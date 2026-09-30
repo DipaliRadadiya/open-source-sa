@@ -1,18 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { History, RotateCcw, User, Cog } from "lucide-react";
-import { restoreEnvironment } from "@/lib/api/environment";
+import { ChevronDown, Cog, History, Loader2, Pencil, RotateCcw } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { getEnvironmentHistoryPage, restoreEnvironment } from "@/lib/api/environment";
+import { useRefresh } from "@/hooks/use-refresh";
 import { apiMessage } from "@/lib/api/error-message";
 import {
   actorOf,
   changedKeys,
   unrestorableReason,
 } from "@/lib/applications/environment-history";
-import { EnvironmentDiff } from "@/components/applications/environment/environment-diff";
+import {
+  EnvironmentDiff,
+  useEnvironmentDiff,
+} from "@/components/applications/environment/environment-diff";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -42,6 +46,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 export function EnvironmentHistoryCard({
   appId,
   entries,
+  meta = null,
   failed = false,
   canManage = false,
   /*
@@ -59,24 +64,52 @@ export function EnvironmentHistoryCard({
   // The restart control reuses the editor dialog's strings, which live one
   // level up — so there is one sentence describing what restarting does.
   const tEnv = useTranslations("applications.environment");
-  const router = useRouter();
+  const { pending: refreshing, refreshThen } = useRefresh();
   const [pending, setPending] = useState(null);
   const [busy, setBusy] = useState(false);
   // Off by default, matching the editor's dialog: restarting is a visible
   // interruption and should be asked for, not assumed.
   const [restart, setRestart] = useState(false);
 
+  // Pages after the first, fetched on request. Dropped when the first page
+  // changes (a save or restore just added a row): every row then shifts one
+  // place, and keeping them would hide the row that moved onto page two.
+  const [older, setOlder] = useState({ from: entries, rows: [], page: 1, last: meta?.last_page ?? 1 });
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  if (older.from !== entries) {
+    setOlder({ from: entries, rows: [], page: 1, last: meta?.last_page ?? 1 });
+  }
+  const shown = [...(entries ?? []), ...older.rows.filter((row) => !entries?.some((entry) => entry.id === row.id))];
+  const remaining = Math.max((meta?.total ?? 0) - shown.length, 0);
+
+  async function loadOlder() {
+    setLoadingOlder(true);
+    try {
+      const data = await getEnvironmentHistoryPage(appId, older.page + 1);
+      setOlder((current) =>
+        current.from === entries
+          ? { ...current, rows: [...current.rows, ...data.history], page: current.page + 1, last: data.meta?.last_page ?? current.last }
+          : current,
+      );
+    } catch (error) {
+      toast.error(apiMessage(error, t("olderFailed")));
+    } finally {
+      setLoadingOlder(false);
+    }
+  }
+
   async function confirmRestore() {
     setBusy(true);
     try {
       await restoreEnvironment(appId, { backup: pending.backup, restart });
-      toast.success(t("restored"));
-      setPending(null);
-      setRestart(false);
       // A refresh, not local state: the restore changed the file the editor
-      // above is showing, and leaving that stale would put the old text on
-      // screen over the new file on disk.
-      router.refresh();
+      // above is showing. Closed once it has landed — closing first left the
+      // old text in the editor for a second under "restored".
+      refreshThen(() => {
+        toast.success(t("restored"));
+        setPending(null);
+        setRestart(false);
+      });
     } catch (error) {
       toast.error(apiMessage(error, t("restoreFailed")));
     } finally {
@@ -102,8 +135,8 @@ export function EnvironmentHistoryCard({
         ) : !entries?.length ? (
           <p className="text-sm text-muted-foreground">{t("empty")}</p>
         ) : (
-          <ul className="divide-y">
-            {entries.map((entry) => (
+          <ul>
+            {shown.map((entry) => (
               <HistoryRow
                 key={entry.id}
                 appId={appId}
@@ -114,6 +147,12 @@ export function EnvironmentHistoryCard({
             ))}
           </ul>
         )}
+        {!failed && older.page < older.last && remaining > 0 ? (
+          <Button variant="outline" size="sm" className="mt-5" onClick={loadOlder} disabled={loadingOlder}>
+            {loadingOlder ? <Loader2 className="size-4 animate-spin" /> : null}
+            {t("showOlder", { count: remaining })}
+          </Button>
+        ) : null}
       </CardContent>
 
       <ConfirmDialog
@@ -130,7 +169,7 @@ export function EnvironmentHistoryCard({
         description={t("confirmBody")}
         cancelLabel={t("cancel")}
         confirmLabel={t("confirmSubmit")}
-        pending={busy}
+        pending={busy || refreshing}
         onConfirm={confirmRestore}
       >
         {/* Same control, same strings as the editor's restore dialog — one
@@ -158,90 +197,124 @@ export function EnvironmentHistoryCard({
   );
 }
 
+/*
+ * One change, as a line on a timeline: who, what in one sentence, when, and
+ * the two things you can do about it. It used to be a stack of five loose
+ * lines — actor, a sentence, a timestamp, a ghost "Show values", and a box
+ * repeating the sentence — with the Restore button floating on its own.
+ */
 function HistoryRow({ appId, entry, canManage, onRestore }) {
   const t = useTranslations("applications.environment.history");
   const actor = actorOf(entry);
   const keys = changedKeys(entry);
   const blocked = unrestorableReason(entry);
+  const restored = entry.action === "environment_restored";
+  // A save that touched no variable has no values to show: the diff would
+  // only repeat the sentence already on the row.
+  const noKeys = !restored && keys.length === 0;
+  const diff = useEnvironmentDiff(appId, entry);
+  const canShowValues = canManage && blocked !== "pruned" && !noKeys;
+  const Icon = actor.kind === "system" ? Cog : restored ? RotateCcw : Pencil;
 
   return (
-    <li className="flex flex-wrap items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
-      <div className="min-w-0 space-y-1.5">
-        <p className="flex items-center gap-1.5 text-sm">
-          {actor.kind === "system" ? (
-            <Cog className="size-3.5 shrink-0 text-muted-foreground" />
-          ) : (
-            <User className="size-3.5 shrink-0 text-muted-foreground" />
-          )}
-          <span className="font-medium">
-            {actor.kind === "user"
-              ? actor.username
-              : actor.kind === "system"
-                ? t("bySystem")
-                : t("byUnknown")}
-          </span>
-          <span className="text-muted-foreground">
-            {entry.action === "environment_restored"
-              ? t("actionRestored")
-              : t("actionUpdated")}
-          </span>
-        </p>
+    <li className="group/row relative flex gap-3 pb-5 last:pb-0">
+      {/* The rail joining one change to the next. */}
+      <span aria-hidden className="absolute top-9 bottom-1 left-4 w-px bg-border group-last/row:hidden" />
+      <span
+        className={cn(
+          "relative flex size-8 shrink-0 items-center justify-center rounded-full",
+          actor.kind === "system"
+            ? "bg-muted text-muted-foreground"
+            : restored
+              ? "bg-warning/15 text-warning"
+              : "bg-primary/10 text-primary",
+        )}
+      >
+        <Icon className="size-4" />
+      </span>
 
-        {keys.length ? (
-          <div className="flex flex-wrap gap-1">
-            {keys.map((key) => (
-              <Badge
-                key={key}
-                variant="outline"
-                className="font-mono text-xs font-normal"
-              >
-                {key}
-              </Badge>
-            ))}
+      <div className="min-w-0 flex-1 space-y-2">
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+          <div className="min-w-48 flex-1 space-y-0.5">
+            <p className="text-sm">
+              <span className="font-medium">
+                {actor.kind === "user"
+                  ? actor.username
+                  : actor.kind === "system"
+                    ? t("bySystem")
+                    : t("byUnknown")}
+              </span>{" "}
+              <span className="text-muted-foreground">
+                {restored
+                  ? t("actionRestored")
+                  : noKeys
+                    ? t("actionNoKeys")
+                    : t("actionChanged", { count: keys.length })}
+              </span>
+            </p>
+            {/* The exact time on hover; the readable one on screen. */}
+            <p className="text-xs text-muted-foreground" title={entry.created_at ?? undefined}>
+              {entry.created_at_human}
+            </p>
+            {/* With the sentence, not under the buttons: on a phone the
+                buttons wrap below this column, and the keys belong to the
+                sentence that counts them. */}
+            {keys.length ? (
+              <div className="flex flex-wrap gap-1.5 pt-1.5">
+                {keys.map((key) => (
+                  <Badge key={key} variant="secondary" className="font-mono text-xs font-normal">
+                    {key}
+                  </Badge>
+                ))}
+              </div>
+            ) : noKeys ? (
+              <p className="pt-1 text-xs text-muted-foreground">{t("noKeysNote")}</p>
+            ) : null}
           </div>
-        ) : entry.action === "environment_updated" ? (
-          // A save that changed no key at all — comments, spacing, or Save
-          // pressed on an untouched file. Worth its own words: a blank space
-          // reads as missing information rather than as "nothing changed".
-          <p className="text-xs text-muted-foreground">{t("noKeys")}</p>
-        ) : null}
 
-        {/* The exact time on hover; the readable one on screen. */}
-        <p className="text-xs text-muted-foreground" title={entry.created_at}>
-          {entry.created_at_human}
-        </p>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            {canShowValues ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={diff.toggle}
+                aria-expanded={diff.open}
+              >
+                <ChevronDown className={cn("size-4 transition-transform", diff.open && "rotate-180")} />
+                {diff.open ? t("hideChanges") : t("showChanges")}
+              </Button>
+            ) : null}
+            {canManage ? (
+              <ReasonTooltip
+                reason={
+                  blocked === "pruned"
+                    ? t("prunedReason")
+                    : blocked === "first"
+                      ? t("firstSaveReason")
+                      : null
+                }
+              >
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={blocked !== null}
+                  onClick={onRestore}
+                >
+                  <RotateCcw className="size-4" />
+                  {t("restore")}
+                </Button>
+              </ReasonTooltip>
+            ) : null}
+          </div>
+        </div>
 
         {/* Values live behind a click, and only for people who could already
-            read them by restoring a backup — it reads the same file.
-            Offered for a first save too, where the diff is "everything was
-            added"; hidden only when the backup is pruned and there is
-            genuinely nothing left to compare against. */}
-        {canManage && blocked !== "pruned" ? (
-          <EnvironmentDiff appId={appId} entry={entry} />
-        ) : null}
+            read them by restoring a backup — it reads the same file. Offered
+            for a first save too, where the diff is "everything was added";
+            hidden when the backup is pruned and there is nothing to compare. */}
+        {canShowValues && diff.open ? <EnvironmentDiff state={diff} /> : null}
       </div>
-
-      {canManage ? (
-        <ReasonTooltip
-          reason={
-            blocked === "pruned"
-              ? t("prunedReason")
-              : blocked === "first"
-                ? t("firstSaveReason")
-                : null
-          }
-        >
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={blocked !== null}
-            onClick={onRestore}
-          >
-            <RotateCcw className="size-3.5" />
-            {t("restore")}
-          </Button>
-        </ReasonTooltip>
-      ) : null}
     </li>
   );
 }

@@ -1,10 +1,13 @@
 <?php
 
+use App\Models\Application;
 use App\Models\GitAccount;
+use App\Models\SystemUser;
 use App\Models\User;
 use Carbon\Carbon;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -283,6 +286,72 @@ it('disconnects an account', function () {
         ->assertOk();
 
     expect(GitAccount::count())->toBe(0);
+});
+
+/** An application deploying with `$account`, for the disconnect guard. */
+function gitAppUsing(GitAccount $account, string $name): Application
+{
+    $user = SystemUser::firstOrCreate(
+        ['username' => 'gituser'],
+        ['home_path' => '/home/gituser', 'shell' => '/bin/bash', 'sudo' => false],
+    );
+
+    return Application::forceCreate([
+        'system_user_id' => $user->id,
+        'name' => $name, 'slug' => Str::slug($name), 'domain' => Str::slug($name).'.test',
+        'site_type' => 'git', 'serving_profile' => 'php', 'php_version' => '8.4',
+        'status' => 'active', 'web_root' => '/',
+        'git_account_id' => $account->id,
+        'repository' => 'octocat/'.Str::slug($name), 'branch' => 'main',
+    ]);
+}
+
+it('refuses to disconnect an account that applications still use, and names them', function () {
+    // The foreign key is nullOnDelete: without the guard the delete succeeds
+    // and every one of these sites can no longer deploy.
+    $account = connectGithub();
+    $shop = gitAppUsing($account, 'Shop');
+    gitAppUsing($account, 'Blog');
+
+    $message = $this->withHeaders(asAdmin())
+        ->deleteJson("/api/integrations/git/accounts/{$account->id}")
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('git_account')
+        ->json('errors.git_account.0');
+
+    expect($message)->toBe(__('errors/git.in_use', ['name' => 'Work GitHub', 'applications' => 'Blog, Shop']))
+        ->and(GitAccount::count())->toBe(1)
+        ->and($shop->fresh()->git_account_id)->toBe($account->id);
+
+    // Nothing happened, so nothing is recorded.
+    $this->withHeaders(asAdmin())->getJson('/api/activity-log')
+        ->assertJsonMissing(['action' => 'disconnected']);
+});
+
+it('collapses a long list of applications into a count', function () {
+    $account = connectGithub();
+    foreach (['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7'] as $name) {
+        gitAppUsing($account, $name);
+    }
+
+    $message = $this->withHeaders(asAdmin())
+        ->deleteJson("/api/integrations/git/accounts/{$account->id}")
+        ->assertStatus(422)
+        ->json('errors.git_account.0');
+
+    expect($message)->toContain('A1, A2, A3, A4, A5, 2 more')
+        ->not->toContain('A6');
+});
+
+it('disconnects an account once no application uses it', function () {
+    $account = connectGithub();
+    gitAppUsing(connectGithub(['label' => 'Other']), 'Shop');
+
+    $this->withHeaders(asAdmin())
+        ->deleteJson("/api/integrations/git/accounts/{$account->id}")
+        ->assertOk();
+
+    expect(GitAccount::whereKey($account->id)->exists())->toBeFalse();
 });
 
 it('rejects a duplicate label', function () {

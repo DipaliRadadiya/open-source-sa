@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { useSetQuery } from "@/hooks/use-set-query";
-import { humanizeActivity, actionBadgeVariant } from "@/lib/activity-log/labels";
+import { typeLabel } from "@/lib/activity-log/labels";
 
 /* Cells at module level: flexRender treats a cell function's identity as the
  * component type, so an inline cell remounts on every render of this table. */
@@ -30,18 +30,14 @@ function UserCell({ row }) {
   );
 }
 
-function EventCell({ row }) {
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      {row.original.type ? (
-        <Badge variant="outline" className="font-normal">
-          {humanizeActivity(row.original.type)}
-        </Badge>
-      ) : null}
-      <Badge variant={actionBadgeVariant(row.original.action)} className="font-normal">
-        {humanizeActivity(row.original.action)}
-      </Badge>
-    </div>
+function TypeCell({ row }) {
+  const t = useTranslations("activity");
+  return row.original.type ? (
+    <Badge variant="outline" className="font-normal">
+      {typeLabel(t, row.original.type)}
+    </Badge>
+  ) : (
+    <span className="text-muted-foreground">—</span>
   );
 }
 
@@ -88,7 +84,7 @@ export function ActivityTable({ data, hasFilters }) {
     // Event is shorthand for the description — "Php" + "Install started" against
     // "Started installing PHP 8.5". A phone has room for one of the two, and the
     // sentence is the one worth keeping. Same call as the self-service log.
-    { id: "event", header: t("columns.event"), cell: EventCell, meta: { className: "hidden md:table-cell" } },
+    { id: "type", header: t("table.type"), cell: TypeCell, meta: { className: "hidden md:table-cell" } },
     {
       accessorKey: "description",
       header: t("columns.description"),

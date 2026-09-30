@@ -239,6 +239,9 @@ return [
     'port_in_use' => 'Auf diesem Server lauscht bereits etwas auf Port :port. Wähle einen anderen oder beende, was ihn belegt.',
 
     'port_registered' => 'Port :port wird normalerweise von :service verwendet. Du kannst ihn trotzdem nutzen, wenn nichts auf diesem Server ihn belegt.',
+    'application_name_immutable' => 'Der Name einer Website steht nach dem Anlegen fest — er benennt ihre Konfigurationsdateien auf dem Server. Legen Sie eine neue Website an, wenn Sie einen anderen Namen brauchen.',
+    'site_name_taken_pool' => 'Auf diesem Server gibt es bereits eine PHP-Pool-Datei namens „:name.conf“, die nicht vom Panel stammt. Wählen Sie einen anderen Namen.',
+    'site_name_taken_vhost' => 'Auf diesem Server gibt es bereits eine Webserver-Konfiguration namens „:name“, die nicht vom Panel stammt — die des Panels selbst gehört dazu. Wählen Sie einen anderen Namen.',
 
     'webhook_secret_min' => 'Das Webhook-Secret muss mindestens 16 Zeichen lang sein.',
 

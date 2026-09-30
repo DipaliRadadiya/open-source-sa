@@ -1,13 +1,14 @@
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, Globe, Info } from "lucide-react";
 import { addDomainFormSchema, REDIRECT_STATUSES } from "@/lib/schemas/domain";
+import { isValidApplicationDomain, suggestApplicationDomain } from "@/lib/schemas/application";
 import { addDomain } from "@/lib/api/domains";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
+import { useRefresh } from "@/hooks/use-refresh";
 import { Button } from "@/components/ui/button";
 import { Caution } from "@/components/ui/caution";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -19,6 +20,7 @@ import {
   FormItem,
   FormLabel,
   FormControl,
+  FormDescription,
   FormMessage,
 } from "@/components/ui/form";
 import {
@@ -37,7 +39,8 @@ import {
  */
 export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, certificate = null }) {
   const t = useTranslations("applications.domains");
-  const router = useRouter();
+  const tForm = useTranslations("applications.form");
+  const { pending: refreshing, refreshThen } = useRefresh();
 
   const active = certificate?.status === "active" ? certificate : null;
   // An uploaded certificate cannot be re-issued from this panel, so the advice
@@ -51,6 +54,9 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
   });
 
   const type = useWatch({ control: form.control, name: "type" });
+  const typedDomain = useWatch({ control: form.control, name: "domain" });
+  // Capitals alone are not worth a suggestion: the form lowercases them.
+  const suggestedDomain = isValidApplicationDomain(typedDomain) ? null : suggestApplicationDomain(typedDomain);
 
   async function onSubmit(values) {
     // Only send redirect fields when they matter.
@@ -63,22 +69,23 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
       // Said again on the way out. The dialog explained this before the click,
       // but the one thing left undone after adding a name to a secured site is
       // covering it — and a bare "Domain added." reads as finished.
-      toast.success(t("toast.added"), {
-        description: active
-          ? t(uploaded ? "toast.addedNeedsUpload" : "toast.addedNeedsReissue", {
-              domain: values.domain,
-            })
-          : undefined,
+      refreshThen(() => {
+        toast.success(t("toast.added"), {
+          description: active
+            ? t(uploaded ? "toast.addedNeedsUpload" : "toast.addedNeedsReissue", {
+                domain: values.domain,
+              })
+            : undefined,
+        });
+        onOpenChange?.(false);
+        form.reset();
       });
-      onOpenChange?.(false);
-      form.reset();
-      router.refresh();
     } catch (error) {
       handleValidationError(error, form);
     }
   }
 
-  const isSubmitting = form.formState.isSubmitting;
+  const isSubmitting = form.formState.isSubmitting || refreshing;
 
   function handleOpenChange(next) {
     if (!next) form.reset();
@@ -116,6 +123,23 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
               <FormControl>
                 <Input placeholder="example.com" autoComplete="off" spellCheck={false} {...field} />
               </FormControl>
+              {/* A pasted address (`https://shop.example.com/`) is the usual
+                  wrong entry. Offer the name inside it, the same way the
+                  create form does, rather than only calling it invalid. */}
+              {suggestedDomain ? (
+                <FormDescription className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span>{tForm("domainSuggestion")}</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      form.setValue("domain", suggestedDomain, { shouldDirty: true, shouldValidate: true })
+                    }
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {tForm("useDomain", { domain: suggestedDomain })}
+                  </button>
+                </FormDescription>
+              ) : null}
               <FormMessage />
             </FormItem>
           )}

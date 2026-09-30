@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -34,10 +35,9 @@ const LOG_LEVELS = ["critical", "error", "warn", "info", "debug", "trace", "blat
  *
  * These arrived when workers moved from systemd units to supervisord programs.
  * The API accepts every one of them and the panel offered none, so a worker
- * could only ever run with supervisord's defaults — including as the site's own
- * user, which is the setting people actually need to change.
+ * could only ever run with supervisord's defaults.
  */
-export function WorkerAdvancedFields({ form, disabled = false }) {
+export function WorkerAdvancedFields({ form, runsAs = null, disabled = false }) {
   const t = useTranslations("applications.workers");
 
   return (
@@ -63,28 +63,15 @@ export function WorkerAdvancedFields({ form, disabled = false }) {
         )}
       />
 
-      <FormField
-        control={form.control}
-        name="user"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel hint={t("form.userHint")}>{t("form.user")}</FormLabel>
-            <FormControl>
-              <Input
-                className="font-mono"
-                autoComplete="off"
-                spellCheck={false}
-                disabled={disabled}
-                placeholder={t("form.userPlaceholder")}
-                {...field}
-              />
-            </FormControl>
-            {/* Empty is the safe answer and the common one, so it says what
-                empty means rather than leaving it to be inferred. */}
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      {/* Shown, never typed. The account a worker runs as is not a choice this
+          form offers: a free-text name accepted `root`, which let anyone who can
+          manage an application's workers run commands as root. */}
+      {runsAs ? (
+        <div className="space-y-2">
+          <Label htmlFor="worker-runs-as" hint={t("form.userHint")}>{t("form.user")}</Label>
+          <Input id="worker-runs-as" className="font-mono" value={runsAs} readOnly />
+        </div>
+      ) : null}
 
       <FormField
         control={form.control}

@@ -2,6 +2,7 @@
 
 namespace App\Contracts;
 
+use App\Models\Application;
 use App\Rules\SupportedPhpVersion;
 
 /**
@@ -123,6 +124,19 @@ interface SiteType
     public function supportedPhpRange(): ?array;
 
     /**
+     * The range for a site that already exists — which may not be the type's.
+     *
+     * The same for almost every type. Not for one whose installer picks a
+     * release by PHP: a PrestaShop shop installed as 8.x stops at PHP 8.1 for
+     * good, even though the type now reaches 8.5 by installing 9.x. The PHP
+     * screen asks this, so an existing site is never moved onto a version its
+     * own release cannot run.
+     *
+     * @return array{min: ?string, max: ?string}|null
+     */
+    public function supportedPhpRangeFor(Application $application): ?array;
+
+    /**
      * The create-form fields, in display order.
      *
      * Each entry: name, label, type, required, plus optionally default,
@@ -159,4 +173,47 @@ interface SiteType
      * generically.
      */
     public function cloneStrategy(): ?CloneStrategy;
+
+    /**
+     * URL paths this type's web root holds that must never be served,
+     * as PCRE patterns matched against the request path (leading `/`).
+     *
+     * For an application that ships its protection as Apache `.htaccess`
+     * files. Apache reads them; nginx never does, and OpenLiteSpeed only
+     * where the vhost turns it on — so on those two the logs, sessions and
+     * source those files deny were downloadable by anyone. Written without
+     * lookaheads: OpenLiteSpeed's regex contexts are not documented as
+     * supporting them.
+     *
+     * @return array<int, string>
+     */
+    public function deniedPaths(): array;
+
+    /**
+     * Top-level directories that are applications of their own, each with its
+     * own front controller — what the application's `.htaccess` in that
+     * directory does on Apache. `directory` is a regex for the directory name
+     * (no slashes, no lookaheads), `script` the file inside it.
+     *
+     * @return array<int, array{directory: string, script: string}>
+     */
+    public function subdirectoryFrontControllers(): array;
+
+    /**
+     * `/.well-known/<name>` URIs this application answers: `redirects` maps a
+     * name to a path it is sent to (301); `fallback`, when set, is where every
+     * other well-known URI goes — the ACME and PKI validation paths excepted.
+     * What the application's `.htaccess` does on Apache.
+     *
+     * @return array{redirects: array<string, string>, fallback: string|null}
+     */
+    public function wellKnownRoutes(): array;
+
+    /**
+     * File extensions the web server must serve with a specific type, which
+     * the application sets in its `.htaccess` on Apache.
+     *
+     * @return array<string, string>
+     */
+    public function mimeTypes(): array;
 }

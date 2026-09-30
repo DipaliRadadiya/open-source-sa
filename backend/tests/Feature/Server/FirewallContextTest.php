@@ -1,7 +1,11 @@
 <?php
 
+use App\Contracts\DatabaseEngine;
 use App\Models\FirewallRule;
 use App\Models\User;
+use App\Services\Server\Databases\DatabaseManager;
+use App\Services\Server\Firewall\RiskyPorts;
+use App\Support\FirewallPresets;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
@@ -185,4 +189,77 @@ it('denies editing to a view-only user', function () {
     $this->withHeader('Authorization', "Bearer {$token}")
         ->putJson("/api/firewall/rules/{$rule->id}", ['enabled' => false])
         ->assertForbidden();
+});
+
+describe('the database warning on a port two engines share', function () {
+    /**
+     * @param  array<string, bool>  $installed  engine => available(), in list order
+     */
+    function riskyWith(array $installed): array
+    {
+        $manager = Mockery::mock(DatabaseManager::class);
+        $manager->shouldReceive('engineNames')->andReturn(array_keys($installed));
+
+        foreach ($installed as $engine => $available) {
+            $double = Mockery::mock(DatabaseEngine::class);
+            $double->shouldReceive('available')->andReturn($available);
+            $manager->shouldReceive('engine')->with($engine)->andReturn($double);
+        }
+
+        return collect((new RiskyPorts($manager))->all())->keyBy('port')->all();
+    }
+
+    it('names MySQL on a MySQL server, not the MariaDB that is not there', function () {
+        // MariaDB is listed after MySQL, so it used to win whatever was installed.
+        $risky = riskyWith(['mysql' => true, 'mariadb' => false]);
+
+        expect($risky[3306]['label'])->toBe('mysql')
+            ->and($risky[3306]['installed'])->toBeTrue();
+    });
+
+    it('names MariaDB on a MariaDB server, whichever order the engines are listed in', function (array $installed) {
+        $risky = riskyWith($installed);
+
+        expect($risky[3306]['label'])->toBe('mariadb')
+            ->and($risky[3306]['installed'])->toBeTrue();
+    })->with([
+        'mysql listed first' => [['mysql' => false, 'mariadb' => true]],
+        'mariadb listed first' => [['mariadb' => true, 'mysql' => false]],
+    ]);
+
+    it('still warns about the port when neither is installed', function () {
+        $risky = riskyWith(['mysql' => false, 'mariadb' => false]);
+
+        expect($risky)->toHaveKey(3306)
+            ->and($risky[3306]['installed'])->toBeFalse();
+    });
+});
+
+it('names the 3306 preset for the database this server runs', function (bool $mariadb, string $label) {
+    $preset = collect(FirewallPresets::all(mariadb: $mariadb))->firstWhere('key', 'mysql');
+
+    // One name, the right one; the key and the rule are the same either way.
+    expect($preset['label'])->toBe($label)
+        ->and($preset['port'])->toBe(3306);
+})->with([
+    'MariaDB server' => [true, 'MariaDB'],
+    'MySQL server, or neither' => [false, 'MySQL'],
+]);
+
+it('asks the server which one it runs when listing the presets', function () {
+    $manager = Mockery::mock(DatabaseManager::class);
+    $engine = Mockery::mock(DatabaseEngine::class);
+    $engine->shouldReceive('available')->andReturn(true);
+    $manager->shouldReceive('engine')->with('mariadb')->andReturn($engine);
+    app()->instance(DatabaseManager::class, $manager);
+
+    $presets = $this->withHeader('Authorization', 'Bearer '.$this->token)
+        ->getJson('/api/firewall/presets')->assertOk()->json('presets');
+
+    expect(collect($presets)->firstWhere('key', 'mysql')['label'])->toBe('MariaDB');
+});
+
+it('finds the 3306 rules when searching for mariadb', function () {
+    expect(FirewallPresets::portFor('MariaDB'))->toBe(3306)
+        ->and(FirewallPresets::portFor('mysql'))->toBe(3306);
 });

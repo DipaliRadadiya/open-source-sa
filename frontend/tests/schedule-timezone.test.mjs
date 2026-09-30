@@ -95,8 +95,9 @@ test("the screens name the project's clock, never the server's", () => {
 
   // Read off the payload, never assumed — a hardcoded fallback would be a
   // specific claim about a clock nothing confirmed.
-  assert.match(form, /const scheduleTimezone = target\?\.timezone \?\? null/);
-  assert.match(panel, /target\.timezone \? "summary\.howOftenAtZone" : "summary\.howOftenAt"/);
+  // The options endpoint names the same clock for a target not saved yet.
+  assert.match(form, /const scheduleTimezone = target\?\.timezone \?\? options\?\.timezone \?\? null/);
+  assert.match(panel, /t\(target\.timezone \? `\$\{scheduleKey\}Zone` : scheduleKey/);
   assert.match(card, /nextClockTime && schedule\?\.timezone/);
 
   assert.doesNotMatch(form, /ServerTimezone|server\.timezone/);

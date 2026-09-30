@@ -3,6 +3,7 @@
 use App\Enums\StorageProvider;
 use App\Models\ActivityLog;
 use App\Models\Application;
+use App\Models\Backup;
 use App\Models\BackupTarget;
 use App\Models\StorageDestination;
 use App\Models\SystemUser;
@@ -11,7 +12,13 @@ use App\Services\Server\Backups\Storage\DestinationDisk;
 use App\Services\Server\Backups\Storage\SftpHostKey;
 use App\Services\Server\Backups\Storage\StorageConnectionProber;
 use App\Services\Server\Backups\Storage\StorageDriverFactory;
+use Aws\Handler\Guzzle\GuzzleHandler;
 use Database\Seeders\PermissionSeeder;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Promise\Create;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\Support\Facades\Storage;
@@ -786,6 +793,47 @@ describe('the in-use guard', function () {
             ->and($message)->toContain('3 more');
     });
 
+    /*
+     * The target can be repointed while its old backups stay where they were
+     * written. The database refused this (restrictOnDelete on
+     * backups.storage_destination_id), but as a 500 naming nothing.
+     */
+    it('refuses to delete a destination that still holds backups, even with no target pointing at it', function () {
+        $old = makeDestination();
+        $new = makeDestination(['name' => 'New S3']);
+
+        $target = BackupTarget::create([
+            'application_id' => ($this->makeApplication)('Shop')->id,
+            'storage_destination_id' => $new->id,
+            'type' => 'full',
+            'retention_count' => 7,
+            'frequency' => 'daily',
+            'enabled' => true,
+        ]);
+
+        // forceCreate: the destination is deliberately not fillable (the model
+        // stamps the target's current one), and here it must be the old one.
+        foreach (range(1, 2) as $_) {
+            Backup::forceCreate([
+                'backup_target_id' => $target->id,
+                'application_id' => $target->application_id,
+                'storage_destination_id' => $old->id,
+                'type' => 'full',
+                'status' => 'verified',
+                'manifest' => ['key' => 'shop/old.tar.gz'],
+            ]);
+        }
+
+        $message = $this->withHeaders(storageAdminAuthHeader())
+            ->deleteJson("/api/integrations/storage/destinations/{$old->id}")
+            ->assertStatus(422)
+            ->json('errors.storage_destination.0');
+
+        expect($message)->toBe(__('storage.delete.holds_backups', ['name' => 'Work S3', 'count' => 2]))
+            ->and(StorageDestination::find($old->id))->not->toBeNull()
+            ->and(Backup::count())->toBe(2);
+    });
+
     it('deletes once the last backup target is gone', function () {
         $dest = makeDestination();
 
@@ -943,11 +991,12 @@ it('has copy for every provider, status and failure category in every locale', f
             'success', 'invalid_credentials', 'unreachable', 'mismatch',
             'forbidden_host', 'invalid_endpoint', 'invalid_host',
             'host_key_mismatch', 'invalid_private_key',
+            'bucket_not_found', 'wrong_region', 'tls_failed',
         ] as $key) {
             expect(__('storage.test.'.$key))->not->toBe('storage.test.'.$key);
         }
 
-        foreach (['in_use', 'and_more'] as $key) {
+        foreach (['in_use', 'holds_backups', 'and_more'] as $key) {
             expect(__('storage.delete.'.$key))->not->toBe('storage.delete.'.$key);
         }
 
@@ -1174,8 +1223,8 @@ it('uses path-style addressing only when a custom endpoint is configured', funct
         return test()->fakeDisk;
     });
 
-    // Custom endpoint (MinIO, Wasabi, B2) — these route through the path.
-    $prober->probe(makeDestination(['name' => 'MinIO', 'config' => ['endpoint' => 'https://minio.example.com']]));
+    // Custom endpoint (self-hosted, Wasabi, B2) — these route through the path.
+    $prober->probe(makeDestination(['name' => 'Self-hosted', 'config' => ['endpoint' => 'https://s3.example.com']]));
 
     // Empty endpoint *means* AWS, where path-style is deprecated and
     // unsupported for buckets in regions launched after 2019.
@@ -1225,6 +1274,92 @@ it('sends GetObject as a streamed request so a large artefact never lands in mem
     // before readStream() returns — DownloadArtifact's stream_copy_to_stream
     // then copies an already-loaded 5+ GB string and OOMs the worker.
     expect($requestOptions[0]['stream'] ?? false)->toBeTrue();
+});
+
+/*
+ * Every S3 failure used to read "The destination rejected the credentials":
+ * the classifier matched the class name `Aws\S3\Exception`, and the SDK
+ * throws that one class for everything. A wrong bucket, a wrong region and a
+ * server with broken TLS all sent the user to replace keys that worked.
+ *
+ * These drive the *real* adapter and SDK through an injected http_handler,
+ * answering with what the provider really sends: an S3 error XML body, or the
+ * cURL errno Guzzle reports. The older tests above threw a RuntimeException
+ * with "InvalidAccessKeyId" in its text, a shape the SDK never produces, which
+ * is how the bug stayed invisible. Shapes measured against real AWS, a host
+ * with broken TLS and a self-signed certificate on 2026-09-24.
+ */
+describe('S3 failure classification', function () {
+    /**
+     * Probe a destination whose requests are answered by $answer.
+     *
+     * Through the SDK's real Guzzle handler, not a bare http_handler: turning
+     * a 4xx into an exception is Guzzle's `http_errors` middleware's job, and
+     * a bare handler skips it, so a 404 would read as a successful upload.
+     */
+    function probeS3With(Response|Closure $answer): array
+    {
+        $destination = makeDestination();
+
+        $prober = makeProber(function (array $config) use ($answer) {
+            $mock = new MockHandler([$answer, $answer, $answer]);
+            $config['http_handler'] = new GuzzleHandler(new Client(['handler' => HandlerStack::create($mock)]));
+            // The SDK retries connection errors and 5xx; one answer per test.
+            $config['retries'] = 0;
+
+            return Storage::build($config);
+        });
+
+        return $prober->probe($destination);
+    }
+
+    function s3ErrorResponse(int $status, string $code): Response
+    {
+        return new Response($status, ['Content-Type' => 'application/xml'], '<?xml version="1.0" encoding="UTF-8"?>'
+            ."<Error><Code>{$code}</Code><Message>provider message</Message><RequestId>r1</RequestId></Error>");
+    }
+
+    /**
+     * What Guzzle's cURL handler raises: the errno sits in the handler
+     * context, where the classifier reads it.
+     */
+    function curlFailure(int $errno, bool $connect = true): Closure
+    {
+        return fn ($request) => Create::rejectionFor($connect
+            ? new ConnectException("cURL error {$errno}: failure", $request, null, ['errno' => $errno])
+            : new RequestException("cURL error {$errno}: failure", $request, null, null, ['errno' => $errno]));
+    }
+
+    // Plain values in the dataset, built inside the test: a closure there is
+    // handed over as-is, so it would be the handler's *return value*.
+    it('reports each failure as what it is', function (string $kind, int $value, string $detail, string $expected) {
+        $answer = $kind === 's3'
+            ? s3ErrorResponse($value, $detail)
+            : curlFailure($value, connect: $detail === 'connect');
+
+        $result = probeS3With($answer);
+
+        expect($result['success'])->toBeFalse()
+            ->and($result['error_class'])->toBe($expected)
+            ->and($result['message'])->toBe(__('storage.test.'.$expected));
+    })->with([
+        'wrong access key' => ['s3', 403, 'InvalidAccessKeyId', 'invalid_credentials'],
+        'wrong secret' => ['s3', 403, 'SignatureDoesNotMatch', 'invalid_credentials'],
+        'key without permission' => ['s3', 403, 'AccessDenied', 'invalid_credentials'],
+        'wrong bucket name' => ['s3', 404, 'NoSuchBucket', 'bucket_not_found'],
+        'wrong region (AWS)' => ['s3', 400, 'AuthorizationHeaderMalformed', 'wrong_region'],
+        'broken TLS handshake (cURL 35)' => ['curl', 35, 'connect', 'tls_failed'],
+        'untrusted certificate (cURL 60)' => ['curl', 60, 'request', 'tls_failed'],
+        'unknown host (cURL 6)' => ['curl', 6, 'connect', 'unreachable'],
+        'connection refused (cURL 7)' => ['curl', 7, 'connect', 'unreachable'],
+    ]);
+
+    // The old rule's whole failure: an S3 error that is not about keys must
+    // not be reported as one. A provider-side 500 is the plainest case.
+    it('does not call an unrelated S3 error a credentials problem', function () {
+        expect(probeS3With(s3ErrorResponse(500, 'InternalError'))['error_class'])
+            ->not->toBe('invalid_credentials');
+    });
 });
 
 /*

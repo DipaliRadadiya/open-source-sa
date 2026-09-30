@@ -25,6 +25,15 @@ server {
     }
 
     location / {
+@foreach ($uncoveredNames as $name)
+        {{-- Not on the certificate: https://{{ $name }} is a TLS error, so
+             send it to the primary. Inside `location /`, never at server
+             level, so the ACME location above still answers for this name
+             and the certificate can be reissued to include it. --}}
+        if ($host = {{ $name }}) {
+            return 301 https://{{ $serverNames[0] }}$request_uri;
+        }
+@endforeach
         return 301 https://$host$request_uri;
     }
 }
@@ -32,13 +41,20 @@ server {
 
 server {
 @if ($certificate)
-    {{-- `listen ... http2` rather than the newer `http2 on;`. The new form is
-         a hard error on nginx before 1.25, which is what Ubuntu 24.04 ships;
-         this form is merely deprecated on newer builds. A deprecation warning
-         is survivable, a config test that fails takes every site on the box
-         down with it. --}}
+    {{-- `http2 on;` where this nginx has it (1.25.1+), `listen ... http2`
+         elsewhere — chosen by NginxDriver::supportsHttp2Directive(). The new
+         form is a hard error before 1.25 (Ubuntu 24.04 ships 1.24), and a
+         failed config test takes every site on the box down; the old one is
+         only deprecated after it, but printed a warning per site on every
+         `nginx -t` (36 on an 18-site Ubuntu 26.04 box). --}}
+@if ($http2On)
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+@else
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
+@endif
 
     ssl_certificate     {{ $certificate->certificate_path }};
     ssl_certificate_key {{ $certificate->private_key_path }};
@@ -82,9 +98,9 @@ server {
     set $waf_block "0";
     set $waf_exception "0";
 @foreach ($waf['exceptions'] as $exception)
-    if ($request_uri ~* "{{ preg_quote($exception, '/') }}") { set $waf_exception "1"; }
-    if ($args ~* "{{ preg_quote($exception, '/') }}") { set $waf_exception "1"; }
-    if ($http_user_agent ~* "{{ preg_quote($exception, '/') }}") { set $waf_exception "1"; }
+    if ($request_uri ~* "{!! $exception !!}") { set $waf_exception "1"; }
+    if ($args ~* "{!! $exception !!}") { set $waf_exception "1"; }
+    if ($http_user_agent ~* "{!! $exception !!}") { set $waf_exception "1"; }
 @endforeach
 @if (in_array('query_string', $waf['categories'], true))
     if ($bad_querystring_ng) { set $waf_block "1"; }
@@ -105,8 +121,8 @@ server {
     if ($not_allowed_method_ng) { set $waf_block "1"; }
 @endif
 @foreach ($waf['customRules'] as $rule)
-    if ($request_uri ~* "{{ preg_quote($rule, '/') }}") { set $waf_block "1"; }
-    if ($args ~* "{{ preg_quote($rule, '/') }}") { set $waf_block "1"; }
+    if ($request_uri ~* "{!! $rule !!}") { set $waf_block "1"; }
+    if ($args ~* "{!! $rule !!}") { set $waf_block "1"; }
 @endforeach
     set $waf_decision "${waf_block}${waf_exception}";
 @if ($waf['mode'] === 'enforce')
@@ -122,7 +138,7 @@ server {
 @if ($botBlock)
     {{-- Blocked before auth_basic is evaluated, so a blocked bot gets a
          flat 403 and never sees the Basic Auth login prompt. --}}
-    if ($http_user_agent ~* "^({{ $botBlock }})") {
+    if ($http_user_agent ~* "({{ $botBlock }})") {
         return 403;
     }
 @endif
@@ -152,9 +168,25 @@ server {
     access_log {{ $logDir }}/access.log;
     error_log  {{ $logDir }}/error.log;
 
+@if ($disabled)
+    {{-- Disabled: every path answers 503 with the unavailable page, which is
+         self-contained. It was a 200 — "up" to every monitor and crawler.
+         The ACME location above still answers, so renewal keeps working. --}}
+    location / {
+        return 503;
+    }
+
+    error_page 503 @unavailable;
+
+    location @unavailable {
+        rewrite ^ /index.html break;
+        add_header Retry-After 3600 always;
+    }
+@else
     location / {
         try_files $uri $uri/ =404;
     }
+@endif
 
     location ~ /\.(?!well-known) {
         deny all;
@@ -170,8 +202,14 @@ server {
     {{-- A redirect needs its own HTTPS listener. `http://old` → `https://new`
          looks like it needs no certificate, but a browser that has seen HSTS
          for `old` refuses the plaintext hop and never reaches the redirect. --}}
+@if ($http2On)
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+@else
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
+@endif
 
     ssl_certificate     {{ $certificate->certificate_path }};
     ssl_certificate_key {{ $certificate->private_key_path }};

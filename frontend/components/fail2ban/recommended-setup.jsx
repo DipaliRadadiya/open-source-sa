@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Loader2, ShieldCheck, Sparkles } from "lucide-react";
@@ -9,6 +9,7 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Card, CardContent } from "@/components/ui/card";
 import { settingsPayload } from "@/lib/fail2ban/settings-payload";
 import { apiMessage } from "@/lib/api/error-message";
+import { useBrowserIpSettled } from "@/components/network/browser-ip";
 
 /**
  * One click to a protected server.
@@ -29,8 +30,9 @@ import { apiMessage } from "@/lib/api/error-message";
  */
 export function RecommendedSetup({ jails, settings, yourIp, ignoreIps = [], canManage }) {
   const t = useTranslations("fail2ban");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [pending, setPending] = useState(false);
+  const ipSettled = useBrowserIpSettled();
 
   const anyEnabled = jails.some((jail) => jail.enabled);
   if (anyEnabled || jails.length === 0) return null;
@@ -51,12 +53,15 @@ export function RecommendedSetup({ jails, settings, yourIp, ignoreIps = [], canM
         // Sent in the same call as the jails, so there is no window where the
         // SSH jail is live and the operator's own address is still bannable.
         ...(willIgnoreMe ? { ignore_ips: [...ignoreIps, yourIp] } : null),
-        // The lockout check is satisfied by the ignore_ips above; this tells the
-        // API we know what we're doing when it can't see that yet.
-        acknowledged: true,
+        // Only when the reader's address is known and covered above. Until the
+        // browser has it, the API's own lockout check runs against this very
+        // request — which comes from the browser, so it sees the right address.
+        acknowledged: Boolean(yourIp),
       });
+      // The card and the jails re-read first, then the toast: "Protection is
+      // on" above a card still saying "not protected" read as a failure.
+      await refreshAndWait();
       toast.success(t("recommended.done"));
-      router.refresh();
     } catch (error) {
       toast.error(
         apiMessage(error, t("recommended.failed")),
@@ -85,8 +90,8 @@ export function RecommendedSetup({ jails, settings, yourIp, ignoreIps = [], canM
           </div>
         </div>
 
-        <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
-          <Button disabled={!canManage || pending} onClick={apply}>
+        <ReasonTooltip reason={!canManage ? t("disabled.noPermission") : !ipSettled ? t("recommended.checkingIp") : null}>
+          <Button disabled={!canManage || pending || !ipSettled} onClick={apply}>
             {pending ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (

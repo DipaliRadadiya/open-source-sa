@@ -30,6 +30,8 @@ return [
     'primary_domain_not_editable' => 'Un domaine principal ne peut pas être modifié. Définissez d’abord un autre domaine comme principal.',
     'domain_taken' => 'Ce domaine est déjà utilisé sur ce serveur.',
     'domain_taken_by' => 'Ce domaine est déjà utilisé par l’application « :application ».',
+    'domain_is_panel' => 'C’est l’adresse sur laquelle le panneau lui-même est servi ; un site ne peut donc pas l’utiliser.',
+    'redirect_target_invalid' => 'La cible de la redirection doit être une adresse web simple : https://, un hôte et un chemin facultatif, sans chaîne de requête, espaces ni caractères comme ; # $ &.',
     'unsupported_web_server' => 'Le panneau ne peut pas écrire la configuration du site pour :web_server.',
     'no_web_server' => 'aucun serveur web détecté',
     'provision_failed' => 'La configuration du site a échoué à l\'étape « :step ».',
@@ -63,6 +65,7 @@ return [
     'waf_failed' => 'La modification des paramètres du pare-feu a échoué sur le serveur.',
     'staging_failed' => 'L\'opération de staging a échoué sur le serveur.',
     'staging_rollback_failed' => 'La publication depuis le staging a échoué et la production n\'a pas pu être restaurée. Le site reste désactivé. Communiquez la référence au support.',
+    'staging_push_running' => 'Un envoi vers ce site est déjà en cours. Attendez qu’il se termine.',
     'clone_failed' => 'L\'opération de clonage a échoué sur le serveur.',
     'fail2ban_failed' => 'L\'opération fail2ban a échoué sur le serveur.',
 
@@ -114,4 +117,19 @@ return [
     'generate_system_user_forbidden' => 'Vous n\'avez pas l\'autorisation de créer des utilisateurs système, un nouveau ne peut donc pas être généré pour ce site. Choisissez plutôt un utilisateur système existant.',
     'system_user_conflict' => 'Choisissez soit un nouvel utilisateur système, soit un utilisateur existant, pas les deux.',
     'system_user_name_unavailable' => 'Impossible de réserver un nom d\'utilisateur système pour ce site : le serveur n\'a pas pu indiquer quels noms sont déjà utilisés. Réessayez ou choisissez un utilisateur système existant.',
+
+    // The Lock button for a site folder the panel did not create; see
+    // SiteRootLock::adopt(). Keyed by its result.
+    'root_lock' => [
+        'unsafe' => 'Le dossier du site :path n\'est pas un dossier ordinaire, ou il a changé pendant la vérification ; il n\'a donc pas été modifié. Vérifiez-le sur le serveur avant de réessayer.',
+        'missing' => 'Le dossier du site :path n\'existe pas sur le serveur.',
+        'failed' => 'Le serveur n\'a pas pu verrouiller le dossier du site. Rien n\'a été modifié. Consultez le journal du serveur pour plus de détails.',
+        'unsupported' => 'Le disque de ce serveur ne prend pas en charge le verrouillage des dossiers ; le dossier du site a donc été laissé tel quel.',
+        'foreign_owner' => 'Le dossier du site :path appartient à un autre compte, pas à l\'utilisateur de ce site ; il n\'a donc pas été modifié. Vérifiez qui doit en être propriétaire avant de le verrouiller.',
+        'writable' => 'D\'autres comptes peuvent écrire dans le dossier du site :path, un verrou ne tiendrait donc pas. Retirez le droit d\'écriture du groupe et de tous (par exemple `chmod 755`), puis réessayez.',
+        'locks_out_user' => 'Verrouiller le dossier du site :path empêcherait l\'utilisateur de ce site de l\'ouvrir : ses permissions ne lui donnent accès qu\'en tant que propriétaire. Donnez au groupe du dossier le droit de lecture et d\'ouverture (par exemple `chmod 750`), vérifiez que l\'utilisateur fait partie de ce groupe, puis réessayez.',
+    ],
+
+    // A git site whose account was disconnected: no credential, no URL.
+    'git_account_missing' => 'Ce compte git n’est plus connecté : il n’y a rien à partir de quoi déployer. Reconnectez-le depuis l’écran Déploiement, puis déployez à nouveau.',
 ];

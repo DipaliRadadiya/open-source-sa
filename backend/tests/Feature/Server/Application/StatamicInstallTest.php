@@ -79,7 +79,10 @@ it('serves from public/, not the project root', function () {
     // Built one level above what is served — but not *into* the project root,
     // which already holds public/ and would make Composer refuse. It is copied
     // there instead.
-    $copy = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'cp'
+    // As the site user: root's `cp` wrote through a link planted at the
+    // destination (the `.panel` class of bug, 2026-09-29).
+    $copy = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'runuser'
+        && ($run['command'][4] ?? '') === 'cp'
         && in_array($this->projectRoot, $run['command'], true));
 
     expect($copy)->not->toBeNull();
@@ -183,4 +186,32 @@ it('follows the domain when it changes, and clears the config cache that would o
         ->and($written['input'])->toContain('APP_NAME=Statamic');
 
     expect(collect($runs)->contains(fn ($run) => in_array('config:clear', $run['command'], true)))->toBeTrue();
+});
+
+it('gives the project root to the site user before copying into it as them', function () {
+    // The web root is `public_html/public`, so the provisioner leaves
+    // `public_html` root-owned; the user's `cp` was refused on every file and
+    // every Composer install failed at extract (found live 2026-09-29).
+    $commands = collect(installStatamic())->pluck('command')->values();
+
+    $chown = $commands->search(fn (array $c) => $c === ['chown', '-h', 'statuser:statuser', test()->projectRoot]);
+    $copy = $commands->search(fn (array $c) => ($c[0] ?? null) === 'runuser' && ($c[4] ?? null) === 'cp'
+        && end($c) === test()->projectRoot);
+
+    expect($chown)->not->toBeFalse()
+        ->and($copy)->not->toBeFalse()
+        ->and($chown)->toBeLessThan($copy);
+});
+
+it('takes world access off the .env once everything that writes it has run', function () {
+    // Statamic's create-project script copies `.env.example`: 0644.
+    $commands = collect(installStatamic())->pluck('command')->values();
+
+    $makeUser = $commands->search(fn (array $c) => in_array('make:user', $c, true));
+    $narrow = $commands->search(fn (array $c) => ($c[4] ?? null) === 'chmod' && ($c[5] ?? null) === 'go-rwx'
+        && ($c[6] ?? null) === test()->projectRoot.'/.env');
+
+    expect($makeUser)->not->toBeFalse()
+        ->and($narrow)->not->toBeFalse()
+        ->and($narrow)->toBeGreaterThan($makeUser);
 });

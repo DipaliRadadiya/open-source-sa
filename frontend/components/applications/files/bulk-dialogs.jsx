@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -19,7 +18,8 @@ import {
 } from "@/lib/api/files";
 import { bulkResult } from "@/lib/files/bulk-result";
 import { apiMessage } from "@/lib/api/error-message";
-import { compressSuggestion, dirname, joinPath } from "@/lib/files/path-helpers";
+import { destinationMissing } from "@/lib/files/missing-folder";
+import { compressSuggestion, dirname, inFolder, joinPath } from "@/lib/files/path-helpers";
 import { sharedMode, selectedFiles } from "@/lib/files/shared-mode";
 import { symbolicMode } from "@/lib/files/describe-mode";
 
@@ -35,6 +35,7 @@ import {
   useArchiveFormat,
 } from "@/components/applications/files/archive-format-field";
 import { PermanentDeleteField } from "@/components/applications/files/permanent-delete-field";
+import { useRefresh } from "@/hooks/use-refresh";
 
 /**
  * The dialogs behind the selection bar. One component because all four share
@@ -42,11 +43,16 @@ import { PermanentDeleteField } from "@/components/applications/files/permanent-
  * and let the panel decide what to show. None of them reports success itself
  * when something failed — a toast cannot carry a list of paths.
  */
-export function BulkDialogs({ appId, action, paths, files = [], path, onOpenChange, onResult }) {
+export function BulkDialogs({ appId, action, paths: selectedPaths, files = [], path, onOpenChange, onResult }) {
+  // Fixed at open. The list refreshes before the dialog closes, and after a
+  // move the selection is no longer on screen — the live value went empty and
+  // `dirname(paths[0])` took the whole page down.
+  const [paths] = useState(selectedPaths);
   const t = useTranslations("applications.files");
   const tc = useTranslations("common");
-  const router = useRouter();
-  const [busy, setBusy] = useState(false);
+  const { pending: refreshing, refreshThen } = useRefresh();
+  const [running, setBusy] = useState(false);
+  const busy = running || refreshing;
   /*
    * Compress gets a useful default; move and copy get none.
    *
@@ -108,9 +114,9 @@ export function BulkDialogs({ appId, action, paths, files = [], path, onOpenChan
   const [mode, setMode] = useState(() => currentMode ?? "");
   const [error, setError] = useState(null);
   const archiveFormat = useArchiveFormat();
-  // Off every time the dialog mounts. BulkDialogs is mounted per action by the
-  // panel, so there is no stale value to carry between two deletes.
-  const [permanent, setPermanent] = useState(false);
+  // On every time the dialog mounts (Krishna, 2026-09-29). BulkDialogs is
+  // mounted per action by the panel, so no value carries between two deletes.
+  const [permanent, setPermanent] = useState(true);
 
   async function run(call) {
     if (busy) return;
@@ -119,9 +125,10 @@ export function BulkDialogs({ appId, action, paths, files = [], path, onOpenChan
     try {
       const { data } = await call();
       const result = bulkResult(data, paths);
-      onResult(action, result, { permanent });
-      onOpenChange(false);
-      router.refresh();
+      refreshThen(() => {
+        onResult(action, result, { permanent });
+        onOpenChange(false);
+      });
     } catch (err) {
       // A 422 here is the whole request refused — a bad target, a selection
       // spanning folders, a count that no longer matches. It belongs in the
@@ -131,8 +138,11 @@ export function BulkDialogs({ appId, action, paths, files = [], path, onOpenChan
         err.response?.data?.errors?.target_directory?.[0] ??
         err.response?.data?.errors?.mode?.[0] ??
         err.response?.data?.errors?.paths?.[0];
+      const folder = action === "compress" ? dirname(inFolder(target.trim(), dirname(paths[0]))) : target.trim();
       if (field) setError(field);
-      else if ([404, 409, 422].includes(err.response?.status)) setError(apiMessage(err, t("bulk.failed")));
+      else if ((action === "move" || action === "copy" || action === "compress") && (await destinationMissing(appId, err, folder))) {
+        setError(t("targetDialog.folderMissing", { folder }));
+      } else if ([404, 409, 422].includes(err.response?.status)) setError(apiMessage(err, t("bulk.failed")));
       else toast.error(apiMessage(err, t("bulk.failed")));
     } finally {
       setBusy(false);
@@ -199,7 +209,9 @@ export function BulkDialogs({ appId, action, paths, files = [], path, onOpenChan
     },
     compress: {
       icon: FileArchive,
-      submit: () => compressFiles(appId, paths, archiveFormat.complete(target.trim())),
+      // A bare name lands beside the selection, as the hint says — it went to
+      // the site's top folder, which on WordPress is the public web root.
+      submit: () => compressFiles(appId, paths, archiveFormat.complete(inFolder(target.trim(), dirname(paths[0])))),
       label: t("bulk.archiveName"),
       placeholder: t("bulk.archiveNamePlaceholder"),
       hint: t("bulk.compressHint", { folder: dirname(paths[0]) || "/" }),
@@ -219,7 +231,7 @@ export function BulkDialogs({ appId, action, paths, files = [], path, onOpenChan
       onSubmit={(event) => {
         event.preventDefault();
         if (action === "compress") {
-          const invalid = archiveFormat.validate(archiveFormat.complete(target.trim()));
+          const invalid = archiveFormat.validate(archiveFormat.complete(inFolder(target.trim(), dirname(paths[0]))));
           if (invalid) {
             setError(invalid);
             return;
@@ -294,7 +306,13 @@ export function BulkDialogs({ appId, action, paths, files = [], path, onOpenChan
         <div className="space-y-2">
           {action === "compress" ? (
             <div className="pb-2">
-              <ArchiveFormatField {...archiveFormat} value={target} setValue={setTarget} busy={busy} />
+              <ArchiveFormatField
+                {...archiveFormat}
+                value={target}
+                setValue={setTarget}
+                busy={busy}
+                suggest={(ext) => compressSuggestion(joinPath(path, "archive"), ext, new Set(files.map((f) => f.path)))}
+              />
             </div>
           ) : null}
           <Label htmlFor="bulk-target">{meta.label}</Label>

@@ -30,7 +30,7 @@ export function ReferenceLookup({ value, onSubmit, onClear }) {
   const dirty = trimmed.length > 0;
 
   return (
-    <form
+    <form noValidate
       className="flex w-full items-start gap-2 sm:w-auto"
       onSubmit={(event) => {
         event.preventDefault();

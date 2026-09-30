@@ -13,5 +13,5 @@ export async function getWebhookProviders() {
   // WHICH failure, not just that there was one: without the status and the
   // kind, the error box on this screen printed the same sentence whether the
   // API refused, crashed, or was not there at all.
-  return { providers: result.failed ? [] : (result.data?.providers ?? []), failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
+  return { providers: result.failed ? [] : (result.data?.webhook_providers ?? []), failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 }

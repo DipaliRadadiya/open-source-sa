@@ -34,10 +34,11 @@ test("Home stays, because it is not derivable from the username", () => {
    * that is a coincidence of how CreateSystemUser builds it. `home_path` is
    * read from /etc/passwd by SystemUserDiscoverer during Server Sync, so an
    * adopted server's accounts can live anywhere — and those are exactly the
-   * users who need the column.
+   * users who need to see it. It sits under the username since 2026-09-28 —
+   * its own column pushed the row menu off a 1280 screen — but it is shown.
    */
-  assert.match(table, /accessorKey: "home_path"/);
-  assert.doesNotMatch(table, /accessorKey: "home_path"[\s\S]{0,120}hidden/);
+  assert.match(table, /function UsernameCell[\s\S]{0,1200}row\.original\.home_path/);
+  assert.doesNotMatch(table, /home_path[^\n]*hidden/);
 });
 
 test("the fail2ban screen is called Fail2ban, everywhere", () => {
@@ -91,7 +92,7 @@ test("English headings match their own breadcrumbs", () => {
   assert.equal(en.cronJobs.title, "Cron Jobs");
   assert.equal(en.sync.title, "Server Sync");
   assert.equal(en.logs.title, "System Logs");
-  assert.equal(en.activity.mine.title, "Activity Log");
+  assert.equal(en.activity.server.title, "Activity Log");
 });
 
 test("Title Case was NOT imposed on the other locales", () => {
@@ -103,8 +104,8 @@ test("Title Case was NOT imposed on the other locales", () => {
    */
   const es = JSON.parse(read("messages/es.json"));
   const ru = JSON.parse(read("messages/ru.json"));
-  assert.equal(es.activity.mine.title, "Registro de actividad");
-  assert.equal(ru.activity.mine.title, "Журнал активности");
+  assert.equal(es.activity.server.title, "Registro de actividad");
+  assert.equal(ru.activity.server.title, "Журнал активности");
 });
 
 test("Activity Log has one name per locale", () => {
@@ -114,7 +115,7 @@ test("Activity Log has one name per locale", () => {
   for (const locale of locales) {
     const m = JSON.parse(read(`messages/${locale}.json`));
     const nav = m.admin?.nav?.activityLog;
-    const page = m.activity?.mine?.title;
+    const page = m.activity?.server?.title;
     if (!nav || !page) continue;
     assert.equal(nav, page, `${locale}: admin nav "${nav}" != page "${page}"`);
   }

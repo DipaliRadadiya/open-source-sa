@@ -50,7 +50,7 @@ test("...but the card omits it rather than dashing it", () => {
    * unmeasured size: in a wrapped line of facts a dash reads as a value, where
    * in a table column it reads as an empty cell.
    */
-  assert.match(cardsCode, /\{application\.php_version \? \(/);
+  assert.match(cardsCode, /\{phpVersionShown\(application\) \? \(/);
   assert.doesNotMatch(cardsCode, /php_version \?\? "—"/);
 });
 

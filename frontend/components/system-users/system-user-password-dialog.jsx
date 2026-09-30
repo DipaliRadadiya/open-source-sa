@@ -1,10 +1,10 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { Loader2, KeyRound } from "lucide-react";
+import { Loader2, KeyRound, Sparkles } from "lucide-react";
 import { systemUserPasswordSchema } from "@/lib/schemas/system-user";
+import { generatePassword } from "@/lib/applications/generate-password";
 import { setSystemUserPassword } from "@/lib/api/system-users";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
@@ -20,10 +20,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { PasswordReveal } from "@/components/system-users/password-reveal";
+import { useRefresh } from "@/hooks/use-refresh";
 
 export function SystemUserPasswordDialog({ user, open, onOpenChange }) {
   const t = useTranslations("systemUsers");
-  const router = useRouter();
+  const { refresh, refreshThen } = useRefresh();
 
   const form = useForm({
     resolver: zodResolver(systemUserPasswordSchema),
@@ -33,11 +34,18 @@ export function SystemUserPasswordDialog({ user, open, onOpenChange }) {
   async function onSubmit(values) {
     try {
       await setSystemUserPassword(user.id, values);
+      // Saving… holds until the list has the new value, so reopening straight
+      // away never shows the old one.
+      await new Promise((resolve) => refreshThen(resolve));
       toast.success(t("toast.passwordSet"));
-      onOpenChange?.(false);
-      form.reset();
-      router.refresh();
+      handleOpenChange(false);
     } catch (error) {
+      if (error?.response?.status === 404) {
+        toast.info(t("toast.alreadyGone", { username: user.username }));
+        handleOpenChange(false);
+        refresh();
+        return;
+      }
       handleValidationError(error, form);
     }
   }
@@ -58,6 +66,9 @@ export function SystemUserPasswordDialog({ user, open, onOpenChange }) {
         onOpenChange={handleOpenChange}
         asForm
         onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
+        // The new password, not the eye on the current one: landing there
+        // opened its tooltip, and the first Escape only closed that.
+        initialFocus="input[name=password]"
         icon={KeyRound}
         title={`${t("password.title")} — ${user?.username ?? ""}`}
         description={t("password.subtitle", { username: user?.username ?? "" })}
@@ -93,7 +104,7 @@ export function SystemUserPasswordDialog({ user, open, onOpenChange }) {
             control={form.control}
             name="password"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="relative">
                 <FormLabel required>{t("password.new")}</FormLabel>
                 <FormControl>
                   <PasswordInput
@@ -102,6 +113,22 @@ export function SystemUserPasswordDialog({ user, open, onOpenChange }) {
                     {...field}
                   />
                 </FormControl>
+                {/* Same control as the create dialog. Fills both fields —
+                    nobody retypes a generated password to confirm it. */}
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  className="absolute top-0 right-0 h-auto p-0 text-xs"
+                  onClick={() => {
+                    const value = generatePassword();
+                    form.setValue("password", value, { shouldDirty: true, shouldValidate: true });
+                    form.setValue("password_confirmation", value, { shouldDirty: true, shouldValidate: true });
+                  }}
+                >
+                  <Sparkles className="size-3" />
+                  {t("create.generate")}
+                </Button>
                 <FormMessage field={t('password.new')} />
               </FormItem>
             )}

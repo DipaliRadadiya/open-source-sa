@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { z } from "zod";
@@ -37,7 +37,7 @@ const schema = z.object({
  */
 export function EditDialog({ account, open, onOpenChange }) {
   const t = useTranslations("git.edit");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
 
   const form = useForm({
     resolver: zodResolver(schema),
@@ -58,8 +58,8 @@ export function EditDialog({ account, open, onOpenChange }) {
 
     try {
       await updateAccount(account.id, payload);
+      await refreshAndWait();
       toast.success(t("saved"));
-      router.refresh();
       onOpenChange?.(false);
     } catch (error) {
       handleValidationError(error, form);

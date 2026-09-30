@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { getTranslations, getFormatter } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
@@ -15,6 +14,7 @@ import { NoDatabaseEngineNotice } from "@/components/applications/no-database-en
 import { CreateApplicationForm } from "@/components/applications/create-application-form";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PageHeader } from "@/components/ui/page-header";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +60,11 @@ export default async function CreateApplicationPage({ searchParams }) {
       : [];
   const nodeVersions = [...managedNode, ...systemNode];
 
-  if (!can(permissions, "application", "manage")) redirect("/applications");
+  // Said, not redirected: bounced to the list, a view-only reader who
+  // followed a link here was never told why the form did not open.
+  if (!can(permissions, "application", "manage")) {
+    return <PermissionDenied title={t("createTitle")} description={t("noPermission")} />;
+  }
 
   if (types.failed) return <LoadFailed description={t("loadFailed")} status={types.status} failure={types.failure} message={types.message} debug={types.debug} />;
 

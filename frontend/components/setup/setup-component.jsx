@@ -96,14 +96,14 @@ function StatusPill({ state, recommended, detail }) {
   }
   if (state === "installing") {
     return (
-      <Badge variant="secondary" className="gap-1.5 font-normal text-primary">
+      <Badge variant="muted" className="gap-1.5 font-normal text-primary">
         <Loader2 className="size-3 animate-spin" />
         {t("pillInstalling")}
       </Badge>
     );
   }
   if (state === "unavailable") {
-    return <Badge variant="secondary" className="font-normal">{t("pillUnavailable")}</Badge>;
+    return <Badge variant="muted" className="font-normal">{t("pillUnavailable")}</Badge>;
   }
   if (state === "failed") {
     return <Badge variant="destructive" className="font-normal">{t("pillFailed")}</Badge>;
@@ -120,7 +120,7 @@ function StatusPill({ state, recommended, detail }) {
  * is the pill, and the next action is the button — three separate reads so the
  * row is scannable. Failure UI is gated strictly on `state === "failed"`.
  */
-export function SetupComponent({ component, versions = [], busy = false, locked = false, tier = "secondary", onInstall }) {
+export function SetupComponent({ component, versions = [], busy = false, locked = false, denied = false, tier = "secondary", note = null, onInstall }) {
   const t = useTranslations("setup");
   const { state, action, options } = component;
   const isRuntime = RUNTIME_KEYS.has(component.key) && Boolean(action);
@@ -137,8 +137,8 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
   // one-at-a-time lock held by a *different* component and owns nothing but a
   // disabled state and a sentence. Folding them into one flag is what put a
   // spinner on "Install MariaDB" while fail2ban was the thing installing.
-  const blocked = busy || locked;
-  const blockedReason = locked ? t("lockedByOtherInstall") : null;
+  const blocked = busy || locked || denied;
+  const blockedReason = denied ? t("installNotPermitted") : locked ? t("lockedByOtherInstall") : null;
   // Nothing to install and nothing to choose: a runtime the server reported no
   // versions for. That is a neutral fact, not a fault, so the card sits back
   // like a finished one rather than staying at full weight in the to-do list
@@ -176,11 +176,13 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
           <p className="text-sm font-medium">{component.title}</p>
           {/* Still says what the thing is for. "Redis · Installed" answers
               whether it is there, never why anyone wanted it — and on a setup
-              page the second question is the one a first-time reader has. One
-              line, clamped, so the row stays a row. */}
+              page the second question is the one a first-time reader has.
+              Wraps rather than clamps: cut at one line, Redis lost the half
+              of its sentence that says why it matters. */}
           {component.description ? (
-            <p className="line-clamp-1 text-xs text-muted-foreground">{component.description}</p>
+            <p className="text-xs text-muted-foreground">{component.description}</p>
           ) : null}
+          {note ? <p className="text-xs">{note}</p> : null}
         </div>
         {/* Status and version share one right-hand column across every row, so
             the eye reads a single edge down the list instead of hunting for the

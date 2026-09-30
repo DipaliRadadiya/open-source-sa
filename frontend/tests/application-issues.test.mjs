@@ -104,7 +104,7 @@ test("the page shows the server's findings and drops the row they supersede", ()
   assert.match(page, /getApplicationIssues\(id\)/);
   assert.match(page, /\.\.\.issueItems\(/, "the server's rows come first");
   assert.match(page, /!superseded\.has\(item\.key\)/);
-  assert.match(page, /catch\(\(\) => \(\{ issues: \[\], healthy: true \}\)\)/, "a failed check must not break the page");
+  assert.match(page, /catch\(\(\) => \(\{ issues: \[\], healthy: true, failed: true \}\)\)/, "a failed check must not break the page — and must not read as healthy (AD-E)");
 });
 
 test("a row with no action does not reach into an undefined href", () => {

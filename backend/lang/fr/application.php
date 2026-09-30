@@ -58,6 +58,8 @@ return [
         'stack' => 'Ce serveur n\'exécute que des conteneurs ; il n\'héberge donc pas ce type d\'application.',
         'database' => 'Cette application nécessite :engines, absent de ce serveur.',
         'php' => 'PHP n\'est pas installé sur ce serveur.',
+        'php_version_install' => 'Ce serveur n\'a aucune version de PHP sur laquelle :type fonctionne (:range). Installez d\'abord PHP :version depuis l\'écran PHP.',
+        'php_version_none' => 'Ce serveur n\'a aucune version de PHP sur laquelle :type fonctionne (:range), et aucune de ces versions ne peut être installée depuis le dépôt de paquets du serveur.',
         'node' => 'Node.js n\'est pas installé sur ce serveur.',
         'web_server' => 'Cette application n\'est pas encore disponible sur les serveurs :web_server.',
     ],
@@ -222,6 +224,8 @@ return [
         'dependencies' => 'Vérification des dépendances',
         'verify' => 'Vérification que le site répond',
         'verify_serving' => 'Vérification que le site répond',
+        'create_admin' => 'Création du compte administrateur',
+        'schedule_cron' => 'Planification des tâches en arrière-plan',
         'worker' => 'Le processus en arrière-plan s\'est arrêté',
     ],
     /*
@@ -242,6 +246,8 @@ return [
         'attached_database_engine_mismatch' => 'Cette application a déjà une base de données associée, mais elle fonctionne sur un moteur que cette application ne peut pas utiliser. Détachez-la, ou associez-en une sur un moteur pris en charge, puis réessayez.',
         'serving_error' => 'L\'application a démarré mais répond à chaque requête par une erreur. Ses ressources n\'ont probablement pas été entièrement construites — voir le journal de l\'application.',
         'not_answering' => 'L\'application a démarré mais n\'a jamais répondu à une requête. Consultez le journal de l\'application pour savoir pourquoi elle n\'écoute pas.',
+        'owner_not_created' => 'L\'application a démarré, mais son administrateur n\'a pas pu être confirmé. Le site n\'a pas été mis à disposition : tant qu\'aucun administrateur n\'existe, toute personne qui l\'ouvre peut en créer un. Réessayez ; si l\'échec persiste, consultez le journal de l\'application.',
+        'app_not_ready' => 'L\'application a démarré, mais n\'a pas fini son initialisation en 2 minutes, son administrateur n\'a donc pas pu être créé. Consultez le journal de l\'application, puis réessayez.',
         'out_of_memory' => 'Le serveur a manqué de mémoire pendant cette étape et le système l\'a arrêtée. Libérez de la mémoire, ou ajoutez du swap, puis réessayez.',
         'no_build_tools' => 'Cette étape devait compiler un module natif, et aucun compilateur n’est installé sur ce serveur. Installez les outils de compilation depuis l’écran de configuration, puis réessayez. Choisir une autre version de Node peut aussi aider, car certaines fournissent des binaires précompilés — mais chaque paquet décide lesquelles, ce n’est donc pas une solution fiable à elle seule.',
         'composer_platform' => 'Composer n’a pas pu installer les dépendances de cette application avec la version de PHP configurée pour ce site. La version de PHP du site, ou l’une des extensions dont elle a besoin, ne correspond pas à ce qu’exige le projet. Choisissez une version de PHP prise en charge par le projet, ou installez l’extension manquante, puis redéployez.',
@@ -284,5 +290,27 @@ return [
         'heading' => 'Ce site est temporairement indisponible',
         'lede' => 'Il a été mis hors ligne par son propriétaire. Merci de réessayer plus tard.',
         'foot' => 'Servi par le panneau de contrôle.',
+    ],
+
+    // A deploy that failed after its checkout left the new code live.
+    // See Application::codeOnDisk().
+    'code_on_disk' => [
+        'incomplete' => 'Le dernier déploiement a échoué après la mise en place du nouveau code : le site exécute donc le commit :commit, qui n\'est pas entièrement déployé. Corrigez le problème et redéployez.',
+    ],
+
+    // A delivery for a site whose deploy-on-push is switched off. See
+    // ApplicationWebhookController::receive().
+    'webhook_delivery' => [
+        'disabled' => 'Le déploiement au push est désactivé pour ce site dans le panneau, donc rien n\'a été déployé. Réactivez-le dans le panneau ou supprimez ce webhook.',
+    ],
+
+    // Why deploy-on-push still needs the webhook added by hand. See
+    // WebhookRegistrar.
+    'webhook_registration' => [
+        'no_account' => 'Ce site est déployé depuis une URL publique, pas depuis un compte Git connecté : le panneau ne peut donc pas ajouter le webhook pour vous. Ajoutez-le dans les paramètres du dépôt avec l\'URL et le secret ci-dessous.',
+        'signing_token' => 'GitLab crée lui-même les jetons de signature : le panneau ne peut donc pas ajouter ce webhook pour vous. Ajoutez-le dans les paramètres Webhooks du dépôt avec l\'URL ci-dessous et votre jeton de signature.',
+        'not_public' => 'L\'adresse du panneau n\'est pas accessible depuis Internet, donc GitHub, GitLab ou Bitbucket ne pourraient pas y livrer. Donnez une adresse publique au panneau, ou ajoutez le webhook à la main ensuite.',
+        'provider_refused' => 'Le fournisseur Git n\'a pas permis au panneau d\'ajouter le webhook. Le jeton connecté n\'a probablement pas le droit de gérer les webhooks de ce dépôt. Ajoutez-le à la main avec l\'URL et le secret ci-dessous, ou reconnectez le compte avec ce droit.',
+        'removal_refused' => 'Le déploiement au push est désactivé, mais le fournisseur Git n\'a pas permis au panneau de supprimer le webhook qu\'il avait ajouté. Le jeton connecté n\'a probablement pas le droit de supprimer des webhooks. Les push continueront d\'être envoyés et refusés jusqu\'à ce que vous supprimiez le webhook dans les paramètres du dépôt.',
     ],
 ];

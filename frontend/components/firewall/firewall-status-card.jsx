@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -9,6 +9,7 @@ import {
   ArrowUpFromLine,
   ShieldAlert,
   ShieldCheck,
+  ShieldQuestion,
   ShieldOff,
   TriangleAlert,
 } from "lucide-react";
@@ -34,9 +35,9 @@ import { apiMessage } from "@/lib/api/error-message";
  *     "off" to also mean "lost my rules", so the dialog says they're kept —
  *     otherwise the safe action feels destructive and gets avoided.
  */
-export function FirewallStatusCard({ enabled, policy, ruleCount, canManage }) {
+export function FirewallStatusCard({ enabled, reference = null, policy, ruleCount, canManage }) {
   const t = useTranslations("firewall");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [confirming, setConfirming] = useState(null);
   const [pending, setPending] = useState(false);
 
@@ -55,11 +56,11 @@ export function FirewallStatusCard({ enabled, policy, ruleCount, canManage }) {
     setPending(true);
     try {
       await toggleFirewall(next);
+      await refreshAndWait();
       toast.success(
         secured ? t("status.secured") : next ? t("status.turnedOn") : t("status.turnedOff"),
       );
       setConfirming(null);
-      router.refresh();
     } catch (error) {
       toast.error(
         apiMessage(error, t("status.toggleFailed")),
@@ -89,7 +90,9 @@ export function FirewallStatusCard({ enabled, policy, ruleCount, canManage }) {
             >
               {/* Not the same icon as "off": this firewall IS running, and a
                   shield with a line through it would say it is not. */}
-              {state === "on" ? (
+              {state === "unknown" ? (
+                <ShieldQuestion className="size-5" />
+              ) : state === "on" ? (
                 <ShieldCheck className="size-5" />
               ) : state === "exposed" ? (
                 <ShieldAlert className="size-5" />
@@ -106,6 +109,9 @@ export function FirewallStatusCard({ enabled, policy, ruleCount, canManage }) {
                   ? t("status.offBody", { count: ruleCount })
                   : t(`status.${state}Body`)}
               </p>
+              {state === "unknown" && reference ? (
+                <p className="font-mono text-xs text-muted-foreground">{t("status.reference", { reference })}</p>
+              ) : null}
               {/* Labelled once rather than twice. Both pills used to end in "by
                   default", which pushed the one word that differs — blocked vs
                   allowed — into the middle of a sentence set in 12px. The label
@@ -150,6 +156,7 @@ export function FirewallStatusCard({ enabled, policy, ruleCount, canManage }) {
               </ReasonTooltip>
             ) : null}
 
+            {state === "unknown" ? null : (
             <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
               {/* Destructive when it is the off switch: this stops enforcing
                   every rule on the page and puts the server back on the open
@@ -166,6 +173,7 @@ export function FirewallStatusCard({ enabled, policy, ruleCount, canManage }) {
                 {enabled ? t("status.turnOff") : t("status.turnOn")}
               </Button>
             </ReasonTooltip>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -219,16 +227,16 @@ export function FirewallStatusCard({ enabled, policy, ruleCount, canManage }) {
 /**
  * One direction and its default, coloured by what that default actually means.
  *
- * The label is dimmed with opacity rather than `text-muted-foreground`, so it
- * stays a shade of the badge's own colour instead of dropping to grey inside a
- * tinted pill.
+ * The words are in the text colour, the tint and icon carry the tone: in
+ * the badge's own colour "Incoming" read 2.64:1 and "Blocked" 4.21:1 on the
+ * green tint.
  */
 function PolicyBadge({ icon: Icon, label, value, tone }) {
   return (
     <Badge variant={tone} className="gap-1.5 font-normal">
       <Icon className="size-3 opacity-70" />
-      <span className="opacity-70">{label}</span>
-      <span className="font-medium">{value}</span>
+      <span className="text-foreground/75">{label}</span>
+      <span className="font-medium text-foreground">{value}</span>
     </Badge>
   );
 }
@@ -243,7 +251,7 @@ function PolicyBadge({ icon: Icon, label, value, tone }) {
 function incomingTone(value) {
   if (value === "deny") return "success";
   if (value === "allow") return "warning";
-  return "secondary";
+  return "muted";
 }
 
 /**
@@ -254,7 +262,7 @@ function incomingTone(value) {
  */
 function outgoingTone(value) {
   if (value === "allow") return "success";
-  return "secondary";
+  return "muted";
 }
 
 // "deny"/"allow" are UFW's words, not everyone's. Anything unexpected is shown

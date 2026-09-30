@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/format/bytes";
 import { apiDuration } from "@/lib/format/api-date";
 import { reasonText } from "@/lib/backups/reason";
+import { isBackupStale } from "@/lib/backups/stale";
 import { BACKUP_IN_FLIGHT, backupHasArchive } from "@/lib/schemas/backup";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
@@ -54,7 +55,7 @@ function SiteCell({ row }) {
   );
 }
 
-function StatusCell({ row }) {
+function StatusCell({ row, table }) {
   const t = useTranslations("backups.history");
   const backup = row.original;
   const reason =
@@ -62,9 +63,20 @@ function StatusCell({ row }) {
       ? reasonText(backup.reason_title, t("unknownReason"))
       : null;
 
+  // Narrower on a site's own page, where the table carries Destination from xl:
+  // at 1280 the German, French and Russian action labels pushed Restore 40px
+  // past the card. The badges wrap and the reason is clamped either way.
+  const width = table.options.meta?.showSite ? "w-52 max-w-52" : "w-40 max-w-40";
+
   return (
-    <div className="w-52 max-w-52 min-w-0 space-y-1">
-      <BackupStatusBadge backup={backup} />
+    <div className={cn(width, "min-w-0 space-y-1")}>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <BackupStatusBadge backup={backup} />
+        {/* The Site column carries this badge, and a site's own page hides that
+            column — so the pre-restore copy, the row someone hunts for after a
+            bad restore, looked like any other backup there. */}
+        {backup.is_safety && !table.options.meta?.showSite ? <SafetyBadge /> : null}
+      </div>
       {/* Bound the copy to the column before clamping it. `truncate` without a
           real width let this no-wrap sentence participate in auto table layout,
           so one detailed failure widened the whole table. Two lines keep the
@@ -282,7 +294,7 @@ function ActionsCell({ row, table }) {
     return (
       <div className="flex items-center justify-end gap-2">
         {download}
-        {canClear ? (
+        {canClear && isBackupStale(backup) ? (
           <Button
             size="sm"
             variant="outline"
@@ -433,8 +445,10 @@ export function BackupsHistoryTable({
           cell: SiteCell,
         }
       : null,
-    { accessorKey: "status", header: t("columns.status"), meta: { className: "w-52" }, cell: StatusCell },
-    { id: "type", header: t("columns.type"), meta: { className: showSite ? "w-44" : "min-w-44" }, cell: TypeCell },
+    { accessorKey: "status", header: t("columns.status"), meta: { className: showSite ? "w-52" : "w-40" }, cell: StatusCell },
+    // No floor on a site's own page: a fixed 176px here is what left no room
+    // for the Hindi action labels at 1280. "Files and database" wraps instead.
+    { id: "type", header: t("columns.type"), meta: { className: showSite ? "w-44" : undefined }, cell: TypeCell },
     // Only when the API actually sends it. The field is absent rather than null
     // on a backend that predates it — the backend distinguishes the two on
     // purpose — and an always-empty column reads as data we failed to load
@@ -462,7 +476,10 @@ export function BackupsHistoryTable({
     {
       id: "size",
       header: () => <span className="block text-right">{t("columns.size")}</span>,
-      meta: { className: "w-28 text-right" },
+      // The "No archive" note may wrap on a site's own page: in Hindi it was
+      // the widest thing in the column, and the column was what pushed Restore
+      // off the card at 1280.
+      meta: { className: showSite ? "w-28 text-right" : "w-24 text-right whitespace-normal" },
       cell: SizeCell,
     },
     {
@@ -521,6 +538,7 @@ export function BackupsHistoryTable({
           busyId,
           restoreInFlight,
           retryBlockedFor,
+          showSite,
         }}
         {...(canDelete
           ? {

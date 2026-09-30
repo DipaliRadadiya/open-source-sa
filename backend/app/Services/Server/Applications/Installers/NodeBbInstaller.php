@@ -83,7 +83,7 @@ class NodeBbInstaller extends AbstractNodeInstaller
      */
     public function install(Application $application, string $documentRoot, array $context): void
     {
-        $settings = $application->settings ?? [];
+        $settings = $application->installSettings();
 
         $this->cloneInto(
             $application,

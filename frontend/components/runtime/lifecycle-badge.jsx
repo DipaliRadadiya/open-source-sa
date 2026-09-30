@@ -31,7 +31,7 @@ export function LifecycleBadge({ lifecycle, namespace, available = true, classNa
   if (!t.has(key)) return null;
 
   return (
-    <Badge variant={TONE[key] ?? "secondary"} className={cn("font-normal", className)}>
+    <Badge variant={TONE[key] ?? "muted"} className={cn("font-normal", className)}>
       {/* Node names its LTS lines ("Iron", "Jod"), and that name is how people
           refer to them in release notes. Only shown when the API sends one. */}
       {key === "lts" && lifecycle.lts_name

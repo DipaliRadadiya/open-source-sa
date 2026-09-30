@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Activity, ChevronDown, ChevronUp, Clock, Square, Timer } from "lucide-react";
@@ -112,7 +112,7 @@ function Fact({ label, last, children }) {
  */
 export function ProcessList({ engine, processes: initial = [], canManage, connections = [] }) {
   const t = useTranslations("databases.monitor");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [polled, setPolled] = useState(null);
   // Holds the row, the in-flight flag AND the last failure, so a refused
   // stop explains itself in the dialog instead of in a toast that leaves.
@@ -183,12 +183,13 @@ export function ProcessList({ engine, processes: initial = [], canManage, connec
   async function kill() {
     await stop.run(() => killProcess(stop.target.id, engine), {
       fallback: t("killFailed"),
-      onDone: () => {
-        toast.success(t("killed"));
+      onDone: async () => {
         // Drop back to the server's list so the row disappears from the same
-        // place everything else on this page comes from.
+        // place everything else on this page comes from — and wait for it, so
+        // the toast and the close never sit over the stopped query.
+        await refreshAndWait();
         setPolled(null);
-        router.refresh();
+        toast.success(t("killed"));
       },
     });
   }

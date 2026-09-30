@@ -2,9 +2,11 @@
 
 use App\Models\ActivityLog;
 use App\Models\Application;
+use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Process;
 
 /*
@@ -35,6 +37,7 @@ beforeEach(function () {
     $this->present = ['/home/envowner/deployed-site/public_html/artisan'];
     $this->backupNames = [];
     $this->written = null;
+    $this->ran = new ArrayObject;
 });
 
 /**
@@ -45,6 +48,7 @@ function fakeSite(): void
 {
     Process::fake(function ($process) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        test()->ran->append($args);
 
         // A `.env` beside the code is handled as the site user — the fake acts
         // on the command under the `runuser -u <user> --` prefix.
@@ -250,13 +254,26 @@ describe('site types that keep no .env', function () {
 });
 
 describe('permissions', function () {
-    it('lets a viewer read but not write', function () {
+    it('does not show the screen to a view-only role at all', function () {
+        // Operator decision 2026-09-29: the `.env` screen is for whoever may
+        // edit it. A view grant opens neither the file, its history, nor a
+        // save (see VisiblePermissions::MANAGE_ONLY for the sidebar half).
         fakeSite();
         $user = User::factory()->create();
         grantPermission($user, 'app_environment', view: true, manage: false);
 
-        $this->actingAs($user)->getJson(envUrl())->assertOk();
+        $this->actingAs($user)->getJson(envUrl())->assertForbidden();
+        $this->actingAs($user)->getJson(envUrl('/history'))->assertForbidden();
         $this->actingAs($user)->putJson(envUrl(), ['raw' => "A=1\n"])->assertForbidden();
+    });
+
+    it('still gives the whole file to someone who may edit it', function () {
+        fakeSite();
+        $editor = User::factory()->create();
+        grantPermission($editor, 'app_environment', view: true, manage: true);
+
+        $this->actingAs($editor)->getJson(envUrl())->assertOk()
+            ->assertJsonPath('environment.raw', "APP_ENV=production\nAPP_KEY=base64:abc\nDB_PASSWORD=hunter2\n");
     });
 
     it('denies a user with no grant at all', function () {
@@ -494,15 +511,13 @@ describe('the history of who changed it', function () {
         $this->actingAs($outsider)->getJson(envUrl('/history'))->assertForbidden();
     });
 
-    it('is readable by someone who can view but not edit', function () {
-        // They can already read the secret values on this screen. Who last
-        // touched them reveals strictly less than what is already shown.
+    it('is readable by someone who may edit the file', function () {
         fakeSite();
 
-        $viewer = User::factory()->create();
-        grantPermission($viewer, 'app_environment', view: true, manage: false);
+        $editor = User::factory()->create();
+        grantPermission($editor, 'app_environment', view: true, manage: true);
 
-        $this->actingAs($viewer)->getJson(envUrl('/history'))->assertOk();
+        $this->actingAs($editor)->getJson(envUrl('/history'))->assertOk();
     });
 
     it('keeps two saves in the same second apart', function () {
@@ -695,5 +710,98 @@ describe('what one change did, variable by variable', function () {
         $this->actingAs($this->admin)
             ->getJson(envUrl('/history/'.$log->id.'/diff'))
             ->assertStatus(500);
+    });
+});
+
+describe('restoring a backup', function () {
+    it('refuses a name that is not a backup with a 422, not a 500', function (string $name) {
+        // It reached the service unvalidated, which threw, and the user saw
+        // "server error" while an error was logged (found live 2026-09-29).
+        fakeSite();
+
+        $this->actingAs($this->admin)->postJson(envUrl('/restore'), ['backup' => $name])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('backup');
+    })->with([
+        'a path' => ['../../etc/passwd'],
+        'almost a backup' => ['.env.bak-2026'],
+        'nothing' => [''],
+    ]);
+
+    it('refuses a well-formed backup that is not on disk with a 422', function () {
+        fakeSite();
+
+        $this->actingAs($this->admin)->postJson(envUrl('/restore'), ['backup' => '.env.bak-20260101-000000'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('backup');
+    });
+});
+
+describe('the mode a save leaves the file in', function () {
+    beforeEach(function () {
+        ServerCapability::query()->delete();
+        ServerCapability::create(['stack' => 'lemp', 'web_server' => 'nginx', 'capabilities' => ['php' => true],
+            'source' => 'installer', 'verified_at' => now()]);
+    });
+
+    /**
+     * Every command the panel ran, without the sudo prefix.
+     *
+     * @return Collection<int, array<int, string>>
+     */
+    function envCommands(): Collection
+    {
+        return collect(test()->ran->getArrayCopy())->values();
+    }
+
+    it('keeps it private to the site user where the site runs as that user', function () {
+        $this->application->forceFill(['isolated_at' => now()])->save();
+        fakeSite();
+
+        $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => "APP_ENV=production\n"])->assertOk();
+
+        $temporary = '/home/envowner/deployed-site/.env.panel-tmp';
+
+        expect(envCommands()->contains(['chmod', '0600', $temporary]))->toBeTrue()
+            // This `.env` is at the top of the site root, so root writes it
+            // and hands it to the user — and to nobody else.
+            ->and(envCommands()->filter(fn (array $c) => ($c[0] ?? '') === 'chown')->values()->all())
+            ->toBe([['chown', '-h', 'envowner:envowner', $temporary]]);
+    });
+
+    it('hands the group to the web server even when the site user writes the file', function () {
+        // A `.env` beside the code is written as the site user, who cannot
+        // give a file to the web server's group — root has to, or PHP loses
+        // its configuration on the first save.
+        $beside = '/home/envowner/deployed-site/public_html/.env';
+        $this->disk = [$beside => "APP_ENV=production\n"];
+        fakeSite();
+
+        $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => "APP_ENV=production\n"])->assertOk();
+
+        expect(envCommands()->contains(['chown', '-h', 'envowner:www-data', $beside.'.panel-tmp']))->toBeTrue()
+            ->and(envCommands()->contains(['runuser', '-u', 'envowner', '--', 'chmod', '0640', $beside.'.panel-tmp']))->toBeTrue();
+    });
+
+    it('leaves it readable by the web server where PHP runs as that account', function () {
+        // A flat 0600 took the file away from this site's own PHP.
+        fakeSite();
+
+        $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => "APP_ENV=production\n"])->assertOk();
+
+        $temporary = '/home/envowner/deployed-site/.env.panel-tmp';
+        $commands = envCommands();
+        $chown = $commands->search(['chown', '-h', 'envowner:www-data', $temporary]);
+        $chmod = $commands->search(['chmod', '0640', $temporary]);
+        $swap = $commands->search(['mv', $temporary, '/home/envowner/deployed-site/.env']);
+
+        expect($chown)->not->toBeFalse()
+            ->and($chmod)->not->toBeFalse()
+            ->and($swap)->not->toBeFalse()
+            // Both before the rename: the file is never in place with the
+            // wrong owner or mode.
+            ->and($chown)->toBeLessThan($swap)
+            ->and($chmod)->toBeLessThan($swap)
+            ->and($commands->contains(fn (array $c) => in_array('0600', $c, true)))->toBeFalse();
     });
 });

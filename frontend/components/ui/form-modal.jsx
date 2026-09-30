@@ -18,6 +18,9 @@ import {
 // a finished action rather than ask for one — a blue tick over "…is ready"
 // says "information", and the moment deserves the colour the rest of the panel
 // already uses for a good outcome.
+const FOCUSABLE =
+  "input:not([type=hidden]), textarea, select, button, a[href], [tabindex]:not([tabindex='-1'])";
+
 const ICON_TONES = {
   primary: "bg-primary/10 text-primary",
   success: "bg-success/10 text-success",
@@ -35,6 +38,9 @@ export function FormModal({
   asForm = false,
   onSubmit,
   className,
+  // A selector for the control to land on, when the first one is not it — a
+  // dialog that opens on a reading (the current password) before its form.
+  initialFocus,
 }) {
   const inner = (
     <>
@@ -84,9 +90,43 @@ export function FormModal({
           "flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg",
           className,
         )}
+        // Land on the first control, never on a label's "?" hint. Left to
+        // Radix, a dialog whose opening label carries a hint focused that
+        // button and opened its note over the field the reader came to fill in.
+        //
+        // It used to look for the first text input instead, which skipped
+        // whatever came before one: the backup setup dialog opened in its third
+        // section, on "At what time", past the choice it leads with. Radix's
+        // hidden native radios and selects are aria-hidden and untabbable, so
+        // they fall out of the tabbable filter on their own.
+        onOpenAutoFocus={(event) => {
+          const chosen = initialFocus ? event.currentTarget.querySelector(initialFocus) : null;
+          if (chosen) {
+            event.preventDefault();
+            chosen.focus();
+            return;
+          }
+          const field = [...event.currentTarget.querySelectorAll(FOCUSABLE)].find(
+            (element) =>
+              element.getAttribute("data-slot") !== "info-hint" &&
+              element.getAttribute("data-slot") !== "dialog-close" &&
+              element.getAttribute("aria-hidden") !== "true" &&
+              element.getAttribute("tabindex") !== "-1" &&
+              !element.disabled &&
+              !element.readOnly &&
+              element.getClientRects().length > 0,
+          );
+          if (field) {
+            event.preventDefault();
+            field.focus();
+          }
+        }}
       >
         {asForm ? (
-          <form onSubmit={onSubmit} className="contents">
+          // noValidate: the browser's own checks (a number's min and max,
+          // `required`) popped an English bubble in front of the translated
+          // message the form's schema already has for the same rule.
+          <form noValidate onSubmit={onSubmit} className="contents">
             {inner}
           </form>
         ) : (

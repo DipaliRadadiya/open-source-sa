@@ -9,11 +9,13 @@ use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\Installers\N8nInstaller;
 use App\Services\Server\Applications\Installers\NodeBbInstaller;
+use App\Services\Server\Applications\Installers\NodeRedInstaller;
 use App\Services\Server\Applications\ProcessSupervisor;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Sleep;
 
 /**
  * The four one-click Node applications.
@@ -57,8 +59,23 @@ beforeEach(function () {
             return Process::result(output: str_repeat('a', 40)."\trefs/tags/2.5.3");
         }
 
+        // n8n, answered as the real one does once it is up: the first-run
+        // page is open until an owner has been set up.
+        if (($args[0] ?? '') === 'curl' && str_ends_with((string) end($args), '/rest/owner/setup')) {
+            test()->n8nOwner = true;
+
+            return Process::result(output: '{"data":{"email":"owner@example.com"}}');
+        }
+
+        if (($args[0] ?? '') === 'curl' && str_ends_with((string) end($args), '/rest/settings')) {
+            return Process::result(output: json_encode(['data' => ['userManagement' => ['showSetupOnFirstLoad' => ! test()->n8nOwner]]]));
+        }
+
         return Process::result(output: '');
     });
+
+    $this->n8nOwner = false;
+    Sleep::fake();
 });
 
 function oneClickApp(string $type, array $settings = []): Application
@@ -108,10 +125,18 @@ function rewrittenTo(string $path): ?string
 /** What was piped into the command that wrote `$path`. */
 function writtenTo(string $path): ?string
 {
+    // Secret files are written as the site user, so the `tee` arrives as
+    // `runuser -u <user> -- tee <path>`.
     return test()->ran
-        ->first(fn ($process) => is_array($process->command)
-            && ($process->command[0] ?? '') === 'tee'
-            && in_array($path, $process->command, true))
+        ->first(function ($process) use ($path) {
+            if (! is_array($process->command)) {
+                return false;
+            }
+
+            $bare = ($process->command[0] ?? '') === 'runuser' ? array_slice($process->command, 4) : $process->command;
+
+            return ($bare[0] ?? '') === 'tee' && in_array($path, $bare, true);
+        })
         ?->input;
 }
 
@@ -148,6 +173,7 @@ it('allocates a port even though nothing asked for one', function () {
         ->postJson('/api/applications', [
             'system_user_id' => $this->su->id,
             'name' => 'Status', 'domain' => 'status.test', 'site_type' => 'uptimekuma',
+            'admin_username' => 'admin', 'admin_password' => 'Kuma-Pass-2026',
         ])
         ->assertCreated()
         ->assertJsonPath('application.serving_profile', 'node');
@@ -226,6 +252,35 @@ it('keeps n8n inside the site, with a key generated before first start', functio
         // automation announced itself as [DEV] on every page. Separate from the
         // unit's NODE_ENV=production, which does not reach this setting.
         ->toContain('N8N_RELEASE_TYPE="stable"');
+});
+
+it('keeps the encryption key n8n already has when the install runs again', function () {
+    // Retry Setup runs install() again. It wrote a fresh key every time, n8n
+    // compared it with the one in its own config and refused to start:
+    // "Mismatching encryption keys" — a retried n8n never came up (measured).
+    $key = str_repeat('ab12', 16);
+
+    Process::fake(function ($process) use ($key) {
+        test()->ran->push($process);
+
+        if (is_array($process->command) && in_array('/home/apps/n8n/public_html/.n8n/config', $process->command, true)) {
+            return Process::result(output: json_encode(['encryptionKey' => $key]));
+        }
+
+        $url = is_array($process->command) ? (string) end($process->command) : '';
+
+        if (str_ends_with($url, '/rest/owner/setup')) {
+            test()->n8nOwner = true;
+        }
+
+        return str_ends_with($url, '/rest/settings')
+            ? Process::result(output: json_encode(['data' => ['userManagement' => ['showSetupOnFirstLoad' => ! test()->n8nOwner]]]))
+            : Process::result(output: '');
+    });
+
+    app(ApplicationProvisioner::class)->provision(claimableApp('n8n', ['admin_email' => 'owner@example.com']));
+
+    expect(writtenTo('/home/apps/n8n/public_html/.env'))->toContain('N8N_ENCRYPTION_KEY="'.$key.'"');
 });
 
 it('installs the release n8n calls current, not a pinned major', function () {
@@ -1022,3 +1077,262 @@ function nodeBbConfigFor(Application $app, array $context): string
 
     return $method->invoke($installer, $app, '/home/apps/nodebb/public_html', $context);
 }
+
+/*
+|--------------------------------------------------------------------------
+| n8n and Uptime Kuma are claimed by the panel, not by the first visitor
+|--------------------------------------------------------------------------
+|
+| Neither has a setup command: its first administrator is created on a
+| first-run page, by whoever opens the site first. Measured on a real server
+| (n8n 2.40.7, Uptime Kuma 2.5.5): the panel's installs sat there unclaimed.
+*/
+
+function claimableApp(string $type, array $settings): Application
+{
+    $app = oneClickApp($type, $settings);
+    $app->forceFill(['install_secrets' => ['admin_password' => 'Owner-Pass-2026']])->save();
+
+    return $app->fresh();
+}
+
+function commandIndex(callable $match): ?int
+{
+    $index = test()->ran->search(fn ($process) => is_array($process->command) && $match($process->command));
+
+    return $index === false ? null : $index;
+}
+
+it('creates the n8n owner after the site answers, with the password on stdin only', function () {
+    app(ApplicationProvisioner::class)->provision(claimableApp('n8n', ['admin_email' => 'owner@example.com']));
+
+    $setup = test()->ran->first(fn ($p) => is_array($p->command) && in_array('http://127.0.0.1:3300/rest/owner/setup', $p->command, true));
+
+    expect($setup)->not->toBeNull();
+
+    $body = json_decode((string) $setup->input, true);
+
+    expect($body['email'])->toBe('owner@example.com')
+        ->and($body['password'])->toBe('Owner-Pass-2026')
+        // Never an argument: arguments are in `ps` and in the server-ops log.
+        ->and(ranCommands())->not->toContain('Owner-Pass-2026');
+
+    // After the process started and answered, not before: n8n is not
+    // listening until then, and the site must not be ready until it is done.
+    $start = commandIndex(fn ($c) => str_contains(implode(' ', $c), 'systemctl') && str_contains(implode(' ', $c), 'sv-app-'));
+    $owner = commandIndex(fn ($c) => in_array('http://127.0.0.1:3300/rest/owner/setup', $c, true));
+
+    expect($start)->not->toBeNull()->and($owner)->toBeGreaterThan($start);
+});
+
+it('skips n8n owner setup when an owner already exists', function () {
+    $app = claimableApp('n8n', ['admin_email' => 'owner@example.com']);
+
+    Process::fake(function ($process) {
+        test()->ran->push($process);
+
+        if (is_array($process->command) && in_array('http://127.0.0.1:3300/rest/settings', $process->command, true)) {
+            return Process::result(output: json_encode(['data' => ['userManagement' => ['showSetupOnFirstLoad' => false]]]));
+        }
+
+        return Process::result(output: '');
+    });
+
+    app(N8nInstaller::class)->afterStart($app, '/home/apps/n8n/public_html');
+
+    expect(ranCommands())->not->toContain('/rest/owner/setup');
+});
+
+it('fails the install when n8n refuses the owner, rather than leaving it open', function () {
+    $app = claimableApp('n8n', ['admin_email' => 'owner@example.com']);
+
+    Process::fake(function ($process) {
+        if (is_array($process->command) && in_array('http://127.0.0.1:3300/rest/owner/setup', $process->command, true)) {
+            return Process::result(errorOutput: 'The requested URL returned error: 400', exitCode: 22);
+        }
+
+        return Process::result(output: json_encode(['data' => ['userManagement' => ['showSetupOnFirstLoad' => true]]]));
+    });
+
+    expect(fn () => app(N8nInstaller::class)->afterStart($app, '/home/apps/n8n/public_html'))
+        ->toThrow(fn (ProvisioningFailedException $e) => expect($e->step)->toBe('create_admin'));
+});
+
+it('never takes n8n\'s starting-up page as an answer', function () {
+    /*
+     * Measured on a real server: while it starts, n8n answers EVERY path, its
+     * API included, with 200 and "n8n is starting up. Please wait". The
+     * readiness check passed on it, the setup request got it too, curl called
+     * both a success — and the site went live with its first-run page open.
+     */
+    $app = claimableApp('n8n', ['admin_email' => 'owner@example.com']);
+    $starting = 'n8n is starting up. Please wait';
+
+    Process::fake(fn () => Process::result(output: $starting));
+
+    expect(fn () => app(N8nInstaller::class)->afterStart($app, '/home/apps/n8n/public_html'))
+        ->toThrow(fn (ProvisioningFailedException $e) => expect($e->reason)->toBe('app_not_ready'));
+
+    // Up for the settings, but the setup request lands on a still-starting
+    // n8n and changes nothing: the page is still open afterwards.
+    Process::fake(function ($process) use ($starting) {
+        if (is_array($process->command) && in_array('http://127.0.0.1:3300/rest/owner/setup', $process->command, true)) {
+            return Process::result(output: $starting);
+        }
+
+        return Process::result(output: json_encode(['data' => ['userManagement' => ['showSetupOnFirstLoad' => true]]]));
+    });
+
+    expect(fn () => app(N8nInstaller::class)->afterStart($app, '/home/apps/n8n/public_html'))
+        ->toThrow(fn (ProvisioningFailedException $e) => expect($e->reason)->toBe('owner_not_created'));
+});
+
+it('waits out n8n\'s start-up before creating the owner', function () {
+    $app = claimableApp('n8n', ['admin_email' => 'owner@example.com']);
+    $calls = 0;
+    $owner = false;
+
+    Process::fake(function ($process) use (&$calls, &$owner) {
+        $url = is_array($process->command) ? (string) end($process->command) : '';
+
+        if (str_ends_with($url, '/rest/owner/setup')) {
+            $owner = true;
+
+            return Process::result(output: '{"data":{}}');
+        }
+
+        // The real sequence, measured: nothing listening, the starting-up
+        // page with a 200, the API answering 404 while its routes register,
+        // then the settings.
+        return match (++$calls) {
+            1 => Process::result(errorOutput: 'curl: (7) Failed to connect', exitCode: 7),
+            2 => Process::result(output: 'n8n is starting up. Please wait'),
+            3 => Process::result(errorOutput: 'curl: (22) The requested URL returned error: 404', exitCode: 22),
+            default => Process::result(output: json_encode(['data' => ['userManagement' => ['showSetupOnFirstLoad' => ! $owner]]])),
+        };
+    });
+
+    app(N8nInstaller::class)->afterStart($app, '/home/apps/n8n/public_html');
+
+    expect($owner)->toBeTrue();
+    Sleep::assertSleptTimes(3);
+});
+
+it('keeps Uptime Kuma on 127.0.0.1 and off its public database page', function () {
+    app(ApplicationProvisioner::class)->provision(claimableApp('uptimekuma', ['admin_username' => 'boss']));
+
+    expect(writtenTo('/home/apps/uptimekuma/public_html/.env'))
+        // It listened on every interface: with the firewall off, reachable on
+        // its port past the vhost's Basic Auth and WAF.
+        ->toContain('UPTIME_KUMA_HOST=127.0.0.1')
+        // Otherwise its first page asks the visitor to choose a database.
+        ->toContain('UPTIME_KUMA_DB_TYPE=sqlite');
+});
+
+it('creates the Uptime Kuma admin through its own setup event, credentials on stdin', function () {
+    app(ApplicationProvisioner::class)->provision(claimableApp('uptimekuma', ['admin_username' => 'boss']));
+
+    $setup = test()->ran->first(fn ($p) => is_array($p->command)
+        && in_array('-e', $p->command, true)
+        && str_contains(implode(' ', $p->command), 'socket.io-client'));
+
+    expect($setup)->not->toBeNull()
+        ->and(implode(' ', $setup->command))->toContain('runuser -u apps')
+        ->and(json_decode((string) $setup->input, true))->toBe(['port' => 3300, 'username' => 'boss', 'password' => 'Owner-Pass-2026'])
+        ->and(ranCommands())->not->toContain('Owner-Pass-2026');
+});
+
+it('sends the Kuma setup only after Kuma has attached its handlers', function () {
+    app(ApplicationProvisioner::class)->provision(claimableApp('uptimekuma', ['admin_username' => 'boss']));
+
+    $script = (string) collect(test()->ran->first(fn ($p) => is_array($p->command)
+        && str_contains(implode(' ', $p->command), 'socket.io-client'))->command)->last();
+
+    // Found on a real server: sent on connect, seconds after Kuma's first
+    // start, the event reached Kuma before its handler existed, was dropped,
+    // and the install failed after 30 s. `loginRequired` is emitted last.
+    expect($script)->toContain('socket.on("loginRequired", send)')
+        ->not->toContain('socket.on("connect", () => socket.emit("setup"')
+        // Kuma's own needs-setup signal is computed during startup and is
+        // silent on an early connection: never read as "already has an admin".
+        ->not->toContain('socket.on("setup"');
+});
+
+it('asks for the administrator when creating n8n and Uptime Kuma', function (string $type, array $admin, string $weakField) {
+    $post = fn (array $extra) => $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
+        ->postJson('/api/applications', array_merge([
+            'system_user_id' => $this->su->id,
+            'name' => 'Claimed', 'domain' => 'claimed.test', 'site_type' => $type,
+        ], $extra));
+
+    $post([])->assertStatus(422)->assertJsonValidationErrors(array_keys($admin));
+
+    // A password the application itself would refuse fails here, not as the
+    // last step of an install that has already done everything else.
+    $post(array_merge($admin, ['admin_password' => 'alllowercase']))
+        ->assertStatus(422)->assertJsonValidationErrors($weakField);
+
+    $post($admin)->assertCreated();
+})->with([
+    'n8n' => ['n8n', ['admin_email' => 'owner@example.com', 'admin_password' => 'Owner-Pass-2026'], 'admin_password'],
+    'uptimekuma' => ['uptimekuma', ['admin_username' => 'admin', 'admin_password' => 'Owner-Pass-2026'], 'admin_password'],
+]);
+
+it('runs no after-start step for the Node apps that set up their own admin', function (string $installer) {
+    // Node-RED and NodeBB take their administrator at install time, from the
+    // settings file and the setup command.
+    app($installer)->afterStart(oneClickApp('nodered'), '/home/apps/nodered/public_html');
+
+    expect(test()->ran)->toBeEmpty();
+})->with([
+    'nodered' => NodeRedInstaller::class,
+    'nodebb' => NodeBbInstaller::class,
+]);
+
+it('lets npm 12 run the install scripts of the packages the panel installs', function (string $type) {
+    // npm 12 skips every dependency's install scripts unless package.json
+    // allows them, and says so only in a closing warning. n8n installed on
+    // the Apache test box after an npm update from the Node screen, then
+    // crashed at start: sqlite3's native module had never been built.
+    app(ApplicationProvisioner::class)->provision(oneClickApp($type));
+
+    $install = test()->ran
+        ->map(fn ($process) => implode(' ', (array) $process->command))
+        ->first(fn (string $c) => str_contains($c, 'npm install') || str_contains($c, 'npm run setup'));
+
+    expect($install)->toContain('npm_config_dangerously_allow_all_scripts=true');
+})->with(['n8n', 'nodered', 'uptimekuma']);
+
+it('lets npm 12 run install scripts during NodeBB setup too', function () {
+    // `./nodebb setup` runs npm itself, through the secret-environment path.
+    // Only the setup command matters; the steps after it need a config.json
+    // this fake does not model, so their failure is ignored.
+    rescue(fn () => app(NodeBbInstaller::class)->install(oneClickApp('nodebb'), '/home/apps/nodebb/public_html', [
+        'db_host' => '127.0.0.1', 'db_port' => 27017,
+        'db_user' => 'nodebb', 'db_password' => 'secret', 'database' => 'nodebb',
+    ]), report: false);
+
+    $setup = test()->ran
+        ->map(fn ($process) => implode(' ', (array) $process->command))
+        ->first(fn (string $c) => str_contains($c, './nodebb') && str_contains($c, 'setup'));
+
+    expect($setup)->toContain("export npm_config_dangerously_allow_all_scripts='true';");
+});
+
+it('copies a cloned app into the site as the site user, from a staging name nobody can guess', function () {
+    // Root's `cp` into a site that already exists — "Retry setup" — wrote
+    // through a link the site user had planted at a destination path (the
+    // `.panel` class of bug, 2026-09-29). And `node-{id}` was a staging path
+    // a site user could create before the installer did.
+    app(ApplicationProvisioner::class)->provision(oneClickApp('uptimekuma'));
+
+    $commands = test()->ran->filter(fn ($p) => is_array($p->command))->map(fn ($p) => $p->command)->values();
+
+    $rootCopies = $commands->filter(fn (array $c) => ($c[0] ?? '') === 'cp');
+    $userCopies = $commands->filter(fn (array $c) => ($c[0] ?? '') === 'runuser' && ($c[4] ?? '') === 'cp');
+    $clone = $commands->first(fn (array $c) => ($c[0] ?? '') === 'git' && ($c[1] ?? '') === 'clone');
+
+    expect($rootCopies->all())->toBe([])
+        ->and($userCopies)->not->toBeEmpty()
+        ->and((string) end($clone))->toMatch('/\/node-[0-9a-f-]{36}$/');
+});

@@ -1,5 +1,6 @@
 "use client";
 
+import { useBrowserIp } from "@/components/network/browser-ip";
 import { useState } from "react";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { RecommendedSetup } from "@/components/fail2ban/recommended-setup";
@@ -20,7 +21,8 @@ import { BannedCard } from "@/components/fail2ban/banned-card";
  * Reading the same optimistic state the switches read makes the card go when
  * the switch moves.
  */
-export function ProtectionSection({ jails, settings, banned, yourIp, ignoreIps, canManage, logHref }) {
+export function ProtectionSection({ jails, settings, banned, ignoreIps, canManage, logHref }) {
+  const yourIp = useBrowserIp();
   // name -> the enabled value the user asked for, paired with the server value
   // it was based on so it retires itself once the refresh lands.
   const [asked, setAsked] = useState({});

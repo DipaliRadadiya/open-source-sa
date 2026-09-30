@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, UserRoundPlus } from "lucide-react";
 import { databaseUserFormSchema } from "@/lib/schemas/database";
 import { createDatabaseUser } from "@/lib/api/databases";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { useRestartConfirm } from "@/components/databases/use-restart-confirm";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/ui/form-modal";
@@ -17,7 +18,8 @@ import { CreatedCredentials } from "@/components/databases/created-credentials";
 
 export function AddUserDialog({ database, open, onOpenChange, remoteUsers = true }) {
   const t = useTranslations("databases.users");
-  const router = useRouter();
+  const restart = useRestartConfirm();
+  const { refreshAndWait } = useRefresh();
   // Set on success: the new credential replaces the form, because a password
   // you are never shown is a password nobody can use.
   const [created, setCreated] = useState(null);
@@ -48,17 +50,22 @@ export function AddUserDialog({ database, open, onOpenChange, remoteUsers = true
     // Omitted means the API generates one, which beats anything typed in a
     // hurry.
     if (submitted.password) payload.password = submitted.password;
+    if (submitted.restart_cluster) payload.restart_cluster = true;
     if (submitted.connection_preference === "remote") {
       payload.host = submitted.host;
     }
 
     try {
       const { data } = await createDatabaseUser(database.id, payload);
+      // The list behind has the user before this panel appears, so Done never
+      // uncovers a table without it.
+      await refreshAndWait();
       toast.success(t("added", { username: submitted.username }));
       setCreated({ ...database, users: [data?.user].filter(Boolean) });
-      router.refresh();
     } catch (error) {
-      handleValidationError(error, form);
+      const restartAnswer = restart.ask(error);
+      if (restartAnswer && (await restartAnswer)) return onSubmit({ ...submitted, restart_cluster: true });
+      if (!restartAnswer) handleValidationError(error, form);
     }
   }
 
@@ -73,6 +80,7 @@ export function AddUserDialog({ database, open, onOpenChange, remoteUsers = true
   if (created) {
     return (
       <CreatedCredentials
+        forUser
         database={created}
         open={open}
         onOpenChange={handleOpenChange}
@@ -111,6 +119,7 @@ export function AddUserDialog({ database, open, onOpenChange, remoteUsers = true
       >
         <UserFields form={form} access={values.connection_preference} remoteUsers={remoteUsers} />
         <p className="text-xs text-muted-foreground">{t("passwordGenerated")}</p>
+      {restart.dialog}
       </FormModal>
     </Form>
   );

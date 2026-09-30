@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Loader2, Link2Off, PlugZap, RefreshCw, ShieldAlert } from "lucide-react";
@@ -28,6 +29,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 export function CentralPanel({ status }) {
   const t = useTranslations("central");
   const router = useRouter();
+  const { refreshAndWait } = useRefresh();
 
   const [token, setToken] = useState(null);
   const [pending, setPending] = useState(null);
@@ -61,10 +63,10 @@ export function CentralPanel({ status }) {
     setPending("disconnect");
     try {
       await disableCentral();
+      await refreshAndWait();
       setToken(null);
       setConfirming(null);
       toast.success(t("disconnected"));
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("errors.disconnectFailed")));
     } finally {
@@ -83,7 +85,7 @@ export function CentralPanel({ status }) {
               {t("cardTitle")}
               {connected ? (
                 <Badge variant="success" className="font-normal">
-                  {t("connected")}
+                  {t("keyActive")}
                 </Badge>
               ) : null}
             </CardTitle>

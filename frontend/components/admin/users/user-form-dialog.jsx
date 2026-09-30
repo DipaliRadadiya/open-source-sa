@@ -1,9 +1,10 @@
 import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
 import { Loader2, ShieldCheck, UserRoundPlus, UserRoundPen, KeyRound } from "lucide-react";
 import { createUserSchema, updateUserSchema } from "@/lib/schemas/user";
 import { createUser, updateUser, syncUserRoles } from "@/lib/api/users";
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Separator } from "@/components/ui/separator";
 import { FormModal } from "@/components/ui/form-modal";
 import {
@@ -30,11 +32,12 @@ export function UserFormDialog({
   user,
   roles = [],
   rolesFailed = false,
+  isSelf = false,
   open,
   onOpenChange,
 }) {
   const t = useTranslations("users");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const isEdit = mode === "edit";
   const didAutoFocus = useRef(false);
 
@@ -89,14 +92,15 @@ export function UserFormDialog({
           is_admin: values.is_admin,
         });
         await syncUserRoles(user.id, values.role_ids);
+        await refreshAndWait();
         toast.success(t("toast.updated"));
       } else {
         await createUser(values);
+        await refreshAndWait();
         toast.success(t("toast.created"));
       }
       onOpenChange?.(false);
       form.reset();
-      router.refresh();
     } catch (error) {
       handleValidationError(error, form);
     }
@@ -274,12 +278,19 @@ export function UserFormDialog({
                     <div className="space-y-1">
                       <FormLabel hint={t("form.isAdminHint")}>{t("form.isAdmin")}</FormLabel>
                     </div>
-                    <label className="flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors hover:bg-muted/50">
+                    {/* Your own admin access stays on: the API accepts
+                        removing it (even from the last admin), and the
+                        role save that follows then fails as non-admin —
+                        leaving a panel nobody can administer. */}
+                    <label className={cn("flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors", isEdit && isSelf ? "cursor-not-allowed opacity-70" : "cursor-pointer hover:bg-muted/50")}>
                       <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={(c) => field.onChange(c === true)}
-                        />
+                        <ReasonTooltip reason={isEdit && isSelf ? t("form.ownAdminLocked") : null}>
+                          <Checkbox
+                            checked={field.value}
+                            disabled={isEdit && isSelf}
+                            onCheckedChange={(c) => field.onChange(c === true)}
+                          />
+                        </ReasonTooltip>
                       </FormControl>
                       <ShieldCheck className="size-4 shrink-0 text-primary" />
                       <span className="text-sm font-medium">

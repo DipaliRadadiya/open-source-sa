@@ -1,7 +1,11 @@
 import { z } from "zod";
 
+// Empty says "enter one" first: the rules checklist beside the field already
+// lists "at least 10 characters", so repeating it in red on a blank field read
+// as a second, separate complaint.
 const passwordField = z
   .string()
+  .min(1, "required_password")
   .min(10, "min10")
   .regex(/[a-z]/, "lowercase")
   .regex(/[A-Z]/, "uppercase")
@@ -21,6 +25,10 @@ export const changePasswordSchema = z
     current_password: z.string().min(1, "required_currentPassword"),
     password: passwordField,
     password_confirmation: z.string().min(1, "confirmPassword"),
+  })
+  .refine((d) => !d.password || d.password !== d.current_password, {
+    message: "passwordSameAsCurrent",
+    path: ["password"],
   })
   .refine((d) => d.password === d.password_confirmation, {
     message: "passwordsMismatch",

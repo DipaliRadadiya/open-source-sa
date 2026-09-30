@@ -24,8 +24,33 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 ])]
 class BackupTarget extends Model
 {
-    /** @var list<string> */
-    public const FREQUENCIES = ['manual', 'daily', 'weekly', 'monthly'];
+    /**
+     * In the order a dropdown shows them. The options endpoint and the save
+     * validation both read this, so what is offered and what is accepted are
+     * one list.
+     *
+     * @var list<string>
+     */
+    public const FREQUENCIES = [
+        'manual', 'hourly', 'every_3_hours', 'every_6_hours', 'every_12_hours',
+        'daily', 'weekly', 'monthly',
+    ];
+
+    /** How many backups a target may keep. */
+    public const RETENTION_MIN = 1;
+
+    public const RETENTION_MAX = 365;
+
+    /**
+     * Frequencies that repeat within a day, and every how many hours.
+     *
+     * @var array<string, int>
+     */
+    private const EVERY_HOURS = [
+        'every_3_hours' => 3,
+        'every_6_hours' => 6,
+        'every_12_hours' => 12,
+    ];
 
     /**
      * Friendly frequency → cron expression. 02:00 rather than the disk
@@ -92,8 +117,39 @@ class BackupTarget extends Model
         return (string) config('app.timezone');
     }
 
+    /**
+     * Which part of `schedule_time` a frequency uses: `minute` (hourly),
+     * `time` (the rest), or null when nothing is scheduled (manual).
+     */
+    public static function timeUsage(string $frequency): ?string
+    {
+        return match (true) {
+            $frequency === 'manual' => null,
+            $frequency === 'hourly' => 'minute',
+            default => 'time',
+        };
+    }
+
     public function cronExpression(): ?string
     {
+        if ($this->frequency === 'hourly') {
+            [, $minute] = explode(':', $this->schedule_time ?? '02:00', 2);
+
+            return (int) $minute.' * * * *';
+        }
+
+        if (isset(self::EVERY_HOURS[$this->frequency])) {
+            $every = self::EVERY_HOURS[$this->frequency];
+            [$hour, $minute] = explode(':', $this->schedule_time ?? '02:00', 2);
+
+            // The chosen time is one of the runs, and the rest fall every N
+            // hours around it. The range has to start at the hour modulo N:
+            // `14-23/12` means "from 14:00", so 14:30 every 12 hours would run
+            // once a day. `2-23/12` runs at 02:30 and 14:30, which is what was
+            // asked for. Measured against the cron library, 2026-09-24.
+            return (int) $minute.' '.((int) $hour % $every).'-23/'.$every.' * * *';
+        }
+
         $base = self::CRON[$this->frequency] ?? null;
 
         if ($base === null || $this->schedule_time === null) {

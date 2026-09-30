@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Trash2 } from "lucide-react";
@@ -7,25 +6,26 @@ import { deleteFile } from "@/lib/api/files";
 import { apiMessage } from "@/lib/api/error-message";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { PermanentDeleteField } from "@/components/applications/files/permanent-delete-field";
+import { useRefresh } from "@/hooks/use-refresh";
 
 export function DeleteFileDialog({ appId, file, open, onOpenChange }) {
   const t = useTranslations("applications.files");
-  const router = useRouter();
+  const { pending: refreshing, refreshThen } = useRefresh();
   const [pending, setPending] = useState(false);
-  // Cleared whenever the dialog opens, not when it closes: a dialog opened from
-  // a row's own menu never sees onOpenChange(false), so state left behind here
-  // would arrive already ticked on the next file.
-  const [permanent, setPermanent] = useState(false);
+  // Ticked by default (Krishna, 2026-09-29). Reset whenever the dialog opens,
+  // not when it closes: a dialog opened from a row's own menu never sees
+  // onOpenChange(false), so an unticked box would carry over to the next file.
+  const [permanent, setPermanent] = useState(true);
 
   async function onConfirm() {
     setPending(true);
     try {
       await deleteFile(appId, file.path, { permanent });
-      toast.success(
-        permanent ? t("delete.doneForever", { name: file.name }) : t("delete.done", { name: file.name }),
-      );
-      onOpenChange?.(false);
-      router.refresh();
+      const done = permanent ? t("delete.doneForever", { name: file.name }) : t("delete.done", { name: file.name });
+      refreshThen(() => {
+        toast.success(done);
+        onOpenChange?.(false);
+      });
     } catch (error) {
       toast.error(apiMessage(error, t("delete.failed")));
     } finally {
@@ -39,7 +39,7 @@ export function DeleteFileDialog({ appId, file, open, onOpenChange }) {
     <ConfirmDialog
       open={open}
       onOpenChange={(next) => {
-        if (next) setPermanent(false);
+        if (next) setPermanent(true);
         onOpenChange?.(next);
       }}
       icon={Trash2}
@@ -56,10 +56,10 @@ export function DeleteFileDialog({ appId, file, open, onOpenChange }) {
       }
       cancelLabel={t("cancel")}
       confirmLabel={permanent ? t("delete.confirmForever") : t("delete.confirm")}
-      pending={pending}
+      pending={pending || refreshing}
       onConfirm={onConfirm}
     >
-      <PermanentDeleteField checked={permanent} onChange={setPermanent} disabled={pending} />
+      <PermanentDeleteField checked={permanent} onChange={setPermanent} disabled={pending || refreshing} />
     </ConfirmDialog>
   );
 }

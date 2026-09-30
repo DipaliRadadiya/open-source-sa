@@ -234,6 +234,52 @@ it('deletes a system user, running userdel', function () {
     Process::assertRan(fn ($process) => $process->command === ['userdel', '-r', 'gone']);
 });
 
+/*
+ * userdel removes a user's own group only when nobody else is in it, and
+ * provisioning a site puts the web server's account in it to write the logs.
+ * So every deleted user left its group behind and the name could never be
+ * reused. Found on a real server (2026-09-24): six deleted users, six groups.
+ */
+it('empties the user\'s own group before userdel, so the group goes with the user', function () {
+    $ran = collect();
+    Process::fake(function ($process) use ($ran) {
+        $ran->push($process->command);
+
+        return $process->command === ['getent', 'group', 'gone']
+            ? Process::result(output: "gone:x:1007:nobody,www-data\n")
+            : Process::result();
+    });
+    $admin = User::factory()->admin()->create();
+    $su = SystemUser::create(['username' => 'gone', 'home_path' => '/home/gone', 'shell' => '/bin/bash']);
+
+    $this->withHeader('Authorization', 'Bearer '.$admin->createToken('t')->plainTextToken)
+        ->deleteJson("/api/system-users/{$su->id}")
+        ->assertNoContent();
+
+    $order = $ran->map(fn (array $c) => implode(' ', $c))->values()->all();
+    $userdel = array_search('userdel -r gone', $order, true);
+
+    // Both members out, and both before the user goes.
+    expect(array_search('gpasswd -d nobody gone', $order, true))->toBeLessThan($userdel)
+        ->and(array_search('gpasswd -d www-data gone', $order, true))->toBeLessThan($userdel)
+        ->and($userdel)->not->toBeFalse();
+});
+
+it('runs no gpasswd when the user\'s group has no other members', function () {
+    Process::fake(fn ($process) => $process->command === ['getent', 'group', 'gone']
+        ? Process::result(output: "gone:x:1007:\n")
+        : Process::result());
+    $admin = User::factory()->admin()->create();
+    $su = SystemUser::create(['username' => 'gone', 'home_path' => '/home/gone', 'shell' => '/bin/bash']);
+
+    $this->withHeader('Authorization', 'Bearer '.$admin->createToken('t')->plainTextToken)
+        ->deleteJson("/api/system-users/{$su->id}")
+        ->assertNoContent();
+
+    Process::assertNotRan(fn ($process) => in_array('gpasswd', $process->command, true));
+    Process::assertRan(fn ($process) => $process->command === ['userdel', '-r', 'gone']);
+});
+
 it('denies a user without the system_user manage permission from creating', function () {
     Process::fake();
     $viewer = systemUserManager(manage: false);

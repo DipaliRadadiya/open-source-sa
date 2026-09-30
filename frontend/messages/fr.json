@@ -23,6 +23,7 @@
     "hidePassword": "Masquer le mot de passe",
     "clearSearch": "Effacer la recherche",
     "logOut": "Se déconnecter",
+    "logOutFailed": "Impossible de vous déconnecter. Réessayez.",
     "loggingOut": "Déconnexion…",
     "openUserMenu": "Ouvrir le menu utilisateur",
     "refresh": "Actualiser",
@@ -66,7 +67,8 @@
     "permissionDenied": {
       "title": "Vous n'avez pas accès à {feature}",
       "description": "Votre rôle n'inclut pas l'autorisation de voir ceci. Demandez-la à un administrateur."
-    }
+    },
+    "serverNavigation": "Menu du serveur"
   },
   "systemUsers": {
     "title": "Utilisateurs système",
@@ -76,7 +78,6 @@
     "columns": {
       "username": "Nom d'utilisateur",
       "password": "Mot de passe",
-      "home": "Répertoire personnel",
       "shell": "Shell",
       "access": "Accès",
       "applications": "Applications",
@@ -118,14 +119,15 @@
       "shellChanged": "Shell de connexion mis à jour.",
       "keyAdded": "Clé SSH ajoutée.",
       "keyRemoved": "Clé SSH retirée.",
-      "failed": "Une erreur s'est produite. Veuillez réessayer."
+      "alreadyGone": "{username} avait déjà été supprimé.",
+      "sshOffNotEnforced": "Connexion SSH désactivée ici. Elle prend effet dès que vous enregistrez Paramètres → Accès et sécurité."
     },
     "create": {
       "title": "Ajouter un utilisateur système",
-      "subtitle": "Crée un compte Linux sur le serveur (exécute useradd).",
+      "subtitle": "Crée un compte Linux sur le serveur.",
       "username": "Nom d'utilisateur",
       "usernamePlaceholder": "ex. deploy",
-      "publicKey": "Clé publique SSH initiale",
+      "publicKey": "Clé publique SSH",
       "publicKeyHint": "Facultatif — ajoutée comme première clé autorisée du compte.",
       "publicKeyPlaceholder": "ssh-ed25519 AAAA…",
       "submit": "Créer l'utilisateur",
@@ -138,13 +140,13 @@
       "sshAccessHint": "Permet à ce compte de se connecter via SSH.",
       "password": "Mot de passe",
       "passwordPlaceholder": "Laisser vide pour aucun mot de passe",
-      "passwordHint": "Généré pour vous. Conservez-le, modifiez-le ou effacez-le — vous pourrez le revoir plus tard depuis l'action Définir le mot de passe de l'utilisateur.",
+      "passwordHint": "Généré pour vous. Conservez-le, modifiez-le ou effacez-le. Vous pourrez le revoir plus tard depuis le menu ⋯ de l'utilisateur → Mot de passe.",
       "generate": "Générer",
       "sshNeedsLoginShell": "{shell} n'autorise pas la connexion, donc l'accès SSH ne peut pas être activé avec."
     },
     "password": {
       "open": "Mot de passe",
-      "title": "Mot de passe système",
+      "title": "Mot de passe",
       "subtitle": "Mot de passe de connexion au serveur pour {username}.",
       "current": "Mot de passe actuel",
       "setNew": "Définir un nouveau mot de passe",
@@ -158,7 +160,7 @@
     "apps": "Applications",
     "delete": {
       "title": "Supprimer l'utilisateur système ?",
-      "description": "Ceci supprime définitivement {username}, son répertoire personnel et ses tâches cron (exécute userdel -r). Action irréversible.",
+      "description": "Ceci supprime définitivement {username}, son répertoire personnel et ses tâches cron. Action irréversible.",
       "confirmLabel": "Saisissez {username} pour confirmer",
       "cancel": "Annuler",
       "confirm": "Supprimer l'utilisateur",
@@ -186,7 +188,6 @@
       "remove": "Retirer la clé",
       "removeTitle": "Retirer la clé SSH ?",
       "removeDescription": "Ceci retire « {name} » des clés autorisées de l'utilisateur.",
-      "removeConfirm": "Retirer",
       "publicKeyHint": "La moitié .pub d’une paire de clés SSH. Elle peut être partagée sans risque : c’est grâce à elle que le serveur vous reconnaît. Ne collez jamais la clé privée ici.",
       "nameHint": "Un nom pour pouvoir reconnaître cette clé plus tard — par exemple, l'ordinateur portable auquel elle appartient."
     },
@@ -219,9 +220,10 @@
     },
     "loadFailed": "Vos utilisateurs système n'ont pas pu être chargés. Ils n'ont pas été modifiés ni supprimés.",
     "sshNotEnforced": {
-      "body": "Les interrupteurs de connexion SSH ne sont pas encore appliqués : un utilisateur désactivé ici peut toujours se connecter en SSH. Ils prennent effet dès que vous enregistrez Paramètres → Accès et sécurité. Ensuite, seuls les utilisateurs activés ici, les utilisateurs sudo et root peuvent se connecter.",
+      "body": "Les interrupteurs SSH ne sont pas encore actifs : tous les utilisateurs peuvent se connecter en SSH tant qu'Accès et sécurité n'est pas enregistré.",
       "action": "Ouvrir Accès et sécurité"
-    }
+    },
+    "sshViaSudo": "Les utilisateurs sudo peuvent toujours se connecter en SSH. Désactivez sudo pour contrôler le SSH ici."
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -319,7 +321,8 @@
       "errors": "Voir le journal d'erreurs",
       "users": "Gérer les utilisateurs",
       "central": "Configurer Central"
-    }
+    },
+    "navigationLabel": "Menu d'administration"
   },
   "users": {
     "title": "Utilisateurs",
@@ -386,7 +389,8 @@
       "submitEdit": "Enregistrer les modifications",
       "saving": "Enregistrement…",
       "cancel": "Annuler",
-      "rolesLoadFailed": "Les rôles n'ont pas pu être chargés, donc aucun ne peut être affiché. Ce n'est pas la même chose qu'aucun rôle n'existe — réessayez dans un instant."
+      "rolesLoadFailed": "Les rôles n'ont pas pu être chargés, donc aucun ne peut être affiché. Ce n'est pas la même chose qu'aucun rôle n'existe — réessayez dans un instant.",
+      "ownAdminLocked": "Vous ne pouvez pas retirer votre propre accès administrateur. Demandez à un autre administrateur de le modifier."
     },
     "resetPassword": {
       "title": "Réinitialiser le mot de passe",
@@ -538,7 +542,8 @@
       "deleted": "Rôle supprimé.",
       "deleteFailed": "Impossible de supprimer ce rôle."
     },
-    "loadFailed": "Les rôles n'ont pas pu être chargés. Cela ne signifie pas que le rôle est absent — réessayez dans un instant."
+    "loadFailed": "Les rôles n'ont pas pu être chargés. Cela ne signifie pas que le rôle est absent — réessayez dans un instant.",
+    "catalogLoadFailed": "La liste des permissions n'a pas pu être chargée, les rôles ne peuvent donc pas être modifiés pour le moment. Rien n'a été modifié."
   },
   "account": {
     "title": "Compte",
@@ -555,7 +560,7 @@
       "success": "Profil mis à jour.",
       "namePlaceholder": "Votre nom complet",
       "usernamePlaceholder": "votre-nom-utilisateur",
-      "usernameHint": "Lettres, chiffres, tirets et underscores.",
+      "usernameHint": "Vous vous connectez avec. Lettres, chiffres, tirets et underscores.",
       "unsavedTitle": "Abandonner les modifications non enregistrées ?",
       "unsavedDesc": "Vous avez des modifications de profil non enregistrées. Si vous changez d'onglet maintenant, elles seront perdues.",
       "unsavedDiscard": "Abandonner les modifications",
@@ -624,14 +629,41 @@
       "type": "Type"
     },
     "mine": {
-      "title": "Journal d'activité",
-      "subtitle": "Ce que vous avez fait dans le panneau. Les actions des autres personnes n'apparaissent pas ici.",
-      "loadFailed": "Impossible de charger votre activité.",
-      "empty": "Vous n'avez encore rien fait.",
-      "emptyFiltered": "Aucun résultat ne correspond à ces filtres.",
-      "searchPlaceholder": "Recherchez ce que vous avez fait…"
+      "emptyFiltered": "Aucun résultat ne correspond à ces filtres."
     },
-    "loadFailed": "Le journal d'activité n'a pas pu être chargé. Réessayez dans un instant."
+    "loadFailed": "Le journal d'activité n'a pas pu être chargé. Réessayez dans un instant.",
+    "server": {
+      "title": "Journal d'activité",
+      "subtitle": "Ce que toutes les personnes ayant accès ont modifié sur ce serveur. Vos connexions et modifications de compte sont sur votre page Compte.",
+      "loadFailed": "Impossible de charger le journal d'activité.",
+      "empty": "Rien ne s'est encore passé sur ce serveur.",
+      "searchPlaceholder": "Rechercher dans l'activité…"
+    },
+    "types": {
+      "application": "Application",
+      "backup": "Sauvegardes",
+      "build_tools": "Outils de compilation",
+      "central": "Central",
+      "cronjob": "Tâches cron",
+      "database": "Base de données",
+      "disk_cleaner": "Nettoyeur de disque",
+      "fail2ban": "Fail2ban",
+      "firewall": "Pare-feu",
+      "git_account": "Compte Git",
+      "log": "Journaux",
+      "node": "Node.js",
+      "panel_update": "Mise à jour du panneau",
+      "permission": "Autorisations",
+      "php": "PHP",
+      "role": "Rôle",
+      "server": "Serveur",
+      "service": "Service",
+      "setting": "Paramètres",
+      "storage_destination": "Stockage",
+      "sync": "Synchronisation du serveur",
+      "system_user": "Utilisateur système",
+      "user": "Utilisateur"
+    }
   },
   "pagination": {
     "perPage": "Par page",
@@ -639,11 +671,14 @@
     "total": "{total} au total",
     "pageAria": "Aller à la page {page}",
     "prev": "Précédent",
-    "next": "Suivant"
+    "next": "Suivant",
+    "label": "Pages"
   },
   "auth": {
     "loginTitle": "Se connecter",
     "loginSubtitle": "Saisissez vos identifiants pour accéder au panneau.",
+    "sessionExpired": "Votre session a expiré. Reconnectez-vous pour reprendre là où vous en étiez.",
+    "tooManyAttempts": "Trop de tentatives de connexion. Attendez une minute, puis réessayez.",
     "registerTitle": "Créer un compte administrateur",
     "registerSubtitle": "Configurez le compte administrateur de ce panneau.",
     "noAccount": "Besoin de configurer le panneau ?",
@@ -703,6 +738,7 @@
     "linuxUsername": "Lettres minuscules, chiffres, - et _ ; doit commencer par une lettre ou _",
     "sshKey": "Saisissez une clé publique SSH valide",
     "max255": "255 caractères maximum",
+    "max240": "240 caractères maximum",
     "shellInStartCommand": "Utilisez une commande simple — pas de pipes, &&, ; ni $( ). Elle est exécutée directement, pas via un shell.",
     "portNumber": "Saisissez un numéro de port.",
     "portRange1024": "Utilisez un port entre 1024 et 65535.",
@@ -712,6 +748,7 @@
     "unresolvedPath": "Remplacez {path} par le répertoire de l'application",
     "required_expression": "La planification est obligatoire",
     "cronExpression": "Saisissez cinq champs (minute heure jour mois jour-semaine) ou une macro comme @daily",
+    "cronUnsupported": "Le cron de ce serveur ne prend pas en charge L, W, ? ni #. Utilisez des nombres, *, des plages (1-5), des listes (1,15) et des pas (*/10).",
     "required_runAs": "Choisissez l'utilisateur qui exécute la tâche",
     "required_engine": "Choisissez un moteur.",
     "databaseName": "Utilisez uniquement des lettres, des chiffres et des tirets bas.",
@@ -752,7 +789,7 @@
     "endpointPlaceholder": "Remplacez la partie entre <crochets angulaires> par votre propre valeur",
     "required_application": "Choisissez une application",
     "required_destination": "Choisissez où stocker les sauvegardes",
-    "retentionRange": "Conservez entre 1 et 365 sauvegardes",
+    "retentionRange": "Conservez entre {min} et {max} sauvegardes",
     "required_confirm": "Saisissez le domaine de l'application pour confirmer",
     "cloneDomainRequired": "Saisissez le domaine pour la copie.",
     "cloneDomainInvalid": "Saisissez un domaine complet, comme copie.exemple.com",
@@ -767,7 +804,53 @@
     "max60": "60 caractères maximum",
     "max600": "Doit être 600 ou moins",
     "noTraversalPath": "Le chemin ne doit pas contenir ..",
-    "noSectionHeader": "Ne doit pas contenir [ — cela démarrerait un autre bloc de programme"
+    "noSectionHeader": "Ne doit pas contenir [ — cela démarrerait un autre bloc de programme",
+    "required_frequency": "Choisissez la fréquence des sauvegardes",
+    "required_type": "Choisissez ce qu'il faut sauvegarder",
+    "hostnameLabelTooLong": "Chaque partie d'un domaine entre deux points peut comporter au maximum 63 caractères.",
+    "absolutePath": "Saisissez un chemin complet commençant par /",
+    "invalidUser": "Utilisez des minuscules, des chiffres, - et _",
+    "integer": "Saisissez un nombre entier.",
+    "portRange": "Saisissez un port entre 1 et 65535.",
+    "stagingDomainRequired": "Saisissez le domaine de la copie de préproduction.",
+    "stagingDomainInvalid": "Saisissez un domaine complet, comme staging.example.com",
+    "max12": "12 caractères maximum",
+    "max4000": "4000 caractères maximum",
+    "max16384": "16384 caractères maximum",
+    "phpSize": "Utilisez une taille comme 128M, 1G ou 512K — ou -1 pour aucune limite.",
+    "range": "Cette valeur dépasse ce que ce réglage autorise.",
+    "functionList": "Utilisez des noms de fonctions séparés par des virgules.",
+    "noSections": "Ne peut pas contenir de ligne [section].",
+    "hostIsUrl": "Saisissez seulement le nom d'hôte, comme ftp.example.com — sans ftp://, chemin ni nom d'utilisateur.",
+    "rootFormat": "Utilisez uniquement des lettres, chiffres, points, tirets, tirets bas et barres obliques.",
+    "rootTraversal": "Le dossier ne peut pas contenir ..",
+    "noEnvironmentLine": "Le panneau définit déjà environment= pour ce worker. Une seconde ligne l'empêche de démarrer.",
+    "sftpAuthRequired": "Saisissez un mot de passe ou une clé privée.",
+    "maxLines100": "100 lignes maximum",
+    "rangeSeconds3600": "Saisissez de 0 à 3600 secondes.",
+    "rangeInputTime": "Saisissez -1 pour aucune limite, ou de 0 à 3600 secondes.",
+    "rangeInputVars": "Saisissez un nombre de 100 à 100000.",
+    "rangeSession": "Saisissez de 60 à 604800 secondes (7 jours).",
+    "rangeWorkers": "Saisissez un nombre de 1 à 100.",
+    "rangeMaxRequests": "Saisissez de 0 à 100000. Avec 0, un worker n'est jamais redémarré.",
+    "pathNoTraversal": "Le chemin ne peut pas contenir ..",
+    "securityUsernameSpaces": "Ne peut pas contenir d'espaces.",
+    "databaseUsernameReserved": "Ce nom appartient au serveur de base de données. Choisissez-en un autre.",
+    "databaseHost": "Saisissez une adresse IPv4 comme 203.0.113.5, ou une plage comme 203.0.113.0/24.",
+    "phpSizeUnit": "Utilisez un nombre avec une unité, comme 128M, 1G ou 512K.",
+    "phpMemoryMin": "Utilisez au moins 16M : en dessous, PHP ne peut pas démarrer la plupart des applications.",
+    "phpMemoryMax": "C'est plus de mémoire que ce serveur n'en possède.",
+    "postBelowUpload": "Doit être au moins égal à la taille d'envoi maximale, sinon les envois entre les deux échouent.",
+    "prependOutsideSite": "Utilisez un fichier situé dans le dossier de cette application.",
+    "prefixTraversal": "Le dossier ne peut pas contenir . ou .. comme nom de dossier.",
+    "passwordSameAsCurrent": "Choisissez un mot de passe différent de l'actuel.",
+    "cronNameReserved": "Ce nom est déjà pris par un fichier du serveur ou du panneau. Choisissez-en un autre.",
+    "cronRootRefused": "Les tâches ne peuvent pas s'exécuter en tant que root. Choisissez un utilisateur système.",
+    "directivesPhpOnly": "Uniquement des réglages PHP, un par ligne, comme php_admin_value[short_open_tag] = On. Les lignes de pool comme user = ou listen = ne sont pas acceptées ici.",
+    "noManagedWorkerKeys": "user, command, directory et les fichiers de journal sont définis par le panneau. Modifiez-les dans les champs ci-dessus, pas ici.",
+    "insideApplication": "Utilisez un chemin situé dans le dossier de cette application.",
+    "securityUsernameAscii": "Utilisez uniquement des lettres anglaises, des chiffres et . _ - @ : les navigateurs n'envoient pas les autres lettres de la même façon.",
+    "excludeInsideSite": "Utilisez un chemin situé dans le dossier de l'application, comme storage/logs, sans / ni .."
   },
   "serverDashboard": {
     "title": "Tableau de bord",
@@ -869,7 +952,8 @@
       "stopped": "{command} arrêté",
       "alreadyGone": "Ce processus n'est plus en cours — rien n'a été arrêté.",
       "refused": "Ce processus ne peut pas être arrêté depuis ici.",
-      "failed": "Le processus n'a pas pu être arrêté."
+      "failed": "Le processus n'a pas pu être arrêté.",
+      "databaseWarning": "Il s'agit du serveur de bases de données {engine}. Il restera arrêté — rien ne le redémarre — et toutes les applications qui l'utilisent cesseront de fonctionner jusqu'à ce que vous le démarriez dans Services."
     },
     "diskUnknown": "Non signalé",
     "measuring": "Mesure…",
@@ -896,7 +980,7 @@
       },
       "deployFailed": {
         "chip": "Le dernier déploiement de {site} a échoué",
-        "detail": "L'application sert toujours sa version précédente, et le prochain envoi échouera de la même façon tant que ce n'est pas corrigé.",
+        "detail": "Le dernier déploiement ne s'est pas terminé, et le prochain envoi échouera de la même façon tant que ce n'est pas corrigé.",
         "action": "Voir le journal de déploiement"
       },
       "processDown": {
@@ -939,7 +1023,8 @@
       "delete": "Supprimer",
       "duplicate": "Dupliquer",
       "viewOutput": "Voir la sortie",
-      "noOutput": "Aucune sortie capturée pour l'instant"
+      "noOutput": "Aucune sortie capturée pour l'instant",
+      "noLogsPermission": "Votre rôle n'inclut pas les journaux système. Demandez à un administrateur de l'accorder."
     },
     "empty": {
       "title": "Aucune tâche cron pour l'instant",
@@ -970,7 +1055,6 @@
       "namePlaceholder": "ex. Nettoyage nocturne",
       "runAs": "S'exécute en tant que",
       "runAsPlaceholder": "Sélectionner un utilisateur",
-      "runAsLocked": "L'utilisateur d'exécution ne peut pas être modifié. Supprimez la tâche et créez-en une nouvelle.",
       "otherUser": "Autre utilisateur OS…",
       "username": "Utilisateur système",
       "usernameHint": "Doit déjà exister sur le serveur, ex. root ou www-data.",
@@ -993,11 +1077,10 @@
         "days": "Jours & semaines",
         "custom": "Personnalisé"
       },
-      "commandHintPath": "cron s'exécute avec un PATH minimal — utilisez des chemins absolus, ex. /usr/bin/php.",
-      "commandHintLog": "Ajoutez >> /chemin/du/log 2>&1 pour conserver la sortie.",
+      "commandHint": "Cron s'exécute avec un <code>PATH</code> minimal : utilisez des chemins absolus comme <code>/usr/bin/php</code>. Pour enregistrer la sortie dans un fichier journal, ajoutez <code>>> /chemin/du/log 2>&1</code>.",
       "serverTimeNote": "S'exécute à l'heure du serveur ({timezone})",
       "runAsUnavailable": "La liste des comptes n'a pas pu être chargée. Choisissez « Autre utilisateur OS… » et saisissez le nom d'utilisateur.",
-      "runAsHint": "Le compte Linux sous lequel la commande s'exécute. Il détermine les fichiers que la tâche peut lire et écrire, et il ne peut pas être modifié ensuite.",
+      "runAsHint": "Le compte Linux sous lequel la commande s'exécute. Il détermine les fichiers que la tâche peut lire et écrire.",
       "scheduleHint": "La fréquence d'exécution. Choisissez l'une des cadences courantes, ou choisissez Personnalisé pour rédiger vous-même la planification."
     },
     "toast": {
@@ -1006,12 +1089,33 @@
       "deleted": "Tâche cron supprimée",
       "paused": "Tâche cron mise en pause",
       "resumed": "Tâche cron reprise",
-      "failed": "Une erreur s'est produite"
+      "failed": "Une erreur s'est produite",
+      "alreadyGone": "« {name} » avait déjà été supprimée."
     },
     "paused": "En pause",
+    "activeFor": "Active : {name}",
     "duplicateName": "{name} (copie)",
     "loadFailed": "Vos tâches cron n'ont pas pu être chargées. Elles n'ont pas été modifiées ni supprimées.",
-    "noPermission": "Votre rôle n'inclut pas les tâches cron avec l'accès Manage. Demandez à un administrateur de l'accorder."
+    "noPermission": "Votre rôle n'inclut pas les tâches cron avec l'accès Manage. Demandez à un administrateur de l'accorder.",
+    "preview": {
+      "everyMinute": "toutes les minutes",
+      "everyMinutes": "{n, plural, one {toutes les minutes} other {toutes les # minutes}}",
+      "hourly": "toutes les heures ({examples}, …)",
+      "everyHours": "{n, plural, one {toutes les heures} other {toutes les # heures}} ({examples}, …)",
+      "everyBetween": "{n, plural, one {toutes les minutes} other {toutes les # minutes}} de {from} à {to}",
+      "at": "à {times}",
+      "everyDay": "tous les jours",
+      "onWeekdays": "le {weekdays}",
+      "onWeekdayRange": "du {from} au {to}",
+      "onDays": "le {days} de chaque mois",
+      "daysOrWeekdays": "{days} ou {weekdays}",
+      "inMonths": "{days} en {months}",
+      "sentenceAt": "S'exécute {days} {time}.",
+      "sentenceRepeat": "S'exécute {time}.",
+      "sentenceRepeatOn": "S'exécute {time}, {days}.",
+      "nextRuns": "Prochaines exécutions : {runs}",
+      "never": "Cette date n'arrive jamais : la tâche ne s'exécuterait jamais."
+    }
   },
   "errors": {
     "title": "Une erreur s'est produite",
@@ -1111,7 +1215,7 @@
     "whatToDo": "Que faire"
   },
   "logs": {
-    "title": "Journaux",
+    "title": "Journaux système",
     "subtitle": "Lire les fichiers journaux de ce serveur.",
     "subtitleWithLocked": "Lire les fichiers journaux de ce serveur. {count} sur {total} nécessitent un accès élevé et ne peuvent pas encore être ouverts.",
     "sourcesLabel": "Sources des journaux",
@@ -1200,7 +1304,8 @@
     "clearDone": "{label} vidé.",
     "clearFailed": "Le journal n'a pas pu être vidé.",
     "clearBodyAudit": "Ce journal fait partie de la manière dont le serveur enregistre ce qui s'y passe : connexions, requêtes bloquées, bannissements. Le vider détruit des preuves dont vous pourriez avoir besoin après une intrusion, et c'est irréversible. Le fichier continue d'enregistrer à partir de maintenant.",
-    "loadingSource": "Chargement de {label}…"
+    "loadingSource": "Chargement de {label}…",
+    "linesCapped": "Affichage du maximum possible : {max, number} lignes."
   },
   "services": {
     "title": "Services",
@@ -1380,7 +1485,10 @@
       "stateFailing": "{count, plural, one {# adresse en échec actuellement} other {# adresses en échec actuellement}}",
       "stateBanned": "{count, plural, one {# adresse bannie} other {# adresses bannies}}",
       "stateUnknown": "Actif",
-      "totalsTooltip": "Depuis le démarrage de Fail2ban : {failed} tentatives erronées, {banned} bannissements."
+      "totalsTooltip": "Depuis le démarrage de Fail2ban : {failed} tentatives erronées, {banned} bannissements.",
+      "names": {
+        "recidive": "Récidivistes"
+      }
     },
     "lockout": {
       "title": "Risque de vous verrouiller l'accès",
@@ -1441,7 +1549,7 @@
       "banned": "{ip} bannie",
       "failed": "Impossible de bannir cette adresse.",
       "invalidIp": "Ce n'est pas une adresse IP valide. Les plages ne sont pas autorisées ici.",
-      "selfWarning": "C'est l'adresse depuis laquelle ce panel a été contacté. La bannir peut vous verrouiller l'accès au serveur.",
+      "selfWarning": "C'est votre propre adresse. Le serveur ne la bannira pas — vous vous bloqueriez l'accès.",
       "ipLabelHint": "L'adresse à bloquer. Vérifiez qu'il ne s'agit pas de votre propre connexion avant d'enregistrer.",
       "jailLabelHint": "Le jeu de règles sous lequel bloquer l'adresse. Chaque jail surveille un service, comme SSH ou le serveur web."
     },
@@ -1481,7 +1589,9 @@
       "removeYouDescription": "{ip} est l'adresse depuis laquelle vous êtes connecté. La retirer de cette liste permet à un jail de la bannir, ce qui vous couperait l'accès à ce serveur.",
       "removeYouConfirm": "Le retirer",
       "cancel": "Annuler",
-      "ignoreLimit": "C'est le nombre maximal d'adresses que cette liste peut contenir ({max}). Retirez-en une pour en ajouter une autre."
+      "ignoreLimit": "C'est le nombre maximal d'adresses que cette liste peut contenir ({max}). Retirez-en une pour en ajouter une autre.",
+      "maxretryRange": "Saisissez un nombre entier de 2 à 100.",
+      "findtimeRange": "Saisissez un nombre entier de secondes de 30 à 86400 (un jour)."
     },
     "tabs": {
       "live": "Protection",
@@ -1499,7 +1609,8 @@
       "bodyWithIp": "{count, plural, one {Active le # jail et ajoute {ip} à la liste des adresses jamais bannies, pour que vous ne puissiez pas vous verrouiller l'accès.} other {Active les # jails et ajoute {ip} à la liste des adresses jamais bannies, pour que vous ne puissiez pas vous verrouiller l'accès.}}",
       "action": "Configurer la protection",
       "done": "La protection est activée.",
-      "failed": "Impossible de configurer cela."
+      "failed": "Impossible de configurer cela.",
+      "checkingIp": "Vérification de votre adresse, pour qu'elle ne soit jamais bannie…"
     },
     "noPermission": "Votre rôle n'inclut pas Fail2ban avec l'accès Gérer. Demandez à un administrateur de vous l'accorder."
   },
@@ -1532,7 +1643,10 @@
       "exposedTitle": "Votre pare-feu est activé, mais il ne bloque rien",
       "exposedBody": "Vos règles sont appliquées, mais tout ce qui n'est pas listé ci-dessous reste autorisé. La politique par défaut a été modifiée en dehors du panneau.",
       "secureNow": "Bloquer le trafic entrant par défaut",
-      "secured": "Le trafic entrant est à nouveau bloqué par défaut."
+      "secured": "Le trafic entrant est à nouveau bloqué par défaut.",
+      "unknownTitle": "Impossible de lire l'état du pare-feu",
+      "unknownBody": "Le panneau n'a pas pu demander au serveur si le pare-feu est activé. Rien n'a été modifié. Rechargez dans un instant ; si cela continue, donnez cette référence au support.",
+      "reference": "Référence : {reference}"
     },
     "confirmOn": {
       "title": "Activer le pare-feu ?",
@@ -1559,6 +1673,8 @@
       "protectedReason": "Elle vous maintient connecté — la désactiver peut vous verrouiller l'accès au serveur ou mettre vos applications hors ligne.",
       "confirmTitle": "Supprimer cette règle ?",
       "confirmBodyOn": "{rule} — cela prend effet immédiatement. Tout ce qu'elle laissait passer sera bloqué.",
+      "confirmBodyOnDeny": "{rule} — cela prend effet immédiatement. Tout ce qu'elle bloquait passera.",
+      "confirmBodyRuleOff": "{rule} — cette règle est désactivée, rien ne change aujourd'hui.",
       "confirmBodyOff": "{rule} — le pare-feu est désactivé, rien ne change aujourd'hui, mais la règle ne reviendra pas à la réactivation.",
       "name": "Nom",
       "action": "Action",
@@ -1593,7 +1709,11 @@
         "portAsc": "Port : croissant",
         "portDesc": "Port : décroissant",
         "actionAsc": "Action : A–Z",
-        "protocolAsc": "Protocole : A–Z"
+        "protocolAsc": "Protocole : A–Z",
+        "stateLabel": "État",
+        "actionLabel": "Action",
+        "originLabel": "Ajoutée par",
+        "sortLabel": "Trier par"
       }
     },
     "add": {
@@ -1610,7 +1730,7 @@
       "created": "Règle ajoutée.",
       "errors": {
         "required": "Saisissez un port.",
-        "portRange": "Les ports vont de 1 à 65534.",
+        "portRange": "Les ports vont de 1 à 65535.",
         "portOrder": "La fin de la plage ne peut pas être inférieure au début.",
         "invalidSource": "Ce n'est pas une adresse IP ou une plage valide.",
         "portShape": "Utilisez un port comme 443, ou une plage comme 8000-8090.",
@@ -1636,8 +1756,9 @@
       "onlyMyIp": "Uniquement mon IP",
       "onlyMyIpSet": "Votre IP",
       "wouldLockYouOut": "C'est l'adresse depuis laquelle vous êtes connecté. La bloquer vous verrouillerait l'accès à ce serveur.",
-      "protectedLocked": "Cette règle a été créée par le panneau et est utilisée. Son port, protocole, action et source ne peuvent pas être modifiés tant que le pare-feu est activé — seul son nom.",
-      "protocolHint": "TCP transporte presque tout — sites web, SSH, bases de données. UDP sert pour DNS, VPN et certains serveurs de jeu."
+      "protectedLocked": "Cette règle a été créée par le panneau et est utilisée. Son port, protocole, action et source ne peuvent pas être modifiés — seul son nom.",
+      "protocolHint": "TCP transporte presque tout — sites web, SSH, bases de données. UDP sert pour DNS, VPN et certains serveurs de jeu.",
+      "onlyMyIpAlready": "Votre IP est déjà renseignée."
     },
     "quick": {
       "title": "Ajout rapide",
@@ -1656,7 +1777,10 @@
       "stackAddHint": "Cliquer pour ajouter ces règles",
       "switchedOn": "{names} réactivé(es).",
       "tileOffBody": "Rien n'atteint le port {port} — cette règle est désactivée.",
-      "tileOffHint": "Cliquer pour la réactiver"
+      "tileOffHint": "Cliquer pour la réactiver",
+      "riskyTitle": "Ouvrir {name} à tout le monde ?",
+      "riskyBody": "N'importe qui sur internet pourra joindre {name} sur le port {port}. Plus sûr : utilisez Règle personnalisée et choisissez « Uniquement mon IP ».",
+      "riskyConfirm": "Ouvrir à tout le monde"
     },
     "history": {
       "action": "Historique",
@@ -1665,7 +1789,10 @@
       "loading": "Chargement…",
       "failed": "Impossible de charger votre historique.",
       "empty": "Vous n'avez encore modifié aucun paramètre du pare-feu.",
-      "everyone": "Voir les modifications de tout le monde"
+      "descriptionEveryone": "Toutes les modifications du pare-feu sur ce serveur, les plus récentes en premier.",
+      "failedEveryone": "Impossible de charger l'historique du pare-feu.",
+      "emptyEveryone": "Personne n'a encore modifié le pare-feu.",
+      "openLog": "Ouvrir le journal d'activité"
     },
     "edit": {
       "title": "Modifier la règle",
@@ -1712,7 +1839,8 @@
       "invalidPort": "Saisissez un port entre 1 et 65535.",
       "invalidTime": "Utilisez une heure sur 24 heures, comme 03:00.",
       "invalidMemory": "Utilisez une taille comme 256mb ou 1gb — ou 0 pour aucune limite.",
-      "passwordTooShort": "Utilisez au moins 8 caractères."
+      "passwordTooShort": "Utilisez au moins 8 caractères.",
+      "invalidHour": "Choisissez une heure entre 0 et 23."
     },
     "server": {
       "title": "Serveur",
@@ -1811,7 +1939,9 @@
         "memoryTotal": "Ce serveur dispose de {size} de mémoire.",
         "custom": "Personnalisé",
         "recommended": "recommandé",
-        "save": "Enregistrer le swap"
+        "save": "Enregistrer le swap",
+        "noRoom": "Cela utiliserait plus de la moitié de l'espace disque libre ({free} de libre). Choisissez une taille plus petite.",
+        "tight": "Un fichier swap de {size} ne laisse que {left} de libre sur le disque, alors que les applications et les sauvegardes en ont aussi besoin."
       },
       "redis": {
         "passwordUnknownShort": "Impossible de vérifier",
@@ -2022,7 +2152,8 @@
       "incompleteDetail": "Il manque {packages} — elle a été installée par un autre paquet, pas par le panneau.",
       "completeInstall": "Compléter l'installation",
       "completing": "Finalisation de PHP {version}…",
-      "incompleteDefault": "Complétez d'abord l'installation — le PHP par défaut est celui qui s'exécute quand rien ne fixe de version."
+      "incompleteDefault": "Complétez d'abord l'installation — le PHP par défaut est celui qui s'exécute quand rien ne fixe de version.",
+      "statusRemoveFailed": "Échec de la suppression"
     },
     "extensions": {
       "title": "Extensions",
@@ -2124,7 +2255,61 @@
       "xsl": "Transforme du XML avec des feuilles XSLT",
       "yaml": "Lit et écrit des fichiers YAML",
       "zip": "Crée et ouvre les archives .zip",
-      "zstd": "Compression rapide, utilisée pour le cache et les sauvegardes"
+      "zstd": "Compression rapide, utilisée pour le cache et les sauvegardes",
+      "amqp": "Envoie et reçoit des messages via RabbitMQ",
+      "apcu": "Garde des données en cache en mémoire pour des pages plus rapides",
+      "ast": "Lit le code PHP sous forme d'arbre syntaxique, pour les outils d'analyse",
+      "decimal": "Calculs décimaux exacts, pour l'argent",
+      "dio": "Accès bas niveau aux fichiers et aux ports série",
+      "ds": "Listes, tables et files plus rapides pour le code PHP",
+      "enchant": "Vérification orthographique",
+      "excimer": "Mesure où PHP passe son temps, pour le profilage",
+      "gearman": "Confie du travail à des processus en arrière-plan via Gearman",
+      "gmagick": "Retouche d'images avec GraphicsMagick",
+      "gnupg": "Chiffre et signe des données avec GnuPG",
+      "grpc": "Appelle des services gRPC, utilisé par certaines bibliothèques Google Cloud",
+      "http": "Outils supplémentaires pour créer et lire des requêtes HTTP",
+      "inotify": "Détecte quand des fichiers changent sur le disque",
+      "interbase": "Se connecte aux bases Firebird et InterBase",
+      "lz4": "Compression rapide pour les données en cache",
+      "mcrypt": "Anciennes fonctions de chiffrement, pour les vieilles applications",
+      "memcache": "Stocke le cache dans un serveur Memcached (ancien client)",
+      "opentelemetry": "Envoie les traces de chaque requête aux outils de supervision",
+      "phalcon": "Le framework Phalcon, intégré à PHP",
+      "pq": "Une autre façon de se connecter à PostgreSQL",
+      "protobuf": "Lit et écrit des données Protocol Buffers",
+      "ps": "Crée des fichiers PostScript",
+      "pspell": "Vérification orthographique avec Aspell",
+      "raphf": "Garde les connexions ouvertes entre les requêtes, requis par http",
+      "rdkafka": "Envoie et reçoit des messages via Kafka",
+      "readline": "Édition de ligne pour PHP en ligne de commande",
+      "rrd": "Lit et écrit des données de graphiques RRDtool",
+      "stomp": "Communique avec des files de messages via STOMP",
+      "sybase": "Se connecte aux bases Sybase et SQL Server",
+      "uopz": "Modifie le code PHP pendant l'exécution, utilisé par les outils de test",
+      "uploadprogress": "Indique l'avancement d'un envoi de fichier",
+      "xhprof": "Mesure quelles fonctions sont lentes, pour le profilage",
+      "xlswriter": "Écrit rapidement de gros fichiers Excel",
+      "xmlrpc": "Communique avec des services XML-RPC, comme l'ancienne API distante de WordPress",
+      "yac": "Cache en mémoire partagée sans verrous",
+      "zmq": "Envoie des messages via ZeroMQ",
+      "apcu-bc": "Permet à du vieux code d'appeler APCu par les anciens noms apc_",
+      "facedetect": "Détecte les visages sur les photos",
+      "geoip": "Trouve le pays d'un visiteur à partir de son adresse IP",
+      "json": "Lit et écrit du JSON (intégré depuis PHP 8)",
+      "lua": "Exécute des scripts Lua depuis PHP",
+      "mongo": "Ancien pilote MongoDB, pour les vieilles applications",
+      "mysqlnd-ms": "Répartit les requêtes MySQL sur plusieurs serveurs",
+      "phalcon3": "Le framework Phalcon 3, intégré à PHP",
+      "phalcon4": "Le framework Phalcon 4, intégré à PHP",
+      "phalcon5": "Le framework Phalcon 5, intégré à PHP",
+      "pinba": "Envoie des statistiques de durée à un serveur Pinba",
+      "propro": "Complément requis par l'ancienne extension http",
+      "radius": "Vérifie les connexions auprès d'un serveur RADIUS",
+      "recode": "Convertit du texte entre jeux de caractères",
+      "sass": "Compile du Sass en CSS",
+      "tideways": "Mesure où PHP passe son temps, pour le profilage",
+      "xcache": "Ancien cache de code, remplacé par OPcache"
     },
     "ioncube": {
       "title": "ionCube Loader",
@@ -2225,7 +2410,8 @@
       "removing": "Suppression de Node.js {version}…",
       "removingSince": "Démarré {when}. La page se met à jour toute seule.",
       "retry": "Réessayer",
-      "retrying": "Nouvelle installation de Node {version}…"
+      "retrying": "Nouvelle installation de Node {version}…",
+      "statusRemoveFailed": "Échec de la suppression"
     },
     "install": {
       "action": "Installer une version",
@@ -2345,7 +2531,8 @@
       "enableHint": "Lance le nettoyage selon un planning au lieu de seulement quand vous appuyez sur le bouton.",
       "onlyWhenHint": "Ne nettoie que lorsque le disque est au moins rempli à ce niveau, pour qu’un nettoyage de routine ne se déclenche pas sur un disque presque vide.",
       "nextRun": "Prochain nettoyage {when}",
-      "nextRunAtZone": "Prochain nettoyage {when} · {time} {timezone}"
+      "nextRunAtZone": "Prochain nettoyage {when} · {time} {timezone}",
+      "thresholdRange": "Saisissez un nombre de 1 à 99. L'utilisation du disque ne dépasse jamais 100 % : avec un nombre plus élevé, le nettoyage ne s'exécute jamais."
     },
     "runs": {
       "title": "Nettoyages récents",
@@ -2569,7 +2756,9 @@
       "copyString": "Copier",
       "connectionStringHint": "La plupart des applications n'ont besoin que de cette ligne.",
       "passwordEscaped": "Le mot de passe est échappé dans la chaîne de connexion, ce qui la fait paraître différente. Les deux sont corrects.",
-      "noUserWarning": "Cette base n'a pas encore d'utilisateur, donc rien ne peut s'y connecter. Ajoutez-en un depuis la ligne de la base."
+      "noUserWarning": "Cette base n'a pas encore d'utilisateur, donc rien ne peut s'y connecter. Ajoutez-en un depuis la ligne de la base.",
+      "userTitle": "{username} peut se connecter maintenant",
+      "userSubtitle": "Donnez ces informations à l'application qui l'utilise. Elles restent dans la liste des utilisateurs ci-dessous."
     },
     "delete": {
       "action": "Supprimer",
@@ -2585,7 +2774,9 @@
       "cardTitle": "Supprimer cette base",
       "cardDescription": "Supprime la base, tout son contenu et ses utilisateurs.",
       "noPermission": "Votre rôle n'inclut pas Bases de données avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
-      "copyName": "Copier le nom de la base"
+      "copyName": "Copier le nom de la base",
+      "usedBy": "{application} utilise cette base et cessera de fonctionner une fois qu'elle sera supprimée.",
+      "usedByUnknown": "Une application utilise cette base et cessera de fonctionner une fois qu'elle sera supprimée."
     },
     "adopt": {
       "title": "{count, plural, one {# base de ce serveur n'est pas gérée ici} other {# bases de ce serveur ne sont pas gérées ici}}",
@@ -2668,7 +2859,8 @@
       "password": "Mot de passe",
       "copyString": "Copier la chaîne de connexion",
       "copyField": "Copier {field}",
-      "otherUsers": "{count, plural, =1 {Un autre utilisateur peut se connecter à cette base.} other {# autres utilisateurs peuvent se connecter à cette base.}} Voir l'onglet Utilisateurs."
+      "otherUsers": "{count, plural, =1 {Un autre utilisateur peut se connecter à cette base.} other {# autres utilisateurs peuvent se connecter à cette base.}} Voir l'onglet Utilisateurs.",
+      "passwordWithheld": "Masqué — votre rôle ne peut pas gérer les bases de données."
     },
     "users": {
       "title": "Utilisateurs",
@@ -2720,14 +2912,16 @@
       "newPasswordRequired": "Nouveau mot de passe (requis pour renommer sur MongoDB)",
       "nameIsFixed": "Le nom d'un utilisateur de base de données ne peut pas être modifié après sa création. Créez un autre utilisateur.",
       "newPasswordRequiredHint": "MongoDB ne peut pas renommer un utilisateur, donc le compte est recréé de zéro. C’est pourquoi il faut définir un mot de passe.",
-      "passwordUnknown": "Le panneau ne connaît pas le mot de passe : ce compte provient d'un autre serveur. Changez le mot de passe pour obtenir une chaîne de connexion."
+      "passwordUnknown": "Le panneau ne connaît pas le mot de passe : ce compte provient d'un autre serveur. Changez le mot de passe pour obtenir une chaîne de connexion.",
+      "passwordWithheld": "Mot de passe masqué — votre rôle ne peut pas gérer les bases de données."
     },
     "detail": {
       "size": "Taille",
       "charset": "Jeu de caractères",
       "collation": "Collation",
       "created": "Créé le",
-      "createdWhen": "créé le {when}"
+      "createdWhen": "créé le {when}",
+      "engineDown": "{engine} n'est pas en cours d'exécution, donc rien ne peut se connecter à cette base de données. Sa taille et ses tables ne peuvent pas être lues tant qu'il n'est pas relancé."
     },
     "exports": {
       "title": "Exports",
@@ -2762,7 +2956,8 @@
       "freeSpace": "{free} libres sur ce serveur.",
       "inProgress": "Exportation…",
       "diskUsed": "{count, plural, one {# export conservé} other {# exports conservés}} — {size}. Rien ne les supprime pour vous.",
-      "takingLonger": "Cela prend plus de temps que d'habitude. Les bases volumineuses peuvent prendre quelques minutes."
+      "takingLonger": "Cela prend plus de temps que d'habitude. Les bases volumineuses peuvent prendre quelques minutes.",
+      "loadFailed": "Impossible de charger les exports."
     },
     "manage": "Gérer",
     "monitor": {
@@ -2842,7 +3037,9 @@
           "slowRateHigh": "Environ {rate} requêtes lentes par heure depuis le dernier redémarrage.",
           "slowRateCritical": "Environ {rate} requêtes lentes par heure — il vaut mieux consulter le journal des requêtes lentes.",
           "recentlyRestarted": "Ce moteur a redémarré récemment, les compteurs et l'historique se remplissent encore."
-        }
+        },
+        "unknownTitle": "Santé inconnue",
+        "unknownBody": "{engine} n'a pas répondu à la vérification de santé. Réessayez dans un instant."
       },
       "longRunning": "Requête longue",
       "meta": {
@@ -2859,7 +3056,8 @@
       "longRunningCount": "{count, plural, one {# longue} other {# longues}}",
       "chartDescription": "Requêtes par seconde, connexions et threads actifs, échantillonnés toutes les 5 minutes.",
       "zoomHint": "Faites glisser les poignées sous le graphique, ou utilisez la molette, pour zoomer sur une plage de temps.",
-      "cannotStopOwn": "C'est la connexion du panel lui-même à la base de données. L'arrêter couperait cette page."
+      "cannotStopOwn": "C'est la connexion du panel lui-même à la base de données. L'arrêter couperait cette page.",
+      "loadFailed": "Impossible de vérifier les moteurs de base de données."
     },
     "tables": {
       "title": "Tables",
@@ -2870,7 +3068,9 @@
       "empty": "Aucune table pour l'instant.",
       "rowCount": "{rows} lignes",
       "rowsEstimated": "Les nombres de lignes sont des estimations du moteur, pas des comptages exacts.",
-      "charsetLine": "Jeu de caractères {charset} · collation {collation}"
+      "charsetLine": "Jeu de caractères {charset} · collation {collation}",
+      "loadFailed": "Impossible de lire les tables de cette base de données.",
+      "unavailable": "Illisible tant que {engine} n'est pas en cours d'exécution."
     },
     "tabs": {
       "users": "Utilisateurs",
@@ -2886,7 +3086,9 @@
       "openAnyway": "Ouvrir phpMyAdmin",
       "install": "Installer phpMyAdmin",
       "needsUser": "Ajoutez d'abord un utilisateur de base de données — phpMyAdmin se connecte en tant qu'utilisateur.",
-      "choose": "Quel phpMyAdmin ?"
+      "choose": "Quel phpMyAdmin ?",
+      "signingShort": "Connexion en cours…",
+      "linkReady": "Votre lien de connexion phpMyAdmin est prêt."
     },
     "usedBy": {
       "title": "Utilisé par",
@@ -2920,6 +3122,11 @@
       "action": "Les afficher",
       "filtered": "Affichage des seules bases de données non liées à une application",
       "showAll": "Tout afficher"
+    },
+    "restartForRemote": {
+      "title": "Redémarrer le serveur de bases de données ?",
+      "cancel": "Annuler",
+      "confirm": "Redémarrer et continuer"
     },
     "unavailable": {
       "title": "Les bases de données ne sont pas gérées sur ce serveur",
@@ -2994,7 +3201,7 @@
     "connect": {
       "action": "Connecter un compte",
       "unavailable": "La liste des fournisseurs n'a pas pu être chargée.",
-      "readOnly": "{brand} lit uniquement vos dépôts et branches. Il n'y fait jamais d'envoi.",
+      "readOnly": "{brand} lit vos dépôts et branches et ajoute le webhook de déploiement. Il n'envoie jamais de code.",
       "pickTitle": "Connecter un compte Git",
       "pickSubtitle": "Choisissez où se trouve votre code.",
       "hints": {
@@ -3003,10 +3210,10 @@
         "bitbucket": "bitbucket.org"
       },
       "title": "Connecter {provider}",
-      "subtitle": "Collez un jeton. {brand} lit uniquement vos dépôts et vos branches — il n'envoie jamais rien.",
-      "scopeHint_github": "Cochez la portée <scope>repo</scope>. Rien d'autre n'est nécessaire.",
-      "scopeHint_gitlab": "Cochez <scope>read_repository</scope> et <scope>read_api</scope>, et choisissez <option>Jeton hérité</option> — le nouveau type granulaire ne les propose pas.",
-      "scopeHint_bitbucket": "Cochez uniquement <scope>read:repository:bitbucket</scope>. Un jeton limité à un dépôt n'affichera que celui-ci.",
+      "subtitle": "Collez un jeton. {brand} lit vos dépôts et vos branches et ajoute le webhook de déploiement — il n'envoie jamais de code.",
+      "scopeHint_github": "Cochez les portées <scope>repo</scope> et <scope>admin:repo_hook</scope>. La seconde permet au panneau d'ajouter lui-même le webhook de déploiement à votre dépôt.",
+      "scopeHint_gitlab": "Cochez <scope>api</scope> et <scope>read_repository</scope>, et choisissez <option>Jeton hérité</option>.",
+      "scopeHint_bitbucket": "Cochez <scope>read:repository:bitbucket</scope>, <scope>read:webhook:bitbucket</scope>, <scope>write:webhook:bitbucket</scope> et <scope>delete:webhook:bitbucket</scope>. Celles du webhook permettent au panneau d'ajouter lui-même le webhook de déploiement, et de le retirer quand vous désactivez le déploiement au push.",
       "nameLabel": "Nom",
       "namePlaceholder": "Compte {provider}",
       "nameHelp": "Un nom pour vous. C'est ainsi qu'apparaît ce compte quand vous créez une application.",
@@ -3029,7 +3236,8 @@
       "fieldHelp": {
         "gitlab_host": "Uniquement pour un GitLab auto-hébergé. Laissez vide pour gitlab.com. Utilisez l'adresse à laquelle vous vous connectez, comme https://gitlab.example.com — pas l'adresse d'un projet.",
         "bitbucket_workspace": "L'identifiant d'espace de travail depuis votre adresse Bitbucket : bitbucket.org/identifiant-espace/depot."
-      }
+      },
+      "scopeNote_gitlab": "<strong>Pourquoi api ?</strong> C'est la seule permission GitLab qui permet au panneau d'ajouter le webhook de déploiement pour vous. Elle donne aussi un accès complet à votre compte GitLab : créez ce jeton uniquement pour le panneau, avec une date d'expiration. Vous préférez moins d'accès ? Cochez plutôt <scope>read_repository</scope> et <scope>read_api</scope> et ajoutez le webhook vous-même."
     },
     "edit": {
       "title": "Modifier le compte",
@@ -3135,11 +3343,9 @@
         "subtitle": "Qui a modifié ce fichier et quelles clés ont changé. Les valeurs ne sont jamais enregistrées.",
         "loadFailed": "L'historique des modifications n'a pas pu être chargé.",
         "empty": "Ce fichier n'a pas encore été modifié via le panneau.",
-        "actionUpdated": "a enregistré ce fichier",
         "actionRestored": "a restauré une version antérieure",
         "bySystem": "Le panneau",
         "byUnknown": "Un compte supprimé",
-        "noKeys": "Aucune clé modifiée — uniquement des commentaires ou des espaces.",
         "restore": "Restaurer",
         "restored": "La version antérieure a été restaurée.",
         "restoreFailed": "Cette version n'a pas pu être restaurée.",
@@ -3149,7 +3355,6 @@
         "confirmBody": "Le fichier actuel est sauvegardé au préalable, cette opération est donc elle aussi réversible.",
         "cancel": "Annuler",
         "confirmSubmit": "Restaurer",
-        "showValues": "Afficher les valeurs",
         "diffLoading": "Lecture des copies enregistrées…",
         "diffFailed": "Ces valeurs n'ont pas pu être lues.",
         "diffUnavailable": "La copie de la version précédente a été supprimée, cette modification ne peut pas être affichée.",
@@ -3157,7 +3362,29 @@
         "colBefore": "Avant",
         "colAfter": "Après",
         "absent": "Non défini",
-        "emptyValue": "vide"
+        "emptyValue": "vide",
+        "actionChanged": "a modifié {count, plural, one {# variable} other {# variables}}",
+        "actionNoKeys": "a enregistré le fichier sans modifier de variable",
+        "noKeysNote": "Seuls des commentaires ou des lignes vides ont changé.",
+        "showChanges": "Afficher les modifications",
+        "hideChanges": "Masquer les modifications",
+        "status": {
+          "added": "Ajouté",
+          "removed": "Supprimé",
+          "changed": "Modifié"
+        },
+        "showOlder": "{count, plural, one {Afficher # modification plus ancienne} other {Afficher # modifications plus anciennes}}",
+        "olderFailed": "Les modifications plus anciennes n'ont pas pu être chargées."
+      },
+      "pageSubtitleReadOnly": "Consultez le fichier .env de cette application.",
+      "emptyFilePlaceholder": "# Ce fichier est vide — ajoutez des variables et enregistrez",
+      "tooLargeTitle": "Non enregistré — fichier trop volumineux",
+      "tooLarge": "Le fichier ne peut pas dépasser 256 Ko. Supprimez du contenu pour pouvoir l'enregistrer.",
+      "guarded": {
+        "title": "Modifier des réglages gérés par le panneau ?",
+        "description": "Vous avez modifié ou supprimé {keys}. Le panneau les a configurés et l'application en dépend : une nouvelle clé de chiffrement rend illisibles tous les identifiants enregistrés, et un autre port ou dossier ne correspond plus au service que le panneau exécute.",
+        "cancel": "Continuer à modifier",
+        "confirm": "Enregistrer quand même"
       }
     },
     "title": "Applications",
@@ -3191,9 +3418,9 @@
       "title": "Source et déploiement",
       "repository": "Dépôt",
       "branch": "Branche",
-      "lastDeploy": "Dernier déploiement",
+      "lastDeploy": "Dernier déploiement réussi",
       "commit": "Commit",
-      "never": "Pas encore déployé",
+      "never": "Aucun pour l'instant",
       "deploy": "Déployer maintenant",
       "deploying": "Déploiement…",
       "started": "Déploiement démarré.",
@@ -3203,7 +3430,12 @@
       "reference": "Référence d'assistance : {reference}",
       "redeploy": "Redéployer",
       "manage": "Gérer le déploiement",
-      "description": "D'où vient le code et comment il est livré."
+      "description": "D'où vient le code et comment il est livré.",
+      "failedAtStep": "Le dernier déploiement a échoué à l'étape {step}.",
+      "incomplete": "Le dernier déploiement a échoué après la mise en place du nouveau code : ce code est en ligne, mais pas entièrement déployé. Corrigez le problème et déployez à nouveau.",
+      "notFullyDeployed": "Déploiement incomplet",
+      "inFlightReason": "Un déploiement est déjà en cours.",
+      "inFlightNote": "Un déploiement est en cours. Cette carte se met à jour à la fin."
     },
     "gitAccount": "Compte Git",
     "gitAccountPlaceholder": "Choisir un compte connecté",
@@ -3294,7 +3526,14 @@
         "install_cli": "Installation des outils en ligne de commande",
         "set_password": "Définition du mot de passe administrateur",
         "set_timezone": "Définition du fuseau horaire",
-        "trust_domain": "Faire confiance au domaine"
+        "trust_domain": "Faire confiance au domaine",
+        "build": "Compilation de l'application",
+        "create_admin": "Création du compte administrateur",
+        "ensure_account": "Préparation de l'utilisateur système",
+        "schedule_cron": "Planification des tâches en arrière-plan",
+        "start_app": "Démarrage de l'application",
+        "verify_install": "Vérification de l'installation",
+        "verify_serving": "Vérification que l'application est servie"
       },
       "stalledTitle": "Cela prend plus de temps que prévu",
       "stalledBody": "La configuration n'a pas signalé de progrès depuis un moment. Elle tourne peut-être encore — réessayez, ou contactez le support si cela persiste.",
@@ -3325,7 +3564,7 @@
       "ready": "Prêt",
       "incompleteHint": "Complétez ces éléments pour continuer.",
       "readyHint": "Vérifiez cette configuration, puis créez l'application.",
-      "complete": "Ajouter {field}",
+      "complete": "Manquant : {field}",
       "configured": "Configuré",
       "progress": "{done} sur {total} prêts"
     },
@@ -3341,15 +3580,13 @@
       "fieldSelectPlaceholder": "Choisir {field}",
       "requiredField": "Choisissez ou saisissez {field} avant de créer l'application.",
       "advancedErrors": "{count, plural, one {# erreur} other {# erreurs}}",
-      "noSystemUsers": "Aucun utilisateur système disponible. Créez-en un avant de créer une application.",
-      "systemUsersUnavailable": "Impossible de charger les utilisateurs système. Vous pouvez toujours en créer un pour continuer.",
+      "noSystemUsers": "Aucun utilisateur système n'existe encore. Choisissez « Générer un nouvel utilisateur système » ci-dessus.",
+      "systemUsersUnavailable": "Impossible de charger les utilisateurs système. Choisissez « Générer un nouvel utilisateur système » pour continuer.",
       "noSystemUserCreatePermission": "Vous avez besoin de l'autorisation de gérer les utilisateurs système. Demandez à un administrateur d'en créer un.",
-      "createSystemUser": "Créer un utilisateur système",
       "generateSystemUser": "Générer un nouvel utilisateur système",
-      "generateSystemUserHint": "Un compte Linux dédié, nommé d'après cette application.",
+      "generateSystemUserHint": "Un utilisateur dédié à cette application. Son nom et son mot de passe sont ci-dessous.",
       "pickSystemUser": "Utiliser un utilisateur système existant",
       "pickSystemUserHint": "Partager un compte avec vos autres applications.",
-      "systemUserWillBeCreated": "Un nouvel utilisateur sera créé",
       "repositoriesLoading": "Chargement des dépôts…",
       "repositoriesEmpty": "Aucun dépôt n'est disponible pour ce compte.",
       "repositoriesFailed": "Impossible de charger les dépôts. Actualisez pour réessayer.",
@@ -3390,10 +3627,10 @@
         "label": "Où cette application sera hébergée"
       },
       "temporaryDomainHint": "Fonctionne tout de suite. Utilisez un vrai domaine avant la mise en ligne.",
-      "nameHint": "Utilisé uniquement dans le panneau — les visiteurs ne le voient jamais.",
+      "nameHint": "Votre libellé dans le panneau. Il remplit aussi le domaine et l'utilisateur système ci-dessous — vous pouvez les modifier.",
       "buildCommandSuperseded": "Ceci ne s'exécutera pas — le script de déploiement le remplace.",
       "moreLines": "{count, plural, one {+# ligne supplémentaire} other {+# lignes supplémentaires}}",
-      "needsSystemUser": "Aucun utilisateur système n'existe encore. Utilisez « Créer un utilisateur système » ci-dessus pour en créer un.",
+      "needsSystemUser": "Aucun utilisateur système n'existe encore.",
       "needsGitAccount": "Aucun compte Git n'est connecté. Utilisez « Connecter Git » ci-dessous, puis Actualiser.",
       "installPhpVersion": "Installer une version de PHP",
       "installNodeVersion": "Installer une version de Node",
@@ -3424,7 +3661,16 @@
       "submitNeedsServices": "{count, plural, one {Installez d’abord le service dont cette application a besoin} other {Installez d’abord les services dont cette application a besoin}}",
       "typeNoResultsInCategory": "Aucun type d’application ne correspond à « {query} » dans {category} — {count, plural, one {# correspondance se trouve} other {# correspondances se trouvent}} dans d’autres catégories.",
       "typeSearchAllCategories": "Rechercher dans toutes les catégories",
-      "runtimeIncomplete": "Il manque {packages} à {runtime} {version}. Les applications qui en ont besoin échoueront. Complétez d'abord l'installation sur la page {runtime}."
+      "runtimeIncomplete": "Il manque {packages} à {runtime} {version}. Les applications qui en ont besoin échoueront. Complétez d'abord l'installation sur la page {runtime}.",
+      "systemUserUsername": "Nom d'utilisateur",
+      "systemUserPassword": "Mot de passe",
+      "systemUserPasswordPlaceholder": "Laisser vide pour aucun mot de passe",
+      "systemUserGeneratePassword": "Générer",
+      "systemUserPasswordHint": "Généré pour vous. Conservez-le, modifiez-le ou effacez-le. Vous pourrez le revoir plus tard sur la page Utilisateurs système.",
+      "systemUserNew": "{username} (nouveau)",
+      "systemUserCreateFailed": "L'utilisateur système n'a pas pu être créé, l'application n'a donc pas été créée non plus.",
+      "systemUserLeftBehind": "L'utilisateur système {username} a été créé mais n'a pas pu être supprimé. Choisissez-le dans « Utiliser un utilisateur système existant » ou supprimez-le depuis Utilisateurs système.",
+      "tablePrefixInvalid": "Commencez par une lettre, utilisez uniquement des lettres et des chiffres et terminez par un tiret bas (par exemple jml_)."
     },
     "actions": {
       "label": "Actions",
@@ -3445,6 +3691,7 @@
       "removeFiles": "Supprimer aussi les fichiers et sauvegardes de l'application",
       "removeFilesOn": "Le répertoire de l'application, ainsi que toutes ses sauvegardes — y compris les archives dans votre stockage — sont supprimés.",
       "removeFilesOff": "Les fichiers restent sur le serveur. Les sauvegardes de l'application quittent le panneau avec elle, mais leurs archives restent dans votre stockage — supprimez-les là-bas si vous n'en voulez plus.",
+      "filesKept": "Ses fichiers ne sont pas supprimés : sans l'utilisateur système, le panneau ne sait pas où ils se trouvent. Ils restent sur le serveur.",
       "systemUserStays": "L'utilisateur système {username} n'est pas supprimé. Si aucune autre application ne l'utilise, vous pouvez le supprimer dans Utilisateurs système.",
       "confirmLabel": "Tapez <code>{domain}</code> pour confirmer",
       "submit": "Supprimer l'application",
@@ -3463,6 +3710,10 @@
       "removeDocker": "Supprimer aussi le réseau et les volumes Docker de ce site ({count})",
       "removeDockerOn": "{names} sera supprimé. Ce qu'un autre site utilise encore est conservé — le serveur le vérifie au moment de la suppression, pas maintenant.",
       "removeDockerOff": "{names} reste sur le serveur. Ses données sont conservées et vous pourrez les supprimer plus tard depuis la page Docker."
+    },
+    "systemUserMissing": {
+      "title": "L'utilisateur système de cette application est introuvable",
+      "description": "Sans lui, le panneau ne peut pas travailler sur les fichiers ni les réglages de {name}. Vous pouvez toujours supprimer l'application."
     },
     "facts": {
       "title": "Application",
@@ -3485,87 +3736,13 @@
       "stopped": "Le processus a été arrêté.",
       "restarted": "Le processus a été redémarré.",
       "failed": "Nous n'avons pas pu modifier le processus.",
-      "deployToStart": "Cette application démarre après son premier déploiement réussi."
-    },
-    "container": {
-      "title": "Conteneur",
-      "image": "Image",
-      "noImage": "Aucune image enregistrée",
-      "imageHint": "Se change en redéployant le site, pas ici : la nouvelle image est récupérée avant de remplacer l'ancien conteneur.",
-      "network": "Réseau",
-      "networkHint": "Les conteneurs d'un même réseau s'atteignent par leur nom. Le bridge par défaut de Docker ne le permet pas.",
-      "defaultBridge": "Bridge par défaut de Docker",
-      "noNetworks": "Ce serveur n'a pas encore de réseau propre, il n'y a donc rien à rejoindre.",
-      "noNetworksLink": "Créez un réseau sur la page Docker.",
-      "missingOption": "{name} (plus présent sur ce serveur)",
-      "missingTitle": "Ce réseau n'existe plus",
-      "missingBody": "Le site est configuré pour rejoindre {name}, et ce serveur ne l'a plus. Le conteneur ne démarrera pas tant que vous n'aurez pas choisi un réseau existant ou recréé celui-ci.",
-      "reachableTitle": "Comment les autres conteneurs atteignent ce site",
-      "reachableBody": "Utilisez le nom d’hôte {alias} — par exemple http://{alias} depuis un autre conteneur du même réseau. Évitez «app» : tous les sites créés par le panneau répondent à ce nom, il en désigne donc un au hasard.",
-      "containerPort": "Port du conteneur",
-      "containerPortHint": "Le port sur lequel votre application écoute à l'intérieur du conteneur.",
-      "memoryLimit": "Limite de mémoire",
-      "memoryLimitHint": "Par exemple 512m ou 2g. Un nombre seul signifie des octets, pas des mégaoctets. Vide utilise la valeur par défaut du serveur : {default}.",
-      "memoryLimitHintUnknown": "Par exemple 512m ou 2g. Un nombre seul signifie des octets, pas des mégaoctets. Vide utilise la valeur par défaut du serveur.",
-      "cpuLimit": "Limite de CPU",
-      "cpuLimitPlaceholder": "Aucune limite",
-      "cpuLimitHint": "En cœurs — 1 pour un cœur entier, 0.5 pour la moitié. Ce serveur en a {cores}. Vide signifie aucune limite.",
-      "cpuLimitHintUnknown": "En cœurs — 1 pour un cœur entier, 0.5 pour la moitié. Vous ne pouvez pas dépasser ce que possède ce serveur. Vide signifie aucune limite.",
-      "limitsTitle": "Comment se comportent ces deux limites",
-      "limitsBody": "Ce sont des plafonds pour ce conteneur seul, pas des réservations — rien ne lui est mis de côté. Leurs défaillances sont opposées, ce qu’il vaut mieux savoir avant de chercher la cause : au-delà du plafond mémoire, le conteneur est tué puis redémarré et le site perd des requêtes ; au-delà du quota CPU, rien n’est tué, le conteneur attend simplement, et le site est lent sans aucune erreur.",
-      "saveAction": "Enregistrer les paramètres du conteneur",
-      "restartNote": "L'enregistrement recrée le conteneur : le site est indisponible quelques secondes.",
-      "savingNote": "Réécriture du fichier compose et recréation du conteneur…",
-      "saved": "Paramètres du conteneur enregistrés.",
-      "failed": "Impossible d'enregistrer les paramètres du conteneur.",
-      "noPermission": "Vous n'avez pas la permission de modifier ce site.",
-      "nothingToSave": "Rien n'a changé.",
-      "volumes": {
-        "title": "Volumes",
-        "empty": "Aucun volume monté. Le conteneur ne conserve rien qui survive à une reconstruction.",
-        "choose": "Choisir un volume",
-        "alreadyMounted": "{name} (déjà monté)",
-        "pathPlaceholder": "/var/lib/mysql",
-        "pathLabel": "Chemin dans le conteneur",
-        "add": "Monter",
-        "remove": "Démonter {volume}",
-        "added": "{volume} monté. Le conteneur a été recréé.",
-        "removed": "{volume} démonté. Le conteneur a été recréé.",
-        "failed": "Impossible de modifier les montages.",
-        "invalid": "Choisissez un volume et indiquez un chemin absolu dans le conteneur, par exemple /var/lib/mysql.",
-        "noVolumes": "Ce serveur n'a pas encore de volume, il n'y a donc rien à monter.",
-        "noVolumesLink": "Créez un volume sur la page Docker.",
-        "hint": "Un volume conserve des données qui survivent à la reconstruction du conteneur. Le monter recrée le conteneur, et il démarre vide : ce que l'image contenait à ce chemin est masqué, pas fusionné."
-      },
-      "credentials": {
-        "title": "Identifiants générés",
-        "reveal": "Afficher",
-        "revealing": "Chargement…",
-        "hint": "Créés à l'installation de l'application et stockés chiffrés. Leur affichage est consigné dans le journal d'activité.",
-        "shownWarning": "Toute personne pouvant gérer ce site peut les lire. Ce sont les véritables identifiants de base de données de l'application : les modifier ici est impossible, car la base de données en cours d'exécution conserverait l'ancienne valeur.",
-        "failed": "Impossible de charger les identifiants."
-      },
-      "firstRun": {
-        "title": "Enregistrez ces identifiants maintenant",
-        "body": "Le panneau les a générés à l'installation de cette application. Ils ne peuvent pas être modifiés ici — l'application les stocke dans sa propre base de données — copiez-les donc en lieu sûr avant de fermer ce message.",
-        "acknowledge": "Je les ai enregistrés",
-        "acknowledgeFailed": "Impossible d'enregistrer cette confirmation. Les identifiants sont inchangés.",
-        "laterHint": "Ils restent disponibles via Conteneur → Afficher.",
-        "loading": "Chargement des identifiants",
-        "failed": "Impossible de charger les identifiants. Ne fermez pas ce message — rechargez la page."
-      },
-      "registry": "Registre",
-      "noRegistry": "Aucun — récupération anonyme",
-      "registryHint": "L’identifiant enregistré avec lequel ce site récupère son image. Laissez Aucun pour une image publique.",
-      "missingRegistryOption": "Identifiant supprimé — la prochaine récupération de ce site sera anonyme",
-      "noRegistries": "Aucun identifiant de registre n’est enregistré sur ce serveur : seules les images publiques peuvent être récupérées.",
-      "noRegistriesLink": "Ajoutez-en un dans Intégrations → Registres Docker.",
-      "pullTitle": "Mettre à jour l’image",
-      "pullHint": "Récupère l’image à nouveau et recrée le conteneur. Redémarrer le site ne revérifie pas le registre : un tag déplacé nécessite ceci.",
-      "pull": "Récupérer et redéployer",
-      "pulled": "L’image a été récupérée et le conteneur recréé.",
-      "pullFailed": "L’image n’a pas pu être récupérée.",
-      "pageSubtitle": "Le réseau, les ports, les limites de CPU et de mémoire et les volumes avec lesquels ce conteneur s’exécute."
+      "deployToStart": "Cette application démarre après son premier déploiement réussi.",
+      "alreadyRunning": "Le processus est déjà en cours d'exécution.",
+      "notRunning": "Le processus n'est pas en cours d'exécution.",
+      "stopTitle": "Arrêter {name} ?",
+      "stopBody": "L'application est hors ligne jusqu'à son redémarrage, et les visiteurs voient une page d'erreur en attendant.",
+      "stopping": "Arrêt…",
+      "cancel": "Annuler"
     },
     "domains": {
       "title": "Domaines et SSL",
@@ -3649,8 +3826,7 @@
         "nowLabel": "Actuel",
         "afterLabel": "Après",
         "keepsServing": "{domain} reste attaché en tant qu'alias et continue de servir cette application.",
-        "renamesFiles": "Les fichiers de configuration et de logs de l'application sont renommés.",
-        "cmsWarning": "WordPress a encore l'ancienne adresse enregistrée, donc les visiteurs peuvent être redirigés tant que vous ne la modifiez pas dans l'application.",
+        "updatesAddress": "L'adresse enregistrée dans l'application est mise à jour vers {domain}.",
         "notOnCertificate": "Le certificat SSL ne couvre pas {domain}. Les visiteurs dirigés vers la nouvelle adresse verront un avertissement de sécurité jusqu’à ce que vous le réémettiez."
       },
       "removeConfirm": {
@@ -3684,7 +3860,7 @@
         "issuingStuck": "Toujours là après quelques minutes ? Supprimez-le et réessayez.",
         "failed": "Le certificat n'a pas pu être émis",
         "reference": "Référence : {reference}",
-        "rateLimited": "Let's Encrypt a limité le débit pour ce domaine. Attendez environ une semaine avant de réessayer — réessayer maintenant ne servira à rien.",
+        "rateLimited": "Let's Encrypt a limité le débit pour ce domaine. Attendez environ une semaine avant de réessayer avec Let's Encrypt. En attendant, un certificat auto-signé ou téléversé fonctionne toujours.",
         "reissue": "Réémettre",
         "remove": "Retirer le certificat",
         "active": "HTTPS est actif",
@@ -3745,7 +3921,10 @@
         "reloadFailed": "Le serveur web n'a pas pu être rechargé.",
         "uploadNeedsBoth": "Collez à la fois le certificat et sa clé privée.",
         "removed": "Le certificat a été supprimé. Cette application repasse en HTTP simple.",
-        "removedAlready": "Le certificat avait déjà été supprimé."
+        "removedAlready": "Le certificat avait déjà été supprimé.",
+        "rateLimitedMethod": "Let's Encrypt a limité le débit pour ce domaine pendant environ une semaine. En attendant, choisissez Auto-signé ou téléversez le vôtre.",
+        "dryRunPartial": "Domaines prêts : {ready} sur {total}. {count, plural, one {{names} ne figurera pas sur le certificat.} other {{names} ne figureront pas sur le certificat.}}",
+        "dryRunStalled": "La simulation n'est toujours pas terminée après 10 minutes, nous avons donc arrêté de vérifier. Rien n'a été émis. Relancez-la, ou configurez le SSL sans elle."
       },
       "issueCertificate": "Configurer le SSL",
       "description": "Noms qui atteignent cette application, et son certificat.",
@@ -3778,7 +3957,10 @@
       "failed": "Impossible de créer le lien de connexion.",
       "popupBlocked": "Votre navigateur a bloqué le nouvel onglet. Autorisez les fenêtres pop-up pour ce panneau et réessayez.",
       "redirecting": "Connexion en cours…",
-      "auditNote": "Le lien ne fonctionne qu'une fois et expire au bout d'une minute. Le compte sous lequel vous vous connectez est inscrit au journal d'activité."
+      "auditNote": "Le lien ne fonctionne qu'une fois et expire au bout d'une minute. Le compte sous lequel vous vous connectez est inscrit au journal d'activité.",
+      "linkReady": "Votre lien de connexion WordPress est prêt.",
+      "openAdmin": "Ouvrir l'administration WordPress",
+      "fetchingUsers": "Récupération des utilisateurs…"
     },
     "markers": {
       "processFailed": "Processus en échec",
@@ -3796,9 +3978,8 @@
         "subtitle": "Récupérez le dernier code depuis votre dépôt et reconstruisez l'application.",
         "repository": "Dépôt",
         "branch": "Branche",
-        "lastDeploy": "Dernier déploiement",
-        "never": "Jamais déployé",
-        "commit": "Commit déployé",
+        "lastDeploy": "Dernier déploiement réussi",
+        "never": "Aucun pour l'instant",
         "action": "Déployer maintenant",
         "redeploy": "Redéployer",
         "deploying": "Déploiement…",
@@ -3814,13 +3995,17 @@
         "reference": "Référence : {reference}",
         "notDeployedYet": "Cette application n'a pas encore de code — déployez pour récupérer votre dépôt depuis {branch} et la mettre en ligne.",
         "resetNote": "Le déploiement réinitialise l'application à la branche {branch} ; les modifications faites directement sur le serveur sont perdues.",
-        "viewCommit": "Voir le commit sur votre fournisseur Git"
+        "viewCommit": "Voir le commit sur votre fournisseur Git",
+        "failedAtStep": "Le dernier déploiement a échoué à l'étape « {step} ».",
+        "incomplete": "Le dernier déploiement a échoué après la mise en place du nouveau code : ce code est en ligne, mais pas entièrement déployé. Corrigez le problème et déployez à nouveau.",
+        "liveCommit": "Commit en ligne",
+        "notFullyDeployed": "Déploiement incomplet"
       },
       "webhook": {
         "title": "Déployer au push",
         "subtitle": "Déployez automatiquement à chaque push vers {branch}.",
         "on": "Activé",
-        "disabledBody": "Activez ceci pour déployer automatiquement à chaque push. Vous obtiendrez une URL et un secret à ajouter à votre fournisseur Git.",
+        "disabledBody": "Activez ceci pour déployer automatiquement à chaque push. Le panneau ajoute le webhook à votre dépôt, ou vous donne une URL et un secret à ajouter vous-même.",
         "provider": "Fournisseur Git",
         "providerPlaceholder": "Choisissez votre fournisseur",
         "enable": "Activer le déploiement au push",
@@ -3854,7 +4039,12 @@
         "offBody": "Le déploiement automatique est désactivé. Activez-le pour déployer à chaque push sur {branch} — votre URL et votre secret de webhook sont conservés.",
         "providerHint": "Le service sur lequel se trouve le dépôt. C’est lui qui détermine comment nous vérifions qu’une requête entrante vient vraiment de lui.",
         "urlHint": "Collez ceci dans les paramètres webhook de votre dépôt. C’est l’adresse que votre service Git appelle lorsqu’il y a du nouveau code.",
-        "disabledBodyNamed": "L’activer crée une URL de webhook et un secret pour {provider}. Vous les ajoutez à votre dépôt à l’étape suivante."
+        "disabledBodyNamed": "L’activer ajoute un webhook à votre dépôt {provider}. Si le panneau ne peut pas l’ajouter pour vous, vous obtiendrez une URL et un secret à coller.",
+        "added": "Webhook ajouté au dépôt",
+        "addedBody": "Le panneau l'a ajouté pour vous sur {provider} : il n'y a rien à coller. Chaque push sur {branch} est déployé automatiquement.",
+        "rotateConfirmBodyRegistered": "Un nouveau secret est généré et l'ancien cesse de fonctionner. Le panneau met à jour le webhook dans {provider} pour vous, le déploiement automatique continue donc de fonctionner.",
+        "tokenTooShort": "Le jeton de signature doit comporter au moins 16 caractères.",
+        "secretWithheld": "Le secret n'est visible que par les personnes autorisées à déployer."
       },
       "cancel": "Annuler",
       "runtime": {
@@ -3867,7 +4057,7 @@
         "appPortHint": "Vide choisit un port libre.",
         "appliesOnDeploy": "Enregistré maintenant, appliqué au prochain déploiement — c'est à ce moment que le fichier de service est réécrit.",
         "save": "Enregistrer les paramètres d'exécution",
-        "saved": "Paramètres d'exécution enregistrés.",
+        "saved": "Paramètres d'exécution enregistrés. Ils s'appliquent au prochain déploiement.",
         "saveFailed": "Impossible d'enregistrer les paramètres d'exécution.",
         "noPermission": "Vous n'avez pas l'autorisation de modifier ceci.",
         "nothingToSave": "Rien n'a changé"
@@ -3892,7 +4082,8 @@
           "loading": "Chargement des branches depuis le dépôt…",
           "empty": "Le dépôt n'a signalé aucune branche — saisissez le nom à la place.",
           "error": "Impossible de charger les branches depuis le dépôt. Saisissez le nom à la place.",
-          "unlinked": "Cette application n'a pas de compte Git fonctionnel, donc les branches ne peuvent pas être listées. Reconnectez-la sur la page de l'application."
+          "unlinked": "Cette application n'a pas de compte Git fonctionnel, donc les branches ne peuvent pas être listées. Reconnectez-la sur la page de l'application.",
+          "missing": "Cette branche n'existe plus dans le dépôt, le prochain déploiement échouera donc. Choisissez une autre branche."
         },
         "title": "Ce qu’exécute un déploiement",
         "subtitle": "La branche extraite, et les commandes qui construisent l'application ensuite."
@@ -3915,7 +4106,9 @@
         "noPermission": "Votre rôle n'inclut pas Déploiement pour cette application avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
         "title": "Historique des déploiements",
         "subtitle": "Chaque déploiement, du plus récent au plus ancien. Ouvrez-en un pour lire son journal de build.",
-        "busy": "Un déploiement est déjà en cours. Attendez qu'il se termine."
+        "busy": "Un déploiement est déjà en cours. Attendez qu'il se termine.",
+        "pushStarted": "Nouveau déploiement lancé par un push sur {branch}.",
+        "loadFailed": "L'historique et les paramètres de déploiement n'ont pas pu être chargés."
       },
       "tabs": {
         "history": "Historique",
@@ -3995,7 +4188,8 @@
         "name": "Nom du dossier",
         "submit": "Créer le dossier",
         "created": "« {name} » créé.",
-        "failed": "Impossible de créer le dossier."
+        "failed": "Impossible de créer le dossier.",
+        "taken": "Il y a déjà un élément nommé « {name} » dans ce dossier."
       },
       "newFile": {
         "action": "Nouveau fichier",
@@ -4055,9 +4249,10 @@
       "targetDialog": {
         "pathLabel": "Chemin",
         "rootPlaceholder": "Racine de l'application",
-        "pathLabelHint": "L'endroit où le placer, compté depuis la racine du dossier de l'application.",
+        "pathLabelHint": "Un nom seul reste dans ce dossier. Un chemin est compté depuis la racine du dossier de l'application.",
         "destination": "Extrait dans",
-        "copyDestination": "Copier ce chemin"
+        "copyDestination": "Copier ce chemin",
+        "folderMissing": "Le dossier « {folder} » n'existe pas. Créez-le d'abord ou choisissez-en un autre."
       },
       "rename": {
         "title": "Renommer ou déplacer « {name} »",
@@ -4328,7 +4523,7 @@
         "stopped": "Arrêté"
       },
       "processCount": "{running}/{total}",
-      "disabledTag": "Ne démarrera pas au boot",
+      "disabledTag": "Désactivé",
       "noRestartOnDeployTag": "Ne redémarrera pas après un déploiement",
       "noAutoRestartTag": "Ne redémarrera pas s'il s'arrête",
       "addedAgo": "Ajouté {time}",
@@ -4345,7 +4540,8 @@
         "restart": "Redémarrer",
         "edit": "Modifier",
         "delete": "Supprimer",
-        "viewLogs": "Voir les journaux"
+        "viewLogs": "Voir les journaux",
+        "viewLogsNoPermission": "Voir les journaux nécessite la permission Journaux du serveur."
       },
       "toast": {
         "start": "Démarrage de {name}…",
@@ -4376,12 +4572,15 @@
       "create": {
         "title": "Ajouter un worker",
         "subtitle": "Choisissez un modèle pour commencer, ou écrivez votre propre commande.",
-        "submit": "Ajouter un worker"
+        "submit": "Ajouter un worker",
+        "failed": "Le worker n'a pas démarré, il n'a donc pas été ajouté. Vérifiez que la commande fonctionne pour cette application, puis réessayez."
       },
       "edit": {
         "title": "Modifier le worker",
-        "subtitle": "Les modifications s'appliquent au prochain redémarrage de ce worker.",
-        "submit": "Enregistrer les modifications"
+        "subtitle": "L'enregistrement applique les modifications tout de suite : le worker redémarre avec elles, sauf s'il est désactivé.",
+        "submit": "Enregistrer les modifications",
+        "failed": "Ces modifications n'ont pas pu être appliquées. Vérifiez que la commande fonctionne pour cette application, puis réessayez.",
+        "failedStopped": "Ces modifications n'ont pas pu être appliquées, le worker a donc été arrêté. Corrigez la commande et enregistrez à nouveau."
       },
       "delete": {
         "title": "Supprimer ce worker ?",
@@ -4392,7 +4591,7 @@
       },
       "form": {
         "name": "Nom",
-        "namePlaceholder": "Worker de file",
+        "namePlaceholder": "background-jobs",
         "nameHint": "Un libellé court pour identifier ce worker.",
         "useTemplate": "Utiliser le modèle",
         "command": "Commande",
@@ -4416,8 +4615,7 @@
           "horizon": "Vous avez déjà Horizon — il gère ses propres workers de file."
         },
         "user": "Exécuter en tant qu'utilisateur",
-        "userPlaceholder": "deploy",
-        "userHint": "Laissez vide pour exécuter avec l'utilisateur de l'application, ce qui est presque toujours correct.",
+        "userHint": "Le compte sous lequel ce worker s'exécute — l'utilisateur propre de l'application.",
         "logFile": "Fichier de log",
         "logFilePlaceholder": "/var/log/my-worker.log",
         "logFileHint": "Chemin absolu, et ne peut pas contenir .. — laissez vide et supervisord en choisira un.",
@@ -4436,7 +4634,7 @@
         "autoStart": "Démarrer avec le serveur",
         "autoStartHint": "Désactivé signifie qu'il ne tourne que si vous le lancez manuellement.",
         "extraConfig": "Paramètres supervisord supplémentaires",
-        "extraConfigPlaceholder": "environment=APP_ENV=\"production\"",
+        "extraConfigPlaceholder": "startsecs=5",
         "extraConfigHint": "Un paramètre par ligne, ajouté uniquement à ce worker. Les en-têtes de section [entre crochets] sont refusés.",
         "kind": "Type",
         "kindHint": "Détermine la façon dont il est redémarré. Queue et Horizon terminent d'abord la tâche en cours ; Personnalisé est arrêté puis redémarré.",
@@ -4444,7 +4642,8 @@
           "queue": "Worker de file",
           "horizon": "Horizon",
           "custom": "Personnalisé"
-        }
+        },
+        "commandPlaceholder": "La commande à maintenir en marche"
       },
       "runsAsTooltip": "S'exécute en tant que {user}, pas avec l'utilisateur de l'application.",
       "supervisor": {
@@ -4486,7 +4685,9 @@
       "savedCredentials": "Enregistrez-les maintenant — ils ne seront plus affichés :",
       "openSite": "Ouvrir l'application",
       "showPassword": "Afficher le mot de passe",
-      "hidePassword": "Masquer le mot de passe"
+      "hidePassword": "Masquer le mot de passe",
+      "unsupportedProtected": "Cette application se connecte avec l'en-tête Authorization, donc la protection par mot de passe peut la rendre inaccessible. Désactivez-la, sauf si vous avez vérifié que l'application fonctionne toujours.",
+      "passwordAgainHint": "Saisissez de nouveau le mot de passe, ou un nouveau. Il est nécessaire pour enregistrer toute modification."
     },
     "botBlocker": {
       "pageTitle": "Bloqueur de bots IA",
@@ -4507,16 +4708,16 @@
         "range": "{days} jours",
         "unavailable": "Le journal d'accès de cette application n'a pas pu être lu, il n'y a donc rien à afficher pour l'instant. Ce n'est pas la même chose qu'aucun bot n'ait visité.",
         "empty": "Aucun bot IA n'a visité au cours des {days} derniers jours.",
-        "summary": "{bots, plural, one {# bot} other {# bots}} · {hits, plural, one {# requête} other {# requêtes}} · {blocked, plural, other {# bloqués}}",
+        "summary": "{bots, plural, one {# bot} other {# bots}} · {hits, plural, one {# requête} other {# requêtes}} · {blocked, plural, other {# de bots que vous bloquez}}",
         "partial": "Seule la partie la plus récente du journal a été analysée ; les applications très actives peuvent en avoir eu davantage.",
-        "blocked": "Bloqué",
-        "allowed": "Passent",
+        "blocked": "Bloquer",
+        "allowed": "Autoriser",
         "columns": {
           "bot": "Bot",
           "kind": "Type",
           "requests": "Requêtes",
           "lastSeen": "Vu pour la dernière fois",
-          "status": "Maintenant"
+          "status": "Vos réglages"
         },
         "kinds": {
           "training": "Entraînement",
@@ -4552,7 +4753,8 @@
           "tooBroad": "Cela correspondrait aussi aux crawlers classiques, y compris Google. Utilisez le nom complet du bot.",
           "searchEngine": "C'est un moteur de recherche, pas un crawler IA — le bloquer retirerait l'application des résultats de recherche.",
           "duplicate": "Ce bot est déjà dans la liste.",
-          "limit": "La liste ne peut pas contenir plus de bots."
+          "limit": "La liste ne peut pas contenir plus de bots.",
+          "browserWord": "Ce mot fait partie du nom des navigateurs ordinaires : il bloquerait de vrais visiteurs. Utilisez le nom complet du bot, comme GPTBot."
         },
         "noPermission": "Votre rôle n'inclut pas Bloqueur de bots IA pour cette application avec l'accès Gérer. Demandez à un administrateur de vous l'accorder."
       },
@@ -4564,7 +4766,9 @@
       "saved": "Paramètres des bots IA enregistrés.",
       "saveFailed": "Impossible d'enregistrer.",
       "noPermission": "Votre rôle n'inclut pas Bloqueur de bots IA pour cette application avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
-      "nothingToSave": "Rien à enregistrer"
+      "nothingToSave": "Rien à enregistrer",
+      "robotsTxtOnly": "robots.txt uniquement",
+      "robotsTxtOnlyNote": "{names} ne visitent jamais votre site : Google et Apple entraînent leur IA avec leurs robots habituels et ne lisent ces noms que dans robots.txt. Les bloquer ici n'y change rien ; ajoutez-les plutôt à robots.txt avec Disallow: /."
     },
     "firewall": {
       "pageTitle": "Pare-feu web",
@@ -4590,7 +4794,7 @@
       "categoryHints": {
         "query_string": "Code d'attaque caché dans la partie d'un lien après le signe ?.",
         "request_uri": "Requêtes pour des fichiers et chemins que seuls les attaquants recherchent.",
-        "user_agent": "Visiteurs se déclarant comme scanners et outils d'attaque connus.",
+        "user_agent": "Visiteurs qui se présentent comme des scanners et outils d'attaque connus — ainsi que les outils en ligne de commande et bibliothèques HTTP comme curl et Go : les moniteurs de disponibilité, scripts et webhooks envoyés ainsi sont bloqués aussi.",
         "referrer": "Trafic prétendant provenir de sites de spam et de logiciels malveillants.",
         "cookie": "Cookies altérés utilisés pour faire passer du code devant votre application.",
         "method": "Façons d'envoyer une requête qu'un navigateur normal n'utilise jamais."
@@ -4609,6 +4813,7 @@
       "remove": "Retirer {value}",
       "countOf": "{count} sur {max}",
       "tooLong": "Restez sous {max} caractères.",
+      "tooShort": "Utilisez au moins {min} caractères : un mot plus court correspond à presque toutes les requêtes.",
       "listFull": "Vous avez atteint la limite de {max}.",
       "shortTermWarning": "Les mots courts correspondent n'importe où dans une adresse — « conf » bloquerait aussi « confirm.js ». Soyez le plus spécifique possible.",
       "unsaved": "Pas encore enregistré",
@@ -4628,7 +4833,8 @@
         "count": "{count, plural, one {# requête} other {# requêtes}}",
         "empty": "Rien n'a encore été capturé. La liste se remplit à mesure que les visiteurs arrivent.",
         "unreadable": "Impossible de lire ceci. Vos paramètres ne sont pas affectés."
-      }
+      },
+      "detectUnknown": "Impossible de lire ce qui a été capturé : vérifiez la liste ci-dessous avant de passer au blocage."
     },
     "clone": {
       "pageTitle": "Cloner l'application",
@@ -4648,7 +4854,7 @@
           "repository": "Dépôt, branche et compte Git"
         },
         "dropsItems": {
-          "ssl": "Certificat SSL",
+          "ssl": "Certificat SSL (la copie reçoit le sien)",
           "backups": "Sauvegardes",
           "cronJobs": "Tâches cron",
           "workers": "Workers de file",
@@ -4685,16 +4891,24 @@
         "sourceFailed": {
           "title": "Cette application n'a pas fini d'être configurée",
           "body": "Il n'y a rien de complet à copier. Corrigez d'abord l'original — une copie d'une application à moitié construite hériterait du même problème."
+        },
+        "deploying": {
+          "title": "Un déploiement est en cours",
+          "body": "Une copie faite maintenant pourrait mélanger anciens et nouveaux fichiers. Une fois le déploiement terminé, cette page vous permettra de le cloner."
+        },
+        "typeNotSupported": {
+          "title": "Ce type d'application ne peut pas être cloné",
+          "body": "Les applications {type} ne peuvent pas être copiées depuis le panneau."
         }
       },
       "result": {
         "next": {
           "title": "Avant de l'utiliser",
-          "subtitle": "Quatre éléments que la copie n'hérite pas.",
+          "subtitle": "{count, plural, one {Un élément que la copie n'hérite pas.} other {# éléments que la copie n'hérite pas.}}",
           "items": {
             "ssl": {
-              "title": "Configurer le SSL",
-              "body": "La copie est servie en HTTP brut tant que vous ne le faites pas."
+              "title": "Vérifier le HTTPS",
+              "body": "Un certificat est délivré automatiquement dès que le domaine pointe vers ce serveur. Vérifiez-le ici."
             },
             "backups": {
               "title": "Configurer les sauvegardes",
@@ -4755,10 +4969,13 @@
           "copying_files": "Copie des fichiers",
           "cloning_database": "Clonage de la base de données",
           "starting_process": "Démarrage de l'application"
-        }
+        },
+        "notStarting": "Ce clonage n'a pas démarré",
+        "notStartingBody": "Il attend depuis plus de deux minutes. Si un autre clonage de cette application tournait en même temps, celui-ci risque de ne jamais démarrer.",
+        "stopWatching": "Arrêter le suivi et recommencer"
       },
       "warnings": {
-        "dns": "Faites pointer le nouveau domaine vers ce serveur avant de délivrer un certificat — tant que le DNS ne résout pas, la copie est servie en HTTP brut.",
+        "dns": "Faites d'abord pointer le nouveau domaine vers ce serveur — dès que c'est le cas, la copie reçoit automatiquement son propre certificat HTTPS.",
         "password": "La protection par mot de passe n'est pas copiée. La copie est publique jusqu'à ce que vous l'activiez.",
         "time": "Une grosse application prend quelques minutes à copier."
       },
@@ -4806,7 +5023,7 @@
         "timezonePlaceholder": "Utiliser celui du serveur",
         "autoPrepend": "Fichier à exécuter avant chaque page",
         "directives": "Directives supplémentaires",
-        "directivesPlaceholder": "opcache.enable = 1"
+        "directivesPlaceholder": "php_admin_value[opcache.enable] = 1"
       },
       "hints": {
         "postTooSmall": "C'est plus petit que la limite d'upload, donc les envois de cette taille échoueront.",
@@ -4817,7 +5034,7 @@
         "sessionLifetime": "Secondes pendant lesquelles un fichier de session est conservé avant de pouvoir être nettoyé.",
         "timezone": "N'affecte que les dates que PHP produit, pas l'horloge du serveur.",
         "autoPrepend": "Un chemin dans cette application. Laissez vide sauf indication contraire.",
-        "directives": "Une par ligne, comme un fichier php.ini. Tout ce qui est ici l'emporte sur les champs ci-dessus.",
+        "directives": "Une par ligne, au format d'un pool PHP-FPM : php_admin_value[nom] = valeur. Tout ce qui est ici l'emporte sur les champs ci-dessus.",
         "openBasedir": "Empêche PHP de lire ou écrire des fichiers hors du dossier de cette application.",
         "allowUrlFopen": "Permet à PHP de récupérer des URL distantes. Le désactiver bloque un moyen courant pour les malwares de communiquer.",
         "upload": "Augmente aussi la limite du serveur web lui-même, qui refuse les gros envois avant que PHP ne les voie. Une application configurée plus tôt le prend en compte la première fois que vous enregistrez.",
@@ -4851,7 +5068,7 @@
         "over": "Plus que les {total} de ce serveur",
         "legend": "{sites, plural, =0 {Aucune autre application n'utilise de mémoire} one {Une autre application a réclamé {value}} other {# autres applications ont réclamé {value}}}",
         "equation": "{limit} × {workers} workers = {total} à pleine charge",
-        "overDetail": "{required} requis, mais ce serveur a {total}. Baissez la limite de mémoire ou le nombre de workers."
+        "overDetail": "Toutes les applications réunies ont besoin de {required}, mais ce serveur a {total}. Baissez la limite de mémoire ou le nombre de workers."
       },
       "custom": "Personnalisé",
       "seconds": "{count} s",
@@ -4887,14 +5104,16 @@
         "remove": "Retirer {name}",
         "empty": "Rien n'est bloqué. Toute fonction PHP installée pour cette application peut s'exécuter.",
         "presetsLabel": "Partir de",
-        "presetsCustom": "Votre propre liste."
+        "presetsCustom": "Votre propre liste.",
+        "invalidName": "Non ajouté, ce n'est pas un nom de fonction : {names}. Utilisez uniquement des lettres, des chiffres et _."
       },
       "saveNote": "L'enregistrement réécrit le pool PHP de l'application et le recharge. Les requêtes en cours se terminent d'abord.",
       "tabs": {
         "basic": "Paramètres de base",
         "security": "Sécurité",
         "advanced": "Avancé",
-        "unsavedHere": "Modifications non enregistrées sur cet onglet"
+        "unsavedHere": "Modifications non enregistrées sur cet onglet",
+        "errorsHere": "Paramètres à corriger dans cet onglet"
       },
       "sections": {
         "runtime": "Exécution",
@@ -4930,7 +5149,8 @@
       "autoPrependPlaceholder": "/home/site/app/prepend.php",
       "postMaxSizePlaceholder": "128M",
       "versionUnsupported": "{type} prend en charge PHP {range}. Faire passer cette application à une autre version risque de la casser.",
-      "presetsLabelHint": "Réglages prêts à l’emploi dimensionnés pour des applications petites, moyennes ou grandes. Un point de départ — vous pouvez encore modifier n’importe quelle valeur ensuite."
+      "presetsLabelHint": "Réglages prêts à l’emploi dimensionnés pour des applications petites, moyennes ou grandes. Un point de départ — vous pouvez encore modifier n’importe quelle valeur ensuite.",
+      "fixErrors": "Certains paramètres sont à corriger. L'onglet concerné est signalé."
     },
     "fail2ban": {
       "pageTitle": "Fail2ban",
@@ -4975,7 +5195,9 @@
       "createAction": "Activer Fail2ban",
       "removeBodyDirty": "Les fichiers jail et filter sont supprimés et fail2ban arrête de surveiller cette application. Toute adresse déjà bannie est libérée — et {count, plural, one {le fichier que vous avez modifié mais pas enregistré disparaît avec eux} other {les # fichiers que vous avez modifiés mais pas enregistrés disparaissent avec eux}}.",
       "tooLong": "Cette configuration est trop longue. Chaque fichier doit rester sous 65 535 caractères.",
-      "invalidConfig": "Cette configuration ne peut pas être enregistrée. Vérifiez que les deux fichiers sont remplis."
+      "invalidConfig": "Cette configuration ne peut pas être enregistrée. Vérifiez que les deux fichiers sont remplis.",
+      "outputShowAll": "Afficher tout ce que fail2ban a renvoyé",
+      "outputErrorsOnly": "Afficher uniquement les erreurs"
     },
     "staging": {
       "pageTitle": "Zone de préproduction",
@@ -4983,6 +5205,7 @@
       "loadFailed": "Impossible de vérifier la zone de préproduction de cette application.",
       "provisioning": "Cette application est encore en cours de configuration. Une copie de préproduction pourra être créée une fois terminée.",
       "unsupported": "La préproduction est uniquement disponible pour les applications WordPress. Celle-ci est une application {type}.",
+      "noPermission": "Votre rôle n'inclut pas Zone de préproduction pour cette application avec l'accès Gérer. Demandez à un administrateur de l'accorder.",
       "manageAction": "Ouvrir l'application de préproduction",
       "empty": {
         "title": "Pas encore de copie de préproduction",
@@ -4992,6 +5215,7 @@
       "push": {
         "title": "Copier la préproduction vers la production",
         "body": "Remplace {domain} par ce qui se trouve sur l'application de préproduction. C'est irréversible.",
+        "notReady": "Cette copie de préproduction n'est pas prête : elle est encore en cours de création, ou sa création a échoué. Si cela dure, supprimez-la et recréez-la.",
         "action": "Pousser en production"
       },
       "createDialog": {
@@ -5009,32 +5233,26 @@
         "domainLabelHint": "L’adresse pour la copie de préproduction. Utilisez quelque chose qui ne ressemble clairement pas à votre application en production."
       },
       "pushDialog": {
-        "title": "Pousser la préproduction vers {domain} ?",
-        "description": "Tout ce qui se trouve sur {staging} est copié vers {production}. C'est irréversible.",
-        "downtime": "Votre application est mise hors ligne pendant l'opération, et les visiteurs voient une page de maintenance jusqu'à la fin.",
-        "whatToPush": "Que faut-il copier",
+        "title": "Pousser la préproduction vers la production ?",
+        "whatToPush": "Ce qui est envoyé",
         "modes": {
           "files": {
             "label": "Fichiers uniquement",
-            "replaces": "Les fichiers de l'application",
-            "deletes": "Les fichiers présents uniquement en production",
-            "undo": "Aucun : rien n'est copié au préalable"
+            "summary": "Les fichiers de l'application. La base de données n'est pas modifiée.",
+            "consequence": "Les fichiers présents uniquement en production sont supprimés. Les téléversements sont conservés."
           },
           "database": {
             "label": "Base de données uniquement",
-            "replaces": "La base de données",
-            "deletes": "Tout ce qui a été écrit depuis la copie : commandes, commentaires, articles",
-            "undo": "L'ancienne base de données est sauvegardée avant",
-            "note": "La production a besoin des mêmes extensions et thèmes que la préproduction. La base de données les attend, et s'il en manque un l'application peut rester blanche."
+            "summary": "Le contenu et les réglages. Les fichiers ne sont pas modifiés.",
+            "consequence": "Tout ce qui a été écrit en production depuis la copie — commandes, commentaires, articles — est remplacé. La production a aussi besoin des mêmes extensions et thèmes que la préproduction, sinon l'application peut rester blanche."
           },
           "full": {
             "label": "Fichiers et base de données",
-            "replaces": "Les fichiers de l'application et la base de données",
-            "deletes": "Les fichiers présents uniquement en production, et tout ce qui a été écrit depuis la copie",
-            "undo": "L'ancienne base de données est sauvegardée avant, les fichiers non"
+            "summary": "Fichiers et base de données. La production devient une copie de la préproduction.",
+            "consequence": "Les fichiers présents uniquement en production sont supprimés (les téléversements sont conservés), et tout ce qui a été écrit en production depuis la copie — commandes, commentaires, articles — est remplacé."
           }
         },
-        "backupFirst": "C'est irréversible. <link>Faites d'abord une sauvegarde</link> si ce n'est pas fait.",
+        "backupFirst": "Impossible d'annuler une fois terminé — <link>faites d'abord une sauvegarde</link>.",
         "confirmLabel": "Saisissez {domain} pour confirmer",
         "pickMode": "Choisissez ce qu'il faut copier",
         "typeToUnlock": "Saisissez le domaine de production pour confirmer",
@@ -5045,19 +5263,19 @@
         "failed": "L'envoi ne s'est pas terminé.",
         "copyAge": "Copie effectuée {age}",
         "copyDomain": "Copier le domaine",
-        "whatToPushHint": "Fichiers copie le code et les téléversements. Base de données copie le contenu. Les deux copient tout.",
-        "facts": {
-          "replaces": "Remplace",
-          "deletes": "Supprime",
-          "undo": "Retour"
-        }
+        "whileRunning": "L'application est hors ligne pendant l'opération. Si elle échoue en cours de route, la production est remise dans son état d'avant."
       },
       "isCopy": {
         "title": "Cette application est une copie de préproduction",
         "body": "Elle a été créée comme copie d'une autre application, elle n'a donc pas sa propre zone de préproduction. Renvoyez-la depuis l'application à laquelle elle appartient.",
         "action": "Aller à l'application d'origine"
       },
-      "copyAge": "Copie effectuée {age}"
+      "copyAge": "Copie effectuée {age}",
+      "remove": {
+        "title": "Supprimer la préproduction",
+        "body": "Supprime l'application de préproduction {domain}. {production} n'est pas modifiée.",
+        "action": "Supprimer"
+      }
     },
     "stagingBadge": "Préproduction",
     "paused": "En pause",
@@ -5069,7 +5287,9 @@
       "submit": "Modifier la racine web",
       "cancel": "Annuler",
       "saved": "Racine web modifiée.",
-      "failed": "La racine web n'a pas pu être modifiée."
+      "failed": "La racine web n'a pas pu être modifiée.",
+      "resolved": "Le site sera servi depuis <code>{path}</code>.",
+      "missingFolder": "Le dossier {path} n'existe pas. Créez-le d'abord dans Fichiers, ou vérifiez l'orthographe."
     },
     "missing": {
       "title": "Cette application n'est plus là",
@@ -5078,11 +5298,11 @@
     },
     "size": {
       "notMeasured": "Non mesuré",
-      "inVolumes": "dont {size} dans des volumes Docker",
       "measuring": "Mesure…",
       "measured": "Taille mesurée.",
       "measureFailed": "La taille n'a pas pu être mesurée.",
-      "measureHint": "Mesurer cette application sur disque maintenant"
+      "measureHint": "Mesurer cette application sur disque maintenant",
+      "inVolumes": "dont {size} dans des volumes Docker"
     },
     "status": {
       "pending": "En attente",
@@ -5099,13 +5319,16 @@
       "bots": "Bots IA",
       "on": "Activé",
       "off": "Désactivé",
-      "description": "Paramètres de protection pour cette application."
+      "description": "Paramètres de protection pour cette application.",
+      "folder": "Dossier du site",
+      "locked": "Verrouillé",
+      "unlocked": "Non verrouillé"
     },
     "backups": {
       "title": "Sauvegardes",
       "state": {
         "protected": "Protégé",
-        "paused": "En pause",
+        "paused": "Manuel uniquement",
         "unprotected": "Non protégé",
         "running": "Sauvegarde en cours…"
       },
@@ -5126,7 +5349,8 @@
       "runningNote": "Une sauvegarde de cette application est en cours. Cette carte se met à jour toute seule.",
       "queuedNote": "Sauvegarde en file. Elle démarre dès que le serveur la prend.",
       "queuedStalled": "Cette sauvegarde n'a pas encore démarré. Si cela persiste, le worker en arrière-plan ne tourne peut-être pas.",
-      "alreadyRunning": "Une sauvegarde de cette application est déjà en cours."
+      "alreadyRunning": "Une sauvegarde de cette application est déjà en cours.",
+      "noneKept": "Aucune conservée"
     },
     "attention": {
       "title": "À vérifier",
@@ -5144,7 +5368,10 @@
         "php_eol": "Changer la version PHP",
         "deploy_failed": "Voir le déploiement",
         "disk": "Libérer de l'espace"
-      }
+      },
+      "folderUnlocked": "Dossier du site non verrouillé",
+      "reviewFolder": "Le verrouiller",
+      "checksFailed": "Les vérifications de cette application n'ont pas pu s'exécuter : des problèmes peuvent manquer à cette liste."
     },
     "filters": {
       "allStatuses": "Tous les statuts",
@@ -5200,7 +5427,7 @@
       "description": "Les visiteurs verront une courte page indiquant que l'application est temporairement indisponible, jusqu'à ce que vous la réactiviez.",
       "keeps": "Rien n'est supprimé. Les fichiers, la base, les sauvegardes, les tâches cron et les certificats restent exactement tels quels.",
       "reversible": "Vous pouvez le réactiver à tout moment depuis ce même menu.",
-      "seo": "Les moteurs de recherche voient une page ordinaire plutôt qu'une réponse « réessayez plus tard », donc une application laissée en pause longtemps peut perdre en classement. Très bien pour une heure, à savoir pour un mois.",
+      "seo": "Les moteurs de recherche sont informés que l'application est temporairement indisponible (503, réessayer dans une heure) : une courte pause n'affecte pas le référencement. Une pause de plusieurs semaines, si.",
       "paused": "{name} est en pause.",
       "resumed": "{name} est de nouveau en ligne.",
       "failed": "Impossible de mettre l'application en pause.",
@@ -5314,6 +5541,101 @@
       "detectAction": "Vérifier ce qui est installé",
       "changeTo": "Traiter plutôt comme {type}",
       "menuHint": "Options du type d'application"
+    },
+    "rootLock": {
+      "lock": "Verrouiller",
+      "title": "Verrouiller le dossier du site ?",
+      "cancel": "Annuler",
+      "confirm": "Verrouiller le dossier",
+      "locking": "Verrouillage…",
+      "done": "Dossier du site verrouillé.",
+      "failed": "Le dossier du site n'a pas pu être verrouillé.",
+      "intro": "Le dossier est configuré comme le panneau configure chaque application qu'il crée.",
+      "folderLabel": "Dossier",
+      "effectOwner": "Appartient à root et est protégé : il ne peut pas être renommé ni supprimé par erreur.",
+      "effectNoChanges": "L'utilisateur système ne peut plus ajouter, supprimer ni renommer d'éléments directement dans ce dossier.",
+      "effectPublic": "Tout ce qui se trouve dans public_html fonctionne exactement comme avant."
+    },
+    "deploying": "Déploiement",
+    "container": {
+      "title": "Conteneur",
+      "image": "Image",
+      "noImage": "Aucune image enregistrée",
+      "imageHint": "Se change en redéployant le site, pas ici : la nouvelle image est récupérée avant de remplacer l'ancien conteneur.",
+      "network": "Réseau",
+      "networkHint": "Les conteneurs d'un même réseau s'atteignent par leur nom. Le bridge par défaut de Docker ne le permet pas.",
+      "defaultBridge": "Bridge par défaut de Docker",
+      "noNetworks": "Ce serveur n'a pas encore de réseau propre, il n'y a donc rien à rejoindre.",
+      "noNetworksLink": "Créez un réseau sur la page Docker.",
+      "missingOption": "{name} (plus présent sur ce serveur)",
+      "missingTitle": "Ce réseau n'existe plus",
+      "missingBody": "Le site est configuré pour rejoindre {name}, et ce serveur ne l'a plus. Le conteneur ne démarrera pas tant que vous n'aurez pas choisi un réseau existant ou recréé celui-ci.",
+      "reachableTitle": "Comment les autres conteneurs atteignent ce site",
+      "reachableBody": "Utilisez le nom d’hôte {alias} — par exemple http://{alias} depuis un autre conteneur du même réseau. Évitez «app» : tous les sites créés par le panneau répondent à ce nom, il en désigne donc un au hasard.",
+      "containerPort": "Port du conteneur",
+      "containerPortHint": "Le port sur lequel votre application écoute à l'intérieur du conteneur.",
+      "memoryLimit": "Limite de mémoire",
+      "memoryLimitHint": "Par exemple 512m ou 2g. Un nombre seul signifie des octets, pas des mégaoctets. Vide utilise la valeur par défaut du serveur : {default}.",
+      "memoryLimitHintUnknown": "Par exemple 512m ou 2g. Un nombre seul signifie des octets, pas des mégaoctets. Vide utilise la valeur par défaut du serveur.",
+      "cpuLimit": "Limite de CPU",
+      "cpuLimitPlaceholder": "Aucune limite",
+      "cpuLimitHint": "En cœurs — 1 pour un cœur entier, 0.5 pour la moitié. Ce serveur en a {cores}. Vide signifie aucune limite.",
+      "cpuLimitHintUnknown": "En cœurs — 1 pour un cœur entier, 0.5 pour la moitié. Vous ne pouvez pas dépasser ce que possède ce serveur. Vide signifie aucune limite.",
+      "limitsTitle": "Comment se comportent ces deux limites",
+      "limitsBody": "Ce sont des plafonds pour ce conteneur seul, pas des réservations — rien ne lui est mis de côté. Leurs défaillances sont opposées, ce qu’il vaut mieux savoir avant de chercher la cause : au-delà du plafond mémoire, le conteneur est tué puis redémarré et le site perd des requêtes ; au-delà du quota CPU, rien n’est tué, le conteneur attend simplement, et le site est lent sans aucune erreur.",
+      "saveAction": "Enregistrer les paramètres du conteneur",
+      "restartNote": "L'enregistrement recrée le conteneur : le site est indisponible quelques secondes.",
+      "savingNote": "Réécriture du fichier compose et recréation du conteneur…",
+      "saved": "Paramètres du conteneur enregistrés.",
+      "failed": "Impossible d'enregistrer les paramètres du conteneur.",
+      "noPermission": "Vous n'avez pas la permission de modifier ce site.",
+      "nothingToSave": "Rien n'a changé.",
+      "volumes": {
+        "title": "Volumes",
+        "empty": "Aucun volume monté. Le conteneur ne conserve rien qui survive à une reconstruction.",
+        "choose": "Choisir un volume",
+        "alreadyMounted": "{name} (déjà monté)",
+        "pathPlaceholder": "/var/lib/mysql",
+        "pathLabel": "Chemin dans le conteneur",
+        "add": "Monter",
+        "remove": "Démonter {volume}",
+        "added": "{volume} monté. Le conteneur a été recréé.",
+        "removed": "{volume} démonté. Le conteneur a été recréé.",
+        "failed": "Impossible de modifier les montages.",
+        "invalid": "Choisissez un volume et indiquez un chemin absolu dans le conteneur, par exemple /var/lib/mysql.",
+        "noVolumes": "Ce serveur n'a pas encore de volume, il n'y a donc rien à monter.",
+        "noVolumesLink": "Créez un volume sur la page Docker.",
+        "hint": "Un volume conserve des données qui survivent à la reconstruction du conteneur. Le monter recrée le conteneur, et il démarre vide : ce que l'image contenait à ce chemin est masqué, pas fusionné."
+      },
+      "credentials": {
+        "title": "Identifiants générés",
+        "reveal": "Afficher",
+        "revealing": "Chargement…",
+        "hint": "Créés à l'installation de l'application et stockés chiffrés. Leur affichage est consigné dans le journal d'activité.",
+        "shownWarning": "Toute personne pouvant gérer ce site peut les lire. Ce sont les véritables identifiants de base de données de l'application : les modifier ici est impossible, car la base de données en cours d'exécution conserverait l'ancienne valeur.",
+        "failed": "Impossible de charger les identifiants."
+      },
+      "firstRun": {
+        "title": "Enregistrez ces identifiants maintenant",
+        "body": "Le panneau les a générés à l'installation de cette application. Ils ne peuvent pas être modifiés ici — l'application les stocke dans sa propre base de données — copiez-les donc en lieu sûr avant de fermer ce message.",
+        "acknowledge": "Je les ai enregistrés",
+        "acknowledgeFailed": "Impossible d'enregistrer cette confirmation. Les identifiants sont inchangés.",
+        "laterHint": "Ils restent disponibles via Conteneur → Afficher.",
+        "loading": "Chargement des identifiants",
+        "failed": "Impossible de charger les identifiants. Ne fermez pas ce message — rechargez la page."
+      },
+      "registry": "Registre",
+      "noRegistry": "Aucun — récupération anonyme",
+      "registryHint": "L’identifiant enregistré avec lequel ce site récupère son image. Laissez Aucun pour une image publique.",
+      "missingRegistryOption": "Identifiant supprimé — la prochaine récupération de ce site sera anonyme",
+      "noRegistries": "Aucun identifiant de registre n’est enregistré sur ce serveur : seules les images publiques peuvent être récupérées.",
+      "noRegistriesLink": "Ajoutez-en un dans Intégrations → Registres Docker.",
+      "pullTitle": "Mettre à jour l’image",
+      "pullHint": "Récupère l’image à nouveau et recrée le conteneur. Redémarrer le site ne revérifie pas le registre : un tag déplacé nécessite ceci.",
+      "pull": "Récupérer et redéployer",
+      "pulled": "L’image a été récupérée et le conteneur recréé.",
+      "pullFailed": "L’image n’a pas pu être récupérée.",
+      "pageSubtitle": "Le réseau, les ports, les limites de CPU et de mémoire et les volumes avec lesquels ce conteneur s’exécute."
     },
     "compose": {
       "title": "Fichier compose",
@@ -5494,12 +5816,13 @@
     "alreadyInstalled": "Composants installés",
     "installingNamed": "Installation de {name}",
     "lockedByOtherInstall": "Un autre composant est en cours d'installation. Une seule installation à la fois — celle-ci se déverrouillera dès qu'elle sera terminée.",
+    "installNotPermitted": "Votre rôle ne permet pas d'installer ceci. Demandez à un administrateur.",
     "chooseVersionFirst": "Choisissez d'abord une version à installer.",
     "recommendedLeft": "Encore {count} recommandé(s)",
     "progressFailed": "{count} échec(s)",
     "pillUnavailable": "Non disponible",
     "retryNamed": "Réessayer l'installation de {name}",
-    "purposeMysql": "La valeur par défaut courante",
+    "purposeMysql": "À choisir si une application a besoin de MySQL",
     "purposeMariadb": "Idéal pour WordPress et la plupart des applications PHP",
     "purposeMongodb": "Pour les applications avec base de données orientée documents",
     "sectionAttention": "À vérifier",
@@ -5513,28 +5836,29 @@
     "alreadyInstalledHint": "Déjà présent sur ce serveur. Rien à faire ici.",
     "chooseEngineFirst": "Choisissez d'abord un moteur de base de données",
     "oneSqlOnly": "Un serveur n'exécute qu'un seul moteur SQL. Une fois celui-ci installé, passer à l'autre implique de reconstruire le serveur.",
-    "purposePostgresql": "Pour les applications qui demandent Postgres par son nom"
+    "purposePostgresql": "Pour les applications qui demandent Postgres par son nom",
+    "fail2banOff": "Installé, mais rien n'est encore protégé. <link>Activez la protection SSH dans Fail2ban</link>."
   },
   "storage": {
     "title": "Stockage",
-    "subtitle": "Où les sauvegardes sont envoyées. Connectez un bucket ici, puis choisissez-le pour une application.",
+    "subtitle": "L'endroit où les sauvegardes sont envoyées. Connectez une destination ici, puis choisissez-la sur une application.",
     "loadFailed": "Impossible de charger ces données.",
     "noPermission": "Votre rôle n'inclut pas le Stockage avec l'accès Gestion. Demandez à un administrateur de l'accorder.",
     "card": {
       "title": "Destinations de stockage",
-      "subtitle": "Buckets compatibles S3 sur lesquels ce serveur peut écrire des sauvegardes.",
+      "subtitle": "Où ce serveur peut envoyer ses sauvegardes : un bucket S3, un serveur FTP ou SFTP, ou Google Drive.",
       "add": "Ajouter une destination",
       "whatTestDoes": "Que fait le test ?",
-      "testExplained": "Il écrit un petit fichier dans le bucket, le relit puis le supprime. Cela prouve que les clés fonctionnent ET qu'elles permettent d'écrire — une clé en lecture seule échouera toujours."
+      "testExplained": "Il écrit un petit fichier dans la destination, le relit puis le supprime. Cela prouve que l'accès fonctionne ET qu'il peut écrire : un compte en lecture seule échouera toujours."
     },
     "empty": {
       "title": "Aucun stockage connecté",
-      "body": "Les sauvegardes ont besoin d'une destination. Connectez un bucket compatible S3 et n'importe quelle application pourra y envoyer ses sauvegardes.",
+      "body": "Les sauvegardes ont besoin d'un endroit où aller. Connectez une destination de stockage et chaque application pourra y envoyer ses sauvegardes.",
       "reassurance": "Les clés sont stockées chiffrées et ne servent qu'à envoyer les sauvegardes de ce serveur et à supprimer les anciennes.",
       "stepsTitle": "Pour commencer, suivez ces trois étapes :",
-      "step1": "Créez un bucket chez votre fournisseur — ou choisissez-en un que vous avez déjà.",
-      "step2": "Créez une clé d'accès pouvant téléverser, télécharger et supprimer des objets dans ce bucket.",
-      "step3": "Collez le nom du bucket, sa région et les clés dans le formulaire ici."
+      "step1": "Choisissez où iront les sauvegardes : un bucket S3, un serveur FTP ou SFTP, ou Google Drive.",
+      "step2": "Obtenez un accès qui peut envoyer, télécharger et supprimer des fichiers à cet endroit : une clé d'accès, ou un identifiant et un mot de passe.",
+      "step3": "Saisissez ces informations dans le formulaire ici."
     },
     "row": {
       "credentialsSet": "Identifiants définis",
@@ -5556,7 +5880,7 @@
       "neverTested": "Jamais testé — personne n'a vérifié que ces identifiants fonctionnent.",
       "lastTestedOk": "Testé {when}",
       "failedCredentials": "Le dernier test a échoué {when} — les identifiants ont été refusés.",
-      "failedUnreachable": "Le dernier test a échoué {when} — le bucket est injoignable.",
+      "failedUnreachable": "Le dernier test a échoué {when} : la destination était injoignable.",
       "failed": "Le dernier test a échoué {when}.",
       "failedHostKey": "Le dernier test a échoué {when} — le serveur a présenté une clé d’hôte différente de celle enregistrée, la connexion a donc été interrompue.",
       "failedPrivateKey": "Le dernier test a échoué {when} — la clé privée n’a pas pu être lue.",
@@ -5573,7 +5897,7 @@
     },
     "form": {
       "provider": "Fournisseur",
-      "providerHint": "Ne change que l'exemple affiché ci-dessous — tout fournisseur compatible S3 fonctionne.",
+      "providerHint": "L'endroit où les sauvegardes sont stockées. Les champs ci-dessous s'adaptent à ce choix.",
       "providers": {
         "aws": "Amazon S3",
         "r2": "Cloudflare R2",
@@ -5594,7 +5918,7 @@
       "endpointAws": "Laissez vide pour Amazon S3 — la région détermine le point de terminaison.",
       "prefix": "Dossier",
       "prefixPlaceholder": "backups/",
-      "prefixHint": "Optionnel. Conserve les sauvegardes dans leur propre dossier à l'intérieur du bucket.",
+      "prefixHint": "Facultatif. Range les sauvegardes dans leur propre dossier à la destination.",
       "prefixChangeWarning": "Modifier ceci ne déplace rien. Les sauvegardes déjà stockées dans l'ancien dossier ne seront plus trouvées.",
       "fields": {
         "bucket": "Bucket",
@@ -5645,14 +5969,14 @@
     },
     "connect": {
       "title": "Ajouter une destination de stockage",
-      "subtitle": "Un bucket compatible S3 pour envoyer les sauvegardes.",
+      "subtitle": "Un endroit où envoyer les sauvegardes.",
       "credentialsNote": "Les clés sont stockées chiffrées et ne sont plus jamais affichées — pour les modifier plus tard, il faut les remplacer.",
       "cancel": "Annuler",
       "submit": "Ajouter une destination",
       "saving": "Ajout…",
       "added": "Destination ajoutée.",
       "testPassed": "Connexion testée — elle fonctionne.",
-      "testFailed": "Enregistré, mais le test de connexion a échoué. Vérifiez les clés et le bucket.",
+      "testFailed": "Enregistré, mais le test de connexion a échoué. Vérifiez les identifiants et la cible.",
       "permissionsNote": "La clé doit avoir les permissions pour téléverser, télécharger et supprimer des objets dans ce bucket. La suppression est importante — les sauvegardes effacent les anciennes archives une fois la limite de rétention dépassée.",
       "keyDocs": "Où trouver ces clés ?",
       "permissionsNoteRemote": "Le compte doit pouvoir créer, lire et supprimer des fichiers dans ce répertoire — les sauvegardes suppriment les anciennes archives au-delà de la limite de rétention, un accès en lecture seule ne peut donc pas fonctionner.",
@@ -5682,7 +6006,7 @@
     "delete": {
       "title": "Supprimer cette destination ?",
       "description": "{name} sera retirée du panneau.",
-      "warning": "Toute application configurée pour sauvegarder ici arrêtera de le faire. Les sauvegardes déjà présentes dans le bucket ne sont pas supprimées.",
+      "warning": "Une destination ne peut être supprimée que si aucune application n'y sauvegarde et qu'elle ne contient plus aucune sauvegarde.",
       "cancel": "Annuler",
       "confirm": "Supprimer la destination",
       "removed": "Destination supprimée.",
@@ -5778,7 +6102,7 @@
       "status": {
         "protected": "Protégé",
         "failing": "En échec",
-        "paused": "En pause",
+        "paused": "Manuel uniquement",
         "unprotected": "Aucune",
         "unknown": "Inconnu"
       },
@@ -5812,7 +6136,8 @@
       "runsShortly": "S'exécute bientôt",
       "notSetUpLine": "Non configurée — rien n'est sauvegardé sur cette application.",
       "needsDestination": "Aucune destination de stockage n'est encore configurée. Ajoutez-en une via Intégrations → Stockage.",
-      "timesShownIn": "Heures affichées en {timezone}"
+      "timesShownIn": "Heures affichées en {timezone}",
+      "minutePast": "à :{minute} de chaque heure"
     },
     "setup": {
       "title": "Configurer les sauvegardes",
@@ -5836,20 +6161,30 @@
         "noSite": "Choisissez une application pour continuer.",
         "noDestination": "Choisissez où stocker les sauvegardes.",
         "incomplete": "Remplissez la planification pour continuer.",
-        "unchanged": "Rien n'a changé."
+        "unchanged": "Rien n'a changé.",
+        "noOptions": "Les options de sauvegarde ne sont pas chargées."
       },
       "editTitle": "Modifier les paramètres de sauvegarde",
       "editSubtitle": "Modifiez ce qui est copié, à quelle fréquence et où cela va.",
       "saveChanges": "Enregistrer les modifications",
       "refreshFound": "Liste de stockage mise à jour.",
       "refreshNoneNew": "Aucun nouveau stockage trouvé pour l'instant.",
-      "refreshFailed": "La liste de stockage n'a pas pu être actualisée."
+      "refreshFailed": "La liste de stockage n'a pas pu être actualisée.",
+      "optionsFailed": "Les options de sauvegarde n'ont pas pu être chargées.",
+      "subtitleSite": "Choisissez quoi sauvegarder, à quelle fréquence et où le stocker.",
+      "savedTitleManual": "Les sauvegardes sont configurées pour {name}",
+      "savedTitleNoName": "Les sauvegardes sont activées",
+      "savedTitleManualNoName": "Les sauvegardes sont configurées",
+      "discardTitle": "Abandonner ces paramètres de sauvegarde ?",
+      "discardDescription": "Vos modifications ne sont pas enregistrées. Si vous fermez maintenant, elles seront perdues.",
+      "discardKeep": "Continuer à modifier",
+      "discardConfirm": "Abandonner les modifications"
     },
     "form": {
       "applicationPlaceholder": "Choisissez une application",
       "applicationSearch": "Rechercher des applications",
       "applicationEmpty": "Aucune application trouvée",
-      "noDestinations": "Les sauvegardes ont besoin d'une destination. Connectez d'abord un stockage compatible S3 — il suffit d'un bucket et d'une clé.",
+      "noDestinations": "Les sauvegardes ont besoin d'un endroit où aller. Connectez d'abord une destination de stockage.",
       "addDestination": "Configurer le stockage",
       "checkAgain": "Vérifier à nouveau",
       "manageStorage": "Gérer le stockage",
@@ -5858,15 +6193,12 @@
       "destinationEmpty": "Aucune destination trouvée",
       "types": {
         "full": {
-          "label": "Fichiers + base de données",
           "hint": "Le plus sûr — restauration complète"
         },
         "filesystem": {
-          "label": "Fichiers uniquement",
           "hint": "Fichiers sans la base de données"
         },
         "database": {
-          "label": "Base de données uniquement",
           "hint": "Base de données sans les fichiers"
         }
       },
@@ -5875,16 +6207,6 @@
       "automaticOff": "Les sauvegardes ne s'exécutent que lorsque vous cliquez sur Sauvegarder maintenant.",
       "frequency": "Fréquence",
       "frequencyPlaceholder": "Choisir une planification",
-      "frequencies": {
-        "daily": "Tous les jours",
-        "weekly": "Toutes les semaines",
-        "monthly": "Tous les mois"
-      },
-      "frequencyHint": {
-        "daily": "S'exécute une fois par jour, à l'heure que vous définissez.",
-        "weekly": "S'exécute chaque dimanche, à l'heure que vous définissez.",
-        "monthly": "S'exécute le 1er de chaque mois, à l'heure que vous définissez."
-      },
       "scheduleTime": "À quelle heure",
       "scheduleTimeHint": "Pas l’horloge de votre ordinateur.",
       "retention": "Combien en conserver",
@@ -5906,18 +6228,26 @@
       "warnings": {
         "narrower": "Les bases de données ne seront plus sauvegardées à partir de la prochaine exécution. Les sauvegardes déjà prises en contiennent toujours.",
         "narrowerFiles": "Les fichiers ne seront plus sauvegardés à partir de la prochaine exécution. Les sauvegardes déjà prises en contiennent toujours.",
-        "retentionDown": "{count, plural, one {La plus ancienne sauvegarde sera supprimée} other {Les # plus anciennes sauvegardes seront supprimées}} lors de la prochaine exécution."
+        "retentionDown": "{count, plural, one {La plus ancienne sauvegarde sera supprimée} other {Les # plus anciennes sauvegardes seront supprimées}} dès l'enregistrement."
       },
       "destinationFailing": "Le dernier test de connexion vers {name} a échoué, les sauvegardes envoyées là-bas ne seront pas écrites tant que ce n'est pas corrigé.",
       "noDatabase": {
         "blocked": "Cette application n'a pas de base de données",
-        "filesOnly": "Cette application n'a pas de base de données, donc seuls ses fichiers seront sauvegardés."
+        "filesOnly": "Cette application n'a pas de base de données, donc seuls ses fichiers seront sauvegardés.",
+        "typeHasNone": "Ce type d'application n'a pas de base de données : seuls ses fichiers sont sauvegardés."
       },
       "automaticHint": "Lance la sauvegarde selon un planning au lieu de seulement quand vous appuyez sur le bouton.",
       "fileExcludesHint": "Chemins à exclure de la sauvegarde, un par ligne. Les caches et les logs méritent de l’être ; les téléversements, non.",
       "databaseExcludesHint": "Bases de données à exclure de la sauvegarde, une par ligne. Utile pour les caches et tout ce que vous pouvez reconstruire.",
-      "scheduleTimeZone": "S’exécute à l’heure du projet ({timezone})",
-      "destinationNotConnected": "{name} n’est pas encore connecté à votre compte Google : les sauvegardes envoyées là échoueront."
+      "scheduleTimeZone": "Heures en {timezone}",
+      "destinationNotConnected": "{name} n’est pas encore connecté à votre compte Google : les sauvegardes envoyées là échoueront.",
+      "optionsFailed": "Les options de sauvegarde n'ont pas pu être chargées : ces réglages ne peuvent pas encore être enregistrés.",
+      "optionsRetry": "Réessayer",
+      "scheduleMinute": "À quelle minute",
+      "scheduleMinuteHint": "Minutes après chaque heure, de 0 à 59.",
+      "retentionHintHours": "Environ {hours, plural, one {# heure} other {# heures}} d'historique. Les plus anciennes sont supprimées.",
+      "retentionHintCount": "Conserve {count, plural, one {la sauvegarde la plus récente} other {les # sauvegardes les plus récentes}}. Les plus anciennes sont supprimées.",
+      "excludeLineError": "Ligne {line} : {message}"
     },
     "history": {
       "allApplications": "Toutes les applications",
@@ -6010,7 +6340,7 @@
           }
         }
       },
-      "copyUid": "Copier le nom de fichier de cette archive dans le bucket",
+      "copyUid": "Copier le nom de fichier de cette archive à la destination",
       "uploadProgress": "{done} sur {total}",
       "uploadProgressBare": "{done} envoyés",
       "retryConfirm": {
@@ -6090,7 +6420,8 @@
       "stalledQueued": "Cette restauration n'a pas démarré",
       "stalledQueuedBody": "Elle attend depuis quelques minutes que le serveur la prenne en charge. Rien n'a été modifié sur l'application. Le job ne fonctionne peut-être pas — vérifiez à nouveau, ou demandez à la personne qui gère ce serveur de regarder.",
       "undone": "La restauration a été annulée",
-      "undoneBody": "L'application est revenue à son état antérieur à votre restauration. Vérifiez l'application, puis fermez ceci."
+      "undoneBody": "L'application est revenue à son état antérieur à votre restauration. Vérifiez l'application, puis fermez ceci.",
+      "checkFailed": "Impossible de vérifier cette restauration. Réessayez dans un instant."
     },
     "application": {
       "pageTitle": "Sauvegardes",
@@ -6103,13 +6434,17 @@
           "body": "{schedule}, stocké sur {destination}."
         },
         "paused": {
-          "title": "Les sauvegardes sont en pause",
+          "title": "Sauvegardes manuelles uniquement",
           "body": "Rien ne s'exécute selon une planification. Les sauvegardes n'ont lieu que lorsque vous cliquez sur Sauvegarder maintenant."
         },
         "unprotected": {
           "title": "Cette application n'est pas sauvegardée",
-          "body": "Si le serveur est perdu, cette application l'est aussi. Définissez une planification ci-dessous.",
+          "body": "Si le serveur est perdu, cette application l'est aussi. Définissez une planification pour la protéger.",
           "bodyReadOnly": "Si le serveur est perdu, cette application l'est aussi. Demandez à un administrateur de configurer les sauvegardes."
+        },
+        "empty": {
+          "title": "Aucune sauvegarde à restaurer pour l'instant",
+          "body": "Les sauvegardes sont planifiées, mais il n'en existe aucune pour le moment. Lancez-en une pour vérifier que tout fonctionne."
         }
       },
       "lastRun": "Dernière exécution {when}",
@@ -6141,7 +6476,9 @@
         "howOftenAt": "{frequency} à {time}",
         "keepsEverything": "Toutes les sauvegardes conservées",
         "keepsNotApplicable": "Non applicable",
-        "howOftenAtZone": "{frequency} à {time} · {timezone}"
+        "howOftenAtZone": "{frequency} à {time} · {timezone}",
+        "howOftenMinute": "{frequency} à :{minute}",
+        "howOftenMinuteZone": "{frequency} à :{minute} · {timezone}"
       },
       "unknownReason": "La raison n'a pas été enregistrée.",
       "restore": "Restaurer",
@@ -6167,7 +6504,29 @@
       "noDatabase": {
         "title": "Cette application n'a pas de base de données",
         "description": "Les sauvegardes de cette application n'en contiendront pas tant que vous n'en attacherez pas une."
-      }
+      },
+      "turnOff": {
+        "action": "Désactiver les sauvegardes",
+        "running": "Une sauvegarde est en cours. Attendez qu'elle se termine avant de désactiver les sauvegardes.",
+        "title": "Désactiver les sauvegardes de {name} ?",
+        "description": "La planification et ses paramètres sont supprimés, et plus aucune sauvegarde ne sera faite pour cette application.",
+        "cancel": "Annuler",
+        "confirm": "Désactiver les sauvegardes",
+        "deleteCount": "{count, plural, one {Supprimer aussi sa # sauvegarde} other {Supprimer aussi ses # sauvegardes}}",
+        "deleteAll": "Supprimer aussi ses sauvegardes",
+        "deleteHint": "Obligatoire : les sauvegardes ne peuvent pas être conservées sans planification. Leurs archives sont supprimées de {destination}, et c'est irréversible.",
+        "storage": "votre stockage",
+        "keepHint": "Vous voulez garder les sauvegardes ? Mettez plutôt en pause : rien ne s'exécute selon la planification, et toutes les sauvegardes sont conservées.",
+        "pauseInstead": "Mettre en pause plutôt",
+        "paused": "Sauvegardes en pause. Toutes les sauvegardes sont conservées.",
+        "pauseFailed": "Les sauvegardes n'ont pas pu être mises en pause.",
+        "done": "Sauvegardes désactivées pour {name}.",
+        "doneWithBackups": "{count, plural, one {Sauvegardes désactivées pour {name}, et # sauvegarde supprimée.} other {Sauvegardes désactivées pour {name}, et # sauvegardes supprimées.}}",
+        "failed": "Les sauvegardes n'ont pas pu être désactivées."
+      },
+      "restoreRunning": "Une restauration est en cours. Attendez qu'elle se termine.",
+      "historyForbidden": "Votre rôle ne peut pas voir l'historique des sauvegardes. Demandez à un administrateur l'autorisation Sauvegardes.",
+      "noneKept": "Aucune conservée"
     },
     "empty": {
       "title": "Rien n'est encore sauvegardé sur ce serveur",
@@ -6180,7 +6539,7 @@
         "offsite": "Stocké hors de ce serveur"
       },
       "stepsTitle": "Comment se configurer",
-      "step1": "Connectez une destination de stockage — le bucket dans lequel vos sauvegardes sont écrites.",
+      "step1": "Connectez une destination de stockage : l'endroit où vos sauvegardes sont écrites.",
       "step2": "Choisissez une application, ce qu'il faut copier, et à quelle fréquence.",
       "step3": "Restaurez depuis n'importe quelle sauvegarde vérifiée, dans l'onglet Historique.",
       "action": "Configurer les sauvegardes",
@@ -6221,7 +6580,7 @@
       },
       "unknownApplication": "Application supprimée",
       "unknownReason": "La raison n'a pas été enregistrée.",
-      "noSafetyCopy": "Aucune prise",
+      "noSafetyCopy": "Aucune disponible",
       "findSafetyCopy": "Trouver la copie de sécurité",
       "allApplications": "Toutes les applications",
       "allStatuses": "Tout statut",
@@ -6291,7 +6650,8 @@
       "hideDetailsShort": "Masquer les détails",
       "ignoreShort": "Ignorer",
       "restoreShort": "Annuler l'ignor",
-      "working": "Traitement…"
+      "working": "Traitement…",
+      "wholeType": "Tous"
     },
     "outcomes": {
       "found": "Trouvé",
@@ -6351,7 +6711,7 @@
     "title": "Gestion centralisée",
     "pageSubtitle": "Laissez un panel central gérer ce serveur pour vous.",
     "subtitle": "Générez une clé ici, puis collez-la dans votre panel central pour y connecter ce serveur.",
-    "connected": "Connecté",
+    "keyActive": "Clé active",
     "disconnected": "Ce serveur n'est plus connecté à Central.",
     "cancel": "Annuler",
     "power": {

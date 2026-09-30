@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
@@ -14,6 +13,9 @@ import {
 } from "@/components/ui/select";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { apiMessage } from "@/lib/api/error-message";
+import { genericErrorMessage } from "@/lib/api/generic-error";
+import { useRefresh } from "@/hooks/use-refresh";
+import { offeredShells } from "@/lib/system-users/offered-shells";
 
 /**
  * Inline login-shell picker.
@@ -29,7 +31,7 @@ import { apiMessage } from "@/lib/api/error-message";
  */
 export function ShellSelect({ user, shells = [], canManage = true, className }) {
   const t = useTranslations("systemUsers");
-  const router = useRouter();
+  const { refresh, refreshThen } = useRefresh();
   const [busy, setBusy] = useState(false);
   // The shell we asked for, until the server agrees with it. Same reason as the
   // access switches: `user.shell` only changes when router.refresh() lands, so
@@ -56,26 +58,34 @@ export function ShellSelect({ user, shells = [], canManage = true, className }) 
     setAsked(value);
     try {
       await setSystemUserShell(user.id, value);
-      toast.success(t("toast.shellChanged"));
-      router.refresh();
+      refreshThen(() => {
+        toast.success(t("toast.shellChanged"));
+        setBusy(false);
+      });
     } catch (error) {
       // Put it back: the shell did not change.
       setAsked(null);
-      toast.error(apiMessage(error, t("toast.failed")));
-    } finally {
       setBusy(false);
+      if (error?.response?.status === 404) {
+        toast.info(t("toast.alreadyGone", { username: user.username }));
+        refresh();
+        return;
+      }
+      toast.error(apiMessage(error, genericErrorMessage()));
     }
   }
 
   const options = shells.length
-    ? shells
+    ? offeredShells(shells, user.shell)
     : // No catalog (the request failed) — keep the current value visible so a
       // lost list never reads as a lost setting.
       [{ value: user.shell, title: label, description: "", allows_login: null }];
 
   return (
     <Select value={shown} disabled={busy} onValueChange={onChange}>
-      <SelectTrigger className={cn("h-8 w-48 text-xs", className)}>
+      {/* Sized to the title rather than a fixed w-48, which cut "Accès shell
+          complet (bash)" and its Spanish and Russian siblings mid-word. */}
+      <SelectTrigger className={cn("h-8 w-auto max-w-72 text-xs", className)}>
         {/* Title only. Radix copies the selected item's children into the
             trigger, so without this the path (and any description) rides along
             and the row grows a second line it does not need. */}

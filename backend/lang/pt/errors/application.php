@@ -30,6 +30,8 @@ return [
     'primary_domain_not_editable' => 'Um domínio principal não pode ser editado. Torne outro domínio principal primeiro.',
     'domain_taken' => 'Este domínio já está a ser utilizado neste servidor.',
     'domain_taken_by' => 'Este domínio já é utilizado pela aplicação «:application».',
+    'domain_is_panel' => 'Este é o endereço em que o próprio painel é servido, por isso um site não pode usá-lo.',
+    'redirect_target_invalid' => 'O destino do redirecionamento deve ser um endereço web simples: https://, um host e um caminho opcional, sem query string, espaços ou caracteres como ; # $ &.',
     'unsupported_web_server' => 'O painel não consegue gravar a configuração do site para :web_server.',
     'no_web_server' => 'nenhum servidor web detectado',
     'provision_failed' => 'A configuração do site falhou na etapa ":step".',
@@ -41,7 +43,7 @@ return [
     'compose_apply_failed' => 'Não foi possível aplicar o ficheiro compose, por isso o site voltou ao que estava a usar antes. Referência :reference.',
     'docker_removal_not_permitted' => 'Não tem permissão para eliminar redes ou volumes Docker. Remova o site sem eles, ou peça a alguém com acesso ao Docker.',
     'no_database_engine' => 'Nenhum mecanismo de banco de dados disponível. Instale e configure o MySQL ou MariaDB antes de criar esta aplicação.',
-    'no_process' => '\"‎:name\" não executa um processo próprio.',
+    'no_process' => '"‎:name" não executa um processo próprio.',
     'process_failed' => 'Não foi possível :action a aplicação. Informe a referência ao suporte.',
     'system_user_missing' => 'O usuário do sistema de :name está ausente, então o painel não pode trabalhar com os arquivos desta aplicação. Você ainda pode excluir a aplicação.',
     'no_port_available' => 'Nenhuma porta livre entre :from e :to. Libere uma ou amplie o intervalo.',
@@ -63,6 +65,7 @@ return [
     'waf_failed' => 'Não foi possível alterar as definições da firewall no servidor.',
     'staging_failed' => 'A operação de staging falhou no servidor.',
     'staging_rollback_failed' => 'O envio do staging falhou e não foi possível restaurar a produção. O site permanece desativado. Informe a referência ao suporte.',
+    'staging_push_running' => 'Já existe um envio em curso para este site. Aguarde que termine.',
     'clone_failed' => 'A operação de clonagem falhou no servidor.',
     'fail2ban_failed' => 'A operação do fail2ban falhou no servidor.',
 
@@ -114,4 +117,19 @@ return [
     'generate_system_user_forbidden' => 'Não tem permissão para criar utilizadores do sistema, por isso não é possível gerar um novo para este site. Escolha antes um utilizador do sistema existente.',
     'system_user_conflict' => 'Escolha um utilizador do sistema novo ou um existente, não ambos.',
     'system_user_name_unavailable' => 'Não foi possível reservar um nome de utilizador do sistema para este site — não foi possível perguntar ao servidor que nomes já estão em uso. Tente novamente ou escolha um utilizador do sistema existente.',
+
+    // The Lock button for a site folder the panel did not create; see
+    // SiteRootLock::adopt(). Keyed by its result.
+    'root_lock' => [
+        'unsafe' => 'A pasta do site :path não é uma pasta normal, ou mudou durante a verificação, por isso não foi alterada. Verifique-a no servidor antes de tentar novamente.',
+        'missing' => 'A pasta do site :path não existe no servidor.',
+        'failed' => 'O servidor não conseguiu bloquear a pasta do site. Nada foi alterado. Consulte o registo do servidor para mais detalhes.',
+        'unsupported' => 'O disco deste servidor não suporta o bloqueio de pastas, por isso a pasta do site ficou como estava.',
+        'foreign_owner' => 'A pasta do site :path pertence a outra conta, não ao utilizador deste site, por isso não foi alterada. Verifique quem deve ser o proprietário antes de a bloquear.',
+        'writable' => 'Outras contas podem escrever na pasta do site :path, por isso um bloqueio não se manteria. Retire a permissão de escrita do grupo e de todos (por exemplo `chmod 755`) e tente novamente.',
+        'locks_out_user' => 'Bloquear a pasta do site :path impediria o utilizador deste site de a abrir: as permissões só lhe dão acesso como proprietário. Dê ao grupo da pasta permissão de leitura e abertura (por exemplo `chmod 750`), confirme que o utilizador pertence a esse grupo e tente novamente.',
+    ],
+
+    // A git site whose account was disconnected: no credential, no URL.
+    'git_account_missing' => 'Esta conta git não está mais conectada, então não há de onde implantar. Reconecte-a na tela de Implantação e implante novamente.',
 ];

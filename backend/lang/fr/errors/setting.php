@@ -6,6 +6,7 @@ return [
     'security_updates_unavailable' => 'unattended-upgrades n\'est pas installé sur ce serveur, le panneau n\'a donc rien à exécuter. Installez le paquet unattended-upgrades, puis réessayez.',
     'security_updates_in_progress' => 'Une mise à jour de sécurité est déjà en cours.',
     'no_ssh_key' => "Ajoutez une clé SSH avant de désactiver l'authentification par mot de passe, sinon vous risquez de vous verrouiller.",
+    'ssh_port_in_use' => 'Le port :port est déjà utilisé sur ce serveur, SSH ne pourrait donc pas y écouter. Choisissez un port libre.',
     'redis_credential_unusable' => 'Le panneau ne peut pas joindre Redis avec le mot de passe qu\'il a enregistré et ne peut donc pas le modifier. Redis fonctionne mais rejette les identifiants du panneau : corrigez REDIS_PASSWORD dans le .env du panneau avec le mot de passe réellement exigé par Redis, puis réessayez.',
     'env_not_writable' => 'Le panneau ne peut pas écrire son propre fichier .env, le nouveau mot de passe Redis n\'a donc pas pu être enregistré. Corrigez d\'abord les permissions du fichier, sinon le panneau perdrait l\'accès à Redis.',
     'swap_no_space' => 'Il n\'y a pas assez d\'espace disque pour :size de swap. :available sont libres, et :reserve doivent rester libres pour le reste du serveur. Choisissez une taille plus petite ou libérez de l\'espace disque.',

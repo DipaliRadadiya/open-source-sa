@@ -10,6 +10,8 @@ use Illuminate\Validation\Rule;
 
 class StoreFirewallRuleRequest extends FormRequest
 {
+    use RefusesDuplicateRules;
+
     public function authorize(): bool
     {
         return $this->user()?->canManage('firewall') ?? false;

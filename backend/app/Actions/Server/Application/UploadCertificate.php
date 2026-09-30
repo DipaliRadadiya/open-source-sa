@@ -9,6 +9,7 @@ use App\Models\Application;
 use App\Models\Certificate;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\InstallerManager;
+use App\Services\Server\Certificates\CertbotClient;
 use App\Services\Server\Certificates\CertificateFiles;
 use Throwable;
 
@@ -30,6 +31,7 @@ class UploadCertificate
         private ApplyVhost $vhost,
         private ActivityLogger $activityLogger,
         private InstallerManager $installers,
+        private CertbotClient $certbot,
     ) {}
 
     /**
@@ -59,7 +61,7 @@ class UploadCertificate
         }
 
         $paths = $this->files->paths($application->domain);
-        $domains = $this->subjectNames((string) $data['certificate']) ?: [$application->domain];
+        $domains = $this->files->subjectNames((string) $data['certificate']) ?: [$application->domain];
         $candidate = new Certificate(['domains' => $domains]);
         $targetUrl = ($candidate->covers((string) $application->domain) ? 'https://' : 'http://').$application->domain;
         $certificate = null;
@@ -83,6 +85,10 @@ class UploadCertificate
                     'domains' => $domains,
                     'certificate_path' => $paths['certificate'],
                     'private_key_path' => $paths['private_key'],
+                    // The chain is bundled into the `.crt` above. A path left
+                    // over from a previous Let's Encrypt certificate points
+                    // into a lineage this certificate has nothing to do with.
+                    'chain_path' => null,
                     'uploaded_private_key' => (string) $data['private_key'],
                     // Nothing can renew an uploaded certificate. Saying otherwise
                     // would be a promise the panel cannot keep.
@@ -121,6 +127,8 @@ class UploadCertificate
             throw $exception;
         }
 
+        $this->removeReplaced($previousCertificate, $paths, $application->id);
+
         $this->activityLogger->log('application.certificate_uploaded', $application, [
             'domain' => $application->domain,
         ]);
@@ -129,36 +137,44 @@ class UploadCertificate
     }
 
     /**
-     * Every name the uploaded certificate actually covers.
+     * Whatever this upload replaced, once the upload is serving.
      *
-     * Parsed rather than assumed so the panel can say "this domain is not on
-     * your certificate" — the failure that otherwise appears only in the
-     * visitor's browser, on a site whose panel says everything is fine.
+     * A Let's Encrypt lineage left behind renews itself forever for a
+     * certificate nothing uses; an older uploaded or self-signed pair at other
+     * paths (the primary domain changed since) is a private key with nothing
+     * to belong to. Best effort: the new certificate is already live, and
+     * failing to tidy up the old one must not report the upload as failed.
      *
-     * @return array<int, string>
+     * @param  array<string, mixed>|null  $previous
+     * @param  array{certificate: string, private_key: string}  $paths
      */
-    private function subjectNames(string $pem): array
+    private function removeReplaced(?array $previous, array $paths, int $applicationId): void
     {
-        $parsed = @openssl_x509_parse($pem);
-
-        if ($parsed === false) {
-            return [];
+        if ($previous === null) {
+            return;
         }
 
-        $names = [];
+        try {
+            if ($previous['type'] === CertificateType::LetsEncrypt) {
+                $lineage = $previous['domains'][0] ?? null;
 
-        if (isset($parsed['subject']['CN'])) {
-            $names[] = strtolower((string) $parsed['subject']['CN']);
-        }
+                if ($lineage !== null) {
+                    $this->certbot->revoke($lineage, $applicationId);
+                }
 
-        foreach (explode(',', (string) ($parsed['extensions']['subjectAltName'] ?? '')) as $entry) {
-            $entry = trim($entry);
-
-            if (str_starts_with($entry, 'DNS:')) {
-                $names[] = strtolower(substr($entry, 4));
+                return;
             }
-        }
 
-        return array_values(array_unique(array_filter($names)));
+            $stale = array_values(array_diff(
+                array_filter([$previous['certificate_path'], $previous['private_key_path']]),
+                [$paths['certificate'], $paths['private_key']],
+            ));
+
+            if ($stale !== []) {
+                $this->files->remove($stale, $applicationId);
+            }
+        } catch (Throwable) {
+            // See above: never fail a live upload over the old certificate.
+        }
     }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Server\Backup\DeleteBackup;
 use App\Contracts\DatabaseEngine;
 use App\Enums\BackupStatus;
 use App\Enums\RestoreStatus;
@@ -16,6 +17,7 @@ use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Restores\RestoreContext;
 use App\Services\Server\Restores\RestoreRunner;
 use App\Services\Server\Restores\Steps\RestoreDatabase;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
@@ -318,6 +320,169 @@ it('puts the site back when the swap fails half way', function () {
         ->and($restore->reason)->toBe('swap_files')
         // Back where it started, with the original content.
         ->and(File::get($this->siteRoot.'/index.php'))->toContain('live');
+});
+
+/*
+ * Every file restore moves the live site aside to `.rollback-{id}`, and nothing
+ * ever removed one: five restores of a 117 MB site left 585 MB on a real server
+ * (2026-09-24). Only the newest is kept now.
+ */
+describe('old copies of the site', function () {
+    /**
+     * fakeSafetyBackupTar(), plus an `rm` that really removes, so what is left
+     * on disk is what the code asked for.
+     */
+    function fakeRestoreThatRemoves(Collection $removed): void
+    {
+        Process::fake(function ($process) use ($removed) {
+            $command = $process->command;
+            $args = $command[0] === 'sudo' ? array_slice($command, 2) : $command;
+            $binary = $args[0] ?? '';
+
+            // The archive is the argument after the mode flag. Read here
+            // rather than through tarArchivePath(), which lives in another
+            // file and is not defined when this one runs alone.
+            foreach (['-czf', '-cf'] as $flag) {
+                $at = array_search($flag, $args, true);
+                if ($binary === 'tar' && $at !== false) {
+                    file_put_contents($args[$at + 1], str_repeat('s', 4096));
+                }
+            }
+
+            if ($binary === 'tar' && in_array('-xzf', $args, true)) {
+                $site = $args[4].'/'.basename(test()->siteRoot);
+                File::ensureDirectoryExists($site);
+                File::put($site.'/index.php', '<?php echo "restored";');
+            }
+
+            if ($binary === 'mv') {
+                @rename($args[1], $args[2]);
+            }
+
+            if ($binary === 'rm') {
+                $target = end($args);
+                $removed->push($target);
+                File::deleteDirectory($target);
+            }
+
+            return Process::result(exitCode: 0);
+        });
+    }
+
+    // scandir, not File::directories(): Finder skips dot-directories, and
+    // every copy is one.
+    function rollbackCopies(): array
+    {
+        return array_values(array_filter(
+            scandir(dirname(test()->siteRoot)),
+            fn (string $name) => str_starts_with($name, '.rollback-'),
+        ));
+    }
+
+    it('keeps only the newest copy after several restores', function () {
+        fakeRestoreThatRemoves(collect());
+
+        $restores = [];
+        foreach (range(1, 3) as $_) {
+            $restores[] = app(RestoreRunner::class)->run(restoreFor(storedBackup()));
+        }
+
+        $newest = end($restores);
+
+        expect(collect($restores)->map(fn ($r) => $r->status->value)->unique()->values()->all())->toBe(['succeeded'])
+            ->and(rollbackCopies())->toBe(['.rollback-'.$newest->id])
+            ->and(is_dir($newest->rollback_path))->toBeTrue()
+            // The older rows stop pointing at a directory that is gone.
+            ->and(Restore::whereNotNull('rollback_path')->pluck('id')->all())->toBe([$newest->id]);
+    });
+
+    it('never removes the copy a failed restore left behind', function () {
+        $removed = collect();
+        fakeRestoreThatRemoves($removed);
+
+        // A failed restore whose move back did not happen: its copy *is* the
+        // site, and must survive anything a later restore does.
+        $failed = restoreFor(storedBackup());
+        $failedCopy = dirname($this->siteRoot).'/.rollback-'.$failed->id;
+        File::ensureDirectoryExists($failedCopy);
+        $failed->update(['status' => RestoreStatus::Failed, 'rollback_path' => $failedCopy]);
+
+        app(RestoreRunner::class)->run(restoreFor(storedBackup()));
+
+        expect(is_dir($failedCopy))->toBeTrue()
+            ->and($removed->all())->not->toContain($failedCopy)
+            ->and($failed->fresh()->rollback_path)->toBe($failedCopy);
+    });
+
+    it('removes nothing but the copy the panel itself made', function () {
+        $removed = collect();
+        fakeRestoreThatRemoves($removed);
+
+        // A row whose path is not `.rollback-{its own id}` beside the site —
+        // however it got there, it is not ours to delete.
+        $odd = restoreFor(storedBackup());
+        $elsewhere = $this->home.'/somewhere-else';
+        File::ensureDirectoryExists($elsewhere);
+        $odd->update(['status' => RestoreStatus::Succeeded, 'rollback_path' => $elsewhere]);
+
+        app(RestoreRunner::class)->run(restoreFor(storedBackup()));
+
+        expect(is_dir($elsewhere))->toBeTrue()
+            ->and($removed->all())->not->toContain($elsewhere);
+    });
+});
+
+/*
+ * Safety backups are kept to the newest two, and the older ones used to be
+ * deleted as rows only: every restore from the third on left a full copy of the
+ * site in the bucket that nothing in the panel could see or remove. Found on a
+ * real server (2026-09-24) as a 40 MB archive left behind in AWS.
+ */
+describe('old safety backups', function () {
+    it('removes the archive of a safety backup it prunes, not only the row', function () {
+        fakeSafetyBackupTar();
+
+        $safeties = [];
+        foreach (range(1, 3) as $_) {
+            $restore = app(RestoreRunner::class)->run(restoreFor(storedBackup()));
+            expect($restore->status)->toBe(RestoreStatus::Succeeded);
+
+            $safety = Backup::findOrFail($restore->safety_backup_id);
+            $safeties[] = ['id' => $safety->id, 'key' => $safety->manifest['key']];
+        }
+
+        [$oldest, $middle, $newest] = $safeties;
+
+        // Two kept, rows and archives both.
+        expect(Backup::where('is_safety', true)->pluck('id')->sort()->values()->all())->toBe([$middle['id'], $newest['id']])
+            ->and($this->fakeDisk->exists($middle['key']))->toBeTrue()
+            ->and($this->fakeDisk->exists($newest['key']))->toBeTrue();
+
+        // The pruned one is gone from the bucket too, which is the whole fix.
+        expect(Backup::find($oldest['id']))->toBeNull()
+            ->and($this->fakeDisk->exists($oldest['key']))->toBeFalse();
+    });
+
+    it('keeps the row of a safety backup whose archive will not delete, and still restores', function () {
+        fakeSafetyBackupTar();
+
+        foreach (range(1, 2) as $_) {
+            app(RestoreRunner::class)->run(restoreFor(storedBackup()));
+        }
+
+        $this->mock(DeleteBackup::class)
+            ->shouldReceive('execute')
+            ->andThrow(new RuntimeException('the bucket is unreachable'));
+
+        $before = Backup::where('is_safety', true)->count();
+
+        $restore = app(RestoreRunner::class)->run(restoreFor(storedBackup()));
+
+        // Nothing was pruned, so nothing is orphaned: the row that could not be
+        // removed stays visible and is retried by the next restore.
+        expect($restore->status)->toBe(RestoreStatus::Succeeded)
+            ->and(Backup::where('is_safety', true)->count())->toBe($before + 1);
+    });
 });
 
 it('leaves no staging directory beside the site, whatever happened', function () {

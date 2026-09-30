@@ -9,6 +9,7 @@ use App\Services\Panel\InstalledPanelInfo;
 use App\Services\Panel\UpdatePreflight;
 use App\Services\Panel\UpdateScript;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Validation\ValidationException;
@@ -551,4 +552,65 @@ it('still refuses a target contained in the live commit', function () {
     // reason nobody notices the downgrade.
     expect(inPlaceScript())->toContain('merge-base --is-ancestor')
         ->and(inPlaceScript())->toContain('target_not_newer');
+});
+
+it('puts the old dependencies back when it rolls back after composer ran', function () {
+    // The checkout restores the old code, not vendor/: without a reinstall a
+    // failed migrate left the old release running on the new packages.
+    $script = inPlaceScript();
+    $rollback = str($script)->between('rollback() {', "\n}")->toString();
+
+    expect($rollback)->toContain('if [ "$DEPS_CHANGED" = 1 ]; then')
+        ->and(strpos($rollback, 'composer install'))->toBeGreaterThan(strpos($rollback, 'checkout --force'))
+        // Best-effort: a failed reinstall must not stop the rest of the rollback.
+        ->and($rollback)->toMatch('/composer install[^\n]*\|\| true/')
+        // Set only once composer is about to change vendor/, so an earlier
+        // failure does not pay for a reinstall it does not need.
+        ->and(strpos($script, 'DEPS_CHANGED=1'))->toBeGreaterThan(strpos($script, 'note composer_install'))
+        ->and(strpos($script, 'DEPS_CHANGED=0'))->toBeLessThan(strpos($script, 'trap rollback ERR'));
+});
+
+describe('the installed commit after git packs its refs', function () {
+    /**
+     * A fake checkout at a temp path: HEAD on `main`, the branch either as a
+     * loose ref file or only inside packed-refs.
+     */
+    function panelInfoFor(bool $packed): InstalledPanelInfo
+    {
+        $root = sys_get_temp_dir().'/panel-info-'.uniqid();
+        mkdir($root.'/.git/refs/heads', 0777, true);
+        file_put_contents($root.'/.git/HEAD', "ref: refs/heads/main\n");
+        $hash = str_repeat('ab12', 10);
+
+        if ($packed) {
+            // What `git pack-refs` leaves: a header, the branch, an annotated
+            // tag and the line peeling it — and no loose file.
+            file_put_contents($root.'/.git/packed-refs', "# pack-refs with: peeled fully-peeled sorted \n"
+                .str_repeat('cd34', 10)." refs/heads/feature\n"
+                ."{$hash} refs/heads/main\n"
+                .str_repeat('ef56', 10)." refs/tags/v1.0.0\n^".str_repeat('0987', 10)."\n");
+        } else {
+            file_put_contents($root.'/.git/refs/heads/main', $hash."\n");
+        }
+
+        test()->panelInfoRoot = $root;
+        Process::fake(fn () => Process::result(exitCode: 128));
+
+        $info = Mockery::mock(InstalledPanelInfo::class)->makePartial();
+        $info->shouldReceive('repositoryPath')->andReturn($root);
+
+        return $info;
+    }
+
+    afterEach(fn () => isset($this->panelInfoRoot) && File::deleteDirectory($this->panelInfoRoot));
+
+    it('reads the commit from a loose ref', function () {
+        expect(panelInfoFor(packed: false)->installed()['commit_hash'])->toBe(str_repeat('ab12', 10));
+    });
+
+    it('reads the commit from packed-refs once git has packed the branch', function () {
+        // After `git gc`/`git pack-refs` the loose file is gone; this read
+        // nothing and the update screen lost the installed commit.
+        expect(panelInfoFor(packed: true)->installed()['commit_hash'])->toBe(str_repeat('ab12', 10));
+    });
 });

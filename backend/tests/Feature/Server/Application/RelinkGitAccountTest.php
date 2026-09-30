@@ -10,10 +10,11 @@ use Illuminate\Support\Facades\Http;
 /**
  * Re-pointing a git application at a different account.
  *
- * The account was create-time only. Disconnecting one is allowed to succeed
- * and the foreign key is `nullOnDelete`, so its applications kept a repository
+ * The account was create-time only. Disconnecting one used to succeed and
+ * the foreign key is `nullOnDelete`, so its applications kept a repository
  * and a branch and lost the credential that could read them — with no way
- * back. Recovery meant deleting the site and building it again, which is not a
+ * back. Disconnecting an account in use is now refused, but sites stranded
+ * before that still need this. Recovery meant deleting the site and building it again, which is not a
  * recovery.
  */
 beforeEach(function () {

@@ -20,12 +20,11 @@ use App\Http\Requests\Server\Application\StoreApplicationRequest;
 use App\Http\Requests\Server\Application\UpdateApplicationRequest;
 use App\Http\Resources\ApplicationResource;
 use App\Http\Resources\AppSidebarResource;
-use App\Jobs\DeployApplication;
 use App\Jobs\MeasureApplicationSize;
 use App\Jobs\ProvisionApplication;
 use App\Models\Application;
 use App\Models\Permission;
-use App\Services\Server\Applications\DeploymentRecorder;
+use App\Services\Server\Applications\DeployQueue;
 use App\Services\Server\Applications\FileBrowser;
 use App\Services\Server\Applications\PortAllocator;
 use App\Services\Server\Applications\ProcessSupervisor;
@@ -110,7 +109,7 @@ class ApplicationController extends Controller
         // So reloading the page and pressing save deleted every custom rule
         // the site had.
         return response()->json([
-            'application' => ApplicationResource::make($application->load('systemUser', 'botRules'))->resolve(),
+            'application' => ApplicationResource::make($application->load('systemUser', 'botRules', 'latestCheckout'))->resolve(),
         ]);
     }
 
@@ -140,7 +139,9 @@ class ApplicationController extends Controller
 
         // Persist before dispatch. A fast worker can otherwise finish and mark
         // the site active before this request overwrites it as provisioning.
-        $application->update(['status' => ApplicationStatus::Provisioning, 'failed_step' => null, 'reference' => null]);
+        // `failed_reason` too: it was added after this line was written, and a
+        // retried site that then succeeded went on showing the old reason.
+        $application->update(['status' => ApplicationStatus::Provisioning, 'failed_step' => null, 'failed_reason' => null, 'reference' => null]);
 
         ProvisionApplication::dispatch($application->id, Auth::id());
 
@@ -158,18 +159,13 @@ class ApplicationController extends Controller
     public function deploy(Application $application): JsonResponse
     {
         abort_unless($application->site_type === 'git', 422, __('errors/application.not_a_git_application'));
+        abort_if($application->gitAccountMissing(), 422, __('errors/application.git_account_missing'));
 
         // Records like any other deploy. This endpoint predates the
         // Deployment screen and stays for compatibility, but a deploy that
         // leaves no history depending on which button started it would be a
         // gap nobody could explain.
-        $deployment = app(DeploymentRecorder::class)->open(
-            $application,
-            DeploymentTrigger::Manual,
-            Auth::id(),
-        );
-
-        DeployApplication::dispatch($application->id, Auth::id(), $deployment->id);
+        app(DeployQueue::class)->queue($application, DeploymentTrigger::Manual, Auth::id());
 
         return response()->json([
             'application' => ApplicationResource::make($application->fresh(['systemUser']))->resolve(),

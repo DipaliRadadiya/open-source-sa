@@ -212,3 +212,28 @@ it('revokes a deleted user\'s tokens', function () {
 
     expect(PersonalAccessToken::where('tokenable_id', $target->id)->count())->toBe(0);
 });
+
+it('refuses to remove the last administrator', function () {
+    // Deleting yourself is refused, but demoting yourself was not: an only
+    // administrator could clear their own flag and leave nobody able to reach
+    // the admin area (found in code review 2026-09-29).
+    $admin = User::factory()->admin()->create(['username' => 'onlyadmin']);
+
+    $this->actingAs($admin)
+        ->putJson("/api/admin/users/{$admin->id}", ['name' => $admin->name, 'username' => $admin->username, 'is_admin' => false])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('is_admin');
+
+    expect($admin->fresh()->is_admin)->toBeTrue();
+});
+
+it('lets an administrator step down when another remains', function () {
+    $admin = User::factory()->admin()->create(['username' => 'steppingdown']);
+    User::factory()->admin()->create();
+
+    $this->actingAs($admin)
+        ->putJson("/api/admin/users/{$admin->id}", ['name' => $admin->name, 'username' => $admin->username, 'is_admin' => false])
+        ->assertOk();
+
+    expect($admin->fresh()->is_admin)->toBeFalse();
+});

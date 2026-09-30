@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { MoreHorizontal, KeyRound, KeySquare, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -14,11 +14,21 @@ import { SystemUserPasswordDialog } from "@/components/system-users/system-user-
 import { SshKeysDialog } from "@/components/system-users/ssh-keys-dialog";
 import { DeleteSystemUserDialog } from "@/components/system-users/delete-system-user-dialog";
 
-export function SystemUserRowActions({ user }) {
+// Shown to viewers too: listing a user's SSH keys only needs view, and the menu
+// was the only way to reach them. What they cannot do stays in the menu, off,
+// with the reason.
+export function SystemUserRowActions({ user, canManage = true, prevPage = null }) {
   const t = useTranslations("systemUsers");
   const [pwOpen, setPwOpen] = useState(false);
   const [keysOpen, setKeysOpen] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
+  // Only an item that opens a dialog keeps focus off the ⋯ button (the dialog
+  // takes it, then hands it back); Escape or a click away returns it there.
+  const openingDialog = useRef(false);
+  const open = (setter) => () => {
+    openingDialog.current = true;
+    setter(true);
+  };
   // Backend blocks deleting a user that still owns applications (422).
   const ownsApps = (user.applications?.length ?? 0) > 0;
 
@@ -34,22 +44,30 @@ export function SystemUserRowActions({ user }) {
         <DropdownMenuContent
           align="end"
           className="w-44"
-          onCloseAutoFocus={(e) => e.preventDefault()}
+          onCloseAutoFocus={(e) => {
+            if (!openingDialog.current) return;
+            openingDialog.current = false;
+            e.preventDefault();
+          }}
         >
-          <DropdownMenuItem onSelect={() => setPwOpen(true)}>
-            <KeyRound className="size-4" />
-            {t("password.open")}
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => setKeysOpen(true)}>
+          <MenuItemHint hint={canManage ? null : t("noPermission")}>
+            <DropdownMenuItem disabled={!canManage} onSelect={open(setPwOpen)}>
+              <KeyRound className="size-4" />
+              {t("password.open")}
+            </DropdownMenuItem>
+          </MenuItemHint>
+          <DropdownMenuItem onSelect={open(setKeysOpen)}>
             <KeySquare className="size-4" />
             {t("sshKeysAction")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <MenuItemHint hint={ownsApps ? t("actions.deleteAppsHint") : null}>
+          <MenuItemHint
+            hint={!canManage ? t("noPermission") : ownsApps ? t("actions.deleteAppsHint") : null}
+          >
             <DropdownMenuItem
               variant="destructive"
-              disabled={ownsApps}
-              onSelect={() => setDelOpen(true)}
+              disabled={!canManage || ownsApps}
+              onSelect={open(setDelOpen)}
             >
               <Trash2 className="size-4" />
               {t("actions.delete")}
@@ -58,9 +76,13 @@ export function SystemUserRowActions({ user }) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <SystemUserPasswordDialog user={user} open={pwOpen} onOpenChange={setPwOpen} />
-      <SshKeysDialog user={user} open={keysOpen} onOpenChange={setKeysOpen} />
-      <DeleteSystemUserDialog user={user} open={delOpen} onOpenChange={setDelOpen} />
+      {canManage ? (
+        <SystemUserPasswordDialog user={user} open={pwOpen} onOpenChange={setPwOpen} />
+      ) : null}
+      <SshKeysDialog user={user} open={keysOpen} onOpenChange={setKeysOpen} canManage={canManage} />
+      {canManage ? (
+        <DeleteSystemUserDialog user={user} open={delOpen} onOpenChange={setDelOpen} prevPage={prevPage} />
+      ) : null}
     </div>
   );
 }

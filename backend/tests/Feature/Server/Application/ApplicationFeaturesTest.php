@@ -61,6 +61,30 @@ it('does not offer PHP settings on a static site', function () {
         ->and($sidebar)->toContain('app_log');
 });
 
+it('does not offer PHP settings on a git site that serves no PHP', function () {
+    // The site type says `php` — it is the default for a repository whose
+    // rendering type was never chosen — but the user picked `static` or
+    // `ssr` at create and the row records it. The row wins: a directory of
+    // files and a Node process have no pool between them.
+    //
+    // Distinct from the static-site case above, which passes on the site
+    // type alone. Only git can disagree with its own type, which is why it
+    // is the one that went unnoticed.
+    // Names and domains are unique, and this test builds three sites.
+    $static = makeFeatureApp('git', 'static', ['name' => 'Git static', 'domain' => 'git-static.example.com']);
+    $node = makeFeatureApp('git', 'node', ['name' => 'Git ssr', 'domain' => 'git-ssr.example.com']);
+
+    expect(sidebarFor($static))->not->toContain('app_php')
+        ->and(sidebarFor($node))->not->toContain('app_php')
+        // Everything else a git site has is unaffected — this narrows one
+        // feature, it does not turn the site type into something else.
+        ->and(sidebarFor($static))->toContain('app_deployment');
+});
+
+it('still offers PHP settings on a git site that does serve PHP', function () {
+    expect(sidebarFor(makeFeatureApp('git')))->toContain('app_php');
+});
+
 it('offers workers on a Node site but not on a one-click PHP one', function () {
     expect(sidebarFor(makeFeatureApp('uptimekuma', 'node')))->toContain('app_worker')
         ->and(sidebarFor(makeFeatureApp('joomla')))->not->toContain('app_worker');

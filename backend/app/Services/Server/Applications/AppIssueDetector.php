@@ -113,10 +113,13 @@ class AppIssueDetector
 
         $status = $this->processSupervisor->status($app);
 
-        // No status = not running (the status() call returns null when
-        // systemctl is-active returns non-zero, which is the signal for a
-        // stopped or crashed unit).
-        if ($status !== null) {
+        // Read the state. status() runs `systemctl show`, which exits 0 for
+        // a stopped or crashed unit too — it only fails when it cannot ask at
+        // all — so "any status means running" meant this never fired: a Node
+        // app that had died showed a healthy dashboard (found live
+        // 2026-09-29). Only the states that mean "down" count; a state we
+        // could not read is not evidence of anything.
+        if ($status !== null && ! in_array($status['state'], ['inactive', 'failed', 'deactivating'], true)) {
             return null;
         }
 
@@ -126,6 +129,7 @@ class AppIssueDetector
             'message' => __('app_dashboard.issues.worker.stopped'),
             'meta' => [
                 'unit' => $this->processSupervisor->unit($app),
+                'state' => $status['state'] ?? null,
             ],
         ];
     }

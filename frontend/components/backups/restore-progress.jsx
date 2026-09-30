@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { CircleAlert, CircleCheck, Loader2, RefreshCw, TriangleAlert, Undo2 } from "lucide-react";
+import { CircleAlert, CircleCheck, EyeOff, Loader2, RefreshCw, TriangleAlert, Undo2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RESTORE_IN_FLIGHT } from "@/lib/schemas/backup";
 import { reasonText } from "@/lib/backups/reason";
@@ -27,6 +27,18 @@ const POLL_LIMIT_MS = 20 * 60 * 1000;
  */
 const QUEUED_LIMIT_MS = 2 * 60 * 1000;
 
+/*
+ * The two kinds of button on these banners, and nothing else.
+ *
+ * The action the banner offers (Undo, Check again) is the panel's ordinary
+ * filled button. Closing it (Dismiss, Hide) is neutral: a plain white surface,
+ * no outline and no status colour — green or red belongs to the message, not
+ * to a button that only closes it. The grey default fill disappeared into the
+ * pale tints, which is why the neutral one is white rather than grey.
+ */
+const NEUTRAL =
+  "border-transparent bg-background text-foreground shadow-xs hover:bg-muted dark:bg-secondary dark:hover:bg-muted";
+
 /**
  * A restore, while it happens and after it finishes.
  *
@@ -43,10 +55,13 @@ export function RestoreProgress({
   // True when the run that is on screen restored a safety copy — i.e. it was
   // itself an undo. Supplied by the page so a reload mid-undo says so too.
   restoredSafetyCopy = false,
+  // Told each status this banner learns, so the page can block the actions
+  // that must wait for a restore.
+  onStatusChange,
   onDismiss,
 }) {
   const t = useTranslations("backups.progress");
-  const { refresh, pending: refreshing } = useRefresh();
+  const { refreshAndWait } = useRefresh();
   const router = useRouter();
   const [restore, setRestore] = useState(initial);
   const [undoBackup, setUndoBackup] = useState(null);
@@ -66,7 +81,17 @@ export function RestoreProgress({
   // Set when polling gives up: the restore is still `pending`/`running` as far
   // as the API is concerned, but nothing has moved for a long time.
   const [stalled, setStalled] = useState(false);
+  // Bumped by "Check again" so polling restarts even when the status it finds
+  // is the same one it gave up on.
+  const [round, setRound] = useState(0);
+  const [checking, setChecking] = useState(false);
   const timer = useRef(null);
+  // Through a ref: callers pass an inline function, and as an effect
+  // dependency it restarted the polling (and its give-up timer) every render.
+  const statusRef = useRef(onStatusChange);
+  useEffect(() => {
+    statusRef.current = onStatusChange;
+  });
 
   const inFlight = RESTORE_IN_FLIGHT.includes(restore?.status);
 
@@ -87,6 +112,7 @@ export function RestoreProgress({
         const next = response.data?.restore;
         if (!next) return;
         setRestore(next);
+        statusRef.current?.(next.status, next.id);
         // The site's files and database just changed underneath every other
         // panel screen; refresh so nothing keeps showing the old world.
         if (!RESTORE_IN_FLIGHT.includes(next.status)) router.refresh();
@@ -113,7 +139,29 @@ export function RestoreProgress({
       clearInterval(timer.current);
       clearTimeout(stop);
     };
-  }, [inFlight, id, queued, router]);
+  }, [inFlight, id, queued, router, round]);
+
+  // Ask about THIS restore, not the page. A refresh re-rendered the layout,
+  // but the banner keeps its own copy, so it went on saying "has not started"
+  // over a restore that had long finished.
+  async function checkAgain() {
+    setChecking(true);
+    try {
+      const response = await fetchRestore(id);
+      const next = response.data?.restore;
+      if (next) {
+        setRestore(next);
+        statusRef.current?.(next.status, next.id);
+        if (!RESTORE_IN_FLIGHT.includes(next.status)) await refreshAndWait();
+      }
+      setStalled(false);
+      setRound((current) => current + 1);
+    } catch (error) {
+      toast.error(apiMessage(error, t("checkFailed")));
+    } finally {
+      setChecking(false);
+    }
+  }
 
   if (!restore) return null;
 
@@ -127,7 +175,9 @@ export function RestoreProgress({
       const response = await fetchBackup(restore.safety_backup_id);
       const backup = response.data?.backup;
       if (!backup) throw new Error("missing");
-      setUndoBackup({ ...backup, application_domain: applicationDomain });
+      // Put back what this restore replaced, no more: undoing a database-only
+      // restore defaulted to "Files and database" and would also rewind files.
+      setUndoBackup({ ...backup, application_domain: applicationDomain, preferred_type: restore.type });
     } catch (error) {
       toast.error(apiMessage(error, t("undoFailed")));
     } finally {
@@ -158,9 +208,11 @@ export function RestoreProgress({
           {/* The way back. Nobody else in this class of product has one, and
               burying it in a table row would waste the only thing that makes
               a wrong restore survivable. */}
+          {/* One size and one style for both: a filled button beside bare
+              text read as one control and a caption. */}
           <div className="ml-14 flex flex-wrap gap-2">
             {restore.safety_backup_id && !wasUndo ? (
-              <Button variant="outline" onClick={openUndo} disabled={loadingUndo}>
+              <Button size="sm" onClick={openUndo} disabled={loadingUndo}>
                 {loadingUndo ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
@@ -169,7 +221,8 @@ export function RestoreProgress({
                 {t("undo")}
               </Button>
             ) : null}
-            <Button variant="ghost" onClick={onDismiss}>
+            <Button variant="secondary" size="sm" onClick={onDismiss} className={NEUTRAL}>
+              <X className="size-4" />
               {t("dismiss")}
             </Button>
           </div>
@@ -192,6 +245,7 @@ export function RestoreProgress({
             // again, under a word that means the opposite.
             setWasUndo(true);
             setRestore(next);
+            onStatusChange?.(next.status, next.id);
           }}
         />
       </>
@@ -222,7 +276,8 @@ export function RestoreProgress({
             ) : null}
           </div>
         </div>
-        <Button variant="outline" onClick={onDismiss} className="ml-14">
+        <Button variant="secondary" size="sm" onClick={onDismiss} className={cn("ml-14", NEUTRAL)}>
+          <X className="size-4" />
           {t("dismiss")}
         </Button>
       </div>
@@ -261,11 +316,12 @@ export function RestoreProgress({
           </div>
         </div>
         <div className="ml-14 flex flex-wrap gap-2">
-          <Button variant="outline" onClick={refresh} disabled={refreshing}>
-            <RefreshCw className={cn("size-4", refreshing && "animate-spin")} />
+          <Button size="sm" onClick={checkAgain} disabled={checking}>
+            <RefreshCw className={cn("size-4", checking && "animate-spin")} />
             {t("checkAgain")}
           </Button>
-          <Button variant="ghost" onClick={onDismiss}>
+          <Button variant="secondary" size="sm" onClick={onDismiss} className={NEUTRAL}>
+            <X className="size-4" />
             {t("dismiss")}
           </Button>
         </div>
@@ -287,7 +343,8 @@ export function RestoreProgress({
             <p className="font-medium">{t("queued")}</p>
             <p className="text-sm text-muted-foreground">{t("queuedBody")}</p>
           </div>
-          <Button variant="ghost" size="sm" onClick={onDismiss} className="shrink-0">
+          <Button variant="secondary" size="sm" onClick={onDismiss} className={cn("shrink-0", NEUTRAL)}>
+            <EyeOff className="size-4" />
             {t("hide")}
           </Button>
         </div>
@@ -308,9 +365,11 @@ export function RestoreProgress({
           </p>
         </div>
         {/* Hiding it entirely means a restore that never finishes leaves a
-            banner nobody can clear. Ghost, and off to the side, so it does not
-            compete with the thing they are watching. */}
-        <Button variant="ghost" size="sm" onClick={onDismiss} className="shrink-0">
+            banner nobody can clear. Off to the side so it does not compete
+            with the thing they are watching, but a real button: as ghost text
+            it read as a label, not as something to press. */}
+        <Button variant="secondary" size="sm" onClick={onDismiss} className={cn("shrink-0", NEUTRAL)}>
+          <EyeOff className="size-4" />
           {t("hide")}
         </Button>
       </div>

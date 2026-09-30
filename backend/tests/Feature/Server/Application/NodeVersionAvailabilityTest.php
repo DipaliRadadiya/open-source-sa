@@ -79,6 +79,8 @@ function createNodeVersionSite(array $overrides = []): TestResponse
             'name' => 'Status',
             'domain' => 'status.example.com',
             'site_type' => 'uptimekuma',
+            'admin_username' => 'admin',
+            'admin_password' => 'Kuma-Pass-2026',
         ], $overrides));
 }
 

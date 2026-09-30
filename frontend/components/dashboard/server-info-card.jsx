@@ -12,6 +12,13 @@ import { EngineLogo } from "@/components/databases/engine-logo";
 import { engineLogo } from "@/lib/databases/engine-logo";
 import { shortVersion } from "@/lib/databases/short-version";
 
+/*
+ * Database engines are listed from `/databases/engines` below, with their
+ * logos. `/server/facts` now reports mariadb, mongodb and postgresql among its
+ * runtimes too, so each one appeared twice in the row.
+ */
+const DATABASE_ENGINES = new Set(["mysql", "mariadb", "mongodb", "postgresql"]);
+
 function Field({ icon: Icon, label, value, mono, copyLabel, className }) {
   return (
     // min-w-0: a grid item keeps min-width:auto, so without it this tile grows
@@ -85,7 +92,7 @@ export async function ServerInfoCard({
    * reading it would put two contradicting versions in one row.
    */
   const runtimes = Object.entries(facts?.runtimes ?? {}).filter(
-    ([name, version]) => version && name !== "mysql",
+    ([name, version]) => version && !DATABASE_ENGINES.has(name),
   );
   // Installed, not running: this row says what is on the machine. Whether it is
   // up is the services badge's question, three chips to the right.

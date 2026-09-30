@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, Pencil } from "lucide-react";
@@ -34,7 +34,7 @@ import { GoogleDriveSetup } from "@/components/integrations/storage/google-drive
  */
 export function EditDestinationDialog({ destination, open, onOpenChange, oauthRedirectUri }) {
   const t = useTranslations("storage.edit");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
 
   const provider = destination?.provider ?? "s3";
   const preset = presetForProvider(provider);
@@ -75,9 +75,9 @@ export function EditDestinationDialog({ destination, open, onOpenChange, oauthRe
         prefix: formValues.prefix?.trim() ?? "",
         config: submittableConfig(provider, formValues.config),
       });
+      await refreshAndWait();
       toast.success(t("saved"));
       onOpenChange?.(false);
-      router.refresh();
     } catch (error) {
       handleValidationError(error, form);
     }

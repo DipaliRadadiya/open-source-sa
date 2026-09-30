@@ -6,6 +6,11 @@ return [
     'force_https_without_certificate' => 'Não é possível forçar HTTPS sem um certificado ativo — o site deixaria de responder.',
     'not_pem' => 'Isto não parece um ficheiro PEM. Deve começar por -----BEGIN.',
     'key_mismatch' => 'A chave privada não corresponde ao certificado.',
+    'not_certificate' => 'Isto não é um certificado. Cole aqui o certificado (-----BEGIN CERTIFICATE-----) e a chave privada no campo próprio.',
+    'domain_not_covered' => 'Este certificado não cobre nenhum domínio deste site (:domains).',
+    'expired' => 'Este certificado já expirou.',
+    'not_yet_valid' => 'Este certificado ainda não é válido.',
+    'invalid_chain' => 'A cadeia deve conter apenas certificados (blocos -----BEGIN CERTIFICATE-----).',
 
     // Why the reachability dry run said no, per domain. The dry run does
     // exactly what Let's Encrypt is about to do, so each of these is a

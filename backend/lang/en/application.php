@@ -63,6 +63,8 @@ return [
         'stack' => 'This server runs containers only, so it does not host this kind of application.',
         'database' => 'This application needs :engines, which this server does not have.',
         'php' => 'This server does not have PHP installed.',
+        'php_version_install' => 'This server has no PHP version :type runs on (:range). Install PHP :version from the PHP screen first.',
+        'php_version_none' => 'This server has no PHP version :type runs on (:range), and none of those versions can be installed from this server\'s package repository.',
         'node' => 'This server does not have Node.js installed.',
         'web_server' => 'This application is not available on :web_server servers yet.',
     ],
@@ -188,7 +190,7 @@ return [
         'table_prefix_random' => 'Leave empty and a random prefix is generated, keeping the tables apart if the database is ever shared.',
         'timezone' => 'Timezone for the site, e.g. America/New_York or Europe/Berlin. See Settings → General → Timezone.',
         'table_prefix_optional' => 'Optional. Clear it and the tables are created with no prefix at all.',
-        'start_command' => 'The entry file, for example \"node server.js\". Not \"npm start\" — a package manager forks the real process, so shutdown signals never reach it.',
+        'start_command' => 'The entry file, for example "node server.js". Not "npm start" — a package manager forks the real process, so shutdown signals never reach it.',
         'app_port' => 'Left empty, the panel picks a free one.',
         'rendering_type' => 'Server-side rendering runs your app and proxies to it. The other two build to files the web server hands out directly — faster, and nothing to keep running.',
         'repository_url' => 'A public repository — no account needed. Must be an https:// address.',
@@ -227,6 +229,8 @@ return [
         'dependencies' => 'Checking the dependencies',
         'verify' => 'Checking the site answers',
         'verify_serving' => 'Checking the site answers',
+        'create_admin' => 'Creating the admin account',
+        'schedule_cron' => 'Scheduling background jobs',
         'worker' => 'The background worker stopped',
     ],
     /*
@@ -252,6 +256,8 @@ return [
         'attached_database_engine_mismatch' => 'This application already has a database attached, but it runs on an engine this application cannot use. Detach it, or attach one on a supported engine, and try again.',
         'serving_error' => 'The application started but answers every request with an error. Its assets were most likely not built completely — check the application log for details.',
         'not_answering' => 'The application started but never answered a request. Check the application log for why it is not listening.',
+        'owner_not_created' => 'The application started but its administrator could not be confirmed. The site was not handed over, because until an administrator exists anyone who opens it can create one. Try again; if it keeps failing, check the application log.',
+        'app_not_ready' => 'The application started but did not finish starting up within 2 minutes, so its administrator could not be created. Check the application log, then try again.',
         'out_of_memory' => 'The server ran out of memory during this step and it was stopped by the system. Free some memory, or add swap, and try again.',
         'no_build_tools' => 'This step needed to compile a native module, and this server has no compiler installed. Install the build tools from the setup screen, then try again. Choosing a different Node version may also help, since some versions ship ready-built binaries — but which ones do is up to each package, so it is not a reliable fix on its own.',
         'composer_platform' => 'Composer could not install this application\'s dependencies under the PHP version this site is set to. The site\'s PHP version, or one of the extensions it needs, does not meet what the project requires. Change the site\'s PHP version to one the project supports, or install the missing extension, and deploy again.',
@@ -294,5 +300,27 @@ return [
         'heading' => 'This site is temporarily unavailable',
         'lede' => 'It has been taken offline by its owner. Please try again later.',
         'foot' => 'Served by the control panel.',
+    ],
+
+    // A deploy that failed after its checkout left the new code live.
+    // See Application::codeOnDisk().
+    'code_on_disk' => [
+        'incomplete' => 'The last deploy failed after the new code was put in place, so the site is running commit :commit, which is not fully deployed. Fix the problem and deploy again.',
+    ],
+
+    // A delivery for a site whose deploy-on-push is switched off. See
+    // ApplicationWebhookController::receive().
+    'webhook_delivery' => [
+        'disabled' => 'Deploy on push is turned off for this site in the panel, so nothing was deployed. Turn it on again in the panel, or delete this webhook.',
+    ],
+
+    // Why deploy-on-push still needs the webhook added by hand. See
+    // WebhookRegistrar.
+    'webhook_registration' => [
+        'no_account' => 'This site deploys from a public URL, not a connected Git account, so the panel cannot add the webhook for you. Add it in your repository settings with the URL and secret below.',
+        'signing_token' => 'GitLab creates signing tokens itself, so the panel cannot add this webhook for you. Add it in the repository\'s Webhooks settings with the URL below and your signing token.',
+        'not_public' => 'The panel\'s address is not reachable from the internet, so GitHub, GitLab or Bitbucket could not deliver to it. Give the panel a public address, or add the webhook by hand once it has one.',
+        'provider_refused' => 'The Git provider did not let the panel add the webhook. The connected token probably lacks permission to manage webhooks on this repository. Add it by hand with the URL and secret below, or reconnect the account with that permission.',
+        'removal_refused' => 'Deploy on push is off, but the Git provider did not let the panel remove the webhook it added. The connected token probably lacks permission to delete webhooks. Pushes will still be sent and refused until you delete the webhook in the repository\'s settings.',
     ],
 ];

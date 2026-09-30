@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations, useFormatter } from "next-intl";
 import {
@@ -17,6 +18,7 @@ import { formatBytes } from "@/lib/format/bytes";
 import { exportSchema, exportsResponseSchema } from "@/lib/schemas/database";
 import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
+import { LoadFailed } from "@/components/data-table/load-failed";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { RefreshButton } from "@/components/data-table/refresh-button";
@@ -46,8 +48,8 @@ const SLOW_AFTER_MS = 120_000;
 const TONE = {
   completed: "success",
   failed: "destructive",
-  running: "secondary",
-  queued: "secondary",
+  running: "muted",
+  queued: "muted",
 };
 
 /**
@@ -57,9 +59,10 @@ const TONE = {
  * fills in as it goes — the alternative is a button that looks broken for the
  * minute a real dump takes. Polling stops as soon as nothing is in flight.
  */
-export function DatabaseExports({ database, exports: initial = [], canManage }) {
+export function DatabaseExports({ database, exports: initial = [], canManage, read = null }) {
   const t = useTranslations("databases.exports");
   const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [polled, setPolled] = useState(null);
   // The polled rows override the server render — and have to stand down the
   // moment the server render is newer than they are. Keeping them forever was
@@ -189,9 +192,9 @@ export function DatabaseExports({ database, exports: initial = [], canManage }) 
     setPendingDelete(true);
     try {
       await deleteExport(deleting.id);
+      await refreshAndWait();
       toast.success(t("deleted"));
       setDeleting(null);
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("deleteFailed")));
     } finally {
@@ -246,7 +249,17 @@ export function DatabaseExports({ database, exports: initial = [], canManage }) 
         </div>
 
         <CardContent className="px-5 py-0">
-          {rows.length === 0 ? (
+          {/* Until a poll succeeds, a failed page read is the only answer. */}
+          {read?.failed && polled === null ? (
+            <div className="py-5">
+              <LoadFailed
+                description={t("loadFailed")}
+                status={read.status}
+                failure={read.failure}
+                message={read.message}
+              />
+            </div>
+          ) : rows.length === 0 ? (
             <div className="py-8 text-center">
               <p className="text-sm text-muted-foreground">{t("empty")}</p>
             </div>
@@ -335,7 +348,7 @@ function ExportRow({ row, canManage, onDelete, slow = false }) {
     <div className="flex items-start justify-between gap-3 py-3.5">
       <div className="min-w-0 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={TONE[row.status] ?? "secondary"} className="font-normal">
+          <Badge variant={TONE[row.status] ?? "muted"} className="font-normal">
             {running ? <Loader2 className="size-3 animate-spin" /> : null}
             {t(`status.${row.status}`)}
           </Badge>
@@ -387,7 +400,9 @@ function ExportRow({ row, canManage, onDelete, slow = false }) {
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
-        {row.download_url && row.available ? (
+        {/* Manage only: the download route is behind `database,manage`, and a
+            viewer's click ended on a 403 page. */}
+        {canManage && row.download_url && row.available ? (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button asChild variant="ghost" size="icon" className="size-8">

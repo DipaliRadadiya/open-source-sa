@@ -42,12 +42,14 @@ it('does not tell anyone the bot blocker is unavailable on OpenLiteSpeed', funct
     }
 });
 
-it('names the WAF as the OpenLiteSpeed capability gap, because that is the one', function () {
-    expect(app(OlsDriver::class)->supportsWaf())->toBeFalse();
+it('no longer tells anyone the WAF is unavailable on OpenLiteSpeed', function () {
+    // It was the one real gap until 2026-09-30; the docs said so, and must
+    // stop saying so now that the driver renders the rules.
+    expect(app(OlsDriver::class)->supportsWaf())->toBeTrue();
 
-    // Both places a user is told before they choose the stack: the file they
-    // read and the prompt they answer.
     foreach (olsCapabilityDocs() as $file => $contents) {
-        expect($contents)->toContain('WAF');
+        expect(mb_strtolower($contents))
+            ->not->toContain('waf (8g firewall) is not available')
+            ->not->toContain('the waf cannot be enforced on ols');
     }
 });

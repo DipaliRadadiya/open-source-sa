@@ -6,7 +6,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
   Select,
   SelectContent,
@@ -19,6 +18,7 @@ import {
 import { formatBytes } from "@/lib/format/bytes";
 import { isRecentlyActive, parseModified } from "@/lib/logs/recent";
 import { GROUP_META, FALLBACK_GROUP } from "@/lib/logs/groups";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { LOG_GROUPS } from "@/lib/schemas/log";
 
 /** Known groups first in a fixed order, then anything the API adds later. */
@@ -37,7 +37,7 @@ function groupSources(sources) {
  * Below `lg` the rail becomes a single select: stacked above the console it
  * would push the actual log a full screen down on a phone.
  */
-export function LogSourceList({ sources, selected, onSelect }) {
+export function LogSourceList({ sources, selected, onSelect, now }) {
   const t = useTranslations("logs");
   const format = useFormatter();
   const groups = groupSources(sources);
@@ -60,17 +60,26 @@ export function LogSourceList({ sources, selected, onSelect }) {
                 <SelectLabel className="text-[12px] font-semibold uppercase tracking-wider text-foreground/75">
                   {t.has(`groups.${group}`) ? t(`groups.${group}`) : group}
                 </SelectLabel>
+                {/* Block-level wrapper: the default inline one put two locked
+                    logs side by side on one row. The short reason is written on
+                    the item too, so it is there before anyone hovers or taps. */}
                 {items.map((source) => (
                   <ReasonTooltip
                     key={source.key}
                     reason={source.readable ? null : t("sourceNotReadable")}
+                    className="flex"
                   >
-                  <SelectItem value={source.key} disabled={!source.readable}>
-                    <span className="flex items-center gap-2">
-                      {source.label}
-                      {!source.readable ? <Lock className="size-3.5" /> : null}
-                    </span>
-                  </SelectItem>
+                    <SelectItem value={source.key} disabled={!source.readable}>
+                      <span className="flex items-center gap-2">
+                        {source.label}
+                        {!source.readable ? (
+                          <>
+                            <Lock className="size-3.5" aria-hidden="true" />
+                            <span className="text-xs">{t("locked.title")}</span>
+                          </>
+                        ) : null}
+                      </span>
+                    </SelectItem>
                   </ReasonTooltip>
                 ))}
               </SelectGroup>
@@ -105,7 +114,7 @@ export function LogSourceList({ sources, selected, onSelect }) {
                       onSelect={onSelect}
                       size={formatBytes(source.size, format)}
                       modified={parseModified(source.modified)}
-                      active={isRecentlyActive(source.modified)}
+                      active={isRecentlyActive(source.modified, now)}
                       format={format}
                       t={t}
                     />

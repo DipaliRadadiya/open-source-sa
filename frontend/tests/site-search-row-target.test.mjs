@@ -56,7 +56,7 @@ test("rows that lead nowhere get no affordance", () => {
   // A .zip has nothing to open and no folder to enter: no overlay, and no
   // hover state promising one. Offering the click and then doing nothing is
   // the fault being fixed, so it must not be reintroduced for these rows.
-  assert.match(code, /const openable = !symlink && !isDir && canOpenFile\(file\.name\)/);
+  assert.match(code, /const openable = canManage && !symlink && !isDir && canOpenFile\(file\.name\)/);
   assert.match(code, /const interactive = isDir \|\| openable/);
   assert.match(code, /interactive &&\s*\n?\s*"transition-colors hover:bg-accent/);
   assert.match(code, /!openable \? \(/);

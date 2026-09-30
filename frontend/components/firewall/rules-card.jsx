@@ -1,11 +1,14 @@
 "use client";
 
+import { useBrowserIp } from "@/components/network/browser-ip";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { SearchX, ShieldX, Trash2, Pencil } from "lucide-react";
 import { deleteFirewallRule, updateFirewallRule } from "@/lib/api/firewall";
+import { deleteRuleBodyKey } from "@/lib/firewall/state";
 import { unreachablePorts } from "@/lib/firewall/listening";
 import { PendingSwitch } from "@/components/ui/pending-switch";
 import { usePendingKeys } from "@/hooks/use-pending-keys";
@@ -126,13 +129,15 @@ export function RulesCard({
   enabled,
   presets,
   canManage,
-  isAdmin,
-  yourIp,
+  historyForEveryone,
   riskyPorts = [],
   listening = [],
 }) {
   const t = useTranslations("firewall");
+  // The reader's address as the browser sees it — see components/network/browser-ip.jsx.
+  const yourIp = useBrowserIp();
   const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const searchParams = useSearchParams();
   const tc = useTranslations("common");
   const setQuery = useSetQuery();
@@ -229,9 +234,9 @@ export function RulesCard({
     setDeletingId(rule.id);
     try {
       await deleteFirewallRule(rule.id);
+      await refreshAndWait();
       toast.success(t("rules.deleted"));
       setConfirming(null);
-      router.refresh();
     } catch (error) {
       toast.error(
         apiMessage(error, t("rules.deleteFailed")),
@@ -286,7 +291,7 @@ export function RulesCard({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <RefreshButton />
-          <HistoryDialog isAdmin={isAdmin} />
+          <HistoryDialog everyone={historyForEveryone} />
           <AddRuleDialog
             presets={presets}
             rules={allRules}
@@ -316,6 +321,7 @@ export function RulesCard({
           <FacetSelect
             paramKey="enabled"
             allLabel={t("rules.filters.anyEnabled")}
+            label={t("rules.filters.stateLabel")}
             options={[
               { value: "1", label: t("rules.filters.enabled") },
               { value: "0", label: t("rules.filters.disabled") },
@@ -325,6 +331,7 @@ export function RulesCard({
           <FacetSelect
             paramKey="action"
             allLabel={t("rules.filters.anyAction")}
+            label={t("rules.filters.actionLabel")}
             options={[
               { value: "allow", label: t("rules.allow") },
               { value: "deny", label: t("rules.deny") },
@@ -334,6 +341,7 @@ export function RulesCard({
           <FacetSelect
             paramKey="origin"
             allLabel={t("rules.filters.anyOrigin")}
+            label={t("rules.filters.originLabel")}
             options={[
               { value: "user", label: t("rules.filters.user") },
               { value: "default", label: t("rules.filters.default") },
@@ -344,6 +352,7 @@ export function RulesCard({
           <FacetSelect
             paramKey="sort"
             allLabel={t("rules.filters.newest")}
+            label={t("rules.filters.sortLabel")}
             options={[
               { value: "port_from", label: t("rules.filters.portAsc") },
               { value: "-port_from", label: t("rules.filters.portDesc") },
@@ -456,9 +465,9 @@ export function RulesCard({
         title={t("rules.confirmTitle")}
         description={
           confirming
-            ? enabled
-              ? t("rules.confirmBodyOn", { rule: confirming.description || confirming.summary || confirming.port_from })
-              : t("rules.confirmBodyOff", { rule: confirming.description || confirming.summary || confirming.port_from })
+            ? t(deleteRuleBodyKey(enabled, confirming), {
+                rule: confirming.description || confirming.summary || confirming.port_from,
+              })
             : ""
         }
         cancelLabel={t("common.cancel")}

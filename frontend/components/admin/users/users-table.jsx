@@ -47,7 +47,7 @@ function AccountTypeCell({ row }) {
   const t = useTranslations("users");
   const admin = row.original.is_admin;
   return (
-    <Badge variant={admin ? "default" : "secondary"}>
+    <Badge variant={admin ? "default" : "muted"}>
       {admin ? t("roleBadge.admin") : t("roleBadge.user")}
     </Badge>
   );

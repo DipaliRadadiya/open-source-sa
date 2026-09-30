@@ -91,8 +91,16 @@ class ApplicationLogController extends Controller
         ApplicationLogManager $logs,
         ActivityLogger $activity,
     ): JsonResponse {
-        if ($logs->find($application, $key) === null) {
+        $source = $logs->find($application, $key);
+
+        if ($source === null) {
             abort(404, __('app_log.errors.unknown_source'));
+        }
+
+        // On OpenLiteSpeed the firewall detections are lines in the access
+        // log, so "clear" here would empty the access log.
+        if (isset($source['marker'])) {
+            abort(422, __('app_log.errors.clear_shared'));
         }
 
         $logs->clear($application, $key);

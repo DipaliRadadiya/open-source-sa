@@ -11,6 +11,7 @@ use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Databases\DatabaseIdentifier;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\DatabasePassword;
+use App\Services\Server\Php\RuntimeOwnership;
 use App\Services\Server\ServerOps;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
@@ -409,8 +410,11 @@ class WordPressStagingStrategy implements StagingStrategy
 
     private function writeMailTrap(Application $staging, string $documentRoot): void
     {
+        // As the user, like the file written into it: root would leave a
+        // directory the user's write then cannot enter, and would follow a
+        // `wp-content` that is a link.
         $directory = $this->serverOps->run(
-            ['mkdir', '-p', "{$documentRoot}/wp-content/mu-plugins"],
+            ['runuser', '-u', $staging->systemUser->username, '--', 'mkdir', '-p', "{$documentRoot}/wp-content/mu-plugins"],
             $this->context($staging, 'staging_mu_plugins_dir'),
         );
 
@@ -474,27 +478,30 @@ class WordPressStagingStrategy implements StagingStrategy
         }
     }
 
-    private function writeSecretFile(Application $application, string $path, string $contents, string $mode = '0640'): void
+    private function writeSecretFile(Application $application, string $path, string $contents, ?string $mode = null): void
     {
-        $written = $this->serverOps->run(['tee', $path], $this->context($application, 'staging_write_file'), input: $contents);
+        $mode ??= app(RuntimeOwnership::class)->secretFileMode($application);
+
+        // As the site's own user. The directory is a copy of another site —
+        // anything its owner planted there came across with it, including a
+        // `wp-config.php` or `mu-plugins` that is a link — and this ran as
+        // root: `tee` wrote through the link and the `chown` after it handed
+        // the target to the user (the same class of bug found in `.panel`,
+        // 2026-09-29). The copy is already theirs by now (rsync() chowns it),
+        // so as the user the file is theirs by construction and a link
+        // reaches only what they could already write.
+        $user = $application->systemUser->username;
+
+        $written = $this->serverOps->run(['runuser', '-u', $user, '--', 'tee', $path], $this->context($application, 'staging_write_file'), input: $contents);
 
         if ($written->failed()) {
             throw new StagingOperationException($written->reference);
         }
 
-        $modeResult = $this->serverOps->run(['chmod', $mode, $path], $this->context($application, 'staging_chmod'));
+        $modeResult = $this->serverOps->run(['runuser', '-u', $user, '--', 'chmod', $mode, $path], $this->context($application, 'staging_chmod'));
 
         if ($modeResult->failed()) {
             throw new StagingOperationException($modeResult->reference, $modeResult->busy, $modeResult->staleLock);
-        }
-
-        $ownership = $this->serverOps->run(
-            ['chown', "{$application->systemUser->username}:{$application->systemUser->username}", $path],
-            $this->context($application, 'staging_chown'),
-        );
-
-        if ($ownership->failed()) {
-            throw new StagingOperationException($ownership->reference, $ownership->busy, $ownership->staleLock);
         }
     }
 

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ArrowRight, Check, CircleAlert, CircleCheck, Clock3, Copy, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CLONE_IN_FLIGHT } from "@/lib/schemas/clone";
+import { CLONE_IN_FLIGHT, cloneFailureTitle } from "@/lib/schemas/clone";
 import { fetchClone } from "@/lib/api/clone";
 import { apiDuration } from "@/lib/format/api-date";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,13 @@ const POLL_MS = 2000;
 const POLL_LIMIT_MS = 20 * 60 * 1000;
 
 /**
+ * Still `pending` after this long, it may never start: a second clone of the
+ * same site is accepted and then dropped by the queue (backend CL-B1), and
+ * this page was the only way back to the form — for twenty minutes.
+ */
+const NOT_STARTING_MS = 2 * 60 * 1000;
+
+/**
  * A clone, while it runs and after it lands.
  *
  * The backend queues the work now and reports named steps, so this shows the
@@ -34,12 +41,13 @@ const POLL_LIMIT_MS = 20 * 60 * 1000;
  * abandons anything, so blocking the screen would be taking something away
  * for nothing.
  */
-export function CloneProgress({ clone: initial, sourceApplication, onDone, onAgain }) {
+export function CloneProgress({ clone: initial, sourceApplication, onDone, onAgain, onRetry }) {
   const t = useTranslations("applications.clone.progress");
   const { refresh, pending: refreshing } = useRefresh();
   const router = useRouter();
   const [clone, setClone] = useState(initial);
   const [stalled, setStalled] = useState(false);
+  const [notStarting, setNotStarting] = useState(false);
   const timer = useRef(null);
 
   const inFlight = CLONE_IN_FLIGHT.includes(clone?.status);
@@ -70,10 +78,12 @@ export function CloneProgress({ clone: initial, sourceApplication, onDone, onAga
       clearInterval(timer.current);
       setStalled(true);
     }, POLL_LIMIT_MS);
+    const waiting = setTimeout(() => setNotStarting(true), NOT_STARTING_MS);
 
     return () => {
       clearInterval(timer.current);
       clearTimeout(stop);
+      clearTimeout(waiting);
     };
   }, [inFlight, id, router, onDone]);
 
@@ -82,7 +92,7 @@ export function CloneProgress({ clone: initial, sourceApplication, onDone, onAga
   if (clone.status === "completed") {
     return <Completed clone={clone} sourceApplication={sourceApplication} onAgain={onAgain} />;
   }
-  if (clone.status === "failed") return <Failed clone={clone} onAgain={onAgain} />;
+  if (clone.status === "failed") return <Failed clone={clone} onAgain={() => (onRetry ?? onAgain)?.(clone)} />;
 
   const total = clone.total_steps ?? STEP_KEYS.length;
   const step = clone.step_number ?? 0;
@@ -92,6 +102,8 @@ export function CloneProgress({ clone: initial, sourceApplication, onDone, onAga
   // list of four dim rows with no spinner is indistinguishable from a job that
   // died. Say which it is.
   const queued = clone.status === "pending";
+  const neverStarted = queued && notStarting && !stalled;
+  const giveUp = stalled || neverStarted;
 
   // The step names live here because every row needs a label, not just the one
   // the API is currently reporting. If the backend ever adds a fifth, that
@@ -106,9 +118,11 @@ export function CloneProgress({ clone: initial, sourceApplication, onDone, onAga
           <Loader2 className="size-6 animate-spin text-primary" aria-hidden />
         </span>
         <div className="min-w-0 flex-1 space-y-1">
-          <p className="font-medium">{stalled ? t("stalled") : queued ? t("queued") : t("running")}</p>
+          <p className="font-medium">
+            {stalled ? t("stalled") : neverStarted ? t("notStarting") : queued ? t("queued") : t("running")}
+          </p>
           <p className="text-sm text-muted-foreground">
-            {stalled ? t("stalledBody") : t("target", { domain: clone.domain })}
+            {stalled ? t("stalledBody") : neverStarted ? t("notStartingBody") : t("target", { domain: clone.domain })}
           </p>
           {/* How long this has been going, which is the number someone reaches
               for before deciding whether to worry. */}
@@ -166,18 +180,27 @@ export function CloneProgress({ clone: initial, sourceApplication, onDone, onAga
         {/* True now that the work is queued, and worth saying — it is the
             difference between someone sitting here and getting on with
             something else. */}
-        {stalled ? (
-          <Button
-            variant="outline"
-            onClick={refresh}
-            disabled={refreshing}
-            className="w-full sm:w-auto"
-          >
-            {/* No icon at rest — this button never had one. The spinner is the
-                only thing added, and only while it is actually working. */}
-            {refreshing ? <Loader2 className="size-4 animate-spin" /> : null}
-            {t("checkAgain")}
-          </Button>
+        {giveUp ? (
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {stalled ? (
+              <Button
+                variant="outline"
+                onClick={refresh}
+                disabled={refreshing}
+                className="w-full sm:w-auto"
+              >
+                {/* No icon at rest — this button never had one. The spinner is the
+                    only thing added, and only while it is actually working. */}
+                {refreshing ? <Loader2 className="size-4 animate-spin" /> : null}
+                {t("checkAgain")}
+              </Button>
+            ) : null}
+            {/* The way back to the form. Forgets only this browser's pointer —
+                the job, if it ever runs, carries on regardless. */}
+            <Button variant="outline" onClick={onAgain} className="w-full sm:w-auto">
+              {t("stopWatching")}
+            </Button>
+          </div>
         ) : (
           <p className="border-t pt-3 text-xs text-muted-foreground">{t("canLeave")}</p>
         )}
@@ -235,7 +258,7 @@ function Completed({ clone, sourceApplication, onAgain }) {
               </dt>
               <dd className="mt-1 truncate text-sm font-medium">{sourceName ?? "—"}</dd>
               {sourceHasSeparateDomain ? (
-                <dd className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+                <dd className="mt-0.5 font-mono text-xs break-all text-muted-foreground">
                   {sourceDomain}
                 </dd>
               ) : null}
@@ -251,14 +274,14 @@ function Completed({ clone, sourceApplication, onAgain }) {
                 {t("destination")}
               </dt>
               <dd className="mt-1 flex min-w-0 items-center gap-1.5">
-                <span className="truncate text-sm font-semibold">{destinationName}</span>
+                <span className="min-w-0 text-sm font-semibold break-all">{destinationName}</span>
                 {!destinationHasSeparateDomain ? (
                   <CopyButton value={clone.domain} label={t("copyDomain")} />
                 ) : null}
               </dd>
               {destinationHasSeparateDomain ? (
                 <dd className="mt-0.5 flex min-w-0 items-center gap-1.5">
-                  <span className="truncate font-mono text-xs text-muted-foreground">
+                  <span className="min-w-0 font-mono text-xs break-all text-muted-foreground">
                     {clone.domain}
                   </span>
                   <CopyButton value={clone.domain} label={t("copyDomain")} />
@@ -317,7 +340,7 @@ function Failed({ clone, onAgain }) {
                 which the backend deliberately does not send. Carries more
                 weight than the reassurance below it: what happened is the
                 answer being looked for, not the fact that nothing broke. */}
-            <p className="text-sm">{clone.reason_title ?? t("failedUnknown")}</p>
+            <p className="text-sm">{cloneFailureTitle(clone) ?? t("failedUnknown")}</p>
             <p className="text-sm text-muted-foreground">{t("failedSafe")}</p>
             {clone.reference ? (
               <p className="pt-1 font-mono text-xs text-muted-foreground">
@@ -338,21 +361,25 @@ function Failed({ clone, onAgain }) {
 }
 
 /** The things a fresh copy does not inherit, each linked to its screen. */
-export function CloneNextSteps({ applicationId, sourceProtected, webhook = null }) {
+export function CloneNextSteps({ applicationId, sourceProtected, sourceHasRepository = false, webhook = null }) {
   const t = useTranslations("applications.clone.result.next");
 
   const steps = [
     ...(sourceProtected ? [{ key: "password", href: `/applications/${applicationId}/security` }] : []),
     { key: "ssl", href: `/applications/${applicationId}/domains` },
     { key: "backups", href: `/applications/${applicationId}/backups` },
-    { key: "deploys", href: `/applications/${applicationId}/deployment` },
+    // Only a copy with a repository and no webhook of its own: it showed on
+    // WordPress copies, and under the new webhook it claimed was missing.
+    ...(sourceHasRepository && !webhook?.url
+      ? [{ key: "deploys", href: `/applications/${applicationId}/deployment` }]
+      : []),
   ];
 
   return (
     <Card className="h-full gap-0 overflow-hidden py-0 shadow-sm">
       <div className="border-b px-5 py-4">
         <h2 className="font-semibold tracking-tight">{t("title")}</h2>
-        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+        <p className="text-sm text-muted-foreground">{t("subtitle", { count: steps.length + (webhook?.url ? 1 : 0) })}</p>
       </div>
       <CardContent className="min-h-0 flex-1 p-0">
         {/* The one step nothing here can do for you.

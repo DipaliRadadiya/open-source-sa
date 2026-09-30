@@ -10,6 +10,7 @@ import { updateProfile } from "@/lib/auth/auth-actions";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
+import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Input } from "@/components/ui/input";
 import {
@@ -52,6 +53,9 @@ export function ProfileForm({ user, onDirtyChange }) {
 
   const isSubmitting = form.formState.isSubmitting;
   const isDirty = form.formState.isDirty;
+  // The tab switcher's own confirm only covers tabs; this covers the sidebar,
+  // the header links and reload, like every settings card.
+  useWatchUnsaved("account-profile", isDirty);
 
   // Report dirty state up so the tab switcher can confirm before discarding.
   useEffect(() => {
@@ -61,7 +65,7 @@ export function ProfileForm({ user, onDirtyChange }) {
 
   return (
     <Form {...form}>
-      <form
+      <form noValidate
         onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         className="max-w-3xl space-y-6"
       >

@@ -9,6 +9,10 @@ use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Applications\ApplicationLogManager;
 use App\Services\Server\Applications\Waf8GManager;
+use App\Services\Server\Waf\OlsWafRuleset;
+use App\Services\Server\WebServers\ApacheDriver;
+use App\Services\Server\WebServers\NginxDriver;
+use App\Services\Server\WebServers\OlsDriver;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Validation\ValidationException;
@@ -365,11 +369,25 @@ it('reads the detect log from the file the vhost was told to write', function ()
         ->and($readerPath)->toBe($writerPath);
 });
 
+/**
+ * A web server that cannot enforce the WAF. None of the three can any more —
+ * OpenLiteSpeed gained it on 2026-09-30 — but the guard stays for a fourth,
+ * so it is tested against a stand-in rather than dropped.
+ */
+function webServerWithoutWaf(): void
+{
+    ServerCapability::query()->update(['web_server' => 'openlitespeed', 'stack' => 'ols']);
+
+    $driver = Mockery::mock(OlsDriver::class)->makePartial();
+    $driver->shouldReceive('supportsWaf')->andReturn(false);
+    app()->instance(OlsDriver::class, $driver);
+}
+
 it('hides the firewall entirely on a web server that cannot enforce it', function () {
     fakeWafWebServer();
 
     // One server runs one web server, so this is a server-wide fact.
-    ServerCapability::query()->update(['web_server' => 'openlitespeed', 'stack' => 'ols']);
+    webServerWithoutWaf();
 
     // Not in the application's feature list, so it is not in the sidebar the
     // panel builds from permissions — hidden rather than shown-and-refused,
@@ -403,7 +421,7 @@ it('keeps the firewall visible when the web server is not yet known', function (
 it('still lets an unsupported web server switch the firewall off', function () {
     fakeWafWebServer();
 
-    ServerCapability::query()->update(['web_server' => 'openlitespeed', 'stack' => 'ols']);
+    webServerWithoutWaf();
 
     // Asserted against the guard rather than through the HTTP stack, because
     // rendering an OLS vhost needs a real shared config this fake has no way
@@ -422,4 +440,104 @@ it('still lets an unsupported web server switch the firewall off', function () {
 
     expect($refuse(true))->toBeTrue()
         ->and($refuse(false))->toBeFalse();
+});
+
+describe('exceptions and custom rules as written into the config', function () {
+    /**
+     * Render the site's vhost with these rules and return it.
+     *
+     * @param  array<int, string>  $exceptions
+     * @param  array<int, string>  $custom
+     */
+    function wafVhost(string $driver, array $exceptions, array $custom = ['qa-block']): string
+    {
+        $app = test()->application;
+        $app->forceFill(['waf_enabled' => true, 'waf_mode' => 'enforce'])->save();
+        $app->setRelation('wafRules', collect([
+            ...array_map(fn ($v) => new ApplicationWafRule(['type' => 'exception', 'value' => $v]), $exceptions),
+            ...array_map(fn ($v) => new ApplicationWafRule(['type' => 'block', 'value' => $v]), $custom),
+        ]));
+
+        return app($driver)->renderConfig($app->load('systemUser'), '/home/siteowner/shop/public_html');
+    }
+
+    /**
+     * What nginx's parser does to a double-quoted string, then the regex
+     * nginx would compile — so the test checks the match, not the text.
+     */
+    function nginxMatches(string $quoted, string $subject): bool
+    {
+        $unescaped = preg_replace_callback('/\\\\(.)/s', fn ($m) => in_array($m[1], ['"', "'", '\\'], true) ? $m[1] : '\\'.$m[1], $quoted);
+
+        return preg_match('/'.str_replace('/', '\/', $unescaped).'/i', $subject) === 1;
+    }
+
+    /** The pattern as the expression engine gets it (already unescaped by the caller). */
+    function apacheMatches(string $pattern, string $subject): bool
+    {
+        return preg_match('#'.$pattern.'#i', $subject) === 1;
+    }
+
+    it('reaches the config unencoded, so & \' " match on nginx', function () {
+        $value = 'page=1&x="it\'s"';
+        $config = wafVhost(NginxDriver::class, [$value]);
+
+        // HTML-encoded, `&` became `&amp;` and the exception never matched.
+        expect($config)->not->toContain('&amp;')->not->toContain('&quot;')->not->toContain('&#039;');
+
+        preg_match('/if \(\$args ~\* "((?:[^"\\\\]|\\\\.)*)"\) \{ set \$waf_exception "1"; \}/', $config, $m);
+
+        expect($m)->not->toBeEmpty()
+            ->and(nginxMatches($m[1], 'a=b&'.$value))->toBeTrue()
+            ->and(nginxMatches($m[1], 'page=1'))->toBeFalse();
+    });
+
+    it('matches the text literally on nginx, backslashes and regex symbols included', function (string $value, string $hit, string $miss) {
+        $config = wafVhost(NginxDriver::class, [$value]);
+        preg_match('/if \(\$args ~\* "((?:[^"\\\\]|\\\\.)*)"\) \{ set \$waf_exception "1"; \}/', $config, $m);
+
+        expect(nginxMatches($m[1], $hit))->toBeTrue()
+            ->and(nginxMatches($m[1], $miss))->toBeFalse();
+    })->with([
+        'dot' => ['a.b', 'xa.bx', 'axb'],
+        'backslash' => ['c:\\tmp', 'path=c:\\tmp', 'path=c:tmp'],
+        'regex symbols' => ['(a+)?', 'q=(a+)?', 'q=aa'],
+    ]);
+
+    it('checks the query string on Apache, which SetEnvIf Query_String never did', function () {
+        $config = wafVhost(ApacheDriver::class, ['action=upload']);
+
+        // `Query_String` is not a SetEnvIf attribute; Apache read it as a
+        // request header that never exists, so the exception never matched.
+        expect($config)->not->toContain('Query_String')
+            // Backslashes doubled: Apache's config parser halves them.
+            ->and($config)->toContain('SetEnvIfExpr "%{REQUEST_URI} =~ m#action\\\\=upload#i || %{QUERY_STRING} =~ m#action\\\\=upload#i || %{HTTP_USER_AGENT} =~ m#action\\\\=upload#i" waf_exception')
+            ->and($config)->toContain('SetEnvIfExpr "%{REQUEST_URI} =~ m#qa\\\\-block#i || %{QUERY_STRING} =~ m#qa\\\\-block#i" waf_custom');
+    });
+
+    it('matches the text literally on Apache too, not as a regex', function (string $value, string $hit, string $miss) {
+        // As Apache's config parser hands it to the expression engine.
+        $config = OlsWafRuleset::apacheUnescape(wafVhost(ApacheDriver::class, [$value]), '"');
+        preg_match('/%\{QUERY_STRING\} =~ m#((?:[^#\\\\]|\\\\.)*)#i \|\| %\{HTTP_USER_AGENT\}/', $config, $m);
+
+        expect($m)->not->toBeEmpty()
+            ->and(apacheMatches($m[1], $hit))->toBeTrue()
+            ->and(apacheMatches($m[1], $miss))->toBeFalse();
+    })->with([
+        'ampersand and quotes' => ['page=1&x="it\'s"', 'page=1&x="it\'s"', 'page=1'],
+        'hash (the delimiter)' => ['a#b', 'xa#bx', 'ab'],
+        'regex symbols' => ['(a+)?', 'q=(a+)?', 'q=aa'],
+        'percent-brace' => ['%{HTTP_HOST}', 'x=%{HTTP_HOST}', 'x=host'],
+        // Apache collapses `\\` in config arguments; a single escape left
+        // the backslash escaping the next character instead.
+        'backslash' => ['c:\\tmp', 'path=c:\\tmp', 'path=c:tmp'],
+    ]);
+
+    it('refuses control characters with a validation error, not a failed config test', function (string $field) {
+        fakeWafWebServer();
+
+        $this->withHeaders(wafHeaders())->putJson("/api/applications/{$this->application->id}/waf", [
+            'enabled' => true, 'mode' => 'enforce', $field => ["x\nreturn 200 pwned;"],
+        ])->assertStatus(422)->assertJsonValidationErrors("{$field}.0");
+    })->with(['exceptions', 'custom_rules']);
 });

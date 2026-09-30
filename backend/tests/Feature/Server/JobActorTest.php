@@ -29,6 +29,7 @@ beforeEach(function () {
 
 it('carries the dispatching user through to the queued job', function () {
     Queue::fake();
+    fakePhpPackageIndex();
 
     $this->withHeader('Authorization', "Bearer {$this->token}")
         ->postJson('/api/php/versions', ['version' => '8.3'])

@@ -42,7 +42,7 @@ test("the severity filter is separate toggles, not a segmented tray", () => {
 
 test("the active filter is tinted, not dressed as a selected tab", () => {
   const chrome = read("lib/theme/filter-toggle.js");
-  assert.match(chrome, /border-primary\/40 bg-primary\/10 font-medium text-primary/);
+  assert.match(chrome, /border-primary\/40 bg-primary\/10 font-medium text-\[color-mix\(in_oklch,var\(--primary\)_80%,var\(--foreground\)\)\]/);
   // `bg-secondary` is the tab strip's active cell — the exact collision.
   assert.doesNotMatch(code, /bg-secondary font-medium text-secondary-foreground/);
 });
@@ -103,7 +103,7 @@ test("Clear log carries destructive weight, and actions are divided from view", 
 test("the Logs page tests found on 2026-09-23 stay fixed", () => {
   const panel = read("components/applications/logs/application-logs-panel.jsx");
   // Each tab opens with its own live default.
-  assert.match(panel, /if \(followFor !== current\) \{\s*setFollowFor\(current\);\s*setFollow\(AUTO_FOLLOW_KEYS\.has\(current\)\);/);
+  assert.match(panel, /if \(followFor !== current\) \{\s*setFollowFor\(current\);\s*setFollow\(followPrefFor\(current, prefs\)\);/);
   // Tabs switch on the page: no navigation, one read, the URL still updated.
   assert.match(panel, /window\.history\.replaceState\(window\.history\.state, "", url\)/);
   assert.match(panel, /setStatus\("loading"\);/);

@@ -9,11 +9,10 @@ use App\Http\Requests\Server\Application\UpdateDeploySettingsRequest;
 use App\Http\Requests\Server\Application\UpdateGitAccountRequest;
 use App\Http\Resources\ApplicationResource;
 use App\Http\Resources\DeploymentResource;
-use App\Jobs\DeployApplication;
 use App\Models\Application;
 use App\Models\Deployment;
 use App\Services\ActivityLogger;
-use App\Services\Server\Applications\DeploymentRecorder;
+use App\Services\Server\Applications\DeployQueue;
 use App\Services\Server\Applications\GitDeployer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -37,6 +36,26 @@ class DeploymentController extends Controller
     }
 
     /**
+     * The newest deploy only, or null — what the Deployment screen polls
+     * while it is open.
+     *
+     * A deploy started by a push runs behind the page: the screen only
+     * polled after its own Deploy button, so the history stayed stale until a
+     * reload. Asking the full list every few seconds would re-send every row
+     * and the settings; this is one indexed row, the same shape as a history
+     * row (no build output — that stays on `show`), so the screen can compare
+     * its `id` and `status` with its top row and reload only on a change.
+     */
+    public function latest(Application $application): JsonResponse
+    {
+        $deployment = $application->deployments()->with('user')->orderByDesc('id')->first();
+
+        return response()->json([
+            'latest' => $deployment === null ? null : DeploymentResource::make($deployment)->resolve(),
+        ]);
+    }
+
+    /**
      * One deploy, with its output. Its own endpoint because the output is the
      * expensive part — a list of fifty carrying full build logs is a response
      * nobody asked for.
@@ -54,11 +73,11 @@ class DeploymentController extends Controller
      * Start a deploy. Returns 202 with the row already created, so the screen
      * has something to show and poll before a worker picks the job up.
      */
-    public function store(Application $application, DeploymentRecorder $recorder): JsonResponse
+    public function store(Application $application, DeployQueue $deploys): JsonResponse
     {
-        $deployment = $recorder->open($application, DeploymentTrigger::Manual, Auth::id());
+        $this->refuseWithoutAccount($application);
 
-        DeployApplication::dispatch($application->id, Auth::id(), $deployment->id);
+        $deployment = $deploys->queue($application, DeploymentTrigger::Manual, Auth::id());
 
         return response()->json([
             'deployment' => DeploymentResource::make($deployment)->resolve(),
@@ -73,13 +92,12 @@ class DeploymentController extends Controller
      * This re-runs the current branch, which is what fixes a deploy that failed
      * on a transient error, and it says so rather than implying time travel.
      */
-    public function redeploy(Application $application, Deployment $deployment, DeploymentRecorder $recorder): JsonResponse
+    public function redeploy(Application $application, Deployment $deployment, DeployQueue $deploys): JsonResponse
     {
         abort_unless($deployment->application_id === $application->id, 404);
+        $this->refuseWithoutAccount($application);
 
-        $fresh = $recorder->open($application, DeploymentTrigger::Redeploy, Auth::id());
-
-        DeployApplication::dispatch($application->id, Auth::id(), $fresh->id);
+        $fresh = $deploys->queue($application, DeploymentTrigger::Redeploy, Auth::id());
 
         return response()->json([
             'deployment' => DeploymentResource::make($fresh)->resolve(),
@@ -146,6 +164,9 @@ class DeploymentController extends Controller
 
             'auto_deploy' => (bool) $application->webhook_enabled,
             'last_commit' => $application->last_commit,
+            // What is on disk, which differs from `last_commit` after a deploy
+            // that failed once it had checked out. See Application::codeOnDisk().
+            'code_on_disk' => $application->codeOnDisk(),
             'last_deployed_at' => $application->last_deployed_at?->format('d-m-Y H:i:s'),
             'last_deployed_at_human' => $application->last_deployed_at?->diffForHumans(),
 
@@ -171,5 +192,17 @@ class DeploymentController extends Controller
         $scripts = (array) config('server.deployments.default_scripts', []);
 
         return (string) ($scripts[$application->serving_profile] ?? $scripts['php'] ?? '');
+    }
+
+    /**
+     * A site whose git account was disconnected has no credential and no URL
+     * to fetch from, so its deploy could only fail on `git remote add origin
+     * ""`. Refused here, before a row and a job are made, with the one thing
+     * the user can do about it. The Deployment screen disables the button too;
+     * this is for every caller that is not the screen.
+     */
+    private function refuseWithoutAccount(Application $application): void
+    {
+        abort_if($application->gitAccountMissing(), 422, __('errors/application.git_account_missing'));
     }
 }

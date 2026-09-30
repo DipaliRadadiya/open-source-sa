@@ -30,6 +30,8 @@ class DeleteSystemUser
 
         // Serialize with every other account command (global /etc/passwd lock).
         $this->accountLock->run(function () use ($systemUser) {
+            $this->emptyOwnGroup($systemUser->username);
+
             $result = $this->serverOps->run(
                 ['userdel', '-r', $systemUser->username],
                 ['feature' => 'system_user', 'op' => 'delete', 'system_user' => $systemUser->username],
@@ -56,6 +58,9 @@ class DeleteSystemUser
 
             foreach ($cronjobs as $cronjob) {
                 $this->crontab->remove($cronjob);
+                // The output log too — it outlived every user deletion, with
+                // nothing left in the panel pointing at it.
+                $this->crontab->removeLog($cronjob);
             }
 
             // Record how many cron jobs went with the user (audit breadcrumb).
@@ -66,5 +71,40 @@ class DeleteSystemUser
 
             $systemUser->delete();
         });
+    }
+
+    /**
+     * Take everyone else out of the user's own group, so `userdel` removes it.
+     *
+     * `userdel` removes a user's private group only when nobody else is in it,
+     * and somebody always is: provisioning a site adds the web server's account
+     * (`nobody` on OpenLiteSpeed) so it can write the site's logs. So the group
+     * outlived every user the panel deleted, and the name could never be used
+     * again, since creating a user refuses a name a group already has. Found on
+     * a real server, 2026-09-24: six deleted users, six leftover groups.
+     *
+     * Only the group named after the user, and only its supplementary members.
+     * Nothing still needs them there: a user with sites cannot be deleted, so
+     * no site's logs depend on the membership.
+     */
+    private function emptyOwnGroup(string $username): void
+    {
+        $group = $this->serverOps->run(
+            ['getent', 'group', $username],
+            ['feature' => 'system_user', 'op' => 'delete_group_members', 'system_user' => $username],
+        );
+
+        if ($group->failed()) {
+            return;
+        }
+
+        $members = array_filter(explode(',', trim((string) (explode(':', trim($group->output()))[3] ?? ''))));
+
+        foreach ($members as $member) {
+            $this->serverOps->run(
+                ['gpasswd', '-d', $member, $username],
+                ['feature' => 'system_user', 'op' => 'delete_group_member', 'system_user' => $username, 'member' => $member],
+            );
+        }
     }
 }

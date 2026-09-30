@@ -36,6 +36,21 @@ class PoolIsolator
      */
     public function isolate(Application $application): array
     {
+        // A pool serves PHP. A static site has no PHP to serve and a Node
+        // site's runtime is a process, not a pool — for either one this would
+        // write a pool file under the *server's* default version (the site's
+        // own `php_version` is null), claim the site as isolated, and reload
+        // PHP-FPM across every real PHP site on the server to change nothing
+        // about how this one is served.
+        //
+        // The guard belongs here rather than only in `isolateAll()`, which
+        // has always filtered `serving_profile` in its query: two callers
+        // enforcing the same invariant in two places is how the single-site
+        // path came to be missing it.
+        if ($application->serving_profile !== 'php') {
+            return ['ok' => false, 'reason' => 'not_php_site'];
+        }
+
         $settings = $application->phpSettings ?? new ApplicationPhpSettings([
             'application_id' => $application->id,
         ]);

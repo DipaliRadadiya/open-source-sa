@@ -8,6 +8,7 @@ use App\Models\Application;
 use App\Models\RuntimeInstall;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Php\IonCubeLoader;
 use App\Services\Server\Runtimes\PhpRuntime;
 use Database\Seeders\PermissionSeeder;
@@ -36,11 +37,12 @@ beforeEach(function () {
 
 afterEach(fn () => File::deleteDirectory($this->phpDir));
 
-function fakePhp(string $default = '8.4', bool $ok = true, array $absent = [], bool $bare = false): ArrayObject
+function fakePhp(string $default = '8.4', bool $ok = true, array $absent = [], bool $bare = false, ?string $search = null, array $candidates = []): ArrayObject
 {
     $runs = new ArrayObject;
+    $search ??= "php8.2-fpm - server-side scripting\nphp8.3-fpm - server-side scripting\nphp8.4-fpm - server-side scripting\n";
 
-    Process::fake(function ($process) use ($runs, $default, $ok, $absent, $bare) {
+    Process::fake(function ($process) use ($runs, $default, $ok, $absent, $bare, $search, $candidates) {
         $runs[] = ['command' => $process->command, 'env' => $process->environment ?? []];
         $command = $process->command;
 
@@ -62,14 +64,14 @@ function fakePhp(string $default = '8.4', bool $ok = true, array $absent = [], b
             // exits 0, and a known-but-uninstallable one prints
             // `Candidate: (none)`. A fake that answered with an exit code
             // would prove the opposite of what happens on a server.
+            // Several packages in one call print one block each, as apt does.
             ($command[0] ?? '') === 'apt-cache' && ($command[1] ?? '') === 'policy' => Process::result(
-                output: in_array($command[2] ?? '', $absent, true)
-                    ? ''
-                    : "{$command[2]}:\n  Installed: (none)\n  Candidate: 1.0\n"
+                output: collect(array_slice($command, 2))
+                    ->reject(fn (string $package) => in_array($package, $absent, true))
+                    ->map(fn (string $package) => "{$package}:\n  Installed: (none)\n  Candidate: ".($candidates[$package] ?? '1.0')."\n  Version table:\n")
+                    ->implode('')
             ),
-            ($command[0] ?? '') === 'apt-cache' => Process::result(
-                output: "php8.2-fpm - server-side scripting\nphp8.3-fpm - server-side scripting\nphp8.4-fpm - server-side scripting\n"
-            ),
+            ($command[0] ?? '') === 'apt-cache' => Process::result(output: $search),
             // `dpkg-query -W` — which of the base packages are actually on the
             // box. A version the panel installed has all of them, which is the
             // default here; `$bare` models the case that prompted this, a
@@ -159,6 +161,76 @@ it('offers only versions that are not installed yet', function () {
 
     // apt-cache lists 8.2, 8.3 and 8.4; the last two are already here.
     expect(collect(phpSettings()['installable'])->pluck('version')->all())->toBe(['8.2']);
+});
+
+it('does not offer a PHP whose candidate is a pre-release', function () {
+    // Measured on a real server: `php8.6-fpm` sat at the top of the list,
+    // looking like any release, while apt's candidate was a beta.
+    fakePhp(
+        search: "php8.2-fpm - x\nphp8.3-fpm - x\nphp8.4-fpm - x\nphp8.5-fpm - x\nphp8.6-fpm - x\n",
+        candidates: [
+            'php8.5-fpm' => '8.5.11-1+0~20260924.26+ubuntu26.04~1.gbpbcb504',
+            'php8.6-fpm' => '8.6.0~beta3-1+0~20260923.2+ubuntu26.04~1.gbp664ce9',
+        ],
+    );
+
+    // 8.5's candidate also has `~` in it (the build date): only the pre-release
+    // marker counts, not the character.
+    expect(collect(phpSettings()['installable'])->pluck('version')->all())->toBe(['8.5', '8.2']);
+});
+
+it('offers a pre-release when told to', function () {
+    config(['server.runtimes.php.offer_prerelease' => true]);
+
+    fakePhp(
+        search: "php8.5-fpm - x\nphp8.6-fpm - x\n",
+        candidates: ['php8.6-fpm' => '8.6.0~RC1-1'],
+    );
+
+    expect(collect(phpSettings()['installable'])->pluck('version')->all())->toBe(['8.6', '8.5']);
+});
+
+it('offers nothing older than the configured floor for a new install', function () {
+    // Operator decision 2026-09-28: 5.6 to 7.3, long past end of life, are
+    // not offered any more — they came up in the repository and sat in the
+    // list like any other release.
+    fakePhp(search: "php5.6-fpm - x\nphp7.0-fpm - x\nphp7.3-fpm - x\nphp7.4-fpm - x\nphp8.2-fpm - x\n");
+
+    expect(collect(phpSettings()['installable'])->pluck('version')->all())->toBe(['8.2', '7.4']);
+
+    // Said as what it is — 7.3 is in the repository, it is just not offered.
+    phpCall('POST', '/api/php/versions', ['version' => '7.3'])
+        ->assertStatus(422)
+        ->assertJsonPath('errors.version.0', __('php.below_minimum', ['version' => '7.3', 'minimum' => '7.4']));
+});
+
+it('still lists and keeps an old version that is already installed', function () {
+    // "If the user has it installed, show it": a server that already runs
+    // 7.2 must not lose it from the screen because the panel stopped
+    // offering it.
+    File::makeDirectory("{$this->phpDir}/7.2/fpm", 0755, true);
+    fakePhp(search: "php7.2-fpm - x\nphp8.2-fpm - x\n");
+
+    $settings = phpSettings();
+
+    expect(collect($settings['versions'])->pluck('version')->all())->toContain('7.2')
+        ->and(collect($settings['installable'])->pluck('version')->all())->toBe(['8.2']);
+});
+
+it('offers an old version again when the floor is lowered on purpose', function () {
+    config(['server.runtimes.php.min_offered' => '5.6']);
+    fakePhp(search: "php5.6-fpm - x\nphp8.2-fpm - x\n");
+
+    expect(collect(phpSettings()['installable'])->pluck('version')->all())->toBe(['8.2', '5.6']);
+});
+
+it('refuses to install a pre-release through the API', function () {
+    fakePhp(
+        search: "php8.5-fpm - x\nphp8.6-fpm - x\n",
+        candidates: ['php8.6-fpm' => '8.6.0~beta3-1'],
+    );
+
+    phpCall('POST', '/api/php/versions', ['version' => '8.6'])->assertStatus(422);
 });
 
 it('marks the version the panel itself runs on', function () {
@@ -669,4 +741,76 @@ it('still treats a complete version as done', function () {
     $this->actingAs($admin)
         ->postJson('/api/php/versions', ['version' => '8.4'])
         ->assertStatus(200);
+});
+
+it('does not go on calling a version failed once it is installed and complete', function () {
+    // The nginx test server showed PHP 8.3 as "install failed" all day while
+    // it served WordPress: apt's start of php-fpm had failed mid-install, and
+    // the version was completed right after.
+    fakePhp();
+    $tracker = app(InstallTracker::class);
+    $tracker->start('php', '8.3');
+    $tracker->fail('php', '8.3', null, 'unknown', 'ref-1');
+
+    $row = collect(phpSettings()['versions'])->firstWhere('version', '8.3');
+
+    expect($row['missing_packages'])->toBe([])
+        ->and($row['status'])->toBe('ready')
+        ->and($row['reason'])->toBeNull();
+});
+
+it('still reports the failure while the version is incomplete', function () {
+    fakePhp(bare: true);
+    $tracker = app(InstallTracker::class);
+    $tracker->start('php', '8.3');
+    $tracker->fail('php', '8.3', null, 'unknown', 'ref-1');
+
+    expect(collect(phpSettings()['versions'])->firstWhere('version', '8.3')['status'])->toBe('failed');
+});
+
+it('keeps the server default when installing a newer PHP', function () {
+    // Debian's `php` group is in auto mode and the newest version has the
+    // highest priority, so apt moved the default to 8.5 on install (nginx
+    // test server) — cron, shells and every new site with it.
+    $runs = new ArrayObject;
+    $state = new ArrayObject(['default' => '8.4']);
+    $phpDir = $this->phpDir;
+
+    Process::fake(function ($process) use ($runs, $state, $phpDir) {
+        $command = $process->command;
+        $runs[] = $command;
+
+        if (($command[0] ?? '') === 'update-alternatives' && in_array('--query', $command, true)) {
+            return Process::result(output: "Name: php\nStatus: auto\nValue: /usr/bin/php{$state['default']}\n");
+        }
+
+        if (($command[0] ?? '') === 'update-alternatives' && ($command[1] ?? '') === '--set' && ($command[2] ?? '') === 'php') {
+            $state['default'] = substr($command[3], strlen('/usr/bin/php'));
+        }
+
+        if (($command[0] ?? '') === 'apt-get' && ($command[1] ?? '') === 'install') {
+            File::makeDirectory("{$phpDir}/8.5/fpm", 0755, true, true);
+            $state['default'] = '8.5';
+        }
+
+        if (($command[0] ?? '') === 'apt-cache' && ($command[1] ?? '') === 'policy') {
+            return Process::result(output: collect(array_slice($command, 2))
+                ->map(fn ($package) => "{$package}:\n  Installed: (none)\n  Candidate: 1.0\n")->implode(''));
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    app(PhpRuntime::class)->install('8.5');
+
+    expect($state['default'])->toBe('8.4')
+        ->and(collect($runs)->contains(fn ($c) => $c === ['update-alternatives', '--set', 'php', '/usr/bin/php8.4']))->toBeTrue();
+});
+
+it('leaves the default alone when an install does not move it', function () {
+    $runs = fakePhp(default: '8.4');
+
+    app(PhpRuntime::class)->install('8.2');
+
+    expect(collect($runs)->contains(fn ($r) => ($r['command'][0] ?? '') === 'update-alternatives' && ($r['command'][1] ?? '') === '--set'))->toBeFalse();
 });

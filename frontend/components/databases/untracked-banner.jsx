@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { PackageSearch } from "lucide-react";
@@ -23,7 +23,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
  */
 export function UntrackedBanner({ untracked = [], canManage }) {
   const t = useTranslations("databases");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   // Everything ticked to begin with — the usual answer is "all of them", and
@@ -57,9 +57,9 @@ export function UntrackedBanner({ untracked = [], canManage }) {
         await adoptDatabases(engine, names);
       }
 
+      await refreshAndWait();
       toast.success(t("adopt.done", { count: chosen.length }));
       setOpen(false);
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("adopt.failed")));
     } finally {

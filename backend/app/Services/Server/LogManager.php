@@ -466,6 +466,7 @@ class LogManager
         return array_merge(
             config('server.logs', []),
             $this->phpFpmLogs(),
+            $this->postgresLogs(),
             $this->cronjobLogs(),
             $this->workerLogs(),
         );
@@ -565,6 +566,40 @@ class LogManager
     }
 
     /**
+     * One log per PostgreSQL cluster.
+     *
+     * Debian names the file after the version and cluster —
+     * `postgresql-18-main.log` — so no fixed registry path can hold it, and
+     * the Logs screen had MariaDB, Redis and PHP-FPM but no PostgreSQL at all
+     * on a server running it (found on the nginx test box). The files are
+     * `postgres:adm 0640`, and the panel's account is in `adm`, so they are
+     * read like every other system log.
+     *
+     * @return array<int, array{key: string, label: string, group: string, path: string, clearable: bool}>
+     */
+    private function postgresLogs(): array
+    {
+        $dir = rtrim((string) config('server.postgres_log_dir', '/var/log/postgresql'), '/');
+        $logs = [];
+
+        foreach (glob($dir.'/postgresql-*-*.log') ?: [] as $path) {
+            if (preg_match('/^postgresql-(\d+(?:\.\d+)?)-([A-Za-z0-9_]+)\.log$/', basename($path), $m) !== 1) {
+                continue;
+            }
+
+            $logs[] = [
+                'key' => "postgresql_{$m[1]}_{$m[2]}",
+                'label' => "PostgreSQL {$m[1]} ({$m[2]})",
+                'group' => 'database',
+                'path' => $path,
+                'clearable' => true,
+            ];
+        }
+
+        return $logs;
+    }
+
+    /**
      * @return array<int, array{key: string, label: string, group: string, path: string}>
      */
     private function phpFpmLogs(): array
@@ -582,6 +617,13 @@ class LogManager
                 'key' => "php{$version}_fpm",
                 'label' => "PHP {$version} FPM",
                 'group' => 'php',
+                // php-fpm creates its log root:root 0600 — its own open() mode,
+                // and logrotate hands the same file back weekly — so the adm
+                // group that opens every other log here opens nothing. The
+                // screen listed it and answered 403 on click. Such a file is
+                // read through sudo `tail` like the Let's Encrypt log; one the
+                // panel can open stays a plain file, keeping follow/download.
+                'kind' => file_exists($path) && ! is_readable($path) ? 'privileged' : 'file',
                 'path' => $path,
                 'clearable' => true,
             ];

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Loader2, Play, RotateCw, Square } from "lucide-react";
@@ -10,6 +10,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatBytes } from "@/lib/format/bytes";
 
 const STATE_VARIANT = { active: "success", failed: "destructive", activating: "warning" };
@@ -34,11 +35,24 @@ export function ProcessCard({ application, canManage = false, className }) {
   const t = useTranslations("applications.process");
   const tApp = useTranslations("applications");
   const format = useFormatter();
-  const router = useRouter();
+  const { refreshThen } = useRefresh();
   const [pending, setPending] = useState(null);
+  const [confirmStop, setConfirmStop] = useState(false);
+  // What the last button here should have done. systemd records a stopped
+  // Node process as "failed" (it exits on SIGTERM), so after Stop that reads
+  // as stopped for this visit. After Start/Restart the old state is still on
+  // the page until the re-read lands; it showed "Process failed" under a
+  // success toast, so it reads as starting until then.
+  const [expected, setExpected] = useState(null);
 
   const process = application.process ?? {};
-  const state = process.state ?? "unknown";
+  const rawState = process.state ?? "unknown";
+  const state =
+    expected === "stopped" && rawState === "failed"
+      ? "inactive"
+      : expected === "running" && rawState !== "active"
+        ? "activating"
+        : rawState;
   const stateLabel =
     state === "active"
       ? tApp("status.active")
@@ -60,18 +74,25 @@ export function ProcessCard({ application, canManage = false, className }) {
     setPending(action);
     try {
       await controlApplicationProcess(application.id, action);
-      toast.success(t(DONE_KEY[action]));
-      router.refresh();
+      setConfirmStop(false);
+      setExpected(action === "stop" ? "stopped" : "running");
+      // Busy until the page has the new state, and the toast with it.
+      refreshThen(() => {
+        toast.success(t(DONE_KEY[action]));
+        setPending(null);
+        if (action !== "stop") setExpected(null);
+      });
     } catch (error) {
       toast.error(apiMessage(error, t("failed")));
-    } finally {
       setPending(null);
     }
   }
 
   const facts = [
     { label: t("state"), value: stateLabel },
-    { label: t("since"), value: process.since },
+    // `since` is when the process last started; on a stopped one it read as
+    // "Running since" a time it no longer is.
+    { label: t("since"), value: state === "active" ? formatSince(process.since, format) : null },
     { label: t("memory"), value: memory },
     { label: t("restarts"), value: process.restarts },
   ].filter((fact) => fact.value !== null && fact.value !== undefined && fact.value !== "");
@@ -80,7 +101,7 @@ export function ProcessCard({ application, canManage = false, className }) {
     <Card className={className}>
       <CardHeader className="gap-1.5">
         <CardTitle as="h2">{t("title")}</CardTitle>
-        <Badge variant={STATE_VARIANT[state] ?? "secondary"} className="font-normal">
+        <Badge variant={STATE_VARIANT[state] ?? "muted"} className="font-normal">
           {stateLabel}
         </Badge>
       </CardHeader>
@@ -101,16 +122,20 @@ export function ProcessCard({ application, canManage = false, className }) {
         {canManage ? (
           <div className="flex flex-wrap gap-2">
             {[
-              { action: "start", icon: Play },
-              { action: "restart", icon: RotateCw },
-              { action: "stop", icon: Square },
-            ].map(({ action, icon: Icon }) => (
+              // Start only when it is not running; Restart and Stop only when
+              // it is — each disabled one says why.
+              { action: "start", icon: Play, reason: state === "active" ? t("alreadyRunning") : null },
+              { action: "restart", icon: RotateCw, reason: state === "active" ? null : t("notRunning") },
+              { action: "stop", icon: Square, reason: state === "active" ? null : t("notRunning") },
+            ].map(({ action, icon: Icon, reason }) => (
               <Button
                 key={action}
                 size="sm"
                 variant="outline"
-                onClick={() => run(action)}
-                disabled={Boolean(pending)}
+                // Stop takes the application offline, so it asks first.
+                onClick={() => (action === "stop" ? setConfirmStop(true) : run(action))}
+                disabled={Boolean(pending) || Boolean(reason)}
+                disabledReason={!pending ? reason : null}
               >
                 {pending === action ? (
                   <Loader2 className="size-3.5 animate-spin" />
@@ -122,7 +147,31 @@ export function ProcessCard({ application, canManage = false, className }) {
             ))}
           </div>
         ) : null}
+        <ConfirmDialog
+          open={confirmStop}
+          onOpenChange={(next) => !pending && setConfirmStop(next)}
+          icon={Square}
+          tone="destructive"
+          title={t("stopTitle", { name: application.name })}
+          description={t("stopBody")}
+          cancelLabel={t("cancel")}
+          confirmLabel={pending === "stop" ? t("stopping") : t("stop")}
+          pending={pending === "stop"}
+          onConfirm={() => run("stop")}
+        />
       </CardContent>
     </Card>
   );
+}
+
+/**
+ * systemd's "Sat 2026-09-26 13:18:19 UTC", in the reader's language. Left as
+ * it came when it is not that shape.
+ */
+function formatSince(since, format) {
+  const match = typeof since === "string" && since.match(/(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) UTC$/);
+  if (!match) return since;
+  const date = new Date(`${match[1]}T${match[2]}Z`);
+  if (Number.isNaN(date.getTime())) return since;
+  return format.dateTime(date, { dateStyle: "medium", timeStyle: "short" });
 }

@@ -30,6 +30,8 @@ return [
     'primary_domain_not_editable' => 'A primary domain cannot be edited. Make another domain primary first.',
     'domain_taken' => 'This domain is already in use on this server.',
     'domain_taken_by' => 'This domain is already in use by the application “:application”.',
+    'domain_is_panel' => 'This is the address the panel itself is served on, so a site cannot use it.',
+    'redirect_target_invalid' => 'The redirect target must be a plain web address: https://, a host and an optional path — no query string, spaces or characters such as ; # $ &.',
     'unsupported_web_server' => 'The panel cannot write site configuration for :web_server.',
     'no_web_server' => 'no detected web server',
     'provision_failed' => 'Setting up the site failed at the ":step" step.',
@@ -41,7 +43,7 @@ return [
     'compose_apply_failed' => 'The compose file could not be applied, so the site was put back on the one it was running before. Reference :reference.',
     'docker_removal_not_permitted' => 'You don\'t have permission to delete Docker networks or volumes. Remove the site without them, or ask someone with Docker access.',
     'no_database_engine' => 'No database engine is available. Install and configure MySQL or MariaDB before creating this application.',
-    'no_process' => '\":name\" does not run a process of its own.',
+    'no_process' => '":name" does not run a process of its own.',
     'process_failed' => 'Could not :action the application. Quote the reference to support.',
     'system_user_missing' => 'The system user for :name is missing, so the panel cannot work on this application\'s files. You can still delete the application.',
     'no_port_available' => 'No free port between :from and :to. Free one or widen the range.',
@@ -63,6 +65,7 @@ return [
     'waf_failed' => 'Changing the firewall settings failed on the server.',
     'staging_failed' => 'The staging operation failed on the server.',
     'staging_rollback_failed' => 'The staging push failed and production could not be restored. The site remains disabled. Quote the reference to support.',
+    'staging_push_running' => 'A push to this site is already running. Wait for it to finish.',
     'clone_failed' => 'The clone operation failed on the server.',
     'fail2ban_failed' => 'The fail2ban operation failed on the server.',
 
@@ -114,4 +117,19 @@ return [
     'generate_system_user_forbidden' => 'You do not have permission to create system users, so a new one cannot be generated for this site. Choose an existing system user instead.',
     'system_user_conflict' => 'Choose either a new system user or an existing one, not both.',
     'system_user_name_unavailable' => 'A system username could not be reserved for this site — the server could not be asked which names are already in use. Try again, or choose an existing system user.',
+
+    // The Lock button for a site folder the panel did not create; see
+    // SiteRootLock::adopt(). Keyed by its result.
+    'root_lock' => [
+        'unsafe' => 'The site folder :path is not a plain folder, or it changed while it was being checked, so it was left alone. Check it on the server before trying again.',
+        'missing' => 'The site folder :path does not exist on the server.',
+        'failed' => 'The server could not lock the site folder. Nothing was changed. See the server log for details.',
+        'unsupported' => 'This server\'s disk does not support the folder lock, so the site folder was left as it was.',
+        'foreign_owner' => 'The site folder :path belongs to another account, not to this site\'s user, so it was left alone. Check who should own it before locking it.',
+        'writable' => 'The site folder :path can be written to by other accounts, so a lock would not hold. Remove the group and public write permission (for example `chmod 755`), then try again.',
+        'locks_out_user' => 'Locking the site folder :path would stop this site\'s user from opening it: its permissions give the user access only as its owner. Give the folder\'s group read and open permission (for example `chmod 750`) and make sure the user is in that group, then try again.',
+    ],
+
+    // A git site whose account was disconnected: no credential, no URL.
+    'git_account_missing' => 'This git account is no longer connected, so there is nothing to deploy from. Reconnect it on the Deployment screen, then deploy again.',
 ];

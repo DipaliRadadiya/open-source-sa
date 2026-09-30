@@ -101,4 +101,44 @@ class BitbucketProvider extends AbstractGitProvider
             'protected' => false, // Bitbucket exposes branch restrictions separately
         ], (array) $response->json('values', [])));
     }
+
+    public function createWebhook(GitAccount $account, string $repository, string $url, string $secret): string
+    {
+        $response = $this->send($account, fn ($client) => $client->post("/2.0/repositories/{$repository}/hooks", $this->hookBody($url, $secret)));
+
+        return (string) $response->json('uuid');
+    }
+
+    public function updateWebhook(GitAccount $account, string $repository, string $id, string $url, string $secret): bool
+    {
+        $response = $this->send(
+            $account,
+            fn ($client) => $client->put("/2.0/repositories/{$repository}/hooks/".rawurlencode($id), $this->hookBody($url, $secret)),
+            missingOk: true,
+        );
+
+        return $response->status() !== 404;
+    }
+
+    public function deleteWebhook(GitAccount $account, string $repository, string $id): void
+    {
+        $this->send($account, fn ($client) => $client->delete("/2.0/repositories/{$repository}/hooks/".rawurlencode($id)), missingOk: true);
+    }
+
+    /**
+     * `secret` makes Bitbucket sign each delivery (`X-Hub-Signature`), which
+     * is what BitbucketWebhook verifies.
+     *
+     * @return array<string, mixed>
+     */
+    private function hookBody(string $url, string $secret): array
+    {
+        return [
+            'description' => 'Deploy on push',
+            'url' => $url,
+            'active' => true,
+            'events' => ['repo:push'],
+            'secret' => $secret,
+        ];
+    }
 }

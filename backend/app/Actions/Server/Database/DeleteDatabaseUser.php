@@ -4,6 +4,7 @@ namespace App\Actions\Server\Database;
 
 use App\Models\DatabaseUser;
 use App\Services\ActivityLogger;
+use App\Services\Server\Databases\DatabaseFirewall;
 use App\Services\Server\Databases\DatabaseManager;
 
 class DeleteDatabaseUser
@@ -11,6 +12,7 @@ class DeleteDatabaseUser
     public function __construct(
         private DatabaseManager $manager,
         private ActivityLogger $activityLogger,
+        private DatabaseFirewall $firewall,
     ) {}
 
     public function execute(DatabaseUser $user): void
@@ -26,5 +28,7 @@ class DeleteDatabaseUser
         ]);
 
         $user->delete();
+
+        $this->firewall->release($database->engine, $user->connection_preference, $user->host);
     }
 }

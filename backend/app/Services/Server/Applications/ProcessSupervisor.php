@@ -134,6 +134,36 @@ class ProcessSupervisor
         $this->daemonReload();
     }
 
+    /**
+     * Rewrite the unit if the template has moved on, without touching the
+     * process: no enable, no restart. systemd applies the new file on
+     * daemon-reload, so a running app keeps running and a disabled one stays
+     * disabled. Units are otherwise only written when a site is created or its
+     * process changes, so a template fix (the crash-loop limit that sat where
+     * systemd ignored it) reached new sites only. True when it was rewritten.
+     */
+    public function refreshUnit(Application $application, string $documentRoot): bool
+    {
+        $path = $this->unitPath($application);
+        $wanted = $this->render($application, $documentRoot);
+        $context = ['feature' => 'application', 'op' => 'unit_refresh', 'application' => $application->id];
+
+        $current = $this->serverOps->run(['cat', $path], $context);
+
+        // No unit on the box: not this method's job to create one.
+        if ($current->failed() || $current->output() === $wanted) {
+            return false;
+        }
+
+        if ($this->files->put($path, $wanted, $context)->failed()) {
+            return false;
+        }
+
+        $this->daemonReload();
+
+        return true;
+    }
+
     public function start(Application $application): ServerOpsResult
     {
         return $this->systemctl('start', $application);
@@ -142,6 +172,28 @@ class ProcessSupervisor
     public function stop(Application $application): ServerOpsResult
     {
         return $this->systemctl('stop', $application);
+    }
+
+    /**
+     * Stop the process and keep it stopped across a reboot — for a disabled
+     * site. `stop` alone lasts until the next boot: the unit is enabled, so
+     * the application came back behind a page saying it was unavailable.
+     */
+    public function suspend(Application $application): ServerOpsResult
+    {
+        $disabled = $this->systemctl('disable', $application);
+
+        return $disabled->failed() ? $disabled : $this->stop($application);
+    }
+
+    /**
+     * Undo suspend(): enable the unit again and start it.
+     */
+    public function resume(Application $application): ServerOpsResult
+    {
+        $enabled = $this->systemctl('enable', $application);
+
+        return $enabled->failed() ? $enabled : $this->start($application);
     }
 
     public function restart(Application $application): ServerOpsResult

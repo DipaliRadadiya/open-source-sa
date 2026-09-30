@@ -115,6 +115,55 @@ class ProcessKiller
             // is not a way around that decision.
             throw ProcessKillException::protectedProcess();
         }
+
+        if ($this->inProtectedUnit($pid)) {
+            throw ProcessKillException::protectedProcess();
+        }
+    }
+
+    /**
+     * Whether the process runs inside a unit the server cannot do without,
+     * asked of systemd rather than guessed from the process name.
+     *
+     * The name check above knows two units from config. On the nginx test
+     * server the Processes screen stopped the SSH daemon and the panel's own
+     * queue worker with a 200 — neither name is on that list. The queue worker
+     * came back (systemd restarts it) with whatever job it was running lost;
+     * sshd came back only because 26.04 socket-activates it. On a server that
+     * does not, a clean TERM is not a failure systemd restarts, and new SSH
+     * logins stop until someone restarts it by other means.
+     *
+     * Protected: every unit the Services screen protects (web server, redis,
+     * the panel's PHP), SSH, and the panel's own units. A process in a user's
+     * login session or a site's app unit is not affected. When systemd cannot
+     * say, the name check above is all there is — as before.
+     */
+    private function inProtectedUnit(int $pid): bool
+    {
+        $result = $this->serverOps->run(
+            ['ps', '-o', 'unit=', '-p', (string) $pid],
+            ['feature' => 'process', 'op' => 'inspect_unit', 'pid' => $pid],
+        );
+
+        $unit = preg_replace('/\.service$/', '', trim($result->output()));
+
+        if (! $result->ok || $unit === '' || $unit === '-') {
+            return false;
+        }
+
+        $protected = [
+            ...app(ServiceManager::class)->protectedUnits(),
+            'ssh', 'sshd',
+            ...array_values((array) config('panel_update.services', [])),
+        ];
+
+        foreach ($protected as $candidate) {
+            if ($unit === preg_replace('/\.service$/', '', (string) $candidate)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function belongsToProtectedService(string $command): bool

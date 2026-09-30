@@ -216,7 +216,7 @@ function UndoCell({ row }) {
   const restore = row.original;
 
   if (!restore.safety_backup_id) {
-    return <span className="text-sm text-muted-foreground/70">{t("noSafetyCopy")}</span>;
+    return <span className="text-sm text-muted-foreground">{t("noSafetyCopy")}</span>;
   }
 
   return (

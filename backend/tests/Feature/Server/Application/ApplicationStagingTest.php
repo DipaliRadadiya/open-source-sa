@@ -1,15 +1,19 @@
 <?php
 
 use App\Enums\DomainType;
+use App\Enums\RestoreStatus;
 use App\Models\ActivityLog;
 use App\Models\Application;
 use App\Models\Database;
 use App\Models\DatabaseUser;
+use App\Models\Restore;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\StagingManager;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Process;
 
 /**
@@ -519,6 +523,11 @@ describe('when creating staging fails', function () {
                 return Process::result(output: '1');
             }
 
+            // Written as the site user now, so the command arrives wrapped.
+            if (($args[0] ?? '') === 'runuser') {
+                $args = array_slice($args, 4);
+            }
+
             if (($args[0] ?? '') === $command && str_ends_with((string) end($args), '/wp-config.php')) {
                 return Process::result(exitCode: 1, errorOutput: 'permission denied');
             }
@@ -531,7 +540,7 @@ describe('when creating staging fails', function () {
             ->assertStatus(500);
 
         expect(Application::where('production_application_id', $this->production->id)->exists())->toBeFalse();
-    })->with(['chmod', 'chown']);
+    })->with(['tee', 'chmod']);
 });
 
 /*
@@ -930,9 +939,10 @@ it('hides a new staging site from search engines', function () {
     expect($sets->contains(fn (string $c) => str_contains($c, 'blog_public 0')))->toBeTrue();
 
     // ...and the file, which a database import cannot undo.
+    // Written as the staging site's own user, not root.
     $written = collect($commands)
-        ->filter(fn (array $a) => ($a[0] ?? '') === 'tee')
-        ->map(fn (array $a) => (string) ($a[1] ?? ''));
+        ->filter(fn (array $a) => ($a[0] ?? '') === 'runuser' && ($a[4] ?? '') === 'tee')
+        ->map(fn (array $a) => (string) ($a[5] ?? ''));
 
     expect($written->contains(fn (string $path) => str_contains($path, 'panel-staging-noindex.php')))->toBeTrue();
 });
@@ -1245,4 +1255,112 @@ it('refuses the push when it cannot tell whether media exists', function () {
     $this->withHeaders(stagingHeaders())
         ->postJson(stagingUrl().'/push', ['mode' => 'files'])
         ->assertStatus(500);
+});
+
+describe('one push at a time', function () {
+    // Pushes ran inside the request with no lock: a double-click started two
+    // that overwrote and rolled back the same production site at once, and
+    // nothing stopped one during a restore (found in code review 2026-09-29).
+    it('refuses a second push while one is running', function () {
+        fakeStagingServer();
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+        $held = Cache::lock('staging-push:'.$this->production->id, 60);
+        $held->get();
+
+        $this->withHeaders(stagingHeaders())
+            ->postJson(stagingUrl().'/push', ['mode' => 'files'])
+            ->assertStatus(422)
+            ->assertJsonFragment(['message' => __('errors/application.staging_push_running')]);
+
+        $held->release();
+
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'files'])->assertOk();
+    });
+
+    it('refuses a push while a restore of production is running', function () {
+        fakeStagingServer();
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+        Restore::forceCreate(['application_id' => $this->production->id, 'status' => RestoreStatus::Running, 'type' => 'full']);
+
+        $this->withHeaders(stagingHeaders())
+            ->postJson(stagingUrl().'/push', ['mode' => 'files'])
+            ->assertStatus(422);
+    });
+
+    it('marks the push as running for the backup job, and clears it after', function () {
+        fakeStagingServer();
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+        $seen = false;
+        $id = $this->production->id;
+        Process::fake(function ($process) use (&$seen, $id) {
+            $seen = $seen || StagingManager::pushInProgress($id);
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            return in_array('option', $args, true) && in_array('get', $args, true)
+                ? Process::result(output: "1\n")
+                : Process::result(exitCode: 0);
+        });
+
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'files'])->assertOk();
+
+        expect($seen)->toBeTrue()
+            ->and(StagingManager::pushInProgress($id))->toBeFalse();
+    });
+});
+
+it('keeps only the newest pre-push database dumps', function () {
+    // Each is a full copy of production's database, written before every
+    // push and never removed (found in code review 2026-09-29).
+    fakeStagingServer();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    $removed = [];
+    Process::fake(function ($process) use (&$removed) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        if (in_array('option', $args, true) && in_array('get', $args, true)) {
+            return Process::result(output: "1\n");
+        }
+
+        if (($args[0] ?? '') === 'find' && in_array('pre-push-*.sql', $args, true)) {
+            return Process::result(output: implode("\n", [
+                'pre-push-20260901-100000-aaaaaa.sql',
+                'pre-push-20260929-100000-eeeeee.sql',
+                'pre-push-20260915-100000-cccccc.sql',
+                'pre-push-20260910-100000-bbbbbb.sql',
+                'pre-push-20260920-100000-dddddd.sql',
+            ])."\n");
+        }
+
+        if (($args[0] ?? '') === 'rm' && ($args[1] ?? '') === '-f') {
+            $removed = array_map('basename', array_slice($args, 3));
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'files'])->assertOk();
+
+    sort($removed);
+    expect($removed)->toBe(['pre-push-20260901-100000-aaaaaa.sql', 'pre-push-20260910-100000-bbbbbb.sql']);
+});
+
+it('refuses a staging domain that is already another site name or the panel host', function () {
+    fakeStagingServer();
+    $this->production->domains()->create(['domain' => 'www.shop.test', 'type' => DomainType::Alias]);
+    config(['server.storage.panel_url' => 'https://panel.shop.test']);
+
+    // An alias lives only in application_domains, so the old check against
+    // applications.domain let it through to the insert.
+    foreach (['www.shop.test', 'panel.shop.test'] as $domain) {
+        $this->withHeaders(stagingHeaders())
+            ->postJson(stagingUrl(), ['domain' => $domain])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('domain');
+    }
+
+    expect(Application::where('production_application_id', $this->production->id)->count())->toBe(0);
 });

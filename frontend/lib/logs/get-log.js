@@ -1,5 +1,6 @@
 import { serverFetch } from "@/lib/api/server-fetch";
 import { logReadResponseSchema } from "@/lib/schemas/log";
+import { failedRead } from "@/lib/logs/failed-read";
 
 /**
  * GET /api/logs/{key} — first screen of a source, rendered server-side so the
@@ -19,12 +20,15 @@ export async function getLog(key, { lines = 200 } = {}) {
 
     if (res.status === 403) return { status: "locked", log: null };
     if (res.status === 404) return { status: "missing", log: null };
-    if (!res.ok) return { status: "failed", log: null };
+    if (!res.ok) return failedRead(res);
 
     const parsed = logReadResponseSchema.safeParse(await res.json());
+    // A shape this page can't read is a failed read. As "ok" with no log it
+    // said "This log is empty" over a log with lines in it, until the browser
+    // read it again seconds later.
     return parsed.success
       ? { status: "ok", log: parsed.data.log }
-      : { status: "ok", log: null };
+      : { status: "failed", log: null };
   } catch {
     return { status: "failed", log: null };
   }

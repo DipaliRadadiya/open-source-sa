@@ -35,7 +35,7 @@ export function Pager({ page, lastPage, total, onPageChange, pending = false }) 
   return (
     <div className="flex items-center gap-3">
       <span className="hidden text-sm text-muted-foreground sm:inline">{t("total", { total })}</span>
-      <nav className="flex items-center gap-1">
+      <nav aria-label={t("label")} className="flex items-center gap-1">
         <Button
           variant="outline"
           size="icon"

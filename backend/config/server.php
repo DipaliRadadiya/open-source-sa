@@ -81,6 +81,7 @@ use App\Services\Server\Doctor\Checks\DriverContentionCheck;
 use App\Services\Server\Doctor\Checks\DynamicResponseLimitCheck;
 use App\Services\Server\Doctor\Checks\FrontendBuildCheck;
 use App\Services\Server\Doctor\Checks\HealthEndpointCheck;
+use App\Services\Server\Doctor\Checks\HomeAccessCheck;
 use App\Services\Server\Doctor\Checks\PhpIsolationCheck;
 use App\Services\Server\Doctor\Checks\PrivilegeCheck;
 use App\Services\Server\Doctor\Checks\QueueCheck;
@@ -186,6 +187,10 @@ return [
             // the site user can rename their root-owned site directory away
             // (it sits in their home) and substitute their own.
             'chattr', 'lsattr',
+            // Per-home ACLs — see HomeDirectoryAccess. A home is closed to
+            // every other local account and opened, by user id, to exactly
+            // the panel and the web server.
+            'setfacl', 'getfacl',
             // `openssl req` writes the key and certificate into /etc/ssl, and
             // `openssl x509 -enddate` reads out of /etc/letsencrypt/live —
             // both root-only. Without this, self-signed certificates cannot be
@@ -212,7 +217,14 @@ return [
             // backups run `dump_client` from the engines list below, and a
             // client the panel will not elevate fails with "a password is
             // required" on a feature that looks configured.
-            'mysql', 'mysqldump', 'mariadb', 'mariadb-dump', 'redis-cli',
+            //
+            // Not `redis-cli`, deliberately. It reaches Redis over TCP like the
+            // panel itself does, so it needs no root — and elevating it put the
+            // Redis password on sudo's command line (`sudo -n env
+            // REDISCLI_AUTH=…`), where sudo logs it to auth.log and the journal
+            // on every call, and the Logs screen shows both to anyone who may
+            // view logs. Found on the nginx test box, 2026-09-27.
+            'mysql', 'mysqldump', 'mariadb', 'mariadb-dump',
             'mongosh', 'mongodump', 'mongorestore',
             // psql is a pg_wrapper symlink rather than the binary itself; sudo
             // matches it by the path given, the same way it already matches
@@ -558,6 +570,7 @@ return [
             DriverContentionCheck::class,
             PhpIsolationCheck::class,
             SiteRootLockCheck::class,
+            HomeAccessCheck::class,
             HealthEndpointCheck::class,
         ],
     ],
@@ -665,6 +678,12 @@ return [
     */
 
     'home_base' => env('SERVER_HOME_BASE', '/home'),
+
+    // The Linux account the panel itself runs as — its PHP-FPM pool and queue
+    // worker. Empty: whoever this process runs as, which is that account in
+    // every place that matters (both run as it). HomeDirectoryAccess lets
+    // exactly this account through a closed home.
+    'panel_account' => env('SERVER_PANEL_ACCOUNT', ''),
 
     // One shared "site unavailable" page, served in place of a disabled
     // application's real vhost — same reasoning as the ACME challenge_root
@@ -1338,11 +1357,12 @@ return [
 
         'prestashop' => [
             'driver' => PrestaShopInstaller::class,
-            // PrestaShop's own channel feed, not GitHub: their 9.x tags ship
-            // no package, and this feed is what their updater follows — so a
-            // new stable branch is picked up without a code change.
+            // PrestaShop's distribution API, not GitHub and not channel.xml:
+            // their 9.x tags ship no package, and channel.xml still names
+            // 8.2.1 as current. This lists every release with its PHP range
+            // and package URL — the source their own Docker images build from.
             'download_url' => env('SERVER_PRESTASHOP_URL', ''),
-            'channel_feed' => env('SERVER_PRESTASHOP_FEED', 'https://api.prestashop.com/xml/channel.xml'),
+            'releases_api' => env('SERVER_PRESTASHOP_RELEASES_API', 'https://api.prestashop-project.org/prestashop'),
             'timeout' => (int) env('SERVER_PRESTASHOP_TIMEOUT', 1800),
         ],
 
@@ -2583,6 +2603,9 @@ return [
         // reboot landing on top of a backup is how you get a half-written
         // archive. ServerAvatar's docs advise the same buffer.
         'minute' => (int) env('SERVER_REBOOT_SCHEDULE_MINUTE', 10),
+        // Where a switched-off schedule's day/hour are kept, so switching it
+        // back on offers what the administrator had. Panel-owned, never cron.
+        'remembered' => env('SERVER_REBOOT_SCHEDULE_REMEMBERED', storage_path('app/reboot-schedule.json')),
     ],
 
     'runtimes' => [
@@ -2655,6 +2678,18 @@ return [
         ],
 
         'php' => [
+            // Offer PHP versions whose apt candidate is an alpha, beta, RC or
+            // dev build. Off: those showed up in the install list looking
+            // exactly like a release. For testing a pre-release on purpose.
+            'offer_prerelease' => (bool) env('SERVER_PHP_OFFER_PRERELEASE', false),
+
+            // The oldest PHP offered for a new install. Anything older that is
+            // already installed is still listed and still usable — this only
+            // stops the panel offering releases long past end of life (5.6 to
+            // 7.3 came up in ondrej's repository and were offered like any
+            // other). Operator decision 2026-09-28: 7.4 and newer.
+            'min_offered' => (string) env('SERVER_PHP_MIN_OFFERED', '7.4'),
+
             /*
             | Why an install failed, matched against apt's output in order.
             |
@@ -2916,8 +2951,8 @@ return [
             // MongoDB is operable but not installable yet — it needs its own apt
             // repository — so it has none, and the catalog says so rather than
             // showing a button that cannot work.
-            'mysql' => ['label' => 'MySQL', 'driver' => 'sql', 'client' => env('SERVER_MYSQL_CLIENT', 'mysql'), 'dump_client' => env('SERVER_MYSQLDUMP', 'mysqldump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'dump_extension' => 'sql', 'uri_scheme' => 'mysql', 'installer' => MySqlInstaller::class],
-            'mariadb' => ['label' => 'MariaDB', 'driver' => 'sql', 'client' => env('SERVER_MARIADB_CLIENT', 'mariadb'), 'dump_client' => env('SERVER_MARIADBDUMP', 'mariadb-dump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'dump_extension' => 'sql', 'uri_scheme' => 'mariadb', 'installer' => MariaDbInstaller::class],
+            'mysql' => ['label' => 'MySQL', 'driver' => 'sql', 'client' => env('SERVER_MYSQL_CLIENT', 'mysql'), 'dump_client' => env('SERVER_MYSQLDUMP', 'mysqldump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'dump_extension' => 'sql', 'uri_scheme' => 'mysql', 'installer' => MySqlInstaller::class, 'service' => 'mysql', 'remote_bind_file' => env('SERVER_MYSQL_REMOTE_BIND_FILE', '/etc/mysql/mysql.conf.d/99-panel-remote.cnf')],
+            'mariadb' => ['label' => 'MariaDB', 'driver' => 'sql', 'client' => env('SERVER_MARIADB_CLIENT', 'mariadb'), 'dump_client' => env('SERVER_MARIADBDUMP', 'mariadb-dump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'dump_extension' => 'sql', 'uri_scheme' => 'mariadb', 'installer' => MariaDbInstaller::class, 'service' => 'mariadb', 'remote_bind_file' => env('SERVER_MARIADB_REMOTE_BIND_FILE', '/etc/mysql/mariadb.conf.d/99-panel-remote.cnf')],
             /*
             | `unsupported_codenames` — Ubuntu releases this engine's vendor has
             | not published for.

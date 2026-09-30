@@ -65,7 +65,9 @@ class PanelUpdateRunner
         // finishes flushing.
         $log = $dir.'/update-'.$update->getKey().'.log';
 
-        $this->launch($path, $log, (string) $update->getKey());
+        if (config('panel_update.launch', true)) {
+            $this->launch($path, $log, (string) $update->getKey());
+        }
 
         return true;
     }

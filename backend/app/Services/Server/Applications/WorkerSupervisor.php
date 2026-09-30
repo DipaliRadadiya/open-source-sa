@@ -308,9 +308,19 @@ class WorkerSupervisor
             return null;
         }
 
+        // As the account the worker's processes run as — the same one the
+        // program block names (render()). This ran as the panel's own account,
+        // which can read a site's code but not write its `storage/`: Laravel
+        // failed to open its own log and exited 1, and every "graceful"
+        // restart — the Restart button and every restart-on-deploy — fell
+        // back to `supervisorctl restart`, killing whatever job was running
+        // (found live 2026-09-29, Statamic on nginx). As root instead it would
+        // have left root-owned cache files the site then cannot write.
+        $user = $worker->user ?: $application->systemUser->username;
+
         return match ($worker->kind) {
-            Worker::KIND_QUEUE => [$php, $root.'/artisan', 'queue:restart'],
-            Worker::KIND_HORIZON => [$php, $root.'/artisan', 'horizon:terminate'],
+            Worker::KIND_QUEUE => ['runuser', '-u', $user, '--', $php, $root.'/artisan', 'queue:restart'],
+            Worker::KIND_HORIZON => ['runuser', '-u', $user, '--', $php, $root.'/artisan', 'horizon:terminate'],
         };
     }
 

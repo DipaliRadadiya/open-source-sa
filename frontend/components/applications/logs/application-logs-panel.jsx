@@ -10,18 +10,23 @@ import {
 } from "@/lib/api/application-logs";
 import { LINE_OPTIONS } from "@/lib/schemas/log";
 import { matchesSeverity } from "@/lib/logs/severity";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollFade } from "@/components/ui/scroll-fade";
 import { LogToolbar } from "@/components/logs/log-toolbar";
 import { LogViewer } from "@/components/logs/log-viewer";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Eraser } from "lucide-react";
 import { apiMessage } from "@/lib/api/error-message";
+import {
+  APP_LOG_FOLLOW_COOKIE,
+  APP_LOG_LINES_COOKIE,
+  followFor as followPrefFor,
+  serializeFollowPrefs,
+  writeCookie,
+} from "@/lib/logs/app-log-prefs";
+import { cleanLines } from "@/lib/logs/clean-lines";
 
 const POLL_MS = 3000;
-// Access logs are a firehose on a busy site — open them paused; error and the
-// app's own output are the ones you usually want tailing.
-const AUTO_FOLLOW_KEYS = new Set(["error", "application", "application_error"]);
 const TAIL_FAILURES_BEFORE_PAUSE = 3;
 
 /*
@@ -44,6 +49,8 @@ export function ApplicationLogsPanel({
   selected,
   initial,
   initialLines,
+  // Live per source as the reader last left it; unset keys use the defaults.
+  followPrefs = {},
   canManage = false,
 }) {
   const t = useTranslations("logs");
@@ -76,8 +83,15 @@ export function ApplicationLogsPanel({
   // that need it.
   const hasAppOutput = sources.some((s) => s.key.startsWith("application"));
 
-  const [lines, setLines] = useState(initial?.log?.lines ?? []);
+  const [lines, setLines] = useState(() => cleanLines(initial?.log?.lines));
   const [status, setStatus] = useState(initial?.status ?? "ok");
+  const [failedMessage, setFailedMessage] = useState(initial?.message ?? null);
+  // Read inside `load`'s catch: a first read that fails shows its box, a
+  // reload of lines already on screen keeps them and says so in a toast.
+  const statusRef = useRef(status);
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
   const [truncated, setTruncated] = useState(Boolean(initial?.log?.truncated));
   // Only meaningful while filtering: the API sets it when the search covered
   // just the tail of the file, which is what makes an empty result honest.
@@ -101,7 +115,8 @@ export function ApplicationLogsPanel({
    * Logs page — which does wire it — works, so the control looked proven.
    */
   const [newestFirst, setNewestFirst] = useState(false);
-  const [follow, setFollow] = useState(AUTO_FOLLOW_KEYS.has(current));
+  const [prefs, setPrefs] = useState(followPrefs);
+  const [follow, setFollow] = useState(() => followPrefFor(current, followPrefs));
   const [busy, setBusy] = useState(false);
   const [tailState, setTailState] = useState("idle");
   // Each tab opens with its own default. Switching tabs keeps this component
@@ -111,7 +126,7 @@ export function ApplicationLogsPanel({
   const [followFor, setFollowFor] = useState(current);
   if (followFor !== current) {
     setFollowFor(current);
-    setFollow(AUTO_FOLLOW_KEYS.has(current));
+    setFollow(followPrefFor(current, prefs));
     setTailState("idle");
   }
   const [clearing, setClearing] = useState(false);
@@ -139,10 +154,11 @@ export function ApplicationLogsPanel({
           grep: debouncedTerm || undefined,
           signal: ctrl.signal,
         });
-        setLines(data?.log?.lines ?? []);
+        setLines(cleanLines(data?.log?.lines));
         setTruncated(Boolean(data?.log?.truncated));
         setSearchCapped(Boolean(data?.log?.search_window_capped));
         setStatus("ok");
+        setFailedMessage(null);
         return true;
       } catch (error) {
         // Cancelled by a newer read (a search, a reload), not a failure: `null`
@@ -152,10 +168,13 @@ export function ApplicationLogsPanel({
         if (code === 403) setStatus("locked");
         else if (code === 404) setStatus("missing");
         else {
-          // A tab whose first read failed has nothing to show but the failure;
-          // a reload of lines already on screen keeps them and says so.
-          setStatus((now) => (now === "loading" ? "failed" : now));
-          if (!silent) toast.error(apiMessage(error, t("loadFailed")));
+          // A tab whose first read failed has nothing to show but the failure,
+          // in the server's words; a reload of lines already on screen keeps
+          // them and says so.
+          if (statusRef.current === "loading") {
+            setStatus("failed");
+            setFailedMessage(apiMessage(error, null) || null);
+          } else if (!silent) toast.error(apiMessage(error, t("loadFailed")));
         }
         return false;
       } finally {
@@ -229,6 +248,20 @@ export function ApplicationLogsPanel({
           : "live"
         : "idle";
 
+  // The reader's choices, remembered — not the automatic pause after failures,
+  // which is the panel's decision rather than theirs.
+  function chooseFollow(next) {
+    setFollow(next);
+    const updated = { ...prefs, [current]: next };
+    setPrefs(updated);
+    writeCookie(APP_LOG_FOLLOW_COOKIE, serializeFollowPrefs(updated));
+  }
+
+  function chooseLines(next) {
+    setLineCount(next);
+    writeCookie(APP_LOG_LINES_COOKIE, String(next));
+  }
+
   const nextLineStep = LINE_OPTIONS.find((n) => n > lineCount) ?? null;
   const searchRef = useRef(null);
 
@@ -295,6 +328,7 @@ export function ApplicationLogsPanel({
       setTruncated(false);
       setSearchCapped(false);
       setStatus("loading");
+      setFailedMessage(null);
       const url = new URL(window.location.href);
       url.searchParams.set("source", key);
       window.history.replaceState(window.history.state, "", url);
@@ -336,6 +370,10 @@ export function ApplicationLogsPanel({
         </TabsList>
       </ScrollFade>
 
+      {/* The panel the source tabs control: without it every tab's
+          aria-controls pointed at nothing. Its own text size and flex are
+          reset so the console below looks exactly as it did. */}
+      <TabsContent value={current ?? ""} className="flex-none text-[length:inherit]">
       <section className="flex h-[calc(100svh-16rem)] min-h-[34rem] flex-col overflow-hidden rounded-xl border bg-card shadow-sm lg:min-h-[24rem]">
         <LogToolbar
           label={source?.label ?? t("noSource")}
@@ -347,9 +385,9 @@ export function ApplicationLogsPanel({
           severity={severity}
           onSeverityChange={setSeverity}
           lines={lineCount}
-          onLinesChange={setLineCount}
+          onLinesChange={chooseLines}
           follow={follow}
-          onFollowChange={setFollow}
+          onFollowChange={chooseFollow}
           wrap={wrap}
           onWrapChange={setWrap}
           newestFirst={newestFirst}
@@ -366,6 +404,8 @@ export function ApplicationLogsPanel({
           clearing={clearing}
           busy={busy}
           disabled={disabled}
+          reloadable={status === "failed"}
+          reloadReason={status === "locked" ? t("locked.title") : status === "missing" ? t("missing.title") : null}
           searchRef={searchRef}
           tailState={effectiveTail}
           onResume={() => {
@@ -387,7 +427,7 @@ export function ApplicationLogsPanel({
             {nextLineStep ? (
               <button
                 type="button"
-                onClick={() => setLineCount(nextLineStep)}
+                onClick={() => chooseLines(nextLineStep)}
                 className="rounded font-medium text-foreground underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 {t("loadMore", { count: nextLineStep })}
@@ -408,10 +448,12 @@ export function ApplicationLogsPanel({
           newestFirst={newestFirst}
           status={status}
           loadingText={t("loadingSource", { label: source?.label ?? current })}
+          failedMessage={failedMessage}
           following={follow}
           onCopyLine={(text) => copy(text, t("copiedLine"))}
         />
       </section>
+      </TabsContent>
 
       {/* Names the log, because "Clear log?" beside a tab strip is ambiguous
           about which one — and this cannot be undone. `destructive` for the

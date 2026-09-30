@@ -27,7 +27,7 @@ class PermissionFixer
     public function __construct(
         private ServerOps $serverOps,
         private ApplicationProvisioner $provisioner,
-        private ApplicationEnvironment $environment,
+        private SecretFilePrivacy $secrets,
         private PoolManager $pool,
         private RuntimeOwnership $ownership,
     ) {}
@@ -38,14 +38,30 @@ class PermissionFixer
         $user = $application->systemUser->username;
 
         $this->run(['chown', '-R', "{$user}:{$user}", $root], $application, 'chown');
-        $this->run(['find', $root, '-type', 'd', '-exec', 'chmod', '0755', '{}', '+'], $application, 'chmod_dirs');
-        $this->run(['find', $root, '-type', 'f', '-exec', 'chmod', '0644', '{}', '+'], $application, 'chmod_files');
+        // The chown stays root's — it is the one step the user cannot do — and
+        // is safe as it is: `chown -R` without -H/-L follows no link, and the
+        // document root cannot itself be replaced (its parent is immutable,
+        // SiteRootLock). The modes are the user's to set once they own
+        // everything, and as the user a link swapped in between `find` seeing
+        // a directory and `chmod` touching it reaches nothing new.
+        $this->run($this->asUser($application, ['find', $root, '-type', 'd', '-exec', 'chmod', '0755', '{}', '+']), $application, 'chmod_dirs');
+        $this->run($this->asUser($application, ['find', $root, '-type', 'f', '-exec', 'chmod', '0644', '{}', '+']), $application, 'chmod_files');
 
         // Re-tighten what the bulk pass above just loosened. Sourced from the
         // services that own each path, not duplicated here — a second copy of
-        // ".env is 0600" is how it drifts.
-        if ($this->environment->exists($application)) {
-            $this->run(['chmod', '0600', $this->environment->path($application)], $application, 'chmod_env');
+        // ".env is 0600" is how it drifts, and it did: a flat 0600 here took
+        // the `.env` away from a site whose PHP runs as the web server's
+        // account. SecretFilePrivacy knows the mode and group per site, and
+        // covers every secret file — the bulk pass left `wp-config.php` 0644.
+        //
+        // As the site user, apart from the one chown the user cannot do (with
+        // `-h`). GNU chmod follows a link named on its command line — a user
+        // who replaced `.env` with a link had root chmod whatever it pointed
+        // at (reproduced live 2026-09-29 on a canary outside the site).
+        $failure = $this->secrets->reset($application);
+
+        if ($failure !== null) {
+            throw new FixPermissionsFailedException($failure->reference, busy: $failure->busy, staleLock: $failure->staleLock, denied: $failure->denied, timedOut: $failure->timedOut);
         }
 
         // Every site that runs as its own user has a session directory of its
@@ -53,8 +69,17 @@ class PermissionFixer
         // skipped every OpenLiteSpeed site — leaving session files at whatever
         // the bulk chmod above left them, which is not private.
         if ($this->ownership->runsAsOwnUser($application)) {
-            $this->run(['chmod', '-R', '0700', $this->pool->sessionPath($application)], $application, 'chmod_sessions');
+            $this->run($this->asUser($application, ['chmod', '-R', '0700', $this->pool->sessionPath($application)]), $application, 'chmod_sessions');
         }
+    }
+
+    /**
+     * @param  array<int, string>  $command
+     * @return array<int, string>
+     */
+    private function asUser(Application $application, array $command): array
+    {
+        return ['runuser', '-u', $application->systemUser->username, '--', ...$command];
     }
 
     /**

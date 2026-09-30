@@ -39,6 +39,7 @@ return [
         'optimize' => 'Rebuilding caches',
         'frontend_build' => 'Building the interface (this is the slow part)',
         'sync_privileges' => 'Updating the panel’s privileges',
+        'configure_queue_worker' => 'Configuring the queue worker',
         'restart_services' => 'Restarting services',
         'maintenance_off' => 'Leaving maintenance mode',
         'health_check' => 'Verifying the new version',
@@ -58,6 +59,7 @@ return [
         'verify' => 'The updated panel did not answer correctly, so the previous release was restored.',
         'prune' => 'The old releases could not be removed.',
         'sync_privileges' => 'The panel’s privileges could not be updated.',
+        'configure_queue_worker' => 'The queue worker could not be configured.',
         'record_firewall_defaults' => 'The firewall defaults could not be recorded.',
         'resync_fail2ban' => 'The fail2ban configuration could not be resynced.',
         'refresh_npm_catalogue' => 'The npm catalogue could not be refreshed.',
@@ -89,6 +91,8 @@ return [
      * `migrate` can carry the `:migrated` suffix.
      */
     'reason_migrated' => 'The database changes had already been applied and cannot be undone: the code is back on the previous version but the schema is not. The backup taken beforehand is in storage/app/panel-backups.',
+    'reason_db_restored' => 'The database was put back to how it was before the update. Its state at the failure is kept in storage/app/panel-backups (the file ending in -failed.sqlite).',
+    'reason_db_not_restored' => 'The database may have been changed by the update and was NOT restored automatically. The backup taken beforehand is in storage/app/panel-backups; restore it before trying again.',
 
     'errors' => [
         'in_progress' => 'An update is already running.',

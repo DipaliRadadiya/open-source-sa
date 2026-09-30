@@ -26,9 +26,20 @@
  * how it cases a word.
  */
 export function firewallState(enabled, policy) {
+  // Unread is not off: "off" offers "Turn on", and a firewall the panel cannot
+  // read needs fixing on the server first.
+  if (enabled === null || enabled === undefined) return "unknown";
   if (!enabled) return "off";
 
   const incoming = typeof policy?.incoming === "string" ? policy.incoming.trim().toLowerCase() : null;
 
   return incoming === "allow" ? "exposed" : "on";
+}
+
+// What deleting a rule changes today. A Block rule going lets traffic in, not
+// out, and a switched-off rule is not being enforced at all.
+export function deleteRuleBodyKey(firewallOn, rule) {
+  if (!firewallOn) return "rules.confirmBodyOff";
+  if (rule?.enabled === false) return "rules.confirmBodyRuleOff";
+  return rule?.action === "deny" ? "rules.confirmBodyOnDeny" : "rules.confirmBodyOn";
 }

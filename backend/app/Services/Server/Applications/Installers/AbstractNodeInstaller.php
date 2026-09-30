@@ -12,6 +12,7 @@ use App\Services\Server\Php\RuntimeOwnership;
 use App\Services\Server\Runtimes\NodeRuntime;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use Illuminate\Support\Str;
 
 /**
  * Shared machinery for the one-click Node applications.
@@ -81,6 +82,21 @@ abstract class AbstractNodeInstaller extends AbstractSiteInstaller
     }
 
     /**
+     * npm 12 blocks every dependency's install scripts unless the project's
+     * package.json lists it under `allowScripts`, and it does so silently:
+     * the install "succeeds" and ends with a line saying what it skipped. No
+     * app the panel installs has that field, so a native module never gets
+     * built — n8n installed on a server whose npm had been updated from the
+     * Node screen crashed at start with "SQLite package has not been found".
+     *
+     * These installs are the panel's own, of packages it chose, and npm 11
+     * and older ran their scripts unconditionally; this restores exactly
+     * that. npm 11 ignores the variable. A user's own git deploy is not
+     * routed through here and keeps whatever policy its package.json sets.
+     */
+    private const NPM_ENVIRONMENT = ['npm_config_dangerously_allow_all_scripts' => 'true'];
+
+    /**
      * Run a command as the site user with the site's Node first on PATH.
      *
      * `env` rather than a shell: these commands are the panel's own, fixed and
@@ -98,17 +114,22 @@ abstract class AbstractNodeInstaller extends AbstractSiteInstaller
         array $command,
         string $cwd,
         array $environment = [],
+        ?string $input = null,
     ): ServerOpsResult {
         $dir = $this->nodeDir($application);
         $path = ($dir === null ? '' : $dir.':').'/usr/local/bin:/usr/bin:/bin';
 
         $prefix = ['env', "PATH={$path}", 'HOME='.$application->systemUser->home_path];
 
+        foreach (self::NPM_ENVIRONMENT as $key => $value) {
+            $prefix[] = "{$key}={$value}";
+        }
+
         foreach ($environment as $key => $value) {
             $prefix[] = "{$key}={$value}";
         }
 
-        return $this->runAsSiteUser($step, $application, array_merge($prefix, $command), null, $cwd);
+        return $this->runAsSiteUser($step, $application, array_merge($prefix, $command), $input, $cwd);
     }
 
     /**
@@ -153,6 +174,7 @@ abstract class AbstractNodeInstaller extends AbstractSiteInstaller
 
         $script = 'set -a; . '.escapeshellarg($file).'; set +a; '
             .'export PATH='.escapeshellarg($path).':"$PATH"; '
+            .collect(self::NPM_ENVIRONMENT)->map(fn ($value, $key) => 'export '.$key.'='.escapeshellarg($value).'; ')->implode('')
             .'cd '.escapeshellarg($cwd).'; exec '
             .implode(' ', array_map(escapeshellarg(...), $command));
 
@@ -193,8 +215,10 @@ abstract class AbstractNodeInstaller extends AbstractSiteInstaller
      */
     protected function cloneInto(Application $application, string $repository, string $branch, string $documentRoot): void
     {
+        // A name nobody can guess, as downloadAndExtract() uses: this was
+        // `node-{id}`, which a site user could create first.
         $work = rtrim((string) config('server.installer_work_dir', sys_get_temp_dir()), '/')
-            .'/node-'.$application->id;
+            .'/node-'.Str::uuid();
 
         $this->run('download', ['rm', '-rf', $work], $application);
         $this->run('download', [
@@ -204,7 +228,7 @@ abstract class AbstractNodeInstaller extends AbstractSiteInstaller
         // The placeholder would otherwise sit in the web root of an
         // application that never serves files from it.
         $this->run('extract', ['rm', '-f', $documentRoot.'/index.html', $documentRoot.'/index.php'], $application);
-        $this->run('extract', ['cp', '-rT', $work, $documentRoot], $application);
+        $this->copyIntoSite($application, $work, $documentRoot, $work);
         $this->run('extract', ['rm', '-rf', $work], $application);
 
         $this->run('extract', [

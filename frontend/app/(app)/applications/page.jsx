@@ -1,4 +1,5 @@
 import { Globe2 } from "lucide-react";
+import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
@@ -11,6 +12,7 @@ import { ApplicationsTable } from "@/components/applications/applications-table"
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
 import { PageHeader } from "@/components/ui/page-header";
+import { RefreshOnReturn } from "@/components/ui/refresh-on-return";
 import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
@@ -72,6 +74,14 @@ export default async function ApplicationsPage({ searchParams }) {
   const gitProviders = needsGitAccounts
     ? providersByAccountId(await getGitAccounts().then((r) => r.accounts ?? []).catch(() => []))
     : new Map();
+  // A 422 here is the URL, not the server: an old bookmark or a hand-typed
+  // `?status=foo` made the whole list "could not be loaded", and Try again
+  // could never succeed. Drop the filters and sort, keep the search.
+  if (result.failed && result.status === 422 && (sp?.status || sp?.site_type || sp?.sort)) {
+    const kept = new URLSearchParams();
+    if (typeof sp.search === "string" && sp.search) kept.set("search", sp.search);
+    redirect(`/applications${kept.size ? `?${kept}` : ""}`);
+  }
   if (result.failed) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
 
@@ -81,6 +91,7 @@ export default async function ApplicationsPage({ searchParams }) {
   return (
     <div className="space-y-6">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <RefreshOnReturn />
       {/* Opening a site that no longer exists lands here, because the list is
           the only place left to go. Saying so on arrival is what separates a
           redirect from being silently teleported somewhere you did not ask for. */}

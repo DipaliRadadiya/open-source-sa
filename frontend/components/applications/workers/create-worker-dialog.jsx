@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, Cog, ChevronDown, TriangleAlert } from "lucide-react";
 import { Caution } from "@/components/ui/caution";
-import { workerFormSchema, WORKER_FORM_DEFAULTS } from "@/lib/schemas/worker";
+import { workerFormSchemaFor, WORKER_FORM_DEFAULTS } from "@/lib/schemas/worker";
 import { createWorker } from "@/lib/api/workers";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { apiMessage } from "@/lib/api/error-message";
+import { useRefresh } from "@/hooks/use-refresh";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { WorkerAdvancedFields } from "@/components/applications/workers/worker-advanced-fields";
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/form";
 import { WorkerCommandField } from "@/components/applications/workers/worker-command-field";
 import { WorkerKindField } from "@/components/applications/workers/worker-kind-field";
+import { useWorkerSite } from "@/components/applications/workers/worker-site-context";
 
 /**
  * Presets prefill both name and command, but stay a starting point, not a
@@ -38,15 +40,16 @@ import { WorkerKindField } from "@/components/applications/workers/worker-kind-f
  * fields (directory, stop-wait) sit behind a disclosure so the common path is
  * four visible fields: name, command, processes, and the two safety switches.
  */
-export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], workers = [], seed }) {
+export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], workers = [], seed, siteUser = null }) {
   const t = useTranslations("applications.workers");
-  const router = useRouter();
+  const { pending: refreshing, refreshThen } = useRefresh();
   // The server's own "installing supervisor" message, kept on screen until
   // the next attempt. Null when there is nothing to say.
   const [installing, setInstalling] = useState(null);
 
+  const { appRoot } = useWorkerSite();
   const form = useForm({
-    resolver: zodResolver(workerFormSchema),
+    resolver: zodResolver(workerFormSchemaFor(appRoot)),
     defaultValues: WORKER_FORM_DEFAULTS,
   });
 
@@ -93,10 +96,11 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
       name: values.name.trim(),
       command: values.command.trim(),
       directory: values.directory?.trim() || undefined,
+      // Never sent: the worker runs as the application's own user, and an
+      // absent key leaves an existing worker's account as it is.
+      user: undefined,
       // Blank means "no opinion", and the API treats an absent key that way —
-      // sending "" would ask it to store an empty username and an empty log
-      // path, which is not the same request at all.
-      user: values.user?.trim() || undefined,
+      // sending "" would ask it to store an empty log path.
       log_file: values.log_file?.trim() || undefined,
       log_level: values.log_level || undefined,
       extra_config: values.extra_config?.trim() || undefined,
@@ -122,18 +126,33 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
         return;
       }
 
-      toast.success(t("toast.created"));
-      onOpenChange?.(false);
-      router.refresh();
+      // Closed once the list shows the change, not on the API's answer.
+      refreshThen(() => {
+        toast.success(t("toast.created"));
+        onOpenChange?.(false);
+      });
     } catch (error) {
+      // A command that will not start answers 500 with no reason the page can
+      // use, and a bare "Something went wrong" toast left a filled-in form that
+      // looked untouched. Said on the form, with what to check: the server has
+      // already removed the worker it could not start.
+      if (!error.response?.data?.errors && (error.response?.status ?? 0) >= 500) {
+        form.setError("root.server", { message: apiMessage(error, t("create.failed")) });
+        scrollToFirstError();
+        return;
+      }
       // `kind` has no control here either — picking the Horizon preset on a
       // site that already has a queue worker is the exact path to the API's
       // conflict, and it landed nowhere.
       handleValidationError(error, form, { formError: true, unrendered: ["kind"] });
+      // The dialog scrolls; the reason can land above or below what is on screen.
+      scrollToFirstError();
     }
   }
 
-  const isSubmitting = form.formState.isSubmitting;
+  // Stays busy through the list's re-read, so the button cannot be pressed
+  // twice while the dialog is still open over a saved worker.
+  const isSubmitting = form.formState.isSubmitting || refreshing;
   const serverError = form.formState.errors.root?.server?.message;
 
   function handleOpenChange(next) {
@@ -178,6 +197,7 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
         {serverError ? (
           <p
             role="alert"
+            data-form-error
             className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm leading-relaxed text-destructive"
           >
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />
@@ -288,7 +308,7 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-4 pt-3">
-            <WorkerAdvancedFields form={form} />
+            <WorkerAdvancedFields form={form} runsAs={siteUser} />
           </CollapsibleContent>
         </Collapsible>
       </FormModal>

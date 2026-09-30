@@ -351,10 +351,13 @@ it('lists, shows, updates and deletes an application', function () {
     $this->withHeaders(appHeaders())->getJson("/api/applications/{$app->id}")
         ->assertOk()->assertJsonPath('application.name', 'Site');
 
-    // A partial settings update must not wipe what it didn't mention.
+    // A partial settings update must not wipe what it didn't mention. This
+    // used to send `name` as well; the name is immutable now, so the update
+    // it demonstrates is the settings merge — see
+    // {@see \App\Http\Requests\Server\Application\UpdateApplicationRequest}.
     $this->withHeaders(appHeaders())->putJson("/api/applications/{$app->id}", [
-        'name' => 'Renamed', 'settings' => ['b' => 2],
-    ])->assertOk()->assertJsonPath('application.name', 'Renamed');
+        'settings' => ['b' => 2],
+    ])->assertOk()->assertJsonPath('application.name', 'Site');
 
     expect($app->fresh()->settings)->toBe(['a' => 1, 'b' => 2]);
 
@@ -494,6 +497,8 @@ describe('node version constraints', function () {
             'name' => 'Flows',
             'domain' => 'flows.example.com',
             'system_user_id' => test()->su->id,
+            'admin_email' => 'owner@example.com',
+            'admin_password' => 'Flows-Pass-2026',
             'node_version' => '25',
         ])->assertStatus(422)->assertJsonValidationErrors('node_version');
     });
@@ -515,6 +520,8 @@ describe('node version constraints', function () {
             'name' => 'Flows',
             'domain' => 'flows.example.com',
             'system_user_id' => test()->su->id,
+            'admin_email' => 'owner@example.com',
+            'admin_password' => 'Flows-Pass-2026',
             'node_version' => '25',
         ])->assertCreated();
     });
@@ -534,6 +541,8 @@ describe('node version constraints', function () {
             'name' => 'Flows',
             'domain' => 'flows.example.com',
             'system_user_id' => test()->su->id,
+            'admin_email' => 'owner@example.com',
+            'admin_password' => 'Flows-Pass-2026',
             'node_version' => '22',
         ])->assertStatus(422)->assertJsonValidationErrors('node_version');
     });
@@ -548,6 +557,8 @@ describe('node version constraints', function () {
             'name' => 'Flows',
             'domain' => 'flows.example.com',
             'system_user_id' => test()->su->id,
+            'admin_email' => 'owner@example.com',
+            'admin_password' => 'Flows-Pass-2026',
             'node_version' => '24.7.0',
         ])->assertCreated();
     });

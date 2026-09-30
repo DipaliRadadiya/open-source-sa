@@ -5,12 +5,15 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getApplication, getSiteTypes } from "@/lib/applications/get-applications";
 import { getStorageDestinations } from "@/lib/storage/get-storage";
-import { getActiveRestore, getBackupTarget, getBackups } from "@/lib/backups/get-backups";
+import { cookies } from "next/headers";
+import { getActiveRestore, getBackupTarget, getBackupTargetOptions, getBackups } from "@/lib/backups/get-backups";
+import { DISMISSED_RESTORES_COOKIE, parseDismissedRestores } from "@/lib/backups/dismissed-restores";
 import { getDatabaseCounts, getApplicationDatabases, getEngines, getUnattachedDatabases } from "@/lib/databases/get-databases";
 import { siteNeedsDatabase } from "@/lib/backups/database-availability";
 import { BackupsPanel } from "@/components/applications/backups/backups-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PermissionDenied } from "@/components/sections/permission-denied";
+import { isSettled } from "@/lib/applications/settled";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +56,7 @@ export default async function ApplicationBackupsPage({ params }) {
   const canRestore = can(permissions, "backup", "manage");
   // Attaching is a server-level database grant, not this site's backup grant.
   const canManageDatabases = can(permissions, "database", "manage");
-  const settled = application.status === "active";
+  const settled = isSettled(application);
 
   // A site still provisioning has nothing to back up and no directory to point
   // at — offering the form would be offering a save that cannot work.
@@ -66,7 +69,7 @@ export default async function ApplicationBackupsPage({ params }) {
    * dropped `failed` entirely, so an unanswered request rendered as
    * "No backups have run for this site yet."
    */
-  const [{ target }, { destinations }, { backups, meta, failed: backupsFailed }, activeRestore, databases, siteDbs, spareDbs, engineList, siteTypes] = await Promise.all([
+  const [{ target }, { destinations }, { backups, meta, failed: backupsFailed, status: backupsStatus }, activeRestore, databases, siteDbs, spareDbs, engineList, siteTypes, { options: backupOptions }] = await Promise.all([
     settled ? getBackupTarget(id) : Promise.resolve({ target: null }),
     getStorageDestinations(),
     settled
@@ -74,7 +77,11 @@ export default async function ApplicationBackupsPage({ params }) {
       : Promise.resolve({ backups: [], meta: { total: 0 } }),
     // Seeded from the server so a reload — or a colleague's browser — still
     // shows a restore that is rewriting this site right now.
-    settled && canRestore ? getActiveRestore(id) : Promise.resolve(null),
+    settled && canRestore
+      ? getActiveRestore(id, {
+          dismissed: parseDismissedRestores((await cookies()).get(DISMISSED_RESTORES_COOKIE)?.value),
+        })
+      : Promise.resolve(null),
     // Only to tell the form whether a database backup of this site would hold
     // anything. A failure here leaves it unknown, and unknown says nothing.
     settled ? getDatabaseCounts() : Promise.resolve({ counts: null, known: false }),
@@ -90,6 +97,9 @@ export default async function ApplicationBackupsPage({ params }) {
     settled && canManageDatabases
       ? getSiteTypes().catch(() => ({ siteTypes: [] }))
       : Promise.resolve({ siteTypes: [] }),
+    // The settings form's choices, and which picker each frequency uses — the
+    // card needs the latter to print an hourly schedule as a minute.
+    settled ? getBackupTargetOptions() : Promise.resolve({ options: null }),
   ]);
 
   // Only a site type that declares it needs one. A blank PHP or static site
@@ -115,17 +125,21 @@ export default async function ApplicationBackupsPage({ params }) {
           backups={backups}
           total={meta.total}
           backupsFailed={backupsFailed}
+          backupsForbidden={backupsFailed && backupsStatus === 403}
           siteDatabasesKnown={!siteDbs.failed}
           databaseCounts={databases.counts}
           databasesKnown={databases.known}
+          siteTypes={siteTypes.siteTypes}
           activeRestore={activeRestore}
           canManage={canManage}
           canRestore={canRestore}
+          canTurnOff={canRestore}
           siteDatabases={siteDbs.databases}
           unattachedDatabases={spareDbs.databases}
           engines={engineList.engines}
           needsDatabase={needsDatabase}
           canManageDatabases={canManageDatabases}
+          backupOptions={backupOptions}
         />
       )}
     </div>

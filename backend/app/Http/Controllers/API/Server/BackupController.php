@@ -7,6 +7,7 @@ use App\Actions\Server\Backup\DeleteBackups;
 use App\Actions\Server\Backup\DeleteBackupTarget;
 use App\Actions\Server\Backup\SaveBackupTarget;
 use App\Enums\BackupStatus;
+use App\Enums\BackupType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Backup\BulkDeleteBackupsRequest;
 use App\Http\Requests\Server\Backup\IndexBackupsRequest;
@@ -19,6 +20,7 @@ use App\Jobs\RunBackup;
 use App\Models\Application;
 use App\Models\Backup;
 use App\Models\BackupTarget;
+use App\Models\Restore;
 use App\Services\ActivityLogger;
 use App\Services\Server\Backups\StaleBackupReaper;
 use App\Services\Server\Backups\Storage\DestinationDisk;
@@ -87,6 +89,35 @@ class BackupController extends Controller
                     'failed' => (clone $baseQuery)->where('status', BackupStatus::Failed->value)->count(),
                 ],
             ],
+        ]);
+    }
+
+    /**
+     * What the backup settings form offers, so the frontend holds no list of
+     * its own.
+     *
+     * Built from the same constants the save validation uses, so a value this
+     * offers is one the API accepts and the reverse. Labels and hints come back
+     * translated. `time` says which picker a frequency needs: `minute` for
+     * hourly, `time` for the rest, null for manual.
+     */
+    public function options(): JsonResponse
+    {
+        return response()->json([
+            'frequencies' => array_map(fn (string $frequency): array => [
+                'value' => $frequency,
+                'label' => __('backup.frequency.'.$frequency),
+                'time' => BackupTarget::timeUsage($frequency),
+                'hint' => __('backup.frequency_hint.'.$frequency),
+            ], BackupTarget::FREQUENCIES),
+            'default_frequency' => 'daily',
+            'types' => array_map(fn (BackupType $type): array => [
+                'value' => $type->value,
+                'label' => __('backup.type.'.$type->value),
+            ], BackupType::cases()),
+            'retention' => ['min' => BackupTarget::RETENTION_MIN, 'max' => BackupTarget::RETENTION_MAX],
+            // The clock `schedule_time` is read in. See BackupTarget::scheduleTimezone().
+            'timezone' => (new BackupTarget)->scheduleTimezone(),
         ]);
     }
 
@@ -251,6 +282,12 @@ class BackupController extends Controller
         // Reaps abandoned rows before answering. Without this a run stranded by
         // a killed worker blocks the site forever: it is in flight by status
         // and gone in fact, and nothing else ever revisits it.
+        if (Restore::inProgressFor($target->application_id)) {
+            throw ValidationException::withMessages([
+                'application' => [__('backup.errors.restore_already_running')],
+            ]);
+        }
+
         if ($reaper->hasLiveRun($target)) {
             // Two archives of the same site at once would compete for the same
             // disk and the same lock. The job is unique per target as well;
@@ -416,6 +453,12 @@ class BackupController extends Controller
         if ($target === null) {
             throw ValidationException::withMessages([
                 'backup' => [__('backup.errors.retry_no_target')],
+            ]);
+        }
+
+        if (Restore::inProgressFor($target->application_id)) {
+            throw ValidationException::withMessages([
+                'application' => [__('backup.errors.restore_already_running')],
             ]);
         }
 

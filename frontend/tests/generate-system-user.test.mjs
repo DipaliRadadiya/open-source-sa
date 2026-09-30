@@ -18,28 +18,24 @@ test("generating is the default", () => {
   assert.match(schema, /generate_system_user: z\.boolean\(\)\.default\(true\)/);
 });
 
-test("the payload carries one answer, never both", () => {
-  // The API refuses a body with a generate flag and an id together: a client
-  // that sends both has not decided, and choosing for it is how a site ends up
-  // owned by an account nobody picked.
-  assert.match(
-    form,
-    /\.\.\.\(values\.generate_system_user\s*\?\s*\{ generate_system_user: true \}\s*:\s*\{ system_user_id: Number\(values\.system_user_id\) \}\)/,
-  );
+test("a generated user is created with the shown name and password, then used by id", () => {
+  // Krishna 2026-09-29: the name and password are shown and editable, which
+  // `generate_system_user` cannot carry — it picks its own name, sets no password.
+  assert.match(form, /createSystemUser\(\{\s*username: values\.system_user_username,\s*\.\.\.\(values\.system_user_password \? \{ password: values\.system_user_password \} : \{\}\)/);
+  assert.match(form, /payload\.system_user_id = newUser\?\.id;/);
+  assert.doesNotMatch(form, /generate_system_user: true/);
+  // A refused application leaves no account behind.
+  assert.match(form, /if \(newUser\?\.id\) \{\s*const removed = await deleteSystemUser\(newUser\.id\)/);
 });
-
 test("switching into generate mode clears any id already chosen", () => {
   // Otherwise a stale id rides along beside the flag and the API 422s.
   assert.match(form, /if \(choice\.generate\) \{\s*form\.setValue\("system_user_id", ""/);
 });
 
-test("the picker is hidden while generating", () => {
-  // Nothing to pick between, and the Create link would open a dialog whose
-  // result the form would then ignore.
+test("the picker is hidden while generating, and there is no second create-user action", () => {
   assert.match(form, /\{generateSystemUser \? null : \(/);
-  assert.match(form, /canCreateSystemUser && !generateSystemUser \?/);
+  assert.doesNotMatch(form, /CreateSystemUserDialog|form\.createSystemUser/);
 });
-
 test("the choice is not offered without permission", () => {
   // One possible answer means no choice to present; a disabled radio pair
   // would be two controls saying so.
@@ -50,13 +46,15 @@ test("the choice is not offered without permission", () => {
   assert.match(form, /\{canCreateSystemUser \? \(\s*<div className="grid gap-/);
 });
 
-test("the review row reads as answered when generating", () => {
-  // The name does not exist yet, so a blank would look like something still to
-  // fill in rather than a decision already made.
-  assert.match(form, /ready: generateSystemUser \|\| Boolean\(systemUserId\)/);
-  assert.match(form, /t\("form\.systemUserWillBeCreated"\)/);
+test("the review row names the user that will be created", () => {
+  assert.match(form, /ready: generateSystemUser \? Boolean\(newUsername\) : Boolean\(systemUserId\)/);
+  assert.match(form, /t\("form\.systemUserNew", \{ username: newUsername \}\)/);
 });
 
+test("the new user's name and password are validated like System Users does", () => {
+  assert.match(schema, /\["system_user_username", usernameField,/);
+  assert.match(schema, /\["system_user_password", passwordField,/);
+});
 test("an existing user is still required when not generating", () => {
   assert.match(schema, /if \(!values\.generate_system_user && !values\.system_user_id\)/);
   // The message has to land on system_user_id — that is where the control is,
@@ -70,7 +68,11 @@ test("every string exists in every locale", () => {
     "generateSystemUserHint",
     "pickSystemUser",
     "pickSystemUserHint",
-    "systemUserWillBeCreated",
+    "systemUserNew",
+    "systemUserUsername",
+    "systemUserPassword",
+    "systemUserPasswordHint",
+    "systemUserCreateFailed",
   ];
 
   for (const locale of locales) {
@@ -81,4 +83,20 @@ test("every string exists in every locale", () => {
       assert.ok(value.length > 0, `${locale}: form.${key} must not be empty`);
     }
   }
+});
+
+test("a second click while creating does not create the user twice", () => {
+  assert.match(form, /if \(submitting\.current\) return;\s*submitting\.current = true;/);
+});
+
+test("a user that could not be removed after a refused application is reported and offered", () => {
+  assert.match(form, /if \(!removed\) \{\s*toast\.warning\(t\("form\.systemUserLeftBehind", \{ username: newUser\.username \}\)[\s\S]{0,60}router\.refresh\(\);/);
+  for (const locale of locales) {
+    const value = JSON.parse(read(`messages/${locale}.json`)).applications.form.systemUserLeftBehind;
+    assert.match(value, /\{username\}/, locale);
+  }
+});
+
+test("the review row takes you to the Username field while generating", () => {
+  assert.match(form, /target: generateSystemUser \? "system_user_username" : "system_user_id"/);
 });

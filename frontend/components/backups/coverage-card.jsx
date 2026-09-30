@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { Clock, SearchX, ShieldAlert, ShieldCheck } from "lucide-react";
 import { BACKUP_IN_FLIGHT, BACKUP_TYPES } from "@/lib/schemas/backup";
 import { runBackupNow } from "@/lib/api/backups";
+import { backupStartedWithin } from "@/lib/backups/just-started";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
@@ -40,6 +41,8 @@ export function CoverageCard({
   canManage,
   databaseCounts = null,
   databasesKnown = false,
+  siteTypes = null,
+  backupOptions = null,
 }) {
   const t = useTranslations("backups.coverage");
   const tc = useTranslations("common");
@@ -52,7 +55,10 @@ export function CoverageCard({
   // Set when "Run backup" is pressed, so the poller can cover the gap between
   // accepting the run and the row showing it. A timer clears it rather than a
   // comparison against `Date.now()`, which would make the render impure.
-  const [justStarted, setJustStarted] = useState(false);
+  // Also true when this card has just replaced the empty state, whose "Back up
+  // now" started a run these rows do not show yet. Only an invisible poller
+  // depends on it, so a server/client difference changes no markup.
+  const [justStarted, setJustStarted] = useState(() => backupStartedWithin(JUST_STARTED_MS));
 
   const [state, setState] = useState("all");
   const [search, setSearch] = useState("");
@@ -113,7 +119,7 @@ export function CoverageCard({
     return () => clearTimeout(id);
   }, [justStarted]);
 
-  const listProps = { rows, canManage, onSetUp: openSetup, onBackUpNow: backUpNow, busyIds: starting.pendingKeys };
+  const listProps = { rows, options: backupOptions, canManage, onSetUp: openSetup, onBackUpNow: backUpNow, busyIds: starting.pendingKeys };
 
   /*
    * The clock the Schedule column's hours are in.
@@ -217,6 +223,7 @@ export function CoverageCard({
             value={type}
             onChange={setType}
             allLabel={t("filters.anyType")}
+            label={t("columns.type")}
             options={BACKUP_TYPES.map((value) => ({ value, label: t(`types.${value}`) }))}
             className="w-full sm:w-48"
           />
@@ -265,11 +272,17 @@ export function CoverageCard({
                 {t("timesShownIn", { timezone: scheduleTimezone })}
               </p>
             ) : null}
-            <div className="lg:hidden">
-              <CoverageCards {...listProps} />
-            </div>
-            <div className="hidden lg:block">
-              <CoverageTable {...listProps} />
+            {/* By the room the table actually has, not the viewport: it needs
+                1,035px in English and 1,179px in French (measured), and at 1280
+                beside the sidebar it got 958 — the Run button sat off-screen
+                behind a sideways scroll. Cards until the widest locale fits. */}
+            <div className="@container">
+              <div className="@min-[1180px]:hidden">
+                <CoverageCards {...listProps} />
+              </div>
+              <div className="hidden @min-[1180px]:block">
+                <CoverageTable {...listProps} />
+              </div>
             </div>
           </>
         )}
@@ -283,6 +296,9 @@ export function CoverageCard({
         applicationId={setupFor}
         databaseCounts={databaseCounts}
         databasesKnown={databasesKnown}
+        siteTypes={siteTypes}
+        options={backupOptions}
+        onStarted={() => setJustStarted(true)}
       />
     </>
   );

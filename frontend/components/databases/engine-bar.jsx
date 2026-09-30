@@ -83,6 +83,15 @@ export function EngineBar({ engines = [], canManage, summary }) {
   const failed = list.filter(
     (engine) => !engine.running && engine.install_status === "failed",
   );
+  // Installed but not answering (stopped service, broken socket). It used to
+  // get no tile at all beside a running engine, so its databases were listed
+  // with nothing saying none of them could be reached.
+  const stopped = list.filter(
+    (engine) =>
+      engine.installed &&
+      !engine.running &&
+      !["installing", "failed"].includes(engine.install_status),
+  );
 
   // Recovery wins over a fresh choice. Previously failed engines were excluded
   // by `!engine.install_status`, so Retry vanished permanently whenever another
@@ -144,6 +153,25 @@ export function EngineBar({ engines = [], canManage, summary }) {
               <Loader2 className="size-3 animate-spin" />
               {t("install.installing")}
             </Badge>
+          </span>
+        ))}
+
+        {stopped.map((engine) => (
+          <span
+            key={engine.engine}
+            className="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/5 px-2.5 py-1.5"
+          >
+            <EngineMark engine={engine.engine} t={t} />
+            <Badge variant="warning" className="font-normal">
+              <TriangleAlert className="size-3" />
+              {t("engineList.unreachable")}
+            </Badge>
+            <Link
+              href="/services"
+              className="text-xs font-medium whitespace-nowrap underline underline-offset-2"
+            >
+              {t("status.checkServices")}
+            </Link>
           </span>
         ))}
 

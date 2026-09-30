@@ -391,6 +391,44 @@ describe('the endpoint itself', function () {
         expect($disabled->status())->toBe(404);
         expect($unknown->status())->toBe(404);
     });
+
+    it('tells the provider itself that deploy-on-push is switched off', function () {
+        // The hook stays in the repository when it is switched off in the
+        // panel (the user's own, or one the token could not delete), and the
+        // provider's delivery log said "not found". An authentic delivery is
+        // now told why, so the user reading that log knows what to do.
+        Queue::fake();
+        $app = hookedApp('github');
+        $app->forceFill(['webhook_enabled' => false])->save();
+        $body = pushBody();
+
+        deliver($app, $body, [
+            'X-GitHub-Event' => 'push',
+            'X-Hub-Signature-256' => 'sha256='.hash_hmac('sha256', $body, (string) $app->webhook_secret),
+        ])
+            ->assertStatus(410)
+            ->assertJsonPath('deployed', false)
+            ->assertJsonPath('reason', 'webhook_disabled')
+            ->assertJsonPath('message', __('application.webhook_delivery.disabled'));
+
+        Queue::assertNothingPushed();
+        expect($app->deployments()->count())->toBe(0);
+    });
+
+    it('still answers a forged delivery to a switched-off site exactly like an unknown one', function () {
+        $app = hookedApp('github');
+        $app->forceFill(['webhook_enabled' => false])->save();
+        $body = pushBody();
+
+        $forged = deliver($app, $body, [
+            'X-GitHub-Event' => 'push',
+            'X-Hub-Signature-256' => 'sha256='.hash_hmac('sha256', $body, 'not-the-secret-at-all-000'),
+        ]);
+        $unknown = test()->call('POST', '/api/webhooks/deploy/no-such-identifier', [], [], [], [], $body);
+
+        expect($forged->status())->toBe(404)
+            ->and($forged->json())->toBe($unknown->json());
+    });
 });
 
 describe('configuring it', function () {

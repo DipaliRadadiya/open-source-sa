@@ -41,8 +41,8 @@ test("the token is posted, never put in a URL", () => {
   // A token in a query string is written to the site's access log, the
   // browser's history and any outbound Referer — and this one buys a full
   // administrator session. The legacy product put it in the URL.
-  assert.match(tabs, /form\.method = "POST"/);
-  assert.match(tabs, /field\.name = "sv_magic_login"/);
+  assert.match(newTab, /form\.method = "POST"/);
+  assert.match(tabs, /postInNewTab\(session\.url, \{ sv_magic_login: session\.token \}\)/);
   assert.doesNotMatch(code(tabs), /sv_magic_login=/);
   assert.doesNotMatch(code(tabs), /\?.*token/i);
   // And no caller may reach for the URL form instead.
@@ -54,17 +54,17 @@ test("the token is posted, never put in a URL", () => {
 test("the form is built through the DOM, not written as HTML", () => {
   // Interpolating the token and the site URL into markup is injection-shaped.
   // "The token is alphanumeric" stops being true the day the format changes.
-  assert.match(tabs, /createElement\("form"\)/);
-  assert.match(tabs, /createElement\("input"\)/);
-  assert.doesNotMatch(tabs, /document\.write/);
-  assert.doesNotMatch(tabs, /innerHTML/);
+  assert.match(newTab, /createElement\("form"\)/);
+  assert.match(newTab, /createElement\("input"\)/);
+  assert.doesNotMatch(newTab, /document\.write/);
+  assert.doesNotMatch(newTab, /innerHTML/);
 });
 
 test("the opened tab cannot reach back into the panel", () => {
   // `noopener` in the feature string would make window.open return null and
   // cost us the handle the form needs, so the opener is severed by hand.
   assert.match(newTab, /tab\.opener = null/);
-  assert.doesNotMatch(tabs, /window\.open\([^)]*noopener/);
+  assert.match(newTab, /form\.rel = "noopener"/);
 });
 
 test("the button is gated by the permission, not by a hardcoded site type", () => {
@@ -113,34 +113,36 @@ test("one administrator signs straight in; none or several still pick", () => {
    */
   assert.match(hook, /if \(admins\.length === 1\)/);
   assert.match(hook, /createMagicLogin\(appId, admins\[0\]\.id\)/);
-  assert.match(hook, /submitMagicLogin\(tab, session\)/);
+  assert.match(hook, /launchMagicLogin\(session, t\)/);
   assert.match(dialog, /admins\.length === 0 \?/);
 });
 
-test("the tab is opened before anything is awaited", () => {
+test("the button says which wait it is: fetching users, then signing in (Krishna, 2026-09-29)", () => {
+  assert.match(hook, /setPhase\("fetching"\);\s*try \{\s*const admins = await getWordPressAdministrators/);
+  assert.match(hook, /if \(admins\.length === 1\) \{\s*setPhase\("signing"\);/);
+});
+
+test("no tab opens until the login link exists (Krishna, 2026-09-29)", () => {
   /*
-   * `window.open` is allowed by the user gesture, and an await spends it. The
-   * old flow minted the token FIRST and opened afterwards, which made the
-   * "popup blocked" path reachable on an ordinary click rather than only for
-   * people who had actually blocked popups — and adding the administrator
-   * lookup in front of it would have made that worse, not better.
-   *
-   * So in both paths the open must come before the first await.
+   * The old flow opened about:blank on the click and held it through the
+   * WP-CLI round trip — a blank page for seconds, and with several
+   * administrators it was closed again to show the picker. Now the button
+   * carries the wait and the tab opens straight onto WordPress.
    */
   for (const [name, source] of [["hook", hook], ["dialog", dialog]]) {
     const body = code(source);
-    const opened = body.indexOf("openBlankTab()");
-    const awaited = body.indexOf("await ");
-    assert.ok(opened > -1, `${name} no longer opens a tab`);
-    assert.ok(
-      opened < awaited,
-      `${name} awaits before opening the tab, so the browser may block it`,
-    );
+    assert.doesNotMatch(body, /openBlankTab|paintPlaceholder|discardTab/, `${name} still opens a blank tab`);
+    assert.ok(body.lastIndexOf("launchMagicLogin(session, t)") > body.indexOf("await createMagicLogin"), `${name} opens before the link is ready`);
   }
-
-  // A tab we are not going to use is never left behind — beside a picker it
-  // reads as a login that half-happened.
-  assert.match(hook, /discardTab\(tab\)/);
+  // When the browser no longer counts the click as permission, a button that
+  // is a fresh click — never a silent failure.
+  assert.match(hook, /if \(openMagicLogin\(session\)\) return;[\s\S]{0,200}action: \{\s*label: t\("openAdmin"\)/);
+  // Krishna 2026-09-29 (second report): not even an empty tab filled in later —
+  // the form posts straight into a new tab.
+  assert.match(newTab, /form\.target = "_blank"/);
+  assert.doesNotMatch(newTab, /window\.open\(""/);
+  // The token still goes by POST, never in a URL.
+  assert.match(read("lib/applications/magic-login-window.js"), /return postInNewTab\(session\.url, \{ sv_magic_login: session\.token \}\);/);
 });
 
 test("a permission with no url is kept out of the sidebar", () => {
@@ -157,7 +159,7 @@ test("every string exists in every locale", () => {
     // "loading" is gone: the dialog no longer waits for the list — it arrives
     // already fetched, and the spinner moved to the button that fetched it.
     "action", "title", "subtitle", "signIn", "cancel", "none",
-    "listFailed", "failed", "popupBlocked", "redirecting", "auditNote",
+    "listFailed", "failed", "popupBlocked", "redirecting", "auditNote", "linkReady", "openAdmin", "fetchingUsers",
   ];
 
   for (const locale of locales) {

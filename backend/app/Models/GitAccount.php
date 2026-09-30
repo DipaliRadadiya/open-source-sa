@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * A connected git provider account. The token is encrypted at rest and is
@@ -23,6 +24,14 @@ class GitAccount extends Model
             'scopes' => 'array',
             'last_verified_at' => 'datetime',
         ];
+    }
+
+    /**
+     * The sites that deploy with this account's token.
+     */
+    public function applications(): HasMany
+    {
+        return $this->hasMany(Application::class);
     }
 
     /**

@@ -30,6 +30,16 @@ class RiskyPorts
                 continue;
             }
 
+            $installed = $this->databases->engine($engine)->available();
+
+            // MySQL and MariaDB share 3306. Whichever came last in the engine
+            // list used to win, so a MySQL server was warned about "mariadb
+            // (not installed)" for the port MySQL was listening on. The one
+            // that is installed names the port; the other never replaces it.
+            if (isset($risky[$port]) && $risky[$port]['installed'] && ! $installed) {
+                continue;
+            }
+
             $risky[$port] = [
                 'port' => $port,
                 'label' => $engine,
@@ -37,7 +47,7 @@ class RiskyPorts
                 // Whether it is actually here. An engine that isn't installed
                 // is still worth warning about — the port could be opened for
                 // one that gets installed later — but the wording differs.
-                'installed' => $this->databases->engine($engine)->available(),
+                'installed' => $installed,
             ];
         }
 

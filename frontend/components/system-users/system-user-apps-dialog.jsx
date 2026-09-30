@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Globe } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +12,7 @@ function statusVariant(status) {
   const s = (status ?? "").toLowerCase();
   if (/(active|running|online|live|deployed)/.test(s)) return "success";
   if (/(stop|error|fail|offline|down|inactive)/.test(s)) return "destructive";
-  return "secondary";
+  return "muted";
 }
 
 export function SystemUserAppsDialog({ user, open, onOpenChange }) {
@@ -45,6 +46,10 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
   }
 
   const skeletonCount = Math.max(minimal.length, 2);
+  // The names are already in the list row, so they show at once; only the
+  // domain and status wait for the detail request (1–4 s on a real server).
+  const loading = apps === null;
+  const shown = apps ?? minimal;
 
   return (
     <FormModal
@@ -63,7 +68,7 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
         </Button>
       }
     >
-      {apps === null ? (
+      {loading && shown.length === 0 ? (
             <ul className="grid gap-2 sm:grid-cols-2">
               {Array.from({ length: skeletonCount }).map((_, i) => (
                 <li
@@ -78,36 +83,42 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
                 </li>
               ))}
             </ul>
-          ) : apps.length === 0 ? (
+          ) : shown.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               {t("detail.noApplications")}
             </p>
           ) : (
             <ul className="grid gap-2 sm:grid-cols-2">
-              {apps.map((app) => (
-                <li
-                  key={app.id}
-                  className="flex items-center justify-between gap-2 rounded-lg border p-3"
-                >
-                  <div className="flex min-w-0 items-start gap-2.5">
-                    <Globe className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium" title={app.name}>{app.name}</p>
-                      {app.domain ? (
-                        <p className="truncate text-xs text-muted-foreground">
-                          {app.domain}
-                        </p>
-                      ) : null}
+              {shown.map((app) => (
+                <li key={app.id}>
+                  <Link
+                    href={`/applications/${app.id}`}
+                    prefetch={false}
+                    onClick={() => handleOpenChange(false)}
+                    className="flex items-center justify-between gap-2 rounded-lg border p-3 outline-none transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/50"
+                  >
+                    <div className="flex min-w-0 items-start gap-2.5">
+                      <Globe className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium" title={app.name}>{app.name}</p>
+                        {app.domain ? (
+                          <p className="truncate text-xs text-muted-foreground">
+                            {app.domain}
+                          </p>
+                        ) : loading ? (
+                          <Skeleton className="mt-1.5 h-3 w-28" />
+                        ) : null}
+                      </div>
                     </div>
-                  </div>
-                  {app.status ? (
-                    <Badge
-                      variant={statusVariant(app.status)}
-                      className="shrink-0 font-normal capitalize"
-                    >
-                      {app.status}
-                    </Badge>
-                  ) : null}
+                    {app.status ? (
+                      <Badge
+                        variant={statusVariant(app.status)}
+                        className="shrink-0 font-normal capitalize"
+                      >
+                        {app.status}
+                      </Badge>
+                    ) : null}
+                  </Link>
                 </li>
               ))}
             </ul>

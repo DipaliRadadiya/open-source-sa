@@ -84,6 +84,12 @@ errorlog $VH_ROOT/logs/error.log {
 
 accesslog $VH_ROOT/logs/access.log {
   useServer               0
+@if ($waf && $waf['mode'] === 'detect')
+  {{-- OLS allows one access log per site, so detect mode marks the lines
+       here (`waf=1`) instead of writing waf-detect.log; the log screen
+       filters on it. Combined format otherwise, as OLS writes by default. --}}
+  logFormat               %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i" waf=%{waf_would}e
+@endif
   rollingSize             10M
   keepDays                30
 }
@@ -109,7 +115,10 @@ index {
      LiteSpeed Cache needs it. But the reason is preference, not incapability,
      so do not let this comment talk you out of an fcgi handler where one is
      warranted. --}}
-extprocessor lsphp{{ $lsphpVersion }} {
+{{-- Named for this site, never just `lsphp84`: OpenLiteSpeed keeps one
+     external app per name, so a name every vhost shares runs every site's PHP
+     as whichever site was loaded first. See `processorName` in OlsDriver. --}}
+extprocessor {{ $processorName }} {
   type                    lsapi
   address                 uds://tmp/lshttpd/lsphp{{ $lsphpVersion }}-{{ $socketName }}.sock
   maxConns                {{ $lsapiChildren }}
@@ -161,7 +170,7 @@ extprocessor lsphp{{ $lsphpVersion }} {
 }
 
 scripthandler {
-  add                     lsapi:lsphp{{ $lsphpVersion }} php
+  add                     lsapi:{{ $processorName }} php
 }
 
 {{-- The front-controller rewrite lives here rather than in .htaccess. OLS only
@@ -189,6 +198,38 @@ rewrite {
   RewriteCond %{HTTPS} =on
   RewriteRule ^ - [F,L]
 @endif
+@if ($waf)
+  {{-- 8G Firewall, before the bot block and everything else. Each category
+       and custom rule marks the request (`waf_block`); an exception marks it
+       too (`waf_exception`); one rule at the end blocks — or, in detect mode,
+       only marks it for the access log — when it is blocked and not excepted.
+       Conditions are printed raw: they are already escaped for this syntax
+       (OlsDriver::wafPattern, and the 8G file's own patterns). --}}
+@foreach ($waf['exceptions'] as $exception)
+  RewriteCond %{REQUEST_URI} {!! $exception !!} [NC,OR]
+  RewriteCond %{QUERY_STRING} {!! $exception !!} [NC,OR]
+  RewriteCond %{HTTP_USER_AGENT} {!! $exception !!} [NC]
+  RewriteRule ^ - [E=waf_exception:1]
+@endforeach
+@foreach ($wafRules as $category => $conditions)
+@foreach ($conditions as [$variable, $pattern])
+  RewriteCond {!! '%{'.$variable.'}' !!} {!! $pattern !!} [NC{{ $loop->last ? '' : ',OR' }}]
+@endforeach
+  RewriteRule ^ - [E=waf_block:1]
+@endforeach
+@foreach ($waf['customRules'] as $rule)
+  RewriteCond %{REQUEST_URI} {!! $rule !!} [NC,OR]
+  RewriteCond %{QUERY_STRING} {!! $rule !!} [NC]
+  RewriteRule ^ - [E=waf_block:1]
+@endforeach
+  RewriteCond %{ENV:waf_exception} !=1
+  RewriteCond %{ENV:waf_block} =1
+@if ($waf['mode'] === 'enforce')
+  RewriteRule ^ - [F,L]
+@else
+  RewriteRule ^ - [E=waf_would:1]
+@endif
+@endif
 @if ($botBlock)
   {{-- Checked first, ahead of HTTPS-force/redirects/the front controller —
        a blocked bot gets [F] (403) immediately. Apache mod_rewrite syntax,
@@ -213,20 +254,49 @@ rewrite {
        .htaccess a user drops in should not silently start costing restarts. --}}
   autoLoadHtaccess        0
 @endif
+{{-- Redirect names first, before HTTPS-force and the front controller.
+     OLS routes them here as aliases, so without these they would serve the
+     site instead of sending a 301. The other way round, a plain-HTTP request
+     for a redirect name was first sent to https://<that name> — which the
+     certificate usually does not cover — so the visitor got a TLS error and
+     the redirect never fired. --}}
+@foreach ($redirects as $redirect)
+  RewriteCond %{HTTP_HOST} ^{{ preg_quote($redirect->domain, '/') }}$ [NC]
+  RewriteRule ^/?(.*)$ {{ $redirect->redirect_to ?: $canonicalUrl }}/$1 [R={{ $redirect->redirect_status }},L]
+@endforeach
 @if ($forceHttps)
   {{-- Force HTTPS. The ACME exclusion is not optional: without it renewal
        stops working, and the redirect goes on pointing confidently at a
        certificate that has expired. --}}
+@foreach ($uncoveredNames as $name)
+  {{-- Not on the certificate: https://{{ $name }} is a TLS error, so send it
+       to the primary. ACME stays excluded so the certificate can still be
+       reissued to include this name. --}}
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP_HOST} ^{{ preg_quote($name, '/') }}$ [NC]
+  RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+  RewriteRule ^/?(.*)$ https://{{ $serverNames[0] }}/$1 [R=301,L]
+@endforeach
   RewriteCond %{HTTPS} !=on
   RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
   RewriteRule ^/?(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 @endif
-{{-- Redirect names first, before the front controller sees them: OLS routes
-     them here as aliases, so without these they would serve the site instead
-     of sending a 301. --}}
-@foreach ($redirects as $redirect)
-  RewriteCond %{HTTP_HOST} ^{{ preg_quote($redirect->domain, '/') }}$ [NC]
-  RewriteRule ^/?(.*)$ {{ $redirect->redirect_to ?: $canonicalUrl }}/$1 [R={{ $redirect->redirect_status }},L]
+@foreach ($wellKnown['redirects'] as $name => $target)
+  {{-- Service discovery the application's .htaccess does on Apache
+       (Nextcloud CalDAV/CardDAV); this vhost does not read that file. --}}
+  RewriteRule ^/\.well-known/{{ preg_quote($name, '/') }}$ {{ $target }} [R=301,L]
+@endforeach
+@if ($wellKnown['fallback'])
+  RewriteCond %{REQUEST_URI} !^/\.well-known/(acme-challenge|pki-validation)/
+  RewriteRule ^/\.well-known/ {{ $wellKnown['fallback'] }} [L]
+@endif
+@foreach ($subdirectoryFrontControllers as $front)
+  {{-- A directory with its own front controller (PrestaShop's back office),
+       which Apache routes with the `.htaccess` inside it. Before the shop's
+       own front controller, which would otherwise take these and 404. --}}
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^/({{ $front['directory'] }})/ /$1/{{ $front['script'] }} [L]
 @endforeach
   RewriteRule ^/index\.php$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
@@ -246,3 +316,12 @@ rewrite {
 context exp:^/\.(git|svn|hg|bzr|env|panel) {
   allowBrowse             0
 }
+@foreach ($deniedPaths as $pattern)
+
+{{-- The application ships this as an Apache `.htaccess` rule, which this vhost
+     does not read for it: without it, logs, sessions and source under the web
+     root were downloadable. --}}
+context exp:{{ $pattern }} {
+  allowBrowse             0
+}
+@endforeach

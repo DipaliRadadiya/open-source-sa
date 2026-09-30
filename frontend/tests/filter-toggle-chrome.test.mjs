@@ -27,7 +27,7 @@ test("there is one definition of what a filter toggle looks like", () => {
   assert.match(chrome, /export function filterToggleClass\(active\)/);
   // An edge in both states: rank belongs in colour, never in whether a control
   // has a surface at all.
-  assert.match(chrome, /border-primary\/40 bg-primary\/10 font-medium text-primary/);
+  assert.match(chrome, /border-primary\/40 bg-primary\/10 font-medium text-\[color-mix\(in_oklch,var\(--primary\)_80%,var\(--foreground\)\)\]/);
   assert.match(chrome, /border-input text-muted-foreground hover:bg-muted hover:text-foreground/);
 });
 
@@ -43,7 +43,9 @@ test("both controls read from it rather than restating it", () => {
 
 test("the range picker is never ghost again", () => {
   const code = range.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-  assert.match(code, /variant="outline"/);
+  // "field": bordered and quiet when off, tinted only when chosen — on the
+  // tinted outline base every range looked selected (30 Sep).
+  assert.match(code, /variant="field"/);
   assert.doesNotMatch(code, /"secondary" : "ghost"/);
   // 28px in a row of 32s was the other half of why it read as text.
   assert.match(code, /h-8 px-2\.5 text-xs/);

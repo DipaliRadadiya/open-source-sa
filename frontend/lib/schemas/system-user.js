@@ -22,7 +22,7 @@ export const shellSchema = z.object({
 export const DEFAULT_SHELL = "/bin/bash";
 
 // Mirrors the backend OS-password policy: min 10, mixed case + a number.
-const passwordField = z
+export const passwordField = z
   .string()
   .min(10, "min10")
   .regex(/[a-z]/, "lowercase")
@@ -31,7 +31,7 @@ const passwordField = z
 
 // Linux username rules: ^[a-z_][a-z0-9_-]{0,31}$ (backend also blocks reserved
 // names + enforces uniqueness — surfaced as a server-side error).
-const usernameField = z
+export const usernameField = z
   .string()
   .min(1, "required_username")
   .max(32, "max32")
@@ -68,6 +68,8 @@ export const systemUserPasswordSchema = z
   });
 
 export const sshKeySchema = z.object({
-  name: z.string().min(1, "required_name"),
+  // The API's own cap. Without it a longer label went to the server and came
+  // back as its English sentence about a "name" field the form calls Label.
+  name: z.string().min(1, "required_name").max(255, "max255"),
   public_key: publicKeyField,
 });

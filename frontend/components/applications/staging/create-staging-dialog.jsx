@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -38,6 +38,21 @@ export function CreateStagingDialog({ appId, production, open, onOpenChange }) {
   const t = useTranslations("applications.staging.createDialog");
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  const [awaitingPage, setAwaitingPage] = useState(false);
+  // The success toast waits for the dialog to go: shown on the API's answer,
+  // it sat beside a dialog still saying "Creating…" for seconds.
+  const announce = useRef(null);
+  useEffect(() => () => announce.current?.(), []);
+  useEffect(() => {
+    if (!awaitingPage) return undefined;
+    const timer = window.setTimeout(() => {
+      announce.current?.();
+      announce.current = null;
+      setPending(false);
+      onOpenChange(false);
+    }, 20000);
+    return () => window.clearTimeout(timer);
+  }, [awaitingPage, onOpenChange]);
 
   // Offered, not imposed: `staging.` in front of the production domain is what
   // almost everyone types, and an empty box makes them invent it. Anyone with
@@ -55,18 +70,24 @@ export function CreateStagingDialog({ appId, production, open, onOpenChange }) {
     setPending(true);
     try {
       await createApplicationStaging(appId, values.domain);
-      onOpenChange(false);
-      toast.success(t("done", { domain: values.domain }));
+      // Open on "Creating…" until the page shows the copy — this dialog lives
+      // in the no-staging state, so it goes when that state does. Closing
+      // first uncovered "Create staging" for the length of the refresh.
+      announce.current = () => toast.success(t("done", { domain: values.domain }));
       router.refresh();
+      setAwaitingPage(true);
+      return;
     } catch (error) {
       if (error.response?.data?.errors) {
         handleValidationError(error, form);
       } else {
         toast.error(apiMessage(error, t("failed")));
+        // Most often another tab made a copy first; the page behind still
+        // offered to create one. Re-read so it shows the copy that exists.
+        router.refresh();
       }
-    } finally {
-      setPending(false);
     }
+    setPending(false);
   }
 
   return (
@@ -75,7 +96,7 @@ export function CreateStagingDialog({ appId, production, open, onOpenChange }) {
         open={open}
         onOpenChange={pending ? undefined : onOpenChange}
         asForm
-        onSubmit={form.handleSubmit(submit)}
+        onSubmit={(event) => form.handleSubmit(submit)(event)}
         icon={FlaskConical}
         title={t("title")}
         description={t("description", { domain: production?.domain ?? "" })}

@@ -26,9 +26,17 @@ export function PasswordReveal({ password, className }) {
   }
 
   return (
-    <div className={cn("flex w-full items-center gap-2", className)}>
-      <code className="min-w-0 flex-1 truncate rounded bg-muted px-2 py-1.5 font-mono text-sm">
-        {shown ? password : "•".repeat(Math.min(password.length, 12))}
+    <div className={cn("flex w-full items-center gap-1", className)}>
+      {/* Wraps once revealed rather than truncating: the whole point of
+          showing it is reading all of it, and a generated one is 20
+          characters — more than the narrow table column holds. */}
+      <code
+        className={cn(
+          "min-w-0 flex-1 rounded bg-muted px-2 py-1.5 font-mono text-sm",
+          shown ? "whitespace-normal break-all" : "truncate",
+        )}
+      >
+        {shown ? password : "•".repeat(Math.min(password.length, 10))}
       </code>
       <IconTooltip label={shown ? t("hide") : t("reveal")}>
         <Button

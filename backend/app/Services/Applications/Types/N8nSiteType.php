@@ -99,6 +99,26 @@ class N8nSiteType extends AbstractSiteType
 
     public function fields(): array
     {
-        return array_merge($this->commonFields(), $this->nodeFields());
+        return array_merge($this->commonFields(), [
+            // The panel creates the first administrator itself, after the
+            // application starts. Left to the first-run page, it was whoever
+            // opened the URL first.
+            $this->field('admin_email', 'email', required: true, extra: ['placeholder' => __('application.placeholders.admin_email')]),
+            $this->field('admin_password', 'password', required: true, extra: ['generate' => true]),
+        ], $this->nodeFields());
+    }
+
+    /**
+     * n8n refuses a password without an upper-case letter and a number, so the
+     * rule says so here instead of failing the install at the last step.
+     *
+     * @return array<string, mixed>
+     */
+    public function rules(): array
+    {
+        return [
+            'admin_email' => ['required', 'email', 'max:255'],
+            'admin_password' => ['required', 'string', 'min:10', 'max:64', 'regex:/[a-z]/', 'regex:/[A-Z]/', 'regex:/[0-9]/'],
+        ];
     }
 }

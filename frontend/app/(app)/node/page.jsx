@@ -115,7 +115,7 @@ export default async function NodePage({ searchParams }) {
               />
             }
           />
-          <SystemNodeNote system={node?.system} />
+          <SystemNodeNote system={node?.system} versions={node?.versions} />
         </div>
       ) : (
         <div className="max-w-5xl space-y-4">
@@ -182,7 +182,7 @@ export default async function NodePage({ searchParams }) {
             namespace="node"
           />
 
-          <SystemNodeNote system={node?.system} />
+          <SystemNodeNote system={node?.system} versions={node?.versions} />
         </div>
       )}
     </div>

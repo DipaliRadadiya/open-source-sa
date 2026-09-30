@@ -89,6 +89,22 @@ it('issues on its own when the domain already points here', function () {
     Queue::assertPushed(IssueCertificate::class);
 });
 
+it('puts the certificate ahead of queued installs when the worker reads the priority queue', function (string $worker, ?string $queue) {
+    pointDnsHere();
+    challengeAnswers();
+    fakeRunningWorker($worker);
+
+    // nginx QA #4: a site was active for 22 minutes before its certificate,
+    // queued behind sixteen installs, ran. Only to `high` when the running
+    // worker reads it — a job on an unread queue never runs.
+    app(AutoIssueCertificate::class)->attempt($this->application);
+
+    Queue::assertPushed(IssueCertificate::class, fn (IssueCertificate $job) => $job->queue === $queue);
+})->with([
+    'worker reads high' => ['artisan queue:work --queue=high,default --sleep=3', 'high'],
+    'worker from before the priority queue' => ['artisan queue:work --sleep=3', null],
+]);
+
 it('writes nothing at all when the domain is not pointed here yet', function () {
     pointDnsHere('198.51.100.5');
     Http::fake();

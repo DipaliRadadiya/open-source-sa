@@ -51,17 +51,14 @@
 @if ($waf)
     Include {{ config('server.waf.apache_setenvif_path') }}
 @foreach ($waf['exceptions'] as $exception)
-    SetEnvIfNoCase Request_URI "{{ $exception }}" waf_exception
-    SetEnvIfNoCase Query_String "{{ $exception }}" waf_exception
-    SetEnvIfNoCase User-Agent "{{ $exception }}" waf_exception
+    SetEnvIfExpr "%{REQUEST_URI} =~ m#{!! $exception !!}#i || %{QUERY_STRING} =~ m#{!! $exception !!}#i || %{HTTP_USER_AGENT} =~ m#{!! $exception !!}#i" waf_exception
 @endforeach
 @foreach ($waf['customRules'] as $rule)
-    SetEnvIfNoCase Request_URI "{{ $rule }}" waf_custom
-    SetEnvIfNoCase Query_String "{{ $rule }}" waf_custom
+    SetEnvIfExpr "%{REQUEST_URI} =~ m#{!! $rule !!}#i || %{QUERY_STRING} =~ m#{!! $rule !!}#i" waf_custom
 @endforeach
 @endif
 @if ($botBlock)
-    SetEnvIfNoCase User-Agent "^({{ $botBlock }})" ai_bot_blocked
+    SetEnvIfNoCase User-Agent "({{ $botBlock }})" ai_bot_blocked
 @endif
 @if ($botBlock || $basicAuth || ($waf && $waf['mode'] === 'enforce'))
     {{-- A node app has no `<Directory>` of its own to attach any of these
@@ -78,8 +75,9 @@
 @if ($waf && $waf['mode'] === 'enforce')
             <RequireAny>
                 Require env waf_exception
-                <RequireNone>
-                    <RequireAny>
+                <RequireAll>
+                    Require all granted
+                    <RequireNone>
 @if (in_array('query_string', $waf['categories'], true))
                         Require env waf_query
 @endif
@@ -101,8 +99,8 @@
 @if ($waf['customRules'] !== [])
                         Require env waf_custom
 @endif
-                    </RequireAny>
-                </RequireNone>
+                    </RequireNone>
+                </RequireAll>
             </RequireAny>
 @endif
 @if ($basicAuth)

@@ -1,30 +1,44 @@
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { TriangleAlert } from "lucide-react";
 import { deleteCronjob } from "@/lib/api/cronjobs";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { apiMessage } from "@/lib/api/error-message";
+import { useRefresh } from "@/hooks/use-refresh";
 
 // No type-the-name gate here (unlike system users): deleting a cron job removes
 // a schedule, not an account and its data, and it's re-creatable from the row's
 // own values. The confirm step alone is proportionate.
-export function DeleteCronjobDialog({ job, open, onOpenChange }) {
+export function DeleteCronjobDialog({ job, open, onOpenChange, prevPage = null }) {
   const t = useTranslations("cronJobs");
-  const router = useRouter();
+  const { refreshThen, navigateThen } = useRefresh();
   const [pending, setPending] = useState(false);
+  // The row, and the ⋯ that opened this, are gone once it is deleted.
+  const removed = useRef(false);
 
   async function onConfirm() {
     setPending(true);
+    const done = (say) => {
+      const after = () => {
+        removed.current = true;
+        say();
+        onOpenChange?.(false);
+        setPending(false);
+      };
+      if (prevPage) navigateThen({ page: prevPage > 1 ? prevPage : undefined }, after);
+      else refreshThen(after);
+    };
     try {
       await deleteCronjob(job.id);
-      toast.success(t("toast.deleted"));
-      onOpenChange?.(false);
-      router.refresh();
+      done(() => toast.success(t("toast.deleted")));
     } catch (error) {
+      // Removed from another tab: the outcome asked for is already true.
+      if (error?.response?.status === 404) {
+        done(() => toast.info(t("toast.alreadyGone", { name: job.name })));
+        return;
+      }
       toast.error(apiMessage(error, t("toast.failed")));
-    } finally {
       setPending(false);
     }
   }
@@ -41,6 +55,12 @@ export function DeleteCronjobDialog({ job, open, onOpenChange }) {
       confirmLabel={pending ? t("delete.deleting") : t("delete.confirm")}
       pending={pending}
       onConfirm={onConfirm}
+      onCloseAutoFocus={(event) => {
+        if (!removed.current) return;
+        removed.current = false;
+        event.preventDefault();
+        document.querySelector("[data-cron-add]")?.focus();
+      }}
     />
   );
 }

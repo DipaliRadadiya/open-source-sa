@@ -132,8 +132,11 @@ it('refuses a retention of zero', function () {
 });
 
 it('refuses an unknown frequency', function () {
+    // `hourly` was the example here until it became a real option. v7 offered
+    // "every 2 days"; this panel deliberately does not, since cron cannot
+    // express it without restarting at the start of every month.
     $this->withHeaders(backupHeaders())
-        ->putJson("/api/applications/{$this->application->id}/backup-target", targetPayload(['frequency' => 'hourly']))
+        ->putJson("/api/applications/{$this->application->id}/backup-target", targetPayload(['frequency' => 'every_2_days']))
         ->assertUnprocessable()
         ->assertJsonValidationErrors('frequency');
 });
@@ -491,6 +494,107 @@ describe('the next scheduled run', function () {
     });
 });
 
+describe('the within-a-day frequencies', function () {
+    // The chosen time is one of the runs, the rest fall every N hours around
+    // it. The every-12-hours case at 15:00 is the one that matters: the naive
+    // cron `30 14-23/12` means "from 14:00" and runs once a day, so its next
+    // run would be tomorrow at 14:30, not tonight at 02:30.
+    it('runs at the times the chosen time implies', function (string $frequency, string $time, string $now, string $expected) {
+        $this->travelTo($now);
+
+        $this->withHeaders(backupHeaders())
+            ->putJson(
+                "/api/applications/{$this->application->id}/backup-target",
+                targetPayload(['frequency' => $frequency, 'schedule_time' => $time]),
+            )
+            ->assertOk()
+            ->assertJsonPath('backup_target.frequency', $frequency)
+            ->assertJsonPath('backup_target.next_run_at', $expected);
+    })->with([
+        'hourly uses only the minute' => ['hourly', '14:30', '2026-03-10 12:00:00', '10-03-2026 12:30:00'],
+        'every 3 hours' => ['every_3_hours', '14:30', '2026-03-10 15:00:00', '10-03-2026 17:30:00'],
+        'every 6 hours' => ['every_6_hours', '14:30', '2026-03-10 15:00:00', '10-03-2026 20:30:00'],
+        'every 12 hours, after the chosen time' => ['every_12_hours', '14:30', '2026-03-10 15:00:00', '11-03-2026 02:30:00'],
+        'every 12 hours from midnight' => ['every_12_hours', '00:00', '2026-03-10 01:00:00', '10-03-2026 12:00:00'],
+    ]);
+
+    // A missed slot (a reboot, a busy box) runs once when the scheduler comes
+    // back, and only once: an hourly target is not owed one run per hour lost.
+    it('catches up a missed hourly slot once, not once per hour missed', function () {
+        $target = BackupTarget::create(array_merge(
+            ['application_id' => $this->application->id],
+            targetPayload(['frequency' => 'hourly', 'schedule_time' => '00:15']),
+        ));
+
+        $target->forceFill(['last_run_at' => '2026-03-10 07:15:00'])->save();
+
+        expect($target->isDue(new DateTime('2026-03-10 10:20:00')))->toBeTrue();
+
+        $target->forceFill(['last_run_at' => '2026-03-10 10:20:00'])->save();
+
+        expect($target->isDue(new DateTime('2026-03-10 10:40:00')))->toBeFalse()
+            ->and($target->isDue(new DateTime('2026-03-10 11:15:00')))->toBeTrue();
+    });
+});
+
+describe('the settings form options', function () {
+    it('offers every frequency the API accepts, translated, with the picker each needs', function () {
+        $options = $this->withHeaders(backupHeaders())
+            ->getJson('/api/backup-targets/options')
+            ->assertOk()
+            ->json();
+
+        expect(collect($options['frequencies'])->pluck('value')->all())->toBe(BackupTarget::FREQUENCIES)
+            ->and(collect($options['frequencies'])->firstWhere('value', 'hourly'))->toBe([
+                'value' => 'hourly',
+                'label' => 'Every hour',
+                'time' => 'minute',
+                'hint' => 'Runs every hour, at the chosen minute.',
+            ])
+            ->and(collect($options['frequencies'])->firstWhere('value', 'manual')['time'])->toBeNull()
+            ->and(collect($options['frequencies'])->firstWhere('value', 'every_12_hours')['time'])->toBe('time')
+            ->and($options['default_frequency'])->toBe('daily')
+            ->and(collect($options['types'])->pluck('value')->all())->toBe(['filesystem', 'database', 'full'])
+            ->and($options['retention'])->toBe(['min' => 1, 'max' => 365])
+            ->and($options['timezone'])->toBe(config('app.timezone'));
+
+        // Every value it offers is one the save accepts: the dropdown and the
+        // validation cannot drift, because both read one list.
+        foreach ($options['frequencies'] as $frequency) {
+            $this->withHeaders(backupHeaders())
+                ->putJson(
+                    "/api/applications/{$this->application->id}/backup-target",
+                    targetPayload(['frequency' => $frequency['value']]),
+                )
+                ->assertOk();
+        }
+
+        foreach ($options['types'] as $type) {
+            $this->withHeaders(backupHeaders())
+                ->putJson(
+                    "/api/applications/{$this->application->id}/backup-target",
+                    targetPayload(['type' => $type['value']]),
+                )
+                ->assertOk();
+        }
+    });
+
+    it('answers in the language asked for', function () {
+        $this->withHeaders(backupHeaders() + ['Accept-Language' => 'de'])
+            ->getJson('/api/backup-targets/options')
+            ->assertOk()
+            ->assertJsonPath('frequencies.1.label', 'Stündlich');
+    });
+
+    it('is refused without the per-site backup permission', function () {
+        $user = User::factory()->create();
+
+        $this->withHeader('Authorization', 'Bearer '.$user->createToken('t')->plainTextToken)
+            ->getJson('/api/backup-targets/options')
+            ->assertForbidden();
+    });
+});
+
 describe('downloading a backup', function () {
     beforeEach(function () {
         $this->target = BackupTarget::create(array_merge(
@@ -670,7 +774,8 @@ it('has copy for every step, status, type and frequency in every locale', functi
         }
 
         foreach (BackupTarget::FREQUENCIES as $frequency) {
-            expect(__('backup.frequency.'.$frequency))->not->toBe('backup.frequency.'.$frequency);
+            expect(__('backup.frequency.'.$frequency))->not->toBe('backup.frequency.'.$frequency)
+                ->and(__('backup.frequency_hint.'.$frequency))->not->toBe('backup.frequency_hint.'.$frequency);
         }
     }
 });

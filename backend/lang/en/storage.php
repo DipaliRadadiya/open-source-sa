@@ -83,6 +83,9 @@ return [
         'failure' => 'Could not connect to the destination.',
         'invalid_credentials' => 'The destination rejected the credentials.',
         'unreachable' => 'The destination endpoint could not be reached.',
+        'bucket_not_found' => 'No bucket with that name exists. Check the bucket name — it is case-sensitive.',
+        'wrong_region' => 'The bucket is in a different region. Set the region the bucket was created in.',
+        'tls_failed' => 'A secure (TLS) connection to the endpoint could not be made. The server\'s certificate is missing, untrusted or broken — check the endpoint URL and the server\'s certificate.',
         'mismatch' => 'The destination wrote and read back different bytes.',
         'forbidden_host' => 'That endpoint address is not allowed.',
         'invalid_endpoint' => 'Enter a valid https:// endpoint URL for the bucket.',
@@ -104,6 +107,7 @@ return [
         // leaves the operator hunting through every application to find which
         // ones. Capped by the guard — see `and_more`.
         'in_use' => 'Cannot delete :name — it is still used by :applications. Remove or repoint those backup targets first.',
+        'holds_backups' => 'Cannot delete :name — it still holds :count backup(s). Delete those backups first, so their archives are removed from the storage too.',
         'and_more' => ':count more',
     ],
 

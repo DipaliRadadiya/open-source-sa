@@ -212,8 +212,8 @@ return [
         'role' => 'função',
     ],
 
-    'start_command_shell' => 'O comando de início não pode conter \":token\" — ele é executado diretamente, não através de um shell.',
-    'start_command_wrapper' => 'Inicie a app com o ficheiro de entrada, por exemplo \"node server.js\", não com :binary. Um gestor de pacotes bifurca o processo real, por isso os sinais nunca lhe chegam.',
+    'start_command_shell' => 'O comando de início não pode conter ":token" — ele é executado diretamente, não através de um shell.',
+    'start_command_wrapper' => 'Inicie a app com o ficheiro de entrada, por exemplo "node server.js", não com :binary. Um gestor de pacotes bifurca o processo real, por isso os sinais nunca lhe chegam.',
 
     'port_in_use_by_app' => 'A porta :port já é usada por outra aplicação neste servidor.',
 
@@ -239,6 +239,9 @@ return [
     'port_in_use' => 'Algo neste servidor já está a escutar na porta :port. Escolha outra ou pare o que a está a usar.',
 
     'port_registered' => 'A porta :port é normalmente usada por :service. Pode usá-la mesmo assim se nada neste servidor a usar.',
+    'application_name_immutable' => 'O nome de um site é fixo depois de criado — dá nome aos seus ficheiros de configuração no servidor. Crie um site novo se precisar de outro nome.',
+    'site_name_taken_pool' => 'Este servidor já tem um ficheiro de pool PHP chamado «:name.conf» que não foi criado pelo painel. Escolha outro nome.',
+    'site_name_taken_vhost' => 'Este servidor já tem uma configuração do servidor web chamada «:name» que não foi criada pelo painel — a do próprio painel é uma delas. Escolha outro nome.',
 
     'webhook_secret_min' => 'O segredo do webhook deve ter pelo menos 16 caracteres.',
 

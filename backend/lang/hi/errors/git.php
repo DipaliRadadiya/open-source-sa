@@ -6,4 +6,8 @@ return [
     'unsupported_provider' => 'प्रदाता :provider समर्थित नहीं है।',
     'invalid_host' => 'सेल्फ-होस्टेड इंस्टेंस के लिए वैध https:// URL दर्ज करें।',
     'blocked_host' => 'यह पता अनुमत नहीं है।',
+
+    // Disconnecting an account that applications still deploy with.
+    'in_use' => ':name को डिस्कनेक्ट नहीं किया जा सकता — इसका उपयोग अभी भी :applications द्वारा किया जा रहा है। पहले उन एप्लिकेशन को किसी दूसरे खाते से जोड़ें।',
+    'and_more' => ':count और',
 ];

@@ -79,6 +79,9 @@ return [
         'failure' => 'Impossible de se connecter à la destination.',
         'invalid_credentials' => 'La destination a rejeté les identifiants.',
         'unreachable' => 'Le point de terminaison de la destination est injoignable.',
+        'bucket_not_found' => 'Aucun bucket ne porte ce nom. Vérifiez le nom du bucket : il est sensible à la casse.',
+        'wrong_region' => 'Le bucket se trouve dans une autre région. Indiquez la région dans laquelle le bucket a été créé.',
+        'tls_failed' => 'Impossible d\'établir une connexion sécurisée (TLS) avec le point de terminaison. Le certificat du serveur est absent, non approuvé ou défectueux : vérifiez l\'URL du point de terminaison et le certificat du serveur.',
         'mismatch' => 'La destination a relu des octets différents de ceux écrits.',
         'forbidden_host' => 'Cette adresse de point de terminaison n’est pas autorisée.',
         'invalid_endpoint' => 'Saisissez une URL de point de terminaison https:// valide pour le bucket.',
@@ -97,6 +100,7 @@ return [
 
     'delete' => [
         'in_use' => 'Impossible de supprimer :name — cette destination est encore utilisée par :applications. Supprimez ou redirigez ces cibles de sauvegarde d’abord.',
+        'holds_backups' => 'Impossible de supprimer :name — cette destination contient encore :count sauvegarde(s). Supprimez d’abord ces sauvegardes, afin que leurs archives soient aussi retirées du stockage.',
         'and_more' => ':count de plus',
     ],
 

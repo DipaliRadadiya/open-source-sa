@@ -1,5 +1,9 @@
 import { serverFetch } from "@/lib/api/server-fetch";
 import { readErrorBody } from "@/lib/api/error-body";
+import { getApplication } from "@/lib/applications/get-applications";
+
+// Anything under a site, not the site itself: `/applications/7/domains`.
+const UNDER_APPLICATION = /^\/applications\/(\d+)\/./;
 
 /**
  * Why a read failed, in one word.
@@ -52,6 +56,17 @@ function report(path, failure, detail) {
  * @returns {Promise<{data: unknown|null, failed: boolean, status: number|null, failure: string|null}>}
  */
 export async function read(path, schema, options) {
+  /*
+   * A site whose system user is missing answers 409 on every route under it.
+   * Its layout shows one panel instead of the page, but Next renders the page
+   * alongside it anyway, so each of its reads still went out to be refused.
+   * The site's own record is already in the request cache from the layout.
+   */
+  const site = UNDER_APPLICATION.exec(path);
+  if (site && (await getApplication(site[1])).application?.system_user === null) {
+    return { data: null, failed: true, status: 409, failure: "http", message: null, debug: null };
+  }
+
   try {
     const res = await serverFetch(path, options);
     if (!res.ok) {

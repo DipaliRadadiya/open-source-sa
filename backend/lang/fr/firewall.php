@@ -12,6 +12,7 @@ return [
         'http' => 'HTTP',
         'https' => 'HTTPS',
         'mysql' => 'MySQL',
+        'mariadb' => 'MariaDB',
         'postgresql' => 'PostgreSQL',
         'redis' => 'Redis',
         'ftp' => 'FTP',

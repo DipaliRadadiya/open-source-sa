@@ -15,8 +15,10 @@ use Illuminate\Support\Facades\Route;
 | restart a service.
 */
 
+// Manage, including reads: the `.env` screen is shown only to who may edit it
+// (operator decision 2026-09-29; see VisiblePermissions::MANAGE_ONLY).
 Route::get('/applications/{application}/environment', [ApplicationEnvironmentController::class, 'show'])
-    ->middleware('permission:app_environment');
+    ->middleware('permission:app_environment,manage');
 
 Route::put('/applications/{application}/environment', [ApplicationEnvironmentController::class, 'update'])
     ->middleware(['permission:app_environment,manage', 'throttle:20,1']);
@@ -34,7 +36,7 @@ Route::post('/applications/{application}/environment/restore', [ApplicationEnvir
 | while being told the edit history is none of their business.
 */
 Route::get('/applications/{application}/environment/history', [ApplicationEnvironmentController::class, 'history'])
-    ->middleware('permission:app_environment');
+    ->middleware('permission:app_environment,manage');
 
 /*
 | What one change did, variable by variable — old value and new value.

@@ -272,7 +272,13 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
       ) : null}
 
       {run ? (
-        <SyncSummary run={run} loaded={items.length} running={running} />
+        <SyncSummary
+          run={run}
+          // Dismissed rows stay in the list (marked, with Undo), but "Found 8
+          // things" kept counting them, so a Dismiss changed nothing up here.
+          loaded={running ? items.length : items.filter((item) => !ignoredKeys.has(ignoreKey(item))).length}
+          running={running}
+        />
       ) : null}
 
       {!run ? (

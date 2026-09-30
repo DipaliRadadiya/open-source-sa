@@ -76,11 +76,21 @@ class SupportedPhpVersion implements ValidationRule
      */
     private function withinRange(string $version): bool
     {
-        if ($this->min !== null && version_compare($version, $this->min, '<')) {
+        return self::within($this->min, $this->max, $version);
+    }
+
+    /**
+     * Public so the catalog asks the same question the form does — a card
+     * greyed by one comparison and a form refused by another could disagree
+     * about the very version on the ceiling.
+     */
+    public static function within(?string $min, ?string $max, string $version): bool
+    {
+        if ($min !== null && version_compare($version, $min, '<')) {
             return false;
         }
 
-        return ! ($this->max !== null && version_compare($version, $this->max, '>'));
+        return ! ($max !== null && version_compare($version, $max, '>'));
     }
 
     /**
@@ -112,10 +122,19 @@ class SupportedPhpVersion implements ValidationRule
 
     private function range(): string
     {
+        return self::describe($this->min, $this->max);
+    }
+
+    /**
+     * The range as the project writes it, shared with the catalog's
+     * unavailable reason so the card and the form name it identically.
+     */
+    public static function describe(?string $min, ?string $max): string
+    {
         return match (true) {
-            $this->min !== null && $this->max !== null => "{$this->min} – {$this->max}",
-            $this->min !== null => "{$this->min}+",
-            default => "≤ {$this->max}",
+            $min !== null && $max !== null => "{$min} – {$max}",
+            $min !== null => "{$min}+",
+            default => "≤ {$max}",
         };
     }
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
-import { scheduleTimeLabel } from "@/lib/backups/schedule-time";
+import { scheduleWhen } from "@/lib/backups/schedule-time";
 import { History, PlayCircle, Settings2, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,7 @@ import { COVERAGE_STATE } from "@/components/backups/status-meta";
  * a card layout below `lg`.
  */
 
-export function CoverageCards({ rows, canManage, onSetUp, onBackUpNow, busyIds = [] }) {
+export function CoverageCards({ rows, options = null, canManage, onSetUp, onBackUpNow, busyIds = [] }) {
   const t = useTranslations("backups.coverage");
   const tc = useTranslations("common");
   const format = useFormatter();
@@ -29,16 +29,16 @@ export function CoverageCards({ rows, canManage, onSetUp, onBackUpNow, busyIds =
   // have rather than leaving a stray separator behind it. The zone is named
   // on the site's own backups page; repeating it on every card would bury the
   // three facts this row exists to show.
-  const scheduleFact = (target) =>
-    [
+  const scheduleFact = (target) => {
+    const when = scheduleWhen(target, options, format);
+    return [
       target.frequency_title ?? target.frequency,
-      target.frequency !== "manual" && target.schedule_time
-        ? scheduleTimeLabel(target.schedule_time, format)
-        : null,
+      when?.minute ? t("minutePast", { minute: when.minute }) : when?.time,
       t("keeps", { count: target.retention_count }),
     ]
       .filter(Boolean)
       .join(" · ");
+  };
 
   if (rows.length === 0) {
     return (
@@ -86,12 +86,12 @@ export function CoverageCards({ rows, canManage, onSetUp, onBackUpNow, busyIds =
             <CardFacts>
               <CardFact
                 label={t("columns.type")}
-                className={cn(!target && "text-muted-foreground/70")}
+                className={cn(!target && "text-muted-foreground")}
                 value={target ? (target.type_title ?? target.type) : t("placeholders.type")}
               />
               <CardFact
                 label={t("columns.schedule")}
-                className={cn(!target && "text-muted-foreground/70")}
+                className={cn(!target && "text-muted-foreground")}
                 /* The hour too, same as the table — a fact row has the width
                    for it, and the phone layout falling behind the desktop one
                    is how this column went a month without it. */
@@ -99,12 +99,12 @@ export function CoverageCards({ rows, canManage, onSetUp, onBackUpNow, busyIds =
               />
               <CardFact
                 label={t("columns.storage")}
-                className={cn(!target && "text-muted-foreground/70")}
+                className={cn(!target && "text-muted-foreground")}
                 value={target?.storage_destination_name ?? t("placeholders.storage")}
               />
               <CardFact
                 label={t("columns.lastRun")}
-                className={cn(!target && "text-muted-foreground/70")}
+                className={cn(!target && "text-muted-foreground")}
               >
                 <span className="block truncate">
                   {/* Same fallback as the table: a run that crashed leaves

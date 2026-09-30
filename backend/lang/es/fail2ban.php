@@ -23,5 +23,7 @@ return [
         'filter_content_required' => 'La configuración del filtro es obligatoria.',
         'filter_content_string' => 'La configuración del filtro debe ser texto.',
         'filter_content_max' => 'La configuración del filtro es demasiado grande (máx. 65535 caracteres).',
+        'foreign_jail' => 'Este jail solo puede configurar el jail propio de este sitio. Sustituya [:section] por [{name}] (se convierte en :name).',
+        'foreign_filter' => 'Este jail solo puede usar el filtro propio de este sitio. Sustituya filter = :filter por filter = {filter} (se convierte en :name).',
     ],
 ];

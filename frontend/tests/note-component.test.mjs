@@ -29,8 +29,8 @@ test("Note is built to the same grammar as Caution", () => {
   assert.match(note, /rounded-lg border border-primary\/20 bg-primary\/5 p-3 text-sm/);
   assert.match(note, /className="mt-0\.5 size-4 shrink-0 text-primary"/);
   assert.match(caution, /rounded-lg border/);
-  // Amber is unchanged by the arrival of a second tone.
-  assert.match(caution, /warning: "border-warning\/40 bg-warning\/10"/);
+  // Softened 2026-09-29 (Krishna: "less visually heavy"): a tint and a hairline.
+  assert.match(caution, /warning: "border-warning\/25 bg-warning\/5"/);
 });
 
 test("Caution's red is lighter than its amber", () => {

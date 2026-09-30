@@ -8,7 +8,10 @@ import { siteNeedsDatabase } from "@/lib/backups/database-availability";
 import { can } from "@/lib/permissions/can";
 import { getApplication, getApplicationIssues } from "@/lib/applications/get-applications";
 import { getBackupTarget, getBackups } from "@/lib/backups/get-backups";
+import { BACKUP_IN_FLIGHT } from "@/lib/schemas/backup";
 import { getGitAccounts } from "@/lib/git/get-git";
+import { gitProviderFor, providersByAccountId } from "@/lib/applications/git-provider";
+import { getLatestDeployment } from "@/lib/applications/get-deployments";
 import {
   getApplicationDomains,
   getApplicationCertificate,
@@ -22,6 +25,8 @@ import { ProcessCard } from "@/components/applications/process-card";
 import { DomainsCard } from "@/components/applications/domains-card";
 import { ProtectionCard } from "@/components/applications/protection-card";
 import { AttentionStrip } from "@/components/applications/attention-strip";
+import { RootLockButton } from "@/components/applications/root-lock-button";
+import { getRootLock } from "@/lib/applications/get-root-lock";
 import { issueItems, localKeysSupersededBy } from "@/lib/applications/issue-items";
 import { BackupCard } from "@/components/applications/backup-card";
 import { DatabaseCard } from "@/components/applications/database-card";
@@ -33,6 +38,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { ApplicationStatusBadge } from "@/components/applications/application-status-badge";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { PermissionDenied } from "@/components/sections/permission-denied";
+import { isSettled } from "@/lib/applications/settled";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +68,12 @@ export default async function ApplicationDetailPage({ params }) {
   const application = result.application;
   const canManage = can(permissions, "application", "manage");
   const canDeploy = can(appPermissions, "app_deployment", "manage", "application");
+  const canSeeDeployment = can(appPermissions, "app_deployment", "view", "application");
   const canSeeDomains = can(appPermissions, "app_domain", "view", "application");
+  // `/issues` is gated by `app_dashboard`, not by the `application` permission
+  // that opens this page. Asking without it is a 403, which read as "health
+  // checks could not be run" on every application for that role.
+  const canSeeChecks = can(appPermissions, "app_dashboard", "view", "application");
   // Already site-type gated by the API: `app_magic_login` exists only in
   // WordPressSiteType::features(), and VisiblePermissions filters the
   // catalog by the site's features. A `site_type === "wordpress"` check
@@ -81,7 +92,7 @@ export default async function ApplicationDetailPage({ params }) {
   const isGit = Boolean(application.repository || application.repository_url);
   // Only a serving site has domains, a certificate or a running process. While
   // it is still being built, saying anything about them would be invention.
-  const settled = application.status === "active";
+  const settled = isSettled(application);
 
   /*
    * The generated credentials, until somebody says they have saved them.
@@ -119,7 +130,7 @@ export default async function ApplicationDetailPage({ params }) {
   // buttons that would only earn a 403.
   const canManageDatabases = can(permissions, "database", "manage");
 
-  const [domainList, certificate, backup, backupRuns, siteDatabases, siteTypes, spareDatabases, engineList] = await Promise.all([
+  const [domainList, certificate, backup, backupRuns, siteDatabases, siteTypes, spareDatabases, engineList, rootLock, latestDeploy] = await Promise.all([
     settled && canSeeDomains
       ? getApplicationDomains(id)
       : Promise.resolve({ domains: [], failed: false }),
@@ -163,7 +174,16 @@ export default async function ApplicationDetailPage({ params }) {
       ? getUnattachedDatabases()
       : Promise.resolve({ databases: [] }),
     settled && canManageDatabases ? getEngines() : Promise.resolve({ engines: [] }),
+    // Whether the site folder is locked against its own user. Only a site
+    // server sync adopted is normally unlocked; see the Security card row.
+    settled ? getRootLock(id) : Promise.resolve({ rootLock: null, failed: false }),
+    // Whether a deploy is running now. Without it Deploy now stayed live for
+    // the whole run and a second click queued a second deploy.
+    settled && isGit && canSeeDeployment
+      ? getLatestDeployment(id)
+      : Promise.resolve({ latest: null, failed: false }),
   ]);
+  const folderStatus = rootLock.rootLock?.status ?? null;
 
   const needsDatabase = siteNeedsDatabase(siteTypes.siteTypes, application.site_type);
   // Only when we actually looked and found none, and only for a type that
@@ -213,6 +233,21 @@ export default async function ApplicationDetailPage({ params }) {
       state: application.ai_bot_policy_title ?? t("protection.off"),
       href: `/applications/${id}/bot-blocker`,
     },
+    /*
+     * Only a definite answer gets a row. `unknown` is "could not check" (no
+     * immutable flag on this disk) and a failed read is no answer at all;
+     * either one rendered as "Not locked" would be a claim nothing backs.
+     */
+    (folderStatus === "locked" || folderStatus === "unlocked") && {
+      key: "folder",
+      label: t("protection.folder"),
+      on: folderStatus === "locked",
+      state: folderStatus === "locked" ? t("protection.locked") : t("protection.unlocked"),
+      control:
+        folderStatus === "unlocked" ? (
+          <RootLockButton applicationId={id} path={rootLock.rootLock.path} canManage={canManage} />
+        ) : null,
+    },
   ].filter(Boolean);
 
 
@@ -228,6 +263,7 @@ export default async function ApplicationDetailPage({ params }) {
    * disagreed. The fallback stays for an API that predates the field.
    */
   const secured = certificate.certificate?.status === "active";
+  const certificateIssuing = ["pending", "issuing"].includes(certificate.certificate?.status);
   const siteUrl =
     application.url ?? `${secured ? "https" : "http"}://${application.domain}`;
 
@@ -250,14 +286,18 @@ export default async function ApplicationDetailPage({ params }) {
    */
   // Live checks, so not cached with the rest: a certificate's remaining days
   // and the disk's percentage both move without anything on this page acting.
-  const issues = settled
-    ? await getApplicationIssues(id).catch(() => ({ issues: [], healthy: true }))
-    : { issues: [], healthy: true };
+  const issues = settled && canSeeChecks
+    ? await getApplicationIssues(id).catch(() => ({ issues: [], healthy: true, failed: true }))
+    : { issues: [], healthy: true, failed: false };
   const superseded = localKeysSupersededBy(issues.issues);
 
   const attentionItems = [
     ...issueItems(issues.issues, id, (type) => t(`attention.issueAction.${type}`)),
-    canSeeDomains && !domainList.failed && !certificate.failed && !secured && {
+    // The server's six checks did not come back. Saying nothing here let the
+    // strip read "Nothing needs attention" on the strength of a failed request.
+    issues.failed && { key: "checks", label: t("attention.checksFailed") },
+    // Not while the automatic certificate is on its way — see DomainsCard.
+    canSeeDomains && !domainList.failed && !certificate.failed && !secured && !certificateIssuing && {
       key: "ssl",
       label: t("attention.noCertificate"),
       action: t("attention.issueCertificate"),
@@ -274,6 +314,16 @@ export default async function ApplicationDetailPage({ params }) {
       label: t("attention.noDatabase"),
       action: t("attention.attachDatabase"),
       href: "/databases",
+    },
+    // Unlike the protections below, this one is a risk and not a choice: the
+    // site user can swap the folder for one they control. Points at the row
+    // that fixes it rather than acting from the strip.
+    // Only someone who can lock it is sent to the button; for anyone else the
+    // row is still worth knowing, so it stays as a plain line.
+    folderStatus === "unlocked" && {
+      key: "folder",
+      label: t("attention.folderUnlocked"),
+      ...(canManage ? { action: t("attention.reviewFolder"), href: "#security" } : null),
     },
     canSeeBackups && !backup.failed && !backup.target && {
       key: "backups",
@@ -333,10 +383,11 @@ export default async function ApplicationDetailPage({ params }) {
                 screen about a single site was the only place not showing what
                 kind of site it is. */}
             <span className="flex size-11 shrink-0 items-center justify-center rounded-lg border bg-background">
-              {/* No `provider`: that swaps in a Git host's mark, which needs
-                  the providers map this page does not load. The site type is
-                  the identity worth showing here anyway. */}
-              <SiteTypeLogo name={application.site_type} size="h-6 w-6" />
+              <SiteTypeLogo
+                name={application.site_type}
+                provider={gitProviderFor(application, providersByAccountId(gitAccounts))}
+                size="h-6 w-6"
+              />
             </span>
           <div className="min-w-0 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -375,7 +426,9 @@ export default async function ApplicationDetailPage({ params }) {
           </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Wraps: on a phone Visit, Magic Login and ⋯ did not fit on one line
+              and ⋯ was pushed off the screen. */}
+          <div className="flex flex-wrap items-center gap-2">
             {/* Outline, not filled. Four solid buttons on one page means none of
                 them leads — and this was the least consequential of the four,
                 sitting at the top in the same weight as "this site has no
@@ -490,6 +543,9 @@ export default async function ApplicationDetailPage({ params }) {
               applicationId={id}
               target={backup.target}
               backups={backupRuns.backups}
+              // The target keeps its last run time after every backup is
+              // deleted, so the list decides whether one is actually kept.
+              noneKept={!backupRuns.failed && backupRuns.meta?.total === backupRuns.backups.filter((b) => BACKUP_IN_FLIGHT.includes(b.status)).length}
               failed={backup.failed}
               canManage={canRunBackup}
               href={`/applications/${id}/backups`}
@@ -524,6 +580,8 @@ export default async function ApplicationDetailPage({ params }) {
               application={application}
               gitAccounts={gitAccounts}
               canDeploy={canDeploy}
+              canSeeDeployment={canSeeDeployment}
+              deployInFlight={Boolean(latestDeploy.latest?.in_flight)}
               className={
                 application.has_process
                   ? "xl:col-span-2"

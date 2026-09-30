@@ -171,7 +171,7 @@ export function ContainerCard({
         </CardTitle>
       </CardHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(save)}>
+        <form noValidate onSubmit={form.handleSubmit(save)}>
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground">

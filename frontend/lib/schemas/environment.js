@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { listMetaSchema } from "./list.js";
 
 /**
  * A site's `.env`, returned in three shapes at once: `raw` (the file text — the
@@ -76,4 +77,7 @@ export const envHistoryEntrySchema = z
 
 export const envHistoryResponseSchema = z.object({
   history: z.array(envHistoryEntrySchema).default([]),
+  // Twenty rows a page. Without it the card showed the newest twenty and
+  // nothing said there were more.
+  meta: listMetaSchema.nullish(),
 });

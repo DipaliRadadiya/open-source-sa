@@ -1,13 +1,13 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, Pencil, ChevronDown, TriangleAlert } from "lucide-react";
-import { workerFormSchema } from "@/lib/schemas/worker";
+import { workerFormSchemaFor } from "@/lib/schemas/worker";
 import { updateWorker } from "@/lib/api/workers";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { useRefresh } from "@/hooks/use-refresh";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { WorkerAdvancedFields } from "@/components/applications/workers/worker-advanced-fields";
@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/form";
 import { WorkerCommandField } from "@/components/applications/workers/worker-command-field";
 import { WorkerKindField } from "@/components/applications/workers/worker-kind-field";
+import { useWorkerSite } from "@/components/applications/workers/worker-site-context";
 
 function valuesFrom(worker) {
   return {
@@ -54,10 +55,11 @@ function valuesFrom(worker) {
 
 export function EditWorkerDialog({ worker, appId, presets = [], workers = [], open, onOpenChange }) {
   const t = useTranslations("applications.workers");
-  const router = useRouter();
+  const { pending: refreshing, refresh, refreshThen } = useRefresh();
 
+  const { appRoot } = useWorkerSite();
   const form = useForm({
-    resolver: zodResolver(workerFormSchema),
+    resolver: zodResolver(workerFormSchemaFor(appRoot)),
     defaultValues: valuesFrom(worker),
   });
 
@@ -94,10 +96,11 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
       name: values.name.trim(),
       command: values.command.trim(),
       directory: values.directory?.trim() || undefined,
+      // Never sent: the worker runs as the application's own user, and an
+      // absent key leaves an existing worker's account as it is.
+      user: undefined,
       // Blank means "no opinion", and the API treats an absent key that way —
-      // sending "" would ask it to store an empty username and an empty log
-      // path, which is not the same request at all.
-      user: values.user?.trim() || undefined,
+      // sending "" would ask it to store an empty log path.
       log_file: values.log_file?.trim() || undefined,
       log_level: values.log_level || undefined,
       extra_config: values.extra_config?.trim() || undefined,
@@ -106,10 +109,22 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
 
     try {
       await updateWorker(appId, worker.id, payload);
-      toast.success(t("toast.updated"));
-      onOpenChange?.(false);
-      router.refresh();
+      // Closed once the list shows the change, not on the API's answer.
+      refreshThen(() => {
+        toast.success(t("toast.updated"));
+        onOpenChange?.(false);
+      });
     } catch (error) {
+      // Unlike creating, nothing is rolled back: the API saves the new settings
+      // first, and when the worker cannot start with them it is left stopped.
+      // "Could not be applied" read as "nothing changed" over a row still
+      // showing Running. Says what happened, and re-reads the list behind.
+      if (!error.response?.data?.errors && (error.response?.status ?? 0) >= 500) {
+        form.setError("root.server", { message: t("edit.failedStopped") });
+        refresh();
+        scrollToFirstError();
+        return;
+      }
       /*
        * `kind` is sent and is in the form's values, but has no control — it is
        * set by picking a preset. So the API's "you can't run Horizon and a
@@ -118,10 +133,14 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
        * refusal on the form, where it stays put while the dialog does.
        */
       handleValidationError(error, form, { formError: true, unrendered: ["kind"] });
+      // The dialog scrolls; the reason can land above or below what is on screen.
+      scrollToFirstError();
     }
   }
 
-  const isSubmitting = form.formState.isSubmitting;
+  // Stays busy through the list's re-read, so the button cannot be pressed
+  // twice while the dialog is still open over a saved worker.
+  const isSubmitting = form.formState.isSubmitting || refreshing;
   const serverError = form.formState.errors.root?.server?.message;
   const others = workers.filter((w) => w.id !== worker.id);
 
@@ -160,6 +179,7 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
         {serverError ? (
           <p
             role="alert"
+            data-form-error
             className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm leading-relaxed text-destructive"
           >
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />
@@ -274,7 +294,7 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-4 pt-3">
-            <WorkerAdvancedFields form={form} />
+            <WorkerAdvancedFields form={form} runsAs={worker.effective_user} />
           </CollapsibleContent>
         </Collapsible>
       </FormModal>

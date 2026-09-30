@@ -3,6 +3,8 @@
 export const AUTO_FOLLOW_MAX_BYTES = 2 * 1024 * 1024;
 
 export const FOLLOW_COOKIE = "sv_logs_follow";
+// The line window, remembered the same way — the application Logs page does.
+export const LINES_COOKIE = "sv_logs_lines";
 
 /**
  * Whether live tailing starts on.

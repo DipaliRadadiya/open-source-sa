@@ -68,6 +68,26 @@ class UptimeKumaSiteType extends AbstractSiteType
 
     public function fields(): array
     {
-        return array_merge($this->commonFields(), $this->nodeFields());
+        return array_merge($this->commonFields(), [
+            // The panel creates the first administrator itself, after the
+            // application starts. Left to the first-run page, it was whoever
+            // opened the URL first.
+            $this->field('admin_username', 'text', required: true, extra: ['default' => 'admin']),
+            $this->field('admin_password', 'password', required: true, extra: ['generate' => true]),
+        ], $this->nodeFields());
+    }
+
+    /**
+     * Uptime Kuma refuses a password it rates "too weak", so the rule asks for
+     * mixed case and a number instead of failing the install at the last step.
+     *
+     * @return array<string, mixed>
+     */
+    public function rules(): array
+    {
+        return [
+            'admin_username' => ['required', 'string', 'max:64', 'regex:/^[A-Za-z0-9._-]+$/'],
+            'admin_password' => ['required', 'string', 'min:10', 'max:64', 'regex:/[a-z]/', 'regex:/[A-Z]/', 'regex:/[0-9]/'],
+        ];
     }
 }

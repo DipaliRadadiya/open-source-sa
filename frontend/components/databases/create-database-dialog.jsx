@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { ChevronDown, DatabasePlus, Loader2 } from "lucide-react";
@@ -11,6 +11,7 @@ import { applicationOptions } from "@/lib/backups/database-availability";
 import { acceptedEnginesFor, engineAccepted } from "@/lib/databases/engine-acceptance";
 import { createDatabase } from "@/lib/api/databases";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { useRestartConfirm } from "@/components/databases/use-restart-confirm";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,7 +71,8 @@ export function CreateDatabaseDialog({
 }) {
   const t = useTranslations("databases");
   const tEngines = useTranslations("databases.engines");
-  const router = useRouter();
+  const restart = useRestartConfirm();
+  const { refreshAndWait } = useRefresh();
   const [advanced, setAdvanced] = useState(false);
   // Set on success. The dialog then shows the credential instead of the form —
   // a closed dialog and a toast leaves you hunting for the connection details
@@ -139,7 +141,12 @@ export function CreateDatabaseDialog({
   const charsetNames = Object.keys(charsets);
   // A collation from the wrong charset is a 422, so the second list is always
   // derived from the first rather than offering everything.
-  const collations = values.charset ? (charsets[values.charset] ?? []) : [];
+  // The `_0900_` collations are MySQL 8's; MariaDB has none of them, and the
+  // API's list for the mysql driver offers them to both — picking one failed
+  // with a bare 500.
+  const collations = (values.charset ? (charsets[values.charset] ?? []) : []).filter(
+    (collation) => engine?.engine !== "mariadb" || !/_0900_/.test(collation),
+  );
 
   async function onSubmit(submitted) {
     const payload = {
@@ -163,6 +170,7 @@ export function CreateDatabaseDialog({
       // Omitted means the API generates one, which is better than anything a
       // person types in a hurry.
       if (submitted.password) payload.create_user.password = submitted.password;
+      if (submitted.restart_cluster) payload.create_user.restart_cluster = true;
       if (submitted.connection_preference === "remote") {
         payload.create_user.host = submitted.host;
       }
@@ -170,11 +178,13 @@ export function CreateDatabaseDialog({
 
     try {
       const { data } = await createDatabase(payload);
+      await refreshAndWait();
       toast.success(t("create.created", { name: submitted.name }));
       setCreated(data?.database ?? null);
-      router.refresh();
     } catch (error) {
-      handleValidationError(error, form);
+      const restartAnswer = restart.ask(error);
+      if (restartAnswer && (await restartAnswer)) return onSubmit({ ...submitted, restart_cluster: true });
+      if (!restartAnswer) handleValidationError(withUserFieldErrors(error, form), form);
     }
   }
 
@@ -556,7 +566,25 @@ export function CreateDatabaseDialog({
             </CollapsibleContent>
           </Collapsible>
         ) : null}
+      {restart.dialog}
       </FormModal>
     </Form>
   );
+}
+
+// The first user is sent nested as `create_user`, so its errors come back as
+// `create_user.username` / `.host` — keys no field is named, and a refused
+// username made Create do nothing (or, at best, raise a toast). They are set on
+// the fields directly and left out of what the generic handler sees.
+function withUserFieldErrors(error, form) {
+  const errors = error?.response?.data?.errors;
+  if (!errors) return error;
+  const rest = {};
+  for (const [key, messages] of Object.entries(errors)) {
+    const field = key.startsWith("create_user.") ? key.slice("create_user.".length) : null;
+    if (field && form.getValues(field) !== undefined) form.setError(field, { type: "server", message: messages[0] });
+    else rest[key] = messages;
+  }
+  if (!Object.keys(rest).length) return { ...error, response: { ...error.response, data: { ...error.response.data, errors: {} } } };
+  return { ...error, response: { ...error.response, data: { ...error.response.data, errors: rest } } };
 }

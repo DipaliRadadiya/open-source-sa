@@ -29,7 +29,7 @@ class RuntimeProgress
             ...$version,
             // Present on disk, so `ready` unless apt is currently doing
             // something to it — reinstalling over an existing version, say.
-            ...($installs->get($version['version'])?->toProgress() ?? $this->settled()),
+            ...($this->stillCurrent($installs->get($version['version']), $version)?->toProgress() ?? $this->settled()),
         ], $versions);
 
         $known = array_column($versions, 'version');
@@ -63,6 +63,25 @@ class RuntimeProgress
                 ),
             )),
         ];
+    }
+
+    /**
+     * The install record, unless it is a failure the version has since got
+     * past. A PHP install marked failed whose version is now on disk with
+     * nothing missing is not failed any more — the nginx test server showed
+     * PHP 8.3 as "install failed" for the rest of the day while it served
+     * WordPress. Only where the screen knows what "complete" means
+     * (`missing_packages`); elsewhere the record stands.
+     *
+     * @param  array<string, mixed>  $version
+     */
+    private function stillCurrent(?object $install, array $version): ?object
+    {
+        if ($install?->status === InstallStatus::Failed && ($version['missing_packages'] ?? null) === []) {
+            return null;
+        }
+
+        return $install;
     }
 
     /**

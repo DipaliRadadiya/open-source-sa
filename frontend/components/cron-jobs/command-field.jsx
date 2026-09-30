@@ -196,10 +196,11 @@ export function CommandField({
             </FormControl>
             {/* The two things that break most first cron jobs. Shown as a hint
                 rather than validation — both are usually right, not always. */}
-            <ul className="space-y-0.5 text-xs text-muted-foreground">
-              <li>{t("form.commandHintPath")}</li>
-              <li>{t("form.commandHintLog")}</li>
-            </ul>
+            <p className="text-xs text-muted-foreground">
+              {t.rich("form.commandHint", {
+                code: (chunks) => <code className="font-mono text-foreground">{chunks}</code>,
+              })}
+            </p>
             <FormMessage />
           </FormItem>
         )}

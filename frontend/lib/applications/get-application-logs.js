@@ -3,17 +3,23 @@ import {
   applicationLogsResponseSchema,
   applicationLogResponseSchema,
 } from "@/lib/schemas/application-log";
+import { failedRead } from "@/lib/logs/failed-read";
 
+// Status and the server's reason carried out with the failure: the page reads
+// them for its error box, and without them it could only say "couldn't load".
 export async function getApplicationLogs(id) {
   try {
     const res = await serverFetch(`/applications/${id}/logs`);
-    if (!res.ok) return { logs: [], failed: true };
+    if (!res.ok) {
+      const { message } = await failedRead(res);
+      return { logs: [], failed: true, status: res.status, failure: "http", message };
+    }
     const parsed = applicationLogsResponseSchema.safeParse(await res.json());
     return parsed.success
       ? { logs: parsed.data.logs, failed: false }
-      : { logs: [], failed: true };
+      : { logs: [], failed: true, status: res.status, failure: "shape" };
   } catch {
-    return { logs: [], failed: true };
+    return { logs: [], failed: true, status: null, failure: "network" };
   }
 }
 
@@ -31,7 +37,7 @@ export async function getApplicationLog(id, key, { lines = 200 } = {}) {
     );
     if (res.status === 403) return { status: "locked", log: null };
     if (res.status === 404) return { status: "missing", log: null };
-    if (!res.ok) return { status: "failed", log: null };
+    if (!res.ok) return failedRead(res);
     const parsed = applicationLogResponseSchema.safeParse(await res.json());
     return parsed.success
       ? { status: "ok", log: parsed.data.log }

@@ -156,7 +156,7 @@ export function ProcessTable({
       // The command is the row's identity, so it owns every pixel left after
       // the compact fact columns. A minimum keeps it useful before the table
       // falls back to horizontal scrolling; max-w-0 lets its child ellipsize.
-      meta: { className: "w-full min-w-64 max-w-0" },
+      meta: { className: "w-full min-w-36 max-w-0 @xl/procs:min-w-64" },
       cell: CommandCell,
     },
     {
@@ -165,13 +165,13 @@ export function ProcessTable({
       accessorFn: (row) => num(row.pid),
       sortingFn: "basic",
       header: t("processes.pid"),
-      meta: { className: "w-20" },
+      meta: { className: "hidden w-20 @xl/procs:table-cell" },
       cell: PidCell,
     },
     {
       accessorKey: "user",
       header: t("processes.user"),
-      meta: { className: "w-28 max-w-28 truncate" },
+      meta: { className: "hidden w-28 max-w-28 truncate @5xl/procs:table-cell" },
       cell: UserCell,
     },
     {
@@ -179,7 +179,7 @@ export function ProcessTable({
       accessorFn: (row) => num(row.cpu),
       sortingFn: "basic",
       header: t("processes.cpu"),
-      meta: { className: "w-32 xl:w-52" },
+      meta: { className: "w-24 @xl/procs:w-32 xl:w-52" },
       cell: CpuCell,
     },
     {
@@ -187,7 +187,7 @@ export function ProcessTable({
       accessorFn: (row) => num(row.memory),
       sortingFn: "basic",
       header: t("processes.memory"),
-      meta: { className: "w-32 xl:w-52" },
+      meta: { className: "hidden w-32 xl:w-52 @xl/procs:table-cell" },
       cell: MemoryCell,
     },
     {
@@ -246,12 +246,14 @@ export function ProcessTable({
   }
 
   return (
-    <div className="space-y-3">
+    // Narrow cards drop PID, user and memory rather than scroll: at 390 the
+    // 48rem table hid every Stop button 454px off-screen.
+    <div className="space-y-3 @container/procs">
       {/* Fixed-height scroll area keeps the page short no matter how many
           processes the server reports. */}
       <div
         className={cn(
-          "overflow-auto rounded-xl border [scrollbar-gutter:stable] [&_table]:min-w-[48rem] [&>div]:rounded-none [&>div]:border-0",
+          "overflow-auto rounded-xl border [scrollbar-gutter:stable] @3xl/procs:[&_table]:min-w-[48rem] [&>div]:rounded-none [&>div]:border-0",
           // Only the full table needs capping; three rows never reach it.
           !limit && "max-h-[26rem]",
         )}

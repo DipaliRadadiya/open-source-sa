@@ -15,6 +15,23 @@ export function joinPath(base, name) {
   return base ? `${base}/${name}` : name;
 }
 
+// A bare name typed where a path is expected stays in `folder` — the folder
+// the reader is looking at. A path with a slash is counted from the top of the
+// application folder, and a leading slash means the top itself.
+export function inFolder(value, folder) {
+  if (!value) return value;
+  if (value.startsWith("/")) return value.replace(/^\/+/, "");
+  return value.includes("/") ? value : joinPath(folder, value);
+}
+
+// What a target dialog's field means. The pre-filled default is already a full
+// path, so it is taken as written: Extract's default for `wp-content/a.zip` is
+// `wp-content`, which has no slash and was otherwise placed inside itself.
+export function placeTarget(typed, itemPath, defaultTarget) {
+  if (typed === defaultTarget) return typed;
+  return inFolder(typed, dirname(itemPath));
+}
+
 // "photo.jpg" -> ["photo", ".jpg"]; "archive.tar.gz" -> ["archive", ".tar.gz"]
 // (the two extensions this feature ever cares about compressing/extracting);
 // "README" -> ["README", ""].

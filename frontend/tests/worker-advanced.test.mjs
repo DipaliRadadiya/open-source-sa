@@ -36,7 +36,10 @@ test("blank means 'no opinion', which is what the API assumes", () => {
     new URL("../components/applications/workers/create-worker-dialog.jsx", import.meta.url),
     "utf8",
   );
-  assert.match(create, /user: values\.user\?\.trim\(\) \|\| undefined/);
+  // The user is never sent from the form now: a worker runs as the app's own
+  // user, and a free-text field accepted `root`.
+  assert.match(create, /user: undefined/);
+  assert.doesNotMatch(create, /values\.user\?\.trim/);
   assert.match(create, /log_level: values\.log_level \|\| undefined/);
 });
 
@@ -60,7 +63,7 @@ test("both dialogs share one set of advanced fields", () => {
       new URL(`../components/applications/workers/${file}`, import.meta.url),
       "utf8",
     );
-    assert.match(s, /<WorkerAdvancedFields form=\{form\} \/>/, `${file} does not use the shared fields`);
+    assert.match(s, /<WorkerAdvancedFields form=\{form\} runsAs=\{[^}]+\} \/>/, `${file} does not use the shared fields`);
   }
 });
 
@@ -171,7 +174,10 @@ test("extra config may not open a second program block", () => {
   assert.ok(
     codes({ ...base, extra_config: "[program:secret]\ncommand=/bin/sh" }).includes("noSectionHeader"),
   );
-  assert.deepEqual(codes({ ...base, extra_config: 'environment=APP_ENV="production"' }), []);
+  // The panel already writes `environment=PATH=…`; a second environment= line
+  // is a duplicate key and supervisord refuses the program (proved 09-25).
+  assert.ok(codes({ ...base, extra_config: 'environment=APP_ENV="production"' }).includes("noEnvironmentLine"));
+  assert.deepEqual(codes({ ...base, extra_config: "startsecs=5" }), []);
 });
 
 test("a log file is an absolute path, with no traversal and no second line", () => {

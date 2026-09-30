@@ -143,7 +143,7 @@ export function SshForm({
   return (
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}>
+        <form noValidate onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}>
           <Section
             icon={KeyRound}
             title={t("title")}

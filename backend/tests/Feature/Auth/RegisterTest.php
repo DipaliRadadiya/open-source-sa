@@ -1,7 +1,10 @@
 <?php
 
+use App\Actions\Auth\RegisterFirstAdmin;
 use App\Models\User;
 use App\Services\AdministratorRole;
+use Database\Seeders\PermissionSeeder;
+use Illuminate\Auth\Access\AuthorizationException;
 
 it('registers the first user as admin with the Administrator role', function () {
     $response = $this->postJson('/api/auth/register', [
@@ -45,4 +48,18 @@ it('validates registration input', function () {
 
     $response->assertUnprocessable()
         ->assertJsonValidationErrors(['name', 'username', 'password']);
+});
+
+it('refuses a second first-admin that got past the request check at the same time', function () {
+    // RegisterRequest::authorize() runs before the account is created, so two
+    // sign-ups arriving together on a fresh panel both passed it. The action
+    // asks again under a lock (found in code review 2026-09-29).
+    $this->seed(PermissionSeeder::class);
+    $register = app(RegisterFirstAdmin::class);
+
+    $register->execute(['name' => 'Owner', 'username' => 'owner', 'password' => 'Str0ng-Passw0rd!']);
+
+    expect(fn () => $register->execute(['name' => 'Late', 'username' => 'late', 'password' => 'Str0ng-Passw0rd!']))
+        ->toThrow(AuthorizationException::class)
+        ->and(User::where('is_system', false)->count())->toBe(1);
 });

@@ -6,6 +6,16 @@ After=network.target
      database that is briefly down should slow the app's start, not refuse it
      and leave the site off until someone notices. --}}
 Wants=network-online.target
+{{-- Without this a crash loop restarts forever at 5s intervals and buries the
+     cause in the journal. Five failures in a minute stops the unit and leaves
+     it visibly failed, which is the state someone can act on. --}}
+{{-- In [Unit], where systemd reads them. Under [Service] the interval was
+     rejected ("Unknown key 'StartLimitIntervalSec' in section [Service],
+     ignoring" — in the journal of every sv-app unit on a real server), so the
+     burst counted against systemd's default 10 s window, which five restarts
+     5 s apart never fill: a crash loop restarted forever. --}}
+StartLimitBurst=5
+StartLimitIntervalSec=60
 
 [Service]
 Type=simple
@@ -35,12 +45,6 @@ ExecStart={{ $exec }}
      unhandled rejection has still taken the site down. --}}
 Restart=always
 RestartSec=5
-{{-- Without this a crash loop restarts forever at 5s intervals and buries the
-     cause in the journal. Five failures in a minute stops the unit and leaves
-     it visibly failed, which is the state someone can act on. --}}
-StartLimitBurst=5
-StartLimitIntervalSec=60
-
 {{-- One slice per application: per-app CPU and memory accounting comes free,
      and one runaway site cannot starve the others. --}}
 Slice=sv-app-{{ $application->id }}.slice

@@ -75,7 +75,7 @@ it('creates the directory, writes a tested config and reloads', function () {
     $app->refresh();
     expect($app->status->value)->toBe('active');
     expect($app->steps)->toBe([
-        'ensure_account', 'create_directory', 'placeholder', 'set_ownership', 'harden_php', 'create_php_pool', 'write_config', 'test_config', 'reload',
+        'ensure_account', 'create_directory', 'set_ownership', 'placeholder', 'harden_php', 'create_php_pool', 'write_config', 'test_config', 'reload',
     ]);
 
     // `{home}/{slug}/public_html` — the document root, not the site directory:
@@ -179,8 +179,8 @@ it('is idempotent when the job runs twice', function () {
     expect($app->steps)->toBe([
         'ensure_account',
         'create_directory',
-        'placeholder',
         'set_ownership',
+        'placeholder',
         'harden_php',
         'create_php_pool',
         'write_config',
@@ -235,7 +235,7 @@ it('queues provisioning when an application is created', function () {
 
 it('can retry a failed provision explicitly', function () {
     Queue::fake();
-    $app = makeApp(['status' => 'failed', 'failed_step' => 'reload', 'reference' => 'abc']);
+    $app = makeApp(['status' => 'failed', 'failed_step' => 'reload', 'failed_reason' => 'not_answering', 'reference' => 'abc']);
 
     $this->withHeaders(provisionHeaders())
         ->postJson("/api/applications/{$app->id}/provision")
@@ -244,7 +244,10 @@ it('can retry a failed provision explicitly', function () {
 
     Queue::assertPushed(ProvisionApplication::class);
     // The previous failure is cleared so the UI doesn't show a stale error.
-    expect($app->fresh()->failed_step)->toBeNull();
+    expect($app->fresh()->failed_step)->toBeNull()
+        // Measured on a real server: a retried n8n came up Active still
+        // saying "not answering".
+        ->and($app->fresh()->failed_reason)->toBeNull();
 });
 
 it('does not queue a second provision while one is already running', function () {

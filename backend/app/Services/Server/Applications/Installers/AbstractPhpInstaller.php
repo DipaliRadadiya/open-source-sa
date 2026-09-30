@@ -2,14 +2,19 @@
 
 namespace App\Services\Server\Applications\Installers;
 
+use App\Actions\Server\Cronjob\CreateCronjob;
 use App\Contracts\PhpStack;
+use App\Exceptions\Server\Application\ProvisioningFailedException;
+use App\Exceptions\Server\Cronjob\CronjobOperationException;
 use App\Models\Application;
+use App\Models\Cronjob;
 use App\Services\Server\Applications\ApplicationConfigMutator;
 use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\Server\Applications\ProvisionProgress;
 use App\Services\Server\Php\PhpShim;
 use App\Services\Server\Php\RuntimeOwnership;
 use App\Services\Server\ServerOps;
+use Illuminate\Support\Str;
 
 /**
  * Shared machinery for the PHP marketplace: WordPress, Moodle, Nextcloud and
@@ -90,7 +95,7 @@ abstract class AbstractPhpInstaller extends AbstractSiteInstaller
      */
     protected function phpCommand(Application $application): array
     {
-        $version = (string) ($application->php_version ?: config('server.default_php_version', '8.4'));
+        $version = $this->phpVersion($application);
 
         return [
             $this->stack->binaryPath($version),
@@ -100,5 +105,54 @@ abstract class AbstractPhpInstaller extends AbstractSiteInstaller
             // them), so a scalar in there would become a one-click app.
             'memory_limit='.(string) config('server.installer_php_memory_limit', '512M'),
         ];
+    }
+
+    /**
+     * The PHP this site's installer runs under: its own version, or the server
+     * default a blank one resolves to. One place, so choosing a release for
+     * a version and running the installer on it cannot use two answers.
+     */
+    protected function phpVersion(Application $application): string
+    {
+        return (string) ($application->php_version ?: config('server.default_php_version', '8.4'));
+    }
+
+    /**
+     * Schedule the application's own background job, as the site user, on
+     * the site's own PHP.
+     *
+     * Nextcloud and Moodle both need a cron to run their background tasks,
+     * and nothing added one: Nextcloud reported "background jobs last ran 56
+     * years ago" on a fresh install (nginx test server). A preset for it
+     * existed on the Cronjobs screen, but the user had to know to add it.
+     *
+     * The PHP binary by absolute path, not `php`: that resolves to the
+     * server's default version, which is not necessarily the site's. Created
+     * through the same action as the Cronjobs screen, so the job appears there
+     * and can be edited or removed like any other. Skipped when a job with the
+     * same command already exists, so Retry Setup does not add a second.
+     *
+     * @throws ProvisioningFailedException
+     */
+    protected function scheduleCron(Application $application, string $documentRoot, string $script, string $expression): void
+    {
+        $command = $this->stack->binaryPath($this->phpVersion($application)).' -f '.$documentRoot.'/'.$script;
+
+        if (Cronjob::query()->where('command', $command)->exists()) {
+            return;
+        }
+
+        try {
+            app(CreateCronjob::class)->execute([
+                'name' => Str::limit($application->name, 200, '').' background jobs #'.$application->id,
+                'system_user_id' => $application->system_user_id,
+                'application_id' => $application->id,
+                'application_owned' => true,
+                'command' => $command,
+                'expression' => $expression,
+            ]);
+        } catch (CronjobOperationException $e) {
+            throw new ProvisioningFailedException('schedule_cron', $e->reference);
+        }
     }
 }

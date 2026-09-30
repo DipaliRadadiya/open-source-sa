@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { useSearchParams } from "next/navigation";
 import { PER_PAGE_OPTIONS } from "@/lib/schemas/user";
 import { useSetQuery } from "@/hooks/use-set-query";
@@ -13,16 +14,22 @@ import {
  * Rows-per-page selector, URL-driven (writes `per_page`, resets to page 1).
  */
 export function PerPageSelect({ label, value, onValueChange }) {
+  // The visible "Per page" names the trigger; without the link the select was
+  // announced as an unnamed combobox.
+  const labelId = useId();
   const searchParams = useSearchParams();
   const setQuery = useSetQuery();
-  const current = value ?? searchParams.get("per_page") ?? "10";
+  // A `per_page` the list refuses (?per_page=7) is shown as 10 rows by the
+  // fetcher, so the control says 10 too rather than going blank.
+  const fromUrl = searchParams.get("per_page");
+  const current = value ?? (PER_PAGE_OPTIONS.includes(Number(fromUrl)) ? fromUrl : String(PER_PAGE_OPTIONS[0]));
   const change = onValueChange ?? ((next) => setQuery({ per_page: next }, { resetPage: true }));
 
   return (
     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-      <span className="whitespace-nowrap">{label}</span>
+      <span id={labelId} className="whitespace-nowrap">{label}</span>
       <Select value={current} onValueChange={change}>
-        <SelectTrigger className="w-[4.5rem]">
+        <SelectTrigger className="w-[4.5rem]" aria-labelledby={labelId}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

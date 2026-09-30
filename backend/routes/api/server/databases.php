@@ -106,8 +106,17 @@ Route::middleware('manages-databases')->group(function (): void {
     // Database users (nested — a user belongs to one database).
     Route::middleware('permission:database')->group(function () {
         Route::get('/databases/{database}/users', [DatabaseUserController::class, 'index']);
-        Route::post('/databases/{database}/phpmyadmin-sso', PhpmyadminSsoController::class);
     });
+
+    /*
+    | phpMyAdmin single sign-on signs the caller in as the database's own user,
+    | and that user can write — so it is a write action, whatever the button
+    | looks like. It sat behind `database` view (DB-02): a read-only role opened
+    | phpMyAdmin and ran an INSERT. Manage, the same bar as every other way of
+    | changing a database's contents.
+    */
+    Route::post('/databases/{database}/phpmyadmin-sso', PhpmyadminSsoController::class)
+        ->middleware('permission:database,manage');
     Route::middleware('permission:database,manage')->scopeBindings()->group(function () {
         Route::post('/databases/{database}/users', [DatabaseUserController::class, 'store']);
         Route::patch('/databases/{database}/users/{user}', [DatabaseUserController::class, 'update']);

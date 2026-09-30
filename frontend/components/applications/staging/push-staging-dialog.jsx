@@ -1,18 +1,18 @@
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
+  Archive,
+  ArrowRight,
   ArrowUpFromLine,
-  Clock,
   Database,
+  ExternalLink,
   FileText,
   Layers,
   Loader2,
   TriangleAlert,
-  PowerOff,
-  Undo2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PUSH_MODES } from "@/lib/schemas/application-staging";
@@ -39,17 +39,18 @@ import {
 /**
  * Copy staging over production.
  *
- * The most destructive action in the panel, and the only one with no undo for
- * files: the backend rsyncs with `--delete`, and `files` mode takes no safety
- * copy of anything. So this borrows the restore dialog's shape — icon header,
- * the facts as facts, and a typed domain before the button unlocks — because
- * the two actions carry the same weight and should not feel different.
+ * The most destructive action in the panel. The backend rsyncs with
+ * `--delete` (uploads excepted — they are merged, never removed), and the
+ * snapshot it takes first is only for putting production back if the push
+ * FAILS; once it succeeds there is no way back from the panel. So this borrows
+ * the restore dialog's shape — icon header, the facts as facts, and a typed
+ * domain before the button unlocks — because the two actions carry the same
+ * weight and should not feel different.
  *
- * The mode has no preselected value on purpose. `PushStagingRequest` calls
- * `files` "the only mode that cannot lose data" and asks the form to default
- * to it; that is not true, and defaulting to it would turn a claim the code
- * makes about itself into the click most people never think about. Each option
- * says what it destroys and the reader picks one.
+ * Files is chosen to begin with (Krishna, 2026-09-30): it is the mode that
+ * leaves production's database — its orders, comments and users — alone. Its
+ * own consequence (production-only files are deleted, uploads kept) shows as
+ * soon as the dialog opens, and the domain still has to be typed.
  *
  * Callers MUST pass a `key` that changes when this opens. A dialog opened
  * from its own button never fires `onOpenChange` on the way in, so a mode
@@ -59,7 +60,8 @@ import {
 export function PushStagingDialog({ appId, production, staging, open, onOpenChange }) {
   const t = useTranslations("applications.staging.pushDialog");
   const router = useRouter();
-  const [mode, setMode] = useState("");
+  const { refreshAndWait } = useRefresh();
+  const [mode, setMode] = useState("files");
   const [confirm, setConfirm] = useState("");
   const [pending, setPending] = useState(false);
 
@@ -71,11 +73,14 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
     setPending(true);
     try {
       await pushApplicationStaging(appId, mode);
+      await refreshAndWait();
       onOpenChange(false);
       toast.success(t("done", { domain }));
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("failed")));
+      // The usual cause is the copy having gone (deleted in another tab), and
+      // the page behind this dialog still showed it. Re-read, so it says so.
+      router.refresh();
     } finally {
       setPending(false);
     }
@@ -89,92 +94,74 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
             <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
               <ArrowUpFromLine className="size-5" />
             </span>
-            <AlertDialogTitle>{t("title", { domain })}</AlertDialogTitle>
+            <AlertDialogTitle>{t("title")}</AlertDialogTitle>
           </div>
+          {/* Which copy goes where, in one line. */}
           <AlertDialogDescription className="pt-1">
-            {t("description", { staging: staging?.domain ?? "", production: domain })}
+            <span className="font-mono break-words">{staging?.domain}</span>
+            <ArrowRight className="mx-1.5 inline size-3.5 align-[-2px]" aria-hidden />
+            <span className="font-mono font-medium break-words text-foreground">{domain}</span>
+            {staging?.created_at_human ? (
+              <span className="block pt-1 text-xs">{t("copyAge", { age: staging.created_at_human })}</span>
+            ) : null}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <div className="space-y-4">
-          {/*
-           * The two costs, together, in one block and above the choice —
-           * they are true of every mode, and they are the parts people do not
-           * expect. They were a tinted paragraph and a line of grey body text
-           * either side of the options: the single most important sentence in
-           * the dialog, "there is no way back from this", was the smallest
-           * thing on screen and sat BELOW the decision it should inform.
-           *
-           * One block with two rows rather than two banners. Two full-width
-           * warnings shout equally and the second stops being read.
-           */}
-          <div className="space-y-2.5 rounded-lg border border-destructive/30 bg-destructive/5 p-3.5 text-sm">
-            <p className="flex items-start gap-2.5">
-              <PowerOff className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
-              <span>{t("downtime")}</span>
-            </p>
-            <p className="flex items-start gap-2.5">
-              <Undo2 className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
-              <span>
-                {t.rich("backupFirst", {
-                  link: (chunks) => (
-                    <Link
-                      href={`/applications/${appId}/backups`}
-                      className="font-medium underline underline-offset-4"
-                    >
-                      {chunks}
-                    </Link>
-                  ),
-                })}
-              </span>
-            </p>
-          </div>
+          {/* Read before choosing: no option can be undone (and the new tab
+              keeps this push waiting — Krishna, 2026-09-29). */}
+          <p className="flex items-start gap-2.5 text-sm">
+            <Archive className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+            <span>
+              {t.rich("backupFirst", {
+                link: (chunks) => (
+                  <a
+                    href={`/applications/${appId}/backups`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 font-medium text-primary underline underline-offset-4"
+                  >
+                    {chunks}
+                    <ExternalLink className="size-3.5" aria-hidden />
+                  </a>
+                ),
+              })}
+            </span>
+          </p>
 
+          {/* One line per option (research-staging-push-ui: every panel
+              surveyed says what each choice is in a phrase; none shows a
+              comparison table). The cost is said once, for the one chosen. */}
           <div className="space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <Label hint={t("whatToPushHint")}>{t("whatToPush")}</Label>
-              {/*
-               * The age of the copy decides whether this push is routine or a
-               * mistake, so it belongs beside the choice it informs. As a bare
-               * grey line floating between a red panel and a heading it
-               * belonged to neither of them.
-               */}
-              {staging?.created_at_human ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground">
-                  <Clock className="size-3.5 shrink-0" aria-hidden />
-                  {t("copyAge", { age: staging.created_at_human })}
-                </span>
-              ) : null}
-            </div>
+            <Label>{t("whatToPush")}</Label>
             <ChoiceField
               value={mode}
               onChange={setMode}
               disabled={pending}
               variant="card"
-              // `hint`, not `description` — ChoiceField renders the former and
-              // silently drops anything else, which took the sentence naming
-              // what each mode destroys off the screen entirely.
               options={PUSH_MODES.map((value) => ({
                 value,
                 label: t(`modes.${value}.label`),
-                hint: <ModeFacts t={t} mode={value} />,
-                // Files, a database, or both: three different kinds of thing,
-                // which is the case an icon actually helps with.
+                hint: t(`modes.${value}.summary`),
                 icon: MODE_ICONS[value],
               }))}
             />
           </div>
 
-          {/*
-           * The gate, in a surface of its own. As a loose label and input at
-           * the bottom of a long dialog it read as one more field; it is the
-           * last thing between a click and an irreversible action.
-           */}
-          <div className="space-y-1.5 rounded-lg border bg-muted/30 p-3.5">
-            {/* The most dangerous action in the panel, and the domain is the
-                only thing standing in front of it — no reason to make it a
-                transcription test as well as a decision. */}
-            <div className="flex items-start justify-between gap-2">
+          {mode ? (
+            <p className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/5 p-3 text-sm">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
+              <span>{t(`modes.${mode}.consequence`)}</span>
+            </p>
+          ) : null}
+
+          <p className="text-xs leading-5 text-muted-foreground">{t("whileRunning")}</p>
+
+          {/* The most dangerous action in the panel, and the domain is the
+              only thing standing in front of it — no reason to make it a
+              transcription test as well as a decision. */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
               <Label htmlFor="staging-push-confirm">{t("confirmLabel", { domain })}</Label>
               <CopyButton value={domain} label={t("copyDomain")} className="size-6 shrink-0" />
             </div>
@@ -186,10 +173,7 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
               autoComplete="off"
               spellCheck={false}
               placeholder={domain}
-              className={cn(
-                "bg-background font-mono",
-                matches && "border-success focus-visible:border-success",
-              )}
+              className={cn("font-mono", matches && "border-success focus-visible:border-success")}
             />
           </div>
         </div>
@@ -215,48 +199,5 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  );
-}
-
-/**
- * What one push mode does, as the same three answers every time.
- *
- * These were three paragraphs — 25, 58 and 34 words — all answering the same
- * three questions in a different order and a different shape: what gets
- * replaced, what gets destroyed, and whether there is any way back. Choosing
- * between them meant extracting that from prose three times, on the most
- * destructive screen in the panel.
- *
- * Same three rows, same order, every mode. What differs between the options is
- * then the only thing on screen that differs.
- *
- * `undo` carries the weight because it is the row that decides it: "None —
- * nothing is copied first" is the most important fact about Files only, and as
- * the last clause of a 25-word sentence it read like a footnote.
- */
-function ModeFacts({ t, mode }) {
-  const note = mode === "database" ? t("modes.database.note") : null;
-
-  return (
-    <span className="mt-1.5 block space-y-1">
-      {["replaces", "deletes", "undo"].map((key) => (
-        <span key={key} className="flex gap-2">
-          {/* A fixed column, so the three answers line up down the card and can
-              be compared across the options without being read in full. */}
-          <span className="w-20 shrink-0 text-muted-foreground">{t(`facts.${key}`)}</span>
-          <span className={cn("min-w-0", key === "undo" && "font-medium text-foreground")}>
-            {t(`modes.${mode}.${key}`)}
-          </span>
-        </span>
-      ))}
-      {/* Only this mode has it: the database will expect plugins and themes
-          that the files it is NOT replacing may not have. */}
-      {note ? (
-        <span className="flex gap-2 pt-0.5 text-warning">
-          <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-          <span className="min-w-0">{note}</span>
-        </span>
-      ) : null}
-    </span>
   );
 }

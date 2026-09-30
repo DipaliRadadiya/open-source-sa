@@ -70,6 +70,16 @@ class PortAllocator
      */
     public function conflict(int $port, ?Application $except = null): ?string
     {
+        // The port this application already has is not a conflict, whoever is
+        // listening on it — while the app runs, that is the app itself. `ss`
+        // cannot say which process holds a port, so asking it refused every
+        // save of a running Node site's settings that kept its port (found
+        // live on nodebb, 2026-09-29). Anything else on that port was already
+        // there before this save and is not something the save changes.
+        if ($except?->exists && (int) $except->getOriginal('app_port') === $port) {
+            return null;
+        }
+
         $taken = Application::query()
             ->whereNotNull('app_port')
             ->when($except?->exists, fn ($query) => $query->whereKeyNot($except->getKey()))

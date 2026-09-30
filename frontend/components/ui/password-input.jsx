@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 
 /**
  * Password field with a show/hide toggle. Accepts all Input props (spread
- * react-hook-form's field onto it). The toggle is outside the tab order so
- * keyboard flow moves field → next field; it's operable by mouse/touch.
+ * react-hook-form's field onto it). The toggle is a tab stop of its own: out of
+ * the tab order, a keyboard user had no way to check what they had typed.
  */
 export function PasswordInput({ className, show: showProp, onShowChange, ...props }) {
   const t = useTranslations("common");
@@ -30,10 +30,9 @@ export function PasswordInput({ className, show: showProp, onShowChange, ...prop
       />
       <button
         type="button"
-        tabIndex={-1}
         onClick={() => setShow((s) => !s)}
         aria-label={show ? t("hidePassword") : t("showPassword")}
-        className="absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-lg text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none"
+        className="absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-lg text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
       >
         {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
       </button>

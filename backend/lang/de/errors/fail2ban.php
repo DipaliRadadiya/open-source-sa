@@ -10,6 +10,7 @@ return [
     'lockout_risk' => 'Das Aktivieren des SSH-Jails kann Sie von diesem Server aussperren. Fügen Sie Ihre IP-Adresse zur Ausnahmeliste hinzu oder bestätigen Sie, dass Sie das Risiko akzeptieren.',
     'ip_ignored' => 'Diese IP-Adresse steht auf Ihrer Ausnahmeliste. Entfernen Sie sie dort zuerst, wenn Sie sie wirklich sperren möchten.',
     'ip_own_address' => 'Das ist die eigene Adresse dieses Servers. Eine Sperre kann das Panel von seiner Datenbank abschneiden und unerreichbar machen; sie ist daher nicht möglich.',
+    'ip_your_address' => 'Das ist die Adresse, von der aus Sie verbunden sind. Eine Sperre würde Sie von diesem Server aussperren, beim recidive-Jail auch von diesem Panel, daher kann sie hier nicht gesperrt werden.',
     'operation_failed' => 'Der fail2ban-Vorgang ist fehlgeschlagen.',
     'bantime_too_short' => 'Die Sperrdauer muss mindestens 60 Sekunden betragen, oder -1 für eine dauerhafte Sperre.',
 ];

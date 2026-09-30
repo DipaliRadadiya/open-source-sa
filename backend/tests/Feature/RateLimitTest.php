@@ -113,6 +113,10 @@ it('keeps the routes that opted out of the global limiter deliberate', function 
         // whatever the user clicked next.
         'api/applications/{application}/files/archive-jobs',
         'api/applications/{application}/deployments/{deployment}',
+        // Polled every few seconds while the Deployment screen is open, so a
+        // deploy started by a push appears without a reload: the same reason
+        // as the row above, in the same `progress` bucket.
+        'api/applications/{application}/deployments/latest',
         'api/server/sync/{run}',
         'api/admin/panel-update/{panelUpdate}',
         // A security update waits out the dpkg lock for up to ten minutes

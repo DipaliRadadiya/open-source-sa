@@ -268,3 +268,32 @@ it('offers the Node version as a fix, not only the compiler', function () {
     // not need.
     expect(__('application.failure_reason.no_build_tools'))->toContain('Node');
 });
+
+it('names an out-of-memory kill that only printed npm warnings first', function () {
+    Process::fake();
+
+    // npm prints its peer-dependency warnings before any work starts, so an
+    // npm install killed by the kernel was never "silent" — `npm install
+    // n8n` died at 3.8 GB on the Apache test box and the step had no reason.
+    $warnings = "npm warn ERESOLVE overriding peer dependency\nnpm warn While resolving: @getzep/zep-cloud@1.0.6\n\nnpm warn   node_modules/@tiptap/pm\n";
+
+    $result = new ServerOpsResult(
+        ok: false,
+        reference: 'ref-126',
+        result: Process::result(output: '', errorOutput: $warnings, exitCode: 137),
+    );
+
+    expect(ProvisioningFailedException::fromResult('install_app', $result)->reason)->toBe('out_of_memory');
+});
+
+it('still prefers npm\'s own error to a guess when it printed one', function () {
+    Process::fake();
+
+    $result = new ServerOpsResult(
+        ok: false,
+        reference: 'ref-127',
+        result: Process::result(output: '', errorOutput: "npm warn deprecated x\nnpm error code ENOSPC\n", exitCode: 137),
+    );
+
+    expect(ProvisioningFailedException::fromResult('install_app', $result)->reason)->toBeNull();
+});

@@ -7,7 +7,9 @@ use App\Models\User;
 use App\Services\Panel\PanelUpdateRunner;
 use App\Services\Panel\UpdateScript;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Process;
 
 beforeEach(function () {
     Cache::flush();
@@ -16,6 +18,9 @@ beforeEach(function () {
 
     // The state dir must not be the real /var/lib path in tests.
     config()->set('panel_update.state_dir', storage_path('framework/testing/panel-update'));
+    // A state file left by an earlier run is read by reconcile() as the
+    // outcome of whichever row now has that id.
+    File::deleteDirectory(storage_path('framework/testing/panel-update'));
 
     Http::fake(['api.github.com/*' => Http::response(['tag_name' => 'v99.0.0'])]);
 });
@@ -108,6 +113,92 @@ describe('the generated update script', function () {
             ->and($this->script)->not->toContain('systemctl reload '.config('panel_update.services.php_fpm'))
             // A panel stuck in maintenance is worse than a failed update.
             ->and(substr_count($this->script, 'artisan up'))->toBeGreaterThan(1);
+    });
+
+    it('restores the database in the rollback only once migrate has started', function () {
+        $touched = strpos($this->script, 'DB_TOUCHED=1');
+        $migrate = strpos($this->script, 'note migrate');
+        $migrateRun = strpos($this->script, 'artisan migrate --force');
+
+        // Set between "note migrate" and the migrate command: a failure before
+        // the migrate step never touches the database.
+        expect($touched)->toBeGreaterThan($migrate)
+            ->and($touched)->toBeLessThan($migrateRun)
+            ->and($this->script)->toContain('if [ "$DB_TOUCHED" = "1" ]; then');
+    });
+
+    it('puts the database back after the old code and before the services restart', function () {
+        $rollback = substr($this->script, strpos($this->script, 'rollback() {'));
+        $composer = strpos($rollback, 'composer install');
+        $restore = strpos($rollback, '-restore.php');
+        $stopQueue = strpos($rollback, 'systemctl stop '.config('panel_update.services.queue'));
+        $restart = strpos($rollback, 'systemctl restart '.config('panel_update.services.php_fpm'));
+
+        expect($composer)->not->toBeFalse()
+            ->and($stopQueue)->not->toBeFalse()
+            ->and($restore)->toBeGreaterThan($composer)
+            // Nothing writes to the database while the file is swapped.
+            ->and($stopQueue)->toBeLessThan($restore)
+            ->and($restart)->toBeGreaterThan($restore)
+            // A failure inside migrate may have changed data only.
+            ->and($rollback)->toContain('if [ "$failed_step" = "migrate" ]; then')
+            ->and($rollback)->toContain('finish failed "$failed_step$DB_SUFFIX" true');
+    });
+
+    it('captures the backup path the rollback restores from', function () {
+        expect($this->script)->toContain('DB_BACKUP="$(sudo -u panel -H ')
+            ->and($this->script)->toContain('artisan panel:backup-database | tail -n 1)"')
+            // Keeps the failed state rather than deleting it.
+            ->and($this->script)->toContain('"${DB_BACKUP%.sqlite}-failed.sqlite"');
+    });
+
+    it('writes the restore helper beside the script, exactly as shipped', function () {
+        $start = strpos($this->script, "<<'PANEL_RESTORE_PHP'\n") + strlen("<<'PANEL_RESTORE_PHP'\n");
+        $end = strpos($this->script, "\nPANEL_RESTORE_PHP\n", $start);
+
+        expect(substr($this->script, $start, $end - $start))
+            ->toBe(rtrim(file_get_contents(resource_path('panel-update/restore-database.php')), "\n"))
+            // Written before the trap can fire, so a failure at any step finds it.
+            ->and(strpos($this->script, 'PANEL_RESTORE_PHP'))->toBeLessThan(strpos($this->script, 'note preflight_git'));
+    });
+
+    it('does not restore automatically when the panel is not on SQLite', function () {
+        // Switched only around the render: the test itself runs on SQLite,
+        // and leaving the default pointed elsewhere breaks every test after.
+        $original = config('database.default');
+        config()->set('database.connections.qa_mysql', ['driver' => 'mysql']);
+        config()->set('database.default', 'qa_mysql');
+
+        try {
+            $script = app(UpdateScript::class)->render($this->update, '99.0.0');
+        } finally {
+            config()->set('database.default', $original);
+        }
+
+        expect($script)->toContain('DB_SUFFIX=":db_not_restored"')
+            ->and($script)->not->toContain('RESTORE_FORCE');
+    });
+
+    it('goes back onto the branch the box was on, not a bare commit', function () {
+        $rollback = substr($this->script, strpos($this->script, 'rollback() {'));
+
+        expect($this->script)->toContain('ORIG_BRANCH="$(')
+            ->and($this->script)->toContain('symbolic-ref --quiet --short HEAD')
+            // Only when that branch still points at the commit being restored.
+            ->and($rollback)->toContain('rev-parse --verify --quiet "$ORIG_BRANCH"')
+            ->and($rollback)->toContain('checkout --force "$ORIG_BRANCH"')
+            ->and(strpos($rollback, 'checkout --force "$ORIG_BRANCH"'))
+            ->toBeGreaterThan(strpos($rollback, 'checkout --force abc1234def5678901234567890abcdef12345678'));
+    });
+
+    it('is still valid bash', function () {
+        $file = tempnam(sys_get_temp_dir(), 'upd');
+        file_put_contents($file, $this->script);
+
+        $check = Process::run(['bash', '-n', $file]);
+        @unlink($file);
+
+        expect($check->successful())->toBeTrue($check->errorOutput());
     });
 
     it('defaults to writing progress outside the repository', function () {
@@ -285,7 +376,12 @@ describe('version validation', function () {
 
 describe('starting an update', function () {
     it('refuses when the panel is already on the newest version', function () {
-        Http::fake(['api.github.com/*' => Http::response(['tag_name' => 'v0.0.1'])]);
+        // Its own release URL. `beforeEach` already faked api.github.com with
+        // v99, and the first matching stub wins, so faking the same host again
+        // here changed nothing — the test passed only while the dev `.env`
+        // pointed PANEL_RELEASES_URL somewhere the fakes did not cover.
+        config(['panel_update.releases_url' => 'https://releases.test/latest']);
+        Http::fake(['releases.test/*' => Http::response(['tag_name' => 'v0.0.1'])]);
 
         $this->withHeaders(applyHeader())->postJson('/api/admin/panel-update')
             ->assertUnprocessable()->assertJsonValidationErrors('version');

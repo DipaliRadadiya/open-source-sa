@@ -5,7 +5,8 @@ import { can } from "@/lib/permissions/can";
 import { getLogSources } from "@/lib/logs/get-log-sources";
 import { getLog } from "@/lib/logs/get-log";
 import { cookies } from "next/headers";
-import { FOLLOW_COOKIE } from "@/lib/logs/follow-preference";
+import { FOLLOW_COOKIE, LINES_COOKIE } from "@/lib/logs/follow-preference";
+import { parseLinesPref } from "@/lib/logs/app-log-prefs";
 import { LogsPanel } from "@/components/logs/logs-panel";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -33,6 +34,7 @@ export default async function LogsPage({ searchParams }) {
   // tail, then stop it once it read the preference, which is the flicker this
   // is meant to remove.
   const followPreference = cookieStore.get(FOLLOW_COOKIE)?.value ?? null;
+  const lines = parseLinesPref(cookieStore.get(LINES_COOKIE)?.value, DEFAULT_LINES);
 
   if (!can(permissions, "logs", "view")) return <PermissionDenied title={t("title")} />;
   // Emptying a log is a different trust from reading one.
@@ -48,10 +50,12 @@ export default async function LogsPage({ searchParams }) {
     null;
 
   const initial = selected
-    ? await getLog(selected, { lines: DEFAULT_LINES })
+    ? await getLog(selected, { lines })
     : { status: "ok", log: null };
 
   const lockedCount = sources.filter((s) => !s.readable).length;
+  // The clock the source list's "written just now" dots were drawn with.
+  const renderedAt = new Date().getTime();
 
   return (
     <div className="space-y-6">
@@ -79,8 +83,9 @@ export default async function LogsPage({ searchParams }) {
           sources={sources}
           selected={selected}
           initial={initial}
-          initialLines={DEFAULT_LINES}
+          initialLines={lines}
           followPreference={followPreference}
+          renderedAt={renderedAt}
           canManage={canManage}
         />
       )}

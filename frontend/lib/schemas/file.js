@@ -19,6 +19,10 @@ export const fileEntrySchema = z.object({
   mode: z.string().nullish(),
   owner: z.string().nullish(),
   group: z.string().nullish(),
+  // Symlinks only. Without them the table could neither say where a link
+  // points nor mark a dangling one — Zod drops what it isn't told about.
+  link_target: z.string().nullish(),
+  link_broken: z.boolean().nullish(),
 });
 
 /**

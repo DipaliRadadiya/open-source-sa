@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\AiBotPolicy;
 use App\Enums\ApplicationStatus;
+use App\Enums\DeploymentStatus;
 use App\Enums\DomainType;
 use App\Enums\WafCategory;
 use App\Enums\WafMode;
@@ -31,10 +32,10 @@ use Illuminate\Support\Str;
     // another application already holds.
     'image', 'registry_id', 'container_port', 'memory_limit', 'cpu_limit', 'compose', 'docker_network', 'volume_mounts', 'docker_secrets', 'credentials_seen_at',
     'build_command', 'deploy_script', 'start_command', 'package_manager',
-    'git_account_id', 'repository', 'repository_url', 'branch', 'settings',
+    'git_account_id', 'repository', 'repository_url', 'branch', 'settings', 'install_secrets',
     'steps', 'failed_step', 'failed_reason', 'provisioning_started_at', 'reference', 'last_commit', 'last_deployed_at', 'directory_size_bytes', 'volume_size_bytes', 'directory_size_updated_at',
     'current_release_id', 'previous_release_path',
-    'webhook_enabled', 'webhook_provider', 'webhook_identifier', 'webhook_secret',
+    'webhook_enabled', 'webhook_provider', 'webhook_identifier', 'webhook_secret', 'webhook_remote_id',
     'webhook_last_delivered_at',
     'fail2ban_enabled',
     'fail2ban_jail_name', 'fail2ban_jail_content', 'fail2ban_filter_content',
@@ -42,6 +43,34 @@ use Illuminate\Support\Str;
 class Application extends Model
 {
     use HasFactory;
+
+    /**
+     * The installer's secrets: every field a site type asks for as a
+     * `password`.
+     *
+     * Written to the encrypted `install_secrets` rather than to `settings`,
+     * and never returned by the API. A list rather than read from the site
+     * types, because building a type's fields runs commands on the server
+     * (the PHP versions on offer) and this is read on every response.
+     * InstallSecretsTest fails if a type adds a password field that is not
+     * here.
+     */
+    public const INSTALL_SECRET_KEYS = ['admin_password', 'mailer_password'];
+
+    /**
+     * Settings the installer records about what it installed. Read-only to the
+     * API: `php_range` is what the PHP screen holds a PrestaShop shop to, so a
+     * client that could write it could move the shop onto a PHP its release
+     * dies on.
+     */
+    public const INSTALLER_RECORDED_KEYS = ['php_range', 'prestashop_version'];
+
+    /**
+     * Never serialized: the installer's passwords are for the installer.
+     *
+     * @var list<string>
+     */
+    protected $hidden = ['install_secrets'];
 
     /**
      * @return array<string, string>
@@ -68,6 +97,9 @@ class Application extends Model
             'fail2ban_filter_content' => 'string',
             'status' => ApplicationStatus::class,
             'settings' => 'array',
+            // The passwords a one-click installer needs, held only until the
+            // install succeeds. See installSettings().
+            'install_secrets' => 'encrypted:array',
             'steps' => 'array',
             'last_deployed_at' => 'datetime',
             'directory_size_bytes' => 'integer',
@@ -79,6 +111,24 @@ class Application extends Model
             'webhook_secret' => 'encrypted',
             'webhook_last_delivered_at' => 'datetime',
         ];
+    }
+
+    /**
+     * What an installer reads: the site's settings plus the passwords it was
+     * created with.
+     *
+     * The passwords are kept apart, in `install_secrets`, because `settings`
+     * is plain JSON and is returned by the API. They used to live in
+     * `settings`, which put every one-click site's admin password in front of
+     * anyone allowed to view the site, for as long as the site existed. They
+     * are held only until the install succeeds; ProvisionApplication then
+     * clears them, because nothing reads them again.
+     *
+     * @return array<string, mixed>
+     */
+    public function installSettings(): array
+    {
+        return array_merge($this->settings ?? [], $this->install_secrets ?? []);
     }
 
     public function systemUser(): BelongsTo
@@ -103,6 +153,23 @@ class Application extends Model
     public function registry(): BelongsTo
     {
         return $this->belongsTo(Registry::class);
+    }
+
+    /**
+     * Deployed from a git account that is no longer connected.
+     *
+     * An account-sourced site is the one with a `repository` and no
+     * `repository_url`, so a public-URL site is never mistaken for a broken
+     * one. Such a site cannot deploy: its remote would be `""`. The resource
+     * reports it and every path that starts a deploy refuses on it, so both
+     * read this one rule.
+     */
+    public function gitAccountMissing(): bool
+    {
+        return $this->site_type === 'git'
+            && $this->git_account_id === null
+            && $this->repository !== null
+            && $this->repository_url === null;
     }
 
     /**
@@ -187,6 +254,12 @@ class Application extends Model
     public const MAX_NAME_LENGTH = 240;
 
     /**
+     * How many names `uniqueSlug()` will ask the disk about before giving up
+     * on it. See the loop for why a bound is not optional.
+     */
+    public const SLUG_DISK_ATTEMPTS = 10;
+
+    /**
      * A stable, unique, filesystem-safe slug from the name — the key for the
      * web-server config filename. Suffixes `-2`, `-3`, … on collision.
      *
@@ -195,18 +268,53 @@ class Application extends Model
      * rename is halfway through. Same shape as {@see Cronjob::uniqueSlug()},
      * which names `/etc/cron.d` files the same way.
      */
-    public static function uniqueSlug(string $name, ?int $ignoreId = null): string
+    public static function uniqueSlug(string $name, ?int $ignoreId = null, ?callable $alsoTaken = null): string
     {
         $base = Str::slug($name) ?: 'application';
         $slug = $base;
         $suffix = 2;
 
+        // The table-based half of the condition below terminates on its own:
+        // there are finitely many rows, so a suffix eventually clears them.
+        // The disk-based half has no such guarantee — a predicate that answers
+        // "taken" to everything spins this loop forever, incrementing a
+        // counter. That is not hypothetical: it hung the whole test suite for
+        // forty minutes at 100% CPU, because `Process::fake()` with no handler
+        // answers *success* to every command, which this read as "every path
+        // exists".
+        //
+        // So the disk is consulted for a bounded number of names and then
+        // believed to be unhelpful. Falling out of the loop with a slug that
+        // may collide is the right failure: the names it hands back are still
+        // unique in the table, so the worst case is the bug this predicate was
+        // added to prevent, where the alternative is an application that never
+        // responds again.
+        $attempts = 0;
+
         while (static::query()
             ->where('slug', $slug)
             ->when($ignoreId, fn ($query) => $query->where('id', '!=', $ignoreId))
             ->exists()
+            // "Taken" has a second meaning this table cannot see: the slug is
+            // a filename, and a file already at that path belongs to whoever
+            // put it there. Create and rename refuse outright and say so
+            // ({@see \App\Rules\AvailableSiteName}) — there is a user to tell.
+            // Clone and staging have no one to ask, so they pass a predicate
+            // here and step over the name instead, which is what the `-2`
+            // suffix has always been for.
+            //
+            // Sync discovery deliberately passes nothing: its slug *is* the
+            // folder it found, and the vhost it is adopting is exactly the
+            // file a probe would report — see ApplicationDiscoverer.
+            //
+            // Optional, and null by default, because the predicate reaches the
+            // server: every caller that has already validated the name would
+            // otherwise probe the disk a second time to learn what it was
+            // just told.
+            || ($alsoTaken !== null && $attempts < self::SLUG_DISK_ATTEMPTS && $alsoTaken($slug))
         ) {
             $slug = $base.'-'.$suffix++;
+            $attempts++;
         }
 
         return $slug;
@@ -292,6 +400,31 @@ class Application extends Model
             $features = array_values(array_diff($features, ['app_firewall']));
         }
 
+        // The second feature whose availability is a fact about *this
+        // application* rather than about its site type.
+        //
+        // {@see \App\Services\Applications\Types\AbstractSiteType::features()}
+        // adds `app_php` when the site type serves PHP, and a site type has
+        // one answer for all its sites. Git does not: the user picks a
+        // rendering type at create, and
+        // {@see \App\Services\Applications\ServingProfile::resolve()} turns
+        // `static`/`csr` into a directory of files and `ssr` into a Node
+        // process. `GitSiteType::servingProfile()` still has to say `php` —
+        // it is the default for a repository with no rendering type chosen —
+        // so a git site serving no PHP at all was offered the PHP screen, and
+        // {@see \App\Http\Middleware\CheckPermission} let all three of its
+        // endpoints through on the strength of it. Isolating such a site
+        // would have written it a pool under the *server's* default version
+        // (its own is null), set `isolated_at`, and reloaded PHP-FPM across
+        // every real PHP site on the box to serve a directory of static
+        // files.
+        //
+        // Read from the row, not the type, because the row is where the
+        // user's choice is recorded.
+        if ($this->serving_profile !== 'php') {
+            $features = array_values(array_diff($features, ['app_php']));
+        }
+
         return $features;
     }
 
@@ -324,6 +457,70 @@ class Application extends Model
     public function deployments(): HasMany
     {
         return $this->hasMany(Deployment::class);
+    }
+
+    /**
+     * Where a provider delivers this site's push events, or null before
+     * deploy-on-push has been set up. The one place it is built, so the URL
+     * shown to the user and the one registered with the provider cannot
+     * differ.
+     */
+    public function webhookUrl(): ?string
+    {
+        return $this->webhook_identifier
+            ? url("/api/webhooks/deploy/{$this->webhook_identifier}")
+            : null;
+    }
+
+    /**
+     * The newest deploy that got as far as checking out a commit — the code
+     * that is on disk now, whether or not that deploy went on to succeed.
+     *
+     * Deploys are in place: the checkout replaces the files first, and the
+     * script, dependency check and verify come after. A deploy that fails in
+     * any of those leaves the new code live, while `last_commit` (written on
+     * success only) still names the old one (found on a real server,
+     * 2026-09-24). See {@see codeOnDisk()}.
+     */
+    public function latestCheckout(): HasOne
+    {
+        return $this->hasOne(Deployment::class)->ofMany(
+            ['id' => 'max'],
+            fn ($query) => $query->whereNotNull('commit_hash'),
+        );
+    }
+
+    /**
+     * Which commit is on disk, and whether the deploy that put it there
+     * finished: `deployed`, `incomplete` (it failed after the checkout) or
+     * `deploying`. Falls back to `last_commit` for a site with no recorded
+     * checkout — one deployed before deployments were recorded, or a clone.
+     *
+     * `message` is the warning to show, and is set for `incomplete` only.
+     *
+     * @return array{commit: ?string, state: ?string, message: ?string}
+     */
+    public function codeOnDisk(): array
+    {
+        $checkout = $this->latestCheckout;
+
+        if ($checkout === null) {
+            return ['commit' => $this->last_commit, 'state' => $this->last_commit !== null ? 'deployed' : null, 'message' => null];
+        }
+
+        $state = match ($checkout->status) {
+            DeploymentStatus::Succeeded => 'deployed',
+            DeploymentStatus::Failed => 'incomplete',
+            default => 'deploying',
+        };
+
+        return [
+            'commit' => $checkout->commit_hash,
+            'state' => $state,
+            'message' => $state === 'incomplete'
+                ? __('application.code_on_disk.incomplete', ['commit' => substr((string) $checkout->commit_hash, 0, 7)])
+                : null,
+        ];
     }
 
     /**

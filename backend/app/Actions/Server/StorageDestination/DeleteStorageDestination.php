@@ -3,8 +3,10 @@
 namespace App\Actions\Server\StorageDestination;
 
 use App\Models\Application;
+use App\Models\Backup;
 use App\Models\StorageDestination;
 use App\Services\ActivityLogger;
+use App\Support\NameList;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -20,13 +22,6 @@ use Illuminate\Validation\ValidationException;
  */
 class DeleteStorageDestination
 {
-    /**
-     * How many application names go in the message before it collapses into
-     * a count. A destination shared by forty sites would otherwise produce a
-     * multi-kilobyte error string that nobody reads.
-     */
-    private const NAMED_LIMIT = 5;
-
     public function __construct(private ActivityLogger $activityLogger) {}
 
     public function execute(StorageDestination $destination): void
@@ -40,7 +35,23 @@ class DeleteStorageDestination
             throw ValidationException::withMessages([
                 'storage_destination' => [__('storage.delete.in_use', [
                     'name' => $destination->name,
-                    'applications' => $this->list($names->all()),
+                    'applications' => NameList::summarise($names->all(), 'storage.delete.and_more'),
+                ])],
+            ]);
+        }
+
+        // Backups whose archives are still in this destination. The database
+        // already refuses (`backups.storage_destination_id` is restrictOnDelete),
+        // but as an integrity error the user saw as a 500. Deleting them here
+        // instead would be the wrong kindness: an archive is somebody's only
+        // copy, and it goes when they delete the backup, not as a side effect.
+        $held = Backup::query()->where('storage_destination_id', $destination->getKey())->count();
+
+        if ($held > 0) {
+            throw ValidationException::withMessages([
+                'storage_destination' => [__('storage.delete.holds_backups', [
+                    'name' => $destination->name,
+                    'count' => $held,
                 ])],
             ]);
         }
@@ -48,20 +59,5 @@ class DeleteStorageDestination
         $destination->delete();
 
         $this->activityLogger->log('storage_destination.deleted', null, ['name' => $destination->name]);
-    }
-
-    /**
-     * @param  array<int, string>  $names
-     */
-    private function list(array $names): string
-    {
-        $overflow = count($names) - self::NAMED_LIMIT;
-
-        if ($overflow <= 0) {
-            return implode(', ', $names);
-        }
-
-        return implode(', ', array_slice($names, 0, self::NAMED_LIMIT))
-            .', '.__('storage.delete.and_more', ['count' => $overflow]);
     }
 }

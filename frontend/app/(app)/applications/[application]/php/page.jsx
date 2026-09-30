@@ -8,6 +8,7 @@ import { getTimezones } from "@/lib/settings/get-timezones";
 import { PhpPanel } from "@/components/applications/php/php-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PermissionDenied } from "@/components/sections/permission-denied";
+import { isSettled } from "@/lib/applications/settled";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,7 @@ export default async function ApplicationPhpPage({ params }) {
   }
 
   const canManage = can(appPermissions, "app_php", "manage", "application");
-  const settled = application.status === "active";
+  const settled = isSettled(application);
 
   // The whole screen is rendered from this response — versions, isolation and
   // the memory budget all come from it — so a failure is a load failure, not
@@ -92,6 +93,9 @@ export default async function ApplicationPhpPage({ params }) {
           php={phpResult.php}
           phpRange={phpRange}
           siteTypeTitle={application.site_type_title ?? application.site_type ?? ""}
+          // The application's own folder, one above the public_html that
+          // `path` names — a prepend file kept outside the web root is normal.
+          applicationPath={(application.path ?? "").replace(/\/public_html\/?$/, "")}
           timezones={timezones}
           canManage={canManage}
         />

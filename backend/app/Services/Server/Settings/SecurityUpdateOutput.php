@@ -37,10 +37,15 @@ class SecurityUpdateOutput
 
     private int $sinceFlush = 0;
 
+    /** Counted as the line goes past, before the tail can drop it. */
+    private ?int $packages = null;
+
     /** True when enough has accumulated to be worth persisting. */
     public function push(string $chunk): bool
     {
-        $this->buffer = $this->tail($this->buffer.$chunk);
+        $combined = $this->buffer.$chunk;
+        $this->packages ??= $this->countPackages($combined);
+        $this->buffer = $this->tail($combined);
         $this->sinceFlush += strlen($chunk);
 
         if ($this->sinceFlush < self::FLUSH_BYTES) {
@@ -79,7 +84,24 @@ class SecurityUpdateOutput
      */
     public function packagesUpgraded(): ?int
     {
-        if (preg_match('/Packages that will be upgraded:\s*(.+)/i', $this->buffer, $matches) !== 1) {
+        return $this->packages ?? $this->countPackages($this->buffer, requireEndOfLine: false);
+    }
+
+    /**
+     * The line is printed near the start of a run, and the buffer keeps only
+     * the last 8 KB — so reading it from the buffer at the end, as this used
+     * to, found it only on runs too small to matter. On the Apache test server
+     * a 109-package run reported `packages_upgraded: null`. So it is counted
+     * while it passes through, and only once the whole line has arrived: a
+     * chunk can end in the middle of the package list.
+     */
+    private function countPackages(string $text, bool $requireEndOfLine = true): ?int
+    {
+        $pattern = $requireEndOfLine
+            ? '/Packages that will be upgraded:[ \t]*([^\n]*)\n/i'
+            : '/Packages that will be upgraded:[ \t]*([^\n]*)/i';
+
+        if (preg_match($pattern, $text, $matches) !== 1) {
             return null;
         }
 

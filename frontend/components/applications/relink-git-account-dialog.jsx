@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Unlink } from "lucide-react";
@@ -28,7 +28,7 @@ import {
  */
 export function RelinkGitAccountDialog({ application, accounts = [], open, onOpenChange }) {
   const t = useTranslations("applications.source");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   /*
    * Preselected when there is nothing to choose.
    *
@@ -53,10 +53,10 @@ export function RelinkGitAccountDialog({ application, accounts = [], open, onOpe
     setPending(true);
     try {
       await relinkGitAccount(application.id, { git_account_id: Number(accountId) });
+      await refreshAndWait();
       toast.success(t("relink.done"));
       onOpenChange?.(false);
       setAccountId(defaultAccountId);
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("relink.failed")));
     } finally {

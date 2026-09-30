@@ -49,6 +49,13 @@ return [
      */
     'state_dir' => env('PANEL_UPDATE_STATE_DIR', '/var/lib/panel-update'),
 
+    // Whether start() actually launches the script it wrote. Off only in the
+    // test suite (phpunit.xml): launching is `sudo -n systemd-run`, and on a
+    // machine where the suite's user has sudo it ran the generated script as
+    // root on the developer's own box and left a root-owned state file behind
+    // that a later test then read as a finished update.
+    'launch' => (bool) env('PANEL_UPDATE_LAUNCH', true),
+
     /*
      * PHP the update shells out to. The running process cannot be asked — it
      * is php-fpm, and the script must survive that being reloaded.

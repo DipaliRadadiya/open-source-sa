@@ -13,6 +13,25 @@ export function saveBackupTarget(applicationId, payload) {
 }
 
 /**
+ * Stop backing an application up: the schedule and its settings go.
+ *
+ * The API refuses (422) while the site still has backups unless they go too,
+ * so `deleteBackups` is not a preference but the only way through when any
+ * exist. Pausing is how to stop runs and keep the archives. Permission is
+ * `backup` manage, not `app_backup`: this can take every archive with it.
+ */
+export function deleteBackupTarget(applicationId, { deleteBackups = false } = {}) {
+  return api.delete(`/applications/${applicationId}/backup-target`, {
+    data: deleteBackups ? { delete_backups: true } : undefined,
+  });
+}
+
+/** The settings form's choices, for a retry after the server render could not read them. */
+export function fetchBackupTargetOptions() {
+  return api.get("/backup-targets/options");
+}
+
+/**
  * Run a backup now. Throttled to 6/min on the backend — each call dumps a
  * database and writes a multi-gigabyte archive.
  *

@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useRefresh } from "@/hooks/use-refresh";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { FolderTree, Loader2 } from "lucide-react";
 import { updateWebRoot } from "@/lib/api/applications";
+import { listFiles } from "@/lib/api/files";
 import { apiMessage } from "@/lib/api/error-message";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { Button } from "@/components/ui/button";
@@ -44,7 +45,7 @@ const schema = z.object({
 
 export function WebRootDialog({ application, open, onOpenChange }) {
   const t = useTranslations("applications.webRoot");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [saving, setSaving] = useState(false);
 
   const form = useForm({
@@ -53,13 +54,37 @@ export function WebRootDialog({ application, open, onOpenChange }) {
     defaultValues: { web_root: application.web_root ?? "" },
   });
 
+  const typed = useWatch({ control: form.control, name: "web_root" }) ?? "";
+  const relative = String(typed).trim().replace(/^\/+|\/+$/g, "");
+  // `path` is the folder web_root is relative to — /etc here meant
+  // public_html/etc, which surprised the one person who typed it.
+  const base = String(application.path ?? "").replace(/\/+$/, "");
+  const resolved = base ? (relative ? `${base}/${relative}` : base) : null;
+
   async function save(values) {
     setSaving(true);
     try {
+      const folder = String(values.web_root ?? "").trim().replace(/^\/+|\/+$/g, "");
+      if (folder) {
+        /*
+         * The API saves a folder that does not exist and the site answers 403
+         * at once. The file list says whether it is there; only a clear "no"
+         * stops the save — a role without file access gets 403 here, which
+         * says nothing about the folder.
+         */
+        const missing = await listFiles(application.id, folder).then(
+          () => false,
+          (error) => [404, 422].includes(error.response?.status),
+        );
+        if (missing) {
+          form.setError("web_root", { type: "manual", message: t("missingFolder", { path: `${base}/${folder}` }) });
+          return;
+        }
+      }
       await updateWebRoot(application.id, values.web_root);
+      await refreshAndWait();
       toast.success(t("saved"));
       onOpenChange?.(false);
-      router.refresh();
     } catch (error) {
       if (error.response?.data?.errors) handleValidationError(error, form);
       else toast.error(apiMessage(error, t("failed")));
@@ -100,6 +125,14 @@ export function WebRootDialog({ application, open, onOpenChange }) {
                 <Input {...field} placeholder="/public" className="font-mono text-sm" disabled={saving} />
               </FormControl>
               <FormMessage />
+              {resolved ? (
+                <p className="text-sm text-muted-foreground">
+                  {t.rich("resolved", {
+                    path: resolved,
+                    code: (chunks) => <code className="font-mono text-foreground [overflow-wrap:anywhere]">{chunks}</code>,
+                  })}
+                </p>
+              ) : null}
             </FormItem>
           )}
         />

@@ -11,10 +11,12 @@ import {
 } from "@/lib/applications/get-applications";
 import { FirewallSection } from "@/components/applications/firewall/firewall-section";
 import { DetectLogCard } from "@/components/applications/firewall/detect-log-card";
+import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { getApplicationLog } from "@/lib/applications/get-application-logs";
 import { parseDetectLog } from "@/lib/firewall/parse-detect-log";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PermissionDenied } from "@/components/sections/permission-denied";
+import { isSettled } from "@/lib/applications/settled";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +44,10 @@ export default async function ApplicationFirewallPage({ params }) {
   // The site is gone. Land on the list — the only place left to go — and say
   // why on arrival, rather than parking on a dead end that offers one link.
   if (result.status === 404) redirect("/applications?gone=1");
+  // The app is read through the firewall endpoint, which answers 403 for a role
+  // without Web Firewall — before the check below could run. That rendered a
+  // raw "Error 403 … 8G Firewall" box instead of the page every other screen shows.
+  if (result.status === 403) return <PermissionDenied title={t("pageTitle")} />;
   if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   const application = result.application;
@@ -49,7 +55,7 @@ export default async function ApplicationFirewallPage({ params }) {
     return <PermissionDenied title={t("pageTitle")} />;
   }
   const canManage = can(appPermissions, "app_firewall", "manage", "application");
-  const settled = application.status === "active";
+  const settled = isSettled(application);
 
   // The category and mode labels come from the API; without them there is
   // nothing truthful to render, so a failure there is a load failure. The web
@@ -120,9 +126,17 @@ export default async function ApplicationFirewallPage({ params }) {
             modes={modes}
             canManage={canManage}
             detectCount={detectRows.length}
+            detectFailed={detectFailed}
           />
           {watching ? (
-            <DetectLogCard rows={detectRows} failed={detectFailed} />
+            <>
+              {/* Watching is how someone decides it is safe to start blocking,
+                  so the list keeps itself current: it stayed at what the page
+                  loaded with while new matches arrived. The form's unsaved
+                  edits live in its own state and survive the re-read. */}
+              <AutoRefresh intervalMs={30000} stopAfterMs={600000} />
+              <DetectLogCard rows={detectRows} failed={detectFailed} />
+            </>
           ) : null}
         </>
       )}

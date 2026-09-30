@@ -37,14 +37,14 @@
 ### POST `/auth/register`
 Create the first admin account. Registration closes after this call.
 
-**Request:**
+**Request:** `name`, `username` and a confirmed `password` are all required (422 otherwise).
 ```json
-{"username": "admin", "password": "…"}
+{"name": "Admin", "username": "admin", "password": "…", "password_confirmation": "…"}
 ```
 
-**Response `201`:**
+**Response `201`:** the user and an API `token` for it.
 ```json
-{"user": {"id": 1, "username": "admin", "is_admin": true, "created_at": "23-07-2026 10:00:00", "created_at_human": "3 weeks ago"}}
+{"user": {"id": 1, "username": "admin", "is_admin": true, "created_at": "23-07-2026 10:00:00", "created_at_human": "3 weeks ago"}, "token": "1|…"}
 ```
 
 ---
@@ -628,8 +628,9 @@ way round — the sentence is translated and gets reworded.
 | `runtime` | The server has no PHP / no Node | Install it — `installable_runtime` names which |
 | `database` | The type takes an engine this server hasn't got (only NodeBB, which is MongoDB-only) | The Databases screen |
 | `web_server` | This web server does not offer the type | None — do not offer an action |
+| `php_version` | PHP is installed, but no version in the type's `php_version_range` (added 2026-09-26) | The PHP screen, when the reason names a version to install; none when it says no version in range can be installed from the server's repository (e.g. a type whose range stops at 8.1 on OpenLiteSpeed / Ubuntu 26.04, where LiteSpeed publishes 8.2 – 8.5 only) |
 
-`installable_runtime` is set only for `runtime`, and is null for the other two:
+`installable_runtime` is set only for `runtime`, and is null for the others:
 nothing installable fixes them, so a card must not offer a button that cannot work.
 
 ---
@@ -740,7 +741,9 @@ Take the version list from `GET /site-types` (the `php_version` / `node_version`
 
 **Omitting `php_version` is checked too, as of 2026-09-11.** An empty field is not "no version" — provisioning resolves it to the server default, which is the newest PHP on the box and therefore the version a ceiling exists to exclude. If that default falls outside the type's range the request is a `422` on `php_version` naming both the range and the default, so send a version in range or leave the field only where the default fits.
 
-This closes the counterpart of the hole above: installed is not the same question as supported. A server whose newest PHP was 8.5 pre-selected 8.5 for PrestaShop, whose current release vendors the old monolithic `symfony/symfony` — the install died inside a Symfony cache warmer during kernel boot, after the archive had been downloaded, unpacked, chowned and handed a database. Ranges are published only where upstream states one: PrestaShop (`7.2`–`8.1`) and Statamic (`8.3`+) today. Every other type sends `null` and accepts any installed version, which is the honest answer for a blank PHP site or a git deployment running the user's own code.
+This closes the counterpart of the hole above: installed is not the same question as supported. A server whose newest PHP was 8.5 pre-selected 8.5 for PrestaShop, whose current release vendors the old monolithic `symfony/symfony` — the install died inside a Symfony cache warmer during kernel boot, after the archive had been downloaded, unpacked, chowned and handed a database. Ranges are published only where upstream states one: PrestaShop (`7.2`–`8.5`) and Statamic (`8.3`+) today.
+
+**PrestaShop's release follows the site's PHP** (2026-09-26). The installer reads PrestaShop's distribution API (`api.prestashop-project.org/prestashop`, override `SERVER_PRESTASHOP_RELEASES_API`) and takes the newest **stable** release whose own PHP range holds the site's version: PHP 8.1 – 8.5 → PrestaShop **9.1** (Classic edition, which bundles PrestaShop's own modules — Checkout, Account, Marketplace), PHP 7.2 – 8.0 → **8.2**. It used to follow `channel.xml`, which still names 8.2.1 as current and caps PHP at 8.1. `SERVER_PRESTASHOP_URL` still pins one package. Every other type sends `null` and accepts any installed version, which is the honest answer for a blank PHP site or a git deployment running the user's own code.
 
 Never send the raw field list — `GET /site-types` publishes the fields for each type, including this one, with localized labels and help text.
 
@@ -888,9 +891,11 @@ It is set by a deploy, by a file change (about a minute later — see
 
 `has_process` is null-safe to read everywhere and tells you whether to render process controls at all: PHP and static sites have nothing to run, so the answer is "render nothing", not "render a disabled button".
 
-**`webhook.secret` is returned in full, deliberately** — the user has to paste it into their repository settings and will come back for it. `webhook.url` is assembled server-side so the frontend never builds the path or gets the host wrong. `webhook.verification` is `signature` or `token`; `token` means a plaintext shared value, which only GitLab has — offer the user the stronger signing token when you see it.
+**`webhook.secret` is returned in full, deliberately** — the user has to paste it into their repository settings and will come back for it. **It is `null` unless the caller has `app_deployment` (manage)** (2026-09-29): with the URL and the secret anyone can sign a push and start a deploy, so it follows `POST /deploy`, not the right to view the application. Hide the secret field (not the webhook card) when it is `null` and `webhook.enabled` is true. Same for `target_webhook.secret` on `GET /clones/{clone}`. `webhook.url` is assembled server-side so the frontend never builds the path or gets the host wrong. `webhook.verification` is `signature` or `token`; `token` means a plaintext shared value, which only GitLab has — offer the user the stronger signing token when you see it.
 
 `settings` is always an object (`{}` when empty), never `[]`. `steps` is a genuine list and stays `[]`.
+
+🔴 **`settings` never contains a password (2026-09-24).** The installer's passwords (`admin_password`, `mailer_password`) used to be saved here and returned to anyone who could view the site, for as long as the site existed. They are now held encrypted, only until the install succeeds, and are never returned. Sending them on `PUT /applications/{id}` (for example to fix a failed install before Retry setup) still works; they go where the installer reads them, not into `settings`.
 
 ---
 
@@ -930,9 +935,19 @@ A failed measure changes nothing — the previous figure and its date stand, bec
 ### PUT `/applications/{application}`
 **Permission:** `application` (manage)
 
-Update name / web root / PHP version / git branch.
+Update web root / PHP version / git branch.
 
-**Request:** `{"name": "new-shop", "php_version": "8.4", "web_root": "/public", "branch": "main"}`
+**Request:** `{"php_version": "8.4", "web_root": "/public", "branch": "main"}`
+
+🔴 **`name` is refused here (422), deliberately (2026-09-29).** This endpoint used to
+accept it, and this page used to advertise it. The name becomes the site's slug, and the
+slug is the filename of six things: the vhost, the PHP-FPM pool *and its socket*, the
+site's directory, its logs, its fail2ban jail and its worker units. A rename moved one of
+them — the vhost — so the site came back pointing at a socket no pool listens on (**502**)
+beside a newly created *empty* site directory (**404**), with its real files still in the
+old one. Reproduced on a test server. Moving all six atomically under a live site is a lot
+of machinery for a label, so the label is fixed: the name is set at creation and a site
+that needs a different one is a new site.
 
 **Response `200`:** `{"application": {...}}`
 
@@ -950,7 +965,7 @@ Re-run provisioning after a failure. Dispatches `ProvisionApplication` job.
 ### POST `/applications/{application}/deploy`
 **Permission:** `app_deployment` (manage)
 
-Trigger a git deploy (git-deploy apps only). `422` for one-click types.
+Trigger a git deploy (git-deploy apps only). `422` for one-click types, and when the site's git account was disconnected (`git_account_missing`).
 
 **Response `202`:** `{"application": {"id": 1, "status": "deploying"}}`
 
@@ -1243,6 +1258,8 @@ Change what an attached name **does**. Accepts `type` (`alias` | `redirect`), `r
 
 Switching `type` to `alias` clears `redirect_to`, because an alias serves the site itself. Switching to `redirect` without a target — in the request or already stored — is a `422` on `redirect_to`.
 
+`redirect_to` (here and on `POST .../domains`) must be `http(s)://` + host + optional path. A query string, fragment, whitespace or any of `; # $ & ? " ' \ { } < > `` ` `` is a `422` on `redirect_to` (`errors/application.redirect_target_invalid`): the target is written into the vhost as is, and those characters mean something there. Every web server appends the request path to the target, so a query string never worked anyway.
+
 **The name itself cannot be changed here, deliberately.** A rename would leave the old name in the certificate's lineage, and `certbot renew` re-validates every name in a lineage and fails the whole renewal when one of them cannot be validated — so it would silently stop the certificate covering the site's remaining, perfectly good names from ever renewing, and the first anyone hears of it is a browser warning up to ninety days later. Renaming stays a `DELETE` plus a `POST`, which is visibly two decisions. See `stale_domains` on the certificate object.
 
 The **primary** domain is refused with `422`: it names the vhost file and both log files, so changing it is what `POST …/domains/{domain}/primary` is for.
@@ -1408,6 +1425,14 @@ If URL/vhost transition fails, the previous certificate status, canonical URL, a
 
 Newest first.
 
+**Which commit is live: `settings.code_on_disk`** (also on `GET /applications/{application}` as `application.code_on_disk`; not in the site list). Deploys are **in place**: the checkout replaces the files before the script, the dependency check and the verify run. So a deploy that fails after its checkout **leaves the new commit live**, while `last_commit` (written on success only) still names the old one.
+
+```json
+"code_on_disk": {"commit": "3293703efd3e…", "state": "incomplete", "message": "The last deploy failed after the new code was put in place, so the site is running commit 3293703, which is not fully deployed. Fix the problem and deploy again."}
+```
+
+`state`: `deployed` (the last deploy that reached checkout succeeded), `incomplete` (it failed after the checkout; show `message` as a warning), `deploying` (in flight), or `null` (never deployed). A deploy that failed *before* the checkout (for example the fetch) changed nothing and is ignored. **Show `code_on_disk.commit` as the running version, not `last_commit`.**
+
 ```json
 {"deployments": [{
   "id": 12,
@@ -1474,12 +1499,22 @@ only platform entries (`php`, `ext-*`), is left alone.
 
 ---
 
+
+### GET `/applications/{application}/deployments/latest`
+**Permission:** `app_deployment` (view) | **Throttle:** `progress` (polling bucket)
+
+The newest deploy only, **for polling while the Deployment screen is open**, so a deploy started by a push (webhook) appears without a reload. `{"latest": <one history row>}`, the **same shape as a row of `deployments`** (no `output`), or `{"latest": null}` when the site has never deployed.
+
+Recommended use: every ~5 s while the page is visible (2.5 s while `latest.in_flight`), stop when the tab is hidden. When `latest.id` is newer than the history's top row, or its `status` changed, put it at the top / reload the history (and `settings`, for `code_on_disk`).
+
 ### POST `/applications/{application}/deployments`
 **Permission:** `app_deployment` (manage)
 
 Start a deploy.
 
 **Response `202`:** `{"deployment": {"id": 13, "status": "queued", "in_flight": true, …}}`
+
+**Response `422`** when the site's git account was disconnected (`git_account_missing: true`): `{"message": "This git account is no longer connected, …"}` (translated). Nothing is queued and no history row is made. Relink with `PUT /applications/{application}/git-account`, then deploy again.
 
 ---
 
@@ -1496,6 +1531,8 @@ The same deployment object as the list, plus **`output`** — the full build log
 Re-run the same deployment (re-fetches current branch tip, re-runs build script).
 
 **Response `202`:** `{"deployment": {"id": 14, "status": "pending"}}`
+
+**Response `422`** when the site's git account was disconnected (`git_account_missing: true`): `{"message": "This git account is no longer connected, …"}` (translated). Nothing is queued and no history row is made. Relink with `PUT /applications/{application}/git-account`, then deploy again.
 
 ---
 
@@ -1581,6 +1618,14 @@ Derived, never stored: an account-sourced site is the one with a `repository`
 and no `repository_url`, so a public-URL site is never flagged. Show a
 re-integrate prompt on this, pointing at the endpoint above.
 
+While it is `true`, every deploy path refuses: `POST …/deployments`,
+`…/redeploy` and the older `POST …/deploy` answer **422** with a translated
+`message`, and a push delivery answers `202 {"deployed": false, "reason":
+"git_account_missing"}` (a success, so the provider does not disable the
+hook). Disconnecting an account that applications still use is now refused
+(see `DELETE /integrations/git/accounts/{account}`), so this state only
+remains on sites stranded before that.
+
 ---
 
 ## Application — Webhooks (deploy-on-push)
@@ -1635,12 +1680,23 @@ The `min:16` on `secret` is enforced with its own message: a four-character "sec
 {"application": {"…": "…", "webhook": {
   "enabled": true, "provider": "github",
   "url": "https://panel.example.com/api/webhooks/deploy/abc123",
-  "secret": "…", "verification": "signature",
+  "secret": "…", "verification": "signature", "registered": true,
   "last_delivered_at": null, "last_delivered_at_human": null
 }}}
 ```
 
 There is no `webhook_enabled` or `webhook_identifier` key in the response — the identifier is already baked into `webhook.url`, which is assembled server-side so the frontend never builds the path or gets the host wrong. Show `webhook.url` as the callback URL the user pastes into the provider. `last_delivered_at` is how you tell "configured" from "actually working"; a webhook that has never fired is worth surfacing.
+
+**The panel now adds the webhook to the repository itself** (GitHub, GitLab, Bitbucket), using the connected account's token: created on `enabled: true`, updated on a rotated secret (re-created if it was deleted in the provider), removed on `enabled: false` and when the site is deleted. A hook the user added by hand (`webhook.registered: false`) is never touched. The response carries how that went:
+
+```json
+{"application": {"…": "…", "webhook": {"…": "…", "registered": true}},
+ "webhook_registration": {"status": "registered", "reason": null, "message": null}}
+```
+
+- `status: "registered"`: nothing for the user to do. Show "Webhook added to the repository", **not** the URL-and-secret paste instructions.
+- `status: "manual"`: deploy-on-push **is still switched on**; show `message` (translated) plus `webhook.url` and `webhook.secret` to paste, as before. `reason` is one of `no_account` (deployed from a public URL), `signing_token` (a GitLab signing token, which GitLab mints itself), `not_public` (the panel's address is `localhost`/private, so the provider could not deliver), `provider_refused` (usually a token without permission to manage webhooks).
+- `webhook_registration` is `null` when switching off — **except** when the provider refused to delete the hook the panel added (e.g. a Bitbucket token with `write:webhook` but no `delete:webhook`): then `{"status": "removal_refused", "reason": "removal_refused", "message": "…"}`. Deploy-on-push *is* off, `webhook.registered` stays `true`, and the user must delete the hook in the repository settings — show `message`.
 
 ---
 
@@ -1653,10 +1709,12 @@ All health signals for this application in one call.
 
 ```json
 {"issues": [
-  {"id": "ssl_expiring", "severity": "warning", "title": "SSL certificate expires soon", "detail": "The SSL certificate for shop.example.com expires in 12 days.", "data": {"expires_at": "01-09-2026 00:00:00", "days_remaining": 12}},
-  {"id": "no_recent_deploy", "severity": "info", "title": "No recent deployment", "detail": "Last deployed 30 days ago.", "data": {"last_deployed_at": null}}
+  {"type": "certificate", "severity": "critical", "message": "The SSL certificate for shop.example.com has expired.", "meta": {"…": "…"}},
+  {"type": "worker", "severity": "warning", "message": "The application process is not running.", "meta": {"unit": "…"}}
 ], "healthy": false}
 ```
+
+Each issue is `{type, severity, message, meta}` (corrected 2026-09-29 — this showed `id`/`title`/`detail`/`data`, which the API has not returned). `type` is one of `certificate`, `dns`, `worker` (the Node application's own process — queue workers are on the Workers screen), `php_eol`, `disk`, `deploy_failed`; `message` is already localised; `meta` varies by type.
 
 `healthy: false` when there is at least one warning or critical. Info-level issues do not affect the flag.
 
@@ -1665,7 +1723,7 @@ All health signals for this application in one call.
 ## Application — Environment (`.env` editor)
 
 ### GET `/applications/{application}/environment`
-**Permission:** `app_environment` (view)
+**Permission:** `app_environment` (**manage**) — was view until 2026-09-29. The `.env` screen is shown only to who may edit it: a view-only grant no longer opens it, and neither the sidebar nor `GET /permissions` reports `view: true` for `app_environment` (or `app_magic_login`, whose routes were always manage-only) unless `manage` is granted too. `GET …/environment/history` is manage as well.
 
 **`404`**, not `403`, for site types that don't use a `.env` (e.g. WordPress — it uses `wp-config.php`). The screen does not exist there, which is a different statement from "you may not have it"; `403` is reserved for a caller who lacks the permission on a site that does have the screen.
 
@@ -1704,6 +1762,8 @@ All of this comes from **one read** of the file. A raw endpoint plus a parsed en
 **`exposed: true`** says that file is reachable over the web, and adds a `file_exposed` check at `error` severity. The fix is to set a web root, not to move the file: in that state the whole source tree is served. A proxied application (Node) is never `exposed` — nothing under its document root is fetchable by path.
 
 **A secret's `value` is `null`, not a masked string.** Don't render dots from the API; render them from `secret: true`.
+
+**`raw` is `null` unless the caller has `app_environment` (manage)** (2026-09-29): it is the whole file, secrets included, and it went to view-only roles while `variables` nulled the same values. Since the same day the whole endpoint is manage-only, so this is a second line rather than the first.
 
 **`requires_restart` and `requires_apply` are the two ways a save can appear to do nothing**, answered up front so the button can say what it will actually do:
 - `requires_restart` — the application runs a process of its own, which is holding the old values in memory.
@@ -1745,7 +1805,7 @@ Restore a previous snapshot.
 
 **Request:** `{"backup": ".env.bak-20260728-141530", "restart": true}`
 
-`backup` is the `name` from the list, verbatim. It reaches a path, so anything not matching `.env.bak-YYYYMMDD-HHMMSS` exactly is refused rather than sanitised. The current file is backed up first, so restoring the wrong snapshot is itself undoable.
+`backup` is the `name` from the list, verbatim. It reaches a path, so anything not matching `.env.bak-YYYYMMDD-HHMMSS` exactly is refused rather than sanitised — a `422` on `backup`, as is a well-formed name that is no longer on disk (both were `500`s until 2026-09-29). The current file is backed up first, so restoring the wrong snapshot is itself undoable.
 
 **Response `200`:** `{"environment": {...}}`
 
@@ -1769,13 +1829,13 @@ Fix file/directory ownership and permissions for this site.
 
 Browse a directory.
 
-**Query:** `?path=/wp-content/plugins` (defaults to `/`)
+**Query:** `?path=wp-content/plugins` (relative to the site root; omitted or empty — `?path=` — is the root itself; empty was a 422 until 2026-09-29. A leading `/` is refused with 422)
 
-**`/` is the site's code root — `{home}/{slug}/public_html` — not its document root.** They are the same directory for a site with no web root. For Statamic (`/public`), Craft (`/web`) or any git site serving from a subdirectory they are not, and rooting here is what lets the file manager show the application itself: its `.env`, `composer.json`, `vendor/` and config, rather than only the served folder. Every path in this section is relative to that root, and nothing above it is reachable — `.panel/` (Basic Auth hash, PHP sessions, pre-push database dumps) is a sibling of `public_html`, which is precisely why the panel writes there.
+**The root (`""`) is the site's code root — `{home}/{slug}/public_html` — not its document root.** They are the same directory for a site with no web root. For Statamic (`/public`), Craft (`/web`) or any git site serving from a subdirectory they are not, and rooting here is what lets the file manager show the application itself: its `.env`, `composer.json`, `vendor/` and config, rather than only the served folder. Every path in this section is relative to that root, and nothing above it is reachable — `.panel/` (Basic Auth hash, PHP sessions, pre-push database dumps) is a sibling of `public_html`, which is precisely why the panel writes there.
 
 **Response `200`:**
 ```json
-{"path": "/wp-content/plugins", "files": [
+{"path": "wp-content/plugins", "files": [
   {"name": "seo-pack", "type": "dir", "size": 4096, "size_human": "4 KB",
    "modified_at": "27-07-2026 10:00:00", "modified_at_human": "2 weeks ago",
    "mode": "drwxr-xr-x", "owner": "siteowner", "group": "siteowner",
@@ -1793,7 +1853,7 @@ Browse a directory.
 
 `type` is `file`, `dir` or `symlink` — note `dir`, not `directory`.
 
-`mode` is the full `ls -l` string (type char + permission bits), **not** an octal — `PUT …/files/permissions` takes an octal, so don't echo this value back at it. `owner` and `group` are separate fields, not part of `mode`.
+`mode` is the **octal** permission bits as a string (`"644"`, `"755"`) — the same three digits `PUT …/files/permissions` takes (corrected 2026-09-29: this said an `ls -l` string, which the API has not returned). `owner` and `group` are separate fields.
 
 On a **symlink**, `mode`/`owner`/`group` are `null` — a link's own mode is always `lrwxrwxrwx` and its ownership says nothing about the target, so a constant is not shown. `link_target` is where it points, left exactly as written (a relative target stays relative), and `link_broken` is `true` when the target does not exist, is a loop, or could not be read. Both are `null` on non-symlinks.
 
@@ -1804,14 +1864,14 @@ On a **symlink**, `mode`/`owner`/`group` are `null` — a link's own mode is alw
 
 Recursive filename search.
 
-**Query:** `?q=config&path=/`
+**Query:** `?q=config&path=` (empty = site root)
 
 `q` is **required** (1–255 chars) — the parameter is `q`, not `search`. `path` is optional and defaults to the site root; it scopes the search to a subtree. Glob metacharacters in `q` are escaped, so the query matches literally rather than as a wildcard pattern.
 
 **Response `200`:**
 ```json
-{"path": "/", "query": "config", "files": [
-  {"path": "/wp-config.php", "name": "wp-config.php", "type": "file",
+{"path": "", "query": "config", "files": [
+  {"path": "wp-config.php", "name": "wp-config.php", "type": "file",
    "size": 4096, "size_human": "4 KB",
    "modified_at": "25-07-2026 14:30:00", "modified_at_human": "3 weeks ago",
    "mode": "-rw-r--r--", "owner": "siteowner", "group": "siteowner",
@@ -1830,22 +1890,22 @@ Each entry is the **same shape as a browse entry** (see `GET …/files` above) w
 
 Folder size on disk.
 
-**Query:** `?path=/wp-content`
+**Query:** `?path=wp-content`
 
-**Response `200`:** `{"path": "/wp-content", "size": 52428800, "size_human": "50 MB"}`
+**Response `200`:** `{"path": "wp-content", "size": 52428800, "size_human": "50 MB"}`
 
 ---
 
 ### GET `/applications/{application}/files/content`
-**Permission:** `app_file` (view) | **Throttle:** 60/min
+**Permission:** `app_file` (**manage**) — **manage**, not view, since 2026-09-29: a file's contents (`wp-config.php`, `.env`) are exactly the secrets the rest of the API withholds from view-only roles. `view` is browse, search, sizes and the trash list; hide open/download/preview for it. | **Throttle:** 60/min
 
 Read a file.
 
-**Query:** `?path=/wp-config.php`
+**Query:** `?path=wp-config.php`
 
 **Response `200`:**
 ```json
-{"path": "/wp-config.php", "content": "<?php\ndefine('DB_NAME', 'shop');\n…", "size": 4096, "backups": ["2026-07-28-141530"]}
+{"path": "wp-config.php", "content": "<?php\ndefine('DB_NAME', 'shop');\n…", "size": 4096, "backups": [{"name": "wp-config.php.bak-20260728-141530", "created_at": "28-07-2026 14:15:30"}]}
 ```
 
 Binary files return `422`.
@@ -1855,9 +1915,9 @@ Binary files return `422`.
 ### PUT `/applications/{application}/files/content`
 **Permission:** `app_file` (manage) | **Throttle:** 20/min
 
-Write/edit a file.
+Edit an **existing** file (`404` if there is none — create files with `POST …/files/upload`). The previous version is kept as an automatic backup first.
 
-**Request:** `{"path": "/wp-config.php", "content": "<?php\n…"}`
+**Request:** `{"path": "wp-config.php", "content": "<?php\n…"}`
 
 **Response `200`:** `{"saved": true}`
 
@@ -1868,7 +1928,7 @@ Write/edit a file.
 
 Restore a file from an automatic backup.
 
-**Request:** `{"path": "/wp-config.php", "backup": "2026-07-28-141530"}`
+**Request:** `{"path": "wp-config.php", "backup": "wp-config.php.bak-20260728-141530"}` — `backup` is a `name` from the `backups` list, verbatim. The current content is backed up before restoring, so a restore is itself undoable.
 
 **Response `200`:** `{"restored": true}`
 
@@ -1881,7 +1941,7 @@ Upload one file in a single request. **Capped at 50 MB** — the whole body is
 buffered through PHP memory. For anything larger use the resumable endpoints
 below; there is no size limit there.
 
-**Body:** `file` (binary), `path` (destination directory, e.g. `wp-content`)
+**Body:** `file` (binary), `path` — the **full destination file path**, e.g. `wp-content/plugin.zip`, not the folder (corrected 2026-09-29). An existing file is never overwritten: `422`, delete it first.
 
 **Response `200`:** `{"uploaded": true}`
 
@@ -1901,16 +1961,16 @@ than after the user has waited.
 Opens a resumable upload and returns its id. Validates up front that the
 destination directory exists and that the disk has room.
 
-**Request:** `{"path": "wp-content/big-backup.zip"}`
+**Request:** `{"path": "wp-content/big-backup.zip"}` — an existing file there is refused up front (`422`).
 
-**Response `201`:** `{"upload": {"id": "…32 hex…"}}`
+**Response `200`:** `{"upload_id": "…32 hex…", "max_chunk": 66584576}` — `max_chunk` is the largest chunk this server accepts, in bytes.
 
 ---
 
 ### PUT `/applications/{application}/files/uploads/{uploadId}`
 **Permission:** `app_file` (manage) | **Throttle:** 1200/min | **Content-Type:** raw body
 
-Appends one chunk. **The body is the raw bytes, not multipart** — that halves
+Appends one chunk; responds `{"received": <total bytes so far>}`. **The body is the raw bytes, not multipart** — that halves
 the disk traffic of an upload on a box that is also serving customer sites.
 
 Bounds: one chunk must fit `client_max_body_size` (**64 MB**); the reference
@@ -1926,13 +1986,15 @@ whichever is larger.
 ### GET `/applications/{application}/files/uploads/{uploadId}`
 **Permission:** `app_file` (view) | **Throttle:** 60/min
 
-Bytes received so far — **this is the resume offset.** Restart from it after a
+`{"received": <bytes>}` — **this is the resume offset.** Restart from it after a
 dropped connection; there is no separate session to reconcile.
 
 ---
 
 ### POST `/applications/{application}/files/uploads/{uploadId}/finalize`
 **Permission:** `app_file` (manage) | **Throttle:** 30/min
+
+**Request:** `{"path": "wp-content/big-backup.zip"}` — the same path the upload was opened with (required). **Response:** `{"uploaded": true}`.
 
 Moves the assembled file into place. A same-filesystem rename, so it is atomic
 and instant — a half-finished upload is never visible at the target path.
@@ -1942,12 +2004,12 @@ and instant — a half-finished upload is never visible at the target path.
 ### DELETE `/applications/{application}/files/uploads/{uploadId}`
 **Permission:** `app_file` (manage) | **Throttle:** 30/min
 
-Abandons an upload and removes its part file.
+Abandons an upload and removes its part file. **Response:** `{"aborted": true}`.
 
 ---
 
 ### GET `/applications/{application}/files/download`
-**Permission:** `app_file` (view) | **Throttle:** 20/min
+**Permission:** `app_file` (**manage**) — **manage**, not view, since 2026-09-29: a file's contents (`wp-config.php`, `.env`) are exactly the secrets the rest of the API withholds from view-only roles. `view` is browse, search, sizes and the trash list; hide open/download/preview for it. | **Throttle:** 20/min
 
 Download a file. **Streamed, with no size limit** (changed 11-08-2026 — it was
 previously capped at 5 MB).
@@ -1962,7 +2024,7 @@ The response is a stream, not a buffered body: read it as a blob, not as text.
 ---
 
 ### GET `/applications/{application}/files/preview`
-**Permission:** `app_file` (view) | **Throttle:** 60/min
+**Permission:** `app_file` (**manage**) — **manage**, not view, since 2026-09-29: a file's contents (`wp-config.php`, `.env`) are exactly the secrets the rest of the API withholds from view-only roles. `view` is browse, search, sizes and the trash list; hide open/download/preview for it. | **Throttle:** 60/min
 
 Stream an **image** with its real content type, so it can be rendered rather
 than saved. The only response in this API a browser is meant to interpret;
@@ -1994,9 +2056,9 @@ Extract a **`.zip`, `.tar.gz` or `.tgz`** archive already in the site. Guarded
 against zip bombs: refused above 250 MB uncompressed or 10,000 entries, and
 any entry that is a symlink or escapes the destination.
 
-**Request:** `{"path": "plugin.zip", "target": "wp-content/plugins"}`
+**Request:** `{"path": "plugin.zip", "target": "wp-content/plugins"}` — `target` must already exist.
 
-**Response `200`:** `{"extracted": true}`
+**Response `202`:** `{"job": {"id": 5, "operation": "extract", "target": "wp-content/plugins", "status": "queued", …}}` — runs in the background; follow it on `GET …/files/archive-jobs` (`status`: `queued` → `running` → `completed` / `failed`, with `message` and `reference` on failure). Corrected 2026-09-29: this said `200 {"extracted": true}`.
 
 ---
 
@@ -2091,7 +2153,7 @@ runs from that folder so the archive holds bare names rather than the server's
 directory layout, and there is no folder to run from once the sources are
 spread across the tree. Disable the button when a selection spans folders.
 
-**Response `200`:** `{"compressed": true}`
+**Response `202`:** `{"job": {"id": 1, "operation": "compress", "target": "wp-content-backup.tar.gz", "status": "queued", …}}` — runs in the background, like `extract`; the finished job carries `size_bytes`. Corrected 2026-09-29: this said `200 {"compressed": true}`.
 
 ---
 
@@ -2146,7 +2208,7 @@ What is recoverable, newest first. An empty list is a normal answer.
 
 `path` is where it came from, which is also where it goes back to — `plugin.php`
 alone would not say which one it was. Only the top of a deleted tree is listed:
-a deleted directory is one thing the user deleted, not four hundred.
+a deleted directory is one thing the user deleted, not four hundred. Items deleted from inside a folder are listed by their own path (`qa/note.txt`), not the folder's — until 2026-09-29 they showed as the parent folder and "restore all" failed with `exists`; batches deleted before that fix still list the old way until they expire.
 
 `size` is the reclaimable on-disk footprint of that entry (directories included),
 not its inode size. `size` and `size_human` are `null` if that entry cannot be
@@ -2405,6 +2467,20 @@ Returns **`405`**. There is no supported way back onto the shared pool: it means
 
 ## Application — Basic Auth (Password Protection)
 
+### GET `/applications/{application}/root-lock`
+**Permission:** `application` (view)
+
+Whether the site folder (`{home}/{slug}`) is locked against its own user: `{"root_lock": {"status": "locked|unlocked|unknown", "path": "/home/brown/brownsite"}}`. `unknown` means "could not check" (for example a filesystem with no immutable flag), not "unlocked". Every site the panel creates is locked when it is set up; `unlocked` is normally a site that **server sync adopted**, whose folder belongs to the site user.
+
+### POST `/applications/{application}/root-lock`
+**Permission:** `application` (manage) | **Throttle:** 10/min | no body
+
+The **Lock** button. Hands the folder to root (`chown -h`, owner only; the mode and every file inside are left as they are) and locks it, then returns the same shape as GET with `status: "locked"`. Already root's? It is just locked. Logged as `application.root_locked`.
+
+Show a warning before calling it: after locking, the site user can no longer add, delete or rename entries **directly in the site folder**; everything inside `public_html` works as before.
+
+Refused with **422** `{"message": "...", "code": "root_lock_request_refused"}` and nothing changed when: it is not a real folder (a symlink, or it changed while being checked), another account owns it, its group or everyone can write to it, or root ownership would lock the site user out (the user needs read+open through the folder's group). The `message` is translated and says what to fix.
+
 ### PUT `/applications/{application}/security`
 **Permission:** `app_security` (manage) | **Throttle:** 10/min
 
@@ -2653,19 +2729,19 @@ Response when configured — `fail2ban` carries the saved values, and the templa
 
 ```json
 {"fail2ban": {
-  "jail_name": "shop",
-  "jail_content": "[shop]\nenabled  = true\nport     = http,https\nfilter   = shop\nlogpath  = /home/siteowner/shop/logs/access.log\nmaxretry = 3\nbantime  = 3600\nfindtime = 600\n",
-  "filter_content": "[shop]\nfailregex = ^<HOST> .* \"(POST|PUT|DELETE) .*wp-login.php\n           ^<HOST> .* \"(POST|PUT|DELETE) .*xmlrpc.php\n           ^<HOST> .* \"(POST|PUT|DELETE) .*wp-admin.*\nignoreregex =\n"
-}, "jail_template": "[shop]\nenabled  = true\nport     = http,https\n...", "filter_template": "[shop]\nfailregex = ^<HOST> .* \"(POST|PUT|DELETE) .*wp-login.php\n..."}
+  "jail_name": "panel-site-shop",
+  "jail_content": "[{name}]\nenabled  = true\nport     = http,https\nfilter   = {filter}\nlogpath  = /home/siteowner/shop/logs/access.log\nmaxretry = 3\nbantime  = 3600\nfindtime = 600\n",
+  "filter_content": "[Definition]\nfailregex = ^<HOST> .* \"(POST|PUT|DELETE) .*wp-login.php\n           ^<HOST> .* \"(POST|PUT|DELETE) .*xmlrpc.php\n           ^<HOST> .* \"(POST|PUT|DELETE) .*wp-admin.*\nignoreregex =\n"
+}, "jail_template": "[panel-site-shop]\nenabled  = true\nport     = http,https\n...", "filter_template": "[Definition]\nfailregex = ^<HOST> .* \"(POST|PUT|DELETE) .*wp-login.php\n..."}
 ```
 
 The jail file template:
 
 ```ini
-[{slug}]
+[{name}]
 enabled  = true
 port     = http,https
-filter   = {slug}
+filter   = {filter}
 logpath  = {app_root}/logs/access.log
 maxretry = 3
 bantime  = 3600
@@ -2675,7 +2751,7 @@ findtime = 600
 The filter file template:
 
 ```ini
-[{slug}]
+[Definition]
 failregex = ^<HOST> .* "(POST|PUT|DELETE) .*wp-login.php
            ^<HOST> .* "(POST|PUT|DELETE) .*xmlrpc.php
            ^<HOST> .* "(POST|PUT|DELETE) .*wp-admin.*
@@ -2683,6 +2759,8 @@ ignoreregex =
 ```
 
 `{slug}`, `{name}`, `{filter}`, `{logpath}` are replaced with the resolved values when the file is written. Any other content the user submits is left untouched, so a custom regex or action is preserved end-to-end.
+
+**Names are always prefixed `panel-site-`** (since 2026-09-26): `{name}` and `{filter}` resolve to `panel-site-{slug}`, and the files are `/etc/fail2ban/jail.d/panel-site-{slug}.conf` and `filter.d/panel-site-{slug}.conf`. Before, they were the bare slug, so a site called `sshd` or `recidive` overwrote fail2ban's own filter and replaced the server's jail. Existing jails are moved by `artisan fail2ban:resync` (run on every panel update).
 
 ---
 
@@ -2693,10 +2771,12 @@ Validate, dry-run against `fail2ban-client -t`, save, write to disk, reload. The
 
 **Request:**
 ```json
-{"jail_config_content": "[shop]\nenabled  = true\n...\n", "filter_config_content": "[shop]\nfailregex = ^<HOST>\n...\n"}
+{"jail_config_content": "[{name}]\nenabled  = true\nfilter   = {filter}\n...\n", "filter_config_content": "[Definition]\nfailregex = ^<HOST>\n...\n"}
 ```
 
 Both fields are required, must be strings, and are capped at 65,535 characters.
+
+**The jail may only be the site's own.** Every `[section]` in `jail_config_content` must be `[{name}]` or the site's jail name (`[panel-site-shop]`), and every `filter =` must be `{filter}` or that same name. `[sshd]`, `[DEFAULT]` (which changes every jail on the server) or `filter = sshd` are valid fail2ban config, so `-t` accepts them, and are refused here with **`422`** and a validation error on `jail_config_content` naming the replacement.
 
 **Response `200`** — test passed, configuration applied:
 ```json
@@ -2713,7 +2793,7 @@ Both fields are required, must be strings, and are capped at 65,535 characters.
 ### DELETE `/applications/{application}/fail2ban`
 **Permission:** `app_fail2ban` (manage) | **Throttle:** 10/min
 
-Remove the jail file from `/etc/fail2ban/jail.d/`, reload the daemon, and clear the saved content. The filter file is left in place — dropping it would invalidate every other jail that referenced the same filter, and there is no clean way to know whether the filter is shared with another application.
+Remove the site's jail file from `/etc/fail2ban/jail.d/` **and its filter** from `filter.d/`, reload the daemon, and clear the saved content. The filter used to be kept in case another jail shared it; under the `panel-site-` prefix it belongs to this site alone, and a filter left behind under a colliding name is what made that collision permanent. Files a site still has under its old unprefixed name are removed too, except a filter the fail2ban package itself owns (checked with `dpkg-query -S`), which is never deleted.
 
 **Response `200`** — disabled:
 ```json
@@ -2736,11 +2816,12 @@ Which log sources this application has and whether each exists yet.
 
 ```json
 {"logs": [
-  {"key": "access", "label": "Access Log", "kind": "access", "exists": true, "size": 1048576, "modified": "29-07-2026 11:00:00"},
-  {"key": "error", "label": "Error Log", "kind": "error", "exists": true, "size": 4096, "modified": "29-07-2026 10:55:00"},
-  {"key": "supervisor", "label": "Worker Output", "kind": "process", "exists": false}
+  {"key": "access", "label": "Access log", "kind": "file", "exists": true},
+  {"key": "error", "label": "Error log", "kind": "file", "exists": true}
 ]}
 ```
+
+Each source is `{key, label, kind, exists}` — no `size` or `modified` (corrected 2026-09-29). Always `access` and `error`; a **Node** application adds its own process output (stdout and stderr, separately); a site with the WAF on adds `waf_detect`. **Queue workers' logs are not here** — they are on the server Logs screen under each worker's `log_identifier` (see Workers).
 
 ---
 
@@ -2837,7 +2918,7 @@ Workers are **supervisord programs** — one `[program:sv-worker-{slug}]` block 
 
 `extra_config` is appended to the program block verbatim, so a directive there wins over everything the panel wrote — the same shape as `additional_directives` on PHP settings. It **may not contain `[`**: a section header would define a second program the panel does not know about and would never stop. Max 2000 characters; both are 422s.
 
-`kind` is `queue`, `horizon` or `custom`, and it decides **how** a restart happens: `queue:restart` for a queue worker, `horizon:terminate` for Horizon, a direct unit restart otherwise. It is not cosmetic. A queue worker and Horizon on the same application both consume the same queue and would run every job twice — neither tool can detect the other, so the request layer rejects the combination.
+`kind` is `queue`, `horizon` or `custom`, and it decides **how** a restart happens: `queue:restart` for a queue worker, `horizon:terminate` for Horizon (both run as the worker's own account), a supervisor restart otherwise — and also whenever the graceful command fails. It is not cosmetic. A queue worker and Horizon on the same application both consume the same queue and would run every job twice — neither tool can detect the other, so the request layer rejects the combination.
 
 `restart_on_deploy` makes the worker pick up new code after a deploy; without it a deploy leaves the site on new code and the queue on old code, with nothing anywhere connecting the two.
 
@@ -2895,7 +2976,7 @@ Add a worker.
 
 Update worker settings. Changes rewrite the program block, then `supervisorctl reread` followed by `update`, and restart the worker.
 
-**Request:** `{"processes": 4, "enabled": false}` — same fields as create, all optional.
+**Request:** the same fields as create, with **`name` and `command` required** (it is the create form sent again — the panel's edit dialog always sends the whole form). Corrected 2026-09-29: this said all fields were optional, and a partial body like `{"processes": 4}` is a 422.
 
 **Response `200`:** `{"worker": {...updated...}}`
 
@@ -2949,8 +3030,10 @@ Uptime Kuma) clone generically and are unaffected.
 
 **Request:**
 ```json
-{"name": "shop-backup", "domain": "backup.example.com", "system_user_id": 1, "site_user_password": "…"}
+{"name": "shop-backup", "domain": "backup.example.com"}
 ```
+
+Only `name` and `domain`. The clone always lands under the **source site's own system user** — a `system_user_id` or `site_user_password` sent here is not accepted and has no effect (it used to be documented, and was silently dropped).
 
 **Response `202`:**
 ```json
@@ -3046,7 +3129,37 @@ Backup settings for one application.
 
 There is no `schedule` or `retention` field — they are **`frequency`** and **`retention_count`**. There is no nested `storage_destination` object either: only `storage_destination_id` plus a flat `storage_destination_name` (and that name is present only when the endpoint loads the relation — it does here and on save).
 
-`frequency` is `manual` · `daily` · `weekly` · `monthly`; `schedule_time` is `HH:MM`. `type` is `filesystem` · `database` · `full`.
+`frequency` is `manual` · `hourly` · `every_3_hours` · `every_6_hours` · `every_12_hours` · `daily` · `weekly` · `monthly`; `schedule_time` is `HH:MM`. `type` is `filesystem` · `database` · `full`. **Take the lists from `GET /backup-targets/options` rather than hardcoding them.**
+
+What `schedule_time` means depends on the frequency (added 2026-09-24):
+- `hourly`: **only the minute** is used. `14:30` runs at :30 past every hour.
+- `every_3_hours` / `every_6_hours` / `every_12_hours`: the chosen time is **one of the runs**, and the rest fall every N hours around the clock. `14:30` every 12 hours runs at 02:30 and 14:30; every 6 hours, at 02:30, 08:30, 14:30 and 20:30.
+- `daily` / `weekly` (Sunday) / `monthly` (the 1st): at that time.
+
+`retention_count` counts backups, not days, so on `hourly` a retention of 7 is seven hours of history. Say so next to the field. A run still in progress when the next slot comes makes that slot be skipped rather than start a second backup, and a slot missed while the server was down runs **once** when it is back.
+
+### GET `/backup-targets/options`
+**Permission:** `app_backup` (view)
+
+Everything the backup settings form offers, already translated into the request's language. Built from the same lists the save validation uses, so every value offered is accepted and the reverse.
+
+```json
+{
+  "frequencies": [
+    {"value": "manual", "label": "Manual only", "time": null, "hint": "Runs only when you start it."},
+    {"value": "hourly", "label": "Every hour", "time": "minute", "hint": "Runs every hour, at the chosen minute."},
+    {"value": "every_3_hours", "label": "Every 3 hours", "time": "time", "hint": "Runs at the chosen time and every 3 hours around the clock."},
+    "…",
+    {"value": "monthly", "label": "Monthly", "time": "time", "hint": "Runs on the 1st of each month at the chosen time."}
+  ],
+  "default_frequency": "daily",
+  "types": [{"value": "filesystem", "label": "Files"}, {"value": "database", "label": "Database"}, {"value": "full", "label": "Files and database"}],
+  "retention": {"min": 1, "max": 365},
+  "timezone": "UTC"
+}
+```
+
+`time` says which picker to render: `minute` (a minute only), `time` (hour and minute), or `null` (none: manual). `frequencies` is in display order.
 
 🔴 **`schedule_time` and `next_run_at` are in `timezone`, which is the panel's clock — *not* the server's.** (This line previously said "the server's timezone" and was wrong.) The scheduler resolves the slot against the application timezone, so on a box set to anything else, `02:00` is not 02:00 to the person who typed it — a user on `Asia/Kolkata` gets it at 07:30. **Always render `timezone` beside the time**; a bare `02:00` reads as local time to everyone, and nothing else in the response reveals otherwise.
 
@@ -3163,7 +3276,7 @@ Note the label: `status: "verified"` renders as **"Complete"**, not "Verified" �
 
 `reason` is a classified failure code with `reason_title` its localised sentence; both null unless `status` is `failed`. `log_key` and `reference` are both **UUIDs assigned when the run starts** — never null, on any status. `log_key` addresses this run's log through the logs endpoints; `reference` is the id to quote to support.
 
-`is_safety: true` marks the automatic pre-restore snapshot rather than a backup anyone scheduled — worth distinguishing in the list so it does not read as a stray extra run.
+`is_safety: true` marks the automatic pre-restore snapshot rather than a backup anyone scheduled — worth distinguishing in the list so it does not read as a stray extra run. The newest **two** per site are kept; each restore removes older ones, **archive included** (until 2026-09-24 only the row was removed, so every restore from the third on left a full-site archive in the bucket that the panel could no longer see). An archive that cannot be removed keeps its row and is retried by the next restore.
 
 ---
 
@@ -3275,7 +3388,7 @@ Restore history — what was restored, when, and by whom. Paginated.
 
 The application is flattened as `application_name` / `application_domain` — no nested object.
 
-`safety_backup_id` — the pre-restore snapshot created automatically. `rollback_path` — the previous site directory still on disk.
+`safety_backup_id` — the pre-restore snapshot created automatically. `rollback_path` — the previous site directory still on disk. **Only the newest successful restore of a site keeps one (2026-09-24):** each successful file restore removes the copies earlier restores left, and their `rollback_path` becomes `null`. Every restore made a full copy of the site and none was ever removed, so five restores of a 117 MB site left 585 MB. A *failed* restore's copy is never removed.
 
 `current_step` is the machine key, `current_step_title` its localised sentence, and `step_number` / `total_steps` turn it into a progress bar. `step_number` is null when nothing has started yet; `total_steps` is always populated, so a bar can be rendered before the first step reports.
 
@@ -3398,6 +3511,10 @@ with **`409`** — not 422. Nothing about the request is wrong; the server is in
 To go ahead, re-send the same request with **`restart_cluster: true`** (or `create_user.restart_cluster` on `POST /databases`). That second request is the consent. Show a confirm dialog first — **every application connected to that cluster loses its connections** for the moment the restart takes.
 
 A cluster that already listens remotely — because the panel widened it earlier, or an operator configured it themselves — skips all of this and never returns `409`.
+
+**MySQL and MariaDB answer the same `409` (added 2026-09-26).** Ubuntu ships both with `bind-address = 127.0.0.1`, so a remote user used to be created and could never connect. The first remote user on an engine bound to loopback now gets the same `409` / `code: restart_required` (the message names the engine), and `restart_cluster: true` makes the panel write `bind-address = 0.0.0.0` to a drop-in (`/etc/mysql/mariadb.conf.d/99-panel-remote.cnf` or `/etc/mysql/mysql.conf.d/99-panel-remote.cnf`) and restart the engine. Same dialog, same consent, one code path on the client.
+
+**`connection_string` of a remote or anywhere user** now points at this server's public address (it used to print the user's own allowed host, i.e. the client's machine). Local users still get `127.0.0.1`.
 
 **What the panel writes.** One `host <database> <role> <cidr> scram-sha-256` line per remote user, inside a marked block appended to `pg_hba.conf`. Everything outside the markers is left byte for byte; the block is re-rendered on every change, so rules never accumulate. `anywhere` writes **two** lines, `0.0.0.0/0` and `::0/0` — one would leave IPv6 clients unable to connect with no setting to blame. Dropping or renaming a user removes or moves its lines.
 
@@ -3593,7 +3710,7 @@ Drops the database and cascades its users. No orphans.
 
 Server databases not yet under panel management (brownfield discovery).
 
-**Query:** `?engine=mariadb`
+**Query:** `?engine=mariadb` (required; missing or unknown → `422` on `engine`)
 
 **Response `200`:** `{"untracked": ["legacy_app_db", "old_cms"]}`
 
@@ -3618,12 +3735,22 @@ Reads a migrated server into the panel. `preview` (the default) changes nothing;
 
 `firewall_rule` is the one that has to be asked for: it is skipped unless `include_firewall: true`, because adopting a rule set is the one step here that can lock you out of the box.
 
+**System users and sudo (2026-09-28).** An adopted user's `sudo` is what the server says — membership of the `sudo` group (or the older `admin` group) — where it used to be recorded as `false` for everyone, so an account with full sudo was listed as having none. The found item's `evidence.sudo` shows it in a preview. An `apply` also corrects `sudo` on users the panel **already** tracks when the group changed outside the panel; the server is never touched. Grants written directly into `/etc/sudoers.d` are not read. If the groups cannot be read at all, nothing is corrected.
+
+**What an adopted site is called (2026-09-24).** A site is adopted only if its document root is `{owner's home}/{folder}/public_html[/sub]`, and it is recorded with **`slug` = that folder** and `web_root` = the part after `public_html`. The slug used to be made from the domain, so the panel looked for the site in a folder that did not exist and its files, PHP settings, workers and backups all pointed at nothing. New skip `reason`s: `folder_taken` (another site in the panel already uses that folder name; slugs are unique) and `folder_name_unusable` (the folder name has characters the panel cannot put in a file name). A root not in that shape is `outside_panel_layout`, as before.
+
+**Database users.** MySQL/MariaDB users are now found (they never were: the account list was mis-read). PostgreSQL offers only non-superuser roles, each only for databases it **owns or was granted by name**; superusers (`postgres`, the panel's own `panel_*` account) are never offered, and PUBLIC's default CONNECT no longer makes every role look like a user of every database.
+
+**Cron jobs** already adopted are not offered again. A job adopted from a **user crontab** records `source_path: "crontab:<user>"` and the exact line; its first edit or delete removes that one line from the crontab (the rest is left as it is), so it no longer runs twice.
+
 ### POST `/server/sync`
 **Permission:** `sync` (manage) | **Throttle:** 10/min
 
 `{"mode": "preview|apply", "only": [], "include_firewall": false, "include_ignored": false}` → **202** `{"sync": {"id": 1, "status": "pending"}}`
 
 An omitted `mode` is **preview**. Refused with `422` while another run is live.
+
+**A preview lists what the apply would adopt, including what belongs to users it found.** The sites, SSH keys and cron jobs of an account the panel does not have yet show as `found`, not skipped, because applying the run adopts the account first. The workers, certificates and PHP settings of a **site** the preview found cannot be read until the site exists, so the preview adds one line per type instead: `action: "skipped"`, `resource_key` = the type, `reason: "after_sites_adopted"`. The apply reads them as usual.
 
 ### GET `/server/sync/{run}?since=<item id>`
 **Permission:** `sync` (view)
@@ -3752,6 +3879,8 @@ Delete the export row **and** its file.
 ### GET `/databases/{database}/users`
 **Permission:** `database` (view)
 
+**`password` and `connection_string` are `null` unless the caller has `database` (manage)** (2026-09-28, DB-01 — a read-only role was handed working credentials). `password_known` still says whether a password is stored, so a read-only screen can show "set" without the value. Applies everywhere a database user is returned, including `GET /databases/{database}`.
+
 ```json
 {"users": [{
   "id": 1, "database_id": 1, "username": "shopuser",
@@ -3777,7 +3906,7 @@ The password is returned in full, deliberately: the user has to paste it into th
 
 **Request:** `{"username": "shopuser2", "password": "…", "connection_preference": "localhost"}`
 
-`connection_preference`: `localhost | remote | anywhere`. Remote/anywhere opens the engine port in the firewall.
+`connection_preference`: `localhost | remote | anywhere`. Remote/anywhere opens the engine port in the firewall (`origin: db_user`); the rule is closed again when the last user needing it is deleted, moved, or its database deleted.
 
 **Response `201`:** `{"user": {...}}`
 
@@ -3811,7 +3940,7 @@ Update username, connection preference, or password.
 ---
 
 ### POST `/databases/{database}/phpmyadmin-sso`
-**Permission:** `database` (view)
+**Permission:** `database` (**manage**) — was `view` until 2026-09-28 (DB-02): the session signs in as the database's own user, which can write, so a read-only role could run an INSERT. Hide the button for view-only users; they get `403`.
 
 One-click auto-login to phpMyAdmin for the database's user. Works only for MySQL/MariaDB databases (MongoDB is not supported by phpMyAdmin — see `mongo-express` instead). Requires a running phpMyAdmin site on this server.
 
@@ -3866,7 +3995,7 @@ Signing in this way writes a `database.phpmyadmin_signed_in` row to the activity
 
 Live process list for the active SQL engine.
 
-**Query:** `?engine=mariadb`
+**Query:** `?engine=mariadb` (required; missing or unknown → `422` on `engine`)
 
 ```json
 {"processes": [{
@@ -3883,7 +4012,7 @@ Live process list for the active SQL engine.
 
 Kill a process/op (`KILL`).
 
-**Query:** `?engine=mariadb`
+**Query:** `?engine=mariadb` (required; missing or unknown → `422` on `engine`)
 
 **Response `204`:**
 
@@ -3911,7 +4040,7 @@ Today: `slow_queries` is `null` on **PostgreSQL** (no counter without `pg_stat_s
 
 24h QPS + connection history for the **Setup page / Database Metrics** chart.
 
-**Query:** `?engine=mariadb`
+**Query:** `?engine=mariadb` (required; missing or unknown → `422` on `engine`)
 
 ```json
 {"metrics": [
@@ -3926,6 +4055,8 @@ Today: `slow_queries` is `null` on **PostgreSQL** (no counter without `pg_stat_s
 
 ### GET `/system-users`
 **Permission:** `system_user` (view)
+
+**`password` is `null` unless the caller has `system_user` (manage)** (2026-09-28, SU-01 — it is a working SSH/SFTP login). New field **`password_known`** says whether one is set. Same on `GET /system-users/{id}` and every endpoint returning a system user.
 
 Paged. `?search=` case-insensitively matches the username; `?sort=created_at|username`, default `-created_at`; `?per_page=10|20|30|50|100`, default 10. Responds `meta{current_page, per_page, total, last_page, ssh_access_enforced}`.
 
@@ -4455,7 +4586,7 @@ Ports are **1–65535** on both create and edit. 65535 is a real port and ufw ac
 
 `enabled: false` means kept but not applied; disabling is not deleting.
 
-`protected: true` marks system-seeded rules (`origin` other than `user`). **While the firewall is enabled, such a rule is description-only**: delete, and any `PUT` touching `port_from`, `port_to`, `protocol`, `action`, `source_ip` or `enabled`, answer `422` with a message naming the port and the way out. Disable the firewall and it is fully editable again — that is the escape hatch, and the reason the lock is not permanent.
+`protected: true` marks system-seeded rules (`origin: default` — SSH, HTTP, HTTPS). `origin: db_user` is a rule opened for a remote database user: not protected, and closed by the panel when the last database user needing that port and address is deleted or moved. **While the firewall is enabled, such a rule is description-only**: delete, and any `PUT` touching `port_from`, `port_to`, `protocol`, `action`, `source_ip` or `enabled`, answer `422` with a message naming the port and the way out. Disable the firewall and it is fully editable again — that is the escape hatch, and the reason the lock is not permanent.
 
 Treat that as one rule in the UI: **disable the edit control and the enable/disable toggle on a protected row, not just the delete action.** Until now only delete was refused, so hiding delete alone left the toggle as the one control nothing checked — and switching off the seeded port-443 rule is `ufw delete allow 443/tcp`, which on a deny-incoming server takes every site on the box offline. Renaming stays available, so an edit dialog that only submits `description` should still be offered.
 
@@ -4908,7 +5039,7 @@ Manual + scheduled run history, paginated.
   "swap": {"enabled": true, "path": "/swapfile-panel", "size": 2147483648, "size_human": "2 GB", "used": 0, "used_human": "0 B", "free": 2147483648, "free_human": "2 GB"},
   "security": {"port": 22, "permit_root_login": "prohibit-password", "password_authentication": false, "has_ssh_key": true},
   "updates": {"security_updates_enabled": true, "auto_reboot": false, "reboot_time": "06:00", "reboot_required": false, "updates_available": 3, "security_updates_available": 1, "lists_refreshed_at": "29-07-2026 04:00:00", "unattended_last_run_at": "27-07-2026 06:18:00", "unattended_last_result": "success", "unattended_last_error": null, "unattended_last_log": null, "unattended_last_log_truncated": false, "unattended_log_readable": true},
-  "redis": {"maxmemory": "256mb", "maxmemory_policy": "allkeys-lru", "has_password": true, "password": "s3cr3t-redis", "password_out_of_sync": false, "password_manageable": true, "running": true, "memory_used": 8388608, "memory_used_human": "8 MB"}
+  "redis": {"maxmemory": "256mb", "maxmemory_policy": "volatile-lru", "unsafe_policies": ["allkeys-lru", "allkeys-lfu", "allkeys-random"], "has_password": true, "password": "s3cr3t-redis", "password_out_of_sync": false, "password_manageable": true, "running": true, "memory_used": 8388608, "memory_used_human": "8 MB"}
 ```
 
 **`swap.path` is `/swapfile-panel`, not `/swapfile`** (changed 2026-09-14). It is the file `install.sh` creates, and the panel manages exactly that one — `swap.enabled` is answered by looking for this path in the kernel's swap list. The two names used to disagree, so on a fresh install the installer's swap was live and this block read `enabled: false, size: 0`. A server whose swap was created through this screen before the change has it at `/swapfile`; that file is now reported under `unmanaged` / `system_total` and is no longer resizable from the screen. Don't hardcode the path — render `swap.path`.
@@ -5062,6 +5193,8 @@ Cancelling when nothing is scheduled is **not** an error: the caller wanted no p
 
 `422` if disabling password auth with no SSH key present (lockout guard).
 
+`422` on `port` when another program already listens on the new port (e.g. the web server on 80) — SSH could not bind it. If the socket still fails to bind the new port, the old port is restored and SSH brought back on it before the `500` is returned. Saving also restarts an `ssh.socket` that is in the failed state, whatever the port.
+
 **Response `200`:** `{"security": {...}}`
 
 ---
@@ -5082,9 +5215,11 @@ Cancelling when nothing is scheduled is **not** an error: the caller wanted no p
 ### PUT `/settings/redis`
 **Permission:** `setting` (manage)
 
-**Request:** `{"maxmemory": "512mb", "maxmemory_policy": "allkeys-lru", "password": "newpassword"}`
+**Request:** `{"maxmemory": "512mb", "maxmemory_policy": "volatile-lru", "password": "newpassword"}`
 
 Omit `password` to leave it unchanged. `{"remove_password": true}` clears it.
+
+A policy listed in `unsafe_policies` (the `allkeys-*` ones, whenever the panel's own queue is on this Redis) is refused with `422` on `maxmemory_policy`: once Redis is full it can evict a pending job silently.
 
 **Response `200`:** settings applied. `{"message": "Password is being changed.", "reference": "…"}` + `202` when a password change is in progress (applied after response).
 
@@ -5212,6 +5347,8 @@ The `phar` groups are **best-effort**: a box that has the interpreter without th
 **Request:** `{"version": "8.3"}`
 
 **Response `202`:** queued (apt takes minutes). Already installed → `200`.
+
+**`422` on `version`** (added 2026-09-26) when the version is neither installed nor in the server's package index — the same list `GET /php` returns as `installable`. It used to be queued and fail minutes later as `package_not_found`.
 
 ---
 
@@ -5512,6 +5649,13 @@ Verify the token is still valid with the provider.
 
 **Response `200`:** `{"deleted": true}`
 
+**Response `422`** while any application still deploys with the account — deleting it would leave those sites unable to deploy. A validation error on `git_account` that names them (first 5, then a count):
+```json
+{"message": "Cannot disconnect Work GitHub — it is still used by Blog, Shop. Link those applications to another account first.",
+ "errors": {"git_account": ["Cannot disconnect Work GitHub — it is still used by Blog, Shop. …"]}}
+```
+Show `message` in the delete dialog. Nothing is deleted and nothing is logged.
+
 ---
 
 ### GET `/integrations/git/accounts/{account}/repositories`
@@ -5532,7 +5676,7 @@ Verify the token is still valid with the provider.
 
 **Query:** `?repository=devuser/shop`
 
-**Response `200`:** `{"branches": ["main", "develop", "hotfix/payment"]}`
+**Response `200`:** `{"branches": [{"name": "main", "protected": true}, {"name": "develop", "protected": false}]}` — objects, not bare names; `protected` is the provider's own branch-protection flag.
 
 ---
 
@@ -5572,7 +5716,9 @@ The list response also carries **`google_oauth_redirect_uri`** at the top level:
 
 **The test result is cleared whenever the provider or *any* config key changes** (the one exception is `host_fingerprint`, which a successful probe records itself). A stored "connected" describes the credentials that were tested, not the ones now saved.
 
-`last_test_error` is a stable category, safe to branch on and to translate: `invalid_credentials` · `unreachable` · `host_key_mismatch` · `invalid_private_key` · `mismatch`. The raw exception is never echoed.
+`last_test_error` is a stable category, safe to branch on and to translate: `invalid_credentials` · `bucket_not_found` · `wrong_region` · `tls_failed` · `unreachable` · `host_key_mismatch` · `invalid_private_key` · `mismatch`. The raw exception is never echoed. (S3 only: before 2026-09-24 a wrong bucket, a wrong region and a broken TLS certificate were all reported as `invalid_credentials`. Backblaze B2 still answers a wrong-region endpoint with `invalid_credentials`, because B2 itself says "the key is not valid".)
+
+**Backblaze B2 keeps deleted backups.** A B2 bucket's default lifecycle is *keep all versions*, so when the panel deletes a backup (by hand or by retention), B2 **hides** the file instead of removing it, and it is still stored and billed. Measured 2026-09-24. The panel does not work around this; tell the user to set the bucket's lifecycle to *Keep only the last version* in the Backblaze console. AWS, Wasabi and DigitalOcean Spaces keep no versions unless versioning was turned on deliberately; Cloudflare R2 has no versioning.
 
 `has_credentials` reports whether the provider's secrets are populated, without returning any of them. For SFTP it is *any of* password / private key, since those are alternatives.
 
@@ -5672,7 +5818,7 @@ Update `name`, `prefix` and any `config` key. **Secrets omitted = unchanged**, s
 ### DELETE `/integrations/storage/destinations/{storageDestination}`
 **Permission:** `storage` (manage)
 
-`422` if any backup target uses this destination.
+`422` if any backup target uses this destination, **or if any backup's archive is still stored in it** (`errors.storage_destination`, *"still holds N backup(s)"*), which happens after a target is repointed elsewhere. The second case used to be refused by the database as a `500`. Delete those backups first, which removes their archives too; the panel never deletes them as a side effect.
 
 **Response `204`:**
 
@@ -5770,7 +5916,9 @@ Not a frontend endpoint — documented so it isn't mistaken for a gap. The gener
 
 **Response `401`:** `{"deployed": false, "reason": "invalid_signature"}`
 
-A disabled webhook and an identifier that never existed both answer `404`, identically — anything else would confirm which applications exist.
+**Response `410`** — deploy-on-push is switched off in the panel, and the delivery is **authentic** (valid signature for the stored secret): `{"deployed": false, "reason": "webhook_disabled", "message": "Deploy on push is turned off for this site in the panel…"}`. Nothing is deployed. Meant for the provider's own delivery log, so whoever reads it knows why; a non-2xx on purpose, so the provider counts the hook as failing (GitLab disables it after a few).
+
+A disabled webhook receiving a delivery **without** a valid signature, and an identifier that never existed, both answer `404`, identically — anything else would confirm which applications exist.
 
 ---
 

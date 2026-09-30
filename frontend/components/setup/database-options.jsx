@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { CheckCircle2, Sparkles } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -33,11 +34,12 @@ const PURPOSE = {
 export function DatabaseOptions({ options, failed = false, disabled = false, disabledReason, onInstall }) {
   const t = useTranslations("setup");
   const installable = useMemo(() => options.filter((o) => o.installable && !o.installed), [options]);
-  // Only auto-select when exactly one SQL engine is installable. Otherwise
-  // (e.g. MongoDB already installed → both MySQL and MariaDB available)
-  // the user must pick explicitly, so leave selected = null and disable
-  // the install button until they do.
-  const defaultValue = installable.length === 1 ? installable[0].value : null;
+  // The only installable engine, else the recommended one: a first-time
+  // reader facing four equal cards had no default and no visible advice.
+  const defaultValue =
+    installable.length === 1
+      ? installable[0].value
+      : (installable.find((o) => o.recommended)?.value ?? null);
   const [selected, setSelected] = useState(defaultValue);
   const chosen = options.find((o) => o.value === selected);
 
@@ -78,11 +80,16 @@ export function DatabaseOptions({ options, failed = false, disabled = false, dis
                   fact you need back. The sparkle returns the moment it isn't
                   the selection. */}
               <span className="flex items-center justify-between gap-2 font-medium">
-                {option.label}
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  {option.label}
+                  {/* In words, and kept when chosen: a lone sparkle was easy to
+                      miss and vanished the moment the card was selected. */}
+                  {option.recommended && !unavailable ? (
+                    <Badge variant="warning" className="font-normal">{t("recommended")}</Badge>
+                  ) : null}
+                </span>
                 {active && !unavailable ? (
                   <CheckCircle2 className="size-4 shrink-0 text-primary" aria-hidden />
-                ) : option.recommended ? (
-                  <Sparkles className="size-3.5 shrink-0 text-primary" aria-hidden />
                 ) : null}
               </span>
               {/* State wins when there is state to report — "already installed"

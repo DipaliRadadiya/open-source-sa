@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Application;
+use App\Models\Cronjob;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Applications\ApplicationProvisioner;
@@ -161,6 +162,20 @@ it('trusts the site\'s own domain, or the site refuses every visitor', function 
     expect($cliUrl['command'])->toContain('--value=http://cloud.example.com');
 });
 
+it('tells Nextcloud to write its config.php private to the site user', function () {
+    // Nextcloud chmods config.php to `configfilemode` on every write, 0640 by
+    // default — readable by the web server account on OpenLiteSpeed.
+    $this->application->forceFill(['isolated_at' => now()])->save();
+    $runs = installNextcloud();
+
+    $mode = occRun($runs, 'configfilemode');
+
+    expect($mode)->not->toBeNull()
+        ->and($mode['command'])->toContain('--value=384') // 0600
+        ->and($mode['command'])->toContain('--type=integer')
+        ->and($mode['path'])->toBe($this->docRoot);
+});
+
 it('takes the zip, not the bzip2 tarball', function () {
     $runs = installNextcloud();
 
@@ -180,7 +195,10 @@ it('takes the zip, not the bzip2 tarball', function () {
 it('copies out of the wrapping directory the zip ships', function () {
     $runs = installNextcloud();
 
-    $copy = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'cp')['command'];
+    // Run as the site user (`runuser -u <user> -- cp …`), so the copy's own
+    // arguments start four places in.
+    $copy = array_slice(collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'runuser'
+        && ($run['command'][4] ?? '') === 'cp')['command'], 4);
 
     // The zip's entries start at `nextcloud/`, unlike Mautic's flat one, and
     // `unzip` has no `--strip-components` to drop it. Copying from the
@@ -245,4 +263,26 @@ it('leaves a stock PostgreSQL command line without a port as well', function () 
 
     expect($command)->toContain('pgsql')
         ->not->toContain('--database-port');
+});
+
+it('schedules its background jobs on the site\'s own PHP, and only once', function () {
+    // A fresh install reported "background jobs last ran 56 years ago":
+    // nothing ever added the cron Nextcloud needs.
+    $runs = installNextcloud();
+
+    expect(occRun($runs, 'background:cron'))->not->toBeNull();
+
+    $job = Cronjob::query()->sole();
+
+    // The version's binary, not `php` — that is the server default.
+    expect($job->command)->toBe('/usr/bin/php8.4 -f '.$this->application->documentRoot().'/cron.php')
+        ->and($job->expression)->toBe('*/5 * * * *')
+        ->and($job->application_id)->toBe($this->application->id)
+        // The panel's own job for the site, so it goes with the site.
+        ->and($job->application_owned)->toBeTrue();
+
+    // Retry Setup runs the installer again.
+    installNextcloud();
+
+    expect(Cronjob::query()->count())->toBe(1);
 });

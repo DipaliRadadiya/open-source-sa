@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { TriangleAlert, User } from "lucide-react";
@@ -16,7 +16,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 export function DeleteUserDialog({ database, user, open, onOpenChange }) {
   const t = useTranslations("databases.users");
   const tAccess = useTranslations("databases.access");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [pending, setPending] = useState(false);
   const access = user?.connection_preference ?? "localhost";
 
@@ -24,9 +24,9 @@ export function DeleteUserDialog({ database, user, open, onOpenChange }) {
     setPending(true);
     try {
       await deleteDatabaseUser(database.id, user.id);
+      await refreshAndWait();
       toast.success(t("deleted", { username: user.username }));
       onOpenChange?.(false);
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("deleteFailed")));
     } finally {

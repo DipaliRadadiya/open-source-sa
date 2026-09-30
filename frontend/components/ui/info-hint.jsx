@@ -35,6 +35,7 @@ export function InfoHint({ label, children, className }) {
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger
         type="button"
+        data-slot="info-hint"
         aria-label={label}
         className={cn(
           // A hit target, not punctuation. Sitting flush against the label at

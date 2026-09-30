@@ -61,7 +61,7 @@ export function AccountHealth({ status, loading }) {
   if (status.status === "unknown") {
     return (
       <Line>
-        <Badge variant="secondary" className="font-normal">
+        <Badge variant="muted" className="font-normal">
           <CircleHelp className="size-3" />
           {t("unknown")}
         </Badge>

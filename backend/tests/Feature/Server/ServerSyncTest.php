@@ -17,6 +17,7 @@ use App\Models\FirewallRule;
 use App\Models\ServerCapability;
 use App\Models\SshKey;
 use App\Models\SyncIgnore;
+use App\Models\SyncItem;
 use App\Models\SyncRun;
 use App\Models\SystemUser;
 use App\Models\User;
@@ -53,7 +54,7 @@ beforeEach(function () {
  *
  * @param  array<string, string>  $authorizedKeys
  */
-function fakeServer(string $passwd = '', array $authorizedKeys = []): void
+function fakeServer(string $passwd = '', array $authorizedKeys = [], ?string $groups = null): void
 {
     $passwd = $passwd !== '' ? $passwd : implode("\n", [
         'root:x:0:0:root:/root:/bin/bash',
@@ -66,8 +67,14 @@ function fakeServer(string $passwd = '', array $authorizedKeys = []): void
         'mysql:x:1004:1004::/home/mysql:/bin/false',
     ]);
 
-    Process::fake(function ($process) use ($passwd, $authorizedKeys) {
+    Process::fake(function ($process) use ($passwd, $authorizedKeys, $groups) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        // `getent group sudo admin` — only when a test models it; the others
+        // get the passwd answer, as before, which names no such group.
+        if ($groups !== null && ($args[0] ?? '') === 'getent' && ($args[1] ?? '') === 'group') {
+            return Process::result(output: $groups, exitCode: str_contains($groups, 'admin:') ? 0 : 2);
+        }
 
         if (($args[0] ?? '') === 'getent') {
             return Process::result(output: $passwd);
@@ -137,6 +144,69 @@ describe('discovering system users', function () {
     });
 });
 
+describe('what an imported account may do', function () {
+    it('imports an account in the sudo group as having sudo', function () {
+        // It was always recorded as sudo: false, so an account with full sudo
+        // on the server was listed in the panel as having none.
+        fakeServer(groups: "sudo:x:27:ubuntu,siteowner\n");
+
+        runSync(SyncMode::Apply);
+
+        expect(SystemUser::where('username', 'siteowner')->value('sudo'))->toBeTrue()
+            ->and(SystemUser::where('username', 'shopuser')->value('sudo'))->toBeFalse();
+    });
+
+    it('counts the older admin group too', function () {
+        fakeServer(groups: "sudo:x:27:\nadmin:x:118:shopuser\n");
+
+        runSync(SyncMode::Apply);
+
+        expect(SystemUser::where('username', 'shopuser')->value('sudo'))->toBeTrue();
+    });
+
+    it('shows the sudo it found in a preview, without writing anything', function () {
+        fakeServer(groups: "sudo:x:27:siteowner\n");
+
+        $run = runSync();
+        $item = SyncItem::where('sync_run_id', $run->id)->where('resource_key', 'siteowner')->first();
+
+        expect($item->evidence['sudo'] ?? null)->toBeTrue()
+            ->and(SystemUser::count())->toBe(0);
+    });
+
+    it('brings an account already in the panel back in line with the server', function () {
+        $granted = SystemUser::create(['username' => 'granted', 'home_path' => '/home/granted', 'sudo' => false]);
+        $revoked = SystemUser::create(['username' => 'revoked', 'home_path' => '/home/revoked', 'sudo' => true]);
+        fakeServer(groups: "sudo:x:27:granted\n");
+
+        runSync(SyncMode::Apply);
+
+        expect($granted->fresh()->sudo)->toBeTrue()
+            ->and($revoked->fresh()->sudo)->toBeFalse();
+    });
+
+    it('leaves the record alone when a preview reads the groups', function () {
+        $granted = SystemUser::create(['username' => 'granted', 'home_path' => '/home/granted', 'sudo' => false]);
+        fakeServer(groups: "sudo:x:27:granted\n");
+
+        runSync();
+
+        expect($granted->fresh()->sudo)->toBeFalse();
+    });
+
+    it('does not strip everyone\'s sudo when the groups cannot be read', function () {
+        // No `sudo` line at all means the command failed — that group exists
+        // on every Debian-derived install. Correcting from an empty answer
+        // would have turned sudo off in the record for every account.
+        $user = SystemUser::create(['username' => 'granted', 'home_path' => '/home/granted', 'sudo' => true]);
+        fakeServer(groups: '');
+
+        runSync(SyncMode::Apply);
+
+        expect($user->fresh()->sudo)->toBeTrue();
+    });
+});
+
 describe('preview', function () {
     it('creates nothing at all', function () {
         fakeServer();
@@ -170,6 +240,68 @@ describe('preview', function () {
             Process::assertNotRan(fn ($p) => ($p->command[0] ?? '') === 'systemctl'
                 && in_array($verb, (array) $p->command, true));
         }
+    });
+});
+
+/*
+ * A preview writes nothing, so everything that belongs to a user it found
+ * used to be "skipped until users are synced", though applying the same run
+ * adopts the user first and then those. The preview said less than the apply
+ * would do (2026-09-24).
+ */
+describe('what a preview promises', function () {
+    beforeEach(function () {
+        ServerCapability::create([
+            'stack' => 'lemp', 'web_server' => 'nginx',
+            'capabilities' => ['php' => true], 'source' => 'installer', 'verified_at' => now(),
+        ]);
+
+        // One account on the box the panel has never seen, with a site, a key
+        // and a crontab job. Nothing about it is in the database.
+        Process::fake(function ($process) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            $binary = $args[0] ?? '';
+            $path = (string) ($args[1] ?? '');
+
+            return match (true) {
+                $binary === 'getent' => Process::result(output: "brown:x:1001:1001::/home/brown:/bin/bash\n"),
+                $binary === 'find' && str_contains($path, 'nginx') => Process::result(output: "/etc/nginx/sites-available/brownsite.conf\n"),
+                $binary === 'cat' && str_ends_with($path, 'brownsite.conf') => Process::result(output: nginxVhost('brown.example.com', '/home/brown/brownsite/public_html')),
+                $binary === 'cat' && $path === '/home/brown/.ssh/authorized_keys' => Process::result(output: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyMaterialForTests laptop@home\n"),
+                $binary === 'stat' => Process::result(output: 'brown'),
+                $binary === 'crontab' && ($args[3] ?? '') === 'brown' => Process::result(output: "*/5 * * * * php /home/brown/brownsite/cron.php\n"),
+                in_array($binary, ['cat', 'crontab', 'test', 'find'], true) => Process::result(exitCode: 1, errorOutput: 'nothing'),
+                default => Process::result(exitCode: 0),
+            };
+        });
+    });
+
+    /** @return array<int, string> `type:key`, sorted */
+    function listed(SyncRun $run, SyncAction $action, array $types): array
+    {
+        return $run->items()->where('action', $action)->whereIn('resource_type', $types)->get()
+            ->map(fn (SyncItem $item): string => $item->resource_type.':'.$item->resource_key)
+            ->sort()->values()->all();
+    }
+
+    it('lists what belongs to a user it found, exactly as applying it adopts', function () {
+        $types = ['system_user', 'application', 'ssh_key', 'cronjob'];
+
+        $preview = runSync(SyncMode::Preview);
+
+        expect($preview->items()->where('reason', 'owner_not_tracked')->exists())->toBeFalse()
+            ->and(listed($preview, SyncAction::Found, $types))->toHaveCount(4)
+            ->and(listed($preview, SyncAction::Found, $types))->toBe(listed(runSync(SyncMode::Apply), SyncAction::Adopted, $types));
+    });
+
+    it('says once per type that a found site\'s workers, SSL and PHP settings come after the sites', function () {
+        $said = runSync(SyncMode::Preview)->items()->where('reason', 'after_sites_adopted')->pluck('resource_type')->sort()->values()->all();
+
+        expect($said)->toBe(['certificate', 'php_settings', 'worker']);
+    });
+
+    it('does not say it on an apply, which has adopted the sites by then', function () {
+        expect(runSync(SyncMode::Apply)->items()->where('reason', 'after_sites_adopted')->exists())->toBeFalse();
     });
 });
 
@@ -628,6 +760,80 @@ describe('adopting a site', function () {
  * box this was developed against the panel's own frontend vhost is called
  * `sv-oss-app.conf`, which no amount of matching "panel" would ever catch.
  */
+/*
+ * The slug is the folder the files are in. It used to be made from the
+ * domain, so a site in /home/brown/brownsite was recorded as
+ * `brown23-172-120-87nipio`, a folder that does not exist, and its file
+ * manager, PHP settings, workers and backups all pointed at nothing. Found on
+ * a real server, 2026-09-24.
+ */
+describe('where an adopted site lives', function () {
+    beforeEach(function () {
+        ServerCapability::create([
+            'stack' => 'lemp', 'web_server' => 'nginx',
+            'capabilities' => ['php' => true], 'source' => 'installer', 'verified_at' => now(),
+        ]);
+
+        SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
+    });
+
+    it('names the site after the folder its files are in, not its domain', function () {
+        fakeVhosts(['legacy-vhost' => nginxVhost('brown.example.com', '/home/siteowner/brownsite/public_html')]);
+
+        runSync(SyncMode::Apply);
+
+        $application = Application::where('domain', 'brown.example.com')->firstOrFail();
+
+        expect($application->slug)->toBe('brownsite')
+            ->and($application->web_root)->toBe('/')
+            ->and($application->documentRoot())->toBe('/home/siteowner/brownsite/public_html');
+    });
+
+    it('keeps a served subdirectory as the web root', function () {
+        fakeVhosts(['legacy-vhost' => nginxVhost('craft.example.com', '/home/siteowner/craft/public_html/web')]);
+
+        runSync(SyncMode::Apply);
+
+        $application = Application::where('domain', 'craft.example.com')->firstOrFail();
+
+        expect($application->slug)->toBe('craft')
+            ->and($application->web_root)->toBe('web')
+            ->and($application->documentRoot())->toBe('/home/siteowner/craft/public_html/web');
+    });
+
+    it('does not adopt a site whose folder another site already uses', function () {
+        Application::forceCreate([
+            'system_user_id' => SystemUser::create(['username' => 'other', 'home_path' => '/home/other'])->id,
+            'name' => 'Other shop', 'slug' => 'shop', 'domain' => 'other.example.com',
+            'site_type' => 'php', 'serving_profile' => 'php', 'status' => 'active', 'web_root' => '/',
+        ]);
+        fakeVhosts(['legacy-vhost' => nginxVhost('shop.example.com', '/home/siteowner/shop/public_html')]);
+
+        $run = runSync(SyncMode::Apply);
+
+        expect(itemsWith($run, 'application', SyncAction::Skipped))->toContain('shop.example.com')
+            ->and($run->items()->where('resource_key', 'shop.example.com')->value('reason'))->toBe('folder_taken')
+            ->and(Application::where('domain', 'shop.example.com')->exists())->toBeFalse();
+    });
+
+    it('does not adopt a site served straight from its folder, with no public_html', function () {
+        fakeVhosts(['legacy-vhost' => nginxVhost('flat.example.com', '/home/siteowner/flat')]);
+
+        $run = runSync(SyncMode::Apply);
+
+        expect($run->items()->where('resource_key', 'flat.example.com')->value('reason'))->toBe('outside_panel_layout')
+            ->and(Application::where('domain', 'flat.example.com')->exists())->toBeFalse();
+    });
+
+    it('does not adopt a folder whose name cannot name a file', function () {
+        fakeVhosts(['legacy-vhost' => nginxVhost('odd.example.com', '/home/siteowner/my shop/public_html')]);
+
+        $run = runSync(SyncMode::Apply);
+
+        expect($run->items()->where('resource_key', 'odd.example.com')->value('reason'))->toBe('folder_name_unusable');
+    });
+});
+
 describe('excluding what is not a customer site', function () {
     beforeEach(function () {
         ServerCapability::create([
@@ -1374,6 +1580,32 @@ describe('discovering cronjobs', function () {
         expect(Cronjob::count())->toBe(1);
     });
 
+    // The panel takes the line out of the crontab on its first edit, so it
+    // needs to know which line. Without it the job ran twice (2026-09-24).
+    it('records where a crontab job came from, down to the exact line', function () {
+        fakeCron(crontabs: ['siteowner' => "MAILTO=me@example.com\n*/5 * * * * /srv/job.sh\n"]);
+
+        runSync(SyncMode::Apply);
+
+        $job = Cronjob::firstOrFail();
+
+        expect($job->source_path)->toBe('crontab:siteowner')
+            ->and($job->source_line)->toBe('*/5 * * * * /srv/job.sh');
+    });
+
+    // Every run offered adopted jobs as new, because the file check only
+    // knew the panel's own file names (2026-09-24).
+    it('does not offer a job it has already adopted', function () {
+        fakeCron(
+            cronD: ['/etc/cron.d/legacy' => "0 3 * * * siteowner /usr/bin/php artisan backup:run\n"],
+            crontabs: ['siteowner' => "*/5 * * * * /srv/job.sh\n"],
+        );
+
+        runSync(SyncMode::Apply);
+
+        expect(itemsWith(runSync(), 'cronjob', SyncAction::Found))->toBe([]);
+    });
+
     it('keeps two jobs that run the same command on different schedules', function () {
         fakeCron(cronD: [
             '/etc/cron.d/shop' => implode("\n", [
@@ -1554,6 +1786,24 @@ describe('discovering firewall rules', function () {
         // caller chose, and repeating their choice back is noise on the
         // screen that matters.
         expect(runSync()->items()->where('resource_type', 'firewall_rule')->count())->toBe(0);
+    });
+
+    // `ufw status` prints a rule's comment after the source, on the same
+    // line. It was stored as part of the source (`Anywhere  # note`), a value
+    // ufw rejects, so the adopted rule could never be edited or deleted.
+    // Found on a real server, 2026-09-24.
+    it('keeps a rule\'s comment out of its source and makes it the description', function () {
+        fakeUfwForSync("[ 1] 65000/tcp                  ALLOW IN    Anywhere                   # brownfield test\n"
+            ."[ 2] 3306                       ALLOW IN    203.0.113.5                # office db\n");
+
+        runSync(SyncMode::Apply, ['include_firewall' => true]);
+
+        $rules = FirewallRule::query()->orderBy('port_from')->get(['port_from', 'source_ip', 'description'])->toArray();
+
+        expect($rules)->toBe([
+            ['port_from' => 3306, 'source_ip' => '203.0.113.5', 'description' => 'office db'],
+            ['port_from' => 65000, 'source_ip' => null, 'description' => 'brownfield test'],
+        ]);
     });
 
     it('reads a port rule', function () {
@@ -1803,6 +2053,24 @@ describe('discovering sites on OpenLiteSpeed', function () {
             ->and($found[0]['key'])->toBe('blog.example.com');
     });
 
+    // The installer's demo vhost was reported as a site whose config could
+    // not be read (2026-09-24). Recognised by its stock document root, so a
+    // customer's own site that happens to be called Example is still found.
+    it('passes over OpenLiteSpeed\'s own Example vhost quietly, but not a real site of that name', function () {
+        fakeOlsVhosts([
+            'Example' => "docRoot \$VH_ROOT/html/\n",
+            'shop' => "docRoot /home/siteowner/shop/public_html\nvhDomain shop.example.com\n",
+        ]);
+
+        $found = app(ApplicationDiscoverer::class)->discover($this->run);
+
+        expect(array_column($found, 'key'))->toBe(['shop.example.com']);
+
+        fakeOlsVhosts(['Example' => "docRoot /home/siteowner/example/public_html\nvhDomain example.com\n"]);
+
+        expect(array_column(app(ApplicationDiscoverer::class)->discover($this->run), 'key'))->toBe(['example.com']);
+    });
+
     it('finds sites a migrated server keeps under the old panels branded directory', function () {
         /*
          * The whole point of the layout detection. A v7 server that installs
@@ -1868,5 +2136,40 @@ describe('discovering sites on OpenLiteSpeed', function () {
             // And the root is recorded, so everything afterwards writes where
             // the shared httpd_config already points.
             ->and(ServerCapability::query()->value('ols_vhost_root'))->toBe('/etc/sureshcloud-ols');
+    });
+});
+
+describe('vhosts that are not enabled', function () {
+    it('ignores a vhost nginx does not read, like the stock default', function () {
+        ServerCapability::create([
+            'stack' => 'lemp', 'web_server' => 'nginx',
+            'capabilities' => ['php' => true], 'source' => 'installer', 'verified_at' => now(),
+        ]);
+
+        // A fresh box: `default` sits in sites-available unlinked. It was
+        // reported as "being served, but its config is not in a shape the
+        // panel could read" (nginx test server) — nothing serves it.
+        Process::fake(function ($process) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            $binary = $args[0] ?? '';
+            $path = (string) ($args[1] ?? '');
+
+            return match (true) {
+                $binary === 'getent' => Process::result(output: "brown:x:1001:1001::/home/brown:/bin/bash\n"),
+                $binary === 'find' && $path === '/etc/nginx/sites-enabled' => Process::result(output: "brownsite.conf\n"),
+                $binary === 'find' && $path === '/etc/nginx/sites-available' => Process::result(output: "/etc/nginx/sites-available/brownsite.conf\n/etc/nginx/sites-available/default\n"),
+                $binary === 'cat' && str_ends_with($path, 'brownsite.conf') => Process::result(output: nginxVhost('brown.example.com', '/home/brown/brownsite/public_html')),
+                $binary === 'cat' && str_ends_with($path, '/default') => Process::result(output: "server {\n    listen 80 default_server;\n    root /var/www/html;\n}\n"),
+                $binary === 'stat' => Process::result(output: 'brown'),
+                in_array($binary, ['cat', 'crontab', 'test', 'find'], true) => Process::result(exitCode: 1, errorOutput: 'nothing'),
+                default => Process::result(exitCode: 0),
+            };
+        });
+
+        $run = runSync(SyncMode::Preview);
+        $keys = $run->items()->where('resource_type', 'application')->pluck('resource_key')->all();
+
+        expect($keys)->toContain('brown.example.com')
+            ->and($keys)->not->toContain('default');
     });
 });

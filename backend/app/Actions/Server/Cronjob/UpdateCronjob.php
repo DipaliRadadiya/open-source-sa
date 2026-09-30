@@ -47,6 +47,13 @@ class UpdateCronjob
         // whole panel.
         $before = $cronjob->getOriginal();
 
+        // A job the panel created for a site is removed with the site. Once
+        // its command is edited it may do something the user wants kept, so
+        // it becomes theirs.
+        if (isset($data['command']) && $data['command'] !== $cronjob->command) {
+            $data['application_owned'] = false;
+        }
+
         $cronjob->update($data);
 
         // Re-materialise from the new state: active → (over)write the file,
@@ -115,7 +122,7 @@ class UpdateCronjob
                 throw new CronjobOperationException($detached->reference, step: 'detach_source');
             }
 
-            $cronjob->forceFill(['source_path' => null])->save();
+            $cronjob->forceFill(['source_path' => null, 'source_line' => null])->save();
         }
 
         $this->activityLogger->log('cronjob.updated', $cronjob, ['name' => $cronjob->name]);

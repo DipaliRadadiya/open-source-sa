@@ -12,6 +12,8 @@ use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\DeploymentRecorder;
 use App\Services\Server\Applications\GitDeployer;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Bus\UniqueLock;
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 
@@ -318,4 +320,210 @@ it('has no deployment screen at all on a site that cannot deploy', function () {
     $this->actingAs($this->admin)
         ->getJson("/api/applications/{$wordpress->id}/deployments")
         ->assertNotFound();
+});
+
+/*
+ * Deploys are in place: the checkout replaces the files before the script,
+ * the dependency check and the verify run. A deploy that failed in one of
+ * those left the new commit live while `last_commit` (success only) still
+ * named the old one, and the panel reported the old code as running. Found
+ * on a real server, 2026-09-24.
+ */
+describe('which commit is on disk', function () {
+    /** Deploy with `rev-parse` answering $commit; `$failChown` fails it after the checkout. */
+    function deployCommit(string $commit, bool $failChown = false): void
+    {
+        Process::fake(function ($process) use ($commit, $failChown) {
+            return match (true) {
+                in_array('rev-parse', $process->command, true) => Process::result(output: $commit),
+                in_array('log', $process->command, true) => Process::result(output: "Change\nAda Lovelace"),
+                $failChown && ($process->command[0] ?? '') === 'chown' => Process::result(errorOutput: 'operation not permitted', exitCode: 1),
+                ($process->command[0] ?? '') === 'curl' => Process::result(output: '200'),
+                default => Process::result(exitCode: 0),
+            };
+        });
+
+        runRecordedDeploy(app(DeploymentRecorder::class)->open(test()->application, DeploymentTrigger::Manual, test()->admin->id)->id);
+    }
+
+    it('names the new commit and says the deploy is incomplete when it failed after the checkout', function () {
+        deployCommit('aaaaaaa1111111');
+        deployCommit('bbbbbbb2222222', failChown: true);
+
+        $this->actingAs($this->admin)->getJson("/api/applications/{$this->application->id}")
+            ->assertOk()
+            // Still the last deploy that succeeded…
+            ->assertJsonPath('application.last_commit', 'aaaaaaa1111111')
+            // …but not what is running.
+            ->assertJsonPath('application.code_on_disk.commit', 'bbbbbbb2222222')
+            ->assertJsonPath('application.code_on_disk.state', 'incomplete')
+            ->assertJsonPath('application.code_on_disk.message', __('application.code_on_disk.incomplete', ['commit' => 'bbbbbbb']));
+
+        $this->actingAs($this->admin)->getJson("/api/applications/{$this->application->id}/deployments")
+            ->assertOk()
+            ->assertJsonPath('settings.code_on_disk.commit', 'bbbbbbb2222222')
+            ->assertJsonPath('settings.code_on_disk.state', 'incomplete');
+    });
+
+    it('is deployed again once a later deploy succeeds', function () {
+        deployCommit('bbbbbbb2222222', failChown: true);
+        deployCommit('ccccccc3333333');
+
+        $this->actingAs($this->admin)->getJson("/api/applications/{$this->application->id}")
+            ->assertJsonPath('application.code_on_disk.commit', 'ccccccc3333333')
+            ->assertJsonPath('application.code_on_disk.state', 'deployed')
+            ->assertJsonPath('application.code_on_disk.message', null);
+    });
+
+    it('ignores a failed deploy that never reached the checkout: the old code is still there', function () {
+        deployCommit('aaaaaaa1111111');
+
+        Process::fake(fn ($process) => in_array('fetch', $process->command, true)
+            ? Process::result(errorOutput: 'fatal: repository not found', exitCode: 128)
+            : Process::result(exitCode: 0));
+        runRecordedDeploy(app(DeploymentRecorder::class)->open($this->application, DeploymentTrigger::Manual, $this->admin->id)->id);
+
+        $this->actingAs($this->admin)->getJson("/api/applications/{$this->application->id}")
+            ->assertJsonPath('application.code_on_disk.commit', 'aaaaaaa1111111')
+            ->assertJsonPath('application.code_on_disk.state', 'deployed');
+    });
+
+    it('falls back to last_commit for a site with no recorded checkout', function () {
+        $this->application->forceFill(['last_commit' => 'ddddddd4444444'])->save();
+
+        $this->actingAs($this->admin)->getJson("/api/applications/{$this->application->id}")
+            ->assertJsonPath('application.code_on_disk.commit', 'ddddddd4444444')
+            ->assertJsonPath('application.code_on_disk.state', 'deployed');
+    });
+
+    it('leaves it out of a list of sites, which does not load it', function () {
+        $this->actingAs($this->admin)->getJson('/api/applications')
+            ->assertOk()
+            ->assertJsonMissingPath('applications.0.code_on_disk');
+    });
+});
+
+/*
+ * What the Deployment screen polls while it is open. A deploy started by a
+ * push ran behind the page, which only polled after its own button, so the
+ * history stayed stale until a reload (reported 2026-09-24).
+ */
+describe('the newest deploy', function () {
+    function latestUrl(): string
+    {
+        return '/api/applications/'.test()->application->id.'/deployments/latest';
+    }
+
+    it('is the newest deploy only, in the history row\'s shape, without its build output', function () {
+        Deployment::create(['application_id' => $this->application->id, 'trigger' => DeploymentTrigger::Manual, 'status' => DeploymentStatus::Succeeded]);
+        $newest = Deployment::create([
+            'application_id' => $this->application->id, 'trigger' => DeploymentTrigger::Webhook,
+            'status' => DeploymentStatus::Running, 'output' => 'a very long build log',
+        ]);
+
+        $response = $this->actingAs($this->admin)->getJson(latestUrl())
+            ->assertOk()
+            ->assertJsonPath('latest.id', $newest->id)
+            ->assertJsonPath('latest.status', 'running')
+            ->assertJsonPath('latest.in_flight', true)
+            ->assertJsonPath('latest.trigger', 'webhook');
+
+        expect($response->json('latest'))->not->toHaveKey('output')
+            // The same keys as a row of the history, so the screen can put it
+            // straight at the top.
+            ->and(array_keys($response->json('latest')))->toBe(array_keys(
+                $this->actingAs($this->admin)->getJson("/api/applications/{$this->application->id}/deployments")->json('deployments.0'),
+            ));
+    });
+
+    it('is null on a site that has never deployed', function () {
+        $this->actingAs($this->admin)->getJson(latestUrl())
+            ->assertOk()
+            ->assertExactJson(['latest' => null]);
+    });
+
+    it('is readable with view on app_deployment, and refused without it', function () {
+        $viewer = User::factory()->create();
+        grantPermission($viewer, 'app_deployment');
+
+        $this->actingAs($viewer)->getJson(latestUrl())->assertOk();
+        $this->actingAs(User::factory()->create())->getJson(latestUrl())->assertForbidden();
+    });
+
+    it('does not exist on a site that cannot deploy', function () {
+        $this->application->forceFill(['site_type' => 'wordpress'])->save();
+
+        $this->actingAs($this->admin)->getJson(latestUrl())->assertNotFound();
+    });
+});
+
+it('joins the deploy already waiting instead of leaving a row nothing will run', function () {
+    // DeployApplication is unique until processing, so Laravel drops a second
+    // dispatch while one waits. The row used to be opened regardless — a push
+    // during a queued deploy on the Apache test box left one `queued` forever.
+    Queue::fake();
+
+    $first = $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/deployments")
+        ->assertStatus(202)
+        ->json('deployment.id');
+
+    $second = $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/deployments")
+        ->assertStatus(202)
+        ->json('deployment.id');
+
+    expect($second)->toBe($first)
+        ->and($this->application->deployments()->count())->toBe(1);
+
+    Queue::assertPushed(DeployApplication::class, 1);
+});
+
+it('queues a fresh deploy once the waiting one has been picked up', function () {
+    Queue::fake();
+
+    $first = $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/deployments")
+        ->json('deployment.id');
+
+    // What the worker does as it starts a unique-until-processing job.
+    (new UniqueLock(app(CacheRepository::class)))->release(new DeployApplication($this->application->id));
+    Deployment::whereKey($first)->update(['status' => DeploymentStatus::Running->value]);
+
+    $second = $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/deployments")
+        ->json('deployment.id');
+
+    // A push during a *running* deploy must still queue one behind it — that
+    // deploy started before the new commit existed.
+    expect($second)->not->toBe($first)
+        ->and($this->application->deployments()->count())->toBe(2);
+
+    Queue::assertPushed(DeployApplication::class, 2);
+});
+
+it('closes a queued row no job will ever run when the next deploy is queued', function () {
+    Queue::fake();
+
+    $orphan = app(DeploymentRecorder::class)->open($this->application, DeploymentTrigger::Webhook, null);
+    $orphan->forceFill(['created_at' => now()->subDay()])->save();
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/deployments")
+        ->assertStatus(202);
+
+    expect($orphan->fresh()->status)->toBe(DeploymentStatus::Failed)
+        ->and($orphan->fresh()->failed_step)->toBe('worker');
+});
+
+it('leaves a young queued row alone — it may be the one a worker just picked up', function () {
+    Queue::fake();
+
+    $young = app(DeploymentRecorder::class)->open($this->application, DeploymentTrigger::Webhook, null);
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/deployments")
+        ->assertStatus(202);
+
+    expect($young->fresh()->status)->toBe(DeploymentStatus::Queued);
 });

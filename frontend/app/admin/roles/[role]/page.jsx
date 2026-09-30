@@ -21,6 +21,7 @@ export default async function EditRolePage({ params }) {
   // and calling notFound() states, with a 404, that something exists nowhere —
   // on the evidence of one request that did not come back.
   if (failed) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
+  if (catalog.failed) return <LoadFailed description={t("catalogLoadFailed")} status={catalog.status} failure={catalog.failure} />;
 
   const role = roles.find((r) => String(r.id) === String(roleId));
   if (!role) notFound();

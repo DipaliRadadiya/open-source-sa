@@ -10,7 +10,7 @@ import { FilterSelect } from "@/components/data-table/filter-select";
  * lives. Screens that filter a list already in memory use `FilterSelect`
  * directly — same dropdown, no navigation per keystroke.
  */
-export function FacetSelect({ paramKey, allLabel, options, className }) {
+export function FacetSelect({ paramKey, allLabel, options, className, label }) {
   const searchParams = useSearchParams();
   const setQuery = useSetQuery();
 
@@ -31,6 +31,7 @@ export function FacetSelect({ paramKey, allLabel, options, className }) {
       allLabel={allLabel}
       options={options}
       className={className}
+      label={label}
     />
   );
 }

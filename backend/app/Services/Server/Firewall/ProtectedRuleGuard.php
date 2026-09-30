@@ -74,7 +74,7 @@ class ProtectedRuleGuard
         // The origin as stored, never as submitted. `origin` is fillable, and
         // reading it off a filled model would let a request that renamed
         // itself to `user` walk straight past the guard meant to stop it.
-        if (($rule->getOriginal('origin') ?? $rule->origin) === 'user') {
+        if (! FirewallRule::originIsProtected($rule->getOriginal('origin') ?? $rule->origin)) {
             return;
         }
 

@@ -98,11 +98,14 @@
     --secondary: oklch(0.968 0.004 264);
     --secondary-foreground: oklch(0.28 0.014 264);
     --muted: oklch(0.968 0.004 264);
-    --muted-foreground: oklch(0.552 0.012 264);
+    /* 0.53: at 0.552 hints and table headers read 4.38:1 on bg-muted. */
+    --muted-foreground: oklch(0.53 0.012 264);
     --accent: oklch(0.962 0.018 260);
     --accent-foreground: oklch(0.32 0.09 260);
-    --destructive: oklch(0.577 0.245 27.325);
-    --success: oklch(0.62 0.16 150);
+    /* 0.54: at 0.577 red text read 3.7–4.0:1 on its own tint. */
+    --destructive: oklch(0.54 0.22 27.3);
+    /* 0.52, like --warning: 0.62 read 3.0:1 on its own badge tint (WCAG AA needs 4.5). */
+    --success: oklch(0.52 0.14 150);
     /* Dark enough to read on its own tint. At 0.68 the amber badges and
        banners sat at 2.96:1 on a card and 2.56:1 on `bg-warning/15` — the
        colour was bright enough to read AS amber and not bright enough to read

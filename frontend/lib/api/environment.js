@@ -1,4 +1,5 @@
 import { api } from "@/lib/api/client";
+import { envHistoryResponseSchema } from "@/lib/schemas/environment";
 
 // Writes the whole file. `restart` is sent when the app runs under systemd
 // (requires_restart) so it picks up the new file. The response echoes the
@@ -28,4 +29,14 @@ export async function restoreEnvironment(appId, { backup, restart = false }) {
     restart,
   });
   return res.data;
+}
+
+// One more page of the change history, for "Show older changes". Parsed with
+// the page's own schema so an older row cannot arrive in a shape the first
+// twenty would have refused.
+export async function getEnvironmentHistoryPage(appId, page) {
+  const res = await api.get(`/applications/${appId}/environment/history`, {
+    params: { page },
+  });
+  return envHistoryResponseSchema.parse(res.data);
 }

@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { readOr } from "@/lib/api/read";
+import { read, readOr } from "@/lib/api/read";
 import {
   engineStatusResponseSchema,
   dbMetricsResponseSchema,
@@ -42,13 +42,16 @@ export const getProcesses = cache(async function getProcesses(engine) {
 });
 
 /** Tables inside one database, biggest first — the reason to look is size. */
+// A failed read is carried, not flattened to []: "No tables yet" over an
+// engine that simply did not answer is a false fact.
 export const getTables = cache(async function getTables(databaseId) {
-  const data = await readOr(
-    `/databases/${databaseId}/tables`,
-    dbTablesResponseSchema,
-    { tables: [] },
-  );
-  return [...data.tables].sort(
-    (a, b) => (b.size_bytes ?? 0) - (a.size_bytes ?? 0),
-  );
+  const result = await read(`/databases/${databaseId}/tables`, dbTablesResponseSchema);
+  const tables = result.failed ? [] : [...(result.data?.tables ?? [])];
+  return {
+    tables: tables.sort((a, b) => (b.size_bytes ?? 0) - (a.size_bytes ?? 0)),
+    failed: result.failed,
+    status: result.status,
+    failure: result.failure,
+    message: result.message,
+  };
 });

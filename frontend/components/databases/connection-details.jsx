@@ -43,8 +43,16 @@ export function ConnectionDetails({ database, canManage = false, phpmyadminSites
     { key: "username", value: user.username },
     // Masked, not hidden behind a reveal: it exists to be copied into a config
     // file, and reading a 24-character password off a screen is nobody's plan.
-    { key: "password", value: user.password, mask: true },
-  ].filter((field) => field.value);
+    // Null without `database` manage (DB-01) while `password_known` still says
+    // one exists: shown as withheld rather than dropped, so the card does not
+    // read as an account with no password.
+    {
+      key: "password",
+      value: user.password,
+      mask: true,
+      withheld: !canManage && !user.password && user.password_known !== false,
+    },
+  ].filter((field) => field.value || field.withheld);
 
   return (
     <Card className="gap-0 overflow-hidden py-0">
@@ -123,18 +131,24 @@ export function ConnectionDetails({ database, canManage = false, phpmyadminSites
               <p className="min-w-0 truncate text-xs text-muted-foreground">
                 {t(field.key)}
               </p>
-              <CopyButton
-                value={field.value}
-                label={t("copyField", { field: t(field.key) })}
-                className="size-6"
-              />
+              {field.value ? (
+                <CopyButton
+                  value={field.value}
+                  label={t("copyField", { field: t(field.key) })}
+                  className="size-6"
+                />
+              ) : null}
             </div>
             {/* Wraps rather than truncating. These are values to be read and
                 typed into a config file; a name cut short still looks like a
                 name, which is worse than a value that takes two lines. */}
-            <p className="font-mono text-sm break-all">
-              {field.mask ? "••••••••" : field.value}
-            </p>
+            {field.withheld ? (
+              <p className="text-sm text-muted-foreground">{t("passwordWithheld")}</p>
+            ) : (
+              <p className="font-mono text-sm break-all">
+                {field.mask ? "••••••••" : field.value}
+              </p>
+            )}
           </div>
         ))}
       </CardContent>

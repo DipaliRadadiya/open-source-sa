@@ -5,6 +5,8 @@ namespace App\Services\Applications\Types;
 use App\Contracts\CloneStrategy;
 use App\Contracts\SiteType;
 use App\Contracts\StagingStrategy;
+use App\Models\Application;
+use App\Rules\SupportedPhpVersion;
 use App\Services\Server\Php\PhpVersionManager;
 
 /**
@@ -249,15 +251,47 @@ abstract class AbstractSiteType implements SiteType
             return $installed;
         }
 
-        $within = array_values(array_filter($installed, function (string $version) use ($range): bool {
-            $min = $range['min'] ?? null;
-            $max = $range['max'] ?? null;
-
-            return ($min === null || version_compare($version, $min, '>='))
-                && ($max === null || version_compare($version, $max, '<='));
-        }));
+        $within = array_values(array_filter(
+            $installed,
+            fn (string $version): bool => SupportedPhpVersion::within($range['min'] ?? null, $range['max'] ?? null, $version),
+        ));
 
         return $within === [] ? $installed : $within;
+    }
+
+    /**
+     * Nothing by default: most types either keep their private files outside
+     * the web root or narrow the web root to a public folder.
+     *
+     * @return array<int, string>
+     */
+    public function deniedPaths(): array
+    {
+        return [];
+    }
+
+    /**
+     * @return array<int, array{directory: string, script: string}>
+     */
+    public function subdirectoryFrontControllers(): array
+    {
+        return [];
+    }
+
+    /**
+     * @return array{redirects: array<string, string>, fallback: string|null}
+     */
+    public function wellKnownRoutes(): array
+    {
+        return ['redirects' => [], 'fallback' => null];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function mimeTypes(): array
+    {
+        return [];
     }
 
     public function defaultWebRoot(): string
@@ -340,6 +374,11 @@ abstract class AbstractSiteType implements SiteType
     public function supportedPhpRange(): ?array
     {
         return null;
+    }
+
+    public function supportedPhpRangeFor(Application $application): ?array
+    {
+        return $this->supportedPhpRange();
     }
 
     /**

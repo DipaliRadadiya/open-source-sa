@@ -1,5 +1,6 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -99,7 +100,7 @@ function expiryContent(ban, t) {
   if (!since) return <span className="text-muted-foreground">{t("banned.unknownLeft")}</span>;
 
   return (
-    <Badge variant="secondary" className="font-normal">
+    <Badge variant="muted" className="font-normal">
       {t("banned.permanent")}
     </Badge>
   );
@@ -130,6 +131,7 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null })
   // that lands. One shared transition means the table dims for all of them.
   const nav = useNavTransition();
   const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [localPending, startLocal] = useTransition();
   const refresh = nav ? nav.refresh : () => startLocal(() => router.refresh());
   const pending = nav ? nav.isPending : localPending;
@@ -162,8 +164,8 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null })
     setUnbanning(ban.ip);
     try {
       await unbanIp(ban.ip, ban.jail);
+      await refreshAndWait();
       toast.success(t("banned.unbanned", { ip: ban.ip }));
-      refresh();
     } catch (error) {
       // 404 = not banned anywhere. Not a success: the list is out of date, so
       // reload it rather than claiming we released something.
@@ -183,9 +185,9 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null })
     setClearing(true);
     try {
       const { data } = await unbanAll();
+      await refreshAndWait();
       toast.success(t("banned.unbannedAll", { count: data?.unbanned?.ips?.length ?? 0 }));
       setConfirmAll(false);
-      refresh();
     } catch (error) {
       if (error.response?.status === 404) {
         toast.info(t("banned.noneToClear"));

@@ -14,7 +14,7 @@ function WorkerMeta({ worker, t }) {
     : worker.kind_title;
 
   if (!worker.created_at) {
-    return <p className="mt-0.5 truncate text-xs text-muted-foreground">{meta}</p>;
+    return <p className="mt-0.5 text-xs text-pretty text-muted-foreground">{meta}</p>;
   }
 
   return (
@@ -22,7 +22,7 @@ function WorkerMeta({ worker, t }) {
       <TooltipTrigger asChild>
         <p
           tabIndex={0}
-          className="mt-0.5 w-fit max-w-full truncate text-xs text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          className="mt-0.5 w-fit max-w-full text-xs text-pretty text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           {meta}
         </p>
@@ -32,7 +32,7 @@ function WorkerMeta({ worker, t }) {
   );
 }
 
-export function WorkersCards({ data, appId, presets = [], canManage, busy, setRowBusy, onWorkerUpdated }) {
+export function WorkersCards({ data, appId, presets = [], canManage, canViewLogs = false, busy, setRowBusy, onWorkerUpdated }) {
   const t = useTranslations("applications.workers");
 
   return (
@@ -72,7 +72,7 @@ export function WorkersCards({ data, appId, presets = [], canManage, busy, setRo
               onBusyChange={(action) => setRowBusy(worker.id, action)}
               onUpdated={onWorkerUpdated}
             />
-            <WorkerRowActions worker={worker} appId={appId} presets={presets} workers={data} canManage={canManage} />
+            <WorkerRowActions worker={worker} appId={appId} presets={presets} workers={data} canManage={canManage} canViewLogs={canViewLogs} />
           </div>
         </CardListItem>
       ))}

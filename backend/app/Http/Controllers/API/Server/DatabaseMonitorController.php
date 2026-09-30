@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\API\Server;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Server\Database\DatabaseEngineRequest;
 use App\Models\DbMetric;
 use App\Services\ActivityLogger;
 use App\Services\Server\Databases\DatabaseManager;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 
 class DatabaseMonitorController extends Controller
@@ -15,9 +15,9 @@ class DatabaseMonitorController extends Controller
     /**
      * Live DB processes / operations for an engine (DB process table).
      */
-    public function processes(Request $request, DatabaseManager $manager): JsonResponse
+    public function processes(DatabaseEngineRequest $request, DatabaseManager $manager): JsonResponse
     {
-        $engine = $this->engine($request, $manager);
+        $engine = $request->engine();
 
         return response()->json(['processes' => $manager->engine($engine)->processes()]);
     }
@@ -25,9 +25,9 @@ class DatabaseMonitorController extends Controller
     /**
      * Guarded kill of a DB process/operation (manage).
      */
-    public function killProcess(Request $request, string $id, DatabaseManager $manager, ActivityLogger $log): JsonResponse
+    public function killProcess(DatabaseEngineRequest $request, string $id, DatabaseManager $manager, ActivityLogger $log): JsonResponse
     {
-        $engine = $this->engine($request, $manager);
+        $engine = $request->engine();
         $manager->engine($engine)->killProcess($id);
 
         $log->log('database.process_killed', null, ['engine' => $engine, 'process' => $id]);
@@ -49,9 +49,9 @@ class DatabaseMonitorController extends Controller
      * 24h Query Monitor history — QPS derived from consecutive cumulative
      * counters (like the server network rate).
      */
-    public function history(Request $request, DatabaseManager $manager): JsonResponse
+    public function history(DatabaseEngineRequest $request): JsonResponse
     {
-        $engine = $this->engine($request, $manager);
+        $engine = $request->engine();
         $cutoff = Date::now()->subHours((int) config('server.metrics.retention_hours', 24));
 
         $rows = DbMetric::query()
@@ -78,13 +78,5 @@ class DatabaseMonitorController extends Controller
         })->values();
 
         return response()->json(['metrics' => $metrics]);
-    }
-
-    private function engine(Request $request, DatabaseManager $manager): string
-    {
-        $engine = (string) $request->query('engine');
-        abort_unless(in_array($engine, $manager->engineNames(), true), 404);
-
-        return $engine;
     }
 }

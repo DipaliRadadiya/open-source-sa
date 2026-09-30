@@ -23,6 +23,7 @@
     "hidePassword": "Hide password",
     "clearSearch": "Clear search",
     "logOut": "Log out",
+    "logOutFailed": "Couldn't sign you out. Try again.",
     "loggingOut": "Signing out…",
     "openUserMenu": "Open user menu",
     "refresh": "Refresh",
@@ -66,7 +67,8 @@
     "permissionDenied": {
       "title": "You don't have access to {feature}",
       "description": "Your role doesn't include permission to view this. Ask an administrator to grant it."
-    }
+    },
+    "serverNavigation": "Server menu"
   },
   "systemUsers": {
     "title": "System Users",
@@ -76,7 +78,6 @@
     "columns": {
       "username": "Username",
       "password": "Password",
-      "home": "Home",
       "shell": "Shell",
       "access": "Access",
       "applications": "Applications",
@@ -118,14 +119,15 @@
       "shellChanged": "Login shell updated.",
       "keyAdded": "SSH key added.",
       "keyRemoved": "SSH key removed.",
-      "failed": "Something went wrong. Please try again."
+      "alreadyGone": "{username} had already been deleted.",
+      "sshOffNotEnforced": "SSH login switched off. It takes effect once you save Settings → Access & security."
     },
     "create": {
       "title": "Add system user",
-      "subtitle": "Creates a system user on the server (runs useradd).",
+      "subtitle": "Creates a Linux account on the server.",
       "username": "Username",
       "usernamePlaceholder": "e.g. deploy",
-      "publicKey": "Initial SSH public key",
+      "publicKey": "SSH public key",
       "publicKeyHint": "Optional — added as the account's first authorized key.",
       "publicKeyPlaceholder": "ssh-ed25519 AAAA…",
       "submit": "Create user",
@@ -138,13 +140,13 @@
       "sshAccessHint": "Lets this account sign in over SSH.",
       "password": "Password",
       "passwordPlaceholder": "Leave empty for no password",
-      "passwordHint": "Generated for you. Keep it, change it, or clear it — you can see it again later from the user's Set password action.",
+      "passwordHint": "Generated for you. Keep it, change it or clear it. You can see it again later from the user's ⋯ menu → Password.",
       "generate": "Generate",
       "sshNeedsLoginShell": "{shell} does not allow login, so SSH access cannot be turned on with it."
     },
     "password": {
       "open": "Password",
-      "title": "OS password",
+      "title": "Password",
       "subtitle": "The server login password for {username}.",
       "current": "Current password",
       "setNew": "Set a new password",
@@ -158,7 +160,7 @@
     "apps": "Applications",
     "delete": {
       "title": "Delete system user?",
-      "description": "This permanently removes {username}, its home directory, and its cron jobs (runs userdel -r). This cannot be undone.",
+      "description": "This permanently removes {username}, its home directory, and its cron jobs. This cannot be undone.",
       "confirmLabel": "Type {username} to confirm",
       "cancel": "Cancel",
       "confirm": "Delete user",
@@ -186,7 +188,6 @@
       "remove": "Remove key",
       "removeTitle": "Remove SSH key?",
       "removeDescription": "This removes “{name}” from the user's authorized keys.",
-      "removeConfirm": "Remove",
       "publicKeyHint": "The .pub half of an SSH key pair. It is safe to share — it is how the server recognises you. Never paste the private key here.",
       "nameHint": "A name so you can tell this key apart later — whose laptop it belongs to, for instance."
     },
@@ -219,9 +220,10 @@
     },
     "loadFailed": "Your system users could not be loaded. They have not been changed or removed.",
     "sshNotEnforced": {
-      "body": "The SSH login switches aren't enforced yet — a user switched off here can still sign in over SSH. They take effect once you save Settings → Access & security. After that, only users switched on here, sudo users and root can sign in.",
+      "body": "SSH switches aren't active yet — every user can sign in over SSH until Access & security is saved.",
       "action": "Open Access & security"
-    }
+    },
+    "sshViaSudo": "Sudo users can always sign in over SSH. Turn off sudo to control SSH here."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -319,7 +321,8 @@
       "errors": "View error log",
       "users": "Manage users",
       "central": "Configure Central"
-    }
+    },
+    "navigationLabel": "Admin menu"
   },
   "users": {
     "title": "Users",
@@ -386,7 +389,8 @@
       "submitEdit": "Save changes",
       "saving": "Saving…",
       "cancel": "Cancel",
-      "rolesLoadFailed": "The roles could not be loaded, so none can be shown. This is not the same as there being none — try again in a moment."
+      "rolesLoadFailed": "The roles could not be loaded, so none can be shown. This is not the same as there being none — try again in a moment.",
+      "ownAdminLocked": "You can't remove your own admin access. Ask another admin to change it."
     },
     "resetPassword": {
       "title": "Reset password",
@@ -538,7 +542,8 @@
       "deleted": "Role deleted.",
       "deleteFailed": "Could not delete this role."
     },
-    "loadFailed": "The roles could not be loaded. This does not mean the role is missing — try again in a moment."
+    "loadFailed": "The roles could not be loaded. This does not mean the role is missing — try again in a moment.",
+    "catalogLoadFailed": "The list of permissions could not be loaded, so roles can't be edited right now. Nothing was changed."
   },
   "account": {
     "title": "Account",
@@ -555,7 +560,7 @@
       "success": "Profile updated.",
       "namePlaceholder": "Your full name",
       "usernamePlaceholder": "your-username",
-      "usernameHint": "Letters, numbers, dashes and underscores.",
+      "usernameHint": "You sign in with this. Letters, numbers, dashes and underscores.",
       "unsavedTitle": "Discard unsaved changes?",
       "unsavedDesc": "You have unsaved profile changes. If you switch tabs now, they will be lost.",
       "unsavedDiscard": "Discard changes",
@@ -624,14 +629,41 @@
       "type": "Type"
     },
     "mine": {
-      "title": "Activity Log",
-      "subtitle": "What you have done in the panel. Other people's actions aren't shown here.",
-      "loadFailed": "We couldn't load your activity.",
-      "empty": "You haven't done anything yet.",
-      "emptyFiltered": "Nothing matches those filters.",
-      "searchPlaceholder": "Search what you did…"
+      "emptyFiltered": "Nothing matches those filters."
     },
-    "loadFailed": "The activity log could not be loaded. Try again in a moment."
+    "loadFailed": "The activity log could not be loaded. Try again in a moment.",
+    "server": {
+      "title": "Activity Log",
+      "subtitle": "What everyone with access has changed on this server. Your logins and account changes are on your Account page.",
+      "loadFailed": "We couldn't load the activity log.",
+      "empty": "Nothing has happened on this server yet.",
+      "searchPlaceholder": "Search activity…"
+    },
+    "types": {
+      "application": "Application",
+      "backup": "Backups",
+      "build_tools": "Build tools",
+      "central": "Central",
+      "cronjob": "Cron Jobs",
+      "database": "Database",
+      "disk_cleaner": "Disk Cleaner",
+      "fail2ban": "Fail2ban",
+      "firewall": "Firewall",
+      "git_account": "Git account",
+      "log": "Logs",
+      "node": "Node.js",
+      "panel_update": "Panel update",
+      "permission": "Permissions",
+      "php": "PHP",
+      "role": "Role",
+      "server": "Server",
+      "service": "Service",
+      "setting": "Settings",
+      "storage_destination": "Storage",
+      "sync": "Server Sync",
+      "system_user": "System user",
+      "user": "User"
+    }
   },
   "pagination": {
     "perPage": "Per page",
@@ -639,11 +671,14 @@
     "total": "{total} total",
     "pageAria": "Go to page {page}",
     "prev": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "label": "Pages"
   },
   "auth": {
     "loginTitle": "Sign in",
     "loginSubtitle": "Enter your credentials to access the panel.",
+    "sessionExpired": "Your session has expired. Sign in again to pick up where you left off.",
+    "tooManyAttempts": "Too many sign-in attempts. Wait a minute, then try again.",
     "registerTitle": "Create admin account",
     "registerSubtitle": "Set up the administrator account for this panel.",
     "noAccount": "Need to set up the panel?",
@@ -703,6 +738,7 @@
     "linuxUsername": "Lowercase letters, digits, - and _; must start with a letter or _",
     "sshKey": "Enter a valid SSH public key",
     "max255": "Must be 255 characters or fewer",
+    "max240": "Must be 240 characters or fewer",
     "shellInStartCommand": "Use a plain command — no pipes, &&, ; or $( ). It is run directly, not through a shell.",
     "portNumber": "Enter a port number.",
     "portRange1024": "Use a port between 1024 and 65535.",
@@ -712,6 +748,7 @@
     "unresolvedPath": "Replace {path} with the application directory",
     "required_expression": "Schedule is required",
     "cronExpression": "Enter five fields (minute hour day month weekday) or a macro like @daily",
+    "cronUnsupported": "This server's cron doesn't support L, W, ? or #. Use numbers, *, ranges (1-5), lists (1,15) and steps (*/10).",
     "required_runAs": "Select which user the job runs as",
     "required_engine": "Choose an engine.",
     "databaseName": "Use only letters, numbers and underscores.",
@@ -752,7 +789,7 @@
     "endpointPlaceholder": "Replace the part in <angle brackets> with your own value",
     "required_application": "Choose an application",
     "required_destination": "Choose where to store the backups",
-    "retentionRange": "Keep between 1 and 365 backups",
+    "retentionRange": "Keep between {min} and {max} backups",
     "required_confirm": "Type the application's domain to confirm",
     "cloneDomainRequired": "Enter the domain for the copy.",
     "cloneDomainInvalid": "Enter a full domain, like copy.example.com",
@@ -767,7 +804,53 @@
     "max60": "Must be 60 characters or fewer",
     "max600": "Must be 600 or fewer",
     "noTraversalPath": "The path cannot contain ..",
-    "noSectionHeader": "Can't contain [ — that would start another program block"
+    "noSectionHeader": "Can't contain [ — that would start another program block",
+    "required_frequency": "Choose how often backups run",
+    "required_type": "Choose what to back up",
+    "hostnameLabelTooLong": "Each part of a domain between dots can be at most 63 characters.",
+    "absolutePath": "Enter a full path that starts with /",
+    "invalidUser": "Use lowercase letters, numbers, - and _",
+    "integer": "Enter a whole number.",
+    "portRange": "Enter a port between 1 and 65535.",
+    "stagingDomainRequired": "Enter the domain for the staging copy.",
+    "stagingDomainInvalid": "Enter a full domain, like staging.example.com",
+    "max12": "Must be 12 characters or fewer",
+    "max4000": "Must be 4000 characters or fewer",
+    "max16384": "Must be 16384 characters or fewer",
+    "phpSize": "Use a size like 128M, 1G or 512K — or -1 for no limit.",
+    "range": "That value is outside what this setting allows.",
+    "functionList": "Use function names separated by commas.",
+    "noSections": "Can't contain a [section] line.",
+    "hostIsUrl": "Enter just the host name, like ftp.example.com — no ftp://, path or user name.",
+    "rootFormat": "Use letters, numbers, dots, dashes, underscores and slashes only.",
+    "rootTraversal": "The folder cannot contain ..",
+    "noEnvironmentLine": "environment= is already set by the panel for this worker. A second line stops it starting.",
+    "sftpAuthRequired": "Enter a password or a private key.",
+    "maxLines100": "Up to 100 lines",
+    "rangeSeconds3600": "Enter 0 to 3600 seconds.",
+    "rangeInputTime": "Enter -1 for no limit, or 0 to 3600 seconds.",
+    "rangeInputVars": "Enter a number from 100 to 100000.",
+    "rangeSession": "Enter 60 to 604800 seconds (7 days).",
+    "rangeWorkers": "Enter a number from 1 to 100.",
+    "rangeMaxRequests": "Enter 0 to 100000. 0 never restarts a worker.",
+    "pathNoTraversal": "The path can't contain ..",
+    "securityUsernameSpaces": "Can't contain spaces.",
+    "databaseUsernameReserved": "That name belongs to the database server. Choose another.",
+    "databaseHost": "Enter an IPv4 address like 203.0.113.5, or a range like 203.0.113.0/24.",
+    "phpSizeUnit": "Use a number with a unit, like 128M, 1G or 512K.",
+    "phpMemoryMin": "Use at least 16M — less than that and PHP can't start most applications.",
+    "phpMemoryMax": "That is more memory than this server has.",
+    "postBelowUpload": "Must be at least the largest upload size, or uploads between the two fail.",
+    "prependOutsideSite": "Use a file inside this application's folder.",
+    "prefixTraversal": "The folder can't contain . or .. as a folder name.",
+    "passwordSameAsCurrent": "Choose a password different from your current one.",
+    "cronNameReserved": "That name is taken by a file the server or the panel already uses. Choose another.",
+    "cronRootRefused": "Jobs can't run as root. Choose a system user.",
+    "directivesPhpOnly": "Only PHP settings, one per line, like php_admin_value[short_open_tag] = On. Pool lines such as user = or listen = aren't allowed here.",
+    "noManagedWorkerKeys": "user, command, directory and the log files are set by the panel. Change them in the fields above, not here.",
+    "insideApplication": "Use a path inside this application's folder.",
+    "securityUsernameAscii": "Use only English letters, numbers and . _ - @ — browsers don't send other letters the same way.",
+    "excludeInsideSite": "Use a path inside the application's folder, like storage/logs — not / or .."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -869,7 +952,8 @@
       "stopped": "{command} stopped",
       "alreadyGone": "That process is no longer running — nothing was stopped.",
       "refused": "This process cannot be stopped from here.",
-      "failed": "The process could not be stopped."
+      "failed": "The process could not be stopped.",
+      "databaseWarning": "This is the {engine} database server. It stays stopped — nothing starts it again — and every application that uses it stops working until you start it in Services."
     },
     "diskUnknown": "Not reported",
     "measuring": "Measuring…",
@@ -896,7 +980,7 @@
       },
       "deployFailed": {
         "chip": "{site}'s last deploy failed",
-        "detail": "The application is still serving its previous version, and the next push will fail the same way until this is fixed.",
+        "detail": "The last deploy did not finish, and the next push will fail the same way until this is fixed.",
         "action": "See the deploy log"
       },
       "processDown": {
@@ -939,7 +1023,8 @@
       "delete": "Delete",
       "duplicate": "Duplicate",
       "viewOutput": "View output",
-      "noOutput": "No output captured yet"
+      "noOutput": "No output captured yet",
+      "noLogsPermission": "Your role does not include System Logs. Ask an administrator to grant it."
     },
     "empty": {
       "title": "No cron jobs yet",
@@ -970,7 +1055,6 @@
       "namePlaceholder": "e.g. Nightly cleanup",
       "runAs": "Runs as",
       "runAsPlaceholder": "Select a user",
-      "runAsLocked": "The run-as user cannot be changed. Delete the job and create a new one instead.",
       "otherUser": "Other system user…",
       "username": "System user",
       "usernameHint": "Must already exist on the server, e.g. root or www-data.",
@@ -993,11 +1077,10 @@
         "days": "Days & weeks",
         "custom": "Custom"
       },
-      "commandHintPath": "cron runs with a minimal PATH — use absolute paths, e.g. /usr/bin/php.",
-      "commandHintLog": "Append >> /path/to/log 2>&1 to keep the output.",
+      "commandHint": "Cron runs with a minimal <code>PATH</code>, so use absolute paths such as <code>/usr/bin/php</code>. To save output to a log file, append <code>>> /path/to/log 2>&1</code>.",
       "serverTimeNote": "Runs in server time ({timezone})",
       "runAsUnavailable": "The account list could not be loaded. Choose \"Other system user…\" and type the username.",
-      "runAsHint": "The system user the command runs under. It decides which files the job can read and write, and it cannot be changed afterwards.",
+      "runAsHint": "The system user the command runs under. It decides which files the job can read and write.",
       "scheduleHint": "How often to run it. Pick one of the common timings, or choose Custom to write the schedule yourself."
     },
     "toast": {
@@ -1006,12 +1089,33 @@
       "deleted": "Cron job deleted",
       "paused": "Cron job paused",
       "resumed": "Cron job resumed",
-      "failed": "Something went wrong"
+      "failed": "Something went wrong",
+      "alreadyGone": "\"{name}\" had already been removed."
     },
     "paused": "Paused",
+    "activeFor": "Active: {name}",
     "duplicateName": "{name} (copy)",
     "loadFailed": "Your cron jobs could not be loaded. They have not been changed or removed.",
-    "noPermission": "Your role does not include Cronjob with Manage access. Ask an administrator to grant it."
+    "noPermission": "Your role does not include Cronjob with Manage access. Ask an administrator to grant it.",
+    "preview": {
+      "everyMinute": "every minute",
+      "everyMinutes": "{n, plural, one {every minute} other {every # minutes}}",
+      "hourly": "every hour ({examples}, …)",
+      "everyHours": "{n, plural, one {every hour} other {every # hours}} ({examples}, …)",
+      "everyBetween": "{n, plural, one {every minute} other {every # minutes}} from {from} to {to}",
+      "at": "at {times}",
+      "everyDay": "every day",
+      "onWeekdays": "on {weekdays}",
+      "onWeekdayRange": "{from} to {to}",
+      "onDays": "on day {days} of the month",
+      "daysOrWeekdays": "{days} or {weekdays}",
+      "inMonths": "{days} in {months}",
+      "sentenceAt": "Runs {days} {time}.",
+      "sentenceRepeat": "Runs {time}.",
+      "sentenceRepeatOn": "Runs {time}, {days}.",
+      "nextRuns": "Next runs: {runs}",
+      "never": "This date never comes, so the job would never run."
+    }
   },
   "errors": {
     "title": "Something went wrong",
@@ -1200,7 +1304,8 @@
     "clearDone": "{label} cleared.",
     "clearFailed": "The log could not be cleared.",
     "clearBodyAudit": "This log is part of how the server records what happened to it — sign-ins, blocked requests, bans. Clearing it destroys evidence you may need after a break-in, and it cannot be undone. The file keeps recording from now on.",
-    "loadingSource": "Loading {label}…"
+    "loadingSource": "Loading {label}…",
+    "linesCapped": "Showing the most there can be: {max, number} lines."
   },
   "services": {
     "title": "Services",
@@ -1380,7 +1485,10 @@
       "stateFailing": "{count, plural, one {# address failing right now} other {# addresses failing right now}}",
       "stateBanned": "{count, plural, one {# address banned} other {# addresses banned}}",
       "stateUnknown": "Watching",
-      "totalsTooltip": "Since Fail2ban started: {failed} wrong tries, {banned} bans."
+      "totalsTooltip": "Since Fail2ban started: {failed} wrong tries, {banned} bans.",
+      "names": {
+        "recidive": "Repeat offenders"
+      }
     },
     "lockout": {
       "title": "This could lock you out",
@@ -1441,7 +1549,7 @@
       "banned": "{ip} banned",
       "failed": "We could not ban that address.",
       "invalidIp": "That is not a valid IP address. Ranges are not allowed here.",
-      "selfWarning": "This is the address this panel was reached from. Banning it may lock you out of the server.",
+      "selfWarning": "This is your own address. The server won't ban it — it would lock you out.",
       "ipLabelHint": "The address to block. Check it is not your own connection before you save.",
       "jailLabelHint": "Which set of rules to ban the address under. Each jail watches one service, such as SSH or the web server."
     },
@@ -1481,7 +1589,9 @@
       "removeYouDescription": "{ip} is the address you are connected from. Take it off this list and a jail can ban it, which would cut off your access to this server.",
       "removeYouConfirm": "Remove it",
       "cancel": "Cancel",
-      "ignoreLimit": "That is the most addresses this list can hold ({max}). Remove one to add another."
+      "ignoreLimit": "That is the most addresses this list can hold ({max}). Remove one to add another.",
+      "maxretryRange": "Use a whole number from 2 to 100.",
+      "findtimeRange": "Use a whole number of seconds from 30 to 86400 (one day)."
     },
     "tabs": {
       "live": "Protection",
@@ -1499,7 +1609,8 @@
       "bodyWithIp": "{count, plural, one {Switches on the # jail and adds {ip} to the never-ban list, so you cannot lock yourself out.} other {Switches on all # jails and adds {ip} to the never-ban list, so you cannot lock yourself out.}}",
       "action": "Set up protection",
       "done": "Protection is on.",
-      "failed": "That could not be set up."
+      "failed": "That could not be set up.",
+      "checkingIp": "Checking your address first, so it can be kept off the ban list…"
     },
     "noPermission": "Your role does not include Fail2ban with Manage access. Ask an administrator to grant it."
   },
@@ -1532,7 +1643,10 @@
       "exposedTitle": "Your firewall is on, but it isn't blocking anything",
       "exposedBody": "Your rules are being enforced, but anything not listed below is still allowed in. The default policy was changed outside the panel.",
       "secureNow": "Block incoming by default",
-      "secured": "Incoming traffic is blocked by default again."
+      "secured": "Incoming traffic is blocked by default again.",
+      "unknownTitle": "Firewall state couldn't be read",
+      "unknownBody": "The panel couldn't ask the server whether the firewall is on. Nothing was changed. Reload in a moment; if it keeps happening, give support this reference.",
+      "reference": "Reference: {reference}"
     },
     "confirmOn": {
       "title": "Turn the firewall on?",
@@ -1559,6 +1673,8 @@
       "protectedReason": "This one keeps you connected — switching it off can lock you out of the server or take your applications offline.",
       "confirmTitle": "Delete this rule?",
       "confirmBodyOn": "{rule} — this takes effect straight away. Whatever it was letting through will be blocked.",
+      "confirmBodyOnDeny": "{rule} — this takes effect straight away. Whatever it was blocking will be let through.",
+      "confirmBodyRuleOff": "{rule} — this rule is switched off, so nothing changes today.",
       "confirmBodyOff": "{rule} — the firewall is off, so nothing changes today, but the rule will not come back when you turn it on.",
       "name": "Name",
       "action": "Action",
@@ -1593,7 +1709,11 @@
         "portAsc": "Port: low to high",
         "portDesc": "Port: high to low",
         "actionAsc": "Action: A–Z",
-        "protocolAsc": "Protocol: A–Z"
+        "protocolAsc": "Protocol: A–Z",
+        "stateLabel": "State",
+        "actionLabel": "Action",
+        "originLabel": "Added by",
+        "sortLabel": "Sort by"
       }
     },
     "add": {
@@ -1610,7 +1730,7 @@
       "created": "Rule added.",
       "errors": {
         "required": "Enter a port.",
-        "portRange": "Ports run from 1 to 65534.",
+        "portRange": "Ports run from 1 to 65535.",
         "portOrder": "The end of the range cannot be lower than the start.",
         "invalidSource": "That is not a valid IP address or range.",
         "portShape": "Use a port like 443, or a range like 8000-8090.",
@@ -1636,8 +1756,9 @@
       "onlyMyIp": "Only my IP",
       "onlyMyIpSet": "Your IP",
       "wouldLockYouOut": "That is the address you are connected from. Blocking it would lock you out of this server.",
-      "protectedLocked": "This rule was set up by the panel and is in use. Its port, protocol, action and source cannot be changed while the firewall is on — only its name.",
-      "protocolHint": "TCP carries almost everything — websites, SSH, databases. UDP is for DNS, VPNs and some game servers."
+      "protectedLocked": "This rule was set up by the panel and is in use. Its port, protocol, action and source cannot be changed — only its name.",
+      "protocolHint": "TCP carries almost everything — websites, SSH, databases. UDP is for DNS, VPNs and some game servers.",
+      "onlyMyIpAlready": "Your IP is already filled in."
     },
     "quick": {
       "title": "Quick add",
@@ -1656,7 +1777,10 @@
       "stackAddHint": "Click to add these rules",
       "switchedOn": "Switched {names} back on.",
       "tileOffBody": "Nothing is reaching port {port} — this rule is switched off.",
-      "tileOffHint": "Click to switch it back on"
+      "tileOffHint": "Click to switch it back on",
+      "riskyTitle": "Open {name} to everyone?",
+      "riskyBody": "Anyone on the internet will be able to reach {name} on port {port}. Safer: use Custom rule and pick “Only my IP”.",
+      "riskyConfirm": "Open to everyone"
     },
     "history": {
       "action": "History",
@@ -1665,7 +1789,10 @@
       "loading": "Loading…",
       "failed": "We could not load your history.",
       "empty": "You have not changed any firewall settings yet.",
-      "everyone": "See everyone’s changes"
+      "descriptionEveryone": "Every firewall change on this server, newest first.",
+      "failedEveryone": "We could not load the firewall history.",
+      "emptyEveryone": "Nobody has changed the firewall yet.",
+      "openLog": "Open Activity Log"
     },
     "edit": {
       "title": "Edit rule",
@@ -1712,7 +1839,8 @@
       "invalidPort": "Enter a port between 1 and 65535.",
       "invalidTime": "Use a 24-hour time, like 03:00.",
       "invalidMemory": "Use a size like 256mb or 1gb — or 0 for no limit.",
-      "passwordTooShort": "Use 8 characters or more."
+      "passwordTooShort": "Use 8 characters or more.",
+      "invalidHour": "Pick an hour from 0 to 23."
     },
     "server": {
       "title": "Server",
@@ -1811,7 +1939,9 @@
         "memoryTotal": "This server has {size} of memory.",
         "custom": "Custom",
         "recommended": "recommended",
-        "save": "Save swap"
+        "save": "Save swap",
+        "noRoom": "That would use more than half of the free disk space ({free} free). Choose a smaller size.",
+        "tight": "A {size} swap file leaves only {left} free on the disk, and applications and backups need that space too."
       },
       "redis": {
         "passwordUnknownShort": "Cannot check",
@@ -2022,7 +2152,8 @@
       "incompleteDetail": "Missing {packages} — it was installed by another package, not by the panel.",
       "completeInstall": "Complete install",
       "completing": "Completing PHP {version}…",
-      "incompleteDefault": "Complete the install first — the default PHP is what runs when nothing pins a version."
+      "incompleteDefault": "Complete the install first — the default PHP is what runs when nothing pins a version.",
+      "statusRemoveFailed": "Removal failed"
     },
     "extensions": {
       "title": "Extensions",
@@ -2124,7 +2255,61 @@
       "xsl": "Transforms XML with XSLT stylesheets",
       "yaml": "Reads and writes YAML files",
       "zip": "Creates and opens .zip archives",
-      "zstd": "Fast compression, used for caching and backups"
+      "zstd": "Fast compression, used for caching and backups",
+      "amqp": "Sends and receives messages through RabbitMQ",
+      "apcu": "Keeps cached data in memory for faster pages",
+      "ast": "Reads PHP code as a syntax tree, used by code analysis tools",
+      "decimal": "Exact decimal maths, used for money",
+      "dio": "Low-level access to files and serial ports",
+      "ds": "Faster lists, maps and queues for PHP code",
+      "enchant": "Spell checking",
+      "excimer": "Measures where PHP spends its time, for profiling",
+      "gearman": "Hands work to background workers through Gearman",
+      "gmagick": "Image editing with GraphicsMagick",
+      "gnupg": "Encrypts and signs data with GnuPG",
+      "grpc": "Calls gRPC services, used by some Google Cloud libraries",
+      "http": "Extra tools for building and reading HTTP requests",
+      "inotify": "Notices when files change on disk",
+      "interbase": "Connects to Firebird and InterBase databases",
+      "lz4": "Fast compression for cached data",
+      "mcrypt": "Old encryption functions, only for legacy applications",
+      "memcache": "Stores cache in a Memcached server (older client)",
+      "opentelemetry": "Sends traces of each request to monitoring tools",
+      "phalcon": "The Phalcon framework, built into PHP",
+      "pq": "Another way to connect to PostgreSQL",
+      "protobuf": "Reads and writes Protocol Buffers data",
+      "ps": "Creates PostScript files",
+      "pspell": "Spell checking with Aspell",
+      "raphf": "Keeps connections open between requests, needed by http",
+      "rdkafka": "Sends and receives messages through Kafka",
+      "readline": "Line editing for PHP on the command line",
+      "rrd": "Reads and writes RRDtool graph data",
+      "stomp": "Talks to message queues over STOMP",
+      "sybase": "Connects to Sybase and SQL Server databases",
+      "uopz": "Changes PHP code while it runs, used by test tools",
+      "uploadprogress": "Shows how far a file upload has got",
+      "xhprof": "Measures which functions are slow, for profiling",
+      "xlswriter": "Writes large Excel files quickly",
+      "xmlrpc": "Talks to XML-RPC services, like WordPress's old remote API",
+      "yac": "Shared memory cache without locks",
+      "zmq": "Sends messages through ZeroMQ",
+      "apcu-bc": "Lets old code call APCu by its former apc_ names",
+      "facedetect": "Finds faces in photos",
+      "geoip": "Looks up a visitor's country from their IP address",
+      "json": "Reads and writes JSON (built in from PHP 8)",
+      "lua": "Runs Lua scripts from PHP",
+      "mongo": "Old MongoDB driver, only for legacy applications",
+      "mysqlnd-ms": "Spreads MySQL queries across several servers",
+      "phalcon3": "The Phalcon 3 framework, built into PHP",
+      "phalcon4": "The Phalcon 4 framework, built into PHP",
+      "phalcon5": "The Phalcon 5 framework, built into PHP",
+      "pinba": "Sends timing statistics to a Pinba server",
+      "propro": "Helper needed by the older http extension",
+      "radius": "Checks logins against a RADIUS server",
+      "recode": "Converts text between character sets",
+      "sass": "Compiles Sass into CSS",
+      "tideways": "Measures where PHP spends its time, for profiling",
+      "xcache": "Old code cache, replaced by OPcache"
     },
     "ioncube": {
       "title": "ionCube Loader",
@@ -2225,7 +2410,8 @@
       "removing": "Removing Node.js {version}…",
       "removingSince": "Started {when}. The page updates on its own.",
       "retry": "Try again",
-      "retrying": "Installing Node {version} again…"
+      "retrying": "Installing Node {version} again…",
+      "statusRemoveFailed": "Removal failed"
     },
     "install": {
       "action": "Install version",
@@ -2345,7 +2531,8 @@
       "enableHint": "Runs the cleanup on a schedule instead of only when you press the button.",
       "onlyWhenHint": "Only clean up once the disk is at least this full, so a routine cleanup does not run on a mostly empty disk.",
       "nextRun": "Next clean {when}",
-      "nextRunAtZone": "Next clean {when} · {time} {timezone}"
+      "nextRunAtZone": "Next clean {when} · {time} {timezone}",
+      "thresholdRange": "Enter a number from 1 to 99. Disk usage never goes above 100%, so a higher number means the cleanup never runs."
     },
     "runs": {
       "title": "Recent cleanups",
@@ -2569,7 +2756,9 @@
       "copyString": "Copy",
       "connectionStringHint": "Most applications need only this line.",
       "passwordEscaped": "The password is escaped inside the connection string, so it looks different there. Both are correct.",
-      "noUserWarning": "This database has no user yet, so nothing can connect to it. Add one from the database's row."
+      "noUserWarning": "This database has no user yet, so nothing can connect to it. Add one from the database's row.",
+      "userTitle": "{username} can connect now",
+      "userSubtitle": "Give these details to the application that uses it. They stay in the Users list below."
     },
     "delete": {
       "action": "Delete",
@@ -2585,7 +2774,9 @@
       "cardTitle": "Delete this database",
       "cardDescription": "Removes the database, everything in it, and its users.",
       "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it.",
-      "copyName": "Copy database name"
+      "copyName": "Copy database name",
+      "usedBy": "{application} uses this database and will stop working once it is deleted.",
+      "usedByUnknown": "An application uses this database and will stop working once it is deleted."
     },
     "adopt": {
       "title": "{count, plural, one {# database on this server isn't managed here} other {# databases on this server aren't managed here}}",
@@ -2668,7 +2859,8 @@
       "password": "Password",
       "copyString": "Copy connection string",
       "copyField": "Copy {field}",
-      "otherUsers": "{count, plural, =1 {One more user can connect to this database.} other {# more users can connect to this database.}} See the Users tab."
+      "otherUsers": "{count, plural, =1 {One more user can connect to this database.} other {# more users can connect to this database.}} See the Users tab.",
+      "passwordWithheld": "Hidden — your role can't manage databases."
     },
     "users": {
       "title": "Users",
@@ -2720,14 +2912,16 @@
       "newPasswordRequired": "New password (required to rename on MongoDB)",
       "nameIsFixed": "A database user's name cannot be changed after it is created. Create another user instead.",
       "newPasswordRequiredHint": "MongoDB cannot rename a user, so the account is created again from scratch. That is why it needs a password set.",
-      "passwordUnknown": "Password not known to the panel — this account came from another server. Change the password to get a connection string."
+      "passwordUnknown": "Password not known to the panel — this account came from another server. Change the password to get a connection string.",
+      "passwordWithheld": "Password hidden — your role can't manage databases."
     },
     "detail": {
       "size": "Size",
       "charset": "Character set",
       "collation": "Collation",
       "created": "Created",
-      "createdWhen": "created {when}"
+      "createdWhen": "created {when}",
+      "engineDown": "{engine} isn't running, so nothing can connect to this database. Its size and tables can't be read until it's back."
     },
     "exports": {
       "title": "Exports",
@@ -2762,7 +2956,8 @@
       "freeSpace": "{free} free on this server.",
       "inProgress": "Exporting…",
       "diskUsed": "{count, plural, one {# export} other {# exports}} kept here — {size}. Nothing deletes these for you.",
-      "takingLonger": "This is taking longer than usual. Large databases can take a few minutes."
+      "takingLonger": "This is taking longer than usual. Large databases can take a few minutes.",
+      "loadFailed": "We couldn't load the exports."
     },
     "manage": "Manage",
     "monitor": {
@@ -2842,7 +3037,9 @@
           "slowRateHigh": "Around {rate} slow queries an hour since the last restart.",
           "slowRateCritical": "Around {rate} slow queries an hour — worth looking at the slow query log.",
           "recentlyRestarted": "This engine restarted recently, so counters and history are still filling up."
-        }
+        },
+        "unknownTitle": "Health unknown",
+        "unknownBody": "{engine} didn't answer the health check. Try again in a moment."
       },
       "longRunning": "Long-running query",
       "meta": {
@@ -2859,7 +3056,8 @@
       "longRunningCount": "{count, plural, one {# long-running} other {# long-running}}",
       "chartDescription": "Queries per second, connections, and running threads, sampled every 5 minutes.",
       "zoomHint": "Drag the handles below the chart, or scroll on it, to zoom into a time range.",
-      "cannotStopOwn": "This is the panel's own connection to the database. Stopping it would cut off this page."
+      "cannotStopOwn": "This is the panel's own connection to the database. Stopping it would cut off this page.",
+      "loadFailed": "We couldn't check the database engines."
     },
     "tables": {
       "title": "Tables",
@@ -2870,7 +3068,9 @@
       "empty": "No tables yet.",
       "rowCount": "{rows} rows",
       "rowsEstimated": "Row counts are the engine's own estimate, not an exact count.",
-      "charsetLine": "Character set {charset} · collation {collation}"
+      "charsetLine": "Character set {charset} · collation {collation}",
+      "loadFailed": "We couldn't read the tables in this database.",
+      "unavailable": "Can't be read while {engine} isn't running."
     },
     "tabs": {
       "users": "Users",
@@ -2886,7 +3086,9 @@
       "openAnyway": "Open phpMyAdmin",
       "install": "Install phpMyAdmin",
       "needsUser": "Add a database user first — phpMyAdmin signs in as one.",
-      "choose": "Which phpMyAdmin?"
+      "choose": "Which phpMyAdmin?",
+      "signingShort": "Signing you in…",
+      "linkReady": "Your phpMyAdmin login link is ready."
     },
     "usedBy": {
       "title": "Used by",
@@ -2920,6 +3122,11 @@
       "action": "Show them",
       "filtered": "Showing only databases not linked to an application",
       "showAll": "Show all"
+    },
+    "restartForRemote": {
+      "title": "Restart the database server?",
+      "cancel": "Cancel",
+      "confirm": "Restart and continue"
     },
     "unavailable": {
       "title": "Databases are not managed on this server",
@@ -2994,7 +3201,7 @@
     "connect": {
       "action": "Connect account",
       "unavailable": "The list of providers could not be loaded.",
-      "readOnly": "{brand} only reads your repositories and branches. It never pushes.",
+      "readOnly": "{brand} reads your repositories and branches and adds the deploy webhook. It never pushes code.",
       "pickTitle": "Connect a Git account",
       "pickSubtitle": "Choose where your code lives.",
       "hints": {
@@ -3003,10 +3210,10 @@
         "bitbucket": "bitbucket.org"
       },
       "title": "Connect {provider}",
-      "subtitle": "Paste a token. {brand} only reads your repositories and branches — it never pushes.",
-      "scopeHint_github": "Tick the <scope>repo</scope> scope. Nothing else is needed.",
-      "scopeHint_gitlab": "Tick <scope>read_repository</scope> and <scope>read_api</scope>, and choose <option>Legacy token</option> — the newer fine-grained type does not offer them.",
-      "scopeHint_bitbucket": "Tick <scope>read:repository:bitbucket</scope> only. A token scoped to one repository will list just that one.",
+      "subtitle": "Paste a token. {brand} reads your repositories and branches and adds the deploy webhook — it never pushes code.",
+      "scopeHint_github": "Tick <scope>repo</scope> and <scope>admin:repo_hook</scope>. The second lets the panel add the deploy webhook to your repository for you.",
+      "scopeHint_gitlab": "Tick <scope>api</scope> and <scope>read_repository</scope>, and choose <option>Legacy token</option>.",
+      "scopeHint_bitbucket": "Tick <scope>read:repository:bitbucket</scope>, <scope>read:webhook:bitbucket</scope>, <scope>write:webhook:bitbucket</scope> and <scope>delete:webhook:bitbucket</scope>. The webhook ones let the panel add the deploy webhook for you, and remove it again when you turn deploy on push off.",
       "nameLabel": "Name",
       "namePlaceholder": "Work {provider}",
       "nameHelp": "A name for you. It is how this account appears when you create an application.",
@@ -3029,7 +3236,8 @@
       "fieldHelp": {
         "gitlab_host": "Only for a self-hosted GitLab. Leave this empty for gitlab.com. Use the address you sign in at, like https://gitlab.example.com — not the address of a project.",
         "bitbucket_workspace": "The workspace ID from your Bitbucket address: bitbucket.org/workspace-id/repository."
-      }
+      },
+      "scopeNote_gitlab": "<strong>Why api?</strong> It is the only GitLab permission that lets the panel add the deploy webhook for you. It also gives full access to your GitLab account, so create this token only for the panel and give it an expiry date. Prefer less access? Tick <scope>read_repository</scope> and <scope>read_api</scope> instead and add the webhook yourself."
     },
     "edit": {
       "title": "Edit account",
@@ -3135,11 +3343,9 @@
         "subtitle": "Who edited this file and which keys they changed. Values are never recorded.",
         "loadFailed": "The change history could not be loaded.",
         "empty": "This file has not been changed through the panel yet.",
-        "actionUpdated": "saved this file",
         "actionRestored": "restored an earlier version",
         "bySystem": "The panel",
         "byUnknown": "A deleted account",
-        "noKeys": "No key changed — comments or spacing only.",
         "restore": "Restore",
         "restored": "The earlier version was restored.",
         "restoreFailed": "That version could not be restored.",
@@ -3149,7 +3355,6 @@
         "confirmBody": "The current file is backed up first, so this is itself undoable.",
         "cancel": "Cancel",
         "confirmSubmit": "Restore",
-        "showValues": "Show values",
         "diffLoading": "Reading the saved copies…",
         "diffFailed": "Those values could not be read.",
         "diffUnavailable": "The copy of the previous version has been deleted, so this change cannot be shown.",
@@ -3157,7 +3362,29 @@
         "colBefore": "Before",
         "colAfter": "After",
         "absent": "Not set",
-        "emptyValue": "empty"
+        "emptyValue": "empty",
+        "actionChanged": "changed {count, plural, one {# variable} other {# variables}}",
+        "actionNoKeys": "saved the file without changing any variable",
+        "noKeysNote": "Only comments or blank lines changed.",
+        "showChanges": "Show changes",
+        "hideChanges": "Hide changes",
+        "status": {
+          "added": "Added",
+          "removed": "Removed",
+          "changed": "Changed"
+        },
+        "showOlder": "{count, plural, one {Show # older change} other {Show # older changes}}",
+        "olderFailed": "Older changes could not be loaded."
+      },
+      "pageSubtitleReadOnly": "View this application's .env file.",
+      "emptyFilePlaceholder": "# This file is empty — add variables and save",
+      "tooLargeTitle": "Not saved — file too large",
+      "tooLarge": "The file can be at most 256 KB. Remove something to save it.",
+      "guarded": {
+        "title": "Change settings the panel manages?",
+        "description": "You changed or removed {keys}. The panel set these up and the application depends on them: a new encryption key makes every saved credential unreadable, and a different port or folder no longer matches the service the panel runs.",
+        "cancel": "Keep editing",
+        "confirm": "Save anyway"
       }
     },
     "title": "Applications",
@@ -3191,9 +3418,9 @@
       "title": "Source and deployment",
       "repository": "Repository",
       "branch": "Branch",
-      "lastDeploy": "Last deployed",
+      "lastDeploy": "Last successful deploy",
       "commit": "Commit",
-      "never": "Not deployed yet",
+      "never": "None yet",
       "deploy": "Deploy now",
       "deploying": "Deploying…",
       "started": "Deployment started.",
@@ -3203,7 +3430,12 @@
       "reference": "Support reference: {reference}",
       "redeploy": "Re-deploy",
       "manage": "Manage deployment",
-      "description": "Where the code comes from and how it ships."
+      "description": "Where the code comes from and how it ships.",
+      "failedAtStep": "The last deploy failed at {step}.",
+      "incomplete": "The last deploy failed after the new code was put in place, so that code is live but not fully deployed. Fix the problem and deploy again.",
+      "notFullyDeployed": "Not fully deployed",
+      "inFlightReason": "A deploy is already running.",
+      "inFlightNote": "A deploy is running. This card updates when it finishes."
     },
     "gitAccount": "Git account",
     "gitAccountPlaceholder": "Choose a connected account",
@@ -3294,7 +3526,14 @@
         "install_cli": "Installing command-line tools",
         "set_password": "Setting the administrator password",
         "set_timezone": "Setting the time zone",
-        "trust_domain": "Trusting the domain"
+        "trust_domain": "Trusting the domain",
+        "build": "Building the application",
+        "create_admin": "Creating the admin account",
+        "ensure_account": "Preparing the system user",
+        "schedule_cron": "Scheduling background tasks",
+        "start_app": "Starting the application",
+        "verify_install": "Checking the installation",
+        "verify_serving": "Checking the application is served"
       },
       "stalledTitle": "This is taking longer than expected",
       "stalledBody": "Setup has not reported progress for a while. It may still be running — check again, or contact support if it stays like this.",
@@ -3325,7 +3564,7 @@
       "ready": "Ready",
       "incompleteHint": "Complete these items to continue.",
       "readyHint": "Review this configuration, then create the application.",
-      "complete": "Add {field}",
+      "complete": "Missing: {field}",
       "configured": "Configured",
       "progress": "{done} of {total} ready"
     },
@@ -3341,15 +3580,13 @@
       "fieldSelectPlaceholder": "Choose {field}",
       "requiredField": "Choose or enter {field} before creating the application.",
       "advancedErrors": "{count, plural, one {# error} other {# errors}}",
-      "noSystemUsers": "No system users are available. Create one before creating an application.",
-      "systemUsersUnavailable": "We couldn’t load system users. You can still create one to continue.",
+      "noSystemUsers": "No system users exist yet. Choose “Generate a new system user” above.",
+      "systemUsersUnavailable": "We couldn’t load system users. Choose “Generate a new system user” to continue.",
       "noSystemUserCreatePermission": "You need permission to manage system users. Ask an administrator to create one.",
-      "createSystemUser": "Create system user",
       "generateSystemUser": "Generate a new system user",
-      "generateSystemUserHint": "A dedicated system user named after this application.",
+      "generateSystemUserHint": "A dedicated user for this application. Its name and password are below.",
       "pickSystemUser": "Use an existing system user",
       "pickSystemUserHint": "Share an account with your other applications.",
-      "systemUserWillBeCreated": "A new user will be created",
       "repositoriesLoading": "Loading repositories…",
       "repositoriesEmpty": "No repositories are available for this account.",
       "repositoriesFailed": "We could not load repositories. Refresh to try again.",
@@ -3390,10 +3627,10 @@
         "label": "Where this application will live"
       },
       "temporaryDomainHint": "Works right away. Use a real domain before launch.",
-      "nameHint": "Only used in the panel — visitors never see it.",
+      "nameHint": "Your label in the panel. It also fills in the domain and system user below — you can change them.",
       "buildCommandSuperseded": "This will not run — the deploy script replaces it.",
       "moreLines": "{count, plural, one {+# more line} other {+# more lines}}",
-      "needsSystemUser": "No system user exists yet. Use “Create system user” above to make one.",
+      "needsSystemUser": "No system users exist yet.",
       "needsGitAccount": "No Git account is connected. Use “Connect Git” below, then Refresh.",
       "installPhpVersion": "Install a PHP version",
       "installNodeVersion": "Install a Node version",
@@ -3424,7 +3661,16 @@
       "submitNeedsServices": "{count, plural, one {Install the service this application needs first} other {Install the services this application needs first}}",
       "typeNoResultsInCategory": "No application types match “{query}” in {category} — {count, plural, one {# match is} other {# matches are}} in other categories.",
       "typeSearchAllCategories": "Search all categories",
-      "runtimeIncomplete": "{runtime} {version} is missing {packages}. Applications that need them will fail. Complete the install on the {runtime} page first."
+      "runtimeIncomplete": "{runtime} {version} is missing {packages}. Applications that need them will fail. Complete the install on the {runtime} page first.",
+      "systemUserUsername": "Username",
+      "systemUserPassword": "Password",
+      "systemUserPasswordPlaceholder": "Leave empty for no password",
+      "systemUserGeneratePassword": "Generate",
+      "systemUserPasswordHint": "Generated for you. Keep it, change it or clear it. You can see it again later on the System Users page.",
+      "systemUserNew": "{username} (new)",
+      "systemUserCreateFailed": "The system user couldn’t be created, so the application wasn’t created either.",
+      "systemUserLeftBehind": "The system user {username} was created but couldn’t be removed. Choose it under “Use an existing system user”, or delete it on System Users.",
+      "tablePrefixInvalid": "Start with a letter, use only letters and numbers, and end with an underscore (for example jml_)."
     },
     "actions": {
       "label": "Actions",
@@ -3445,6 +3691,7 @@
       "removeFiles": "Also delete the application’s files and backups",
       "removeFilesOn": "The application’s directory, and every backup it has — including the archives in your storage — are deleted.",
       "removeFilesOff": "The files stay on the server. The application’s backups leave the panel with it, but their archives stay in your storage — delete them there if you no longer want them.",
+      "filesKept": "Its files are not removed: without the system user the panel can't tell where they are. They stay on the server.",
       "systemUserStays": "The system user {username} is not removed. If no other application uses it, you can delete it from System Users.",
       "confirmLabel": "Type <code>{domain}</code> to confirm",
       "submit": "Delete application",
@@ -3463,6 +3710,10 @@
       "removeDocker": "Also delete this site's Docker network and volumes ({count})",
       "removeDockerOn": "{names} will be deleted. Anything another site is still using is kept — the server checks at the moment it deletes, not now.",
       "removeDockerOff": "{names} stays on the server. Its data survives, and you can remove it later from the Docker page."
+    },
+    "systemUserMissing": {
+      "title": "This application's system user is missing",
+      "description": "The panel can't work on {name}'s files or settings without it. You can still delete the application."
     },
     "facts": {
       "title": "Application",
@@ -3485,87 +3736,13 @@
       "stopped": "The process was stopped.",
       "restarted": "The process was restarted.",
       "failed": "We could not change the process.",
-      "deployToStart": "This application starts after its first successful deployment."
-    },
-    "container": {
-      "title": "Container",
-      "image": "Image",
-      "noImage": "No image recorded",
-      "imageHint": "Changed by redeploying the site, not here — a new image is pulled before the old container is replaced.",
-      "network": "Network",
-      "networkHint": "Containers on the same network reach each other by name. Docker's default bridge cannot do that.",
-      "defaultBridge": "Docker's default bridge",
-      "noNetworks": "This server has no networks of its own yet, so there is nothing to join.",
-      "noNetworksLink": "Create a network on the Docker page.",
-      "missingOption": "{name} (no longer on this server)",
-      "missingTitle": "This network is gone",
-      "missingBody": "The site is set to join {name}, and this server no longer has it. The container will not start until you pick a network that exists, or recreate that one.",
-      "reachableTitle": "How other containers reach this site",
-      "reachableBody": "Use the hostname {alias} — for example http://{alias} from another container on the same network. Avoid “app”: every site the panel builds answers to that name, so it resolves to an arbitrary one of them.",
-      "containerPort": "Container port",
-      "containerPortHint": "The port your application listens on inside the container.",
-      "memoryLimit": "Memory limit",
-      "memoryLimitHint": "For example 512m or 2g. A bare number means bytes, not megabytes. Empty uses the server default of {default}.",
-      "memoryLimitHintUnknown": "For example 512m or 2g. A bare number means bytes, not megabytes. Empty uses the server default.",
-      "cpuLimit": "CPU limit",
-      "cpuLimitPlaceholder": "No limit",
-      "cpuLimitHint": "In cores — 1 for one full core, 0.5 for half. This server has {cores}. Empty means no limit at all.",
-      "cpuLimitHintUnknown": "In cores — 1 for one full core, 0.5 for half. You cannot set more than this server has. Empty means no limit at all.",
-      "limitsTitle": "How these two limits behave",
-      "limitsBody": "Both are ceilings for this container alone, not reservations — nothing is set aside for it. They fail in opposite ways, which is worth knowing before you debug one: past the memory ceiling the container is killed and restarted, so the site drops requests; past the CPU quota nothing is killed and the container simply waits, so the site is slow with no error anywhere.",
-      "saveAction": "Save container settings",
-      "restartNote": "Saving recreates the container, so the site is down for a few seconds.",
-      "savingNote": "Rewriting the compose file and recreating the container…",
-      "saved": "Container settings saved.",
-      "failed": "Couldn't save the container settings.",
-      "noPermission": "You don't have permission to change this site.",
-      "nothingToSave": "Nothing has changed.",
-      "volumes": {
-        "title": "Volumes",
-        "empty": "No volumes mounted. The container keeps nothing that survives a rebuild.",
-        "choose": "Choose a volume",
-        "alreadyMounted": "{name} (already mounted)",
-        "pathPlaceholder": "/var/lib/mysql",
-        "pathLabel": "Path inside the container",
-        "add": "Mount",
-        "remove": "Unmount {volume}",
-        "added": "{volume} mounted. The container was recreated.",
-        "removed": "{volume} unmounted. The container was recreated.",
-        "failed": "Couldn't change the mounts.",
-        "invalid": "Pick a volume and give an absolute path inside the container, for example /var/lib/mysql.",
-        "noVolumes": "This server has no volumes yet, so there is nothing to mount.",
-        "noVolumesLink": "Create a volume on the Docker page.",
-        "hint": "A volume keeps data that survives the container being rebuilt. Mounting one recreates the container, and it starts empty — whatever the image had at that path is hidden, not merged."
-      },
-      "credentials": {
-        "title": "Generated credentials",
-        "reveal": "Reveal",
-        "revealing": "Loading…",
-        "hint": "Created when the app was installed, and stored encrypted. Revealing them is recorded in the activity log.",
-        "shownWarning": "Anyone who can manage this site can read these. They are the app's real database credentials — changing one here is not possible, because the running database would keep the old value.",
-        "failed": "Couldn't load the credentials."
-      },
-      "firstRun": {
-        "title": "Save these credentials now",
-        "body": "The panel generated these when it installed this app. They cannot be changed from here — the app stores them inside its own database — so copy them somewhere safe before you dismiss this.",
-        "acknowledge": "I've saved these",
-        "acknowledgeFailed": "Couldn't record that. The credentials are unchanged.",
-        "laterHint": "They stay available under Container → Reveal.",
-        "loading": "Loading credentials",
-        "failed": "Couldn't load the credentials. Don't dismiss this — try reloading the page."
-      },
-      "registry": "Registry",
-      "noRegistry": "None — pull anonymously",
-      "registryHint": "The stored credential this site pulls its image with. Leave it as None for a public image.",
-      "missingRegistryOption": "Deleted credential — this site's next pull will be anonymous",
-      "noRegistries": "No registry credentials are stored on this server, so only public images can be pulled.",
-      "noRegistriesLink": "Add one under Integrations → Docker Registries.",
-      "pullTitle": "Update the image",
-      "pullHint": "Fetches the image again and recreates the container. Bringing the site up on its own does not re-check the registry, so a moved tag needs this.",
-      "pull": "Pull and redeploy",
-      "pulled": "The image was pulled and the container recreated.",
-      "pullFailed": "The image could not be pulled.",
-      "pageSubtitle": "The network, ports, CPU and memory limits and volumes this container runs with."
+      "deployToStart": "This application starts after its first successful deployment.",
+      "alreadyRunning": "The process is already running.",
+      "notRunning": "The process isn't running.",
+      "stopTitle": "Stop {name}?",
+      "stopBody": "The application goes offline until it is started again, and visitors get an error page in the meantime.",
+      "stopping": "Stopping…",
+      "cancel": "Cancel"
     },
     "domains": {
       "title": "Domains and SSL",
@@ -3649,8 +3826,7 @@
         "nowLabel": "Now",
         "afterLabel": "After",
         "keepsServing": "{domain} stays attached as an alias and keeps serving this application.",
-        "renamesFiles": "The application's config and log files are renamed.",
-        "cmsWarning": "WordPress still has the old address saved, so visitors may be redirected back until you change it in the application.",
+        "updatesAddress": "The application's own address setting is updated to {domain}.",
         "notOnCertificate": "The SSL certificate does not cover {domain}. Visitors sent to the new address will get a security warning until you reissue it."
       },
       "removeConfirm": {
@@ -3684,7 +3860,7 @@
         "issuingStuck": "Still here after a few minutes? Remove it and try again.",
         "failed": "Certificate could not be issued",
         "reference": "Reference: {reference}",
-        "rateLimited": "Let's Encrypt has rate-limited this domain. Wait about a week before trying again — retrying now won't help.",
+        "rateLimited": "Let's Encrypt has rate-limited this domain. Wait about a week before trying Let's Encrypt again. A self-signed or uploaded certificate still works in the meantime.",
         "reissue": "Reissue",
         "remove": "Remove certificate",
         "active": "HTTPS is active",
@@ -3745,7 +3921,10 @@
         "reloadFailed": "The web server could not be reloaded.",
         "uploadNeedsBoth": "Paste both the certificate and its private key.",
         "removed": "The certificate was removed. This application is back on plain HTTP.",
-        "removedAlready": "The certificate had already been removed."
+        "removedAlready": "The certificate had already been removed.",
+        "rateLimitedMethod": "Let's Encrypt has rate-limited this domain for about a week. Choose Self-signed or upload your own in the meantime.",
+        "dryRunPartial": "Ready for {ready} of {total} domains. {count, plural, one {{names} will be left off the certificate.} other {{names} will be left off the certificate.}}",
+        "dryRunStalled": "The dry run is still not finished after 10 minutes, so we stopped checking. Nothing was issued. Run it again, or set up SSL without it."
       },
       "issueCertificate": "Set up SSL",
       "description": "Names that reach this application, and its certificate.",
@@ -3778,7 +3957,10 @@
       "failed": "Couldn't create the login link.",
       "popupBlocked": "Your browser blocked the new tab. Allow pop-ups for this panel and try again.",
       "redirecting": "Signing you in…",
-      "auditNote": "The link works once and expires in a minute. Whoever you sign in as is recorded in the activity log."
+      "auditNote": "The link works once and expires in a minute. Whoever you sign in as is recorded in the activity log.",
+      "linkReady": "Your WordPress login link is ready.",
+      "openAdmin": "Open WordPress admin",
+      "fetchingUsers": "Fetching users…"
     },
     "markers": {
       "processFailed": "Process failed",
@@ -3796,9 +3978,8 @@
         "subtitle": "Pull the latest code from your repository and rebuild the application.",
         "repository": "Repository",
         "branch": "Branch",
-        "lastDeploy": "Last deployed",
-        "never": "Never deployed",
-        "commit": "Deployed commit",
+        "lastDeploy": "Last successful deploy",
+        "never": "None yet",
         "action": "Deploy now",
         "redeploy": "Deploy again",
         "deploying": "Deploying…",
@@ -3814,13 +3995,17 @@
         "reference": "Reference: {reference}",
         "notDeployedYet": "This application has no code yet — deploy to pull your repository from {branch} and go live.",
         "resetNote": "Deploying resets the application to the {branch} branch; changes made directly on the server are discarded.",
-        "viewCommit": "View commit on your Git provider"
+        "viewCommit": "View commit on your Git provider",
+        "failedAtStep": "Last deploy failed at “{step}”.",
+        "incomplete": "The last deploy failed after the new code was put in place, so that code is live but not fully deployed. Fix the problem and deploy again.",
+        "liveCommit": "Live commit",
+        "notFullyDeployed": "Not fully deployed"
       },
       "webhook": {
         "title": "Deploy on push",
         "subtitle": "Automatically deploy whenever you push to {branch}.",
         "on": "On",
-        "disabledBody": "Turn this on to deploy automatically on every push. You'll get a URL and secret to add to your Git provider.",
+        "disabledBody": "Turn this on to deploy automatically on every push. The panel adds the webhook to your repository, or gives you a URL and secret to add yourself.",
         "provider": "Git provider",
         "providerPlaceholder": "Choose your provider",
         "enable": "Enable deploy on push",
@@ -3854,7 +4039,12 @@
         "offBody": "Auto-deploy is off. Turn it on to deploy on every push to {branch} — your webhook URL and secret are kept.",
         "providerHint": "Which service the repository is on. It decides how we check that an incoming request really came from them.",
         "urlHint": "Paste this into your repository's webhook settings. It is the address your Git service calls when there is new code.",
-        "disabledBodyNamed": "Turning this on creates a webhook URL and secret for {provider}. You add them to your repository in the next step."
+        "disabledBodyNamed": "Turning this on adds a webhook to your {provider} repository. If the panel can't add it for you, you'll get a URL and secret to paste instead.",
+        "added": "Webhook added to the repository",
+        "addedBody": "The panel added it to {provider} for you, so there is nothing to paste. Pushing to {branch} deploys automatically.",
+        "rotateConfirmBodyRegistered": "A new secret is generated and the current one stops working. The panel updates the webhook in {provider} for you, so deploy on push keeps working.",
+        "tokenTooShort": "The signing token must be at least 16 characters.",
+        "secretWithheld": "The secret is only shown to people who can deploy."
       },
       "cancel": "Cancel",
       "runtime": {
@@ -3867,7 +4057,7 @@
         "appPortHint": "Blank picks a free one.",
         "appliesOnDeploy": "Saved now, applied on the next deploy — that is when the service file is rewritten.",
         "save": "Save runtime settings",
-        "saved": "Runtime settings saved.",
+        "saved": "Runtime settings saved. They apply on the next deploy.",
         "saveFailed": "Couldn't save the runtime settings.",
         "noPermission": "You do not have permission to change this.",
         "nothingToSave": "Nothing has changed"
@@ -3892,7 +4082,8 @@
           "loading": "Loading branches from the repository…",
           "empty": "The repository reported no branches — type the name instead.",
           "error": "Couldn't load branches from the repository. Type the name instead.",
-          "unlinked": "This application has no working Git account, so branches can't be listed. Reconnect it on the application page."
+          "unlinked": "This application has no working Git account, so branches can't be listed. Reconnect it on the application page.",
+          "missing": "This branch is no longer in the repository, so the next deploy will fail. Pick another branch."
         },
         "title": "What a deploy runs",
         "subtitle": "The branch to check out, and the commands that build the application afterwards."
@@ -3915,7 +4106,9 @@
         "noPermission": "Your role does not include Deployment for this application with Manage access. Ask an administrator to grant it.",
         "title": "Deploy history",
         "subtitle": "Every deploy, newest first. Open one to read its build log.",
-        "busy": "A deployment is already running. Wait for it to finish."
+        "busy": "A deployment is already running. Wait for it to finish.",
+        "pushStarted": "New deploy started from a push to {branch}.",
+        "loadFailed": "The deploy history and settings could not be loaded."
       },
       "tabs": {
         "history": "History",
@@ -3995,7 +4188,8 @@
         "name": "Folder name",
         "submit": "Create folder",
         "created": "\"{name}\" created.",
-        "failed": "Couldn't create the folder."
+        "failed": "Couldn't create the folder.",
+        "taken": "Something named “{name}” is already in this folder."
       },
       "newFile": {
         "action": "New file",
@@ -4055,9 +4249,10 @@
       "targetDialog": {
         "pathLabel": "Path",
         "rootPlaceholder": "Application folder",
-        "pathLabelHint": "Where to put it, counted from the top of the application's folder.",
+        "pathLabelHint": "A name on its own stays in this folder. A path is counted from the top of the application's folder.",
         "destination": "Extracts into",
-        "copyDestination": "Copy this path"
+        "copyDestination": "Copy this path",
+        "folderMissing": "The folder “{folder}” doesn't exist. Create it first, or pick another one."
       },
       "rename": {
         "title": "Rename or move \"{name}\"",
@@ -4328,7 +4523,7 @@
         "stopped": "Stopped"
       },
       "processCount": "{running}/{total}",
-      "disabledTag": "Won't start on boot",
+      "disabledTag": "Turned off",
       "noRestartOnDeployTag": "Won't restart after deploy",
       "noAutoRestartTag": "Won't restart if it stops",
       "addedAgo": "Added {time}",
@@ -4345,7 +4540,8 @@
         "restart": "Restart",
         "edit": "Edit",
         "delete": "Delete",
-        "viewLogs": "View logs"
+        "viewLogs": "View logs",
+        "viewLogsNoPermission": "Viewing logs needs the server Logs permission."
       },
       "toast": {
         "start": "Starting {name}…",
@@ -4376,12 +4572,15 @@
       "create": {
         "title": "Add a worker",
         "subtitle": "Pick a template to start, or write your own command.",
-        "submit": "Add worker"
+        "submit": "Add worker",
+        "failed": "The worker did not start, so it was not added. Check that the command runs for this application, then try again."
       },
       "edit": {
         "title": "Edit worker",
-        "subtitle": "Changes apply the next time this worker restarts.",
-        "submit": "Save changes"
+        "subtitle": "Saving applies the changes right away — the worker restarts with them unless it is turned off.",
+        "submit": "Save changes",
+        "failed": "These changes could not be applied. Check that the command runs for this application, then try again.",
+        "failedStopped": "These changes could not be applied, so the worker was stopped. Fix the command and save again."
       },
       "delete": {
         "title": "Delete this worker?",
@@ -4392,7 +4591,7 @@
       },
       "form": {
         "name": "Name",
-        "namePlaceholder": "Queue worker",
+        "namePlaceholder": "background-jobs",
         "nameHint": "A short label to identify this worker.",
         "useTemplate": "Use template",
         "command": "Command",
@@ -4416,8 +4615,7 @@
           "horizon": "You already have Horizon — it manages its own queue workers."
         },
         "user": "Run as user",
-        "userPlaceholder": "deploy",
-        "userHint": "Leave empty to run as this application's own user, which is almost always right.",
+        "userHint": "The account this worker runs as — the application's own user.",
         "logFile": "Log file",
         "logFilePlaceholder": "/var/log/my-worker.log",
         "logFileHint": "Absolute path, and it can't contain .. — leave empty and supervisord chooses one.",
@@ -4436,7 +4634,7 @@
         "autoStart": "Start with the server",
         "autoStartHint": "Off means it only runs when you start it by hand.",
         "extraConfig": "Extra supervisord settings",
-        "extraConfigPlaceholder": "environment=APP_ENV=\"production\"",
+        "extraConfigPlaceholder": "startsecs=5",
         "extraConfigHint": "One setting per line, added to this worker only. Section headers in [brackets] are refused.",
         "kind": "Type",
         "kindHint": "Decides how it gets restarted. Queue and Horizon are asked to finish the job they're on first; Custom is stopped and started.",
@@ -4444,7 +4642,8 @@
           "queue": "Queue worker",
           "horizon": "Horizon",
           "custom": "Custom"
-        }
+        },
+        "commandPlaceholder": "The command to keep running"
       },
       "runsAsTooltip": "Runs as {user}, not this application's own user.",
       "supervisor": {
@@ -4486,7 +4685,9 @@
       "savedCredentials": "Save these now — they won't be shown again:",
       "openSite": "Open application",
       "showPassword": "Show password",
-      "hidePassword": "Hide password"
+      "hidePassword": "Hide password",
+      "unsupportedProtected": "This application signs in with the Authorization header, so password protection can make it unreachable. Turn it off unless you've checked the application still works.",
+      "passwordAgainHint": "Enter the password again, or a new one. It's needed to save any change."
     },
     "botBlocker": {
       "pageTitle": "AI Bot Blocker",
@@ -4507,16 +4708,16 @@
         "range": "{days} days",
         "unavailable": "This application’s access log couldn’t be read, so there’s nothing to show yet. This isn’t the same as no bots visiting.",
         "empty": "No AI bots have visited in the last {days} days.",
-        "summary": "{bots, plural, one {# bot} other {# bots}} · {hits, plural, one {# request} other {# requests}} · {blocked, plural, other {# blocked}}",
+        "summary": "{bots, plural, one {# bot} other {# bots}} · {hits, plural, one {# request} other {# requests}} · {blocked, plural, other {# from bots you block}}",
         "partial": "Only the most recent part of the log was scanned, so busy applications may have had more.",
-        "blocked": "Blocked",
-        "allowed": "Getting through",
+        "blocked": "Block",
+        "allowed": "Allow",
         "columns": {
           "bot": "Bot",
           "kind": "Kind",
           "requests": "Requests",
           "lastSeen": "Last seen",
-          "status": "Right now"
+          "status": "Your settings"
         },
         "kinds": {
           "training": "Training",
@@ -4552,7 +4753,8 @@
           "tooBroad": "That would match ordinary crawlers too, including Google's. Use the bot's full name.",
           "searchEngine": "That's a search engine, not an AI crawler — blocking it would take the application out of search results.",
           "duplicate": "That bot is already on this list.",
-          "limit": "That's the most bots this list can hold."
+          "limit": "That's the most bots this list can hold.",
+          "browserWord": "That word is part of ordinary browsers' names, so it would block real visitors. Use the bot's full name, like GPTBot."
         },
         "noPermission": "Your role does not include AI Bot Blocker for this application with Manage access. Ask an administrator to grant it."
       },
@@ -4564,7 +4766,9 @@
       "saved": "AI bot settings saved.",
       "saveFailed": "That couldn't be saved.",
       "noPermission": "Your role does not include AI Bot Blocker for this application with Manage access. Ask an administrator to grant it.",
-      "nothingToSave": "Nothing to save"
+      "nothingToSave": "Nothing to save",
+      "robotsTxtOnly": "robots.txt only",
+      "robotsTxtOnlyNote": "{names} never visit your site — Google and Apple train AI with their normal crawlers and only read these names in robots.txt. Blocking them here doesn't stop that; add them to robots.txt with Disallow: / instead."
     },
     "firewall": {
       "pageTitle": "Web Firewall",
@@ -4590,7 +4794,7 @@
       "categoryHints": {
         "query_string": "Attack code hidden in the part of a link after the ? sign.",
         "request_uri": "Requests for files and paths that only attackers go looking for.",
-        "user_agent": "Visitors identifying themselves as known scanners and attack tools.",
+        "user_agent": "Visitors identifying themselves as known scanners and attack tools — and also command-line tools and HTTP libraries such as curl and Go, so uptime monitors, scripts and webhooks sent that way are blocked too.",
         "referrer": "Traffic claiming to arrive from spam and malware websites.",
         "cookie": "Tampered cookies used to slip code past your application.",
         "method": "Ways of sending a request that a normal browser never uses."
@@ -4609,6 +4813,7 @@
       "remove": "Remove {value}",
       "countOf": "{count} of {max}",
       "tooLong": "Keep this under {max} characters.",
+      "tooShort": "Use at least {min} characters — a shorter word matches almost every request.",
       "listFull": "You've reached the limit of {max}.",
       "shortTermWarning": "Short words match anywhere in an address — \"conf\" would also block \"confirm.js\". Be as specific as you can.",
       "unsaved": "Not saved yet",
@@ -4628,7 +4833,8 @@
         "count": "{count, plural, one {# request} other {# requests}}",
         "empty": "Nothing has been caught yet. The list fills in as visitors arrive.",
         "unreadable": "This could not be read. Your settings are unaffected."
-      }
+      },
+      "detectUnknown": "Couldn't read what has been caught, so check the list below before you switch to blocking."
     },
     "clone": {
       "pageTitle": "Application Clone",
@@ -4648,7 +4854,7 @@
           "repository": "Repository, branch & git account"
         },
         "dropsItems": {
-          "ssl": "SSL certificate",
+          "ssl": "SSL certificate (the copy gets its own)",
           "backups": "Backups",
           "cronJobs": "Cron jobs",
           "workers": "Queue workers",
@@ -4685,16 +4891,24 @@
         "sourceFailed": {
           "title": "This application did not finish setting up",
           "body": "There is nothing complete to copy. Fix the original first — a copy of a half-built application would inherit the same problem."
+        },
+        "deploying": {
+          "title": "A deploy is running",
+          "body": "A copy taken now could mix old and new files. Once the deploy finishes, this page will let you clone it."
+        },
+        "typeNotSupported": {
+          "title": "This application type can't be cloned",
+          "body": "{type} applications can't be copied from the panel."
         }
       },
       "result": {
         "next": {
           "title": "Before you use it",
-          "subtitle": "Four things the copy does not inherit.",
+          "subtitle": "{count, plural, one {One thing the copy does not inherit.} other {# things the copy does not inherit.}}",
           "items": {
             "ssl": {
-              "title": "Set up SSL",
-              "body": "The copy is served over plain HTTP until you do."
+              "title": "Check HTTPS",
+              "body": "A certificate is issued automatically once the domain points at this server. Check it here."
             },
             "backups": {
               "title": "Set up backups",
@@ -4755,10 +4969,13 @@
           "copying_files": "Copying files",
           "cloning_database": "Cloning the database",
           "starting_process": "Starting the application"
-        }
+        },
+        "notStarting": "This clone hasn't started",
+        "notStartingBody": "It has been waiting for over two minutes. If another clone of this application was running at the same time, this one may never start.",
+        "stopWatching": "Stop watching and start over"
       },
       "warnings": {
-        "dns": "Point the new domain at this server before issuing a certificate — until DNS resolves, the copy is served over plain HTTP.",
+        "dns": "Point the new domain at this server first — the copy gets its own HTTPS certificate automatically once it does.",
         "password": "Password protection is not copied. The copy is public until you turn it on.",
         "time": "A large application takes a few minutes to copy."
       },
@@ -4806,7 +5023,7 @@
         "timezonePlaceholder": "Use the server's",
         "autoPrepend": "File to run before every page",
         "directives": "Extra directives",
-        "directivesPlaceholder": "opcache.enable = 1"
+        "directivesPlaceholder": "php_admin_value[opcache.enable] = 1"
       },
       "hints": {
         "postTooSmall": "This is smaller than the upload limit, so uploads that size will still fail.",
@@ -4817,7 +5034,7 @@
         "sessionLifetime": "Seconds a session file is kept before it can be cleaned up.",
         "timezone": "Only affects dates PHP produces, not the server clock.",
         "autoPrepend": "A path inside this application. Leave empty unless you were told otherwise.",
-        "directives": "One per line, like a php.ini file. Anything here wins over the fields above.",
+        "directives": "One per line, in PHP-FPM pool form: php_admin_value[name] = value. Anything here wins over the fields above.",
         "openBasedir": "Stops PHP reading or writing files outside this application's folder.",
         "allowUrlFopen": "Lets PHP fetch remote URLs. Turning it off blocks a common way malware phones home.",
         "upload": "Also raises the web server's own limit, which refuses large uploads before PHP sees them. An application set up earlier picks this up the first time you save.",
@@ -4851,7 +5068,7 @@
         "over": "More than this server's {total}",
         "legend": "{sites, plural, =0 {No other applications are using memory} one {One other application has claimed {value}} other {# other applications have claimed {value}}}",
         "equation": "{limit} × {workers} workers = {total} at full load",
-        "overDetail": "{required} required, but this server has {total}. Lower the memory limit or the number of workers."
+        "overDetail": "All applications together need {required}, but this server has {total}. Lower the memory limit or the number of workers."
       },
       "custom": "Custom",
       "seconds": "{count}s",
@@ -4887,14 +5104,16 @@
         "remove": "Remove {name}",
         "empty": "Nothing is blocked. Every PHP function this application has installed can run.",
         "presetsLabel": "Start from",
-        "presetsCustom": "Your own list."
+        "presetsCustom": "Your own list.",
+        "invalidName": "Not added, not a function name: {names}. Use letters, numbers and _ only."
       },
       "saveNote": "Saving rewrites this application's PHP pool and reloads it. Requests already running finish first.",
       "tabs": {
         "basic": "Basic settings",
         "security": "Security",
         "advanced": "Advanced",
-        "unsavedHere": "Unsaved changes on this tab"
+        "unsavedHere": "Unsaved changes on this tab",
+        "errorsHere": "Settings to fix on this tab"
       },
       "sections": {
         "runtime": "Runtime",
@@ -4930,7 +5149,8 @@
       "autoPrependPlaceholder": "/home/site/app/prepend.php",
       "postMaxSizePlaceholder": "128M",
       "versionUnsupported": "{type} supports PHP {range}. Moving this application to another version is likely to break it.",
-      "presetsLabelHint": "Ready-made settings sized for small, medium and large applications. A starting point — you can still change any value afterwards."
+      "presetsLabelHint": "Ready-made settings sized for small, medium and large applications. A starting point — you can still change any value afterwards.",
+      "fixErrors": "Some settings need fixing. The tab with the problem is marked."
     },
     "fail2ban": {
       "pageTitle": "Fail2ban",
@@ -4975,7 +5195,9 @@
       "createAction": "Turn on Fail2ban",
       "removeBodyDirty": "The jail and filter files are deleted and fail2ban stops watching this application. Anyone already banned is released — and {count, plural, one {the file you have edited but not saved goes with them} other {the # files you have edited but not saved go with them}}.",
       "tooLong": "That config is too long. Each file has to stay under 65,535 characters.",
-      "invalidConfig": "That config cannot be saved. Check both files are filled in."
+      "invalidConfig": "That config cannot be saved. Check both files are filled in.",
+      "outputShowAll": "Show everything fail2ban said",
+      "outputErrorsOnly": "Show only the errors"
     },
     "staging": {
       "pageTitle": "Staging Area",
@@ -4983,6 +5205,7 @@
       "loadFailed": "We could not check this application's staging area.",
       "provisioning": "This application is still being set up. A staging copy can be made once it finishes.",
       "unsupported": "Staging is only available for WordPress applications. This one is a {type} application.",
+      "noPermission": "Your role does not include Staging Area for this application with Manage access. Ask an administrator to grant it.",
       "manageAction": "Open staging application",
       "empty": {
         "title": "No staging copy yet",
@@ -4992,6 +5215,7 @@
       "push": {
         "title": "Copy staging over production",
         "body": "Replaces {domain} with what is on the staging application. There is no undo.",
+        "notReady": "This staging copy isn't ready: it is still being created, or creating it failed. If it stays like this, delete it and create it again.",
         "action": "Push to production"
       },
       "createDialog": {
@@ -5009,32 +5233,26 @@
         "domainLabelHint": "The address for the staging copy. Use something obviously not your live application."
       },
       "pushDialog": {
-        "title": "Push staging over {domain}?",
-        "description": "Everything on {staging} is copied over {production}. This cannot be undone.",
-        "downtime": "Your application is taken offline while this runs, and visitors see a maintenance page until it finishes.",
-        "whatToPush": "What should be copied",
+        "title": "Push staging to production?",
+        "whatToPush": "What to push",
         "modes": {
           "files": {
             "label": "Files only",
-            "replaces": "The application's files",
-            "deletes": "Files that exist only on production",
-            "undo": "None — nothing is copied first"
+            "summary": "The application's files. The database is not touched.",
+            "consequence": "Files that exist only on production are deleted. Uploads are kept."
           },
           "database": {
             "label": "Database only",
-            "replaces": "The database",
-            "deletes": "Everything written since the copy — orders, comments, posts",
-            "undo": "The old database is saved first",
-            "note": "Production needs the same plugins and themes as staging. The database expects them, and a missing one can leave the application blank."
+            "summary": "Content and settings. Files are not touched.",
+            "consequence": "Everything written on production since the copy was made — orders, comments, posts — is replaced. Production also needs the same plugins and themes as staging, or the application can go blank."
           },
           "full": {
             "label": "Files and database",
-            "replaces": "The application's files and the database",
-            "deletes": "Files only on production, and everything written since the copy",
-            "undo": "The old database is saved first; the files are not"
+            "summary": "Files and database. Production becomes a copy of staging.",
+            "consequence": "Files only on production are deleted (uploads are kept), and everything written on production since the copy was made — orders, comments, posts — is replaced."
           }
         },
-        "backupFirst": "There is no way back from this. <link>Take a backup first</link> if you have not.",
+        "backupFirst": "There is no undo once it finishes — <link>take a backup first</link>.",
         "confirmLabel": "Type {domain} to confirm",
         "pickMode": "Choose what to copy",
         "typeToUnlock": "Type the production domain to confirm",
@@ -5045,19 +5263,19 @@
         "failed": "The push did not finish.",
         "copyAge": "Copy made {age}",
         "copyDomain": "Copy domain",
-        "whatToPushHint": "Files copies code and uploads. Database copies content. Both copies everything.",
-        "facts": {
-          "replaces": "Replaces",
-          "deletes": "Deletes",
-          "undo": "Undo"
-        }
+        "whileRunning": "The application is offline while this runs. If it fails partway, production is put back as it was."
       },
       "isCopy": {
         "title": "This application is a staging copy",
         "body": "It was made as a copy of another application, so it does not get a staging area of its own. Push it back from the application it belongs to.",
         "action": "Go to the original application"
       },
-      "copyAge": "Copy made {age}"
+      "copyAge": "Copy made {age}",
+      "remove": {
+        "title": "Delete staging",
+        "body": "Deletes the staging application {domain}. {production} is not touched.",
+        "action": "Delete"
+      }
     },
     "stagingBadge": "Staging",
     "paused": "Paused",
@@ -5069,7 +5287,9 @@
       "submit": "Change web root",
       "cancel": "Cancel",
       "saved": "Web root changed.",
-      "failed": "The web root could not be changed."
+      "failed": "The web root could not be changed.",
+      "resolved": "The site will be served from <code>{path}</code>.",
+      "missingFolder": "There is no folder {path}. Create it in Files first, or check the spelling."
     },
     "missing": {
       "title": "This application is no longer here",
@@ -5078,11 +5298,11 @@
     },
     "size": {
       "notMeasured": "Not measured",
-      "inVolumes": "{size} of this is in Docker volumes",
       "measuring": "Measuring…",
       "measured": "Size measured.",
       "measureFailed": "The size could not be measured.",
-      "measureHint": "Measure this application on disk now"
+      "measureHint": "Measure this application on disk now",
+      "inVolumes": "{size} of this is in Docker volumes"
     },
     "status": {
       "pending": "Pending",
@@ -5099,13 +5319,16 @@
       "bots": "AI bots",
       "on": "On",
       "off": "Off",
-      "description": "Protection settings for this application."
+      "description": "Protection settings for this application.",
+      "folder": "Site folder",
+      "locked": "Locked",
+      "unlocked": "Not locked"
     },
     "backups": {
       "title": "Backups",
       "state": {
         "protected": "Protected",
-        "paused": "Paused",
+        "paused": "Manual only",
         "unprotected": "Not protected",
         "running": "Backing up…"
       },
@@ -5126,7 +5349,8 @@
       "runningNote": "A backup of this application is running now. This card updates on its own.",
       "queuedNote": "Backup queued. It starts as soon as the server picks it up.",
       "queuedStalled": "This backup has not started yet. If it stays this way, the background worker may not be running.",
-      "alreadyRunning": "A backup of this application is already running."
+      "alreadyRunning": "A backup of this application is already running.",
+      "noneKept": "None kept"
     },
     "attention": {
       "title": "Needs attention",
@@ -5144,7 +5368,10 @@
         "php_eol": "Change PHP version",
         "deploy_failed": "View deployment",
         "disk": "Free up space"
-      }
+      },
+      "folderUnlocked": "Site folder not locked",
+      "reviewFolder": "Lock it",
+      "checksFailed": "This application's health checks could not be run, so problems may be missing from this list."
     },
     "filters": {
       "allStatuses": "All statuses",
@@ -5200,7 +5427,7 @@
       "description": "Visitors will see a short page saying the application is temporarily unavailable, until you resume it.",
       "keeps": "Nothing is deleted. Files, database, backups, cron jobs and certificates all stay exactly as they are.",
       "reversible": "You can resume it at any time from this same menu.",
-      "seo": "Search engines see an ordinary page rather than a \"try again later\" response, so an application left paused for a long time can lose ranking. Fine for an hour, worth knowing for a month.",
+      "seo": "Search engines are told the application is temporarily unavailable (503, try again in an hour), so a short pause does not hurt its ranking. Left paused for weeks, it can.",
       "paused": "{name} is paused.",
       "resumed": "{name} is back online.",
       "failed": "We couldn't pause the application.",
@@ -5314,6 +5541,101 @@
       "detectAction": "Check what is installed",
       "changeTo": "Treat as {type} instead",
       "menuHint": "Application type options"
+    },
+    "rootLock": {
+      "lock": "Lock",
+      "title": "Lock the site folder?",
+      "cancel": "Cancel",
+      "confirm": "Lock folder",
+      "locking": "Locking…",
+      "done": "Site folder locked.",
+      "failed": "The site folder could not be locked.",
+      "intro": "This sets the folder up the way the panel sets up every application it creates.",
+      "folderLabel": "Folder",
+      "effectOwner": "Owned by root and protected, so it can't be renamed or removed by mistake.",
+      "effectNoChanges": "The system user can no longer add, delete or rename items directly in this folder.",
+      "effectPublic": "Everything inside public_html keeps working exactly as before."
+    },
+    "deploying": "Deploying",
+    "container": {
+      "title": "Container",
+      "image": "Image",
+      "noImage": "No image recorded",
+      "imageHint": "Changed by redeploying the site, not here — a new image is pulled before the old container is replaced.",
+      "network": "Network",
+      "networkHint": "Containers on the same network reach each other by name. Docker's default bridge cannot do that.",
+      "defaultBridge": "Docker's default bridge",
+      "noNetworks": "This server has no networks of its own yet, so there is nothing to join.",
+      "noNetworksLink": "Create a network on the Docker page.",
+      "missingOption": "{name} (no longer on this server)",
+      "missingTitle": "This network is gone",
+      "missingBody": "The site is set to join {name}, and this server no longer has it. The container will not start until you pick a network that exists, or recreate that one.",
+      "reachableTitle": "How other containers reach this site",
+      "reachableBody": "Use the hostname {alias} — for example http://{alias} from another container on the same network. Avoid “app”: every site the panel builds answers to that name, so it resolves to an arbitrary one of them.",
+      "containerPort": "Container port",
+      "containerPortHint": "The port your application listens on inside the container.",
+      "memoryLimit": "Memory limit",
+      "memoryLimitHint": "For example 512m or 2g. A bare number means bytes, not megabytes. Empty uses the server default of {default}.",
+      "memoryLimitHintUnknown": "For example 512m or 2g. A bare number means bytes, not megabytes. Empty uses the server default.",
+      "cpuLimit": "CPU limit",
+      "cpuLimitPlaceholder": "No limit",
+      "cpuLimitHint": "In cores — 1 for one full core, 0.5 for half. This server has {cores}. Empty means no limit at all.",
+      "cpuLimitHintUnknown": "In cores — 1 for one full core, 0.5 for half. You cannot set more than this server has. Empty means no limit at all.",
+      "limitsTitle": "How these two limits behave",
+      "limitsBody": "Both are ceilings for this container alone, not reservations — nothing is set aside for it. They fail in opposite ways, which is worth knowing before you debug one: past the memory ceiling the container is killed and restarted, so the site drops requests; past the CPU quota nothing is killed and the container simply waits, so the site is slow with no error anywhere.",
+      "saveAction": "Save container settings",
+      "restartNote": "Saving recreates the container, so the site is down for a few seconds.",
+      "savingNote": "Rewriting the compose file and recreating the container…",
+      "saved": "Container settings saved.",
+      "failed": "Couldn't save the container settings.",
+      "noPermission": "You don't have permission to change this site.",
+      "nothingToSave": "Nothing has changed.",
+      "volumes": {
+        "title": "Volumes",
+        "empty": "No volumes mounted. The container keeps nothing that survives a rebuild.",
+        "choose": "Choose a volume",
+        "alreadyMounted": "{name} (already mounted)",
+        "pathPlaceholder": "/var/lib/mysql",
+        "pathLabel": "Path inside the container",
+        "add": "Mount",
+        "remove": "Unmount {volume}",
+        "added": "{volume} mounted. The container was recreated.",
+        "removed": "{volume} unmounted. The container was recreated.",
+        "failed": "Couldn't change the mounts.",
+        "invalid": "Pick a volume and give an absolute path inside the container, for example /var/lib/mysql.",
+        "noVolumes": "This server has no volumes yet, so there is nothing to mount.",
+        "noVolumesLink": "Create a volume on the Docker page.",
+        "hint": "A volume keeps data that survives the container being rebuilt. Mounting one recreates the container, and it starts empty — whatever the image had at that path is hidden, not merged."
+      },
+      "credentials": {
+        "title": "Generated credentials",
+        "reveal": "Reveal",
+        "revealing": "Loading…",
+        "hint": "Created when the app was installed, and stored encrypted. Revealing them is recorded in the activity log.",
+        "shownWarning": "Anyone who can manage this site can read these. They are the app's real database credentials — changing one here is not possible, because the running database would keep the old value.",
+        "failed": "Couldn't load the credentials."
+      },
+      "firstRun": {
+        "title": "Save these credentials now",
+        "body": "The panel generated these when it installed this app. They cannot be changed from here — the app stores them inside its own database — so copy them somewhere safe before you dismiss this.",
+        "acknowledge": "I've saved these",
+        "acknowledgeFailed": "Couldn't record that. The credentials are unchanged.",
+        "laterHint": "They stay available under Container → Reveal.",
+        "loading": "Loading credentials",
+        "failed": "Couldn't load the credentials. Don't dismiss this — try reloading the page."
+      },
+      "registry": "Registry",
+      "noRegistry": "None — pull anonymously",
+      "registryHint": "The stored credential this site pulls its image with. Leave it as None for a public image.",
+      "missingRegistryOption": "Deleted credential — this site's next pull will be anonymous",
+      "noRegistries": "No registry credentials are stored on this server, so only public images can be pulled.",
+      "noRegistriesLink": "Add one under Integrations → Docker Registries.",
+      "pullTitle": "Update the image",
+      "pullHint": "Fetches the image again and recreates the container. Bringing the site up on its own does not re-check the registry, so a moved tag needs this.",
+      "pull": "Pull and redeploy",
+      "pulled": "The image was pulled and the container recreated.",
+      "pullFailed": "The image could not be pulled.",
+      "pageSubtitle": "The network, ports, CPU and memory limits and volumes this container runs with."
     },
     "compose": {
       "title": "Compose file",
@@ -5494,12 +5816,13 @@
     "alreadyInstalled": "Installed components",
     "installingNamed": "Installing {name}",
     "lockedByOtherInstall": "Another component is installing. Only one install can run at a time — this unlocks as soon as it finishes.",
+    "installNotPermitted": "Your role can't install this. Ask an administrator.",
     "chooseVersionFirst": "Choose a version to install first.",
     "recommendedLeft": "{count} recommended still to go",
     "progressFailed": "{count} failed",
     "pillUnavailable": "Not available",
     "retryNamed": "Retry {name} install",
-    "purposeMysql": "The common default",
+    "purposeMysql": "Choose this if an app needs MySQL",
     "purposeMariadb": "Best for WordPress and most PHP apps",
     "purposeMongodb": "For document-database apps",
     "sectionAttention": "Needs attention",
@@ -5513,28 +5836,29 @@
     "alreadyInstalledHint": "Already on this server. Nothing to do here.",
     "chooseEngineFirst": "Pick a database engine first",
     "oneSqlOnly": "A server runs one SQL engine. Once this installs, switching to the other means rebuilding the server.",
-    "purposePostgresql": "For apps that ask for Postgres by name"
+    "purposePostgresql": "For apps that ask for Postgres by name",
+    "fail2banOff": "Installed, but nothing is protected yet. <link>Turn on SSH protection in Fail2ban</link>."
   },
   "storage": {
     "title": "Storage",
-    "subtitle": "Where backups are sent. Connect a bucket here, then choose it on an application.",
+    "subtitle": "Where backups are sent. Connect a destination here, then choose it on an application.",
     "loadFailed": "This couldn't be loaded.",
     "noPermission": "Your role does not include Storage with Manage access. Ask an administrator to grant it.",
     "card": {
       "title": "Storage destinations",
-      "subtitle": "S3-compatible buckets this server can write backups to.",
+      "subtitle": "Where this server can send backups: an S3 bucket, an FTP or SFTP server, or Google Drive.",
       "add": "Add destination",
       "whatTestDoes": "What does Test do?",
-      "testExplained": "It writes a small file to the bucket, reads it back and deletes it. That proves the keys work AND that they can write — a read-only key will always fail this."
+      "testExplained": "It writes a small file to the destination, reads it back and deletes it. That proves the login works AND that it can write — a read-only account will always fail this."
     },
     "empty": {
       "title": "No storage connected yet",
-      "body": "Backups need somewhere to go. Connect an S3-compatible bucket and any application can send its backups there.",
+      "body": "Backups need somewhere to go. Connect a storage destination and any application can send its backups there.",
       "reassurance": "The keys are stored encrypted and are only ever used to upload this server's backups and remove old ones.",
       "stepsTitle": "To get started, follow these three steps:",
-      "step1": "Create a bucket at your provider — or pick one you already have.",
-      "step2": "Create an access key that can upload, download and delete objects in that bucket.",
-      "step3": "Paste the bucket name, its region and the keys into the form here."
+      "step1": "Pick where backups should go: an S3 bucket, an FTP or SFTP server, or Google Drive.",
+      "step2": "Get a login that can upload, download and delete files there — an access key, or a username and password.",
+      "step3": "Enter those details in the form here."
     },
     "row": {
       "credentialsSet": "Credentials set",
@@ -5556,7 +5880,7 @@
       "neverTested": "Never tested — nobody has checked these credentials work.",
       "lastTestedOk": "Tested {when}",
       "failedCredentials": "The last test failed {when} — the credentials were rejected.",
-      "failedUnreachable": "The last test failed {when} — the bucket could not be reached.",
+      "failedUnreachable": "The last test failed {when} — the destination could not be reached.",
       "failed": "The last test failed {when}.",
       "failedHostKey": "The last test failed {when} — the server presented a different host key than the one recorded, so the connection was stopped.",
       "failedPrivateKey": "The last test failed {when} — the private key could not be read.",
@@ -5573,7 +5897,7 @@
     },
     "form": {
       "provider": "Provider",
-      "providerHint": "Only changes the example shown below — any S3-compatible provider works.",
+      "providerHint": "Where the backups are stored. The fields below change to match it.",
       "providers": {
         "aws": "Amazon S3",
         "r2": "Cloudflare R2",
@@ -5594,7 +5918,7 @@
       "endpointAws": "Leave empty for Amazon S3 — the region decides the endpoint.",
       "prefix": "Folder",
       "prefixPlaceholder": "backups/",
-      "prefixHint": "Optional. Keeps backups in their own folder inside the bucket.",
+      "prefixHint": "Optional. Keeps backups in their own folder at the destination.",
       "prefixChangeWarning": "Changing this does not move anything. Backups already stored under the old folder stop being found.",
       "fields": {
         "bucket": "Bucket",
@@ -5645,14 +5969,14 @@
     },
     "connect": {
       "title": "Add a storage destination",
-      "subtitle": "An S3-compatible bucket to send backups to.",
+      "subtitle": "Somewhere to send backups to.",
       "credentialsNote": "Keys are stored encrypted and never shown again — to change them later you replace them.",
       "cancel": "Cancel",
       "submit": "Add destination",
       "saving": "Adding…",
       "added": "Destination added.",
       "testPassed": "Connection tested — it works.",
-      "testFailed": "Saved, but the connection test failed. Check the keys and bucket.",
+      "testFailed": "Saved, but the connection test failed. Check the login details and where it points.",
       "permissionsNote": "The key needs permission to upload, download and delete objects in this bucket. Delete matters too — backups remove old archives once they pass the retention limit you set.",
       "keyDocs": "Where do I find these keys?",
       "permissionsNoteRemote": "The account needs to create, read and delete files in that directory — backups remove old archives when they pass the retention limit, so read-only access cannot work.",
@@ -5682,7 +6006,7 @@
     "delete": {
       "title": "Delete this destination?",
       "description": "{name} will be removed from the panel.",
-      "warning": "Any application set to back up here will stop backing up. Existing backups already in the bucket are not deleted.",
+      "warning": "A destination can only be deleted when no application backs up to it and no backups are stored in it any more.",
       "cancel": "Cancel",
       "confirm": "Delete destination",
       "removed": "Destination deleted.",
@@ -5778,7 +6102,7 @@
       "status": {
         "protected": "Protected",
         "failing": "Failing",
-        "paused": "Paused",
+        "paused": "Manual only",
         "unprotected": "None",
         "unknown": "Unknown"
       },
@@ -5812,7 +6136,8 @@
       "runsShortly": "Runs shortly",
       "notSetUpLine": "Not set up — nothing on this application is being backed up.",
       "needsDestination": "No storage destination is set up yet. Add one under Integrations → Storage first.",
-      "timesShownIn": "Times shown in {timezone}"
+      "timesShownIn": "Times shown in {timezone}",
+      "minutePast": ":{minute} past each hour"
     },
     "setup": {
       "title": "Set up backups",
@@ -5836,20 +6161,30 @@
         "noSite": "Choose an application to continue.",
         "noDestination": "Choose where to store backups.",
         "incomplete": "Fill in the schedule to continue.",
-        "unchanged": "Nothing has changed."
+        "unchanged": "Nothing has changed.",
+        "noOptions": "The backup choices have not loaded."
       },
       "editTitle": "Edit backup settings",
       "editSubtitle": "Change what is copied, how often, and where it goes.",
       "saveChanges": "Save changes",
       "refreshFound": "Storage list updated.",
       "refreshNoneNew": "No new storage found yet.",
-      "refreshFailed": "The storage list could not be refreshed."
+      "refreshFailed": "The storage list could not be refreshed.",
+      "optionsFailed": "The backup choices could not be loaded.",
+      "subtitleSite": "Choose what to back up, how often, and where it is stored.",
+      "savedTitleManual": "Backups are set up for {name}",
+      "savedTitleNoName": "Backups are on",
+      "savedTitleManualNoName": "Backups are set up",
+      "discardTitle": "Discard these backup settings?",
+      "discardDescription": "Your changes haven't been saved. Closing now will lose them.",
+      "discardKeep": "Keep editing",
+      "discardConfirm": "Discard changes"
     },
     "form": {
       "applicationPlaceholder": "Choose an application",
       "applicationSearch": "Search applications",
       "applicationEmpty": "No applications found",
-      "noDestinations": "Backups need somewhere to go. Connect an S3-compatible storage destination first — it only takes a bucket and a key.",
+      "noDestinations": "Backups need somewhere to go. Connect a storage destination first.",
       "addDestination": "Set up storage",
       "checkAgain": "Check again",
       "manageStorage": "Manage storage",
@@ -5858,15 +6193,12 @@
       "destinationEmpty": "No destinations found",
       "types": {
         "full": {
-          "label": "Files + database",
           "hint": "Safest — a full restore"
         },
         "filesystem": {
-          "label": "Files only",
           "hint": "Files without the database"
         },
         "database": {
-          "label": "Database only",
           "hint": "Database without the files"
         }
       },
@@ -5875,16 +6207,6 @@
       "automaticOff": "Backups only run when you press Back up now.",
       "frequency": "How often",
       "frequencyPlaceholder": "Choose a schedule",
-      "frequencies": {
-        "daily": "Every day",
-        "weekly": "Every week",
-        "monthly": "Every month"
-      },
-      "frequencyHint": {
-        "daily": "Runs once a day, at the time you set.",
-        "weekly": "Runs every Sunday, at the time you set.",
-        "monthly": "Runs on the 1st of each month, at the time you set."
-      },
       "scheduleTime": "At what time",
       "scheduleTimeHint": "Not your computer's clock.",
       "retention": "How many to keep",
@@ -5906,18 +6228,26 @@
       "warnings": {
         "narrower": "Databases will stop being backed up from the next run. Backups already taken still contain them.",
         "narrowerFiles": "Files will stop being backed up from the next run. Backups already taken still contain them.",
-        "retentionDown": "{count, plural, one {The oldest backup will be deleted} other {The # oldest backups will be deleted}} on the next run."
+        "retentionDown": "{count, plural, one {The oldest backup will be deleted} other {The # oldest backups will be deleted}} as soon as you save."
       },
       "destinationFailing": "The last connection test to {name} failed, so backups sent there will not be written until it is fixed.",
       "noDatabase": {
         "blocked": "This application has no database",
-        "filesOnly": "This application has no database, so only its files will be backed up."
+        "filesOnly": "This application has no database, so only its files will be backed up.",
+        "typeHasNone": "This type of application has no database, so only its files are backed up."
       },
       "automaticHint": "Runs the backup on a schedule instead of only when you press the button.",
       "fileExcludesHint": "Paths to leave out of the backup, one per line. Caches and logs are worth excluding; uploads are not.",
       "databaseExcludesHint": "Databases to leave out of the backup, one per line. Useful for caches and anything you can rebuild.",
-      "scheduleTimeZone": "Runs in project time ({timezone})",
-      "destinationNotConnected": "{name} has not been connected to your Google account yet, so backups sent there will fail."
+      "scheduleTimeZone": "Times are in {timezone}",
+      "destinationNotConnected": "{name} has not been connected to your Google account yet, so backups sent there will fail.",
+      "optionsFailed": "The backup choices could not be loaded, so these settings cannot be saved yet.",
+      "optionsRetry": "Try again",
+      "scheduleMinute": "At what minute",
+      "scheduleMinuteHint": "Minutes past each hour, 0 to 59.",
+      "retentionHintHours": "About {hours, plural, one {# hour} other {# hours}} of history. Older ones are deleted.",
+      "retentionHintCount": "Keeps the newest {count, plural, one {# backup} other {# backups}}. Older ones are deleted.",
+      "excludeLineError": "Line {line}: {message}"
     },
     "history": {
       "allApplications": "All applications",
@@ -6010,7 +6340,7 @@
           }
         }
       },
-      "copyUid": "Copy this archive's file name in the bucket",
+      "copyUid": "Copy this archive's file name at the destination",
       "uploadProgress": "{done} of {total}",
       "uploadProgressBare": "{done} uploaded",
       "retryConfirm": {
@@ -6090,7 +6420,8 @@
       "stalledQueued": "This restore has not started",
       "stalledQueuedBody": "It has been waiting a couple of minutes for the server to pick it up. Nothing on the application has been changed. The job may not be running — check again, or ask whoever manages this server to look.",
       "undone": "The restore has been undone",
-      "undoneBody": "The application is back as it was before you restored. Check the application, then dismiss this."
+      "undoneBody": "The application is back as it was before you restored. Check the application, then dismiss this.",
+      "checkFailed": "We couldn't check this restore. Try again in a moment."
     },
     "application": {
       "pageTitle": "Backups",
@@ -6103,13 +6434,17 @@
           "body": "{schedule}, stored on {destination}."
         },
         "paused": {
-          "title": "Backups are paused",
+          "title": "Manual backups only",
           "body": "Nothing runs on a schedule. Backups only happen when you press Back up now."
         },
         "unprotected": {
           "title": "This application is not backed up",
-          "body": "If the server is lost, so is this application. Set a schedule below.",
+          "body": "If the server is lost, so is this application. Set up a schedule to protect it.",
           "bodyReadOnly": "If the server is lost, so is this application. Ask an administrator to set up backups."
+        },
+        "empty": {
+          "title": "No backup to restore from yet",
+          "body": "Backups are scheduled, but none exists right now. Run one to be sure it works."
         }
       },
       "lastRun": "Last run {when}",
@@ -6141,7 +6476,9 @@
         "howOftenAt": "{frequency} at {time}",
         "keepsEverything": "Every backup kept",
         "keepsNotApplicable": "Not applicable",
-        "howOftenAtZone": "{frequency} at {time} · {timezone}"
+        "howOftenAtZone": "{frequency} at {time} · {timezone}",
+        "howOftenMinute": "{frequency} at :{minute}",
+        "howOftenMinuteZone": "{frequency} at :{minute} · {timezone}"
       },
       "unknownReason": "The reason was not recorded.",
       "restore": "Restore",
@@ -6167,7 +6504,29 @@
       "noDatabase": {
         "title": "This application has no database",
         "description": "Backups of this application will not contain one until you attach it."
-      }
+      },
+      "turnOff": {
+        "action": "Turn off backups",
+        "running": "A backup is running. Wait for it to finish before turning backups off.",
+        "title": "Turn off backups for {name}?",
+        "description": "The schedule and its settings are removed, and no more backups will run for this application.",
+        "cancel": "Cancel",
+        "confirm": "Turn off backups",
+        "deleteCount": "{count, plural, one {Also delete its # backup} other {Also delete its # backups}}",
+        "deleteAll": "Also delete its backups",
+        "deleteHint": "Required: backups can't be kept once the schedule is gone. Their archives are removed from {destination}, and this can't be undone.",
+        "storage": "your storage",
+        "keepHint": "Want to keep the backups? Pause instead: nothing runs on a schedule, and every backup stays.",
+        "pauseInstead": "Pause instead",
+        "paused": "Backups paused. Every backup is kept.",
+        "pauseFailed": "Backups could not be paused.",
+        "done": "Backups turned off for {name}.",
+        "doneWithBackups": "{count, plural, one {Backups turned off for {name}, and # backup deleted.} other {Backups turned off for {name}, and # backups deleted.}}",
+        "failed": "Backups could not be turned off."
+      },
+      "restoreRunning": "A restore is running. Wait for it to finish.",
+      "historyForbidden": "Your role can't see backup history. Ask an administrator for the Backups permission.",
+      "noneKept": "None kept"
     },
     "empty": {
       "title": "Nothing on this server is backed up yet",
@@ -6180,7 +6539,7 @@
         "offsite": "Stored off this server"
       },
       "stepsTitle": "How to get set up",
-      "step1": "Connect a storage destination — the bucket your backups are written to.",
+      "step1": "Connect a storage destination — where your backups are written to.",
       "step2": "Choose an application, what to copy, and how often.",
       "step3": "Restore from any verified backup, on the History tab.",
       "action": "Set up backups",
@@ -6221,7 +6580,7 @@
       },
       "unknownApplication": "Deleted application",
       "unknownReason": "The reason was not recorded.",
-      "noSafetyCopy": "None taken",
+      "noSafetyCopy": "None available",
       "findSafetyCopy": "Find safety copy",
       "allApplications": "All applications",
       "allStatuses": "Any status",
@@ -6291,7 +6650,8 @@
       "hideDetailsShort": "Hide details",
       "ignoreShort": "Dismiss",
       "restoreShort": "Undo dismissing",
-      "working": "Working…"
+      "working": "Working…",
+      "wholeType": "All of them"
     },
     "outcomes": {
       "found": "Found",
@@ -6351,7 +6711,7 @@
     "title": "Central management",
     "pageSubtitle": "Let a central panel manage this server on your behalf.",
     "subtitle": "Generate a key here, then paste it into your central panel to connect this server to it.",
-    "connected": "Connected",
+    "keyActive": "Key active",
     "disconnected": "This server is no longer connected to Central.",
     "cancel": "Cancel",
     "power": {

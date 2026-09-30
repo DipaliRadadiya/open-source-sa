@@ -18,7 +18,9 @@ test("the list keeps ssh_access_enforced instead of stripping it", async () => {
 test("the SSH switches carry a warning while they keep nobody out", () => {
   const table = read("components/system-users/system-users-table.jsx");
   // Only a definite false: null means sshd could not be asked.
-  assert.match(table, /meta\?\.ssh_access_enforced === false && data\.length \?/);
+  // Managers only: a viewer can neither flip the switches nor save the setting.
+  assert.match(table, /const sshEnforced = meta\?\.ssh_access_enforced \?\? null/);
+  assert.match(table, /canManage && sshEnforced === false && data\.length \?/);
   assert.match(table, /t\("sshNotEnforced\.body"\)/);
   assert.match(table, /href="\/settings\/security" prefetch=\{false\}/);
   // The link only for someone who can save that screen.
@@ -31,6 +33,7 @@ test("the shell picker takes the server's list as it comes, however long", () =>
   for (const file of ["components/system-users/shell-select.jsx", "components/system-users/create-system-user-dialog.jsx"]) {
     const src = read(file);
     assert.doesNotMatch(src, /\/usr\/bin\/zsh|shells\[\d\]|shells\.length [=!]==? \d/, file);
-    assert.match(src, /shells\.length\s*\?\s*shells/, `${file} renders what it was given`);
+    // Only the legacy duplicate of "No login" may be dropped (offered-shells.js).
+    assert.match(src, /shells\.length\s*\?\s*(shells|offeredShells\(shells, )/, `${file} renders what it was given`);
   }
 });

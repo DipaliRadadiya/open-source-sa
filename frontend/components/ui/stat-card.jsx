@@ -214,8 +214,10 @@ export function StatCard({
              */}
             {sub || status ? (
               <div className="mt-2.5 flex min-h-5 items-center justify-between gap-2">
-                <p className="min-w-0 truncate text-xs tabular-nums text-muted-foreground">
-                  {sub}
+                {/* Wraps: truncated, "…kann freigegeben wer…" hid the one number
+                    the Disk Cleaner card exists to show, at 390 in de/ru. */}
+                <p className="min-w-0 text-xs break-words tabular-nums text-muted-foreground">
+                  {keepUnits(sub)}
                 </p>
                 {status ? (
                   <Badge
@@ -232,4 +234,9 @@ export function StatCard({
       </CardContent>
     </Card>
   );
+}
+
+// "3.8 GB" wraps as a unit, never as "3.8 / GB".
+function keepUnits(value) {
+  return typeof value === "string" ? value.replace(/(\d)\s+(?=[A-Za-z%])/g, "$1\u00A0") : value;
 }

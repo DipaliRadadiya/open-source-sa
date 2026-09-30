@@ -20,6 +20,8 @@ return [
         'firewall_app_profile' => 'Esta regla usa un perfil de aplicación en vez de un puerto. Los puertos que hay detrás pueden cambiar al actualizar el paquete, así que importar los números de hoy sería una foto fija haciéndose pasar por la regla.',
         'panel_infrastructure' => 'Esto es el propio panel, no un sitio que pueda alojar. Se deja intacto a propósito.',
         'outside_panel_layout' => 'Este sitio no tiene la estructura de directorios que el panel gestiona, así que no se puede adoptar sin mover sus archivos. Sigue funcionando: no se ha cambiado nada.',
+        'folder_taken' => 'Otro sitio del panel ya usa una carpeta con este nombre. Los nombres de carpeta deben ser únicos, así que este se dejó como estaba. Sigue en línea.',
+        'folder_name_unusable' => 'El nombre de la carpeta de este sitio contiene caracteres que el panel no puede usar en nombres de archivo, así que se dejó como estaba. Sigue en línea.',
         'vhost_unreadable' => 'No se pudo leer la configuración del servidor web para este sitio, así que se dejó intacto.',
         'vhost_unparsed' => 'Este sitio se está sirviendo, pero su configuración no tiene un formato que el panel pueda leer. Adóptalo a mano o revisa el archivo.',
         'owner_not_tracked' => 'La cuenta de Linux propietaria de este sitio no es una que el panel gestione. Sincroniza primero los usuarios del sistema y vuelve a ejecutarlo.',
@@ -27,6 +29,7 @@ return [
         'discovery_failed' => 'No se pudo leer del servidor. No se cambió nada.',
         'adopt_failed' => 'Encontrado en el servidor, pero el panel no pudo crear un registro.',
         'requires_system_user' => 'Omitido porque los usuarios del sistema no formaban parte de esta ejecución y hacen falta primero.',
+        'after_sites_adopted' => 'Esta vista previa encontró sitios nuevos. Sus workers, certificados SSL y ajustes de PHP se muestran cuando los sitios estén sincronizados: al aplicar la sincronización se adoptan primero los sitios y después se leen estos.',
     ],
 
 ];

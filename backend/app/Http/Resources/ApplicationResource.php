@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Application;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Applications\SiteTypeSuggestion;
 use App\Services\Git\Webhooks\WebhookManager;
@@ -214,26 +215,27 @@ class ApplicationResource extends JsonResource
             // said so: the site looked exactly like a public-repository one
             // until the next deploy ran `git remote add origin ""` and failed.
             //
-            // Derived, not stored — an account-sourced site is the one with a
-            // `repository` and no `repository_url`, so a public-URL site is
-            // never mistaken for a broken one.
-            'git_account_missing' => $this->site_type === 'git'
-                && $this->git_account_id === null
-                && $this->repository !== null
-                && $this->repository_url === null,
+            // Derived, not stored — see Application::gitAccountMissing().
+            'git_account_missing' => $this->resource->gitAccountMissing(),
 
             // Deploy-on-push. The secret is shown because the user has to paste
             // it into their repository settings and will come back for it — the
             // same reasoning as the System User password. `url` is built here so
             // the frontend never assembles it (and never gets the path wrong on
             // a panel served under a different host).
+            //
+            // The secret only for someone who may deploy (`app_deployment`
+            // manage, the bar on POST /deploy): with it and the URL, anyone can
+            // sign a push and start a deployment, and it went to every role
+            // that could view the application.
             'webhook' => [
                 'enabled' => (bool) $this->webhook_enabled,
                 'provider' => $this->webhook_provider,
-                'url' => $this->webhook_identifier
-                    ? url("/api/webhooks/deploy/{$this->webhook_identifier}")
-                    : null,
-                'secret' => $this->webhook_secret,
+                'url' => $this->resource->webhookUrl(),
+                'secret' => $request->user()?->canManage('app_deployment') ? $this->webhook_secret : null,
+                // True when the panel added the webhook to the repository
+                // itself; false means it has to be pasted in by hand.
+                'registered' => $this->webhook_remote_id !== null,
                 // Which check this secret gets. `token` means a plaintext
                 // shared value — only GitLab has one, only because it is the
                 // sole thing the panel can generate there, and the UI should
@@ -254,7 +256,15 @@ class ApplicationResource extends JsonResource
             // shape of this field would then depend on whether it happens to
             // be populated, forcing every consumer to handle both.
             // `steps` below is a genuine list and correctly stays `[]`.
-            'settings' => (object) ($this->settings ?? []),
+            //
+            // Without the installer's passwords. New sites never put them
+            // here (they go to the encrypted `install_secrets`), but a value
+            // saved before that, or sent through PUT, must still not be
+            // returned to anyone who can merely view the site.
+            'settings' => (object) array_diff_key(
+                $this->settings ?? [],
+                array_flip(Application::INSTALL_SECRET_KEYS),
+            ),
 
             // Provisioning progress, so the UI can show which stage it reached
             // instead of a bare spinner.
@@ -275,9 +285,17 @@ class ApplicationResource extends JsonResource
             // never been provisioned.
             'provisioning_started_at' => $this->provisioning_started_at?->format('d-m-Y H:i:s'),
             'provisioning_started_at_human' => $this->provisioning_started_at?->diffForHumans(),
-            // What is actually on disk right now — the only honest answer to
-            // "which version is running".
+            // The last deploy that SUCCEEDED. Not necessarily what is on disk:
+            // deploys are in place, so one that fails after its checkout leaves
+            // the new commit live. `code_on_disk` answers that.
             'last_commit' => $this->last_commit,
+            // `{commit, state, message}`, state `deployed | incomplete |
+            // deploying`. Only on a response that loaded `latestCheckout`, so a
+            // list of sites does not run a query per row. `when` rather than
+            // `whenLoaded`: that one returns null for a loaded-but-empty
+            // relation without calling back, which skipped the `last_commit`
+            // fallback for every site with no recorded checkout.
+            'code_on_disk' => $this->when($this->resource->relationLoaded('latestCheckout'), fn () => $this->codeOnDisk()),
             'last_deployed_at' => $this->last_deployed_at?->format('d-m-Y H:i:s'),
             'last_deployed_at_human' => $this->last_deployed_at?->diffForHumans(),
             // Quote this to support; the technical detail is in the server-ops

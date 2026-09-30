@@ -95,4 +95,26 @@ class AkauntingSiteType extends AbstractSiteType
     {
         return ['min' => '8.1', 'max' => null];
     }
+
+    /**
+     * Akaunting is served from its application root, so `storage/` (logs
+     * with stack traces, sessions), `config/` and the rest sit under the web
+     * root. Taken from Akaunting's own `.htaccess` and the nginx sample it
+     * ships: its protected folders, `artisan`, `.env` and `*.log`, and code
+     * under `modules/` and `vendor/` — where only assets may load. Its rule
+     * for those two uses a lookahead ("anything but an asset"); this lists
+     * what is code instead, so OpenLiteSpeed can apply it too.
+     *
+     * @return array<int, string>
+     */
+    public function deniedPaths(): array
+    {
+        return [
+            '^/(app|bootstrap|config|database|overrides|resources|routes|storage|tests)/',
+            '^/artisan$',
+            '^/composer\\.(json|lock)$',
+            '\\.(env|log)$',
+            '^/(modules|vendor)/.*\\.(php[0-9]?|phtml|phar|inc|json|lock|md|txt|xml|ya?ml|dist|sh|twig|stub|neon)$',
+        ];
+    }
 }

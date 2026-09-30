@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, Pencil, Lock } from "lucide-react";
@@ -9,6 +8,7 @@ import { editDomainFormSchema, REDIRECT_STATUSES } from "@/lib/schemas/domain";
 import { updateDomain } from "@/lib/api/domains";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
+import { useRefresh } from "@/hooks/use-refresh";
 import { Button } from "@/components/ui/button";
 import { Caution } from "@/components/ui/caution";
 import { Input } from "@/components/ui/input";
@@ -43,7 +43,7 @@ import {
  */
 export function EditDomainDialog({ appId, domain, open, onOpenChange }) {
   const t = useTranslations("applications.domains");
-  const router = useRouter();
+  const { pending: refreshing, refreshThen } = useRefresh();
 
   const form = useForm({
     resolver: zodResolver(editDomainFormSchema),
@@ -83,15 +83,18 @@ export function EditDomainDialog({ appId, domain, open, onOpenChange }) {
         : { type: values.type };
     try {
       await updateDomain(appId, domain.domain, body);
-      toast.success(t("toast.updated", { domain: domain.domain }));
-      onOpenChange?.(false);
-      router.refresh();
+      // Closed once the list has re-read, so the row it closes onto already
+      // says what was just saved.
+      refreshThen(() => {
+        toast.success(t("toast.updated", { domain: domain.domain }));
+        onOpenChange?.(false);
+      });
     } catch (error) {
       handleValidationError(error, form);
     }
   }
 
-  const isSubmitting = form.formState.isSubmitting;
+  const isSubmitting = form.formState.isSubmitting || refreshing;
 
   return (
     <Form {...form}>

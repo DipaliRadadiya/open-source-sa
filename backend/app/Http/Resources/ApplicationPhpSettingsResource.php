@@ -4,6 +4,8 @@ namespace App\Http\Resources;
 
 use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
+use App\Rules\SupportedPhpVersion;
+use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Php\MemoryBudget;
 use App\Services\Server\Php\PhpStackManager;
 use App\Services\Server\Php\PoolManager;
@@ -41,7 +43,13 @@ class ApplicationPhpSettingsResource extends JsonResource
 
             // Read from disk every time. A stored list is wrong the moment
             // someone installs or removes a version.
-            'available_versions' => app(PhpStackManager::class)->stack()->versions(),
+            //
+            // Only the ones this site type runs on: WordPress (7.4+) listed an
+            // installed 7.0, and choosing it was refused with a 422 — the menu
+            // offered what the endpoint rejects. Filtered with the same rule
+            // the endpoint uses, so the two cannot disagree. The site's
+            // current version is always kept, so the menu shows what it is on.
+            'available_versions' => $this->versionsForType($application),
 
             // Whether this site has a pool of its own yet. Everything else on
             // this screen is only enforceable once it does — a shared pool
@@ -178,5 +186,34 @@ class ApplicationPhpSettingsResource extends JsonResource
             ['key' => 'balanced', 'pm_type' => 'ondemand', 'pm_max_children' => 6],
             ['key' => 'high', 'pm_type' => 'dynamic', 'pm_max_children' => 12],
         ]);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function versionsForType(Application $application): array
+    {
+        $versions = app(PhpStackManager::class)->stack()->versions();
+        $type = app(SiteTypeManager::class)->find((string) $application->site_type);
+        $range = $type?->supportedPhpRangeFor($application);
+
+        if ($type === null || $range === null) {
+            return $versions;
+        }
+
+        $rule = new SupportedPhpVersion($range['min'] ?? null, $range['max'] ?? null, $type->name());
+
+        return array_values(array_filter($versions, function (string $version) use ($rule, $application): bool {
+            if ($version === $application->php_version) {
+                return true;
+            }
+
+            $allowed = true;
+            $rule->validate('php_version', $version, function () use (&$allowed): void {
+                $allowed = false;
+            });
+
+            return $allowed;
+        }));
     }
 }

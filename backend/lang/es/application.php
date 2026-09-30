@@ -58,6 +58,8 @@ return [
         'stack' => 'Este servidor solo ejecuta contenedores, por lo que no aloja este tipo de aplicación.',
         'database' => 'Esta aplicación necesita :engines, que este servidor no tiene.',
         'php' => 'Este servidor no tiene PHP instalado.',
+        'php_version_install' => 'Este servidor no tiene ninguna versión de PHP en la que funcione :type (:range). Instala primero PHP :version desde la pantalla de PHP.',
+        'php_version_none' => 'Este servidor no tiene ninguna versión de PHP en la que funcione :type (:range), y ninguna de esas versiones se puede instalar desde el repositorio de paquetes del servidor.',
         'node' => 'Este servidor no tiene Node.js instalado.',
         'web_server' => 'Esta aplicación aún no está disponible en servidores :web_server.',
     ],
@@ -183,7 +185,7 @@ return [
         'table_prefix_random' => 'Déjalo vacío y se generará un prefijo aleatorio, manteniendo las tablas separadas si alguna vez se comparte la base de datos.',
         'timezone' => 'Zona horaria del sitio, p. ej. America/New_York o Europe/Madrid. Ver Ajustes → General → Zona horaria.',
         'table_prefix_optional' => 'Opcional. Si lo borras, las tablas se crean sin ningún prefijo.',
-        'start_command' => 'El archivo de entrada, por ejemplo \"node server.js\". No \"npm start\": un gestor de paquetes bifurca el proceso real, así que las señales de apagado nunca le llegan.',
+        'start_command' => 'El archivo de entrada, por ejemplo "node server.js". No "npm start": un gestor de paquetes bifurca el proceso real, así que las señales de apagado nunca le llegan.',
         'app_port' => 'Si lo dejas vacío, el panel elige uno libre.',
         'rendering_type' => 'El renderizado en servidor ejecuta tu app y hace de proxy hacia ella. Los otros dos compilan a archivos que el servidor web entrega directamente: más rápido y sin nada que mantener en ejecución.',
         'repository_url' => 'Un repositorio público: no hace falta cuenta. Debe ser una dirección https://.',
@@ -222,6 +224,8 @@ return [
         'dependencies' => 'Comprobando las dependencias',
         'verify' => 'Comprobando que el sitio responde',
         'verify_serving' => 'Comprobando que el sitio responde',
+        'create_admin' => 'Creando la cuenta de administrador',
+        'schedule_cron' => 'Programando las tareas en segundo plano',
         'worker' => 'El proceso en segundo plano se detuvo',
     ],
     /*
@@ -242,6 +246,8 @@ return [
         'attached_database_engine_mismatch' => 'Esta aplicación ya tiene una base de datos asociada, pero funciona con un motor que esta aplicación no puede usar. Desvincúlela, o asocie una en un motor compatible, e inténtelo de nuevo.',
         'serving_error' => 'La aplicación se inició pero responde a cada solicitud con un error. Lo más probable es que sus recursos no se compilaran por completo; consulte el registro de la aplicación.',
         'not_answering' => 'La aplicación se inició pero nunca respondió a una solicitud. Consulte el registro de la aplicación para ver por qué no está escuchando.',
+        'owner_not_created' => 'La aplicación se inició, pero no se pudo confirmar su administrador. El sitio no se entregó, porque mientras no exista un administrador cualquiera que lo abra puede crearlo. Inténtelo de nuevo; si sigue fallando, revise el registro de la aplicación.',
+        'app_not_ready' => 'La aplicación se inició, pero no terminó de arrancar en 2 minutos, así que no se pudo crear su administrador. Revise el registro de la aplicación e inténtelo de nuevo.',
         'out_of_memory' => 'El servidor se quedó sin memoria durante este paso y el sistema lo detuvo. Libere memoria, o añada swap, e inténtelo de nuevo.',
         'no_build_tools' => 'Este paso necesitaba compilar un módulo nativo y este servidor no tiene ningún compilador instalado. Instale las herramientas de compilación desde la pantalla de configuración y vuelva a intentarlo. Elegir otra versión de Node también puede ayudar, ya que algunas incluyen binarios ya compilados, pero cada paquete decide cuáles, así que por sí solo no es una solución fiable.',
         'composer_platform' => 'Composer no pudo instalar las dependencias de esta aplicación con la versión de PHP configurada en el sitio. La versión de PHP del sitio, o alguna de las extensiones que necesita, no cumple lo que exige el proyecto. Cambie la versión de PHP del sitio a una compatible, o instale la extensión que falta, y vuelva a desplegar.',
@@ -284,5 +290,27 @@ return [
         'heading' => 'Este sitio no está disponible temporalmente',
         'lede' => 'Su propietario lo ha puesto fuera de línea. Vuelve a intentarlo más tarde.',
         'foot' => 'Servido por el panel de control.',
+    ],
+
+    // A deploy that failed after its checkout left the new code live.
+    // See Application::codeOnDisk().
+    'code_on_disk' => [
+        'incomplete' => 'El último despliegue falló después de colocar el código nuevo, así que el sitio está ejecutando el commit :commit, que no está desplegado por completo. Corrige el problema y vuelve a desplegar.',
+    ],
+
+    // A delivery for a site whose deploy-on-push is switched off. See
+    // ApplicationWebhookController::receive().
+    'webhook_delivery' => [
+        'disabled' => 'El despliegue al hacer push está desactivado para este sitio en el panel, así que no se desplegó nada. Vuelve a activarlo en el panel o elimina este webhook.',
+    ],
+
+    // Why deploy-on-push still needs the webhook added by hand. See
+    // WebhookRegistrar.
+    'webhook_registration' => [
+        'no_account' => 'Este sitio se despliega desde una URL pública, no desde una cuenta de Git conectada, así que el panel no puede añadir el webhook por ti. Añádelo en la configuración del repositorio con la URL y el secreto de abajo.',
+        'signing_token' => 'GitLab crea los tokens de firma por sí mismo, así que el panel no puede añadir este webhook por ti. Añádelo en la configuración de Webhooks del repositorio con la URL de abajo y tu token de firma.',
+        'not_public' => 'La dirección del panel no es accesible desde internet, así que GitHub, GitLab o Bitbucket no podrían enviarle entregas. Da al panel una dirección pública o añade el webhook a mano cuando la tenga.',
+        'provider_refused' => 'El proveedor de Git no permitió que el panel añadiera el webhook. Probablemente el token conectado no tiene permiso para gestionar webhooks en este repositorio. Añádelo a mano con la URL y el secreto de abajo, o vuelve a conectar la cuenta con ese permiso.',
+        'removal_refused' => 'El despliegue al hacer push está desactivado, pero el proveedor de Git no permitió que el panel eliminara el webhook que añadió. Probablemente el token conectado no tiene permiso para borrar webhooks. Los push se seguirán enviando y rechazando hasta que borres el webhook en la configuración del repositorio.',
     ],
 ];

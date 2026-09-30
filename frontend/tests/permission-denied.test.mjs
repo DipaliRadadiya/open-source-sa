@@ -53,7 +53,9 @@ test("a refused page names itself, not whatever it would have bounced to", () =>
   for (const p of guarded) {
     assert.match(
       strip(read(p)),
-      /<PermissionDenied title=\{t\("(title|pageTitle)"\)\} \/>/,
+      // createTitle: the create page's own heading; it also says which
+      // permission is missing, since "view" is not the one it lacks.
+      /<PermissionDenied title=\{t\("(title|pageTitle|createTitle)"\)\}( description=\{t\("noPermission"\)\})? \/>/,
       `${p} must name itself`,
     );
   }
@@ -164,7 +166,7 @@ test("a screen is spelled one way", () => {
   // itself "Activity log" while its own table said "Activity Log".
   const en = JSON.parse(read("messages/en.json")).activity;
   assert.equal(en.title, "Activity Log");
-  assert.equal(en.title, en.mine.title);
+  assert.equal(en.title, en.server.title);
 });
 
 test("the clear button names what it actually clears", () => {
@@ -242,7 +244,9 @@ test("an application sub-page refuses in place too, not just the server ones", (
     );
     assert.match(
       src,
-      /if \(!can\(appPermissions, "\w+", "view", "application"\)\) \{\s*return <PermissionDenied title=\{t\("(pageTitle|title)"\)\} \/>;/,
+      // Environment and Workers first ask whether the screen exists for this site type;
+      // Clone tells an administrator the type can't be cloned (they hold every grant).
+      /if \(!can\(appPermissions, "\w+", "view", "application"\)\) \{\s*(?:if \(\(await get\w+\(id\)\)\.status === 404\) notFound\(\);\s*)?(?:if \(\(await getCurrentUser\(\)[^\n]*\)\?\.is_admin\) return <TypeNotSupported [^\n]*\/>;\s*)?return <PermissionDenied title=\{t\("(pageTitle|title)"\)\} \/>;/,
       `${p} must refuse in place, named`,
     );
   }

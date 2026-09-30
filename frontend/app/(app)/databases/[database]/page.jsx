@@ -20,10 +20,14 @@ import { DatabaseTabs } from "@/components/databases/database-tabs";
 import { UsedByCard } from "@/components/databases/used-by-card";
 import { DatabaseTables } from "@/components/databases/database-tables";
 import { DatabaseExports } from "@/components/databases/database-exports";
+import { applicationById } from "@/lib/backups/database-availability";
 import { DeleteDatabaseCard } from "@/components/databases/delete-database-card";
 import { PageCrumb } from "@/components/sections/page-crumb";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PermissionDenied } from "@/components/sections/permission-denied";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Caution } from "@/components/ui/caution";
 
 export const dynamic = "force-dynamic";
 
@@ -93,6 +97,12 @@ export default async function DatabasePage({ params, searchParams }) {
       />
     );
 
+  // The API answers 200 with no tables and size 0 when the engine is down
+  // (FS-C12), so the engine's own state is the only honest signal here.
+  const engineRow = (engines.engines ?? []).find((row) => row.engine === data.engine);
+  const engineDown = Boolean(engineRow?.installed) && !engineRow.running;
+  const engineName = t(`engines.${data.engine}`);
+
   return (
     <div className="space-y-6">
       <PageCrumb mono>{data.name}</PageCrumb>
@@ -107,11 +117,23 @@ export default async function DatabasePage({ params, searchParams }) {
               {t(`engines.${data.engine}`)}
             </Badge>
           </div>
-          <DatabaseFacts database={data} />
+          <DatabaseFacts database={data} hideSize={engineDown} />
         </div>
       </div>
 
       <div className="max-w-4xl space-y-4">
+        {engineDown ? (
+          <Caution
+            action={
+              <Button asChild variant="outline" size="sm">
+                <Link href="/services">{t("status.checkServices")}</Link>
+              </Button>
+            }
+          >
+            {t("detail.engineDown", { engine: engineName })}
+          </Caution>
+        ) : null}
+
         {/* Above the tabs: connecting an application is what this page is
             opened for, and it was three clicks deep inside Users. */}
         <ConnectionDetails
@@ -133,10 +155,11 @@ export default async function DatabasePage({ params, searchParams }) {
           initial={sp?.tab}
           counts={{
             users: data.users?.length ?? 0,
-            tables: tables.length,
-            exports: exportList.exports.filter(
-              (row) => row.database_id === data.id,
-            ).length,
+            // Null, not 0, when the list could not be read.
+            tables: tables.failed || engineDown ? null : tables.tables.length,
+            exports: exportList.failed
+              ? null
+              : exportList.exports.filter((row) => row.database_id === data.id).length,
           }}
           users={
             <DatabaseUsers
@@ -147,11 +170,19 @@ export default async function DatabasePage({ params, searchParams }) {
               remoteUsers={supportsRemoteUsers(engines, data.engine)}
             />
           }
-          tables={<DatabaseTables database={data} tables={tables} />}
+          tables={
+            <DatabaseTables
+              database={data}
+              tables={tables.tables}
+              read={tables}
+              unavailable={engineDown ? engineName : null}
+            />
+          }
           exports={
             <DatabaseExports
               database={data}
               exports={exportList.exports}
+              read={exportList}
               canManage={canManage}
             />
           }
@@ -160,7 +191,11 @@ export default async function DatabasePage({ params, searchParams }) {
         {/* Outside the tabs: deleting the database is not one of its sections,
             and it belongs at the end of the page past everything that might
             change your mind. */}
-        <DeleteDatabaseCard database={data} canManage={canManage} />
+        <DeleteDatabaseCard
+          database={data}
+          application={applicationById(appList.applications, data.application_id)}
+          canManage={canManage}
+        />
       </div>
     </div>
   );

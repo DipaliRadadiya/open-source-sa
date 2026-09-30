@@ -30,11 +30,19 @@ class FixPermissionsFake
     /** Whether the site has an `.env` on disk. */
     public static bool $envExists = false;
 
+    /** @var array<int, string> other files on disk, by absolute path */
+    public static array $files = [];
+
+    /** A command containing this fails, whatever $ok says. */
+    public static ?string $failOn = null;
+
     public static function reset(): void
     {
         self::$ran = [];
         self::$ok = true;
         self::$envExists = false;
+        self::$files = [];
+        self::$failOn = null;
     }
 }
 
@@ -93,19 +101,29 @@ function fakeFileServer(): void
 
         FixPermissionsFake::$ran[] = implode(' ', $args);
 
+        // The secret-file pass asks as the site user.
+        if ($binary === 'runuser' && ($args[4] ?? '') === 'test') {
+            $args = array_slice($args, 4);
+            $binary = 'test';
+        }
+
         if ($binary === 'test' && ($args[1] ?? '') === '-f') {
             // Named, not "yes to everything": the panel asks about more than
             // one candidate path now — a `.env` beside the code is the file
             // the framework reads, and answering yes to all of them made this
             // fake describe a site with two.
             return Process::result(
-                exitCode: FixPermissionsFake::$envExists && ($args[2] ?? '') === '/home/siteowner/shop/.env' ? 0 : 1,
+                exitCode: (FixPermissionsFake::$envExists && ($args[2] ?? '') === '/home/siteowner/shop/.env')
+                    || in_array($args[2] ?? '', FixPermissionsFake::$files, true) ? 0 : 1,
             );
         }
 
+        $ok = FixPermissionsFake::$ok
+            && (FixPermissionsFake::$failOn === null || ! str_contains(implode(' ', $args), FixPermissionsFake::$failOn));
+
         return Process::result(
-            exitCode: FixPermissionsFake::$ok ? 0 : 1,
-            errorOutput: FixPermissionsFake::$ok ? '' : 'permission denied',
+            exitCode: $ok ? 0 : 1,
+            errorOutput: $ok ? '' : 'permission denied',
         );
     });
 }
@@ -138,13 +156,57 @@ it('logs the action', function () {
     expect(ActivityLog::where('type', 'application')->where('action', 'permissions_fixed')->exists())->toBeTrue();
 });
 
-it('re-tightens .env back to 0600 when one exists', function () {
+it('makes .env private to the site user when the site runs as that user', function () {
+    fakeFileServer();
+    FixPermissionsFake::$envExists = true;
+    $this->application->forceFill(['isolated_at' => now()])->save();
+
+    $this->actingAs($this->admin)->postJson(fixUrl())->assertOk();
+
+    // As the site user: root's chmod followed a `.env` that was a link.
+    expect(FixPermissionsFake::$ran)->toContain('runuser -u siteowner -- chmod 0600 /home/siteowner/shop/.env')
+        // The group back to the user's own, in case it was the web server's
+        // before the site got a pool of its own.
+        ->and(FixPermissionsFake::$ran)->toContain('chown -h siteowner:siteowner /home/siteowner/shop/.env');
+});
+
+it('leaves .env readable by PHP where PHP runs as the web server account', function () {
+    // A flat 0600 here took the file away from the site's own PHP.
     fakeFileServer();
     FixPermissionsFake::$envExists = true;
 
     $this->actingAs($this->admin)->postJson(fixUrl())->assertOk();
 
-    expect(FixPermissionsFake::$ran)->toContain('chmod 0600 /home/siteowner/shop/.env');
+    $ran = collect(FixPermissionsFake::$ran)->values();
+    $chown = $ran->search('chown -h siteowner:www-data /home/siteowner/shop/.env');
+    $chmod = $ran->search('runuser -u siteowner -- chmod 0640 /home/siteowner/shop/.env');
+
+    expect($chown)->not->toBeFalse()
+        ->and($chmod)->not->toBeFalse()
+        ->and($chown)->toBeLessThan($chmod)
+        ->and($ran->contains(fn (string $c) => str_contains($c, 'chmod 0600')))->toBeFalse();
+});
+
+it('re-tightens the config files the bulk pass loosened, not only .env', function () {
+    fakeFileServer();
+    $this->application->forceFill(['site_type' => 'wordpress', 'isolated_at' => now()])->save();
+    FixPermissionsFake::$files = ['/home/siteowner/shop/public_html/wp-config.php'];
+
+    $this->actingAs($this->admin)->postJson(fixUrl())->assertOk();
+
+    expect(FixPermissionsFake::$ran)->toContain('runuser -u siteowner -- chmod 0600 /home/siteowner/shop/public_html/wp-config.php');
+});
+
+it('reports a secret file it could not tighten, rather than claiming success', function () {
+    // A `.env` swapped for a link to a root file: the user's chmod is
+    // refused, and the button must say so.
+    fakeFileServer();
+    FixPermissionsFake::$envExists = true;
+    FixPermissionsFake::$failOn = 'chmod 0640 /home/siteowner/shop/.env';
+
+    $this->actingAs($this->admin)->postJson(fixUrl())->assertStatus(500);
+
+    expect(ActivityLog::where('action', 'permissions_fixed')->exists())->toBeFalse();
 });
 
 it('does not touch .env when the site has none', function () {
@@ -152,7 +214,7 @@ it('does not touch .env when the site has none', function () {
 
     $this->actingAs($this->admin)->postJson(fixUrl())->assertOk();
 
-    expect(FixPermissionsFake::$ran)->not->toContain('chmod 0600 /home/siteowner/shop/.env');
+    expect(collect(FixPermissionsFake::$ran)->contains(fn (string $c) => str_contains($c, 'chmod') && str_contains($c, '/home/siteowner/shop/.env')))->toBeFalse();
 });
 
 it('re-tightens the session directory once the site is isolated', function () {
@@ -164,7 +226,9 @@ it('re-tightens the session directory once the site is isolated', function () {
 
     $this->actingAs($this->admin)->postJson(fixUrl())->assertOk();
 
-    expect(FixPermissionsFake::$ran)->toContain('chmod -R 0700 /home/siteowner/shop/.panel/sessions');
+    // As the site user: root's `chmod -R` descended into whatever a
+    // `sessions` link pointed at (reproduced live 2026-09-29).
+    expect(FixPermissionsFake::$ran)->toContain('runuser -u siteowner -- chmod -R 0700 /home/siteowner/shop/.panel/sessions');
 });
 
 it('leaves the session directory alone for a site that is not isolated', function () {
@@ -387,6 +451,25 @@ function fakeFileBrowserServer(): void
                 ."\t1700000000\t{$mode}\t{$owner}\t{$group}\t{$targetType}\t{$linkTarget}";
         };
 
+        // `find <trash> … -name '*.paths' -exec grep -H '' {} +` — each batch's
+        // record, printed the way grep -H prints it: `<file>:<line>`.
+        if ($binary === 'find' && in_array('*.paths', $inner, true)) {
+            $root = rtrim($inner[1], '/');
+            $lines = [];
+
+            foreach (FileBrowserFake::$fs as $path => $entry) {
+                if (preg_match('#^'.preg_quote($root, '#').'/\d{8}-\d{6}\.paths$#', $path) !== 1) {
+                    continue;
+                }
+
+                foreach (array_filter(explode("\n", (string) ($entry['content'] ?? ''))) as $line) {
+                    $lines[] = "{$path}:{$line}";
+                }
+            }
+
+            return Process::result(output: $lines === [] ? '' : implode("\n", $lines)."\n");
+        }
+
         // `find <trash> -mindepth 2 -printf '%P\n'` — everything under the
         // trash root, path relative to it. Keys in the fake are absolute for
         // anything above the web root, so this strips the root prefix the same
@@ -516,6 +599,17 @@ function fakeFileBrowserServer(): void
             $entry = FileBrowserFake::$fs[$relative($inner[1])] ?? null;
 
             return Process::result(output: $entry['content'] ?? '');
+        }
+
+        // `tee -a <trash>/<batch>.paths` — the record of what a batch holds.
+        if ($binary === 'tee' && ($inner[1] ?? null) === '-a') {
+            $rel = $relative($inner[2]);
+            FileBrowserFake::$fs[$rel] = [
+                'type' => 'f',
+                'content' => (FileBrowserFake::$fs[$rel]['content'] ?? '').($process->input ?? ''),
+            ];
+
+            return Process::result(exitCode: 0);
         }
 
         if ($binary === 'tee') {
@@ -1129,17 +1223,31 @@ describe('browsing', function () {
     });
 
     describe('permissions', function () {
-        it('lets a viewer browse, view and download but not edit', function () {
+        it('lets a viewer browse and search, but not read a file\'s contents', function () {
+            // Operator decision 2026-09-29 (option A). Reading contents let a
+            // view-only role open wp-config.php or .env and read the database
+            // password and APP_KEY every other screen hides from it.
             fakeFileBrowserServer();
             $user = User::factory()->create();
             grantPermission($user, 'app_file', view: true, manage: false);
 
             $this->actingAs($user)->getJson(filesUrl())->assertOk();
-            $this->actingAs($user)->getJson(filesUrl('/content?path=index.php'))->assertOk();
-            $this->actingAs($user)->getJson(filesUrl('/download?path=index.php'))->assertOk();
+            $this->actingAs($user)->getJson(filesUrl('/search?q=index'))->assertOk();
+            $this->actingAs($user)->getJson(filesUrl('/content?path=index.php'))->assertForbidden();
+            $this->actingAs($user)->getJson(filesUrl('/download?path=index.php'))->assertForbidden();
+            $this->actingAs($user)->getJson(filesUrl('/preview?path=index.php'))->assertForbidden();
             $this->actingAs($user)
                 ->putJson(filesUrl('/content'), ['path' => 'index.php', 'content' => 'x'])
                 ->assertForbidden();
+        });
+
+        it('lets someone who may manage files read them', function () {
+            fakeFileBrowserServer();
+            $user = User::factory()->create();
+            grantPermission($user, 'app_file', view: true, manage: true);
+
+            $this->actingAs($user)->getJson(filesUrl('/content?path=index.php'))->assertOk();
+            $this->actingAs($user)->getJson(filesUrl('/download?path=index.php'))->assertOk();
         });
 
         it('denies an unauthenticated caller', function () {
@@ -2073,7 +2181,8 @@ describe('bulk operations', function () {
         // come back together rather than scattering across twelve folders.
         $batches = collect(array_keys(FileBrowserFake::$fs))
             ->filter(fn (string $k) => str_contains($k, '/.panel/trash/'))
-            ->map(fn (string $k) => explode('/', explode('/.panel/trash/', $k)[1])[0])
+            // `<batch>.paths` is that batch's record of what it holds.
+            ->map(fn (string $k) => preg_replace('/\.paths$/', '', explode('/', explode('/.panel/trash/', $k)[1])[0]))
             ->unique();
 
         expect($batches)->toHaveCount(1);
@@ -2327,10 +2436,99 @@ describe('upload throttling', function () {
     });
 });
 
+it('treats an empty path as the site root, as documented', function () {
+    // `?path=` reaches the request as null (ConvertEmptyStringsToNull), and
+    // was refused with "The path field must be a string" (found live
+    // 2026-09-29).
+    FileBrowserFake::reset();
+    FileBrowserFake::$fs[''] = ['type' => 'd'];
+    FileBrowserFake::$fs['index.php'] = ['type' => 'f', 'content' => '<?php'];
+    fakeFileBrowserServer();
+
+    $this->actingAs($this->admin)->getJson(filesUrl().'?path=')->assertOk()->assertJsonPath('path', '');
+    $this->actingAs($this->admin)->getJson(filesUrl('/search').'?q=index&path=')->assertOk();
+});
+
 describe('trash', function () {
     beforeEach(function () {
         FileBrowserFake::reset();
         FileBrowserFake::$fs['old.txt'] = ['type' => 'f', 'size' => 5, 'content' => 'gone?'];
+    });
+
+    it('lists what was deleted from inside a folder, not the folder, and restores it', function () {
+        // Found live 2026-09-29: deleting `qa/note.txt` made `<batch>/qa/` for
+        // it, the listing read that scaffolding back as a deleted folder `qa`
+        // and hid the file, and "restore all" tried to put back a `qa` that
+        // was never deleted — refused with `exists`. Nothing deleted below the
+        // site root could be restored from the screen.
+        fakeFileBrowserServer();
+        FileBrowserFake::$fs['qa'] = ['type' => 'd'];
+        FileBrowserFake::$fs['qa/note.txt'] = ['type' => 'f', 'size' => 9, 'content' => 'hello v1'];
+
+        $this->actingAs($this->admin)
+            ->deleteJson(filesUrl(), ['path' => 'qa/note.txt', 'confirm' => true])
+            ->assertOk();
+
+        $trash = $this->actingAs($this->admin)->getJson(filesUrl('/trash'))->assertOk()->json('trash');
+
+        expect(collect($trash)->pluck('path')->all())->toBe(['qa/note.txt']);
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/trash/restore'), ['batch' => $trash[0]['batch']])
+            ->assertOk()
+            ->assertJsonPath('restored', true)
+            ->assertJsonPath('succeeded', ['qa/note.txt']);
+
+        expect(FileBrowserFake::$fs['qa/note.txt']['content'] ?? null)->toBe('hello v1');
+    });
+
+    it('empties the trash by removing what is in it, never the directory', function () {
+        // `.panel` is root's, so the site user cannot remove `trash` itself:
+        // `rm -rf <trash>` deleted everything, then failed on the directory
+        // and reported the empty as a 500 (found live 2026-09-29).
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->deleteJson(filesUrl('/trash'), ['confirm' => true])
+            ->assertOk();
+
+        $trash = '/home/siteowner/shop/.panel/trash';
+        $ran = collect(FileBrowserFake::$ran);
+
+        expect($ran->contains(fn (string $c) => str_contains($c, "find {$trash} -mindepth 1 -maxdepth 1 -exec rm -rf {} +")))->toBeTrue()
+            ->and($ran->contains(fn (string $c) => str_ends_with($c, "rm -rf {$trash}")))->toBeFalse();
+    });
+
+    it('empties one batch together with its record', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->deleteJson(filesUrl('/trash'), ['batch' => '20260929-093707', 'confirm' => true])
+            ->assertOk();
+
+        $trash = '/home/siteowner/shop/.panel/trash';
+
+        expect(collect(FileBrowserFake::$ran)->contains(
+            fn (string $c) => str_contains($c, "rm -rf {$trash}/20260929-093707 {$trash}/20260929-093707.paths")
+        ))->toBeTrue();
+    });
+
+    it('lists each item of a selection deleted from inside a folder', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$fs['qa'] = ['type' => 'd'];
+        FileBrowserFake::$fs['qa/keep'] = ['type' => 'd'];
+        FileBrowserFake::$fs['qa/keep/a.txt'] = ['type' => 'f', 'size' => 1, 'content' => 'a'];
+        FileBrowserFake::$fs['qa/keep2'] = ['type' => 'd'];
+
+        $this->actingAs($this->admin)
+            ->deleteJson(filesUrl(), ['paths' => ['qa/keep', 'qa/keep2'], 'confirm' => true, 'count' => 2])
+            ->assertOk();
+
+        $trash = $this->actingAs($this->admin)->getJson(filesUrl('/trash'))->assertOk()->json('trash');
+
+        // Both, and only the tops of the two deleted trees — not `qa`, and not
+        // `qa/keep/a.txt`.
+        expect(collect($trash)->pluck('path')->sort()->values()->all())->toBe(['qa/keep', 'qa/keep2']);
     });
 
     it('lists what was deleted with its size and retention, then puts it back', function () {
@@ -2466,7 +2664,7 @@ describe('panel directory ownership', function () {
         // this suite stayed green — Process is faked, and a fake never returns
         // EACCES.
         expect(collect(FileBrowserFake::$ran)->contains(
-            fn (string $c): bool => $c === 'chown siteowner:siteowner /home/siteowner/shop/.panel/file-backups'
+            fn (string $c): bool => $c === 'chown -h siteowner:siteowner /home/siteowner/shop/.panel/file-backups'
         ))->toBeTrue();
     });
 
@@ -2478,7 +2676,7 @@ describe('panel directory ownership', function () {
             ->assertOk();
 
         expect(collect(FileBrowserFake::$ran)->contains(
-            fn (string $c): bool => $c === 'chown siteowner:siteowner /home/siteowner/shop/.panel/trash'
+            fn (string $c): bool => $c === 'chown -h siteowner:siteowner /home/siteowner/shop/.panel/trash'
         ))->toBeTrue();
     });
 

@@ -14,6 +14,12 @@ use App\Models\Cronjob;
  */
 class CrontabManager
 {
+    /**
+     * `source_path` of a job adopted from a user crontab: `crontab:<user>`.
+     * The line itself is in `source_line`.
+     */
+    public const CRONTAB_SOURCE = 'crontab:';
+
     public function __construct(private ServerOps $serverOps) {}
 
     /**
@@ -69,9 +75,67 @@ class CrontabManager
             return null;
         }
 
+        if (str_starts_with($source, self::CRONTAB_SOURCE)) {
+            return $this->detachCrontabLine(
+                substr($source, strlen(self::CRONTAB_SOURCE)),
+                (string) $cronjob->source_line,
+                $cronjob,
+            );
+        }
+
         return $this->serverOps->run(
             ['rm', '-f', $source],
             ['feature' => 'cronjob', 'op' => 'detach_source', 'cronjob' => $cronjob->id, 'path' => $source],
+        );
+    }
+
+    /**
+     * Take an adopted job's line out of the user crontab it was read from.
+     *
+     * Only that line, matched exactly, and only the first match: the rest of
+     * the crontab is the user's own and is written back unchanged. A line that
+     * is no longer there (edited or removed by hand) leaves nothing to do, and
+     * neither does a user with no crontab at all.
+     */
+    private function detachCrontabLine(string $username, string $line, Cronjob $cronjob): ?ServerOpsResult
+    {
+        $line = trim($line);
+
+        if ($username === '' || $line === '') {
+            return null;
+        }
+
+        $context = ['feature' => 'cronjob', 'op' => 'detach_crontab_line', 'cronjob' => $cronjob->id, 'system_user' => $username];
+
+        $current = $this->serverOps->run(['crontab', '-l', '-u', $username], $context);
+
+        // "no crontab for <user>": the line is already gone.
+        if ($current->failed()) {
+            return str_contains($current->errorOutput(), 'no crontab') ? null : $current;
+        }
+
+        $lines = preg_split('/\r?\n/', rtrim($current->output(), "\n")) ?: [];
+        $index = null;
+
+        foreach ($lines as $i => $candidate) {
+            if (trim($candidate) === $line) {
+                $index = $i;
+                break;
+            }
+        }
+
+        if ($index === null) {
+            return null;
+        }
+
+        unset($lines[$index]);
+
+        $remaining = implode("\n", $lines);
+
+        return $this->serverOps->run(
+            ['crontab', '-u', $username, '-'],
+            $context,
+            input: $remaining === '' ? '' : $remaining."\n",
         );
     }
 

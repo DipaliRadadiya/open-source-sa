@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { ScrollFade } from "@/components/ui/scroll-fade";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isInFlight } from "@/lib/runtime/in-flight";
 
 /**
@@ -108,7 +108,7 @@ export function PhpVersionTabs({
 
   return (
     <div className="space-y-4">
-      <Tabs value={tab} onValueChange={select}>
+      <Tabs value={tab} onValueChange={select} className="gap-4">
         {/* Scrolls rather than wraps, matching the other tab strips: a bar that
             reflows to two rows stops reading as one control. */}
         <ScrollFade className="-mx-1 px-1 pb-1">
@@ -132,11 +132,19 @@ export function PhpVersionTabs({
             ))}
           </TabsList>
         </ScrollFade>
+
+        {/* Inside real tab panels: rendered beside the tabs, each tab's
+            aria-controls pointed at a panel that did not exist, so a screen
+            reader could not get from a tab to its content. Only the active
+            panel mounts, as before — the data is already on the page. */}
+        {sections.map((section) => (
+          <TabsContent key={section.value} value={section.value}>
+            {section.node}
+          </TabsContent>
+        ))}
       </Tabs>
 
-      {/* Rendered, not mounted per tab: both sections come from the server with
-          the page, so switching is instant and nothing refetches. */}
-      {sections.find((section) => section.value === tab)?.node}
+
     </div>
   );
 }

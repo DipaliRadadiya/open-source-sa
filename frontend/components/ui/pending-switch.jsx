@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
  *  - a `disabled` switch looks only slightly faded, which is not a way to say
  *    "this is in flight".
  *
- * `pending` puts a spinner beside it and locks it; `checked` should be the value
+ * `pending` puts a spinner beside it and ignores further changes; `checked` should be the value
  * the user asked for, not the one the server has caught up to yet.
  *
  * The spinner sits AFTER the switch, in a slot that is always present. Before,
@@ -23,17 +23,31 @@ import { Switch } from "@/components/ui/switch";
  * locked on it. Reserving the space costs 16px of a table cell and nothing
  * moves.
  */
-export function PendingSwitch({ pending = false, disabled = false, className, ...props }) {
+// `aside` fills the same slot while nothing is pending — a marker that a
+// disabled switch is locked for a reason, not merely off.
+export function PendingSwitch({ pending = false, disabled = false, aside = null, className, onCheckedChange, ...props }) {
   return (
     <span className={cn("inline-flex items-center gap-2", className)}>
-      <Switch {...props} disabled={disabled || pending} aria-busy={pending} />
+      {/* Locked by ignoring changes, not by `disabled`: a disabled element
+          drops keyboard focus, so toggling with Space left the reader
+          stranded at the top of the page every time. */}
+      <Switch
+        {...props}
+        disabled={disabled}
+        aria-busy={pending}
+        aria-disabled={pending}
+        className={cn(pending && "cursor-progress opacity-50")}
+        onCheckedChange={pending ? undefined : onCheckedChange}
+      />
       <span className="inline-flex size-4 shrink-0 items-center justify-center">
         {pending ? (
           <Loader2
             className="size-3.5 animate-spin text-muted-foreground"
             aria-hidden
           />
-        ) : null}
+        ) : (
+          aside
+        )}
       </span>
     </span>
   );

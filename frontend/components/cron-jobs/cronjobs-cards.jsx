@@ -22,6 +22,9 @@ import {
  * no column header left to say what it toggles.
  */
 export function CronjobsCards({
+  runAs,
+  prevPage = null,
+  canViewLogs = false,
   jobs,
   canManage = false,
   schedulePresets = [],
@@ -50,19 +53,21 @@ export function CronjobsCards({
                 {job.command}
               </p>
             </div>
-            {canManage ? (
-              <div className="-me-2 -mt-1 shrink-0">
-                <CronjobRowActions
-                  job={job}
-                  schedulePresets={schedulePresets}
-                  commandPresets={commandPresets}
-                  applications={applications}
-                  placeholder={placeholder}
-                  timezone={timezone}
-                  onDuplicate={onDuplicate}
-                />
-              </div>
-            ) : null}
+            <div className="-me-2 -mt-1 shrink-0">
+              <CronjobRowActions
+                job={job}
+                schedulePresets={schedulePresets}
+                commandPresets={commandPresets}
+                applications={applications}
+                placeholder={placeholder}
+                timezone={timezone}
+                onDuplicate={onDuplicate}
+                runAs={runAs}
+                prevPage={prevPage}
+                canManage={canManage}
+                canViewLogs={canViewLogs}
+              />
+            </div>
           </div>
 
           <CardFacts>
@@ -84,7 +89,7 @@ export function CronjobsCards({
               </div>
             </CardFact>
             <CardFact label={t("columns.active")}>
-              <CronjobActiveSwitch job={job} canManage={canManage} />
+              <CronjobActiveSwitch job={job} canManage={canManage} prevPage={prevPage} />
             </CardFact>
           </CardFacts>
         </CardListItem>

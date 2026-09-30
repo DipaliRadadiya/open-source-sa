@@ -60,8 +60,10 @@ export function useConfirmAction() {
       setError(null);
       try {
         const result = await fn();
-        close();
+        // onDone before the close: it is where a caller re-reads the page, and
+        // closing first uncovered the row that had just been deleted.
         await onDone?.(result);
+        close();
         return true;
       } catch (cause) {
         // Into the dialog, not a toast: it is the answer to a question the

@@ -6,6 +6,17 @@
 Description={{ $worker->name }} — {{ $application->domain }} (%i)
 After=network.target
 Wants=network-online.target
+@if ($autoRestart)
+{{-- Without a limit a crash loop restarts forever at 5s intervals and buries
+     the cause in the journal. Failing visibly is a state someone can act on. --}}
+{{-- In [Unit], where systemd reads them. Under [Service] the interval was
+     rejected ("Unknown key 'StartLimitIntervalSec' in section [Service],
+     ignoring" — in the journal of every sv-app unit on a real server), so the
+     burst counted against systemd's default 10 s window, which five restarts
+     5 s apart never fill: a crash loop restarted forever. --}}
+StartLimitBurst=5
+StartLimitIntervalSec=60
+@endif
 
 [Service]
 Type=simple
@@ -37,10 +48,6 @@ TimeoutStopSec={{ $stopWaitSeconds }}
      dropped has still stopped working. --}}
 Restart=always
 RestartSec=5
-{{-- Without a limit a crash loop restarts forever at 5s intervals and buries
-     the cause in the journal. Failing visibly is a state someone can act on. --}}
-StartLimitBurst=5
-StartLimitIntervalSec=60
 @else
 Restart=no
 @endif

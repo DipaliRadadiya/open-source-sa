@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { ExternalLink, Unplug } from "lucide-react";
@@ -20,15 +20,15 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 export function DisconnectDialog({ account, open, onOpenChange }) {
   const t = useTranslations("git.disconnect");
   const { name: brand } = useBranding();
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [pending, setPending] = useState(false);
 
   async function confirm() {
     setPending(true);
     try {
       await disconnectAccount(account.id);
+      await refreshAndWait();
       toast.success(t("done", { label: account.label }));
-      router.refresh();
       onOpenChange?.(false);
     } catch (error) {
       toast.error(apiMessage(error, t("failed")));

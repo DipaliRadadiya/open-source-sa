@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
@@ -34,7 +34,7 @@ import {
  */
 export function CleanupPanel({ categories, canManage, measuredAt }) {
   const t = useTranslations("diskCleaner");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [selected, setSelected] = useState(() => new Set());
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
@@ -97,10 +97,12 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
       const parsed = cleanResultSchema.safeParse(response.data);
       // Report what the disk actually gave back, not what we predicted — the
       // gap between the two is the complaint every other panel collects.
+      // Sizes re-read before the result shows, so "freed 2 GB" never sits
+      // beside categories still showing the old sizes.
+      await refreshAndWait();
       if (parsed.success) setResult(parsed.data);
       setConfirming(false);
       setSelected(new Set());
-      router.refresh();
     } catch (err) {
       // Kept in the dialog rather than only in a toast: the dialog stays open
       // on failure so the selection isn't lost, and a toast that has already
@@ -251,7 +253,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
                                 ) : null}
   
                                 {empty ? (
-                                  <Badge variant="secondary" className="font-normal">
+                                  <Badge variant="muted" className="font-normal">
                                     {t("list.alreadyClean")}
                                   </Badge>
                                 ) : null}

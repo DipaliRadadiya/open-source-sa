@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\SyncAction;
 use App\Enums\SyncMode;
 use App\Enums\SyncStatus;
 use App\Jobs\RunServerSync;
@@ -9,6 +10,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 #[Fillable(['user_id', 'mode', 'status', 'options', 'totals', 'reference', 'started_at', 'finished_at'])]
@@ -39,6 +41,34 @@ class SyncRun extends Model
     public function items(): HasMany
     {
         return $this->hasMany(SyncItem::class);
+    }
+
+    /**
+     * Accounts this preview found and an apply would adopt, username => home
+     * path. Always empty for an apply, which has adopted them for real by the
+     * time anything that belongs to them is read.
+     *
+     * A preview writes nothing, so the site, key and cron discoverers looked
+     * for their owner in the panel, did not find one, and said "skipped until
+     * users are synced" about things the same run applied would adopt
+     * (2026-09-24). Read back from this run's own items, so it is exactly the
+     * list the user is looking at: an ignored or skipped account is not in it.
+     *
+     * @return Collection<string, string|null>
+     */
+    public function previewedSystemUsers(): Collection
+    {
+        // Null on a run created without a mode and not read back: the column
+        // defaults to preview, and so does this.
+        if ($this->mode?->writes() === true) {
+            return new Collection;
+        }
+
+        return $this->items()
+            ->where('resource_type', 'system_user')
+            ->where('action', SyncAction::Found)
+            ->get(['resource_key', 'evidence'])
+            ->mapWithKeys(fn (SyncItem $item): array => [$item->resource_key => $item->evidence['home_path'] ?? null]);
     }
 
     /**

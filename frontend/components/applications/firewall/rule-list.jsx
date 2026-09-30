@@ -32,7 +32,7 @@ const VISIBLE_ROWS = 8;
  * Nothing here is a regex — the API takes plain strings and does a substring
  * match, so the input stays a plain input with no syntax to get wrong.
  */
-export function RuleList({ items, onChange, disabled, placeholder, emptyText, warnShort = false }) {
+export function RuleList({ items, onChange, disabled, placeholder, emptyText, warnShort = false, minLength = 1 }) {
   const t = useTranslations("applications.firewall");
   const [draft, setDraft] = useState("");
   const [error, setError] = useState(null);
@@ -45,6 +45,10 @@ export function RuleList({ items, onChange, disabled, placeholder, emptyText, wa
     if (!value) return;
     if (value.length > MAX_LENGTH) {
       setError(t("tooLong", { max: MAX_LENGTH }));
+      return;
+    }
+    if (value.length < minLength) {
+      setError(t("tooShort", { min: minLength }));
       return;
     }
     setError(null);

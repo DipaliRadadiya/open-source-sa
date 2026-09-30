@@ -3,6 +3,7 @@
 use App\Http\Controllers\API\Server\ApplicationContainerController;
 use App\Http\Controllers\API\Server\ApplicationController;
 use App\Http\Controllers\API\Server\ApplicationDomainController;
+use App\Http\Controllers\API\Server\ApplicationRootLockController;
 use App\Http\Controllers\API\Server\ApplicationSiteTypeController;
 use App\Http\Controllers\API\Server\ApplicationWebhookController;
 use App\Http\Controllers\API\Server\ApplicationWebRootController;
@@ -62,6 +63,13 @@ Route::post('/applications/{application}/enable', [ApplicationController::class,
 // because it is a server mutation — it creates a directory, rewrites the
 // vhost and reloads — and needs the throttle and the failure envelope that
 // go with one, not the plain-record semantics of `PUT /applications/{id}`.
+// The site folder's lock against its own user. A Lock button for sites that
+// server sync adopted, whose folder the panel did not create.
+Route::get('/applications/{application}/root-lock', [ApplicationRootLockController::class, 'show'])
+    ->middleware('permission:application');
+Route::post('/applications/{application}/root-lock', [ApplicationRootLockController::class, 'store'])
+    ->middleware(['permission:application,manage', 'throttle:10,1']);
+
 Route::put('/applications/{application}/web-root', [ApplicationWebRootController::class, 'update'])
     ->middleware(['permission:application,manage', 'throttle:10,1']);
 
@@ -217,6 +225,12 @@ Route::get('/applications/{application}/deployments', [DeploymentController::cla
     ->middleware('permission:app_deployment');
 Route::post('/applications/{application}/deployments', [DeploymentController::class, 'store'])
     ->middleware('permission:app_deployment,manage');
+// Polled every few seconds while the Deployment screen is open, so a deploy
+// started by a push appears there without a reload. Before the {deployment}
+// route, which would otherwise take `latest` for an id and 404.
+Route::get('/applications/{application}/deployments/latest', [DeploymentController::class, 'latest'])
+    ->withoutMiddleware('throttle:api')
+    ->middleware(['permission:app_deployment', 'throttle:progress']);
 // Polled line-by-line while a deploy runs — same reasoning as the two above.
 Route::get('/applications/{application}/deployments/{deployment}', [DeploymentController::class, 'show'])
     ->withoutMiddleware('throttle:api')

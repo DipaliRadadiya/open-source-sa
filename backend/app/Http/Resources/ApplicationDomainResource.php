@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\DomainType;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -18,7 +19,10 @@ class ApplicationDomainResource extends JsonResource
             'type' => $this->type->value,
             'type_title' => $this->type->label(),
             'redirect_to' => $this->redirect_to,
-            'redirect_status' => $this->redirect_status,
+            // Only a redirect has one. The column is NOT NULL with a default
+            // of 301, so reporting it raw put a status on every alias and
+            // primary — and kept a stale 302 on a redirect turned alias.
+            'redirect_status' => $this->type === DomainType::Redirect ? $this->redirect_status : null,
             'is_test' => $this->is_test,
 
             // DNS state, and the reason a certificate button is or is not

@@ -68,14 +68,11 @@ sudo bash install.sh --stack=ols      # OpenLiteSpeed + PHP
 Run it without `--stack` from a terminal and it asks. Under `curl | bash` there is
 no terminal to ask on, so pass the flag.
 
-**On `--stack=ols`:** supported, with three differences worth knowing before you
-pick it rather than after.
-
-**The WAF (8G firewall) is not available.** OpenLiteSpeed needs those rules as
-rewrite directives inside each site's `vhconf.conf`, and the templates do not
-carry them yet. The panel refuses to enable it rather than storing a setting it
-cannot enforce — but if a site needs that protection, it needs a different
-stack. The **bot blocker does work** on OpenLiteSpeed.
+**On `--stack=ols`:** supported, with two differences worth knowing before you
+pick it rather than after. The **8G firewall and the bot blocker both work** on
+OpenLiteSpeed; in detect mode the firewall marks its matches in the site's
+access log (`waf=1`) rather than a separate file, because OpenLiteSpeed allows
+one access log per site.
 
 **There is no per-site PHP isolation.** OpenLiteSpeed starts PHP itself and has
 no per-site pools. Per-site `php.ini` settings do work, through `lsphp`.

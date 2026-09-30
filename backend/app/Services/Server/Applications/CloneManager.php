@@ -100,7 +100,10 @@ class CloneManager
             'system_user_id' => $source->system_user_id,
             'cloned_from_application_id' => $source->id,
             'name' => $name,
-            'slug' => Application::uniqueSlug($name),
+            'slug' => Application::uniqueSlug(
+                $name,
+                alsoTaken: fn (string $slug): bool => app(SlugConflict::class)->for($slug) !== null,
+            ),
             'domain' => $domain,
             'site_type' => $source->site_type,
             'serving_profile' => $source->serving_profile,

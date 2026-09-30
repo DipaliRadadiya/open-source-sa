@@ -32,6 +32,7 @@ return [
         'optimize' => 'Caches werden neu aufgebaut',
         'frontend_build' => 'Oberfläche wird gebaut (das ist der langsame Teil)',
         'sync_privileges' => 'Berechtigungen des Panels werden aktualisiert',
+        'configure_queue_worker' => 'Queue-Worker wird konfiguriert',
         'restart_services' => 'Dienste werden neu gestartet',
         'maintenance_off' => 'Wartungsmodus wird verlassen',
         'health_check' => 'Neue Version wird überprüft',
@@ -45,6 +46,7 @@ return [
         'verify' => 'Das aktualisierte Panel hat nicht korrekt geantwortet, deshalb wurde das vorherige Release wiederhergestellt.',
         'prune' => 'Die alten Releases konnten nicht entfernt werden.',
         'sync_privileges' => 'Die Berechtigungen des Panels konnten nicht aktualisiert werden.',
+        'configure_queue_worker' => 'Der Queue-Worker konnte nicht konfiguriert werden.',
         'record_firewall_defaults' => 'Die Firewall-Standardregeln konnten nicht erfasst werden.',
         'resync_fail2ban' => 'Die fail2ban-Konfiguration konnte nicht neu synchronisiert werden.',
         'refresh_npm_catalogue' => 'Der npm-Katalog konnte nicht aktualisiert werden.',
@@ -75,6 +77,8 @@ return [
      * `migrate` can carry the `:migrated` suffix.
      */
     'reason_migrated' => 'Die Datenbankänderungen waren bereits angewendet und lassen sich nicht zurücknehmen: der Code läuft wieder auf der vorherigen Version, das Schema nicht. Die vorher erstellte Sicherung liegt in storage/app/panel-backups.',
+    'reason_db_restored' => 'Die Datenbank wurde auf den Stand vor dem Update zurückgesetzt. Ihr Zustand zum Zeitpunkt des Fehlers liegt in storage/app/panel-backups (die Datei mit der Endung -failed.sqlite).',
+    'reason_db_not_restored' => 'Die Datenbank wurde möglicherweise durch das Update verändert und wurde NICHT automatisch wiederhergestellt. Die vorher erstellte Sicherung liegt in storage/app/panel-backups; stellen Sie sie wieder her, bevor Sie es erneut versuchen.',
 
     'errors' => [
         'in_progress' => 'Es läuft bereits ein Update.',

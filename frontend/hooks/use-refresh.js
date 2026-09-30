@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useEffect, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useNavTransition } from "@/components/data-table/nav-transition";
 
@@ -22,14 +22,74 @@ import { useNavTransition } from "@/components/data-table/nav-transition";
  * Under a `<NavTransitionProvider>` it borrows the list's pending signal, so
  * the table dims with the same transition rather than running a second one
  * beside it; elsewhere it keeps its own.
+ *
+ * `refreshThen(after)` runs `after` once the refreshed page is on screen. A
+ * dialog that closed on the API's answer and refreshed behind it left the old
+ * list up for 1.5–4 s on a real server, under a toast saying it was done — a
+ * renamed file still wearing its old name. Keep the spinner while `pending`
+ * and do the toast and the close in `after`. It still runs if the refresh
+ * unmounts the caller.
  */
 export function useRefresh() {
   const nav = useNavTransition();
   const router = useRouter();
   const [localPending, startLocal] = useTransition();
 
+  const pending = nav ? nav.isPending : localPending;
+  const refresh = nav ? nav.refresh : () => startLocal(() => router.refresh());
+  // A queue, not a slot: two rows deleted back to back share one hook, and a
+  // second waiter overwriting the first left the first button spinning.
+  const after = useRef([]);
+  const wait = (fn) => {
+    after.current.push(fn);
+  };
+  const flush = () => {
+    const waiting = after.current;
+    after.current = [];
+    waiting.forEach((run) => run());
+  };
+
+  useEffect(() => {
+    if (pending || after.current.length === 0) return;
+    flush();
+  }, [pending]);
+
+  /*
+   * The refresh can remove the very component that asked for it: a deleted
+   * worker's row takes its own delete dialog with it. The effect above then
+   * never sees `pending` fall, and "Worker deleted." was never shown. Run the
+   * waiting step on the way out instead — by then the refresh has landed.
+   */
+  useEffect(() => () => flush(), []);
+
   return {
-    pending: nav ? nav.isPending : localPending,
-    refresh: nav ? nav.refresh : () => startLocal(() => router.refresh()),
+    pending,
+    refresh,
+    refreshThen: (fn) => {
+      wait(fn);
+      refresh();
+    },
+    // The same, awaitable: `await refreshAndWait()` before the success toast
+    // and the close, so a dialog never uncovers the state it just changed.
+    refreshAndWait: () =>
+      new Promise((resolve) => {
+        wait(resolve);
+        refresh();
+      }),
+    /*
+     * Same, but lands on a different page of the list. For the last row of a
+     * page leaving it: a refresh re-renders the now-empty page, the server
+     * redirects to the previous one, and the reader watched the loading
+     * screen in between. Going straight there has nothing to redirect.
+     */
+    navigateThen: (updates, fn) => {
+      if (!nav) {
+        refresh();
+        fn();
+        return;
+      }
+      wait(fn);
+      nav.setQuery(updates);
+    },
   };
 }

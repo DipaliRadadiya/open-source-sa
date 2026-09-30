@@ -1,6 +1,5 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, FilePlus } from "lucide-react";
@@ -12,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormModal } from "@/components/ui/form-modal";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { useRefresh } from "@/hooks/use-refresh";
 
 function joinPath(base, name) {
   return base ? `${base}/${name}` : name;
@@ -22,7 +22,7 @@ function joinPath(base, name) {
 // through the same call Upload uses, not a shortcut around anything.
 export function NewFileDialog({ appId, path, open, onOpenChange, onSuccess }) {
   const t = useTranslations("applications.files");
-  const router = useRouter();
+  const { pending: refreshing, refreshThen } = useRefresh();
   const form = useForm({
     resolver: zodResolver(newFileSchema),
     defaultValues: { name: "" },
@@ -33,11 +33,13 @@ export function NewFileDialog({ appId, path, open, onOpenChange, onSuccess }) {
     try {
       const empty = new Blob([""], { type: "text/plain" });
       await uploadFile(appId, targetPath, new File([empty], values.name.trim()));
-      toast.success(t("newFile.created", { name: values.name.trim() }));
-      onSuccess?.(targetPath);
-      onOpenChange?.(false);
-      form.reset({ name: "" });
-      router.refresh();
+      const name = values.name.trim();
+      refreshThen(() => {
+        toast.success(t("newFile.created", { name }));
+        onSuccess?.(targetPath);
+        onOpenChange?.(false);
+        form.reset({ name: "" });
+      });
     } catch (error) {
       const pathError = error.response?.data?.errors?.path?.[0];
       if (pathError) {
@@ -52,9 +54,10 @@ export function NewFileDialog({ appId, path, open, onOpenChange, onSuccess }) {
     }
   }
 
-  const isSubmitting = form.formState.isSubmitting;
+  const isSubmitting = form.formState.isSubmitting || refreshing;
 
   function handleOpenChange(next) {
+    if (isSubmitting) return;
     if (!next) form.reset({ name: "" });
     onOpenChange?.(next);
   }

@@ -30,3 +30,21 @@ export function setGenericErrorMessage(next) {
 export function genericErrorMessage() {
   return message;
 }
+
+/**
+ * "Too many requests", in the reader's language.
+ *
+ * Laravel's throttle answers 429 with its own untranslated "Too Many
+ * Attempts.", and every toast in the panel printed it as-is: English on every
+ * locale, and no hint that waiting is the whole fix. Handed over by the shell
+ * the same way as the sentence above.
+ */
+let rateLimited = "Too many requests. Wait a moment and try again.";
+
+export function setRateLimitedMessage(next) {
+  if (typeof next === "string" && next.trim()) rateLimited = next;
+}
+
+export function rateLimitedMessage() {
+  return rateLimited;
+}

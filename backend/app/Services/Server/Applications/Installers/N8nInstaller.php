@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications\Installers;
 
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
+use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
 
 /**
@@ -27,8 +28,9 @@ use Illuminate\Support\Str;
  *
  * Its data lives in SQLite under that folder, so it needs no database.
  *
- * There is no admin account to create: n8n's owner account is set up by the
- * first person to open the site.
+ * **The owner account is created by the panel**, in `afterStart()`. n8n has
+ * no command for it: left alone, its owner is whoever opens the site first,
+ * and a fresh install is on a public URL from the moment it starts.
  *
  * **Licensing:** n8n is fair-code under the Sustainable Use License, not open
  * source. Self-hosting for your own use is exactly what it permits — but it is
@@ -60,6 +62,131 @@ class N8nInstaller extends AbstractNodeInstaller
         $this->writeSecretFile($application, "{$documentRoot}/.env", $this->environment($application, $documentRoot));
     }
 
+    /**
+     * Claim the instance: create its owner through n8n's own setup endpoint,
+     * from the server, before the site is reported ready.
+     *
+     * The same request n8n's first-run page sends, to 127.0.0.1 — n8n
+     * listens there only. Once an owner exists the endpoint refuses (400),
+     * which is what closes the page to a stranger. The password travels on
+     * stdin, never on the command line.
+     *
+     * **A 200 proves nothing here.** While it starts, n8n answers every path —
+     * its API included — with `200` and a "n8n is starting up" page. The
+     * readiness check passed on that page, and the setup request got the same
+     * page and a 200: the panel reported the owner created and the site went
+     * live unclaimed (measured on a real server). So this waits for the real
+     * settings JSON first, and afterwards reads the settings again and
+     * requires the first-run page to be closed. Nothing else counts as done.
+     *
+     * Skipped when n8n already has an owner, so Retry Setup does not fail on
+     * an instance a previous attempt already claimed.
+     */
+    public function afterStart(Application $application, string $documentRoot): void
+    {
+        $base = 'http://127.0.0.1:'.((int) ($application->app_port ?: 5678));
+        $settings = $application->installSettings();
+
+        if (! $this->waitForSetupState($application, $base)) {
+            return;
+        }
+
+        $this->run('create_admin', [
+            'curl', '-sS', '--fail-with-body', '--max-time', '30',
+            '-H', 'Content-Type: application/json',
+            '--data-binary', '@-',
+            $base.'/rest/owner/setup',
+        ], $application, json_encode([
+            'email' => (string) ($settings['admin_email'] ?? ''),
+            'firstName' => 'Admin',
+            'lastName' => 'Owner',
+            'password' => (string) ($settings['admin_password'] ?? ''),
+        ], JSON_THROW_ON_ERROR));
+
+        if ($this->waitForSetupState($application, $base)) {
+            throw new ProvisioningFailedException('create_admin', (string) Str::uuid(), 'owner_not_created');
+        }
+    }
+
+    /**
+     * Whether n8n's first-run page is still open, once n8n can say.
+     *
+     * Polls until `/rest/settings` returns the real settings — not the
+     * starting-up page — for up to `server.installers.n8n.ready_attempts`
+     * tries, two seconds apart. Fails the step if it never does: an install
+     * that cannot confirm its owner must not be reported ready.
+     *
+     * @throws ProvisioningFailedException
+     */
+    private function waitForSetupState(Application $application, string $base): bool
+    {
+        $attempts = max(1, (int) config('server.installers.n8n.ready_attempts', 60));
+
+        for ($attempt = 1; $attempt <= $attempts; $attempt++) {
+            // Not `run()`, which fails the install on the first non-2xx: on
+            // its way up n8n refuses the connection, then serves the
+            // starting-up page, then answers its API with 404 for a moment
+            // while the routes register (all measured). Every one of those
+            // means "not yet", not "failed".
+            $response = $this->serverOps->run(
+                ['curl', '-sS', '--fail', '--max-time', '10', $base.'/rest/settings'],
+                ['feature' => 'application', 'op' => 'installer.create_admin_wait', 'application' => $application->id],
+                timeout: 20,
+            );
+            $open = $response->ok
+                ? ($this->decode($response->output())['data']['userManagement']['showSetupOnFirstLoad'] ?? null)
+                : null;
+
+            if (is_bool($open)) {
+                return $open;
+            }
+
+            if ($attempt < $attempts) {
+                Sleep::for(2)->seconds();
+            }
+        }
+
+        throw new ProvisioningFailedException('create_admin', (string) Str::uuid(), 'app_not_ready');
+    }
+
+    /**
+     * The key this instance already uses, when it has been started before.
+     *
+     * Generated once and never changed — but `install()` runs again on Retry
+     * Setup, and it used to write a fresh key every time. n8n keeps the key it
+     * first started with in `.n8n/config` and refuses to start when the
+     * environment disagrees ("Mismatching encryption keys"), so a retried n8n
+     * never came up again (found on a real server). Its own file is asked
+     * first, since that is what n8n compares against; the `.env` second.
+     */
+    private function existingEncryptionKey(Application $application, string $documentRoot): ?string
+    {
+        $read = fn (string $path) => $this->serverOps->run(
+            ['cat', $path],
+            ['feature' => 'application', 'op' => 'installer.read_encryption_key', 'application' => $application->id],
+        );
+
+        $config = $read($documentRoot.'/.n8n/config');
+        $key = $config->ok ? ($this->decode($config->output())['encryptionKey'] ?? null) : null;
+
+        if (! is_string($key) || $key === '') {
+            $env = $read($documentRoot.'/.env');
+            $key = $env->ok && preg_match('/^N8N_ENCRYPTION_KEY="?([^"\n]+)"?$/m', $env->output(), $m) ? $m[1] : null;
+        }
+
+        return is_string($key) && preg_match('/^[A-Za-z0-9+\/=_-]{16,}$/', $key) === 1 ? $key : null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function decode(string $json): array
+    {
+        $decoded = json_decode($json, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
     private function environment(Application $application, string $documentRoot): string
     {
         $domain = (string) $application->domain;
@@ -67,7 +194,7 @@ class N8nInstaller extends AbstractNodeInstaller
         $lines = [
             // Generated before first start — see the class note. 32 bytes of
             // randomness, hex, which is what n8n's own docs suggest.
-            'N8N_ENCRYPTION_KEY' => bin2hex(random_bytes(32)),
+            'N8N_ENCRYPTION_KEY' => $this->existingEncryptionKey($application, $documentRoot) ?? bin2hex(random_bytes(32)),
             'N8N_USER_FOLDER' => $documentRoot,
             'N8N_PORT' => (string) ($application->app_port ?: 5678),
             // Loopback only: the site is reached through the panel's reverse

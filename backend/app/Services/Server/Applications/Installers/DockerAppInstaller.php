@@ -143,6 +143,27 @@ class DockerAppInstaller implements SiteInstaller
     }
 
     /**
+     * Nothing to do once the container is up — and it has to be said explicitly.
+     *
+     * `AbstractSiteInstaller` carries an empty default, but this class implements
+     * `SiteInstaller` directly (it shares nothing with the host installers: no
+     * archive to unpack, no PHP to configure, no web root to populate), so a method
+     * added to the interface lands here as a fatal rather than as an inherited
+     * no-op. That is exactly what happened when `afterStart()` arrived on main
+     * while this file only existed on this branch: git merged both sides cleanly
+     * and the result would not load — every test touching the site-type catalog
+     * died with no output at all.
+     *
+     * The hook exists for apps whose first administrator is created by whoever
+     * opens the site first — n8n and Uptime Kuma — so an install that stopped at
+     * "started" handed the site to the first stranger to find the URL. No
+     * container one-click has that shape: each generates its admin credential
+     * during install and the compose file passes it in as an environment variable
+     * before the app has ever run. If one ever does, this is where it goes.
+     */
+    public function afterStart(Application $application, string $documentRoot): void {}
+
+    /**
      * @param  array<string, mixed>  $context
      */
     public function install(Application $application, string $documentRoot, array $context): void

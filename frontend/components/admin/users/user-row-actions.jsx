@@ -46,7 +46,9 @@ export function UserRowActions({ user, roles = [], rolesFailed = false, currentU
       await impersonateUser(user.id);
       // Session identity changed — hard-navigate so SSR re-reads the new
       // cookie (router.refresh would leave stale server-rendered chrome).
-      window.location.href = "/dashboard";
+      // "/", not "/dashboard": the front door sends each role to the first
+      // page it may open, and a role without Dashboard landed on a refusal.
+      window.location.href = "/";
     } catch (error) {
       toast.error(apiMessage(error, t("actions.impersonateFailed")));
       setImpersonating(false);
@@ -103,6 +105,7 @@ export function UserRowActions({ user, roles = [], rolesFailed = false, currentU
         user={user}
         roles={roles}
         rolesFailed={rolesFailed}
+        isSelf={isSelf}
         open={editOpen}
         onOpenChange={setEditOpen}
       />

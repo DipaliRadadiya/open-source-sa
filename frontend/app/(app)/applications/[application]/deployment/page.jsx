@@ -11,6 +11,7 @@ import { gitProviderFromUrl } from "@/lib/applications/git-provider-from-url";
 import { DeploymentPanel } from "@/components/applications/deployment/deployment-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PermissionDenied } from "@/components/sections/permission-denied";
+import { isSettled } from "@/lib/applications/settled";
 
 export const dynamic = "force-dynamic";
 
@@ -40,21 +41,22 @@ export default async function ApplicationDeploymentPage({ params }) {
     return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   const application = result.application;
+  // Git sites only — the deploy endpoint 404s for anything else and the sidebar
+  // hides the item, so a hand-typed URL for a non-git site is simply not found.
+  // Checked before the grant: the API drops `app_deployment` for a non-git
+  // site, so the other order told its owner they lacked access.
+  const isGit = Boolean(application.repository || application.repository_url);
+  if (!isGit) notFound();
   // Deployment is its own grant, separate from the server-level `application`.
   if (!can(appPermissions, "app_deployment", "view", "application")) {
     return <PermissionDenied title={t("pageTitle")} />;
   }
-  // Git sites only — the deploy endpoint 404s for anything else and the sidebar
-  // hides the item, so a hand-typed URL for a non-git site is simply not found.
-  const isGit = Boolean(application.repository || application.repository_url);
-  if (!isGit) notFound();
 
   const canManage = can(appPermissions, "app_deployment", "manage", "application");
   // The failure banner offers the site's own log as the evidence, and the Logs
   // page is a separate grant — offering a link that would only redirect them
   // back here is worse than offering nothing.
   const canViewLogs = can(appPermissions, "app_log", "view", "application");
-  const settled = application.status === "active";
   const [{ providers }, history, gitAccounts] = await Promise.all([
     getWebhookProviders(),
     // History and settings arrive together; a failure here must not blank the
@@ -64,7 +66,8 @@ export default async function ApplicationDeploymentPage({ params }) {
     // application payload carries `git_account_id` and no provider name, and
     // without it the webhook card offers all three as if the choice were open
     // — it is not: a GitHub site can only ever be pushed to by GitHub.
-    application.git_account_id
+    // Also when the account is gone: re-linking offers the ones left.
+    application.git_account_id || application.git_account_missing
       ? getGitAccounts().then((r) => r.accounts ?? []).catch(() => [])
       : Promise.resolve([]),
   ]);
@@ -102,6 +105,10 @@ export default async function ApplicationDeploymentPage({ params }) {
       ? providers.filter((p) => p.name === gitProvider)
       : providers;
 
+  // The history too: a site whose deploys are all recorded failures has run
+  // deploys, and belongs on this page rather than behind a waiting message.
+  const settled = isSettled(application) || history.deployments.length > 0;
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -121,6 +128,8 @@ export default async function ApplicationDeploymentPage({ params }) {
           canViewLogs={canViewLogs}
           deployments={history.deployments}
           settings={history.settings}
+          history={history}
+          gitAccounts={gitAccounts}
         />
       )}
     </div>

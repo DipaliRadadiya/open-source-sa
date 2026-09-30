@@ -8,7 +8,9 @@ use App\Enums\DomainType;
 use App\Enums\WafMode;
 use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
+use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Applications\ApplicationLogDirectory;
+use App\Services\Server\Applications\PanelDirectory;
 use App\Services\Server\Applications\SiteRootLock;
 use App\Services\Server\Certificates\CertbotClient;
 use App\Services\Server\Certificates\CertificateFiles;
@@ -148,6 +150,19 @@ abstract class AbstractWebServerDriver implements WebServerDriver
      * server inherits the answer that grants nothing, and has to say so
      * deliberately if its workers open their own logs.
      */
+    /**
+     * nginx and Apache workers run as the account PHP-FPM pool sockets are
+     * already handed to ({@see PoolManager}) —
+     * `www-data` on the Debian packages install.sh uses. The same setting, so
+     * the two cannot name different accounts.
+     */
+    public function siteReaderUser(): ?string
+    {
+        $user = (string) config('server.web_server_user', 'www-data');
+
+        return $user === '' ? null : $user;
+    }
+
     public function logWriterUser(): ?string
     {
         return null;
@@ -173,6 +188,12 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             $application->panelPath(),
             ['feature' => 'application', 'op' => 'ensure_panel_dir', 'application' => $application->id],
         );
+
+        // And root's again, with anything planted in it removed. Here because
+        // `sites:resync` comes through this method on every deploy: that is
+        // how the servers where `.panel` had been handed to the site user
+        // repair themselves. See PanelDirectory::secure().
+        app(PanelDirectory::class)->secure($application);
     }
 
     /**
@@ -300,6 +321,8 @@ abstract class AbstractWebServerDriver implements WebServerDriver
      */
     protected function viewData(Application $application, string $documentRoot): array
     {
+        $siteType = app(SiteTypeManager::class)->find((string) $application->site_type);
+
         return [
             'application' => $application,
             'domain' => $application->domain,
@@ -337,7 +360,33 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             // can reject the request; this reserved-name pair identifies no
             // user application and is generated lazily on brownfield boxes.
             'tlsFallback' => $this->certificateFiles->fallbackPaths(),
-            'forceHttps' => (bool) ($application->scheme() === 'https' && $application->certificate?->force_https),
+            // Paths the site type ships `.htaccess` deny rules for. Apache
+            // reads those itself; nginx and OpenLiteSpeed render these.
+            // A disabled site: its vhost serves the shared "unavailable" page,
+            // and serves it as 503 — a 200 told monitors and crawlers the site
+            // was up.
+            'disabled' => $application->disabled_at !== null,
+            'deniedPaths' => $siteType?->deniedPaths() ?? [],
+            // Directories with their own front controller, which Apache gets
+            // from the application's own `.htaccess`.
+            'subdirectoryFrontControllers' => $siteType?->subdirectoryFrontControllers() ?? [],
+            // /.well-known routing and file types the application sets in its
+            // own .htaccess — Nextcloud's CalDAV/CardDAV discovery and .mjs.
+            'wellKnown' => $siteType?->wellKnownRoutes() ?? ['redirects' => [], 'fallback' => null],
+            'mimeTypes' => $siteType?->mimeTypes() ?? [],
+            'forceHttps' => $forceHttps = (bool) ($application->scheme() === 'https' && $application->certificate?->force_https),
+            // Names the certificate does not cover, while HTTPS is forced.
+            // Sending one to https://<that name> lands the visitor on a
+            // certificate error, so they go to the primary instead — which a
+            // forced-HTTPS certificate always covers, since forcing needs the
+            // site's own scheme to be https. Apache already sends every name
+            // to the primary; nginx and OLS keep each covered name's own host.
+            'uncoveredNames' => $forceHttps
+                ? array_values(array_filter(
+                    $application->serverNames(),
+                    fn (string $name): bool => ! $application->certificate->covers($name),
+                ))
+                : [],
             // The shared ACME webroot, aliased into every profile. Per-site
             // document roots cannot work for node and proxy sites — they serve
             // nothing from disk, so there is nowhere for certbot to drop the
@@ -418,6 +467,20 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     }
 
     /**
+     * A WAF exception or custom rule as a case-insensitive *literal* match,
+     * ready to sit inside a double-quoted regex in this web server's config.
+     *
+     * nginx: `preg_quote` makes it literal; nginx's quoted strings then turn
+     * `\\` into `\` and `\"` into `"`, so a backslash the user typed is
+     * doubled and a quote escaped. Control characters never get here — the
+     * request refuses them.
+     */
+    public function wafPattern(string $value): string
+    {
+        return str_replace(['\\\\', '"'], ['\\\\\\\\', '\\"'], preg_quote($value));
+    }
+
+    /**
      * Null unless the firewall is on and actually has something to check —
      * zero categories and zero custom rules means nothing would ever be
      * blocked, so the template renders no block at all rather than an
@@ -447,8 +510,12 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         return [
             'mode' => $application->waf_mode instanceof WafMode ? $application->waf_mode->value : (string) $application->waf_mode,
             'categories' => $categories,
-            'exceptions' => $exceptions,
-            'customRules' => $customRules,
+            // Escaped here, for this web server's config syntax, and printed
+            // raw by the templates. They went through Blade's `{{ }}`, which
+            // HTML-encodes: `page=1&x` became `page=1&amp;x` in the config and
+            // never matched (found live, 2026-09-30).
+            'exceptions' => array_map(fn (string $value): string => $this->wafPattern($value), $exceptions),
+            'customRules' => array_map(fn (string $value): string => $this->wafPattern($value), $customRules),
             'detectLogPath' => $application->wafDetectLogPath(),
         ];
     }

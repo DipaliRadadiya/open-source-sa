@@ -10,6 +10,7 @@ const KEYS = [
   "swapTooLarge",
   "invalidPort",
   "invalidTime",
+  "invalidHour",
   "invalidMemory",
   "passwordTooShort",
 ];

@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\ActivityLog;
+use App\Models\FirewallRule;
 use App\Models\User;
 use Carbon\Carbon;
 use Database\Seeders\PermissionSeeder;
@@ -34,11 +35,11 @@ beforeEach(function () {
 
 afterEach(fn () => File::deleteDirectory($this->dir));
 
-function fakeSettings(bool $swapActive = false, bool $swapoffOk = true): void
+function fakeSettings(bool $swapActive = false, bool $swapoffOk = true, bool $sshSocket = false): void
 {
     $redis = test()->redisCli;
     $swapFile = test()->swapFile;
-    Process::fake(function ($process) use ($redis, $swapActive, $swapoffOk, $swapFile) {
+    Process::fake(function ($process) use ($redis, $swapActive, $swapoffOk, $swapFile, $sshSocket) {
         $cmd = $process->command;
         // ServerOps prefixes privileged operations with sudo in this test
         // environment; fakes assert the underlying command semantics.
@@ -53,7 +54,6 @@ function fakeSettings(bool $swapActive = false, bool $swapoffOk = true): void
         if ($bin === 'test' && ($cmd[1] ?? '') === '-s' && str_ends_with((string) end($cmd), '/.ssh/authorized_keys')) {
             return Process::result(exitCode: 1);
         }
-
 
         // Checked before the `swapon` case below, which is the activation
         // call rather than the query and shares its binary.
@@ -95,6 +95,9 @@ function fakeSettings(bool $swapActive = false, bool $swapoffOk = true): void
         }
         if ($bin === 'hostnamectl' && ($cmd[1] ?? '') === '--static') {
             return Process::result(output: 'server.example');
+        }
+        if ($cmd === ['systemctl', 'is-active', 'ssh.socket']) {
+            return Process::result(output: $sshSocket ? "active\n" : "inactive\n", exitCode: $sshSocket ? 0 : 3);
         }
         if ($bin === 'sshd' && ($cmd[1] ?? '') === '-T') {
             return Process::result(output: "port 22\npermitrootlogin prohibit-password\npasswordauthentication yes\n");
@@ -297,7 +300,152 @@ it('writes the ssh drop-in, tests then reloads', function () {
         ->toContain('AllowGroups ssh-users sudo root');
     Process::assertRan(fn ($p) => in_array('sshd', $p->command, true) && in_array('-t', $p->command, true));
     Process::assertRan(fn ($p) => in_array('rm', $p->command, true) && in_array($this->dir.'/99-panel.conf', $p->command, true));
-    Process::assertRan(fn ($p) => in_array('systemctl', $p->command, true) && in_array('reload', $p->command, true) && in_array('ssh', $p->command, true));
+    Process::assertRan(fn ($p) => in_array('systemctl', $p->command, true) && in_array('try-reload-or-restart', $p->command, true) && in_array('ssh', $p->command, true));
+});
+
+describe('a socket-activated SSH (Ubuntu 24.04+)', function () {
+    // The port sshd listens on belongs to ssh.socket, generated from
+    // sshd_config at daemon-reload. Reloading ssh alone left the 26.04 test
+    // server answering on 22 while every screen said 2222.
+    it('moves the socket when the port changes', function () {
+        fakeSettings(sshSocket: true);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 2222, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertOk();
+
+        Process::assertRan(fn ($p) => array_slice($p->command, -2) === ['systemctl', 'daemon-reload']);
+        Process::assertRan(fn ($p) => array_slice($p->command, -3) === ['systemctl', 'restart', 'ssh.socket']);
+    });
+
+    it('lets the rule for the port SSH left be removed, and keeps the new one protected', function () {
+        fakeSettings(sshSocket: true);
+        $old = FirewallRule::create(['port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+        $web = FirewallRule::create(['port_from' => 443, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 2222, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertOk();
+
+        expect($old->fresh()->isProtected())->toBeFalse()
+            ->and($web->fresh()->isProtected())->toBeTrue();
+    });
+
+    it('protects the rule again when SSH moves back to a port it left', function () {
+        fakeSettings(sshSocket: true);
+        Process::fake(function ($process) {
+            $cmd = ($process->command[0] ?? null) === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            return match (true) {
+                ($cmd[0] ?? '') === 'ufw' => Process::result(output: "Status: active\n"),
+                ($cmd[0] ?? '') === 'sshd' && ($cmd[1] ?? '') === '-T' => Process::result(output: "port 2222\npermitrootlogin no\npasswordauthentication yes\n"),
+                ($cmd[0] ?? '') === 'tee' => (function () use ($cmd, $process) {
+                    File::put($cmd[1], (string) $process->input);
+
+                    return Process::result();
+                })(),
+                default => Process::result(),
+            };
+        });
+        $released = FirewallRule::create(['port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'user']);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 22, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertOk();
+
+        expect($released->fresh()->isProtected())->toBeTrue();
+    });
+
+    /**
+     * A socket-activated box: `ss` reports `$listeners`, the socket is in
+     * `$socketState`, and restarting it fails while the drop-in names
+     * `$unbindable`. The drop-in is really written, so a rollback is visible.
+     */
+    function fakeSocketBox(string $listeners = '', string $socketState = 'active', ?int $unbindable = null): void
+    {
+        $dir = test()->dir;
+
+        Process::fake(function ($process) use ($listeners, $socketState, $unbindable, $dir) {
+            $cmd = ($process->command[0] ?? null) === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            return match (true) {
+                ($cmd[0] ?? '') === 'ss' => Process::result(output: $listeners),
+                ($cmd[0] ?? '') === 'ufw' => Process::result(output: "Status: inactive\n"),
+                ($cmd[0] ?? '') === 'sshd' && ($cmd[1] ?? '') === '-T' => Process::result(output: "port 22\npermitrootlogin no\npasswordauthentication yes\n"),
+                $cmd === ['systemctl', 'is-active', 'ssh.socket'] => Process::result(output: "{$socketState}\n", exitCode: $socketState === 'active' ? 0 : 3),
+                $cmd === ['systemctl', 'restart', 'ssh.socket'] => $unbindable !== null && str_contains((string) @file_get_contents($dir.'/00-panel.conf'), "Port {$unbindable}\n")
+                    ? Process::result(errorOutput: 'Job for ssh.socket failed.', exitCode: 1)
+                    : Process::result(),
+                ($cmd[0] ?? '') === 'tee' => (function () use ($cmd, $process) {
+                    File::put($cmd[1], (string) $process->input);
+
+                    return Process::result();
+                })(),
+                default => Process::result(),
+            };
+        });
+    }
+
+    it('refuses a port another program already listens on', function () {
+        fakeSocketBox("tcp LISTEN 0 511 0.0.0.0:80 0.0.0.0:* users:((\"apache2\",pid=900,fd=4))\n");
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 80, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['port' => __('errors/setting.ssh_port_in_use', ['port' => 80])]);
+
+        Process::assertDidntRun(fn ($p) => in_array('tee', $p->command, true));
+        Process::assertDidntRun(fn ($p) => in_array('ssh.socket', $p->command, true) && in_array('restart', $p->command, true));
+    });
+
+    it('does not count SSH itself as the program in the way', function () {
+        fakeSocketBox("tcp LISTEN 0 4096 0.0.0.0:2222 0.0.0.0:* users:((\"systemd\",pid=1,fd=60))\n");
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 2222, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertOk();
+    });
+
+    it('brings a failed socket back even when the port stays the same', function () {
+        fakeSocketBox(socketState: 'failed');
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 22, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertOk();
+
+        Process::assertRan(fn ($p) => array_slice($p->command, -3) === ['systemctl', 'restart', 'ssh.socket']);
+    });
+
+    it('puts the old port back when the socket will not bind the new one', function () {
+        fakeSocketBox(unbindable: 2222);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 2222, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertServerError();
+
+        expect(File::get($this->dir.'/00-panel.conf'))->toContain("Port 22\n")->not->toContain('Port 2222');
+        Process::assertRanTimes(fn ($p) => array_slice($p->command, -3) === ['systemctl', 'restart', 'ssh.socket'], 2);
+    });
+
+    it('leaves the socket alone when the port stays the same', function () {
+        fakeSettings(sshSocket: true);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 22, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertOk();
+
+        Process::assertDidntRun(fn ($p) => in_array('ssh.socket', $p->command, true) && in_array('restart', $p->command, true));
+    });
+
+    it('does not touch a socket that is not in use', function () {
+        fakeSettings();
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 2222, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertOk();
+
+        Process::assertDidntRun(fn ($p) => in_array('restart', $p->command, true));
+    });
 });
 
 it('blocks disabling password auth with no ssh key (lockout guard)', function () {
@@ -397,6 +545,42 @@ it('applies redis settings via redis-cli', function () {
 
     Process::assertRan(fn ($p) => $p->command === [$this->redisCli, 'config', 'set', 'maxmemory', '256mb']);
     Process::assertRan(fn ($p) => $p->command === [$this->redisCli, 'config', 'rewrite']);
+});
+
+it('refuses an allkeys policy while the panel queues its jobs in redis', function (string $policy) {
+    config(['queue.default' => 'redis']);
+    fakeSettings();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/settings/redis', ['maxmemory' => '256mb', 'maxmemory_policy' => $policy])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['maxmemory_policy' => __('setting.redis.policy_evicts_panel_queue')]);
+
+    Process::assertDidntRun(fn ($p) => ($p->command[1] ?? null) === 'config' && ($p->command[2] ?? null) === 'set');
+})->with(['allkeys-lru', 'allkeys-lfu', 'allkeys-random']);
+
+it('still accepts noeviction and volatile policies while the panel queues in redis', function (string $policy) {
+    config(['queue.default' => 'redis']);
+    fakeSettings();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/settings/redis', ['maxmemory' => '256mb', 'maxmemory_policy' => $policy])
+        ->assertOk();
+})->with(['noeviction', 'volatile-lru', 'volatile-ttl']);
+
+it('names the refused policies so the form can disable them', function () {
+    config(['queue.default' => 'redis']);
+    fakeSettings();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/settings')->assertOk()
+        ->assertJsonPath('settings.redis.unsafe_policies', ['allkeys-lru', 'allkeys-lfu', 'allkeys-random']);
+
+    config(['queue.default' => 'database']);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/settings')->assertOk()
+        ->assertJsonPath('settings.redis.unsafe_policies', []);
 });
 
 it('omits redis and 404s its update when redis-cli is absent', function () {
@@ -549,6 +733,36 @@ it('keeps the existing swap when the new one cannot be allocated', function () {
         ->and(File::get(test()->swapFile))->toBe('the swap in use right now');
     Process::assertNotRan(fn ($p) => $p->command === ['rm', '-f', test()->swapFile]);
 });
+
+it('refuses a hostname the kernel would not keep as given', function (string $hostname) {
+    fakeSettings();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/settings/general', ['timezone' => 'Etc/UTC', 'hostname' => $hostname, 'ntp' => true])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('hostname');
+
+    Process::assertDidntRun(fn ($p) => ($p->command[0] ?? '') === 'hostnamectl' && ($p->command[1] ?? '') === 'set-hostname');
+})->with([
+    'empty label' => 'a..b',
+    'trailing dot' => 'web.',
+    'longer than 64' => str_repeat('x', 70),
+    'label longer than 63' => str_repeat('a', 64).'.b',
+    'hyphen at label end' => 'web-.example',
+    'underscore' => 'web_01',
+]);
+
+it('accepts ordinary hostnames up to 64 characters', function (string $hostname) {
+    fakeSettings();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/settings/general', ['timezone' => 'Etc/UTC', 'hostname' => $hostname, 'ntp' => true])
+        ->assertOk();
+})->with([
+    'single label' => 'web-01',
+    'fqdn' => 'srv1.example.com',
+    'exactly 64' => str_repeat('a', 31).'.'.str_repeat('b', 32),
+]);
 
 it('makes the new hostname resolve, so sudo does not hang on it', function () {
     fakeSettings();

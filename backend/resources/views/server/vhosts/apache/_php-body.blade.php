@@ -36,20 +36,17 @@
          Setting an env var this site never checks below costs nothing. --}}
     Include {{ config('server.waf.apache_setenvif_path') }}
 @foreach ($waf['exceptions'] as $exception)
-    SetEnvIfNoCase Request_URI "{{ $exception }}" waf_exception
-    SetEnvIfNoCase Query_String "{{ $exception }}" waf_exception
-    SetEnvIfNoCase User-Agent "{{ $exception }}" waf_exception
+    SetEnvIfExpr "%{REQUEST_URI} =~ m#{!! $exception !!}#i || %{QUERY_STRING} =~ m#{!! $exception !!}#i || %{HTTP_USER_AGENT} =~ m#{!! $exception !!}#i" waf_exception
 @endforeach
 @foreach ($waf['customRules'] as $rule)
-    SetEnvIfNoCase Request_URI "{{ $rule }}" waf_custom
-    SetEnvIfNoCase Query_String "{{ $rule }}" waf_custom
+    SetEnvIfExpr "%{REQUEST_URI} =~ m#{!! $rule !!}#i || %{QUERY_STRING} =~ m#{!! $rule !!}#i" waf_custom
 @endforeach
 @endif
 @if ($botBlock)
     {{-- `SetEnvIfNoCase` rather than mod_rewrite: it needs no `RewriteEngine`
          of its own, so it cannot conflict with a user's own rewrite rules in
          a `.htaccess` this vhost already allows (`AllowOverride All`). --}}
-    SetEnvIfNoCase User-Agent "^({{ $botBlock }})" ai_bot_blocked
+    SetEnvIfNoCase User-Agent "({{ $botBlock }})" ai_bot_blocked
 @endif
     <Directory {{ $documentRoot }}>
         Options -Indexes +FollowSymLinks
@@ -62,15 +59,18 @@
 @endif
 @if ($waf && $waf['mode'] === 'enforce')
             {{-- Grant access if (an exception matched) OR (no enabled
-                 category/custom rule matched) — the two-level RequireAny
-                 wrapping a RequireNone is Apache's way of expressing
-                 "blocked AND NOT excepted" without a boolean AND operator.
+                 category/custom rule matched). A `RequireNone` cannot sit
+                 directly in a `RequireAny` — Apache refuses the config with
+                 "directive has no effect", since a negation alone never
+                 grants — so it is paired with `Require all granted` inside
+                 a `RequireAll`, which is how Apache spells "none matched".
                  Detect mode skips this entirely — see the CustomLog lines
                  below instead, which log without ever denying access. --}}
             <RequireAny>
                 Require env waf_exception
-                <RequireNone>
-                    <RequireAny>
+                <RequireAll>
+                    Require all granted
+                    <RequireNone>
 @if (in_array('query_string', $waf['categories'], true))
                         Require env waf_query
 @endif
@@ -92,8 +92,8 @@
 @if ($waf['customRules'] !== [])
                         Require env waf_custom
 @endif
-                    </RequireAny>
-                </RequireNone>
+                    </RequireNone>
+                </RequireAll>
             </RequireAny>
 @endif
 @if ($basicAuth)

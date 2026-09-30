@@ -18,6 +18,18 @@ use App\Services\Server\Capabilities\ServerCapabilities;
  */
 class VisiblePermissions
 {
+    /**
+     * Screens with nothing for a view-only role to do.
+     *
+     * `app_environment`: operator decision 2026-09-29 — the `.env` screen is
+     * shown only to who may edit it (a viewer already got no file contents
+     * since 77661c7b, only variable names). `app_magic_login`: its routes were
+     * manage-only from the start, so a viewer was shown a menu entry that
+     * could only answer 403. The routes enforce the same rule; this is what
+     * the sidebar and `/permissions` say about it.
+     */
+    public const MANAGE_ONLY = ['app_environment', 'app_magic_login'];
+
     public function for(User $user, ?string $level, ?Application $application = null): array
     {
         $query = Permission::query()->orderBy('order');
@@ -110,6 +122,14 @@ class VisiblePermissions
         return $permissions
             ->map(function (Permission $permission) use ($effective) {
                 $grant = $effective[$permission->id] ?? ['view' => false, 'manage' => false];
+
+                // A screen that is only for changing things is only shown to
+                // someone who may change them: a view grant alone counts for
+                // nothing, so it leaves both the sidebar and the frontend's
+                // own `can(view)` guard. See MANAGE_ONLY.
+                if (in_array($permission->name, self::MANAGE_ONLY, true)) {
+                    $grant['view'] = $grant['manage'];
+                }
 
                 return [
                     'level' => $permission->level,

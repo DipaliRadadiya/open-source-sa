@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { humanizeActivity, actionBadgeVariant, typeBadgeClass } from "@/lib/activity-log/labels";
+import { typeBadgeClass, typeLabel } from "@/lib/activity-log/labels";
 
 // Backend timestamps may be ISO or MySQL-style ("YYYY-MM-DD HH:mm:ss"); parse
 // both, return null if neither is valid so we skip the tooltip instead of
@@ -28,7 +28,7 @@ function WhenCell({ row }) {
   const format = useFormatter();
   const { created_at, created_at_human } = row.original;
   const label = (
-    <span className="whitespace-nowrap tabular-nums text-muted-foreground">
+    <span className="tabular-nums text-muted-foreground sm:whitespace-nowrap">
       {created_at_human}
     </span>
   );
@@ -47,40 +47,44 @@ function WhenCell({ row }) {
 }
 
 function TypeCell({ row }) {
+  const t = useTranslations("activity");
   const { type } = row.original;
   if (!type) return <span className="text-muted-foreground">—</span>;
   // Colour by family (people / security / runtimes / sites / housekeeping) so a
   // long page can be scanned without reading every word.
   return (
     <Badge variant="outline" className={cn("font-normal whitespace-nowrap", typeBadgeClass(type))}>
-      {humanizeActivity(type)}
+      {typeLabel(t, type)}
     </Badge>
   );
 }
 
-function EventCell({ row }) {
-  return (
-    <Badge variant={actionBadgeVariant(row.original.action)} className="font-normal">
-      {humanizeActivity(row.original.action)}
-    </Badge>
+function UserCell({ row }) {
+  const t = useTranslations("activity");
+  const u = row.original.user;
+  return u ? (
+    <span className="whitespace-nowrap">@{u.username}</span>
+  ) : (
+    <span className="text-muted-foreground">{t("system")}</span>
   );
 }
+
+const wrap = (label) => function WrappingHeader() {
+  return <span className="whitespace-normal">{label}</span>;
+};
 
 function DescriptionCell({ row }) {
   return <span>{row.original.description || "—"}</span>;
 }
 
 /**
- * The caller's own activity for one scope, fixed by the page.
- *
- * There is no "who" column: every row is you. That is the whole difference from
- * the admin log, and the reason the page says so in its subtitle rather than
- * leaving people to infer it from a missing column.
+ * Activity for one scope, fixed by the page. `showUser` adds the "who" column
+ * for the server log, which spans everyone; the account tab is only you.
  *
  * No scope column either — each page fixes its own scope, so a column repeating
  * "Server" on every row would be a constant.
  */
-export function MyActivityTable({ data, emptyMessage, hasFilters = false }) {
+export function MyActivityTable({ data, emptyMessage, hasFilters = false, showUser = false }) {
   const t = useTranslations("activity");
 
   // Type and Event are shorthand for the description — "Php" + "Install Started"
@@ -88,7 +92,10 @@ export function MyActivityTable({ data, emptyMessage, hasFilters = false }) {
   // and the sentence is the one worth keeping; without this it is the column
   // that scrolls out of sight.
   const columns = [
-    { accessorKey: "created_at_human", header: t("table.when"), cell: WhenCell },
+    // Headers may wrap: at 390 in Russian the unbroken headers and "1 час
+    // назад" made the table 43px wider than the phone.
+    { accessorKey: "created_at_human", header: wrap(t("table.when")), cell: WhenCell, meta: { className: "whitespace-normal sm:whitespace-nowrap" } },
+    ...(showUser ? [{ id: "user", header: t("columns.user"), cell: UserCell }] : []),
     {
       accessorKey: "type",
       header: t("table.type"),
@@ -96,14 +103,8 @@ export function MyActivityTable({ data, emptyMessage, hasFilters = false }) {
       meta: { className: "hidden md:table-cell" },
     },
     {
-      accessorKey: "action",
-      header: t("table.event"),
-      cell: EventCell,
-      meta: { className: "hidden md:table-cell" },
-    },
-    {
       accessorKey: "description",
-      header: t("table.description"),
+      header: wrap(t("table.description")),
       cell: DescriptionCell,
       // TableCell is whitespace-nowrap for everything, which suits short values
       // and ruins this one: at 320 the sentence ran straight off the card with

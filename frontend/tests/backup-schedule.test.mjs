@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { BACKUP_DEFAULT_TIME, backupTargetFormSchema } from "../lib/schemas/backup.js";
 
 const timeError = (value) => {
-  const result = backupTargetFormSchema.shape.schedule_time.safeParse(value);
+  const result = backupTargetFormSchema(null).shape.schedule_time.safeParse(value);
   return result.success ? null : result.error.issues[0].message;
 };
 

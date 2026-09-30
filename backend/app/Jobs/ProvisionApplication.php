@@ -10,7 +10,7 @@ use App\Jobs\Concerns\TracksActor;
 use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationProvisioner;
-use App\Services\Server\Applications\DeploymentRecorder;
+use App\Services\Server\Applications\DeployQueue;
 use App\Services\Server\Applications\ProvisioningBudget;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -87,6 +87,9 @@ class ProvisionApplication implements ShouldBeUnique, ShouldQueue
                 'status' => ApplicationStatus::Active,
                 'steps' => $steps,
                 'reference' => null,
+                // The admin password has been handed to the installer, and
+                // nothing reads it again. Kept on failure, for Retry setup.
+                'install_secrets' => null,
             ]);
 
             $activityLogger->log('application.provisioned', $application, [
@@ -135,13 +138,7 @@ class ProvisionApplication implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $deployment = app(DeploymentRecorder::class)->open(
-            $application,
-            DeploymentTrigger::Initial,
-            $this->actorId,
-        );
-
-        DeployApplication::dispatch($application->id, $this->actorId, $deployment->id);
+        app(DeployQueue::class)->queue($application, DeploymentTrigger::Initial, $this->actorId);
     }
 
     /**

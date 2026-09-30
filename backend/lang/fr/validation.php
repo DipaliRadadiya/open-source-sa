@@ -239,6 +239,9 @@ return [
     'port_in_use' => 'Quelque chose écoute déjà sur le port :port de ce serveur. Choisissez-en un autre ou arrêtez ce qui l\'occupe.',
 
     'port_registered' => 'Le port :port est normalement utilisé par :service. Vous pouvez quand même l\'utiliser si rien sur ce serveur ne le fait.',
+    'application_name_immutable' => 'Le nom d\'un site est fixé dès sa création : il nomme ses fichiers de configuration sur le serveur. Créez un nouveau site s\'il vous faut un autre nom.',
+    'site_name_taken_pool' => 'Ce serveur a déjà un fichier de pool PHP nommé « :name.conf » qui n\'a pas été créé par le panneau. Choisissez un autre nom.',
+    'site_name_taken_vhost' => 'Ce serveur a déjà une configuration de serveur web nommée « :name » qui n\'a pas été créée par le panneau — celle du panneau en fait partie. Choisissez un autre nom.',
 
     'webhook_secret_min' => 'Le secret du webhook doit contenir au moins 16 caractères.',
 

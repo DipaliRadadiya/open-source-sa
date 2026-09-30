@@ -77,6 +77,7 @@ export function DockerResourcesPanel({
           </CardTitle>
           {canManage ? (
             <form
+              noValidate
               className="flex items-center gap-2"
               onSubmit={async (event) => {
                 event.preventDefault();
@@ -247,6 +248,7 @@ export function DockerResourcesPanel({
           </CardTitle>
           {canManage ? (
             <form
+              noValidate
               className="flex items-center gap-2"
               onSubmit={async (event) => {
                 event.preventDefault();

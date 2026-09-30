@@ -12,6 +12,9 @@ use App\Services\Server\ManagedFile;
 use App\Services\Server\Php\SitePhpIni;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use App\Services\Server\Waf\OlsWafRuleset;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * OpenLiteSpeed.
@@ -102,6 +105,9 @@ class OlsDriver extends AbstractWebServerDriver
 
         return [
             ...$data,
+            // The 8G conditions for the categories this site has on; the
+            // exceptions and custom rules are already in `$data['waf']`.
+            'wafRules' => $data['waf'] === null ? [] : app(OlsWafRuleset::class)->for($data['waf']['categories']),
             // Site types whose cache or rewrite integration goes through
             // .htaccess. WordPress is the one that matters: LiteSpeed Cache
             // talks to the OLS cache module through that file and nothing else.
@@ -122,6 +128,16 @@ class OlsDriver extends AbstractWebServerDriver
             // file, the logs -- is keyed by slug already; the socket is the
             // one that wandered off.
             'socketName' => $this->socketName($application),
+            // The processor's name, which must be this site's alone.
+            //
+            // It was `lsphp84` in every vhost. OpenLiteSpeed keeps one external
+            // app per name (it logs it as `lsphp84.655340`, the name plus the
+            // vhost's suEXEC uid, which is `nobody` for every vhost), so the
+            // first vhost it loaded supplied the extUser and socket for all of
+            // them. Measured on a real server, 2026-09-24: three sites' PHP ran
+            // as a fourth site's user, which could read their files, and any
+            // site whose wp-config.php that user could not read answered 500.
+            'processorName' => 'lsphp'.str_replace('.', '', $version).'-'.$this->socketName($application),
             // The LSAPI binary, not the CLI — this is what OLS spawns.
             'lsphpBinary' => $this->stack->handlerPath($version),
             // Where this site's own php settings live. Written by `apply()`
@@ -163,14 +179,28 @@ class OlsDriver extends AbstractWebServerDriver
     }
 
     /**
-     * Not yet. OpenLiteSpeed needs the rules as rewrite directives inside each
-     * site's `vhconf.conf` — `.htaccess` would need a restart, not a reload —
-     * and none of the three OLS templates carry them. Answering `false` here is
-     * what turns "enabled and doing nothing" into a refusal the user can see.
+     * The 8G rules are rendered as rewrite directives inside each site's
+     * `vhconf.conf` (never `.htaccess`, which OLS only reads after a restart),
+     * from the same file the Apache version uses — see OlsWafRuleset. v7 had
+     * 8G on OpenLiteSpeed; this closes that gap (2026-09-30).
      */
     public function supportsWaf(): bool
     {
-        return false;
+        return true;
+    }
+
+    /**
+     * An exception or custom rule for an *unquoted* OLS `RewriteCond`.
+     *
+     * `preg_quote` makes it literal and also covers what a condition pattern
+     * would otherwise read as an operator at its start (`!`, `<`, `>`, `=`,
+     * `-`). Whitespace would end the pattern and a quote could start a quoted
+     * one, so those are written as hex escapes, which PCRE reads as the same
+     * characters.
+     */
+    public function wafPattern(string $value): string
+    {
+        return str_replace([' ', '"', "'"], ['\\x20', '\\x22', '\\x27'], preg_quote($value));
     }
 
     public function name(): string
@@ -217,6 +247,22 @@ class OlsDriver extends AbstractWebServerDriver
         $this->assertHasSystemUser($application);
 
         $context = ['feature' => 'application', 'op' => 'write_config', 'application' => $application->id];
+
+        // Before anything is written. A site whose name is already one of the
+        // server's own vhosts would overwrite that vhost's `vhconf.conf` two
+        // steps below, long before the shared config refuses it — which is
+        // how a site named `panel` took the panel's UI down (2026-09-29).
+        if ($this->shared->ownedByServer($this->fileName($application))) {
+            $reference = (string) Str::uuid();
+
+            Log::channel('server-ops')->error('ols vhost refused: name belongs to a vhost that is not a site', $context + [
+                'reference' => $reference,
+                'vhost' => $this->fileName($application),
+            ]);
+
+            return new ServerOpsResult(false, $reference);
+        }
+
         $fallback = $this->ensureTlsFallback($application);
 
         if ($fallback->failed()) {
@@ -431,6 +477,16 @@ class OlsDriver extends AbstractWebServerDriver
      * stock OpenLiteSpeed install runs as, and admitting it to one site's log
      * group is no wider than the grant this method exists to make.
      */
+    /**
+     * The account OpenLiteSpeed's workers run as — the same one they write the
+     * vhost logs as, read from httpd_config.conf rather than assumed
+     * (`nobody` on a stock install, never `www-data`).
+     */
+    public function siteReaderUser(): ?string
+    {
+        return $this->logWriterUser();
+    }
+
     public function logWriterUser(): ?string
     {
         return $this->shared->serverUser()

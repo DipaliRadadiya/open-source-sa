@@ -13,6 +13,7 @@ import { isRateLimited } from "@/lib/api/rate-limited";
 import { RequestFailedCard } from "@/components/sections/request-failed";
 import { isRequestFailed, requestFailureProps } from "@/lib/api/request-failed";
 import { LoginForm } from "@/components/forms/login-form";
+import { SessionExpiredNote } from "@/components/forms/session-expired-note";
 import { Logo } from "@/components/logo";
 import {
   Card,
@@ -57,6 +58,7 @@ export default async function LoginPage() {
         <CardDescription>{t("loginSubtitle")}</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-6">
+        <SessionExpiredNote />
         <LoginForm />
         {basicInfo.registration_open && (
           <p className="text-center text-sm text-muted-foreground">

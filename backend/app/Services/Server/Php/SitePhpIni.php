@@ -233,14 +233,17 @@ class SitePhpIni
             return $made;
         }
 
-        $owned = $this->serverOps->run(['chown', $user.':'.$user, $path], $context, timeout: 30);
+        // `-h`, and the chmod as the user: neither may follow a `sessions`
+        // that has been replaced by a link. Same reasoning as
+        // PoolManager::ensureSiteDirectories().
+        $owned = $this->serverOps->run(['chown', '-h', $user.':'.$user, $path], $context, timeout: 30);
 
         if ($owned->failed()) {
             return $owned;
         }
 
         // 0700: session files are as sensitive as the cookies that name them.
-        return $this->serverOps->run(['chmod', '0700', $path], $context, timeout: 15);
+        return $this->serverOps->run(['runuser', '-u', $user, '--', 'chmod', '0700', $path], $context, timeout: 15);
     }
 
     /**

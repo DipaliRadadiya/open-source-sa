@@ -8,6 +8,7 @@ import {
   fetchCertificateDryRun,
 } from "@/lib/api/domains";
 import { apiMessage } from "@/lib/api/error-message";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Caution } from "@/components/ui/caution";
 import { Label } from "@/components/ui/label";
@@ -29,6 +30,9 @@ import {
 // seconds; the certbot stage is a round trip to the CA and takes a good deal
 // longer, which is why the stage is named while it runs.
 const DRY_RUN_POLL_MS = 3000;
+// The same ten minutes the SSL card allows an issuance. A run still going
+// after that has lost its worker, and polling on costs 20 requests a minute.
+const DRY_RUN_POLL_LIMIT = (10 * 60 * 1000) / DRY_RUN_POLL_MS;
 
 const FALLBACK_TYPES = [
   { type: "letsencrypt", available: true, recommended: true },
@@ -55,9 +59,16 @@ export function IssueCertDialog({
   open,
   onOpenChange,
   onIssued,
+  // The last Let's Encrypt attempt hit its rate limit. The other methods do
+  // not go near Let's Encrypt, so only that one is closed.
+  rateLimited = false,
 }) {
   const t = useTranslations("applications.domains");
-  const types = availableTypes.length ? availableTypes : FALLBACK_TYPES;
+  const types = (availableTypes.length ? availableTypes : FALLBACK_TYPES).map((entry) =>
+    rateLimited && entry.type === "letsencrypt"
+      ? { ...entry, available: false, reason: t("ssl.rateLimitedMethod") }
+      : entry,
+  );
   // The server's recommendation, else the first thing that actually works —
   // never a fixed default, which is how the dialog came to open on Let's
   // Encrypt for sites Let's Encrypt refuses.
@@ -66,7 +77,12 @@ export function IssueCertDialog({
     types.find((entry) => entry.available)?.type ??
     types[0]?.type;
 
-  const [type, setType] = useState(defaultType);
+  const [chosen, setType] = useState(defaultType);
+  // A choice that has since become unavailable (Let's Encrypt after a rate
+  // limit) falls back to the default rather than staying selected and dead.
+  const type = types.some((entry) => entry.type === chosen && entry.available !== false)
+    ? chosen
+    : defaultType;
   // This dialog holds its own state rather than react-hook-form, so it gets none
   // of FormItem's label wiring for free. Without an id every label here was
   // decorative: clicking it did nothing and a screen reader announced an
@@ -93,9 +109,13 @@ export function IssueCertDialog({
   // state, not a pending one.
   const [dryRun, setDryRun] = useState(null);
   const [starting, setStarting] = useState(false);
+  const [stalled, setStalled] = useState(false);
 
   const selected = types.find((entry) => entry.type === type);
-  const dryRunning = starting || dryRun?.status === "running";
+  const dryRunning = starting || (dryRun?.status === "running" && !stalled);
+  // A pass needs only one name to pass. The rest are issued without, so the
+  // headline has to say which names the certificate will not cover.
+  const leftOff = dryRun?.status === "passed" ? (dryRun.domains ?? []).filter((entry) => !entry.ok) : [];
 
   function reset() {
     setType(defaultType);
@@ -104,6 +124,7 @@ export function IssueCertDialog({
     setRefusals([]);
     setDryRun(null);
     setStarting(false);
+    setStalled(false);
     setSubmitting(false);
   }
 
@@ -119,9 +140,15 @@ export function IssueCertDialog({
   // `open` being a dependency, and the `live` flag drops a reply that lands
   // after that.
   useEffect(() => {
-    if (!open || dryRun?.status !== "running") return undefined;
+    if (!open || dryRun?.status !== "running" || stalled) return undefined;
     let live = true;
+    let ticks = 0;
     const timer = setInterval(async () => {
+      if (++ticks > DRY_RUN_POLL_LIMIT) {
+        clearInterval(timer);
+        if (live) setStalled(true);
+        return;
+      }
       try {
         const next = await fetchCertificateDryRun(appId);
         if (live) setDryRun(next);
@@ -133,10 +160,11 @@ export function IssueCertDialog({
       live = false;
       clearInterval(timer);
     };
-  }, [open, dryRun?.status, appId]);
+  }, [open, dryRun?.status, appId, stalled]);
 
   async function runDryRun() {
     setStarting(true);
+    setStalled(false);
     // Last run's verdict is cleared first. Leaving it on screen beside a fresh
     // spinner shows a stale answer next to the question that supersedes it.
     setDryRun(null);
@@ -338,21 +366,37 @@ export function IssueCertDialog({
             </p>
           ) : null}
 
+          {stalled ? (
+            <Caution size="md">{t("ssl.dryRunStalled")}</Caution>
+          ) : null}
+
           {dryRun && dryRun.status !== "running" ? (
             <div className="space-y-2">
               <p
-                className={
-                  dryRun.status === "passed"
-                    ? "flex items-center gap-2 text-sm font-medium text-success"
-                    : "flex items-center gap-2 text-sm font-medium text-destructive"
-                }
+                className={cn(
+                  "flex items-center gap-2 text-sm font-medium",
+                  dryRun.status !== "passed"
+                    ? "text-destructive"
+                    : leftOff.length
+                      ? "text-warning"
+                      : "text-success",
+                )}
               >
-                {dryRun.status === "passed" ? (
+                {dryRun.status === "passed" && !leftOff.length ? (
                   <Check className="size-4" />
                 ) : (
                   <TriangleAlert className="size-4" />
                 )}
-                {t(dryRun.status === "passed" ? "ssl.dryRunPassed" : "ssl.dryRunFailed")}
+                {dryRun.status !== "passed"
+                  ? t("ssl.dryRunFailed")
+                  : leftOff.length
+                    ? t("ssl.dryRunPartial", {
+                        ready: dryRun.domains.length - leftOff.length,
+                        total: dryRun.domains.length,
+                        names: leftOff.map((entry) => entry.domain).join(", "),
+                        count: leftOff.length,
+                      })
+                    : t("ssl.dryRunPassed")}
               </p>
 
               {/* Every name, passing ones included. "Two of your three domains
@@ -365,7 +409,7 @@ export function IssueCertDialog({
                       {entry.ok ? (
                         <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       ) : (
-                        <TriangleAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
+                        <TriangleAlert className={cn("mt-0.5 size-4 shrink-0", leftOff.length ? "text-warning" : "text-destructive")} />
                       )}
                       {/* The icon carries the verdict; the sentence stays
                           readable. A failure message is the instruction for

@@ -12,6 +12,7 @@ use App\Services\Applications\SiteTypeDetector;
 use App\Services\Server\ServerOps;
 use App\Services\Server\WebServers\OlsVhostLayout;
 use App\Services\Server\WebServers\WebServerManager;
+use RuntimeException;
 
 /**
  * Sites the web server is already serving that the panel has no record of.
@@ -66,6 +67,21 @@ class ApplicationDiscoverer implements Discoverable
         $trackedSlugs = Application::query()->pluck('slug')->filter()->map('strtolower')->all();
         $trackedDomains = ApplicationDomain::query()->pluck('domain')->map('strtolower')->all();
         $owners = SystemUser::query()->pluck('id', 'username');
+        $homes = SystemUser::query()->pluck('home_path', 'username');
+
+        // In a preview, the accounts it found count as owners too: applying
+        // the same run adopts them before it gets here. No id, and none is
+        // needed, because a preview never adopts.
+        foreach ($run->previewedSystemUsers() as $username => $home) {
+            if (! $owners->has($username)) {
+                $owners->put($username, null);
+                $homes->put($username, $home);
+            }
+        }
+
+        // Folders claimed in this run, so two vhosts serving one directory
+        // cannot both be adopted as sites that each think they own it.
+        $claimed = [];
 
         // The panel's own installation. Derived from where this code is
         // running rather than from a configured name: install.sh writes
@@ -79,11 +95,20 @@ class ApplicationDiscoverer implements Discoverable
         $excludedDomains = array_map('strtolower', (array) config('server.sync.exclude.domains', []));
 
         $found = [];
+        $enabled = $this->enabledVhosts();
 
         foreach (preg_split('/\r?\n/', trim($listing->output())) ?: [] as $path) {
             $path = trim($path);
 
             if ($path === '') {
+                continue;
+            }
+
+            // Not enabled is not served. nginx's stock `default` sits in
+            // sites-available on every fresh install without being linked, and
+            // was reported as "being served, but its config is not in a shape
+            // the panel could read" (nginx test server).
+            if ($enabled !== null && ! in_array(basename($path), $enabled, true)) {
                 continue;
             }
 
@@ -106,6 +131,20 @@ class ApplicationDiscoverer implements Discoverable
             if ($contents->failed()) {
                 $found[] = ['key' => $name, 'skip' => 'vhost_unreadable', 'evidence' => ['path' => $path]];
 
+                continue;
+            }
+
+            // OpenLiteSpeed's installer ships a demo vhost called `Example`,
+            // served from $VH_ROOT/html/ and registered nowhere. It was
+            // reported as "being served, but its config is not in a shape the
+            // panel could read", which was untrue twice over (2026-09-24). Not
+            // a customer's site: nothing to report.
+            //
+            // Recognised by name *and* its stock document root, not by "is it
+            // registered in httpd_config.conf": a server migrated from v7
+            // registers every site through `include /etc/<brand>-ols/*.conf`,
+            // so that test would have dropped all of them.
+            if ($name === 'Example' && preg_match('/^\s*docRoot\s+\$VH_ROOT\/html\/?\s*$/m', $contents->output()) === 1) {
                 continue;
             }
 
@@ -176,6 +215,53 @@ class ApplicationDiscoverer implements Discoverable
                 continue;
             }
 
+            // Where the site really lives, in the panel's terms. The panel
+            // addresses every site as {home}/{slug}/public_html/{web_root}, so
+            // the slug has to be the folder the files are in. It used to be
+            // made from the domain: a site in /home/brown/brownsite became
+            // `brown23-172-120-87nipio`, a folder that does not exist, and the
+            // file manager, PHP settings, workers and backups of that site all
+            // pointed at nothing. Found on a real server, 2026-09-24.
+            $layout = $this->layout($parsed['root'], rtrim((string) $homes->get($owner), '/'));
+
+            if ($layout === null) {
+                $found[] = [
+                    'key' => $primary,
+                    'skip' => 'outside_panel_layout',
+                    'evidence' => ['path' => $path, 'document_root' => $parsed['root'], 'owner' => $owner],
+                ];
+
+                continue;
+            }
+
+            $folder = $layout['slug'];
+
+            if (preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]*$/', $folder) !== 1) {
+                $found[] = [
+                    'key' => $primary,
+                    'skip' => 'folder_name_unusable',
+                    'evidence' => ['path' => $path, 'document_root' => $parsed['root'], 'folder' => $folder],
+                ];
+
+                continue;
+            }
+
+            // The slug is unique across the panel, and it names files the panel
+            // writes, so a second site cannot share it. Two owners each with a
+            // `shop` folder is possible, and the second is reported rather than
+            // adopted under a different name that would not match its files.
+            if (in_array(strtolower($folder), $trackedSlugs, true) || isset($claimed[strtolower($folder)])) {
+                $found[] = [
+                    'key' => $primary,
+                    'skip' => 'folder_taken',
+                    'evidence' => ['path' => $path, 'document_root' => $parsed['root'], 'folder' => $folder],
+                ];
+
+                continue;
+            }
+
+            $claimed[strtolower($folder)] = true;
+
             $type = $this->detector->detectAt($parsed['root'], ['feature' => 'sync'])->toDiscoveryAttributes();
 
             $found[] = [
@@ -186,6 +272,7 @@ class ApplicationDiscoverer implements Discoverable
                     'path' => $path,
                     'document_root' => $parsed['root'],
                     'owner' => $owner,
+                    'folder' => $folder,
                     'domains' => $parsed['domains'],
                     'site_type' => $type['site_type'],
                     'matched' => $type['matched'],
@@ -193,6 +280,8 @@ class ApplicationDiscoverer implements Discoverable
                 'attributes' => [
                     'system_user_id' => $owners->get($owner),
                     'domains' => $parsed['domains'],
+                    'slug' => $folder,
+                    'web_root' => $layout['web_root'],
                     'document_root' => $parsed['root'],
                     'site_type' => $type['site_type'],
                     'serving_profile' => $type['serving_profile'],
@@ -211,18 +300,41 @@ class ApplicationDiscoverer implements Discoverable
         $domains = $attributes['domains'];
         $primary = $domains[0];
 
+        // The folder the files are in, never a name made up here: see
+        // layout(). Checked again because a site created between the preview
+        // and this apply could have taken it.
+        //
+        // Deliberately NOT passed {@see \App\Services\Server\Applications\SlugConflict},
+        // which create, rename, clone and staging all consult. That asks "does
+        // a file at this slug's paths already exist" — and for an adopted site
+        // the answer is yes by definition: the vhost being adopted is the file
+        // it would find. Wiring it here would refuse every adoption there is.
+        //
+        // The residual case is a folder named after something the panel does
+        // not own — `~/www` adopts as slug `www` — which only bites later, if
+        // that site is then isolated and its pool written over the distro's
+        // `pool.d/www.conf`. Left alone rather than half-guarded: the pool
+        // writer takes over unowned pool files on purpose (see
+        // `PoolManager::adoptOpenBasedir()`), so a refusal here would fight a
+        // feature rather than fix a bug.
+        $slug = (string) $attributes['slug'];
+
+        if (Application::query()->where('slug', $slug)->exists()) {
+            throw new RuntimeException("the folder {$slug} is already a site in the panel");
+        }
+
         $application = Application::forceCreate([
             'system_user_id' => $attributes['system_user_id'],
             'name' => Application::uniqueName($primary),
             // forceCreate and an explicit slug: `slug` is not fillable because
             // it names the config file the panel overwrites, and mass
             // assignment would drop it in silence.
-            'slug' => Application::uniqueSlug($primary),
+            'slug' => $slug,
             'domain' => $primary,
             'site_type' => $attributes['site_type'],
             'serving_profile' => $attributes['serving_profile'],
             'status' => 'active',
-            'web_root' => '/',
+            'web_root' => $attributes['web_root'] ?? '/',
             // Deliberately null: the panel has not written a pool for this
             // site, and claiming otherwise would make `php:isolate-all` skip
             // the one site that most needs it.
@@ -301,6 +413,42 @@ class ApplicationDiscoverer implements Discoverable
     }
 
     /**
+     * The vhost files the web server actually reads, by name — the entries of
+     * its sites-enabled directory — for nginx and Apache. Null where that is
+     * not how the web server works (OpenLiteSpeed) or the directory could not
+     * be listed, and then nothing is filtered: an unreadable directory must
+     * not make every site look unserved.
+     *
+     * @return array<int, string>|null
+     */
+    private function enabledVhosts(): ?array
+    {
+        // The same answer listCommand() uses — the detected web server, not
+        // the configured one, which is unset on a server the installer set up.
+        $driver = $this->webServers->driver()->name();
+
+        if (! in_array($driver, ['nginx', 'apache'], true)) {
+            return null;
+        }
+
+        $directory = rtrim((string) config("server.web_server_drivers.{$driver}.sites_dir"), '/');
+
+        if ($directory === '') {
+            return null;
+        }
+
+        $result = $this->serverOps->run(
+            ['find', $directory, '-maxdepth', '1', '(', '-type', 'l', '-o', '-type', 'f', ')', '-printf', '%f\\n'],
+            ['feature' => 'sync', 'op' => 'discover_enabled_vhosts'],
+            timeout: 30,
+        );
+
+        return $result->failed()
+            ? null
+            : array_values(array_filter(array_map(fn (string $line) => basename(trim($line)), preg_split('/\r?\n/', trim($result->output())) ?: [])));
+    }
+
+    /**
      * The site's name as this web server records it.
      *
      * For nginx and Apache that is the file. For OpenLiteSpeed the file has a
@@ -321,6 +469,41 @@ class ApplicationDiscoverer implements Discoverable
         }
 
         return preg_replace('/\.conf$/', '', basename($path)) ?? basename($path);
+    }
+
+    /**
+     * The panel's view of a document root: the folder under the owner's home
+     * (the slug) and the path inside its public_html (the web root).
+     *
+     * Null when the root is not `{home}/{folder}/public_html[/...]`, which is
+     * the only shape the panel can manage without moving files.
+     *
+     * @return array{slug: string, web_root: string}|null
+     */
+    private function layout(string $root, string $home): ?array
+    {
+        $root = rtrim($root, '/');
+
+        if ($home === '' || ! str_starts_with($root.'/', $home.'/')) {
+            return null;
+        }
+
+        $parts = explode('/', substr($root, strlen($home) + 1));
+
+        if (count($parts) < 2 || $parts[0] === '' || $parts[1] !== 'public_html') {
+            return null;
+        }
+
+        $inside = array_slice($parts, 2);
+
+        if (in_array('..', $inside, true) || in_array('.', $inside, true)) {
+            return null;
+        }
+
+        return [
+            'slug' => $parts[0],
+            'web_root' => $inside === [] ? '/' : implode('/', $inside),
+        ];
     }
 
     /**

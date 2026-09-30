@@ -1,8 +1,9 @@
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
-import { getMyActivity } from "@/lib/account/get-my-activity";
-import { getMyActivityFilters } from "@/lib/activity-log/get-activity-filters";
+import { getServerActivity } from "@/lib/activity-log/get-server-activity";
+import { getActivityFilters, getMyActivityFilters } from "@/lib/activity-log/get-activity-filters";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { ActivityToolbar } from "@/components/activity-log/activity-toolbar";
 import { typesForScope, actionsForScope } from "@/lib/activity-log/labels";
 import { MyActivityTable } from "@/components/activity-log/my-activity-table";
@@ -17,7 +18,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata() {
   const t = await getTranslations("activity");
-  return { title: t("mine.title") };
+  return { title: t("server.title") };
 }
 
 export default async function ActivityLogPage({ searchParams }) {
@@ -28,9 +29,12 @@ export default async function ActivityLogPage({ searchParams }) {
   ]);
 
   if (!can(permissions, "activity_log", "view")) return <PermissionDenied title={t("title")} />;
+  const user = await getCurrentUser();
   const [{ activity_log: entries, meta, failed, status, failure, message }, filters] = await Promise.all([
-    getMyActivity(sp, "server"),
-    getMyActivityFilters(),
+    getServerActivity(sp),
+    // There is no server-wide filter list yet (FS-C11): admins get the full
+    // catalog, everyone else the types they have touched themselves.
+    user?.is_admin ? getActivityFilters() : getMyActivityFilters(),
   ]);
 
   const isFiltered = Boolean(sp.search || sp.type || sp.action);
@@ -41,23 +45,22 @@ export default async function ActivityLogPage({ searchParams }) {
   redirectOutOfRange("/activity-log", sp, meta, failed);
   return (
     <div className="space-y-6">
-      {/* Said out loud, because the missing "who" column is the only other
-      clue that this is your history and not the server's. */}
-      <PageHeader title={t("mine.title")} subtitle={t("mine.subtitle")} />
+      <PageHeader title={t("server.title")} subtitle={t("server.subtitle")} />
 
       {failed ? (
-        <LoadFailed description={t("mine.loadFailed")} status={status} failure={failure} message={message} />
+        <LoadFailed description={t("server.loadFailed")} status={status} failure={failure} message={message} />
       ) : (
         <NavTransitionProvider>
           <ActivityToolbar
             // The filters endpoint spans both scopes; this page is server-only.
             types={typesForScope(filters.types, "server")}
             actions={actionsForScope(filters.actions, filters.types, "server")}
-            searchKey="mine.searchPlaceholder"
+            searchKey="server.searchPlaceholder"
           />
           <MyActivityTable
             data={entries}
-            emptyMessage={isFiltered ? t("mine.emptyFiltered") : t("mine.empty")}
+            showUser
+            emptyMessage={isFiltered ? t("mine.emptyFiltered") : t("server.empty")}
             hasFilters={isFiltered}
           />
           {/* Not behind a row count: the selector hides itself when the list is too

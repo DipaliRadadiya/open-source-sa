@@ -14,6 +14,14 @@ export function readApplication(id) {
   return api.get(`/applications/${id}`);
 }
 
+/**
+ * The newest deploy only, for polling while the Deployment screen is open, so a
+ * deploy started by a push shows up without a reload. `{ latest: row | null }`.
+ */
+export function fetchLatestDeployment(id) {
+  return api.get(`/applications/${id}/deployments/latest`);
+}
+
 /** The history and the settings, in the one call that returns both. */
 export function fetchDeployments(id) {
   return api.get(`/applications/${id}/deployments`);

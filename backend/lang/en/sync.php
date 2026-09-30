@@ -20,6 +20,8 @@ return [
         'firewall_app_profile' => 'This rule uses an application profile rather than a port. The ports behind it can change when the package updates, so importing today\'s numbers would be a snapshot pretending to be the rule.',
         'panel_infrastructure' => 'This is the panel itself, not a site it can host. Left alone deliberately.',
         'outside_panel_layout' => 'This site is not laid out the way the panel manages sites, so it cannot be adopted without moving its files. It is still being served — nothing has changed.',
+        'folder_taken' => 'Another site in the panel already uses a folder with this name. Folder names must be unique, so this one was left alone. It is still being served.',
+        'folder_name_unusable' => 'This site\'s folder name contains characters the panel cannot use in file names, so it was left alone. It is still being served.',
         'vhost_unreadable' => 'The web server config for this site could not be read, so it was left alone.',
         'vhost_unparsed' => 'This site is being served, but its config is not in a shape the panel could read. Adopt it by hand, or check the file.',
         'owner_not_tracked' => 'The Linux account that owns this site is not one the panel manages. Sync system users first, then run this again.',
@@ -27,6 +29,7 @@ return [
         'discovery_failed' => 'This could not be read from the server. Nothing was changed.',
         'adopt_failed' => 'Found on the server, but the panel could not create a record for it.',
         'requires_system_user' => 'Skipped because system users were not part of this run, and this needs them first.',
+        'after_sites_adopted' => 'This preview found new sites. Their workers, SSL certificates and PHP settings are listed once the sites are synced: applying the sync adopts the sites first, then reads these.',
     ],
 
 ];

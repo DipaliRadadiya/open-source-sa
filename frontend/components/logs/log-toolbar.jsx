@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
   Select,
   SelectContent,
@@ -32,6 +33,7 @@ import {
 } from "@/components/ui/tooltip";
 import { LINE_OPTIONS, MAX_LINES, MIN_LINES, normalizeLineCount } from "@/lib/schemas/log";
 import { SEVERITY_FILTERS } from "@/lib/logs/severity";
+import { toast } from "sonner";
 
 // Not a line count, so it can never collide with one.
 const CUSTOM_LINES = "custom";
@@ -73,6 +75,12 @@ export function LogToolbar({
   clearing = false,
   busy,
   disabled,
+  // A read that failed says "try again"; Reload is how, so it stays usable
+  // while everything that needs lines on screen is disabled.
+  reloadable = false,
+  // Why Reload is off when it is: the log is locked or gone, which is what
+  // the viewer's own box says.
+  reloadReason = null,
   searchRef,
   tailState = "idle",
   onResume,
@@ -202,6 +210,9 @@ export function LogToolbar({
             ref={searchRef}
             value={term}
             onChange={(e) => onTermChange(e.target.value)}
+            // The API's own limit (grep ≤ 200): past it the server refused the
+            // search while the previous results stayed under the new text.
+            maxLength={200}
             placeholder={t("searchPlaceholder")}
             disabled={disabled}
             className={cn("w-full", term && "pr-8")}
@@ -299,6 +310,10 @@ export function LogToolbar({
                 // then 50, then 500.
                 onBlur={(event) => {
                   const next = normalizeLineCount(event.target.value);
+                  // 6000 quietly became "Last 5,000 lines"; say so.
+                  if (Number.parseInt(event.target.value, 10) > MAX_LINES) {
+                    toast.info(t("linesCapped", { max: MAX_LINES }));
+                  }
                   if (next !== null && next !== lines) onLinesChange(next);
                   setCustomLines(false);
                 }}
@@ -365,12 +380,14 @@ export function LogToolbar({
               onClick={onCopyVisible}
               disabled={disabled}
             />
-            <IconAction
-              icon={RotateCw}
-              label={t("reload")}
-              onClick={onReload}
-              disabled={disabled}
-            />
+            <ReasonTooltip reason={disabled && !reloadable ? reloadReason : null} className="inline-flex h-full">
+              <IconAction
+                icon={RotateCw}
+                label={t("reload")}
+                onClick={onReload}
+                disabled={disabled && !reloadable}
+              />
+            </ReasonTooltip>
             {showDownload ? (
               <IconAction
                 icon={Download}

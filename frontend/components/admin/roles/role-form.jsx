@@ -121,7 +121,7 @@ export function RoleForm({ mode = "create", role, catalog }) {
 
   return (
     <Form {...form}>
-      <form
+      <form noValidate
         onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         className="space-y-6"
       >
@@ -166,7 +166,7 @@ export function RoleForm({ mode = "create", role, catalog }) {
               <CardDescription>{t("form.permissionsHint")}</CardDescription>
             </div>
             <Badge
-              variant={enabledCount > 0 ? "success" : "secondary"}
+              variant={enabledCount > 0 ? "success" : "muted"}
               className="shrink-0"
             >
               {t("form.enabledCount", { count: enabledCount, total: permissions.length })}

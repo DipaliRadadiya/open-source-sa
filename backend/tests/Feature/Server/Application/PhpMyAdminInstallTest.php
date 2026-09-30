@@ -72,8 +72,8 @@ it('creates no database for a tool that reads the ones already there', function 
 it('writes a config that is actually PHP', function () {
     $runs = installPma();
 
-    $config = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'tee'
-        && str_ends_with((string) ($run['command'][1] ?? ''), 'config.inc.php'));
+    $config = collect($runs)->first(fn ($run) => in_array('tee', $run['command'], true)
+        && str_ends_with((string) end($run['command']), 'config.inc.php'));
 
     // A config file whose opening tag got escaped is served as plain text, so
     // the application never configures itself and the file's contents are
@@ -96,7 +96,7 @@ it('generates a different blowfish secret for every installation', function () {
     $second = installPma();
 
     $secret = fn (ArrayObject $runs) => collect($runs)
-        ->first(fn ($run) => str_ends_with((string) ($run['command'][1] ?? ''), 'config.inc.php'))['input'];
+        ->first(fn ($run) => in_array('tee', $run['command'], true) && str_ends_with((string) end($run['command']), 'config.inc.php'))['input'];
 
     preg_match("/sodium_hex2bin\('([0-9a-f]+)'\)/", $secret($first), $a);
     preg_match("/sodium_hex2bin\('([0-9a-f]+)'\)/", $secret($second), $b);
@@ -112,7 +112,7 @@ it('generates a different blowfish secret for every installation', function () {
 it('asks each user for their own database credentials, storing none', function () {
     $runs = installPma();
 
-    $config = collect($runs)->first(fn ($run) => str_ends_with((string) ($run['command'][1] ?? ''), 'config.inc.php'))['input'];
+    $config = collect($runs)->first(fn ($run) => in_array('tee', $run['command'], true) && str_ends_with((string) end($run['command']), 'config.inc.php'))['input'];
 
     // The alternative writes a database password into a file served from a
     // public web root, handing that account to every visitor.

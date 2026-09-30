@@ -103,10 +103,38 @@ export const workerFormSchema = z.object({
     .trim()
     .max(2000, "max2000")
     .refine((v) => !v.includes("["), "noSectionHeader")
+    // The panel already writes an `environment=` line for every worker; a
+    // second one is a duplicate key and the worker never starts (500).
+    .refine((v) => !/^\s*environment\s*=/im.test(v), "noEnvironmentLine")
+    // The panel writes these itself. A `user=` here ran the worker as root
+    // while the page still showed the site's user; the others moved its
+    // command, folder or logs somewhere the panel does not know about.
+    .refine(
+      (v) => !/^\s*(user|command|directory|stdout_logfile|stderr_logfile)\s*=/im.test(v),
+      "noManagedWorkerKeys",
+    )
     .optional()
     .or(z.literal("")),
   auto_start: z.boolean().optional(),
 });
+
+/**
+ * The form with the application's own folder: an absolute working directory
+ * or log file must be inside it. `/etc/...` was accepted for both.
+ */
+export function workerFormSchemaFor(appRoot = "") {
+  const root = String(appRoot ?? "").replace(/\/+$/, "");
+  if (!root) return workerFormSchema;
+  const inside = (value) => !value || !value.startsWith("/") || value === root || value.startsWith(`${root}/`);
+  return workerFormSchema.superRefine((values, ctx) => {
+    if (!inside(values.directory?.trim())) {
+      ctx.addIssue({ code: "custom", path: ["directory"], message: "insideApplication" });
+    }
+    if (!inside(values.log_file?.trim())) {
+      ctx.addIssue({ code: "custom", path: ["log_file"], message: "insideApplication" });
+    }
+  });
+}
 
 export const WORKER_FORM_DEFAULTS = {
   name: "",

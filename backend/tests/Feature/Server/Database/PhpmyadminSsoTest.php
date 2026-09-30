@@ -44,7 +44,13 @@ beforeEach(function () {
         // particular `tee` — the file contents never appear in argv.
         $this->ranInput[$command] = (string) $process->input;
 
-        return str_starts_with($command, 'cat ') && str_contains($command, 'config.inc.php')
+        // Every step now runs as the phpMyAdmin site's user, so the read
+        // arrives as `runuser -u <user> -- cat …`. Matched after that prefix:
+        // a fake that only knew the bare `cat` would return an empty config
+        // and let the "already configured" test pass without looking.
+        $bare = preg_replace('/^runuser -u \S+ -- /', '', $command);
+
+        return str_starts_with($bare, 'cat ') && str_contains($bare, 'config.inc.php')
             ? Process::result(output: $this->configContents)
             : Process::result(exitCode: 0);
     });
@@ -78,6 +84,16 @@ beforeEach(function () {
 function ssoCommands(): array
 {
     return test()->ranCommands;
+}
+
+/**
+ * The prefix every SSO file operation must carry: the phpMyAdmin site's own
+ * user. As root, `tee` and `chown` followed a link planted at `sso.php` or
+ * `config.inc.php` (the `.panel` class of bug, 2026-09-29).
+ */
+function asPma(string $command): string
+{
+    return 'runuser -u '.test()->pmaApp->systemUser->username.' -- '.$command;
 }
 
 /**
@@ -169,7 +185,8 @@ describe('POST /databases/{database}/phpmyadmin-sso', function () {
 
         $shim = $this->pmaApp->rootPath().'/public_html/sso.php';
 
-        expect(ssoCommands())->toContain("tee {$shim}");
+        expect(ssoCommands())->toContain(asPma("tee {$shim}"))
+            ->and(collect(ssoCommands())->contains(fn (string $c) => str_starts_with($c, "tee {$shim}")))->toBeFalse();
     });
 
     it('drops the token in a private file above the document root', function () {
@@ -185,8 +202,8 @@ describe('POST /databases/{database}/phpmyadmin-sso', function () {
         // Above the document root, so no visitor can request it by name, and
         // 0600 so no other account on the server can read the password in it.
         expect($file)->not->toContain('/public_html/')
-            ->and(ssoCommands())->toContain("tee {$file}")
-            ->and(ssoCommands())->toContain("chmod 0600 {$file}");
+            ->and(ssoCommands())->toContain(asPma("tee {$file}"))
+            ->and(ssoCommands())->toContain(asPma("chmod 0600 {$file}"));
     });
 
     it('never puts the credentials on a command line', function () {
@@ -283,9 +300,12 @@ describe('POST /databases/{database}/phpmyadmin-sso', function () {
 
         $this->postJson("/api/databases/{$this->database->id}/phpmyadmin-sso")->assertOk();
 
-        $write = 'tee '.$this->pmaApp->rootPath().'/public_html/config.inc.php';
+        $write = asPma('tee '.$this->pmaApp->rootPath().'/public_html/config.inc.php');
 
         expect(ssoCommands())->toContain($write)
+            // Read as the site user too: as root, `cat` followed a
+            // `config.inc.php` link to whatever it named.
+            ->and(ssoCommands())->toContain(asPma('cat '.$this->pmaApp->rootPath().'/public_html/config.inc.php'))
             // The existing blowfish_secret is carried across. Generating a new
             // one would silently sign out everyone already using phpMyAdmin.
             ->and(test()->ranInput[$write])->toContain(str_repeat('a', 64))
@@ -304,7 +324,7 @@ describe('POST /databases/{database}/phpmyadmin-sso', function () {
         // Rewriting would regenerate blowfish_secret, and a new secret cannot
         // decrypt the cookies the old one issued — every signed-in user would
         // be thrown out each time somebody else clicked the button.
-        expect(ssoCommands())->not->toContain('tee '.$this->pmaApp->rootPath().'/public_html/config.inc.php');
+        expect(collect(ssoCommands())->contains(fn (string $c) => str_contains($c, 'tee '.$this->pmaApp->rootPath().'/public_html/config.inc.php')))->toBeFalse();
     });
 
     it('records who signed in to which database as which account', function () {
@@ -393,6 +413,18 @@ describe('POST /databases/{database}/phpmyadmin-sso', function () {
         $response = $this->postJson("/api/databases/{$this->database->id}/phpmyadmin-sso");
 
         $response->assertForbidden();
+    });
+
+    it('refuses a view-only role, because the session it opens can write', function () {
+        // DB-02: the sign-in lands as the database's own user, and a
+        // read-only role used it to run an INSERT.
+        grantPermission($this->user, 'database');
+        DatabaseUser::factory()->create(['database_id' => $this->database->id]);
+
+        $this->postJson("/api/databases/{$this->database->id}/phpmyadmin-sso")->assertForbidden();
+
+        // Refused before anything is written to the phpMyAdmin site.
+        expect($this->ranCommands)->toBe([]);
     });
 
     it('returns 404 for a non-existent database', function () {

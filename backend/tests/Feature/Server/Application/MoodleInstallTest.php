@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Application;
+use App\Models\Cronjob;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Applications\ApplicationProvisioner;
@@ -80,7 +81,7 @@ function moodleRun(ArrayObject $runs, string $script): ?array
 it('keeps the database password out of every command line', function () {
     $runs = installMoodle();
 
-    $config = collect($runs)->first(fn ($run) => str_ends_with((string) ($run['command'][1] ?? ''), 'config.php'));
+    $config = collect($runs)->first(fn ($run) => in_array('tee', $run['command'], true) && str_ends_with((string) end($run['command']), 'config.php'));
 
     // Moodle's own installers take database credentials as arguments. Writing
     // config.php ourselves is what keeps them off the command line, where
@@ -96,7 +97,7 @@ it('keeps the database password out of every command line', function () {
 it('writes a config that is actually PHP', function () {
     $runs = installMoodle();
 
-    $config = collect($runs)->first(fn ($run) => str_ends_with((string) ($run['command'][1] ?? ''), 'config.php'))['input'];
+    $config = collect($runs)->first(fn ($run) => in_array('tee', $run['command'], true) && str_ends_with((string) end($run['command']), 'config.php'))['input'];
 
     expect($config)->toStartWith('<?php');
 
@@ -144,7 +145,7 @@ it('gives Moodle a data directory outside the web root', function () {
     // home — `{home}/{slug}/moodledata`. Outside the web root, still the
     // site's own, which is what document roots becoming slug-based settled.
     $dataDir = "{$this->home}/courses/moodledata";
-    $config = collect($runs)->first(fn ($run) => str_ends_with((string) ($run['command'][1] ?? ''), 'config.php'))['input'];
+    $config = collect($runs)->first(fn ($run) => in_array('tee', $run['command'], true) && str_ends_with((string) end($run['command']), 'config.php'))['input'];
 
     // It holds every file every student uploads; inside the document root
     // each one is a URL.
@@ -195,7 +196,7 @@ it('raises max_input_vars on the interpreter, which Moodle refuses to install wi
 function moodleConfig(ArrayObject $runs): string
 {
     return collect($runs)
-        ->first(fn ($run) => str_ends_with((string) ($run['command'][1] ?? ''), 'config.php'))['input'];
+        ->first(fn ($run) => in_array('tee', $run['command'], true) && str_ends_with((string) end($run['command']), 'config.php'))['input'];
 }
 
 it('writes PostgreSQL\'s driver, and a config that is still valid PHP', function () {
@@ -266,4 +267,14 @@ it('writes the port when only the PANEL\'s default has moved, not the applicatio
     config(['server.databases.engines.postgresql.default_port' => 5433]);
 
     expect(moodleConfig(installMoodle('postgresql')))->toContain("'dbport' => '5433'");
+});
+
+it('schedules Moodle\'s cron every minute, on the site\'s own PHP', function () {
+    installMoodle();
+
+    $job = Cronjob::query()->sole();
+
+    expect($job->command)->toEndWith('/admin/cli/cron.php')
+        ->and($job->command)->toStartWith('/usr/bin/php')
+        ->and($job->expression)->toBe('* * * * *');
 });

@@ -36,21 +36,30 @@ export function UserMenu({ extraItems, impersonating = false }) {
     setSigningOut(true);
     try {
       await logout();
-    } finally {
-      /*
-       * Leaving on purpose is not the same as being thrown out, so the screen
-       * you were on stops being somewhere to return to. Left in place, the
-       * next person to sign in on this browser would land on the last one's
-       * page — refused by the permission check if it is not theirs, which is
-       * a confusing first screen and tells them where their colleague was.
-       */
-      forgetRememberedPath();
-      // Deliberately not cleared: the menu should keep saying "signing out"
-      // right up until the login page replaces it, rather than flicking back
-      // to "Log out" for the length of the navigation.
-      router.push("/login");
-      router.refresh();
+    } catch (error) {
+      // Still signed in: going to /login would bounce straight back to "/" and
+      // read as "log out does nothing". A 401/419 means the session is already
+      // gone, which is the outcome asked for.
+      const status = error?.response?.status;
+      if (status !== 401 && status !== 419) {
+        toast.error(apiMessage(error, t("logOutFailed")));
+        setSigningOut(false);
+        return;
+      }
     }
+    /*
+     * Leaving on purpose is not the same as being thrown out, so the screen
+     * you were on stops being somewhere to return to. Left in place, the
+     * next person to sign in on this browser would land on the last one's
+     * page — refused by the permission check if it is not theirs, which is
+     * a confusing first screen and tells them where their colleague was.
+     */
+    forgetRememberedPath();
+    // Deliberately not cleared: the menu should keep saying "signing out"
+    // right up until the login page replaces it, rather than flicking back
+    // to "Log out" for the length of the navigation.
+    router.push("/login");
+    router.refresh();
   }
 
   function onLogout() {
@@ -83,7 +92,7 @@ export function UserMenu({ extraItems, impersonating = false }) {
           aria-label={t("openUserMenu")}
         >
           <Avatar className="size-8">
-            <AvatarFallback className="bg-primary/10 text-xs font-medium text-primary">
+            <AvatarFallback className="bg-primary/10 text-xs font-medium text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))]">
               {initials(user?.name)}
             </AvatarFallback>
           </Avatar>
@@ -93,7 +102,7 @@ export function UserMenu({ extraItems, impersonating = false }) {
         {/* Identity header */}
         <div className="flex items-center gap-2.5 p-2.5">
           <Avatar className="size-9">
-            <AvatarFallback className="bg-primary/10 text-xs font-medium text-primary">
+            <AvatarFallback className="bg-primary/10 text-xs font-medium text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))]">
               {initials(user?.name)}
             </AvatarFallback>
           </Avatar>

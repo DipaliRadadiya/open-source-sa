@@ -3,6 +3,7 @@ import { PANEL_CARD } from "@/lib/theme/card-chrome";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
+  CircleCheck,
   Eye,
   EyeOff,
   Info,
@@ -10,6 +11,7 @@ import {
   RefreshCw,
   ShieldAlert,
   ShieldCheck,
+  TriangleAlert,
   Webhook,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -39,6 +41,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+// The backend's `min:16` on a webhook secret.
+const TOKEN_MIN = 16;
 
 function ReadOnlyField({ label, value, hint, secret = false }) {
   const tc = useTranslations("common");
@@ -138,11 +143,22 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [rotateOpen, setRotateOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  /*
+   * Why the panel could not add the hook to the repository itself, from the
+   * last save. Only a save's response carries it; after a reload the card
+   * still knows from `webhook.registered` that the hook must be pasted, it
+   * just no longer knows why.
+   */
+  const [manualReason, setManualReason] = useState(null);
 
   const selectedProvider = providers.find((p) => p.name === providerName) ?? null;
   const activeProvider = providers.find((p) => p.name === webhook.provider) ?? null;
   const wantsToken = selectedProvider?.secret_source === "either";
   const verifiedBySignature = webhook.verification === "signature";
+  // The API refuses a secret under 16 characters; said before sending, beside
+  // the field, rather than as a toast after the round trip.
+  const typedToken = gitlabToken.trim();
+  const tokenTooShort = typedToken.length > 0 && typedToken.length < TOKEN_MIN;
 
   async function save(payload, { successKey, failKey }) {
     setBusy(true);
@@ -150,7 +166,13 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
       const { data } = await updateWebhook(application.id, payload);
       const parsed = applicationSchema.safeParse(data?.application);
       if (parsed.success) onChange(parsed.data);
-      toast.success(t(successKey));
+      const registration = data?.webhook_registration ?? null;
+      setManualReason(registration?.status === "manual" ? (registration.message ?? null) : null);
+      toast.success(
+        registration?.status === "registered" && successKey !== "webhook.rotated"
+          ? t("webhook.added")
+          : t(successKey),
+      );
       return true;
     } catch (error) {
       toast.error(apiMessage(error, t(failKey)));
@@ -241,7 +263,7 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
                 />
               </div>
             ) : (
-              <Badge variant="secondary" className="font-normal">
+              <Badge variant={enabled ? "success" : "muted"} className="font-normal">
                 {enabled ? t("webhook.on") : t("webhook.off")}
               </Badge>
             )}
@@ -260,8 +282,12 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
            * chosen first; that picker stays in the body where the choice is.
            */
           <CardAction>
-            <ReasonTooltip reason={!providerName && !busy ? tc("chooseAnOption") : null}>
-              <Button onClick={enable} disabled={!providerName || busy}>
+            <ReasonTooltip
+              reason={
+                busy ? null : !providerName ? tc("chooseAnOption") : wantsToken && tokenTooShort ? t("webhook.tokenTooShort") : null
+              }
+            >
+              <Button onClick={enable} disabled={!providerName || busy || (wantsToken && tokenTooShort)}>
                 {busy ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
@@ -279,18 +305,12 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
           <>
             <div className="flex flex-wrap items-center gap-2">
               {verifiedBySignature ? (
-                <Badge
-                  variant="secondary"
-                  className="gap-1.5 font-normal text-success"
-                >
+                <Badge variant="success" className="gap-1.5 font-normal">
                   <ShieldCheck className="size-3.5" />
                   {t("webhook.verifiedSignature")}
                 </Badge>
               ) : (
-                <Badge
-                  variant="secondary"
-                  className="gap-1.5 font-normal text-warning"
-                >
+                <Badge variant="warning" className="gap-1.5 font-normal">
                   <ShieldAlert className="size-3.5" />
                   {t("webhook.verifiedToken")}
                 </Badge>
@@ -320,12 +340,12 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
                       className="w-full max-w-xs font-mono text-xs"
                     />
                     <ReasonTooltip
-                      reason={!gitlabToken.trim() && !busy ? tc("enterAValue") : null}
+                      reason={busy ? null : !typedToken ? tc("enterAValue") : tokenTooShort ? t("webhook.tokenTooShort") : null}
                     >
                       <Button
                         size="sm"
                         onClick={applyToken}
-                        disabled={!gitlabToken.trim() || busy}
+                        disabled={!typedToken || tokenTooShort || busy}
                       >
                         {busy ? <Loader2 className="size-4 animate-spin" /> : null}
                         {t("webhook.saveToken")}
@@ -354,6 +374,38 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
               </div>
             ) : null}
 
+            {/* Added to the repository by the panel: nothing to paste, so
+                the URL, secret and paste steps would only be instructions for
+                a job already done. */}
+            {webhook.registered ? (
+              <div className="flex items-start gap-2.5 rounded-lg border border-success/30 bg-success/5 p-3 text-sm">
+                <CircleCheck className="mt-0.5 size-4 shrink-0 text-success" />
+                <div className="space-y-0.5">
+                  <p className="font-medium">{t("webhook.added")}</p>
+                  <p className="text-muted-foreground">
+                    {t("webhook.addedBody", {
+                      provider: activeProvider?.title ?? webhook.provider ?? "",
+                      branch: application.branch ?? "main",
+                    })}
+                  </p>
+                  <p className="pt-1 text-xs text-muted-foreground">
+                    {t("webhook.lastDelivered")}:{" "}
+                    <span className="font-medium text-foreground">
+                      {webhook.last_delivered_at_human ??
+                        webhook.last_delivered_at ??
+                        t("webhook.noDeliveries")}
+                    </span>
+                  </p>
+                </div>
+              </div>
+            ) : (
+            <>
+            {manualReason ? (
+              <div className="flex items-start gap-2.5 rounded-lg border border-warning/40 bg-warning/5 p-3 text-sm">
+                <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+                <p>{manualReason}</p>
+              </div>
+            ) : null}
             <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
               <div className="space-y-4">
                 <ReadOnlyField
@@ -367,6 +419,10 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
                     value={webhook.secret}
                     secret
                   />
+                ) : !canManage ? (
+                  // Only sent to someone who may deploy: with it and the URL,
+                  // anyone can sign a push.
+                  <p className="text-xs text-muted-foreground">{t("webhook.secretWithheld")}</p>
                 ) : null}
                 <p className="text-xs text-muted-foreground">
                   {t("webhook.lastDelivered")}:{" "}
@@ -385,6 +441,8 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
                 />
               ) : null}
             </div>
+            </>
+            )}
 
             {canManage ? (
               <div className="border-t pt-4">
@@ -492,7 +550,11 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
         onOpenChange={setRotateOpen}
         icon={RefreshCw}
         title={t("webhook.rotateConfirmTitle")}
-        description={t("webhook.rotateConfirmBody")}
+        description={
+          webhook.registered
+            ? t("webhook.rotateConfirmBodyRegistered", { provider: activeProvider?.title ?? webhook.provider ?? "" })
+            : t("webhook.rotateConfirmBody")
+        }
         cancelLabel={t("cancel")}
         confirmLabel={busy ? t("webhook.rotating") : t("webhook.rotate")}
         pending={busy}

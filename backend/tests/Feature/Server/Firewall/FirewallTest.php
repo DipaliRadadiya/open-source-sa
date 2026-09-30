@@ -97,6 +97,56 @@ it('rejects a duplicate rule', function () {
         ->assertJsonValidationErrors('port_from');
 });
 
+it('refuses a deny rule that ufw would write over an existing allow', function () {
+    // ufw counts port/protocol/source as one rule. `ufw deny 22/tcp` beside
+    // `allow 22/tcp` prints "Rule updated" and replaces it, while the panel
+    // kept listing both; deleting the deny then removed SSH altogether. Found
+    // live on the Apache test box, which it locked out.
+    fakeUfw('active');
+    FirewallRule::create(['port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/firewall/rules', ['port_from' => 22, 'protocol' => 'tcp', 'action' => 'deny'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['port_from' => __('errors/firewall.conflict', ['ports' => '22', 'action' => 'allow'])]);
+
+    expect(FirewallRule::count())->toBe(1);
+    Process::assertDidntRun(fn ($p) => in_array('deny', $p->command, true));
+});
+
+it('still accepts an opposite rule from a different source, which ufw keeps apart', function () {
+    fakeUfw('active');
+    FirewallRule::create(['port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/firewall/rules', ['port_from' => 22, 'protocol' => 'tcp', 'action' => 'deny', 'source_ip' => '203.0.113.9'])
+        ->assertCreated();
+});
+
+it('refuses an edit that makes a rule the opposite of another on the same port', function () {
+    fakeUfw('active');
+    FirewallRule::create(['port_from' => 8080, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'user']);
+    $deny = FirewallRule::create(['port_from' => 9090, 'protocol' => 'tcp', 'action' => 'deny', 'origin' => 'user']);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/firewall/rules/{$deny->id}", ['port_from' => 8080])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('port_from');
+
+    expect($deny->fresh()->port_from)->toBe(9090);
+});
+
+it('lets a rule change its own action, since that is the edit ufw can do', function () {
+    fakeUfw('active');
+    $rule = FirewallRule::create(['port_from' => 8080, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'user']);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/firewall/rules/{$rule->id}", ['action' => 'deny'])
+        ->assertOk();
+
+    expect($rule->fresh()->action)->toBe('deny');
+});
+
 it('rejects an out-of-range port', function () {
     fakeUfw();
 

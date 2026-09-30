@@ -66,6 +66,13 @@ export function LoginForm() {
         router.refresh();
       });
     } catch (error) {
+      // The login throttle, not the panel's request budget: said on the form,
+      // where the reader is looking, instead of the generic "the panel asked
+      // the server too often" toast.
+      if (error?.response?.status === 429) {
+        form.setError("password", { message: t("tooManyAttempts") });
+        return;
+      }
       handleValidationError(error, form);
     }
   }
@@ -75,7 +82,7 @@ export function LoginForm() {
 
   return (
     <Form {...form}>
-      <form
+      <form noValidate
         // Unhydrated, a form with no method falls back to GET and puts the
         // password in the URL. React intercepts this before it ever submits.
         method="post"

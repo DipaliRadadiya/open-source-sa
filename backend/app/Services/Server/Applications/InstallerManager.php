@@ -94,6 +94,16 @@ class InstallerManager
     }
 
     /**
+     * The installer's post-start step. {@see SiteInstaller::afterStart()}
+     *
+     * @throws ProvisioningFailedException
+     */
+    public function afterStart(Application $application, string $documentRoot): void
+    {
+        $this->installerFor($application)?->afterStart($application, $documentRoot);
+    }
+
+    /**
      * Bring an installed application's own canonical URL in line with the
      * domain and certificate the panel currently serves.
      *

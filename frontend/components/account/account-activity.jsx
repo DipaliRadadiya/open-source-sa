@@ -6,7 +6,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { humanizeActivity, actionBadgeVariant } from "@/lib/activity-log/labels";
+import { typeLabel } from "@/lib/activity-log/labels";
 
 // Backend timestamps may be ISO or MySQL-style ("YYYY-MM-DD HH:mm:ss"); parse
 // both, return null if neither is valid so we skip the tooltip instead of
@@ -45,20 +45,13 @@ function WhenCell({ row }) {
 }
 
 function TypeCell({ row }) {
+  const t = useTranslations("activity");
   return row.original.type ? (
     <Badge variant="outline" className="font-normal">
-      {humanizeActivity(row.original.type)}
+      {typeLabel(t, row.original.type)}
     </Badge>
   ) : (
     <span className="text-muted-foreground">—</span>
-  );
-}
-
-function EventCell({ row }) {
-  return (
-    <Badge variant={actionBadgeVariant(row.original.action)} className="font-normal">
-      {humanizeActivity(row.original.action)}
-    </Badge>
   );
 }
 
@@ -72,7 +65,6 @@ export function AccountActivity({ data }) {
   const columns = [
     { accessorKey: "created_at_human", header: t("activity.when"), cell: WhenCell },
     { accessorKey: "type", header: t("activity.type"), cell: TypeCell },
-    { accessorKey: "action", header: t("activity.event"), cell: EventCell },
     {
       accessorKey: "description",
       header: t("activity.descriptionHeader"),

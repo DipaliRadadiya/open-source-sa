@@ -33,6 +33,9 @@ export default async function CronjobsPage({ searchParams }) {
 
   if (!can(permissions, "cronjob", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "cronjob", "manage");
+  // A permission of its own: the output lives in the Logs registry, which
+  // `/logs/{key}` gates on `logs` — cron access neither grants nor needs it.
+  const canViewLogs = can(permissions, "logs", "view");
   const [{ cronjobs, meta, failed, status, failure, message }, runAs, schedulePresets, commandPresets, facts, sites] =
     await Promise.all([
       getCronjobs(sp),
@@ -84,6 +87,7 @@ export default async function CronjobsPage({ searchParams }) {
             systemUsersFailed={runAs.failed}
             applications={sites.applications}
             canManage={canManage}
+            canViewLogs={canViewLogs}
             schedulePresets={schedulePresets}
             commandPresets={commandPresets.presets}
             placeholder={commandPresets.placeholder}

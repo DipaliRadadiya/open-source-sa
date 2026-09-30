@@ -63,7 +63,7 @@ export async function BotTrafficCard({ appId, traffic, failed, days }) {
                  look like static text. The active one is tinted rather than
                  filled grey — same rule as the log viewer's severity filter,
                  from one definition so the two cannot drift apart. */
-              variant="outline"
+              variant="field"
               className={cn("h-8 px-2.5 text-xs", filterToggleClass(range === days))}
             >
               <Link
@@ -114,19 +114,30 @@ export async function BotTrafficCard({ appId, traffic, failed, days }) {
                   <TableRow>
                     <TableHead className="px-2 sm:px-4">{t("columns.bot")}</TableHead>
                     {/* Five columns do not fit a phone. Rather than let the
-                        table clip — which hid "Right now", the one column that
+                        table clip — which hid the settings column, the one that
                         answers "is this bot getting in?" — the two least
                         urgent drop out below `sm` and reappear above it. */}
                     <TableHead className="hidden sm:table-cell">{t("columns.kind")}</TableHead>
-                    <TableHead className="px-2 text-right sm:px-4">{t("columns.requests")}</TableHead>
-                    <TableHead className="hidden md:table-cell">{t("columns.lastSeen")}</TableHead>
-                    <TableHead className="px-2 sm:px-4">{t("columns.status")}</TableHead>
+                    <TableHead className="h-auto px-2 py-2 text-right whitespace-normal sm:px-4">{t("columns.requests")}</TableHead>
+                    {/* From xl, not md: at 768 and 1024 in French and Portuguese this
+                        column pushed the settings column past the table's edge. */}
+                    <TableHead className="hidden xl:table-cell">{t("columns.lastSeen")}</TableHead>
+                    {/* Allowed to wrap: "Suas configurações" / "Tu configuración"
+                        ran 40px past a 390px screen on one line. */}
+                    <TableHead className="h-auto px-2 py-2 whitespace-normal sm:px-4">{t("columns.status")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {bots.map((bot) => (
                     <TableRow key={bot.bot}>
-                      <TableCell className="px-2 font-mono text-xs sm:px-4">
+                      {/* Only a name too long for any screen may break: on
+                          every row, `break-all` split "Bytespider" mid-word. */}
+                      <TableCell
+                        className={cn(
+                          "px-2 font-mono text-xs sm:px-4",
+                          bot.bot.length > 24 && "min-w-20 break-all whitespace-normal",
+                        )}
+                      >
                         {bot.bot}
                         {/* The kind still has to be readable once its own
                             column is gone, so it rides along under the name. */}
@@ -144,15 +155,16 @@ export async function BotTrafficCard({ appId, traffic, failed, days }) {
                       <TableCell className="px-2 text-right text-xs tabular-nums sm:px-4">
                         {format.number(bot.hits)}
                       </TableCell>
-                      <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
+                      <TableCell className="hidden text-xs text-muted-foreground xl:table-cell">
                         {bot.last_seen_human ?? "—"}
                       </TableCell>
                       <TableCell className="px-2 sm:px-4">
-                        {/* Says what your CURRENT settings do to this bot, so
-                            the table doubles as a preview of the policy above
-                            rather than a list to cross-reference by hand. */}
+                        {/* What your settings say to do with this bot — not
+                            what happened: the API decides this by name, not
+                            from the status codes in the log, so "Blocked" was
+                            shown beside requests that were answered 200. */}
                         {bot.blocked ? (
-                          <Badge variant="secondary">{t("blocked")}</Badge>
+                          <Badge variant="muted">{t("blocked")}</Badge>
                         ) : (
                           <span className="text-xs text-muted-foreground">{t("allowed")}</span>
                         )}

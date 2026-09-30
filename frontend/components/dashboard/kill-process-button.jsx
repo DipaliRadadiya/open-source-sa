@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { CircleStop, TriangleAlert } from "lucide-react";
 import { killProcess } from "@/lib/api/server-metrics";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Caution } from "@/components/ui/caution";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
   Tooltip,
   TooltipContent,
@@ -27,20 +29,26 @@ import { apiMessage } from "@/lib/api/error-message";
  */
 export function KillProcessButton({ process, canManage }) {
   const t = useTranslations("serverDashboard");
-  const router = useRouter();
+  const { refreshThen } = useRefresh();
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
   // Only offered once TERM has been tried and the process is still there.
   const [offerForce, setOfferForce] = useState(false);
+  const engine = databaseEngine(process.command);
 
   async function run(signal) {
     setPending(true);
     try {
       await killProcess(process.pid, signal);
-      toast.success(t("kill.stopped", { command: shortCommand(process.command) }));
-      setConfirming(false);
-      setOfferForce(false);
-      router.refresh();
+      // Said once the list no longer shows it: announced on the API's answer,
+      // "sh stopped" sat over a row still claiming 100% CPU for seconds.
+      refreshThen(() => {
+        toast.success(t("kill.stopped", { command: shortCommand(process.command) }));
+        setConfirming(false);
+        setOfferForce(false);
+        setPending(false);
+      });
+      return;
     } catch (error) {
       const status = error.response?.status;
 
@@ -48,9 +56,11 @@ export function KillProcessButton({ process, canManage }) {
         // Already gone — but NOT a success. PIDs are recycled, so the row may
         // now point at a different process entirely; the honest move is to say
         // nothing was stopped and reload the list.
-        toast.info(t("kill.alreadyGone"));
-        setConfirming(false);
-        router.refresh();
+        refreshThen(() => {
+          toast.info(t("kill.alreadyGone"));
+          setConfirming(false);
+          setPending(false);
+        });
         return;
       }
 
@@ -59,6 +69,7 @@ export function KillProcessButton({ process, canManage }) {
         // protected service. Retrying will never work, so don't offer it.
         toast.error(apiMessage(error, t("kill.refused")));
         setConfirming(false);
+        setPending(false);
         return;
       }
 
@@ -68,57 +79,46 @@ export function KillProcessButton({ process, canManage }) {
       // The signal didn't land. KILL is the next thing to try, so surface it now
       // rather than making the user reopen the dialog.
       if (signal === "TERM") setOfferForce(true);
-    } finally {
-      setPending(false);
     }
+    setPending(false);
   }
+
+  const stopButton = (
+    <Button
+      variant="ghost"
+      size="icon"
+      // Same red square the Services page uses for Stop. A grey circle read as
+      // a generic target — "stop" should be one shape, and one colour,
+      // everywhere in the product.
+      className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+      disabled={!canManage}
+      onClick={() => {
+        setOfferForce(false);
+        setConfirming(true);
+      }}
+      aria-label={t("kill.action")}
+    >
+      {/* A circle around the square. A bare outlined square at 16px is the
+          same glyph as an unticked checkbox, and in destructive red on a table
+          row it read as a rendering fault rather than a control. */}
+      <CircleStop className="size-4" />
+    </Button>
+  );
 
   return (
     <>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span tabIndex={canManage ? -1 : 0} className="inline-flex">
-            <Button
-              variant="ghost"
-              size="icon"
-              // Same red square the Services page uses for Stop. A grey circle
-              // read as a generic target — "stop" should be one shape, and one
-              // colour, everywhere in the product.
-              className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-              disabled={!canManage}
-              /*
-               * No `disabledReason` here, deliberately.
-               *
-               * Button renders its OWN ReasonTooltip whenever one is passed,
-               * and it only stands down for a parent that supplies the reason
-               * through context. The wrapper above is a hand-rolled Radix
-               * Tooltip, which sets no context — so without permission this
-               * control had two tooltips saying the same sentence, and two tab
-               * stops (both wrapper spans take tabIndex={0}) for one dead
-               * button. On a touch screen the inner one is a Popover, nested
-               * inside a TooltipTrigger.
-               *
-               * The tooltip above already switches its own text on canManage,
-               * so it covers both states on its own.
-               */
-              onClick={() => {
-                setOfferForce(false);
-                setConfirming(true);
-              }}
-              aria-label={t("kill.action")}
-            >
-              {/* A circle around the square. A bare outlined square at 16px is
-                  the same glyph as an unticked checkbox, and in destructive red
-                  on a table row it read as a rendering fault rather than a
-                  control. */}
-              <CircleStop className="size-4" />
-            </Button>
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>
-          {canManage ? t("kill.action") : t("kill.noPermission")}
-        </TooltipContent>
-      </Tooltip>
+      {/* Not permitted: ReasonTooltip, which also opens on a tap — the plain
+          Radix tooltip this used never did, so a phone showed a dead red
+          button. It supplies the reason through context, so the Button does
+          not add a second tooltip of its own. */}
+      {canManage ? (
+        <Tooltip>
+          <TooltipTrigger asChild>{stopButton}</TooltipTrigger>
+          <TooltipContent>{t("kill.action")}</TooltipContent>
+        </Tooltip>
+      ) : (
+        <ReasonTooltip reason={t("kill.noPermission")}>{stopButton}</ReasonTooltip>
+      )}
 
       <ConfirmDialog
         open={confirming}
@@ -140,9 +140,29 @@ export function KillProcessButton({ process, canManage }) {
         confirmVariant="destructive"
         pending={pending}
         onConfirm={() => run(offerForce ? "KILL" : "TERM")}
-      />
+      >
+        {/* A database stopped here stays down — nothing restarts it — and
+            every application using it fails until someone starts it again
+            from Services. The API still allows it, so the dialog says so. */}
+        {engine && !offerForce ? (
+          <Caution tone="destructive" size="md">
+            {t("kill.databaseWarning", { engine })}
+          </Caution>
+        ) : null}
+      </ConfirmDialog>
     </>
   );
+}
+
+const DATABASE_PROCESSES = [
+  [/^(mysqld|mariadbd|mysqld_safe|mariadbd-safe)$/, "MariaDB / MySQL"],
+  [/^mongod$/, "MongoDB"],
+  [/^(postgres|postmaster)$/, "PostgreSQL"],
+];
+
+function databaseEngine(command) {
+  const name = shortCommand(command).replace(/:$/, "");
+  return DATABASE_PROCESSES.find(([pattern]) => pattern.test(name))?.[1] ?? null;
 }
 
 // The full command line can be hundreds of characters; a dialog title needs the

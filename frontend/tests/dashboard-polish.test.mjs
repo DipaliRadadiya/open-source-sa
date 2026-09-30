@@ -355,7 +355,9 @@ test("the stop button has exactly one tooltip", () => {
 
   // The remaining one still has to cover both states and still be labelled.
   assert.match(killButton, /aria-label=\{t\("kill\.action"\)\}/);
-  assert.match(killButton, /canManage \? t\("kill\.action"\) : t\("kill\.noPermission"\)/);
+  // One tooltip per state: a label when allowed, the tap-capable reason when not.
+  assert.match(killButton, /<TooltipContent>\{t\("kill\.action"\)\}<\/TooltipContent>/);
+  assert.match(killButton, /<ReasonTooltip reason=\{t\("kill\.noPermission"\)\}>\{stopButton\}<\/ReasonTooltip>/);
 });
 
 test("the command column reads as the row's identity", () => {

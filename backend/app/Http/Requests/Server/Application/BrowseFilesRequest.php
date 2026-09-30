@@ -23,7 +23,10 @@ class BrowseFilesRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'path' => ['sometimes', 'string', 'max:1024', new SafeRelativePath],
+            // Nullable: `?path=` arrives as null (ConvertEmptyStringsToNull),
+            // and the documented meaning of an empty path is the site root.
+            // It was a 422 "must be a string" instead.
+            'path' => ['sometimes', 'nullable', 'string', 'max:1024', new SafeRelativePath],
             // Only the listing reads this; view and download share this request
             // and ignore it, which is cheaper than a fourth request class for
             // one optional flag.

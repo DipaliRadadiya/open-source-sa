@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -55,6 +56,13 @@ import {
 import { AddDomainDialog } from "@/components/applications/domains/add-domain-dialog";
 import { EditDomainDialog } from "@/components/applications/domains/edit-domain-dialog";
 
+// Site types whose installer rewrites the application's own stored address
+// when the primary domain changes (`syncUrl` in the backend installers).
+const ADDRESS_SYNCED_TYPES = new Set([
+  "wordpress", "akaunting", "craftcms", "mautic", "moodle",
+  "n8n", "nextcloud", "nodebb", "prestashop", "statamic",
+]);
+
 const TYPE_VARIANT = {
   primary: "default",
   alias: "secondary",
@@ -79,20 +87,32 @@ const TYPE_VARIANT = {
  *   - The confirm dialogs stay quiet when unknown. Guessing the other way puts
  *     a scary warning on every dialog the moment a field goes missing.
  *
- * `missing_domains` is preferred because it is the backend's own answer to
- * exactly this question and needs no wildcard matching here; `domains` is the
- * fallback for a payload that carries only the positive list.
+ * `domains` (the names on the certificate) is read first; `missing_domains`
+ * is the fallback for a payload that carries only that list.
  *
  * Only an active certificate counts. A pending or failed one secures nothing,
  * so its coverage is not a fact about what visitors get.
  */
 function certificateCoverage(certificate, domain) {
   if (certificate?.status !== "active") return "unknown";
+  /*
+   * The certificate's own list first. `missing_domains` is only as fresh as
+   * the last time it was worked out, and a name added since was in neither
+   * list — so it read "Secured" until the next reissue. The names on the
+   * certificate cannot be stale about what the certificate covers.
+   */
+  if (certificate.domains?.length) {
+    const name = String(domain ?? "").toLowerCase();
+    const covered = certificate.domains.some((entry) => {
+      const on = String(entry).toLowerCase();
+      if (on === name) return true;
+      // *.example.com covers one label, not the apex and not deeper names.
+      return on.startsWith("*.") && name.endsWith(on.slice(1)) && !name.slice(0, -on.length + 1).includes(".");
+    });
+    return covered ? "covered" : "uncovered";
+  }
   if (certificate.missing_domains?.length) {
     return certificate.missing_domains.includes(domain) ? "uncovered" : "covered";
-  }
-  if (certificate.domains?.length) {
-    return certificate.domains.includes(domain) ? "covered" : "uncovered";
   }
   return "unknown";
 }
@@ -133,12 +153,14 @@ export function DomainsSection({
 }) {
   const t = useTranslations("applications.domains");
   const router = useRouter();
+  const { pending: refreshing, refreshThen } = useRefresh();
 
   const [addOpen, setAddOpen] = useState(false);
   const [promoteTarget, setPromoteTarget] = useState(null);
   // Read from the list rather than carried on the menu item: promoting is the
   // one action whose consequence is about the name being replaced, not the one
-  // being clicked.
+  // being clicked. Copied onto the target when the dialog opens, because the
+  // dialog now stays open through the re-read that changes the list.
   const currentPrimary = domains.find((domain) => domain.type === "primary");
   const [editTarget, setEditTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -184,9 +206,12 @@ export function DomainsSection({
     setPending(true);
     try {
       await makePrimaryDomain(appId, promoteTarget.domain);
-      toast.success(t("toast.promoted", { domain: promoteTarget.domain }));
-      setPromoteTarget(null);
-      router.refresh();
+      // Closed once the list has re-read: closing first left the old primary
+      // on screen for seconds under a toast saying it had changed.
+      refreshThen(() => {
+        toast.success(t("toast.promoted", { domain: promoteTarget.domain }));
+        setPromoteTarget(null);
+      });
     } catch (error) {
       toast.error(apiMessage(error, t("toast.promoteFailed")));
     } finally {
@@ -199,9 +224,10 @@ export function DomainsSection({
     setPending(true);
     try {
       await deleteDomain(appId, target);
-      toast.success(t("toast.removed", { domain: target }));
-      setDeleteTarget(null);
-      router.refresh();
+      refreshThen(() => {
+        toast.success(t("toast.removed", { domain: target }));
+        setDeleteTarget(null);
+      });
     } catch (error) {
       /*
        * Already gone — another tab, another person, or a click that landed
@@ -210,9 +236,10 @@ export function DomainsSection({
        * disappear and invites a retry that can only ever 404.
        */
       if (error?.response?.status === 404) {
-        toast.info(t("toast.removedAlready", { domain: target }));
-        setDeleteTarget(null);
-        router.refresh();
+        refreshThen(() => {
+          toast.info(t("toast.removedAlready", { domain: target }));
+          setDeleteTarget(null);
+        });
         return;
       }
       toast.error(apiMessage(error, t("toast.removeFailed")));
@@ -248,7 +275,7 @@ export function DomainsSection({
           /* No border here. The rows already sit inside a Card, and a second
              frame around them drew the same edge twice — the coloured frames
              on the SSL card mean something, this one meant nothing. */
-          <div className="-mx-6 -mb-6 divide-y overflow-hidden rounded-b-xl border-t">
+          <div className="-mx-(--card-spacing) -mb-(--card-spacing) divide-y overflow-hidden border-t">
             {domains.map((domain) => {
               const isPrimary = domain.type === "primary";
               const isVerifying = Boolean(verifying[domain.domain]);
@@ -481,7 +508,7 @@ export function DomainsSection({
                             </DropdownMenuItem>
                             {domain.type === "alias" ? (
                               <DropdownMenuItem
-                                onSelect={() => setPromoteTarget(domain)}
+                                onSelect={() => setPromoteTarget({ ...domain, from: currentPrimary?.domain })}
                               >
                                 <Star className="size-4" />
                                 {t("makePrimary")}
@@ -535,25 +562,25 @@ export function DomainsSection({
         description={t("promote.body")}
         cancelLabel={t("cancel")}
         confirmLabel={t("makePrimary")}
-        pending={pending}
+        pending={pending || refreshing}
         onConfirm={confirmPromote}
       >
         {/* The swap is the fact worth seeing first, and the name being replaced
             is the one thing the title cannot show. Contrast alone separates the
             two — the outgoing name is muted, the incoming one is not — rather
             than stacking size, weight and colour on the same line. */}
-        {currentPrimary ? (
-          <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-1.5 rounded-lg border p-3">
+        {promoteTarget?.from ? (
+          <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-4 gap-y-1.5 rounded-lg border p-3">
             <dt className="text-xs text-muted-foreground">
               {t("promote.nowLabel")}
             </dt>
-            <dd className="truncate font-mono text-sm text-muted-foreground">
-              {currentPrimary.domain}
+            <dd className="font-mono text-sm break-all text-muted-foreground">
+              {promoteTarget.from}
             </dd>
             <dt className="text-xs text-muted-foreground">
               {t("promote.afterLabel")}
             </dt>
-            <dd className="truncate font-mono text-sm">
+            <dd className="font-mono text-sm break-all">
               {promoteTarget?.domain}
             </dd>
           </dl>
@@ -563,20 +590,20 @@ export function DomainsSection({
             semicolons, which is exactly the shape nobody reads before clicking
             a confirm button. */}
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
-          {currentPrimary ? (
+          {promoteTarget?.from ? (
             <li>
-              {t("promote.keepsServing", { domain: currentPrimary.domain })}
+              {t("promote.keepsServing", { domain: promoteTarget.from })}
             </li>
           ) : null}
-          <li>{t("promote.renamesFiles")}</li>
+          {/* The installer's syncUrl rewrites the stored address for these
+              types (WordPress's siteurl and home, checked with wp-cli). The
+              dialog used to warn it would NOT, and that files get renamed —
+              the vhost and logs are named after the application, so nothing
+              is. Both lines described something that does not happen. */}
+          {promoteTarget && ADDRESS_SYNCED_TYPES.has(siteType) ? (
+            <li>{t("promote.updatesAddress", { domain: promoteTarget.domain })}</li>
+          ) : null}
         </ul>
-
-        {/* Only WordPress stores its own address, so only WordPress is warned.
-            Shown to every site type, this line trained people to skip the
-            dialog. */}
-        {siteType === "wordpress" ? (
-          <Caution>{t("promote.cmsWarning")}</Caution>
-        ) : null}
 
         {/* The name about to become the application's canonical address is not
             on the certificate, so from the moment this is confirmed the
@@ -600,7 +627,7 @@ export function DomainsSection({
         description={t("removeConfirm.body")}
         cancelLabel={t("cancel")}
         confirmLabel={t("remove")}
-        pending={pending}
+        pending={pending || refreshing}
         onConfirm={confirmDelete}
       >
         {/* The consequence nothing on this screen mentioned.

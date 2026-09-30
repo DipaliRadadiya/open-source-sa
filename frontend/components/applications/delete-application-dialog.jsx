@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { useRefresh } from "@/hooks/use-refresh";
 import { TriangleAlert } from "lucide-react";
 import { CopyButton } from "@/components/ui/copy-button";
 import { deleteApplication } from "@/lib/api/applications";
@@ -18,9 +19,10 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
  * Deleting an application stops the domain being served, so the domain is what
  * has to be typed — the thing that goes dark, not the label.
  *
- * The files are a separate decision and default to being kept, which matches
- * the API. Two things people expect to happen and don't are said out loud: the
- * code on disk stays, and a database created for this site stays too.
+ * The files and databases are separate decisions, ticked by default: deleting
+ * a site usually means all of it, and unticking is the deliberate choice.
+ * Unticked, what is left behind is said out loud: the code on disk stays, and
+ * a database created for this site stays too.
  *
  * `remove_files` also destroys this site's backups — every row AND the archives
  * in the storage destination. That is the whole reason the checkbox names them:
@@ -33,16 +35,24 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
  * halves of that are said, because a half-truth here is what leaves somebody
  * paying for buckets they cannot find.
  */
-export function DeleteApplicationDialog({ application, open, onOpenChange, afterDelete, redirectTo }) {
+export function DeleteApplicationDialog({ application, open, onOpenChange, afterDelete, redirectTo, closeWhenGone = false }) {
   const t = useTranslations("applications.delete");
   const router = useRouter();
+  const { refreshThen } = useRefresh();
   const [pending, setPending] = useState(false);
+  const [awaitingPage, setAwaitingPage] = useState(false);
   const [confirm, setConfirm] = useState("");
-  const [removeFiles, setRemoveFiles] = useState(false);
-  const [removeDatabases, setRemoveDatabases] = useState(false);
-  // Off by default, like the other two. A volume holding a site's database is as
+  const [removeFiles, setRemoveFiles] = useState(true);
+  // Null when the user is gone; absent (undefined) when it was not loaded.
+  const orphaned = application?.system_user === null;
+  const [removeDatabases, setRemoveDatabases] = useState(true);
+  // On by default, following the two above rather than the comment this line used
+  // to carry. It said "off by default, like the other two" — and main has since
+  // turned both of those on, so the stated reason had expired. Left off it would
+  // mean deleting a site's files AND its databases while silently keeping its
+  // volumes, and a volume holding a container site's database is exactly as
   // unrecoverable as the database a LEMP site had.
-  const [removeDockerResources, setRemoveDockerResources] = useState(false);
+  const [removeDockerResources, setRemoveDockerResources] = useState(true);
   /*
    * Only to NAME them on the checkbox. "Also delete the database" is a
    * different decision from "also delete shop_live", and the second is the one
@@ -99,18 +109,50 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
   function handleOpenChange(next) {
     if (!next) {
       setConfirm("");
-      setRemoveFiles(false);
-      setRemoveDatabases(false);
+      setRemoveFiles(true);
+      setRemoveDatabases(true);
       setDatabases([]);
     }
     onOpenChange?.(next);
   }
 
+  // With closeWhenGone the toast waits for the page to drop this dialog;
+  // announced on the API's answer it sat beside "Deleting…" for seconds.
+  const announce = useRef(null);
+  useEffect(() => () => announce.current?.(), []);
+
+  useEffect(() => {
+    if (!awaitingPage) return undefined;
+    const timer = window.setTimeout(() => {
+      announce.current?.();
+      announce.current = null;
+      setAwaitingPage(false);
+      setPending(false);
+      onOpenChange?.(false);
+    }, 20000);
+    return () => window.clearTimeout(timer);
+  }, [awaitingPage, onOpenChange]);
+
   async function onConfirm() {
     if (!matches) return;
     setPending(true);
     try {
-      const { data } = await deleteApplication(application.id, { removeFiles, removeDatabases, removeDockerResources });
+      // Databases only when they were listed and the box is ticked. Sent
+      // unconditionally, a site with no database still asked for
+      // remove_databases=true — a 403 for every role without database manage,
+      // and a silent drop of databases this dialog never showed when their
+      // list failed to load.
+      //
+      // Docker resources get the same treatment for the same reason: the box is
+      // rendered only when there is something to remove, so asking for it on a
+      // site with no volumes is asking the Docker endpoints to act on a server
+      // that may not even have Docker.
+      const { data } = await deleteApplication(application.id, {
+        removeFiles: removeFiles && !orphaned,
+        removeDatabases: databases.length > 0 && removeDatabases,
+        removeDockerResources:
+          dockerResourceNames.length > 0 && removeDockerResources,
+      });
 
       /*
        * 200 with a failure inside it. The site really is gone — a red toast
@@ -121,18 +163,18 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
        * finish it, held long enough to read.
        */
       const failed = data?.databases?.failed ?? [];
-      if (failed.length) {
-        toast.warning(data?.message ?? t("databasesFailed", { databases: failed.map((row) => row.name).join(", ") }), {
-          duration: 20000,
-          action: { label: t("goToDatabases"), onClick: () => router.push("/databases") },
-        });
-      } else {
-        toast.success(t("done", { name: application.name }));
-      }
-      handleOpenChange(false);
+      const say = () => {
+        if (failed.length) {
+          toast.warning(data?.message ?? t("databasesFailed", { databases: failed.map((row) => row.name).join(", ") }), {
+            duration: 20000,
+            action: { label: t("goToDatabases"), onClick: () => router.push("/databases") },
+          });
+        } else {
+          toast.success(t("done", { name: application.name }));
+        }
+      };
       if (afterDelete) await afterDelete();
-      if (redirectTo) router.push(redirectTo);
-      else router.refresh();
+      finish(say);
     } catch (error) {
       /*
        * 404 means somebody already deleted it — another tab, another person,
@@ -147,16 +189,39 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
        * is refreshed underneath them so the row actually leaves.
        */
       if (error?.response?.status === 404) {
-        toast.info(t("alreadyGone", { name: application.name }));
-        handleOpenChange(false);
         if (afterDelete) await afterDelete();
-        if (redirectTo) router.push(redirectTo);
-        else router.refresh();
+        finish(() => toast.info(t("alreadyGone", { name: application.name })));
         return;
       }
       toast.error(apiMessage(error, t("failed")));
-    } finally {
       setPending(false);
+    }
+  }
+
+  // Announced when the list no longer shows the row, not before: closed
+  // straight after the API answered, the dialog left "… was deleted" over a
+  // row that stayed on screen for another two seconds.
+  function finish(say) {
+    const done = () => {
+      say();
+      handleOpenChange(false);
+      setPending(false);
+    };
+    // For a caller whose page swaps this dialog out once the application is
+    // gone (the staging page): stay on "Deleting…" until that happens, rather
+    // than trusting the refresh to land before the dialog closes — it did not
+    // on a real server, and the old card showed for a moment.
+    if (closeWhenGone) {
+      announce.current = say;
+      router.refresh();
+      setAwaitingPage(true);
+      return;
+    }
+    if (redirectTo) {
+      router.push(redirectTo);
+      done();
+    } else {
+      refreshThen(done);
     }
   }
 
@@ -175,22 +240,31 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
       onConfirm={onConfirm}
     >
       <div className="space-y-4">
-        <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-3">
-          <Checkbox
-            id="delete-app-files"
-            checked={removeFiles}
-            onCheckedChange={(value) => setRemoveFiles(value === true)}
-            className="mt-0.5"
-          />
-          <div className="space-y-1">
-            <Label htmlFor="delete-app-files" className="text-sm font-medium" hint={t("removeFilesHint")}>
-              {t("removeFiles")}
-            </Label>
-            <p className="text-xs leading-5 text-muted-foreground">
-              {removeFiles ? t("removeFilesOn") : t("removeFilesOff")}
-            </p>
+        {/* No system user, no home to find the files in: the API skips them
+            rather than guess, so offering the choice would be a promise it
+            does not keep. */}
+        {orphaned ? (
+          <p className="rounded-lg border bg-muted/40 p-3 text-xs leading-5 text-muted-foreground">
+            {t("filesKept")}
+          </p>
+        ) : (
+          <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-3">
+            <Checkbox
+              id="delete-app-files"
+              checked={removeFiles}
+              onCheckedChange={(value) => setRemoveFiles(value === true)}
+              className="mt-0.5"
+            />
+            <div className="space-y-1">
+              <Label htmlFor="delete-app-files" className="text-sm font-medium" hint={t("removeFilesHint")}>
+                {t("removeFiles")}
+              </Label>
+              <p className="text-xs leading-5 text-muted-foreground">
+                {removeFiles ? t("removeFilesOn") : t("removeFilesOff")}
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Only for a container site with something to remove — the same rule as
             the databases box, for the same reason: a note about volumes on a site

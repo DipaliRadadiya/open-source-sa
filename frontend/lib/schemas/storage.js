@@ -81,8 +81,18 @@ export const storageDestinationResponseSchema = z.object({
 // trip: a bucket with a slash in it, a region with an underscore, an endpoint
 // that isn't https, a host that is really a pasted URL.
 const nameField = z.string().trim().min(1, "required_name").max(100, "max100");
+// `.` and `..` segments refused: `../etc` wrote outside the bucket on S3 and
+// climbed above the root folder on FTP/SFTP.
 const prefixField = z
-  .union([z.literal(""), z.string().trim().max(255, "max255").regex(/^[A-Za-z0-9._/-]*$/, "prefixFormat")])
+  .union([
+    z.literal(""),
+    z
+      .string()
+      .trim()
+      .max(255, "max255")
+      .regex(/^[A-Za-z0-9._/-]*$/, "prefixFormat")
+      .refine((v) => !/(^|\/)\.{1,2}(\/|$)/.test(v), "prefixTraversal"),
+  ])
   .optional();
 
 const bucketField = z.string().trim().max(255, "max255").regex(/^[A-Za-z0-9._-]+$/, "bucketFormat");
@@ -258,13 +268,36 @@ export function createStorageDestinationSchema(preset) {
  * control whose only outcome is a 422 is not a control.
  */
 export function editStorageDestinationSchema(destination) {
-  const preset = destination?.provider === "s3" ? "other" : destination?.provider;
+  if (destination?.provider !== "s3") {
+    return z.object({
+      name: nameField,
+      prefix: prefixField,
+      config: configSchemaFor(destination?.provider, { requireSecrets: false }),
+    });
+  }
 
-  return z.object({
-    name: nameField,
-    prefix: prefixField,
-    config: configSchemaFor(preset, { requireSecrets: false }),
-  });
+  /*
+   * Which S3 service this is is not known on edit, so neither field can carry
+   * a preset's rule: "other" made the endpoint required — on an Amazon S3
+   * destination whose hint says to leave it empty — and region optional.
+   * The rule both presets share: an endpoint, or a region for Amazon S3.
+   */
+  return z
+    .object({
+      name: nameField,
+      prefix: prefixField,
+      config: configSchemaFor("other", { requireSecrets: false }).extend({
+        endpoint: endpointField.optional().or(z.literal("")),
+        region: regionField.optional().or(z.literal("")),
+      }),
+    })
+    .superRefine((values, ctx) => {
+      const endpoint = String(values.config?.endpoint ?? "").trim();
+      const region = String(values.config?.region ?? "").trim();
+      if (!endpoint && !region) {
+        ctx.addIssue({ code: "custom", path: ["config", "region"], message: "requiredField" });
+      }
+    });
 }
 
 /** Rotation: only the credential fields, all of them required. */

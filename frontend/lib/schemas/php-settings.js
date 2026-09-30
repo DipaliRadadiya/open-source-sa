@@ -73,12 +73,20 @@ export function budgetWith(memory, memoryLimit, maxChildren) {
   };
 }
 
-const size = z
+/*
+ * Stricter than the API, which takes anything PHP's syntax allows: a bare `64`
+ * is 64 BYTES (PHP ignores it and falls back to 128M while this page kept
+ * showing 64), `0` and `-1` switch the limit off, and nothing stopped 99999G.
+ */
+const sizeWithUnit = z
   .string()
   .trim()
   .min(1, "requiredField")
   .max(12, "max12")
-  .regex(PHP_SIZE_PATTERN, "phpSize");
+  .regex(/^\d+[KMG]$/i, "phpSizeUnit")
+  .refine((value) => phpSizeToBytes(value) > 0, "phpSizeUnit");
+
+const MIN_MEMORY = 16 * 1024 * 1024;
 
 /** `GET /applications/{id}/php`. */
 export const applicationPhpSchema = z
@@ -195,16 +203,16 @@ export const applicationPhpResponseSchema = z.object({ php: applicationPhpSchema
  */
 export const phpSettingsFormSchema = z.object({
   php_version: z.string().min(1, "requiredField"),
-  memory_limit: size,
-  upload_max_filesize: size,
-  post_max_size: size,
-  max_execution_time: z.coerce.number().int("integer").min(0, "range").max(3600, "range"),
-  max_input_time: z.coerce.number().int("integer").min(-1, "range").max(3600, "range"),
-  max_input_vars: z.coerce.number().int("integer").min(100, "range").max(100000, "range"),
-  session_gc_maxlifetime: z.coerce.number().int("integer").min(60, "range").max(604800, "range"),
+  memory_limit: sizeWithUnit.refine((value) => phpSizeToBytes(value) >= MIN_MEMORY, "phpMemoryMin"),
+  upload_max_filesize: sizeWithUnit,
+  post_max_size: sizeWithUnit,
+  max_execution_time: z.coerce.number().int("integer").min(0, "rangeSeconds3600").max(3600, "rangeSeconds3600"),
+  max_input_time: z.coerce.number().int("integer").min(-1, "rangeInputTime").max(3600, "rangeInputTime"),
+  max_input_vars: z.coerce.number().int("integer").min(100, "rangeInputVars").max(100000, "rangeInputVars"),
+  session_gc_maxlifetime: z.coerce.number().int("integer").min(60, "rangeSession").max(604800, "rangeSession"),
   pm_type: z.enum(PM_TYPES),
-  pm_max_children: z.coerce.number().int("integer").min(1, "range").max(MAX_CHILDREN, "range"),
-  pm_max_requests: z.coerce.number().int("integer").min(0, "range").max(100000, "range"),
+  pm_max_children: z.coerce.number().int("integer").min(1, "rangeWorkers").max(MAX_CHILDREN, "rangeWorkers"),
+  pm_max_requests: z.coerce.number().int("integer").min(0, "rangeMaxRequests").max(100000, "rangeMaxRequests"),
   open_basedir_enabled: z.boolean().default(false),
   /**
    * Extra folders, one per line. The rules are the backend's own
@@ -253,7 +261,7 @@ export const phpSettingsFormSchema = z.object({
     .trim()
     .max(255, "max255")
     // `not_regex:/\.\./` on the backend.
-    .refine((value) => !value.includes(".."), "noTraversal")
+    .refine((value) => !value.includes(".."), "pathNoTraversal")
     .default(""),
   // Ini, so newlines are fine; a `[section]` header is not — it would start a
   // second pool inside this file.
@@ -262,5 +270,42 @@ export const phpSettingsFormSchema = z.object({
     .trim()
     .max(4000, "max4000")
     .refine((value) => !/^\s*\[/m.test(value), "noSections")
+    /*
+     * PHP settings only. A pool line went through: `user = root` stopped PHP
+     * 7.4 for every site on it, and `user = <another site>` ran this site's
+     * code as that site. A bare `short_open_tag = On` failed with nothing but
+     * "PHP-FPM rejected the configuration" — this says the form it needs.
+     */
+    .refine(
+      (value) =>
+        value
+          .split("\n")
+          .map((line) => line.trim())
+          .every((line) => line === "" || /^[;#]/.test(line) || /^php_(admin_)?(value|flag)\[[A-Za-z0-9_.]+\]\s*=/.test(line)),
+      "directivesPhpOnly",
+    )
     .default(""),
 });
+
+/**
+ * The form's rules that need the server: memory no larger than the machine has,
+ * and a POST limit that fits the largest upload (a smaller one refuses every
+ * upload between the two, with PHP's empty-$_POST failure nobody can read).
+ */
+export function phpSettingsFormSchemaFor(totalMemoryBytes = 0, applicationPath = "") {
+  const root = String(applicationPath ?? "").replace(/\/+$/, "");
+  return phpSettingsFormSchema.superRefine((values, ctx) => {
+    // PHP runs this file at the top of every page, for every visitor: an
+    // absolute path anywhere on the server printed a system file on the site.
+    const prepend = values.auto_prepend_file ?? "";
+    if (prepend.startsWith("/") && (!root || !prepend.startsWith(`${root}/`))) {
+      ctx.addIssue({ code: "custom", path: ["auto_prepend_file"], message: "prependOutsideSite" });
+    }
+    if (totalMemoryBytes > 0 && phpSizeToBytes(values.memory_limit) > totalMemoryBytes) {
+      ctx.addIssue({ code: "custom", path: ["memory_limit"], message: "phpMemoryMax" });
+    }
+    if (phpSizeToBytes(values.post_max_size) < phpSizeToBytes(values.upload_max_filesize)) {
+      ctx.addIssue({ code: "custom", path: ["post_max_size"], message: "postBelowUpload" });
+    }
+  });
+}

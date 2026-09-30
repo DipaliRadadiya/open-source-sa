@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { saveEnvironment } from "@/lib/api/environment";
+import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
@@ -23,6 +24,31 @@ import { Textarea } from "@/components/ui/textarea";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { RestoreBackupDialog } from "@/components/applications/environment/restore-backup-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+
+/**
+ * Keys the panel writes and the app depends on staying put. A new
+ * N8N_ENCRYPTION_KEY makes every credential n8n saved unreadable — the file's
+ * own first line says it must never change — and the port and folder must
+ * match the service and proxy the panel set up. The API only checks syntax.
+ */
+const GUARDED_KEYS = ["N8N_ENCRYPTION_KEY", "N8N_PORT", "N8N_USER_FOLDER"];
+
+function envValues(text) {
+  const values = new Map();
+  for (const line of String(text ?? "").split("\n")) {
+    const match = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/.exec(line);
+    if (match) values.set(match[1], match[2].replace(/^(["'])(.*)\1$/, "$2"));
+  }
+  return values;
+}
+
+/** Guarded keys the saved file has and the edit changes or removes. */
+function guardedChanges(saved, next) {
+  const before = envValues(saved);
+  const after = envValues(next);
+  return GUARDED_KEYS.filter((key) => before.has(key) && before.get(key) !== after.get(key));
+}
 
 // Rewrite (or append) a KEY's line to the suggested value — the one-click fix
 // behind a check. Matches an optional `export ` and leading indent; leaves the
@@ -36,15 +62,34 @@ function applySuggestion(text, key, suggested) {
   return `${text}${sep}${key}=${suggested}\n`;
 }
 
+// The API's own limit (`max:262144` on `raw`, counted in characters). Checked
+// here so an oversized file is refused before it is sent, in words about size —
+// the server's 422 arrived in the box titled "syntax error".
+const MAX_CHARS = 262144;
+
+function overLimit(text) {
+  // `.length` counts UTF-16 units, never fewer than characters; only a file
+  // that is over by that measure is worth counting properly.
+  return text.length > MAX_CHARS && Array.from(text).length > MAX_CHARS;
+}
+
+// A file of only blank lines is shown as empty, so its placeholder says what
+// to do with it. The API writes an emptied file back as a single newline, and
+// a black box holding one invisible line said nothing.
+function editable(raw) {
+  return (raw ?? "").trim() ? raw : "";
+}
+
 export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
   const t = useTranslations("applications.environment");
   const tc = useTranslations("common");
   const router = useRouter();
   const [env, setEnv] = useState(initialEnv);
-  const [contents, setContents] = useState(initialEnv.raw ?? "");
+  const [contents, setContents] = useState(editable(initialEnv.raw));
   const [saving, setSaving] = useState(false);
   const [syntaxError, setSyntaxError] = useState(null);
   const [restoreOpen, setRestoreOpen] = useState(false);
+  const [guarded, setGuarded] = useState([]);
 
   // The file changed underneath this component.
   //
@@ -56,34 +101,37 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
   //
   // Adjusted during render rather than in an effect: this is the sanctioned
   // React pattern for a prop-driven reset, and an effect here would be the
-  // cascading render the lint rules refuse. `serverRaw` is the last value seen
-  // *from the server*, not the last rendered — comparing against `contents`
-  // would fight every keystroke.
-  const [serverRaw, setServerRaw] = useState(initialEnv.raw ?? "");
+  // cascading render the lint rules refuse.
+  //
+  // `seenRaw` is the last value this prop carried, and it moves only when the
+  // prop does. It used to be set to the SAVED text on save, while the prop
+  // still held the old text until the refresh landed — so the very next render
+  // saw a "change", copied the old file back in, and the editor showed the
+  // pre-save text for a second or more after "Environment saved.", wiping
+  // anything typed meanwhile.
+  const propRaw = initialEnv.raw ?? "";
+  const [seenRaw, setSeenRaw] = useState(propRaw);
 
-  if ((initialEnv.raw ?? "") !== serverRaw) {
-    setServerRaw(initialEnv.raw ?? "");
+  if (propRaw !== seenRaw) {
+    setSeenRaw(propRaw);
     setEnv(initialEnv);
-    // Takes the new text unconditionally. The only thing that moves this value
-    // is a write to the file — a save from here, or a restore — and after
-    // either one the file on disk is the truth this screen should be showing.
-    setContents(initialEnv.raw ?? "");
-    setSyntaxError(null);
+    // A refresh that only confirms what this editor already saved leaves the
+    // text alone. Anything else is a write from elsewhere (a restore from the
+    // history card), and the file on disk is the truth to show.
+    if (propRaw !== (env.raw ?? "")) {
+      setContents(editable(propRaw));
+      setSyntaxError(null);
+    }
   }
 
-  const dirty = contents !== (env.raw ?? "");
+  const dirty = contents !== editable(env.raw);
+  const tooLarge = overLimit(contents);
 
-  // Warn on reload/close with unsaved edits — the only guard the App Router
-  // gives us for free. In-app navigation is a Link away and rare here.
-  useEffect(() => {
-    if (!dirty) return undefined;
-    const onBeforeUnload = (e) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [dirty]);
+  // Registered with the panel's guard, which asks before the sidebar, header
+  // or breadcrumb leave and covers reload/close too. A beforeunload of its own
+  // covered only the last two: a click on another page in the sidebar threw the
+  // edits away without a word.
+  useWatchUnsaved("environment-editor", dirty);
 
   // The button must say what the save will actually do — otherwise a Node app
   // ignores the file until restart, or a cached config quietly overrides it.
@@ -94,24 +142,28 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
       ? t("saveApply")
       : t("save");
 
-  async function onSave() {
-    if (!dirty || saving) return;
+  async function onSave({ confirmed = false } = {}) {
+    if (!dirty || saving || tooLarge) return;
+    const touched = guardedChanges(env.raw, contents);
+    if (touched.length && !confirmed) {
+      setGuarded(touched);
+      return;
+    }
+    setGuarded([]);
+    const sent = contents;
     setSaving(true);
     setSyntaxError(null);
     try {
       const data = await saveEnvironment(appId, {
-        raw: contents,
+        raw: sent,
         restart: sendRestart,
       });
       const next = data?.environment;
       if (next) {
         setEnv(next);
-        setContents(next.raw ?? contents);
-        // Marks this write as already seen, so the refresh below arrives as a
-        // no-op instead of re-applying the same text. Without it, anything
-        // typed between the toast and the refresh landing would be wiped by
-        // the sync above.
-        setServerRaw(next.raw ?? "");
+        // Only if nothing was typed while the request ran; otherwise those
+        // keystrokes stay, as unsaved changes on top of the saved file.
+        setContents((current) => (current === sent ? editable(next.raw ?? sent) : current));
       }
       toast.success(
         data?.restarted
@@ -142,7 +194,7 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
   }
 
   function revert() {
-    setContents(env.raw ?? "");
+    setContents(editable(env.raw));
     setSyntaxError(null);
   }
 
@@ -268,22 +320,17 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
             onKeyDown={onEditorKeyDown}
             readOnly={!canManage}
             spellCheck={false}
-            placeholder={env.exists ? undefined : t("emptyPlaceholder")}
+            placeholder={env.exists ? t("emptyFilePlaceholder") : t("emptyPlaceholder")}
             className="console-scroll h-96 resize-none rounded-none border-0 bg-console font-mono text-xs leading-6 text-console-foreground caret-console-foreground shadow-none selection:bg-console-foreground/20 focus-visible:ring-0 dark:bg-console"
             aria-label={t("sectionTitle")}
           />
         </div>
 
-        {/* The site's config was NOT changed — say so in the backend's words. */}
-        {syntaxError ? (
-          <div className="overflow-hidden rounded-lg border border-destructive/30 bg-destructive/5">
-            <div className="border-b border-destructive/20 px-3 py-1.5 text-xs uppercase tracking-wide text-destructive">
-              {t("syntaxTitle")}
-            </div>
-            <pre className="console-scroll max-h-40 overflow-auto p-3 font-mono text-xs leading-6 text-destructive">
-              {syntaxError}
-            </pre>
-          </div>
+        {tooLarge ? (
+          <NotSaved title={t("tooLargeTitle")}>{t("tooLarge")}</NotSaved>
+        ) : syntaxError ? (
+          // The site's config was NOT changed — say so in the backend's words.
+          <NotSaved title={t("syntaxTitle")}>{syntaxError}</NotSaved>
         ) : null}
 
         {!canManage ? (
@@ -301,8 +348,8 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
                 {t("revert")}
               </Button>
             </ReasonTooltip>
-            <ReasonTooltip reason={!dirty && !saving ? tc("nothingToSave") : null}>
-            <Button onClick={onSave} disabled={!dirty || saving}>
+            <ReasonTooltip reason={tooLarge ? t("tooLarge") : !dirty && !saving ? tc("nothingToSave") : null}>
+            <Button onClick={() => onSave()} disabled={!dirty || saving || tooLarge}>
               {saving ? <Loader2 className="size-4 animate-spin" /> : null}
               {saveLabel}
               {saving ? null : (
@@ -314,6 +361,18 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
         </CardFooter>
       ) : null}
 
+      <ConfirmDialog
+        open={guarded.length > 0}
+        onOpenChange={(next) => !next && setGuarded([])}
+        icon={TriangleAlert}
+        tone="destructive"
+        title={t("guarded.title")}
+        description={t("guarded.description", { keys: guarded.join(", ") })}
+        cancelLabel={t("guarded.cancel")}
+        confirmLabel={t("guarded.confirm")}
+        onConfirm={() => onSave({ confirmed: true })}
+      />
+
       {canManage && env.backups?.length ? (
         <RestoreBackupDialog
           appId={appId}
@@ -324,8 +383,7 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
           onRestored={(next) => {
             if (next) {
               setEnv(next);
-              setContents(next.raw ?? "");
-              setServerRaw(next.raw ?? "");
+              setContents(editable(next.raw));
               setSyntaxError(null);
             }
             // A restore is a change to the file like any other and writes its
@@ -335,5 +393,18 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
         />
       ) : null}
     </Card>
+  );
+}
+
+function NotSaved({ title, children }) {
+  return (
+    <div className="overflow-hidden rounded-lg border border-destructive/30 bg-destructive/5">
+      <div className="border-b border-destructive/20 px-3 py-1.5 text-xs uppercase tracking-wide text-destructive">
+        {title}
+      </div>
+      <pre className="console-scroll max-h-40 overflow-auto p-3 font-mono text-xs leading-6 whitespace-pre-wrap text-destructive">
+        {children}
+      </pre>
+    </div>
   );
 }

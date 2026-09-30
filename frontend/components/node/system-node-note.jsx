@@ -9,8 +9,12 @@ import { Info } from "lucide-react";
  * someone who typed `node -v` over SSH and saw a version sees an empty page
  * here and assumes the panel is broken.
  */
-export async function SystemNodeNote({ system }) {
+export async function SystemNodeNote({ system, versions = [] }) {
   if (!system?.version) return null;
+  // The server's `node` is often one of the panel's own versions (the
+  // installer links it), and then "it isn't listed above" is false — it is
+  // the row right above this note.
+  if (system.path && (versions ?? []).some((entry) => entry.path === system.path)) return null;
   const t = await getTranslations("node");
 
   return (

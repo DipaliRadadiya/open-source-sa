@@ -51,7 +51,9 @@ export function SiteAttention({ findings = [] }) {
   const label =
     findings.length === 1
       ? t(`${findings[0].kind}.chip`, { site: findings[0].site })
-      : t("count", { count: findings.length });
+      : // Applications, not findings: the sentence counts applications, and one
+        // with a failed deploy AND a stopped process was counted twice.
+        t("count", { count: new Set(findings.map((finding) => finding.site)).size });
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>

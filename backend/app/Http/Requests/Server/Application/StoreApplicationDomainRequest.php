@@ -4,6 +4,7 @@ namespace App\Http\Requests\Server\Application;
 
 use App\Enums\DomainType;
 use App\Models\ApplicationDomain;
+use App\Rules\NotPanelHost;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -32,11 +33,12 @@ class StoreApplicationDomainRequest extends FormRequest
                 'required', 'string', 'max:253',
                 'regex:/^(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))+$/i',
                 Rule::unique('application_domains', 'domain'),
+                new NotPanelHost,
             ],
             // Primary is not settable here — promoting a name is its own
             // action, because it renames the vhost and both log files.
             'type' => ['sometimes', Rule::in([DomainType::Alias->value, DomainType::Redirect->value])],
-            'redirect_to' => ['nullable', 'required_if:type,redirect', 'string', 'max:2048', 'url'],
+            'redirect_to' => ['nullable', 'required_if:type,redirect', 'string', 'max:2048', 'url', 'regex:'.ApplicationDomain::REDIRECT_TARGET_PATTERN],
             'redirect_status' => ['sometimes', Rule::in([301, 302, 307, 308])],
         ];
     }
@@ -64,6 +66,7 @@ class StoreApplicationDomainRequest extends FormRequest
             ->first()?->application;
 
         return [
+            'redirect_to.regex' => __('errors/application.redirect_target_invalid'),
             // Falls back to the plain message when the holder cannot be found
             // — a row deleted between the check and this call, say. Better a
             // vaguer sentence than one naming an application that is gone.

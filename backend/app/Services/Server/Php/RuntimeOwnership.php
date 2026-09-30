@@ -62,4 +62,33 @@ class RuntimeOwnership
         // there is nothing to record and nothing to wait for.
         return $this->stacks->stack()->isolatesByDefault();
     }
+
+    /**
+     * The mode for a file holding this site's secrets.
+     *
+     * 0640 lets the group read, which is needed only when PHP runs as the web
+     * server's account and the group is that account. Where the site runs as
+     * its own user nothing but that user needs the file, and the group is
+     * not private: on OpenLiteSpeed the web server account (`nobody`) is a
+     * member of every site user's group, so it can write the site's logs —
+     * which made every 0640 `wp-config.php` and `.env` readable to it
+     * (measured on 2026-09-29).
+     */
+    public function secretFileMode(Application $application): string
+    {
+        return $this->runsAsOwnUser($application) ? '0600' : '0640';
+    }
+
+    /**
+     * The group for a file holding this site's secrets: the account that runs
+     * its PHP. The site user's own group where it runs as itself, the web
+     * server's account where it does not — which is the only reason
+     * {@see secretFileMode()} ever leaves the group any access.
+     */
+    public function secretFileGroup(Application $application): string
+    {
+        return $this->runsAsOwnUser($application)
+            ? (string) $application->systemUser?->username
+            : (string) config('server.web_server_user', 'www-data');
+    }
 }

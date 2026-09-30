@@ -40,12 +40,20 @@ export function branchFieldMode({ application, state, branches = [] } = {}) {
  * not broken, and telling its owner that branches "could not be loaded" would
  * invent a fault. Only a genuine attempt that failed gets a message.
  */
-export function branchFieldNotice({ application, state } = {}) {
+export function branchFieldNotice({ application, state, branches, current } = {}) {
+  // First, and without the account id: a deleted account nulls that column,
+  // so requiring it here meant this notice could never appear.
+  if (application?.git_account_missing && application?.repository) return "unlinked";
   if (!application?.git_account_id || !application?.repository) return null;
-  if (application?.git_account_missing) return "unlinked";
   if (state === "loading") return "loading";
   if (state === "error") return "error";
   if (state === "empty") return "empty";
+  // Kept in the picker (see branchOptions) but gone from the repository: the
+  // next deploy fails at the fetch, so it has to be said beside the field.
+  if (state === "ready" && current && Array.isArray(branches)) {
+    const names = branches.map((item) => (typeof item === "string" ? item : item?.name));
+    if (!names.includes(current)) return "missing";
+  }
   return null;
 }
 

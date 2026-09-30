@@ -71,7 +71,8 @@ class ApplicationLogManager
         }
 
         $lines = max(1, min($lines, self::MAX_LINES));
-        $filtering = $filter !== null && $filter !== '';
+        $marker = $source['marker'] ?? null;
+        $filtering = ($filter !== null && $filter !== '') || $marker !== null;
 
         // Read more than asked for when filtering, or a filter over the last
         // 200 lines finds nothing on a busy site and the screen looks broken
@@ -108,7 +109,11 @@ class ApplicationLogManager
             array_shift($all);
         }
 
-        if ($filtering) {
+        if ($marker !== null) {
+            $all = array_values(array_filter($all, fn (string $line): bool => str_contains($line, $marker)));
+        }
+
+        if ($filter !== null && $filter !== '') {
             // Literal, case-insensitive. Not a regex: a user-supplied pattern
             // over a large file is a denial of service waiting to happen, and
             // nobody searching a log wants regex semantics by surprise.
@@ -220,6 +225,19 @@ class ApplicationLogManager
                 // enforce a ruleset they have not actually checked.
                 'path' => $application->wafDetectLogPath(),
             ];
+
+            // OpenLiteSpeed allows one access log per site, so detect mode
+            // marks its lines there (`waf=1`, see the OLS vhost templates)
+            // instead of writing a file of its own. Same key, same screen:
+            // the access log, only the marked lines.
+            if ($this->webServers->driver()->name() === 'openlitespeed') {
+                $catalog[array_key_last($catalog)] = [
+                    'key' => 'waf_detect',
+                    'kind' => 'file',
+                    'path' => $paths['access'],
+                    'marker' => ' waf=1',
+                ];
+            }
         }
 
         return $catalog;
@@ -337,7 +355,9 @@ class ApplicationLogManager
     {
         $source = $this->find($application, $key);
 
-        if ($source === null || ($source['kind'] ?? 'file') !== 'file') {
+        // A marked source is a view onto another log: clearing it would wipe
+        // the whole access log. The controller refuses it with a message.
+        if ($source === null || ($source['kind'] ?? 'file') !== 'file' || isset($source['marker'])) {
             // The caller 404s on an unknown key; reaching here with a non-file
             // source would mean the catalog grew a journal entry and this was
             // not revisited. `journalctl --vacuum` is a different operation

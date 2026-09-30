@@ -19,25 +19,24 @@ export function RefreshButton({ className }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        {/* Same disabled-safe wrapper as WorkerActions/ServiceActions — a
-            disabled button swallows pointer events, so hover needs a span to
-            hang off during the brief pending state. */}
-        <span tabIndex={pending ? 0 : -1} className="inline-flex">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            // 36px by default, matching the card-header clusters it usually
-            // sits in. A toolbar of `sm` buttons passes size-8 so the row keeps
-            // one height — the same mismatch that made these read as bolted on.
-            className={cn("size-9 shrink-0", className)}
-            onClick={refresh}
-            disabled={pending}
-            aria-label={t("refresh")}
-          >
-            <RefreshCw className={cn("size-4", pending && "animate-spin")} />
-          </Button>
-        </span>
+        {/* Busy, not disabled: a disabled button drops focus, so pressing it
+            from the keyboard sent the reader back to the top of the page. The
+            click is ignored instead while the spinner turns. */}
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          // 36px by default, matching the card-header clusters it usually
+          // sits in. A toolbar of `sm` buttons passes size-8 so the row keeps
+          // one height — the same mismatch that made these read as bolted on.
+          className={cn("size-9 shrink-0", pending && "cursor-progress", className)}
+          onClick={pending ? undefined : refresh}
+          aria-disabled={pending}
+          aria-busy={pending}
+          aria-label={t("refresh")}
+        >
+          <RefreshCw className={cn("size-4", pending && "animate-spin")} />
+        </Button>
       </TooltipTrigger>
       <TooltipContent>{t("refresh")}</TooltipContent>
     </Tooltip>

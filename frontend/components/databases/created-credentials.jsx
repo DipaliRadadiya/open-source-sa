@@ -26,7 +26,9 @@ import { FormModal } from "@/components/ui/form-modal";
  * for host and port separately. Before this they were six identical boxes, so
  * the port — which is always 3306 — carried the same weight as the password.
  */
-export function CreatedCredentials({ database, open, onOpenChange }) {
+// `forUser`: shown after adding a user on the database's own page, where
+// "the database is ready" and "Open database" described the wrong event.
+export function CreatedCredentials({ database, open, onOpenChange, forUser = false }) {
   const t = useTranslations("databases");
   const user = database?.users?.[0] ?? null;
   const { host, port } = connectionAddress(user);
@@ -70,8 +72,14 @@ export function CreatedCredentials({ database, open, onOpenChange }) {
       // Green, not the panel's default blue: this dialog reports a finished
       // action rather than asking for one.
       iconTone="success"
-      title={t("created.title", { name: database?.name ?? "" })}
-      description={user ? t("created.subtitle") : t("created.subtitleNoUser")}
+      title={
+        forUser
+          ? t("created.userTitle", { username: user?.username ?? "" })
+          : t("created.title", { name: database?.name ?? "" })
+      }
+      description={
+        forUser ? t("created.userSubtitle") : user ? t("created.subtitle") : t("created.subtitleNoUser")
+      }
       footer={
         <>
           <Button type="button" variant="outline" onClick={close}>
@@ -81,7 +89,7 @@ export function CreatedCredentials({ database, open, onOpenChange }) {
               back on the list with nothing done. The database's own page is
               where these values live from now on, so it is the honest next
               step and the answer to "where do I find this again". */}
-          {database?.id ? (
+          {database?.id && !forUser ? (
             <Button asChild onClick={close}>
               <Link href={`/databases/${database.id}`}>{t("created.open")}</Link>
             </Button>

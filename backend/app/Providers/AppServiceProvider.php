@@ -31,9 +31,11 @@ use App\Services\Server\Sync\Discoverers\SystemUserDiscoverer;
 use App\Services\Server\Sync\Discoverers\WorkerDiscoverer;
 use App\Services\Server\Sync\ServerSync;
 use App\Support\PasswordPolicy;
+use App\Support\Scheduling\BootScopedEventMutex;
 use Google\Client as GoogleClient;
 use Google\Service\Drive as GoogleDrive;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Console\Scheduling\EventMutex;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\Request;
@@ -54,6 +56,9 @@ class AppServiceProvider extends ServiceProvider
     {
         // The firewall engine — UFW today; swap the binding for firewalld later.
         $this->app->bind(Firewall::class, UfwFirewall::class);
+
+        // Scheduler locks that a reboot cannot strand — see the class.
+        $this->app->bind(EventMutex::class, BootScopedEventMutex::class);
 
         // The sync registry. Order here is the intended run order; ServerSync
         // still resolves dependsOn() itself, so adding one in the wrong place

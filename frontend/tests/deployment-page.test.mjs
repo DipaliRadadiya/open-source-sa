@@ -39,7 +39,7 @@ test("switching tab and opening the log happen together, not via an effect", () 
   // The first version parked the deployment in state and opened it from an
   // effect once the tab changed — a `set-state-in-effect` lint error, and a
   // dance around a problem forceMount had already solved.
-  const fn = code(panel).match(/showBuildLog = useCallback\(([\s\S]*?)\}, \[\]\)/);
+  const fn = code(panel).match(/showBuildLog = useCallback\(([\s\S]*?)\}, \[setTab\]\)/);
   assert.ok(fn, "showBuildLog is a single callback");
   assert.match(fn[1], /setTab\("history"\)/);
   assert.match(fn[1], /historyRef\.current\?\.show\(/);
@@ -57,7 +57,8 @@ test("the deploy button is not inside a tab", () => {
 test("History is the tab you land on", () => {
   // It is what you want the second after pressing Deploy; it used to be a
   // thousand pixels below the button.
-  assert.match(code(panel), /useState\("history"\)/);
+  // …unless the address names another tab: a reload keeps the one you were on.
+  assert.match(code(panel), /TABS\.includes\(searchParams\.get\("tab"\)\) \? searchParams\.get\("tab"\) : "history"/);
 });
 
 test("the settings card has a heading of its own", () => {

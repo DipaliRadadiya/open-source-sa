@@ -10,6 +10,7 @@ return [
     'lockout_risk' => 'Activer la prison SSH peut vous bloquer l\'accès à ce serveur. Ajoutez votre adresse IP à la liste d\'exclusion ou confirmez que vous acceptez le risque.',
     'ip_ignored' => 'Cette adresse IP figure sur votre liste d\'exclusion. Retirez-l\'en d\'abord si vous voulez vraiment la bannir.',
     'ip_own_address' => 'Il s\'agit de l\'adresse propre de ce serveur. La bloquer peut couper le panneau de sa base de données et le rendre inaccessible ; c\'est donc refusé.',
+    'ip_your_address' => 'C\'est l\'adresse depuis laquelle vous êtes connecté. La bannir vous couperait l\'accès à ce serveur, et avec la prison recidive à ce panneau aussi ; elle ne peut donc pas être bannie d\'ici.',
     'operation_failed' => 'L\'opération fail2ban a échoué.',
     'bantime_too_short' => 'La durée de bannissement doit être d\'au moins 60 secondes, ou -1 pour un bannissement permanent.',
 ];

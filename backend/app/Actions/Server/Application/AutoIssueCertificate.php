@@ -7,6 +7,7 @@ use App\Enums\CertificateType;
 use App\Jobs\IssueCertificate;
 use App\Models\Application;
 use App\Models\Certificate;
+use App\Services\Panel\QueueWorker;
 use App\Services\Server\Certificates\AcmeReachabilityCheck;
 use Throwable;
 
@@ -76,7 +77,8 @@ class AutoIssueCertificate
 
         // No actor: nobody pressed anything. Reads as System in the activity
         // log, the same as a deploy triggered by a git webhook.
-        IssueCertificate::dispatch($certificate->id, null);
+        IssueCertificate::dispatch($certificate->id, null)
+            ->onQueue(app(QueueWorker::class)->priorityQueue());
 
         return $certificate;
     }

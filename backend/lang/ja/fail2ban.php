@@ -23,5 +23,7 @@ return [
         'filter_content_required' => 'フィルター設定は必須です。',
         'filter_content_string' => 'フィルター設定はテキストである必要があります。',
         'filter_content_max' => 'フィルター設定が大きすぎます（最大 65535 文字）。',
+        'foreign_jail' => 'このジェイルで設定できるのはこのサイト自身のジェイルだけです。[:section] を [{name}] に置き換えてください（:name になります）。',
+        'foreign_filter' => 'このジェイルで使えるのはこのサイト自身のフィルターだけです。filter = :filter を filter = {filter} に置き換えてください（:name になります）。',
     ],
 ];

@@ -3,11 +3,10 @@
 namespace App\Actions\Server\Application;
 
 use App\Enums\DeploymentTrigger;
-use App\Jobs\DeployApplication;
 use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Git\Webhooks\WebhookManager;
-use App\Services\Server\Applications\DeploymentRecorder;
+use App\Services\Server\Applications\DeployQueue;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -31,19 +30,38 @@ class ReceiveDeployWebhook
     ) {}
 
     /**
+     * Whether this delivery really comes from the provider the site's webhook
+     * was set up with: signed (or, for GitLab's legacy scheme, tokened) with
+     * the stored secret.
+     *
+     * Also asked of a site whose deploy-on-push is switched off — the secret
+     * is kept when it is switched off, so an authentic delivery can be told
+     * "this is off" while anyone else still gets the plain 404.
+     */
+    public function authentic(Request $request, Application $application): bool
+    {
+        $secret = (string) $application->webhook_secret;
+        $provider = (string) $application->webhook_provider;
+
+        if ($secret === '' || ! $this->webhooks->supports($provider)) {
+            return false;
+        }
+
+        return $this->webhooks->driver($provider)->verify($request, $secret, $request->getContent());
+    }
+
+    /**
      * @return array{deployed: bool, reason: string}
      */
     public function execute(Request $request, Application $application): array
     {
         $driver = $this->webhooks->driver((string) $application->webhook_provider);
-        $secret = (string) $application->webhook_secret;
-
         // The raw body, before Laravel has looked at it. The signature covers
         // the exact bytes sent, so re-encoding the parsed array — even into
         // JSON that means the same thing — produces a different digest.
         $body = $request->getContent();
 
-        if ($secret === '' || ! $driver->verify($request, $secret, $body)) {
+        if (! $this->authentic($request, $application)) {
             // Deliberately not written to the activity log. A rejected delivery
             // is the one thing an unauthenticated caller can cause at will, and
             // a row per attempt would let them flood the user's own history.
@@ -68,6 +86,14 @@ class ReceiveDeployWebhook
         // unauthenticated caller still cannot learn anything about the site.
         if ($application->site_type !== 'git') {
             return ['deployed' => false, 'reason' => 'not_a_git_application'];
+        }
+
+        // Its account was disconnected: a deploy would have no credential and
+        // no URL. Authentic, just nothing we can do — so a success, like the
+        // checks around it, or the provider disables the hook and it stays
+        // off after the account is reconnected.
+        if ($application->gitAccountMissing()) {
+            return ['deployed' => false, 'reason' => 'git_account_missing'];
         }
 
         if (! $driver->isPush($request)) {
@@ -104,13 +130,10 @@ class ReceiveDeployWebhook
         // this", which is true, rather than "we lost track of who did".
         // A row with no actor: nobody pressed anything. It reads as System,
         // the same rule the activity log follows for webhook deploys.
-        $deployment = app(DeploymentRecorder::class)->open(
-            $application,
-            DeploymentTrigger::Webhook,
-            null,
-        );
-
-        DeployApplication::dispatch($application->id, null, $deployment->id);
+        //
+        // A push that lands while a deploy is still waiting joins it instead
+        // (see DeployQueue) — that deploy fetches the tip, this commit included.
+        app(DeployQueue::class)->queue($application, DeploymentTrigger::Webhook, null);
 
         $this->activityLogger->log('application.webhook_deployed', $application, [
             'name' => $application->name,

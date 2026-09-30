@@ -15,6 +15,7 @@ import { canOpenFile } from "@/lib/files/openable";
 import { FILE_NAME } from "@/lib/files/name-style";
 import { useModeSentence } from "@/components/applications/files/use-mode-sentence";
 import { isWorldWritable, symbolicMode } from "@/lib/files/describe-mode";
+import { SORT_COOKIE, serializeSort, writePref } from "@/lib/files/view-prefs";
 
 // Cells are module-level so flexRender's identity stays stable across
 // re-renders — see the same note in workers-table.jsx.
@@ -89,7 +90,7 @@ function SelectAllHeader({ table }) {
 function NameCell({ row, table }) {
   const t = useTranslations("applications.files");
   const file = row.original;
-  const { appId, onAction } = table.options.meta;
+  const { appId, onAction, canManage } = table.options.meta;
 
   if (file.type === "dir") {
     const href = `/applications/${appId}/files?path=${encodeURIComponent(file.path)}`;
@@ -147,10 +148,12 @@ function NameCell({ row, table }) {
   // isn't text" and the preview cannot decode it. Offering the click and then
   // refusing it is a worse answer than not offering it — download and extract
   // are still on the row's menu.
-  if (!canOpenFile(file.name)) {
+  // Opening reads the file, which needs File Manager manage — a view-only
+  // role gets the name, not a click that answers 403.
+  if (!canManage || !canOpenFile(file.name)) {
     return (
       <span className="flex w-full min-w-0 items-center gap-2 font-medium">
-        <FileThumb file={file} appId={appId} className="size-5" />
+        <FileThumb file={file} appId={appId} className="size-5" canPreview={canManage} />
         <span className={FILE_NAME} title={file.name}>
           {file.name}
         </span>
@@ -170,7 +173,7 @@ function NameCell({ row, table }) {
       // fill the cell.
       className="flex w-full min-w-0 items-center gap-2 rounded text-left font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
-      <FileThumb file={file} appId={appId} className="size-5" />
+      <FileThumb file={file} appId={appId} className="size-5" canPreview={canManage} />
       <span className={FILE_NAME} title={file.name}>
         {file.name}
       </span>
@@ -229,8 +232,12 @@ function ModifiedCell({ row }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span tabIndex={0} className="text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+        {/* Not a tab stop: with the permissions cell that made seven per row,
+            ~140 presses through a 20-row folder. The exact time still reaches
+            a screen reader, and the tooltip still opens on hover. */}
+        <span className="text-muted-foreground">
           {file.modified_at_human ?? file.modified_at}
+          <span className="sr-only"> ({exact})</span>
         </span>
       </TooltipTrigger>
       <TooltipContent>{exact}</TooltipContent>
@@ -300,10 +307,7 @@ function PermissionsCell({ row }) {
     // warning when it applies — which used to be a second, icon-only tooltip.
     <Tooltip>
       <TooltipTrigger asChild>
-        <span
-          tabIndex={0}
-          className="flex flex-col gap-0.5 whitespace-nowrap font-mono text-xs w-fit cursor-help rounded text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        >
+        <span className="flex flex-col gap-0.5 whitespace-nowrap font-mono text-xs w-fit cursor-help rounded text-muted-foreground">
           <span className="flex items-center gap-1.5">
             <span className={worldWritable ? "font-medium text-destructive" : undefined}>
               {symbolic ?? file.mode}
@@ -313,6 +317,9 @@ function PermissionsCell({ row }) {
           {/* Omitted when the mode could not be read symbolically — the line
               above is then already the octal, and repeating it says nothing. */}
           {symbolic ? <span className="text-muted-foreground/70">{file.mode}</span> : null}
+          {/* The tooltip's sentence, for a screen reader: this cell is no
+              longer a tab stop (see ModifiedCell). */}
+          {sentence ? <span className="sr-only">{sentence}</span> : null}
         </span>
       </TooltipTrigger>
       <TooltipContent className="max-w-64">
@@ -350,6 +357,7 @@ export function FilesTable({
   onToggleAll,
   folderSizes = {},
   sizingPaths = [],
+  initialSort = [{ id: "name", desc: false }],
 }) {
   const t = useTranslations("applications.files");
 
@@ -463,7 +471,8 @@ export function FilesTable({
         )
       }
       sortable
-      defaultSorting={[{ id: "name", desc: false }]}
+      defaultSorting={initialSort}
+      onSortingChange={(sorting) => writePref(SORT_COOKIE, serializeSort(sorting))}
       fixedLayout
       contextMenu={(file) => (
         <FileActionItems

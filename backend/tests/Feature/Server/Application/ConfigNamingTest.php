@@ -121,42 +121,36 @@ it('keeps two names that slug to the same string apart', function () {
         ->and(configPathFor($one))->not->toBe(configPathFor($two));
 });
 
-it('moves the config when the application is renamed', function () {
+it('does not move the config, because a site cannot be renamed', function () {
     $app = namingApp();
     $before = configPathFor($app);
 
     $ran = fakeNamingServer();
 
+    // The endpoint refuses `name` outright; this goes straight to the action
+    // to prove the action no longer acts on one either, since that is what
+    // used to move the file.
     app(UpdateApplication::class)->execute($app, ['name' => 'Renamed blog']);
 
-    $after = configPathFor($app->fresh());
-
-    expect($after)->toEndWith('/renamed-blog.conf')
-        ->and($after)->not->toBe($before);
-
-    // The old file has to go while the application still knows its old name.
-    // Left behind it would sit in sites-enabled serving the same domains.
-    $removedOld = false;
-
-    foreach ($ran as $args) {
-        if (($args[0] ?? '') === 'rm' && in_array($before, $args, true)) {
-            $removedOld = true;
-        }
-    }
-
-    expect($removedOld)->toBeTrue('the config under the old name was not removed');
+    // The slug is the key to six filenames — the vhost, the pool and its
+    // socket, the directory, the logs, the jail, the units — and only the
+    // vhost ever moved. Now nothing does.
+    expect($app->fresh()->slug)->toBe($app->slug)
+        ->and(configPathFor($app->fresh()))->toBe($before)
+        ->and(count((array) $ran))->toBe(0);
 });
 
-it('does not touch the server when a pending application is renamed', function () {
-    $app = namingApp(['status' => 'pending']);
+it('refuses a rename at the endpoint, rather than quietly ignoring it', function () {
+    $app = namingApp();
 
-    $ran = fakeNamingServer();
+    // Silence would be worse than a refusal: API_REFERENCE used to advertise
+    // this, so a caller following it would get a 200 and no rename.
+    test()->actingAs(test()->admin)
+        ->putJson("/api/applications/{$app->id}", ['name' => 'Renamed blog'])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('name');
 
-    app(UpdateApplication::class)->execute($app, ['name' => 'Still pending']);
-
-    // Nothing has been written for it yet, so there is nothing to move.
-    expect($app->fresh()->slug)->toBe('still-pending')
-        ->and(count((array) $ran))->toBe(0);
+    expect($app->fresh()->name)->toBe($app->name);
 });
 
 it('removes the old domain-named config when resyncing an existing install', function () {

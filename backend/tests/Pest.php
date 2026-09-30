@@ -168,6 +168,21 @@ function fakeUsableSqlEngine(): void
 }
 
 /**
+ * Answer the PHP package index as a server offering 8.2 – 8.4.
+ *
+ * `POST /php/versions` refuses a version the index does not have, so a test
+ * that installs one must say what the index holds — otherwise it passes or
+ * fails on whatever repository the machine running the suite has configured.
+ * Everything else fails, as {@see fakeUsableSqlEngine()} explains.
+ */
+function fakePhpPackageIndex(): void
+{
+    Process::fake(fn (mixed $process) => ($process->command[0] ?? '') === 'apt-cache'
+        ? Process::result(output: "php8.2-fpm - server-side scripting\nphp8.3-fpm - server-side scripting\nphp8.4-fpm - server-side scripting\n")
+        : Process::result(exitCode: 1));
+}
+
+/**
  * Grant a permission to a user via a one-off role (permissions are role-based
  * only — there are no direct per-user grants). Creates a role holding the
  * given permission with the requested abilities and assigns it to the user.

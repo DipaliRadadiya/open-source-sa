@@ -3,8 +3,13 @@
 namespace App\Console\Commands;
 
 use App\Models\Application;
+use App\Models\SystemUser;
+use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\ProcessSupervisor;
+use App\Services\Server\Applications\SecretFilePrivacy;
 use App\Services\Server\Applications\SiteConfigResyncer;
 use App\Services\Server\Applications\SiteRootLock;
+use App\Services\Server\SystemUsers\HomeDirectoryAccess;
 use Illuminate\Console\Command;
 
 /**
@@ -26,7 +31,7 @@ class ResyncSiteConfigs extends Command
 
     protected $description = 'Re-render every live site config from the current templates and bot lists';
 
-    public function handle(SiteConfigResyncer $resyncer, SiteRootLock $rootLock): int
+    public function handle(SiteConfigResyncer $resyncer, SiteRootLock $rootLock, HomeDirectoryAccess $homeAccess): int
     {
         $result = $resyncer->run();
 
@@ -57,8 +62,114 @@ class ResyncSiteConfigs extends Command
         }
 
         $this->lockSiteRoots($rootLock);
+        $this->closeHomes($homeAccess);
+        // The panel's own checkout, closed for the same reason as the homes
+        // and by the same means — see PanelDirectoryAccess.
+        $this->call('panel:close-directory');
+        $this->refreshUnits(app(ProcessSupervisor::class), app(ApplicationProvisioner::class));
+        $this->narrowSecretFiles(app(SecretFilePrivacy::class));
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Keep every site's `.env` and config secrets to the account that runs
+     * it — see SecretFilePrivacy. Here because the installs that left them
+     * readable happened before the fix did. Only ever narrows, so a file the
+     * user tightened is left as it is.
+     */
+    private function narrowSecretFiles(SecretFilePrivacy $privacy): void
+    {
+        $count = 0;
+
+        foreach (Application::query()->with('systemUser')->get() as $application) {
+            if ($application->systemUser === null) {
+                continue;
+            }
+
+            $privacy->narrow($application);
+            $count++;
+        }
+
+        $this->info("Secret files (.env, wp-config.php and the like): narrowed where present ({$count} site(s) checked).");
+    }
+
+    /**
+     * Bring every application's systemd unit up to the current template —
+     * see ProcessSupervisor::refreshUnit(). Never restarts anything.
+     */
+    private function refreshUnits(ProcessSupervisor $supervisor, ApplicationProvisioner $provisioner): void
+    {
+        $refreshed = 0;
+
+        foreach (Application::query()->with('systemUser')->get() as $application) {
+            if ($application->systemUser === null || ! $supervisor->runs($application)) {
+                continue;
+            }
+
+            if ($supervisor->refreshUnit($application, $provisioner->documentRoot($application))) {
+                $refreshed++;
+            }
+        }
+
+        if ($refreshed > 0) {
+            $this->info("Process units: {$refreshed} updated to the current template (nothing restarted).");
+        }
+    }
+
+    /**
+     * Close every system user's home to other local accounts — see
+     * HomeDirectoryAccess. Here for the reason lockSiteRoots() is: a change
+     * made only when a user is created protects new accounts and none of the
+     * existing ones. Installs the `acl` package first when it is missing
+     * (Ubuntu 26.04 does not ship it); never fails the command.
+     */
+    private function closeHomes(HomeDirectoryAccess $homeAccess): void
+    {
+        $users = SystemUser::query()->orderBy('id')->get();
+
+        if ($users->isEmpty()) {
+            return;
+        }
+
+        if (! $homeAccess->ensureTools()) {
+            $this->warn('Home directories left open: the acl package could not be installed (setfacl is missing).');
+
+            return;
+        }
+
+        $counts = array_fill_keys([
+            HomeDirectoryAccess::SECURED, HomeDirectoryAccess::ALREADY, HomeDirectoryAccess::SKIPPED,
+            HomeDirectoryAccess::NO_ACL, HomeDirectoryAccess::NO_READER, HomeDirectoryAccess::FAILED,
+        ], 0);
+        $open = [];
+
+        foreach ($users as $user) {
+            $result = $homeAccess->secure($user);
+            $counts[$result]++;
+
+            if (in_array($result, [HomeDirectoryAccess::NO_ACL, HomeDirectoryAccess::NO_READER, HomeDirectoryAccess::FAILED], true)) {
+                $open[] = [$user, $result];
+            }
+        }
+
+        $this->info(sprintf(
+            'Home directories: %d closed to other users, %d already closed%s%s.',
+            $counts[HomeDirectoryAccess::SECURED],
+            $counts[HomeDirectoryAccess::ALREADY],
+            $counts[HomeDirectoryAccess::SKIPPED] > 0
+                ? sprintf(', %d left alone (outside %s, a link, or not the user\'s own)', $counts[HomeDirectoryAccess::SKIPPED], config('server.home_base', '/home'))
+                : '',
+            $open !== [] ? sprintf(', %d still open', count($open)) : '',
+        ));
+
+        foreach ($open as [$user, $result]) {
+            $this->warn(sprintf('Still open: %s — %s', $user->username, match ($result) {
+                HomeDirectoryAccess::NO_READER => 'the web server\'s account is not known',
+                HomeDirectoryAccess::NO_ACL => 'setfacl is missing',
+                default => 'the ACL did not take; see the server-ops log',
+            }));
+        }
     }
 
     /**
@@ -107,7 +218,7 @@ class ResyncSiteConfigs extends Command
                 $application->name,
                 $application->id,
                 $result === SiteRootLock::UNSAFE
-                    ? 'its directory is not a root-owned directory, so it was left alone; check '.$application->rootPath()
+                    ? 'its directory is not a root-owned directory, so it was left alone; check '.$application->rootPath().' (a site server sync adopted: use Lock on the site\'s page)'
                     : 'chattr failed; see the server-ops log',
             ));
         }

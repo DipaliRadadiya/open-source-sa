@@ -16,7 +16,15 @@ import { EmptyState } from "@/components/data-table/empty-state";
  */
 
 export function versionState(version) {
+  // A failed REMOVAL leaves the version installed and working — it is not the
+  // failed install every "failed" used to be read as, which blocked its
+  // default switch, php.ini and extensions with "did not install".
+  if (removeFailed(version)) return null;
   return version?.status && version.status !== "ready" ? version.status : null;
+}
+
+export function removeFailed(version) {
+  return version?.status === "failed" && version?.reason === "remove_failed";
 }
 
 /**
@@ -29,6 +37,13 @@ export function versionState(version) {
 export function RuntimeStatusBadge({ version, namespace }) {
   const t = useTranslations(namespace);
   const state = versionState(version);
+  if (removeFailed(version)) {
+    return (
+      <Badge variant="destructive" className="font-normal" title={version.message ?? undefined}>
+        {t("versions.statusRemoveFailed")}
+      </Badge>
+    );
+  }
   if (!state) return null;
 
   if (state === "failed") {

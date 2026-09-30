@@ -44,7 +44,14 @@ function Label({
  */
 function LabelHint({ children }) {
   const t = useTranslations("common")
-  return <InfoHint label={t("whatIsThis")}>{children}</InfoHint>
+  // The trigger keeps its 20px target but not its 20px of line height: a
+  // label with a hint was 6px taller than one without, so of two fields side
+  // by side the one with the ⓘ sat lower.
+  return (
+    <InfoHint label={t("whatIsThis")} className="-my-[3px]">
+      {children}
+    </InfoHint>
+  )
 }
 
 /*

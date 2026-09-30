@@ -409,7 +409,7 @@ function EngineBadge({ engine, present }) {
 
   if (engine.install_status === "installing") {
     return (
-      <Badge variant="secondary" className="font-normal">
+      <Badge variant="muted" className="font-normal">
         <Loader2 className="size-3 animate-spin" />
         {t("engineList.installing", { name: t(`engines.${engine.engine}`) })}
       </Badge>
@@ -440,7 +440,7 @@ function EngineBadge({ engine, present }) {
     );
   }
   return (
-    <Badge variant="secondary" className="font-normal">
+    <Badge variant="muted" className="font-normal">
       {t("engineList.notInstalled")}
     </Badge>
   );

@@ -58,6 +58,8 @@ return [
         'stack' => 'Dieser Server führt ausschließlich Container aus und hostet diese Art von Anwendung daher nicht.',
         'database' => 'Diese Anwendung benötigt :engines, das auf diesem Server fehlt.',
         'php' => 'Auf diesem Server ist PHP nicht installiert.',
+        'php_version_install' => 'Auf diesem Server gibt es keine PHP-Version, auf der :type läuft (:range). Installiere zuerst PHP :version im PHP-Bereich.',
+        'php_version_none' => 'Auf diesem Server gibt es keine PHP-Version, auf der :type läuft (:range), und keine dieser Versionen lässt sich aus dem Paket-Repository des Servers installieren.',
         'node' => 'Auf diesem Server ist Node.js nicht installiert.',
         'web_server' => 'Diese Anwendung ist auf :web_server-Servern noch nicht verfügbar.',
     ],
@@ -222,6 +224,8 @@ return [
         'dependencies' => 'Abhängigkeiten werden geprüft',
         'verify' => 'Prüfen, ob die Website antwortet',
         'verify_serving' => 'Prüfen, ob die Website antwortet',
+        'create_admin' => 'Administratorkonto wird angelegt',
+        'schedule_cron' => 'Hintergrundaufgaben werden eingeplant',
         'worker' => 'Der Hintergrundprozess wurde beendet',
     ],
     /*
@@ -242,6 +246,8 @@ return [
         'attached_database_engine_mismatch' => 'Diese Anwendung hat bereits eine Datenbank, die jedoch auf einer Engine läuft, die diese Anwendung nicht verwenden kann. Trennen Sie sie, oder verknüpfen Sie eine auf einer unterstützten Engine, und versuchen Sie es erneut.',
         'serving_error' => 'Die Anwendung wurde gestartet, beantwortet aber jede Anfrage mit einem Fehler. Wahrscheinlich wurden ihre Assets nicht vollständig gebaut — Einzelheiten im Anwendungsprotokoll.',
         'not_answering' => 'Die Anwendung wurde gestartet, hat aber nie auf eine Anfrage geantwortet. Im Anwendungsprotokoll steht, warum sie nicht lauscht.',
+        'owner_not_created' => 'Die Anwendung wurde gestartet, aber ihr Administrator konnte nicht bestätigt werden. Die Website wurde nicht freigegeben, denn solange kein Administrator existiert, kann jeder, der sie öffnet, einen anlegen. Versuchen Sie es erneut; schlägt es weiter fehl, prüfen Sie das Anwendungsprotokoll.',
+        'app_not_ready' => 'Die Anwendung wurde gestartet, war aber nach 2 Minuten noch nicht fertig hochgefahren, daher konnte ihr Administrator nicht angelegt werden. Prüfen Sie das Anwendungsprotokoll und versuchen Sie es erneut.',
         'out_of_memory' => 'Dem Server ging bei diesem Schritt der Speicher aus und das System hat ihn beendet. Geben Sie Speicher frei oder fügen Sie Swap hinzu und versuchen Sie es erneut.',
         'no_build_tools' => 'Für diesen Schritt musste ein natives Modul kompiliert werden, und auf diesem Server ist kein Compiler installiert. Installieren Sie die Build-Tools im Einrichtungsbildschirm und versuchen Sie es erneut. Eine andere Node-Version kann ebenfalls helfen, da manche Versionen fertige Binärdateien mitbringen — welche das sind, entscheidet aber jedes Paket selbst, daher ist das allein keine verlässliche Lösung.',
         'composer_platform' => 'Composer konnte die Abhängigkeiten dieser Anwendung mit der für diese Site eingestellten PHP-Version nicht installieren. Die PHP-Version der Site oder eine der benötigten Erweiterungen erfüllt nicht, was das Projekt verlangt. Stellen Sie die Site auf eine unterstützte PHP-Version um oder installieren Sie die fehlende Erweiterung, und deployen Sie erneut.',
@@ -284,5 +290,27 @@ return [
         'heading' => 'Diese Seite ist vorübergehend nicht verfügbar',
         'lede' => 'Sie wurde von ihrem Betreiber offline genommen. Bitte versuchen Sie es später erneut.',
         'foot' => 'Ausgeliefert vom Control Panel.',
+    ],
+
+    // A deploy that failed after its checkout left the new code live.
+    // See Application::codeOnDisk().
+    'code_on_disk' => [
+        'incomplete' => 'Das letzte Deployment ist fehlgeschlagen, nachdem der neue Code bereits eingespielt war. Die Website läuft daher mit Commit :commit, der nicht vollständig bereitgestellt ist. Behebe das Problem und deploye erneut.',
+    ],
+
+    // A delivery for a site whose deploy-on-push is switched off. See
+    // ApplicationWebhookController::receive().
+    'webhook_delivery' => [
+        'disabled' => 'Deploy bei Push ist für diese Website im Panel ausgeschaltet, deshalb wurde nichts bereitgestellt. Schalte es im Panel wieder ein oder lösche diesen Webhook.',
+    ],
+
+    // Why deploy-on-push still needs the webhook added by hand. See
+    // WebhookRegistrar.
+    'webhook_registration' => [
+        'no_account' => 'Diese Website wird von einer öffentlichen URL bereitgestellt, nicht über ein verbundenes Git-Konto, daher kann das Panel den Webhook nicht für dich anlegen. Lege ihn in den Repository-Einstellungen mit der URL und dem Secret unten an.',
+        'signing_token' => 'GitLab erstellt Signatur-Tokens selbst, daher kann das Panel diesen Webhook nicht für dich anlegen. Lege ihn in den Webhook-Einstellungen des Repositorys mit der URL unten und deinem Signatur-Token an.',
+        'not_public' => 'Die Adresse des Panels ist aus dem Internet nicht erreichbar, daher könnten GitHub, GitLab oder Bitbucket nichts zustellen. Gib dem Panel eine öffentliche Adresse oder lege den Webhook danach von Hand an.',
+        'provider_refused' => 'Der Git-Anbieter hat dem Panel nicht erlaubt, den Webhook anzulegen. Wahrscheinlich fehlt dem verbundenen Token die Berechtigung, Webhooks in diesem Repository zu verwalten. Lege ihn von Hand mit der URL und dem Secret unten an oder verbinde das Konto mit dieser Berechtigung neu.',
+        'removal_refused' => 'Deploy bei Push ist aus, aber der Git-Anbieter hat dem Panel nicht erlaubt, den angelegten Webhook zu entfernen. Wahrscheinlich fehlt dem verbundenen Token die Berechtigung, Webhooks zu löschen. Pushes werden weiter gesendet und abgewiesen, bis du den Webhook in den Einstellungen des Repositorys löschst.',
     ],
 ];

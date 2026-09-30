@@ -3,6 +3,7 @@ import { useWatch } from "react-hook-form";
 import { useTranslations } from "next-intl";
 import { Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { SchedulePreview } from "@/components/cron-jobs/schedule-preview";
 import {
   FormField,
   FormItem,
@@ -109,6 +110,8 @@ export function ScheduleField({ form, presets, timezone }) {
       : errorKey
     : null;
 
+  const selectInvalid = !showRawField && Boolean(expressionError);
+
   // Grouping only earns its keep once the list is long enough to scan.
   const grouped = presets.length > 6;
   const buckets = GROUP_ORDER.map((group) => ({
@@ -139,9 +142,11 @@ export function ScheduleField({ form, presets, timezone }) {
           {/* Required like every other field it sits with: the form refuses to
               submit without a schedule, and the only way to learn that was to
               press Create and be told. */}
-          <FormLabel required hint={t("form.scheduleHint")}>{t("form.schedule")}</FormLabel>
+          {/* Not a FormField (the value is derived, not bound), so the
+              error state the other fields get for free is passed by hand. */}
+          <FormLabel required hint={t("form.scheduleHint")} data-error={selectInvalid}>{t("form.schedule")}</FormLabel>
           <Select value={selected} onValueChange={onPreset}>
-            <FormControl>
+            <FormControl aria-invalid={selectInvalid}>
               <SelectTrigger className="w-full">
                 {/* Explicit trigger content: Radix would otherwise reuse the
                     option markup, dragging the list's fixed label column into
@@ -217,6 +222,9 @@ export function ScheduleField({ form, presets, timezone }) {
           )}
         />
       ) : null}
+
+      {/* "0 0 2 * *" reads as 2 AM daily to most people; it is midnight on the 2nd. */}
+      {showRawField ? <SchedulePreview expression={expression} timezone={timezone} /> : null}
 
       {/* Timezone only. The trigger already shows the label and expression, so
           repeating them was noise; what it can't show is which clock the

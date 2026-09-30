@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Server\Application;
 
 use App\Enums\DomainType;
+use App\Models\ApplicationDomain;
 use App\Models\Certificate;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -42,8 +43,18 @@ class UpdateApplicationDomainRequest extends FormRequest
             // may change only the target, leaving `type` out entirely. The
             // effective type is therefore resolved against the stored row in
             // the controller's action rather than guessed from this payload.
-            'redirect_to' => ['nullable', 'string', 'max:2048', 'url'],
+            'redirect_to' => ['nullable', 'string', 'max:2048', 'url', 'regex:'.ApplicationDomain::REDIRECT_TARGET_PATTERN],
             'redirect_status' => ['sometimes', Rule::in([301, 302, 307, 308])],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'redirect_to.regex' => __('errors/application.redirect_target_invalid'),
         ];
     }
 }

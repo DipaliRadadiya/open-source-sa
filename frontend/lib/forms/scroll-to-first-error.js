@@ -10,8 +10,10 @@
 export function scrollToFirstError(root = typeof document !== "undefined" ? document : null) {
   if (!root) return;
   requestAnimationFrame(() => {
+    // First in page order, so a form-level message above the fields wins over
+    // a field below it. `data-form-error` marks those messages.
     const target =
-      root.querySelector('[aria-invalid="true"]') ??
+      root.querySelector('[data-form-error], [aria-invalid="true"]') ??
       root.querySelector('[data-slot="form-message"]');
     if (!target) return;
     target.scrollIntoView({ behavior: "smooth", block: "center" });

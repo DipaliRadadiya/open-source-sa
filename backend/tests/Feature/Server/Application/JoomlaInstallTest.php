@@ -8,6 +8,7 @@ use App\Services\Server\Applications\ApplicationProvisioner;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Str;
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -184,6 +185,23 @@ it('generates a table prefix when none is given', function () {
     // Joomla's own installer randomises this so tables stay apart if the
     // database is ever shared.
     expect($prefix)->toMatch('/^--db-prefix=[a-z0-9]{5}_$/');
+});
+
+it('starts the table prefix with a letter, which Joomla requires', function () {
+    // Joomla refuses `42k4p_` ("must start with a letter"). Every random draw
+    // here is digits, the worst case the old `Str::random(5)` could produce.
+    Str::createRandomStringsUsing(fn (int $length) => str_repeat('4', $length));
+    fakeJoomlaReleases();
+
+    try {
+        $command = joomlaInstallRun(installJoomla())['command'];
+    } finally {
+        Str::createRandomStringsNormally();
+    }
+
+    $prefix = collect($command)->first(fn ($a) => str_starts_with((string) $a, '--db-prefix='));
+
+    expect($prefix)->toMatch('/^--db-prefix=[a-z][a-z0-9]*_$/');
 });
 
 it('tells Joomla to speak PostgreSQL when that is the database it was given', function () {

@@ -128,7 +128,13 @@ class CreateApplication
                     ...$this->containerWiring($data),
                     'name' => $data['name'],
                     'domain' => $data['domain'],
-                    'php_version' => $data['php_version'] ?? null,
+                    // A blank version is the server default, resolved and
+                    // stored now. Left blank it was resolved again at every
+                    // render: the API had no version to show, and a change to
+                    // the default moved the site to another PHP unasked.
+                    'php_version' => $servingProfile === 'php'
+                        ? (($data['php_version'] ?? null) ?: ((string) config('server.default_php_version') ?: null))
+                        : ($data['php_version'] ?? null),
                     'node_version' => $data['node_version'] ?? null,
                     // Allocated when the app needs a process and the user did not pick
                     // one. A port the panel chose is checked against both the database
@@ -151,7 +157,7 @@ class CreateApplication
                     'repository' => $data['repository'] ?? null,
                     'repository_url' => $data['repository_url'] ?? null,
                     'branch' => $data['branch'] ?? null,
-                    'settings' => $this->typeSettings($type->fields(), $data),
+                    ...$this->splitSecrets($this->typeSettings($type->fields(), $data)),
                 ]);
 
                 // The domains table is the list the Domains screen reads, and until now
@@ -199,6 +205,26 @@ class CreateApplication
         ProvisionApplication::dispatch($application->id, Auth::id());
 
         return $application->fresh(['systemUser']);
+    }
+
+    /**
+     * Separate the installer's passwords from the rest of the answers.
+     *
+     * `settings` is plain JSON and the API returns it; the passwords go to
+     * `install_secrets`, which is encrypted, never serialized, and cleared once
+     * the install succeeds.
+     *
+     * @param  array<string, mixed>  $settings
+     * @return array{settings: array<string, mixed>, install_secrets: array<string, mixed>|null}
+     */
+    private function splitSecrets(array $settings): array
+    {
+        $secrets = array_intersect_key($settings, array_flip(Application::INSTALL_SECRET_KEYS));
+
+        return [
+            'settings' => array_diff_key($settings, $secrets),
+            'install_secrets' => $secrets === [] ? null : $secrets,
+        ];
     }
 
     /**

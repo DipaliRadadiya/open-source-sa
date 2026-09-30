@@ -13,6 +13,7 @@ use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Php\PhpExtensionManager;
 use App\Services\Server\Php\PhpOverview;
 use App\Services\Server\Php\PhpStackManager;
+use App\Services\Server\Php\PhpVersionManager;
 use App\Services\Server\Php\Stacks\LsphpPhpStack;
 use App\Services\Server\Runtimes\PhpRuntime;
 use App\Services\Server\WebServers\OlsDriver;
@@ -165,6 +166,28 @@ describe('the shared httpd_config.conf', function () {
         expect(sharedConfig())
             ->toContain('virtualHost shop.test {')
             ->toContain('map                     shop.test shop.test, www.shop.test');
+    });
+
+    /*
+     * A map inside the panel's markers with no virtualHost block says nothing
+     * about where the site lives, and the rebuild rendered its block with an
+     * empty root: `vhRoot /`. OpenLiteSpeed accepts that until the site's own
+     * config names a log under $VH_ROOT, so it survived the config test and
+     * broke the next change instead (seen on a real server, 2026-09-24).
+     */
+    it('refuses to rebuild when a site in its maps has no known directory, and changes nothing', function () {
+        $orphan = "  ### BEGIN panel-managed maps — do not edit between these markers\n"
+            ."  map                     brownsite brown.test\n"
+            ."  ### END panel-managed maps\n";
+        $runs = fakeOls(olsConfig($orphan));
+        $before = sharedConfig();
+
+        $result = app(OlsSharedConfig::class)->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
+
+        expect($result->ok)->toBeFalse()
+            ->and($result->reference)->not->toBe('')
+            ->and(sharedConfig())->toBe($before)
+            ->and(collect($runs)->contains(fn (array $r) => ($r['command'][0] ?? '') === 'tee'))->toBeFalse();
     });
 
     it('creates a secure listener when the server has none', function () {
@@ -330,6 +353,58 @@ describe('the shared httpd_config.conf', function () {
             ->and(sharedConfig())->toContain('### BEGIN panel-managed virtual hosts')
             // And somebody else's config is still none of our business.
             ->and(sharedConfig())->toContain('virtualHost legacy {');
+    });
+
+    it('refuses to take over a vhost that is not a site', function (string $name, string $root) {
+        /*
+         * The other side of the takeover above, and the one that happened on a
+         * live box (2026-09-29): a site created as `panel` absorbed the
+         * panel's own `virtualHost panel` and both of its maps, and the UI
+         * answered 404. A name is not enough to tell a site from the server's
+         * own vhosts; where it is rooted is — a site's vhRoot is its folder,
+         * install.sh roots the panel in the config directory, and
+         * OpenLiteSpeed's sample uses a relative path.
+         */
+        $original = <<<CONF
+        serverName                SomeServer
+
+        listener Default {
+          address                 *:80
+          map                     {$name} {$name}.example.test
+        }
+
+        virtualHost {$name} {
+          vhRoot                  {$root}
+          configFile              \$SERVER_ROOT/conf/vhosts/{$name}/vhconf.conf
+        }
+        CONF;
+
+        fakeOls($original);
+
+        $result = app(OlsSharedConfig::class)->register($name, ['qa.example.test'], '/home/shopuser/'.$name);
+
+        expect($result->ok)->toBeFalse()
+            ->and($result->reference)->not->toBeNull()
+            // Not touched at all — the server's own entry, and its map, as
+            // they were.
+            ->and(sharedConfig())->toBe($original)
+            ->and(app(OlsSharedConfig::class)->ownedByServer($name))->toBeTrue();
+    })->with([
+        'the panel, rooted in the config directory' => ['panel', '/usr/local/lsws/conf/vhosts/panel/'],
+        'OpenLiteSpeed\'s sample, rooted relatively' => ['Example', 'Example/'],
+    ]);
+
+    it('still counts a migrated site, rooted in its own folder, as a site', function () {
+        fakeOls(<<<'CONF'
+        virtualHost shop.test {
+          vhRoot                  /home/shopuser/shop.test/
+          configFile              /etc/sureshcloud-ols/shop.test/main.conf
+        }
+        CONF);
+
+        // The takeover test above depends on this answering false; pinned on
+        // its own so a guard widened by mistake fails here, by name.
+        expect(app(OlsSharedConfig::class)->ownedByServer('shop.test'))->toBeFalse();
     });
 
     it('points vhRoot at the site, not at the config directory', function () {
@@ -516,6 +591,28 @@ describe('the driver', function () {
             ->and($vhost)->toMatch('/^realm '.$realm.' \{\n  userDB \{\n    location\s+\/home\/shopuser\/shop\/\.panel\/\.htpasswd\n  \}\n\}/m');
     })->with(['php', 'static', 'node']);
 
+    it('writes nothing for a site whose name is one of the server\'s own vhosts', function () {
+        // The shared config refuses on its own, but by then the site's
+        // `vhconf.conf` has been written — into the panel's own vhost folder,
+        // which is what took the UI down on 2026-09-29. So the driver asks
+        // first.
+        $this->app_->forceFill(['slug' => 'panel'])->save();
+
+        $runs = fakeOls(<<<'CONF'
+        virtualHost panel {
+          vhRoot                  /usr/local/lsws/conf/vhosts/panel/
+          configFile              /usr/local/lsws/conf/vhosts/panel/vhconf.conf
+        }
+        CONF);
+
+        $result = app(OlsDriver::class)->apply($this->app_->fresh('systemUser'), '/home/shopuser/panel/public_html');
+
+        $writes = collect($runs)->filter(fn (array $run) => in_array($run['command'][0], ['tee', 'mkdir', 'cp'], true));
+
+        expect($result->ok)->toBeFalse()
+            ->and($writes->all())->toBe([]);
+    });
+
     it('is resolved for a server running OpenLiteSpeed', function () {
         expect(app(WebServerManager::class)->driver())->toBeInstanceOf(OlsDriver::class);
     });
@@ -605,9 +702,11 @@ describe('the driver', function () {
         );
 
         expect($commands)->toContain('mkdir -p /home/shopuser/shop/.panel/sessions')
-            ->toContain('chown shopuser:shopuser /home/shopuser/shop/.panel/sessions')
+            // -h and the mode by its owner: neither may follow a `sessions`
+            // that was replaced by a link (the `.panel` bug, 2026-09-29).
+            ->toContain('chown -h shopuser:shopuser /home/shopuser/shop/.panel/sessions')
             // As sensitive as the cookies that name the files in it.
-            ->toContain('chmod 0700 /home/shopuser/shop/.panel/sessions');
+            ->toContain('runuser -u shopuser -- chmod 0700 /home/shopuser/shop/.panel/sessions');
     });
 
     it('hands the site its sessions without handing it its own limits', function () {
@@ -844,13 +943,51 @@ describe('the driver', function () {
         expect($config)
             ->toContain('docRoot                   /home/shopuser/shop.test')
             ->toContain('vhDomain                  shop.test')
-            // lsphp84, not lsphp8.4 — LiteSpeed drops the dot everywhere.
-            ->toContain('extprocessor lsphp84 {')
+            // lsphp84, not lsphp8.4 — LiteSpeed drops the dot everywhere —
+            // and named for this site. See the test below.
+            ->toContain('extprocessor lsphp84-shop {')
+            ->toContain('add                     lsapi:lsphp84-shop php')
             // bin/lsphp, not bin/php: the CLI does not speak LSAPI, so a
             // vhost pointed at it would run no PHP at all.
             ->toContain('path                    '.$this->lsws.'/lsphp84/bin/lsphp')
             // OLS spawns the process itself, so it has to be told who as.
             ->toContain('extUser                 shopuser');
+    });
+
+    /*
+     * Every vhost used to name its processor `lsphp84`. OpenLiteSpeed keeps one
+     * external app per name, so the first vhost loaded supplied the extUser and
+     * socket for all of them. On a real server (2026-09-24) three sites' PHP ran
+     * as a fourth site's user, which could read their files, and the sites whose
+     * wp-config.php it could not read answered 500.
+     */
+    it('gives each site a processor of its own, and routes its PHP to that one', function () {
+        fakeOls(olsConfig());
+
+        $other = Application::forceCreate([
+            'system_user_id' => SystemUser::create(['username' => 'bloguser', 'home_path' => '/home/bloguser'])->id,
+            'name' => 'Blog', 'slug' => 'blog', 'domain' => 'blog.test',
+            'site_type' => 'wordpress', 'serving_profile' => 'php', 'web_root' => '/',
+            'status' => 'pending', 'php_version' => '8.4',
+        ]);
+
+        $names = [];
+
+        foreach ([[$this->app_, 'shopuser'], [$other, 'bloguser']] as [$site, $user]) {
+            $config = app(OlsDriver::class)->renderConfig($site, "/home/{$user}/{$site->slug}");
+
+            preg_match('/^extprocessor (\S+) \{/m', $config, $defined);
+            preg_match('/^\s*add\s+lsapi:(\S+) php$/m', $config, $handled);
+
+            // The handler must name the processor this vhost defines, and that
+            // processor must run as this site's own user.
+            expect($handled[1] ?? null)->toBe($defined[1] ?? 'none')
+                ->and($config)->toContain("extUser                 {$user}");
+
+            $names[] = $defined[1];
+        }
+
+        expect($names[0])->not->toBe($names[1]);
     });
 
     it('uses OpenLiteSpeed regex context syntax, not nginx', function () {
@@ -1316,7 +1453,16 @@ describe('the site type catalog', function () {
     // reachable SQL engine every type that needs one is greyed for a reason
     // that has nothing to do with OpenLiteSpeed, and the assertion below stops
     // measuring the thing it names.
-    beforeEach(fn () => fakeUsableSqlEngine());
+    beforeEach(function () {
+        fakeUsableSqlEngine();
+
+        // Same reasoning for PHP: a type is greyed when no installed version is
+        // in its range (PrestaShop stops at 8.1), and without this the answer
+        // came from whatever /etc/php the machine running the suite has.
+        $versions = Mockery::mock(PhpVersionManager::class)->makePartial();
+        $versions->shouldReceive('versions')->andReturn(['8.4', '8.1']);
+        app()->instance(PhpVersionManager::class, $versions);
+    });
 
     it('offers every site type, because nothing in them depends on the web server', function () {
         $catalog = collect(app(SiteTypeManager::class)->catalog());

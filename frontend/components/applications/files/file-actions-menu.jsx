@@ -43,7 +43,8 @@ export function FileActionItems({
   const canWrite = canManage;
   const permReason = symlinkReason ?? (canWrite ? null : t("noPermission"));
   const isArchive = file.type === "file" && ARCHIVE_RE.test(file.name);
-  const downloadReason = symlinkReason;
+  // Downloading reads the file, which needs File Manager manage.
+  const downloadReason = symlinkReason ?? (canManage ? null : t("noPermission"));
 
   async function copyPath() {
     try {
@@ -60,8 +61,8 @@ export function FileActionItems({
         <>
           {file.type !== "dir" ? (
             <MenuItemHint hint={downloadReason}>
-              <Item disabled={symlink} asChild={!symlink}>
-                {symlink ? (
+              <Item disabled={Boolean(downloadReason)} asChild={!downloadReason}>
+                {downloadReason ? (
                   <span className="flex items-center gap-1.5">
                     <Download className="size-4" />
                     {t("actions.download")}

@@ -9,6 +9,7 @@ use App\Actions\Server\Database\DeleteDatabase;
 use App\Enums\ExportStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Database\AdoptDatabasesRequest;
+use App\Http\Requests\Server\Database\DatabaseEngineRequest;
 use App\Http\Requests\Server\Database\IndexDatabasesRequest;
 use App\Http\Requests\Server\Database\StoreDatabaseRequest;
 use App\Http\Requests\Server\Database\UpdateDatabaseApplicationRequest;
@@ -24,6 +25,7 @@ use App\Services\Runtime\DatabaseInstallProgress;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\DatabaseSizes;
+use App\Services\Server\Databases\Installers\AbstractSqlEngineInstaller;
 use App\Services\Server\Databases\Installers\EngineInstallerManager;
 use App\Support\ListSearch;
 use App\Support\ListSort;
@@ -54,18 +56,24 @@ class DatabaseController extends Controller
     public function engines(DatabaseManager $manager, EngineInstallerManager $installers): JsonResponse
     {
         $progress = app(InstallTracker::class)->versions('database')->keyBy('version');
+        $capabilities = $manager->capabilities();
+        $installed = array_column($capabilities, 'installed', 'engine');
 
-        $engines = array_map(function (array $engine) use ($manager, $installers, $progress) {
+        $engines = array_map(function (array $engine) use ($manager, $installers, $progress, $installed) {
             $name = (string) $engine['engine'];
             $row = $progress->get($name);
+            // Read from the detection above rather than asked again: the
+            // engine list must not cost a package-manager question per row.
+            $unavailable = $installers->unavailableReason($name)
+                ?? $this->engineConflict($installers, $name, $installed);
 
             return $engine + [
                 'system_schemas' => $manager->systemSchemas($name),
-                'installable' => $installers->canInstall($name),
+                'installable' => $installers->canInstall($name) && $unavailable === null,
                 // Why not, when not — `{code, reason}`, the same shape a blocked
                 // site-type card carries, so the frontend renders both the same
                 // way. Null whenever `installable` is true.
-                'unavailable' => $installers->unavailableReason($name),
+                'unavailable' => $unavailable,
                 // Only ever `installing` or `failed`: a finished install deletes
                 // its row, so "installed" is answered by detection above and
                 // there is no second copy of that fact to go stale.
@@ -76,9 +84,39 @@ class DatabaseController extends Controller
                 'install_message' => $row?->message(),
                 'install_progress' => $row === null ? null : DatabaseInstallProgress::describe($row),
             ];
-        }, $manager->capabilities());
+        }, $capabilities);
 
         return response()->json(['engines' => $engines]);
+    }
+
+    /**
+     * MySQL and MariaDB cannot share a server: apt removes one to install the
+     * other. The install job already refused it, but only once it ran — so the
+     * list offered "Install MySQL" beside a working MariaDB and the job then
+     * failed (Apache test server). Said up front, in the words the job used.
+     * An engine that is installed itself is never blocked by this: installing
+     * it again is how its panel account is repaired.
+     *
+     * @param  array<string, bool>  $installed
+     * @return array{code: string, reason: string}|null
+     */
+    private function engineConflict(EngineInstallerManager $installers, string $engine, array $installed): ?array
+    {
+        if (($installed[$engine] ?? false) || ! $installers->canInstall($engine)) {
+            return null;
+        }
+
+        $installer = $installers->installer($engine);
+
+        if (! $installer instanceof AbstractSqlEngineInstaller) {
+            return null;
+        }
+
+        $other = $installer->conflictingEngine();
+
+        return ($installed[$other] ?? false)
+            ? ['code' => 'engine_conflict', 'reason' => __('runtime.install_failed.port_in_use_by_'.$other)]
+            : null;
     }
 
     /**
@@ -99,6 +137,10 @@ class DatabaseController extends Controller
         // and not a missing feature.
         if (($unavailable = $installers->unavailableReason($engine)) !== null) {
             abort(422, $unavailable['reason']);
+        }
+
+        if (($conflict = $this->engineConflict($installers, $engine, array_column($manager->capabilities(), 'installed', 'engine'))) !== null) {
+            abort(422, $conflict['reason']);
         }
 
         abort_unless($installers->canInstall($engine), 422, __('errors/database.engine_not_installable'));
@@ -249,10 +291,9 @@ class DatabaseController extends Controller
     /**
      * Server databases not yet tracked by the panel (brownfield discovery).
      */
-    public function untracked(Request $request, DatabaseManager $manager): JsonResponse
+    public function untracked(DatabaseEngineRequest $request, DatabaseManager $manager): JsonResponse
     {
-        $engineName = (string) $request->query('engine');
-        abort_unless(in_array($engineName, $manager->engineNames(), true), 404);
+        $engineName = $request->engine();
 
         $onServer = $manager->engine($engineName)->listDatabases();
         $tracked = Database::query()->where('engine', $engineName)->pluck('name')->all();

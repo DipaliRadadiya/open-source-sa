@@ -20,5 +20,6 @@ return [
 
     'errors' => [
         'unknown_source' => 'That log does not exist for this application.',
+        'clear_shared' => 'On OpenLiteSpeed the firewall detections are part of this site\'s access log. Clear the access log instead.',
     ],
 ];

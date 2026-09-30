@@ -15,11 +15,10 @@ test("the toggle turns hiding on from a showing listing", () => {
 });
 
 test("and back off again", () => {
-  // Showing is the default, so the way back is a URL with no flag at all
-  // rather than ?hidden=1, which would say nothing.
+  // Explicit: a remembered "hide" would otherwise answer a bare URL.
   assert.equal(
     hiddenToggleHref({ appId: 7, path: "", showHidden: false }),
-    "/applications/7/files",
+    "/applications/7/files?hidden=1",
   );
 });
 
@@ -33,7 +32,7 @@ test("the current folder is carried, not dropped", () => {
 
   assert.equal(
     hiddenToggleHref({ appId: 7, path: "wp-content/uploads", showHidden: false }),
-    "/applications/7/files?path=wp-content%2Fuploads",
+    "/applications/7/files?path=wp-content%2Fuploads&hidden=1",
   );
 });
 

@@ -7,6 +7,18 @@ import { Slot } from "radix-ui"
 import { ReasonTooltip, useDisabledReason } from "@/components/ui/reason-tooltip";
 import { cn } from "@/lib/utils"
 
+// A light brand tint with brand text (Krishna, 30 Sep): white or grey with a
+// border looked exactly like the white outlined cards and the grey badges
+// around it, so nothing said "this is clickable". The text is mixed towards the
+// foreground so it clears 4.5:1 on its own tint whatever the brand colour is.
+const TINT =
+  "bg-[color-mix(in_oklch,var(--primary)_9%,var(--background))] text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] hover:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] aria-expanded:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] dark:bg-primary/15 dark:text-[color-mix(in_oklch,var(--primary)_70%,white)] dark:hover:bg-primary/25 dark:aria-expanded:bg-primary/25";
+
+// Icon-only buttons (Refresh, pager, copy, reveal) stay neutral: a row of blue
+// squares beside every table reads as noise, not as actions (Krishna, 30 Sep).
+const NEUTRAL =
+  "border-border bg-secondary hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_6%)] hover:text-foreground aria-expanded:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_6%)] aria-expanded:text-foreground dark:border-input dark:bg-input/40 dark:hover:bg-input/60";
+
 const buttonVariants = cva(
   "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
@@ -32,14 +44,24 @@ const buttonVariants = cva(
          * for the same thing — "a button that is not the primary action" — and
          * that is one decision, not 240.
          */
-        outline:
-          "border-border bg-secondary hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_6%)] hover:text-foreground aria-expanded:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_6%)] aria-expanded:text-foreground dark:border-input dark:bg-input/40 dark:hover:bg-input/60",
+        // Colour comes from compoundVariants below: tinted with text, neutral
+        // when icon-only.
+        outline: "",
+        // The same neutral look for header chrome that has a label (the
+        // language switcher), which sits beside icon-only controls.
+        neutral: NEUTRAL,
+        // A button that stands in for an input (the combobox trigger): it has
+        // to look like the Select and Input beside it, not like an action.
+        field:
+          "border-input bg-transparent hover:bg-muted/40 aria-expanded:bg-transparent dark:bg-input/30 dark:hover:bg-input/50",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:
           "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
+        // A solid tint, not /10: see-through, it took on the colour of whatever
+        // card it sat on and the red text fell to 4.4:1 on the green status card.
         destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
+          "bg-[color-mix(in_oklch,var(--destructive)_10%,var(--background))] text-destructive hover:bg-[color-mix(in_oklch,var(--destructive)_18%,var(--background))] focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
@@ -63,6 +85,10 @@ const buttonVariants = cva(
         "icon-lg": "size-9",
       },
     },
+    compoundVariants: [
+      { variant: "outline", size: ["default", "xs", "sm", "lg"], className: TINT },
+      { variant: "outline", size: ["icon", "icon-xs", "icon-sm", "icon-lg"], className: NEUTRAL },
+    ],
     defaultVariants: {
       variant: "default",
       size: "default",

@@ -25,6 +25,15 @@ server {
     }
 
     location / {
+@foreach ($uncoveredNames as $name)
+        {{-- Not on the certificate: https://{{ $name }} is a TLS error, so
+             send it to the primary. Inside `location /`, never at server
+             level, so the ACME location above still answers for this name
+             and the certificate can be reissued to include it. --}}
+        if ($host = {{ $name }}) {
+            return 301 https://{{ $serverNames[0] }}$request_uri;
+        }
+@endforeach
         return 301 https://$host$request_uri;
     }
 }
@@ -32,13 +41,20 @@ server {
 
 server {
 @if ($certificate)
-    {{-- `listen ... http2` rather than the newer `http2 on;`. The new form is
-         a hard error on nginx before 1.25, which is what Ubuntu 24.04 ships;
-         this form is merely deprecated on newer builds. A deprecation warning
-         is survivable, a config test that fails takes every site on the box
-         down with it. --}}
+    {{-- `http2 on;` where this nginx has it (1.25.1+), `listen ... http2`
+         elsewhere — chosen by NginxDriver::supportsHttp2Directive(). The new
+         form is a hard error before 1.25 (Ubuntu 24.04 ships 1.24), and a
+         failed config test takes every site on the box down; the old one is
+         only deprecated after it, but printed a warning per site on every
+         `nginx -t` (36 on an 18-site Ubuntu 26.04 box). --}}
+@if ($http2On)
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+@else
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
+@endif
 
     ssl_certificate     {{ $certificate->certificate_path }};
     ssl_certificate_key {{ $certificate->private_key_path }};
@@ -83,9 +99,9 @@ server {
     set $waf_block "0";
     set $waf_exception "0";
 @foreach ($waf['exceptions'] as $exception)
-    if ($request_uri ~* "{{ preg_quote($exception, '/') }}") { set $waf_exception "1"; }
-    if ($args ~* "{{ preg_quote($exception, '/') }}") { set $waf_exception "1"; }
-    if ($http_user_agent ~* "{{ preg_quote($exception, '/') }}") { set $waf_exception "1"; }
+    if ($request_uri ~* "{!! $exception !!}") { set $waf_exception "1"; }
+    if ($args ~* "{!! $exception !!}") { set $waf_exception "1"; }
+    if ($http_user_agent ~* "{!! $exception !!}") { set $waf_exception "1"; }
 @endforeach
 @if (in_array('query_string', $waf['categories'], true))
     if ($bad_querystring_ng) { set $waf_block "1"; }
@@ -106,8 +122,8 @@ server {
     if ($not_allowed_method_ng) { set $waf_block "1"; }
 @endif
 @foreach ($waf['customRules'] as $rule)
-    if ($request_uri ~* "{{ preg_quote($rule, '/') }}") { set $waf_block "1"; }
-    if ($args ~* "{{ preg_quote($rule, '/') }}") { set $waf_block "1"; }
+    if ($request_uri ~* "{!! $rule !!}") { set $waf_block "1"; }
+    if ($args ~* "{!! $rule !!}") { set $waf_block "1"; }
 @endforeach
     set $waf_decision "${waf_block}${waf_exception}";
 @if ($waf['mode'] === 'enforce')
@@ -123,7 +139,7 @@ server {
 @if ($botBlock)
     {{-- Blocked before auth_basic is evaluated, so a blocked bot gets a
          flat 403 and never sees the Basic Auth login prompt. --}}
-    if ($http_user_agent ~* "^({{ $botBlock }})") {
+    if ($http_user_agent ~* "({{ $botBlock }})") {
         return 403;
     }
 @endif
@@ -163,6 +179,46 @@ server {
         try_files $uri $uri/ /index.php?$query_string;
     }
 
+@foreach ($wellKnown['redirects'] as $name => $target)
+    {{-- Service discovery the application's own .htaccess does on Apache —
+         Nextcloud's CalDAV/CardDAV. Answered 404 here, so calendar and
+         contact clients could not find the server. --}}
+    location = /.well-known/{{ $name }} {
+        return 301 {{ $target }};
+    }
+@endforeach
+@if ($wellKnown['fallback'])
+    {{-- Every other well-known URI to the application, as its .htaccess does.
+         The ACME location above is a longer prefix and still wins; PKI
+         validation files are served as they are. --}}
+    location ^~ /.well-known/ {
+        location ^~ /.well-known/pki-validation/ {
+            try_files $uri =404;
+        }
+
+        return 301 {{ $wellKnown['fallback'] }}$request_uri;
+    }
+@endif
+@foreach ($mimeTypes as $extension => $type)
+    {{-- A type the application sets in its .htaccess. `.mjs` went out as
+         application/octet-stream, which browsers refuse to run as a module. --}}
+    location ~* \.{{ $extension }}$ {
+        types { }
+        default_type {{ $type }};
+        try_files $uri =404;
+    }
+@endforeach
+@foreach ($deniedPaths as $pattern)
+    {{-- The application ships this as an Apache `.htaccess` rule, which nginx
+         never reads: without it, logs, sessions and source under the web root
+         were downloadable. Before the PHP location on purpose — regex
+         locations are tried in order and the first match wins, so placed
+         after it a denied `.php` would still run. --}}
+    location ~* {{ $pattern }} {
+        deny all;
+    }
+@endforeach
+
     {{-- `[^/]\.php(/|$)`, not `\.php$`. Several applications address their own
          scripts with a path appended — Moodle's slash arguments are the loudest
          case, where every stylesheet and script is requested as
@@ -188,6 +244,17 @@ server {
     location ~ /\.(?!well-known) {
         deny all;
     }
+@foreach ($subdirectoryFrontControllers as $i => $front)
+
+    {{-- A directory that is an application of its own (PrestaShop's back
+         office), which Apache routes with the `.htaccess` inside it. Last on
+         purpose: regex locations are first-match, so the PHP, dotfile and
+         denied-path rules above must see `.php`, `.htaccess` and logs first —
+         placed before them, this would serve those as plain files. --}}
+    location ~ ^/(?<frontdir{{ $i }}>{{ $front['directory'] }})/ {
+        try_files $uri $uri/ /$frontdir{{ $i }}/{{ $front['script'] }}$is_args$args;
+    }
+@endforeach
 }
 
 {{-- Redirects get their own server block. Serving the same content under a
@@ -199,8 +266,14 @@ server {
     {{-- A redirect needs its own HTTPS listener. `http://old` → `https://new`
          looks like it needs no certificate, but a browser that has seen HSTS
          for `old` refuses the plaintext hop and never reaches the redirect. --}}
+@if ($http2On)
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+@else
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
+@endif
 
     ssl_certificate     {{ $certificate->certificate_path }};
     ssl_certificate_key {{ $certificate->private_key_path }};

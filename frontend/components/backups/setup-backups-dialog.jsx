@@ -1,12 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { CheckCircle2, Loader2, PlayCircle, ShieldCheck } from "lucide-react";
-import { BACKUP_DEFAULT_TIME, backupTargetFormSchema } from "@/lib/schemas/backup";
-import { runBackupNow, saveBackupTarget } from "@/lib/api/backups";
+import { CheckCircle2, Loader2, PlayCircle, ShieldCheck, TriangleAlert } from "lucide-react";
+import {
+  BACKUP_DEFAULT_TIME,
+  backupTargetFormSchema,
+  backupTargetOptionsSchema,
+} from "@/lib/schemas/backup";
+import { frequencyOption, timeUsage } from "@/lib/backups/frequency";
+import { fetchBackupTargetOptions, runBackupNow, saveBackupTarget } from "@/lib/api/backups";
+import { markBackupStarted } from "@/lib/backups/just-started";
 import { listDestinations } from "@/lib/api/storage";
 import { storageDestinationsResponseSchema } from "@/lib/schemas/storage";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
@@ -16,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Form } from "@/components/ui/form";
 import { FormModal } from "@/components/ui/form-modal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { BackupSettingsFields } from "@/components/backups/backup-settings-fields";
 
 /**
@@ -45,11 +52,23 @@ export function SetupBackupsDialog({
   // form can say when a database backup would hold nothing.
   databaseCounts = null,
   databasesKnown = false,
+  // `GET /backup-targets/options`, read by the page. Null when that failed.
+  options: initialOptions = null,
+  // The site's name when the dialog is fixed to one site (the application
+  // page), which passes no `applications` list to look it up in.
+  applicationName = null,
+  // Site type catalogue, and the fixed site's type — see BackupSettingsFields.
+  siteTypes = null,
+  siteType = null,
+  // Called after the saved step's "Back up now" is accepted.
+  onStarted,
 }) {
   const t = useTranslations("backups.setup");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [saved, setSaved] = useState(null);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [running, setRunning] = useState(false);
+  const [finishing, setFinishing] = useState(false);
   /*
    * The destinations, as of the last time we asked.
    *
@@ -66,16 +85,49 @@ export function SetupBackupsDialog({
   const [refreshing, setRefreshing] = useState(false);
   const available = refreshed ?? destinations;
 
+  // Re-read here only when the page's read failed and someone pressed retry.
+  const [fetchedOptions, setFetchedOptions] = useState(null);
+  const [loadingOptions, setLoadingOptions] = useState(false);
+  const options = initialOptions ?? fetchedOptions;
+  // The resolver is fixed when the form is created; the ref lets it validate
+  // against options that arrived after that.
+  const optionsRef = useRef(options);
+  useEffect(() => {
+    optionsRef.current = options;
+  }, [options]);
+
   const form = useForm({
-    resolver: zodResolver(backupTargetFormSchema),
+    resolver: (values, context, resolverOptions) =>
+      zodResolver(backupTargetFormSchema(optionsRef.current))(values, context, resolverOptions),
     mode: "onSubmit",
     reValidateMode: "onChange",
-    defaultValues: defaults(applicationId, destinations, target),
+    defaultValues: defaults(applicationId, destinations, target, options),
   });
+
+  async function retryOptions() {
+    setLoadingOptions(true);
+    try {
+      const { data } = await fetchBackupTargetOptions();
+      const parsed = backupTargetOptionsSchema.safeParse(data);
+      if (!parsed.success) {
+        toast.error(t("optionsFailed"));
+        return;
+      }
+      setFetchedOptions(parsed.data);
+      // A new target was seeded before there was a default to seed it with.
+      if (!target && !form.getValues("frequency")) {
+        form.setValue("frequency", parsed.data.default_frequency);
+      }
+    } catch (error) {
+      toast.error(apiMessage(error, t("optionsFailed")));
+    } finally {
+      setLoadingOptions(false);
+    }
+  }
 
   // Reopening from a different row must not inherit the previous row's site.
   useEffect(() => {
-    if (open) form.reset(defaults(applicationId, destinations, target));
+    if (open) form.reset(defaults(applicationId, destinations, target, options));
     // `destinations` and `target` are excluded deliberately. Both change
     // identity on every parent render, and re-seeding on them would overwrite a
     // half-filled form; `open` going false→true already covers arriving from a
@@ -90,9 +142,9 @@ export function SetupBackupsDialog({
         type: values.type,
         retention_count: values.retention_count,
         frequency: values.frequency,
-        // Only meaningful for a schedule. Sending it with `manual` would store
-        // a time for a backup that never runs on its own.
-        ...(values.frequency === "manual" ? null : { schedule_time: values.schedule_time }),
+        // Only for a frequency that reads it. Sending one with `manual` would
+        // store a time for a backup that never runs on its own.
+        ...(timeUsage(options, values.frequency) ? { schedule_time: values.schedule_time } : null),
         enabled: values.enabled,
         file_excludes: values.file_excludes,
         database_excludes: values.database_excludes,
@@ -101,8 +153,14 @@ export function SetupBackupsDialog({
       const application = applications.find(
         (candidate) => candidate.id === Number(values.application_id),
       );
-      setSaved({ id: Number(values.application_id), name: application?.name ?? "", ...values });
-      router.refresh();
+      // No refresh yet: on the Backups empty state it swaps the page for the
+      // overview, which unmounts this dialog and loses the "Back up now" step.
+      // Done and Back up now refresh instead.
+      setSaved({
+        id: Number(values.application_id),
+        name: application?.name ?? applicationName ?? "",
+        ...values,
+      });
     } catch (error) {
       if (error.response?.data?.errors) {
         handleValidationError(error, form);
@@ -116,9 +174,11 @@ export function SetupBackupsDialog({
     setRunning(true);
     try {
       await runBackupNow(saved.id);
+      markBackupStarted();
+      onStarted?.();
+      await refreshAndWait();
       toast.success(t("started"));
       close();
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("startFailed")));
     } finally {
@@ -126,12 +186,34 @@ export function SetupBackupsDialog({
     }
   }
 
+  // Esc, the X and Cancel all come through here. With edits in the form they
+  // ask first — they used to drop a half-filled schedule without a word.
+  function requestClose() {
+    if (!saved && form.formState.isDirty && !form.formState.isSubmitting) {
+      setConfirmDiscard(true);
+      return;
+    }
+    close();
+  }
+
+  // Leaving the saved step: the page behind has not seen the new settings yet.
+  async function finish() {
+    setFinishing(true);
+    try {
+      await refreshAndWait();
+    } finally {
+      setFinishing(false);
+    }
+    close();
+  }
+
   function close() {
+    setConfirmDiscard(false);
     setSaved(null);
     // Back to the prop: the page behind this dialog re-reads on navigation, so
     // its list is the fresher one once we are no longer holding a form open.
     setRefreshed(null);
-    form.reset(defaults(applicationId, destinations, target));
+    form.reset(defaults(applicationId, destinations, target, options));
     onOpenChange?.(false);
   }
 
@@ -184,8 +266,9 @@ export function SetupBackupsDialog({
 
   // What is missing, in the order the form asks for it. A disabled primary
   // action that does not say why is the anti-pattern; this is the sentence.
-  const blocker =
-    available.length === 0
+  const blocker = !options
+    ? t("blocked.noOptions")
+    : available.length === 0
       ? t("blocked.noStorage")
       : !values.application_id
         ? t("blocked.noSite")
@@ -201,18 +284,23 @@ export function SetupBackupsDialog({
     return (
       <FormModal
         open={open}
-        onOpenChange={(next) => (next ? onOpenChange?.(true) : close())}
+        onOpenChange={(next) => (next ? onOpenChange?.(true) : running || finishing ? null : finish())}
         icon={CheckCircle2}
-        title={t("savedTitle", { name: saved.name })}
+        title={
+          saved.name
+            ? t(saved.enabled ? "savedTitle" : "savedTitleManual", { name: saved.name })
+            : t(saved.enabled ? "savedTitleNoName" : "savedTitleManualNoName")
+        }
         description={
           saved.enabled ? t("savedScheduled") : t("savedManual")
         }
         footer={
           <>
-            <Button type="button" variant="outline" onClick={close} disabled={running}>
+            <Button type="button" variant="outline" onClick={finish} disabled={running || finishing}>
+              {finishing ? <Loader2 className="size-4 animate-spin" /> : null}
               {t("done")}
             </Button>
-            <Button type="button" onClick={backUpNow} disabled={running}>
+            <Button type="button" onClick={backUpNow} disabled={running || finishing}>
               {running ? <Loader2 className="size-4 animate-spin" /> : <PlayCircle className="size-4" />}
               {t("backUpNow")}
             </Button>
@@ -231,13 +319,15 @@ export function SetupBackupsDialog({
     <Form {...form}>
       <FormModal
         open={open}
-        onOpenChange={(next) => (next ? onOpenChange?.(true) : close())}
+        onOpenChange={(next) => (next ? onOpenChange?.(true) : requestClose())}
         asForm
         onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         icon={ShieldCheck}
         className="sm:max-w-xl"
         title={target ? t("editTitle") : t("title")}
-        description={target ? t("editSubtitle") : t("subtitle")}
+        description={
+          target ? t("editSubtitle") : applications.length ? t("subtitle") : t("subtitleSite")
+        }
         footer={
           <>
             {blocker ? (
@@ -247,7 +337,7 @@ export function SetupBackupsDialog({
                 {blocker}
               </span>
             ) : null}
-            <Button type="button" variant="outline" onClick={close} disabled={submitting}>
+            <Button type="button" variant="outline" onClick={requestClose} disabled={submitting}>
               {t("cancel")}
             </Button>
             {/* The blocker is already printed above the button; the tooltip
@@ -272,13 +362,37 @@ export function SetupBackupsDialog({
           target={target}
           databaseCounts={databaseCounts}
           databasesKnown={databasesKnown}
+          siteTypes={siteTypes}
+          siteType={siteType}
+          options={options}
+          onRetryOptions={retryOptions}
+          retryingOptions={loadingOptions}
         />
 
         {/* What pressing Save will actually do, in one line. Reading your own
             answers back is the cheapest way to catch the wrong site or a
             schedule you did not mean. */}
-        <SummaryLine values={values} applications={applications} destinations={available} />
+        <SummaryLine
+          values={values}
+          applications={applications}
+          applicationName={applicationName}
+          destinations={available}
+          options={options}
+        />
       </FormModal>
+
+      <ConfirmDialog
+        open={confirmDiscard}
+        onOpenChange={setConfirmDiscard}
+        icon={TriangleAlert}
+        tone="warning"
+        confirmVariant="destructive"
+        title={t("discardTitle")}
+        description={t("discardDescription")}
+        cancelLabel={t("discardKeep")}
+        confirmLabel={t("discardConfirm")}
+        onConfirm={close}
+      />
     </Form>
   );
 }
@@ -291,18 +405,21 @@ export function SetupBackupsDialog({
  * set one at a time; this is the only place the answers appear together, which
  * is where a wrong site or an unintended `manual` becomes obvious.
  */
-function SummaryLine({ values, applications, destinations }) {
+function SummaryLine({ values, applications, applicationName = null, destinations, options }) {
   const t = useTranslations("backups.setup");
   const tf = useTranslations("backups.form");
 
-  const site = applications.find((a) => a.id === Number(values.application_id));
+  // On the application page there is no list to look the site up in, and the
+  // whole line used to disappear with it.
+  const siteName =
+    applications.find((a) => a.id === Number(values.application_id))?.name ?? applicationName;
   const destination = destinations.find((d) => d.id === Number(values.storage_destination_id));
-  if (!site || !values.type) return null;
+  if (!siteName || !values.type) return null;
 
   const parts = [
-    site.name,
-    tf(`types.${values.type}.label`),
-    values.enabled ? tf(`frequencies.${values.frequency ?? "daily"}`) : tf("automaticOffShort"),
+    siteName,
+    options?.types.find((type) => type.value === values.type)?.label,
+    values.enabled ? frequencyOption(options, values.frequency)?.label : tf("automaticOffShort"),
     values.enabled ? t("keep", { count: Number(values.retention_count) || 0 }) : null,
     destination?.name,
   ].filter(Boolean);
@@ -322,7 +439,7 @@ function SummaryLine({ values, applications, destinations }) {
  * without making a single decision — which for this audience is the whole
  * difference between "set up" and "meant to set up".
  */
-function defaults(applicationId, destinations, target) {
+function defaults(applicationId, destinations, target, options) {
   if (target) {
     // A disabled target and a manual one mean the same thing to the backend,
     // and the form has one switch for both — so normalise on the way in, or
@@ -349,7 +466,7 @@ function defaults(applicationId, destinations, target) {
     storage_destination_id: destinations.length === 1 ? destinations[0].id : "",
     type: "full",
     retention_count: 7,
-    frequency: "daily",
+    frequency: options?.default_frequency ?? "",
     schedule_time: BACKUP_DEFAULT_TIME,
     enabled: true,
     file_excludes: [],

@@ -8,6 +8,8 @@ use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * The two entries every OpenLiteSpeed site needs in the *shared*
@@ -165,6 +167,99 @@ class OlsSharedConfig
     }
 
     /**
+     * Whether `$name` is already a vhost that is not a site — the panel's own
+     * `panel` / `panel-api`, or OpenLiteSpeed's `Example`.
+     *
+     * {@see absorbUnmanaged()} takes over an entry outside the markers so a
+     * server migrated from the old panel does not end up with two definitions
+     * of one site. It cannot tell a site from the panel itself by name, and on
+     * 2026-09-29 a site created as `panel` took over the panel's own vhost:
+     * the UI 404'd, and its `vhconf.conf` had already been overwritten by the
+     * time the shared file was touched. So the driver asks this **before
+     * writing anything**.
+     *
+     * Told apart by `vhRoot`, which is where a site's files are and never
+     * where the server's config is: a site's is its own folder (v7's template
+     * is `vhRoot {{ $applicationPath }}`, ours {@see OlsDriver::vhRoot()}),
+     * while install.sh roots the panel's vhosts in the config directory and
+     * OpenLiteSpeed ships `Example` with a relative `Example/`.
+     *
+     * An unreadable file answers false: the write that follows reads the same
+     * file and fails on its own, and inventing a conflict would refuse every
+     * site on a box whose config merely could not be read this once.
+     */
+    public function ownedByServer(string $name): bool
+    {
+        $read = $this->serverOps->run(
+            ['cat', $this->path()],
+            ['feature' => 'application', 'op' => 'ols_read', 'site' => $name],
+        );
+
+        return $read->ok && $this->serverOwned($read->output(), $name);
+    }
+
+    private function serverOwned(string $contents, string $name): bool
+    {
+        $root = $this->unmanagedRoot($contents, $name);
+
+        if ($root === null) {
+            return false;
+        }
+
+        $configDir = rtrim(app(OlsVhostLayout::class)->root(), '/').'/';
+
+        return ! str_starts_with($root, '/') || str_starts_with(rtrim($root, '/').'/', $configDir);
+    }
+
+    /**
+     * The `vhRoot` of the `virtualHost <name>` block outside the markers, or
+     * null when there is no such block. Same line walk as absorbUnmanaged(),
+     * so the two cannot disagree about which block is "outside".
+     */
+    private function unmanagedRoot(string $contents, string $name): ?string
+    {
+        $quoted = preg_quote($name, '/');
+        $managed = false;
+        $inside = false;
+        $depth = 0;
+
+        foreach (preg_split('/\r?\n/', $contents) ?: [] as $line) {
+            if (preg_match('/### (BEGIN|END) panel-managed/', $line, $marker) === 1) {
+                $managed = $marker[1] === 'BEGIN';
+
+                continue;
+            }
+
+            if ($managed) {
+                continue;
+            }
+
+            if (! $inside) {
+                if (preg_match('/^\s*virtualHost\s+'.$quoted.'\s*\{/', $line) === 1) {
+                    $inside = true;
+                    $depth = substr_count($line, '{') - substr_count($line, '}');
+                }
+
+                continue;
+            }
+
+            if (preg_match('/^\s*vhRoot\s+(\S+)/', $line, $found) === 1) {
+                return $found[1];
+            }
+
+            $depth += substr_count($line, '{') - substr_count($line, '}');
+
+            if ($depth <= 0) {
+                // A block with no vhRoot says nothing about where it lives;
+                // treat it like the relative case — not a site of ours.
+                return '';
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * The account lsws drops its workers to — the top-level `user` directive.
      *
      * Here rather than in the driver because this class owns the file: it
@@ -235,9 +330,50 @@ class OlsSharedConfig
         }
 
         $original = $read->output();
+        $sites = $change($this->sites($original));
+
+        // A site with no known directory is refused, not written. It is a
+        // map line inside the markers with no virtualHost block beside it, so
+        // this file does not say where the site lives, and the block used to
+        // be rendered with an empty root: `vhRoot /`, the whole filesystem.
+        // OpenLiteSpeed accepts that until the site's own config names a log
+        // under $VH_ROOT, so the test below passed and the entry stayed, and
+        // the next change to that site failed its test instead (seen on a real
+        // server, 2026-09-24). Nothing is changed and the reference says why.
+        $unknown = array_keys(array_filter($sites, fn (array $site): bool => trim((string) ($site['root'] ?? ''), '/') === ''));
+
+        if ($unknown !== []) {
+            $reference = (string) Str::uuid();
+
+            Log::channel('server-ops')->error('ols shared config refused: a site has no known directory', $context + [
+                'reference' => $reference,
+                'sites' => $unknown,
+                'path' => $path,
+            ]);
+
+            return new ServerOpsResult(false, $reference);
+        }
+
+        // Never take over a vhost that is not a site: see ownedByServer().
+        // The driver asks first; this catches every other way in (resync,
+        // a rename) and is the last line before the file every site shares.
+        //
+        // Only the site being written. Asking of every site would let one odd
+        // entry elsewhere in the file stop every site on the box from saving.
+        if (array_key_exists($name, $sites) && $this->serverOwned($original, $name)) {
+            $reference = (string) Str::uuid();
+
+            Log::channel('server-ops')->error('ols shared config refused: name belongs to a vhost that is not a site', $context + [
+                'reference' => $reference,
+                'path' => $path,
+            ]);
+
+            return new ServerOpsResult(false, $reference);
+        }
+
         $updated = $this->render(
             $original,
-            $change($this->sites($original)),
+            $sites,
             $secureListener ? $this->tlsFallback($context) : null,
         );
 

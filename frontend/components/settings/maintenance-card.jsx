@@ -515,7 +515,7 @@ function UpdatesSection({ updates, canManage }) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}>
+      <form noValidate onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}>
         <Section
           icon={ShieldCheck}
           title={t("updates.title")}
@@ -674,7 +674,7 @@ function ScheduleSection({ schedule, presets, presetsFailed, canManage }) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}>
+      <form noValidate onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}>
         <Section
           icon={CalendarClock}
           title={t("schedule.title")}

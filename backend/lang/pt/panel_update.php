@@ -32,6 +32,7 @@ return [
         'optimize' => 'A reconstruir caches',
         'frontend_build' => 'A compilar a interface (esta é a parte lenta)',
         'sync_privileges' => 'A atualizar os privilégios do painel',
+        'configure_queue_worker' => 'A configurar o processador da fila',
         'restart_services' => 'A reiniciar serviços',
         'maintenance_off' => 'A sair do modo de manutenção',
         'health_check' => 'A verificar a nova versão',
@@ -45,6 +46,7 @@ return [
         'verify' => 'O painel atualizado não respondeu corretamente, por isso a versão anterior foi restaurada.',
         'prune' => 'Não foi possível remover as versões antigas.',
         'sync_privileges' => 'Não foi possível atualizar os privilégios do painel.',
+        'configure_queue_worker' => 'Não foi possível configurar o processador da fila.',
         'record_firewall_defaults' => 'Não foi possível registar as regras predefinidas da firewall.',
         'resync_fail2ban' => 'Não foi possível ressincronizar a configuração do fail2ban.',
         'refresh_npm_catalogue' => 'Não foi possível atualizar o catálogo do npm.',
@@ -75,6 +77,8 @@ return [
      * `migrate` can carry the `:migrated` suffix.
      */
     'reason_migrated' => 'As alterações à base de dados já tinham sido aplicadas e não podem ser revertidas: o código voltou à versão anterior, mas o esquema não. A cópia de segurança feita antes está em storage/app/panel-backups.',
+    'reason_db_restored' => 'A base de dados foi reposta no estado anterior à atualização. O estado no momento da falha fica guardado em storage/app/panel-backups (o ficheiro terminado em -failed.sqlite).',
+    'reason_db_not_restored' => 'A base de dados pode ter sido alterada pela atualização e NÃO foi reposta automaticamente. A cópia de segurança feita antes está em storage/app/panel-backups; reponha-a antes de tentar novamente.',
 
     'errors' => [
         'in_progress' => 'Já existe uma atualização em curso.',

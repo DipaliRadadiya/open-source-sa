@@ -7,6 +7,7 @@ use App\Contracts\SettingGroup;
 use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Models\FirewallRule;
 use App\Models\SshKey;
+use App\Services\Server\Firewall\ListeningPorts;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\SystemUsers\SshUsersGroup;
@@ -42,6 +43,7 @@ class SecuritySettings implements SettingGroup
         private ServerOps $serverOps,
         private Firewall $firewall,
         private ManagedFile $files,
+        private ListeningPorts $listening,
     ) {}
 
     public function key(): string
@@ -88,6 +90,15 @@ class SecuritySettings implements SettingGroup
             throw ValidationException::withMessages([
                 'password_authentication' => [__('errors/setting.no_ssh_key')],
             ]);
+        }
+
+        // Read before the drop-in changes it: only a port move needs the
+        // socket moved too (moveSocket()).
+        $previousPort = (int) ($this->effectiveConfig()['port'] ?? config('server.ssh_port', 22));
+        $portChanged = (int) $data['port'] !== $previousPort;
+
+        if ($portChanged) {
+            $this->assertPortFree((int) $data['port']);
         }
 
         $rootLogin = in_array($data['permit_root_login'], self::ROOT_LOGIN, true)
@@ -145,13 +156,157 @@ class SecuritySettings implements SettingGroup
                 ['port_from' => (int) $data['port'], 'port_to' => null, 'protocol' => 'tcp', 'action' => 'allow', 'source_ip' => null],
                 ['origin' => 'default', 'description' => 'SSH'],
             );
+
+            // Moving back to a port SSH left earlier finds that port's rule
+            // released as an ordinary one (releaseOldPortRule()). It is the
+            // SSH rule again, so it is the panel's again.
+            if ($rule->origin === 'user') {
+                $rule->forceFill(['origin' => 'default'])->save();
+            }
+
             $this->firewall->apply($rule);
         }
 
-        $reload = $this->serverOps->run(['systemctl', 'reload', 'ssh'], ['feature' => 'setting', 'group' => 'security', 'op' => 'reload']);
+        // try-reload-or-restart, not reload: under socket activation
+        // ssh.service is not running until someone connects, and after a
+        // failed socket it is not running at all. `reload` then fails, and
+        // failing here meant a save could never reach moveSocket() — the only
+        // step that brings a dead socket back.
+        $reload = $this->serverOps->run(['systemctl', 'try-reload-or-restart', 'ssh'], ['feature' => 'setting', 'group' => 'security', 'op' => 'reload']);
         if ($reload->failed()) {
             throw new SettingOperationException($reload->reference);
         }
+
+        $this->moveSocket($portChanged, $dir.'/'.self::DROP_IN, $config, $previousPort);
+
+        if ($portChanged) {
+            $this->releaseOldPortRule($previousPort);
+        }
+    }
+
+    /**
+     * Refuse a port something else already listens on.
+     *
+     * ssh.socket binds the port itself, and a taken one fails it with
+     * "Address already in use" — after the old port has been let go. On the
+     * Apache test box, moving SSH to 80 answered 500 and left no SSH at all,
+     * and saving 22 again could not bring it back; only a reboot did.
+     * sshd's own listener (or systemd holding it for ssh.socket) is not a
+     * conflict: that is SSH already being there.
+     */
+    private function assertPortFree(int $port): void
+    {
+        foreach ($this->listening->all() as $listener) {
+            if ($listener['protocol'] !== 'tcp' || $listener['port'] !== $port) {
+                continue;
+            }
+
+            if (in_array($listener['program'], ['sshd', 'systemd'], true)) {
+                continue;
+            }
+
+            throw ValidationException::withMessages([
+                'port' => [__('errors/setting.ssh_port_in_use', ['port' => $port])],
+            ]);
+        }
+    }
+
+    /**
+     * Let the user remove the rule for the port SSH has just left.
+     *
+     * The rule opened for SSH is marked as the panel's, and the panel's rules
+     * cannot be removed while the firewall is on — right for the port SSH is
+     * on, wrong for the one it left. On the 26.04 test server, moving SSH to
+     * 2222 and back left 2222 open with no way to close it short of turning
+     * the firewall off. The rule is kept (closing a port someone may still
+     * be connected through is theirs to decide) but becomes an ordinary one.
+     * SshLockoutGuard still refuses removing whatever covers the port SSH is
+     * on now.
+     */
+    private function releaseOldPortRule(int $port): void
+    {
+        if (in_array($port, [80, 443], true)) {
+            return;
+        }
+
+        FirewallRule::query()
+            ->where('port_from', $port)
+            ->whereNull('port_to')
+            ->where('protocol', 'tcp')
+            ->where('action', 'allow')
+            ->whereNull('source_ip')
+            ->where('origin', '!=', 'user')
+            ->update(['origin' => 'user']);
+    }
+
+    /**
+     * Move a socket-activated SSH to the new port.
+     *
+     * Ubuntu 24.04 and later start sshd from `ssh.socket`, and the port it
+     * listens on is the *socket's*, generated from sshd_config by
+     * `sshd-socket-generator` at daemon-reload. Reloading ssh re-reads the
+     * config and changes nothing about where it listens. Found on the 26.04
+     * test server: the screen, `sshd -T`, the firewall and the fail2ban jail
+     * all said 2222 while SSH went on answering on 22 only — so the SSH
+     * lockout guard was protecting a port nothing listened on.
+     *
+     * daemon-reload regenerates the socket's addresses and a restart of the
+     * socket applies them. Sessions already open stay open (ssh.service is
+     * KillMode=process; measured with a session held across the restart).
+     * The firewall has already been opened for the new port above.
+     */
+    private function moveSocket(bool $portChanged, string $dropIn, string $config, int $previousPort): void
+    {
+        $context = ['feature' => 'setting', 'group' => 'security', 'op' => 'ssh_socket'];
+
+        $state = trim($this->serverOps->run(['systemctl', 'is-active', 'ssh.socket'], $context)->output());
+
+        // A failed socket is restarted whatever the port: it is SSH being
+        // down, and saving this screen is the only repair the panel offers.
+        // A socket that is merely inactive is a server not using socket
+        // activation, and is left alone.
+        if (! ($state === 'failed' || ($state === 'active' && $portChanged))) {
+            return;
+        }
+
+        $failure = $this->restartSocket($context);
+
+        if ($failure === null) {
+            return;
+        }
+
+        // The new port would not bind. Put the old one back and bring the
+        // socket up on it before reporting, so a refused move is a refused
+        // move and not a server with no SSH.
+        if ($portChanged) {
+            $this->files->put(
+                $dropIn,
+                (string) preg_replace('/^Port \d+$/m', "Port {$previousPort}", $config),
+                ['feature' => 'setting', 'group' => 'security', 'op' => 'ssh_rollback'],
+            );
+            $this->restartSocket($context);
+        }
+
+        throw new SettingOperationException($failure);
+    }
+
+    /**
+     * daemon-reload regenerates the socket's addresses from sshd_config and
+     * the restart applies them. Returns the failing step's reference.
+     *
+     * @param  array<string, string>  $context
+     */
+    private function restartSocket(array $context): ?string
+    {
+        foreach ([['systemctl', 'daemon-reload'], ['systemctl', 'restart', 'ssh.socket']] as $command) {
+            $result = $this->serverOps->run($command, $context);
+
+            if ($result->failed()) {
+                return $result->reference;
+            }
+        }
+
+        return null;
     }
 
     /**

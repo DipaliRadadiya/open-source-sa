@@ -41,8 +41,13 @@ Route::get('/applications/{application}/files/breakdown', [ApplicationFileContro
 Route::get('/applications/{application}/files/size', [ApplicationFileController::class, 'folderSize'])
     ->middleware(['permission:app_file', 'throttle:20,1']);
 
+// Reading a file's contents — open, download, preview — needs manage.
+// Operator decision 2026-09-29 (option A): `view` is browse, search and sizes.
+// With `view` reading contents, a view-only role opened wp-config.php or .env
+// here and read the database password and APP_KEY that every other screen
+// hides from it (DB-01, the .env screen), just through a different door.
 Route::get('/applications/{application}/files/content', [ApplicationFileController::class, 'show'])
-    ->middleware(['permission:app_file', 'throttle:60,1']);
+    ->middleware(['permission:app_file,manage', 'throttle:60,1']);
 
 Route::put('/applications/{application}/files/content', [ApplicationFileController::class, 'update'])
     ->middleware(['permission:app_file,manage', 'throttle:20,1']);
@@ -113,19 +118,19 @@ Route::delete('/applications/{application}/files/uploads/{uploadId}', [Applicati
     ->middleware(['permission:app_file,manage', 'throttle:240,1']);
 
 Route::get('/applications/{application}/files/download', [ApplicationFileController::class, 'download'])
-    ->middleware(['permission:app_file', 'throttle:20,1']);
+    ->middleware(['permission:app_file,manage', 'throttle:20,1']);
 
 /*
 | The one read here that returns a renderable response: an image, with its
 | real content type, so the file manager can show a picture instead of
 | offering to save it.
 |
-| Read-only and `permission:app_file` like `content` and `download`, and
-| throttled like `content` rather than like `download` — a folder of
-| thumbnails is many small reads, not a few large transfers.
+| Manage, like `content` and `download` (see there), and throttled like
+| `content` rather than like `download` — a folder of thumbnails is many small
+| reads, not a few large transfers.
 */
 Route::get('/applications/{application}/files/preview', [ApplicationFileController::class, 'preview'])
-    ->middleware(['permission:app_file', 'throttle:60,1']);
+    ->middleware(['permission:app_file,manage', 'throttle:60,1']);
 
 Route::post('/applications/{application}/files/extract', [ApplicationFileController::class, 'extract'])
     ->middleware(['permission:app_file,manage', 'throttle:5,1']);

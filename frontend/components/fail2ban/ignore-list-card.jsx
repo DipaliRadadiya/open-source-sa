@@ -1,5 +1,6 @@
 "use client";
 
+import { useBrowserIp } from "@/components/network/browser-ip";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -38,11 +39,21 @@ const MAX_IGNORE_IPS = 100;
  * Saves the whole settings object because the backend rewrites the file as a
  * unit — sending only the list would drop the numbers the other card owns.
  */
-export function IgnoreListCard({ settings, yourIp, canManage }) {
+export function IgnoreListCard({ settings, canManage }) {
+  const yourIp = useBrowserIp();
   const t = useTranslations("fail2ban");
   const router = useRouter();
 
-  const [ips, setIps] = useState(settings.ignore_ips ?? []);
+  const saved = settings.ignore_ips ?? [];
+  // Follows the server until edited here. A copy taken at mount went stale when
+  // the Protection tab added an address, and Save then wrote the old list back
+  // over it — un-ignoring the address that had just been protected.
+  // An edit holds only while the server still has the list it was based on.
+  const [edited, setEdited] = useState(null);
+  const sameList = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const live = edited && sameList(edited.base, saved) ? edited.ips : null;
+  const ips = live ?? saved;
+  const setIps = (update) => setEdited({ ips: update(ips), base: saved });
   const [draft, setDraft] = useState("");
   const [draftError, setDraftError] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -54,7 +65,6 @@ export function IgnoreListCard({ settings, yourIp, canManage }) {
   // dialog exists to prevent, just approached from the other side.
   const [confirmRemoveSelf, setConfirmRemoveSelf] = useState(false);
 
-  const saved = settings.ignore_ips ?? [];
   const dirty = JSON.stringify(saved) !== JSON.stringify(ips);
   const ipIgnored = Boolean(yourIp) && ips.includes(yourIp);
 
@@ -242,7 +252,7 @@ export function IgnoreListCard({ settings, yourIp, canManage }) {
             dirty={dirty}
             saveReason={saveReason}
             onSave={save}
-            onDiscard={() => setIps(saved)}
+            onDiscard={() => setEdited(null)}
             saveLabel={t("settings.save")}
             savingNote={t("settings.savingNote")}
           />

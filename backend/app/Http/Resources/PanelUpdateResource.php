@@ -106,8 +106,13 @@ class PanelUpdateResource extends JsonResource
         // less than "for an unknown reason" does.
         $title = Lang::has($key) ? __($key) : __('panel_update.reasons.unknown');
 
-        return $suffix === 'migrated'
-            ? $title.' '.__('panel_update.reason_migrated')
-            : $title;
+        // The legacy flow's rollback now puts the database back when the
+        // update changed it, and says which of the two happened.
+        return match ($suffix) {
+            'migrated' => $title.' '.__('panel_update.reason_migrated'),
+            'db_restored' => $title.' '.__('panel_update.reason_db_restored'),
+            'db_not_restored' => $title.' '.__('panel_update.reason_db_not_restored'),
+            default => $title,
+        };
     }
 }

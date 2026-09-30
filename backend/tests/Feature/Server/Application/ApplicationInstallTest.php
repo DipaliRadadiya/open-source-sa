@@ -124,7 +124,7 @@ it('installs wordpress end to end after the site is serving', function () {
     // served from it. Without that step every PHP site ran as the shared
     // www-data and could read every other site's configuration.
     expect($app->steps)->toBe([
-        'ensure_account', 'create_directory', 'placeholder', 'set_ownership', 'harden_php', 'create_php_pool',
+        'ensure_account', 'create_directory', 'set_ownership', 'placeholder', 'harden_php', 'create_php_pool',
         'write_config', 'test_config', 'reload',
         'create_database', 'download', 'extract', 'configure', 'install_app',
     ]);
@@ -207,12 +207,30 @@ it('creates a database and a dedicated user, and writes them into wp-config', fu
     // The generated password ends up in wp-config.php and nowhere else.
     $password = $database->users->first()->password;
 
-    Process::assertRan(fn ($p) => $p->command[0] === 'tee'
-        && str_contains((string) $p->command[1], 'wp-config.php')
+    Process::assertRan(fn ($p) => in_array('tee', $p->command, true)
+        && str_contains((string) end($p->command), 'wp-config.php')
         && str_contains((string) $p->input, $database->name)
         && str_contains((string) $p->input, $password));
 
     Process::assertNotRan(fn ($p) => str_contains(implode(' ', $p->command), $password));
+});
+
+it('copies the extracted files into the site as the site user, never as root', function () {
+    // The document root is not always new — "Retry setup" copies into one the
+    // site user has had all along — and root's `cp` wrote through a link
+    // planted at a destination path (the `.panel` class of bug, 2026-09-29).
+    fakeSaltService();
+    fakeInstallServer();
+    runProvision(wpApp());
+
+    $unwrap = fn (array $c) => ($c[0] ?? null) === 'sudo' ? array_slice($c, 2) : $c;
+
+    Process::assertNotRan(fn ($p) => ($unwrap($p->command)[0] ?? null) === 'cp');
+    Process::assertRan(function ($p) use ($unwrap) {
+        $c = $unwrap($p->command);
+
+        return ($c[0] ?? null) === 'runuser' && ($c[2] ?? null) === 'deploy' && ($c[4] ?? null) === 'cp';
+    });
 });
 
 it('hands the extracted files to the site user, not root', function () {
@@ -279,7 +297,9 @@ it('does not hand out a name the engine already has', function () {
             $sql = (string) $process->input;
 
             // The availability probe -- statements go over stdin, never argv.
-            if (str_contains($sql, 'information_schema.schemata')) {
+            // Matched on its EXISTS, not on the table: describeDatabase()
+            // reads information_schema.schemata too, after the create.
+            if (str_contains($sql, 'CASE WHEN EXISTS') && str_contains($sql, 'information_schema.schemata')) {
                 preg_match("/schema_name = '([^']+)'/", $sql, $m);
                 $offered[] = $m[1] ?? '';
 
@@ -414,9 +434,12 @@ it('locks down wp-config.php, which holds live database credentials', function (
     fakeInstallServer();
     runProvision(wpApp());
 
-    Process::assertRan(fn ($p) => $p->command[0] === 'chmod'
-        && $p->command[1] === '0640'
-        && str_contains((string) $p->command[2], 'wp-config.php'));
+    // By the site user, who wrote it: root's chmod followed a link planted
+    // at the path (the `.panel` class of bug, 2026-09-29). And 0600, not
+    // 0640: the site runs as its own user, and its group is not private —
+    // on OpenLiteSpeed the web server account is a member of it.
+    Process::assertRan(fn ($p) => array_slice($p->command, 0, 6) === ['runuser', '-u', 'deploy', '--', 'chmod', '0600']
+        && str_contains((string) end($p->command), 'wp-config.php'));
 });
 
 /** The wp-config.php WordPress will read, as written. */
@@ -425,7 +448,7 @@ function wpConfigWritten(): string
     $config = '';
 
     Process::fake(function ($process) use (&$config) {
-        if (($process->command[0] ?? '') === 'tee' && str_contains((string) $process->command[1], 'wp-config.php')) {
+        if (in_array('tee', $process->command, true) && str_contains((string) end($process->command), 'wp-config.php')) {
             $config = (string) $process->input;
         }
 
@@ -469,7 +492,7 @@ it('gives every install its own salts', function () {
 
     // The fake handler sees every command, so it can capture what was written.
     Process::fake(function ($process) use (&$configs) {
-        if ($process->command[0] === 'tee' && str_contains((string) $process->command[1], 'wp-config.php')) {
+        if (in_array('tee', $process->command, true) && str_contains((string) end($process->command), 'wp-config.php')) {
             preg_match("/define\('AUTH_KEY', '(.*)'\);/U", (string) $process->input, $m);
             $configs[] = $m[1] ?? '';
         }
@@ -539,7 +562,7 @@ it('skips the installer entirely for site types that have none', function () {
     $app->refresh();
     expect($app->status->value)->toBe('active');
     expect($app->steps)->toBe([
-        'ensure_account', 'create_directory', 'placeholder', 'set_ownership', 'write_config', 'test_config', 'reload',
+        'ensure_account', 'create_directory', 'set_ownership', 'placeholder', 'write_config', 'test_config', 'reload',
     ]);
     expect(Database::where('application_id', $app->id)->count())->toBe(0);
     Process::assertNotRan(fn ($p) => $p->command[0] === 'curl');

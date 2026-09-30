@@ -31,7 +31,9 @@ export const firewallRuleSchema = z.object({
 });
 
 export const firewallResponseSchema = z.object({
-  enabled: z.boolean(),
+  // Null when the panel could not read ufw (FirewallController): not "off".
+  enabled: z.boolean().nullable(),
+  status_reference: z.string().nullish(),
   default_policy: z
     .object({ incoming: z.string().nullable().optional(), outgoing: z.string().nullable().optional() })
     .nullable()
@@ -130,12 +132,9 @@ export const createFirewallRuleSchema = z
     const parsed = parsePorts(values.ports);
     if (!parsed) {
       ctx.addIssue({ code: "custom", path: ["ports"], message: "portShape" });
-      // Both ends capped at 65534, which is what the create endpoint accepts
-      // (`between:1,65534` on port_from AND port_to). The end used to be
-      // allowed up to 65535: the client passed it, the server refused it on
-      // `port_to` — a field name that does not exist on this screen — and the
-      // matching message claimed "1 to 65535" while rejecting 65535.
-    } else if (parsed.from < 1 || parsed.from > 65534 || (parsed.to && parsed.to > 65534)) {
+      // 1–65535 on both ends, as FirewallRule::PORT_MIN/PORT_MAX (the API
+      // lifted its old 65534 cap on 2026-09-22, 03aca0da).
+    } else if (parsed.from < 1 || parsed.from > 65535 || (parsed.to && parsed.to > 65535)) {
       ctx.addIssue({ code: "custom", path: ["ports"], message: "portRange" });
     } else if (parsed.to && parsed.to < parsed.from) {
       ctx.addIssue({ code: "custom", path: ["ports"], message: "portOrder" });

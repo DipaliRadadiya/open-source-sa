@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Services\Server\Settings\SettingsManager;
+use App\Support\ServerTimezone;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
@@ -20,12 +21,16 @@ beforeEach(function () {
         'server.cron_d' => $this->cronDir,
         'server.reboot_schedule.file' => 'panel-reboot',
         'server.reboot_schedule.minute' => 10,
+        'server.reboot_schedule.remembered' => $this->cronDir.'-remembered/reboot-schedule.json',
     ]);
 
     $this->file = $this->cronDir.'/panel-reboot';
 });
 
-afterEach(fn () => File::deleteDirectory($this->cronDir));
+afterEach(function () {
+    File::deleteDirectory($this->cronDir);
+    File::deleteDirectory($this->cronDir.'-remembered');
+});
 
 /**
  * `tee` and `rm` really run here rather than being faked, because the point
@@ -283,4 +288,61 @@ it("logs the reboot with the panel's own PHP, not a distro path that may not exi
     expect(cronLine())
         ->toContain("'/usr/local/lsws/lsphp84/bin/php'")
         ->not->toContain('/usr/bin/php');
+});
+
+it('keeps the day and hour of a schedule that is switched off', function () {
+    schedule(['enabled' => true, 'frequency' => 'weekly', 'hour' => 5, 'day_of_week' => 2])->assertOk();
+    schedule(['enabled' => false])->assertOk();
+
+    expect(File::exists(test()->file))->toBeFalse();
+
+    test()->withHeader('Authorization', 'Bearer '.test()->token)
+        ->getJson('/api/settings')->assertOk()
+        ->assertJsonPath('settings.reboot_schedule.enabled', false)
+        ->assertJsonPath('settings.reboot_schedule.frequency', 'weekly')
+        ->assertJsonPath('settings.reboot_schedule.hour', 5)
+        ->assertJsonPath('settings.reboot_schedule.day_of_week', 2)
+        ->assertJsonPath('settings.reboot_schedule.next_run', null);
+});
+
+it('remembers what a switch-off request sent over what the file said', function () {
+    schedule(['enabled' => true, 'frequency' => 'daily', 'hour' => 3])->assertOk();
+    schedule(['enabled' => false, 'frequency' => 'monthly', 'hour' => 4, 'day_of_month' => 15])->assertOk();
+
+    test()->withHeader('Authorization', 'Bearer '.test()->token)
+        ->getJson('/api/settings')->assertOk()
+        ->assertJsonPath('settings.reboot_schedule.frequency', 'monthly')
+        ->assertJsonPath('settings.reboot_schedule.hour', 4)
+        ->assertJsonPath('settings.reboot_schedule.day_of_month', 15);
+});
+
+it('ignores a remembered value that is out of range', function () {
+    File::ensureDirectoryExists(dirname(config('server.reboot_schedule.remembered')));
+    File::put(config('server.reboot_schedule.remembered'), json_encode(['frequency' => 'hourly', 'hour' => 99]));
+
+    test()->withHeader('Authorization', 'Bearer '.test()->token)
+        ->getJson('/api/settings')->assertOk()
+        ->assertJsonPath('settings.reboot_schedule.frequency', 'daily')
+        ->assertJsonPath('settings.reboot_schedule.hour', 3);
+});
+
+it('labels the schedule with the zone cron runs in when /etc/timezone is absent', function () {
+    // Ubuntu 26.04 ships no /etc/timezone; /etc/localtime is the only record.
+    $link = test()->cronDir.'/localtime';
+    symlink('/usr/share/zoneinfo/Asia/Kolkata', $link);
+    config([
+        'server.timezone_file' => test()->cronDir.'/no-such-timezone',
+        'server.localtime_link' => $link,
+    ]);
+    ServerTimezone::forget();
+
+    schedule(['enabled' => true, 'frequency' => 'daily', 'hour' => 4])->assertOk();
+
+    $response = test()->withHeader('Authorization', 'Bearer '.test()->token)
+        ->getJson('/api/settings')->assertOk()
+        ->assertJsonPath('settings.reboot_schedule.timezone', 'Asia/Kolkata');
+
+    expect($response->json('settings.reboot_schedule.next_run'))->toEndWith('04:10:00');
+
+    ServerTimezone::forget();
 });

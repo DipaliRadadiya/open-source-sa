@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\Server;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Server\Application\RestoreEnvironmentRequest;
 use App\Http\Requests\Server\Application\SaveEnvironmentRequest;
 use App\Http\Resources\ApplicationEnvironmentResource;
 use App\Models\ActivityLog;
@@ -18,6 +19,7 @@ use App\Services\Server\ServerOps;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 /**
  * The application's `.env`, edited as one file.
@@ -148,15 +150,21 @@ class ApplicationEnvironmentController extends Controller
 
     /** Put a previous save back. */
     public function restore(
-        Request $request,
+        RestoreEnvironmentRequest $request,
         Application $application,
         ApplicationEnvironment $files,
         FrameworkDetector $detector,
         ActivityLogger $activity,
     ): JsonResponse {
-        $name = (string) $request->string('backup')->trim();
+        $name = (string) $request->validated('backup');
 
-        $safety = $files->restore($application, $name);
+        // A well-formed name that is not (or no longer) on disk is the user's
+        // mistake — a stale list — not a server failure.
+        try {
+            $safety = $files->restore($application, $name);
+        } catch (RuntimeException) {
+            throw ValidationException::withMessages(['backup' => [__('errors/application.unknown_backup')]]);
+        }
 
         $this->apply($application, $detector->detect($application), $detector);
         $this->restart($application, $request->boolean('restart'));

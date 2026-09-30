@@ -6,4 +6,8 @@ return [
     'unsupported_provider' => 'El proveedor :provider no es compatible.',
     'invalid_host' => 'Introduce una URL https:// válida para la instancia autoalojada.',
     'blocked_host' => 'Esta dirección no está permitida.',
+
+    // Disconnecting an account that applications still deploy with.
+    'in_use' => 'No se puede desconectar :name: todavía la usan :applications. Vincula primero esas aplicaciones a otra cuenta.',
+    'and_more' => ':count más',
 ];

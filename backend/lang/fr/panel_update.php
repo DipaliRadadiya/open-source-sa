@@ -32,6 +32,7 @@ return [
         'optimize' => 'Reconstruction des caches',
         'frontend_build' => 'Compilation de l’interface (c’est la partie lente)',
         'sync_privileges' => 'Mise à jour des privilèges du panneau',
+        'configure_queue_worker' => 'Configuration du processus de file d’attente',
         'restart_services' => 'Redémarrage des services',
         'maintenance_off' => 'Sortie du mode maintenance',
         'health_check' => 'Vérification de la nouvelle version',
@@ -45,6 +46,7 @@ return [
         'verify' => 'Le panneau mis à jour n’a pas répondu correctement, la version précédente a donc été restaurée.',
         'prune' => 'Les anciennes versions n’ont pas pu être supprimées.',
         'sync_privileges' => 'Les privilèges du panneau n’ont pas pu être mis à jour.',
+        'configure_queue_worker' => 'Le processus de file d’attente n’a pas pu être configuré.',
         'record_firewall_defaults' => 'Les règles de pare-feu par défaut n’ont pas pu être enregistrées.',
         'resync_fail2ban' => 'La configuration fail2ban n’a pas pu être resynchronisée.',
         'refresh_npm_catalogue' => 'Le catalogue npm n’a pas pu être actualisé.',
@@ -75,6 +77,8 @@ return [
      * `migrate` can carry the `:migrated` suffix.
      */
     'reason_migrated' => 'Les modifications de la base de données avaient déjà été appliquées et ne peuvent pas être annulées : le code est revenu à la version précédente, mais pas le schéma. La sauvegarde effectuée au préalable se trouve dans storage/app/panel-backups.',
+    'reason_db_restored' => 'La base de données a été remise dans l\'état où elle était avant la mise à jour. Son état au moment de l\'échec est conservé dans storage/app/panel-backups (le fichier se terminant par -failed.sqlite).',
+    'reason_db_not_restored' => 'La base de données a peut-être été modifiée par la mise à jour et n\'a PAS été restaurée automatiquement. La sauvegarde effectuée au préalable se trouve dans storage/app/panel-backups ; restaurez-la avant de réessayer.',
 
     'errors' => [
         'in_progress' => 'Une mise à jour est déjà en cours.',

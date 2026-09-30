@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { RefreshCw } from "lucide-react";
@@ -15,7 +15,7 @@ import { apiMessage } from "@/lib/api/error-message";
 
 export function SyncPermissionsButton() {
   const t = useTranslations("roles.sync");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
 
@@ -23,9 +23,9 @@ export function SyncPermissionsButton() {
     setPending(true);
     try {
       const res = await syncPermissions();
+      await refreshAndWait();
       toast.success(t("success", { count: res.data?.synced ?? 0 }));
       setOpen(false);
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("failed")));
     } finally {

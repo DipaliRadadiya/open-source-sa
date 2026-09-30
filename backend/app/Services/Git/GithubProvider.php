@@ -100,4 +100,46 @@ class GithubProvider extends AbstractGitProvider
             'protected' => (bool) ($branch['protected'] ?? false),
         ], (array) $response->json()));
     }
+
+    public function createWebhook(GitAccount $account, string $repository, string $url, string $secret): string
+    {
+        $response = $this->send($account, fn ($client) => $client->post("/repos/{$repository}/hooks", [
+            'name' => 'web',
+            ...$this->hookBody($url, $secret),
+        ]));
+
+        return (string) $response->json('id');
+    }
+
+    public function updateWebhook(GitAccount $account, string $repository, string $id, string $url, string $secret): bool
+    {
+        $response = $this->send(
+            $account,
+            fn ($client) => $client->patch("/repos/{$repository}/hooks/".rawurlencode($id), $this->hookBody($url, $secret)),
+            missingOk: true,
+        );
+
+        return $response->status() !== 404;
+    }
+
+    public function deleteWebhook(GitAccount $account, string $repository, string $id): void
+    {
+        $this->send($account, fn ($client) => $client->delete("/repos/{$repository}/hooks/".rawurlencode($id)), missingOk: true);
+    }
+
+    /**
+     * Push events only, as JSON, signed with the secret. TLS verification
+     * stays on: a panel without a valid certificate should fail loudly in the
+     * hook's delivery log, not deploy over an unverified connection.
+     *
+     * @return array<string, mixed>
+     */
+    private function hookBody(string $url, string $secret): array
+    {
+        return [
+            'active' => true,
+            'events' => ['push'],
+            'config' => ['url' => $url, 'content_type' => 'json', 'secret' => $secret, 'insecure_ssl' => '0'],
+        ];
+    }
 }

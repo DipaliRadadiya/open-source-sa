@@ -4,6 +4,7 @@ namespace App\Actions\Server\Database;
 
 use App\Models\Database;
 use App\Services\ActivityLogger;
+use App\Services\Server\Databases\DatabaseFirewall;
 use App\Services\Server\Databases\DatabaseManager;
 
 class DeleteDatabase
@@ -11,6 +12,7 @@ class DeleteDatabase
     public function __construct(
         private DatabaseManager $manager,
         private ActivityLogger $activityLogger,
+        private DatabaseFirewall $firewall,
     ) {}
 
     public function execute(Database $database): void
@@ -30,6 +32,12 @@ class DeleteDatabase
 
         $this->activityLogger->log('database.deleted', null, ['name' => $database->name, 'engine' => $database->engine]);
 
+        $users = $database->users->map(fn ($user) => [$user->connection_preference, $user->host])->all();
+
         $database->delete(); // cascade removes database_users rows
+
+        foreach ($users as [$preference, $host]) {
+            $this->firewall->release($database->engine, $preference, $host);
+        }
     }
 }

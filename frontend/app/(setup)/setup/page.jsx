@@ -1,8 +1,11 @@
 import { getTranslations, getLocale } from "next-intl/server";
 import { Rocket } from "lucide-react";
 import { getSetup } from "@/lib/setup/get-setup";
+import { getFail2ban } from "@/lib/fail2ban/get-fail2ban";
 import { getPhp } from "@/lib/php/get-php";
 import { getNode } from "@/lib/node/get-node";
+import { getPermissions } from "@/lib/permissions/get-permissions";
+import { can } from "@/lib/permissions/can";
 import { SetupChecklist } from "@/components/setup/setup-checklist";
 import { LoadFailed } from "@/components/data-table/load-failed";
 
@@ -20,7 +23,31 @@ function needsVersions(setup, key) {
 }
 
 export default async function SetupPage() {
-  const [t, locale, result] = await Promise.all([getTranslations("setup"), getLocale(), getSetup()]);
+  const [t, locale, result, permissions, fail2ban] = await Promise.all([
+    getTranslations("setup"),
+    getLocale(),
+    getSetup(),
+    getPermissions(),
+    getFail2ban(),
+  ]);
+  // Installing fail2ban turns no jail on, so "installed" protected nothing and
+  // the checklist said nothing about it. "unknown" when it could not be read:
+  // better silent than telling someone with protection on to turn it on.
+  const fail2banProtection = fail2ban.failed
+    ? "unknown"
+    : fail2ban.data?.installed && (fail2ban.data.jails ?? []).some((jail) => jail.enabled)
+      ? "on"
+      : "off";
+  // Opening this page needs only `setting` view, but each install is gated by
+  // its own feature's manage permission — without this a view-only role saw
+  // working Install buttons that answered 403.
+  const canInstall = {
+    database: can(permissions, "database", "manage"),
+    fail2ban: can(permissions, "fail2ban", "manage"),
+    php: can(permissions, "php", "manage"),
+    node: can(permissions, "node", "manage"),
+    build_tools: can(permissions, "node", "manage"),
+  };
 
   // Fetch installable versions only for the runtimes that still need one, so the
   // PHP/Node cards can install a version inline instead of navigating away.
@@ -55,7 +82,7 @@ export default async function SetupPage() {
           failure={result.failure} message={result.message} debug={result.debug}
         />
       ) : (
-        <SetupChecklist key={locale} initialSetup={result.setup} versions={versions} />
+        <SetupChecklist key={locale} initialSetup={result.setup} versions={versions} canInstall={canInstall} fail2banProtection={fail2banProtection} />
       )}
     </div>
   );

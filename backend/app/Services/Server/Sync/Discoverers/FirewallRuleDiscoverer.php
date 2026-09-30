@@ -65,7 +65,7 @@ class FirewallRuleDiscoverer implements Discoverable
 
             [, $to, $action, $direction, $from] = $matches;
             $to = trim($to);
-            $from = trim($from);
+            [$from, $comment] = $this->splitComment($from);
 
             // ufw lists the v6 half of a rule as its own numbered entry. The
             // panel stores one row per rule, so adopting both would double
@@ -144,7 +144,11 @@ class FirewallRuleDiscoverer implements Discoverable
                     'protocol' => $port['protocol'],
                     'action' => $normalisedAction,
                     'source_ip' => $sourceIp,
-                    'description' => 'Imported from ufw',
+                    // The rule's own comment where it has one. It used to be
+                    // left on the end of the source (`Anywhere  # note`), which
+                    // stored a source ufw cannot read, so the rule could never
+                    // be edited or deleted from the panel (2026-09-24).
+                    'description' => $comment !== null ? mb_substr($comment, 0, 255) : 'Imported from ufw',
                 ],
             ];
         }
@@ -187,6 +191,23 @@ class FirewallRuleDiscoverer implements Discoverable
             // ufw prints no protocol when the rule covers both.
             'protocol' => strtolower($matches[3] ?? '') ?: 'all',
         ];
+    }
+
+    /**
+     * The source column and the rule's comment, which `ufw status` prints on
+     * the same line after a `#`: `Anywhere                   # brownfield test`.
+     *
+     * @return array{0: string, 1: string|null}
+     */
+    private function splitComment(string $from): array
+    {
+        if (preg_match('/^(.*?)\s*#\s?(.*)$/', trim($from), $matches) === 1) {
+            $comment = trim($matches[2]);
+
+            return [trim($matches[1]), $comment === '' ? null : $comment];
+        }
+
+        return [trim($from), null];
     }
 
     /** `Anywhere` means no restriction; anything else is an address or CIDR. */

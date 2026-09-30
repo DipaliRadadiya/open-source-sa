@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -15,10 +14,12 @@ import { matchesSeverity } from "@/lib/logs/severity";
 import { LogSourceList } from "@/components/logs/log-source-list";
 import { LogToolbar } from "@/components/logs/log-toolbar";
 import { LogViewer } from "@/components/logs/log-viewer";
-import { FOLLOW_COOKIE, resolveFollow } from "@/lib/logs/follow-preference";
+import { FOLLOW_COOKIE, LINES_COOKIE, resolveFollow } from "@/lib/logs/follow-preference";
+import { writeCookie } from "@/lib/logs/app-log-prefs";
 import { apiMessage } from "@/lib/api/error-message";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Eraser } from "lucide-react";
+import { cleanLines } from "@/lib/logs/clean-lines";
 
 const POLL_MS = 3000;
 // Long tailing sessions must not grow without bound.
@@ -39,27 +40,49 @@ export function LogsPanel({
   initial,
   initialLines,
   followPreference,
+  renderedAt,
   canManage = false,
 }) {
   const t = useTranslations("logs");
-  const router = useRouter();
-  const searchParams = useSearchParams();
 
   // The catalog has two sources of truth: the server render (authoritative,
   // and newer on every navigation) and our poll. Rather than syncing them in an
   // effect, the poll's result is held separately and dropped the moment a fresh
   // server render arrives.
   const [polledSources, setPolledSources] = useState(null);
+  // "Written just now" is measured against the server render's clock until
+  // the first poll, so the browser draws the same dots the server did.
+  const [now, setNow] = useState(renderedAt);
   const [renderedWith, setRenderedWith] = useState(initialSources);
   if (renderedWith !== initialSources) {
     setRenderedWith(initialSources);
     setPolledSources(null);
+    setNow(renderedAt);
   }
   const sources = polledSources ?? initialSources;
-  const source = sources.find((s) => s.key === selected) ?? null;
+  /*
+   * The log on screen. Switched here rather than by navigating: a navigation
+   * re-rendered the page on the server, left the old log up with nothing to
+   * say a click had landed, then read the new one twice (once for a first
+   * paint this component ignored). The URL is still updated for reloads.
+   */
+  const [current, setCurrent] = useState(selected);
+  const source = sources.find((s) => s.key === current) ?? null;
+  // Keyed on these, not on `source`: the catalog poll hands back new objects
+  // every 30s, and a `load` rebuilt from them re-read the whole log each time.
+  const sourceKey = source?.key ?? null;
+  const readable = Boolean(source?.readable);
+  const appends = source?.follow !== false;
 
-  const [lines, setLines] = useState(initial?.log?.lines ?? []);
+  const [lines, setLines] = useState(() => cleanLines(initial?.log?.lines));
   const [status, setStatus] = useState(initial?.status ?? "ok");
+  const [failedMessage, setFailedMessage] = useState(initial?.message ?? null);
+  // Read inside `load`'s catch: a first read that fails shows its box, a
+  // reload of lines already on screen keeps them and says so in a toast.
+  const statusRef = useRef(status);
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
   const [truncated, setTruncated] = useState(Boolean(initial?.log?.truncated));
   const [clearing, setClearing] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -72,6 +95,9 @@ export function LogsPanel({
   // that is how a console reads and how a live tail appends.
   const [newestFirst, setNewestFirst] = useState(false);
   const [follow, setFollow] = useState(() => resolveFollow(followPreference, source));
+  // The cookie's value as of now: the prop is only as fresh as the last server
+  // render, and switching logs no longer makes one.
+  const [followPref, setFollowPref] = useState(followPreference);
   const [busy, setBusy] = useState(false);
 
   // Remembered across refreshes and across log sources. A cookie rather than
@@ -79,11 +105,16 @@ export function LogsPanel({
   // tail would start, then stop, which is the flicker this exists to remove.
   const changeFollow = useCallback((next) => {
     setFollow(next);
+    setFollowPref(next ? "on" : "off");
     try {
       document.cookie = `${FOLLOW_COOKIE}=${next ? "on" : "off"}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
     } catch {
       // A blocked cookie costs the preference, nothing else.
     }
+  }, []);
+  const chooseLines = useCallback((next) => {
+    setLineCount(next);
+    writeCookie(LINES_COOKIE, String(next));
   }, []);
   // "reconnecting" after a blip, "paused" once we stop trying — a tail that
   // silently stops is indistinguishable from a log that went quiet.
@@ -92,9 +123,9 @@ export function LogsPanel({
   const cursor = useRef(initial?.log?.cursor ?? 0);
 
   /*
-   * Picking a different log only replaces the URL, so this component is NOT
-   * remounted — and every `useState` above keeps the value it was seeded with
-   * for the source you were reading before. Two of those matter:
+   * A navigation to a different `?source=` (Back, a link) is not a remount,
+   * so every `useState` above keeps the value it was seeded with for the log
+   * you were reading before. Two of those matter:
    *
    *   - `follow`. Auto-follow is deliberately off above AUTO_FOLLOW_MAX_BYTES,
    *     but that was decided once, from the FIRST source. Opening a 4 KB
@@ -114,11 +145,13 @@ export function LogsPanel({
   const [renderedSource, setRenderedSource] = useState(selected);
   if (renderedSource !== selected) {
     setRenderedSource(selected);
-    setLines(initial?.log?.lines ?? []);
+    setCurrent(selected);
+    setLines(cleanLines(initial?.log?.lines));
     setStatus(initial?.status ?? "ok");
+    setFailedMessage(initial?.message ?? null);
     setTruncated(Boolean(initial?.log?.truncated));
     setTailState("idle");
-    setFollow(resolveFollow(followPreference, source));
+    setFollow(resolveFollow(followPref, sources.find((s) => s.key === selected)));
   }
 
   // The cursor moves with them, but a ref cannot be written during render and
@@ -142,18 +175,25 @@ export function LogsPanel({
 
   // Catalog refresh. Failure is silent: a rail one interval out of date beats a
   // toast for something the reader never asked to happen.
+  const reloadSources = useCallback(async (isActive = () => true) => {
+    try {
+      const { data } = await listLogSources();
+      const parsed = logSourcesResponseSchema.safeParse(data);
+      if (isActive() && parsed.success) {
+        setPolledSources(parsed.data.logs);
+        setNow(Date.now());
+      }
+    } catch {
+      /* keep the last known catalog */
+    }
+  }, []);
+
   useEffect(() => {
     let active = true;
 
     async function tick() {
       if (document.hidden) return;
-      try {
-        const { data } = await listLogSources();
-        const parsed = logSourcesResponseSchema.safeParse(data);
-        if (active && parsed.success) setPolledSources(parsed.data.logs);
-      } catch {
-        /* keep the last known catalog */
-      }
+      await reloadSources(() => active);
     }
 
     const id = setInterval(tick, CATALOG_MS);
@@ -161,36 +201,40 @@ export function LogsPanel({
       active = false;
       clearInterval(id);
     };
-  }, []);
+  }, [reloadSources]);
 
   const load = useCallback(
     async ({ silent } = {}) => {
-      if (!source?.readable) return;
+      if (!sourceKey || !readable) return;
       controller.current?.abort();
       const ctrl = new AbortController();
       controller.current = ctrl;
       if (!silent) setBusy(true);
       try {
-        const { data } = await readLog(source.key, {
+        const { data } = await readLog(sourceKey, {
           lines: lineCount,
           grep: debouncedTerm || undefined,
           signal: ctrl.signal,
         });
-        setLines(data?.log?.lines ?? []);
+        setLines(cleanLines(data?.log?.lines));
         setTruncated(Boolean(data?.log?.truncated));
         setStatus("ok");
+        setFailedMessage(null);
         cursor.current = data?.log?.cursor ?? 0;
       } catch (error) {
         if (error?.code === "ERR_CANCELED") return;
         const code = error?.response?.status;
         if (code === 403) setStatus("locked");
         else if (code === 404) setStatus("missing");
-        else toast.error(apiMessage(error, t("loadFailed")));
+        else if (statusRef.current === "loading") {
+          setStatus("failed");
+          setFailedMessage(apiMessage(error, null) || null);
+        } else toast.error(apiMessage(error, t("loadFailed")));
       } finally {
         setBusy(false);
       }
     },
-    [source, lineCount, debouncedTerm, t],
+    [sourceKey, readable, lineCount, debouncedTerm, t],
   );
 
   // Re-read whenever the source, window size or filter changes. The initial
@@ -215,10 +259,21 @@ export function LogsPanel({
     async function tick() {
       if (document.hidden) return;
       try {
-        const { data } = await readLog(source.key, { after: cursor.current });
+        if (!appends) {
+          // No cursor to resume from: re-read the window and replace it. The
+          // viewer tells new lines from the ones it already holds.
+          const { data } = await readLog(sourceKey, { lines: lineCount });
+          if (!active) return;
+          setLines(cleanLines(data?.log?.lines));
+          setTruncated(Boolean(data?.log?.truncated));
+          failures = 0;
+          setTailState("live");
+          return;
+        }
+        const { data } = await readLog(sourceKey, { after: cursor.current });
         if (!active) return;
         const next = data?.log?.cursor ?? 0;
-        const fresh = data?.log?.lines ?? [];
+        const fresh = cleanLines(data?.log?.lines);
         // Rotation: the file shrank, so what we hold is history of a file that
         // no longer exists — replace rather than append.
         if (next < cursor.current) setLines(fresh);
@@ -249,7 +304,7 @@ export function LogsPanel({
       clearInterval(id);
       document.removeEventListener("visibilitychange", tick);
     };
-  }, [follow, disabled, debouncedTerm, source]);
+  }, [follow, disabled, debouncedTerm, sourceKey, appends, lineCount]);
 
   // Severity narrows what's on screen without another round trip, so it costs
   // nothing to keep tailing underneath it.
@@ -315,12 +370,15 @@ export function LogsPanel({
       cursor.current = 0;
       setConfirmClear(false);
       toast.success(t("clearDone", { label: source.label }));
+      // The rail's size for this log is from the last catalog read — up to 30 s
+      // old — so it went on showing the size of what was just emptied.
+      reloadSources();
     } catch (error) {
       toast.error(apiMessage(error, t("clearFailed")));
     } finally {
       setClearing(false);
     }
-  }, [source, t]);
+  }, [source, t, reloadSources]);
 
   const copy = useCallback(
     async (text, message) => {
@@ -338,17 +396,28 @@ export function LogsPanel({
 
   const selectSource = useCallback(
     (key) => {
-      const params = new URLSearchParams(searchParams);
-      params.set("source", key);
-      router.replace(`/logs?${params.toString()}`, { scroll: false });
+      if (key === current) return;
+      setCurrent(key);
+      // The old log's lines must not sit under the new log's name while its
+      // own are on their way; `load` re-reads on the key change.
+      setLines([]);
+      setTruncated(false);
+      setStatus("loading");
+      setFailedMessage(null);
+      setTailState("idle");
+      setFollow(resolveFollow(followPref, sources.find((s) => s.key === key)));
+      cursor.current = 0;
+      const url = new URL(window.location.href);
+      url.searchParams.set("source", key);
+      window.history.replaceState(window.history.state, "", url);
     },
-    [router, searchParams],
+    [current, followPref, sources],
   );
 
   return (
     <div className="grid gap-6 lg:h-[calc(100svh-13rem)] lg:min-h-[24rem] lg:grid-cols-[16.5rem_minmax(0,1fr)]">
       <aside className="lg:h-full lg:overflow-y-auto">
-        <LogSourceList sources={sources} selected={selected} onSelect={selectSource} />
+        <LogSourceList sources={sources} selected={current} onSelect={selectSource} now={now} />
       </aside>
 
       <section className="flex h-[calc(100svh-13rem)] min-h-[24rem] flex-col overflow-hidden rounded-xl border bg-card shadow-sm lg:h-full lg:min-h-0">
@@ -358,13 +427,15 @@ export function LogsPanel({
           loaded={lines.length}
           // Only worth stating when it isn't what the selector already says:
           // the file came up short of the window we asked for.
-          wholeFile={!truncated && lines.length > 0}
+          // Not for the journal or a log read through the system: those have no
+          // file size, so a short window says nothing about the whole.
+          wholeFile={!truncated && lines.length > 0 && source?.size != null}
           term={term}
           onTermChange={setTerm}
           severity={severity}
           onSeverityChange={setSeverity}
           lines={lineCount}
-          onLinesChange={setLineCount}
+          onLinesChange={chooseLines}
           follow={follow}
           onFollowChange={changeFollow}
           wrap={wrap}
@@ -376,12 +447,15 @@ export function LogsPanel({
             copy(visible.join("\n"), t("copiedLines", { count: visible.length }))
           }
           downloadUrl={source ? logDownloadUrl(source.key) : undefined}
+          showDownload={source?.downloadable !== false}
           onClear={
             canManage && source?.clearable ? () => setConfirmClear(true) : null
           }
           clearing={clearing}
           busy={busy}
           disabled={disabled}
+          reloadable={status === "failed"}
+          reloadReason={status === "locked" ? t("locked.title") : status === "missing" ? t("missing.title") : null}
           searchRef={searchRef}
           tailState={effectiveTail}
           onResume={() => {
@@ -403,7 +477,7 @@ export function LogsPanel({
             {nextLineStep ? (
               <button
                 type="button"
-                onClick={() => setLineCount(nextLineStep)}
+                onClick={() => chooseLines(nextLineStep)}
                 className="rounded font-medium text-foreground underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 {t("loadMore", { count: nextLineStep })}
@@ -421,6 +495,8 @@ export function LogsPanel({
           wrap={wrap}
           newestFirst={newestFirst}
           status={status}
+          loadingText={t("loadingSource", { label: source?.label ?? "" })}
+          failedMessage={failedMessage}
           following={follow && !debouncedTerm}
           onCopyLine={(text) => copy(text, t("copiedLine"))}
           onAtBottomChange={(v) => {

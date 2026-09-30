@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, Loader2, TriangleAlert } from "lucide-react";
 import { fetchSetup, runSetupAction } from "@/lib/api/setup";
 import { apiMessage } from "@/lib/api/error-message";
 import { SetupComponent } from "@/components/setup/setup-component";
@@ -21,7 +22,7 @@ const SLOW_AFTER_MS = 3 * 60 * 1000;
 // will never stop.
 const GIVE_UP_MS = 10 * 60 * 1000;
 
-export function SetupChecklist({ initialSetup, versions = {} }) {
+export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, fail2banProtection = "unknown" }) {
   const t = useTranslations("setup");
   const router = useRouter();
   const [setup, setSetup] = useState(initialSetup);
@@ -139,7 +140,9 @@ export function SetupChecklist({ initialSetup, versions = {} }) {
   // recommended, and a heading that says otherwise is a heading that lies. It
   // is also not called "Optional" — this page already decided that reads as
   // "you can skip this", which is wrong for a runtime a Node site needs.
-  const attention = pending.filter((c) => c.state === "failed" || c.state === "installing");
+  // Failed only. An install in progress is not "something that did not
+  // finish" — it stays in its own group, floated to the top by `rank`.
+  const attention = pending.filter((c) => c.state === "failed");
   const advised = pending.filter((c) => !attention.includes(c) && c.recommended);
   const optional = pending.filter((c) => !attention.includes(c) && !c.recommended);
 
@@ -159,7 +162,24 @@ export function SetupChecklist({ initialSetup, versions = {} }) {
       // apt runs one install at a time — while any is in flight, the others are
       // held so a second click can't hit an apt lock.
       locked={anyInstalling && component.state !== "installing" && !busy[component.key]}
+      denied={canInstall[component.key] === false}
       onInstall={install}
+      note={
+        component.key === "fail2ban" && component.state === "installed" && fail2banProtection === "off" ? (
+          <span className="inline-flex items-start gap-1.5 text-foreground">
+            <TriangleAlert className="mt-px size-3.5 shrink-0 text-warning" aria-hidden />
+            <span>
+            {t.rich("fail2banOff", {
+              link: (chunks) => (
+                <Link href="/fail2ban" className="font-medium underline underline-offset-2">
+                  {chunks}
+                </Link>
+              ),
+            })}
+            </span>
+          </span>
+        ) : null
+      }
     />
   );
 

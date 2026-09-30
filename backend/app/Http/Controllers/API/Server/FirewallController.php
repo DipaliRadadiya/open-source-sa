@@ -15,6 +15,7 @@ use App\Http\Requests\Server\Firewall\ToggleFirewallRequest;
 use App\Http\Requests\Server\Firewall\UpdateFirewallRuleRequest;
 use App\Http\Resources\FirewallRuleResource;
 use App\Models\FirewallRule;
+use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Firewall\ListeningPorts;
 use App\Services\Server\Firewall\RiskyPorts;
 use App\Support\FirewallPresets;
@@ -86,10 +87,10 @@ class FirewallController extends Controller
     /**
      * Common-service presets for the frontend dropdown.
      */
-    public function presets(): JsonResponse
+    public function presets(DatabaseManager $databases): JsonResponse
     {
         return response()->json([
-            'presets' => FirewallPresets::all(),
+            'presets' => FirewallPresets::all(mariadb: $databases->engine('mariadb')->available()),
         ]);
     }
 

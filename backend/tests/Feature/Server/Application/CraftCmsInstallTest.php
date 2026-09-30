@@ -46,6 +46,23 @@ beforeEach(function () {
  * @param  string|null  $engine  the engine the site asked for, on a server
  *                               that has only that one
  */
+/**
+ * The run that wrote the project's `.env`. The installer writes it as the site
+ * user, so the command is `runuser -u <user> -- tee <path>` and the path is
+ * the last argument rather than the second.
+ *
+ * @return array{command: array<int, string>, input: string, path: ?string}|null
+ */
+function craftEnvWrite(ArrayObject $runs): ?array
+{
+    return collect($runs)->first(function (array $run): bool {
+        $command = $run['command'];
+        $bare = ($command[0] ?? '') === 'runuser' ? array_slice($command, 4) : $command;
+
+        return ($bare[0] ?? '') === 'tee' && str_ends_with((string) ($bare[1] ?? ''), '.env');
+    });
+}
+
 function installCraft(?string $engine = null): ArrayObject
 {
     $runs = new ArrayObject;
@@ -90,7 +107,10 @@ it('builds into an empty directory, not the project root Composer would refuse',
         ->and($target)->not->toBe("{$this->projectRoot}/web");
 
     // ...and the build is then copied into the project root.
-    $copy = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'cp'
+    // As the site user: root's `cp` wrote through a link planted at the
+    // destination (the `.panel` class of bug, 2026-09-29).
+    $copy = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'runuser'
+        && ($run['command'][4] ?? '') === 'cp'
         && in_array($this->projectRoot, $run['command'], true));
 
     expect($copy['command'])->toContain("{$target}/.");
@@ -111,9 +131,12 @@ it('serves from web/, so the application source is not published', function () {
     expect($this->application->web_root)->toBe('/web');
 
     $runs = installCraft();
-    $env = collect($runs)->first(fn ($run) => str_ends_with((string) ($run['command'][1] ?? ''), '.env'));
+    $env = craftEnvWrite($runs);
 
-    expect($env['command'][1])->toBe("{$this->projectRoot}/.env");
+    expect(end($env['command']))->toBe("{$this->projectRoot}/.env")
+        // Written as the site user: root's `tee` followed a `.env` that had
+        // been replaced by a link (the `.panel` class of bug, 2026-09-29).
+        ->and(array_slice($env['command'], 0, 5))->toBe(['runuser', '-u', $this->application->systemUser->username, '--', 'tee']);
 });
 
 it('keeps the database credentials off the command line', function () {
@@ -126,7 +149,7 @@ it('keeps the database credentials off the command line', function () {
         expect(implode(' ', $run['command']))->not->toContain('CraftDbPass1!');
     }
 
-    $env = collect($runs)->first(fn ($run) => str_ends_with((string) ($run['command'][1] ?? ''), '.env'))['input'];
+    $env = craftEnvWrite($runs)['input'];
     expect($env)->toContain('CRAFT_DB_PASSWORD=');
 });
 
@@ -152,8 +175,7 @@ it('passes the admin password as an option, because the prompt no longer reads a
 });
 
 it('generates a distinct security key and app id per installation', function () {
-    $envOf = fn (ArrayObject $runs) => collect($runs)
-        ->first(fn ($run) => str_ends_with((string) ($run['command'][1] ?? ''), '.env'))['input'];
+    $envOf = fn (ArrayObject $runs) => craftEnvWrite($runs)['input'];
 
     $first = $envOf(installCraft());
     $second = $envOf(installCraft());
@@ -178,7 +200,7 @@ it('runs Craft from the project root, as the site user', function () {
 it('tells Craft to speak PostgreSQL when that is the database it was given', function () {
     $runs = installCraft('postgresql');
 
-    $env = collect($runs)->first(fn ($run) => str_ends_with((string) ($run['command'][1] ?? ''), '.env'))['input'];
+    $env = craftEnvWrite($runs)['input'];
 
     // `pgsql` is DbConfig::DRIVER_PGSQL — Craft validates this value against
     // its own two constants, so anything else stops its installer.
@@ -198,8 +220,7 @@ it('still tells Craft to speak MySQL on a MySQL server', function () {
     // The half that a new branch quietly breaks. Every Craft site the panel
     // has already made is on MySQL, and a driver that only ever produces the
     // new value would take all of them down on the next install.
-    $env = collect(installCraft())
-        ->first(fn ($run) => str_ends_with((string) ($run['command'][1] ?? ''), '.env'))['input'];
+    $env = craftEnvWrite(installCraft())['input'];
 
     expect($env)->toContain('CRAFT_DB_DRIVER=mysql')
         ->not->toContain('CRAFT_DB_DRIVER=pgsql');

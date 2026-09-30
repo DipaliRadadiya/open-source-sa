@@ -30,9 +30,10 @@ export async function generateMetadata() {
 
 export default async function DatabaseMonitorPage({ searchParams }) {
   const sp = await searchParams;
-  const [permissions, t, live] = await Promise.all([
+  const [permissions, t, tEngines, live] = await Promise.all([
     getPermissions(),
     getTranslations("databases.monitor"),
+    getTranslations("databases.engines"),
     getEngines(),
   ]);
   const { engines, failed: enginesFailed, status: enginesStatus, failure: enginesFailure, message: enginesMessage } = live;
@@ -59,7 +60,7 @@ export default async function DatabaseMonitorPage({ searchParams }) {
           always done this correctly; this one dropped it.
         */}
         {enginesFailed ? (
-          <LoadFailed status={enginesStatus} failure={enginesFailure} message={enginesMessage} />
+          <LoadFailed description={t("loadFailed")} status={enginesStatus} failure={enginesFailure} message={enginesMessage} />
         ) : (
           <EmptyState
             icon={Activity}
@@ -99,8 +100,11 @@ export default async function DatabaseMonitorPage({ searchParams }) {
                 size="sm"
                 variant={engine === selected ? "default" : "outline"}
               >
-                <Link href={`/databases/monitor?engine=${engine.engine}`}>
-                  {engine.engine}
+                <Link
+                  href={`/databases/monitor?engine=${engine.engine}`}
+                  aria-current={engine === selected ? "page" : undefined}
+                >
+                  {tEngines(engine.engine)}
                 </Link>
               </Button>
             ))}

@@ -10,6 +10,7 @@ use App\Actions\Server\Application\UploadCertificate;
 use App\Enums\CertificateType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\StoreCertificateRequest;
+use App\Http\Requests\Server\Application\UpdateForceHttpsRequest;
 use App\Http\Resources\CertificateDryRunResource;
 use App\Http\Resources\CertificateResource;
 use App\Models\Application;
@@ -99,9 +100,9 @@ class CertificateController extends Controller
     /**
      * @throws ValidationException
      */
-    public function forceHttps(Application $application, Request $request, SetForceHttps $action): JsonResponse
+    public function forceHttps(Application $application, UpdateForceHttpsRequest $request, SetForceHttps $action): JsonResponse
     {
-        $validated = $request->validate(['force_https' => ['required', 'boolean']]);
+        $validated = $request->validated();
 
         $certificate = $application->certificate;
 

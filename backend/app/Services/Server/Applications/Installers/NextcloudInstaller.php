@@ -111,10 +111,10 @@ class NextcloudInstaller extends AbstractPhpInstaller
             ...$this->portOption($context),
             '--database-name', (string) $context['database'],
             '--database-user', (string) $context['db_user'],
-            '--admin-user', (string) ($application->settings['admin_user'] ?? 'admin'),
-            '--admin-email', (string) ($application->settings['admin_email'] ?? ''),
+            '--admin-user', (string) ($application->installSettings()['admin_user'] ?? 'admin'),
+            '--admin-email', (string) ($application->installSettings()['admin_email'] ?? ''),
             '--data-dir', $dataDir,
-        ], $context['db_password']."\n".($application->settings['admin_password'] ?? '')."\n", $documentRoot);
+        ], $context['db_password']."\n".($application->installSettings()['admin_password'] ?? '')."\n", $documentRoot);
 
         // Installed from the command line, Nextcloud has no request to learn
         // the hostname from, so it trusts only localhost. Without this the
@@ -124,12 +124,28 @@ class NextcloudInstaller extends AbstractPhpInstaller
             '--value='.$application->domain,
         ], null, $documentRoot);
 
+        // Nextcloud chmods config.php to this on every write, defaulting to
+        // 0640 — group-readable, which on OpenLiteSpeed is the web server
+        // account (it is in every site user's group). Its own setting, so
+        // Nextcloud keeps the file private itself rather than the panel
+        // sweeping up after it. An integer: `chmod()` is handed it as is.
+        $this->runAsSiteUser('configure', $application, [
+            ...$php, 'occ', 'config:system:set', 'configfilemode',
+            '--value='.octdec($this->ownership->secretFileMode($application)), '--type=integer',
+        ], null, $documentRoot);
+
         // Background jobs and generated links need to know the site's own
         // address; from the CLI there is nothing to infer it from.
         $this->runAsSiteUser('trust_domain', $application, [
             ...$php, 'occ', 'config:system:set', 'overwrite.cli.url',
             '--value='.$application->url(),
         ], null, $documentRoot);
+
+        // Background jobs by system cron, which Nextcloud recommends; its
+        // default (AJAX) only runs them when someone has a page open, and a
+        // fresh install reported "background jobs last ran 56 years ago".
+        $this->runAsSiteUser('schedule_cron', $application, [...$php, 'occ', 'background:cron'], null, $documentRoot);
+        $this->scheduleCron($application, $documentRoot, 'cron.php', '*/5 * * * *');
     }
 
     /**

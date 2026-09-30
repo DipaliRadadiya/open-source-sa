@@ -10,6 +10,7 @@ use App\Services\Server\AccountLock;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use App\Services\Server\SystemUsers\ChpasswdLine;
+use App\Services\Server\SystemUsers\HomeDirectoryAccess;
 use App\Services\Server\SystemUsers\SshUsersGroup;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -23,6 +24,7 @@ class CreateSystemUser
         private ActivityLogger $activityLogger,
         private AccountLock $accountLock,
         private SshUsersGroup $sshUsersGroup,
+        private HomeDirectoryAccess $homeAccess,
     ) {}
 
     /**
@@ -218,15 +220,16 @@ class CreateSystemUser
             );
         }
 
-        // `useradd -m` on Ubuntu 22.04+ creates the home directory at 0750, so
-        // the web server cannot traverse into it.
-        $traversal = $this->serverOps->run(
-            ['chmod', 'o+x', $homePath],
-            ['feature' => 'system_user', 'op' => 'grant_web_server_traversal', 'system_user' => $username],
-        );
+        // `useradd -m` on Ubuntu 22.04+ creates the home at 0750, which the
+        // web server and the panel cannot enter. This used to be `chmod o+x`,
+        // which let them in and every other local account with them — and
+        // with those, every file an application writes world-readable. They
+        // are let in by ACL instead; without setfacl the home falls back to
+        // `o+x` rather than locking the sites out. {@see HomeDirectoryAccess}
+        $fallback = $this->homeAccess->closeNewHome($username, $homePath);
 
-        if ($traversal->failed()) {
-            throw new SystemUserCreateFailedException($traversal->reference);
+        if ($fallback?->failed()) {
+            throw new SystemUserCreateFailedException($fallback->reference);
         }
     }
 

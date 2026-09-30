@@ -23,9 +23,23 @@ return [
     ],
     'frequency' => [
         'manual' => 'Solo manual',
+        'hourly' => 'Cada hora',
+        'every_3_hours' => 'Cada 3 horas',
+        'every_6_hours' => 'Cada 6 horas',
+        'every_12_hours' => 'Cada 12 horas',
         'daily' => 'Diaria',
         'weekly' => 'Semanal',
         'monthly' => 'Mensual',
+    ],
+    'frequency_hint' => [
+        'manual' => 'Solo se ejecuta cuando la inicias.',
+        'hourly' => 'Se ejecuta cada hora, en el minuto elegido.',
+        'every_3_hours' => 'Se ejecuta a la hora elegida y cada 3 horas durante todo el día.',
+        'every_6_hours' => 'Se ejecuta a la hora elegida y cada 6 horas durante todo el día.',
+        'every_12_hours' => 'Se ejecuta a la hora elegida y 12 horas después.',
+        'daily' => 'Se ejecuta una vez al día a la hora elegida.',
+        'weekly' => 'Se ejecuta cada domingo a la hora elegida.',
+        'monthly' => 'Se ejecuta el día 1 de cada mes a la hora elegida.',
     ],
     'errors' => [
         'restore_unverified' => 'Esta copia nunca se verificó, así que no se puede restaurar.',

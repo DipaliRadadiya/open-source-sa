@@ -149,7 +149,11 @@ export function ContainerVolumes({
             </Link>
           </Note>
         ) : (
-          <form className="flex flex-wrap items-start gap-2" onSubmit={add}>
+          <form
+            noValidate
+            className="flex flex-wrap items-start gap-2"
+            onSubmit={add}
+          >
             <Select value={volume} onValueChange={setVolume} disabled={pending}>
               <SelectTrigger className="h-9 w-48">
                 <SelectValue placeholder={t("choose")} />

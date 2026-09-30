@@ -301,7 +301,7 @@ abstract class AbstractSiteInstaller implements SiteInstaller
         $root = $this->archiveRoot();
         $source = $root === null ? "{$work}/src" : "{$work}/src/".trim($root, '/');
 
-        $this->run('extract', ['cp', '-r', "{$source}/.", $documentRoot], $application);
+        $this->copyIntoSite($application, $source, $documentRoot, $work);
 
         // The copy above runs elevated, so everything it just wrote is owned
         // by root. Provisioning's `set_ownership` step cannot help: it runs
@@ -411,7 +411,7 @@ abstract class AbstractSiteInstaller implements SiteInstaller
 
         // Contents, not the directory — `{$work}/.` for the same reason
         // downloadAndExtract() uses it.
-        $this->run('extract', ['cp', '-r', "{$work}/.", $projectRoot], $application);
+        $this->copyIntoSite($application, $work, $projectRoot, $work);
         $this->run('extract', ['rm', '-rf', $work], $application);
 
         // The copy ran elevated even though the build did not, so the tree
@@ -426,11 +426,29 @@ abstract class AbstractSiteInstaller implements SiteInstaller
      *
      * @throws ProvisioningFailedException
      */
-    protected function writeSecretFile(Application $application, string $path, string $contents, string $mode = '0640'): void
+    protected function writeSecretFile(Application $application, string $path, string $contents, ?string $mode = null): void
     {
-        $this->run('configure', ['tee', $path], $application, input: $contents);
-        $this->run('configure', ['chmod', $mode, $path], $application);
-        $this->run('configure', ['chown', $this->runtimePhpOwner($application), $path], $application);
+        // A mode passed in is deliberate (a PHP file the web server must be
+        // able to read, say); the default is private — see
+        // RuntimeOwnership::secretFileMode().
+        $mode ??= $this->ownership->secretFileMode($application);
+
+        // Written and narrowed as the site user: every path here is inside a
+        // tree that user already owns (extract() chowns it), and root's `tee`
+        // and `chown` followed a link planted at the path — the class of bug
+        // found in `.panel` on 2026-09-29. As the user, a link reaches only
+        // what they could already write.
+        $this->runAsSiteUser('configure', $application, ['tee', $path], input: $contents);
+        $this->runAsSiteUser('configure', $application, ['chmod', $mode, $path]);
+
+        // The group is the one thing the user may not be able to set — PHP can
+        // run as `www-data` — so it stays root's, with `-h` so a link is
+        // changed itself rather than followed.
+        $owner = $this->runtimePhpOwner($application);
+
+        if ($owner !== $application->systemUser->username.':'.$application->systemUser->username) {
+            $this->run('configure', ['chown', '-h', $owner, $path], $application);
+        }
     }
 
     /**
@@ -473,15 +491,45 @@ abstract class AbstractSiteInstaller implements SiteInstaller
         // OpenLiteSpeed it is null for every site — so this handed the group
         // to www-data there, an account that does not run PHP on that stack,
         // breaking the very rule this docblock states.
-        $runsAsSiteUser = $this->ownership->runsAsOwnUser($application);
+        return $application->systemUser->username.':'.$this->ownership->secretFileGroup($application);
+    }
 
-        $user = $application->systemUser->username;
+    /**
+     * Nothing, for the installers that finish before the process starts.
+     */
+    public function afterStart(Application $application, string $documentRoot): void {}
 
-        $group = $runsAsSiteUser
-            ? $user
-            : (string) config('server.web_server_user', 'www-data');
+    /**
+     * Copy a prepared tree into the site — as the site's own user.
+     *
+     * The destination is not always new. "Retry setup" copies into a document
+     * root the site user has had all along, and `cp` run as root writes
+     * *through* a symlink it finds at a destination path: a link planted at
+     * `license.txt`, or a directory link where the archive has a folder,
+     * redirected root's copy to a file of the user's choosing — the class of
+     * bug found in `.panel` on 2026-09-29. As the user, a planted link reaches
+     * only what the user could already write.
+     *
+     * The staging tree is handed to the user first so they can read it; it is
+     * the panel's own temporary directory, under a name nobody could guess.
+     *
+     * So is the destination directory itself, and only that: where the web
+     * root is a subfolder (Statamic, Craft serve `public_html/public`) the
+     * provisioner leaves `public_html` root-owned, and the user's `cp` was
+     * refused on every file — every Composer install failed at `extract`
+     * (found live 2026-09-29). Root copying used to hide it, and the
+     * `chown -R` afterwards is what made it the user's. `-h`, so a link at
+     * that path is the one thing changed, never what it points to.
+     *
+     * @param  string  $work  the staging directory to hand over (the source or its parent)
+     */
+    protected function copyIntoSite(Application $application, string $source, string $destination, string $work): void
+    {
+        $owner = $application->systemUser->username;
 
-        return "{$user}:{$group}";
+        $this->run('extract', ['chown', '-R', "{$owner}:{$owner}", $work], $application);
+        $this->run('extract', ['chown', '-h', "{$owner}:{$owner}", $destination], $application);
+        $this->runAsSiteUser('extract', $application, ['cp', '-r', "{$source}/.", $destination]);
     }
 
     /**

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { ChevronDown, Loader2, Sparkles, UserRoundPlus } from "lucide-react";
@@ -11,6 +10,8 @@ import { generatePassword } from "@/lib/applications/generate-password";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { cn } from "@/lib/utils";
+import { offeredShells } from "@/lib/system-users/offered-shells";
+import { useRefresh } from "@/hooks/use-refresh";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -34,11 +35,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
-  // Fetched when the dialog opens rather than passed in: it is opened from the
-  // system-users page AND from the application form, and only one of those has
-  // the catalog to hand.
-  const [shells, setShells] = useState([]);
+export function CreateSystemUserDialog({ open, onOpenChange, onCreated, initialShells = [] }) {
+  // Fetched when the dialog opens: it is opened from the system-users page AND
+  // from the application form, and only one of those has the catalog to hand.
+  // The page passes its copy so the field never shows the raw "/bin/bash"
+  // while the request is out.
+  const [shells, setShells] = useState(initialShells);
   useEffect(() => {
     if (!open) return undefined;
     let cancelled = false;
@@ -53,7 +55,7 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
   }, [open]);
 
   const t = useTranslations("systemUsers");
-  const router = useRouter();
+  const { refreshThen } = useRefresh();
   const [moreOpen, setMoreOpen] = useState(false);
 
   const form = useForm({
@@ -108,19 +110,34 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
     if (values.password) payload.password = values.password;
     try {
       const { data } = await createSystemUser(payload);
+      // Creating… holds until the new row is in the list behind the dialog —
+      // the toast used to land ~1.5 s before it.
+      await new Promise((resolve) => refreshThen(resolve));
       toast.success(t("toast.created"));
       onCreated?.(data?.system_user ?? data?.user ?? null);
       // handleOpenChange, not onOpenChange: closing by our own code path skips
       // Radix's callback, so "More options" stayed expanded into the next open
       // — a dialog that is supposed to start as three fields.
       handleOpenChange(false);
-      router.refresh();
     } catch (error) {
       handleValidationError(error, form);
     }
   }
 
   const isSubmitting = form.formState.isSubmitting;
+
+  const [sudoOn, chosenShell] = useWatch({ control: form.control, name: ["sudo", "shell"] });
+  const chosenShellEntry = shells.find((entry) => entry.value === (chosenShell || DEFAULT_SHELL));
+  const sshViaSudo = sudoOn && chosenShellEntry?.allows_login !== false;
+  // A shell that refuses login cannot carry SSH access — the API refuses the
+  // pair — so the switch goes off and stays off while that shell is chosen.
+  const noLoginShell = chosenShellEntry?.allows_login === false;
+  useEffect(() => {
+    if (noLoginShell && form.getValues("ssh_access")) {
+      form.setValue("ssh_access", false, { shouldDirty: true });
+      form.clearErrors("ssh_access");
+    }
+  }, [noLoginShell, form]);
 
   function handleOpenChange(next) {
     if (!next) {
@@ -281,7 +298,7 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
                             spelled. Until the catalog arrives the default is
                             the single option, so the field is never empty. */}
                         {(shells.length
-                          ? shells
+                          ? offeredShells(shells, field.value)
                           : [{ value: DEFAULT_SHELL, title: DEFAULT_SHELL }]
                         ).map((shell) => (
                           <SelectItem key={shell.value} value={shell.value} className="text-xs">
@@ -302,7 +319,19 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
 
               {[
                 { name: "sudo", label: t("create.sudo"), hint: t("create.sudoHint") },
-                { name: "ssh_access", label: t("create.sshAccess"), hint: t("create.sshAccessHint") },
+                {
+                  name: "ssh_access",
+                  label: t("create.sshAccess"),
+                  // Same rule as the list: sudo users always get SSH, so the
+                  // switch shows that and stays out of the way.
+                  hint: noLoginShell
+                    ? t("create.sshNeedsLoginShell", { shell: chosenShellEntry.title })
+                    : sshViaSudo
+                      ? t("sshViaSudo")
+                      : t("create.sshAccessHint"),
+                  locked: sshViaSudo || noLoginShell,
+                  lockedValue: !noLoginShell,
+                },
               ].map((toggle) => (
                 <FormField
                   key={toggle.name}
@@ -312,7 +341,12 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
                     <FormItem>
                       {/* A real label, so the whole row toggles — same as the
                           firewall and password-protection switches. */}
-                      <label className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border p-3">
+                      <label
+                        className={cn(
+                          "flex items-center justify-between gap-4 rounded-lg border p-3",
+                          toggle.locked ? "cursor-not-allowed" : "cursor-pointer",
+                        )}
+                      >
                         <div className="space-y-0.5">
                           <span className="block text-sm font-medium">{toggle.label}</span>
                           <span className="block text-xs text-muted-foreground">{toggle.hint}</span>
@@ -320,7 +354,9 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
                         <div className="flex h-5 shrink-0 items-center">
                           <FormControl>
                             <Switch
-                              checked={field.value}
+                              checked={toggle.locked ? toggle.lockedValue : field.value}
+                              disabled={toggle.locked}
+                              disabledReason={toggle.locked ? toggle.hint : undefined}
                               onCheckedChange={field.onChange}
                               aria-label={toggle.label}
                             />

@@ -33,6 +33,8 @@ export function LogViewer({
   // this is undefined there and the wording stays as it was.
   searchCapped = false,
   loadingText = null,
+  // The server's reason for a failed read, when it gave one.
+  failedMessage = null,
   searchedLines,
   /*
    * Newest line at the TOP rather than the bottom.
@@ -146,7 +148,7 @@ export function LogViewer({
   // The read failed — say so rather than showing an empty console, which reads
   // as "this file has nothing in it".
   if (status === "failed") {
-    return <Notice icon={TriangleAlert} title={t("readFailed.title")} body={t("readFailed.body")} />;
+    return <Notice icon={TriangleAlert} title={t("readFailed.title")} body={failedMessage ?? t("readFailed.body")} />;
   }
   if (!lines.length) {
     // "No matches" is two different answers and they were rendered as one. A

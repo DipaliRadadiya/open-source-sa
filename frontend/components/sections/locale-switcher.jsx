@@ -31,7 +31,7 @@ export function LocaleSwitcher({ align = "end" }) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="outline"
+          variant="neutral"
           size="sm"
           className="gap-1.5"
           aria-label={localeNames[active] ?? "Language"}

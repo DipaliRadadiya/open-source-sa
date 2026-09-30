@@ -46,3 +46,11 @@ it('quotes paths, so a state directory with a space cannot split the command', f
         ->and(PanelUpdateRunner::fallbackCommand('/tmp/a b/run.sh', '/tmp/a b/log'))
         ->toContain("'/tmp/a b/run.sh'");
 });
+
+it('launches the update by default; only the test suite switches it off', function () {
+    // phpunit.xml sets PANEL_UPDATE_LAUNCH=false so the suite never runs
+    // `sudo systemd-run` on the machine running it. A default of false would
+    // make every real update write its script and never start it.
+    expect(file_get_contents(dirname(__DIR__, 2).'/config/panel_update.php'))
+        ->toContain("'launch' => (bool) env('PANEL_UPDATE_LAUNCH', true)");
+});

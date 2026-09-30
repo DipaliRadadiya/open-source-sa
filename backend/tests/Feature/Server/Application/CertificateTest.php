@@ -142,6 +142,88 @@ it('issues, records the paths and puts TLS into the vhost', function () {
     $this->assertDatabaseHas('activity_logs', ['type' => 'application', 'action' => 'certificate_issued']);
 });
 
+it('removes the Let\'s Encrypt lineage a self-signed certificate replaced', function () {
+    $certificate = Certificate::create([
+        'application_id' => $this->application->id,
+        'type' => CertificateType::SelfSigned,
+        'status' => CertificateStatus::Pending,
+        'domains' => ['shop.example.com'],
+    ]);
+
+    fakeCertbotSuccess();
+
+    // Left behind, certbot renews it forever for a certificate nothing uses.
+    runIssueJob(new IssueCertificate($certificate->id, null, 'shop.example.com'));
+
+    expect($certificate->fresh()->status)->toBe(CertificateStatus::Active);
+    Process::assertRan(fn ($process) => in_array('delete', $process->command, true)
+        && in_array('shop.example.com', $process->command, true));
+});
+
+it('keeps the lineage when Let\'s Encrypt reissues it under the same name', function () {
+    $certificate = Certificate::create([
+        'application_id' => $this->application->id,
+        'type' => CertificateType::LetsEncrypt,
+        'status' => CertificateStatus::Pending,
+        'domains' => ['shop.example.com'],
+    ]);
+
+    fakeCertbotSuccess();
+
+    runIssueJob(new IssueCertificate($certificate->id, null, 'shop.example.com'));
+
+    Process::assertNotRan(fn ($process) => in_array('delete', $process->command, true));
+});
+
+it('removes an uploaded key once Let\'s Encrypt replaces it', function () {
+    [$pem, $key] = generateKeyPair('shop.example.com');
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/certificate", [
+            'type' => 'custom', 'certificate' => $pem, 'private_key' => $key,
+        ])
+        ->assertCreated();
+
+    Queue::fake();
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/certificate", ['type' => 'letsencrypt', 'force' => true])
+        ->assertStatus(202);
+
+    $pushed = null;
+    Queue::assertPushed(IssueCertificate::class, function (IssueCertificate $job) use (&$pushed) {
+        $pushed = $job;
+
+        return $job->previousFiles === ['/etc/ssl/sv-oss/shop.example.com.crt', '/etc/ssl/sv-oss/shop.example.com.key'];
+    });
+
+    fakeCertbotSuccess();
+    runIssueJob($pushed);
+
+    $certificate = $this->application->fresh()->certificate;
+    expect($certificate->type)->toBe(CertificateType::LetsEncrypt)
+        ->and($certificate->status)->toBe(CertificateStatus::Active)
+        ->and($certificate->uploaded_private_key)->toBeNull();
+
+    Process::assertRan(fn ($process) => in_array('rm', $process->command, true)
+        && in_array('/etc/ssl/sv-oss/shop.example.com.key', $process->command, true));
+});
+
+it('removes the Let\'s Encrypt lineage an uploaded certificate replaced', function () {
+    activeCertificate($this->application);
+    [$pem, $key] = generateKeyPair('shop.example.com');
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/certificate", [
+            'type' => 'custom', 'certificate' => $pem, 'private_key' => $key,
+        ])
+        ->assertCreated();
+
+    Process::assertRan(fn ($process) => in_array('delete', $process->command, true)
+        && in_array('--cert-name', $process->command, true)
+        && in_array('shop.example.com', $process->command, true));
+});
+
 it('drives certbot through the webroot plugin, never the nginx one', function () {
     $certificate = Certificate::create([
         'application_id' => $this->application->id,
@@ -338,6 +420,115 @@ it('rejects something that is not a PEM file at all', function () {
         ->assertJsonValidationErrors(['certificate', 'private_key']);
 });
 
+it('refuses an uploaded certificate that covers no name on the site', function () {
+    activeCertificate($this->application);
+    [$pem, $key] = generateKeyPair('example.org');
+
+    // Used to be accepted, marked active and served in place of the working
+    // certificate, with every visitor getting a name-mismatch error.
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/certificate", [
+            'type' => 'custom',
+            'certificate' => $pem,
+            'private_key' => $key,
+        ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['certificate' => 'shop.example.com']);
+
+    expect($this->application->fresh()->certificate->type)->toBe(CertificateType::LetsEncrypt);
+    Process::assertNotRan(fn ($process) => in_array('tee', $process->command, true));
+});
+
+it('accepts an uploaded wildcard that covers the site', function () {
+    [$pem, $key] = generateKeyPair('*.example.com');
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/certificate", [
+            'type' => 'custom',
+            'certificate' => $pem,
+            'private_key' => $key,
+        ])
+        ->assertCreated();
+});
+
+it('refuses an uploaded certificate that has already expired', function () {
+    [$pem, $key] = generateKeyPair('shop.example.com', days: 1);
+    $this->travel(2)->days();
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/certificate", [
+            'type' => 'custom',
+            'certificate' => $pem,
+            'private_key' => $key,
+        ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['certificate' => 'expired']);
+
+    expect(Certificate::count())->toBe(0);
+});
+
+it('refuses an uploaded certificate that is not valid yet', function () {
+    [$pem, $key] = generateKeyPair('shop.example.com');
+    $this->travel(-2)->days();
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/certificate", [
+            'type' => 'custom',
+            'certificate' => $pem,
+            'private_key' => $key,
+        ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['certificate' => 'not valid yet']);
+});
+
+it('refuses a chain that is not made of whole certificates', function (string $chain) {
+    [$pem, $key] = generateKeyPair('shop.example.com');
+
+    // OpenLiteSpeed quietly drops a block it cannot parse, so garbage here used
+    // to be served as though the site had its intermediates.
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/certificate", [
+            'type' => 'custom',
+            'certificate' => $pem,
+            'private_key' => $key,
+            'chain' => $chain,
+        ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('chain');
+})->with([
+    'not base64' => "-----BEGIN CERTIFICATE-----\n!!!garbage!!!\n-----END CERTIFICATE-----",
+    'a private key' => fn () => generateKeyPair('x.example.com')[1],
+    'trailing junk' => fn () => generateKeyPair('ca.example.com')[0]."\nnot a certificate",
+]);
+
+it('accepts a chain of real certificates', function () {
+    [$pem, $key] = generateKeyPair('shop.example.com');
+    [$intermediate] = generateKeyPair('Intermediate CA');
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/certificate", [
+            'type' => 'custom',
+            'certificate' => $pem,
+            'private_key' => $key,
+            'chain' => $intermediate,
+        ])
+        ->assertCreated();
+});
+
+it('says a private key pasted into the certificate field is not a certificate', function () {
+    [, $key] = generateKeyPair('shop.example.com');
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/certificate", [
+            'type' => 'custom',
+            'certificate' => $key,
+            'private_key' => $key,
+        ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['certificate' => 'not a certificate'])
+        ->assertJsonMissingValidationErrors('private_key');
+});
+
 it('names the domains that are on the site but not on the certificate', function () {
     activeCertificate($this->application);
 
@@ -442,6 +633,70 @@ it('refuses a stored certificate path that escapes the private certificate direc
     expect(fn () => app(CertificateFiles::class)->remove([
         '/etc/ssl/sv-oss/../../etc/passwd',
     ], $this->application->id))->toThrow(HttpException::class);
+
+    Process::assertNotRan(fn ($process) => in_array('rm', $process->command, true));
+});
+
+it('does not carry a Let\'s Encrypt chain path over into an uploaded certificate', function () {
+    activeCertificate($this->application)
+        ->update(['chain_path' => '/etc/letsencrypt/live/shop.example.com/chain.pem']);
+
+    [$pem, $key] = generateKeyPair('shop.example.com');
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/certificate", [
+            'type' => 'custom',
+            'certificate' => $pem,
+            'private_key' => $key,
+        ])
+        ->assertCreated();
+
+    expect($this->application->fresh()->certificate->chain_path)->toBeNull();
+});
+
+it('deletes an uploaded certificate whose row still names an old Let\'s Encrypt chain', function () {
+    // The state every site that went Let's Encrypt -> upload was left in before
+    // the upload cleared it. Deleting used to 500 with no message after HTTPS
+    // was already off, and every retry did the same.
+    $certificate = Certificate::create([
+        'application_id' => $this->application->id,
+        'type' => CertificateType::Custom,
+        'status' => CertificateStatus::Active,
+        'domains' => ['shop.example.com'],
+        'certificate_path' => '/etc/ssl/sv-oss/shop.example.com.crt',
+        'private_key_path' => '/etc/ssl/sv-oss/shop.example.com.key',
+        'chain_path' => '/etc/letsencrypt/live/shop.example.com/chain.pem',
+    ]);
+
+    $this->actingAs($this->admin)
+        ->deleteJson("/api/applications/{$this->application->id}/certificate")
+        ->assertNoContent();
+
+    Process::assertRan(fn ($process) => in_array('rm', $process->command, true)
+        && in_array('/etc/ssl/sv-oss/shop.example.com.crt', $process->command, true));
+    Process::assertNotRan(fn ($process) => in_array('rm', $process->command, true)
+        && in_array('/etc/letsencrypt/live/shop.example.com/chain.pem', $process->command, true));
+
+    expect($certificate->fresh())->toBeNull();
+});
+
+it('refuses a corrupted certificate path before taking HTTPS off the site', function () {
+    $certificate = Certificate::create([
+        'application_id' => $this->application->id,
+        'type' => CertificateType::Custom,
+        'status' => CertificateStatus::Active,
+        'domains' => ['shop.example.com'],
+        'certificate_path' => '/etc/ssl/sv-oss/../../passwd',
+        'private_key_path' => '/etc/ssl/sv-oss/shop.example.com.key',
+    ]);
+
+    $this->actingAs($this->admin)
+        ->deleteJson("/api/applications/{$this->application->id}/certificate")
+        ->assertStatus(500);
+
+    // Nothing changed: still active, still HTTPS, nothing removed.
+    expect($certificate->fresh()->status)->toBe(CertificateStatus::Active)
+        ->and($this->application->fresh()->url())->toBe('https://shop.example.com');
 
     Process::assertNotRan(fn ($process) => in_array('rm', $process->command, true));
 });
@@ -585,6 +840,27 @@ it('needs manage on app_domain to change anything', function () {
         ->assertForbidden();
 });
 
+it('validates force HTTPS in its form request', function (mixed $value) {
+    activeCertificate($this->application);
+
+    $this->actingAs($this->admin)
+        ->putJson("/api/applications/{$this->application->id}/certificate/force-https", ['force_https' => $value])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('force_https');
+})->with(['missing' => null, 'not a boolean' => 'sometimes']);
+
+it('needs manage on app_domain to force HTTPS', function () {
+    activeCertificate($this->application);
+    $viewer = User::factory()->create();
+    grantPermission($viewer, 'app_domain');
+
+    $this->actingAs($viewer)
+        ->putJson("/api/applications/{$this->application->id}/certificate/force-https", ['force_https' => true])
+        ->assertForbidden();
+
+    expect($this->application->fresh()->certificate->force_https)->toBeFalse();
+});
+
 it('lets a self-signed certificate cover a name Let\'s Encrypt could never reach', function () {
     Queue::fake();
 
@@ -598,6 +874,78 @@ it('lets a self-signed certificate cover a name Let\'s Encrypt could never reach
         ->assertStatus(202)
         ->assertJsonPath('certificate.renewable', false);
 });
+
+it('sends a redirect name on before forcing HTTPS on OpenLiteSpeed', function (string $profile) {
+    config(['server.web_server' => 'openlitespeed']);
+    $this->application->update(['serving_profile' => $profile]);
+    activeCertificate($this->application)->update(['force_https' => true]);
+
+    $this->application->domains()->create([
+        'domain' => 'old.example.com',
+        'type' => DomainType::Redirect,
+        'redirect_to' => 'https://shop.example.com',
+        'redirect_status' => 301,
+    ]);
+
+    $config = renderedCertVhost($this->application->fresh(), 'openlitespeed');
+    $redirect = strpos($config, 'RewriteCond %{HTTP_HOST} ^old\.example\.com$');
+    $force = strpos($config, 'RewriteRule ^/?(.*)$ https://%{HTTP_HOST}/$1');
+
+    // Forcing first sent http://old.example.com to https://old.example.com,
+    // a name the certificate does not cover: a TLS error, never the redirect.
+    expect($redirect)->not->toBeFalse()
+        ->and($force)->not->toBeFalse()
+        ->and($redirect)->toBeLessThan($force);
+})->with(['php', 'static', 'node']);
+
+it('sends an alias the certificate does not cover to the primary when forcing HTTPS', function (string $driver, string $profile) {
+    config(['server.web_server' => $driver]);
+    $this->application->update(['serving_profile' => $profile]);
+    activeCertificate($this->application)->update([
+        'force_https' => true,
+        'domains' => ['shop.example.com', 'www.shop.example.com'],
+    ]);
+
+    foreach (['www.shop.example.com', 'new.example.com'] as $alias) {
+        $this->application->domains()->create(['domain' => $alias, 'type' => DomainType::Alias]);
+    }
+
+    $config = renderedCertVhost($this->application->fresh(), $driver);
+
+    // new.example.com is not on the certificate: https://new.example.com was a
+    // TLS error. www is covered and keeps its own host.
+    if ($driver === 'nginx') {
+        $location = substr($config, strpos($config, 'location / {'));
+        $location = substr($location, 0, strpos($location, "\n    }") + 6);
+
+        expect($location)->toContain('if ($host = new.example.com)')
+            ->and($location)->toContain('return 301 https://shop.example.com$request_uri;')
+            ->and($location)->toContain('return 301 https://$host$request_uri;')
+            ->and($location)->not->toContain('www.shop.example.com')
+            // Server-level would also swallow the ACME challenge for the name,
+            // and the certificate could never be reissued to include it.
+            ->and(strpos($config, 'if ($host = new.example.com)'))->toBeGreaterThan(strpos($config, 'location ^~ /.well-known/acme-challenge/'));
+    } else {
+        $alias = strpos($config, 'RewriteCond %{HTTP_HOST} ^new\\.example\\.com$ [NC]');
+        $general = strpos($config, 'RewriteRule ^/?(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]');
+
+        expect($alias)->not->toBeFalse()
+            ->and($alias)->toBeLessThan($general)
+            ->and(substr($config, $alias, $general - $alias))->toContain('!^/\\.well-known/acme-challenge/')
+            ->and(substr($config, $alias, $general - $alias))->toContain('https://shop.example.com/$1 [R=301,L]')
+            ->and($config)->not->toContain('^www\\.shop\\.example\\.com$');
+    }
+})->with(['nginx', 'openlitespeed'])->with(['php', 'static', 'node']);
+
+it('adds no alias redirect when HTTPS is not forced', function (string $driver) {
+    config(['server.web_server' => $driver]);
+    activeCertificate($this->application);
+    $this->application->domains()->create(['domain' => 'new.example.com', 'type' => DomainType::Alias]);
+
+    expect(renderedCertVhost($this->application->fresh(), $driver))
+        ->not->toContain('https://shop.example.com$request_uri')
+        ->not->toContain('https://shop.example.com/$1');
+})->with(['nginx', 'openlitespeed']);
 
 it('renders TLS on all three web servers', function (string $driver) {
     config(['server.web_server' => $driver]);
@@ -615,6 +963,17 @@ it('renders TLS on all three web servers', function (string $driver) {
  * supposedly wrote — the expiry is read off disk rather than assumed from a
  * lifetime, because Let's Encrypt has begun issuing shorter-lived certificates.
  */
+function runIssueJob(IssueCertificate $job): void
+{
+    $job->handle(
+        app(CertbotClient::class),
+        app(CertificateFiles::class),
+        app(ApplyVhost::class),
+        app(WebServerManager::class),
+        app(ActivityLogger::class),
+    );
+}
+
 function fakeCertbotSuccess(): void
 {
     Process::fake(function ($process) {
@@ -658,11 +1017,11 @@ function renderedCertVhost(Application $application, ?string $driverName = null)
  *
  * @return array{0: string, 1: string}
  */
-function generateKeyPair(string $commonName): array
+function generateKeyPair(string $commonName, int $days = 365): array
 {
     $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
     $csr = openssl_csr_new(['commonName' => $commonName], $key, ['digest_alg' => 'sha256']);
-    $cert = openssl_csr_sign($csr, null, $key, 365, ['digest_alg' => 'sha256']);
+    $cert = openssl_csr_sign($csr, null, $key, $days, ['digest_alg' => 'sha256']);
 
     openssl_x509_export($cert, $pem);
     openssl_pkey_export($key, $privateKey);

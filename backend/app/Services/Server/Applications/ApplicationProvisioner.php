@@ -44,6 +44,7 @@ class ApplicationProvisioner
         private ApplicationArtifacts $artifacts,
         private HttpReadinessCheck $readiness,
         private SiteRootLock $rootLock,
+        private SecretFilePrivacy $secretPrivacy,
     ) {}
 
     /**
@@ -285,30 +286,35 @@ class ApplicationProvisioner
                 return $result;
             }
 
+            // `-h`: where the site has a web root, `.env` sits in a folder the
+            // site user owns, and a plain chown follows a link planted there —
+            // handing its target to the user (the `.panel` class of bug,
+            // 2026-09-29). With -h a link is changed itself, never followed.
             return $this->serverOps->run(
-                ['chown', "{$user->username}:{$user->username}", $env],
+                ['chown', '-h', "{$user->username}:{$user->username}", $env],
                 ['feature' => 'application', 'op' => 'chown_env', 'application' => $application->id],
             );
         });
-
-        // Written *before* ownership is set, not after. `tee` runs elevated,
-        // so a placeholder written after the `chown` is a root-owned file
-        // sitting in the site user's own directory: the File Manager runs as
-        // that user and could list it but never edit, rename or delete it —
-        // and on a blank site it is the one file they immediately want to
-        // replace.
-        if ($this->wantsPlaceholder($application, $skipInstaller)) {
-            $this->step('placeholder', fn () => $this->serverOps->run(
-                ['tee', $this->placeholderPath($application, $documentRoot)],
-                ['feature' => 'application', 'op' => 'placeholder', 'application' => $application->id],
-                input: $this->placeholderContents($application),
-            ));
-        }
 
         $this->step('set_ownership', fn () => $this->serverOps->run(
             ['chown', '-R', "{$user->username}:{$user->username}", $documentRoot],
             ['feature' => 'application', 'op' => 'chown', 'application' => $application->id],
         ));
+
+        // Written *as the site user*, after ownership is set. It was written
+        // by root before the chown, so that the chown would hand it over —
+        // but this runs on every provision, "Retry setup" included, into a
+        // document root the user already controls, and root's `tee` follows
+        // a link planted at `index.php` (the `.panel` class of bug,
+        // 2026-09-29). As the user the file is theirs by construction, which
+        // is what writing it first was for.
+        if ($this->wantsPlaceholder($application, $skipInstaller)) {
+            $this->step('placeholder', fn () => $this->serverOps->run(
+                ['runuser', '-u', $user->username, '--', 'tee', $this->placeholderPath($application, $documentRoot)],
+                ['feature' => 'application', 'op' => 'placeholder', 'application' => $application->id],
+                input: $this->placeholderContents($application),
+            ));
+        }
 
         // Every PHP site gets its own pool from the start, not as an opt-in
         // afterthought. Before this, a freshly provisioned site ran on the
@@ -428,6 +434,10 @@ class ApplicationProvisioner
             // `systemctl start` succeeds, the process dies immediately, and
             // provisioning fails on a site that is otherwise fine.
             $this->startProcess($application, $documentRoot);
+
+            // After everything that may write a `.env` — installers and the
+            // first-start step alike. Several leave it 0644.
+            $this->secretPrivacy->narrow($application);
         }
 
         // Last, and unable to fail the provision. The site is created, serving
@@ -523,6 +533,11 @@ class ApplicationProvisioner
             $this->readiness->verify($application);
 
             $this->progress->record('verify_serving');
+
+            // After the site answers and before it is reported ready: an
+            // application whose admin is created by the first visitor must
+            // not be Active for a moment while a stranger can still do that.
+            $this->installers->afterStart($application, $documentRoot);
         }
     }
 
@@ -614,17 +629,23 @@ class ApplicationProvisioner
         $driver = $this->webServers->driver();
         $realProfile = $application->serving_profile;
 
+        // Set before rendering, unsaved: the template reads it to serve the
+        // page as 503. Cleared again on every way out that fails.
+        $application->disabled_at = now();
         $application->serving_profile = 'static';
         $applied = $driver->apply($application, $this->disabledPageRoot());
         $application->serving_profile = $realProfile;
 
         if ($applied->failed()) {
+            $application->disabled_at = null;
+
             throw new ApplicationAvailabilityException($applied->reference);
         }
 
         if ($driver->test()->failed()) {
             // Put the real vhost back before failing — a disable must never
             // leave a live site's config pointed nowhere useful.
+            $application->disabled_at = null;
             $restored = $driver->apply($application, $this->documentRoot($application));
 
             throw new ApplicationAvailabilityException($restored->reference);
@@ -632,8 +653,19 @@ class ApplicationProvisioner
 
         $driver->reload();
 
-        $application->disabled_at = now();
         $application->save();
+
+        // A Node app went on running behind the unavailable page — listening,
+        // using memory, and on Uptime Kuma reachable on its port past the
+        // vhost. Stopped — and kept stopped across a reboot — once the page is
+        // live; started again by enable().
+        if ($this->supervisor->runs($application)) {
+            $stopped = $this->supervisor->suspend($application);
+
+            if ($stopped->failed()) {
+                throw new ApplicationAvailabilityException($stopped->reference);
+            }
+        }
     }
 
     public function enable(Application $application): void
@@ -642,16 +674,30 @@ class ApplicationProvisioner
 
         $driver = $this->webServers->driver();
         $documentRoot = $this->documentRoot($application);
+        $disabledAt = $application->disabled_at;
 
+        // The process first: the real vhost proxies to it.
+        if ($this->supervisor->runs($application)) {
+            $started = $this->supervisor->resume($application);
+
+            if ($started->failed()) {
+                throw new ApplicationAvailabilityException($started->reference);
+            }
+        }
+
+        $application->disabled_at = null;
         $applied = $driver->apply($application, $documentRoot);
 
         if ($applied->failed()) {
+            $application->disabled_at = $disabledAt;
+
             throw new ApplicationAvailabilityException($applied->reference);
         }
 
         if ($driver->test()->failed()) {
             // Put the disabled page back before failing, for the same reason
             // disable()'s rollback exists — never strand the vhost mid-swap.
+            $application->disabled_at = $disabledAt;
             $realProfile = $application->serving_profile;
             $application->serving_profile = 'static';
             $restored = $driver->apply($application, $this->disabledPageRoot());
@@ -662,7 +708,6 @@ class ApplicationProvisioner
 
         $driver->reload();
 
-        $application->disabled_at = null;
         $application->save();
     }
 

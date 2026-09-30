@@ -427,3 +427,29 @@ describe('the post-deploy health check', function () {
         expect($app->fresh()->steps)->toContain('verify');
     });
 });
+
+it('gives the checked-out branch an upstream so a bare git pull works', function () {
+    // init + fetch + reset leaves the branch with no upstream, and a deploy
+    // script of `git pull` failed the first deploy on the Apache test box:
+    // "There is no tracking information for the current branch".
+    $order = collect();
+
+    Process::fake(function ($process) use ($order) {
+        $order->push(implode(' ', (array) $process->command));
+
+        return match (true) {
+            $process->command[0] === 'test' => Process::result(exitCode: 0),
+            in_array('rev-parse', $process->command, true) => Process::result(output: "newsha\n"),
+            default => Process::result(exitCode: 0),
+        };
+    });
+
+    runDeploy(gitApp(['branch' => 'develop']));
+
+    $reset = $order->search(fn (string $c) => str_contains($c, 'reset --hard FETCH_HEAD'));
+    $upstream = $order->search(fn (string $c) => str_ends_with($c, 'branch --set-upstream-to=origin/develop'));
+
+    expect($reset)->not->toBeFalse()
+        ->and($upstream)->not->toBeFalse()
+        ->and($upstream)->toBeGreaterThan($reset);
+});

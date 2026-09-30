@@ -14,6 +14,7 @@ use App\Models\SiteClone;
 use App\Models\SystemUser;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Process;
 
 /**
@@ -345,6 +346,11 @@ describe('when a clone fails partway', function () {
                 return Process::result(output: '1');
             }
 
+            // Written as the site user now, so the command arrives wrapped.
+            if (($args[0] ?? '') === 'runuser') {
+                $args = array_slice($args, 4);
+            }
+
             if (($args[0] ?? '') === $command && str_ends_with((string) end($args), '/wp-config.php')) {
                 return Process::result(exitCode: 1, errorOutput: 'permission denied');
             }
@@ -377,7 +383,49 @@ describe('when a clone fails partway', function () {
         expect($record->status->value)->toBe('failed')
             ->and($record->target_application_id)->toBeNull()
             ->and(Application::where('domain', 'shop-clone.test')->exists())->toBeFalse();
-    })->with(['chmod', 'chown']);
+    })->with(['tee', 'chmod']);
+});
+
+it('writes the clone\'s wp-config.php as the site user, never as root', function () {
+    // The target is a copy of another site, links included, so a
+    // `wp-config.php` that is a link arrives with it — and root's `tee` and
+    // `chown` followed it (the `.panel` class of bug, 2026-09-29).
+    $ran = [];
+    Process::fake(function ($process) use (&$ran) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        $ran[] = $args;
+
+        if (in_array(($args[0] ?? ''), ['mysql', 'mariadb'], true)
+            && str_contains((string) $process->input, 'information_schema.schemata')) {
+            return Process::result(output: '1');
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $source = Application::forceCreate([
+        'system_user_id' => $this->systemUser->id,
+        'name' => 'Shop',
+        'slug' => 'shop', 'domain' => 'shop.test', 'site_type' => 'wordpress',
+        'serving_profile' => 'php', 'status' => 'active', 'web_root' => '/', 'php_version' => '8.4',
+    ]);
+    $database = Database::create(['name' => 'shop_db', 'engine' => 'mysql', 'application_id' => $source->id]);
+    DatabaseUser::create([
+        'database_id' => $database->id, 'username' => 'shop_user', 'password' => 'secret',
+        'connection_preference' => 'localhost', 'host' => 'localhost',
+    ]);
+
+    expect(runClone($source, 'shop-clone.test')->status->value)->toBe('completed');
+
+    $writes = collect($ran)
+        ->filter(fn (array $c) => in_array('tee', $c, true) && str_ends_with((string) end($c), '/wp-config.php'))
+        ->values();
+
+    expect($writes)->not->toBeEmpty()
+        ->and($writes->every(fn (array $c) => array_slice($c, 0, 5) === ['runuser', '-u', 'siteowner', '--', 'tee']))->toBeTrue()
+        // And no root chown of it afterwards: the user's write made it theirs.
+        ->and(collect($ran)->map(fn (array $c) => implode(' ', $c))
+            ->contains(fn (string $c) => str_starts_with($c, 'chown ') && str_ends_with($c, '/wp-config.php')))->toBeFalse();
 });
 
 it('gives the clone a primary domain row, not just the mirror column', function () {
@@ -685,6 +733,34 @@ describe('cloning a git application', function () {
         expect($payload['url'])->toContain($clone->webhook_identifier);
         expect($payload['secret'])->toBe($clone->webhook_secret);
         expect($payload['provider'])->toBe('github');
+    });
+
+    it('keeps the copy\'s webhook secret from a role that may not deploy', function () {
+        fakeCloneServer();
+
+        $record = runClone(gitSource([
+            'webhook_enabled' => true,
+            'webhook_identifier' => 'src-hook',
+            'webhook_secret' => 'src-secret',
+            'webhook_provider' => 'github',
+        ]), 'api-clone.test');
+
+        // With the URL and the secret anyone can sign a push and start a
+        // deployment, so it follows the deploy button, not the clone screen.
+        $viewer = User::factory()->create();
+        grantPermission($viewer, 'app_clone', manage: true);
+
+        // runClone() authenticated as the admin, and the guard keeps that
+        // user for the rest of the test unless told to forget it.
+        Auth::forgetGuards();
+
+        $payload = test()->withHeaders(['Authorization' => 'Bearer '.$viewer->createToken('t')->plainTextToken])
+            ->getJson("/api/clones/{$record->id}")
+            ->assertOk()
+            ->json('clone.target_webhook');
+
+        expect($payload['url'])->not->toBeNull()
+            ->and($payload['secret'])->toBeNull();
     });
 
     it('says nothing about a webhook the source never used', function () {

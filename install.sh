@@ -96,10 +96,10 @@ DRY_RUN=0          # --dry-run
 #   * The panel's own vhost is written OUTSIDE the panel-managed markers in
 #     httpd_config.conf — see configure_ols() for why that is load-bearing.
 #
-# Two capability differences remain, and the installer says both at selection:
-# the WAF cannot be enforced on OLS (OlsDriver::supportsWaf() returns false),
-# and there is no per-site PHP isolation. Neither is a defect in this script.
-# The bot blocker is NOT one of them — both OLS templates render its rules.
+# One capability difference remains, and the installer says it at selection:
+# there is no per-site PHP isolation. It is not a defect in this script. The
+# 8G firewall and the bot blocker both work on OLS — the templates render
+# their rules into each site's vhconf (the WAF since 2026-09-30).
 STACK=""           # --stack=lemp|lamp|mern|ols|docker  (prompted, or lemp)
 WEB_SERVER=""      # derived from STACK
 
@@ -386,9 +386,8 @@ resolve_stack() {
             # only to whoever reads the source. Not a warning about the stack
             # any more — a capability difference they would otherwise find out
             # about from a control that refuses to switch on.
-            say "     note: the WAF (8G firewall) is not available on OpenLiteSpeed,"
-            say "     and there is no per-site PHP isolation (no per-site pools)."
-            say "     The bot blocker does work."
+            say "     note: there is no per-site PHP isolation on OpenLiteSpeed"
+            say "     (no per-site pools). The 8G firewall and bot blocker work."
             ;;
         *) die "unknown stack: ${STACK}  (expected lemp, lamp, mern, ols or docker)" ;;
     esac
@@ -1023,7 +1022,12 @@ install_packages() {
     # code, never packages, so this line only ever reaches *fresh* installs —
     # an existing panel upgrading to the code that prefers pigz will not have it
     # until somebody runs `apt install pigz` by hand. ~60 KB.
-    run_progress "Installing installer prerequisites" apt-get install -y software-properties-common curl git unzip zip rsync ca-certificates gnupg update-notifier-common build-essential pigz
+    #
+    # `acl` is setfacl: each site user's home is closed to every other local
+    # account and opened, by ACL, to the panel and the web server only (see
+    # HomeDirectoryAccess). Ubuntu 26.04 does not ship it. Unlike pigz, existing
+    # servers get it too: `sites:resync` installs it when it is missing.
+    run_progress "Installing installer prerequisites" apt-get install -y software-properties-common curl git unzip zip rsync ca-certificates gnupg update-notifier-common build-essential pigz acl
 
     # Docker, when the stack asked for it. Here rather than in a configure_*
     # step so the runtime is present before anything tries to use it, and
@@ -2884,6 +2888,14 @@ configure_apache() {
     # hostnames depending on load order.
     run a2dissite 000-default
 
+    # Without a global ServerName every `apachectl configtest` -- the panel runs
+    # one before each reload and shows its output on the Services screen --
+    # opens with "AH00558: Could not reliably determine the server's fully
+    # qualified domain name". Harmless, and noise in every test. Every vhost
+    # the panel writes names itself, so this is only the fallback's name.
+    printf 'ServerName %s\n' "$(hostname)" >/etc/apache2/conf-available/${PANEL_SLUG}-servername.conf
+    run a2enconf "${PANEL_SLUG}-servername"
+
     local conf="/etc/apache2/sites-available/${PANEL_SLUG}.conf"
     local api_block panel_block
 
@@ -2981,11 +2993,23 @@ CONF
         die "the generated Apache config failed its own test — see $LOG_FILE"
     fi
 
+    # Ubuntu 26.04's apache2.service mounts /home read-only for Apache
+    # (ProtectHome=read-only). Every site the panel creates lives in its owner's
+    # home and logs to <site>/logs, which the root master opens at start -- so
+    # the first site's reload failed with "Read-only file system: could not
+    # open error log file" and took Apache down, the panel included. Found on
+    # the 26.04 test server. ReadWritePaths=/home does not lift it (measured);
+    # ProtectHome=no does. The panel's ApacheDriver writes the same drop-in on
+    # servers installed before this.
+    mkdir -p /etc/systemd/system/apache2.service.d
+    printf '[Service]\nProtectHome=no\n' >/etc/systemd/system/apache2.service.d/${PANEL_SLUG}-site-logs.conf
+    run systemctl daemon-reload
+
     run systemctl enable apache2
-    # reload-or-restart, not reload: see the nginx path. A stopped Apache
-    # cannot be reloaded, and the installer's own port-80 advice is what
-    # stops it.
-    run systemctl reload-or-restart apache2
+    # restart, not reload: a running Apache keeps the sandbox it started with,
+    # and a stopped one (the installer's own port-80 advice stops it) cannot be
+    # reloaded at all.
+    run systemctl restart apache2
     ok "Apache serving ${PANEL_HOST}"
 }
 
@@ -3040,11 +3064,12 @@ Type=simple
 User=${APP_USER}
 Group=${APP_USER}
 WorkingDirectory=${backend}
-# No --queue, so this consumes the default queue and nothing else. Jobs must
-# therefore not name a queue: one sent elsewhere is accepted, stored and
-# never run -- no error, no failed_jobs row, it simply never happens.
-# Backups shipped that way and never once executed on a real install.
-ExecStart=${PANEL_PHP_BIN} ${backend}/artisan queue:work --sleep=3 --tries=1 --max-time=3600
+# Reads `high` before `default`: still one job at a time, but a certificate
+# waits for the job that is running rather than for every job queued. These
+# are the ONLY queues drained: a job sent anywhere else is accepted, stored
+# and never run -- no error, no failed_jobs row. Backups shipped that way and
+# never once executed on a real install. Must match QueueWorker::QUEUES.
+ExecStart=${PANEL_PHP_BIN} ${backend}/artisan queue:work --queue=high,default --sleep=3 --tries=1 --max-time=3600
 Restart=always
 RestartSec=5
 # Longer than the longest job, so a stop during a 30-minute install waits
@@ -3533,6 +3558,15 @@ finish() {
     run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan config:cache' -- "$backend" "${PANEL_PHP_BIN}"
     run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan route:cache' -- "$backend" "${PANEL_PHP_BIN}"
     ok "configuration cached"
+
+    # Close the checkout to every local account but the web server's. It is
+    # 755 all the way down, and config:cache has just written the APP_KEY and
+    # the Redis password into a 644 file inside it -- readable by every site
+    # and SSH user the panel will create. As APP_USER like every artisan call
+    # here (setfacl goes through the panel's sudo grant, configured above);
+    # the same command runs on every update through sites:resync. Never fatal;
+    # the command reports what it did.
+    run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan panel:close-directory' -- "$backend" "${PANEL_PHP_BIN}"
 
     # Prove the panel actually works before claiming the install succeeded.
     # Everything above this line only shows that commands ran as *root*; the

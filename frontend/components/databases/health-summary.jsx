@@ -1,7 +1,8 @@
 "use client";
 
 import { useTranslations, useFormatter } from "next-intl";
-import { CircleCheck, TriangleAlert, CircleAlert, Clock, Info } from "lucide-react";
+import { CircleCheck, CircleHelp, TriangleAlert, CircleAlert, Clock, Info } from "lucide-react";
+import { RefreshButton } from "@/components/data-table/refresh-button";
 import { cn } from "@/lib/utils";
 import { assessHealth } from "@/lib/databases/health";
 import { Badge } from "@/components/ui/badge";
@@ -40,8 +41,32 @@ const ISSUE_TEXT = "text-sm";
  */
 export function HealthSummary({ engine, status, processes = [] }) {
   const t = useTranslations("databases.monitor.health");
+  const tEngines = useTranslations("databases.engines");
   const format = useFormatter();
   const { tone, issues, recentlyRestarted } = assessHealth({ status, processes });
+
+  // No status means the check did not answer. "Healthy" over an unanswered
+  // request is the reassuring false fact; say we could not tell.
+  if (!status) {
+    return (
+      <Card className="gap-0 overflow-hidden py-0">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+          <div className="flex items-center gap-3">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+              <CircleHelp className="size-6" aria-hidden />
+            </span>
+            <div className="min-w-0 space-y-0.5">
+              <p className="font-semibold">{t("unknownTitle")}</p>
+              <p className="text-sm text-muted-foreground">
+                {t("unknownBody", { engine: engine?.engine ? tEngines(engine.engine) : "" })}
+              </p>
+            </div>
+          </div>
+          <RefreshButton />
+        </div>
+      </Card>
+    );
+  }
   const styles = TONE[tone];
   const Icon = styles.icon;
 
@@ -99,7 +124,7 @@ export function HealthSummary({ engine, status, processes = [] }) {
             version, is it up, how long. */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
           <span className="flex items-center gap-2">
-            <span className="font-medium">{engine?.engine}</span>
+            <span className="font-medium">{engine?.engine ? tEngines(engine.engine) : null}</span>
             {engine?.version ? (
               <span className="font-mono text-xs text-muted-foreground">
                 {engine.version}

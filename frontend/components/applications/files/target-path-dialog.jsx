@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Folder, Loader2 } from "lucide-react";
 import { apiMessage } from "@/lib/api/error-message";
+import { destinationMissing } from "@/lib/files/missing-folder";
+import { dirname, placeTarget } from "@/lib/files/path-helpers";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormModal } from "@/components/ui/form-modal";
+import { useRefresh } from "@/hooks/use-refresh";
 
 /**
  * The shared shape behind Rename, Copy, Compress and Extract: one "target
@@ -51,6 +53,9 @@ export function TargetPathDialog({
   // else (the listing's own `path=` convention) — every other use of this
   // dialog genuinely requires a non-empty target.
   allowEmpty = false,
+  // Extract's value is the folder itself; everywhere else the folder is the
+  // value minus its last part.
+  targetIsFolder = false,
   emptyPlaceholder,
   // Rendered above the path field, and handed the field's own state — Compress
   // uses it for the format choice, which has to rewrite the extension in the
@@ -78,12 +83,13 @@ export function TargetPathDialog({
 }) {
   const t = useTranslations("applications.files");
   const tc = useTranslations("common");
-  const router = useRouter();
+  const { pending: refreshing, refreshThen } = useRefresh();
   // Mounted fresh per file (see files-panel.jsx), so the pre-filled default
   // is the initial state directly rather than something an effect resets.
   const [value, setValue] = useState(defaultTarget);
   const [error, setError] = useState(null);
-  const [busy, setBusy] = useState(false);
+  const [submitting, setBusy] = useState(false);
+  const busy = submitting || refreshing;
   const inputRef = useRef(null);
 
   /*
@@ -93,7 +99,11 @@ export function TargetPathDialog({
    * everywhere else in this feature — so it gets the same words the breadcrumb
    * uses rather than rendering as nothing at all.
    */
-  const trimmedTarget = destinationOf(value.trim()).replace(/^\/+|\/+$/g, "");
+  // A bare name stays in the item's own folder (Rename, Copy, Compress,
+  // Extract alike) — typed on its own it used to land in the application's
+  // top folder, which on WordPress is the public web root.
+  const place = (typed) => placeTarget(typed, file.path, defaultTarget);
+  const trimmedTarget = destinationOf(place(value.trim())).replace(/^\/+|\/+$/g, "");
   const destinationValue = trimmedTarget;
   const destinationText = trimmedTarget
     ? trimmedTarget.split("/").filter(Boolean).join(" / ")
@@ -122,7 +132,7 @@ export function TargetPathDialog({
 
   async function onSubmit(e) {
     e.preventDefault();
-    const trimmed = normalize(value.trim());
+    const trimmed = normalize(place(value.trim()));
     if ((!trimmed && !allowEmpty) || busy) return;
     const invalid = validate?.(trimmed);
     if (invalid) {
@@ -133,14 +143,17 @@ export function TargetPathDialog({
     setError(null);
     try {
       await apply(appId, file.path, trimmed);
-      toast.success(successMessage(file, trimmed));
-      onSuccess?.(trimmed);
-      handleOpenChange(false);
-      router.refresh();
+      refreshThen(() => {
+        toast.success(successMessage(file, trimmed));
+        onSuccess?.(trimmed);
+        onOpenChange?.(false);
+      });
     } catch (err) {
       const targetError = err.response?.data?.errors?.target?.[0];
       if (targetError) {
         setError(targetError);
+      } else if (await destinationMissing(appId, err, targetIsFolder ? trimmed : dirname(trimmed))) {
+        setError(t("targetDialog.folderMissing", { folder: targetIsFolder ? trimmed : dirname(trimmed) }));
       } else if (REFUSED_HERE.has(err.response?.status)) {
         // "Something already exists at that path", "could not be found": the
         // API sends these with no field key, and a toast fading out beside a

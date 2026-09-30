@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -95,14 +95,18 @@ export function AddRuleDialog({
   onClose,
 }) {
   const t = useTranslations("firewall");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const editing = rule !== null;
   // What the API will refuse on this rule: port, protocol, action and source
   // on a panel-seeded rule while the firewall is enforcing. The name is
   // deliberately NOT in the list — the guard allows a rename, on the grounds
   // that a label never reaches ufw and blocking a typo fix is pure
   // obstruction. So the fields lock, not the button.
-  const ruleLocked = editing && Boolean(rule.protected) && firewallEnabled;
+  // Locked whether or not the firewall is on. The API allows these edits while
+  // it is off, but turning it on then re-adds the panel's own allow rule AFTER
+  // the edited one — ufw matches the first — so an SSH rule edited to Block
+  // locks you out the moment the firewall starts.
+  const ruleLocked = editing && Boolean(rule.protected);
   const [selfOpen, setSelfOpen] = useState(false);
   const open = editing ? true : selfOpen;
   const setOpen = (next) => {
@@ -188,15 +192,16 @@ export function AddRuleDialog({
         payload.source_ip = submitted.source_ip?.trim() || null;
         payload.description = submitted.description?.trim() || null;
         await updateFirewallRule(rule.id, payload);
+        await refreshAndWait();
         toast.success(t("edit.saved"));
       } else {
         await createFirewallRule(payload);
+        await refreshAndWait();
         toast.success(t("add.created"));
       }
       setOpen(false);
       setAutoName("");
       form.reset(editing ? valuesFrom(rule) : DEFAULTS);
-      router.refresh();
     } catch (error) {
       // 422 is usually "you already have this rule" — that belongs on the form,
       // not in a toast that vanishes while the form sits there. It is not a
@@ -452,7 +457,7 @@ export function AddRuleDialog({
                   // the same lock — otherwise one button quietly makes the
                   // exact edit the greyed input beside it is refusing.
                   disabled={ruleLocked || values.source_ip === yourIp}
-                  disabledReason={ruleLocked ? t("rules.protectedReason") : t("add.wouldLockYouOut")}
+                  disabledReason={ruleLocked ? t("rules.protectedReason") : t("add.onlyMyIpAlready")}
                 >
                   <Crosshair className="size-4" />
                   {values.source_ip === yourIp ? t("add.onlyMyIpSet") : t("add.onlyMyIp")}

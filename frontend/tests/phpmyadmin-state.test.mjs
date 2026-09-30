@@ -132,19 +132,20 @@ test("the plain button does not hand its click event to the site id", () => {
   );
 });
 
-test("the tab is still opened inside the click that asked for it", () => {
+test("no tab opens until the phpMyAdmin URL exists (Krishna, 2026-09-29)", () => {
+  // The old flow opened about:blank on the click and held it through the SSO
+  // call. The button now carries the wait and the tab opens onto phpMyAdmin.
   const button = fs.readFileSync(path.join(root, "components/databases/phpmyadmin-button.jsx"), "utf8");
   const body = button.slice(button.indexOf("async function open("));
-  const openTab = body.indexOf("openBlankTab()");
-  // The call itself, not the word — a comment above the function says "after
-  // the await" and matched before the code did.
   const firstAwait = body.indexOf("await phpmyadminSso(");
-  assert.ok(openTab !== -1 && openTab < firstAwait, "a tab opened after an await is a blocked popup");
-
-  // And the holding page goes up before the await too, or the tab is white for
-  // as long as the request takes — which is what Magic Login was doing.
-  const paint = body.indexOf("paintPlaceholder(");
-  assert.ok(paint !== -1 && paint < firstAwait, "the placeholder must be painted inside the click as well");
+  const openTab = body.indexOf("openUrlInNewTab(url)");
+  // Straight onto phpMyAdmin — an empty tab navigated later still showed about:blank.
+  assert.doesNotMatch(button, /openBlankTab|paintPlaceholder|location\.replace/);
+  assert.ok(firstAwait !== -1 && openTab > firstAwait, "the tab must open only once the URL is known");
+  // Refused → a click the browser will honour, never a silent failure.
+  assert.match(body, /toast\(t\("linkReady"\), \{[\s\S]{0,120}label: t\("openAnyway"\)/);
+  // The button says what it is waiting for.
+  assert.match(button, /const label = opening \? t\("signingShort"\)/);
 });
 
 test("the id reaches the API as application_id, beside the user id it already sent", () => {

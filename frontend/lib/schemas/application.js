@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { listMetaSchema } from "./list.js";
+import { passwordField, usernameField } from "./system-user.js";
 
 const textField = z.object({
   name: z.string(),
@@ -16,6 +17,13 @@ const textField = z.object({
   source: z.string().nullish(),
   depends_on: z.string().nullish(),
   generate: z.boolean().default(false),
+  // package_manager → the install+build command it fills in. Stripped by this
+  // schema until 2026-09-29, so the form never filled build_command and every
+  // Node git app deployed without installing its dependencies (HTTP 502).
+  // PHP sends an empty map as [].
+  build_templates: z
+    .preprocess((v) => (Array.isArray(v) ? {} : v), z.record(z.string(), z.string()))
+    .optional(),
 });
 
 // Either end may be absent, meaning unbounded in that direction.
@@ -92,17 +100,18 @@ const processSchema = z
   })
   .passthrough();
 
-const webhookSchema = z
-  .object({
-    enabled: z.boolean().default(false),
-    provider: z.string().nullish(),
-    url: z.string().nullish(),
-    secret: z.string().nullish(),
-    verification: z.string().nullish(),
-    last_delivered_at: z.string().nullish(),
-    last_delivered_at_human: z.string().nullish(),
-  })
-  .passthrough();
+const webhookSchema = z.object({
+  enabled: z.boolean().default(false),
+  provider: z.string().nullish(),
+  url: z.string().nullish(),
+  secret: z.string().nullish(),
+  verification: z.string().nullish(),
+  // True when the panel added the webhook to the repository itself; false
+  // means the URL and secret have to be pasted in by hand.
+  registered: z.boolean().default(false),
+  last_delivered_at: z.string().nullish(),
+  last_delivered_at_human: z.string().nullish(),
+}).passthrough();
 
 /**
  * One thing the server thinks is wrong with a site.
@@ -302,8 +311,17 @@ export const applicationSchema = z.object({
   waf_categories: z.array(z.string()).default([]),
   waf_exceptions: z.array(z.string()).optional(),
   waf_custom_rules: z.array(z.string()).optional(),
-  last_commit: z
-    .union([z.string(), z.record(z.string(), z.unknown())])
+  last_commit: z.union([z.string(), z.record(z.string(), z.unknown())]).nullish(),
+  // What is actually on disk. Deploys are in place, so one that fails after
+  // its checkout leaves the NEW commit live while `last_commit` (written on
+  // success only) still names the old one. Sent on a single application, not
+  // in the list.
+  code_on_disk: z
+    .object({
+      commit: z.string().nullish(),
+      state: z.enum(["deployed", "incomplete", "deploying"]).nullable().catch(null),
+      message: z.string().nullish(),
+    })
     .nullish(),
   last_deployed_at: z.string().nullish(),
   last_deployed_at_human: z.string().nullish(),
@@ -446,18 +464,21 @@ export const securityFormSchema = z
   })
   .superRefine((data, ctx) => {
     if (!data.enabled) return;
-    if (!data.username.trim()) {
-      ctx.addIssue({
-        path: ["username"],
-        code: "custom",
-        message: "required_username",
-      });
-    } else if (data.username.includes(":")) {
-      ctx.addIssue({
-        path: ["username"],
-        code: "custom",
-        message: "securityUsernameColon",
-      });
+    // Mirrors UpdateBasicAuthRequest (`regex:/^[^:\s]+$/`, `max:255`). A space
+    // used to pass here and come back from the server in English.
+    const username = data.username.trim();
+    if (!username) {
+      ctx.addIssue({ path: ["username"], code: "custom", message: "required_username" });
+    } else if (username.includes(":")) {
+      ctx.addIssue({ path: ["username"], code: "custom", message: "securityUsernameColon" });
+    } else if (/\s/.test(username)) {
+      ctx.addIssue({ path: ["username"], code: "custom", message: "securityUsernameSpaces" });
+    } else if (username.length > 255) {
+      ctx.addIssue({ path: ["username"], code: "custom", message: "max255" });
+    } else if (!/^[A-Za-z0-9._@-]+$/.test(username)) {
+      // Browsers send a non-ASCII name in different encodings (UTF-8 or
+      // Latin-1), so ünïcode could be saved and then never sign in.
+      ctx.addIssue({ path: ["username"], code: "custom", message: "securityUsernameAscii" });
     }
     if (!data.password) {
       ctx.addIssue({
@@ -467,6 +488,8 @@ export const securityFormSchema = z
       });
     } else if (data.password.length < 8) {
       ctx.addIssue({ path: ["password"], code: "custom", message: "min8" });
+    } else if (data.password.length > 255) {
+      ctx.addIssue({ path: ["password"], code: "custom", message: "max255" });
     }
   });
 
@@ -487,10 +510,10 @@ export function isValidApplicationDomain(value) {
     return false;
 
   const labels = domain.split(".");
-  return (
-    labels.length >= 2 &&
-    labels.every((label) => applicationDomainLabel.test(label))
-  );
+  // An all-digit last label is an IP address, never a name: 127.0.0.1 and the
+  // server's own IP passed the label rule and were added as domains.
+  if (/^\d+$/.test(labels[labels.length - 1])) return false;
+  return labels.length >= 2 && labels.every((label) => applicationDomainLabel.test(label));
 }
 
 /**
@@ -515,38 +538,57 @@ export function suggestApplicationDomain(value) {
   }
 }
 
-export const createApplicationSchema = z
-  .object({
-    site_type: z.string().min(1, "applicationTypeRequired"),
-    name: z
-      .string()
-      .trim()
-      .min(1, "applicationNameRequired")
-      .max(255, "tooLong"),
-    domain: z
-      .string()
-      .trim()
-      .min(1, "applicationDomainRequired")
-      .max(255, "tooLong")
-      .refine(isValidApplicationDomain, "hostnameInvalid"),
-    // Default true: a dedicated account per site is the right answer often
-    // enough to be the one the form starts on. Turned off for anyone who cannot
-    // create system users — see the form, which cannot offer what the API refuses.
-    generate_system_user: z.boolean().default(true),
-    // Required only when the caller is picking one. `superRefine` rather than a
-    // conditional field, because the message has to land on `system_user_id` —
-    // that is where the control is and where the form scrolls to.
-    system_user_id: z
-      .union([z.coerce.number().int().positive(), z.literal("")])
-      .optional(),
-  })
-  .passthrough()
-  .superRefine((values, ctx) => {
-    if (!values.generate_system_user && !values.system_user_id) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["system_user_id"],
-        message: "applicationSystemUserRequired",
-      });
+export const createApplicationSchema = z.object({
+  site_type: z.string().min(1, "applicationTypeRequired"),
+  // 240, the API's limit (StoreApplicationRequest); 255 let 241–255 through to a 422.
+  name: z.string().trim().min(1, "applicationNameRequired").max(240, "max240"),
+  domain: z
+    .string()
+    .trim()
+    .min(1, "applicationDomainRequired")
+    .max(255, "tooLong")
+    .refine(isValidApplicationDomain, "hostnameInvalid"),
+  // Default true: a dedicated account per site is the right answer often
+  // enough to be the one the form starts on. Turned off for anyone who cannot
+  // create system users — see the form, which cannot offer what the API refuses.
+  generate_system_user: z.boolean().default(true),
+  // Required only when the caller is picking one. `superRefine` rather than a
+  // conditional field, because the message has to land on `system_user_id` —
+  // that is where the control is and where the form scrolls to.
+  system_user_id: z.union([z.coerce.number().int().positive(), z.literal("")]).optional(),
+  // The new user's details, only read while generating one.
+  system_user_username: z.string().optional(),
+  system_user_password: z.string().optional(),
+}).passthrough().superRefine((values, ctx) => {
+  if (!values.generate_system_user && !values.system_user_id) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["system_user_id"],
+      message: "applicationSystemUserRequired",
+    });
+  }
+  if (!values.generate_system_user) return;
+  const checks = [
+    ["system_user_username", usernameField, values.system_user_username ?? ""],
+    ["system_user_password", passwordField, values.system_user_password ?? ""],
+  ];
+  for (const [path, field, value] of checks) {
+    if (path === "system_user_password" && value === "") continue;
+    const result = field.safeParse(value);
+    if (!result.success) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message: result.error.issues[0].message });
     }
-  });
+  }
+});
+
+/**
+ * `GET|POST /applications/{id}/root-lock`: whether the site folder is locked
+ * against its own user. `unknown` is "could not check" (a filesystem with no
+ * immutable flag), never "unlocked" — the two must not render the same.
+ */
+export const rootLockResponseSchema = z.object({
+  root_lock: z.object({
+    status: z.enum(["locked", "unlocked", "unknown"]).catch("unknown"),
+    path: z.string().nullish(),
+  }),
+});

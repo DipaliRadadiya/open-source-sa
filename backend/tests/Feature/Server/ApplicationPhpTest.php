@@ -5,8 +5,10 @@ use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Applications\Types\GitSiteType;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Php\PhpVersionManager;
+use App\Services\Server\Php\PoolIsolator;
 use App\Services\Server\Php\PoolManager;
 use App\Services\Server\ServerOpsResult;
 use App\Services\Server\WebServers\WebServerManager;
@@ -250,6 +252,25 @@ it('keeps the session directory inside the site', function () {
     // being www-data cannot write there, and every login on it breaks with no
     // obvious cause — so the path has to move with the user.
     expect(poolFile())->toContain('session.save_path] = /home/siteowner/shop/.panel/sessions');
+});
+
+it('hands the site its sessions directory and never the .panel above it', function () {
+    fakePhpServer();
+    $this->actingAs($this->admin)->postJson(phpUrl('/isolate'));
+
+    $ran = collect(PoolFake::$ran);
+
+    // `.panel` is root's: everything else root writes for this site lives
+    // there. This was `chown -R` on the parent of `sessions`, which handed
+    // `.panel` to the site user on every PHP site, and a link the user
+    // planted in it then redirected root's writes (reproduced live
+    // 2026-09-29: enabling Basic Auth wrote and chowned a file outside the
+    // site).
+    expect($ran->contains(fn (string $c) => str_contains($c, 'chown -R') && str_contains($c, '/home/siteowner/shop/.panel')))->toBeFalse()
+        ->and($ran)->toContain('chown -h siteowner:siteowner /home/siteowner/shop/.panel/sessions')
+        // And the mode by its owner, so a `sessions` that is a link is not
+        // followed by root.
+        ->and($ran)->toContain('runuser -u siteowner -- chmod 0700 /home/siteowner/shop/.panel/sessions');
 });
 
 it('bounds a memory leak with max_requests', function () {
@@ -497,7 +518,8 @@ describe('a version the application itself cannot run on', function () {
      */
     beforeEach(function () {
         // The fixture's `php` type declares no range, so it cannot exercise
-        // one. PrestaShop's ceiling is 8.1.
+        // one. A shop with no recorded release was installed as PrestaShop 8,
+        // whose ceiling is 8.1 — whatever the type now reaches by installing 9.
         $this->application->forceFill(['site_type' => 'prestashop'])->save();
     });
 
@@ -514,6 +536,39 @@ describe('a version the application itself cannot run on', function () {
         // Installed, and still refused: being on the box is a different
         // question from the application running on it.
         expect($this->application->fresh()->php_version)->toBe('8.4');
+    });
+
+    it('holds a shop to the range of the release it was given', function () {
+        // Installed as 9.x, so 8.3 is inside its own range even though it is
+        // above PrestaShop 8's.
+        $this->application->forceFill(['settings' => ['php_range' => ['min' => '8.1', 'max' => '8.5']]])->save();
+        fakePhpServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['php_version' => '8.3'])
+            ->assertOk();
+
+        expect($this->application->fresh()->php_version)->toBe('8.3');
+    });
+
+    it('does not let the API rewrite the recorded range', function () {
+        fakePhpServer();
+
+        // A client that could write this could move a PrestaShop 8 shop onto
+        // the PHP it dies on.
+        $this->actingAs($this->admin)
+            ->putJson("/api/applications/{$this->application->id}", [
+                'settings' => ['php_range' => ['min' => '7.2', 'max' => '8.5'], 'shop_name' => 'Renamed'],
+            ]);
+
+        // The request itself went through — only the recorded key was dropped.
+        expect($this->application->fresh()->settings)
+            ->toMatchArray(['shop_name' => 'Renamed'])
+            ->not->toHaveKey('php_range');
+
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['php_version' => '8.3'])
+            ->assertStatus(422);
     });
 
     it('accepts a version inside the range', function () {
@@ -1042,5 +1097,78 @@ describe('adopting an existing open_basedir', function () {
 
         expect(app(PoolManager::class)->adoptOpenBasedir($this->application, $settings)['adopted'])->toBeFalse()
             ->and($settings->fresh()->open_basedir_paths)->toBe('/mnt/mine');
+    });
+});
+
+describe('a site that does not serve PHP', function () {
+    /**
+     * A git site's rendering type is chosen by the user at create, so unlike
+     * every other site type its row can disagree with its type's serving
+     * profile — {@see GitSiteType} has to
+     * answer `php`, which is the default for a repository with no rendering
+     * type. The row is the user's actual choice.
+     */
+    function staticGitSite(): Application
+    {
+        $application = Application::forceCreate([
+            'system_user_id' => test()->application->system_user_id,
+            'name' => 'Docs',
+            'slug' => 'docs',
+            'domain' => 'docs.test',
+            'site_type' => 'git',
+            'serving_profile' => 'static',
+            'status' => 'active',
+            'web_root' => '/',
+            // A static site never had one, which is exactly why isolating it
+            // would have reached for the server default instead.
+            'php_version' => null,
+        ]);
+
+        test()->application = $application;
+
+        return $application;
+    }
+
+    it('has no PHP screen at all', function () {
+        staticGitSite();
+
+        // 404, not 403: the screen does not exist for this site, which is a
+        // different statement from "you may not open it". The admin here
+        // holds every permission there is.
+        $this->actingAs($this->admin)->getJson(phpUrl())->assertNotFound();
+        $this->actingAs($this->admin)->putJson(phpUrl(), ['memory_limit' => '512M'])->assertNotFound();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertNotFound();
+    });
+
+    it('is refused a pool by the isolator itself', function () {
+        fakePhpServer();
+
+        $result = app(PoolIsolator::class)->isolate(staticGitSite());
+
+        expect($result['ok'])->toBeFalse()
+            ->and($result['reason'])->toBe('not_php_site')
+            // Nothing was written and nothing was reloaded. A pool file here
+            // would have been named for the *server's* default version and a
+            // reload touches every real PHP site on the box.
+            ->and(PoolFake::$files)->toBe([])
+            ->and(PoolFake::$ran)->toBe([]);
+    });
+
+    it('leaves a Node site alone too', function () {
+        $application = staticGitSite();
+        $application->forceFill(['serving_profile' => 'node'])->save();
+
+        $this->actingAs($this->admin)->getJson(phpUrl())->assertNotFound();
+    });
+
+    it('does not touch a site that really does serve PHP', function () {
+        // The negative control. Narrowing this by one profile must not take
+        // the screen away from the sites it was built for.
+        fakePhpServer();
+
+        $this->actingAs($this->admin)->getJson(phpUrl())->assertOk();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+
+        expect($this->application->fresh()->isolated_at)->not->toBeNull();
     });
 });

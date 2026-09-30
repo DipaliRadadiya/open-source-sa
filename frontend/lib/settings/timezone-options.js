@@ -34,3 +34,34 @@ export function timezoneOptionsWith(groups, value) {
   if (!value || options.some((option) => option.value === value)) return options;
   return [{ value, label: value }, ...options];
 }
+
+// Linked names from tzdata's `backward` file that `timedatectl` lists and PHP's
+// `DateTimeZone::listIdentifiers()` does not. Every `Etc/*` zone and every
+// one-word zone but UTC are in the same set, so they are matched by rule below.
+const PHP_UNLISTED = new Set([
+  "Africa/Timbuktu", "America/Atka", "America/Coral_Harbour", "America/Ensenada",
+  "America/Montreal", "America/Nipigon", "America/Pangnirtung", "America/Porto_Acre",
+  "America/Rainy_River", "America/Santa_Isabel", "America/Shiprock", "America/Thunder_Bay",
+  "America/Virgin", "America/Yellowknife", "Asia/Choibalsan", "Asia/Chongqing", "Asia/Harbin",
+  "Asia/Istanbul", "Asia/Kashgar", "Asia/Tel_Aviv", "Atlantic/Jan_Mayen", "Australia/Canberra",
+  "Australia/Currie", "Australia/Yancowinna", "Europe/Belfast", "Europe/Nicosia",
+  "Europe/Tiraspol", "Pacific/Johnston", "Pacific/Samoa", "Pacific/Yap",
+]);
+
+function phpAccepts(zone) {
+  if (zone === "UTC") return true;
+  if (!zone.includes("/") || zone.startsWith("Etc/")) return false;
+  return !PHP_UNLISTED.has(zone);
+}
+
+/**
+ * The list for a site's `date.timezone`, which the API validates against PHP's
+ * own list rather than the server's. `Etc/UTC` is the visible case: it read as
+ * a second "UTC" and failed to save while the other one worked.
+ */
+export function phpTimezoneOptionsWith(groups, value) {
+  const accepted = Array.isArray(groups)
+    ? groups.map((group) => ({ ...group, zones: (group?.zones ?? []).filter((zone) => phpAccepts(zone.value)) }))
+    : groups;
+  return timezoneOptionsWith(accepted, value);
+}

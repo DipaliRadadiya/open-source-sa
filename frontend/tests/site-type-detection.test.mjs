@@ -217,7 +217,7 @@ test("applying re-reads the route rather than patching a field", () => {
   // The type decides which screens a site has — WordPress adds Staging, Clone
   // and Magic Login — so the sidebar changes. A local patch would leave the
   // rail claiming the old set.
-  assert.match(dialogCode, /router\.refresh\(\)/);
+  assert.match(dialogCode, /await refreshAndWait\(\);\s*toast\.success/);
   assert.doesNotMatch(dialogCode, /setApplication|mutate\(/);
 });
 

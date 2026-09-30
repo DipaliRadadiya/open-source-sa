@@ -24,5 +24,6 @@ return [
     ],
     'redis' => [
         'password_applying' => 'Se está aplicando la contraseña de Redis. Vuelva a cargar en un momento para confirmar.',
+        'policy_evicts_panel_queue' => 'El panel guarda sus tareas en cola en este Redis. Una política allkeys puede expulsar en silencio una tarea pendiente cuando Redis se llena, por lo que no se permite aquí. Use noeviction o una política volatile.',
     ],
 ];

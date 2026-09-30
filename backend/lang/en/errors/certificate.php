@@ -6,6 +6,11 @@ return [
     'force_https_without_certificate' => 'HTTPS cannot be forced without an active certificate — the site would stop responding.',
     'not_pem' => 'This does not look like a PEM file. It should begin with -----BEGIN.',
     'key_mismatch' => 'The private key does not match the certificate.',
+    'not_certificate' => 'This is not a certificate. Paste the certificate (-----BEGIN CERTIFICATE-----) here and the private key in its own field.',
+    'domain_not_covered' => 'This certificate does not cover any domain on this site (:domains).',
+    'expired' => 'This certificate has already expired.',
+    'not_yet_valid' => 'This certificate is not valid yet.',
+    'invalid_chain' => 'The chain must contain only certificates (-----BEGIN CERTIFICATE----- blocks).',
 
     // Why the reachability dry run said no, per domain. The dry run does
     // exactly what Let's Encrypt is about to do, so each of these is a

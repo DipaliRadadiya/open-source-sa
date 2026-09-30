@@ -243,6 +243,7 @@ export function RegistriesCard({ initialRegistries, canManage }) {
 
           {editing !== null ? (
             <form
+              noValidate
               className="mb-6 grid gap-4 rounded-md border p-4 sm:grid-cols-2"
               onSubmit={submit}
             >

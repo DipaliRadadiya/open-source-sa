@@ -128,6 +128,7 @@ export function DestinationFormFields({
           preset={preset}
           disabled={disabled}
           endpointHint={endpointHint}
+          existing={existing}
           t={t}
         />
       ))}
@@ -184,9 +185,13 @@ export function DestinationFormFields({
  * means adding a dictionary key — there is no per-provider branch here to
  * forget to update.
  */
-function ConfigField({ definition, form, preset, disabled, endpointHint, t }) {
+function ConfigField({ definition, form, preset, disabled, endpointHint, existing = false, t }) {
   const { name, kind, mono, placeholder, warnWhenOff, hintsEndpoint } = definition;
-  const required = isRequired(definition, preset);
+  // An existing S3 destination is edited without knowing which service it is,
+  // so its endpoint and region follow the shared rule (one or the other) in
+  // `editStorageDestinationSchema` rather than any one preset's.
+  const sharedS3Rule = existing && providerForPreset(preset) === "s3" && (name === "endpoint" || name === "region");
+  const required = !sharedS3Rule && isRequired(definition, preset);
   const help = t.has(`help.${name}`) ? t(`help.${name}`) : null;
   // A translated placeholder when the field has one, falling back to the
   // literal on the definition (the port defaults, which are numbers and the

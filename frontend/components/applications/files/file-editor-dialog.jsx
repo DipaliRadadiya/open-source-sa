@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { FileCode2, Loader2, History, Download, TriangleAlert } from "lucide-react";
@@ -47,6 +48,10 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
   const t = useTranslations("applications.files");
   const tc = useTranslations("common");
   const router = useRouter();
+  const { refreshAndWait } = useRefresh();
+  // The row that opened the editor, captured before focus moves into it.
+  const [opener] = useState(() => (typeof document === "undefined" ? null : document.activeElement));
+  const saved = useRef(false);
   // Mounted fresh per file (see files-panel.jsx), so these start at the
   // "about to load" state directly rather than being reset by an effect.
   const tooLarge = file.size > EDITOR_MAX_BYTES;
@@ -153,9 +158,10 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
     setSaveError(null);
     try {
       await saveFileContent(appId, file.path, contents);
+      await refreshAndWait();
       toast.success(t("editor.saved"));
+      saved.current = true;
       onOpenChange?.(false);
-      router.refresh();
     } catch (error) {
       // Shown in the dialog, not as a toast. The dialog stays open holding
       // work that is not on disk yet, so the reason has to stay on screen for
@@ -201,6 +207,14 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
           which is the thing this is displacing. */}
       <DialogContent
         className="grid-rows-[auto_minmax(0,1fr)_auto] h-[85vh] sm:max-w-6xl"
+        // After a save, focus still goes back to the file's row but without the
+        // ring: typing in the editor makes the browser treat the returned focus
+        // as keyboard focus, and the row looked selected.
+        onCloseAutoFocus={(event) => {
+          if (!saved.current) return;
+          event.preventDefault();
+          opener?.focus?.({ preventScroll: true, focusVisible: false });
+        }}
         onKeyDown={(event) => {
           if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
             event.preventDefault();

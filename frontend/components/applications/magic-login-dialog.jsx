@@ -4,8 +4,7 @@ import { toast } from "sonner";
 import { KeyRound, Loader2, User } from "lucide-react";
 import { createMagicLogin } from "@/lib/api/magic-login";
 import { apiMessage } from "@/lib/api/error-message";
-import { submitMagicLogin } from "@/lib/applications/magic-login-window";
-import { openBlankTab, paintPlaceholder, discardTab } from "@/lib/browser/new-tab";
+import { launchMagicLogin } from "@/components/applications/use-magic-login";
 import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/ui/form-modal";
 
@@ -26,27 +25,14 @@ export function MagicLoginDialog({ appId, admins, open, onOpenChange }) {
   const [pendingId, setPendingId] = useState(null);
 
   async function signIn(admin) {
-    // Synchronously, while this is still the click — see openBlankTab. The old
-    // version minted the token first and opened afterwards, by which point the
-    // gesture was spent and the browser was entitled to block the tab.
-    const tab = openBlankTab();
-    if (!tab) {
-      toast.error(t("popupBlocked"));
-      return;
-    }
-
-    // The same holding page the one-administrator path paints. This route is
-    // one request rather than two, so the gap is shorter — but a white tab for
-    // a second and a half still reads as nothing happening.
-    paintPlaceholder(tab, t("redirecting"), t("action"));
-
+    // The chosen row's button carries the wait; the tab opens only once the
+    // login URL is ready, straight onto WordPress.
     setPendingId(admin.id);
     try {
       const session = await createMagicLogin(appId, admin.id);
-      submitMagicLogin(tab, session);
+      launchMagicLogin(session, t);
       onOpenChange?.(false);
     } catch (e) {
-      discardTab(tab);
       toast.error(apiMessage(e, t("failed")));
     } finally {
       setPendingId(null);
@@ -91,7 +77,7 @@ export function MagicLoginDialog({ appId, admins, open, onOpenChange }) {
                 onClick={() => signIn(admin)}
               >
                 {pendingId === admin.id && <Loader2 className="size-4 animate-spin" />}
-                {t("signIn")}
+                {pendingId === admin.id ? t("redirecting") : t("signIn")}
               </Button>
             </li>
           ))}

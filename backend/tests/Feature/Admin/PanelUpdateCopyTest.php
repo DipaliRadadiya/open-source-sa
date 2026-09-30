@@ -128,3 +128,33 @@ it('says nothing rather than a key for an unknown current step', function () {
     // generic "working" line the frontend already falls back to.
     expect($payload['current_step_title'])->toBeNull();
 });
+
+it('has both database-restore clauses in every locale', function () {
+    foreach (locales() as $locale) {
+        expect(Lang::has('panel_update.reason_db_restored', $locale))->toBeTrue($locale.' is missing reason_db_restored')
+            ->and(Lang::has('panel_update.reason_db_not_restored', $locale))->toBeTrue($locale.' is missing reason_db_not_restored');
+    }
+});
+
+it('says whether the rollback put the database back', function (string $suffix, string $clause) {
+    $this->seed(PermissionSeeder::class);
+    $admin = User::factory()->admin()->create();
+
+    $run = PanelUpdate::create([
+        'status' => PanelUpdateStatus::Failed,
+        'reason' => 'migrate:'.$suffix,
+        'rolled_back' => true,
+    ]);
+
+    $payload = PanelUpdateResource::make($run)->toArray(
+        tap(request(), fn ($request) => $request->setUserResolver(fn () => $admin)),
+    );
+
+    expect($payload['reason_title'])
+        ->toContain(__('panel_update.reasons.migrate'))
+        ->toContain(__($clause))
+        ->not->toContain('panel_update.');
+})->with([
+    'restored' => ['db_restored', 'panel_update.reason_db_restored'],
+    'not restored' => ['db_not_restored', 'panel_update.reason_db_not_restored'],
+]);
