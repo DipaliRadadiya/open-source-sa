@@ -25,6 +25,8 @@ return [
         'nocodb' => ['title' => 'NocoDB', 'tagline' => 'Interface de folha de cálculo para uma base de dados — funciona com o seu próprio PostgreSQL'],
         'metabase' => ['title' => 'Metabase', 'tagline' => 'Painéis e análises sobre os seus dados — funciona com o seu próprio PostgreSQL'],
         'wikijs' => ['title' => 'Wiki.js', 'tagline' => 'Wiki de documentação — funciona com o seu próprio PostgreSQL'],
+        'grafana' => ['title' => 'Grafana', 'tagline' => 'Painéis e alertas sobre as suas métricas — a palavra-passe de administrador é gerada por site'],
+        'bookstack' => ['title' => 'BookStack', 'tagline' => 'Documentação em estantes, livros e páginas — funciona com a sua própria MariaDB'],
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'Criador de blogs e sites'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'Faça a gestão das suas bases de dados no navegador'],
         'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => 'Monitorização de disponibilidade e páginas de estado'],

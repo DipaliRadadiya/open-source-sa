@@ -30,6 +30,8 @@ return [
         'nocodb' => ['title' => 'NocoDB', 'tagline' => 'Spreadsheet interface for a database — runs with its own PostgreSQL'],
         'metabase' => ['title' => 'Metabase', 'tagline' => 'Dashboards and questions over your data — runs with its own PostgreSQL'],
         'wikijs' => ['title' => 'Wiki.js', 'tagline' => 'Documentation wiki — runs with its own PostgreSQL'],
+        'grafana' => ['title' => 'Grafana', 'tagline' => 'Dashboards and alerts over your metrics — the admin password is generated per site'],
+        'bookstack' => ['title' => 'BookStack', 'tagline' => 'Documentation in shelves, books and pages — runs with its own MariaDB'],
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'Blog and website builder'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'Manage your databases in the browser'],
         'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => 'Uptime monitoring and status pages'],

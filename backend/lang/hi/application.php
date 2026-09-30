@@ -25,6 +25,8 @@ return [
         'nocodb' => ['title' => 'NocoDB', 'tagline' => 'डेटाबेस के लिए स्प्रेडशीट इंटरफ़ेस — अपने PostgreSQL के साथ चलता है'],
         'metabase' => ['title' => 'Metabase', 'tagline' => 'आपके डेटा पर डैशबोर्ड और सवाल — अपने PostgreSQL के साथ चलता है'],
         'wikijs' => ['title' => 'Wiki.js', 'tagline' => 'दस्तावेज़ीकरण विकी — अपने PostgreSQL के साथ चलता है'],
+        'grafana' => ['title' => 'Grafana', 'tagline' => 'आपके मेट्रिक्स पर डैशबोर्ड और अलर्ट — एडमिन पासवर्ड हर साइट के लिए बनाया जाता है'],
+        'bookstack' => ['title' => 'BookStack', 'tagline' => 'शेल्फ़, किताबों और पेजों में दस्तावेज़ीकरण — अपने MariaDB के साथ चलता है'],
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'ब्लॉग और वेबसाइट बिल्डर'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'ब्राउज़र में अपने डेटाबेस प्रबंधित करें'],
         'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => 'अपटाइम निगरानी और स्टेटस पेज'],

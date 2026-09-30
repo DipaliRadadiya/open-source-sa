@@ -25,6 +25,8 @@ return [
         'nocodb' => ['title' => 'NocoDB', 'tagline' => 'データベースをスプレッドシートとして操作 — 専用の PostgreSQL 付きで動作'],
         'metabase' => ['title' => 'Metabase', 'tagline' => 'データのダッシュボードと分析 — 専用の PostgreSQL 付きで動作'],
         'wikijs' => ['title' => 'Wiki.js', 'tagline' => 'ドキュメント Wiki — 専用の PostgreSQL 付きで動作'],
+        'grafana' => ['title' => 'Grafana', 'tagline' => 'メトリクスのダッシュボードとアラート — 管理者パスワードはサイトごとに生成されます'],
+        'bookstack' => ['title' => 'BookStack', 'tagline' => '棚・本・ページで整理するドキュメント — 専用の MariaDB とともに動作します'],
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'ブログ・ウェブサイト作成'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'ブラウザーからデータベースを管理'],
         'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => '稼働監視とステータスページ'],

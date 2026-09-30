@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\Applications\Types\AkauntingSiteType;
+use App\Services\Applications\Types\BookStackSiteType;
 use App\Services\Applications\Types\CraftCmsSiteType;
 use App\Services\Applications\Types\DockerSiteType;
 use App\Services\Applications\Types\ForgejoSiteType;
@@ -9,6 +10,7 @@ use App\Services\Applications\Types\GhostSiteType;
 use App\Services\Applications\Types\GiteaSiteType;
 use App\Services\Applications\Types\GitSiteType;
 use App\Services\Applications\Types\GlanceSiteType;
+use App\Services\Applications\Types\GrafanaSiteType;
 use App\Services\Applications\Types\HomepageSiteType;
 use App\Services\Applications\Types\ItToolsSiteType;
 use App\Services\Applications\Types\JoomlaSiteType;
@@ -1414,6 +1416,14 @@ return [
             'driver' => DockerAppInstaller::class,
         ],
 
+        'grafana' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'bookstack' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
         'mattermost' => [
             'driver' => DockerAppInstaller::class,
         ],
@@ -1665,6 +1675,26 @@ return [
             'db_image' => env('DOCKER_APP_MATOMO_DB_IMAGE', 'mariadb:10.11'),
         ],
 
+        'grafana' => [
+            // The 13.2 line rather than `latest`, for the reason this whole list
+            // is versioned: `latest` moves a running site onto a new major the day
+            // upstream tags one, and because the rendered compose is stored per
+            // site that only ever reaches NEW sites. 13.2 tracks its own patches.
+            'image' => env('DOCKER_APP_GRAFANA_IMAGE', 'grafana/grafana:13.2'),
+        ],
+
+        'bookstack' => [
+            // BookStack versions by year.month and publishes no major line, so
+            // `26.09` is the closest thing to a patch-tracking tag — the same
+            // trade as `5-alpine` for Ghost. `latest` would carry a running site
+            // across feature releases.
+            'image' => env('DOCKER_APP_BOOKSTACK_IMAGE', 'lscr.io/linuxserver/bookstack:26.09'),
+            // 11.4 is the current MariaDB LTS, supported to 2029 and comfortably
+            // above BookStack's 10.6 floor. Matomo pins 10.11 because Matomo's own
+            // documentation does; there is no such constraint here.
+            'db_image' => env('DOCKER_APP_BOOKSTACK_DB_IMAGE', 'mariadb:11.4'),
+        ],
+
         'mattermost' => [
             'image' => env('DOCKER_APP_MATTERMOST_IMAGE', 'mattermost/mattermost-team-edition:release-10'),
             'db_image' => env('DOCKER_APP_MATTERMOST_DB_IMAGE', 'postgres:16-alpine'),
@@ -1751,6 +1781,8 @@ return [
         MattermostSiteType::class,
         MetabaseSiteType::class,
         WikiJsSiteType::class,
+        GrafanaSiteType::class,
+        BookStackSiteType::class,
         WordPressSiteType::class,
         NextcloudSiteType::class,
         JoomlaSiteType::class,

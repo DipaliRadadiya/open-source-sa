@@ -81,6 +81,26 @@ function installDockerApp(Application $application): Application
     return $application->fresh();
 }
 
+/**
+ * Did the stored secret actually reach the rendered file?
+ *
+ * Verbatim for every app but one. BookStack's `APP_KEY` is a Laravel application
+ * key, which has a format: `base64:` followed by 32 base64-encoded bytes. The
+ * generator produces a 32-character string — 32 bytes — and the template encodes
+ * it, because passing it raw makes BookStack exit at boot complaining about an
+ * unsupported cipher.
+ *
+ * So the property is "the value the panel stored is the value the app receives",
+ * and for one app the transport is base64. Checked as an alternative rather than
+ * loosened to a substring match, which would have passed for a truncated or
+ * re-generated key too.
+ */
+function secretReachedFile(string $compose, string $secret): bool
+{
+    return str_contains($compose, $secret)
+        || str_contains($compose, 'base64:'.base64_encode($secret));
+}
+
 dataset('docker apps', [
     'ghost' => ['ghost', 2368, ['content', 'db']],
     'nocodb' => ['nocodb', 8080, ['data', 'db']],
@@ -99,6 +119,11 @@ dataset('docker apps', [
     // because it is a file somebody edits. See the starter-files tests below.
     'glance' => ['glance', 8080, []],
     'homepage' => ['homepage', 3000, ['config']],
+    // Grafana is one container, but not from the shared template: its admin
+    // password is a generated SECRET, and that template renders `$environment`
+    // only. See GrafanaSiteType::composeTemplate().
+    'grafana' => ['grafana', 3000, ['data']],
+    'bookstack' => ['bookstack', 80, ['config', 'db']],
     // Strapi was the intended second app and publishes NO official image —
     // `strapi/strapi` and `strapi/base` are both gone from Docker Hub, and
     // upstream's own guidance is to build your own from a `create-strapi-app`
@@ -208,8 +233,10 @@ it('generates a different secret for every site', function (string $type, int $p
             ->and(strlen($a))->toBeGreaterThanOrEqual(24)
             ->and($a)->not->toBe($b, "{$key} is the same on two sites")
             // And it actually reached the file — a stored secret the template
-            // never interpolates is a credential nothing uses.
-            ->and($first->compose)->toContain($a);
+            // never interpolates is a credential nothing uses. See
+            // `secretReachedFile()` for the one app that encodes on the way in.
+            ->and(secretReachedFile((string) $first->compose, $a))
+            ->toBeTrue("{$key} was stored but never reached the compose file");
     }
 })->with('docker apps');
 
@@ -333,8 +360,9 @@ it('keeps the same secrets when the url changes', function (string $type, int $p
 
     expect($after->docker_secrets)->toBe($before);
 
-    foreach ($before as $value) {
-        expect($after->compose)->toContain($value);
+    foreach ($before as $key => $value) {
+        expect(secretReachedFile((string) $after->compose, $value))
+            ->toBeTrue("{$key} stopped reaching the compose file when the url moved");
     }
 
     // And the url really did move — for the apps that have one. An app whose URL
@@ -540,4 +568,95 @@ it('tells Homepage which host it is served on', function () {
 
     expect(Yaml::parse((string) $application->compose)['services']['app']['environment'])
         ->toHaveKey('HOMEPAGE_ALLOWED_HOSTS', $application->domain);
+});
+
+/*
+ * Grafana and BookStack, and the two things about them that the shared property
+ * tests above cannot see.
+ */
+
+it('never leaves Grafana on admin/admin', function () {
+    // Grafana's documented quickstart is admin/admin with a change-me prompt on
+    // first login. On a public URL that is a race between the owner and everyone
+    // else, so the panel sets a password per site — and `GF_SECURITY_ADMIN_PASSWORD`
+    // is read on every boot, so this value IS the password rather than a seed.
+    $application = installDockerApp(dockerAppSite('grafana', 20101));
+
+    $parsed = Yaml::parse((string) $application->compose);
+    $environment = $parsed['services']['app']['environment'];
+
+    $secret = $application->docker_secrets['GF_SECURITY_ADMIN_PASSWORD'];
+
+    expect($environment['GF_SECURITY_ADMIN_PASSWORD'])->toBe($secret)
+        ->and($secret)->not->toBe('admin')
+        ->and(strlen($secret))->toBeGreaterThanOrEqual(24)
+        // And the account it belongs to is named, so the Credentials panel and the
+        // login form agree without the reader having to know Grafana's defaults.
+        ->and($environment['GF_SECURITY_ADMIN_USER'])->toBe('admin');
+});
+
+it('does not quietly make every Grafana dashboard public', function () {
+    // Anonymous access would turn "install Grafana" into "publish my metrics",
+    // and the reporting toggles phone home. Neither is a choice to make silently
+    // on somebody's behalf.
+    $application = installDockerApp(dockerAppSite('grafana', 20101));
+    $environment = Yaml::parse((string) $application->compose)['services']['app']['environment'];
+
+    expect($environment['GF_AUTH_ANONYMOUS_ENABLED'])->toBe('false')
+        ->and($environment['GF_ANALYTICS_REPORTING_ENABLED'])->toBe('false');
+});
+
+it('gives BookStack a key Laravel will actually accept', function () {
+    // The trap. `APP_KEY` must be `base64:` plus exactly 32 base64-encoded bytes;
+    // passed raw, BookStack exits at boot complaining about an unsupported cipher
+    // — a message that says nothing about the key being the problem.
+    $application = installDockerApp(dockerAppSite('bookstack', 20101));
+    $environment = Yaml::parse((string) $application->compose)['services']['app']['environment'];
+
+    $key = $environment['APP_KEY'];
+
+    expect($key)->toStartWith('base64:');
+
+    $decoded = base64_decode(substr($key, strlen('base64:')), true);
+
+    // 32 BYTES after decoding, which is what the cipher requires — asserted on
+    // the decoded length rather than the string's, because a 32-character
+    // base64 string decodes to 24 bytes and would look right.
+    expect($decoded)->not->toBeFalse()
+        ->and(strlen($decoded))->toBe(32)
+        ->and($decoded)->toBe($application->docker_secrets['APP_KEY']);
+});
+
+it('does not mount the database volume into the BookStack container', function () {
+    // Caught while writing the template: `$mounts` holds every volume the type
+    // declares, so looping it in a multi-service file hands MariaDB's data
+    // directory to the application as well. The single-container template can
+    // loop it because there is only one service to give them to.
+    $application = installDockerApp(dockerAppSite('bookstack', 20101));
+    $parsed = Yaml::parse((string) $application->compose);
+
+    expect($parsed['services']['app']['volumes'])->toBe(['sv-app-'.$application->id.'_config:/config'])
+        ->and($parsed['services']['db']['volumes'])->toBe(['sv-app-'.$application->id.'_db:/var/lib/mysql']);
+});
+
+it('tells BookStack its url, which it refuses to start without', function () {
+    $application = installDockerApp(dockerAppSite('bookstack', 20101));
+    $environment = Yaml::parse((string) $application->compose)['services']['app']['environment'];
+
+    expect($environment['APP_URL'])->toStartWith('https://')
+        // The database host is the compose service name, not localhost — the two
+        // containers share a network and nothing else.
+        ->and($environment['DB_HOST'])->toBe('db');
+});
+
+it('pins both images to a line rather than to latest', function () {
+    // `latest` moves a running site onto a new major the day upstream tags one,
+    // and because the rendered compose is stored per site that only ever reaches
+    // NEW sites — so the old ones silently diverge from the card's promise.
+    foreach (['grafana', 'bookstack'] as $app) {
+        $image = (string) config("server.docker_apps.{$app}.image");
+
+        expect($image)->not->toEndWith(':latest')
+            ->and($image)->toContain(':');
+    }
 });
