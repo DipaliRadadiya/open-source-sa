@@ -522,3 +522,27 @@ test("Page frame a11y: one main landmark, named navigation, readable group label
 test("Success green is dark enough to read on its own tint (Krishna OK, 30 Sep)", () => {
   assert.match(read("app/globals.css"), /--success: oklch\(0\.52 0\.14 150\);/);
 });
+
+test("Stat card helper line wraps instead of cutting off, and keeps numbers with their units", () => {
+  const src = read("components/ui/stat-card.jsx");
+  assert.doesNotMatch(src, /min-w-0 truncate text-xs tabular-nums/);
+  assert.match(src, /\{keepUnits\(sub\)\}/);
+  assert.match(src, /replace\(\/\(\\d\)\\s\+\(\?=\[A-Za-z%\]\)\/g, "\$1\\u00A0"\)/);
+});
+
+test("Firewall full pass: named filters, readable policy pill, even quick-add tiles", () => {
+  assert.match(read("components/data-table/filter-select.jsx"), /<SelectTrigger className=\{className\} aria-label=\{label\}>/);
+  const rules = read("components/firewall/rules-card.jsx");
+  for (const k of ["stateLabel", "actionLabel", "originLabel", "sortLabel"]) assert.match(rules, new RegExp(`label=\\{t\\("rules\\.filters\\.${k}"\\)\\}`), k);
+  assert.match(read("components/firewall/firewall-status-card.jsx"), /<span className="font-medium text-foreground">\{value\}<\/span>/);
+  const quick = read("components/firewall/quick-add-card.jsx");
+  assert.match(quick, /<ReasonTooltip reason=\{reason\} className="flex">/);
+  assert.match(quick, /"group flex w-full items-start/);
+  for (const l of locales) { const f = JSON.parse(read(`messages/${l}.json`)).firewall.rules.filters; assert.ok(f.stateLabel && f.actionLabel && f.originLabel && f.sortLabel, l); }
+});
+
+test("Red and grey tokens are dark enough for AA on their tints (Krishna OK, 30 Sep)", () => {
+  const css = read("app/globals.css");
+  assert.match(css, /--destructive: oklch\(0\.54 0\.22 27\.3\);/);
+  assert.match(css, /--muted-foreground: oklch\(0\.53 0\.012 264\);/);
+});

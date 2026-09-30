@@ -321,6 +321,7 @@ export function RulesCard({
           <FacetSelect
             paramKey="enabled"
             allLabel={t("rules.filters.anyEnabled")}
+            label={t("rules.filters.stateLabel")}
             options={[
               { value: "1", label: t("rules.filters.enabled") },
               { value: "0", label: t("rules.filters.disabled") },
@@ -330,6 +331,7 @@ export function RulesCard({
           <FacetSelect
             paramKey="action"
             allLabel={t("rules.filters.anyAction")}
+            label={t("rules.filters.actionLabel")}
             options={[
               { value: "allow", label: t("rules.allow") },
               { value: "deny", label: t("rules.deny") },
@@ -339,6 +341,7 @@ export function RulesCard({
           <FacetSelect
             paramKey="origin"
             allLabel={t("rules.filters.anyOrigin")}
+            label={t("rules.filters.originLabel")}
             options={[
               { value: "user", label: t("rules.filters.user") },
               { value: "default", label: t("rules.filters.default") },
@@ -349,6 +352,7 @@ export function RulesCard({
           <FacetSelect
             paramKey="sort"
             allLabel={t("rules.filters.newest")}
+            label={t("rules.filters.sortLabel")}
             options={[
               { value: "port_from", label: t("rules.filters.portAsc") },
               { value: "-port_from", label: t("rules.filters.portDesc") },

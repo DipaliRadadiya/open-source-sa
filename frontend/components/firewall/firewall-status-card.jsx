@@ -227,16 +227,16 @@ export function FirewallStatusCard({ enabled, reference = null, policy, ruleCoun
 /**
  * One direction and its default, coloured by what that default actually means.
  *
- * The label is dimmed with opacity rather than `text-muted-foreground`, so it
- * stays a shade of the badge's own colour instead of dropping to grey inside a
- * tinted pill.
+ * The words are in the text colour, the tint and icon carry the tone: in
+ * the badge's own colour "Incoming" read 2.64:1 and "Blocked" 4.21:1 on the
+ * green tint.
  */
 function PolicyBadge({ icon: Icon, label, value, tone }) {
   return (
     <Badge variant={tone} className="gap-1.5 font-normal">
       <Icon className="size-3 opacity-70" />
-      <span className="opacity-70">{label}</span>
-      <span className="font-medium">{value}</span>
+      <span className="text-foreground/75">{label}</span>
+      <span className="font-medium text-foreground">{value}</span>
     </Badge>
   );
 }

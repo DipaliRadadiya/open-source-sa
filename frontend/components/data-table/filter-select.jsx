@@ -17,10 +17,12 @@ import {
  * `value` is "all" when nothing is selected — the same sentinel `FacetSelect`
  * uses, so the two cannot disagree about what "no filter" means.
  */
-export function FilterSelect({ value, onChange, allLabel, options, className }) {
+// `label` names the control for screen readers: the trigger only shows the
+// current choice ("Any state"), which says nothing about what it filters.
+export function FilterSelect({ value, onChange, allLabel, options, className, label }) {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className={className}>
+      <SelectTrigger className={className} aria-label={label}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

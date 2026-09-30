@@ -1662,7 +1662,11 @@
         "portAsc": "Port: low to high",
         "portDesc": "Port: high to low",
         "actionAsc": "Action: A–Z",
-        "protocolAsc": "Protocol: A–Z"
+        "protocolAsc": "Protocol: A–Z",
+        "stateLabel": "State",
+        "actionLabel": "Action",
+        "originLabel": "Added by",
+        "sortLabel": "Sort by"
       }
     },
     "add": {

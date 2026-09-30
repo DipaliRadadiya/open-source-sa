@@ -1662,7 +1662,11 @@
         "portAsc": "पोर्ट: कम से ज़्यादा",
         "portDesc": "पोर्ट: ज़्यादा से कम",
         "actionAsc": "क्रिया: A–Z",
-        "protocolAsc": "प्रोटोकॉल: A–Z"
+        "protocolAsc": "प्रोटोकॉल: A–Z",
+        "stateLabel": "स्थिति",
+        "actionLabel": "क्रिया",
+        "originLabel": "किसने जोड़ा",
+        "sortLabel": "इसके अनुसार क्रमबद्ध करें"
       }
     },
     "add": {

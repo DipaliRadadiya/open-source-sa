@@ -1662,7 +1662,11 @@
         "portAsc": "ポート: 昇順",
         "portDesc": "ポート: 降順",
         "actionAsc": "アクション: A–Z",
-        "protocolAsc": "プロトコル: A–Z"
+        "protocolAsc": "プロトコル: A–Z",
+        "stateLabel": "状態",
+        "actionLabel": "操作",
+        "originLabel": "追加元",
+        "sortLabel": "並べ替え"
       }
     },
     "add": {

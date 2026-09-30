@@ -1662,7 +1662,11 @@
         "portAsc": "Porta: menor para maior",
         "portDesc": "Porta: maior para menor",
         "actionAsc": "Ação: A–Z",
-        "protocolAsc": "Protocolo: A–Z"
+        "protocolAsc": "Protocolo: A–Z",
+        "stateLabel": "Estado",
+        "actionLabel": "Ação",
+        "originLabel": "Adicionada por",
+        "sortLabel": "Ordenar por"
       }
     },
     "add": {

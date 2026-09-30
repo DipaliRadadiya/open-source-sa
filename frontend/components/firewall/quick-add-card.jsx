@@ -314,13 +314,16 @@ function Tile({
   onClick,
 }) {
   return (
-    <ReasonTooltip reason={reason}>
+    // "flex" on the wrapper and w-full on the tile: a locked tile's tooltip
+    // wrapper was inline-flex, so it shrank to its text while the unlocked
+    // tiles filled the column — three widths in one grid on a phone.
+    <ReasonTooltip reason={reason} className="flex">
       <button
         type="button"
         disabled={disabled}
         onClick={onClick}
         className={cn(
-          "group flex items-start gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors",
+          "group flex w-full items-start gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors",
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
           done
             ? // Green at rest, red under the cursor — the tile that added the

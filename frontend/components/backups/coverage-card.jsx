@@ -222,6 +222,7 @@ export function CoverageCard({
             value={type}
             onChange={setType}
             allLabel={t("filters.anyType")}
+            label={t("columns.type")}
             options={BACKUP_TYPES.map((value) => ({ value, label: t(`types.${value}`) }))}
             className="w-full sm:w-48"
           />

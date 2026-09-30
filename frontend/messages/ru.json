@@ -1662,7 +1662,11 @@
         "portAsc": "Порт: по возрастанию",
         "portDesc": "Порт: по убыванию",
         "actionAsc": "Действие: А–Я",
-        "protocolAsc": "Протокол: А–Я"
+        "protocolAsc": "Протокол: А–Я",
+        "stateLabel": "Состояние",
+        "actionLabel": "Действие",
+        "originLabel": "Кем добавлено",
+        "sortLabel": "Сортировка"
       }
     },
     "add": {

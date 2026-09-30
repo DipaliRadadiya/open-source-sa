@@ -1662,7 +1662,11 @@
         "portAsc": "Port : croissant",
         "portDesc": "Port : décroissant",
         "actionAsc": "Action : A–Z",
-        "protocolAsc": "Protocole : A–Z"
+        "protocolAsc": "Protocole : A–Z",
+        "stateLabel": "État",
+        "actionLabel": "Action",
+        "originLabel": "Ajoutée par",
+        "sortLabel": "Trier par"
       }
     },
     "add": {
