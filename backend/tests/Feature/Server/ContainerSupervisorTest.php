@@ -901,3 +901,99 @@ it('writes no cpus line into the override for a pasted site with no quota', func
 
     expect((string) overrideWritten())->not->toContain('cpus');
 });
+
+it('writes no override for a file the panel rendered itself', function () {
+    // 🔴 The bug this guard exists for, found on a real box. `contents()` takes the
+    // pasted-file branch whenever `compose` is non-empty — and a ONE-CLICK app's
+    // compose column holds a file the panel rendered from that app's own template,
+    // which already carries per-service limits. So the override applied the app's
+    // ceiling to every service in it, and a Ghost installed at 640m gave its MySQL
+    // 640m while the file on disk plainly said 512m. `docker inspect` was the only
+    // place the two disagreed.
+    //
+    // The override is for a HAND-WRITTEN file, which has no limits of its own.
+    // A generated one needs nothing added and must not have its numbers replaced.
+    //
+    // Keyed on `docker_apps` — the same registry the installer reads the image
+    // from — so a new one-click cannot be added without being covered: a type
+    // missing from that list has no image either.
+    $pasted = <<<'YAML'
+    services:
+      ghost:
+        image: ghost:5-alpine
+        mem_limit: 640m
+        cpus: 0.5
+        ports:
+          - "127.0.0.1:20001:2368"
+      db:
+        image: mysql:8.4
+        mem_limit: 512m
+    YAML;
+
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        'compose_validate' => fn () => new ServerOpsResult(
+            ok: true, reference: 'r', result: processResult(json_encode([
+                'services' => [
+                    'ghost' => ['image' => 'ghost:5-alpine', 'ports' => [['published' => '20001', 'target' => 2368, 'host_ip' => '127.0.0.1']]],
+                    'db' => ['image' => 'mysql:8.4'],
+                ],
+            ])), answered: true,
+        ),
+        'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+    ], $ran, $written);
+
+    overrideWritten('');
+
+    $application = containerApp();
+    $application->forceFill([
+        // A registered one-click type, not the generic `docker` card.
+        'site_type' => 'ghost',
+        'compose' => $pasted,
+        'memory_limit' => '640m',
+        'cpu_limit' => '0.5',
+    ])->save();
+
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
+        ->apply($application, '/home/shop/shop/public_html');
+
+    expect(overrideWritten())->toBe('');
+
+    // And `-f compose.panel.yml` is not passed to `up` either, which is the half
+    // that would fail loudly rather than quietly: the file is not on disk.
+    expect(collect($ran)->contains(
+        fn (array $entry): bool => in_array('compose.panel.yml', array_map(
+            fn ($a): string => basename((string) $a), $entry['command']
+        ), true),
+    ))->toBeFalse();
+});
+
+it('still writes an override for a genuinely hand-written file', function () {
+    // The other side of the same guard. A `docker` site's compose column IS the
+    // user's, carries no limits, and losing the override would mean a site with no
+    // memory ceiling and unbounded logs — the two failures the generated template
+    // has a paragraph each about.
+    $pasted = "services:\n  web:\n    image: nginx:1.27-alpine\n    ports:\n      - \"127.0.0.1:20001:80\"\n";
+
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        'compose_validate' => fn () => new ServerOpsResult(
+            ok: true, reference: 'r', result: processResult(json_encode([
+                'services' => ['web' => ['image' => 'nginx:1.27-alpine', 'ports' => [['published' => '20001', 'target' => 80, 'host_ip' => '127.0.0.1']]]],
+            ])), answered: true,
+        ),
+        'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+    ], $ran, $written);
+
+    overrideWritten('');
+
+    $application = containerApp();
+    $application->forceFill(['compose' => $pasted, 'memory_limit' => '256m'])->save();
+
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
+        ->apply($application, '/home/shop/shop/public_html');
+
+    expect(overrideWritten())->toContain('mem_limit: 256m');
+});

@@ -865,3 +865,30 @@ it('renders a fractional cpu quota that parses as a number', function () {
 
     expect($parsed['services']['metabase']['cpus'])->toBe(0.5);
 });
+
+it('does not let the app ceiling become the database ceiling', function () {
+    // 🔴 Found on the box, and the file on disk was innocent. Ghost installed at
+    // 640m wrote `mem_limit: 640m` on the app and `512m` on its MySQL — correct —
+    // and `docker inspect` reported 640m on BOTH.
+    //
+    // The cause is that a one-click's `compose` column holds a file the PANEL
+    // rendered, so `ContainerSupervisor::contents()` takes its pasted-file branch
+    // and writes an override for every service in it. That override exists to give
+    // a HAND-WRITTEN file the limits it has none of; applied to the panel's own
+    // template it replaces per-service numbers that were already right.
+    //
+    // This had been true of memory since one-click apps shipped. It is asserted
+    // here rather than in the supervisor's own tests because only a real app
+    // template has two services with deliberately different ceilings.
+    $application = dockerAppSite('ghost');
+    $application->forceFill(['memory_limit' => '640m', 'cpu_limit' => '0.5'])->save();
+
+    $parsed = Yaml::parse((string) installDockerApp($application)->compose);
+
+    expect($parsed['services']['ghost']['mem_limit'])->toBe('640m')
+        ->and($parsed['services']['ghost']['cpus'])->toBe(0.5)
+        // The database keeps its own ceiling and takes no quota — which is what
+        // the create form's help text promises.
+        ->and($parsed['services']['db']['mem_limit'])->toBe((string) config('server.docker.default_db_memory_limit'))
+        ->and($parsed['services']['db'])->not->toHaveKey('cpus');
+});

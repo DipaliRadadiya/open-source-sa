@@ -382,6 +382,24 @@ class ContainerSupervisor
     }
 
     /**
+     * Did the panel write this site's `compose` column itself?
+     *
+     * True for every one-click app, because `DockerAppInstaller` renders that
+     * app's template into the column — so the file is the panel's own work and
+     * already carries everything the override exists to add.
+     *
+     * Asked of `docker_apps`, the same registry the installer reads the image
+     * from, rather than by matching the site type against a class. A type that is
+     * in that list is by definition one whose compose file the panel generates,
+     * and the two cannot drift: a new one-click has to be registered there or it
+     * has no image.
+     */
+    private function panelRendered(Application $application): bool
+    {
+        return config("server.docker_apps.{$application->site_type}") !== null;
+    }
+
+    /**
      * Write the panel's own compose override, and return its path.
      *
      * **Why an override file rather than editing the user's YAML.** A pasted compose
@@ -408,6 +426,21 @@ class ContainerSupervisor
     private function writeOverride(Application $application, string $documentRoot, array $context): ?string
     {
         if ($this->pastedServices === []) {
+            return null;
+        }
+
+        // **A one-click app's file is not a pasted file.** `contents()` takes the
+        // pasted branch whenever the `compose` column is non-empty — and for a
+        // one-click that column holds a file the PANEL rendered from the app's own
+        // template, which already carries per-service limits: the app's ceiling on
+        // the app service, and the database default on the database.
+        //
+        // Overriding it applies the app's numbers to every service, which is how a
+        // Ghost installed at 640m gave its MySQL 640m as well while the file on
+        // disk plainly said 512m. Found on the box by reading `docker inspect`
+        // after trusting the file — the override had been doing this to memory
+        // since one-click apps shipped, and the CPU quota would have joined it.
+        if ($this->panelRendered($application)) {
             return null;
         }
 
