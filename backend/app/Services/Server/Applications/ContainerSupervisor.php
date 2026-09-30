@@ -382,6 +382,32 @@ class ContainerSupervisor
     }
 
     /**
+     * Remove an override that is no longer wanted, and answer null.
+     *
+     * Not passed to `up` once this method is reached, so a leftover file is inert
+     * — but it is a file on disk stating limits the container does not have, in the
+     * site's own directory, where the File Manager shows it and anybody debugging
+     * will read it. The one-click sites created before the guard above existed each
+     * have one saying the database is capped at the app's ceiling, which is exactly
+     * the wrong thing to find while looking for why a database is slow.
+     *
+     * Also covers a site that moves from a pasted file back to a generated one:
+     * that path returned null and left the old override behind too.
+     *
+     * A failed delete is not a provisioning failure. The file is unreferenced
+     * either way, and refusing to bring a site up because a stale file could not be
+     * removed would trade a cosmetic problem for an outage.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    private function discardOverride(string $documentRoot, array $context): ?string
+    {
+        $this->files->delete(rtrim($documentRoot, '/').'/compose.panel.yml', $context);
+
+        return null;
+    }
+
+    /**
      * Did the panel write this site's `compose` column itself?
      *
      * True for every one-click app, because `DockerAppInstaller` renders that
@@ -426,7 +452,7 @@ class ContainerSupervisor
     private function writeOverride(Application $application, string $documentRoot, array $context): ?string
     {
         if ($this->pastedServices === []) {
-            return null;
+            return $this->discardOverride($documentRoot, $context);
         }
 
         // **A one-click app's file is not a pasted file.** `contents()` takes the
@@ -441,7 +467,7 @@ class ContainerSupervisor
         // after trusting the file — the override had been doing this to memory
         // since one-click apps shipped, and the CPU quota would have joined it.
         if ($this->panelRendered($application)) {
-            return null;
+            return $this->discardOverride($documentRoot, $context);
         }
 
         $limit = (string) ($application->memory_limit

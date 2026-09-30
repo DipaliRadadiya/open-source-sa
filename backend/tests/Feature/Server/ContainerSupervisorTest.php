@@ -99,7 +99,31 @@ function containerDeps(array $handlers = [], array &$ran = [], ?string &$written
         return new ServerOpsResult(ok: true, reference: 'r', answered: true);
     });
 
+    // The override is removed when it is not wanted, so a site that never needed
+    // one — or stopped needing one — does not keep a file on disk stating limits
+    // its containers do not have. Recorded, so a test can assert the removal
+    // rather than only the absence of a write.
+    $files->shouldReceive('delete')->andReturnUsing(function (string $path) {
+        if (str_ends_with($path, '/compose.panel.yml')) {
+            overrideDeleted(true);
+        }
+
+        return new ServerOpsResult(ok: true, reference: 'r', answered: true);
+    });
+
     return [$ops, $files];
+}
+
+/** Was the override file removed during a run? */
+function overrideDeleted(?bool $deleted = null): bool
+{
+    static $last = false;
+
+    if ($deleted !== null) {
+        $last = $deleted;
+    }
+
+    return $last;
 }
 
 function processResult(string $stdout): ProcessResult
@@ -945,6 +969,7 @@ it('writes no override for a file the panel rendered itself', function () {
     ], $ran, $written);
 
     overrideWritten('');
+    overrideDeleted(false);
 
     $application = containerApp();
     $application->forceFill([
@@ -958,7 +983,11 @@ it('writes no override for a file the panel rendered itself', function () {
     (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
         ->apply($application, '/home/shop/shop/public_html');
 
-    expect(overrideWritten())->toBe('');
+    expect(overrideWritten())->toBe('')
+        // And the stale one from before this guard existed is taken away, rather
+        // than left in the site's directory saying the database is capped at the
+        // app's ceiling — which is the first thing anybody debugging would read.
+        ->and(overrideDeleted())->toBeTrue();
 
     // And `-f compose.panel.yml` is not passed to `up` either, which is the half
     // that would fail loudly rather than quietly: the file is not on disk.

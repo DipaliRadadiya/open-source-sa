@@ -180,7 +180,13 @@ it('removes the credential after a successful pull', function () {
 
     app(ContainerSupervisor::class)->apply($this->application, '/home/priv/priv.test');
 
-    $removed = collect($ran)->first(fn (array $c): bool => ($c['args'][0] ?? '') === 'rm');
+    // Matched on the DIRECTORY, not on "the first `rm`". The supervisor also
+    // removes a stale `compose.panel.yml` with `rm -f`, and it runs first — so the
+    // loose version of this assertion started reporting that command and failing on
+    // `-rf`. Two unrelated cleanups sharing an argv prefix is a coincidence; the
+    // path is what says which one this is.
+    $removed = collect($ran)->first(fn (array $c): bool => ($c['args'][0] ?? '') === 'rm'
+        && str_contains((string) ($c['args'][2] ?? ''), '/registry-'));
 
     expect($removed)->not->toBeNull()->and($removed['args'])->toContain('-rf');
 });
