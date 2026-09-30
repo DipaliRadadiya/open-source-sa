@@ -99,9 +99,9 @@ server {
     set $waf_block "0";
     set $waf_exception "0";
 @foreach ($waf['exceptions'] as $exception)
-    if ($request_uri ~* "{{ preg_quote($exception, '/') }}") { set $waf_exception "1"; }
-    if ($args ~* "{{ preg_quote($exception, '/') }}") { set $waf_exception "1"; }
-    if ($http_user_agent ~* "{{ preg_quote($exception, '/') }}") { set $waf_exception "1"; }
+    if ($request_uri ~* "{!! $exception !!}") { set $waf_exception "1"; }
+    if ($args ~* "{!! $exception !!}") { set $waf_exception "1"; }
+    if ($http_user_agent ~* "{!! $exception !!}") { set $waf_exception "1"; }
 @endforeach
 @if (in_array('query_string', $waf['categories'], true))
     if ($bad_querystring_ng) { set $waf_block "1"; }
@@ -122,8 +122,8 @@ server {
     if ($not_allowed_method_ng) { set $waf_block "1"; }
 @endif
 @foreach ($waf['customRules'] as $rule)
-    if ($request_uri ~* "{{ preg_quote($rule, '/') }}") { set $waf_block "1"; }
-    if ($args ~* "{{ preg_quote($rule, '/') }}") { set $waf_block "1"; }
+    if ($request_uri ~* "{!! $rule !!}") { set $waf_block "1"; }
+    if ($args ~* "{!! $rule !!}") { set $waf_block "1"; }
 @endforeach
     set $waf_decision "${waf_block}${waf_exception}";
 @if ($waf['mode'] === 'enforce')

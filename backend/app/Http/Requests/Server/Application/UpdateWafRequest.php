@@ -29,9 +29,11 @@ class UpdateWafRequest extends FormRequest
             // 50 entries is already more than anyone has needed in the
             // documented real-world exception cases.
             'exceptions' => ['array', 'max:50'],
-            'exceptions.*' => ['string', 'min:1', 'max:255'],
+            // No control characters: a newline cannot be part of a match and
+            // only ever broke the config test (a 500) — refused here instead.
+            'exceptions.*' => ['string', 'min:1', 'max:255', 'not_regex:/[\x00-\x1F\x7F]/'],
             'custom_rules' => ['array', 'max:50'],
-            'custom_rules.*' => ['string', 'min:1', 'max:255'],
+            'custom_rules.*' => ['string', 'min:1', 'max:255', 'not_regex:/[\x00-\x1F\x7F]/'],
         ];
     }
 

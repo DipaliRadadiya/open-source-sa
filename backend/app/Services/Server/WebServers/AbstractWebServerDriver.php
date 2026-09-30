@@ -444,6 +444,20 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     }
 
     /**
+     * A WAF exception or custom rule as a case-insensitive *literal* match,
+     * ready to sit inside a double-quoted regex in this web server's config.
+     *
+     * nginx: `preg_quote` makes it literal; nginx's quoted strings then turn
+     * `\\` into `\` and `\"` into `"`, so a backslash the user typed is
+     * doubled and a quote escaped. Control characters never get here — the
+     * request refuses them.
+     */
+    public function wafPattern(string $value): string
+    {
+        return str_replace(['\\\\', '"'], ['\\\\\\\\', '\\"'], preg_quote($value));
+    }
+
+    /**
      * Null unless the firewall is on and actually has something to check —
      * zero categories and zero custom rules means nothing would ever be
      * blocked, so the template renders no block at all rather than an
@@ -473,8 +487,12 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         return [
             'mode' => $application->waf_mode instanceof WafMode ? $application->waf_mode->value : (string) $application->waf_mode,
             'categories' => $categories,
-            'exceptions' => $exceptions,
-            'customRules' => $customRules,
+            // Escaped here, for this web server's config syntax, and printed
+            // raw by the templates. They went through Blade's `{{ }}`, which
+            // HTML-encodes: `page=1&x` became `page=1&amp;x` in the config and
+            // never matched (found live, 2026-09-30).
+            'exceptions' => array_map(fn (string $value): string => $this->wafPattern($value), $exceptions),
+            'customRules' => array_map(fn (string $value): string => $this->wafPattern($value), $customRules),
             'detectLogPath' => $application->wafDetectLogPath(),
         ];
     }

@@ -42,13 +42,10 @@
          Setting an env var this site never checks below costs nothing. --}}
     Include {{ config('server.waf.apache_setenvif_path') }}
 @foreach ($waf['exceptions'] as $exception)
-    SetEnvIfNoCase Request_URI "{{ $exception }}" waf_exception
-    SetEnvIfNoCase Query_String "{{ $exception }}" waf_exception
-    SetEnvIfNoCase User-Agent "{{ $exception }}" waf_exception
+    SetEnvIfExpr "%{REQUEST_URI} =~ m#{!! $exception !!}#i || %{QUERY_STRING} =~ m#{!! $exception !!}#i || %{HTTP_USER_AGENT} =~ m#{!! $exception !!}#i" waf_exception
 @endforeach
 @foreach ($waf['customRules'] as $rule)
-    SetEnvIfNoCase Request_URI "{{ $rule }}" waf_custom
-    SetEnvIfNoCase Query_String "{{ $rule }}" waf_custom
+    SetEnvIfExpr "%{REQUEST_URI} =~ m#{!! $rule !!}#i || %{QUERY_STRING} =~ m#{!! $rule !!}#i" waf_custom
 @endforeach
 @endif
 @if ($botBlock)
