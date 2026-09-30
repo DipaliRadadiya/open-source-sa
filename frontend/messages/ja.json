@@ -5185,7 +5185,7 @@
       "title": "バックアップ",
       "state": {
         "protected": "保護中",
-        "paused": "一時停止中",
+        "paused": "手動のみ",
         "unprotected": "未保護",
         "running": "バックアップ中…"
       },
@@ -5863,7 +5863,7 @@
       "status": {
         "protected": "保護中",
         "failing": "失敗",
-        "paused": "一時停止中",
+        "paused": "手動のみ",
         "unprotected": "なし",
         "unknown": "不明"
       },
@@ -6194,7 +6194,7 @@
           "body": "{schedule} で {destination} に保存されています。"
         },
         "paused": {
-          "title": "バックアップは一時停止中です",
+          "title": "手動バックアップのみ",
           "body": "スケジュールによる実行はありません。「今すぐバックアップ」を押したときだけ実行されます。"
         },
         "unprotected": {

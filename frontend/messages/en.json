@@ -5185,7 +5185,7 @@
       "title": "Backups",
       "state": {
         "protected": "Protected",
-        "paused": "Paused",
+        "paused": "Manual only",
         "unprotected": "Not protected",
         "running": "Backing up…"
       },
@@ -5863,7 +5863,7 @@
       "status": {
         "protected": "Protected",
         "failing": "Failing",
-        "paused": "Paused",
+        "paused": "Manual only",
         "unprotected": "None",
         "unknown": "Unknown"
       },
@@ -6194,7 +6194,7 @@
           "body": "{schedule}, stored on {destination}."
         },
         "paused": {
-          "title": "Backups are paused",
+          "title": "Manual backups only",
           "body": "Nothing runs on a schedule. Backups only happen when you press Back up now."
         },
         "unprotected": {

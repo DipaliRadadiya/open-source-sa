@@ -297,11 +297,13 @@ export function CoverageTable({ rows, options = null, canManage, onSetUp, onBack
       meta: { className: "min-w-52" },
       cell: SiteCell,
     },
-    { accessorKey: "state", header: t("columns.status"), meta: { className: "w-36" }, cell: StatusCell },
-    { id: "type", header: t("columns.type"), meta: { className: "w-44" }, cell: TypeCell },
-    { id: "schedule", header: t("columns.schedule"), meta: { className: "w-32" }, cell: (ctx) => <ScheduleCell {...ctx} options={options} /> },
-    { id: "storage", header: t("columns.storage"), meta: { className: "w-40" }, cell: StorageCell },
-    { id: "runs", header: t("columns.lastRun"), meta: { className: "w-40" }, cell: RunsCell },
+    // Headers may wrap: "TYPE DE SAUVEGARDE" on one line was wider than any
+    // value under it.
+    { accessorKey: "state", header: wrapping(t("columns.status")), meta: { className: "w-32" }, cell: StatusCell },
+    { id: "type", header: wrapping(t("columns.type")), meta: { className: "w-28" }, cell: TypeCell },
+    { id: "schedule", header: wrapping(t("columns.schedule")), meta: { className: "w-32" }, cell: (ctx) => <ScheduleCell {...ctx} options={options} /> },
+    { id: "storage", header: wrapping(t("columns.storage")), meta: { className: "w-36" }, cell: StorageCell },
+    { id: "runs", header: wrapping(t("columns.lastRun")), meta: { className: "w-36" }, cell: RunsCell },
     {
       id: "actions",
       header: () => <span className="sr-only">{t("columns.actions")}</span>,
@@ -327,7 +329,14 @@ export function CoverageTable({ rows, options = null, canManage, onSetUp, onBack
   );
 }
 
+const wrapping = (label) => function WrappingHeader() {
+  return <span className="whitespace-normal">{label}</span>;
+};
+
 function NotSetUp() {
   const t = useTranslations("backups.coverage");
-  return <span className="text-sm text-muted-foreground/80">{t("notSetUpLine")}</span>;
+  // Wraps: unwrapped, this sentence set the width of the four columns it
+  // spans and pushed the row's Run button off-screen at 1280 (by 112px in
+  // English, 300px in French).
+  return <span className="text-sm whitespace-normal text-muted-foreground/80">{t("notSetUpLine")}</span>;
 }

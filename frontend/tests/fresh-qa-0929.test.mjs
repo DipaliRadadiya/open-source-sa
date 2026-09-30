@@ -470,3 +470,22 @@ test("Databases QA: honest states and quieter dialogs", () => {
     assert.ok(d.detail.engineDown.includes("{engine}") && d.tables.unavailable.includes("{engine}") && d.monitor.health.unknownBody.includes("{engine}") && d.created.userTitle.includes("{username}") && d.monitor.loadFailed, l);
   }
 });
+
+test("Manual-only backups are labelled Manual only, not Paused (Krishna, 29 Sep)", () => {
+  for (const l of locales) {
+    const m = JSON.parse(read(`messages/${l}.json`));
+    const short = m.backups.form.automaticOffShort;
+    assert.equal(m.backups.coverage.status.paused, short, l);
+    assert.equal(m.applications.backups.state.paused, short, l);
+  }
+  assert.equal(JSON.parse(read("messages/en.json")).backups.application.state.paused.title, "Manual backups only");
+});
+
+test("Backups overview: the table only shows when the widest locale fits, and its spanning line wraps", () => {
+  const card = read("components/backups/coverage-card.jsx");
+  assert.match(card, /<div className="@container">\s*<div className="@min-\[1180px\]:hidden">\s*<CoverageCards/);
+  assert.match(card, /<div className="hidden @min-\[1180px\]:block">\s*<CoverageTable/);
+  const table = read("components/backups/coverage-table.jsx");
+  assert.match(table, /whitespace-normal text-muted-foreground\/80">\{t\("notSetUpLine"\)\}/);
+  assert.match(table, /header: wrapping\(t\("columns\.type"\)\)/);
+});

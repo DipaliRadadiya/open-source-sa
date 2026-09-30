@@ -5185,7 +5185,7 @@
       "title": "Backups",
       "state": {
         "protected": "Geschützt",
-        "paused": "Pausiert",
+        "paused": "Nur manuell",
         "unprotected": "Nicht geschützt",
         "running": "Wird gesichert…"
       },
@@ -5863,7 +5863,7 @@
       "status": {
         "protected": "Geschützt",
         "failing": "Scheitert",
-        "paused": "Pausiert",
+        "paused": "Nur manuell",
         "unprotected": "Keine",
         "unknown": "Unbekannt"
       },
@@ -6194,7 +6194,7 @@
           "body": "{schedule}, gespeichert auf {destination}."
         },
         "paused": {
-          "title": "Die Backups sind pausiert",
+          "title": "Nur manuelle Backups",
           "body": "Es läuft nichts nach Zeitplan. Backups entstehen nur, wenn Sie „Jetzt sichern“ drücken."
         },
         "unprotected": {

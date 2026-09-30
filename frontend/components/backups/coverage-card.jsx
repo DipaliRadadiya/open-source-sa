@@ -270,11 +270,17 @@ export function CoverageCard({
                 {t("timesShownIn", { timezone: scheduleTimezone })}
               </p>
             ) : null}
-            <div className="lg:hidden">
-              <CoverageCards {...listProps} />
-            </div>
-            <div className="hidden lg:block">
-              <CoverageTable {...listProps} />
+            {/* By the room the table actually has, not the viewport: it needs
+                1,035px in English and 1,179px in French (measured), and at 1280
+                beside the sidebar it got 958 — the Run button sat off-screen
+                behind a sideways scroll. Cards until the widest locale fits. */}
+            <div className="@container">
+              <div className="@min-[1180px]:hidden">
+                <CoverageCards {...listProps} />
+              </div>
+              <div className="hidden @min-[1180px]:block">
+                <CoverageTable {...listProps} />
+              </div>
             </div>
           </>
         )}

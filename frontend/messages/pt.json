@@ -5185,7 +5185,7 @@
       "title": "Backups",
       "state": {
         "protected": "Protegido",
-        "paused": "Em pausa",
+        "paused": "Apenas manual",
         "unprotected": "Não protegido",
         "running": "Fazendo backup…"
       },
@@ -5863,7 +5863,7 @@
       "status": {
         "protected": "Protegido",
         "failing": "Com falha",
-        "paused": "Em pausa",
+        "paused": "Apenas manual",
         "unprotected": "Nenhum",
         "unknown": "Desconhecido"
       },
@@ -6194,7 +6194,7 @@
           "body": "{schedule}, armazenado em {destination}."
         },
         "paused": {
-          "title": "Backups pausados",
+          "title": "Apenas backups manuais",
           "body": "Nada é executado por agendamento. Os backups só ocorrem quando você clica em Fazer backup agora."
         },
         "unprotected": {

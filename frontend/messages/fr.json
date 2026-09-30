@@ -5185,7 +5185,7 @@
       "title": "Sauvegardes",
       "state": {
         "protected": "Protégé",
-        "paused": "En pause",
+        "paused": "Manuel uniquement",
         "unprotected": "Non protégé",
         "running": "Sauvegarde en cours…"
       },
@@ -5863,7 +5863,7 @@
       "status": {
         "protected": "Protégé",
         "failing": "En échec",
-        "paused": "En pause",
+        "paused": "Manuel uniquement",
         "unprotected": "Aucune",
         "unknown": "Inconnu"
       },
@@ -6194,7 +6194,7 @@
           "body": "{schedule}, stocké sur {destination}."
         },
         "paused": {
-          "title": "Les sauvegardes sont en pause",
+          "title": "Sauvegardes manuelles uniquement",
           "body": "Rien ne s'exécute selon une planification. Les sauvegardes n'ont lieu que lorsque vous cliquez sur Sauvegarder maintenant."
         },
         "unprotected": {

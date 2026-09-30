@@ -5185,7 +5185,7 @@
       "title": "Copias de seguridad",
       "state": {
         "protected": "Protegido",
-        "paused": "En pausa",
+        "paused": "Solo manual",
         "unprotected": "Sin protección",
         "running": "Copiando…"
       },
@@ -5863,7 +5863,7 @@
       "status": {
         "protected": "Protegido",
         "failing": "Con errores",
-        "paused": "En pausa",
+        "paused": "Solo manual",
         "unprotected": "Ninguna",
         "unknown": "Desconocido"
       },
@@ -6194,7 +6194,7 @@
           "body": "{schedule}, guardadas en {destination}."
         },
         "paused": {
-          "title": "Las copias están en pausa",
+          "title": "Copias solo manuales",
           "body": "No se ejecuta nada de forma programada. Las copias solo se hacen cuando pulsas Copiar ahora."
         },
         "unprotected": {
