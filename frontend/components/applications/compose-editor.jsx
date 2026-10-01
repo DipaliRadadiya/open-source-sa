@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { FileCode2, Loader2, RotateCcw } from "lucide-react";
@@ -49,7 +49,7 @@ export function ComposeEditor({
   initialGenerated,
 }) {
   const t = useTranslations("applications.compose");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
 
   const [contents, setContents] = useState(initialCompose);
   const [saving, setSaving] = useState(false);
@@ -70,13 +70,12 @@ export function ComposeEditor({
     setErrors([]);
     try {
       await saveContainerCompose(application.id, contents);
+      // Before the toast: the image and published port are server-rendered and a
+      // compose save can move either, so a toast first uncovers stale state.
+      await refreshAndWait();
       toast.success(t("saved"));
       setGenerated(false);
       setAcknowledged(false);
-      // The site's image and published port are both server-rendered and a compose
-      // save can move either, so the page has to re-read rather than keep showing
-      // the state it loaded with.
-      router.refresh();
     } catch (error) {
       // A 422 carries either field errors from the validator or one message from a
       // failed apply. Both belong on the page, where the text can be fixed without

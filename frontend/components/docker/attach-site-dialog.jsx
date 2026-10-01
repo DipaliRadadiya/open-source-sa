@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { HardDrive, Loader2, Network } from "lucide-react";
@@ -46,7 +46,7 @@ export function AttachSiteDialog({
   sites = [],
 }) {
   const t = useTranslations("docker.attach");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
 
   const [site, setSite] = useState("");
   const [path, setPath] = useState("");
@@ -82,8 +82,8 @@ export function AttachSiteDialog({
         : { docker_network: name };
 
       await updateContainerSettings(chosen.id, payload);
+      await refreshAndWait();
       toast.success(t("attached", { name, site: chosen.name }));
-      router.refresh();
       onOpenChange(false);
       setSite("");
       setPath("");

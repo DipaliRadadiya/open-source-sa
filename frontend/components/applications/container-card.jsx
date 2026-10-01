@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Box, Network, KeyRound, RefreshCw, Gauge } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { containerSettingsFormSchema } from "@/lib/schemas/docker";
 import { pullContainerImage, updateContainerSettings } from "@/lib/api/docker";
 import { apiMessage } from "@/lib/api/error-message";
@@ -85,7 +85,7 @@ export function ContainerCard({
   className,
 }) {
   const t = useTranslations("applications.container");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [saving, setSaving] = useState(false);
   const [pulling, setPulling] = useState(false);
 
@@ -148,11 +148,11 @@ export function ContainerCard({
             ? null
             : Number(values.registry_id),
       });
+      // Before the toast: the Docker page's "used by" column and this site's own
+      // facts are server-rendered, so a toast first uncovers page-load state.
+      await refreshAndWait();
       toast.success(t("saved"));
       form.reset(values);
-      // The Docker page's "used by" column and this site's own facts are both
-      // server-rendered, so without this they keep showing page-load state.
-      router.refresh();
     } catch (error) {
       if (!handleValidationError(error, form)) {
         toast.error(apiMessage(error, t("failed")));
@@ -208,8 +208,8 @@ export function ContainerCard({
                     setPulling(true);
                     try {
                       await pullContainerImage(application.id);
+                      await refreshAndWait();
                       toast.success(t("pulled"));
-                      router.refresh();
                     } catch (error) {
                       toast.error(apiMessage(error, t("pullFailed")));
                     } finally {

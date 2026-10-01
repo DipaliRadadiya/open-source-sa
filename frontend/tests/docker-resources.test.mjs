@@ -196,8 +196,9 @@ test("the empty network choice is one constant, not three strings", () => {
 
 test("saving the card refreshes the server-rendered siblings", () => {
   // The Docker page's "used by" column and this site's own facts are both
-  // server-rendered. Without a refresh they keep showing page-load state.
-  assert.match(card, /router\.refresh\(\)/);
+  // server-rendered. Without a refresh they keep showing page-load state — and the
+  // refresh has to be awaited BEFORE the toast, or "saved" covers the old state.
+  assert.match(card, /await refreshAndWait\(\);\s*toast\.success\(/);
 });
 
 test("the card says the site restarts before the click, not after", () => {
@@ -302,7 +303,7 @@ test("a volume already mounted is still offered, at another path", () => {
 test("add and remove save immediately and refresh", () => {
   // Each change recreates the container, so batching them into a Save button
   // would hide how many restarts one click is worth.
-  assert.match(volumesList, /router\.refresh\(\)/);
+  assert.match(volumesList, /await refreshAndWait\(\);\s*toast\.success\(/);
   assert.match(volumesList, /updateContainerSettings/);
 });
 

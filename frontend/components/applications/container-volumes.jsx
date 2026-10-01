@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { HardDrive, Plus, X } from "lucide-react";
 import { volumeMountSchema } from "@/lib/schemas/docker";
 import { updateContainerSettings } from "@/lib/api/docker";
@@ -43,7 +43,7 @@ export function ContainerVolumes({
   canManage = false,
 }) {
   const t = useTranslations("applications.container.volumes");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
 
   const mounts = application.volume_mounts ?? [];
   const [pending, setPending] = useState(false);
@@ -56,8 +56,8 @@ export function ContainerVolumes({
     setError(null);
     try {
       await updateContainerSettings(application.id, { volume_mounts: next });
+      await refreshAndWait();
       toast.success(done);
-      router.refresh();
       return true;
     } catch (requestError) {
       // The server's own sentence. It is the only one that can say "that path is

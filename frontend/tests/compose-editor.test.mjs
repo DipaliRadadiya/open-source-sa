@@ -112,5 +112,8 @@ test("validator refusals are shown on the page, not as a toast", () => {
 test("a successful save refreshes the server-rendered facts", () => {
   // A compose save can move the published port and the image, both of which are
   // rendered on the server — without this the card shows page-load state.
-  assert.match(editor, /router\.refresh\(\)/);
+  //
+  // Awaited BEFORE the toast, not after: a toast first shows "saved" over the state
+  // the page was loaded with for as long as the server render takes.
+  assert.match(editor, /await refreshAndWait\(\);\s*toast\.success\(/);
 });

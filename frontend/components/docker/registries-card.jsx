@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -65,7 +65,7 @@ import {
  */
 export function RegistriesCard({ initialRegistries, canManage }) {
   const t = useTranslations("docker.registries");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
 
   const [pending, setPending] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -85,10 +85,10 @@ export function RegistriesCard({ initialRegistries, canManage }) {
     setPending(key);
     try {
       await action();
+      // Before the toast: every sibling on this page is server-rendered, so a toast
+      // first leaves the table showing page-load state.
+      await refreshAndWait();
       toast.success(successMessage);
-      // Every sibling on this page is server-rendered, so without the refresh the
-      // table keeps showing page-load state for as long as the tab is open.
-      router.refresh();
       return true;
     } catch (error) {
       toast.error(apiMessage(error, t("failed")));

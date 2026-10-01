@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Network, HardDrive, Link2, Plus, Trash2, Lock } from "lucide-react";
@@ -41,7 +41,7 @@ export function DockerResourcesPanel({
   canManageSites = false,
 }) {
   const t = useTranslations("docker");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
 
   const [pending, setPending] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -54,8 +54,8 @@ export function DockerResourcesPanel({
     setPending(key);
     try {
       await action();
+      await refreshAndWait();
       toast.success(successMessage);
-      router.refresh();
       return true;
     } catch (error) {
       // The server's own sentence: it names the containers on a busy network
