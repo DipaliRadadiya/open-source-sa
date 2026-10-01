@@ -193,7 +193,7 @@ class DeploymentController extends Controller
             $perManager = (array) config('server.deployments.package_manager_scripts', []);
 
             if (isset($perManager[$application->package_manager])) {
-                return "cd {path}\ngit pull origin {branch}\n".$perManager[$application->package_manager];
+                return "cd {path}\n".$perManager[$application->package_manager];
             }
         }
 

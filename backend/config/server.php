@@ -1182,11 +1182,16 @@ return [
         // point rather than a policy: it is the user's file the moment they
         // open the screen.
         'default_scripts' => [
-            'php' => "cd {path}\ngit pull origin {branch}\n"
+            //
+            // No `git pull`: the panel has fetched and checked out the branch
+            // before the script runs, with the account's credential. The
+            // script runs without it, so a pull there failed on every private
+            // repository (measured 2026-10-01) and did nothing on a public one.
+            'php' => "cd {path}\n"
                 ."if [ -f composer.json ]; then\n    composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader\nfi\n",
-            'node' => "cd {path}\ngit pull origin {branch}\nnpm ci\nnpm run build --if-present\n",
-            'static' => "cd {path}\ngit pull origin {branch}\n",
-            'proxy' => "cd {path}\ngit pull origin {branch}\n",
+            'node' => "cd {path}\nnpm ci\nnpm run build --if-present\n",
+            'static' => "cd {path}\n",
+            'proxy' => "cd {path}\n",
         ],
 
         // Run on a deploy for which the user wrote no script and no build
@@ -1200,7 +1205,7 @@ return [
         // Install + build for each package manager a Node application can
         // record. Used two ways: as-is for the create-form's build_command
         // (the checkout already happened by then), and prefixed with the
-        // `cd`/`git pull` above for the deploy-script default once an
+        // `cd` above for the deploy-script default once an
         // application has a package_manager on record.
         //
         // `--if-present` is npm's own flag (bun matches it); yarn has never

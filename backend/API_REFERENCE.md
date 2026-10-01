@@ -840,6 +840,7 @@ and fall back to `failed_step` + `reference` when it is `null`.
 | `serving_error` | The application started, but answers every request with a 5xx. Usually assets that did not build completely. |
 | `not_answering` | The application started but never answered a request at all. |
 | `composer_platform` | Composer refused to install the dependencies under the PHP version the site is set to — the version, or an extension, does not meet what the project requires. |
+| `script_git_auth` | The deploy script ran a git command (usually `git pull`) that needed a login; the script has none, so it fails on a private repository. The panel already fetches the branch before the script runs — remove the line. Only on the `script` step (since 2026-10-01). |
 | `composer_dependencies_missing` | The project requires Composer packages and none were installed, so there is no `vendor/autoload.php` and every request to the site would fail. Raised at the new `dependencies` step, **before** the site is curled. |
 
 The last two come from the `verify_serving` step, which is the final step of
@@ -1454,9 +1455,9 @@ Newest first.
   "created_at": "28-07-2026 11:00:00", "created_at_human": "3 days ago"
 }], "settings": {
   "branch": "main", "repository": "https://github.com/user/shop",
-  "deploy_script": "cd {path}\ngit pull origin {branch}\nnpm install\nnpm run build",
+  "deploy_script": "cd {path}\nnpm install\nnpm run build",
   "deploy_script_customised": true,
-  "default_deploy_script": "cd {path}\ngit pull origin {branch}\ncomposer install --no-dev",
+  "default_deploy_script": "cd {path}\nif [ -f composer.json ]; then\n    composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader\nfi\n",
   "auto_deploy": false, "webhook_enabled": false,
   "last_commit": "a1b2c3d", "last_deployed_at": "28-07-2026 11:01:30",
   "placeholders": ["{path}", "{branch}", "{domain}", "{php}"]
@@ -1503,6 +1504,12 @@ check would have failed: `composer.json` requires real packages. Since
 deploy. A site with its own script or build command runs only that. The PHP
 `default_deploy_script` now ends with the same install, guarded by
 `if [ -f composer.json ]`.
+
+**No default script runs `git pull`** (since 2026-10-01). The panel has fetched
+and checked out the branch with the connected account before the script runs;
+the script itself has no credential, so a pull there failed on every private
+repository (`script_git_auth`) and did nothing on a public one. Scripts users
+already saved are not changed.
 
 `deploy_script_customised` is `false` for a saved script that is the default
 apart from line endings and trailing whitespace. `steps` lists each stage once
@@ -1556,7 +1563,7 @@ Update branch, deploy script, auto-deploy toggle.
 
 **Request:**
 ```json
-{"branch": "develop", "deploy_script": "cd {path}\ngit pull origin {branch}\nnpm install\nnpm run build", "auto_deploy": true}
+{"branch": "develop", "deploy_script": "cd {path}\nnpm install\nnpm run build", "auto_deploy": true}
 ```
 
 **Response `200`:** `{"settings": {...updated...}}`

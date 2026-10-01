@@ -196,9 +196,28 @@ it('offers a starting script suited to the runtime', function () {
 
     // A starting point, not a policy — it is the user's file the moment they
     // open the screen.
-    expect($response->json('settings.default_deploy_script'))->toContain('git pull')
+    expect($response->json('settings.default_deploy_script'))->toStartWith('cd {path}')
         ->and($response->json('settings.deploy_script_customised'))->toBeFalse();
 });
+
+it('offers no starting script that pulls from git itself', function (array $attributes) {
+    $this->application->update($attributes);
+
+    // The panel has fetched the branch with the account's credential before
+    // the script runs. A pull inside the script has no credential and failed
+    // on every private repository (measured 2026-10-01).
+    $default = $this->actingAs($this->admin)
+        ->getJson("/api/applications/{$this->application->id}/deployments")
+        ->json('settings.default_deploy_script');
+
+    expect($default)->not->toContain('git ');
+})->with([
+    'php' => [['serving_profile' => 'php']],
+    'node' => [['serving_profile' => 'node']],
+    'node with a package manager' => [['serving_profile' => 'node', 'package_manager' => 'pnpm']],
+    'static' => [['serving_profile' => 'static']],
+    'proxy' => [['serving_profile' => 'proxy']],
+]);
 
 it('needs manage to change the script', function () {
     $viewer = User::factory()->create();
