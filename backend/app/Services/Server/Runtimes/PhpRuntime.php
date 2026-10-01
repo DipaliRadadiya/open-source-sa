@@ -8,6 +8,7 @@ use App\Exceptions\Server\Runtime\RuntimeInstallException;
 use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Services\Runtime\InstallFailureClassifier;
 use App\Services\Server\ManagedFile;
+use App\Services\Server\Php\FpmReloadGrace;
 use App\Services\Server\Php\IonCubeLoader;
 use App\Services\Server\Php\PhpVersionManager;
 use App\Services\Server\ServerOps;
@@ -41,6 +42,7 @@ class PhpRuntime implements Runtime
         private InstallFailureClassifier $classifier,
         private IonCubeLoader $ionCube,
         private ManagedFile $files,
+        private FpmReloadGrace $reloadGrace,
     ) {}
 
     public function key(): string
@@ -517,6 +519,10 @@ class PhpRuntime implements Runtime
         }
 
         $this->keepDefault($previousDefault, $version);
+
+        // So the reloads every site change makes on this version finish the
+        // requests in flight instead of answering them 502. Never fatal.
+        $this->reloadGrace->apply($version);
     }
 
     /**

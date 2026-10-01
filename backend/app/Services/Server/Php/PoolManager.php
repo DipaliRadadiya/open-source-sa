@@ -373,7 +373,8 @@ class PoolManager
     public function reload(string $version): ServerOpsResult
     {
         // Reload, never restart: a restart drops every in-flight request on
-        // every site the daemon serves.
+        // every site the daemon serves. A reload does too unless
+        // process_control_timeout lets it wait — see FpmReloadGrace.
         return $this->serverOps->run(
             ['systemctl', 'reload', 'php'.$version.'-fpm'],
             ['feature' => 'php', 'op' => 'pool_reload', 'version' => $version],

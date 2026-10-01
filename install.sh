@@ -1676,9 +1676,24 @@ Restart=on-failure
 WantedBy=multi-user.target
 UNIT
 
+    # Let a reload of the hosted-site master finish the requests it would
+    # otherwise cut off. The panel reloads it on every site created or deleted
+    # and every PHP setting saved, and with process_control_timeout at its
+    # default of 0 each reload answered every in-flight request on every site
+    # with a 502 (measured 2026-10-01). Its own file in pool.d, so the distro's
+    # php-fpm.conf stays untouched; FPM reads [global] from any included file.
+    # The panel writes the same file for each PHP version installed later --
+    # FpmReloadGrace, which a test keeps in step with this.
+    cat >"/etc/php/${PHP_VERSION}/fpm/pool.d/00.panel-global.conf" <<'GRACE'
+; Managed by the panel. Lets a reload finish the requests it would otherwise cut off.
+[global]
+process_control_timeout = 30s
+GRACE
+
     # The distro unit is left enabled for hosted-site pools, but the panel no
     # longer rides on it.
     run systemctl enable "php${PHP_VERSION}-fpm"
+    run systemctl restart "php${PHP_VERSION}-fpm"
     run systemctl daemon-reload
     # enable + restart, not enable --now: on a re-run the pool config may have
     # changed and --now would leave the old master running with the old config.
