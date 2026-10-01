@@ -485,3 +485,63 @@ it('refuses to move a site to a PHP that is still installing', function () {
         ->assertStatus(422)
         ->assertJsonValidationErrors(['php_version' => 'still being installed']);
 });
+
+/** Make `$target` the server's default PHP, the way "Make default" does on OpenLiteSpeed. */
+function pointServerDefaultAt(?string $target): void
+{
+    @unlink(test()->link);
+
+    if ($target !== null) {
+        symlink($target, test()->link);
+    }
+
+    config(['server.php_path_link' => test()->link]);
+}
+
+/*
+ * "Make default" on the PHP screen is the default for new sites too
+ * (operator's call, 2026-10-01). It moves the `php` command; new sites used to
+ * start from install.sh's SERVER_DEFAULT_PHP_VERSION regardless.
+ */
+describe('the server default chosen on the PHP screen', function () {
+    beforeEach(function () {
+        installLsphpBuild('8.2');
+        // install.sh's value; the server default below says otherwise.
+        config(['server.default_php_version' => '8.3']);
+        $this->link = $this->lsws.'/php-link';
+    });
+
+    it('is what a new site gets when it names no version', function () {
+        pointServerDefaultAt($this->lsws.'/lsphp82/bin/php');
+
+        createPhpVersionSite(['domain' => 'plain.example.com'])
+            ->assertSuccessful()
+            ->assertJsonPath('application.php_version', '8.2');
+    });
+
+    it('is what the create form preselects', function () {
+        pointServerDefaultAt($this->lsws.'/lsphp82/bin/php');
+
+        $fields = collect(app(SiteTypeManager::class)->catalog())->firstWhere('name', 'php')['fields'];
+
+        expect(collect($fields)->firstWhere('name', 'php_version')['default'] ?? null)->toBe('8.2');
+    });
+
+    it('falls back to the configured version when the server has none the panel recognises', function () {
+        pointServerDefaultAt('/usr/bin/not-a-php-the-panel-installed');
+
+        createPhpVersionSite(['domain' => 'plain.example.com'])
+            ->assertSuccessful()
+            ->assertJsonPath('application.php_version', '8.3');
+    });
+
+    it('never moves a site that already has a version', function () {
+        pointServerDefaultAt($this->lsws.'/lsphp83/bin/php');
+        createPhpVersionSite(['domain' => 'old.example.com'])->assertSuccessful();
+
+        pointServerDefaultAt($this->lsws.'/lsphp82/bin/php');
+        app()->forgetScopedInstances();
+
+        expect(Application::query()->where('domain', 'old.example.com')->value('php_version'))->toBe('8.3');
+    });
+});

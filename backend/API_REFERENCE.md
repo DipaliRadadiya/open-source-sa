@@ -5344,7 +5344,7 @@ though they have no package.
 
 **Response `200`:** `{"php": {"default": "8.3", …}}`
 
-Only the **CLI** default moves. Sites keep whatever version their pool or handler runs — this must never migrate a running site.
+The **CLI** default moves, and (since 2026-10-01) it is also the version **new** sites start on: the create form preselects it and a PHP site created without `php_version` gets it — unless it is outside that site type's PHP range, in which case the newest installed version in range is used. `server.default_php_version` (install.sh's value) is only the fallback for when the server has no default the panel recognises. Existing sites keep whatever version they store — this never migrates a running site.
 
 What runs depends on the stack, because the two register alternatives differently:
 

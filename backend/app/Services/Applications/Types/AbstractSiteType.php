@@ -8,6 +8,7 @@ use App\Contracts\StagingStrategy;
 use App\Models\Application;
 use App\Rules\SupportedPhpVersion;
 use App\Services\Server\Php\PhpVersionManager;
+use App\Services\Server\Php\ServerDefaultPhp;
 
 /**
  * Shared defaults and field helpers, so a concrete site type is mostly just
@@ -182,8 +183,8 @@ abstract class AbstractSiteType implements SiteType
      * value the server will reject is a worse answer than one that opens on
      * the version the site would actually run.
      *
-     * The configured default wins when it is installed, because that is the
-     * version the rest of the panel falls back to for a site that names none.
+     * The server's default wins when it is installed and in range — the version
+     * "Make default" on the PHP screen chose ({@see ServerDefaultPhp}).
      * Otherwise the newest installed one; null when nothing was detected,
      * which leaves the field unset rather than asserting a version.
      *
@@ -201,9 +202,9 @@ abstract class AbstractSiteType implements SiteType
             return null;
         }
 
-        $configured = (string) config('server.default_php_version', '');
+        $default = app(ServerDefaultPhp::class)->version();
 
-        return in_array($configured, $installed, true) ? $configured : $installed[0];
+        return in_array($default, $installed, true) ? $default : $installed[0];
     }
 
     /**

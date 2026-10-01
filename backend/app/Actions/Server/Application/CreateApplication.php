@@ -15,6 +15,7 @@ use App\Services\ActivityLogger;
 use App\Services\Applications\ServingProfile;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Applications\PortAllocator;
+use App\Services\Server\Php\ServerDefaultPhp;
 use App\Services\Server\Runtimes\NodeRuntime;
 use App\Services\Server\SystemUsers\SystemUsernameGenerator;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -104,7 +105,7 @@ class CreateApplication
                     // render: the API had no version to show, and a change to
                     // the default moved the site to another PHP unasked.
                     'php_version' => $servingProfile === 'php'
-                        ? (($data['php_version'] ?? null) ?: ((string) config('server.default_php_version') ?: null))
+                        ? (($data['php_version'] ?? null) ?: app(ServerDefaultPhp::class)->version())
                         : ($data['php_version'] ?? null),
                     'node_version' => $data['node_version'] ?? null,
                     // Allocated when the app needs a process and the user did not pick

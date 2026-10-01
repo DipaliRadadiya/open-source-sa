@@ -17,6 +17,7 @@ use App\Services\Server\Applications\EngineVersionSupport;
 use App\Services\Server\Applications\InstallerManager;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Php\PhpVersionManager;
+use App\Services\Server\Php\ServerDefaultPhp;
 use App\Services\Server\Runtimes\NodeRuntime;
 use Closure;
 use Illuminate\Contracts\Validation\Validator;
@@ -313,7 +314,7 @@ class StoreApplicationRequest extends FormRequest
             // `nullable` and provisioning resolves a blank one to the server
             // default, so without this the range is enforced on every value
             // except the one the user gets by touching nothing.
-            (string) config('server.default_php_version', '') ?: null,
+            app(ServerDefaultPhp::class)->version(),
         );
     }
 
