@@ -130,12 +130,16 @@ class SavePhpSettingsRequest extends FormRequest
             // allowed because it is ini; a `[section]` header is not, because
             // that would silently start a second pool inside this file.
             'additional_directives' => ['sometimes', 'nullable', 'string', 'max:4000', 'not_regex:/^\s*\[/m',
-                // PHP settings only, one per line — see AdditionalDirectives.
+                // PHP settings the panel does not set itself, one per line —
+                // see AdditionalDirectives.
                 function (string $attribute, mixed $value, Closure $fail): void {
-                    $line = app(AdditionalDirectives::class)->firstInvalidLine((string) $value);
+                    $refusal = app(AdditionalDirectives::class)->refusal((string) $value);
 
-                    if ($line !== null) {
-                        $fail(__('php_settings.errors.directive_invalid', ['line' => mb_strimwidth($line, 0, 80, '…')]));
+                    if ($refusal !== null) {
+                        $fail(__('php_settings.errors.'.$refusal['reason'], [
+                            'line' => mb_strimwidth($refusal['line'], 0, 80, '…'),
+                            'name' => $refusal['name'],
+                        ]));
                     }
                 },
             ],

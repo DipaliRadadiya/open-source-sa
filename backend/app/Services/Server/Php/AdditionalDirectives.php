@@ -14,10 +14,30 @@ namespace App\Services\Server\Php;
  *
  * Anything that is not a PHP setting line is refused when saved, and skipped
  * — never written — on every other path (2026-09-30).
+ *
+ * Also refused when saved (2026-10-01), still written if already saved:
+ * - a setting the panel writes itself. PHP-FPM keeps the first of a repeated
+ *   php_admin_value, and the panel's lines come first, so on nginx/Apache the
+ *   owner's line was silently ignored while on OpenLiteSpeed it won. One rule
+ *   for every stack: set it on its own field.
+ * - loading an extension, which has its own screen.
  */
 class AdditionalDirectives
 {
     private const FLAG_VALUES = ['on', 'off', 'true', 'false', 'yes', 'no', '0', '1'];
+
+    /**
+     * Every setting the pool template and SitePhpIni write. Keep in step with
+     * both — a test renders each and compares.
+     */
+    public const PANEL_MANAGED = [
+        'memory_limit', 'upload_max_filesize', 'post_max_size', 'max_execution_time',
+        'max_input_time', 'max_input_vars', 'allow_url_fopen', 'session.save_path',
+        'session.gc_maxlifetime', 'error_log', 'log_errors', 'date.timezone',
+        'auto_prepend_file', 'open_basedir', 'disable_functions',
+    ];
+
+    public const EXTENSION_LOADERS = ['extension', 'zend_extension'];
 
     /**
      * @return array<int, array{name: string, value: string, flag: bool, admin: bool}>
@@ -45,6 +65,33 @@ class AdditionalDirectives
         foreach ($this->lines($text) as $line) {
             if ($this->parseLine($line) === null) {
                 return $line;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Why this text cannot be saved, or null: the first refused line, the
+     * translation key saying why, and the setting's name.
+     *
+     * @return array{reason: string, line: string, name: string}|null
+     */
+    public function refusal(string $text): ?array
+    {
+        foreach ($this->lines($text) as $line) {
+            $setting = $this->parseLine($line);
+            $name = strtolower($setting['name'] ?? '');
+
+            $reason = match (true) {
+                $setting === null => 'directive_invalid',
+                in_array($name, self::PANEL_MANAGED, true) => 'directive_managed',
+                in_array($name, self::EXTENSION_LOADERS, true) => 'directive_extension',
+                default => null,
+            };
+
+            if ($reason !== null) {
+                return ['reason' => $reason, 'line' => $line, 'name' => $setting['name'] ?? ''];
             }
         }
 

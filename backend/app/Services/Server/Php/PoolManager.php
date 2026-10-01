@@ -508,17 +508,23 @@ class PoolManager
             return null;
         }
 
-        // The last match wins, the way FPM itself resolves a repeated key —
-        // taking the first would report the panel's line while the server
-        // obeys someone else's. `php_value` as well as `php_admin_value`:
-        // both set it, and a config the panel did not write may use either.
+        // Resolved the way FPM resolves it. Within one kind the first line
+        // wins: fpm_conf prepends each to its list, so the first written is
+        // the last applied (measured 2026-09-30: of 256M then 300M, 256M
+        // applied). And php_admin_value beats php_value wherever it sits, as
+        // the admin list is applied after the other. Taking the last line, as
+        // this did until 2026-10-01, could report a value nothing enforces.
+        // `php_value` too: a config the panel did not write may use it.
         preg_match_all(
-            '/^\s*php_(?:admin_)?value\s*\[\s*open_basedir\s*\]\s*=\s*(.+?)\s*$/mi',
+            '/^\s*php_(admin_)?value\s*\[\s*open_basedir\s*\]\s*=\s*(.+?)\s*$/mi',
             $contents,
             $matches,
+            PREG_SET_ORDER,
         );
 
-        $value = $matches[1] === [] ? null : trim((string) end($matches[1]));
+        $admin = array_values(array_filter($matches, fn (array $m): bool => $m[1] !== ''));
+        $winner = $admin[0] ?? $matches[0] ?? null;
+        $value = $winner === null ? null : trim($winner[2]);
 
         return ($value === null || $value === '') ? null : $value;
     }

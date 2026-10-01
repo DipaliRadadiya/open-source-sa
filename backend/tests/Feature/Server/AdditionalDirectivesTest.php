@@ -42,3 +42,22 @@ it('accepts quoted values and ignores comments and blank lines', function () {
     expect($directives->firstInvalidLine("; comment\n# also a comment\n\nsession.name = \"MYSESS[1]\"\n"))->toBeNull()
         ->and($directives->forIni('session.name = "MYSESS[1]"'))->toBe('session.name = "MYSESS[1]"');
 });
+
+it('names why a line cannot be saved', function (string $text, ?string $reason, ?string $name) {
+    $refusal = app(AdditionalDirectives::class)->refusal($text);
+
+    expect($refusal['reason'] ?? null)->toBe($reason)
+        ->and($refusal['name'] ?? null)->toBe($name);
+})->with([
+    'unmanaged setting' => ["display_errors = Off\n; memory_limit = 1G", null, null],
+    'panel-managed' => ['display_errors = Off'."\n".'php_admin_value[post_max_size] = 1G', 'directive_managed', 'post_max_size'],
+    'extension' => ['extension = redis.so', 'directive_extension', 'extension'],
+    'zend_extension' => ['zend_extension=opcache', 'directive_extension', 'zend_extension'],
+    'not a setting first' => ["nonsense\nmemory_limit = 1G", 'directive_invalid', ''],
+]);
+
+it('still writes a panel-managed line saved before it was refused', function () {
+    // Refused when saved, not dropped from existing sites: what was applied
+    // yesterday is applied today.
+    expect(app(AdditionalDirectives::class)->forIni('memory_limit = 1G'))->toBe('memory_limit = 1G');
+});
