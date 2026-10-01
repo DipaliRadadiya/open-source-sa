@@ -663,3 +663,26 @@ it('falls back to the engine default for an engine with no overrides', function 
 
     expect(DockerDatabase::find($id)->dataPath())->toBe('/var/lib/mysql');
 });
+
+it('pings MariaDB with the tool MariaDB 12 actually ships', function () {
+    // 🔴 MariaDB 12 REMOVED `mysqladmin`. It was renamed `mariadb-admin` in 11 with
+    // the old name kept as a symlink, and 12.3 dropped the symlink — verified on the
+    // box: only `/usr/bin/mariadb-admin` exists. So the healthcheck could never
+    // pass, the readiness wait ran its full course, and the create rolled back with
+    // `not_ready`. 12.3 is the newest MariaDB in the catalog and therefore what the
+    // one-click tile offers.
+    //
+    // One line serves both engines because of the `||`: MySQL has no
+    // `mariadb-admin`, so the shell answers 127 and falls through.
+    foreach ([['mariadb', '12.3'], ['mysql', '8.4']] as [$engine, $version]) {
+        [, $id] = createDb(['name' => 'ping'.$engine, 'engine' => $engine, 'version' => $version]);
+
+        $test = Yaml::parse(app(DatabaseContainerManager::class)->contents(DockerDatabase::find($id)))['services']['db']['healthcheck']['test'][1];
+
+        expect($test)->toContain('mariadb-admin ping')
+            ->and($test)->toContain('|| mysqladmin ping')
+            // `mariadb-admin` has to come FIRST: on MariaDB 12 the fallback is the
+            // one that does not exist, so the order is what makes it work.
+            ->and(strpos($test, 'mariadb-admin'))->toBeLessThan(strpos($test, '|| mysqladmin'));
+    }
+});
