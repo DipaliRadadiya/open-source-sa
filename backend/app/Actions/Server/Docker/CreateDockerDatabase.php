@@ -7,6 +7,7 @@ use App\Services\ActivityLogger;
 use App\Services\Server\Applications\PortAllocator;
 use App\Services\Server\Docker\DatabaseContainerFailedException;
 use App\Services\Server\Docker\DatabaseContainerManager;
+use App\Services\Server\Docker\DockerResources;
 use Illuminate\Support\Str;
 
 /**
@@ -29,6 +30,7 @@ class CreateDockerDatabase
         private ActivityLogger $activityLogger,
         private PortAllocator $ports,
         private DatabaseContainerManager $containers,
+        private DockerResources $docker,
     ) {}
 
     /**
@@ -59,6 +61,26 @@ class CreateDockerDatabase
             // is a set of connection details that connect to nothing, and it
             // holds a port the allocator would keep reserving.
             $this->containers->remove($database);
+
+            // 🔴 **And the volume**, which this did not do. Two failed creates on
+            // the test box — Postgres 18 before its mount point was fixed, and
+            // MongoDB 8 on a kernel it refuses to run on — left `sv-db-8_data` and
+            // `sv-db-10_data` behind with nothing pointing at them. The API was
+            // meanwhile answering "Nothing was left behind — no row, no container
+            // and no port held", which was a true list and the wrong one.
+            //
+            // Safe to remove unconditionally HERE, unlike on delete, where it is an
+            // opt-in: this volume was created seconds ago by this call, for a
+            // database that never started, so there is nothing in it that could be
+            // wanted. The opt-in on delete exists because that volume may hold
+            // years of data.
+            //
+            // After `remove()`, never before: `docker volume rm` refuses a volume a
+            // container still references, and the container is what `compose down`
+            // has just taken away. The site path learned the same ordering on a
+            // real box.
+            $this->docker->removeVolume($database->volume());
+
             $database->delete();
 
             throw $e;

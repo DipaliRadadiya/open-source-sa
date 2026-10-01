@@ -472,6 +472,17 @@ it('rolls back a database that never becomes ready', function () {
     $response->assertStatus(422)->assertJsonPath('step', 'not_ready');
 
     expect(DockerDatabase::count())->toBe(0);
+
+    // 🔴 **And the volume goes too.** Two failed creates on the test box left
+    // `sv-db-8_data` and `sv-db-10_data` behind with nothing pointing at them,
+    // while the API answered "Nothing was left behind — no row, no container and no
+    // port held". A true list, and the wrong one.
+    //
+    // Safe to remove unconditionally on THIS path, unlike on delete where it is an
+    // opt-in: the volume was made seconds earlier by this same call, for a database
+    // that never started, so nothing in it can be wanted.
+    Process::assertRan(fn ($process): bool => in_array('volume', $process->command, true)
+        && in_array('rm', $process->command, true));
 });
 
 it('does not hang when the health status cannot be read', function () {
