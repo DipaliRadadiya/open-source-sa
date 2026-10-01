@@ -45,7 +45,7 @@ test("no schema emits a message code that has no sentence", () => {
   // Swept both ways a code is written: `.min(1, "code")` and `message: "code"`.
   // Firewall codes are translated by the add-rule form itself; staging's
   // modeRequired is never rendered (the dialog uses its own state).
-  const handled = new Set(["requiredField", "invalidSource", "nameTooLong", "portOrder", "portShape", "modeRequired"]);
+  const handled = new Set(["requiredField", "invalidSource", "nameTooLong", "portOrder", "portShape", "rangeNeedsProtocol", "modeRequired"]);
   const en = JSON.parse(read("messages/en.json"));
   const known = new Set([...Object.keys(en.validation), ...Object.keys(en.settings.validation), ...handled]);
   const files = fs.readdirSync("lib/schemas").map((f) => `lib/schemas/${f}`);

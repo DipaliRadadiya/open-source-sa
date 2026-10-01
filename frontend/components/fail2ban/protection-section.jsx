@@ -21,7 +21,7 @@ import { BannedCard } from "@/components/fail2ban/banned-card";
  * Reading the same optimistic state the switches read makes the card go when
  * the switch moves.
  */
-export function ProtectionSection({ jails, settings, banned, ignoreIps, canManage, logHref }) {
+export function ProtectionSection({ jails, settings, banned, ignoreIps, canManage, logHref, serverIp = null }) {
   const yourIp = useBrowserIp();
   // name -> the enabled value the user asked for, paired with the server value
   // it was based on so it retires itself once the refresh lands.
@@ -66,7 +66,7 @@ export function ProtectionSection({ jails, settings, banned, ignoreIps, canManag
       {shownJails.some((jail) => jail.enabled) ||
       (banned.length > 0 && Object.keys(asked).length === 0) ? (
         <NavTransitionProvider>
-          <BannedCard banned={banned} jails={jails} canManage={canManage} logHref={logHref} yourIp={yourIp} />
+          <BannedCard banned={banned} jails={jails} canManage={canManage} logHref={logHref} yourIp={yourIp} serverIp={serverIp} />
         </NavTransitionProvider>
       ) : null}
     </>

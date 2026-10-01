@@ -212,13 +212,20 @@ export function BackupSettingsFields({
   // chosen would leave a selected option that is also blocked, and save a
   // backup guaranteed to be empty. Fall back to the full option, which is what
   // that site can actually produce.
+  // A NEW setup for a site with no database starts on Files only (1 Oct): it
+  // started on "Files and database", which copies the same files under a name
+  // that promises more, and a "Full" restore of it then fails at the database
+  // step. Only the starting value — once someone picks a type, it is theirs.
+  const typePicked = Boolean(form.formState.dirtyFields?.type);
   useEffect(() => {
     if (filesOnly && type !== "filesystem") {
       form.setValue("type", "filesystem", { shouldDirty: true });
     } else if (noDatabase && type === "database") {
       form.setValue("type", "full", { shouldDirty: true });
+    } else if (noDatabase === true && !target && !typePicked && type === "full") {
+      form.setValue("type", "filesystem");
     }
-  }, [filesOnly, noDatabase, type, form]);
+  }, [filesOnly, noDatabase, type, form, target, typePicked]);
   // Lowering retention prunes when the settings are SAVED (SaveBackupTarget
   // applies it in the same request), not on the next run.
   const pruning =

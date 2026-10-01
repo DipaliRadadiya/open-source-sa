@@ -125,7 +125,7 @@ function ActionsCell({ row, table }) {
   );
 }
 
-export function BannedCard({ banned, jails, canManage, logHref, yourIp = null }) {
+export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, serverIp = null }) {
   const t = useTranslations("fail2ban");
   // Every write on this card ends in a re-read, and the row does not move until
   // that lands. One shared transition means the table dims for all of them.
@@ -233,7 +233,7 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null })
               </Link>
             </Button>
           ) : null}
-          <BanIpDialog jails={jails} canManage={canManage} yourIp={yourIp} />
+          <BanIpDialog jails={jails} canManage={canManage} yourIp={yourIp} serverIp={serverIp} />
           {/* Kept in plain sight: this exists for the moment you've just banned
               your own office, and that is not a moment for hunting through a
               menu or unbanning rows one at a time. */}

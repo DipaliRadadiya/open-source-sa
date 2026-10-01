@@ -298,7 +298,8 @@
     "noManagedWorkerKeys": "user, command, directory y los archivos de registro los fija el panel. Cámbialos en los campos de arriba, no aquí.",
     "insideApplication": "Usa una ruta dentro de la carpeta de esta aplicación.",
     "securityUsernameAscii": "Usa solo letras inglesas, números y . _ - @: los navegadores no envían otras letras de la misma forma.",
-    "excludeInsideSite": "Usa una ruta dentro de la carpeta de la aplicación, como storage/logs, sin / ni .. al principio"
+    "excludeInsideSite": "Usa una ruta dentro de la carpeta de la aplicación, como storage/logs, sin / ni .. al principio",
+    "cronTrailingComment": "Quita la nota con #. Cron trata todo lo que va después de # como un comentario, incluida la parte que escribe el registro de la tarea."
   },
   "admin": {
     "switchToAdmin": "Panel de administración",
@@ -1561,7 +1562,8 @@
       "invalidIp": "Eso no es una dirección IP válida. Aquí no se admiten rangos.",
       "selfWarning": "Es tu propia dirección. El servidor no la bloqueará: te dejaría fuera.",
       "ipLabelHint": "La dirección que se va a bloquear. Verifique que no sea su propia conexión antes de guardar.",
-      "jailLabelHint": "Bajo qué conjunto de reglas se bloqueará la dirección. Cada jail supervisa un servicio, como SSH o el servidor web."
+      "jailLabelHint": "Bajo qué conjunto de reglas se bloqueará la dirección. Cada jail supervisa un servicio, como SSH o el servidor web.",
+      "ownServer": "Es la dirección de este mismo servidor. Bloquearla dejaría a todos sin acceso al panel."
     },
     "settings": {
       "title": "Reglas de bloqueo",
@@ -1744,7 +1746,8 @@
         "portOrder": "El final del rango no puede ser menor que el inicio.",
         "invalidSource": "Eso no es una dirección IP ni un rango válido.",
         "portShape": "Usa un puerto como 443, o un rango como 8000-8090.",
-        "nameTooLong": "El nombre no puede superar los 255 caracteres."
+        "nameTooLong": "El nombre no puede superar los 255 caracteres.",
+        "rangeNeedsProtocol": "Para un rango de puertos, elige TCP o UDP. Añade una segunda regla si necesitas los dos."
       },
       "anywhere": "cualquier sitio",
       "summary": "Resumen",

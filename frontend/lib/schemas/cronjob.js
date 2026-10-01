@@ -41,7 +41,40 @@ const commandField = z
   .max(1000, "max1000")
   .refine((v) => !/[\r\n]/.test(v), "noLineBreaks")
   // Preset commands ship with a {path} placeholder; the API 422s if it survives.
-  .refine((v) => !v.includes(PATH_TOKEN), "unresolvedPath");
+  .refine((v) => !v.includes(PATH_TOKEN), "unresolvedPath")
+  // The panel appends its own logging after the command, so a `# note` at the
+  // end comments that out too: the job looked saved and its log stayed empty.
+  .refine((v) => !hasShellComment(v), "cronTrailingComment");
+
+/**
+ * Is there a shell comment in this command: a `#` at the start of a word,
+ * outside quotes? `echo "#tag"`, `curl x/#frag` and `$#` are not comments.
+ */
+export function hasShellComment(command) {
+  let quote = null;
+  // True at the start and after unescaped whitespace: where a word begins.
+  let wordStart = true;
+  for (let i = 0; i < command.length; i += 1) {
+    const c = command[i];
+    if (c === "\\" && quote !== "'") {
+      i += 1;
+      wordStart = false;
+      continue;
+    }
+    if (quote) {
+      if (c === quote) quote = null;
+      continue;
+    }
+    if (c === "'" || c === '"') {
+      quote = c;
+      wordStart = false;
+      continue;
+    }
+    if (c === "#" && wordStart) return true;
+    wordStart = /\s|;|&|\|/.test(c);
+  }
+  return false;
+}
 
 /*
  * Each job is a file in /etc/cron.d named after it, so a name can land on a

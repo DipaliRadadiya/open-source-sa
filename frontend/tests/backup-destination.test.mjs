@@ -47,10 +47,13 @@ test("the destination column is only hidden where it does not fit", () => {
    * hiding it there was hiding it for nothing, and that is the page where
    * "where is this stored?" is actually asked. It was reported as missing from
    * exactly that page.
+   *
+   * 1 Oct: xl → 2xl. With real rows the server-wide list still ran 141px past
+   * its card at 1280 and 55px at 1366, hiding Size, Download and Restore.
    */
   assert.match(
     TABLE,
-    /cn\("max-w-40", showSite && "hidden xl:table-cell"\)/,
+    /cn\("max-w-40", showSite && "hidden 2xl:table-cell"\)/,
     "the destination column no longer decides its breakpoint by layout",
   );
   // Flexible, not pinned: a fixed width gave the table a 1244px floor and

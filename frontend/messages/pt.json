@@ -851,7 +851,8 @@
     "noManagedWorkerKeys": "user, command, directory e os arquivos de log são definidos pelo painel. Altere-os nos campos acima, não aqui.",
     "insideApplication": "Use um caminho dentro da pasta desta aplicação.",
     "securityUsernameAscii": "Use apenas letras em inglês, números e . _ - @ — os navegadores não enviam outras letras da mesma forma.",
-    "excludeInsideSite": "Use um caminho dentro da pasta da aplicação, como storage/logs, sem / nem .."
+    "excludeInsideSite": "Use um caminho dentro da pasta da aplicação, como storage/logs, sem / nem ..",
+    "cronTrailingComment": "Remova a nota com #. O cron trata tudo depois de # como comentário, incluindo a parte que grava o log da tarefa."
   },
   "serverDashboard": {
     "title": "Painel",
@@ -1561,7 +1562,8 @@
       "invalidIp": "Esse não é um endereço IP válido. Intervalos não são permitidos aqui.",
       "selfWarning": "Este é o seu próprio endereço. O servidor não vai bani-lo — você ficaria sem acesso.",
       "ipLabelHint": "O endereço a ser bloqueado. Verifique se não é a sua própria conexão antes de salvar.",
-      "jailLabelHint": "Conjunto de regras sob o qual o endereço será banido. Cada jail monitora um serviço, como SSH ou o servidor web."
+      "jailLabelHint": "Conjunto de regras sob o qual o endereço será banido. Cada jail monitora um serviço, como SSH ou o servidor web.",
+      "ownServer": "Esse é o endereço do próprio servidor. Bani-lo deixaria todos sem acesso ao painel."
     },
     "settings": {
       "title": "Regras de bloqueio",
@@ -1744,7 +1746,8 @@
         "portOrder": "O fim do intervalo não pode ser menor que o início.",
         "invalidSource": "Esse não é um endereço IP ou faixa válida.",
         "portShape": "Use uma porta como 443, ou um intervalo como 8000-8090.",
-        "nameTooLong": "Mantenha o nome com menos de 255 caracteres."
+        "nameTooLong": "Mantenha o nome com menos de 255 caracteres.",
+        "rangeNeedsProtocol": "Para um intervalo de portas, escolha TCP ou UDP. Adicione uma segunda regra se precisar dos dois."
       },
       "anywhere": "qualquer lugar",
       "summary": "Resumo",

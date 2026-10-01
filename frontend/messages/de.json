@@ -851,7 +851,8 @@
     "noManagedWorkerKeys": "user, command, directory und die Logdateien setzt das Panel. Ändern Sie sie in den Feldern oben, nicht hier.",
     "insideApplication": "Einen Pfad im Ordner dieser Anwendung verwenden.",
     "securityUsernameAscii": "Nur englische Buchstaben, Ziffern und . _ - @ verwenden — Browser senden andere Buchstaben unterschiedlich.",
-    "excludeInsideSite": "Einen Pfad im Ordner der Anwendung verwenden, etwa storage/logs — ohne / oder .."
+    "excludeInsideSite": "Einen Pfad im Ordner der Anwendung verwenden, etwa storage/logs — ohne / oder ..",
+    "cronTrailingComment": "Entfernen Sie die #-Notiz. Cron behandelt alles nach # als Kommentar, auch den Teil, der das Protokoll des Jobs schreibt."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -1561,7 +1562,8 @@
       "invalidIp": "Das ist keine gültige IP-Adresse. Bereiche sind hier nicht erlaubt.",
       "selfWarning": "Das ist Ihre eigene Adresse. Der Server sperrt sie nicht – Sie würden sich aussperren.",
       "ipLabelHint": "Die Adresse, die gesperrt werden soll. Prüfen Sie vor dem Speichern, dass es nicht Ihre eigene Verbindung ist.",
-      "jailLabelHint": "Welcher Regelsatz verwendet wird, um die Adresse zu sperren. Jedes Jail überwacht einen Dienst, etwa SSH oder den Webserver."
+      "jailLabelHint": "Welcher Regelsatz verwendet wird, um die Adresse zu sperren. Jedes Jail überwacht einen Dienst, etwa SSH oder den Webserver.",
+      "ownServer": "Das ist die eigene Adresse dieses Servers. Eine Sperre würde alle aus dem Panel aussperren."
     },
     "settings": {
       "title": "Sperrregeln",
@@ -1744,7 +1746,8 @@
         "portOrder": "Das Ende des Bereichs darf nicht unter dem Anfang liegen.",
         "invalidSource": "Das ist keine gültige IP-Adresse und kein gültiger Bereich.",
         "portShape": "Verwenden Sie einen Port wie 443 oder einen Bereich wie 8000-8090.",
-        "nameTooLong": "Halten Sie den Namen unter 255 Zeichen."
+        "nameTooLong": "Halten Sie den Namen unter 255 Zeichen.",
+        "rangeNeedsProtocol": "Wählen Sie für einen Portbereich TCP oder UDP. Fügen Sie eine zweite Regel hinzu, wenn Sie beide brauchen."
       },
       "anywhere": "überall",
       "summary": "Zusammenfassung",

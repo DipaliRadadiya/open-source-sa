@@ -138,6 +138,10 @@ export const createFirewallRuleSchema = z
       ctx.addIssue({ code: "custom", path: ["ports"], message: "portRange" });
     } else if (parsed.to && parsed.to < parsed.from) {
       ctx.addIssue({ code: "custom", path: ["ports"], message: "portOrder" });
+    } else if (parsed.to && parsed.to !== parsed.from && values.protocol === "all") {
+      // The server's firewall takes a range only with one protocol; sent as
+      // "both" it answered "The firewall operation failed on the server".
+      ctx.addIssue({ code: "custom", path: ["protocol"], message: "rangeNeedsProtocol" });
     }
 
     const source = values.source_ip?.trim();

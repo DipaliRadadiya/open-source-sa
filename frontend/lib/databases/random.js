@@ -1,7 +1,9 @@
 // Ambiguous characters (l, 1, 0, O) are left out on purpose — these values get
 // retyped by hand into config files, and read aloud over calls.
 const SAFE = "abcdefghijkmnopqrstuvwxyz23456789";
-const PASSWORD_EXTRA = "ABCDEFGHJKLMNPQRSTUVWXYZ!@#%^*_-+=";
+// No `=`: PrestaShop's installer cuts a password at the first `=`, and other
+// tools that read `key=value` do the same. Nothing is lost by leaving it out.
+const PASSWORD_EXTRA = "ABCDEFGHJKLMNPQRSTUVWXYZ!@#%^*_-+";
 
 function pick(alphabet, length) {
   const bytes = new Uint8Array(length);

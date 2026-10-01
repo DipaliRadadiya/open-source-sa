@@ -31,7 +31,7 @@ import { apiMessage } from "@/lib/api/error-message";
  * shell, and was the only dialog anywhere with no icon in its header — the one
  * that looked wrong at a glance without anyone being able to say why.
  */
-export function BanIpDialog({ jails = [], canManage, yourIp = null }) {
+export function BanIpDialog({ jails = [], canManage, yourIp = null, serverIp = null }) {
   const t = useTranslations("fail2ban");
   // Refreshing through the list's own transition rather than the router
   // directly: the ban lands on the server long before the page has re-read it,
@@ -86,6 +86,12 @@ export function BanIpDialog({ jails = [], canManage, yourIp = null }) {
     event.preventDefault();
     if (!isIpAddress(ip.trim())) {
       setError(t("ban.invalidIp"));
+      return;
+    }
+    // The API refuses 127.0.0.1 but not the server's public address, and that
+    // ban locks everyone out of the panel, with no way back but SSH.
+    if (serverIp && ip.trim() === serverIp) {
+      setError(t("ban.ownServer"));
       return;
     }
     setPending(true);

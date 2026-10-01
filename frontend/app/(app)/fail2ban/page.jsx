@@ -4,6 +4,7 @@ import { CircleCheck, CircleAlert } from "lucide-react";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getFail2ban } from "@/lib/fail2ban/get-fail2ban";
+import { getServerCapabilities } from "@/lib/applications/get-applications";
 import { InstallPrompt } from "@/components/fail2ban/install-prompt";
 import { ProtectionSection } from "@/components/fail2ban/protection-section";
 import { BanRulesCard } from "@/components/fail2ban/ban-rules-card";
@@ -37,7 +38,12 @@ export default async function Fail2banPage() {
   // permission: a link that lands on a redirect is worse than no link.
   const logHref = can(permissions, "logs", "view") ? "/logs?source=fail2ban" : null;
 
-  const { data, failed, status, failure, message } = await getFail2ban();
+  // The server's own address, so a ban on it is refused before it is sent:
+  // banning it took the panel down for everyone, login page included.
+  const [{ data, failed, status, failure, message }, { serverIp }] = await Promise.all([
+    getFail2ban(),
+    getServerCapabilities(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -83,6 +89,7 @@ export default async function Fail2banPage() {
                 ignoreIps={data.settings?.ignore_ips ?? []}
                 canManage={canManage}
                 logHref={logHref}
+                serverIp={serverIp}
               />
             }
             settings={

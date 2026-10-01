@@ -33,7 +33,8 @@ test("server sync: a whole-type placeholder row is not a name and cannot be igno
   assert.match(src, /canManage && !wholeType \?/);
   // No details to open, so its reason is shown whole rather than clamped.
   assert.match(src, /\{wholeType \? null : \(/);
-  assert.match(src, /wholeType \? "max-w-xl whitespace-normal" : "line-clamp-1"/);
+  // The cell wraps (TableCell is nowrap); other reasons get two lines.
+  assert.match(src, /wholeType \? "max-w-xl" : "line-clamp-2 break-words"/);
 });
 
 test("every new string exists in all eight locales", () => {

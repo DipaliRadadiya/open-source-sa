@@ -851,7 +851,8 @@
     "noManagedWorkerKeys": "user, command, directory and the log files are set by the panel. Change them in the fields above, not here.",
     "insideApplication": "Use a path inside this application's folder.",
     "securityUsernameAscii": "Use only English letters, numbers and . _ - @ — browsers don't send other letters the same way.",
-    "excludeInsideSite": "Use a path inside the application's folder, like storage/logs — not / or .."
+    "excludeInsideSite": "Use a path inside the application's folder, like storage/logs — not / or ..",
+    "cronTrailingComment": "Remove the # note. Cron treats everything after # as a comment, including the part that writes the job's log."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -1561,7 +1562,8 @@
       "invalidIp": "That is not a valid IP address. Ranges are not allowed here.",
       "selfWarning": "This is your own address. The server won't ban it — it would lock you out.",
       "ipLabelHint": "The address to block. Check it is not your own connection before you save.",
-      "jailLabelHint": "Which set of rules to ban the address under. Each jail watches one service, such as SSH or the web server."
+      "jailLabelHint": "Which set of rules to ban the address under. Each jail watches one service, such as SSH or the web server.",
+      "ownServer": "That is this server's own address. Banning it would lock everyone out of the panel."
     },
     "settings": {
       "title": "Ban rules",
@@ -1744,7 +1746,8 @@
         "portOrder": "The end of the range cannot be lower than the start.",
         "invalidSource": "That is not a valid IP address or range.",
         "portShape": "Use a port like 443, or a range like 8000-8090.",
-        "nameTooLong": "Keep the name under 255 characters."
+        "nameTooLong": "Keep the name under 255 characters.",
+        "rangeNeedsProtocol": "For a range of ports, choose TCP or UDP. Add a second rule if you need both."
       },
       "anywhere": "anywhere",
       "summary": "Summary",

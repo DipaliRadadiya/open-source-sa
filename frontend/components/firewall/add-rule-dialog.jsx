@@ -213,6 +213,7 @@ export function AddRuleDialog({
 
   const { isSubmitting } = form.formState;
   const portError = form.formState.errors.ports?.message;
+  const protocolError = form.formState.errors.protocol?.message;
   const sourceError = form.formState.errors.source_ip?.message;
   const nameError = form.formState.errors.description?.message;
   const serverError = form.formState.errors.root?.server?.message;
@@ -395,9 +396,9 @@ export function AddRuleDialog({
               <Label htmlFor="fw-protocol" hint={t("add.protocolHint")}>{t("add.protocol")}</Label>
               <Select
                 value={values.protocol}
-                onValueChange={(next) => form.setValue("protocol", next)}
+                onValueChange={(next) => form.setValue("protocol", next, { shouldValidate: form.formState.isSubmitted })}
               >
-                <SelectTrigger id="fw-protocol" className="w-full" disabled={ruleLocked}>
+                <SelectTrigger id="fw-protocol" className="w-full" disabled={ruleLocked} aria-invalid={Boolean(protocolError)}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -406,6 +407,11 @@ export function AddRuleDialog({
                   <SelectItem value="all">{t("add.protocolAll")}</SelectItem>
                 </SelectContent>
               </Select>
+              {protocolError ? (
+                <p role="alert" className="text-xs text-destructive">
+                  {message(t, protocolError)}
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -535,6 +541,7 @@ function message(t, text) {
     "portOrder",
     "invalidSource",
     "nameTooLong",
+    "rangeNeedsProtocol",
   ];
   return KEYS.includes(text) ? t(`add.errors.${text}`) : text;
 }

@@ -851,7 +851,8 @@
     "noManagedWorkerKeys": "user, command, directory et les fichiers de journal sont définis par le panneau. Modifiez-les dans les champs ci-dessus, pas ici.",
     "insideApplication": "Utilisez un chemin situé dans le dossier de cette application.",
     "securityUsernameAscii": "Utilisez uniquement des lettres anglaises, des chiffres et . _ - @ : les navigateurs n'envoient pas les autres lettres de la même façon.",
-    "excludeInsideSite": "Utilisez un chemin situé dans le dossier de l'application, comme storage/logs, sans / ni .."
+    "excludeInsideSite": "Utilisez un chemin situé dans le dossier de l'application, comme storage/logs, sans / ni ..",
+    "cronTrailingComment": "Supprimez la note avec #. Cron traite tout ce qui suit # comme un commentaire, y compris la partie qui écrit le journal de la tâche."
   },
   "serverDashboard": {
     "title": "Tableau de bord",
@@ -1561,7 +1562,8 @@
       "invalidIp": "Ce n'est pas une adresse IP valide. Les plages ne sont pas autorisées ici.",
       "selfWarning": "C'est votre propre adresse. Le serveur ne la bannira pas — vous vous bloqueriez l'accès.",
       "ipLabelHint": "L'adresse à bloquer. Vérifiez qu'il ne s'agit pas de votre propre connexion avant d'enregistrer.",
-      "jailLabelHint": "Le jeu de règles sous lequel bloquer l'adresse. Chaque jail surveille un service, comme SSH ou le serveur web."
+      "jailLabelHint": "Le jeu de règles sous lequel bloquer l'adresse. Chaque jail surveille un service, comme SSH ou le serveur web.",
+      "ownServer": "C'est l'adresse de ce serveur. La bannir bloquerait l'accès au panneau pour tout le monde."
     },
     "settings": {
       "title": "Règles de bannissement",
@@ -1744,7 +1746,8 @@
         "portOrder": "La fin de la plage ne peut pas être inférieure au début.",
         "invalidSource": "Ce n'est pas une adresse IP ou une plage valide.",
         "portShape": "Utilisez un port comme 443, ou une plage comme 8000-8090.",
-        "nameTooLong": "Le nom doit contenir moins de 255 caractères."
+        "nameTooLong": "Le nom doit contenir moins de 255 caractères.",
+        "rangeNeedsProtocol": "Pour une plage de ports, choisissez TCP ou UDP. Ajoutez une deuxième règle si vous avez besoin des deux."
       },
       "anywhere": "n'importe où",
       "summary": "Résumé",

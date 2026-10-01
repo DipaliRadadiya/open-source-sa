@@ -142,11 +142,13 @@ export function SyncResults({
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
-                <TableHead className="w-10" />
-                <TableHead className="w-[16%]">{t("results.columns.type")}</TableHead>
+                <TableHead className="w-10 px-1 sm:px-2" />
+                {/* Below sm the type rides under the name: four columns did
+                    not fit a phone, and Status and Dismiss were what fell off. */}
+                <TableHead className="hidden w-[16%] sm:table-cell">{t("results.columns.type")}</TableHead>
                 <TableHead>{t("results.columns.name")}</TableHead>
                 <TableHead className="w-[12%]">{t("results.columns.outcome")}</TableHead>
-                <TableHead className="w-10" />
+                <TableHead className="w-10 px-1 sm:px-2" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -166,7 +168,7 @@ export function SyncResults({
                     key={item.id}
                     className={cn(ignored && "opacity-55")}
                   >
-                    <TableCell className="align-top">
+                    <TableCell className="px-1 align-top sm:px-2">
                       {/* A chevron on its own is a guess. The aria-label names
                           the row for a screen reader; the tooltip is the same
                           answer for everyone else. */}
@@ -195,10 +197,13 @@ export function SyncResults({
                         </Tooltip>
                       )}
                     </TableCell>
-                    <TableCell className="align-top text-sm text-muted-foreground">
+                    <TableCell className="hidden align-top text-sm text-muted-foreground sm:table-cell">
                       {t(`types.${item.resource_type}`)}
                     </TableCell>
-                    <TableCell className="align-top">
+                    {/* Wraps: TableCell is nowrap, so one long "skipped" reason
+                        set the table's width — Status and Dismiss went off the
+                        card at 1280 and the name was cut on a phone. */}
+                    <TableCell className="align-top whitespace-normal">
                       {wholeType ? (
                         <span className="text-sm">{t("results.wholeType")}</span>
                       ) : (
@@ -206,11 +211,14 @@ export function SyncResults({
                           {item.resource_key}
                         </span>
                       )}
+                      <p className="text-xs text-muted-foreground sm:hidden">
+                        {t(`types.${item.resource_type}`)}
+                      </p>
                       {/* The reason is already a full sentence in the reader's
                           language — the backend localizes it — so one line of
                           it here is the whole explanation, not a label. */}
                       {item.reason ? (
-                        <p className={cn("mt-0.5 text-xs text-muted-foreground", wholeType ? "max-w-xl whitespace-normal" : "line-clamp-1")}>
+                        <p className={cn("mt-0.5 text-xs text-muted-foreground", wholeType ? "max-w-xl" : "line-clamp-2 break-words")}>
                           {item.reason}
                         </p>
                       ) : null}
@@ -225,7 +233,7 @@ export function SyncResults({
                         {t(`outcomes.${item.action}`)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="align-top">
+                    <TableCell className="px-1 align-top sm:px-2">
                       {canManage && !wholeType ? (
                         <Tooltip>
                           {/* The trigger wraps a span: a disabled button

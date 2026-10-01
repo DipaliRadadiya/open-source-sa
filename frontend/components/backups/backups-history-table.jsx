@@ -35,7 +35,7 @@ function SiteCell({ row }) {
 
   return (
     <div className="min-w-0">
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
         {backup.application_id ? (
           <Link
             href={`/applications/${backup.application_id}/backups`}
@@ -63,10 +63,10 @@ function StatusCell({ row, table }) {
       ? reasonText(backup.reason_title, t("unknownReason"))
       : null;
 
-  // Narrower on a site's own page, where the table carries Destination from xl:
-  // at 1280 the German, French and Russian action labels pushed Restore 40px
-  // past the card. The badges wrap and the reason is clamped either way.
-  const width = table.options.meta?.showSite ? "w-52 max-w-52" : "w-40 max-w-40";
+  // One width everywhere (1 Oct): the server-wide list had 208px here and, at
+  // 1280–1366, Restore went off the card in six languages. The badges wrap and
+  // the reason is clamped to two lines, with the full text on hover/focus.
+  const width = "w-32 max-w-32";
 
   return (
     <div className={cn(width, "min-w-0 space-y-1")}>
@@ -441,14 +441,19 @@ export function BackupsHistoryTable({
       ? {
           accessorKey: "application_name",
           header: t("columns.site"),
-          meta: { className: "min-w-52" },
+          meta: { className: "min-w-48" },
           cell: SiteCell,
         }
       : null,
-    { accessorKey: "status", header: t("columns.status"), meta: { className: showSite ? "w-52" : "w-40" }, cell: StatusCell },
+    // Sized to the badge, not reserved: a 208px Status column on the
+    // server-wide list was a third of what pushed Restore off the card at
+    // 1280 in six languages.
+    { accessorKey: "status", header: t("columns.status"), meta: { className: "w-32" }, cell: StatusCell },
     // No floor on a site's own page: a fixed 176px here is what left no room
     // for the Hindi action labels at 1280. "Files and database" wraps instead.
-    { id: "type", header: t("columns.type"), meta: { className: showSite ? "w-44" : undefined }, cell: TypeCell },
+    // The header wraps: "Тип резервной копии" set this column's width on its
+    // own, wider than anything in it.
+    { id: "type", header: t("columns.type"), meta: { className: "w-32 whitespace-normal" }, cell: TypeCell },
     // Only when the API actually sends it. The field is absent rather than null
     // on a backend that predates it — the backend distinguishes the two on
     // purpose — and an always-empty column reads as data we failed to load
@@ -468,18 +473,21 @@ export function BackupsHistoryTable({
            * 1024 up, so hiding it there was hiding it for nothing — and it is
            * the page where "where did this go?" is actually asked.
            */
-          meta: { className: cn("max-w-40", showSite && "hidden xl:table-cell") },
+          // 2xl, not xl (1 Oct): at 1280–1366 the server-wide list still ran
+          // 141px / 55px past its card and Size, Download and Restore sat
+          // behind a fade. The destination is on each site's own page.
+          meta: { className: cn("max-w-40", showSite && "hidden 2xl:table-cell") },
           cell: DestinationCell,
         }
       : null,
-    { id: "when", header: t("columns.when"), meta: { className: "w-36" }, cell: WhenCell },
+    { id: "when", header: t("columns.when"), meta: { className: "w-28" }, cell: WhenCell },
     {
       id: "size",
       header: () => <span className="block text-right">{t("columns.size")}</span>,
       // The "No archive" note may wrap on a site's own page: in Hindi it was
       // the widest thing in the column, and the column was what pushed Restore
       // off the card at 1280.
-      meta: { className: showSite ? "w-28 text-right" : "w-24 text-right whitespace-normal" },
+      meta: { className: "w-20 text-right whitespace-normal" },
       cell: SizeCell,
     },
     {
