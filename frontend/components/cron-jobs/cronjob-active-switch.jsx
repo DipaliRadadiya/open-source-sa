@@ -45,7 +45,7 @@ export function CronjobActiveSwitch({ job, canManage = true, prevPage = null }) 
         refresh();
         return;
       }
-      toast.error(apiMessage(error, t("toast.failed")));
+      toast.error(apiMessage(error, next ? t("toast.resumeFailed") : t("toast.pauseFailed")));
     }
   }
 

@@ -852,7 +852,8 @@
     "insideApplication": "Use a path inside this application's folder.",
     "securityUsernameAscii": "Use only English letters, numbers and . _ - @ — browsers don't send other letters the same way.",
     "excludeInsideSite": "Use a path inside the application's folder, like storage/logs — not / or ..",
-    "cronTrailingComment": "Remove the # note. Cron treats everything after # as a comment, including the part that writes the job's log."
+    "cronTrailingComment": "Remove the # note. Cron treats everything after # as a comment, including the part that writes the job's log.",
+    "cronReboot": "@reboot isn't supported here. Use a schedule, for example @daily or */5 * * * *."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -1017,7 +1018,8 @@
       "allUsers": "All users",
       "allStatuses": "All statuses",
       "active": "Active",
-      "paused": "Paused"
+      "paused": "Paused",
+      "statusLabel": "Status"
     },
     "actions": {
       "label": "Actions",
@@ -1091,8 +1093,12 @@
       "deleted": "Cron job deleted",
       "paused": "Cron job paused",
       "resumed": "Cron job resumed",
-      "failed": "Something went wrong",
-      "alreadyGone": "\"{name}\" had already been removed."
+      "alreadyGone": "\"{name}\" had already been removed.",
+      "createFailed": "The cron job could not be created.",
+      "updateFailed": "The cron job could not be saved.",
+      "pauseFailed": "The cron job could not be paused.",
+      "resumeFailed": "The cron job could not be resumed.",
+      "deleteFailed": "The cron job could not be deleted."
     },
     "paused": "Paused",
     "activeFor": "Active: {name}",

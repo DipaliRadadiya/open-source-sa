@@ -852,7 +852,8 @@
     "insideApplication": "Use um caminho dentro da pasta desta aplicação.",
     "securityUsernameAscii": "Use apenas letras em inglês, números e . _ - @ — os navegadores não enviam outras letras da mesma forma.",
     "excludeInsideSite": "Use um caminho dentro da pasta da aplicação, como storage/logs, sem / nem ..",
-    "cronTrailingComment": "Remova a nota com #. O cron trata tudo depois de # como comentário, incluindo a parte que grava o log da tarefa."
+    "cronTrailingComment": "Remova a nota com #. O cron trata tudo depois de # como comentário, incluindo a parte que grava o log da tarefa.",
+    "cronReboot": "@reboot não é compatível aqui. Use um agendamento, por exemplo @daily ou */5 * * * *."
   },
   "serverDashboard": {
     "title": "Painel",
@@ -1017,7 +1018,8 @@
       "allUsers": "Todos os usuários",
       "allStatuses": "Todos os status",
       "active": "Ativa",
-      "paused": "Em pausa"
+      "paused": "Em pausa",
+      "statusLabel": "Status"
     },
     "actions": {
       "label": "Ações",
@@ -1091,8 +1093,12 @@
       "deleted": "Cron job excluído",
       "paused": "Cron job pausado",
       "resumed": "Cron job retomado",
-      "failed": "Algo deu errado",
-      "alreadyGone": "\"{name}\" já tinha sido excluído."
+      "alreadyGone": "\"{name}\" já tinha sido excluído.",
+      "createFailed": "Não foi possível criar o cron job.",
+      "updateFailed": "Não foi possível salvar o cron job.",
+      "pauseFailed": "Não foi possível pausar o cron job.",
+      "resumeFailed": "Não foi possível retomar o cron job.",
+      "deleteFailed": "Não foi possível excluir o cron job."
     },
     "paused": "Em pausa",
     "activeFor": "Ativa: {name}",

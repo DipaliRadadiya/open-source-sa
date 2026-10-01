@@ -35,7 +35,8 @@ export function CronjobsToolbar({
           paramKey="user"
           allLabel={t("filter.allUsers")}
           options={userOptions}
-          className="w-full sm:w-52"
+          className="w-full sm:w-64"
+          label={t("columns.runAs")}
         />
         <FacetSelect
           paramKey="active"
@@ -44,7 +45,8 @@ export function CronjobsToolbar({
             { value: "true", label: t("filter.active") },
             { value: "false", label: t("filter.paused") },
           ]}
-          className="w-full sm:w-36"
+          className="w-full sm:w-44"
+          label={t("filter.statusLabel")}
         />
       </div>
 

@@ -21,7 +21,10 @@ const expressionField = z
   .string()
   .trim()
   .min(1, "required_expression")
-  .refine((v) => isMacro(v) || v.split(/\s+/).length === 5, "cronExpression")
+  // Named on its own: the general message offers "a macro like @daily", which
+  // @reboot is, so it read as a typo rather than as unsupported.
+  .refine((v) => v.toLowerCase() !== "@reboot", "cronReboot")
+  .refine((v) => v.toLowerCase() === "@reboot" || isMacro(v) || v.split(/\s+/).length === 5, "cronExpression")
   .refine(
     (v) => isMacro(v) || v.split(/\s+/).length !== 5 || v.split(/\s+/).every((f) => f.split(",").every((t) => CRON_TOKEN.test(t))),
     "cronUnsupported",

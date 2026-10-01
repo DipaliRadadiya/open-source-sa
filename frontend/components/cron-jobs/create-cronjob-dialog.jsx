@@ -7,6 +7,7 @@ import { Loader2, CalendarPlus } from "lucide-react";
 import { createCronjobSchema, OTHER_USER } from "@/lib/schemas/cronjob";
 import { createCronjob } from "@/lib/api/cronjobs";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { apiMessage } from "@/lib/api/error-message";
 import { useRefresh } from "@/hooks/use-refresh";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
@@ -85,7 +86,9 @@ export function CreateCronjobDialog({
       onOpenChange?.(false);
       form.reset(DEFAULTS);
     } catch (error) {
-      handleValidationError(error, form);
+      // Field errors go on the fields; anything else says what failed.
+      if (error?.response?.data?.errors) handleValidationError(error, form);
+      else toast.error(apiMessage(error, t("toast.createFailed")));
     }
   }
 

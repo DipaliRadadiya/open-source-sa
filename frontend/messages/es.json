@@ -299,7 +299,8 @@
     "insideApplication": "Usa una ruta dentro de la carpeta de esta aplicación.",
     "securityUsernameAscii": "Usa solo letras inglesas, números y . _ - @: los navegadores no envían otras letras de la misma forma.",
     "excludeInsideSite": "Usa una ruta dentro de la carpeta de la aplicación, como storage/logs, sin / ni .. al principio",
-    "cronTrailingComment": "Quita la nota con #. Cron trata todo lo que va después de # como un comentario, incluida la parte que escribe el registro de la tarea."
+    "cronTrailingComment": "Quita la nota con #. Cron trata todo lo que va después de # como un comentario, incluida la parte que escribe el registro de la tarea.",
+    "cronReboot": "@reboot no es compatible aquí. Usa una programación, por ejemplo @daily o */5 * * * *."
   },
   "admin": {
     "switchToAdmin": "Panel de administración",
@@ -1017,7 +1018,8 @@
       "allUsers": "Todos los usuarios",
       "allStatuses": "Todos los estados",
       "active": "Activas",
-      "paused": "Pausadas"
+      "paused": "Pausadas",
+      "statusLabel": "Estado"
     },
     "actions": {
       "label": "Acciones",
@@ -1091,8 +1093,12 @@
       "deleted": "Tarea cron eliminada",
       "paused": "Tarea cron pausada",
       "resumed": "Tarea cron reanudada",
-      "failed": "Algo salió mal",
-      "alreadyGone": "\"{name}\" ya se había eliminado."
+      "alreadyGone": "\"{name}\" ya se había eliminado.",
+      "createFailed": "No se pudo crear la tarea cron.",
+      "updateFailed": "No se pudo guardar la tarea cron.",
+      "pauseFailed": "No se pudo pausar la tarea cron.",
+      "resumeFailed": "No se pudo reanudar la tarea cron.",
+      "deleteFailed": "No se pudo eliminar la tarea cron."
     },
     "paused": "Pausada",
     "activeFor": "Activa: {name}",

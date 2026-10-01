@@ -852,7 +852,8 @@
     "insideApplication": "Einen Pfad im Ordner dieser Anwendung verwenden.",
     "securityUsernameAscii": "Nur englische Buchstaben, Ziffern und . _ - @ verwenden — Browser senden andere Buchstaben unterschiedlich.",
     "excludeInsideSite": "Einen Pfad im Ordner der Anwendung verwenden, etwa storage/logs — ohne / oder ..",
-    "cronTrailingComment": "Entfernen Sie die #-Notiz. Cron behandelt alles nach # als Kommentar, auch den Teil, der das Protokoll des Jobs schreibt."
+    "cronTrailingComment": "Entfernen Sie die #-Notiz. Cron behandelt alles nach # als Kommentar, auch den Teil, der das Protokoll des Jobs schreibt.",
+    "cronReboot": "@reboot wird hier nicht unterstützt. Verwenden Sie einen Zeitplan, zum Beispiel @daily oder */5 * * * *."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -1017,7 +1018,8 @@
       "allUsers": "Alle Benutzer",
       "allStatuses": "Alle Status",
       "active": "Aktiv",
-      "paused": "Pausiert"
+      "paused": "Pausiert",
+      "statusLabel": "Status"
     },
     "actions": {
       "label": "Aktionen",
@@ -1091,8 +1093,12 @@
       "deleted": "Cronjob gelöscht",
       "paused": "Cronjob pausiert",
       "resumed": "Cronjob fortgesetzt",
-      "failed": "Etwas ist schiefgelaufen",
-      "alreadyGone": "„{name}“ war bereits entfernt."
+      "alreadyGone": "„{name}“ war bereits entfernt.",
+      "createFailed": "Der Cronjob konnte nicht erstellt werden.",
+      "updateFailed": "Der Cronjob konnte nicht gespeichert werden.",
+      "pauseFailed": "Der Cronjob konnte nicht pausiert werden.",
+      "resumeFailed": "Der Cronjob konnte nicht fortgesetzt werden.",
+      "deleteFailed": "Der Cronjob konnte nicht gelöscht werden."
     },
     "paused": "Pausiert",
     "activeFor": "Aktiv: {name}",

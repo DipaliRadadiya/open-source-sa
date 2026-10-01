@@ -37,7 +37,7 @@ export function DeleteCronjobDialog({ job, open, onOpenChange, prevPage = null }
         done(() => toast.info(t("toast.alreadyGone", { name: job.name })));
         return;
       }
-      toast.error(apiMessage(error, t("toast.failed")));
+      toast.error(apiMessage(error, t("toast.deleteFailed")));
       setPending(false);
     }
   }

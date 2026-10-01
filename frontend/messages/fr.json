@@ -852,7 +852,8 @@
     "insideApplication": "Utilisez un chemin situé dans le dossier de cette application.",
     "securityUsernameAscii": "Utilisez uniquement des lettres anglaises, des chiffres et . _ - @ : les navigateurs n'envoient pas les autres lettres de la même façon.",
     "excludeInsideSite": "Utilisez un chemin situé dans le dossier de l'application, comme storage/logs, sans / ni ..",
-    "cronTrailingComment": "Supprimez la note avec #. Cron traite tout ce qui suit # comme un commentaire, y compris la partie qui écrit le journal de la tâche."
+    "cronTrailingComment": "Supprimez la note avec #. Cron traite tout ce qui suit # comme un commentaire, y compris la partie qui écrit le journal de la tâche.",
+    "cronReboot": "@reboot n'est pas pris en charge ici. Utilisez une planification, par exemple @daily ou */5 * * * *."
   },
   "serverDashboard": {
     "title": "Tableau de bord",
@@ -1017,7 +1018,8 @@
       "allUsers": "Tous les utilisateurs",
       "allStatuses": "Tous les statuts",
       "active": "Active",
-      "paused": "En pause"
+      "paused": "En pause",
+      "statusLabel": "Statut"
     },
     "actions": {
       "label": "Actions",
@@ -1091,8 +1093,12 @@
       "deleted": "Tâche cron supprimée",
       "paused": "Tâche cron mise en pause",
       "resumed": "Tâche cron reprise",
-      "failed": "Une erreur s'est produite",
-      "alreadyGone": "« {name} » avait déjà été supprimée."
+      "alreadyGone": "« {name} » avait déjà été supprimée.",
+      "createFailed": "La tâche cron n'a pas pu être créée.",
+      "updateFailed": "La tâche cron n'a pas pu être enregistrée.",
+      "pauseFailed": "La tâche cron n'a pas pu être mise en pause.",
+      "resumeFailed": "La tâche cron n'a pas pu être reprise.",
+      "deleteFailed": "La tâche cron n'a pas pu être supprimée."
     },
     "paused": "En pause",
     "activeFor": "Active : {name}",

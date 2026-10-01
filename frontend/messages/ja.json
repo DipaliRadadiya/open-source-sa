@@ -852,7 +852,8 @@
     "insideApplication": "このアプリケーションのフォルダー内のパスを指定してください。",
     "securityUsernameAscii": "半角英字、数字、. _ - @ のみ使用してください。それ以外の文字はブラウザによって送信方法が異なります。",
     "excludeInsideSite": "storage/logs のように、アプリケーションのフォルダー内のパスを指定してください（/ や .. は使えません）",
-    "cronTrailingComment": "# のメモを削除してください。cron は # 以降をすべてコメントとして扱うため、ジョブのログを書き込む部分も無効になります。"
+    "cronTrailingComment": "# のメモを削除してください。cron は # 以降をすべてコメントとして扱うため、ジョブのログを書き込む部分も無効になります。",
+    "cronReboot": "@reboot はここでは使えません。@daily や */5 * * * * などのスケジュールを使ってください。"
   },
   "serverDashboard": {
     "title": "ダッシュボード",
@@ -1017,7 +1018,8 @@
       "allUsers": "すべてのユーザー",
       "allStatuses": "すべての状態",
       "active": "有効",
-      "paused": "一時停止中"
+      "paused": "一時停止中",
+      "statusLabel": "状態"
     },
     "actions": {
       "label": "操作",
@@ -1091,8 +1093,12 @@
       "deleted": "cron ジョブを削除しました",
       "paused": "cron ジョブを一時停止しました",
       "resumed": "cron ジョブを再開しました",
-      "failed": "問題が発生しました",
-      "alreadyGone": "\"{name}\" はすでに削除されていました。"
+      "alreadyGone": "\"{name}\" はすでに削除されていました。",
+      "createFailed": "cron ジョブを作成できませんでした。",
+      "updateFailed": "cron ジョブを保存できませんでした。",
+      "pauseFailed": "cron ジョブを一時停止できませんでした。",
+      "resumeFailed": "cron ジョブを再開できませんでした。",
+      "deleteFailed": "cron ジョブを削除できませんでした。"
     },
     "paused": "一時停止中",
     "activeFor": "有効: {name}",
