@@ -1,28 +1,20 @@
 import { z } from "zod";
 
 /**
- * Connected git provider accounts.
- *
- * The token never appears in any of these shapes on purpose — it is write-only
- * at the API, so there is nothing to model on the way back.
+ * Connected git provider accounts. The token is write-only at the API, so it
+ * never appears in these shapes.
  */
 
 /**
- * One input on the connect form, described by the backend.
- *
- * The field list genuinely differs per provider (Bitbucket needs a workspace,
- * self-hosted GitLab needs a host), so the form is rendered from this rather
- * than hardcoded three times. A new provider then needs no frontend change.
+ * One input on the connect form, described by the backend. Fields differ per
+ * provider, so the form renders from this and new providers need no frontend change.
  */
 export const providerFieldSchema = z.object({
   name: z.string(),
   label: z.string(),
   required: z.boolean().default(false),
   type: z.string().default("text"),
-  // Per-field guidance, written and localized by the backend — what a
-  // self-hosted GitLab URL should contain, where a Bitbucket workspace id comes
-  // from. It was being sent all along and stripped here, so two fields that had
-  // an explanation rendered without one. Null when the field speaks for itself.
+  // Per-field guidance, localized by the backend. Null when self-explanatory.
   help: z.string().nullish(),
 });
 
@@ -42,8 +34,8 @@ export const gitAccountSchema = z.object({
   provider: z.string(),
   provider_title: z.string(),
   label: z.string(),
-  // Fetched from the provider during verification, never typed: the username
-  // for GitHub/GitLab, the workspace slug for Bitbucket.
+  // Fetched from the provider during verification: the GitHub/GitLab username
+  // or the Bitbucket workspace slug.
   identifier: z.string().nullish(),
   host: z.string().nullish(),
   workspace: z.string().nullish(),
@@ -59,10 +51,8 @@ export const gitAccountsResponseSchema = z.object({
 });
 
 /**
- * Live token health, one row per account.
- *
- * `unknown` is not a soft failure — it means the provider could not be reached,
- * and the user must not be told to act on it.
+ * Live token health, one row per account. `unknown` means the provider could
+ * not be reached; never tell the user to act on it.
  */
 export const gitStatusSchema = z.object({
   id: z.number(),
@@ -72,8 +62,7 @@ export const gitStatusSchema = z.object({
   status: z.enum(["valid", "invalid", "unknown"]).catch("unknown"),
   status_title: z.string().nullish(),
   expires_at: z.string().nullish(),
-  // Absent for Bitbucket, which has no expiry at all — null means "there is
-  // none", never "we could not tell".
+  // Null means no expiry (e.g. Bitbucket), never "could not tell".
   expires_in_days: z.number().nullish(),
   checked_at: z.string().nullish(),
 });
@@ -90,11 +79,8 @@ export const labelSchema = z
   .max(60, "tooLong");
 
 /**
- * The connect form's shape, built from the provider the user picked.
- *
- * Generated rather than written out because Zod strips keys it does not know
- * about: a hardcoded schema would silently drop `workspace` the moment the
- * backend added a provider that needs one.
+ * The connect form's shape, built from the chosen provider's fields so
+ * provider-specific keys are not stripped by Zod.
  */
 export function connectFormSchema(provider) {
   const shape = { label: labelSchema };
@@ -113,11 +99,7 @@ export const replaceTokenSchema = z.object({
 });
 
 /**
- * One repository the connected account can see.
- *
- * Fetched by the "Test repositories" action so we can show the user whether
- * their token actually reaches any repos without going through the app-create
- * flow.
+ * One repository the connected account can see, from "Test repositories".
  */
 export const repositorySchema = z.object({
   full_name: z.string(),
@@ -129,8 +111,7 @@ export const repositorySchema = z.object({
 
 export const repositoriesResponseSchema = z.object({
   repositories: z.array(repositorySchema).default([]),
-  // This endpoint deliberately returns a lightweight continuation marker,
-  // not a total. It avoids an expensive provider-wide count request.
+  // A continuation marker, not a total (avoids a provider-wide count).
   meta: z.object({
     page: z.number().optional(),
     has_more: z.boolean().optional(),

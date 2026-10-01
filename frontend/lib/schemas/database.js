@@ -10,19 +10,9 @@ import { listMetaSchema } from "./list.js";
  */
 
 /*
- * Names the server owns. Creating one is refused, so say so before the 422.
- *
- * The union across every engine, not one engine's list. The check runs before
- * an engine is necessarily chosen, and a name that collides on ANY engine the
- * server might have is a name worth steering away from — refusing `postgres`
- * on a MariaDB server costs nobody anything, while allowing `template1` on a
- * PostgreSQL one collides with a database that cannot even be connected to.
- *
- * This is now the FALLBACK only. `GET /databases/engines` publishes each
- * engine's `system_schemas`, so `reservedNames()` below reads the server's own
- * answer and keeps this list for an API that predates the field. A hardcoded
- * copy is wrong the first time an engine is added and nothing tells anyone —
- * which is exactly why the backend published it.
+ * Fallback list of names the server owns, used when the API does not publish
+ * `system_schemas` (see `reservedNames()`). The union across every engine,
+ * because the check can run before an engine is chosen.
  */
 export const RESERVED_NAMES = [
   // MySQL / MariaDB
@@ -34,19 +24,17 @@ export const RESERVED_NAMES = [
   "admin",
   "local",
   "config",
-  // PostgreSQL — `template0` cannot be connected to at all, and `postgres` is
-  // the maintenance database every administrative statement is issued against.
+  // PostgreSQL: `template0` cannot be connected to; `postgres` is the
+  // maintenance database.
   "postgres",
   "template0",
   "template1",
 ];
 
 /**
- * Names the server owns, as the server reports them.
- *
- * The union across every engine it has, for the reason above: the check runs
- * before an engine is necessarily chosen. Falls back to the fixed list when no
- * engine carries `system_schemas`, so an older API loses nothing.
+ * Names the server owns, as the server reports them: the union across every
+ * engine (the check can run before an engine is chosen). Falls back to the
+ * fixed list when no engine carries `system_schemas`.
  */
 export function reservedNames(engines = []) {
   const published = engines.flatMap((engine) =>
@@ -94,37 +82,18 @@ export const engineSchema = z.object({
   engine: z.string(),
   driver: z.string().nullable().optional(),
   /*
-   * Whether an account on this engine can be reached from another host.
-   *
-   * False for PostgreSQL: a role is cluster-wide and carries no host, so which
-   * addresses may reach it lives in `pg_hba.conf`, a file the panel does not
-   * manage. The API refuses `remote`/`anywhere` there, and this is what lets
-   * the form say so before the click instead of collecting a 422.
-   *
-   * Declared, or Zod strips it and every screen silently falls back to the
-   * default. Defaults TRUE so a panel pointed at an older API keeps offering
-   * the choice rather than hiding a working control.
+   * False for PostgreSQL: roles carry no host and access lives in
+   * `pg_hba.conf`, which the panel does not manage, so the API refuses
+   * `remote`/`anywhere`. Defaults true for older APIs.
    */
   supports_remote_users: z.boolean().default(true),
-  /*
-   * The engine's own databases — the ones it creates and the panel must never
-   * make, drop or alter. Zod strips what is not declared, so without this line
-   * the list would arrive and vanish, and `reservedNames()` would quietly keep
-   * using the hardcoded fallback while looking like it read the server.
-   */
+  // The engine's own databases, which the panel must never create, drop or
+  // alter. Read by `reservedNames()`.
   system_schemas: z.array(z.string()).nullish(),
   /*
    * Why this engine cannot be installed here, or null when it can.
-   *
-   * `{ code, reason }` — a stable code to branch on and a sentence the API has
-   * already translated for the viewer, the same shape a blocked site-type card
-   * carries so both render the same way.
-   *
-   * Declared, or Zod strips it — which is exactly what happened. The reason
-   * arrived on every response and vanished, so a MongoDB card on Ubuntu 26.04
-   * fell back to the generic "has to be installed manually — it isn't in the
-   * server's package list". That is not true and sends somebody off to install
-   * it by hand: MongoDB has published no server build for that release at all.
+   * `{ code, reason }`: a stable code to branch on and an already-translated
+   * sentence, the same shape a blocked site-type card carries.
    */
   unavailable: z
     .object({ code: z.string(), reason: z.string() })
@@ -132,22 +101,20 @@ export const engineSchema = z.object({
     .optional(),
   // Reachable with the configured connection — NOT the same as installed.
   running: z.boolean().nullable().optional().default(false),
-  // Present on the server, whether or not it is up. The field that separates
-  // "install it" from "we cannot connect to it".
+  // Present on the server, whether or not it is up: separates "install it"
+  // from "cannot connect to it".
   installed: z.boolean().nullable().optional().default(false),
   // Null when nothing is on the server. With `running: false` and a version
-  // present, the engine is there but we could not talk to it.
+  // present, the engine is there but could not be reached.
   version: z.string().nullable().optional(),
   charsets: charsetsSchema,
-  // Config-driven capability. Never infer this from the engine name: MongoDB
-  // became installable once the backend gained repository provisioning.
+  // Config-driven capability; never infer it from the engine name.
   installable: z.boolean().nullable().optional().default(false),
   // `installing` | `failed` | null. Never "installed": a finished install
   // deletes its progress row so detection stays the single answer.
   install_status: z.string().nullable().optional(),
   install_reason: z.string().nullable().optional(),
-  // The server's own sentence, in the caller's language. Ours would be a guess
-  // about a failure we did not witness.
+  // The server's own sentence, in the caller's language.
   install_message: z.string().nullable().optional(),
   install_progress: databaseInstallProgressSchema.nullish(),
 });
@@ -163,16 +130,12 @@ export const databaseUserSchema = z.object({
   password: z.string().nullable().optional(),
   connection_preference: z.string().nullable().optional(),
   host: z.string().nullable().optional(),
-  // Ready to paste into an app's config — the thing people actually came for.
+  // Ready to paste into an app's config.
   connection_string: z.string().nullable().optional(),
   /*
-   * Whether the panel holds this user's password at all.
-   *
-   * False for a user adopted from a migrated server: the engine stores a hash,
-   * and a hash is not a password. The API already withholds `connection_string`
-   * in that case rather than handing back one with an empty password in it —
-   * this is what lets the screen say WHY the line is missing instead of simply
-   * omitting it and looking broken.
+   * Whether the panel holds this user's password. False for users adopted from
+   * a migrated server (only a hash exists); the API then withholds
+   * `connection_string`, and the screen explains why.
    */
   password_known: z.boolean().nullish(),
   created_at: z.string().nullable().optional(),
@@ -189,10 +152,8 @@ export const databaseSchema = z.object({
   application_id: z.number().nullable().optional(),
   size_bytes: z.number().nullable().optional(),
   size_human: z.string().nullable().optional(),
-  // Zero means nothing can connect to it — worth surfacing on the row.
-  // No `.default(0)`: only the list counts users, so on the detail payload a
-  // default would invent a zero the API never sent, which reads as "this
-  // database has no users" — a real answer, from a missing one.
+  // No `.default(0)`: only the list counts users, and a default on the detail
+  // payload would claim "no users" when the API sent nothing.
   users_count: z.number().nullable().optional(),
   created_at: z.string().nullable().optional(),
   created_at_human: z.string().nullable().optional(),
@@ -210,20 +171,8 @@ export const untrackedResponseSchema = z.object({
   untracked: z.array(z.string()).default([]),
 });
 
-/**
- * Create a database, and optionally its first user in the same step.
- *
- * A database with no user cannot be connected to, so the user is opt-out rather
- * than a second errand. Messages are key tokens the form translates.
- */
-/**
- * A factory rather than a constant, so the reserved list can come from the
- * engines the server actually reported. Called with no argument it behaves
- * exactly as the constant did.
- */
 // The API's rules for a database user (StoreDatabaseUserRequest): 32 is
 // MySQL 8's limit for every engine, and the server's own accounts are refused.
-// Without them the refusal came back as the API's raw English sentence.
 const RESERVED_DATABASE_USERS = new Set(["root"]);
 
 export function databaseUsernameProblem(value) {
@@ -237,14 +186,18 @@ export function databaseUsernameProblem(value) {
 export function hostProblem(value) {
   if (!value) return "required_host";
   const match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})(?:\/(\d{1,2}))?$/.exec(value);
-  // The shape alone let 999.999.999.999 and 1.2.3.4/99 through to a 500 and a
-  // firewall rule nobody could delete.
+  // Range-check octets and prefix: the shape alone lets 999.999.999.999 through.
   if (!match) return "databaseHost";
   if (match.slice(1, 5).some((octet) => Number(octet) > 255)) return "databaseHost";
   if (match[5] !== undefined && Number(match[5]) > 32) return "databaseHost";
   return null;
 }
 
+/**
+ * Create a database, and optionally its first user (opt-out: a database with no
+ * user cannot be connected to). A factory so the reserved list can come from
+ * the engines the server reported. Messages are key tokens the form translates.
+ */
 export const createDatabaseSchema = (reserved = reservedNames()) =>
   z
   .object({
@@ -256,9 +209,8 @@ export const createDatabaseSchema = (reserved = reservedNames()) =>
       .regex(DATABASE_NAME, "databaseName")
       .refine((value) => !reserved.has(value.toLowerCase()), "databaseNameReserved"),
     engine: z.string().min(1, "required_engine"),
-    // "" is the "not linked to a site" choice, which is a legitimate answer —
-    // a database need not belong to one. Coerced to null at submit rather than
-    // sent as an empty string, which the API would reject.
+    // "" means "not linked to a site"; coerced to null at submit because the API
+    // rejects an empty string.
     application_id: z.string().optional(),
     charset: z.string().optional(),
     collation: z.string().optional(),
@@ -290,11 +242,9 @@ export const createDatabaseSchema = (reserved = reservedNames()) =>
   });
 
 /**
- * The admin connection the panel itself uses, per engine.
- *
- * Stored in the database rather than `.env`, and the password is never returned
- * — `has_password` says whether one exists, and an empty field on save means
- * "leave it alone" rather than "clear it".
+ * The admin connection the panel itself uses, per engine. The password is
+ * never returned (`has_password` says whether one exists); an empty field on
+ * save means "leave it alone", not "clear it".
  */
 export const connectionSchema = z.object({
   engine: z.string(),
@@ -352,8 +302,7 @@ export const databaseUserFormSchema = z
         const problem = databaseUsernameProblem(value);
         if (problem) ctx.addIssue({ code: "custom", message: problem });
       }),
-    // Blank means "generate one" (add) or "keep it" (edit); anything typed has
-    // to meet the API's 8–255.
+    // Blank means "generate one" (add) or "keep it" (edit); otherwise 8–255.
     password: z
       .string()
       .optional()
@@ -389,20 +338,15 @@ export const exportSchema = z.object({
   status: z.string(),
   size_bytes: z.number().nullable().optional(),
   size_human: z.string().nullable().optional(),
-  // Stable code + the same thing worded in the viewer's language, plus the id
-  // support will ask for.
+    // Stable code, the localized message, and the support reference.
   reason: z.string().nullable().optional(),
   message: z.string().nullable().optional(),
   reference: z.string().nullable().optional(),
-  // False once the file has been removed from disk by hand — the row remains
-  // but there is nothing to download.
+    // False once the file has been removed from disk by hand.
   available: z.boolean().nullable().optional().default(false),
   download_url: z.string().nullable().optional(),
-  // An object, not a string. The list endpoint eager-loads the user, so this
-  // arrives as `{id, username}` — and `z.array()` fails whole if any element
-  // fails, so a single export started by a signed-in user made the entire list
-  // unparseable. The poll then fetched every three seconds and discarded the
-  // answer in silence, and the server render fell back to an empty list.
+    // An object (`{id, username}`, eager-loaded), not a string: a wrong shape
+    // fails the whole list.
   requested_by: z
     .object({ id: z.number(), username: z.string() })
     .nullable()
@@ -450,7 +394,7 @@ export const dbProcessSchema = z.object({
   host: z.string().nullable().optional(),
   db: z.string().nullable().optional(),
   command: z.string().nullable().optional(),
-  // Seconds in the current state — the number that says "this is stuck".
+  // Seconds in the current state.
   time: z.number().nullable().optional(),
   state: z.string().nullable().optional(),
   query: z.string().nullable().optional(),

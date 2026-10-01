@@ -18,24 +18,16 @@ import { StepList } from "@/components/applications/step-list";
 
 const POLL_MS = 4000;
 
-/** Give up after 20 minutes, matching the clone screen — a job that has not
- *  moved by then is stuck, and polling a dead queue forever helps nobody. */
+/** Give up after 20 minutes, matching the clone screen; a job that has not
+ *  moved by then is stuck. */
 const POLL_LIMIT_MS = 20 * 60 * 1000;
 
 /**
- * The whole page while a site is being built — creating an application
- * redirects straight here, so this is the first thing anyone sees after
- * clicking Create.
+ * The whole page while a site is being built (Create redirects here). Shares
+ * the clone progress screen's visual language.
  *
- * Deliberately built in the same visual language as the clone progress screen:
- * icon tile, bar, ringed step rows, reassurance on a footer rule. Two screens
- * that answer "is my thing being built?" should not look like different
- * products.
- *
- * The bar is indeterminate, unlike the clone's. A clone reports `step_number`
- * and `total_steps`; provisioning reports only the steps that have *finished*,
- * and which ones run at all depends on the site type — so there is no
- * denominator, and a creeping percentage would be invented.
+ * The bar is indeterminate: provisioning reports only finished steps, and
+ * which steps run depends on the site type, so there is no total.
  */
 export function ProvisioningCard({ application, canManage = false }) {
   const t = useTranslations("applications.details");
@@ -49,8 +41,7 @@ export function ProvisioningCard({ application, canManage = false }) {
   const failed = application.status === "failed";
   const steps = application.steps ?? [];
 
-  // Raw identifiers are keys, not copy — anything unrecognised gets a generic
-  // phrase so a new backend step never surfaces as `install_cache`.
+  // Unknown step ids get a generic phrase rather than the raw identifier.
   const stepLabel = (step) => provisionStepLabel(step, t);
 
   useEffect(() => {
@@ -71,8 +62,7 @@ export function ProvisioningCard({ application, canManage = false }) {
     setRetrying(true);
     try {
       await retryProvisioning(application.id);
-      // Busy until the page shows the new run: released on the API's answer,
-      // the card sat on "Setup failed" with a live Retry for ~3 s.
+      // Busy until the page shows the new run.
       refreshThen(() => setRetrying(false));
     } catch (error) {
       toast.error(
@@ -89,9 +79,8 @@ export function ProvisioningCard({ application, canManage = false }) {
       : t("settingUp");
 
   const body = failed
-    // The server's own reason when it identified one — already localized, and
-    // it names the cause rather than the step the cause happened to stop at.
-    // Null for most failures by design, so the step remains the fallback.
+    // The server's localized reason when it has one (usually null); otherwise the
+    // step it stopped at.
     ? (application.failed_reason_title ??
        t("failedAt", { step: stepLabel(application.failed_step) }))
     : stalled
@@ -130,8 +119,7 @@ export function ProvisioningCard({ application, canManage = false }) {
         {working && !stalled ? <Progress indeterminate className="h-1.5" /> : null}
 
         {failed && application.reference ? (
-          // The reference is the only thing support can act on, so it is
-          // copyable rather than something to transcribe off the screen.
+          // The reference is copyable: it is what support needs.
           <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
             <CircleAlert className="size-4 shrink-0" />
             <span className="min-w-0 flex-1">
@@ -141,8 +129,7 @@ export function ProvisioningCard({ application, canManage = false }) {
           </div>
         ) : null}
 
-        {/* An unnamed working row rather than the next step: the API reports
-            what finished, never what started. */}
+        {/* An unnamed working row: the API reports what finished, never what started. */}
         <StepList
           steps={steps}
           working={working && !stalled}
@@ -151,13 +138,9 @@ export function ProvisioningCard({ application, canManage = false }) {
           label={stepLabel}
         />
 
-        {/* Still no percentage: the step count varies by site type, so a
-            fraction of an unknown total is a number nobody can act on.
-            Elapsed time is different now — `provisioning_started_at` arrived
-            (asked for 2026-08-11), and it is the START OF THIS RUN, so unlike
-            `created_at` it is not stale after a retry. Shown as the API's own
-            phrase rather than computed here, so a browser clock that disagrees
-            with the server cannot invent a duration. */}
+        {/* No percentage (the step count varies). Elapsed time uses the API's own
+            phrase from `provisioning_started_at`, which resets on retry, so a skewed
+            browser clock cannot invent a duration. */}
         {working && !stalled ? (
           <p className="border-t pt-3 text-xs text-muted-foreground">
             {application.provisioning_started_at_human

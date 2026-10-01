@@ -14,44 +14,28 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 /*
  * Makes the name the click target for the whole row: the pseudo-element is
- * positioned against the <li> (the nearest positioned ancestor), so it spans
- * the row even though the name itself is a short box.
- *
- * `truncate` puts overflow:hidden on that name, which does NOT clip this — an
- * absolutely positioned box whose containing block sits outside the
- * overflowing element escapes its clipping. That is the sort of claim that is
- * easy to get wrong, so the harness clicks the far right edge of a row rather
- * than trusting the reasoning.
+ * positioned against the <li>, so it spans the row. The name's `truncate`
+ * (overflow:hidden) does not clip it, because its containing block is outside
+ * the overflowing element.
  */
 const STRETCH = "after:absolute after:inset-0 after:rounded-xl";
 
 /**
- * Results for "Search entire site" — recursive, so unlike the folder table
- * each row can be anywhere on the site. Clicking a **file** opens it, same
- * as clicking one in the regular listing — a click that just navigated to
- * the containing folder read as "nothing happened" whenever that folder was
- * already the one you searched from. Clicking a **folder** navigates into
- * it, since that IS how folders open. The folder each result lives in is
- * still shown, as its own small link, for "take me there instead."
+ * Results for "Search entire site": recursive, so rows can be anywhere on the
+ * site. A file opens like in the listing; a folder navigates into it. The
+ * containing folder is shown as its own small link.
  *
- * The whole row is the target, not just the name. These rows are 66px tall
- * and the name is one short string inside them, so the honest hit area was
- * ~4% of what looks clickable — every click on the icon, the folder line or
- * the empty space to the right did nothing, which reads as "search is
- * broken" rather than "you missed". It's done with a stretched overlay on
- * the name rather than by wrapping the row, because the row already holds a
- * second link (the folder) and an <a> inside an <a> is not a thing; the
- * overlay keeps one real control per destination and lifts the folder link
- * above it.
+ * The whole row is the target via a stretched overlay on the name, not by
+ * wrapping the row in a link, because the row also holds the folder link (no
+ * <a> inside <a>); the folder link is lifted above the overlay.
  */
 export function SiteSearchResults({ appId, query, onAction, canManage = true }) {
   const t = useTranslations("applications.files");
   const [remote, setRemote] = useState({ status: "loading", files: [], message: null });
 
   useEffect(() => {
-    // Mounted fresh per search (see files-panel.jsx — editing the query while
-    // results are showing unmounts this), so `remote`'s initial "loading"
-    // state is already correct without resetting it here.
+    // Mounted fresh per search (see files-panel.jsx), so `remote` starts in the
+    // correct "loading" state.
     let active = true;
     const controller = new AbortController();
     searchFiles(appId, query, { signal: controller.signal })
@@ -68,9 +52,8 @@ export function SiteSearchResults({ appId, query, onAction, canManage = true }) 
       active = false;
       controller.abort();
     };
-    // `t` is excluded: it is read only to word a failure, so a new translator
-    // identity is not a reason to re-run the search — and re-running would
-    // abort the in-flight request via the cleanup above.
+    // `t` is excluded: it only words a failure, and re-running would abort the
+    // in-flight request via the cleanup above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appId, query]);
 
@@ -86,7 +69,7 @@ export function SiteSearchResults({ appId, query, onAction, canManage = true }) 
   }
 
   if (status === "error") {
-    // No reason from the server means the fallback, which is the title already.
+    // No server reason means the fallback, which is already the title.
     return (
       <EmptyState
         icon={SearchX}
@@ -116,14 +99,10 @@ export function SiteSearchResults({ appId, query, onAction, canManage = true }) 
         const folder = dirname(file.path);
         const folderHref = `/applications/${appId}/files?path=${encodeURIComponent(folder)}`;
         const folderLabel = folder ? t("siteSearch.inFolder", { folder }) : t("root");
-        // Into the folder itself — `folderHref` is its PARENT, which is the
-        // right answer for "where does this file live" and the wrong one for
-        // "open this folder". Sharing it meant clicking a search hit landed
-        // you one level above the thing you clicked.
+        // Into the folder itself; `folderHref` is its PARENT.
         const openDirHref = `/applications/${appId}/files?path=${encodeURIComponent(file.path)}`;
         const openable = canManage && !symlink && !isDir && canOpenFile(file.name);
-        // Only rows that lead somewhere get the row-wide affordance; a
-        // hover state on a row that cannot be opened is a lie.
+        // Only rows that lead somewhere get the row-wide hover affordance.
         const interactive = isDir || openable;
 
         return (
@@ -152,7 +131,7 @@ export function SiteSearchResults({ appId, query, onAction, canManage = true }) 
                     <TooltipContent className="max-w-60">{t("symlinkHint")}</TooltipContent>
                   </Tooltip>
                 ) : (
-                  // Nothing to open — see the note in files-table.
+                  // Nothing to open: see the note in files-table.
                   !openable ? (
                     <span className="block w-full truncate font-medium" title={file.name}>
                       {file.name}
@@ -171,8 +150,7 @@ export function SiteSearchResults({ appId, query, onAction, canManage = true }) 
                   {isDir ? (
                     folderLabel
                   ) : (
-                    // Above the row overlay, so "take me to the folder" stays
-                    // reachable instead of being swallowed by "open the file".
+                    // Above the row overlay so the folder link stays clickable.
                     <Link href={folderHref} className="relative z-10 hover:text-foreground hover:underline">
                       {folderLabel}
                     </Link>

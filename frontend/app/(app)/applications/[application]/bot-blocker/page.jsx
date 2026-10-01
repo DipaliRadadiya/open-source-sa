@@ -28,8 +28,8 @@ export async function generateMetadata({ params }) {
 export default async function ApplicationBotBlockerPage({ params, searchParams }) {
   const { application: id } = await params;
   const { days: rawDays } = await searchParams;
-  // Only the ranges the card offers — a hand-typed ?days=365 must not become a
-  // request the backend then clamps to something the UI never said.
+  // Only ranges the card offers; a hand-typed ?days=365 would be clamped by the
+  // backend to something the UI never showed.
   const days = TRAFFIC_RANGES.includes(Number(rawDays)) ? Number(rawDays) : DEFAULT_RANGE;
   const [permissions, appPermissions, t, result] = await Promise.all([
     getPermissions(),
@@ -39,8 +39,7 @@ export default async function ApplicationBotBlockerPage({ params, searchParams }
   ]);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
-  // The site is gone. Land on the list — the only place left to go — and say
-  // why on arrival, rather than parking on a dead end that offers one link.
+  // Site deleted: land on the list and explain why via ?gone=1.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
@@ -51,12 +50,9 @@ export default async function ApplicationBotBlockerPage({ params, searchParams }
   const canManage = can(appPermissions, "app_bot_blocker", "manage", "application");
   const settled = isSettled(application);
 
-  // The whole screen is rendered from this catalog — without it there is
-  // nothing truthful to show, so a failure here is a load failure, not an
-  // empty set of options.
-  // The traffic panel reads the site's access log, so it is gated by `app_log`
-  // — a separate grant from the bot blocker's own. Without it the panel is not
-  // rendered at all rather than shown empty, which would misreport "no bots".
+  // The screen is built from this catalog, so a failure is a load failure, not an
+  // empty option set. Traffic reads the access log, gated by the separate
+  // `app_log` grant; without it the panel is hidden rather than misreporting "no bots".
   const canSeeTraffic = can(appPermissions, "app_log", "view", "application");
 
   const [{ policies, failed: policiesFailed, status: policiesStatus, failure: policiesFailure, message: policiesMessage }, traffic] = settled
@@ -89,9 +85,8 @@ export default async function ApplicationBotBlockerPage({ params, searchParams }
             currentAllowed={application.bot_allowed ?? []}
             canManage={canManage}
           />
-          {/* Below the choices, not above: on most sites this is empty or the
-              log cannot be read, and an empty panel must not push the control
-              this page exists for off the screen. */}
+          {/* Below the choices: it is often empty or unreadable and must not push the
+              main control off screen. */}
           {canSeeTraffic ? (
             <BotTrafficCard
               appId={id}

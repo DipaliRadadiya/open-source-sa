@@ -4,9 +4,8 @@ import { useTranslations } from "next-intl";
 import { FailurePanel } from "@/components/ui/failure-panel";
 import { RetryButton } from "@/components/ui/retry-button";
 
-// Segment-level boundary for every server-panel route: an SSR fetch that throws
-// lands here instead of on Next's default error screen. `reset()` re-runs the
-// segment, which is usually enough for a transient API failure.
+// Error boundary for panel routes; `reset()` re-runs the segment, which
+// usually clears a transient API failure.
 export default function AppError({ error, reset }) {
   const t = useTranslations("errors");
 

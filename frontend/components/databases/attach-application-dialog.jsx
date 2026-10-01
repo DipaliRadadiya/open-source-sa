@@ -15,14 +15,9 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 /**
  * Choose which site a database belongs to.
  *
- * The same modal covers attach, move and detach, because the API is one field:
- * `application_id` is the site, or null. Three verbs over one nullable value
- * would be three ways to describe the same request.
- *
- * The consequence is stated in the modal rather than after it, because it is
- * the reason anyone is here and the reason they might be about to be
- * disappointed: this decides what gets BACKED UP, and rewrites no connection
- * string anywhere.
+ * One modal for attach, move and detach: the API takes a single nullable
+ * `application_id`. This decides what gets backed up; it rewrites no
+ * connection string.
  */
 export function AttachApplicationDialog({
   database,
@@ -36,21 +31,18 @@ export function AttachApplicationDialog({
   const t = useTranslations("databases.attach");
   const tEngines = useTranslations("databases.engines");
   const { refreshAndWait } = useRefresh();
-  // null means untouched, so the field simply reads the database. Holding the
-  // current site in state instead would need an effect to re-seed it, and an
-  // effect that writes state on open is a cascading render.
+  // null means untouched, so the field reads the database's current site
+  // without an effect to re-seed state on open.
   const [picked, setPicked] = useState(null);
   const [pending, setPending] = useState(false);
-  // Field-level, because both of the API's refusals name a next action
-  // ("detach that one first") and a toast takes that away as it fades.
+  // Field-level: the API's refusals name a next action a toast would hide.
   const [error, setError] = useState(null);
 
   const current = database?.application_id ?? null;
   const value = picked ?? (current === null ? "" : String(current));
 
-  // Every close resets, including the one after a successful save. The open is
-  // left alone deliberately: it comes from the parent's own button, which never
-  // routes through here, so seeding on open would need the effect this avoids.
+  // Every close resets. Opening comes from the parent's button and never
+  // routes through here, so no seeding is needed.
   function handleOpenChange(next) {
     if (!next) {
       setPicked(null);
@@ -74,8 +66,7 @@ export function AttachApplicationDialog({
       toast.success(chosen ? t("attached") : t("detached"));
       handleOpenChange(false);
     } catch (caught) {
-      // The API returns both refusals on `application_id`, which is the field
-      // the reader is looking at.
+  // The API returns both refusals on `application_id`.
       const field = caught.response?.data?.errors?.application_id?.[0];
       setError(field ?? apiMessage(caught, t("failed")));
     } finally {
@@ -102,10 +93,8 @@ export function AttachApplicationDialog({
           >
             {t("cancel")}
           </Button>
-          {/* Off until the answer actually changes, which needs saying: an
-              inert Save with the right site already showing reads as broken
-              rather than as "there is nothing to do". Silent while saving —
-              the spinner is its own explanation. */}
+          {/* Explains why Save is disabled when nothing changed; silent while
+              saving. */}
           <ReasonTooltip reason={!pending && unchanged ? t("unchanged") : null}>
             <Button type="submit" disabled={pending || unchanged}>
               {pending && <Loader2 className="size-4 animate-spin" />}
@@ -134,13 +123,12 @@ export function AttachApplicationDialog({
             { value: "", label: t("none") },
             ...applicationOptions(
               applications,
-              // The site this database is ALREADY on must stay choosable, or
-              // the dialog opens showing a value its own list calls taken.
+              // The current site must stay selectable, or the dialog opens on
+              // a value its own list calls taken.
               excludeSelf(databaseCounts, current),
               databasesKnown,
               t("taken"),
-              // The API refuses this pairing outright, so it is a blocked
-              // option with the reason rather than a refusal after the choice.
+              // The API refuses this pairing, so it is a blocked option with a reason.
               (application) =>
                 engineAccepted({ application, siteTypes, engine: database?.engine })
                   ? undefined
@@ -159,8 +147,7 @@ export function AttachApplicationDialog({
           </p>
         ) : null}
 
-        {/* Required by the API docs in as many words: someone who attaches a
-            database expecting their site to start using it has been misled. */}
+        {/* Required by the API docs: attaching does not make the site use it. */}
         <p className="text-xs text-muted-foreground">{t("hint")}</p>
       </div>
     </FormModal>
@@ -168,11 +155,8 @@ export function AttachApplicationDialog({
 }
 
 /**
- * The counts, minus this database's own site.
- *
- * Without this, reopening the dialog on an attached database shows its current
- * site greyed out as "already has a database" — true, and the database saying
- * it is this one.
+ * The counts, minus this database's own site, so reopening the dialog does
+ * not grey out the current site as "already has a database".
  */
 function excludeSelf(counts, applicationId) {
   if (!counts || applicationId === null || applicationId === undefined) return counts;

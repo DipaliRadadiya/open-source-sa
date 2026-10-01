@@ -35,18 +35,16 @@ export default async function ApplicationFirewallPage({ params }) {
     getPermissions(),
     getPermissions("application", id).catch(() => []),
     getTranslations("applications.firewall"),
-    // Not getApplication: the exceptions and custom rules are `whenLoaded` on
-    // the backend and come back from this endpoint only.
+    // Not getApplication: exceptions and custom rules are `whenLoaded` and
+    // only returned by this endpoint.
     getApplicationWaf(id),
   ]);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
-  // The site is gone. Land on the list — the only place left to go — and say
-  // why on arrival, rather than parking on a dead end that offers one link.
+  // The site is gone: back to the list, which explains why.
   if (result.status === 404) redirect("/applications?gone=1");
-  // The app is read through the firewall endpoint, which answers 403 for a role
-  // without Web Firewall — before the check below could run. That rendered a
-  // raw "Error 403 … 8G Firewall" box instead of the page every other screen shows.
+  // The firewall endpoint answers 403 for roles without Web Firewall, before
+  // the permission check below can run.
   if (result.status === 403) return <PermissionDenied title={t("pageTitle")} />;
   if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
@@ -57,38 +55,24 @@ export default async function ApplicationFirewallPage({ params }) {
   const canManage = can(appPermissions, "app_firewall", "manage", "application");
   const settled = isSettled(application);
 
-  // The category and mode labels come from the API; without them there is
-  // nothing truthful to render, so a failure there is a load failure. The web
-  // server is a separate, non-fatal question — if it can't be determined, the
-  // screen just doesn't claim anything about OpenLiteSpeed.
+  // Category and mode labels come from the API, so their failure is a load
+  // failure. The web server lookup is non-fatal.
   const [{ categories, modes, failed: optionsFailed, status: optionsStatus, failure: optionsFailure, message: optionsMessage }, { webServer }] = settled
     ? await Promise.all([getWafOptions(), getServerCapabilities()])
     : [{ categories: [], modes: [], failed: false }, { webServer: null }];
 
-  // Watching mode is the only mode that writes this, and the API only lists
-  // the key while it is on — so this read is conditional on the same thing.
+  // Only watching (detect) mode writes this log, and the API lists it only then.
   const watching = settled && application.waf_enabled && application.waf_mode === "detect";
   const detect = watching
     ? await getApplicationLog(id, "waf_detect", { lines: 200 })
     : null;
-  // 'missing' is a 404 for the file, which is the NORMAL state until the first
-  // match — it must read as "nothing caught yet", never as a failure. Only a
-  // read error or a permission refusal is a failure.
+  // 'missing' (404) is normal until the first match, so it is not a failure.
   const detectFailed = detect?.status === "failed" || detect?.status === "locked";
   const detectRows = detect?.log?.lines?.length ? parseDetectLog(detect.log.lines) : [];
 
   /*
-   * The API's own answer, where it gives one.
-   *
-   * This was inferred from the web server's name — true today, and a guess
-   * about somebody else's capability the moment OpenLiteSpeed grows the rule
-   * set, or another web server lacks it. `waf_supported` is per application
-   * and comes from the driver itself, so it cannot disagree with what the save
-   * would do.
-   *
-   * The name check stays as the fallback for an API that predates the field:
-   * a panel deployed ahead of its backend must not start offering a firewall
-   * that server cannot apply.
+   * Prefer the API's per-application `waf_supported`. The web server name check
+   * is a fallback for APIs that predate the field.
    */
   const unsupported =
     typeof application.waf_supported === "boolean"
@@ -110,9 +94,7 @@ export default async function ApplicationFirewallPage({ params }) {
         <LoadFailed description={t("loadFailed")} status={optionsStatus} failure={optionsFailure} message={optionsMessage} />
       ) : (
         <>
-          {/* Stated rather than hidden: on OpenLiteSpeed the settings still
-              save, but nothing enforces them yet. A screen that quietly does
-              nothing is worse than one that admits it. */}
+          {/* Settings still save where unsupported, but nothing enforces them. */}
           {unsupported ? (
             <div className="flex max-w-4xl items-start gap-2.5 rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm">
               <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
@@ -130,10 +112,7 @@ export default async function ApplicationFirewallPage({ params }) {
           />
           {watching ? (
             <>
-              {/* Watching is how someone decides it is safe to start blocking,
-                  so the list keeps itself current: it stayed at what the page
-                  loaded with while new matches arrived. The form's unsaved
-                  edits live in its own state and survive the re-read. */}
+              {/* Keeps the match list current; unsaved form edits survive the refresh. */}
               <AutoRefresh intervalMs={30000} stopAfterMs={600000} />
               <DetectLogCard rows={detectRows} failed={detectFailed} />
             </>

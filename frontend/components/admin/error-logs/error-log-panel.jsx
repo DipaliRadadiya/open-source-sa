@@ -21,21 +21,10 @@ import {
 } from "@/components/ui/select";
 
 /**
- * The grouped error list plus its controls.
- *
- * Two searches, deliberately, because they answer different questions:
- *
- * The text box filters in memory. It narrows what is already on screen by
- * exception, route, feature or operation — a browsing tool.
- *
- * The reference lookup goes through the URL to the server's `?reference=`
- * parameter, because the entry being asked for is frequently NOT on screen:
- * someone is holding a reference from a failure older than the last 100 lines,
- * and an in-memory filter over those lines could only ever answer "not found".
- *
- * `lines` goes through the URL for the same reason every other list control in
- * the panel does — it re-runs the server component rather than fetching from
- * the browser.
+ * The grouped error list plus its controls. Two searches on purpose: the text
+ * box filters what is on screen; the reference lookup queries the server's
+ * `?reference=`, because the entry may be older than the loaded lines.
+ * `lines` goes through the URL so the server component re-runs.
  */
 export function ErrorLogPanel({ groups, now, truncated, lines, reference }) {
   const t = useTranslations("errorLogs");
@@ -43,10 +32,8 @@ export function ErrorLogPanel({ groups, now, truncated, lines, reference }) {
   const setQuery = useSetQuery();
   const [search, setSearch] = useState("");
 
-  /* "Nothing recorded" is the normal state here, and it still needs its action:
-     an admin who has just seen the panel misbehave wants to re-ask, not reload
-     the browser. Search and the size selector have nothing to act on with an
-     empty list, so they go — Refresh stays. */
+  /* With no entries, search and the size selector have nothing to act on;
+     Refresh stays. */
   const hasEntries = groups.length > 0;
 
   const visible = useMemo(
@@ -57,9 +44,7 @@ export function ErrorLogPanel({ groups, now, truncated, lines, reference }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start gap-2">
-        {/* Kept even with an empty list, unlike the text search: "nothing
-            recorded in the last 100 lines" is exactly when someone arrives
-            holding a reference from a failure that happened yesterday. */}
+        {/* Kept even with an empty list: a reference may point at an older failure. */}
         <ReferenceLookup
           value={reference}
           onSubmit={(value) => setQuery({ reference: value })}
@@ -99,19 +84,15 @@ export function ErrorLogPanel({ groups, now, truncated, lines, reference }) {
         </div>
       </div>
 
-      {/* Say out loud that the list is cut short. Without this the oldest entry
-          on screen reads as the oldest that exists, and an admin concludes the
-          problem started at a time it did not. */}
+      {/* Say the list is cut short, or the oldest entry reads as the first. */}
       {truncated ? (
         <p className="rounded-lg border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
           {t("truncated", { lines })}
         </p>
       ) : null}
 
-      {/* A lookup that found nothing needs its own words. The healthy-state
-          band above says "no failures recorded", which read against a specific
-          reference means the opposite of what happened — the log is fine, that
-          one reference is not in it. */}
+      {/* A failed lookup needs its own wording: "no failures recorded" would
+          misread as the log being clean. */}
       {!hasEntries && reference ? (
         <EmptyState
           icon={SearchX}

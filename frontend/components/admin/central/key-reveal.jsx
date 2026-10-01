@@ -4,17 +4,10 @@ import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 
 /**
- * The one and only time this key is ever readable.
+ * The only time this key is readable.
  *
- * Inline on the page rather than in a dialog. Every product surveyed that gets
- * this right — GitHub, Stripe, Cloudflare, Coolify — reveals the secret in
- * place; only AWS uses a modal, and a modal is the wrong shape here twice over:
- * Escape dismisses it by reflex, and the fix for that (a dialog you cannot
- * close) turns a failed copy into a trap.
- *
- * Nothing blocks leaving, for the same reason nobody else blocks it. The
- * guard is that the warning is stated plainly and the value is one click from
- * the clipboard.
+ * Inline rather than in a dialog: Escape dismisses a dialog by reflex, and a
+ * dialog that cannot be closed turns a failed copy into a trap.
  */
 export function KeyReveal({ token, onDone }) {
   const t = useTranslations("central");
@@ -27,7 +20,6 @@ export function KeyReveal({ token, onDone }) {
         </span>
         <div className="min-w-0 space-y-1">
           <p className="font-medium">{t("reveal.title")}</p>
-          {/* The whole point of the screen, in the strongest place on it. */}
           <p className="flex items-start gap-1.5 text-sm text-warning">
             <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
             <span>{t("reveal.warning")}</span>

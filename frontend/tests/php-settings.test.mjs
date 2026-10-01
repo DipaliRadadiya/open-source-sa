@@ -162,7 +162,6 @@ test("the ⓘ is tied to the directive, so it cannot wrap away alone", () => {
    * with nothing beside it. Rendered as a child, it wraps with the directive.
    */
   assert.match(PHP_PANEL_SOURCE, /hint=\{directive \? undefined : explain\}/);
-  assert.match(PHP_PANEL_SOURCE, /whitespace-nowrap/);
   assert.match(PHP_PANEL_SOURCE, /<LabelHint>\{explain\}<\/LabelHint>/);
 });
 

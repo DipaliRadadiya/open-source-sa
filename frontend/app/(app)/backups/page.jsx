@@ -15,16 +15,13 @@ export default async function BackupsPage() {
   const [coverage, { destinations }, databases, appPermissions, t, { options: backupOptions }, { siteTypes }] = await Promise.all([
     getBackupCoverage(),
     getStorageDestinations(),
-    // Lets the setup form say when the site picked in it has no database, so a
-    // "files + database" backup cannot quietly turn into a files-only one.
+    // Lets the setup form warn when the chosen site has no database.
     getDatabaseCounts(),
-    // Application-level catalog with no site: answers "may this user configure
-    // backups at all", which is what the Set up button needs. Per-site
-    // filtering happens on the application's own page.
+    // Application-level catalog (no site): whether the user may configure
+    // backups at all. Per-site filtering happens on the application page.
     getPermissions("application").catch(() => []),
     getTranslations("backups"),
-    // What the settings form offers. A failure is carried as null and the form
-    // says so; it never stops the coverage list rendering.
+    // A failure is carried as null; it never blocks the coverage list.
     getBackupTargetOptions(),
     // Which site types never have a database, so their setup offers Files only.
     getSiteTypes().catch(() => ({ siteTypes: [] })),
@@ -34,8 +31,7 @@ export default async function BackupsPage() {
 
   const canManage = can(appPermissions, "app_backup", "manage", "application");
 
-  // Nothing configured anywhere: the coverage card would be a list of red
-  // rows with no explanation of what a backup here even is. Teach first.
+  // Nothing configured: show an introduction instead of a list of red rows.
   const nothingConfigured = coverage.rows.every((row) => row.state === "unprotected");
 
   if (nothingConfigured && coverage.total > 0) {

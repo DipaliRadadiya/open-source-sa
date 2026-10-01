@@ -8,12 +8,11 @@ import { useSidebar } from "@/components/ui/sidebar";
  * Collapses the sidebar to its icon rail on tablet widths, and expands it again
  * on the way back to desktop.
  *
- * Only on the transition, never on every render: inside the range the user is
- * still free to open it, and re-collapsing under them would make the toggle
- * look broken.
+ * Only on the transition, never on every render: inside the range the user may
+ * still open it.
  *
- * Renders nothing — it exists to run inside SidebarProvider without editing the
- * generated primitive.
+ * Renders nothing; it runs inside SidebarProvider without editing the generated
+ * primitive.
  */
 export function SidebarAutoCollapse() {
   const isTablet = useIsTablet();

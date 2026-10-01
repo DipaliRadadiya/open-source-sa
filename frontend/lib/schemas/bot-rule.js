@@ -1,24 +1,17 @@
 /**
- * A bot name someone types in, checked by the same rules the backend uses.
+ * A bot name someone types in, checked by the same rules as
+ * `App\Rules\BotUserAgent`. Keep in step: a laxer client rule promises an
+ * acceptance the server will refuse.
  *
- * Copied from `App\Rules\BotUserAgent` deliberately, and it has to change with
- * it: a laxer client rule is worse than none, because it promises an
- * acceptance the server is about to refuse.
- *
- * The value ends up inside a regex in an nginx `if`, an Apache
- * `SetEnvIfNoCase` or an OLS rewrite, written by an elevated process — hence
- * the charset allowlist rather than escaping. The other two refusals are not
- * about safety but about intent: the pattern is matched case-insensitively
- * against the start of the user agent, so `bot` matches `Googlebot` and
- * `bingbot`. Someone typing that means "block bots" and gets "disappear from
- * search", with nothing on screen to explain why.
+ * The value ends up inside a web-server regex written by an elevated process,
+ * hence a charset allowlist rather than escaping. The value is matched
+ * case-insensitively within the user agent, so broad words (`bot`) would also
+ * block search engines.
  */
 
 /**
- * Letters, digits and the punctuation real crawler tokens use.
- *
- * Exported only so `tests/backend-mirror.test.mjs` can hold it up against the
- * PHP it was copied from.
+ * Letters, digits and the punctuation real crawler tokens use. Exported for
+ * `tests/backend-mirror.test.mjs`.
  */
 export const SHAPE = /^[A-Za-z0-9._\-/]{2,100}$/;
 
@@ -39,10 +32,8 @@ export const BOT_RULE_LIMIT = 50;
 
 /**
  * Why this value cannot be used, as a message key, or null when it can.
- *
- * `applebot` is a search engine but `Applebot-Extended` is the training
- * opt-out token, and blocking that is legitimate — so the comparison is
- * against the whole value, never a prefix.
+ * Compared against the whole value, never a prefix: `applebot` is a search
+ * engine but `Applebot-Extended` is a legitimate opt-out token.
  */
 export function botRuleError(value) {
   const trimmed = String(value ?? "").trim();
@@ -54,10 +45,8 @@ export function botRuleError(value) {
 
   if (CATCH_ALLS.has(lower)) return "tooBroad";
   if (SEARCH_ENGINES.has(lower)) return "searchEngine";
-  // The web server matches any PART of the user agent, so a word inside a
-  // browser's own name blocks real people: `Chrome` + `Safari` gave every
-  // Chrome visitor a 403, `Android` every phone. `Googlebot/2.1` slipped past
-  // the exact-name check above the same way.
+  // The web server matches any part of the user agent, so a word inside a
+  // browser's or search engine's user agent would block it.
   if (BROWSER_USER_AGENTS.some((agent) => agent.includes(lower))) return "browserWord";
   if (SEARCH_USER_AGENTS.some((agent) => agent.includes(lower))) return "searchEngine";
 
@@ -90,14 +79,9 @@ export function hasBot(list, value) {
 }
 
 /**
- * What is actually enforced: the policy's own list, plus this site's
- * additions, minus its exemptions.
- *
- * Mirrors `AbstractWebServerDriver::botBlockPattern()`, including that an
- * allow beats a block of the same name — a rule that says allow and one that
- * says block have only one safe resolution, and the one that keeps traffic
- * flowing is it. Without this the card would go on reporting the policy's
- * count while enforcing something else.
+ * What is actually enforced: the policy's list plus this site's additions,
+ * minus its exemptions. Mirrors `AbstractWebServerDriver::botBlockPattern()`,
+ * including that an allow beats a block of the same name.
  */
 export function effectiveBlockedBots(policyBots = [], blocked = [], allowed = []) {
   const allow = new Set(allowed.map((bot) => String(bot).toLowerCase()));

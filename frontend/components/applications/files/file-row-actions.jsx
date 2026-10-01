@@ -17,9 +17,8 @@ import { FileActionItems } from "@/components/applications/files/file-actions-me
 export function FileRowActions({ file, appId, canManage, onAction }) {
   const t = useTranslations("applications.files");
   const tc = useTranslations("common");
-  // Refused everywhere in the API except delete — so every other action is
-  // shown disabled with why, not hidden, matching the app's "never a silent
-  // gap" convention (same as a locked log source, or a conflicting preset).
+  // The API refuses every symlink action except delete, so the others are shown
+  // disabled with the reason, not hidden.
   const symlink = file.type === "symlink";
   const symlinkReason = symlink ? t("symlinkHint") : null;
   const canWrite = canManage;
@@ -37,14 +36,11 @@ export function FileRowActions({ file, appId, canManage, onAction }) {
 
   return (
     <div className="flex items-center justify-end gap-0.5">
-      {/* The two safe, single-click, no-dialog actions sit directly on the
-          row — everything else stays behind "…" so a glance at the row
-          doesn't read as seven equally-weighted buttons, and nothing
-          destructive is one accidental click away. */}
+      {/* Only the two safe, single-click actions sit on the row; everything else stays
+          behind "…", so nothing destructive is one accidental click away. */}
       {file.type !== "dir" ? (
         <IconTooltip label={t("actions.download")} reason={downloadReason}>
-          {/* A real disabled button when blocked: `disabled` on an <a> does
-              nothing, so the link still downloaded. */}
+          {/* A real disabled button when blocked: `disabled` on an <a> does nothing. */}
           {downloadReason ? (
             <Button variant="ghost" size="icon" className="size-8" disabled aria-label={t("actions.download")}>
               <Download className="size-4" />

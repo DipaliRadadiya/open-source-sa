@@ -1,13 +1,7 @@
 /*
- * One-click jumps to the places people actually go in an app they know by
- * name, not by path. "Where are my uploads?" is the question; `wp-content/
- * uploads` is the answer only someone who already knows it can type.
- *
- * Only for types whose layout is confirmed, not remembered. WordPress was
- * read off a live listing: the root holds `wp-config.php` and `wp-content`,
- * and `wp-content` holds `uploads`, `themes` and `plugins`. Add a type here
- * the same way — from a real listing of an installed one — or a chip will
- * open "This folder is gone" on the first click.
+ * One-click jumps to well-known folders of a site type (e.g. WordPress uploads).
+ * Only add a type after confirming its layout on a real installation, or a
+ * chip will open a missing folder.
  */
 const SHORTCUTS = {
   wordpress: [

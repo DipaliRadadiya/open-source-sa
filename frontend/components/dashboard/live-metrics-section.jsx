@@ -11,18 +11,9 @@ import { StatCards } from "@/components/dashboard/stat-cards";
 import { ChartCardSkeleton } from "@/components/dashboard/chart-card-skeleton";
 
 /**
- * The four charts are loaded after the page, not with it.
- *
- * Recharts is around 400 KB and this is the screen login lands on, so
- * importing it statically made the numbers people actually came for wait for a
- * drawing library. Split out, the stat cards and the live badge are readable
- * immediately and the charts fill in behind them.
- *
- * `ssr: false` because none of the four can render anything real on the
- * server: the two I/O charts need a second poll sample before they have a
- * line at all, and the two history charts are inside a client-polled section.
- * Server-rendering markup that is about to be replaced buys nothing and costs
- * the render.
+ * Charts load after the page: Recharts is ~400 KB and this is the login
+ * landing screen. `ssr: false` because none can render real content on the
+ * server (I/O needs a second poll sample; history is client-polled).
  */
 const chart = (load) => dynamic(load, { ssr: false, loading: ChartCardSkeleton });
 
@@ -61,8 +52,7 @@ function ConnectionAnnouncement({ failed }) {
 function LiveStatus({ failed, reason, updatedAt, timeZone }) {
   const t = useTranslations("serverDashboard");
   const format = useFormatter();
-  // timeZoneName here only — the axes stay uncluttered, but the "Updated" label
-  // has to say which clock it means.
+  // timeZoneName only here: the "Updated" label must say which clock it means.
   const clock = clockFormatter(format, timeZone, {
     second: "2-digit",
     timeZoneName: "short",
@@ -97,10 +87,7 @@ function LiveStatus({ failed, reason, updatedAt, timeZone }) {
       {failed && updatedAt ? (
         <span className="text-xs text-muted-foreground">{t("staleHint")}</span>
       ) : null}
-      {/* The server's own sentence, beside the category rather than behind a
-          hover. "Live metrics unavailable" says a thing failed; "Metrics
-          collector is not running." says what to go and fix. The row already
-          wraps, so a long one drops to its own line instead of crowding. */}
+      {/* The server's own reason, inline rather than behind a hover. */}
       {failed && reason ? (
         <span className="text-xs text-destructive">{reason}</span>
       ) : null}
@@ -109,14 +96,8 @@ function LiveStatus({ failed, reason, updatedAt, timeZone }) {
 }
 
 /**
- * Names one of the two clocks on this page.
- *
- * "Last 24 hours" used to be a lone 12px muted line with a `pt-2` on it, which
- * labelled the block below but left the block ABOVE it unnamed — so the page
- * read as some charts, then a section. Both groups get the same heading now;
- * the rule under it is what makes them read as regions rather than as captions.
- *
- * h2 under the page h1, which is why the cards inside dropped to h3.
+ * Names one of the two clocks on this page (live vs 24h). h2 under the page
+ * h1, so the cards inside use h3.
  */
 function SectionHeading({ icon: Icon, title, children }) {
   return (
@@ -133,24 +114,17 @@ function SectionHeading({ icon: Icon, title, children }) {
 export function LiveMetricsSection({ timeZone, history = [] }) {
   const t = useTranslations("serverDashboard");
   const { metrics, series, failed, reason, updatedAt, ratesReady } = useLiveMetrics();
-  // Everything on screen is last-known, not current — the charts have to say
-  // so as loudly as the stat cards do.
+  // Everything on screen is last-known, not current; the charts must show it too.
   const stale = failed && Boolean(metrics);
 
   return (
-    // space-y-6 matches the page's own rhythm, so a section break here is worth
-    // exactly as much as the break between this and the Processes card.
     <div className="space-y-6">
-      {/* Grouped by clock, not by subject. Everything under the Live badge is
-          the 3s poll; everything under the 24h label is the five-minute
-          collector. Mixing the two under one "Live" badge is exactly the
-          question this page kept being asked. */}
+      {/* Grouped by clock, not subject: the 3s live poll vs the five-minute
+          24h collector. */}
       <ConnectionAnnouncement failed={failed} />
 
       <section className="space-y-4">
-        {/* The Live pill sits IN the heading row rather than above it — it is
-            this section's status, and as a floating row it belonged to nothing
-            in particular. */}
+        {/* The Live pill is this section's status, so it sits in the heading row. */}
         <SectionHeading icon={Radio} title={t("liveLabel")}>
           <LiveStatus failed={failed} reason={reason} updatedAt={updatedAt} timeZone={timeZone} />
         </SectionHeading>

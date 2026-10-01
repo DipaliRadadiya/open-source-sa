@@ -33,16 +33,12 @@ export default async function AdminErrorLogsPage({ searchParams }) {
   const entries = data?.error_logs ?? [];
   const groups = groupErrorLogs(entries);
 
-  /* "Nothing recorded" only means the server is healthy when the whole log was
-     asked for. During a reference lookup the same empty result means the log is
-     fine and that one reference is not in it — so the band is suppressed and
-     the panel says which of the two happened. */
+  /* Empty means healthy only for the whole log; during a reference lookup it
+     means that reference was not found, so the band is suppressed. */
   const healthy = groups.length === 0 && !reference;
   const showSummary = groups.length > 0 || !reference;
 
-  /* One clock for the whole page. Relative times are formatted against this on
-     both sides of hydration; letting the client read its own clock re-renders
-     every row and can print a different answer than the server just did. */
+  /* One clock for server and client so relative times match across hydration. */
   const now = new Date();
 
   return (
@@ -53,8 +49,6 @@ export default async function AdminErrorLogsPage({ searchParams }) {
         <LoadFailed status={status} failure={failure} message={message} />
       ) : (
         <>
-          {/* Same neutral summary band as System Health: status is carried by
-              the coloured icon, not by tinting the whole surface. */}
           {showSummary ? (
           <div className="flex flex-wrap items-center gap-4 rounded-2xl border bg-muted/40 p-4">
             <span
@@ -84,9 +78,7 @@ export default async function AdminErrorLogsPage({ searchParams }) {
                         : t("unknownTime"),
                     })}
               </p>
-              {/* An empty page here is the normal, correct state, and an admin
-                  who does not know what is excluded reads it as "logging is
-                  broken". Say what is not recorded, where it is reassuring. */}
+              {/* Say what is excluded so an empty log does not look broken. */}
               {healthy ? (
                 <p className="mt-1 text-sm text-muted-foreground">{t("summary.excluded")}</p>
               ) : null}
@@ -94,9 +86,7 @@ export default async function AdminErrorLogsPage({ searchParams }) {
           </div>
           ) : null}
 
-          {/* Rendered even with nothing to show: the panel keeps its Refresh
-              action, which would otherwise disappear exactly when someone came
-              here to re-check. */}
+          {/* Always rendered so its Refresh action stays available. */}
           <NavTransitionProvider>
             <ErrorLogPanel
               groups={groups}

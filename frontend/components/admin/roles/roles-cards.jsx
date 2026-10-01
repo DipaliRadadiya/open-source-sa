@@ -4,13 +4,7 @@ import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-t
 import { RoleRowActions } from "@/components/admin/roles/role-row-actions";
 import { grantedCount } from "@/lib/roles/granted-count";
 
-/**
- * Roles on a narrow screen.
- *
- * The table showed the name and part of the description; the permission count,
- * the created date and the row menu were off the right edge — so on a phone you
- * could see that a role existed but not edit or delete it.
- */
+/** Roles on a narrow screen, where the table's count, date and menu would be cut off. */
 export function RolesCards({ roles }) {
   const t = useTranslations("roles");
 
@@ -28,8 +22,6 @@ export function RolesCards({ roles }) {
                   </Badge>
                 ) : null}
               </div>
-              {/* Two lines, not one: a card has the room, and a description cut
-                  after four words is no more use than none. */}
               <p className="line-clamp-2 text-xs text-muted-foreground">
                 {role.description || "—"}
               </p>

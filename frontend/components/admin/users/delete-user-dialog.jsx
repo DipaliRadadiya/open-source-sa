@@ -11,8 +11,7 @@ export function DeleteUserDialog({ user, open, onOpenChange }) {
   async function onConfirm() {
     await run(() => deleteUser(user.id), {
       success: t("toast.deleted"),
-      // Backend blocks self-deletion (and similar) with a 422 message, which
-      // apiMessage surfaces in place of this fallback.
+      // The backend's 422 message (e.g. self-deletion) replaces this fallback.
       error: t("toast.deleteFailed"),
       onSuccess: () => onOpenChange?.(false),
       refresh: true,

@@ -59,8 +59,8 @@ export function FilesPanel({
     ? (initialFiles ?? []).find((f) => f.name === openName && f.type !== "dir")
     : null;
   const openedFile = opened ? { ...opened, path: joinPath(initialPath ?? "", opened.name) } : null;
-  // An image opens in the preview, text in the editor; anything else (an
-  // archive, a binary) has nowhere to open, so its row is highlighted instead.
+  // An image opens in the preview, text in the editor; anything else (an archive,
+  // a binary) cannot be opened, so its row is highlighted instead.
   const [action, setAction] = useState(() =>
     openedFile && canManage && canOpenFile(openedFile.name)
       ? { type: isImageFile(openedFile.name) ? "preview" : "edit", file: openedFile }
@@ -73,22 +73,18 @@ export function FilesPanel({
   const [query, setQuery] = useState("");
   const [siteSearch, setSiteSearch] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-  // dragenter/dragleave fire for every child element a drag crosses, not just
-  // the container's own edge — a plain boolean flickers the overlay on and
-  // off as the pointer passes over rows. A depth counter only reads "outside"
-  // once it actually returns to zero.
+  // dragenter/dragleave fire for every child a drag crosses, so a boolean flickers;
+  // a depth counter only reads "outside" back at zero.
   const dragDepth = useRef(0);
 
-  // Which row to flash after a create/rename/copy/compress/upload lands —
-  // the list re-sorts on refresh, so without this the result could be
-  // anywhere and there's no visual answer to "did that work, and where did
-  // it go."
+  // Which row to flash after a create/rename/copy/compress/upload lands: the list
+  // re-sorts on refresh, so the result could be anywhere.
   const [highlightPath, setHighlightPath] = useState(openedFile?.path ?? null);
   const highlightTimeout = useRef(null);
   useEffect(() => () => clearTimeout(highlightTimeout.current), []);
 
-  // `open` has done its job once the file is on screen. Dropped from the
-  // address without a navigation, so a refresh or Back does not reopen it.
+  // `open` is dropped from the URL once the file is shown, without a navigation, so
+  // a refresh or Back does not reopen it.
   useEffect(() => {
     if (!openName) return;
     const url = new URL(window.location.href);
@@ -103,23 +99,20 @@ export function FilesPanel({
     highlightTimeout.current = setTimeout(() => setHighlightPath(null), 2000);
   }
 
-  // Server-provided on every navigation/refresh — no client polling here
-  // (unlike Workers/Services), since a directory listing has no live state to
-  // poll for. The path segment is what the server component keys its fetch on.
+  // Server-provided on every navigation/refresh; a directory listing has no live
+  // state to poll. The path segment keys the server component's fetch.
   const path = initialPath ?? "";
   const files = (initialFiles ?? []).map((f) => ({ ...f, path: joinPath(path, f.name) }));
 
-  // Selection is a list of paths, not row indexes: the list re-sorts and
-  // refreshes under you, and an index would then point at a different file.
+  // Selection is a list of paths, not row indexes: the list re-sorts and refreshes,
+  // and an index would then point at a different file.
   const [selected, setSelected] = useState([]);
   const [bulkAction, setBulkAction] = useState(null);
   const [bulkOutcome, setBulkOutcome] = useState(null);
 
-  // Leaving the folder abandons the selection — carrying it across folders
-  // would let someone act on things they can no longer see. Adjusted during
-  // render rather than in an effect: an effect would paint one frame with the
-  // old folder's selection still ticked, and React re-runs this immediately
-  // without committing that frame.
+  // Leaving the folder clears the selection, so nothing unseen can be acted on.
+  // Adjusted during render rather than in an effect to avoid painting one frame
+  // with the old selection.
   const [selectionPath, setSelectionPath] = useState(path);
   if (selectionPath !== path) {
     setSelectionPath(path);
@@ -145,12 +138,10 @@ export function FilesPanel({
 
   function onBulkResult(action, result, { permanent = false } = {}) {
     setSelected([]);
-    // Everything worked — a toast is enough, and the panel stays out of the
-    // way. Anything else is left on screen to be read.
+    // Full success: a toast is enough. Anything else stays on screen to be read.
     if (!result.failed.length) {
       setBulkOutcome(null);
-      // A permanent delete must not report itself as "moved to the trash" —
-      // it is the one delete nothing can undo.
+      // A permanent delete must not report "moved to the trash".
       const key = action === "delete" && permanent ? "bulk.deleteDoneForever" : `bulk.${action}Done`;
       toast.success(t(key, { count: result.succeeded.length }));
       return;
@@ -163,11 +154,9 @@ export function FilesPanel({
     return needle ? files.filter((f) => f.name.toLowerCase().includes(needle)) : files;
   }, [files, query]);
   /*
-   * Only what is on screen is selected. Hiding hidden files, or typing in the
-   * search box, took rows off screen but left them ticked — so "Permissions
-   * for 3 items" could quietly include a .htaccess nobody could see any more.
-   * Derived, not pruned: clearing the filter brings the ticks back with the
-   * rows, which is what the reader expects.
+   * Only rows on screen count as selected, so a filter or search cannot leave a
+   * hidden .htaccess in the selection. Derived, not pruned: clearing the filter
+   * restores the ticks.
    */
   const shownSelection = useMemo(() => {
     const onScreen = new Set(filtered.map((f) => f.path));
@@ -180,13 +169,11 @@ export function FilesPanel({
   // Remembered for the next folder too, not only this URL.
   const rememberHidden = () => writePref(HIDDEN_COOKIE, showHidden ? "hide" : null);
 
-  // Folder sizes are computed one at a time, on request, and remembered for
-  // as long as the listing is on screen — asking twice for the same folder
-  // makes the backend walk the tree twice for an answer we already have.
+  // Folder sizes are computed on request and cached while the listing is shown;
+  // each request makes the backend walk the tree.
   const [folderSizes, setFolderSizes] = useState({});
-  // Every folder being measured, not just the last one clicked: with one slot,
-  // a second Calculate took the spinner off the first, and whichever finished
-  // first cleared the other's spinner too.
+  // Tracks every folder being measured, so concurrent Calculates keep their own
+  // spinners.
   const [sizingPaths, setSizingPaths] = useState([]);
 
   async function measure(file) {
@@ -203,8 +190,7 @@ export function FilesPanel({
   }
 
   function onAction(type, file) {
-    // Answered in place rather than in a dialog: it is one number about one
-    // row, and the row already has a column for it.
+    // Answered in place: one number about one row, which already has a column for it.
     if (type === "size") {
       measure(file);
       return;
@@ -216,8 +202,7 @@ export function FilesPanel({
     setAction(null);
   }
 
-  // Drop anywhere on the panel to upload — the button-first flow (open
-  // dialog, then drag in) still works too, this just skips the first click.
+  // Drop anywhere on the panel to upload; the dialog flow still works too.
   function onDragEnter(e) {
     if (!canWrite) return;
     e.preventDefault();
@@ -240,49 +225,31 @@ export function FilesPanel({
     dragDepth.current = 0;
     setDragOver(false);
     if (e.dataTransfer.files?.length) {
-      // A snapshot, not the live FileList: `dataTransfer` is neutered once the
-      // drop event finishes, and this is read later — during the dialog's
-      // render, by which time the live list is empty.
+      // A snapshot, not the live FileList: `dataTransfer` is emptied once the drop
+      // event finishes, and this is read later during the dialog's render.
       setDroppedFiles(Array.from(e.dataTransfer.files));
       setUploadOpen(true);
     }
   }
 
-  // Plain, always-labeled buttons. A dropdown would save space that desktop
-  // doesn't need and costs an extra click every single time; icon-only would
-  // save space mobile doesn't have room to spend on guessing. `flex-wrap`
-  // handles the actual space constraint (narrow mobile) by letting the row
-  // become two, not by hiding what anything is.
-  //
-  // Grouped rather than listed: these eight controls do four unrelated jobs —
-  // looking at the folder, adding to it, repairing it, leaving it — and drawn
-  // as one flat row of equal pills they read as a pile. Upload is the only
-  // primary action here and used to sit sixth, weighted the same as Trash.
+  // Plain, always-labelled buttons; `flex-wrap` handles narrow screens by wrapping,
+  // not by hiding labels. Grouped by job (view, add, repair, leave); Upload is the
+  // only primary action.
   const addButtons = (
     <div className="flex flex-wrap items-center gap-2">
-      {/* Divides "looking at this folder" from "changing it". Without it the
-          eight controls read as one continuous run however they are weighted —
-          which is the actual complaint.
-
-          Shown on a CONTAINER query, not a viewport one: the strip is narrower
-          than the window by whatever the sidebar takes, so a `2xl:` guess
-          would be wrong on a collapsed sidebar and wrong again on a wide one.
-          Below the threshold the groups sit on separate lines, where the break
-          already separates them and this would be a rule dangling at the start
-          of a row.
-
-          73rem is measured, not chosen. The groups stop fitting on one line at
-          a strip width of 1176px, and a container query measures the CONTENT
-          box — 18px less than the border box this is drawn on. 72rem let the
-          rule appear at 1176 and its own 17px then caused the very wrap it
-          exists to avoid; 74rem held it back until 1216 and lost the divider
-          on a perfectly good single row at 1196. */}
+      {/* Divides "looking at this folder" from "changing it".
+          
+          A CONTAINER query, not a viewport one: the strip's width depends on the
+          sidebar. Below the threshold the groups wrap onto separate lines and the rule
+          would dangle.
+          
+          73rem is measured: the groups stop fitting at a 1176px strip, and container
+          queries measure the content box (18px narrower). 72rem made the rule itself
+          cause the wrap; 74rem hid it on rows that fit. */}
       <Separator
         orientation="vertical"
-        // `!self-center` because the primitive sets `data-vertical:self-stretch`,
-        // which beats the row's `items-center`: stretched to the line box and
-        // then clamped to 20px, the rule pinned to the TOP and sat 6px above
-        // every button beside it.
+        // `!self-center` because the primitive's `data-vertical:self-stretch` beats the
+        // row's `items-center` and would pin the 20px rule to the top.
         className="mx-0.5 !h-5 !self-center hidden @[73rem]/toolbar:block"
       />
       <ReasonTooltip reason={writeReason}>
@@ -303,27 +270,18 @@ export function FilesPanel({
           {t("uploadDialog.action")}
         </Button>
       </ReasonTooltip>
-      {/* Neither of these is part of adding a file: one repairs the folder,
-          one leaves it for another view. Separated from the three above; the
-          rank comes from Upload being the one filled button, not from greying
-          these — grey text on this strip read as disabled. */}
+      {/* Neither is part of adding a file. Rank comes from Upload being the one filled
+          button; grey text on this strip read as disabled. */}
       <Separator orientation="vertical" className="mx-0.5 !h-5 !self-center" />
       <FixPermissionsButton appId={appId} canManage={canManage} />
-      {/* Every panel that has a trash reaches it from this toolbar — cPanel and
-          Plesk both use a button here that swaps the list. Nobody gives it its
-          own page, and a tab would compete with the breadcrumb.
-
-          Light red, by Krishna's call (2026-09-23), after the grey version
-          read as disabled. It is only a tint — outline, 5% fill, red text —
-          so it still sits below the solid red of the controls that actually
-          destroy: Delete in the selection bar and the permanent-delete
-          confirm. The trade-off was raised and chosen knowingly: a red
-          control that is safe to press slightly dulls what red means.
-
-          The text is the destructive red mixed 22% toward the foreground in
-          light mode: plain `text-destructive` on this tint measured 4.24:1
-          from the rendered pixels, under the 4.5:1 floor for 14px text. Dark
-          mode already measured 5.78:1 and keeps the plain token. */}
+      {/* Trash is reached from this toolbar, swapping the list, as in other panels.
+          
+          Light red tint (outline, 5% fill, red text) so it does not read as disabled,
+          while staying below the solid red of truly destructive controls.
+          
+          Text is destructive red mixed 22% toward the foreground in light mode: plain
+          `text-destructive` on this tint is under 4.5:1 for 14px text. Dark mode passes
+          with the plain token. */}
       <Button
         variant="outline"
         size="sm"
@@ -346,11 +304,7 @@ export function FilesPanel({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      {/*
-       * Above the listing, not inside it. Compress and extract are queued, so
-       * the archive is not in the rows below yet — a spinner placed among the
-       * files would be pointing at a row that does not exist.
-       */}
+      {/* Above the listing: queued archives are not in the rows yet. */}
       <ArchiveJobsBanner appId={appId} />
       {dragOver ? (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl border-2 border-dashed border-primary bg-primary/5 backdrop-blur-[1px]">
@@ -363,9 +317,7 @@ export function FilesPanel({
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <FileBreadcrumb appId={appId} path={path} />
-        {/* Site search results span every folder on the site, not just this
-            one — a local "X of Y" count here would describe the wrong
-            thing, so it's hidden rather than showing a stale local number. */}
+        {/* Site search spans every folder, so a local "X of Y" count would be wrong. */}
         {files.length && !siteSearch ? (
           <span className="shrink-0 text-xs text-muted-foreground">
             {query.trim()
@@ -377,22 +329,11 @@ export function FilesPanel({
 
       <FileShortcuts appId={appId} siteType={siteType} path={path} onAction={onAction} canManage={canManage} />
 
-      {/*
-        One toolbar on one surface, instead of eight controls floating on the
-        page over two rows.
-
-        The border and tint are doing real work: with nothing containing them
-        the pills had no relationship to each other or to the table they act
-        on, which is most of why the page read as unstructured rather than
-        merely busy. Search sits inside it too — on its own row it cost a whole
-        band of vertical space above the fold to hold one input.
-      */}
+      {/* One toolbar on one bordered surface, with search inside it, so the controls
+          read as a group tied to the table. */}
       <div className="@container/toolbar flex flex-col gap-3 rounded-xl border bg-muted/30 p-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        {/* Sized to its contents, not `flex-1`: growing this group squeezed
-            the one beside it and pushed "Hide hidden files" onto a second
-            line while ~500px sat empty between them. When the row genuinely
-            runs out of width the two groups wrap as wholes, which is the
-            behaviour worth having on a phone. */}
+        {/* Sized to content, not `flex-1`, so the two groups wrap as wholes instead of
+            squeezing each other. */}
         <div className="flex flex-wrap items-center gap-2">
           {files.length > 0 ? (
             <LocalSearchInput
@@ -402,27 +343,19 @@ export function FilesPanel({
                 setSiteSearch(false);
               }}
               placeholder={t("searchPlaceholder")}
-              // 224px, not the default 320: measured, the two groups came to
-              // 1206px in a 1196px strip and wrapped over 10px. The field is
-              // still wider than the longest folder name anyone types into it.
+              // 224px, not the default 320: measured, the two groups otherwise overflow a
+              // 1196px strip by 10px.
               className="sm:max-w-56"
             />
           ) : null}
-          {/* Files change from outside the panel — a deploy, a cron job,
-              someone on SSH — so the list can be stale without anything here
-              having happened. It re-runs the server component, so it refreshes
-              the trash view and a search result too, not just a listing.
-              Grouped with search and the view toggles because it is one of
-              them: none of these four change a single byte on disk. */}
+          {/* Files change outside the panel (deploys, cron, SSH). Re-runs the server
+              component, so it refreshes the trash view and search results too. Grouped with
+              the view controls: none of these change anything on disk. */}
           <RefreshButton className="size-8" />
-          {/* Context for the listing, not an action on it — so it sits with the
-              other view controls rather than among New folder and Upload. It
-              was a 340px rail beside the table until the table needed that
-              width back. */}
+          {/* Context for the listing, not an action, so it sits with the view controls. */}
           <SizeBreakdownSheet breakdown={breakdown} />
-          {/* A link, not a button: the listing is fetched on the server, so
-              the choice has to be in the URL to change what comes back. It
-              also makes the view shareable and survives a reload. */}
+          {/* A link, not a button: the listing is fetched on the server, so the choice must
+              be in the URL (also shareable and reload-safe). */}
           {files.length > 0 || hiddenCount > 0 ? (
             <Button asChild variant="outline" size="sm">
               <Link
@@ -433,9 +366,7 @@ export function FilesPanel({
               >
                 {showHidden ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
                 {showHidden ? t("hidden.hide") : t("hidden.show")}
-                {/* The count comes from the same read that produced the rows.
-                    A screen that hides files without saying how many is
-                    indistinguishable from one that lost them. */}
+                {/* Hidden files are counted so the screen never looks like it lost them. */}
                 {!showHidden && hiddenCount > 0 ? (
                   <span className="ms-1 tabular-nums">
                     {t("hidden.count", { count: hiddenCount })}
@@ -462,16 +393,8 @@ export function FilesPanel({
         <SiteSearchResults appId={appId} query={query} onAction={onAction} canManage={canManage} />
       ) : files.length === 0 && !showHidden && hiddenCount > 0 ? (
         /*
-         * There ARE files here — they are just hidden.
-         *
-         * "This folder is empty. Upload a file to get started." over a folder
-         * holding .env, .git and .htaccess is a false statement, and the
-         * suggested action is wrong too: what you want is to see them, not to
-         * add another. The count has always been on screen in the toggle above
-         * ("3 hidden"); only the state below it was ignoring it.
-         *
-         * The action reuses the same href the toggle uses, so there is one
-         * definition of what "show hidden" means on this page.
+         * There ARE files here, just hidden: "empty" would be false. The action reuses
+         * the toggle's href, so "show hidden" has one definition.
          */
         <EmptyState
           icon={EyeOff}
@@ -488,11 +411,8 @@ export function FilesPanel({
         />
       ) : files.length === 0 ? (
         /*
-         * Explain, then offer the way out. "Upload a file, or create a new
-         * file or folder" with no buttons sent the reader back up to the
-         * toolbar to find them — and told a read-only viewer to do things
-         * they cannot. Drag-and-drop was the other undiscovered half: it
-         * worked on this very area and nothing said so.
+         * Explain, then offer the way out (including drag-and-drop), and only actions the
+         * reader may take.
          */
         <EmptyState
           icon={Folder}
@@ -501,9 +421,7 @@ export function FilesPanel({
           action={
             canWrite ? (
               <div className="flex flex-wrap justify-center gap-2">
-                {/* Outlined, not the filled primary: the toolbar's Upload is
-                    already on screen, and two blue buttons would stop "the blue
-                    one" meaning anything. */}
+                {/* Outlined: the toolbar's Upload is already the filled primary. */}
                 <Button variant="outline" size="sm" onClick={() => setUploadOpen(true)}>
                   <UploadCloud className="size-3.5" />
                   {t("uploadDialog.action")}
@@ -542,8 +460,7 @@ export function FilesPanel({
               highlightPath={highlightPath}
               selected={shownSelection}
               onToggle={toggleSelected}
-              // Same state the table gets — "Folder size" is in the card menu
-              // too, and without these it had nowhere to put its answer.
+              // Same state the table gets, so "Folder size" in the card menu can show its answer.
               folderSizes={folderSizes}
               sizingPaths={sizingPaths}
             />
@@ -564,9 +481,7 @@ export function FilesPanel({
               initialSort={initialSort}
             />
           </div>
-          {/* The drop target has always been this whole panel; nothing said
-              so until something was already being dragged over it. Desktop
-              only — a phone has nothing to drag from. */}
+          {/* Advertises the whole-panel drop target. Desktop only. */}
           {canWrite ? (
             <p className="hidden items-center gap-1.5 text-xs text-muted-foreground lg:flex">
               <MousePointerClick className="size-3.5" aria-hidden />
@@ -604,16 +519,14 @@ export function FilesPanel({
         onSuccess={flashPath}
       />
 
-      {/* Mounted only while active, not always-mounted + an open flag — each
-          dialog then initializes its own state fresh from props instead of
-          resetting via a setState-in-effect on every action change. */}
+      {/* Mounted only while active, so each dialog initializes fresh from props instead
+          of resetting via setState-in-effect. */}
       {bulkAction ? (
         <BulkDialogs
           appId={appId}
           action={bulkAction}
           paths={shownSelection}
-          // The rows themselves, not just their paths: the Permissions dialog
-          // has to start from what is actually set, and a path cannot say.
+          // The rows, not just paths: the Permissions dialog starts from the actual modes.
           files={files}
           path={path}
           onOpenChange={(open) => !open && setBulkAction(null)}

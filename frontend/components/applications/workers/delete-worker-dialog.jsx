@@ -7,9 +7,8 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { apiMessage } from "@/lib/api/error-message";
 import { useRefresh } from "@/hooks/use-refresh";
 
-// The API stops the supervisord program before deleting the row — the other order
-// would leave a process running that nothing in the panel knows about — so a
-// plain confirm is proportionate; there's no orphaned-process risk to spell out.
+// The API stops the supervisord program before deleting the row, so a plain
+// confirm is enough (no orphaned process).
 export function DeleteWorkerDialog({ worker, appId, open, onOpenChange }) {
   const t = useTranslations("applications.workers");
   const { pending: refreshing, refreshThen } = useRefresh();
@@ -19,9 +18,7 @@ export function DeleteWorkerDialog({ worker, appId, open, onOpenChange }) {
     setPending(true);
     try {
       await deleteWorker(appId, worker.id);
-      // Closed once the list has re-read, not on the API's answer: closing
-      // first left the deleted row on screen for a second and a half under a
-      // toast saying it was gone.
+      // Closed once the list has re-read, not on the API's answer.
       refreshThen(() => {
         toast.success(t("toast.deleted"));
         onOpenChange?.(false);

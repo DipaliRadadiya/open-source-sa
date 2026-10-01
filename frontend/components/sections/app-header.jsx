@@ -19,18 +19,12 @@ export function AppHeader({ impersonating = false }) {
   const isAdmin = user?.is_admin;
 
   return (
-    // Stickiness is owned by the wrapping cluster in the layout (so an
-    // impersonation banner can pin above it) — this stays a plain bar.
-    // The controls in here are sized for a mouse (28–32px). On a phone that is
-    // below what a finger reliably hits, so every control in the bar gets a
-    // 44px minimum box on small screens only — the visual size is unchanged,
-    // the target grows. Desktop keeps the compact chrome.
+    // Stickiness is owned by the wrapping cluster in the layout (so an impersonation
+    // banner can pin above it); this stays a plain bar.
+    // Controls are mouse-sized (28-32px), so on small screens each gets a 44px
+    // minimum touch box without changing its visual size.
     <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-6 max-sm:[&_button]:min-h-11 max-sm:[&_button]:min-w-11">
-      {/* The trail lives at the top of the page content, not up here. In the
-          bar it competed with the account controls for a fixed 64px and had to
-          hide its ancestors on narrow screens to fit; in the content column it
-          has the page's own width and sits directly above the thing it
-          describes. */}
+      {/* The trail lives at the top of the page content, where it has the page's width. */}
       <SidebarToggle />
       <div className="ml-auto flex items-center gap-2">
         <LocaleSwitcher />

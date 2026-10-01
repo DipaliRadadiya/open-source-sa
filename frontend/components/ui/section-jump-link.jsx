@@ -7,16 +7,9 @@ import { Button } from "@/components/ui/button";
 const HIGHLIGHT_MS = 1200;
 
 /**
- * A same-page link that makes its destination briefly identify itself.
- *
- * The href stays a real fragment link, so the browser still reaches the
- * section before hydration or when JavaScript is unavailable. Once hydrated,
- * the extra cue confirms the jump even when the target was already nearby.
- */
-/**
- * `className` opts out of the Button wrapper entirely, for callers whose link
- * IS the row rather than a control sitting inside one. Without it the jump
- * behaviour was only available in button shape.
+ * A same-page fragment link that briefly highlights its target. Works as a
+ * plain link before hydration. `className` renders a bare link instead of a
+ * Button, for links that are the whole row.
  */
 export function SectionJumpLink({ href, children, variant = "outline", size = "sm", className }) {
   const highlightTimer = useRef(null);
@@ -54,8 +47,7 @@ export function SectionJumpLink({ href, children, variant = "outline", size = "s
     cancelAnimationFrame(highlightFrame.current);
     target.removeAttribute("data-jump-highlight");
 
-    // Re-add on the next frame so clicking the link again while the cue is
-    // still visible restarts it instead of looking like the click did nothing.
+    // Re-add on the next frame so a repeat click restarts the cue.
     highlightFrame.current = requestAnimationFrame(() => {
       target.setAttribute("data-jump-highlight", "true");
       highlightTimer.current = setTimeout(() => {

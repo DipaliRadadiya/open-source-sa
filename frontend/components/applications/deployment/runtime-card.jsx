@@ -19,17 +19,11 @@ import {
 } from "@/components/ui/form";
 
 /**
- * How the site's process is started.
+ * How the site's process is started, editable after creation via
+ * `PUT /applications/{id}`.
  *
- * These two were only ever askable on the create form, and the API has taken
- * them on `PUT /applications/{id}` the whole time — so a site created with the
- * wrong entry file could not be corrected at all. It started, died with
- * MODULE_NOT_FOUND, and every deploy failed at `verify` with no field anywhere
- * to fix. Deleting the site and making it again was the only route.
- *
- * Saved here, applied by the next deploy: the deployer rewrites the systemd
- * unit before restarting, and the card says so rather than implying the
- * running process changes under you.
+ * Saved here, applied by the next deploy: the deployer rewrites the systemd unit
+ * before restarting, and the card says so.
  */
 export function RuntimeCard({ application, canManage }) {
   const t = useTranslations("applications.deployment.runtime");
@@ -38,8 +32,7 @@ export function RuntimeCard({ application, canManage }) {
 
   const defaults = {
     start_command: application.start_command ?? "",
-    // Empty rather than 0: the API reads a blank port as "pick a free one",
-    // and a 0 in the box would read as a real choice.
+    // Empty rather than 0: the API reads a blank port as "pick a free one".
     app_port: application.app_port ? String(application.app_port) : "",
   };
 
@@ -73,16 +66,8 @@ export function RuntimeCard({ application, canManage }) {
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
       <Form {...form}>
         <form noValidate onSubmit={form.handleSubmit(save)}>
-          {/*
-           * The same Section/Row system as the card above it, so the Settings
-           * tab has ONE field layout rather than three. It was a hand-rolled
-           * two-column grid — a third arrangement on a tab that already had two.
-           *
-           * The rule, applied the same way in both cards: a value that fits the
-           * 224px control column gets a row; a value that cannot — a shell
-           * command, a multi-line script — goes full width. So the width says
-           * something about the content instead of being arbitrary.
-           */}
+          {/* Same Section/Row layout as the card above. A value that fits the 224px control
+              column gets a row; a shell command or script goes full width. */}
           <Section
             icon={Play}
             title={t("title")}

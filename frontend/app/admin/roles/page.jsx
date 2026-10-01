@@ -16,16 +16,11 @@ export default async function AdminRolesPage({ searchParams }) {
   const [rolesPage, t] = await Promise.all([getRolesPage(query), getTranslations("roles")]);
 
 
-  // Before anything renders: a page past the end sends the reader to the
-  // last real page instead of painting an error for it.
   redirectOutOfRange("/admin/roles", sp, rolesPage.meta, rolesPage.failed);
   return (
     <div className="space-y-6">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
-      {/* "No roles yet" is a statement about this panel, and a failed request
-          is not evidence for it — every sibling admin table already branches
-          here. `failed` was being passed to redirectOutOfRange one line above
-          and then dropped for rendering. */}
+      {/* A failed request must not render as "No roles yet". */}
       {rolesPage.failed ? (
         <LoadFailed
           description={t("loadFailed")}

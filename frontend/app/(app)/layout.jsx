@@ -31,13 +31,9 @@ import { ErrorCopy } from "@/components/sections/error-copy";
 export const dynamic = "force-dynamic";
 
 /**
- * This layout sits above every error.jsx in the panel, so a throw here escapes
- * to Next's own unstyled error page — which is exactly what a rate-limited
- * session looked like. Caught by identity and answered with a screen that says
- * so; anything else still reaches the boundary.
- *
- * The session must be resolved before the redirect, but the other three are
- * independent of each other, so they go together rather than in a waterfall.
+ * Sits above every error.jsx, so a throw here reaches Next's unstyled error
+ * page; a rate-limit error is caught and given its own screen. The session
+ * resolves first, then the other three reads run in parallel.
  */
 export default async function AppLayout({ children }) {
   let user;
@@ -70,12 +66,9 @@ export default async function AppLayout({ children }) {
       <TooltipProvider delayDuration={300}>
       <ErrorCopy />
       <RememberPath />
-        {/* Panel-wide, not settings-only. Any screen with its own Save can
-            lose an edit to a sidebar click, and every one of them did. */}
+        {/* Panel-wide: any screen with a Save can lose an edit to a sidebar click. */}
         <UnsavedProvider>
-        {/* Above the shell, not inside a page: a restart takes the sidebar and
-            header down with everything else, so the curtain has to cover them
-            too. */}
+        {/* Above the shell so the restart curtain covers sidebar and header too. */}
         <ServerRestartProvider>
         <PanelFocus />
         <PageCrumbProvider>
@@ -86,12 +79,11 @@ export default async function AppLayout({ children }) {
               {/* min-w-0: without it this flex child keeps min-width:auto and wide
               content (tables/charts) pushes the page into horizontal overflow. */}
               <SidebarInset className="min-w-0">
-                {/* Banner + header ride together as one sticky cluster, so while
-                impersonating the indicator and its escape never scroll away. */}
+                {/* Banners + header form one sticky cluster so the impersonation
+                banner never scrolls away. */}
                 <div className="sticky top-0 z-20">
                   {/* Publishes this cluster's measured height as `--app-chrome`
-                      so anything else that sticks can clear it. Its height is
-                      conditional — see the component. */}
+                      for other sticky elements. */}
                   <AppChromeHeight />
                   {impersonatedBy ? (
                     <ImpersonationBanner
@@ -105,17 +97,9 @@ export default async function AppLayout({ children }) {
                     />
                   ) : null}
                   <AppHeader impersonating={!!impersonatedBy} />
-                  {/* Its own band under the header rather than a line of text
-                      above the h1: the trail is chrome, and sharing the page's
-                      background made it read as a stray first line of the
-                      heading. Full-bleed so the rule actually divides, with the
-                      crumb held to the content column so it still lines up.
-
-                      Inside the sticky cluster, not `top-16` in <main>: the
-                      banners above it are conditional, so any fixed offset is
-                      wrong the moment someone is impersonating. Frosted rather
-                      than a flat tint because a translucent band would show the
-                      page scrolling through it. */}
+                  {/* Inside the sticky cluster, not a fixed `top-16` offset: the
+                      banners above are conditional. Frosted so scrolling content
+                      does not show through. */}
                   <div className="border-b bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/70">
                     <div className="mx-auto w-full max-w-screen-xl px-4 py-2.5 sm:px-6 lg:px-8">
                       <AppBreadcrumb items={permissions} />

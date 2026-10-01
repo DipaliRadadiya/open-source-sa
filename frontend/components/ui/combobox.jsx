@@ -8,14 +8,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useChromeOffset } from "@/hooks/use-chrome-offset";
 
 /**
- * Searchable single-select. The house rule is a Combobox — not a bare Select —
- * for any data-driven or long list (repos, branches, system users): scanning a
- * scroll-only dropdown for one entry is the slow path, typing to filter is the
- * fast one.
- *
- * Deliberately built on Popover + a filtered list rather than pulling in cmdk —
- * one dependency-free primitive the whole panel can share. `options` are
- * `{ value, label, hint? }`; `value`/`onChange` speak the option value.
+ * Searchable single-select; use it instead of Select for long or data-driven
+ * lists. Built on Popover without cmdk. `options` are `{ value, label, hint? }`;
+ * `value`/`onChange` use the option value.
  */
 export function Combobox({
   options = [],
@@ -25,9 +20,7 @@ export function Combobox({
   searchPlaceholder,
   empty,
   disabled = false,
-  // Forwarded to the trigger, which is a Button and knows how to show it.
-  // Without this a disabled Combobox was the one control that could never
-  // explain itself, and it is the panel default for every long list.
+  // Forwarded to the trigger Button, which shows it.
   disabledReason,
   className,
   id,
@@ -35,8 +28,7 @@ export function Combobox({
 }) {
   const t = useTranslations("common");
   const [open, setOpen] = useState(false);
-  // The sticky header is not empty space, whatever the positioning engine
-  // thinks — see hooks/use-chrome-offset.js.
+  // Keeps the popover clear of the sticky header; see hooks/use-chrome-offset.js.
   const [chromeOffset, measureChrome] = useChromeOffset();
   const [query, setQuery] = useState("");
   // The highlighted row for the keyboard, as an index into `filtered`.
@@ -45,18 +37,9 @@ export function Combobox({
   const searchRef = useRef(null);
   const triggerRef = useRef(null);
   /*
-   * Whether this picker lives inside a dialog.
-   *
-   * A Dialog wraps its content in react-remove-scroll, which blocks wheel
-   * events on everything it does not consider inside itself. The popover is
-   * portalled to the body, so it is "outside" — and the list scrolled with the
-   * scrollbar or the keyboard but sat dead under a mouse wheel, which is how
-   * everyone actually scrolls a dropdown.
-   *
-   * `modal` makes the popover manage its own scroll lock, which nests inside
-   * the dialog's and lets its own content scroll. Only inside a dialog: on an
-   * ordinary page a modal popover would block the rest of the screen for a
-   * control that has no business doing that.
+   * Modal only inside a dialog: the Dialog's react-remove-scroll blocks wheel
+   * events in the portalled popover, and a modal popover nests its own scroll
+   * lock. On a normal page modal would block the rest of the screen.
    */
   const [modal, setModal] = useState(false);
 
@@ -87,8 +70,7 @@ export function Combobox({
     handleOpenChange(false);
   }
 
-  // Typing narrows the list, so Enter should take what is left rather than do
-  // nothing; the arrows move over the rows that can actually be chosen.
+  // Enter picks the active (or first choosable) row; arrows skip blocked rows.
   function onSearchKeyDown(event) {
     if (event.key === "Enter") {
       event.preventDefault();
@@ -156,14 +138,7 @@ export function Combobox({
             placeholder={searchPlaceholder ?? t("search")}
             className="h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 dark:bg-transparent"
           />
-          {/* The same clear the panel's other two search boxes have. This one
-              is shared by the repository, branch, application and destination
-              pickers, so its absence was felt in several places at once —
-              and a filtered list with no matches gave no way back except
-              selecting the text and deleting it.
-
-              Focus returns to the field: the point of clearing is to type
-              again, and the list underneath has just changed. */}
+          {/* Clearing returns focus to the field for retyping. */}
           {query ? (
             <button
               type="button"
@@ -182,9 +157,7 @@ export function Combobox({
           {filtered.length ? (
             filtered.map((option, index) => {
               const isSelected = String(option.value) === String(value);
-              // Shown greyed with the reason rather than hidden: an option that
-              // silently is not there reads as a bug in the list, and the
-              // reason is usually the next thing the reader has to act on.
+              // Blocked options are shown greyed with their reason, not hidden.
               const blocked = Boolean(option.disabledReason);
               return (
                 <button
@@ -209,8 +182,6 @@ export function Combobox({
                   <Check className={cn("mt-0.5 size-4 shrink-0", isSelected ? "opacity-100 text-primary" : "opacity-0")} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate">{option.label}</span>
-                    {/* The blocker replaces the hint: while the option cannot be
-                        chosen, why is the only thing worth the line. */}
                     {blocked ? (
                       <span className="block truncate text-xs font-medium text-warning">
                         {option.disabledReason}

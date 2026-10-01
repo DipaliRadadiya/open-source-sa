@@ -1,17 +1,8 @@
 /**
- * The provisioning step identifiers the backend records.
- *
- * `steps[]` and `failed_step` carry raw internal names — `create_php_pool`,
- * `trust_domain`, `set_ownership` — and the UI was printing them verbatim.
- * They are keys, not copy, so every one gets a translated label; anything not
- * on this list falls back to a generic phrase rather than leaking an
- * identifier the moment the backend adds a step.
- *
- * Sources: ApplicationProvisioner::step(), the installers' run() calls, and
- * GitDeployer — a deploy records into the same `steps[]` field, so the two
- * screens share one catalog rather than one of them humanising raw keys.
- * The list is unordered on purpose — which steps run, and in what order,
- * depends on the site type, so the API's own sequence is the only truth.
+ * Step identifiers the backend records in `steps[]` and `failed_step`; each
+ * gets a translated label. Sources: ApplicationProvisioner::step(), the
+ * installers' run() calls, and GitDeployer. Unordered: the API's sequence
+ * depends on the site type.
  */
 export const PROVISION_STEPS = new Set([
   // Core provisioning.
@@ -27,8 +18,7 @@ export const PROVISION_STEPS = new Set([
   "script",
   "restart_app",
   "restart_workers",
-  // Git deploys. `verify` never appears in steps[] — it is only ever written
-  // to failed_step, because a site that answers is not worth a row of its own.
+  // Git deploys. `verify` only ever appears in failed_step.
   "init",
   "fetch",
   "checkout",
@@ -45,7 +35,6 @@ export const PROVISION_STEPS = new Set([
   "set_password",
   "set_timezone",
   "trust_domain",
-  // Seen on the fresh server 2026-09-29 without a label ("Ensure account").
   "ensure_account",
   "build",
   "create_admin",
@@ -56,20 +45,9 @@ export const PROVISION_STEPS = new Set([
 ]);
 
 /**
- * Human label for a step. `prefix` bridges the two namespaces this is called
- * from — the card translates under `applications.details`, the list and row
- * actions under `applications`, and both need the same words.
- *
- * An unrecognised step is handed to `t()` anyway rather than swapped for the
- * generic phrase. The panel now supplies a fallback for every missing key
- * (i18n/message-fallback.js), so a step we have no wording for reads as
- * "Brand new step" instead of leaking `brand_new_step` — and, more to the
- * point, instead of "Completed a step", which the failure sentence rendered as
- * **"Stopped at: Completed a step"**. A message that contradicts itself is
- * worse than one that is merely unpolished.
- *
- * `unknownStep` survives for the case it was actually right about: no step at
- * all. A failure that names nothing cannot be described by naming something.
+ * Human label for a step. `prefix` selects the namespace (`applications.details`
+ * or `applications`). Unknown steps still go through `t()`, whose fallback
+ * (i18n/message-fallback.js) humanises the key; `unknownStep` is only for no step.
  */
 export function provisionStepLabel(step, t, prefix = "") {
   if (!step) return t(`${prefix}unknownStep`);

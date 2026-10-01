@@ -30,13 +30,10 @@ function ReportPending() {
 }
 
 /**
- * `next/link` that tells the top bar when it is waiting.
- *
- * Panel routes are dynamic and most links are `prefetch={false}` (a prefetch
- * is a full server render against the API's rate budget), so a click waits for
- * the server before `loading.jsx` can show. On a slow connection that was a
- * second or more of nothing happening. `useLinkStatus` is only readable inside
- * a Link, so every Link carries this reporter.
+ * `next/link` that tells the top bar when it is waiting. Most links use
+ * `prefetch={false}` (each prefetch is a full server render against the rate
+ * budget), so a click waits before `loading.jsx` shows. `useLinkStatus` is only
+ * readable inside a Link, hence the reporter.
  */
 export default function AppLink({ children, ...props }) {
   return (

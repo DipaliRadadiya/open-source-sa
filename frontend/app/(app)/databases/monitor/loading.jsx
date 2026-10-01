@@ -1,7 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Mirrors the real layout — back link, heading, four stat cards, chart, process
-// list — so the page fills in place rather than jumping.
+// Mirrors the real layout so the page fills in place without jumping.
 export default function Loading() {
   return (
     <div className="space-y-6">

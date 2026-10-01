@@ -1,13 +1,7 @@
 /**
- * How the reader likes the file list shown — hidden files and sort order —
- * remembered across folders and reloads.
- *
- * Both lived only in the moment: the sort reset on every reload, and "hide
- * hidden files" reset the moment you opened another folder, because the flag
- * sat in one URL and six different places build folder links without it. A
- * cookie rather than localStorage because the hidden flag filters on the
- * server; an explicit `?hidden=` in the URL still wins, so a shared link shows
- * what its sender saw.
+ * File list preferences (hidden files, sort order), remembered across folders
+ * and reloads. A cookie, not localStorage, because the hidden flag filters on
+ * the server; an explicit `?hidden=` in the URL still wins.
  */
 export const HIDDEN_COOKIE = "sv_files_hidden";
 export const SORT_COOKIE = "sv_files_sort";
@@ -38,6 +32,6 @@ export function writePref(name, value) {
       ? `${name}=${value}; path=/; max-age=${YEAR}; samesite=lax`
       : `${name}=; path=/; max-age=0; samesite=lax`;
   } catch {
-    // A blocked cookie costs the preference, nothing else.
+    // A blocked cookie only loses the preference.
   }
 }

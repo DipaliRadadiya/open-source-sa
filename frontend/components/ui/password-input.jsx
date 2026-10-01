@@ -6,8 +6,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Password field with a show/hide toggle. Accepts all Input props (spread
- * react-hook-form's field onto it). The toggle is a tab stop of its own: out of
- * the tab order, a keyboard user had no way to check what they had typed.
+ * react-hook-form's field onto it). The toggle is a tab stop for keyboard users.
  */
 export function PasswordInput({ className, show: showProp, onShowChange, ...props }) {
   const t = useTranslations("common");

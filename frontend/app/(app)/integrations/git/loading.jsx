@@ -1,8 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Mirrors the real layout — title, subtitle, one card with a header row and
-// two account rows — so the page fills in place instead of jumping. Keep in
-// step with page.jsx: a card added there and not here is a jump.
+// Mirrors the real layout so the page fills in place. Keep in step with page.jsx.
 export default function Loading() {
   return (
     <div className="space-y-6">

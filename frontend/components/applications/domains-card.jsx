@@ -7,41 +7,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DomainText } from "@/components/ui/domain-text";
 
-// Four rows plus a counted remainder. Enough to answer "what answers to this
-// site" for the overwhelming majority, without letting a site with forty
-// aliases turn the dashboard into a domain list — that screen already exists.
+// Four rows plus a counted remainder; the full list is on the Domains screen.
 const SHOWN = 4;
 
 /**
- * The two questions this card answers are "what names does it answer to" and
- * "is it encrypted". Everything else about a domain belongs on the Domains
- * screen.
- *
- * It used to print the primary domain and then "1 alias · no redirects" — a
- * count standing in for data the page had already fetched and thrown away.
- * Naming the domains is both the better answer and what gives this card the
- * same weight as Security beside it; two cards in a row with half the content
- * of each other is what made the grid look ragged.
- *
- * Rows deliberately match the Security card's rhythm — same padding, same
- * divider, same mono-value-then-muted-label shape. Gestalt similarity: two
- * cards side by side reading as one system rather than two.
- *
- * No certificate is a normal state, not an error — it says so plainly instead
- * of showing a red failure for a site that simply serves plain HTTP.
+ * What names the site answers to, and whether it is encrypted. Everything else
+ * belongs on the Domains screen. Rows match the Security card's layout beside
+ * it. No certificate is a normal state (plain HTTP), not an error.
  */
 export function DomainsCard({ application, domains = [], certificate = null, failed = false, href = null }) {
   const t = useTranslations("applications.domains");
 
   const secure = certificate?.status === "active";
-  // A new application gets its certificate automatically a few seconds after
-  // it goes live. Until then this said "No certificate" and offered Set up SSL
-  // for something already on its way.
+  // A new application gets its certificate automatically shortly after going
+  // live; do not prompt for one already on its way.
   const issuing = certificate?.status === "pending" || certificate?.status === "issuing";
   const promptCertificate = !failed && !secure && !issuing;
 
-  // Primary first, then aliases, then redirects — the order somebody reads them
-  // in, not the order the API happened to return.
+  // Primary, then aliases, then redirects, regardless of API order.
   const RANK = { primary: 0, alias: 1, redirect: 2 };
   const ordered = [...domains].sort((a, b) => (RANK[a.type] ?? 3) - (RANK[b.type] ?? 3));
   // A site always has at least its own name, even before a domain row exists.
@@ -53,7 +36,7 @@ export function DomainsCard({ application, domains = [], certificate = null, fai
   return (
     <Card>
       {/* Re-reads until the certificate is issued or fails, so the card and the
-          attention strip move on without a reload. */}
+          attention strip update without a reload. */}
       {issuing ? <AutoRefresh intervalMs={5000} stopAfterMs={300000} /> : null}
       <CardHeader className="gap-1.5">
         <div className="min-w-0 space-y-1">
@@ -77,8 +60,6 @@ export function DomainsCard({ application, domains = [], certificate = null, fai
             {t("secured")}
           </Badge>
         ) : (
-          // A state, not a label: the quiet `secondary` badge read as plain
-          // text beside the green HTTPS one it is the opposite of.
           <Badge variant="warning" className="w-fit gap-1.5 font-normal">
             <ShieldOff className="size-3" />
             {t("noCertificate")}
@@ -95,9 +76,6 @@ export function DomainsCard({ application, domains = [], certificate = null, fai
               <li key={domain.id} className="flex items-center gap-3 px-6 py-3">
                 <Globe2 className="size-4 shrink-0 text-muted-foreground" />
                 <DomainText domain={domain.domain} className="min-w-0 flex-1 font-mono text-xs" />
-                {/* A badge, so the type reads as a tag on the name rather than a
-                    second column of text; the primary one tinted, being the
-                    name the site answers to. */}
                 <Badge variant={domain.type === "primary" ? "default" : "outline"} className="shrink-0 font-normal">
                   {domain.type_title ?? t(`types.${domain.type}`)}
                 </Badge>
@@ -118,9 +96,7 @@ export function DomainsCard({ application, domains = [], certificate = null, fai
         )}
 
         {href ? (
-          // No mt-auto: a site with a single domain has a short list, and
-          // floating the button to the card foot left ~90px of nothing
-          // between the two.
+          // No mt-auto: with a short list it would leave a large gap above the button.
           <div className="px-(--card-spacing) pt-(--card-spacing)">
             <Button asChild variant={promptCertificate ? "default" : "outline"} size="sm">
               <Link href={promptCertificate ? `${href}?tab=ssl` : href} prefetch={false}>

@@ -36,59 +36,43 @@ export default async function ApplicationBackupsPage({ params }) {
   ]);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
-  // The site is gone. Land on the list — the only place left to go — and say
-  // why on arrival, rather than parking on a dead end that offers one link.
+  // The site is gone: back to the list, which explains the redirect.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application)
     return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
-  // Granted per site type, the same contract as the other application screens:
-  // no grant here means this screen should not exist for this site.
+  // Granted per site type, like the other application screens.
   if (!can(appPermissions, "app_backup", "view", "application")) {
     return <PermissionDenied title={t("pageTitle")} />;
   }
 
   const application = result.application;
   const canManage = can(appPermissions, "app_backup", "manage", "application");
-  // Restoring needs `backup` at manage level — a different trust from
-  // configuring a schedule, so it is checked against the server-level catalog
-  // rather than this site's `app_backup` grant.
+  // Restoring needs server-level `backup` manage, not this site's `app_backup`.
   const canRestore = can(permissions, "backup", "manage");
   // Attaching is a server-level database grant, not this site's backup grant.
   const canManageDatabases = can(permissions, "database", "manage");
   const settled = isSettled(application);
 
-  // A site still provisioning has nothing to back up and no directory to point
-  // at — offering the form would be offering a save that cannot work.
-  // `meta.total` is the whole history, not the five rows below it: the list is
-  // capped, and a cap the reader cannot see reads as the complete list.
-  /*
-   * `backupsFailed` is the difference between "nothing has ever run" and "we
-   * could not ask" — on the one screen whose whole job is answering "am I
-   * protected", the wrong one of those is the reassuring one. The destructure
-   * dropped `failed` entirely, so an unanswered request rendered as
-   * "No backups have run for this site yet."
-   */
+  // A site still provisioning has nothing to back up, so nothing is fetched.
+  // `meta.total` is the whole history; the list itself is capped at five.
+  // `backupsFailed` keeps "could not ask" distinct from "nothing has run".
   const [{ target }, { destinations }, { backups, meta, failed: backupsFailed, status: backupsStatus }, activeRestore, databases, siteDbs, spareDbs, engineList, siteTypes, { options: backupOptions }] = await Promise.all([
     settled ? getBackupTarget(id) : Promise.resolve({ target: null }),
     getStorageDestinations(),
     settled
       ? getBackups({ application: id, per_page: 5 })
       : Promise.resolve({ backups: [], meta: { total: 0 } }),
-    // Seeded from the server so a reload — or a colleague's browser — still
-    // shows a restore that is rewriting this site right now.
+    // Seeded from the server so a reload still shows a running restore.
     settled && canRestore
       ? getActiveRestore(id, {
           dismissed: parseDismissedRestores((await cookies()).get(DISMISSED_RESTORES_COOKIE)?.value),
         })
       : Promise.resolve(null),
-    // Only to tell the form whether a database backup of this site would hold
-    // anything. A failure here leaves it unknown, and unknown says nothing.
+    // Whether a database backup would hold anything; a failure leaves it unknown.
     settled ? getDatabaseCounts() : Promise.resolve({ counts: null, known: false }),
-    // For the "this site has no database" notice and its Attach action.
-    // `failed` rides through: accusing a site of having no database on the
-    // strength of a request that did not come back is the same mistake the
-    // application page already guards against.
+    // For the "no database" notice and Attach action; `failed` is passed on so
+    // a failed read never claims the site has no database.
     settled && canManageDatabases
       ? getApplicationDatabases(id)
       : Promise.resolve({ databases: [], failed: false }),
@@ -97,13 +81,11 @@ export default async function ApplicationBackupsPage({ params }) {
     settled && canManageDatabases
       ? getSiteTypes().catch(() => ({ siteTypes: [] }))
       : Promise.resolve({ siteTypes: [] }),
-    // The settings form's choices, and which picker each frequency uses — the
-    // card needs the latter to print an hourly schedule as a minute.
+    // Form choices, including which picker each frequency uses.
     settled ? getBackupTargetOptions() : Promise.resolve({ options: null }),
   ]);
 
-  // Only a site type that declares it needs one. A blank PHP or static site
-  // with no database is correct, and a permanent warning on it is noise.
+  // Only site types that declare `needs_database` get the warning.
   const needsDatabase = siteNeedsDatabase(siteTypes.siteTypes, application.site_type);
 
   return (

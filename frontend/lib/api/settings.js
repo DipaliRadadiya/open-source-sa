@@ -1,7 +1,6 @@
 import { api } from "@/lib/api/client";
 
-// Each group is written on its own — the API applies them independently, so a
-// single "save everything" call would report success for work it never did.
+// Each group is saved separately; the API applies them independently.
 // Every write returns `{ <group>: {…refreshed values…} }`.
 
 export function updateGeneralSettings(payload) {
@@ -15,8 +14,7 @@ export function updateSwapSettings(payload) {
 
 /**
  * SSH. The API runs `sshd -t` before reloading and opens the new port in the
- * firewall first, so a bad value can't take the daemon down — but the rule for
- * the OLD port is left behind and is the caller's to clean up.
+ * firewall first, but the rule for the OLD port is left for the caller to clean up.
  *
  * `422` on `password_authentication` means no SSH key exists to get back in with.
  */
@@ -29,16 +27,12 @@ export function updateUpdateSettings(payload) {
 }
 
 /**
- * Install the waiting security updates now, rather than at apt's next timer.
+ * Install waiting security updates now via unattended-upgrades (works even
+ * with the automatic timer disabled).
  *
- * Runs unattended-upgrades' own binary, so it applies exactly the policy the
- * PUT above configures — and it works with that automation switched off,
- * because the enable flags gate the timer and not the binary.
- *
- * **202**, never a finished answer: the upgrade takes minutes and can restart
- * services the panel itself runs under. Poll `getSecurityUpdateRun` for the
- * outcome. **409** means one is already running and carries that run in
- * `security_update`; **422** means the package is not installed.
+ * **202**: poll `getSecurityUpdateRun` for the outcome. **409** means one is
+ * already running (carried in `security_update`); **422** means the package is
+ * not installed.
  */
 export function runSecurityUpdates() {
   return api.post("/settings/updates/run");
@@ -46,56 +40,41 @@ export function runSecurityUpdates() {
 
 /**
  * The current or last run. `security_update` is null when none has ever run.
- *
- * Readable with `setting` view, but `output` comes back null without `manage` —
- * apt's output can carry conffile diffs, debconf answers and mirror URLs.
+ * `output` is null without `manage`, since apt output can carry sensitive detail.
  */
 export function getSecurityUpdateRun() {
   return api.get("/settings/updates/run");
 }
 
 /**
- * A recurring restart. Disabling removes the cron file outright, so only
- * `enabled: false` needs sending in that case — the rest would describe a
- * schedule that no longer exists.
+ * A recurring restart. When disabling, only `enabled: false` needs sending;
+ * the cron file is removed.
  */
 export function updateRebootSchedule(payload) {
   return api.put("/settings/reboot-schedule", payload);
 }
 
-/** `404` when redis isn't installed — the group is simply absent from the read. */
 /**
- * Memory settings apply immediately. A password change does not: the credential
- * the panel is currently using is the one being replaced, so the server applies
- * it AFTER answering and returns **202**, not 200.
- *
- * Callers must tell the two apart. Treating 202 as done reports success for
- * something still in flight and re-reads state that has not changed yet — which
- * reads exactly like "the password was not updated".
+ * `404` when redis isn't installed. Memory settings apply immediately; a
+ * password change is applied after answering and returns **202**, so callers
+ * must not treat it as done or re-read state straight away.
  */
 export function updateRedisSettings(payload) {
   return api.put("/settings/redis", payload);
 }
 
 /**
- * `delay_minutes` 0–60; `0` = now. Returns 202, the server goes away shortly
- * after. The response carries `at` — the absolute moment, from the SERVER's
- * clock. Use it rather than adding the delay to `Date.now()`: the two clocks
- * drift, and this is the one value where being wrong means somebody expects a
- * restart at the wrong hour.
+ * `delay_minutes` 0–60; `0` = now. Returns 202. Show the response's `at` (the
+ * server's clock) rather than adding the delay to `Date.now()`.
  */
 export function rebootServer(delayMinutes = 0) {
   return api.post("/settings/reboot", { delay_minutes: delayMinutes });
 }
 
 /**
- * Whether a restart is already pending, and for when.
- *
- * Read from systemd rather than from anything the panel remembers, so a reboot
- * scheduled from a shell is not invisible here. A `500` means the panel could
- * not look, which is NOT `scheduled: false` — this is the endpoint someone
- * opens to decide whether to cancel a restart, and "no" and "I could not ask"
- * must not read alike.
+ * Whether a restart is pending, read from systemd (so shell-scheduled reboots
+ * show too). A `500` means the panel could not check, which is NOT
+ * `scheduled: false`.
  */
 export function getRebootStatus() {
   return api.get("/settings/reboot");

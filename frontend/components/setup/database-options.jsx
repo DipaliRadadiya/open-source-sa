@@ -6,22 +6,16 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 /**
- * Pick-one engine chooser (only the database component has options). An option
- * the panel can't install (MongoDB — needs its own apt repo) is shown disabled;
- * one already installed is marked so. The chosen option's own `action` endpoint
- * is what gets installed.
+ * Pick-one engine chooser (only the database component has options). Engines
+ * the panel cannot install are disabled; installed ones are marked. The chosen
+ * option's own `action` endpoint is what gets installed.
  *
- * No spinner in here, deliberately. This block only renders while its component
- * still needs installing — the moment its own install starts, the card replaces
- * it with the Installing pill. So a spinner on this button could never mean
- * "installing this"; it only ever meant "another component is installing", and
- * that is what it was wrongly saying. `disabled` + a reason says it truthfully.
+ * No spinner: once this component's install starts, the card replaces this
+ * block, so a spinner here could only mean another install is running.
  */
-// What each engine is FOR, keyed on the API's own option value. Naming three
-// engines and marking one "Recommended" tells you which button to press but
-// never why — and the answer is different per project, not per server. Unknown
-// engines simply fall back to their state, so the list stays API-driven.
-// One SQL engine per server — the choice cannot be undone once it installs.
+// One SQL engine per server: the choice cannot be undone once installed.
+// PURPOSE says what each engine is for, keyed on the API's option value;
+// unknown engines fall back to their state.
 const SQL_ENGINES = ["mysql", "mariadb"];
 
 const PURPOSE = {
@@ -34,8 +28,7 @@ const PURPOSE = {
 export function DatabaseOptions({ options, failed = false, disabled = false, disabledReason, onInstall }) {
   const t = useTranslations("setup");
   const installable = useMemo(() => options.filter((o) => o.installable && !o.installed), [options]);
-  // The only installable engine, else the recommended one: a first-time
-  // reader facing four equal cards had no default and no visible advice.
+  // The only installable engine, else the recommended one.
   const defaultValue =
     installable.length === 1
       ? installable[0].value
@@ -47,10 +40,8 @@ export function DatabaseOptions({ options, failed = false, disabled = false, dis
     <div className="space-y-3">
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {options.map((option) => {
-          // Not the `disabled` prop: an engine is off because of what it is, and
-          // it says so in its own subtitle below — no tooltip needed. Picking an
-          // engine while another component installs is harmless, so the lock
-          // applies to the install button, not to choosing.
+          // Not the `disabled` prop: the subtitle explains why. Choosing while another
+          // component installs is harmless; the lock is on the install button.
           const unavailable = option.installed || !option.installable;
           const active = option.value === selected;
           return (
@@ -62,28 +53,16 @@ export function DatabaseOptions({ options, failed = false, disabled = false, dis
               disabled={unavailable}
               onClick={() => setSelected(option.value)}
               className={cn(
-                // px-3 py-2.5: three of these plus an error box and a button
-                // made the Database card 390px tall next to a 110px neighbour,
-                // and the extra height was padding around two short words.
                 "flex flex-col gap-1 rounded-xl border px-3 py-2.5 text-left text-sm transition-colors",
-                // Selected reads as a tinted panel rather than an outline plus a
-                // ring: the ring doubled the border weight and made the chosen
-                // option the harshest thing in a card that already had a red
-                // error box in it.
                 active && !unavailable && "border-primary/60 bg-primary/5",
                 !active && !unavailable && "hover:border-primary/40 hover:bg-muted/40",
                 unavailable && "cursor-not-allowed opacity-60",
               )}
             >
-              {/* One marker slot, and being *chosen* outranks being advised:
-                  once you have picked something, which one you picked is the
-                  fact you need back. The sparkle returns the moment it isn't
-                  the selection. */}
+              {/* One marker slot: being chosen outranks being recommended. */}
               <span className="flex items-center justify-between gap-2 font-medium">
                 <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   {option.label}
-                  {/* In words, and kept when chosen: a lone sparkle was easy to
-                      miss and vanished the moment the card was selected. */}
                   {option.recommended && !unavailable ? (
                     <Badge variant="warning" className="font-normal">{t("recommended")}</Badge>
                   ) : null}
@@ -92,11 +71,8 @@ export function DatabaseOptions({ options, failed = false, disabled = false, dis
                   <CheckCircle2 className="size-4 shrink-0 text-primary" aria-hidden />
                 ) : null}
               </span>
-              {/* State wins when there is state to report — "already installed"
-                  and "we can't install this" both change what the option means.
-                  Otherwise the line is spent on what the engine is good for,
-                  which is the question actually being asked. "Recommended" is
-                  not repeated here: the sparkle above already says it. */}
+              {/* State (installed / not installable) wins; otherwise what the engine is
+                  good for. */}
               <span className="text-xs leading-snug text-muted-foreground">
                 {option.installed
                   ? t("optionInstalled")
@@ -113,10 +89,7 @@ export function DatabaseOptions({ options, failed = false, disabled = false, dis
         })}
       </div>
 
-      {/* The same sentence the Databases page shows before it commits. Choosing
-          MySQL or MariaDB here is exactly as permanent, and the wizard is where
-          most people make the choice — saying it in only one of the two places
-          meant whichever door you came through decided whether you were told. */}
+      {/* Same warning as the Databases page: the SQL engine choice is permanent. */}
       {chosen && SQL_ENGINES.includes(chosen.value) ? (
         <p className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs leading-relaxed">
           {t("oneSqlOnly")}
@@ -128,15 +101,10 @@ export function DatabaseOptions({ options, failed = false, disabled = false, dis
           onClick={() => onInstall(chosen.action)}
           disabled={disabled || selected === null}
           disabledReason={selected === null ? t("chooseEngineFirst") : disabledReason}
-          // Same treatment as the settings save buttons: a Button is shrink-0
-          // and whitespace-nowrap, and this label carries an engine name that
-          // grows in other locales — "Reintentar la instalación de MariaDB" ran
-          // 44px off a 320px screen. It wraps rather than forcing the width.
+          // Wraps: the label carries an engine name that grows in other locales.
           className="h-auto max-w-full py-2 text-center whitespace-normal"
         >
-          {/* After a failure "Install MariaDB" reads as though the last attempt
-              never happened. Naming it a retry is the difference between a
-              fresh action and a second go at the one that just failed. */}
+          {/* After a failure, name it a retry. */}
           {failed
             ? t("retryNamed", { name: chosen.label })
             : t("installNamed", { name: chosen.label })}

@@ -19,28 +19,11 @@ export function DataTablePagination({ meta }) {
 
   const { current_page: page, last_page: lastPage, total } = meta;
 
-  /*
-   * Nothing to page through: three applications under a Previous / 1 / Next
-   * row with both arrows greyed out is a control that can only ever say "1".
-   *
-   * Only when we can positively tell. `last_page` missing means an older or
-   * unexpected `meta`, and the honest response to not knowing is to leave the
-   * control where it is.
-   */
+  // Hide the pager only when a single page is certain (`last_page` known).
   const showPager = lastPage == null || lastPage > 1;
 
-  /*
-   * The rows-per-page selector used to be hidden alongside the pager, on the
-   * reasoning that with everything already on screen there is no answer it
-   * could change. That reasoning ignored how the state was reached: choose 20
-   * on a list of 15 and the list stops paginating, so the selector vanishes —
-   * taking with it the only way back to 10. A door that locks behind you.
-   *
-   * So it is the list, not the current page count, that decides. More rows
-   * than the smallest option means some setting does paginate, and the choice
-   * is real whichever one is selected now. Fewer, and no option changes
-   * anything, so both controls go.
-   */
+  // Decided by total, not page count: otherwise picking a larger size would
+  // hide the selector and remove the way back.
   const showPerPage = total == null || total > PER_PAGE_OPTIONS[0];
 
   if (!showPager && !showPerPage) return null;

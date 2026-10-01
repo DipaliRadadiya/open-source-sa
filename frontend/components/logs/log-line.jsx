@@ -3,8 +3,7 @@ import { cn } from "@/lib/utils";
 import { LEVEL_CLASS, lineLevel, splitOnTerm } from "@/lib/logs/severity";
 import { tokenizeLine } from "@/lib/logs/tokenize";
 
-// Level pills: colour + the word itself, so severity never depends on colour
-// alone (and still reads for anyone colour-blind).
+// Level pills: colour plus the word, so severity never depends on colour alone.
 const LEVEL_PILL = {
   error: "bg-console-error/15 text-console-error",
   warn: "bg-console-warning/15 text-console-warning",
@@ -13,9 +12,8 @@ const LEVEL_PILL = {
 };
 
 /**
- * One log row in three tiers: dimmed timestamp, coloured level, bright message.
- * A file of uniform INFO lines is a grey wall without this — the structure is
- * what makes it scannable, not the severity colour (which most lines lack).
+ * One log row in three tiers: dimmed timestamp, coloured level, bright message,
+ * so uniform INFO lines stay scannable.
  */
 export function LogLine({ index, text, group, term, wrap, onCopy, copyLabel }) {
   const { time, level, levelKey, message } = tokenizeLine(text);
@@ -25,12 +23,9 @@ export function LogLine({ index, text, group, term, wrap, onCopy, copyLabel }) {
 
   return (
     <div className="group flex gap-3 px-3 hover:bg-console-foreground/[0.06]">
-      {/* The gutter is the copy affordance: 48px of otherwise-dead space that
-          already belongs to this row. A button per line would be chrome
-          fighting the content, and a 24px row has no space for one. */}
-      {/* Out of the Tab order: every rendered line had one, so getting past
-          the log took ~55 presses. The log itself is focusable and scrolls by
-          keyboard, and "Copy visible lines" in the toolbar copies by keyboard. */}
+      {/* The gutter doubles as the copy button. Out of the Tab order (one stop
+          per line made the log impassable); the log scrolls by keyboard and
+          the toolbar's "Copy visible lines" covers keyboard copying. */}
       <button
         type="button"
         tabIndex={-1}
@@ -68,8 +63,7 @@ export function LogLine({ index, text, group, term, wrap, onCopy, copyLabel }) {
         <span
           className={cn(
             "text-console-foreground",
-            // Only tint the message when the severity came from content rather
-            // than an explicit level pill — otherwise the pill already says it.
+            // Tint the message only when no level pill already states severity.
             !level && severity ? LEVEL_CLASS[severity] : "",
           )}
         >

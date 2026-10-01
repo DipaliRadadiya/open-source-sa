@@ -32,10 +32,8 @@ import {
 } from "@/components/ui/select";
 
 /**
- * @param certificate what secures the site today, or null. Only an *active*
- *   one matters here: a pending or failed certificate is not serving anything,
- *   so warning about the coverage of a certificate that does not exist yet
- *   would be noise on top of a problem the SSL card is already reporting.
+ * @param certificate the site's certificate, or null. Only an active one
+ *   matters: a pending or failed one is not serving anything.
  */
 export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, certificate = null }) {
   const t = useTranslations("applications.domains");
@@ -43,9 +41,7 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
   const { pending: refreshing, refreshThen } = useRefresh();
 
   const active = certificate?.status === "active" ? certificate : null;
-  // An uploaded certificate cannot be re-issued from this panel, so the advice
-  // inverts: there is no button to press, and telling the user to "reissue"
-  // sends them looking for one that is not there.
+  // An uploaded certificate cannot be re-issued here, so the advice differs.
   const uploaded = active?.type === "custom";
 
   const form = useForm({
@@ -59,16 +55,13 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
   const suggestedDomain = isValidApplicationDomain(typedDomain) ? null : suggestApplicationDomain(typedDomain);
 
   async function onSubmit(values) {
-    // Only send redirect fields when they matter.
     const body =
       values.type === "redirect"
         ? values
         : { domain: values.domain, type: values.type };
     try {
       await addDomain(appId, body);
-      // Said again on the way out. The dialog explained this before the click,
-      // but the one thing left undone after adding a name to a secured site is
-      // covering it — and a bare "Domain added." reads as finished.
+      // On a secured site, the toast repeats that the new name is not covered yet.
       refreshThen(() => {
         toast.success(t("toast.added"), {
           description: active
@@ -123,9 +116,7 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
               <FormControl>
                 <Input placeholder="example.com" autoComplete="off" spellCheck={false} {...field} />
               </FormControl>
-              {/* A pasted address (`https://shop.example.com/`) is the usual
-                  wrong entry. Offer the name inside it, the same way the
-                  create form does, rather than only calling it invalid. */}
+              {/* Offer the hostname inside a pasted URL, as the create form does. */}
               {suggestedDomain ? (
                 <FormDescription className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <span>{tForm("domainSuggestion")}</span>
@@ -153,9 +144,7 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
               <FormLabel hint={t("add.typeHint")}>{t("add.type")}</FormLabel>
               <Select value={field.value} onValueChange={field.onChange}>
                 <FormControl>
-                  {/* w-full for the same reason as the certificate dialog:
-                      SelectTrigger defaults to w-fit, and this one sits
-                      directly under a full-width domain input. */}
+                  {/* w-full: SelectTrigger defaults to w-fit. */}
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
@@ -165,8 +154,8 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
                   <SelectItem value="redirect">{t("type.redirect")}</SelectItem>
                 </SelectContent>
               </Select>
-              {/* The alias/redirect choice is not cosmetic — most users pick
-                  "alias" when they mean "redirect". Spell out the difference. */}
+              {/* Users often pick "alias" when they mean "redirect"; spell out
+                  the difference. */}
               <p className="text-xs text-muted-foreground">
                 {type === "redirect" ? t("add.redirectHint") : t("add.aliasHint")}
               </p>
@@ -175,10 +164,6 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
           )}
         />
 
-        {/* One field per row, like every other field here. These two used to
-            share a row, which made "Redirect to" the only input in the form
-            narrower than the rest — and it lined up with nothing above it. The
-            modal body is already `space-y-4`, the same gap the grid used. */}
         {type === "redirect" ? (
           <>
             <FormField
@@ -206,10 +191,7 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
-                    {/* Named, not numbered. The list used to read
-                        "301 · 302 · 307 · 308", which tells you which one to
-                        pick only if you already knew. The number stays because
-                        it is what every other tool calls it. */}
+                    {/* Options are named, with the status code kept alongside. */}
                     <SelectContent>
                       {REDIRECT_STATUSES.map((code) => (
                         <SelectItem key={code} value={String(code)}>
@@ -225,13 +207,9 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
           </>
         ) : null}
 
-        {/* Set expectations up front: a name does nothing until its DNS points
-            here. Show the exact A-record target when we know it.
-
-            `dnsNote` promises HTTPS "can be issued", which is true of a site
-            with no certificate and misleading for one that already has a
-            certificate this name will not be on — so the secured case says the
-            neutral half and leaves the certificate to the notice below. */}
+        {/* A name does nothing until its DNS points here. On a secured site the
+            neutral text is used, since `dnsNote` promises HTTPS "can be issued"
+            and the notice below covers the certificate. */}
         <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
           <Info className="size-3.5 shrink-0" />
           {serverIp ? (
@@ -247,14 +225,9 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
           )}
         </div>
 
-        {/* The consequence of adding a name to a site that is already serving
-            HTTPS, said before the click rather than discovered by a visitor.
-
-            The new name goes into the TLS server block's `server_name` along
-            with every other — the vhost does not filter by what the
-            certificate covers — so it answers on 443 presenting a certificate
-            issued for somebody else's name, and the browser refuses the page
-            outright. That is a harder failure than plain HTTP would be. */}
+        {/* On an HTTPS site the new name joins the TLS server block, so it
+            answers on 443 with a certificate that does not cover it and the
+            browser refuses the page. */}
         {active ? (
           <Caution size="md">
             <p>
@@ -262,11 +235,8 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
                 current: active.type_title ?? "",
               })}
             </p>
-            {/* The sharp edge, and only when it is actually sharp. With the
-                redirect off, the new name still answers on plain HTTP, so a
-                visitor sees the site and no warning. With it on, port 80
-                sends them to the certificate error and there is no way
-                through. */}
+            {/* With force-HTTPS on, port 80 also redirects to that certificate
+                error, so the name is unreachable. */}
             {active.force_https ? <p>{t("add.certNoticeForceHttps")}</p> : null}
           </Caution>
         ) : null}

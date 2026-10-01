@@ -5,10 +5,7 @@ export function setDefaultPhpVersion(version) {
   return api.put("/php/default", { default: version });
 }
 
-/**
- * Queued — apt takes minutes and holds a lock, so this returns 202 and the
- * caller polls. Idempotent: a version already installed returns 200.
- */
+/** Queued: returns 202 and the caller polls. Already installed returns 200. */
 export function installPhpVersion(version) {
   return api.post("/php/versions", { version });
 }
@@ -22,23 +19,16 @@ export function removePhpVersion(version) {
 }
 
 /**
- * The ionCube Loader for one PHP version.
- *
- * Its own endpoints rather than a row in the extensions catalog: every
- * extension there is an apt package enabled with phpenmod, and this is a
- * closed-source `.so` fetched from the vendor and declared as a
- * `zend_extension` pointing at an absolute path.
+ * The ionCube Loader for one PHP version. Separate from the extensions catalog
+ * because it is a vendor `.so` loaded as a `zend_extension`, not an apt package.
  */
 export function getIonCube(version, { signal } = {}) {
   return api.get(`/php/versions/${encodeURIComponent(version)}/ioncube`, { signal });
 }
 
 /**
- * Queued — the archive is ~29 MB, so this returns 202 and the caller polls.
- *
- * `422` when ionCube publishes no loader for this PHP version. The UI knows
- * that from `supported` before offering the button, so a 422 here means the
- * catalogue changed under us rather than that the user did something wrong.
+ * Queued: returns 202 and the caller polls. `422` when ionCube has no loader
+ * for this version (the UI checks `supported` first).
  */
 export function installIonCube(version) {
   return api.post(`/php/versions/${encodeURIComponent(version)}/ioncube`);
@@ -69,10 +59,9 @@ export function readPhpIni(version) {
 }
 
 /**
- * Replace the ini. `acknowledged` is required by the API by design — a raw ini
- * edit can stop FPM starting, so it must not be reachable by an accidental
- * request. The backend backs up, writes, runs `php-fpm{version} -t`, and
- * restores the previous file if PHP rejects it, reloading only that version.
+ * Replace the ini. The API requires `acknowledged`, since a bad ini can stop
+ * FPM. The backend tests with `php-fpm{version} -t` and restores the previous
+ * file if PHP rejects it.
  */
 export function savePhpIni(version, contents) {
   return api.put(`/php/versions/${encodeURIComponent(version)}/ini`, {

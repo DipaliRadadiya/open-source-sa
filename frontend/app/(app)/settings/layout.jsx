@@ -20,14 +20,12 @@ export default async function SettingsLayout({ children }) {
   ]);
 
   if (!can(permissions, "setting", "view")) return <PermissionDenied title={t("title")} />;
-  // The badges are the only reason the layout reads settings — the point of a
-  // dot on a tab is that it's visible from the section you're already on.
+  // Read here for the tab badges, which must show from any section.
   // `getSettings` is request-cached, so the open section shares this call.
   const { data } = await getSettings();
 
   const badges = {
-    // Root login by password is the one combination here that hands a
-    // brute-forcer a shell; everything else is a preference.
+    // Root login by password hands brute-forcers a shell; the rest are preferences.
     security: data?.security?.permit_root_login === "yes" ? "warning" : null,
     maintenance: data?.updates?.reboot_required ? "info" : null,
   };
@@ -36,11 +34,7 @@ export default async function SettingsLayout({ children }) {
     <div className="space-y-6">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
-      {/* One width for the tabs AND every section: the strip only frames the
-          cards if it ends where they end. Set here so nothing shifts as you
-          move between sections. */}
-      {/* The tabs need to know whether the section below them has unsaved
-          edits, and only a shared provider can carry that across the boundary. */}
+      {/* One width for the tabs and every section, so nothing shifts between sections. */}
       <div className="max-w-[48rem] space-y-6">
           <SettingsTabs badges={badges} />
           {children}

@@ -18,19 +18,12 @@ import { FormModal } from "@/components/ui/form-modal";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
 /**
- * Rotating the credentials.
+ * Rotating the credentials. Fields come from the same provider declaration as
+ * the create form (e.g. SFTP key vs. S3 key pair).
  *
- * Which credentials those are depends on the provider — rotating an SFTP
- * private key is not rotating an access key and secret key pair — so the
- * fields come from the same declaration the create form uses rather than being
- * the hardcoded S3 pair this dialog used to assume.
- *
- * Unlike the git equivalent, the API does NOT verify these before storing
- * them — it has no way to, since the check is a separate endpoint. So the old
- * working credentials are genuinely replaced by whatever is typed here, and
- * the dialog says so instead of implying a safety net it doesn't have. The
- * test runs straight after, so a bad rotation is caught in seconds rather than
- * at the next scheduled backup.
+ * Unlike the git equivalent, the API does NOT verify these before storing, so
+ * the dialog says the old credentials are replaced. The test runs straight
+ * after, so a bad rotation is caught in seconds.
  */
 export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
   const t = useTranslations("storage.replace");
@@ -55,9 +48,8 @@ export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
 
   async function onSubmit(values) {
     try {
-      // Only what was actually typed. An empty string here is not "clear it" —
-      // it is "I did not rotate this one", which matters for SFTP where the
-      // user rotates either the password or the key, never both.
+      // Only what was typed: empty means "not rotating this one" (SFTP rotates
+      // the password or the key, never both).
       const config = Object.fromEntries(
         Object.entries(values)
           .map(([key, value]) => [key, String(value ?? "").trim()])
@@ -111,8 +103,7 @@ export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
           </>
         }
       >
-        {/* No "we verify before replacing" promise here — that would be a lie
-            about this endpoint. What it can honestly say is what breaks. */}
+        {/* States what breaks; this endpoint does not verify first. */}
         <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
           <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
           <p>{t("warning")}</p>
@@ -125,12 +116,8 @@ export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
             name={definition.name}
             render={({ field }) => (
               <FormItem>
-                {/* The same `help.<field>` text the add/edit form prints under
-                    each input. This dialog has no such line — it is a short,
-                    tense screen about replacing a live credential — so it goes
-                    behind a "?" instead of being absent, which is what it was.
-                    Not every field has one; `t.has` is what keeps the icon off
-                    the ones that explain themselves. */}
+                {/* The form's `help.<field>` text, behind a "?" here; `t.has`
+                    skips fields without help. */}
                 <FormLabel
                   hint={
                     tf.has(`help.${definition.name}`)
@@ -166,8 +153,7 @@ export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
           />
         ))}
 
-        {/* SFTP takes a password OR a key, so "fill in the one you are
-            changing" is the actual instruction — not "fill in everything". */}
+        {/* SFTP takes a password OR a key, so only the changed one is filled. */}
         <p className="text-xs text-muted-foreground">{t("onlyWhatYouChange")}</p>
       </FormModal>
     </Form>

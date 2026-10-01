@@ -114,8 +114,7 @@ export function ProfileForm({ user, onDirtyChange }) {
         </Card>
 
         <div className="flex justify-end">
-          {/* A disabled Save explains nothing by itself, and "no changes yet"
-              is the reason nobody guesses — they look for the broken field. */}
+          {/* Explains why Save is disabled ("no changes yet"). */}
           <ReasonTooltip reason={!isDirty && !isSubmitting ? tc("nothingToSave") : null}>
             <Button type="submit" disabled={isSubmitting || !isDirty}>
               {isSubmitting && <Loader2 className="size-4 animate-spin" />}

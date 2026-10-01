@@ -3,17 +3,11 @@ import { confidenceBand } from "@/lib/schemas/sync";
 import { cn } from "@/lib/utils";
 
 /**
- * The evidence behind one guess.
+ * The evidence behind one guess, rendered as whatever keys arrived: they
+ * differ per resource type, so a per-row panel rather than table columns.
  *
- * Rendered as whatever keys arrived, because they genuinely differ per resource
- * type — an application carries {path, document_root, owner}, php_settings
- * carries {pool, values}, a firewall rule carries {to, from}. Any fixed set of
- * columns here would be blank for two thirds of the rows, which is why this is
- * a per-row panel rather than part of the table.
- *
- * Keys are printed raw and monospaced: they are the API's own names, and a
- * translated label would invent a mapping that goes stale the moment a
- * discoverer adds a field.
+ * Keys are printed raw: they are the API's own names, and translated labels
+ * would go stale when a discoverer adds a field.
  */
 function EvidenceValue({ value }) {
   if (value == null) return <span className="text-muted-foreground">—</span>;
@@ -41,10 +35,8 @@ export function SyncEvidence({ item }) {
   const t = useTranslations("sync");
   const entries = Object.entries(item.evidence ?? {});
 
-  /* Confidence is only shown where it varies. Seven of the nine discoverers
-     hardcode 100 — a score on those rows is not a measurement, it is the
-     absence of one, and printing it invites people to compare it against a
-     website's 40 as though the two came from the same scale. */
+  /* Confidence is only shown where it varies: most discoverers hardcode 100,
+     which is not a measurement. */
   const showConfidence = item.confidence != null && item.confidence < 100;
   const band = confidenceBand(item.confidence);
 

@@ -1,12 +1,7 @@
 import { read } from "@/lib/api/read";
 import { deploymentsResponseSchema, latestDeploymentResponseSchema } from "@/lib/schemas/deploy-history";
 
-/**
- * One site's deploy history and its settings.
- *
- * Both come back from the same endpoint, so this is one request rather than
- * two for facts the API already returns together.
- */
+/** One site's deploy history and its settings (one endpoint returns both). */
 export async function getDeployments(applicationId) {
   const result = await read(`/applications/${applicationId}/deployments`, deploymentsResponseSchema);
 

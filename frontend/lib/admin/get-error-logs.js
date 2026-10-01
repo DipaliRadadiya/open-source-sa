@@ -16,9 +16,8 @@ export function referenceFromSearchParams(searchParams = {}) {
 }
 
 /**
- * How many entries to ask for, from the URL. Anything not one of the offered
- * sizes falls back to the default rather than being forwarded — the backend
- * would clamp it silently and the selector would then disagree with the list.
+ * How many entries to ask for, from the URL. Values outside the offered sizes
+ * fall back to the default (the backend would clamp them silently).
  */
 export function linesFromSearchParams(searchParams = {}) {
   const asked = Number(searchParams.lines);
@@ -26,18 +25,13 @@ export function linesFromSearchParams(searchParams = {}) {
 }
 
 /**
- * Recorded API failures (GET /admin/error-logs). Admin-only on the backend.
- *
- * Returns the full read() result — the page needs `failed`/`status` to tell a
- * 403 from a dead API, and "no errors" is the healthy state here, so an empty
- * list must never be confused with a failed fetch.
+ * Recorded API failures (GET /admin/error-logs), admin-only. Returns the full
+ * read() result so an empty list is never confused with a failed fetch.
  */
 export function getErrorLogs(lines = DEFAULT_LINES, reference = null) {
   return read("/admin/error-logs", errorLogsResponseSchema, {
-    // `reference` narrows to a single entry server-side. Only sent when it is
-    // a well-formed uuid: the backend validates the format and would answer
-    // 422, which this screen would then have to render as something other than
-    // the "no entry with that reference" the reader is actually asking about.
+    // `reference` narrows to one entry; only well-formed uuids are sent
+    // (the backend 422s anything else).
     searchParams: reference ? { lines, reference } : { lines },
   });
 }

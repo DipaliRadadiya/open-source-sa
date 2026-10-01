@@ -1,6 +1,4 @@
-// Purely presentational tinting. The API returns raw lines; nothing here
-// changes meaning, so an unrecognised line simply renders untinted rather than
-// being guessed at.
+// Presentational tinting only; an unrecognised line stays untinted.
 
 const LEVEL_PATTERNS = [
   { level: "error", re: /\b(error|critical|crit|fatal|emerg|alert|panic)\b/i },
@@ -32,8 +30,7 @@ export function lineLevel(line, group) {
   return LEVEL_PATTERNS.find((p) => p.re.test(line))?.level ?? null;
 }
 
-// Severity filter buckets. "warnings" includes errors: nobody asking for
-// warnings wants the errors hidden.
+// Severity filter buckets. "warnings" includes errors.
 export const SEVERITY_FILTERS = ["all", "errors", "warnings"];
 
 const IN_BUCKET = {
@@ -42,9 +39,8 @@ const IN_BUCKET = {
 };
 
 /**
- * Client-side display filter over the loaded buffer. Unlike grep (server-side,
- * whole file) this only ever sees the lines we hold — which is why it can run
- * while tailing, and why the UI states the count as "of N loaded".
+ * Client-side display filter over the loaded buffer only (unlike server-side
+ * grep), so it works while tailing and the UI says "of N loaded".
  */
 export function matchesSeverity(line, group, filter) {
   const bucket = IN_BUCKET[filter];
@@ -52,9 +48,7 @@ export function matchesSeverity(line, group, filter) {
   return bucket.has(lineLevel(line, group));
 }
 
-// Text colour only — no backgrounds. A log is a wall of text; tinted rows would
-// fight the content instead of guiding the eye to the few lines that matter.
-// These are the console-specific hues, lifted for contrast on the dark canvas.
+// Text colour only, no row backgrounds; console hues tuned for the dark canvas.
 export const LEVEL_CLASS = {
   error: "text-console-error",
   warn: "text-console-warning",

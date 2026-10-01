@@ -1,7 +1,5 @@
-// Clock times on the dashboard are shown in the monitored server's timezone
-// (facts.timezone) — that's the clock its logs and `top` output use. The value
-// comes from the API, so it is validated before Intl is handed it: an unknown
-// zone throws a RangeError and would take the whole card down.
+// Dashboard clock times use the monitored server's timezone (facts.timezone).
+// Validated first: Intl throws a RangeError on an unknown zone.
 
 export function safeTimeZone(timeZone) {
   if (!timeZone || typeof timeZone !== "string") return undefined;

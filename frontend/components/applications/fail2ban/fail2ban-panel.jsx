@@ -27,9 +27,7 @@ import { CardSaveFooter } from "@/components/ui/card-save-footer";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// CodeMirror and its language packs are a large chunk that only this screen
-// and the file editor need — loaded on demand so a site that never opens
-// attack protection does not pay for it.
+// CodeMirror is large and only needed here and in the file editor, so it is loaded on demand.
 const CodeEditor = dynamic(
   () => import("@/components/applications/files/code-editor").then((m) => m.CodeEditor),
   {
@@ -43,9 +41,8 @@ const CodeEditor = dynamic(
 );
 
 /*
- * fail2ban opens every refusal with a warning about `allowipv6`, which has
- * nothing to do with the file; the line that names the problem came second, in
- * a scroll box. The ERROR lines alone, when there are any.
+ * fail2ban's output starts with an unrelated `allowipv6` warning; return only
+ * the ERROR lines when there are any.
  */
 function errorLines(output) {
   const errors = output.split("\n").filter((line) => /\bERROR\b/.test(line));
@@ -58,21 +55,12 @@ const FILES = [
 ];
 
 /**
- * One site's brute-force protection.
+ * One site's brute-force protection: an editor for the two raw INI files the
+ * backend writes verbatim to `/etc/fail2ban/{jail,filter}.d/`. There is no
+ * enable flag, jail state or ban list.
  *
- * This screen used to be a dashboard — a switch, two jails, a banned list,
- * counters. The backend replaced all of it with two raw INI files written
- * verbatim to `/etc/fail2ban/{jail,filter}.d/`, so it is an editor now. None
- * of the old surface has an equivalent: there is no enable flag, no jail
- * state, and no way to see or clear a ban.
- *
- * Two states, and the difference matters: a site that has never been set up
- * gets an empty state with one action, not a wall of INI it did not ask for.
- *
- * The save is also the config test. `fail2ban-client` gets the pair first and
- * its own error text comes back on rejection — so that output is the most
- * important thing this screen can render, and it is shown verbatim next to
- * the editor rather than in a toast that takes the reason away with it.
+ * Saving also runs the config test; `fail2ban-client`'s rejection text is shown
+ * verbatim next to the editor rather than in a toast.
  */
 export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filterTemplate, canManage }) {
   const t = useTranslations("applications.fail2ban");
@@ -80,11 +68,9 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
   const { refreshAndWait } = useRefresh();
 
   /*
-   * What the last create or remove did, until the refreshed props agree:
-   * `null` = removed here, an object = created here. The toast lands ~1.7 s
-   * before `router.refresh()` does, and in between the setup form stayed live
-   * — a second click sent another save, and Discard showed "not set up" over
-   * a jail that was running.
+   * The last create or remove until refreshed props agree: `null` = removed
+   * here, an object = created here. Covers the gap between the toast and
+   * `router.refresh()`, when the stale form could resubmit.
    */
   const [override, setOverride] = useState(undefined);
   if (override !== undefined && (override === null ? !serverConfig : Boolean(serverConfig))) {
@@ -97,8 +83,7 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
-  // The config test's own words, kept until the next attempt. A rejected
-  // regex is read, not glanced at.
+  // The config test's output, kept until the next attempt.
   const [testError, setTestError] = useState(null);
   const [fullOutput, setFullOutput] = useState(false);
 
@@ -109,25 +94,15 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
 
   const [draft, setDraft] = useState(saved);
 
-  // What "unchanged" is measured against: the server's copy at page load, or
-  // whatever we last saved successfully.
-  //
-  // It cannot just be `saved`. Laravel trims every incoming string
-  // (`TrimStrings` is in the default global middleware and this app does not
-  // disable it), and both templates end in a newline — so the server stores a
-  // copy that differs from what was sent by exactly that character. The draft
-  // then never matched the reloaded config again and the row kept its "not
-  // saved yet" dot forever, over a config that had saved perfectly.
-  //
-  // Any server-side normalisation does the same thing, so this is keyed on
-  // "the server accepted this" rather than on guessing what it did to it.
+  // What "unchanged" is measured against: the server's copy at load, or the
+  // last successful save. Not `saved`: Laravel's TrimStrings strips the
+  // trailing newline, so the reloaded config never matches the draft. Keyed on
+  // "the server accepted this" rather than guessing its normalisation.
   const [savedBaseline, setSavedBaseline] = useState(null);
   const baseline = savedBaseline ?? saved;
 
-  // Nothing is saved yet during setup, so there is nothing to have changed
-  // FROM. Comparing the draft against the template made an untouched setup
-  // form read as "nothing has changed" and disabled the only button on it —
-  // accepting the defaults, which is the common case, was impossible.
+  // Nothing is saved during setup, so an untouched form must still be
+  // submittable (accepting the defaults is the common case).
   const isSetup = !config;
   const unsavedFiles = FILES.filter(({ key }) => draft[key] !== baseline[key]).length;
   const changed = unsavedFiles > 0;
@@ -148,14 +123,8 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
       filter_config_content: draft.filter,
     });
     if (!parsed.success) {
-      // This used to be a bare `return`. Pressing Save on a config over the
-      // 65,535-character limit did nothing at all — no toast, no message, not
-      // even a spinner — and the only clue was that nothing happened. The
-      // empty case is already kept out by the disabled button, so over-length
-      // was the reachable path and the one with no way to find out.
-      //
-      // Rendered in the same panel the daemon's own refusal uses: it sits
-      // directly above the button that was just pressed.
+      // Over-length is the reachable failure (empty is blocked by the disabled
+      // button); show it in the same panel as the daemon's refusal.
       const issue = parsed.error.issues[0];
       setTestError({
         message: t(
@@ -170,8 +139,7 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
     setTestError(null);
     try {
       await saveApplicationFail2ban(appId, draft);
-      // The server took it, so this is the saved state from here on — whatever
-      // it stored after trimming.
+      // The server accepted it, so this is the saved state (whatever it trimmed).
       setSavedBaseline({ ...draft });
       if (!config) {
         setOverride({ jail_name: null, jail_content: draft.jail, filter_content: draft.filter });
@@ -179,14 +147,11 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
       await refreshAndWait();
       toast.success(t("saved"));
     } catch (error) {
-      // A config the daemon refuses comes back as a body, not a status worth
-      // reading: the backend answers 500 for what is really a validation
-      // failure, so the payload decides which of the two this was.
+      // The backend answers 500 for a config the daemon refuses, so the payload
+      // decides whether this was a validation failure.
       const data = error.response?.data;
       if (data?.testOk === false) {
-        // No toast: the panel it renders into sits directly above the button
-        // that was just pressed, so a toast would say the same thing twice and
-        // then take the half of it that matters away again.
+        // No toast: the panel renders directly above the button.
         setTestError({ message: data.message ?? t("testFailed"), output: data.output ?? "" });
         setFullOutput(false);
       } else {
@@ -203,8 +168,7 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
       await deleteApplicationFail2ban(appId);
       removed();
     } catch (error) {
-      // 422 is the API's "already disabled": removed from another tab. What
-      // the user asked for is true, so it is not a failure to report.
+      // 422 means "already disabled" (removed elsewhere), which is the goal.
       if (error.response?.status === 422) removed();
       else toast.error(apiMessage(error, t("removeFailed")));
     } finally {
@@ -215,10 +179,8 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
   function removed() {
     setConfirmRemove(false);
     setTestError(null);
-    // `editing` was true because a config existed. Leaving it set drops the
-    // user into the setup form the moment the config disappears — still
-    // holding the text they just deleted. Back to the empty state, with the
-    // shipped templates ready if they change their mind.
+    // Otherwise the setup form opens with the deleted text; return to the
+    // empty state instead.
     setEditing(false);
     setSavedBaseline(null);
     setDraft({ jail: jailTemplate, filter: filterTemplate });
@@ -227,8 +189,6 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
     router.refresh();
   }
 
-  // Never set up, and not being set up right now: one thing to read, one
-  // thing to press.
   if (!config && !editing) {
     return (
       <div className="max-w-4xl">
@@ -285,21 +245,15 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
               {config ? t("state.onBody") : t("state.setupBody")}
             </p>
           </div>
-          {/* Destructive, not outline. This tears down the jail that is
-              currently banning attackers, and as a plain bordered button it
-              read like "Manage" — the same weight as every harmless control on
-              the page. The variant is deliberately the tinted one the design
-              system ships (bg-destructive/10, not solid red): unmistakably
-              dangerous without shouting at somebody whose site is fine.
-              The icon carries the meaning too, so it does not rest on colour —
-              red/green is the one pair a colour-blind reader cannot separate. */}
+          {/* Destructive (tinted) variant: this tears down the active jail. The
+              icon carries the meaning too, so it does not rely on colour. */}
           {config && canManage ? (
             <Button
               variant="destructive"
               className="shrink-0"
               onClick={() => setConfirmRemove(true)}
-              // Not during a save: both requests went out and whichever the
-              // server finished last decided whether protection was on.
+              // Not during a save: concurrent requests race on whether
+              // protection ends up on.
               disabled={removing || saving}
             >
               {removing ? (
@@ -316,9 +270,8 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
       <Card className="gap-0 overflow-hidden py-0 shadow-sm">
         <Tabs value={tab} onValueChange={setTab} className="gap-0">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3">
-            {/* Scrolls rather than wraps, same as the Settings tab bar: a bar that
-                reflows to two rows stops reading as one control. ScrollFade is what
-                says there is more to the side. */}
+            {/* Scrolls rather than wraps, like the Settings tab bar; ScrollFade
+                signals more content to the side. */}
             <ScrollFade className="-mx-1 px-1 pb-1">
               <TabsList className="!h-auto w-fit gap-1 p-1">
                 {FILES.map(({ key, icon: Icon }) => (
@@ -338,25 +291,16 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
             <p className="text-xs text-muted-foreground">{t(`files.${tab}Hint`)}</p>
           </div>
 
-          {/* Said before they edit.
-
-              This used to explain the `{name}` / `{filter}` / `{logpath}` /
-              `{slug}` tokens, because the editor was handed the raw template
-              and those tokens were on screen. The backend now renders them
-              before sending — saved configs too — so the sentence described
-              something the reader could no longer see. What survives of it is
-              the part that still matters: `filter` names the other tab's
-              file, and that filename is fixed by the server. */}
+          {/* `filter` names the other tab's file, and that filename is fixed
+              by the server. */}
           <p className="border-b bg-muted/30 px-5 py-2.5 text-xs text-muted-foreground">
             {t("placeholderNote")}
           </p>
 
           {FILES.map(({ key, filename }) => (
             <TabsContent key={key} value={key} forceMount hidden={tab !== key} className="mt-0">
-              {/* `h-full` on the editor, `overflow-hidden` on the box — the
-                  same pair the file editor uses. Without it CodeMirror sizes
-                  to its content and leaves the rest of the box blank, so a
-                  short file sat in a dark strip above a white gap. */}
+              {/* `h-full` on the editor plus `overflow-hidden` on the box, as in
+                  the file editor; otherwise CodeMirror sizes to its content. */}
               <div className="h-80 overflow-hidden border-b" aria-label={filename}>
                 <CodeEditor
                   filename={filename}
@@ -381,13 +325,9 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
             </p>
           ) : null}
 
-          {/* fail2ban's own words about what it refused, kept on screen
-              because the next edit is based on them.
-
-              Not a console slab: given the black editor directly above it, a
-              second dark monospaced box read as another file rather than as
-              the reason the first one was rejected. It is quoted inside the
-              message — mono for fidelity, but plainly part of the alert. */}
+          {/* fail2ban's refusal, kept on screen for the next edit. Quoted inside
+              the alert rather than as a dark console box, which would read as
+              another file. */}
           {testError ? (
             <div className="flex items-start gap-2.5 border-b border-destructive/30 bg-destructive/5 px-5 py-3.5">
               <TriangleAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
@@ -419,9 +359,8 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
             saving={saving}
             dirty={dirty}
             onSave={save}
-            // During setup the way out is back to the empty state, not a
-            // reset to a template that was never saved — otherwise the form
-            // has no exit but the browser's back button.
+            // During setup, Discard returns to the empty state (there is no
+            // saved template to reset to).
             onDiscard={() => {
               setDraft(saved);
               setTestError(null);
@@ -450,9 +389,7 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
         icon={TriangleAlert}
         tone="destructive"
         title={t("removeTitle")}
-        // Removing throws away unsaved edits as well as the saved config, and
-        // the two losses are not obviously the same action — so the dialog
-        // counts what else is about to go rather than letting it go quietly.
+        // Removing also discards unsaved edits, so the dialog says so.
         description={
           unsavedFiles > 0 ? t("removeBodyDirty", { count: unsavedFiles }) : t("removeBody")
         }

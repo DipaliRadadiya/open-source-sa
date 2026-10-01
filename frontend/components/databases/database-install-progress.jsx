@@ -26,16 +26,8 @@ export function DatabaseInstallProgress({
   slow = false,
   pollIssue = false,
   /*
-   * What to do about a failure.
-   *
-   * A failed install used to be a title, a sentence and a wall of apt output
-   * with nothing to press — which reads as "this is broken and you are stuck",
-   * even when the server has said `retryable: true`. The message explains what
-   * went wrong; this is the part that says what to do about it.
-   *
-   * Passed in rather than done here: each screen that shows this already owns
-   * an install action, and a second one inside this component would be a
-   * second code path to keep in step with the first.
+   * Retry handler, passed in because each screen already owns the install
+   * action; a second one here would be a second code path to keep in step.
    */
   onRetry,
   retrying = false,
@@ -54,19 +46,8 @@ export function DatabaseInstallProgress({
         : t("working"));
 
   /*
-   * The engine's name, said out loud.
-   *
-   * `label` was passed by all three callers and spent only on the progress
-   * bar's aria-label, so the visible line read "Downloading packages" — true of
-   * MySQL, MariaDB, PostgreSQL, MongoDB and Redis alike. Installing a *second*
-   * engine is the case that breaks: the server owns the step wording and none
-   * of it names an engine, so the card said nothing about which one you were
-   * waiting for.
-   *
-   * In the title rather than beside it, because this <p> is the aria-live
-   * region: a screen reader announcing "Configuring packages" every few seconds
-   * with no subject has the same problem, and fixing the visible text without
-   * fixing that would be fixing half of it.
+   * The engine name goes in the title because server step wording never names
+   * one, and this <p> is the aria-live region.
    */
   const title = label ? t("titleWithEngine", { name: label, step }) : step;
 
@@ -126,10 +107,8 @@ export function DatabaseInstallProgress({
             </p>
           ) : null}
           {/*
-            * Offered only when the SERVER says the failure is retryable.
-            * `port_in_use_by_mariadb` will fail exactly the same way a second
-            * time, and a button that repeats a known failure is worse than
-            * none — it costs minutes of apt to learn nothing.
+            * Offered only when the server says the failure is retryable (e.g.
+            * `port_in_use_by_mariadb` would fail the same way again).
             */}
           {onRetry && progress.retryable !== false ? (
             <Button

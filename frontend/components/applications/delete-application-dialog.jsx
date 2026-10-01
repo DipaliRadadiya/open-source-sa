@@ -16,24 +16,15 @@ import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 /**
- * Deleting an application stops the domain being served, so the domain is what
- * has to be typed — the thing that goes dark, not the label.
+ * The domain is what must be typed: it is what stops being served.
  *
- * The files and databases are separate decisions, ticked by default: deleting
- * a site usually means all of it, and unticking is the deliberate choice.
- * Unticked, what is left behind is said out loud: the code on disk stays, and
- * a database created for this site stays too.
+ * Files and databases are separate choices, ticked by default; when unticked,
+ * the dialog says what is left behind.
  *
- * `remove_files` also destroys this site's backups — every row AND the archives
- * in the storage destination. That is the whole reason the checkbox names them:
- * "delete the files" reads as recoverable, and it is the one decision here that
- * is not.
- *
- * Leaving it unticked is not "keep your backups" either. The backup rows cascade
- * with the application, so they leave the panel regardless; only the archives
- * survive, and nothing in the panel can list or delete them afterwards. Both
- * halves of that are said, because a half-truth here is what leaves somebody
- * paying for buckets they cannot find.
+ * `remove_files` also destroys this site's backup archives in the storage
+ * destination, which is why the checkbox names them. Unticked, the backup rows
+ * still cascade with the application; the archives survive but the panel can no
+ * longer list or delete them. Both facts are stated.
  */
 export function DeleteApplicationDialog({ application, open, onOpenChange, afterDelete, redirectTo, closeWhenGone = false }) {
   const t = useTranslations("applications.delete");
@@ -47,22 +38,14 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
   const orphaned = application?.system_user === null;
   const [removeDatabases, setRemoveDatabases] = useState(true);
   /*
-   * Only to NAME them on the checkbox. "Also delete the database" is a
-   * different decision from "also delete shop_live", and the second is the one
-   * somebody can check against what they believe the site owns.
-   *
-   * The delete call sends a flag, never these ids — the API resolves the list
-   * itself as it deletes, so a database attached since this opened is still
-   * taken and this cannot go stale in a way that loses data.
+   * Only used to name databases on the checkbox. The delete call sends a flag,
+   * not these ids; the API resolves the list itself, so this cannot go stale.
    */
   const [databases, setDatabases] = useState([]);
 
   /*
-   * On open, not on mount: this dialog is rendered per row on the list, so
-   * mounting would fetch once per site for a question nobody asked.
-   * A failure leaves the list empty, which hides the checkbox — the site
-   * deletes exactly as it did before, rather than offering a choice the panel
-   * cannot describe.
+   * Fetched on open, not mount: the dialog is rendered per row. A failure leaves
+   * the list empty, which hides the checkbox.
    */
   useEffect(() => {
     if (!open || !application?.id) return undefined;
@@ -71,10 +54,8 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
     getDatabasesForApplication(application.id, { signal: controller.signal })
       .then(({ data }) => {
         /*
-         * The rows, not the envelope. `databasesResponseSchema` also requires
-         * `meta`, and this only needs names — parsing the whole response would
-         * hide the checkbox the day pagination changes shape. Same shape as
-         * `get-server-processes`.
+         * Parse the rows, not the envelope: only names are needed, and requiring
+         * `meta` would hide the checkbox if pagination changes shape.
          */
         const parsed = z.array(databaseSchema).safeParse(data?.databases);
         setDatabases(parsed.success ? parsed.data : []);
@@ -97,8 +78,7 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
     onOpenChange?.(next);
   }
 
-  // With closeWhenGone the toast waits for the page to drop this dialog;
-  // announced on the API's answer it sat beside "Deleting…" for seconds.
+  // With closeWhenGone the toast waits until the page drops this dialog.
   const announce = useRef(null);
   useEffect(() => () => announce.current?.(), []);
 
@@ -118,23 +98,16 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
     if (!matches) return;
     setPending(true);
     try {
-      // Databases only when they were listed and the box is ticked. Sent
-      // unconditionally, a site with no database still asked for
-      // remove_databases=true — a 403 for every role without database manage,
-      // and a silent drop of databases this dialog never showed when their
-      // list failed to load.
+      // Databases only when listed and ticked: an unconditional remove_databases is
+      // a 403 for roles without database manage, and would drop unlisted databases.
       const { data } = await deleteApplication(application.id, {
         removeFiles: removeFiles && !orphaned,
         removeDatabases: databases.length > 0 && removeDatabases,
       });
 
       /*
-       * 200 with a failure inside it. The site really is gone — a red toast
-       * would say nothing happened when nearly all of it did — but a green one
-       * would bury a database still sitting on the server, and the dialog this
-       * would have been reported in is about to close on a site that no longer
-       * exists. So: a warning that names what is left, and a way to go and
-       * finish it, held long enough to read.
+       * A 200 can still carry database failures. The site is gone, so not an error,
+       * but a warning names what is left and links to finish it.
        */
       const failed = data?.databases?.failed ?? [];
       const say = () => {
@@ -151,16 +124,8 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
       finish(say);
     } catch (error) {
       /*
-       * 404 means somebody already deleted it — another tab, another person,
-       * or this same dialog after a click that did land. The reader's goal is
-       * achieved, so a red "we could not delete this application" is wrong
-       * twice over: it denies something that is true, and it leaves the dialog
-       * open over a row that is about to vanish, so they type the domain again
-       * and retry a delete that cannot ever succeed.
-       *
-       * Treated as done, but not silently as a success — they are told the
-       * reason it was already gone is that it was already gone, and the list
-       * is refreshed underneath them so the row actually leaves.
+       * 404: already deleted (another tab or user). Treated as done with an
+       * explanatory message, and the list is refreshed so the row leaves.
        */
       if (error?.response?.status === 404) {
         if (afterDelete) await afterDelete();
@@ -172,19 +137,15 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
     }
   }
 
-  // Announced when the list no longer shows the row, not before: closed
-  // straight after the API answered, the dialog left "… was deleted" over a
-  // row that stayed on screen for another two seconds.
+  // Announced once the list no longer shows the row.
   function finish(say) {
     const done = () => {
       say();
       handleOpenChange(false);
       setPending(false);
     };
-    // For a caller whose page swaps this dialog out once the application is
-    // gone (the staging page): stay on "Deleting…" until that happens, rather
-    // than trusting the refresh to land before the dialog closes — it did not
-    // on a real server, and the old card showed for a moment.
+    // For callers that swap this dialog out once the application is gone (the
+    // staging page): stay on "Deleting…" until then.
     if (closeWhenGone) {
       announce.current = say;
       router.refresh();
@@ -192,9 +153,7 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
       return;
     }
     if (redirectTo) {
-      // The list first, then the toast and the close: pushing and closing
-      // together left the deleted application's page up and clickable for the
-      // length of the server render.
+      // Navigate first, then toast and close, so the deleted page is not left up.
       pushAndWait(redirectTo).then(done);
     } else {
       refreshThen(done);
@@ -216,9 +175,8 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
       onConfirm={onConfirm}
     >
       <div className="space-y-4">
-        {/* No system user, no home to find the files in: the API skips them
-            rather than guess, so offering the choice would be a promise it
-            does not keep. */}
+        {/* No system user means no home directory: the API skips the files, so no
+            choice is offered. */}
         {orphaned ? (
           <p className="rounded-lg border bg-muted/40 p-3 text-xs leading-5 text-muted-foreground">
             {t("filesKept")}
@@ -242,8 +200,7 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
           </div>
         )}
 
-        {/* Only when there is one. The old note said a database "is kept" on
-            every site, including those that never had one. */}
+        {/* Only when the site has a database. */}
         {databases.length ? (
           <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-3">
             <Checkbox
@@ -256,12 +213,9 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
               <Label htmlFor="delete-app-databases" className="text-sm font-medium">
                 {t("removeDatabases", { count: databases.length })}
               </Label>
-              {/* Named, not counted. "Also delete 1 database" is a promise the
-                  reader cannot check; the name is. */}
+              {/* Databases are named, not counted, so the reader can check them. */}
               <p className="text-xs leading-5 text-muted-foreground">
-                {/* `count` as well as the names: the verb and the pronoun have
-                    to agree with a list, and "shop_live, shop_reports stays …
-                    Remove it" is what one shared sentence gives you. */}
+                {/* `count` too, so the verb and pronoun agree with the list. */}
                 {t(removeDatabases ? "removeDatabasesOn" : "removeDatabasesOff", {
                   count: databases.length,
                   databases: databases.map((row) => row.name).join(", "),
@@ -271,16 +225,8 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
           </div>
         ) : null}
 
-        {/* The Linux account this application generated.
-        
-            `POST /applications/{id}` accepts `remove_files` and
-            `remove_databases` and nothing else, so there is no checkbox to
-            offer — the account cannot be removed from here. What it CAN do is
-            stop being silent about it: the dialog listed configuration, files
-            and databases and never mentioned the user, so deleting a
-            test application left a Linux account owning nothing and nothing on
-            screen said so. Found on this server, twice: `qa-throwaway` and
-            `prestashop`, both with zero applications. */}
+        {/* The generated Linux account is not removed: the API accepts only
+            `remove_files` and `remove_databases`. Say so rather than stay silent. */}
         {application?.system_user?.username ? (
           <p className="text-xs leading-5 text-muted-foreground">
             {t("systemUserStays", { username: application.system_user.username })}
@@ -288,11 +234,8 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
         ) : null}
 
         <div className="space-y-2">
-          {/* One sentence, not three fragments. `Label` is display:flex, so
-              "Type", the domain and "to confirm" were laid out as flex items
-              and a long domain pushed the trailing words into their own
-              wrapped column. `block` makes them words again, and the whole
-              sentence is one key so word order can differ by language. */}
+          {/* `Label` is display:flex; `block` keeps the sentence flowing as text. One
+              key so word order can differ by language. */}
           <div className="flex items-start justify-between gap-2">
             <Label
               htmlFor="delete-app-confirm"

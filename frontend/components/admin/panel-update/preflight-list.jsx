@@ -5,27 +5,17 @@ import { isUnknownDetail, megabytes, parseSizeDetail } from "@/lib/admin/preflig
 /**
  * The preflight gate: each check must pass before an update can start.
  *
- * Three shapes, decided by the data rather than by a list of keys:
+ * Three shapes, decided by the data:
+ * - failing: a full-width red row, the only actionable item on the page;
+ * - passing with a MEASUREMENT: a tile leading with the figure;
+ * - everything else: a compact row.
  *
- * - anything failing gets a full-width red row, because it is the only thing on
- *   the page you can act on. In a grid the one blocking check landed in
- *   whichever cell it fell into, tinted across half a row with a hole beside it;
- * - a passing check that reports a MEASUREMENT becomes a tile with the figure,
- *   because "have I got room" is answered by a number, not a tick;
- * - everything else is a compact row.
+ * An ADVISORY check never gets a red row: it does not gate the update (see
+ * UpdatePreflight::run()). It keeps its tile and shows a muted warning instead
+ * of a tick when short, since a green tick over a low figure would mislead.
  *
- * An ADVISORY check is never one of the red rows, however it reads: it does not
- * gate the update (see UpdatePreflight::run()), so presenting it as the thing
- * standing in your way would be a lie about a button that works. It keeps its
- * tile and shows a muted warning instead of a tick when short — the figure is
- * the first thing to look at if a build is later killed, and a green tick over
- * 300 MB would be a worse lie than no check at all.
- *
- * The grids are `auto-fit`, never a fixed column count: with three checks or
- * five, the last row stretches to fill instead of leaving an empty cell.
- *
- * Known keys get a friendly localized name; an unknown future key falls back to
- * the raw key so the list never breaks. `clean_working_tree` fails closed when
+ * Grids are `auto-fit`, never a fixed column count, so the last row fills.
+ * Unknown keys fall back to the raw key. `clean_working_tree` fails closed when
  * the tree state is unknown (a forced checkout would discard uncommitted work).
  */
 const FILL = "grid gap-3 grid-cols-[repeat(auto-fit,minmax(14rem,1fr))]";
@@ -45,8 +35,7 @@ export function PreflightList({ checks }) {
   if (!checks.length) return null;
 
   const name = (key) => (t.has(`preflight.${key}`) ? t(`preflight.${key}`) : key);
-  // A tile is a column heading, not a sentence: "Disk space", not "Enough free
-  // disk space". Falls back to the full name for a check with no short form.
+  // A tile label is a heading ("Disk space"); falls back to the full name.
   const shortName = (key) => (t.has(`preflightShort.${key}`) ? t(`preflightShort.${key}`) : name(key));
 
   const size = (mb) => {
@@ -55,14 +44,13 @@ export function PreflightList({ checks }) {
     return `${format.number(unit.value, { maximumFractionDigits: unit.maximumFractionDigits })} ${unit.unit}`;
   };
 
-  // A measurement makes a tile; the parser returning null (or the backend
-  // saying "unknown") means there is no figure to lead with.
+  // A null parse (or backend "unknown") means no figure to lead with.
   const withSize = checks.map((c) => ({ ...c, measured: parseSizeDetail(c.detail) }));
   const failed = withSize.filter((c) => !c.passed && !c.advisory);
   const tiles = withSize.filter((c) => (c.passed || c.advisory) && c.measured);
   const rows = withSize.filter((c) => (c.passed || c.advisory) && !c.measured);
-  // Counts what gates the button, so an advisory check short on memory does not
-  // read as "4 of 5 ready" next to an update that starts perfectly well.
+  // Counts only gating checks, so an advisory shortfall does not read as "4 of 5
+  // ready" beside an update that can start.
   const gating = checks.filter((c) => !c.advisory);
   const passedCount = gating.filter((c) => c.passed).length;
 
@@ -103,9 +91,7 @@ export function PreflightList({ checks }) {
       {tiles.length ? (
         <div className={FILL}>
           {tiles.map((c) => (
-            // Both rows run edge to edge: the figure and what it means sit at
-            // opposite ends rather than stacked down the left with the right
-            // half of the tile empty.
+            // Figure and caption sit at opposite ends of each row.
             <div key={c.key} className="rounded-xl border bg-muted/25 px-4 py-3">
               <div className="flex items-center gap-2">
                 <p className="min-w-0 flex-1 truncate text-xs font-medium tracking-wide text-muted-foreground uppercase">
@@ -118,8 +104,8 @@ export function PreflightList({ checks }) {
                   {size(c.measured.haveMb)}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {/* "recommended", not "needed", when the shortfall does not
-                      stop anything — the caption has to agree with the button. */}
+                  {/* "recommended", not "needed", when the shortfall blocks nothing; the caption
+                      must agree with the button. */}
                   {c.passed
                     ? t(c.measured.kind === "free" ? "captionFree" : "captionAvailable", {
                         need: size(c.measured.needMb),
@@ -135,12 +121,8 @@ export function PreflightList({ checks }) {
       {rows.length ? (
         <ul className={FILL}>
           {rows.map((c) => (
-            // `shrink-0` on the detail meant a sentence the parser did not
-            // recognise could not shrink OR wrap, so it ran straight out of the
-            // card and printed over the one beside it. The backend adding a
-            // term to a detail string is enough to cause that — it did, with
-            // "+ 0MB swap" — so the row wraps rather than trusting the text to
-            // be short.
+            // No `shrink-0` on the detail: the backend's detail text can grow (e.g.
+            // "+ 0MB swap") and must wrap instead of overflowing into the next card.
             <li
               key={c.key}
               className="flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-xl border px-4 py-3 text-sm"

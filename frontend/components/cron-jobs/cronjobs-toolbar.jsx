@@ -6,10 +6,9 @@ import { FacetSelect } from "@/components/data-table/facet-select";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 
 /**
- * Filters are URL-driven and applied server-side. There's no search box: the
- * cron list endpoint exposes only system_user_id / username / active, and a
- * client-side search over a paginated page would only ever match the rows
- * already on screen.
+ * Filters are URL-driven and applied server-side. No search box: the cron
+ * endpoint filters only by system_user_id / username / active, and a
+ * client-side search would only match the current page.
  */
 export function CronjobsToolbar({
   systemUsers = [],

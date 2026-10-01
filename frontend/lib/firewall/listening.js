@@ -1,21 +1,14 @@
 /**
- * What is actually running behind a rule.
- *
- * A firewall page without this shows rules and hopes: an allow rule for 8080
- * with nothing bound to 8080 does nothing at all, and a service bound publicly
- * with no rule is unreachable. Both are common, and neither is visible from the
- * rule list alone.
+ * What is actually running behind a rule: an allow rule with nothing bound does
+ * nothing, and a public service with no rule is unreachable.
  */
 
 /**
  * The listening entry a rule points at, or null.
  *
- * Only PUBLIC sockets count. A process on 127.0.0.1 cannot be reached from
- * outside whatever the firewall says, so calling its rule "in use" would be
- * wrong in the direction that matters.
- *
- * Range rules match if anything public is bound inside the range — one live
- * port is enough to make the rule real.
+ * Only public sockets count; a 127.0.0.1 process is unreachable from outside
+ * regardless of the firewall. A range rule matches if anything public is bound
+ * inside it.
  */
 export function listenerFor(rule, listening = []) {
   const from = Number(rule?.port_from);

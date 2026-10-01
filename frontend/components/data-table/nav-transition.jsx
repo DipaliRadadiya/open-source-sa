@@ -39,17 +39,9 @@ export function NavTransitionProvider({ children }) {
       if (resetPage) params.delete("page");
       const qs = params.toString();
       /*
-       * `push` the FIRST time the URL gains a query, `replace` after that.
-       *
-       * Replacing on every keystroke is right — "moodle x" would otherwise
-       * leave eight history entries and Back would walk the reader letter by
-       * letter out of their own search. But replacing on the first one too
-       * means the UNFILTERED list never enters history at all, so Back from a
-       * filtered table left the screen entirely: /applications -> type -> Back
-       * landed on /dashboard.
-       *
-       * One push at the empty -> set boundary gives Back exactly one job:
-       * clear the filters and stay. Every later keystroke still replaces.
+       * `push` the first time the URL gains a query, `replace` after that, so
+       * Back clears the filters once instead of stepping through keystrokes or
+       * leaving the page.
        */
       const hadQuery = searchParams.toString() !== "";
       const navigate = hadQuery || !qs ? router.replace : router.push;
@@ -60,8 +52,7 @@ export function NavTransitionProvider({ children }) {
     [router, pathname, searchParams],
   );
 
-  // Re-run the server component (re-fetch) without a full page reload, sharing
-  // the same pending signal so the table dims like any other update.
+  // Re-fetch via the server component, sharing the same pending signal.
   const refresh = useCallback(
     () => startTransition(() => router.refresh()),
     [router],

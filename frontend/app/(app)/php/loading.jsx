@@ -1,9 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableSkeleton } from "@/components/data-table/table-skeleton";
 
-// Mirrors the real layout — heading, version card with a footer of buttons,
-// then the extensions card with its search row and table — so content swaps in
-// place instead of shifting everything down when it arrives.
+// Mirrors the real layout so content swaps in without shifting.
 export default function Loading() {
   return (
     <div className="space-y-6">

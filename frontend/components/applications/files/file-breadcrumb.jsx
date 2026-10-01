@@ -8,9 +8,9 @@ function href(appId, segments, upTo) {
   return path ? `/applications/${appId}/files?path=${encodeURIComponent(path)}` : `/applications/${appId}/files`;
 }
 
-// The in-page path navigator (not the header nav breadcrumb) — root plus each
-// folder segment, all but the last clickable. Collapses the middle once a path
-// runs deep enough to wrap, rather than letting it push the toolbar around.
+// The in-page path navigator (not the header breadcrumb): root plus each folder
+// segment, all but the last clickable. Collapses the middle once a path is deep
+// enough to wrap.
 export function FileBreadcrumb({ appId, path }) {
   const t = useTranslations("applications.files");
   const segments = path ? path.split("/").filter(Boolean) : [];
@@ -31,8 +31,8 @@ export function FileBreadcrumb({ appId, path }) {
       </Link>
       {visible.map((seg, i) => {
         const isLast = i === visible.length - 1;
-        // Index into the real segments array for building the right href —
-        // offset by how many we skipped at the front when collapsed.
+        // Index into the real segments for the href, offset by the segments skipped when
+        // collapsed.
         const realIndex = collapsed ? segments.length - visible.length + i + 1 : i + 1;
         return (
           <span key={i} className="flex shrink-0 items-center gap-1">
@@ -57,9 +57,7 @@ export function FileBreadcrumb({ appId, path }) {
           </span>
         );
       })}
-      {/* Nothing meaningful to copy at the root — it's the reference point
-          every relative path (including every per-file "Copy path") is
-          already relative to. */}
+      {/* Nothing to copy at the root: every relative path is relative to it. */}
       {path ? <CopyButton value={path} label={t("actions.copyPath")} className="ml-0.5" /> : null}
     </nav>
   );

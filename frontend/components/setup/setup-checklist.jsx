@@ -13,36 +13,27 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 
 const POLL_MS = 3000;
-// apt on a small box is slow, but past this we stop implying steady progress —
-// an unbounded spinner is a promise we have no evidence for.
+// Past this, stop implying steady progress (apt on a small box is slow).
 const SLOW_AFTER_MS = 3 * 60 * 1000;
-// Ceiling on how long we will claim something is installing without the server
-// agreeing. Past this the queue worker is the likelier explanation than apt, and
-// showing the server's own answer — even "not installed" — beats a spinner that
-// will never stop.
+// Past this, stop claiming an install without the server agreeing (a stuck
+// queue worker is likelier than apt) and show the server's answer.
 const GIVE_UP_MS = 10 * 60 * 1000;
 
 export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, fail2banProtection = "unknown" }) {
   const t = useTranslations("setup");
   const router = useRouter();
   const [setup, setSetup] = useState(initialSetup);
-  // Keys with a POST in flight (before the 202 lands) — a spinner on that
-  // control until the "installing" state or the poll takes over.
+  // Keys with a POST in flight, until "installing" or the poll takes over.
   const [busy, setBusy] = useState({});
-  // Installs we started here, key → when. The backend only tracks progress for
-  // database, php and node (SetupCatalog::progressFor maps exactly those three),
-  // so a queued fail2ban install reports `pending` for its entire run. Without
-  // this the very next poll overwrote the row back to an Install button while
-  // apt was still going, polling then stopped because nothing looked in flight,
-  // and the page never noticed the install finishing.
+  // Installs started here. The backend tracks progress only for database, php
+  // and node (SetupCatalog::progressFor), so e.g. fail2ban reports `pending`
+  // throughout; without this the poll would revert it to an Install button.
   const [started, setStarted] = useState({});
   const [slow, setSlow] = useState(false);
   const [finishing, startTransition] = useTransition();
 
-  // Server truth, with our own known-started installs laid over it. Derived
-  // rather than merged into `setup`: an override simply stops applying once the
-  // server resolves that component, so there is no bookkeeping to prune and
-  // nothing to keep in sync.
+  // Server state with installs started here overlaid; derived, so an override
+  // stops applying once the server resolves that component.
   const components = setup.components.map((c) =>
     started[c.key] && c.state !== "installed" && c.state !== "failed"
       ? { ...c, state: "installing" }
@@ -52,8 +43,7 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
   const anyInstalling =
     components.some((c) => c.state === "installing") || Object.keys(busy).length > 0;
 
-  // The ceiling. One timer for the whole set, restarted whenever another install
-  // is started, because that is a fresh reason to keep waiting.
+  // One timer for the set, restarted on each new install.
   useEffect(() => {
     if (!Object.keys(started).length) return undefined;
     const id = setTimeout(() => setStarted({}), GIVE_UP_MS);
@@ -88,8 +78,7 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
     setBusy((b) => ({ ...b, [component.key]: true }));
     try {
       await runSetupAction(action, body);
-      // Remembered rather than written into `setup`: the poll replaces that
-      // wholesale, so anything merged into it survives exactly one tick.
+      // Kept outside `setup`, which the poll replaces wholesale.
       setStarted((s) => ({ ...s, [component.key]: true }));
     } catch (error) {
       toast.error(apiMessage(error, t("installFailed")));
@@ -103,28 +92,21 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
   }
 
   function finish() {
-    // The dashboard navigation re-runs its Server Component itself. Refreshing
-    // as well issued a second request and left the button looking inert while
-    // both navigations competed.
+    // The navigation re-runs the Server Component; an extra refresh would compete.
     startTransition(() => router.push("/dashboard"));
   }
 
   const recommended = components.filter((c) => c.recommended);
   const recommendedLeft = recommended.filter((c) => c.state !== "installed").length;
-  // Counted over everything installed, not just the recommended set. Driving it
-  // off `recommended` alone meant a server with PHP and Redis already up read
-  // "0 of 2 recommended installed · 0%" with an empty bar — directly above an
-  // "Already installed" list naming two components. The bar is the answer to
-  // "how far along is this server", and what is still *advised* is a separate
-  // sentence rather than a second, contradictory score.
+  // Progress counts everything installed, not just the recommended set, so it
+  // never contradicts the "Already installed" list.
   const installedCount = components.filter((c) => c.state === "installed").length;
   const failedCount = components.filter((c) => c.state === "failed").length;
   const pct = components.length
     ? Math.round((installedCount / components.length) * 100)
     : 100;
 
-  // Float what needs attention to the top and sink the already-done to the
-  // bottom, so the next step is always the first thing the eye lands on.
+  // Needs-attention first, already-done last.
   const rank = (c) =>
     c.state === "failed" ? 0 : c.state === "installing" ? 1 : c.state === "installed" ? 4 : c.recommended ? 2 : 3;
   const ordered = components
@@ -134,21 +116,14 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
   const pending = ordered.filter((c) => c.state !== "installed");
   const done = ordered.filter((c) => c.state === "installed");
 
-  // Grouped by what each one asks of the reader.
-  //
-  // "Also available" rather than folding Node.js under "Recommended": it is not
-  // recommended, and a heading that says otherwise is a heading that lies. It
-  // is also not called "Optional" — this page already decided that reads as
-  // "you can skip this", which is wrong for a runtime a Node site needs.
-  // Failed only. An install in progress is not "something that did not
-  // finish" — it stays in its own group, floated to the top by `rank`.
+  // "Also available" (not "Optional", not under "Recommended") for components
+  // that are neither advised nor skippable. Attention is failed only; installing
+  // stays in its own group.
   const attention = pending.filter((c) => c.state === "failed");
   const advised = pending.filter((c) => !attention.includes(c) && c.recommended);
   const optional = pending.filter((c) => !attention.includes(c) && !c.recommended);
 
-  // The backend names what's running, but only for the three components it
-  // tracks — for the others its label is null and the line went anonymous
-  // ("One install runs at a time" with no subject). Name it ourselves then.
+  // The backend labels only the three components it tracks; name the others here.
   const running = components.find((c) => c.state === "installing");
   const runningLabel = setup.label ?? (running ? t("installingNamed", { name: running.title }) : null);
 
@@ -159,8 +134,7 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
       tier={tier}
       versions={versions[component.key] ?? []}
       busy={Boolean(busy[component.key])}
-      // apt runs one install at a time — while any is in flight, the others are
-      // held so a second click can't hit an apt lock.
+      // apt runs one install at a time, so others are held to avoid an apt lock.
       locked={anyInstalling && component.state !== "installing" && !busy[component.key]}
       denied={canInstall[component.key] === false}
       onInstall={install}
@@ -185,7 +159,6 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
 
   return (
     <div className="space-y-6">
-      {/* A clear payoff once the recommended set is in — the reason to finish. */}
       {setup.complete ? (
         <div className="flex items-center gap-3 rounded-2xl border border-success/30 bg-success/5 px-4 py-3">
           <CheckCircle2 className="size-5 shrink-0 text-success" />
@@ -196,29 +169,16 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
         </div>
       ) : null}
 
-      {/* The overview, as its own panel rather than a caption floating above the
-          list. It answers the three questions someone opens this page with —
-          how far along, did anything break, what is still advised — and being a
-          surface rather than loose text is what stops it reading as a label for
-          the card underneath it. */}
+      {/* Overview panel: how far along, what failed, what is still advised. */}
       <div className="space-y-3 rounded-2xl border bg-card p-5 shadow-sm">
-        {/* The percentage leads, because it is the one number that answers the
-            question the page title raises. The label that used to sit here
-            ("Setup progress") named the panel it was already inside. */}
-        {/* Percentage and counts share the line above the bar. They are the same
-            fact at two resolutions — a score and its breakdown — so giving the
-            breakdown its own row below the bar spent a whole line separating
-            things that belong together. `flex-wrap` lets it fall back to two
-            rows on a narrow screen, where there is no room for one. */}
+        {/* Percentage and counts share a line; `flex-wrap` gives two rows on narrow
+            screens. */}
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5">
           <p className="text-base font-semibold tracking-tight tabular-nums">
             {t("percentComplete", { pct })}
           </p>
 
-          {/* Counts as separate items, not one run-on sentence: each is a
-              different kind of fact, and the failure is the one that has to
-              catch the eye — it gets a tinted chip rather than another grey
-              clause. */}
+          {/* Separate items; failures get a tinted chip. */}
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm">
             <span className="font-medium">
               {setup.complete
@@ -254,8 +214,7 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
           className="h-2"
         />
 
-        {/* One live line while installing: what's running, that only one runs at
-            a time, and — past a while — that it's just slow, not stuck. */}
+        {/* While installing: what is running, one at a time, and a slow note later. */}
         {anyInstalling ? (
           <p className="flex items-start gap-2 border-t pt-3 text-xs text-muted-foreground">
             <Loader2 className="mt-0.5 size-3 shrink-0 animate-spin" />
@@ -267,11 +226,7 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
         ) : null}
       </div>
 
-      {/* Three groups, because they are three different requests of the reader:
-          something went wrong and wants a decision; something is advised and
-          can wait; something is done and wants nothing. Rendering them as one
-          undifferentiated stack of equal cards is what made the page read as a
-          wall — the tiers below carry the weight, the headings say why. */}
+      {/* Three groups: needs a decision, advised, done. */}
       <Section title={t("sectionAttention")} hint={t("sectionAttentionHint")} items={attention} render={(c) => renderComponent(c, "primary")} />
       <Section title={t("sectionRecommended")} hint={t("sectionRecommendedHint")} items={advised} render={(c) => renderComponent(c, "secondary")} />
       <Section title={t("sectionOptional")} hint={t("sectionOptionalHint")} items={optional} render={(c) => renderComponent(c, "secondary")} />
@@ -279,21 +234,12 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
         title={t("alreadyInstalled")}
         hint={t("alreadyInstalledHint")}
         items={done}
-        // A receipt, not a queue. One bordered container with divided rows
-        // reads as a single quiet block; two separately bordered cards read as
-        // two more things to deal with, competing with the actions above.
         className="divide-y overflow-hidden rounded-2xl border bg-muted/20"
         render={(c) => renderComponent(c, "compact")}
       />
 
-      {/* "Skip for now" is a fair name only while something is actually
-          outstanding. With nothing left to install it named the act of giving
-          up on a page where there was nothing left to give up on — so once the
-          list is clear the button names its destination instead. */}
-      {/* A panel in the same stack as the cards, not a rule with things loose
-          under it. A bare border-t left the last decision on the page floating
-          in the margin below everything, reading as page furniture rather than
-          the end of the flow it belongs to. */}
+      {/* "Skip for now" only while something is outstanding; otherwise the button
+          names its destination. */}
       <div className="flex flex-col gap-3 rounded-2xl border bg-muted/30 px-4 py-3.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
           {setup.complete ? t("doneHint") : anyInstalling ? t("skipWhileInstalling") : t("skipHint")}
@@ -316,10 +262,8 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
 }
 
 /**
- * A titled group, rendered only when it has anything in it.
- *
- * The count sits with the heading rather than in it: "Recommended 1" scans as a
- * heading and a quantity, where "Recommended (1)" reads as part of the name.
+ * A titled group, rendered only when it has items. The count sits beside the
+ * heading, not inside it.
  */
 function Section({ title, hint, items, render, className = "space-y-3" }) {
   if (!items.length) return null;
@@ -330,9 +274,6 @@ function Section({ title, hint, items, render, className = "space-y-3" }) {
           <h2 className="text-base font-semibold tracking-tight">{title}</h2>
           <span className="text-xs text-muted-foreground tabular-nums">{items.length}</span>
         </div>
-        {/* One line saying why this group exists. A bare heading names a pile;
-            the hint is what tells you whether the pile is yours to deal with
-            now or later — which is the only reason to group them at all. */}
         {hint ? <p className="text-sm text-muted-foreground">{hint}</p> : null}
       </div>
       <div className={className}>{items.map(render)}</div>
@@ -340,8 +281,7 @@ function Section({ title, hint, items, render, className = "space-y-3" }) {
   );
 }
 
-// The separator between summary counts. A character, not a border, so it wraps
-// with the text it divides instead of leaving a stray rule on a folded line.
+// A character separator, not a border, so it wraps with the text.
 function Dot() {
   return (
     <span aria-hidden className="text-muted-foreground/50">

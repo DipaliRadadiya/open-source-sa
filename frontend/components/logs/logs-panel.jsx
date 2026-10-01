@@ -24,14 +24,10 @@ import { cleanLines } from "@/lib/logs/clean-lines";
 const POLL_MS = 3000;
 // Long tailing sessions must not grow without bound.
 const MAX_BUFFER = 10000;
-// Tail by default only for logs small enough that "live" is useful rather than
-// a firehose; big access logs open paused.
 
 // One blip is noise; three in a row means the tail isn't working.
 const TAIL_FAILURES_BEFORE_PAUSE = 3;
-// The rail's sizes and "written just now" dots are only true at fetch time;
-// re-read them often enough that sitting on the page doesn't turn them into a
-// picture of ten minutes ago.
+// Re-read the rail's sizes and "written just now" dots so they do not go stale.
 const CATALOG_MS = 30000;
 
 export function LogsPanel({
@@ -45,13 +41,11 @@ export function LogsPanel({
 }) {
   const t = useTranslations("logs");
 
-  // The catalog has two sources of truth: the server render (authoritative,
-  // and newer on every navigation) and our poll. Rather than syncing them in an
-  // effect, the poll's result is held separately and dropped the moment a fresh
-  // server render arrives.
+  // The server render is authoritative and newer on every navigation; the poll
+  // result is held separately and dropped when a fresh render arrives.
   const [polledSources, setPolledSources] = useState(null);
-  // "Written just now" is measured against the server render's clock until
-  // the first poll, so the browser draws the same dots the server did.
+  // Measured against the server render's clock until the first poll, so the
+  // browser draws the same dots the server did.
   const [now, setNow] = useState(renderedAt);
   const [renderedWith, setRenderedWith] = useState(initialSources);
   if (renderedWith !== initialSources) {
@@ -60,16 +54,12 @@ export function LogsPanel({
     setNow(renderedAt);
   }
   const sources = polledSources ?? initialSources;
-  /*
-   * The log on screen. Switched here rather than by navigating: a navigation
-   * re-rendered the page on the server, left the old log up with nothing to
-   * say a click had landed, then read the new one twice (once for a first
-   * paint this component ignored). The URL is still updated for reloads.
-   */
+  // The log on screen. Switched in state rather than by navigating (which
+  // re-rendered on the server and read the log twice); the URL is still updated.
   const [current, setCurrent] = useState(selected);
   const source = sources.find((s) => s.key === current) ?? null;
-  // Keyed on these, not on `source`: the catalog poll hands back new objects
-  // every 30s, and a `load` rebuilt from them re-read the whole log each time.
+  // Keyed on these, not on `source`: the catalog poll returns new objects every
+  // 30s and would trigger a full re-read.
   const sourceKey = source?.key ?? null;
   const readable = Boolean(source?.readable);
   const appends = source?.follow !== false;
@@ -77,8 +67,8 @@ export function LogsPanel({
   const [lines, setLines] = useState(() => cleanLines(initial?.log?.lines));
   const [status, setStatus] = useState(initial?.status ?? "ok");
   const [failedMessage, setFailedMessage] = useState(initial?.message ?? null);
-  // Read inside `load`'s catch: a first read that fails shows its box, a
-  // reload of lines already on screen keeps them and says so in a toast.
+  // Read inside `load`'s catch: a failed first read shows its box, a failed
+  // reload keeps the lines on screen and shows a toast.
   const statusRef = useRef(status);
   useEffect(() => {
     statusRef.current = status;
@@ -91,18 +81,16 @@ export function LogsPanel({
   const [debouncedTerm, setDebouncedTerm] = useState("");
   const [severity, setSeverity] = useState("all");
   const [wrap, setWrap] = useState(false);
-  // Which end the newest line sits at. Oldest-first is the default because
-  // that is how a console reads and how a live tail appends.
+  // Oldest-first by default: how a console reads and a live tail appends.
   const [newestFirst, setNewestFirst] = useState(false);
   const [follow, setFollow] = useState(() => resolveFollow(followPreference, source));
-  // The cookie's value as of now: the prop is only as fresh as the last server
-  // render, and switching logs no longer makes one.
+  // The cookie's current value: the prop is only as fresh as the last server
+  // render, and switching logs does not make one.
   const [followPref, setFollowPref] = useState(followPreference);
   const [busy, setBusy] = useState(false);
 
-  // Remembered across refreshes and across log sources. A cookie rather than
-  // localStorage so the server render already knows — read after mount, the
-  // tail would start, then stop, which is the flicker this exists to remove.
+  // A cookie rather than localStorage so the server render already knows the
+  // preference and the tail does not start then stop.
   const changeFollow = useCallback((next) => {
     setFollow(next);
     setFollowPref(next ? "on" : "off");
@@ -116,31 +104,20 @@ export function LogsPanel({
     setLineCount(next);
     writeCookie(LINES_COOKIE, String(next));
   }, []);
-  // "reconnecting" after a blip, "paused" once we stop trying — a tail that
-  // silently stops is indistinguishable from a log that went quiet.
+  // "reconnecting" after a blip, "paused" once retries stop, so a stalled tail
+  // is not mistaken for a quiet log.
   const [tailState, setTailState] = useState("idle");
 
   const cursor = useRef(initial?.log?.cursor ?? 0);
 
   /*
-   * A navigation to a different `?source=` (Back, a link) is not a remount,
-   * so every `useState` above keeps the value it was seeded with for the log
-   * you were reading before. Two of those matter:
+   * A navigation to a different `?source=` is not a remount, so state seeded
+   * from the previous log must be reset: `follow` (auto-follow depends on the
+   * source's size) and `lines` (the old content would sit under the new name).
+   * Reset during render, not in an effect, so the old log never paints.
    *
-   *   - `follow`. Auto-follow is deliberately off above AUTO_FOLLOW_MAX_BYTES,
-   *     but that was decided once, from the FIRST source. Opening a 4 KB
-   *     nginx error log and then switching to a 10 MB syslog left the tail
-   *     running against exactly the file the limit exists to protect.
-   *   - `lines`. The previous log's content sat under the new log's name until
-   *     the re-read landed, which on a large grep is seconds of the wrong file
-   *     presented as the right one.
-   *
-   * Reset during render, the same way the catalog above drops a stale poll,
-   * rather than in an effect — an effect would paint the old log first.
-   *
-   * Deliberately NOT reset: the search term, severity, wrap and line count.
-   * Those are how the reader wants logs shown, not facts about one file, and
-   * the toolbar keeps them visible.
+   * Deliberately NOT reset: search term, severity, wrap and line count; those
+   * are reader preferences, not facts about one file.
    */
   const [renderedSource, setRenderedSource] = useState(selected);
   if (renderedSource !== selected) {
@@ -154,10 +131,8 @@ export function LogsPanel({
     setFollow(resolveFollow(followPref, sources.find((s) => s.key === selected)));
   }
 
-  // The cursor moves with them, but a ref cannot be written during render and
-  // the lint rule is right to say so. An effect is early enough: the tail's
-  // first tick is a full POLL_MS away, so it can never read the old file's
-  // offset against the new file.
+  // A ref cannot be written during render; an effect is early enough because
+  // the tail's first tick is a full POLL_MS away.
   useEffect(() => {
     cursor.current = initial?.log?.cursor ?? 0;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -173,8 +148,7 @@ export function LogsPanel({
     return () => clearTimeout(id);
   }, [term]);
 
-  // Catalog refresh. Failure is silent: a rail one interval out of date beats a
-  // toast for something the reader never asked to happen.
+  // Catalog refresh. Failure is silent: the reader never asked for it.
   const reloadSources = useCallback(async (isActive = () => true) => {
     try {
       const { data } = await listLogSources();
@@ -237,8 +211,8 @@ export function LogsPanel({
     [sourceKey, readable, lineCount, debouncedTerm, t],
   );
 
-  // Re-read whenever the source, window size or filter changes. The initial
-  // render already has server-fetched content, so skip that first pass.
+  // Re-read whenever the source, window size or filter changes; the first
+  // render already has server-fetched content.
   const firstRun = useRef(true);
   useEffect(() => {
     if (firstRun.current) {
@@ -260,8 +234,7 @@ export function LogsPanel({
       if (document.hidden) return;
       try {
         if (!appends) {
-          // No cursor to resume from: re-read the window and replace it. The
-          // viewer tells new lines from the ones it already holds.
+          // No cursor to resume from: re-read the window and replace it.
           const { data } = await readLog(sourceKey, { lines: lineCount });
           if (!active) return;
           setLines(cleanLines(data?.log?.lines));
@@ -274,8 +247,7 @@ export function LogsPanel({
         if (!active) return;
         const next = data?.log?.cursor ?? 0;
         const fresh = cleanLines(data?.log?.lines);
-        // Rotation: the file shrank, so what we hold is history of a file that
-        // no longer exists — replace rather than append.
+        // Rotation: the file shrank, so replace rather than append.
         if (next < cursor.current) setLines(fresh);
         else if (fresh.length) {
           setLines((prev) => [...prev, ...fresh].slice(-MAX_BUFFER));
@@ -286,8 +258,7 @@ export function LogsPanel({
       } catch {
         if (!active) return;
         failures += 1;
-        // One blip is noise; three in a row means the tail is not working, and
-        // a silently-stalled tail looks exactly like a log that went quiet.
+        // One blip is noise; three in a row pauses the tail visibly.
         if (failures >= TAIL_FAILURES_BEFORE_PAUSE) {
           setTailState("paused");
           setFollow(false);
@@ -306,8 +277,7 @@ export function LogsPanel({
     };
   }, [follow, disabled, debouncedTerm, sourceKey, appends, lineCount]);
 
-  // Severity narrows what's on screen without another round trip, so it costs
-  // nothing to keep tailing underneath it.
+  // Severity filters client-side, so tailing continues underneath it.
   const visible = useMemo(
     () =>
       severity === "all"
@@ -316,8 +286,7 @@ export function LogsPanel({
     [lines, severity, source],
   );
 
-  // Derived, not stored: "paused" is the only state worth remembering (we
-  // stopped trying), everything else follows from whether we're polling.
+  // Derived, not stored: only "paused" (retries stopped) needs remembering.
   const effectiveTail =
     tailState === "paused"
       ? "paused"
@@ -329,13 +298,12 @@ export function LogsPanel({
             : "live"
           : "idle";
 
-  // The next bigger window, so the banner can offer one click instead of
-  // sending the reader off to hunt for the selector.
+  // The next bigger window, offered as one click in the truncation banner.
   const nextLineStep = LINE_OPTIONS.find((n) => n > lineCount) ?? null;
 
   const searchRef = useRef(null);
 
-  // "/" to filter, Escape to clear — the two shortcuts every log tool has.
+  // "/" to filter, Escape to clear.
   useEffect(() => {
     function onKey(event) {
       const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(event.target?.tagName ?? "");
@@ -351,13 +319,8 @@ export function LogsPanel({
   }, []);
 
   /**
-   * Empty the selected log.
-   *
-   * The server truncates, so the source still exists and the viewer is simply
-   * emptied in place. The incremental cursor is reset with it: it counts bytes
-   * into a file that is now zero bytes long, and leaving it where it was would
-   * make the next poll ask for a range past the end and render nothing for as
-   * long as the page stayed open.
+   * Empty the selected log. The server truncates in place, so the byte cursor
+   * must reset to 0 or the next poll asks for a range past the end.
    */
   const clearSelected = useCallback(async () => {
     if (!source) return;
@@ -370,8 +333,7 @@ export function LogsPanel({
       cursor.current = 0;
       setConfirmClear(false);
       toast.success(t("clearDone", { label: source.label }));
-      // The rail's size for this log is from the last catalog read — up to 30 s
-      // old — so it went on showing the size of what was just emptied.
+      // The rail's size for this log is from the last catalog read.
       reloadSources();
     } catch (error) {
       toast.error(apiMessage(error, t("clearFailed")));
@@ -386,8 +348,7 @@ export function LogsPanel({
         await navigator.clipboard.writeText(text);
         toast.success(message);
       } catch {
-        // Denied permission or an insecure context — say so rather than
-        // letting a click do nothing.
+        // Denied permission or an insecure context.
         toast.error(t("copyFailed"));
       }
     },
@@ -398,8 +359,7 @@ export function LogsPanel({
     (key) => {
       if (key === current) return;
       setCurrent(key);
-      // The old log's lines must not sit under the new log's name while its
-      // own are on their way; `load` re-reads on the key change.
+      // Clear the old lines while the new log loads; `load` re-reads on the key change.
       setLines([]);
       setTruncated(false);
       setStatus("loading");
@@ -425,10 +385,8 @@ export function LogsPanel({
           label={source?.label ?? t("noSource")}
           shown={visible.length}
           loaded={lines.length}
-          // Only worth stating when it isn't what the selector already says:
-          // the file came up short of the window we asked for.
-          // Not for the journal or a log read through the system: those have no
-          // file size, so a short window says nothing about the whole.
+          // Only when the file came up short of the requested window, and only
+          // for file sources (the journal has no size to compare against).
           wholeFile={!truncated && lines.length > 0 && source?.size != null}
           term={term}
           onTermChange={setTerm}
@@ -464,15 +422,11 @@ export function LogsPanel({
           }}
         />
 
-        {/* With a filter active the window caps the *matches*, so the count
-            above is "what we're showing", not "how many exist" — say which. */}
+        {/* With a filter active the window caps the matches, not the total. */}
         {truncated && status === "ok" && lines.length > 0 ? (
-          // Chrome, not console: styled dark it read as another log line, which
-          // is the one thing it must not look like — it's the app talking about
-          // the file, not the file. It carries the fix rather than describing it.
+          // Panel chrome, not console styling: it must not look like a log line.
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b bg-muted/40 px-4 py-2 text-xs text-muted-foreground">
-            {/* No count here: the selector above already states the window,
-                and repeating it made the same number appear three times. */}
+            {/* No count: the selector above already states the window. */}
             <span>{t("olderNotLoaded")}</span>
             {nextLineStep ? (
               <button
@@ -505,8 +459,7 @@ export function LogsPanel({
         />
       </section>
 
-      {/* Names the log: "Clear log?" over a list of twenty sources does not say
-          which one, and this cannot be undone. */}
+      {/* Names the log: clearing cannot be undone. */}
       <ConfirmDialog
         open={confirmClear}
         onOpenChange={setConfirmClear}
@@ -514,10 +467,8 @@ export function LogsPanel({
         tone="destructive"
         title={t("clearTitle", { label: source?.label ?? "" })}
         description={
-          // Two sentences, because these are two different acts. Emptying an
-          // access log frees disk; emptying auth.log destroys the record of who
-          // signed in. The same wording for both would be the interface
-          // pretending they are equivalent.
+          // Separate wording for audit logs (e.g. auth.log): emptying one
+          // destroys the sign-in record, not just disk usage.
           source?.clear_sensitive ? t("clearBodyAudit") : t("clearBody")
         }
         cancelLabel={t("clearCancel")}

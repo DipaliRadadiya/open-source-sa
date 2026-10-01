@@ -31,14 +31,9 @@ import { useRestoreWatch } from "@/components/backups/restore-watch";
 import { BackupsHistoryTable } from "@/components/backups/backups-history-table";
 
 /**
- * Every backup that has run, across every application.
- *
- * Server-paginated: this list grows without bound — one row per application
- * per run, forever.
- *
- * Restore is offered here and on the application page, but through one dialog
- * and one permission (`backup,manage`, separate from `app_backup`) — two doors
- * to the same guardrails rather than two implementations of them.
+ * Every backup that has run, across every application. Server-paginated: the
+ * list grows without bound. Restore uses the same dialog and permission
+ * (`backup,manage`) as the application page.
  */
 export function BackupsHistory({
   backups,
@@ -60,29 +55,16 @@ export function BackupsHistory({
   const [clearing, setClearing] = useState(null);
   const [busyId, setBusyId] = useState(null);
   // Runs started here: application id → that site's newest backup id at the
-  // click. Per site, not one flag — this list spans every application, and one
-  // site's run appearing must not end another site's wait.
-  //
-  // Needed because `POST /backups/{id}/retry` dispatches the same RunBackup job
-  // "Back up now" does and answers 202 with the *target*. No row exists until a
-  // worker starts, so the refresh after the click returned an unchanged list,
-  // nothing looked in flight, and the table never polled. The toast was the
-  // only evidence, and it went away.
+  // click, per site. Needed because retry answers 202 with the *target* and no
+  // row exists until a worker starts, so the list would not look in flight.
   const [started, setStarted] = useState({});
   const [stalled, setStalled] = useState(false);
 
-  // Retry is a label, not a separate operation: the endpoint checks the row is
-  // failed and then re-runs the target, creating a NEW row rather than reviving
-  // this one. So what we wait for is "a newer run for this site", not "this row
-  // changed".
+  // Retry re-runs the target and creates a NEW row, so wait for "a newer run
+  // for this site", not for this row to change.
   /**
-   * Ask first. Retry spends hours and gigabytes, and nothing here can undo it.
-   *
-   * Every other action in this table already confirms — Restore makes you type
-   * the site's domain, Clear opens a dialog — and Retry, the one you can fire
-   * by accident, went straight to the API. Worse, on a failed *restore* the
-   * only button the row offers is this one, so "retry" reads as "retry the
-   * restore" when it actually starts a brand new backup.
+   * Confirm first: Retry starts a full new backup (hours, gigabytes) and on a
+   * failed restore it can be mistaken for "retry the restore".
    */
   function askRetry(backup) {
     setRetrying(backup);
@@ -141,9 +123,8 @@ export function BackupsHistory({
     )
     .filter(Boolean);
 
-  // A status filter that excludes in-flight runs means the new row genuinely
-  // cannot show up in *this* list, however long we wait. Saying "it appears
-  // here shortly" would then be a promise the filter forbids.
+  // A status filter excluding in-flight runs means the new row can never
+  // appear in this list, so don't promise it will.
   const statusFilter = params.get("status");
   const filterHidesRun = Boolean(statusFilter) && !BACKUP_IN_FLIGHT.includes(statusFilter);
 
@@ -153,19 +134,13 @@ export function BackupsHistory({
     return () => clearTimeout(id);
   }, [queuedIds.length, stalled, filterHidesRun]);
 
-  // `restoreBlocker` has always known how to refuse a second restore while one
-  // is running, but nothing ever passed the flag — so the guard was dead code
-  // and its message unreachable. Two restores over one site is the one thing
-  // here nobody can undo, and finding out from a 422 after typing your own
-  // domain is the wrong moment.
+  // Refuse a second restore over the same site up front rather than via a 422.
   const restoreInFlight = RESTORE_IN_FLIGHT.includes(active?.status);
 
   const listProps = {
     backups,
     canRestore,
-    // Same permission as restore: both act on the copy that exists to survive
-    // a mistake. Deleting also removes the archive from the customer's bucket,
-    // so it is not a schedule-level action.
+    // Same permission as restore; deleting also removes the archive from the bucket.
     canDelete: canRestore,
     // The delete dialog re-reads the list itself before it closes.
     onDeleted: () => {},
@@ -176,16 +151,11 @@ export function BackupsHistory({
     canClear: canRun,
     busyId,
     restoreInFlight,
-    // Per site: a run under way for THIS site blocks its rows, and leaves every
-    // other site's Retry alone. The endpoint refuses a second run per target
-    // with a 422, so the button should refuse it first and say why.
+    // Per site: a run for THIS site blocks its rows only. The endpoint refuses
+    // a second run per target with a 422, so refuse it first and say why.
     retryBlockedFor: (backup) => {
-      // A restore under way blocks Retry, and this is the half that was
-      // missing. The guard below only knew about *backups*, so after a restore
-      // failed — the exact moment someone is clicking around trying to work out
-      // why — Retry was fully enabled, and one click started a fresh archive
-      // and a multi-gigabyte upload. The restore's own safety backup competes
-      // for the same disk and the same target.
+      // A running restore blocks Retry: its safety backup competes for the
+      // same disk and target.
       if (restoreInFlight) return tr("blocked.alreadyRunning");
 
       return queuedIds.includes(String(backup.application_id)) ||
@@ -199,13 +169,8 @@ export function BackupsHistory({
     },
   };
 
-  // A backup writes for minutes. Without this the row says "Backing up" until
-  // someone thinks to reload, which reads as a stuck job rather than a running
-  // one. Only while something is actually in flight.
-  //
-  // A restore counts too: it takes a safety copy on the way past, so a row this
-  // list has never shown appears partway through — and the restore's own
-  // polling refreshes the banner, not the table underneath it.
+  // Poll while anything is in flight. A running restore counts too: its safety
+  // copy adds a row partway through, and its own polling only refreshes the banner.
   const busy =
     backups.some((backup) => BACKUP_IN_FLIGHT.includes(backup.status)) || restoreInFlight;
 
@@ -213,9 +178,7 @@ export function BackupsHistory({
     <div className="space-y-4">
       {busy || queuedNames.length ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
 
-      {/* The gap a toast cannot cover: the run has been accepted but has no row
-          yet, so every visible thing on this page is unchanged. Named by site,
-          because on this list "a backup" is not enough to know whose. */}
+      {/* Accepted runs with no row yet, named by site. */}
       {queuedNames.length ? (
         <div
           role="status"
@@ -239,8 +202,7 @@ export function BackupsHistory({
         </div>
       ) : null}
 
-      {/* Counts come from the API, not from this page's rows — "3 failed" has
-          to mean three in total, not three on page one of forty. */}
+      {/* Counts come from the API so they cover every page, not just this one. */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Tally label={t("counts.total")} value={counts.total} />
         <Tally label={t("counts.complete")} value={counts.verified} tone="text-success" dot="bg-success" />
@@ -249,9 +211,7 @@ export function BackupsHistory({
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        {/* A searchable picker rather than a plain select: `/backups` has no
-            text search, but "find the site" is the search people actually
-            mean, and the combobox filters as you type. */}
+        {/* Searchable picker: `/backups` has no text search, so this is how a site is found. */}
         <FacetSelect
           paramKey="application"
           allLabel={t("allApplications")}
@@ -270,9 +230,7 @@ export function BackupsHistory({
           }))}
           className="w-full sm:w-44"
         />
-        {/* Presets, not a calendar. "What ran last week" is the question
-            people actually have, and a two-field date picker is a heavier
-            control than that question deserves. */}
+        {/* Presets rather than a date picker. */}
         <FacetSelect
           paramKey="period"
           allLabel={t("anyTime")}
@@ -298,8 +256,7 @@ export function BackupsHistory({
           icon={Archive}
           title={hasFilters ? t("emptyFiltered.title") : t("empty.title")}
           description={hasFilters ? t("emptyFiltered.description") : t("empty.description")}
-          // Only when filters are what emptied it. On a genuinely empty list
-          // the button would clear nothing and imply the rows are hiding.
+          // Only when filters emptied the list.
           action={hasFilters ? <ClearFiltersButton keys={["application", "status", "period", "type", "search"]} /> : null}
         />
       ) : (
@@ -322,9 +279,7 @@ export function BackupsHistory({
           retrying
             ? t("retryConfirm.description", {
                 name: retrying.application_name ?? t("unknownApplication"),
-                // The size of the archive it is about to rebuild and re-upload.
-                // "A new backup" is abstract; "24.1 GB" is the number that makes
-                // someone reconsider on a slow link.
+                // The archive size about to be rebuilt and re-uploaded.
                 size: retrying.size_bytes
                   ? formatBytes(retrying.size_bytes, format)
                   : t("retryConfirm.unknownSize"),
@@ -361,9 +316,8 @@ export function BackupsHistory({
         onOpenChange={(next) => (next ? null : setRestoring(null))}
         onStarted={(started) => {
           setRestoring(null);
-          // Hand it straight to the banner. Relying on router.refresh() alone
-          // meant the dialog closed onto an unchanged list, and the only way to
-          // see that anything was happening was to reload.
+          // Hand it straight to the banner; router.refresh() alone closed the
+          // dialog onto an unchanged list.
           if (started) start(started);
           router.refresh();
         }}
@@ -373,11 +327,8 @@ export function BackupsHistory({
 }
 
 /**
- * One line per figure: dot, number, label.
- *
- * Stacked label-over-number cards were mostly whitespace, and the label carried
- * the only colour. The dot matches the status badge in the table below, so the
- * summary and the rows use one colour language.
+ * One line per figure: dot, number, label. The dot colours match the status
+ * badges in the table.
  */
 function Tally({ label, value, tone, dot }) {
   return (

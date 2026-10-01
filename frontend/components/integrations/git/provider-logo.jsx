@@ -2,44 +2,20 @@ import { GitBranch } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * Provider marks, in the brands' own colours.
- *
- * These were drawn inline in `currentColor`, which made all three render as
- * flat black — reported as exactly that. The reasoning at the time was that a
- * theme-following mark cannot clash with a dark page, and it is true; it also
- * threw away the one property that makes a logo scannable. GitLab is orange
- * and Bitbucket is blue, and a reader picks those out before reading a word.
- *
- * Files in `public/`, keyed here, because that is already how this panel
- * carries brand marks — `db-engines/` for the database engines and
- * `site-types/` for the application types. Git providers were the only set
- * still hand-drawn, and the inconsistency is why they looked wrong beside
- * everything else.
- *
- * Both variants are rendered and CSS shows one, rather than reading the theme
- * in JavaScript: the theme is a class on `<html>` applied before paint, so a
- * component that decided in JS would serve the light mark from the server, the
- * dark one after hydration, and flash on every load of a dark page. Same
- * approach as `EngineLogo`, for the same reason.
+ * Provider marks in brand colours, from `public/git-providers/`.
+ * Both theme variants render and CSS shows one: deciding in JS would flash on
+ * dark pages after hydration (same as `EngineLogo`).
  */
 const PROVIDER_LOGOS = {
-  // Near-black by brand, so it needs the white cut for the dark theme — the
-  // same reason three of the four database logos ship two files. GitLab's
-  // orange and Bitbucket's blue read on both surfaces and need only one.
+  // GitHub is near-black, so it needs a white variant for the dark theme.
   github: { light: "github.svg", dark: "github-white.svg" },
   gitlab: { light: "gitlab.svg" },
   bitbucket: { light: "bitbucket.svg" },
 };
 
 /**
- * The same marks as flat paths, for the one place that wants them quiet.
- *
- * The applications table draws the provider beside the site-type logo, in a
- * column that is already a row of full-colour brand marks — `site-type-logo`
- * says so in its own comment, and three more colours there would make the
- * column louder than the names it sits beside. That is a decision somebody
- * made on purpose, so colouring every mark unconditionally would have undone
- * it silently.
+ * Monochrome paths for the applications table, where the provider sits beside
+ * the full-colour site-type logo and must stay quiet.
  */
 const PATHS = {
   github:
@@ -63,8 +39,7 @@ export function ProviderLogo({ provider, className = "size-4", mono = false }) {
     );
   }
 
-  // A provider the backend adds before we have its mark gets the generic glyph
-  // rather than a guessed filename, which would render as a broken image.
+  // Unknown providers get a generic glyph, not a guessed (broken) image.
   if (!logo) return <GitBranch className={cn("shrink-0", className)} aria-hidden />;
 
   const dark = logo.dark ?? logo.light;

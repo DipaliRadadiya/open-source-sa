@@ -1,52 +1,30 @@
 /**
- * Which phpMyAdmin control a database should get, decided before the click.
+ * Which phpMyAdmin control a database gets, decided before the click:
  *
- * The SSO endpoint refuses for five different reasons. Two of them are
- * knowable from data the page already holds, and those are the two that used
- * to be discovered by being told no:
+ *   hidden      Driver is not `sql`, matching `IssuePhpmyadminSsoToken`.
+ *               Branch on the driver, not engine names.
+ *   install     No active phpMyAdmin site (site_type=phpmyadmin AND
+ *               status=active, as the backend checks).
+ *   needs-user  phpMyAdmin signs in as a database user; there is none.
+ *   open        Nothing visible blocks it; the SSO call may still refuse,
+ *               and the toast handles that.
  *
- *   hidden      Any engine phpMyAdmin cannot speak. The API asks the same
- *               question the same way — `IssuePhpmyadminSsoToken` refuses any
- *               driver that is not `sql` — so this branches on the DRIVER, not
- *               on a list of engine names. It used to name MongoDB, which was
- *               the only non-SQL engine when it was written; PostgreSQL
- *               arrived with driver `pgsql` and walked straight past it.
- *   install     No active phpMyAdmin site on the server. Same condition the
- *               backend checks: site_type=phpmyadmin AND status=active.
- *   needs-user  phpMyAdmin signs in AS a database user. With none, there is no
- *               login to make.
- *   open        Everything we can see is in order — which is not a promise.
- *               A site sharing the server-wide PHP pool, or one that cannot
- *               prepare the link, still refuses, and the toast still handles it.
- *
- * `installed` is deliberately three-valued. `null` means the lookup failed, and
- * that is NOT evidence there is no phpMyAdmin — offering to install a second
- * copy because one request timed out would be worse than the error it replaces.
- * Unknown behaves exactly as the old code did.
+ * `installed` is three-valued: `null` means the lookup failed, which must not
+ * trigger an offer to install a second copy.
  */
 export function phpmyadminState({ engine, driver = null, installed = null, users = null } = {}) {
-  // The driver when the row carries one, the name only as the fallback for a
-  // payload that predates it. A `driver` we have never heard of is still not
-  // `sql`, so a fifth engine hides correctly the day it appears.
+  // Engine name is only a fallback for payloads without `driver`.
   if (driver ? driver !== "sql" : engine === "mongodb") return "hidden";
   if (installed === false) return "install";
-  // Only when we positively counted zero. A missing count is not zero users.
+  // Only a counted zero; a missing count is not zero users.
   if (users === 0) return "needs-user";
   return "open";
 }
 
 /**
- * The user count a database row carries, whichever shape it arrived in.
- *
- * The list sends `users_count`; the detail payload sends the `users` array. A
- * component rendered in both places would otherwise read undefined in one of
- * them and quietly decide there are no users.
- *
- * The loaded array is asked FIRST, and that order is the whole point: the
- * detail endpoint loads the users without counting them, so the count is absent
- * there. Reading the count first meant an absent one — filled in as 0 by the
- * schema — outranked an array of real users, and every database detail page
- * disabled phpMyAdmin saying "add a user first" while listing the user above.
+ * A database row's user count: the list sends `users_count`, the detail
+ * payload the `users` array. The array must be checked first: on the detail
+ * payload the schema defaults the absent count to 0.
  */
 export function userCount(database) {
   if (Array.isArray(database?.users)) return database.users.length;

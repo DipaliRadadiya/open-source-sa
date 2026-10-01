@@ -30,14 +30,8 @@ import {
 } from "@/components/ui/select";
 
 /**
- * Change what an attached name DOES.
- *
- * Before `PUT …/domains/{domain}` existed, fixing a mistyped redirect target
- * meant deleting the name and adding it back — and the gap between the two is
- * not harmless. The vhost is re-rendered without the name in between, so the
- * redirect stops answering; and an add that fails or is forgotten leaves the
- * name off a site whose certificate still covers it, which is the state that
- * silently kills renewal for every other name on that certificate.
+ * Changes an attached domain's type or redirect in place (`PUT …/domains/{domain}`),
+ * avoiding a delete + add that drops the name from the vhost and can break renewal.
  *
  * @param domain the row being edited, or null when the dialog is closed.
  */
@@ -50,14 +44,7 @@ export function EditDomainDialog({ appId, domain, open, onOpenChange }) {
     defaultValues: { type: "alias", redirect_to: "", redirect_status: 301 },
   });
 
-  /*
-   * Seeded from the row each time it opens, not once at mount.
-   *
-   * The dialog lives beside the list rather than inside each row, so one
-   * instance serves every name. Without this, opening it on a second row
-   * showed the first row's values — and worse, submitting would have written
-   * them to a name they never belonged to.
-   */
+  // Re-seeded on each open: one instance serves every row.
   useEffect(() => {
     if (!open || !domain) return;
     form.reset({
@@ -68,23 +55,18 @@ export function EditDomainDialog({ appId, domain, open, onOpenChange }) {
   }, [open, domain, form]);
 
   const type = useWatch({ control: form.control, name: "type" });
-  // Switching away from a redirect throws its target away — the server clears
-  // the column, because an alias serves the site itself and a target left on
-  // one is a value nothing reads and every screen shows. Said before the
-  // click, not discovered after it.
+  // Switching a redirect to alias makes the server clear its target; warn first.
   const dropsTarget = domain?.type === "redirect" && type === "alias" && Boolean(domain?.redirect_to);
 
   async function onSubmit(values) {
-    // Only send the redirect fields when they mean anything — the server
-    // clears the target itself on a switch to alias.
+    // Redirect fields only for redirects; the server clears them on alias.
     const body =
       values.type === "redirect"
         ? values
         : { type: values.type };
     try {
       await updateDomain(appId, domain.domain, body);
-      // Closed once the list has re-read, so the row it closes onto already
-      // says what was just saved.
+      // Closes after the list re-reads, so the row already shows the change.
       refreshThen(() => {
         toast.success(t("toast.updated", { domain: domain.domain }));
         onOpenChange?.(false);
@@ -118,14 +100,7 @@ export function EditDomainDialog({ appId, domain, open, onOpenChange }) {
           </>
         }
       >
-        {/*
-          * The name, shown and not editable — with the reason.
-          *
-          * A disabled box with no explanation reads as a bug, and this one has
-          * a real answer the user needs anyway: renaming is delete + add, and
-          * they have to know that is the route rather than hunting for an
-          * input that was never going to be here.
-          */}
+        {/* Read-only, with the reason: renaming is delete + add. */}
         <div className="space-y-2">
           <FormLabel className="text-muted-foreground">{t("edit.domain")}</FormLabel>
           <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2">
@@ -152,9 +127,7 @@ export function EditDomainDialog({ appId, domain, open, onOpenChange }) {
                   <SelectItem value="redirect">{t("type.redirect")}</SelectItem>
                 </SelectContent>
               </Select>
-              {/* Same sentences as the add form — most people pick "alias"
-                  when they mean "redirect", and that is no less true when
-                  they are changing their mind about it. */}
+              {/* Same hints as the add form. */}
               <p className="text-xs text-muted-foreground">
                 {type === "redirect" ? t("add.redirectHint") : t("add.aliasHint")}
               </p>

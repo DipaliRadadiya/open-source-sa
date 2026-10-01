@@ -1,11 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "@/components/ui/app-link";
 
-/**
- * "← Back to …" above a detail page's title. The breadcrumb already links
- * up, but it sits in the header strip; on a detail page reached from a list,
- * the way back belongs where the eye starts reading the page.
- */
+/** "← Back to …" above a detail page's title. */
 export function BackLink({ href, children }) {
   return (
     <Link

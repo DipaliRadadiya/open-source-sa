@@ -55,8 +55,7 @@ export function NetworkIoChart({ series, metrics, timeZone, stale }) {
       stale={stale}
       badges={
         <>
-          {/* Dots match the line tokens above, so the pill and its line are the
-              same colour without the value having to be. */}
+          {/* Dots match the line tokens above. */}
           <ChartPill
             dotClassName="bg-chart-2"
             label={t("charts.network.in")}

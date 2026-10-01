@@ -34,17 +34,13 @@ import { WorkerKindField } from "@/components/applications/workers/worker-kind-f
 import { useWorkerSite } from "@/components/applications/workers/worker-site-context";
 
 /**
- * Presets prefill both name and command, but stay a starting point, not a
- * locked template — the two most-common cases (Queue worker, Horizon) are one
- * click away, and everything after that is a normal editable form. Advanced
- * fields (directory, stop-wait) sit behind a disclosure so the common path is
- * four visible fields: name, command, processes, and the two safety switches.
+ * Presets prefill name and command as an editable starting point. Advanced
+ * fields sit behind a disclosure.
  */
 export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], workers = [], seed, siteUser = null }) {
   const t = useTranslations("applications.workers");
   const { pending: refreshing, refreshThen } = useRefresh();
-  // The server's own "installing supervisor" message, kept on screen until
-  // the next attempt. Null when there is nothing to say.
+  // The server's "installing supervisor" message, kept until the next attempt.
   const [installing, setInstalling] = useState(null);
 
   const { appRoot } = useWorkerSite();
@@ -62,16 +58,13 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
         ? { name: preset.title, command: preset.command, kind: preset.kind }
         : null),
     });
-    // `presets` and `form` are excluded — `form` is stable, and `presets` is the
-    // catalog the seed is looked up in rather than something that should
-    // re-seed the form when its array identity changes.
+    // `form` is stable; a new `presets` array identity must not re-seed the form.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, seed]);
 
   function onPickPreset(preset) {
     form.setValue("kind", preset.kind, { shouldValidate: true });
-    // Custom command ships with an empty command on purpose (type your own) —
-    // validating it immediately would flag "required" before anyone's typed.
+    // The custom preset has an empty command; do not flag "required" before typing.
     if (preset.command) {
       form.setValue("command", preset.command, { shouldValidate: true });
     } else {
@@ -84,11 +77,8 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
   }
 
   async function onSubmit(values) {
-    // Cleared on every attempt: the notice below describes the LAST answer,
-    // and leaving a stale "installing" above a fresh validation error reads as
-    // two contradictory explanations for one press.
+    // Both describe the last attempt only; a root error is cleared by nothing else.
     setInstalling(null);
-    // Same reasoning: it belongs to no field, so nothing else clears it.
     form.clearErrors("root.server");
 
     const payload = {
@@ -96,11 +86,9 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
       name: values.name.trim(),
       command: values.command.trim(),
       directory: values.directory?.trim() || undefined,
-      // Never sent: the worker runs as the application's own user, and an
-      // absent key leaves an existing worker's account as it is.
+      // Never sent: the worker runs as the application's own user.
       user: undefined,
-      // Blank means "no opinion", and the API treats an absent key that way —
-      // sending "" would ask it to store an empty log path.
+      // Blank is omitted; "" would store an empty log path.
       log_file: values.log_file?.trim() || undefined,
       log_level: values.log_level || undefined,
       extra_config: values.extra_config?.trim() || undefined,
@@ -110,16 +98,10 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
     try {
       const response = await createWorker(appId, payload);
 
-      // 202, not 201: the server had no supervisord and has started installing
-      // it. apt is minutes long and cannot be held inside a request, so no
-      // worker exists yet — saying "Created" here would name a thing that is
-      // not there. The dialog stays open with the form intact, so the same
-      // worker is one more click once the install lands.
+      // 202: supervisord is being installed and no worker exists yet. The dialog
+      // stays open with the form intact so it can be resubmitted afterwards.
       if (response?.status === 202) {
-        // A toast AND a notice, not a toast alone. The toast fades after a few
-        // seconds and leaves a filled-in form that looks like the button did
-        // nothing — the one reading of this screen that is flatly wrong, since
-        // an apt install is running because of that press.
+        // Toast plus a persistent notice, since the toast fades.
         toast.info(response.data?.message ?? t("toast.installingSupervisor"));
         setInstalling(response.data?.message ?? t("toast.installingSupervisor"));
 
@@ -132,26 +114,21 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
         onOpenChange?.(false);
       });
     } catch (error) {
-      // A command that will not start answers 500 with no reason the page can
-      // use, and a bare "Something went wrong" toast left a filled-in form that
-      // looked untouched. Said on the form, with what to check: the server has
-      // already removed the worker it could not start.
+      // A command that will not start answers 500 without field errors (the
+      // server has removed the worker); show it on the form.
       if (!error.response?.data?.errors && (error.response?.status ?? 0) >= 500) {
         form.setError("root.server", { message: apiMessage(error, t("create.failed")) });
         scrollToFirstError();
         return;
       }
-      // `kind` has no control here either — picking the Horizon preset on a
-      // site that already has a queue worker is the exact path to the API's
-      // conflict, and it landed nowhere.
+      // `kind` errors (e.g. a Horizon conflict) are shown at form level.
       handleValidationError(error, form, { formError: true, unrendered: ["kind"] });
       // The dialog scrolls; the reason can land above or below what is on screen.
       scrollToFirstError();
     }
   }
 
-  // Stays busy through the list's re-read, so the button cannot be pressed
-  // twice while the dialog is still open over a saved worker.
+  // Busy through the list refresh so the button cannot be pressed twice.
   const isSubmitting = form.formState.isSubmitting || refreshing;
   const serverError = form.formState.errors.root?.server?.message;
 
@@ -190,8 +167,6 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
           </>
         }
       >
-        {/* Above the fields, because it explains why they are still filled in
-            and still here. */}
         {installing ? <Caution>{installing}</Caution> : null}
 
         {serverError ? (
@@ -242,8 +217,7 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
           />
         </div>
 
-        {/* No filtering here: nothing has been created yet, so every worker on
-            the site counts against the choice. */}
+        {/* Unfiltered: every existing worker counts against the choice. */}
         <WorkerKindField form={form} presets={presets} workers={workers} />
 
         <WorkerCommandField form={form} presets={presets} workers={workers} onPick={onPickPreset} />

@@ -1,34 +1,13 @@
 /**
- * The install picker's options, with the ones already on the server marked.
- *
- * The two runtimes disagreed about this and nothing in the frontend noticed,
- * because the filtering was happening in the backend or not at all. PHP's
- * `installable()` excludes what is installed; Node's returns the six newest
- * majors from `fnm list-remote` and excludes nothing. So the same dialog
- * offered PHP 8.4 nowhere and Node 24.20.0 as if it were new.
- *
- * Marked rather than removed. Node offers six versions in total: drop the two
- * that are installed and you cannot tell whether 24 is missing because you have
- * it or because fnm never offered it. And once every offered version is
- * installed, a filtered list is empty — at which point the button says "no new
- * versions are available", which is the wrong sentence for "you have them all".
- *
- * Matching is exact, not by major. `fnm` offers the newest patch of each major,
- * so with 24.20.0 installed and 24.20.1 published, 24.20.1 is a real upgrade
- * and must stay selectable.
+ * The install picker's options, with installed ones marked rather than removed
+ * (PHP's `installable()` excludes them, Node's does not). Matching is exact,
+ * not by major: a newer patch of an installed major is a real upgrade.
  */
 
 /**
- * `[{ version, ... }]` → the same, each with `installed: boolean`.
- *
- * A FAILED install does not count as installed. Its row exists — that is how
- * the page shows "Install failed" and offers to clear it up — but the version
- * is not on the server, and marking it installed greyed it out in this picker
- * so the one obvious way to try again was closed. Reported exactly that way:
- * PHP 8.2 failed, the page said so, and the dropdown still called it Installed.
- *
- * Everything else counts, including a version mid-install or mid-removal:
- * offering Install there would dispatch a second apt run over the first.
+ * `[{ version, ... }]` → the same, each with `installed: boolean`. A failed
+ * install does not count (so it can be retried); in-flight ones do, to avoid
+ * a second concurrent apt run.
  */
 export function installOptions(installable = [], installed = []) {
   const have = new Set(
@@ -45,42 +24,24 @@ export function installOptions(installable = [], installed = []) {
 }
 
 /**
- * Which version the dialog should open on.
- *
- * The first option that can actually be installed, not simply the first — a
- * disabled item sitting preselected means the Install button is live and does
- * nothing useful, and the picker looks broken rather than informative.
- *
- * Falls back to "" when everything is installed, which leaves Install disabled;
- * `allInstalled` is what the caller uses to say why.
+ * The first installable version, or "" when everything is installed (Install
+ * stays disabled; `allInstalled` explains why).
  */
 export function firstInstallable(options = []) {
   return (Array.isArray(options) ? options : []).find((option) => !option.installed)?.version ?? "";
 }
 
-/** Something is offered, and every bit of it is already here. */
+/** True when options exist and all are installed. */
 export function allInstalled(options = []) {
   const list = Array.isArray(options) ? options : [];
   return list.length > 0 && list.every((option) => option.installed);
 }
 
 /**
- * The version the picker should be showing, given what the user chose and what
- * is still on offer.
- *
- * The dialog holds its choice in state, and the list underneath it changes:
- * starting an install moves that version OUT of `installable` — the API reports
- * it under `versions` with status "installing" — while this component stays
- * mounted. A `<Select>` whose value matches no item renders an EMPTY trigger,
- * so the next person to open the dialog found a blank Version field and an
- * Install button that would submit nothing.
- *
- * Reconciled here rather than in an effect: an effect would paint the blank
- * frame first, and setting state during render is the cascade the lint rule
- * refuses. Deriving costs nothing and cannot go stale.
- *
- * The stored choice wins while it is still installable — re-deriving on every
- * render would fight the user's own selection.
+ * The version the picker should show. Starting an install removes that version
+ * from the options, and a `<Select>` whose value matches no item renders empty,
+ * so the stored choice is kept only while still installable. Derived, not set
+ * in an effect, to avoid a blank frame.
  */
 export function resolveVersion(chosen, options = []) {
   const list = Array.isArray(options) ? options : [];

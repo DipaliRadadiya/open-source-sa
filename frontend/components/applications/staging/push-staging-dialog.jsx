@@ -37,25 +37,13 @@ import {
 } from "@/components/ui/alert-dialog";
 
 /**
- * Copy staging over production.
+ * Copies staging over production. The backend rsyncs with `--delete` (uploads
+ * merged, never removed); its snapshot only restores production if the push
+ * fails, so a typed domain is required, as in the restore dialog.
+ * Files mode is preselected because it leaves production's database alone.
  *
- * The most destructive action in the panel. The backend rsyncs with
- * `--delete` (uploads excepted — they are merged, never removed), and the
- * snapshot it takes first is only for putting production back if the push
- * FAILS; once it succeeds there is no way back from the panel. So this borrows
- * the restore dialog's shape — icon header, the facts as facts, and a typed
- * domain before the button unlocks — because the two actions carry the same
- * weight and should not feel different.
- *
- * Files is chosen to begin with (Krishna, 2026-09-30): it is the mode that
- * leaves production's database — its orders, comments and users — alone. Its
- * own consequence (production-only files are deleted, uploads kept) shows as
- * soon as the dialog opens, and the domain still has to be typed.
- *
- * Callers MUST pass a `key` that changes when this opens. A dialog opened
- * from its own button never fires `onOpenChange` on the way in, so a mode
- * chosen and a domain typed for one visit would still be sitting there the
- * next time — pre-arming the safeguard that exists to slow the click down.
+ * Callers MUST pass a `key` that changes on open, so the mode and typed domain
+ * never carry over between visits.
  */
 export function PushStagingDialog({ appId, production, staging, open, onOpenChange }) {
   const t = useTranslations("applications.staging.pushDialog");
@@ -78,8 +66,7 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
       toast.success(t("done", { domain }));
     } catch (error) {
       toast.error(apiMessage(error, t("failed")));
-      // The usual cause is the copy having gone (deleted in another tab), and
-      // the page behind this dialog still showed it. Re-read, so it says so.
+      // Usually the copy was deleted elsewhere; refresh so the page shows it.
       router.refresh();
     } finally {
       setPending(false);
@@ -96,7 +83,6 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
             </span>
             <AlertDialogTitle>{t("title")}</AlertDialogTitle>
           </div>
-          {/* Which copy goes where, in one line. */}
           <AlertDialogDescription className="pt-1">
             <span className="font-mono break-words">{staging?.domain}</span>
             <ArrowRight className="mx-1.5 inline size-3.5 align-[-2px]" aria-hidden />
@@ -108,8 +94,7 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
         </AlertDialogHeader>
 
         <div className="space-y-4">
-          {/* Read before choosing: no option can be undone (and the new tab
-              keeps this push waiting — Krishna, 2026-09-29). */}
+          {/* No option can be undone. */}
           <p className="flex items-start gap-2.5 text-sm">
             <Archive className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
             <span>
@@ -129,9 +114,7 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
             </span>
           </p>
 
-          {/* One line per option (research-staging-push-ui: every panel
-              surveyed says what each choice is in a phrase; none shows a
-              comparison table). The cost is said once, for the one chosen. */}
+          {/* One line per option; the consequence is shown for the chosen one. */}
           <div className="space-y-2">
             <Label>{t("whatToPush")}</Label>
             <ChoiceField
@@ -157,9 +140,6 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
 
           <p className="text-xs leading-5 text-muted-foreground">{t("whileRunning")}</p>
 
-          {/* The most dangerous action in the panel, and the domain is the
-              only thing standing in front of it — no reason to make it a
-              transcription test as well as a decision. */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-2">
               <Label htmlFor="staging-push-confirm">{t("confirmLabel", { domain })}</Label>
@@ -183,9 +163,7 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
           <ReasonTooltip reason={blocker}>
             <AlertDialogAction
               onClick={(event) => {
-                // Closes when the request comes back, not on click — the push
-                // blocks for minutes and a dialog that vanishes first leaves
-                // no sign anything is happening.
+                // Stays open until the request returns; the push takes minutes.
                 event.preventDefault();
                 push();
               }}

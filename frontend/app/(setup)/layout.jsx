@@ -12,10 +12,8 @@ import { ErrorCopy } from "@/components/sections/error-copy";
 export const dynamic = "force-dynamic";
 
 /**
- * A focused, branded shell for the first-run setup — authenticated but without
- * the app sidebar, so it reads as a get-started screen rather than a normal
- * page. Gated: no session → login; no `setting` permission → dashboard (a
- * non-admin has nothing to do here).
+ * A focused shell for first-run setup: authenticated but without the app
+ * sidebar. No session → login; no `setting` permission → home.
  */
 export default async function SetupLayout({ children }) {
   const user = await getCurrentUser();
@@ -23,13 +21,9 @@ export default async function SetupLayout({ children }) {
 
   const permissions = await getPermissions();
   /*
-   * Home, not /dashboard.
-   *
-   * The other 34 gates now refuse in place and name the screen that was
-   * refused. These two cannot: a layout IS the shell, so there is no shell
-   * left to render the refusal inside. A redirect is right here — it just has
-   * to go somewhere the caller can actually open, which /dashboard is not for
-   * every role. `app/page.js` picks that from their own permissions.
+   * A layout cannot render an in-place refusal (it IS the shell), so redirect
+   * to "/", which `app/page.js` resolves from the caller's permissions;
+   * /dashboard is not open to every role.
    */
   if (!can(permissions, "setting", "view")) redirect("/");
 
@@ -45,11 +39,8 @@ export default async function SetupLayout({ children }) {
           </div>
         </header>
         <main className="flex flex-1 justify-center px-4 pb-16 pt-2 sm:pt-6">
-          {/* 840px. 672 made a full-screen first-run page feel like a dialog
-              that had lost its dialog; 768 still ran narrow once the cards grew
-              internal structure. Past ~860 the one-line descriptions start
-              looking stranded, so this is the top of the useful range rather
-              than a step toward full width. */}
+          {/* 840px: narrower feels like a lost dialog; wider strands the
+              one-line descriptions. */}
           <div className="w-full max-w-[840px]">{children}</div>
         </main>
       </div>

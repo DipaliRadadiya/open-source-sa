@@ -28,14 +28,8 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations("auth");
-  // `router.push` returns void, so awaiting it is impossible and
-  // `formState.isSubmitting` goes false the moment the credentials come back —
-  // which is where the wait *starts*, not where it ends. The dashboard sits
-  // behind an async layout (identity, permissions, impersonation, reboot flag),
-  // so the button would return to its resting state and the page would appear
-  // to have ignored the click for as long as that took. A transition stays
-  // pending until the navigation and its server work finish, and this component
-  // unmounts at that point, so there is nothing to reset.
+  // `router.push` cannot be awaited, so a transition keeps the button busy
+  // until the navigation and its server work finish.
   const [navigating, startNavigation] = useTransition();
   const form = useForm({
     resolver: zodResolver(loginSchema),
@@ -47,28 +41,16 @@ export function LoginForm() {
       await login(values);
       startNavigation(() => {
         /*
-         * Back to the screen the session died on, when there is one.
-         *
-         * `?next=` first, because it is explicit — a link someone was sent, or
-         * a redirect that knew where it was going. Then the path this tab
-         * recorded on its way out (see `RememberPath`), which is what covers
-         * the ordinary case of a session quietly expiring.
-         *
-         * Both are re-checked rather than trusted. `?next=` has been through
-         * the address bar and the stored value through sessionStorage, and
-         * anything on the origin can write either; `safeNext` drops whatever
-         * is not a single-slash in-panel path.
-         *
-         * Otherwise "/" — NOT "/dashboard": the landing page depends on what
-         * this role can open, which only the server knows. app/page.js decides.
+         * `?next=` first, then the path remembered when the session ended (see
+         * `RememberPath`). Both are untrusted and go through `safeNext`.
+         * Otherwise "/", not "/dashboard": app/page.js picks the landing page
+         * for this role.
          */
         router.push(safeNext(searchParams.get("next")) ?? takeRememberedPath() ?? "/");
         router.refresh();
       });
     } catch (error) {
-      // The login throttle, not the panel's request budget: said on the form,
-      // where the reader is looking, instead of the generic "the panel asked
-      // the server too often" toast.
+      // The login throttle: shown on the form, not as the generic rate-limit toast.
       if (error?.response?.status === 429) {
         form.setError("password", { message: t("tooManyAttempts") });
         return;
@@ -77,14 +59,12 @@ export function LoginForm() {
     }
   }
 
-  // Credentials in flight, then the redirect — one uninterrupted signal.
   const isSubmitting = form.formState.isSubmitting || navigating;
 
   return (
     <Form {...form}>
       <form noValidate
-        // Unhydrated, a form with no method falls back to GET and puts the
-        // password in the URL. React intercepts this before it ever submits.
+        // Unhydrated, a form with no method submits via GET and leaks the password into the URL.
         method="post"
         onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         className="grid gap-4"

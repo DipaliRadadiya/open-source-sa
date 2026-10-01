@@ -12,16 +12,12 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 
 /**
- * Lock the folder of a site server sync adopted.
+ * Lock the folder of a site adopted by server sync (sync never changes
+ * ownership itself). Asks first: afterwards the site user cannot add, remove or
+ * rename anything directly in that folder.
  *
- * Sync never changes ownership on its own, so this is the step that makes an
- * adopted site's folder what the panel gives every site it creates. Asked
- * first because it changes what the site user can do: nothing can be added,
- * removed or renamed directly in that folder afterwards.
- *
- * A refusal keeps the dialog open with the server's reason, which names what
- * to fix on the server. As a toast it would be gone before anyone read the
- * `chmod` it suggests.
+ * A refusal keeps the dialog open with the server's reason (which names the fix,
+ * e.g. a `chmod`), rather than a toast that disappears.
  */
 export function RootLockButton({ applicationId, path, canManage = true }) {
   const t = useTranslations("applications.rootLock");
@@ -37,8 +33,8 @@ export function RootLockButton({ applicationId, path, canManage = true }) {
     setError(null);
     try {
       await lockApplicationRoot(applicationId);
-      // Said now, not after the re-read: the re-read turns the row to Locked,
-      // which removes this button — and a callback waiting on it with it.
+      // Toast now: the re-read marks the row Locked, which unmounts this button and
+      // any pending callback.
       toast.success(t("done"));
       refreshThen(() => setOpen(false));
     } catch (e) {
@@ -77,9 +73,6 @@ export function RootLockButton({ applicationId, path, canManage = true }) {
         error={error}
         onConfirm={lock}
       >
-        {/* One paragraph used to carry the path, the ownership change, the
-            restriction and the reassurance; split so each can be scanned —
-            which folder, then what changes, then what does not. */}
         {path ? (
           <div className="flex items-start gap-2.5 rounded-lg border bg-muted/40 px-3 py-2.5">
             <FolderLock className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />

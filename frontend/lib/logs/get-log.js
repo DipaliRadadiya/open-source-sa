@@ -7,10 +7,8 @@ import { failedRead } from "@/lib/logs/failed-read";
  * viewer paints with content instead of a spinner.
  *
  * 403 (exists but unreadable by the panel) and 404 (gone since the catalog was
- * built) are expected states the UI explains, not errors — they come back as a
- * status the caller renders. Anything else is `status: "failed"`, which the
- * viewer shows in place of the console: one unreadable file is no reason to
- * take away the source list and the rest of the page.
+ * built) are expected states returned as a status for the UI to explain.
+ * Anything else is `status: "failed"`, shown in place of the console only.
  */
 export async function getLog(key, { lines = 200 } = {}) {
   try {
@@ -23,9 +21,7 @@ export async function getLog(key, { lines = 200 } = {}) {
     if (!res.ok) return failedRead(res);
 
     const parsed = logReadResponseSchema.safeParse(await res.json());
-    // A shape this page can't read is a failed read. As "ok" with no log it
-    // said "This log is empty" over a log with lines in it, until the browser
-    // read it again seconds later.
+    // An unreadable shape is a failed read, not an empty log.
     return parsed.success
       ? { status: "ok", log: parsed.data.log }
       : { status: "failed", log: null };

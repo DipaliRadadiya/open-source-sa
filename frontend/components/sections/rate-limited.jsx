@@ -4,13 +4,9 @@ import { RetryButton } from "@/components/ui/retry-button";
 import { FailureScreen } from "@/components/sections/failure-screen";
 
 /**
- * Shown in place of the whole panel when the API is turning us away for asking
- * too often. Deliberately not styled as destructive: nothing is broken and
- * nothing was changed — waiting a moment fixes it.
- *
- * Now built on `FailureScreen`, like the other two whole-screen states. It
- * used to hand-roll the same box, which is how the three drifted into three
- * different surfaces on one screen.
+ * Shown in place of the whole panel when the API is rate-limiting this client.
+ * Not styled as destructive: nothing is broken, and waiting fixes it. Built on
+ * `FailureScreen`, like the other whole-screen states.
  */
 export function RateLimitedCard() {
   const t = useTranslations("errors.rateLimited");

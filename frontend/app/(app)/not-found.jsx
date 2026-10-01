@@ -1,9 +1,7 @@
 import { NotFoundContent } from "@/components/sections/not-found-content";
 import { getQuickLinks } from "@/lib/navigation/get-quick-links";
 
-// For notFound() thrown inside the panel — an application or role id that
-// doesn't exist. The shell stays, so the user is one click from anywhere; the
-// link column still earns its place by naming the likely destinations.
+// notFound() inside the panel (unknown application or role id); the shell stays.
 export default async function AppNotFound() {
   const links = await getQuickLinks().catch(() => []);
 

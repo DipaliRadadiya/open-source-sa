@@ -10,12 +10,9 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
   const loading = !metrics;
 
   /*
-   * The level word, from the same thresholds that colour the bar.
-   *
-   * `fallback` is for the two cards that have a real state but no percentage:
-   * a machine with no swap is Off, and a disk the collector could not read is
-   * Unknown. Everything else with no percentage gets no word at all rather
-   * than a guess.
+   * The level word, from the same thresholds that colour the bar. `fallback`
+   * covers cards with a real state but no percentage (no swap: Off; unreadable
+   * disk: Unknown).
    */
   const statusFor = (percent, fallback = null) => {
     const key = usageStatus(percent) ?? fallback;
@@ -52,9 +49,8 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
 
   return (
     // 5 cards: 1 → 2 → 5. A 3-col step would strand a single card on its own row.
-    // These values refresh every three seconds, so the group deliberately is
-    // NOT a live region. Connection loss/recovery is announced once by the
-    // status above it; reading five changing metrics on every poll is noise.
+    // Deliberately NOT a live region: values change every 3s; connection
+    // changes are announced once by the status above.
     <div
       aria-busy={loading}
       className={cn(
@@ -67,19 +63,12 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
         icon={Cpu}
         label={t("cpu")}
         /*
-         * A rate needs two samples. Until the second one lands the API returns
-         * 0, which would draw an idle machine we have no evidence for.
-         *
-         * It says so in words rather than with a dash. This is the first number
-         * on the dashboard and it sat at "—" for about four seconds on every
-         * load while Memory, Swap and Disk beside it already showed values —
-         * which reads as broken rather than as pending, because a dash is what
-         * the other cards use for "this machine has no swap".
+         * A rate needs two samples; until then the API returns 0, so show
+         * "Measuring…" (a dash means "not applicable" on the other cards).
          */
         value={ratesReady ? percentText(cpu?.percent, 1) : t("measuring")}
         percent={ratesReady ? cpu?.percent : null}
-        // No word until the second sample lands: the card says "Measuring…"
-        // and a level beside it would be describing a number we do not have.
+        // No level word until the second sample lands.
         status={ratesReady ? statusFor(cpu?.percent) : null}
         hint={cpu?.cores ? t("cores", { count: cpu.cores }) : ""}
         loading={loading}
@@ -106,8 +95,7 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
           Number(swap?.total) > 0 ? percentText(swap?.percent) : "—"
         }
         percent={Number(swap?.total) > 0 ? swap?.percent : null}
-        // "Off" is a fact about this machine, not a missing reading — plenty of
-        // servers run without swap on purpose.
+        // "Off" is a fact (many servers run without swap), not a missing reading.
         status={Number(swap?.total) > 0 ? statusFor(swap?.percent) : statusFor(null, "off")}
         hint={
           Number(swap?.total) > 0 && swap?.used_human && swap?.total_human
@@ -122,17 +110,14 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
         hasSub
         loading={loading}
       />
-      {/* Guarded like swap above: when the collector reports no filesystem at
-          all, disk_total is 0 and the unguarded card rendered "0%" over an
-          empty bar and "0 B of 0 B" — which reads as a healthy empty disk when
-          the truth is that nothing was measured. */}
+      {/* Guarded like swap: with no filesystem reported, disk_total is 0 and
+          "0%" would look like a healthy empty disk. */}
       <StatCard
         icon={HardDrive}
         label={t("disk")}
         value={Number(disk?.total) > 0 ? percentText(disk?.percent) : "—"}
         percent={Number(disk?.total) > 0 ? disk?.percent : null}
-        // Unknown, NOT "Off": a disk that reports 0 total has not been measured,
-        // and there is no such thing as a server without one.
+        // Unknown, NOT "Off": a disk reporting 0 total was not measured.
         status={Number(disk?.total) > 0 ? statusFor(disk?.percent) : statusFor(null, "unknown")}
         hint={
           Number(disk?.total) > 0 && disk?.total_human

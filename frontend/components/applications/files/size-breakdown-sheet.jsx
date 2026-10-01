@@ -14,70 +14,48 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-// The chart library was part of every Files visit for a sheet most visits never
-// open. Fetched when the sheet's content first renders — Radix mounts it only
-// on open — with a placeholder the donut's own height, so nothing jumps.
+// The chart library loads when the sheet's content first renders (Radix mounts it
+// only on open), with a placeholder the donut's height so nothing jumps.
 const SizeBreakdownDonut = dynamic(
   () => import("@/components/applications/files/size-breakdown-donut").then((m) => m.SizeBreakdownDonut),
   { ssr: false, loading: () => <Skeleton className="h-56 w-full rounded-lg" /> },
 );
 
 /**
- * What is using this folder's space — on demand, from the file manager toolbar.
+ * What is using this folder's space, on demand from the toolbar, so the listing
+ * keeps its full width.
  *
- * It used to be a card in a 340px sticky rail beside the listing, which cost the
- * listing that width: seven columns in what was left put Download and Copy
- * behind a horizontal scroll, and the rail was eventually held back to `2xl` so
- * both could fit. That still spends the widest screens' extra width on the
- * secondary thing. This is the same information behind a button, so the listing
- * keeps the whole row at every size.
+ * A sheet rather than a dialog: it is reference material read while deciding
+ * what to delete, with the listing still visible.
  *
- * A sheet rather than a dialog: it is a reference panel you read while deciding
- * what to delete, and a sheet leaves the listing visible beside it.
- *
- * Measured for the directory on screen rather than the whole site, so browsing
- * into a folder bounds the cost of the walk that produced it — the site root is
- * the worst case and someone three folders down pays for three folders.
+ * Measured for the directory on screen, not the whole site, so the walk's cost is
+ * bounded by where the user is.
  */
 export function SizeBreakdownSheet({ breakdown }) {
   const t = useTranslations("applications.files.breakdown");
 
-  // Memoised so a null breakdown does not hand a fresh [] to every render
-  // below it, which would rebuild the fold and the option each time.
+  // Memoised so a null breakdown does not create a fresh [] each render.
   const categories = useMemo(() => breakdown?.categories ?? [], [breakdown]);
   const { slices } = useMemo(() => foldCategories(categories), [categories]);
 
   const label = useCallback((key) => t(`types.${key}`), [t]);
 
   /*
-   * Not measurable and empty are different answers. "This folder holds no
-   * files" is a fact; "the walk did not finish" is an apology, and showing the
-   * first when the second happened would be a confident lie about a disk.
-   *
-   * `null` counts as not-measurable, which is the half this was missing.
-   * `getBreakdown` returns null on a non-ok response, a schema mismatch or a
-   * throw — and its docblock says so in as many words: "A failure returns null
-   * so the card can say it could not measure, which is a different sentence
-   * from 'this folder is empty'." Null is falsy, so it satisfied neither
-   * branch below and fell through to the ordinary subtitle: a folder holding
-   * gigabytes read as " across 0 files" with an empty chart, which is exactly
-   * the lie the comment was written to prevent.
+   * Not measurable is not empty: "no files" would be a false statement about the
+   * disk. `getBreakdown` returns null on a non-ok response, schema mismatch or
+   * throw, so null must count as not measurable.
    */
   const unavailable = !breakdown || breakdown.available === false;
   const empty = breakdown?.available && categories.length === 0;
 
   /*
-   * And the two not-measurable reasons get their own sentences.
-   *
-   * `available: false` is the backend saying the walk was too big to finish —
-   * a specific, true cause. `null` is the request not arriving at all, where
-   * "too large" would be a confident guess at a reason we do not have.
+   * `available: false` means the walk was too big to finish; `null` means the
+   * request failed, where "too large" would be a guess.
    */
   const unavailableMessage = breakdown ? t("unavailable") : t("measureFailed");
 
-  // Which token each category wears, so the legend's swatch matches the segment
-  // it names. Past the fifth they are all the tail's grey — which is honest:
-  // the bar folded them into one segment and the legend says which.
+  // Swatch token per category so the legend matches its segment; past the fifth,
+  // all use the tail's grey, as the bar folds them into one segment.
   const swatch = (index) =>
     index < SERIES_TOKENS.length
       ? `var(--color-${SERIES_TOKENS[index]})`
@@ -91,8 +69,7 @@ export function SizeBreakdownSheet({ breakdown }) {
           {t("trigger")}
         </Button>
       </SheetTrigger>
-      {/* Wider than the default `sm:max-w-sm`: the legend is four columns of
-          numbers, and the rail this replaces was already too narrow for them. */}
+      {/* Wider than the default `sm:max-w-sm`: the legend has four numeric columns. */}
       <SheetContent className="w-full sm:max-w-lg">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
@@ -113,11 +90,8 @@ export function SizeBreakdownSheet({ breakdown }) {
 
         {unavailable || empty ? null : (
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-4">
-            {/* The donut answers "roughly what shape is this"; the table under
-                it answers "how big exactly", which is the question that decides
-                what to delete. It is not a fallback for the chart — they answer
-                different questions. The sheet has the height for both, which
-                the 340px rail this replaced did not. */}
+            {/* The donut shows the overall shape; the table below gives exact sizes, which
+                decide what to delete. */}
             <SizeBreakdownDonut
               slices={slices}
               label={label}
@@ -132,14 +106,9 @@ export function SizeBreakdownSheet({ breakdown }) {
               }}
             />
 
-            {/* Every category, not just the six the bar can show — and the
-                values are visible rather than hover-only, because two of the
-                categorical hues sit under 3:1 against this surface and the
-                palette check obligates a visible value somewhere.
-
-                A real table, not a grid of divs: it is tabular data, and the
-                header row is what tells a screen reader what the third number
-                on each line means. */}
+            {/* Every category, not just those the chart shows, with visible values: two
+                categorical hues are under 3:1 on this surface, so values cannot be hover-only.
+                A real table so screen readers get the column headers. */}
             <table className="w-full text-sm">
               <thead className="border-b text-xs text-muted-foreground">
                 <tr>
@@ -153,8 +122,8 @@ export function SizeBreakdownSheet({ breakdown }) {
               <tbody className="divide-y">
                 {categories.map((category, index) => (
                   <tr key={category.key}>
-                    {/* The swatch carries identity, never the text colour: a
-                        light categorical hue is illegible as type. */}
+                    {/* The swatch carries identity, never the text colour: light hues are illegible as
+                        type. */}
                     <td className="w-4 py-1.5">
                       <span
                         className="block size-2 rounded-full"
@@ -174,8 +143,7 @@ export function SizeBreakdownSheet({ breakdown }) {
               </tbody>
             </table>
 
-            {/* Said outright rather than left in a number that looks whole.
-                A partial total read as complete is worse than no total. */}
+            {/* A partial total is stated, not passed off as complete. */}
             {breakdown?.truncated ? (
               <p className="text-xs text-muted-foreground">{t("truncated")}</p>
             ) : null}

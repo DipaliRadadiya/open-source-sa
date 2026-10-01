@@ -34,12 +34,9 @@ import { useNavTransition } from "@/components/data-table/nav-transition";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { apiMessage } from "@/lib/api/error-message";
 
-// 10, not 25: on a phone each ban is a card, and 25 of them is a wall of
-// scrolling with the paging controls stranded at the bottom — the same problem
-// the desktop scroll box solves, which cards cannot use without nesting a
-// second scroller inside the page.
+// 10: on a phone each ban is a card, and more strands the paging controls.
 const PAGE_SIZE = 10;
-// Below this the list is still scannable and a toolbar is just more to read.
+// Search and paging appear only from this many bans.
 const TOOLS_FROM = 8;
 
 /* Cells at module level — flexRender treats a cell function's identity as the
@@ -66,22 +63,16 @@ function BannedAtCell({ row }) {
 }
 
 /**
- * How long is left, which is the whole reason this column exists: a list of bare
- * addresses gives you no way to choose between waiting and unbanning.
- *
- * Three different answers, and conflating any two of them misleads:
- *   - a countdown, when the server gave us seconds
- *   - **Permanent**, when the server dated the ban but named no expiry
- *   - **Unknown**, when it reported no timing at all — an older fail2ban simply
- *     doesn't tell us, and "we couldn't ask" must never render as "never
- *     expires". Someone would sit waiting for a ban to lift on its own.
+ * Time left on a ban, one of three distinct answers:
+ *   - a countdown, when the server sends seconds
+ *   - **Permanent**, when the ban is dated but has no expiry
+ *   - **Unknown**, when no timing is reported (older fail2ban); never "permanent"
  */
 function ExpiryCell({ row, table }) {
   return expiryContent(row.original, table.options.meta.t);
 }
 
-// Shared with the mobile cards: the same three-way distinction has to hold at
-// every width, or the phone quietly tells a different story to the desktop.
+// Shared with the mobile cards so both widths agree.
 function expiryContent(ban, t) {
   const { seconds_left: left, expires_at: expires, banned_at: since } = ban;
 
@@ -90,13 +81,12 @@ function expiryContent(ban, t) {
     return <span className="whitespace-nowrap tabular-nums">{formatLeft(t, left)}</span>;
   }
 
-  // No seconds, but the server named an expiry — show it verbatim, server clock.
+  // No seconds but an expiry: show it verbatim (server clock).
   if (expires) {
     return <span className="whitespace-nowrap text-xs tabular-nums">{expires}</span>;
   }
 
-  // No expiry AND no start date means the source told us nothing, not that the
-  // ban lasts forever.
+  // No expiry and no start date means unknown, not permanent.
   if (!since) return <span className="text-muted-foreground">{t("banned.unknownLeft")}</span>;
 
   return (
@@ -127,8 +117,7 @@ function ActionsCell({ row, table }) {
 
 export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, serverIp = null }) {
   const t = useTranslations("fail2ban");
-  // Every write on this card ends in a re-read, and the row does not move until
-  // that lands. One shared transition means the table dims for all of them.
+  // One shared transition dims the table during every post-write re-read.
   const nav = useNavTransition();
   const router = useRouter();
   const { refreshAndWait } = useRefresh();
@@ -153,8 +142,7 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
       (!term || b.ip.toLowerCase().includes(term)),
   );
 
-  // Clamped during render rather than reset in an effect: filtering down to two
-  // rows while sitting on page 4 would otherwise show an empty table for a beat.
+  // Clamped during render, not in an effect, to avoid a flash of an empty page.
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const page = Math.min(rawPage, pageCount - 1);
   const visible = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -167,8 +155,7 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
       await refreshAndWait();
       toast.success(t("banned.unbanned", { ip: ban.ip }));
     } catch (error) {
-      // 404 = not banned anywhere. Not a success: the list is out of date, so
-      // reload it rather than claiming we released something.
+      // 404 = not banned anywhere: the list is stale, so reload it.
       if (error.response?.status === 404) {
         toast.info(t("banned.alreadyGone"));
         refresh();
@@ -223,8 +210,7 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <RefreshButton />
-          {/* A ban tells you an address was blocked, never what it did. The
-              lines that triggered it are in the log, so the page says where. */}
+          {/* The log shows what triggered a ban. */}
           {logHref ? (
             <Button variant="ghost" size="sm" asChild>
               <Link href={logHref}>
@@ -234,9 +220,7 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
             </Button>
           ) : null}
           <BanIpDialog jails={jails} canManage={canManage} yourIp={yourIp} serverIp={serverIp} />
-          {/* Kept in plain sight: this exists for the moment you've just banned
-              your own office, and that is not a moment for hunting through a
-              menu or unbanning rows one at a time. */}
+          {/* Kept visible for a fast recovery from banning yourself. */}
           {banned.length > 0 ? (
             <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
               <Button
@@ -253,9 +237,6 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
       </CardHeader>
 
       <CardContent className="space-y-3">
-        {/* Search and paging only once the list stops being scannable. Three
-            bans need no toolbar; a hundred are unusable without one, and this
-            table is only ever long on the day something is going wrong. */}
         {needsTools ? (
           <div className="flex flex-col gap-2 sm:flex-row">
             <LocalSearchInput
@@ -294,12 +275,8 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
           </p>
         ) : (
           <>
-            {/* Cards on a phone, table from lg. Five columns and a full
-                timestamp cannot fit 390px, and the horizontal scroll hides
-                Unban off the right edge. */}
-            {/* The desktop table dims itself from the same signal; the phone
-                cards are not a DataTable, so they say it here rather than
-                sitting perfectly still while the list is being re-read. */}
+            {/* Cards below lg, table from lg. The cards dim themselves here
+                since they are not a DataTable. */}
             <div className={cn("lg:hidden", pending && "pointer-events-none opacity-60")}>
               <BannedCards
                 data={visible}
@@ -311,10 +288,8 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
               />
             </div>
 
-            {/* Fixed-height scroll area, same as the dashboard's process table:
-                a full page of bans pushed the paging controls off-screen, so
-                getting to page 2 meant scrolling past everything on page 1
-                first. The header sticks so columns stay labelled on the way. */}
+            {/* Fixed-height scroll area keeps paging controls on screen; the
+                header sticks. */}
             <div className="hidden max-h-[26rem] overflow-auto rounded-xl border lg:block [&>div]:rounded-none [&>div]:border-0">
               <DataTable
                 columns={columns}
@@ -363,9 +338,6 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
         onOpenChange={(open) => !clearing && setConfirmAll(open)}
         icon={ShieldOff}
         tone="warning"
-        // The dialog is warning-toned but its confirm button fell through to
-        // `default` — so the friendliest button on the screen released every
-        // blocked attacker, while the Unban button that opened it is red.
         confirmVariant="destructive"
         title={t("banned.unbanAllTitle", { count: banned.length })}
         description={t("banned.unbanAllDescription")}
@@ -374,10 +346,8 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
         pending={clearing}
         onConfirm={onUnbanAll}
       >
-        {/* Capped and scrollable: this rendered every ban, and a server that has
-            been under attack has hundreds. The dialog grew until the confirm
-            button was off the bottom of the screen — on the one screen where
-            you most need to see what you are agreeing to. */}
+        {/* Capped and scrollable so hundreds of bans never push the confirm
+            button off screen. */}
         <ul className="max-h-56 divide-y overflow-y-auto rounded-lg border">
           {banned.map((ban) => (
             <li
@@ -398,10 +368,6 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
         tone="warning"
         confirmVariant="destructive"
         title={t("banned.unbanIpTitle", { ip: unbanConfirm?.ip })}
-        // Was "This will remove the ban for {ip} from {jail}" — the title above
-        // it already says the address, and "removes the ban" only restates the
-        // button. What the person is actually deciding is whether this address
-        // gets back in, and whether letting it back is permanent.
         description={t("banned.unbanIpDescription", { jail: unbanConfirm?.jail })}
         cancelLabel={t("banned.cancel")}
         confirmLabel={t("banned.unban")}
@@ -412,7 +378,7 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
   );
 }
 
-// Minutes up to an hour, then hours — nobody needs "3,412 seconds".
+// Seconds, then minutes up to an hour, then hours.
 function formatLeft(t, seconds) {
   if (seconds < 60) return t("banned.secondsLeft", { count: seconds });
   const minutes = Math.round(seconds / 60);

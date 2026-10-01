@@ -17,12 +17,9 @@ import { PER_PAGE_OPTIONS } from "@/lib/schemas/user";
 /**
  * What changed on this firewall, when, and by whom.
  *
- * `everyone` (the `activity_log` permission) reads the server log, which names
- * the person. Without it the only readable rows are your own, and the dialog
- * says so rather than implying it is the whole history.
- *
- * Fetched on open rather than with the page: nobody needs the history until they
- * ask for it, and it would otherwise cost every visitor a request.
+ * `everyone` (the `activity_log` permission) reads the server log, which names the
+ * person. Without it only the reader's own rows are shown, and the dialog says so.
+ * Fetched on open, not with the page.
  */
 export function HistoryDialog({ everyone = false }) {
   const t = useTranslations("firewall");
@@ -35,9 +32,8 @@ export function HistoryDialog({ everyone = false }) {
     failed: false,
     entries: [],
     meta: null,
-    // Kept so the box can name the failure rather than shrug at it — this
-    // dialog is reached from a security screen, where "could not load" and
-    // "you may not see this" are very different answers.
+    // Lets the box name the failure: "could not load" and "you may not see this" are
+    // different answers on a security screen.
     status: null,
   });
 
@@ -71,9 +67,8 @@ export function HistoryDialog({ everyone = false }) {
         entries: [],
         meta: null,
         status: error?.response?.status ?? null,
-        // The API's own sentence, like every other failed read. This dialog
-        // fetches from the client rather than through `read()`, so it has to
-        // pull the message out of the axios error itself.
+        // Fetched on the client rather than through `read()`, so the API's message is
+        // pulled from the axios error here.
         message: apiMessage(error, null),
       });
     }
@@ -136,8 +131,8 @@ export function HistoryDialog({ everyone = false }) {
               {state.entries.map((entry) => (
                 <li key={entry.id} className="flex items-start justify-between gap-3 py-2.5">
                   <div className="min-w-0 space-y-1">
-                    {/* `description` is the server's finished sentence; the
-                        humanized verb is only a fallback for rows without one. */}
+                    {/* `description` is the server's finished sentence; the humanized verb is only a
+                        fallback. */}
                     <p className="text-sm leading-snug">
                       {entry.description || humanizeActivity(entry.action)}
                     </p>
@@ -155,15 +150,12 @@ export function HistoryDialog({ everyone = false }) {
                 </li>
               ))}
             </ul>
-            {/* Same rule as the list pager: the selector stays while the
-                history is longer than the smallest option, or choosing 20 on
-                15 entries hides the only way back to 10. */}
+            {/* The selector stays while the history is longer than the smallest option, or
+                choosing 20 on 15 entries would hide the way back to 10. */}
             {state.meta?.last_page > 1 || state.meta?.total > PER_PAGE_OPTIONS[0] ? (
               <div className="flex flex-col gap-3">
-                {/* This dialog is capped at `sm:max-w-lg`, so a viewport-sized
-                    `sm:flex-row` layout made the selector squeeze the pager and
-                    wrap "48 total" at otherwise desktop widths. Keep each
-                    control group on its own row inside the constrained surface. */}
+                {/* The dialog is capped at `sm:max-w-lg`, so viewport-based `sm:flex-row` would
+                    squeeze the pager; each control group gets its own row. */}
                 <PerPageSelect
                   label={paginationT("perPage")}
                   value={String(perPage)}

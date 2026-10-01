@@ -27,9 +27,8 @@ export default async function ServicesPage() {
   if (!can(permissions, "service", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "service", "manage");
 
-  // PHP moved to its own feature behind its own permission. The link from an
-  // FPM row is only offered to someone who can actually open that page —
-  // otherwise it lands on a redirect back to the dashboard.
+  // Only link FPM rows to PHP when the user can open that page; otherwise the
+  // link lands on a redirect.
   const canSeePhp = can(permissions, "php", "view");
   const [{ services, failed, status, failure, message }, php] = await Promise.all([
     getServices(),
@@ -37,8 +36,8 @@ export default async function ServicesPage() {
   ]);
   const phpVersions = php.data?.versions ?? [];
 
-  // Formatted server-side against the configured display timezone, so it can't
-  // hydrate to a different clock than the one the rest of the panel quotes.
+  // Formatted server-side in the configured display timezone to avoid a
+  // hydration mismatch.
   const format = await getFormatter();
   const checkedAt = format.dateTime(new Date(), { timeStyle: "short" });
 

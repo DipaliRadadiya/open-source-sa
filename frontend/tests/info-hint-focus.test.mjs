@@ -84,6 +84,6 @@ test("a panel opened by a CLICK does not close itself", () => {
 test("the docblocks no longer promise plain focus-opening", () => {
   // These comments are the only place the behaviour is written down, and a
   // stale one is how the guard gets "simplified" back out.
-  assert.match(hintSource, /never from focus a dialog handed over/);
+  assert.match(hintSource, /(never|not) from focus a dialog handed over/);
   assert.match(hookSource, /focus-visible/);
 });

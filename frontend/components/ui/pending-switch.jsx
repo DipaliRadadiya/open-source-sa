@@ -3,34 +3,15 @@ import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 
 /**
- * A switch that says something is happening, and shows the state you asked for
- * while it happens.
- *
- * A plain `<Switch checked={serverValue}>` has two problems the moment the write
- * is not instant, and these writes rewrite a config file and reload a daemon:
- *
- *  - it does not move when you click it, because `checked` is still the old
- *    server value — so the click reads as ignored, and
- *  - a `disabled` switch looks only slightly faded, which is not a way to say
- *    "this is in flight".
- *
- * `pending` puts a spinner beside it and ignores further changes; `checked` should be the value
- * the user asked for, not the one the server has caught up to yet.
- *
- * The spinner sits AFTER the switch, in a slot that is always present. Before,
- * it was rendered conditionally and ahead of the control, so the switch itself
- * jumped sideways the instant you clicked it — the one moment the eye is
- * locked on it. Reserving the space costs 16px of a table cell and nothing
- * moves.
+ * A switch for slow writes. `pending` shows a spinner and ignores further
+ * changes; `checked` should be the requested value, not the server's.
+ * The spinner slot after the switch is always reserved so nothing shifts.
+ * `aside` fills that slot when not pending (e.g. a lock marker).
  */
-// `aside` fills the same slot while nothing is pending — a marker that a
-// disabled switch is locked for a reason, not merely off.
 export function PendingSwitch({ pending = false, disabled = false, aside = null, className, onCheckedChange, ...props }) {
   return (
     <span className={cn("inline-flex items-center gap-2", className)}>
-      {/* Locked by ignoring changes, not by `disabled`: a disabled element
-          drops keyboard focus, so toggling with Space left the reader
-          stranded at the top of the page every time. */}
+      {/* Locked by ignoring changes, not `disabled`, which would drop keyboard focus. */}
       <Switch
         {...props}
         disabled={disabled}

@@ -5,8 +5,8 @@ let count = 0;
 // one wait from the next.
 let generation = 0;
 const listeners = new Set();
-// Waits whose link was unmounted mid-navigation — the phone sidebar closes on
-// tap, a menu closes on select. The navigation carries on without them.
+// Waits whose link unmounted mid-navigation (a closing menu or phone sidebar);
+// the navigation carries on without them.
 const held = new Set();
 // If the page never changes (the navigation was abandoned), let go anyway.
 const HOLD_LIMIT_MS = 30_000;

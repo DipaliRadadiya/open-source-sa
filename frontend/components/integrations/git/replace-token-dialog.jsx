@@ -25,18 +25,12 @@ import {
 } from "@/components/ui/form";
 
 /**
- * Rotating the credential.
- *
- * The API verifies the new token against the provider before it replaces the
- * old one, so a rejected rotation leaves the working credential in place. That
- * promise is printed in the dialog: without it, someone with an expiring token
- * disconnects and reconnects instead, which is the one path that can actually
- * leave them with nothing.
+ * Replaces the token. The API verifies the new token before replacing, so a
+ * rejected one leaves the working credential in place; the dialog says so.
  */
 export function ReplaceTokenDialog({ account, open, onOpenChange }) {
   const t = useTranslations("git.replace");
-  // The connect form already names each provider's token; reuse rather than
-  // write a second set that can drift from it.
+  // Reuses the connect form's per-provider token strings.
   const tConnect = useTranslations("git.connect");
   const { name: brand } = useBranding();
   const { refreshAndWait } = useRefresh();
@@ -115,15 +109,7 @@ export function ReplaceTokenDialog({ account, open, onOpenChange }) {
               <FormControl>
                 <PasswordInput
                   autoComplete="off"
-                  /*
-                   * The provider's own token, named the way that provider
-                   * names it. "Paste the new token" is true of all three and
-                   * useful for none: GitHub has two kinds with different
-                   * prefixes, GitLab calls it a personal access token, and
-                   * Bitbucket wants an API token with a scope. The connect
-                   * form has said so since it shipped; replacing a token asks
-                   * exactly the same question and had the generic sentence.
-                   */
+                  /* Names the token the way each provider does. */
                   placeholder={
                     tConnect.has(`placeholders.token_${account?.provider}`)
                       ? tConnect(`placeholders.token_${account?.provider}`)
@@ -150,7 +136,6 @@ export function ReplaceTokenDialog({ account, open, onOpenChange }) {
           )}
         />
 
-        {/* The reason this dialog is safe to try. */}
         <p className="rounded-lg border bg-muted/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
           {t("safety")}
         </p>

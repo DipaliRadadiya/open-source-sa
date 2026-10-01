@@ -34,17 +34,14 @@ export default async function ApplicationDeploymentPage({ params }) {
   ]);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
-  // The site is gone. Land on the list — the only place left to go — and say
-  // why on arrival, rather than parking on a dead end that offers one link.
+  // Site deleted: land on the list, which explains why on arrival.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application)
     return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   const application = result.application;
-  // Git sites only — the deploy endpoint 404s for anything else and the sidebar
-  // hides the item, so a hand-typed URL for a non-git site is simply not found.
-  // Checked before the grant: the API drops `app_deployment` for a non-git
-  // site, so the other order told its owner they lacked access.
+  // Git sites only: the deploy endpoint 404s for anything else. Checked before
+  // the grant because the API drops `app_deployment` for non-git sites.
   const isGit = Boolean(application.repository || application.repository_url);
   if (!isGit) notFound();
   // Deployment is its own grant, separate from the server-level `application`.
@@ -53,60 +50,34 @@ export default async function ApplicationDeploymentPage({ params }) {
   }
 
   const canManage = can(appPermissions, "app_deployment", "manage", "application");
-  // The failure banner offers the site's own log as the evidence, and the Logs
-  // page is a separate grant — offering a link that would only redirect them
-  // back here is worse than offering nothing.
+  // Logs is a separate grant; without it the failure banner offers no log link.
   const canViewLogs = can(appPermissions, "app_log", "view", "application");
   const [{ providers }, history, gitAccounts] = await Promise.all([
     getWebhookProviders(),
-    // History and settings arrive together; a failure here must not blank the
-    // Deploy button, so the panel simply renders without them.
+    // A failure here must not hide the Deploy button; the panel renders without history.
     getDeployments(id),
-    // Only to learn which provider this site's account belongs to. The
-    // application payload carries `git_account_id` and no provider name, and
-    // without it the webhook card offers all three as if the choice were open
-    // — it is not: a GitHub site can only ever be pushed to by GitHub.
-    // Also when the account is gone: re-linking offers the ones left.
+    // The application payload carries `git_account_id` but no provider name;
+    // needed to narrow the webhook providers. Also fetched when the account is
+    // gone, so re-linking can offer the remaining ones.
     application.git_account_id || application.git_account_missing
       ? getGitAccounts().then((r) => r.accounts ?? []).catch(() => [])
       : Promise.resolve([]),
   ]);
 
-  /*
-   * The account first, then the repository URL, then ask.
-   *
-   * A linked account states its provider outright. A public repository has no
-   * account — but for github.com, gitlab.com and bitbucket.org the URL on this
-   * same screen already answers it, and the card was asking anyway. Null only
-   * when neither can say: an unlinked site on a self-hosted host, or one whose
-   * account has gone. Then the full picker comes back, which is the only honest
-   * thing left.
-   */
+  // Linked account first, then the repository URL (github.com, gitlab.com,
+  // bitbucket.org). Null when neither can tell: the full picker is shown.
   const gitProvider =
     gitAccounts.find((a) => a.id === application.git_account_id)?.provider ??
     gitProviderFromUrl(application.repository_url) ??
     null;
 
-  /*
-   * Only the provider this site actually deploys from.
-   *
-   * The card offered all three and asked which one — but the answer was never
-   * open: a site connected to a GitHub account can only ever be pushed to by
-   * GitHub, and picking Bitbucket there produces setup instructions for a
-   * webhook nobody will ever send. Narrowing the list is what turns a question
-   * into the answer.
-   *
-   * Falls back to the full list when the provider is unknown — an unlinked
-   * site, or one whose account has gone. Guessing there would be worse than
-   * asking.
-   */
+  // Only the provider this site deploys from; the full list when it is unknown.
   const webhookProviders =
     gitProvider && providers.some((p) => p.name === gitProvider)
       ? providers.filter((p) => p.name === gitProvider)
       : providers;
 
-  // The history too: a site whose deploys are all recorded failures has run
-  // deploys, and belongs on this page rather than behind a waiting message.
+  // A site with recorded (even failed) deploys has run, so skip the waiting message.
   const settled = isSettled(application) || history.deployments.length > 0;
 
   return (

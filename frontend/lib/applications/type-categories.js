@@ -1,16 +1,7 @@
 /**
- * Display groups for the application-type grid.
- *
- * The API sends a `category` per type, and it is too fine to filter by: 11
- * categories across 17 types, 8 of them holding exactly ONE — a row of eleven
- * chips where clicking "education" finds Moodle alone. So the raw categories
- * are folded into a handful of buckets a person would actually reach for, and
- * anything the API adds tomorrow lands in `others` rather than vanishing.
- *
- * The grouping is a FRONTEND decision, deliberately: it is about how many
- * chips fit on a row and which words a beginner recognises, neither of which
- * the backend can know. If the catalogue grows enough that a bucket is worth
- * splitting, this file is the only place that changes.
+ * Display groups for the application-type grid. The API's `category` is too
+ * fine to filter by, so categories are folded into a few buckets; unknown ones
+ * land in `others`. The grouping is deliberately a frontend decision.
  */
 export const CATEGORY_GROUPS = [
   { key: "cms", categories: ["cms", "ecommerce"] },
@@ -22,7 +13,7 @@ export const CATEGORY_GROUPS = [
   },
 ];
 
-/** The group a type belongs to — `others` for a category we have not placed. */
+/** The group a type belongs to; `others` for an unmapped category. */
 export function groupForType(type) {
   const category = String(type?.category ?? "").toLowerCase();
   const group = CATEGORY_GROUPS.find((g) => g.categories.includes(category));
@@ -30,12 +21,8 @@ export function groupForType(type) {
 }
 
 /**
- * The groups worth showing for a given catalogue, in order, with counts.
- *
- * Empty groups are dropped rather than rendered disabled: a chip that filters
- * to nothing is a promise the panel cannot keep, and on a small install it
- * would be most of the row. `others` only appears when something actually
- * landed in it.
+ * The non-empty groups for a catalogue, in order, with counts. Empty groups
+ * (including `others`) are dropped rather than shown disabled.
  */
 export function groupsWithTypes(types = []) {
   const counts = new Map();

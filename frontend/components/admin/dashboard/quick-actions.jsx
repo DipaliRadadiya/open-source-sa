@@ -5,14 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 /**
- * The five places an administrator goes, without hunting the sidebar for them.
- *
- * Links, not buttons that do the thing from here: each of these lands on a
- * screen that then asks for confirmation or shows what it is about to do.
- * "Update panel" firing an update from a dashboard tile would skip the
- * pre-flight checks and the confirmation, which is the entire safety of that
- * screen. Opening System Health does re-run the checks, because that page runs
- * them on load.
+ * Shortcuts to common admin screens. Links only, never direct actions: e.g.
+ * "Update panel" must go through that screen's pre-flight checks and confirmation.
  */
 const ACTIONS = [
   { key: "health", icon: Stethoscope, href: "/admin/doctor" },
@@ -32,21 +26,11 @@ export async function QuickActions() {
           {t("title")}
         </h2>
       </div>
-      {/* Across, not down: five stacked rows made a column tall enough to leave
-          a void beside a short feed, and these are peers — none of them is the
-          one you came for. auto-fit so the last row fills rather than leaving a
-          hole at whatever count they end on. */}
+      {/* auto-fit so the last row fills instead of leaving a hole. */}
       <ul className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-2.5 p-4">
         {ACTIONS.map(({ key, icon: Icon, href }) => (
           <li key={key}>
-            {/* The real Button, not a link styled to look like one — these were
-                flat because they were borrowing three of its classes and none
-                of its states. */}
-            {/* Centred, not left-aligned. Full width plus a left-aligned label
-                on a pale border is the shape of a text input, which is what
-                these were reading as; centring the icon-and-label pair is what
-                makes a button look pressable. The hover moves — border, fill
-                and the icon taking on the brand colour — so it answers back. */}
+            {/* Centred: a full-width left-aligned label reads as a text input. */}
             <Button
               asChild
               variant="outline"

@@ -3,23 +3,17 @@ import { serverFetch } from "@/lib/api/server-fetch";
 import { accessLevelSchema, permissionGroupSchema } from "@/lib/schemas/role";
 
 /**
- * GET /admin/permissions — everything the role form needs, in the three shapes
- * the server already has it in.
+ * GET /admin/permissions — everything the role form needs (admin-only).
  *
- * `permissions` is the flat ordered list. `groups` is the same rows bucketed by
- * level AND sub-level, with section titles already localised — grouping it here
- * rather than client-side is what keeps `logs` at server level and `logs` at
- * application level as two sections instead of one control over both.
- * `accessLevels` names the three states a grant can hold, in the order they
- * should be offered.
+ * `permissions` is the flat ordered list; `groups` buckets it by level AND
+ * sub-level with localised titles (so same-named keys at different levels stay
+ * separate); `accessLevels` lists a grant's states in display order.
  *
- * Distinct from getPermissions() (GET /permissions), which is the caller's own
- * effective grants for the nav. Admin-only.
+ * Distinct from getPermissions(), the caller's own effective grants.
  */
 export async function getPermissionCatalog() {
-  // `failed`: the role form must not open on an empty catalog. It saves every
-  // grant it shows, so an empty list saved as "no permissions" and stripped
-  // the role — and everyone holding it — under a "Role updated." toast.
+  // The role form MUST NOT open on an empty catalog: it saves every grant it
+  // shows, so saving an empty list would strip the role's permissions.
   const empty = (status = null, failure = status ? "http" : "network") =>
     ({ permissions: [], groups: [], accessLevels: [], failed: true, status, failure });
   try {
@@ -34,8 +28,7 @@ export async function getPermissionCatalog() {
 
     return {
       permissions,
-      // No groups (an older backend) falls back to one section per level, so
-      // the form still renders rather than showing nothing.
+      // Without groups (older backend), fall back to one section per level.
       groups: groups.success && groups.data.length
         ? groups.data
         : groupByLevel(permissions),

@@ -8,15 +8,9 @@ import { AppsCell } from "@/components/system-users/apps-cell";
 import { SystemUserRowActions } from "@/components/system-users/system-user-row-actions";
 
 /**
- * System users on a narrow screen.
- *
- * Eight columns, of which three are live controls — the table put the sudo and
- * SSH switches off the right edge, so on a phone you could read who existed but
- * not what they were allowed to do.
- *
- * Sudo and SSH lead the facts because they are why anyone opens this page. The
- * shell picker takes the full width underneath: it is a control, not a reading,
- * and a 120px select shows half a shell name.
+ * System users on a narrow screen, where the table pushed the sudo and SSH
+ * switches off screen. Sudo and SSH lead the facts; the shell picker takes the
+ * full width underneath so shell names fit.
  */
 export function SystemUsersCards({ users, shells = [], canManage = false, prevPage = null, sshEnforced = null }) {
   const t = useTranslations("systemUsers");
@@ -28,14 +22,11 @@ export function SystemUsersCards({ users, shells = [], canManage = false, prevPa
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                {/* break-all, not truncate: a username IS the identifier you
-                    came to read, so it wraps onto a second line rather than
-                    losing its tail. Without it a long one pushed the row menu
-                    off the card. */}
+                {/* break-all, not truncate: the username is the identifier being read, and a long
+                    one would push the row menu off the card. */}
                 <span className="min-w-0 font-medium break-all">{user.username}</span>
-                {/* Same rule as the table: the Password fact below already
-                    says "Not set" for a manager, and only a viewer — who has
-                    no such fact — needs the badge. */}
+                {/* Same rule as the table: managers see "Not set" in the Password fact; only
+                    viewers need the badge. */}
                 {!canManage && !(user.password_known ?? user.password) ? (
                   <Badge variant="warning" className="font-normal">
                     {t("noPassword")}
@@ -44,7 +35,7 @@ export function SystemUsersCards({ users, shells = [], canManage = false, prevPa
               </div>
               <p className="truncate font-mono text-xs text-muted-foreground">{user.home_path}</p>
             </div>
-            {/* For viewers too — the menu is how SSH keys are reached. */}
+            {/* For viewers too: the menu is how SSH keys are reached. */}
             <div className="-me-2 -mt-1 shrink-0">
               <SystemUserRowActions user={user} canManage={canManage} prevPage={prevPage} />
             </div>
@@ -64,14 +55,11 @@ export function SystemUsersCards({ users, shells = [], canManage = false, prevPa
             <CardFact label={t("columns.shell")}>
               <ShellSelect user={user} shells={shells} canManage={canManage} className="w-full" />
             </CardFact>
-            {/* Last, and full width: it is the longest value here and the one
-                you came to copy. Managers only — a viewer holds a redacted
+            {/* Last and full width: the longest value. Managers only; viewers get a redacted
                 placeholder, not the password. */}
             {canManage ? (
               <CardFact label={t("columns.password")}>
-                {/* CardFact right-aligns its value, which pushed the masked
-                    dots to the far end of their own box. A credential reads
-                    left-to-right like the mono values above it. */}
+                {/* CardFact right-aligns values; a credential reads left-to-right. */}
                 <PasswordReveal password={user.password} className="text-left" />
               </CardFact>
             ) : null}

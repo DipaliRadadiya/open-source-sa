@@ -27,9 +27,8 @@ import { UserFields } from "@/components/databases/user-fields";
 /**
  * Rename a user, or change where it may connect from.
  *
- * On SQL engines this is a `RENAME USER`, so the grants survive. On Mongo the
- * user is dropped and recreated — which is why renaming there needs a password,
- * and why the warning below only appears for Mongo.
+ * SQL engines use `RENAME USER`, so grants survive. Mongo drops and recreates
+ * the user, so a rename there needs a password and shows a warning.
  */
 export function EditUserDialog({ database, user, open, onOpenChange, remoteUsers = true }) {
   const t = useTranslations("databases.users");
@@ -54,8 +53,7 @@ export function EditUserDialog({ database, user, open, onOpenChange, remoteUsers
   const values = useWatch({ control: form.control });
 
   async function onSubmit(submitted) {
-    // PATCH: send only what changed, so an untouched field is never rewritten
-    // on the engine for no reason.
+    // PATCH: send only changed fields.
     const payload = {};
     if (submitted.username !== defaults.username) {
       payload.username = submitted.username;
@@ -114,8 +112,7 @@ export function EditUserDialog({ database, user, open, onOpenChange, remoteUsers
             >
               {t("cancel")}
             </Button>
-            {/* Two different reasons, and the password one is the surprising
-                half: a Mongo rename drops and recreates the user. */}
+            {/* Two reasons; a Mongo rename drops and recreates the user. */}
             <ReasonTooltip
               reason={
                 isSubmitting
@@ -140,18 +137,15 @@ export function EditUserDialog({ database, user, open, onOpenChange, remoteUsers
       >
         <UserFields form={form} access={values.connection_preference} remoteUsers={remoteUsers} />
 
-        {/* Only Mongo loses the credential on a rename, so only Mongo is
-            warned — a warning shown to everyone is a warning nobody reads. */}
+        {/* Only Mongo loses the credential on a rename, so only Mongo is warned. */}
         {isMongo && renaming ? (
           <>
             <p className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs leading-relaxed">
               {t("mongoRenameWarning")}
             </p>
 
-            {/* Required here, and only here: MongoDB drops and recreates the
-                user on a rename, so it needs a password to recreate it with.
-                Warning about that without offering the field sent people
-                straight into a 422. */}
+            {/* Required only here: Mongo recreates the user on rename and needs
+                a password (otherwise the API returns 422). */}
             <FormField
               control={form.control}
               name="password"

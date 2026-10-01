@@ -1,11 +1,8 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
- * Mirrors `BotBlockerSection`: the policy card and the traffic card beneath
- * it, both capped at `max-w-4xl` like the panel.
- *
- * Sized from the rendered page — 878px and 233px — rather than guessed. The
- * previous single `h-72` block was both the wrong count and the wrong width.
+ * Mirrors `BotBlockerSection`: the policy card and the traffic card beneath it,
+ * both capped at `max-w-4xl`; heights measured from the rendered page.
  */
 export default function Loading() {
   return (

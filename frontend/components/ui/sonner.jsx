@@ -12,10 +12,8 @@ const Toaster = ({
   return (
     <Sonner
       theme={theme}
-      // Radix sets `pointer-events: none` on <body> while a dialog is open and
-      // re-enables it only inside the dialog. The toaster is a separate portal,
-      // so its close button went dead whenever a modal was up — and a failure
-      // toast is raised from a dialog more often than not.
+      // Radix sets `pointer-events: none` on <body> while a dialog is open;
+      // the toaster portal must stay clickable.
       className="toaster group !pointer-events-auto"
       icons={{
         success: (
@@ -42,31 +40,19 @@ const Toaster = ({
           "--border-radius": "var(--radius)"
         }
       }
-      // A toast sits over the bottom-right of the page, which is where action
-      // buttons live — so without a way to dismiss it you have to wait it out
-      // before you can click what is underneath.
+      // Toasts can cover action buttons, so they must be dismissable.
       closeButton
       toastOptions={{
         classNames: {
-          // Room on the right so the message never runs under the close button.
+          // Room on the right for the close button.
           toast: "cn-toast !pr-10",
-          // Sonner puts the close button on the top-left corner, revealed on
-          // hover — neither works here: a touch screen cannot hover, and pinned
-          // to a corner it read as a stray mark rather than a control. Centred
-          // on the right edge, always visible, 28px so a thumb can hit it.
-          // Centred with top/bottom-0 + auto margins rather than a translate:
-          // Sonner sets its own `transform` to nudge the button into a corner,
-          // which composes with any translate utility and leaves it ~10px high.
+          // Always visible (touch cannot hover), centred on the right edge,
+          // 28px. Centred with auto margins because Sonner's own `transform`
+          // would compose with a translate.
           closeButton:
             "!left-auto !right-2.5 !top-0 !bottom-0 !my-auto !size-7 !transform-none !rounded-md !border-0 !bg-transparent !text-foreground/60 hover:!bg-foreground/10 hover:!text-foreground !transition-colors",
-          // Semantic tint per type — colored icon (above) + soft background and
-          // matching border, so success/error read at a glance. Text stays on
-          // the readable foreground token.
-          //
-          // The tint is MIXED INTO the popover colour rather than layered as an
-          // alpha (`bg-success/10`): a translucent toast over a dark surface —
-          // the log console — let the content behind show through and left the
-          // dark toast text unreadable on it.
+          // Per-type tint mixed into the popover colour, not an alpha: a
+          // translucent toast is unreadable over dark surfaces.
           success:
             "!bg-[color-mix(in_oklab,var(--success)_10%,var(--popover))] !border-success/25",
           error:

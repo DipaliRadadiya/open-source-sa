@@ -26,16 +26,9 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { BackupSettingsFields } from "@/components/backups/backup-settings-fields";
 
 /**
- * Setting up backups for a site, from the Backups screen.
- *
- * The application is the first field rather than a page you have to navigate
- * into first: someone looking for "Backups" looks in the sidebar, and the id
- * the API wants is just a value on the form.
- *
- * Two states. After saving it does NOT simply close — a schedule that says
- * "daily" has produced nothing yet, and closing on a toast leaves a new user
- * with no evidence anything works for up to 24 hours. So the second state
- * offers the one action that answers it.
+ * Setting up backups for a site, from the Backups screen; the application is
+ * the first field. After saving it does NOT close: a second step offers
+ * "Back up now", since a daily schedule proves nothing for up to 24 hours.
  */
 export function SetupBackupsDialog({
   open,
@@ -44,9 +37,8 @@ export function SetupBackupsDialog({
   destinations = [],
   // Preselected when opened from a specific row's "Set up" button.
   applicationId = null,
-  // An existing configuration turns this into an edit: same modal, same
-  // fields, prefilled — so the application page never needs its own copy of
-  // the form, and the two can never drift apart.
+  // An existing configuration turns this into an edit, so the application page
+  // reuses this form rather than keeping its own copy.
   target = null,
   // Passed straight through to the fields: which sites have a database, so the
   // form can say when a database backup would hold nothing.
@@ -70,16 +62,9 @@ export function SetupBackupsDialog({
   const [running, setRunning] = useState(false);
   const [finishing, setFinishing] = useState(false);
   /*
-   * The destinations, as of the last time we asked.
-   *
-   * `destinations` arrives from a server component, so it cannot change while
-   * this dialog is open — and "Add destination" opens the storage page in a
-   * NEW TAB. Someone who came here without one had to add it, come back, and
-   * reload the page to see it, losing everything already typed.
-   *
-   * Null until refreshed, so the prop stays authoritative for a dialog nobody
-   * has pressed the button in. Cleared on close, when the page's own data is
-   * fresher than anything held here.
+   * Destinations as of the last refresh. The prop comes from a server component
+   * and cannot change while open, but "Add destination" opens a new tab. Null
+   * until refreshed, so the prop stays authoritative; cleared on close.
    */
   const [refreshed, setRefreshed] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -128,10 +113,8 @@ export function SetupBackupsDialog({
   // Reopening from a different row must not inherit the previous row's site.
   useEffect(() => {
     if (open) form.reset(defaults(applicationId, destinations, target, options));
-    // `destinations` and `target` are excluded deliberately. Both change
-    // identity on every parent render, and re-seeding on them would overwrite a
-    // half-filled form; `open` going false→true already covers arriving from a
-    // different row, which is the case this exists for.
+    // `destinations` and `target` are excluded deliberately: both change
+    // identity every parent render, and re-seeding would overwrite a half-filled form.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, applicationId]);
 
@@ -142,8 +125,7 @@ export function SetupBackupsDialog({
         type: values.type,
         retention_count: values.retention_count,
         frequency: values.frequency,
-        // Only for a frequency that reads it. Sending one with `manual` would
-        // store a time for a backup that never runs on its own.
+        // Only for a frequency that reads it; `manual` never runs on a schedule.
         ...(timeUsage(options, values.frequency) ? { schedule_time: values.schedule_time } : null),
         enabled: values.enabled,
         file_excludes: values.file_excludes,
@@ -186,8 +168,7 @@ export function SetupBackupsDialog({
     }
   }
 
-  // Esc, the X and Cancel all come through here. With edits in the form they
-  // ask first — they used to drop a half-filled schedule without a word.
+  // Esc, the X and Cancel all come through here; unsaved edits ask first.
   function requestClose() {
     if (!saved && form.formState.isDirty && !form.formState.isSubmitting) {
       setConfirmDiscard(true);
@@ -210,8 +191,7 @@ export function SetupBackupsDialog({
   function close() {
     setConfirmDiscard(false);
     setSaved(null);
-    // Back to the prop: the page behind this dialog re-reads on navigation, so
-    // its list is the fresher one once we are no longer holding a form open.
+    // Back to the prop: the page's list is fresher once the form is closed.
     setRefreshed(null);
     form.reset(defaults(applicationId, destinations, target, options));
     onOpenChange?.(false);
@@ -221,14 +201,9 @@ export function SetupBackupsDialog({
   // useWatch, not form.watch(): the latter returns a fresh function every
   // render and opts the whole component out of the React compiler.
   const values = useWatch({ control: form.control });
-  // Required fields, mirrored from the schema. The primary action stays
-  // disabled until they are answered rather than failing on submit.
   /**
-   * Ask again, without disturbing the form.
-   *
-   * Deliberately not `router.refresh()`: that re-runs the server component and
-   * would re-render this dialog's parent, which is the reload we are trying to
-   * avoid. Only the list is replaced.
+   * Re-read destinations without disturbing the form. Not `router.refresh()`,
+   * which would re-render this dialog's parent.
    */
   async function refreshDestinations() {
     setRefreshing(true);
@@ -242,9 +217,7 @@ export function SetupBackupsDialog({
       const next = parsed.data.storage_destinations;
       setRefreshed(next);
 
-      // Just added their first one: fill the field they have not answered yet,
-      // rather than making them open a picker holding a single option. Never
-      // overwrites a choice already made.
+      // A first destination fills the empty field; never overwrites a choice.
       if (next.length === 1 && !form.getValues("storage_destination_id")) {
         form.setValue("storage_destination_id", next[0].id, { shouldValidate: true });
       }
@@ -264,8 +237,7 @@ export function SetupBackupsDialog({
     !values.type ||
     (values.enabled && (!values.frequency || !values.retention_count));
 
-  // What is missing, in the order the form asks for it. A disabled primary
-  // action that does not say why is the anti-pattern; this is the sentence.
+  // What is missing, in form order, shown beside the disabled primary action.
   const blocker = !options
     ? t("blocked.noOptions")
     : available.length === 0
@@ -307,9 +279,6 @@ export function SetupBackupsDialog({
           </>
         }
       >
-        {/* The reason to press the button, stated plainly. Waiting until
-            tonight to discover the credentials are wrong is the failure this
-            step exists to prevent. */}
         <p className="text-sm text-muted-foreground">{t("verifyHint")}</p>
       </FormModal>
     );
@@ -331,8 +300,7 @@ export function SetupBackupsDialog({
         footer={
           <>
             {blocker ? (
-              // Full width on a phone: as `mr-auto` in a nowrap row it was
-              // pushed off the left edge of the footer and clipped.
+              // Full width on a phone: with `mr-auto` in a nowrap row it was clipped.
               <span className="w-full text-xs text-muted-foreground sm:mr-auto sm:w-auto">
                 {blocker}
               </span>
@@ -340,9 +308,7 @@ export function SetupBackupsDialog({
             <Button type="button" variant="outline" onClick={requestClose} disabled={submitting}>
               {t("cancel")}
             </Button>
-            {/* The blocker is already printed above the button; the tooltip
-                repeats it for anyone who reaches the control by keyboard and
-                never sees the paragraph. */}
+            {/* Repeats the blocker for keyboard users who never see the paragraph. */}
             <ReasonTooltip reason={!submitting && blocker ? blocker : null}>
             <Button type="submit" disabled={submitting || Boolean(blocker)}>
               {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
@@ -369,9 +335,7 @@ export function SetupBackupsDialog({
           retryingOptions={loadingOptions}
         />
 
-        {/* What pressing Save will actually do, in one line. Reading your own
-            answers back is the cheapest way to catch the wrong site or a
-            schedule you did not mean. */}
+        {/* Reads the answers back in one line before saving. */}
         <SummaryLine
           values={values}
           applications={applications}
@@ -398,19 +362,12 @@ export function SetupBackupsDialog({
 }
 
 
-/**
- * The whole configuration as one sentence, read back before committing.
- *
- * Site · what · when · how many · where. Everything above is a control you
- * set one at a time; this is the only place the answers appear together, which
- * is where a wrong site or an unintended `manual` becomes obvious.
- */
+/** The whole configuration as one sentence: site · what · when · how many · where. */
 function SummaryLine({ values, applications, applicationName = null, destinations, options }) {
   const t = useTranslations("backups.setup");
   const tf = useTranslations("backups.form");
 
-  // On the application page there is no list to look the site up in, and the
-  // whole line used to disappear with it.
+  // The application page passes no list, so fall back to `applicationName`.
   const siteName =
     applications.find((a) => a.id === Number(values.application_id))?.name ?? applicationName;
   const destination = destinations.find((d) => d.id === Number(values.storage_destination_id));
@@ -432,18 +389,11 @@ function SummaryLine({ values, applications, applicationName = null, destination
   );
 }
 
-/**
- * Opens already answered.
- *
- * Every field carries a sane value so a nervous first-timer can press Save
- * without making a single decision — which for this audience is the whole
- * difference between "set up" and "meant to set up".
- */
+/** Every field starts with a sane value, so Save works without any decisions. */
 function defaults(applicationId, destinations, target, options) {
   if (target) {
-    // A disabled target and a manual one mean the same thing to the backend,
-    // and the form has one switch for both — so normalise on the way in, or
-    // the switch would read "on" for a schedule that never runs.
+    // Disabled and manual mean the same to the backend, and the form has one
+    // switch for both, so normalise here.
     const automatic = target.enabled && target.frequency !== "manual";
     return {
       application_id: target.application_id ?? applicationId ?? "",
@@ -451,9 +401,7 @@ function defaults(applicationId, destinations, target, options) {
       type: target.type,
       retention_count: target.retention_count,
       frequency: automatic ? target.frequency : "manual",
-      // The API carries `schedule_time` now, so an existing target opens on
-      // the time it actually runs at. The fallback stays for a target saved
-      // before the column existed, which has none.
+      // Fallback for targets saved before `schedule_time` existed.
       schedule_time: target.schedule_time ?? BACKUP_DEFAULT_TIME,
       enabled: automatic,
       file_excludes: target.file_excludes ?? [],

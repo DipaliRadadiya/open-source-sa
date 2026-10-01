@@ -46,32 +46,18 @@ import { VisitSiteLink } from "@/components/applications/visit-site-link";
 
 const POLL_MS = 3000;
 /*
- * Issuing is a round trip to Let's Encrypt and finishes in under a minute when
- * it finishes at all. This loop had no end: a certificate wedged in `issuing`
- * polled every three seconds for as long as the tab stayed open — 20 requests
- * a minute, each one a real API call against a 180/min budget, for hours.
- *
- * Ten minutes is comfortably longer than any successful issuance and short
- * enough that a stuck one stops costing anything. Giving up is not a failure
- * verdict: the card keeps showing "issuing", which is still the last thing the
- * server said, and Refresh re-reads it.
+ * Polling stops after ten minutes so a wedged issuance does not drain the
+ * 180/min API budget. Not a failure verdict: the card keeps showing "issuing".
  */
 const POLL_LIMIT = (10 * 60 * 1000) / POLL_MS;
 const isPending = (c) =>
   c && (c.status === "pending" || c.status === "issuing");
-// Retrying a rate-limit is precisely what must not happen — the wait is a week.
+// Never retry a rate limit: the wait is a week.
 const NO_RETRY = new Set(["rate_limited"]);
 
 /*
- * The panel's own tile vocabulary, lifted from `admin/dashboard/status-tile`:
- * a hairline card with `shadow-sm`, a 2px accent down the left edge and a
- * tinted icon chip. Colour arrives as a chip and an edge, never as a fill —
- * the one exception is `destructive`, whose 2% wash is below the threshold at
- * which it reads as "red box" and above the one at which it reads as nothing.
- *
- * Reusing this rather than inventing a fifth look: it is already the language
- * the rest of the product speaks, and every version of this card that invented
- * its own was rejected.
+ * Tile styles from `admin/dashboard/status-tile`: colour comes from the chip
+ * and a left accent, never a fill (except a faint wash for `destructive`).
  */
 const TONES = {
   success: { chip: "bg-success/10 text-success", accent: "bg-success/45", tint: "", title: "" },
@@ -110,13 +96,7 @@ function Tile({ tone = "idle", icon: Icon, spin = false, title, badge, children 
   );
 }
 
-/**
- * Every note on this card is the shared `Caution` at `md`.
- *
- * It was a private copy here for about an hour, which is exactly how the three
- * hand-rolled red blocks in the issue dialog got there. One component, so the
- * card and the dialog one click away from it cannot drift apart again.
- */
+/** Every note on this card is the shared `Caution` at `md`. */
 const Note = (props) => <Caution size="md" {...props} />;
 
 export function SslSection({
@@ -125,30 +105,16 @@ export function SslSection({
   certifiable = true,
   availableTypes = [],
   canManage = false,
-  // The panel's own web server, which is also its service key — the catalog is
-  // matched on exactly this value server-side. Null for a role that cannot read
-  // capabilities, which is why the stale alert falls back to a link.
+  // The web server's service key; null when capabilities cannot be read, in
+  // which case the stale alert falls back to a link.
   webServer = null,
 }) {
   const t = useTranslations("applications.domains");
   const format = useFormatter();
   /*
-   * Every date this card prints goes through here.
-   *
-   * ⚠️ `parseApiDate`, NOT `new Date`. This API sends `20-11-2026 04:34:36` —
-   * day first, no timezone — which `new Date` cannot parse at all. The first
-   * version of this used `new Date`, passed against a stub that happened to
-   * send ISO, and silently fell back to `expires_at_human` on every real
-   * certificate. The fix did nothing on the panel it was written for.
-   *
-   * `expires_at` is an ISO timestamp and `served_expires_at` is a plain date,
-   * so the stale-certificate line read "Being served: expires 2026-08-01 · On
-   * disk: expires 2026-11-20T12:00:00+00:00" — two dates in one sentence, one
-   * of them a machine timestamp complete with timezone offset. Formatting is
-   * not the caller's job to remember.
-   *
-   * Returns null rather than a fallback string so a caller can decide what an
-   * unparseable date means; every one of them currently hides the line.
+   * Every date on this card goes through here. Use `parseApiDate`, NOT
+   * `new Date`: the API sends `20-11-2026 04:34:36` (day first, no timezone).
+   * Returns null when unparseable; callers hide the line.
    */
   const asDate = (value) => {
     const when = parseApiDate(value);
@@ -158,9 +124,7 @@ export function SslSection({
   const { refreshAndWait } = useRefresh();
 
   const [cert, setCert] = useState(initialCertificate);
-  // Taken over again whenever the page re-reads it. Only the first read was
-  // ever used, so adding a domain on the Domains tab left this tab saying
-  // "1 of 1 secured" — without the reissue warning — until a reload.
+  // Re-synced whenever the page re-reads the certificate.
   const [certFrom, setCertFrom] = useState(initialCertificate);
   if (certFrom !== initialCertificate) {
     setCertFrom(initialCertificate);
@@ -169,24 +133,17 @@ export function SslSection({
   const [issueOpen, setIssueOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  // The switch's own request, apart from `busy`: removing the certificate
-  // also disables the switch, but it is not the switch that is working then.
+  // The switch's own request, separate from `busy`.
   const [savingHttps, setSavingHttps] = useState(false);
   const [reloading, setReloading] = useState(false);
 
-  /*
-   * Reload the web server so it picks up the certificate already on disk.
-   *
-   * `reload` rather than `restart`: it re-reads configuration and certificates
-   * without dropping connections, and it stays available on the web server even
-   * though that unit is protected — the panel would go down with a stop.
-   */
+  // Reload (not restart) the web server to pick up the certificate on disk:
+  // no dropped connections, and allowed on the protected unit.
   async function reloadWebServer() {
     setReloading(true);
     try {
       await runServiceAction(webServer, "reload");
-      // The served certificate is re-read server-side, so the banner only
-      // clears once the server agrees — not because we asked it to.
+      // The banner clears only once the server reports the new certificate.
       await refreshAndWait();
       toast.success(t("ssl.reloaded"));
     } catch (error) {
@@ -198,8 +155,7 @@ export function SslSection({
 
   const polling = isPending(cert);
 
-  // Poll while issuing — ACME involves a round trip back to this server and
-  // routinely outlasts the request. Stop (and re-sync SSR) once it settles.
+  // Poll while issuing; stop and re-sync SSR once it settles.
   useEffect(() => {
     if (!polling) return undefined;
     let live = true;
@@ -231,9 +187,7 @@ export function SslSection({
     try {
       const updated = await setForceHttps(appId, next);
       setCert(updated);
-      // Named per direction, not a generic "Saved". The switch moves under the
-      // cursor either way, so the useful confirmation is which state it landed
-      // in — and turning this ON changes what every visitor gets.
+      // Names the new state rather than a generic "Saved".
       toast.success(next ? t("ssl.forceHttpsEnabled") : t("ssl.forceHttpsDisabled"));
     } catch (error) {
       toast.error(apiMessage(error, t("ssl.forceHttpsFailed")));
@@ -247,16 +201,12 @@ export function SslSection({
     setBusy(true);
     try {
       await deleteCertificate(appId);
-      // Every other action on this screen says what it did. This one dropped
-      // the application back to plain HTTP in silence — the single most
-      // consequential thing the card can do.
       setCert(null);
       await refreshAndWait();
       toast.success(t("ssl.removed"));
       setDeleteOpen(false);
     } catch (error) {
-      // Already gone. The certificate is not there, which is what was asked
-      // for; a red toast over a closed dialog invites a retry that cannot work.
+      // Already removed: treat as success.
       if (error?.response?.status === 404) {
         toast.info(t("ssl.removedAlready"));
         setCert(null);
@@ -270,15 +220,8 @@ export function SslSection({
     }
   }
 
-  /*
-   * One card, four states — and each state returns its SURFACE and its ACTIONS
-   * together.
-   *
-   * The actions used to be rendered inside each body, which meant every state
-   * spelled out its own `canManage` branch and its own button row, in four
-   * different shapes. They now land in one CardFooter, which is where every
-   * other card in the panel puts them.
-   */
+  // Each of the four states returns its body and its actions; actions render
+  // in one CardFooter.
   function view() {
     // --- No certificate ---
     if (!cert) {
@@ -308,15 +251,7 @@ export function SslSection({
             <Tile tone="progress" icon={Loader2} spin title={t("ssl.issuing")}>
               <p className="max-w-prose text-sm text-muted-foreground">{t("ssl.issuingBody")}</p>
             </Tile>
-            {/*
-              * A way out of a state that can wedge.
-              *
-              * This card was a spinner and two lines with no control at all, so
-              * an issuance that never completes left the reader with nothing to
-              * press on the one screen that decides whether the application
-              * serves HTTPS. Capping the poll made that worse, not better:
-              * after ten minutes the spinner is no longer even asking.
-              */}
+            {/* A way out of an issuance that never completes. */}
             {canManage ? (
               <Note icon={Clock3}>
                 <p>{t("ssl.issuingStuck")}</p>
@@ -336,19 +271,13 @@ export function SslSection({
     // --- Failed ---
     if (cert.status === "failed") {
       const noRetry = NO_RETRY.has(cert.reason);
-      // `apiMessage` reads `error.response.data.message`; this message arrives
-      // on the certificate itself, so it is shaped to match rather than
-      // reimplementing the key-detection here.
+      // Wrapped in an error shape so `apiMessage` can translate it.
       const certMessage = apiMessage({ response: { data: { message: cert.message } } }, null);
       return {
         content: (
           <>
             <Tile tone="destructive" icon={ShieldAlert} title={t("ssl.failed")}>
-              {/* Through `apiMessage`, like every other API sentence in the
-                  panel. Printed raw, an untranslated lookup key — the backend
-                  sends `errors/ssl.issue_failed` shapes from some paths —
-                  landed on the card as-is and read as the panel being broken
-                  rather than the certificate. */}
+              {/* Via `apiMessage`: some paths send an untranslated key. */}
               {certMessage ? <p className="max-w-prose text-sm">{certMessage}</p> : null}
               {cert.reference ? (
                 <p className="font-mono text-xs text-muted-foreground">
@@ -363,14 +292,11 @@ export function SslSection({
             ) : null}
           </>
         ),
-        // Remove and Reissue stay while rate-limited: only Let's Encrypt is
-        // closed, and the dialog says so on that method. Hiding both left the
-        // site stuck on a failed certificate for a week.
+        // Remove and Reissue stay while rate-limited: only Let's Encrypt is closed.
         actions:
           canManage ? (
             <>
-              {/* Red text, the ink deepened in light mode: plain destructive
-                  on the hover tint measured 3.82:1 (the Files Trash fix). */}
+              {/* Deeper red in light mode for contrast on the hover tint. */}
               <Button
                 variant="ghost"
                 className="[--destructive-ink:color-mix(in_oklch,var(--destructive),var(--foreground)_22%)] text-(--destructive-ink) hover:bg-destructive/10 hover:text-(--destructive-ink) dark:text-destructive dark:hover:text-destructive"
@@ -392,12 +318,8 @@ export function SslSection({
     const expired = cert.expired;
     const servingStale = cert.serving_stale === true;
 
-    /*
-     * Every name this certificate has an opinion about, in one list.
-     * `domains` are on it, `missing_domains` are the application's names it
-     * does not carry, `stale_domains` are names it carries that the
-     * application has dropped — one question, so one list.
-     */
+    // One list: `domains` (covered), `missing_domains` (application names not
+    // on it), `stale_domains` (on it but dropped by the application).
     const names = [
       ...(cert.domains ?? []).map((domain) => ({ domain, state: "covered" })),
       ...(cert.missing_domains ?? []).map((domain) => ({ domain, state: "missing" })),
@@ -408,16 +330,13 @@ export function SslSection({
     const hasCoverageGap = Boolean(cert.missing_domains?.length || cert.stale_domains?.length);
     const secured = names.filter((n) => n.state === "covered").length;
     const expiresOn = asDate(cert.expires_at);
-    // Declared before anything reads it: an earlier version put this below the
-    // tone that depends on it, which built and linted and then crashed on two
-    // of the three states at render time.
     const healthy = !expired && !servingStale && !hasCoverageGap;
     const tone = expired ? "destructive" : healthy ? "success" : "warning";
 
     return {
       content: (
         <>
-          {/* THE ANSWER — one tile, the only one with a status colour. */}
+          {/* The status tile: the only element with a status colour. */}
           <Tile
             tone={tone}
             icon={healthy ? ShieldCheck : ShieldAlert}
@@ -430,7 +349,6 @@ export function SslSection({
               ) : null
             }
           >
-            {/* `tabular-nums` because a day count is data. */}
             {expiresOn || cert.expires_at_human ? (
               <p className="text-sm text-muted-foreground tabular-nums">
                 {expired
@@ -443,9 +361,7 @@ export function SslSection({
             ) : null}
           </Tile>
 
-          {/* THE NAMES — a bounded list with its own header and a count, so
-              "which of my domains are actually secured" is answered by
-              scanning one column rather than reading prose. */}
+          {/* The names, with a count. */}
           {names.length ? (
             <div className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
               <div className="flex items-center gap-2 border-b border-border/60 bg-muted/30 px-4 py-2.5">
@@ -459,22 +375,15 @@ export function SslSection({
               </div>
               <ul className="divide-y divide-border/60">
                 {names.map(({ domain, state }) => (
-                  // Left-grouped on purpose. `justify-between` on a 940px card
-                  // throws the name and its status to opposite edges with a
-                  // void between them; the group ends where its content ends.
+                  // Left-grouped, not justify-between, to avoid a wide gap.
                   <li key={domain} className="flex flex-wrap items-center gap-x-2.5 gap-y-1 px-4 py-2.5">
                     {state === "covered" ? (
                       <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden />
                     ) : (
                       <AlertCircle className="size-4 shrink-0 text-warning" aria-hidden />
                     )}
-                    {/* Wraps rather than truncates. `truncate` here hid the
-                        second half of every name at 390px — and the name is
-                        the one thing the row exists to tell you.
-                        The max-width keeps ~46px free on the last line so the
-                        open-site link stays beside the name instead of
-                        wrapping onto a line of its own. No effect on a desktop
-                        row, where the cap is 800px and a hostname is 250. */}
+                    {/* Wraps rather than truncates; the max-width leaves room
+                        for the visit link on the last line. */}
                     <span className="max-w-[calc(100%-4.5rem)] font-mono text-sm break-all">{domain}</span>
                     {state === "covered" ? (
                       <VisitSiteLink
@@ -494,7 +403,7 @@ export function SslSection({
             </div>
           ) : null}
 
-          {/* WHAT IS WRONG — as notes, not banners. */}
+          {/* Problems, as notes. */}
           {expired && cert.force_https ? (
             <Note tone="destructive" icon={ShieldAlert}>
               <p>{t("ssl.expiredForcedHttps")}</p>
@@ -519,9 +428,7 @@ export function SslSection({
                 </p>
               ) : null}
               {canManage && webServer ? (
-                /* Solid, like "Turn off Force HTTPS" in the note above: it is the
-                   fix for what the note reports, and an outline button on the
-                   red tint read as a washed-out grey box. */
+                /* Solid: it is the fix for what the note reports. */
                 <Button size="sm" className="w-fit" onClick={reloadWebServer} disabled={reloading}>
                   {reloading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
                   {t("ssl.reloadWebServer", { service: webServer })}
@@ -536,8 +443,7 @@ export function SslSection({
             </Note>
           ) : null}
 
-          {/* THE SETTING — its own tile, because it is a control the reader
-              changes rather than a fact the card is reporting. */}
+          {/* The Force HTTPS setting, in its own tile. */}
           {canManage ? (
             <div className="flex items-start gap-3 rounded-xl border border-border/60 bg-card p-4 shadow-sm">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
@@ -549,9 +455,7 @@ export function SslSection({
                   {t("ssl.forceHttpsHint")}
                 </span>
               </Label>
-              {/* A spinner beside it while the change is applied: a switch that
-                  only greys out reads as broken, which is when it gets pressed
-                  again. */}
+              {/* Shows a spinner while the change applies. */}
               <PendingSwitch
                 id="force-https"
                 checked={cert.force_https}
@@ -564,8 +468,7 @@ export function SslSection({
           ) : null}
         </>
       ),
-      // Both actions out in the open, in every state — a healthy certificate
-      // used to hide them behind a "Certificate options" menu.
+      // Both actions visible in every state.
       actions: !canManage ? null : (
         <>
           <Button
@@ -609,9 +512,8 @@ export function SslSection({
         onOpenChange={setIssueOpen}
         onIssued={(next) => {
           setCert(next);
-          // An uploaded certificate is active on arrival, so no poll ever
-          // settles to re-read the page — and the Domains tab (and the tab's
-          // padlock) kept saying "No SSL" until a manual refresh.
+          // An upload is active at once with no poll to settle, so refresh
+          // here to update the Domains tab and the tab icon.
           if (!isPending(next)) router.refresh();
         }}
         rateLimited={cert?.status === "failed" && NO_RETRY.has(cert.reason)}

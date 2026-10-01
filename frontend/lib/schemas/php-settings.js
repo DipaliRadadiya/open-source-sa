@@ -1,11 +1,8 @@
 import { z } from "zod";
 
 /**
- * PHP's own size vocabulary — `128M`, `1G`, `-1` for unlimited.
- *
- * A copy of `SavePhpSettingsRequest`'s rule, kept in PHP's units rather than
- * a number of megabytes so what someone types is what lands in the pool file
- * and they can read it back. Covered in `tests/backend-mirror.test.mjs`.
+ * PHP's own size vocabulary: `128M`, `1G`, `-1` for unlimited. A copy of
+ * `SavePhpSettingsRequest`'s rule; covered in `tests/backend-mirror.test.mjs`.
  */
 export const PHP_SIZE_PATTERN = /^(-1|\d+[KMG]?)$/i;
 
@@ -15,11 +12,8 @@ export const PM_TYPES = ["ondemand", "dynamic", "static"];
 export const MAX_CHILDREN = 100;
 
 /**
- * `256M` → bytes, mirroring `ApplicationPhpSettings::toBytes()`.
- *
- * `-1` counts as 128M rather than zero: unlimited cannot be budgeted, and
- * treating it as nothing would report a server full of unlimited pools as
- * comfortably empty.
+ * `256M` → bytes, mirroring `ApplicationPhpSettings::toBytes()`. `-1` counts
+ * as 128M rather than zero, so unlimited pools are not reported as empty.
  */
 export function phpSizeToBytes(value) {
   const trimmed = String(value ?? "").trim();
@@ -39,22 +33,16 @@ export function phpSizeToBytes(value) {
 
 /**
  * What this site could take at full tilt, mirroring
- * `ApplicationPhpSettings::memoryCeilingBytes()`.
- *
- * The API returns this figure too, but only for the SAVED settings — the whole
- * point of the budget bar is that it moves while someone is still deciding, so
- * the arithmetic has to exist on this side as well.
+ * `ApplicationPhpSettings::memoryCeilingBytes()`. The API only returns it for
+ * saved settings; the budget bar needs it for unsaved ones.
  */
 export function memoryCeilingBytes(memoryLimit, maxChildren) {
   return phpSizeToBytes(memoryLimit) * (Number(maxChildren) || 0);
 }
 
 /**
- * The budget with unsaved numbers folded in.
- *
- * `committed` from the API already includes this site's saved ceiling, so it
- * is taken back out before the proposed one goes in — otherwise every keystroke
- * would count the site twice.
+ * The budget with unsaved numbers folded in. `committed` already includes this
+ * site's saved ceiling, so it is subtracted before adding the proposed one.
  */
 export function budgetWith(memory, memoryLimit, maxChildren) {
   const total = memory?.total ?? 0;
@@ -74,9 +62,8 @@ export function budgetWith(memory, memoryLimit, maxChildren) {
 }
 
 /*
- * Stricter than the API, which takes anything PHP's syntax allows: a bare `64`
- * is 64 BYTES (PHP ignores it and falls back to 128M while this page kept
- * showing 64), `0` and `-1` switch the limit off, and nothing stopped 99999G.
+ * Stricter than the API: a bare `64` is 64 BYTES (PHP falls back to 128M),
+ * and `0`/`-1` switch the limit off.
  */
 const sizeWithUnit = z
   .string()
@@ -98,9 +85,8 @@ export const applicationPhpSchema = z
     isolated_at: z.string().nullish(),
     isolation_supported: z.boolean().default(true),
     runs_as: z.string().nullish(),
-    // False when the pool file no longer matches what the panel would write —
-    // someone edited it by hand, and saving would overwrite their work. Null
-    // when the panel could not read the pool file to check.
+    // False when the pool file was hand-edited (saving would overwrite it);
+    // null when the pool file could not be read.
     managed: z.boolean().nullable().default(true),
     settings: z
       .object({
@@ -115,8 +101,8 @@ export const applicationPhpSchema = z
         pm_max_children: z.number().default(5),
         pm_max_requests: z.number().default(500),
         open_basedir_enabled: z.boolean().default(false),
-        // Only the paths the user ADDED. The three the backend always prepends
-        // (app root, this site's sessions, /tmp) are not in here.
+        // Only the user-added paths; the backend always prepends app root,
+        // this site's sessions and /tmp.
         open_basedir_paths: z.string().nullish(),
         disable_functions: z.string().nullish(),
         allow_url_fopen: z.boolean().default(true),
@@ -125,11 +111,9 @@ export const applicationPhpSchema = z
         additional_directives: z.string().nullish(),
       })
       .passthrough(),
-    // True for each directive this site has explicitly set; false means the
-    // value in `settings` is the panel default showing through. The client
-    // cannot work this out for itself — an inherited value and an override that
-    // happens to equal the default look identical — so it is the only thing
-    // that makes "Reset to default" possible.
+    // True for each directive explicitly set; false means the panel default
+    // shows through. Needed for "Reset to default", since an override equal to
+    // the default looks identical.
     overridden: z.record(z.string(), z.boolean()).default({}),
     presets: z
       .array(
@@ -157,28 +141,21 @@ export const applicationPhpSchema = z
      *
      * `effective`   — what the panel would write from the stored row. Null when
      *                 the setting is off.
-     * `live`        — what the pool file on disk actually says, READ not
-     *                 derived. Null means the panel could not find out (no pool
-     *                 file, or the pool sets nothing) — which is not the same
-     *                 as "no restriction" and must never render as one.
-     * `recommended` — the whole value you would get by turning it on and adding
-     *                 nothing. Note this is the RESULT, not a value to paste
-     *                 into the paths box: the box holds extras only.
+     * `live`        — what the pool file on disk actually says. Null means it
+     *                 could not be determined, never "no restriction".
+     * `recommended` — the full value from enabling it with no extras; not a
+     *                 value to paste into the paths box (extras only).
      *
-     * `live` differing from `effective` means PHP is enforcing something other
-     * than what this screen says — someone hand-edited the pool, or put their
-     * own `open_basedir` in the additional-directives box, where it lands after
-     * ours and wins.
+     * `live` differing from `effective` means the pool was hand-edited or the
+     * additional directives set their own `open_basedir`, which wins.
      */
     open_basedir_effective: z.string().nullish(),
     open_basedir_live: z.string().nullish(),
     open_basedir_recommended: z.string().nullish(),
 
     suggested_disable_functions: z.string().default(""),
-    // Starting points for `disable_functions`, safest first, titles and
-    // descriptions already localised by the API. Read this rather than the
-    // flat `suggested_disable_functions` above — a third preset should not
-    // need a frontend change.
+    // `disable_functions` starting points, safest first, localized by the API.
+    // Prefer this over `suggested_disable_functions`.
     disable_functions_presets: z
       .array(
         z.object({
@@ -195,11 +172,8 @@ export const applicationPhpSchema = z
 export const applicationPhpResponseSchema = z.object({ php: applicationPhpSchema });
 
 /**
- * The form, mirroring `SavePhpSettingsRequest`.
- *
- * Every bound here is the backend's own. They are repeated rather than
- * discovered from a 422 because a number this screen accepts and the server
- * refuses is a round trip that teaches nothing.
+ * The form, mirroring `SavePhpSettingsRequest`. Every bound is the backend's
+ * own, repeated so values are refused before a 422.
  */
 export const phpSettingsFormSchema = z.object({
   php_version: z.string().min(1, "requiredField"),
@@ -215,12 +189,8 @@ export const phpSettingsFormSchema = z.object({
   pm_max_requests: z.coerce.number().int("integer").min(0, "rangeMaxRequests").max(100000, "rangeMaxRequests"),
   open_basedir_enabled: z.boolean().default(false),
   /**
-   * Extra folders, one per line. The rules are the backend's own
-   * (`SavePhpSettingsRequest`), repeated here so nobody learns them from a 422:
-   * absolute only (a relative path resolves against the worker's working
-   * directory, which nobody can see), never bare `/` (that allows everything,
-   * so the pool would claim open_basedir is on while enforcing nothing), and no
-   * `..`.
+   * Extra folders, one per line (backend rules, `SavePhpSettingsRequest`):
+   * absolute only, never bare `/` (would allow everything), and no `..`.
    */
   open_basedir_paths: z
     .string()
@@ -246,8 +216,7 @@ export const phpSettingsFormSchema = z.object({
       }
     })
     .default(""),
-  // A comma-separated list of function names and nothing else: it lands in the
-  // pool file verbatim.
+  // Function names and commas only: it lands in the pool file verbatim.
   disable_functions: z
     .string()
     .trim()
@@ -263,18 +232,15 @@ export const phpSettingsFormSchema = z.object({
     // `not_regex:/\.\./` on the backend.
     .refine((value) => !value.includes(".."), "pathNoTraversal")
     .default(""),
-  // Ini, so newlines are fine; a `[section]` header is not — it would start a
-  // second pool inside this file.
+  // Ini, so newlines are fine; a `[section]` header would start a second pool.
   additional_directives: z
     .string()
     .trim()
     .max(4000, "max4000")
     .refine((value) => !/^\s*\[/m.test(value), "noSections")
     /*
-     * PHP settings only. A pool line went through: `user = root` stopped PHP
-     * 7.4 for every site on it, and `user = <another site>` ran this site's
-     * code as that site. A bare `short_open_tag = On` failed with nothing but
-     * "PHP-FPM rejected the configuration" — this says the form it needs.
+     * PHP settings only: a pool line such as `user = root` or another site's
+     * user would change who the pool runs as.
      */
     .refine(
       (value) =>
@@ -288,15 +254,13 @@ export const phpSettingsFormSchema = z.object({
 });
 
 /**
- * The form's rules that need the server: memory no larger than the machine has,
- * and a POST limit that fits the largest upload (a smaller one refuses every
- * upload between the two, with PHP's empty-$_POST failure nobody can read).
+ * The form's rules that need the server: memory no larger than the machine
+ * has, and a POST limit at least the upload limit (PHP otherwise drops $_POST).
  */
 export function phpSettingsFormSchemaFor(totalMemoryBytes = 0, applicationPath = "") {
   const root = String(applicationPath ?? "").replace(/\/+$/, "");
   return phpSettingsFormSchema.superRefine((values, ctx) => {
-    // PHP runs this file at the top of every page, for every visitor: an
-    // absolute path anywhere on the server printed a system file on the site.
+    // PHP runs this file on every request; keep it inside the site.
     const prepend = values.auto_prepend_file ?? "";
     if (prepend.startsWith("/") && (!root || !prepend.startsWith(`${root}/`))) {
       ctx.addIssue({ code: "custom", path: ["auto_prepend_file"], message: "prependOutsideSite" });

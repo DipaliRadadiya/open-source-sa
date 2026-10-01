@@ -9,14 +9,9 @@ function Input({
   ...props
 }) {
   const inheritedReason = useDisabledReason();
-  // 14px everywhere, 16px on iOS only (`ios:` — see globals.css). This used to
-  // be 16px on every phone, which left an input visibly larger than the label
-  // above it and the select beside it, both of which are 14px. Only iOS charges
-  // for going under 16px, so only iOS pays.
-  //
-  // placeholder:text-sm keeps the resting text at 14px where the field is 16px;
-  // Safari's zoom keys off the input's own font-size, and ::placeholder is a
-  // separate element.
+  // 14px everywhere, 16px on iOS only (`ios:`, see globals.css) to avoid
+  // Safari's focus zoom. placeholder:text-sm keeps placeholders at 14px: the
+  // zoom keys off the input's font-size, not ::placeholder.
   const control = (
     <input
       type={type}
@@ -30,9 +25,7 @@ function Input({
     />
   );
 
-  // A parent already showing a tooltip over this area wins — two bubbles for
-  // one control is worse than none. A parent that only SUPPLIES a reason does
-  // not, so the control renders it as its own.
+  // A parent already showing a tooltip here wins, to avoid two bubbles.
   if (disabled && inheritedReason?.handled && !disabledReason) return control;
 
   return (

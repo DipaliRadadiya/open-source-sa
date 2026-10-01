@@ -1,6 +1,5 @@
-// Shared byte-rate formatting for the metrics charts. Units are technical
-// tokens and stay untranslated; only the number is localized, so pass a
-// next-intl formatter (useFormatter/getFormatter) as `format`.
+// Byte-rate formatting for the metrics charts. Units stay untranslated; pass a
+// next-intl formatter (useFormatter/getFormatter) as `format` for the number.
 
 const RATE_UNITS = ["B/s", "KB/s", "MB/s", "GB/s", "TB/s"];
 
@@ -19,7 +18,7 @@ export function scaleRate(value) {
 
 /**
  * "1.4 MB/s" with locale-aware decimals. Whole bytes and values >= 10 render
- * without a fraction — an axis tick reading "1,024 B/s" needs no ".0".
+ * without a fraction.
  */
 export function formatRate(value, format) {
   const scaled = scaleRate(value);
@@ -34,17 +33,12 @@ export function formatRate(value, format) {
 }
 
 /**
- * Human byte size — "212 MB". Locale-formatted by the caller, so pass a
- * next-intl formatter. Returns null for anything that is not a byte count, so
- * a missing value renders as a dash rather than "NaN B".
+ * Human byte size — "212 MB". Pass a next-intl formatter. Returns null for
+ * anything that is not a byte count, so a missing value is not "NaN B".
  */
 export function formatBytes(bytes, format) {
-  // Nullish and "" are rejected before Number() sees them, because it turns all
-  // three into 0 — finite, non-negative, and therefore "0 B". So "we have not
-  // measured this yet" rendered as "this is empty": the sites list showed 0 B on
-  // every row of a server whose sizes were all null, and its own
-  // "Not measured" branch could never be reached. The Number.isFinite guard
-  // below was written to catch exactly this and cannot.
+  // Reject nullish and "" first: Number() turns them into 0, so "not measured"
+  // would render as "0 B".
   if (bytes === null || bytes === undefined || bytes === "") return null;
 
   const n = Number(bytes);

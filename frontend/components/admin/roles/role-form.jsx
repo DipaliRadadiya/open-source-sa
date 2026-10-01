@@ -34,9 +34,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-// The role's own grants, keyed the way the matrix reads them. `access` is
-// what the API sends now; the schema fills it in from the old boolean pair
-// when an older backend omits it, so only one shape reaches here.
+// The role's grants keyed the way the matrix reads them. The schema derives
+// `access` from the old boolean pair when an older backend omits it.
 function seedMatrix(role) {
   const value = {};
   for (const entry of role?.permissions ?? []) {
@@ -69,8 +68,7 @@ export function RoleForm({ mode = "create", role, catalog }) {
     (item) => (matrix[permKey(item.level, item.name)] ?? ACCESS_NONE) !== ACCESS_NONE,
   ).length;
 
-  // A stable fingerprint of the granted permissions, so we can tell whether the
-  // matrix drifted from what we loaded.
+  // Fingerprint of the granted permissions, to detect changes from what was loaded.
   const canonMatrix = (m) =>
     permissions
       .map((i) => `${i.level}:${i.name}:${m[permKey(i.level, i.name)] ?? ACCESS_NONE}`)
@@ -91,8 +89,8 @@ export function RoleForm({ mode = "create", role, catalog }) {
   }
 
   async function onSubmit(values) {
-    // One access level per permission, not a boolean pair — the pair could
-    // express a state the server does not store.
+    // One access level per permission; a boolean pair could express a state the
+    // server does not store.
     const payload = {
       name: values.name,
       description: values.description || null,
@@ -107,8 +105,7 @@ export function RoleForm({ mode = "create", role, catalog }) {
       if (isEdit) await updateRole(role.id, payload);
       else await createRole(payload);
       setJustSubmitted(true);
-      // The list first, then the toast: pushing and toasting together left
-      // this form up, saying "saved", for the length of the server render.
+      // Navigate first, then toast, so the form is not left up saying "saved".
       await pushAndWait("/admin/roles");
       toast.success(isEdit ? t("toast.updated") : t("toast.created"));
     } catch (error) {

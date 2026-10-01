@@ -2,11 +2,9 @@ import { z } from "zod";
 import { listMetaSchema } from "./list.js";
 
 /**
- * A site's `.env`, returned in three shapes at once: `raw` (the file text — the
- * only field that carries secret values, so it is what the editor shows),
- * parsed `variables` (value `null` for secrets), and `checks` that judge the
- * file. The two `requires_*` flags say why a save might look like it did
- * nothing, so the Save button can name what it will actually do.
+ * A site's `.env` in three shapes: `raw` (the file text, the only field with
+ * secret values, shown in the editor), parsed `variables` (secrets `null`),
+ * and `checks`. The `requires_*` flags let Save name what it will actually do.
  */
 export const envCheckSchema = z
   .object({
@@ -47,14 +45,9 @@ export const environmentResponseSchema = z.object({
 });
 
 /**
- * One change to the file: who made it, when, which key names, and whether the
- * version it replaced is still on disk.
- *
- * No value from the file appears here and none should ever be added — the whole
- * reason this screen is permission-gated is that those are secrets, and Zod
- * strips what it is not told about, so a field added to the API without being
- * added here would silently never arrive. That is the desired direction for
- * this particular payload.
+ * One change to the file: who, when, which key names, and whether the replaced
+ * version is still on disk. Never add a value from the file here: those are
+ * secrets, and Zod stripping undeclared fields is the desired safety net.
  */
 export const envHistoryEntrySchema = z
   .object({
@@ -69,15 +62,14 @@ export const envHistoryEntrySchema = z
     created_at: z.string().nullish(),
     created_at_human: z.string().nullish(),
     backup: z.string().nullish(),
-    // Required, not defaulted: a missing value would default to false and
-    // disable every Restore button with no error anywhere.
+    // Required, not defaulted: a default of false would silently disable every
+    // Restore button.
     restorable: z.boolean(),
   })
   .passthrough();
 
 export const envHistoryResponseSchema = z.object({
   history: z.array(envHistoryEntrySchema).default([]),
-  // Twenty rows a page. Without it the card showed the newest twenty and
-  // nothing said there were more.
+    // Twenty rows a page; needed to show that more exist.
   meta: listMetaSchema.nullish(),
 });

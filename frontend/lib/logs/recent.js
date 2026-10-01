@@ -1,13 +1,10 @@
-// The API writes these with PHP's date() in the app timezone, UTC. Read as a
-// wall clock in the browser's zone, "recent" came out differently on the
-// server render and in an Indian or American browser, and React threw away
-// the page's HTML over the mismatch.
+// The API writes these in UTC with no zone; parse as a wall clock in UTC so
+// server and browser renders agree (avoids a hydration mismatch).
 export { parseApiWallClock as parseModified } from "../format/api-date.js";
 import { parseApiWallClock as parseModified } from "../format/api-date.js";
 
-// "Written to within the last few minutes" is the question the rail should
-// answer at a glance — a relative timestamp answers it worse and costs a
-// quarter of the row's width.
+// "Written to within the last few minutes", shown as a marker rather than a
+// relative timestamp.
 export const ACTIVE_WINDOW_MS = 5 * 60 * 1000;
 
 export function isRecentlyActive(modified, now = Date.now()) {

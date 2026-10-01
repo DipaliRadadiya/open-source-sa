@@ -4,19 +4,8 @@ import { HardDrive, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /**
- * When the place the backups go is broken, say so here.
- *
- * This is the failure mode the whole feature is most exposed to and the one
- * the screens said nothing about: a key gets rotated or a bucket gets deleted,
- * every nightly run fails from that moment, and the first anyone hears of it
- * is a column of red rows days later — or the day they need a restore.
- *
- * Only destinations that something actually depends on are reported. A broken
- * destination nobody has pointed a schedule at is not urgent, and warning
- * about it here would train people to ignore this banner.
- *
- * Never-tested counts. It is not a failure, but it is the state most likely to
- * become one at 2am, and treating "untested" as "fine" is how it gets there.
+ * Warns when a destination that backups depend on is failing or never tested.
+ * Unused destinations are ignored so the banner stays meaningful.
  */
 export function DestinationHealth({ destinations, inUse }) {
   const t = useTranslations("backups.destinationHealth");
@@ -34,9 +23,8 @@ export function DestinationHealth({ destinations, inUse }) {
 
   return (
     <div
-      // Stacks below `sm`. As a wrapping row the text column carried
-      // `flex-1 min-w-0`, so it shrank to nothing rather than wrapping the
-      // BUTTON — one word per line beside a button that never moved.
+      // Stacks below `sm`; a wrapping row squeezed the `flex-1 min-w-0` text to
+      // one word per line instead of wrapping the button.
       data-slot="notice"
           className={`flex flex-col items-start gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:gap-4 ${
         broken ? "border-destructive/30 bg-destructive/5" : "border-warning/30 bg-warning/5"
@@ -54,8 +42,7 @@ export function DestinationHealth({ destinations, inUse }) {
         <p className="font-semibold tracking-tight">
           {broken ? t("failedTitle", { count: failed.length }) : t("untestedTitle", { count: untested.length })}
         </p>
-        {/* Naming them matters: with several destinations configured, "one is
-            failing" sends someone to check all of them. */}
+        {/* Names them, so not every destination has to be checked. */}
         <p className="text-sm text-muted-foreground">
           {broken
             ? t("failedBody", { names: list.map((d) => d.name).join(", ") })

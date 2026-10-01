@@ -17,9 +17,8 @@ function joinPath(base, name) {
   return base ? `${base}/${name}` : name;
 }
 
-// There's no "create an empty text file" endpoint — upload is documented as
-// the thing allowed to create a new file, so this is a real empty blob
-// through the same call Upload uses, not a shortcut around anything.
+// There is no "create empty file" endpoint; upload is the documented way to
+// create a file, so this uploads an empty blob.
 export function NewFileDialog({ appId, path, open, onOpenChange, onSuccess }) {
   const t = useTranslations("applications.files");
   const { pending: refreshing, refreshThen } = useRefresh();
@@ -45,8 +44,7 @@ export function NewFileDialog({ appId, path, open, onOpenChange, onSuccess }) {
       if (pathError) {
         form.setError("name", { message: pathError });
       } else if ([404, 409, 422].includes(error.response?.status)) {
-        // A refusal with no field key (a name that is taken) still belongs
-        // on the field, not in a toast beside a dialog that stays open.
+        // A refusal with no field key (a taken name) still belongs on the field.
         form.setError("name", { message: apiMessage(error, t("newFile.failed")) });
       } else {
         toast.error(apiMessage(error, t("newFile.failed")));

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // Sentinel for "run as an OS account the panel doesn't manage" (root, www-data).
-// The API takes system_user_id XOR username; this drives which one we send.
+// The API takes system_user_id XOR username; this decides which one is sent.
 export const OTHER_USER = "__other__";
 
 const PATH_TOKEN = "{path}";
@@ -12,16 +12,12 @@ const linuxUsername = z
   .trim()
   .regex(/^[a-z_][a-z0-9_-]{0,31}$/, "linuxUsername");
 
-// 5-field cron, or a macro like @daily. The backend owns the real parse — this
-// just catches obvious typos before a round-trip.
-// No "@reboot". It is the one macro the backend's parser refuses
-// (dragonmantank/cron-expression returns false for it while accepting the
-// other seven), so advertising it here only bought a round trip and a 422.
+// 5-field cron, or a macro like @daily. The backend owns the real parse.
+// No "@reboot": the backend's parser (dragonmantank/cron-expression) refuses it.
 const CRON_MACROS = ["@yearly", "@annually", "@monthly", "@weekly", "@daily", "@midnight", "@hourly"];
-// What Linux cron itself reads in each field: a number, *, a 3-letter month or
-// day name, a range, a step, comma-separated. The API's parser also takes L, W,
-// ? and # ("last day", "2nd Monday") — cron refuses that line and ignores the
-// whole file, so the job would never run while the panel showed a next run.
+// What Linux cron itself reads in each field: a number, *, a 3-letter name, a
+// range, a step, comma-separated. The API's parser also takes L, W, ? and #,
+// but cron rejects the line and ignores the whole file.
 const CRON_TOKEN = /^(\*|\d+|[a-z]{3})(-(\d+|[a-z]{3}))?(\/\d+)?$/i;
 const isMacro = (v) => CRON_MACROS.includes(v.toLowerCase());
 const expressionField = z
@@ -42,8 +38,8 @@ const commandField = z
   .refine((v) => !/[\r\n]/.test(v), "noLineBreaks")
   // Preset commands ship with a {path} placeholder; the API 422s if it survives.
   .refine((v) => !v.includes(PATH_TOKEN), "unresolvedPath")
-  // The panel appends its own logging after the command, so a `# note` at the
-  // end comments that out too: the job looked saved and its log stayed empty.
+  // The panel appends its own logging after the command, so a trailing
+  // `# note` would comment that out.
   .refine((v) => !hasShellComment(v), "cronTrailingComment");
 
 /**
@@ -77,11 +73,9 @@ export function hasShellComment(command) {
 }
 
 /*
- * Each job is a file in /etc/cron.d named after it, so a name can land on a
- * file that is already there: "panel-scheduler" replaced the panel's own
- * scheduler, and deleting the job deleted it. `RESERVED` is the backend's
- * `NotReservedCronFile` list; the panel-* names are the panel's own files,
- * which that list does not include yet.
+ * Each job is a file in /etc/cron.d named after it, so a name must not land on
+ * an existing file. Mirrors the backend's `NotReservedCronFile` list; panel-*
+ * names (the panel's own files) are refused too.
  */
 const RESERVED_CRON_FILES = [
   "php", "e2scrub_all", "sysstat", "anacron", "certbot", "mdadm",
@@ -125,15 +119,13 @@ export const createCronjobSchema = z
     (d) => d.run_as !== OTHER_USER || linuxUsername.safeParse(d.username ?? "").success,
     { message: "linuxUsername", path: ["username"] },
   )
-  // A cron job is a way to run any command; as root that is the whole server
-  // for anyone who can manage cron jobs.
+  // As root, a cron job is the whole server for anyone who can manage cron jobs.
   .refine(
     (d) => d.run_as !== OTHER_USER || (d.username ?? "").trim() !== "root",
     { message: "cronRootRefused", path: ["username"] },
   );
 
-// Run-as is editable: the API re-points the job at the new account, checking
-// it exists exactly as create does.
+// Run-as is editable: the API re-points the job and validates the account as on create.
 export const updateCronjobSchema = createCronjobSchema;
 
 const systemUserRef = z.object({ id: z.number(), username: z.string() });
@@ -141,23 +133,20 @@ const systemUserRef = z.object({ id: z.number(), username: z.string() });
 export const cronjobSchema = z.object({
   id: z.number(),
   name: z.string(),
-  // Nullable in the table and raw in the resource: a job adopted by the sync
-  // before it had a slug would have taken the whole cron list down.
+  // Nullable: jobs adopted by sync may have no slug.
   slug: z.string().nullish(),
   username: z.string(),
   system_user: systemUserRef.nullable().optional(),
   command: z.string(),
   expression: z.string(),
   active: z.boolean(),
-  // The server's zone, not the viewer's: cron runs against the OS clock, so the
-  // time only means anything paired with the zone it was computed in.
+  // The server's zone, not the viewer's: cron runs on the OS clock.
   timezone: z.string().optional(),
-  // null for a paused job — an inactive schedule has no next run.
+  // null for a paused job: an inactive schedule has no next run.
   next_run_at: z.string().nullable().optional(),
   next_run_at_human: z.string().nullable().optional(),
-  // Key into the Logs endpoints for this job’s captured output. Null until the
-  // job has been saved with output capture — show “nothing captured yet” rather
-  // than opening an empty viewer.
+  // Key into the Logs endpoints for this job's output. Null until saved with
+  // output capture; show "nothing captured yet" instead of an empty viewer.
   log_key: z.string().nullable().optional(),
   created_at: z.string().optional(),
   created_at_human: z.string().optional(),

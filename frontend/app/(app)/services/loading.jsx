@@ -1,8 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableSkeleton } from "@/components/data-table/table-skeleton";
 
-// Heading, the checked-at line and refresh button on the right, then the
-// services table — the same shape the real page settles into.
 export default function Loading() {
   return (
     <div className="space-y-6">

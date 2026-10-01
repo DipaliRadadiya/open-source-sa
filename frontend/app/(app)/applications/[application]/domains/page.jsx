@@ -36,8 +36,7 @@ export default async function ApplicationDomainsPage({ params }) {
   ]);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
-  // The site is gone. Land on the list — the only place left to go — and say
-  // why on arrival, rather than parking on a dead end that offers one link.
+  // Site deleted: land on the list and explain why via ?gone=1.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
@@ -51,15 +50,13 @@ export default async function ApplicationDomainsPage({ params }) {
   const [domainList, certificate, capabilities] = await Promise.all([
     settled ? getApplicationDomains(id) : Promise.resolve({ domains: [], failed: false }),
     settled ? getApplicationCertificate(id) : Promise.resolve({ certificate: null, availableTypes: [], failed: false }),
-    // The A-record target for unverified domains. The server states its own
-    // address; null (a role that cannot read it) falls back to generic guidance.
+    // A-record target for unverified domains; null (role cannot read it) falls back
+    // to generic guidance.
     settled ? getServerCapabilities().catch(() => null) : Promise.resolve(null),
   ]);
 
-  // What the SITE can be issued, per the server — not what its domains resolve
-  // to. A nip.io or internal name cannot get Let's Encrypt but can absolutely
-  // have a self-signed certificate, and deriving this from the domains alone
-  // told those sites they could have no SSL at all.
+  // What the site can be issued, per the server, not derived from its domains:
+  // a nip.io or internal name cannot get Let's Encrypt but can get self-signed.
   const availableTypes = certificate.availableTypes ?? [];
   const certifiable = availableTypes.length
     ? availableTypes.some((entry) => entry.available)
@@ -67,15 +64,8 @@ export default async function ApplicationDomainsPage({ params }) {
   const serverIp = capabilities?.serverIp ?? null;
 
   const cert = certificate.certificate;
-  /*
-   * A failed certificate read is not "this site has no certificate".
-   *
-   * `!cert` covered both, so a 500 on `GET /applications/{id}/certificate`
-   * rendered "Not secured — this site is served over plain HTTP" with an
-   * Enable HTTPS button, on a site holding a live certificate. The fetcher's
-   * own comment says these two answers must stay apart; this page read only
-   * `domainList.failed` and never `certificate.failed`.
-   */
+  /* A failed certificate read is not "no certificate": keep `certificate.failed`
+     apart from `!cert`, or a 500 renders "Not secured" on a site with live HTTPS. */
   const sslStatus = certificate.failed
     ? "unknown"
     : !cert
@@ -112,11 +102,8 @@ export default async function ApplicationDomainsPage({ params }) {
               serverIp={serverIp}
               secured={sslStatus === "active"}
               siteType={application.site_type}
-              // Adding a name to a site that already has HTTPS has a
-              // consequence the Add form is the last place to mention it: the
-              // new name is served on 443 by the existing certificate, which
-              // does not cover it. The dialog needs the certificate's type to
-              // give the right advice, not just whether one exists.
+              // A new name on an HTTPS site is served by the existing certificate, which does
+              // not cover it; the dialog needs the certificate type to advise correctly.
               certificate={cert}
             />
           }

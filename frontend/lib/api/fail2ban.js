@@ -5,18 +5,16 @@ export function getFail2ban({ signal } = {}) {
 }
 
 /**
- * Queued — apt is slow, so this returns 202 and the caller polls `GET /fail2ban`
- * until `installed` flips. Nothing is enabled by the install: a fail2ban that
- * started banning the moment it appeared would be a nasty surprise.
+ * Queued: returns 202 and the caller polls `GET /fail2ban` until `installed`
+ * flips. The install enables no jails.
  */
 export function installFail2ban() {
   return api.post("/fail2ban/install");
 }
 
 /**
- * Settings, ignore list and jail toggles in one call, because they all live in
- * one file that is rewritten whole. A jail you omit keeps its current state, so
- * a single toggle can be sent on its own without touching the others.
+ * Settings, ignore list and jail toggles in one call (one file rewritten
+ * whole). Omitted jails keep their current state.
  *
  * `acknowledged` is only needed to enable a lockout-risk jail without the
  * caller's own IP on the ignore list.
@@ -36,10 +34,7 @@ export function unbanIp(ip, jail) {
   });
 }
 
-/**
- * Release every ban. This exists for one moment — an office or VPN range banned
- * by mistake — where unbanning rows one at a time is not what's called for.
- */
+/** Release every ban (e.g. an office or VPN range banned by mistake). */
 export function unbanAll() {
   return api.delete("/fail2ban/bans");
 }

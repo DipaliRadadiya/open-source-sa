@@ -32,16 +32,13 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 /**
- * Who changed this application's `.env`, when, and what they touched.
+ * Who changed this application's `.env`, when, and which keys.
  *
- * The list itself carries key names only. Values are one click further in, and
- * only for a `manage` user — they come off the backup files on demand, never
- * out of the activity log, which is append-only, unpruned, and rendered by an
- * admin-wide screen with different permissions than this one.
+ * The list carries key names only. Values are loaded on demand from the backup
+ * files, for `manage` users only, never from the activity log (which is
+ * unpruned and visible under different permissions).
  *
- * Restoring from a row puts the file back to what it was *before* that change,
- * which is why each row carries its own backup name. The alternative, and what
- * this replaces, was a list of filenames to match against a log by timestamp.
+ * Restoring a row puts the file back to its state *before* that change.
  */
 export function EnvironmentHistoryCard({
   appId,
@@ -49,31 +46,21 @@ export function EnvironmentHistoryCard({
   meta = null,
   failed = false,
   canManage = false,
-  /*
-   * Whether this site runs a process that holds its environment in memory.
-   *
-   * The editor's own restore dialog has always offered a restart checkbox for
-   * these sites; this card — the same endpoint, the same action — sent no flag
-   * and told the reader "The application keeps running with the restored
-   * values." On a Node site that was simply untrue: the process kept running
-   * with the OLD ones. Two doors to one action cannot tell different stories.
-   */
+  // The process holds its environment in memory, so a restore needs a
+  // restart to take effect; offers the same checkbox as the editor's dialog.
   requiresRestart = false,
 }) {
   const t = useTranslations("applications.environment.history");
-  // The restart control reuses the editor dialog's strings, which live one
-  // level up — so there is one sentence describing what restarting does.
+  // Restart strings are shared with the editor's restore dialog.
   const tEnv = useTranslations("applications.environment");
   const { pending: refreshing, refreshThen } = useRefresh();
   const [pending, setPending] = useState(null);
   const [busy, setBusy] = useState(false);
-  // Off by default, matching the editor's dialog: restarting is a visible
-  // interruption and should be asked for, not assumed.
+  // Off by default, matching the editor's dialog.
   const [restart, setRestart] = useState(false);
 
   // Pages after the first, fetched on request. Dropped when the first page
-  // changes (a save or restore just added a row): every row then shifts one
-  // place, and keeping them would hide the row that moved onto page two.
+  // changes, since every row shifts and one would otherwise be hidden.
   const [older, setOlder] = useState({ from: entries, rows: [], page: 1, last: meta?.last_page ?? 1 });
   const [loadingOlder, setLoadingOlder] = useState(false);
   if (older.from !== entries) {
@@ -102,9 +89,7 @@ export function EnvironmentHistoryCard({
     setBusy(true);
     try {
       await restoreEnvironment(appId, { backup: pending.backup, restart });
-      // A refresh, not local state: the restore changed the file the editor
-      // above is showing. Closed once it has landed — closing first left the
-      // old text in the editor for a second under "restored".
+      // Refresh so the editor shows the restored file; close only once it lands.
       refreshThen(() => {
         toast.success(t("restored"));
         setPending(null);
@@ -127,9 +112,7 @@ export function EnvironmentHistoryCard({
         <CardDescription>{t("subtitle")}</CardDescription>
       </CardHeader>
       <CardContent>
-        {/* A history that could not be read is not an empty history. Saying
-            "no changes yet" here would be a confident lie about an audit
-            trail, which is worse than admitting the read failed. */}
+        {/* A failed read must not render as "no changes yet". */}
         {failed ? (
           <p className="text-sm text-muted-foreground">{t("loadFailed")}</p>
         ) : !entries?.length ? (
@@ -160,8 +143,7 @@ export function EnvironmentHistoryCard({
         onOpenChange={(next) => {
           if (next) return;
           setPending(null);
-          // Cleared on close so a checkbox ticked and then abandoned does not
-          // silently apply to the next restore.
+          // Cleared so an abandoned tick does not apply to the next restore.
           setRestart(false);
         }}
         icon={RotateCcw}
@@ -172,9 +154,7 @@ export function EnvironmentHistoryCard({
         pending={busy || refreshing}
         onConfirm={confirmRestore}
       >
-        {/* Same control, same strings as the editor's restore dialog — one
-            wording for one decision. Only shown when the site actually has a
-            process to restart. */}
+        {/* Same control and strings as the editor's restore dialog. */}
         {requiresRestart ? (
           <div className="flex items-start gap-2.5 rounded-lg border p-3">
             <Checkbox
@@ -197,20 +177,14 @@ export function EnvironmentHistoryCard({
   );
 }
 
-/*
- * One change, as a line on a timeline: who, what in one sentence, when, and
- * the two things you can do about it. It used to be a stack of five loose
- * lines — actor, a sentence, a timestamp, a ghost "Show values", and a box
- * repeating the sentence — with the Restore button floating on its own.
- */
+/* One change as a timeline entry: who, what, when, and its actions. */
 function HistoryRow({ appId, entry, canManage, onRestore }) {
   const t = useTranslations("applications.environment.history");
   const actor = actorOf(entry);
   const keys = changedKeys(entry);
   const blocked = unrestorableReason(entry);
   const restored = entry.action === "environment_restored";
-  // A save that touched no variable has no values to show: the diff would
-  // only repeat the sentence already on the row.
+  // A save that touched no variable has no values to show.
   const noKeys = !restored && keys.length === 0;
   const diff = useEnvironmentDiff(appId, entry);
   const canShowValues = canManage && blocked !== "pruned" && !noKeys;
@@ -256,9 +230,7 @@ function HistoryRow({ appId, entry, canManage, onRestore }) {
             <p className="text-xs text-muted-foreground" title={entry.created_at ?? undefined}>
               {entry.created_at_human}
             </p>
-            {/* With the sentence, not under the buttons: on a phone the
-                buttons wrap below this column, and the keys belong to the
-                sentence that counts them. */}
+            {/* Inside this column so on a phone the keys stay with the sentence, above the wrapped buttons. */}
             {keys.length ? (
               <div className="flex flex-wrap gap-1.5 pt-1.5">
                 {keys.map((key) => (
@@ -309,10 +281,8 @@ function HistoryRow({ appId, entry, canManage, onRestore }) {
           </div>
         </div>
 
-        {/* Values live behind a click, and only for people who could already
-            read them by restoring a backup — it reads the same file. Offered
-            for a first save too, where the diff is "everything was added";
-            hidden when the backup is pruned and there is nothing to compare. */}
+        {/* Values only for `manage` users (who could read them by restoring
+            anyway); unavailable once the backup is pruned. */}
         {canShowValues && diff.open ? <EnvironmentDiff state={diff} /> : null}
       </div>
     </li>

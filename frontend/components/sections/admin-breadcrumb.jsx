@@ -15,11 +15,8 @@ import {
 } from "@/components/ui/breadcrumb";
 
 /**
- * The admin panel's trail, lifted out of the header bar.
- *
- * It was inline in `AdminHeader`; it now sits at the top of the page content
- * like the server panel's does, so the two panels read the same way — including
- * a root that is a link rather than a label.
+ * The admin panel's trail, at the top of the page content like the server
+ * panel's, with a root that is a link.
  */
 export function AdminBreadcrumb() {
   const pathname = usePathname();

@@ -2,18 +2,11 @@ import { Check, CircleAlert, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * The ringed list of steps a long job has finished, plus a live row for the one
- * it is on.
+ * The ringed list of steps a long job has finished, plus a live row for the
+ * current one. Shared by provisioning and deploying (same `steps[]` field).
  *
- * Shared by provisioning and by deploying because they are the same question —
- * "is my thing being built?" — answered from the same `steps[]` field. The
- * deploy card used to lay them out in two columns, which turned a sequence into
- * something you read down the left in the wrong order.
- *
- * Only completed steps get a row. The API reports what *finished*, never what
- * started, and which steps run at all depends on the site — a deploy script
- * only if one is set, workers only if there are any — so a greyed-out list of
- * what is still to come would sometimes be a list of things that never happen.
+ * Only completed steps get a row: the API reports what finished, never what
+ * started, and which steps run depends on the site.
  */
 function Marker({ tone, children }) {
   return (
@@ -39,14 +32,12 @@ export function StepList({
   label,
   className,
 }) {
-  // The API's list ends with the step that failed, so without this it was
-  // drawn twice — ticked as done, then again in red.
+  // The API's list ends with the failed step; drop it so it is not drawn twice.
   const done =
     failedStep && steps[steps.length - 1] === failedStep ? steps.slice(0, -1) : steps;
 
   return (
-    // Rows appear one at a time while the user watches, so announce the
-    // additions rather than leaving a screen reader on a frozen page.
+    // Rows appear one at a time, so announce additions to screen readers.
     <ol className={cn("space-y-2.5", className)} aria-live="polite">
       {done.map((step, index) => (
         <li key={`${step}-${index}`} className="flex items-center gap-3 text-sm">

@@ -9,24 +9,17 @@ import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/ui/form-modal";
 
 /**
- * Choose which administrator to sign in as.
- *
- * Only reached when there is a choice to make — `useMagicLogin` signs straight
- * in when the site has exactly one administrator, and opens this when it has
- * none or several.
- *
- * `admins` arrives already fetched, from the same call that decided to open
- * this. It is never cached between opens: an account that was an administrator
- * last time may not be one now, and offering a stale name means a refusal the
- * operator cannot explain.
+ * Choose which administrator to sign in as. Only opened when the site has none
+ * or several administrators (see `useMagicLogin`). `admins` is fetched fresh on
+ * every open, never cached: a stale name would lead to an unexplained refusal.
  */
 export function MagicLoginDialog({ appId, admins, open, onOpenChange }) {
   const t = useTranslations("applications.magicLogin");
   const [pendingId, setPendingId] = useState(null);
 
   async function signIn(admin) {
-    // The chosen row's button carries the wait; the tab opens only once the
-    // login URL is ready, straight onto WordPress.
+    // The chosen row's button shows the wait; the tab opens once the login URL is
+    // ready.
     setPendingId(admin.id);
     try {
       const session = await createMagicLogin(appId, admin.id);
@@ -84,9 +77,7 @@ export function MagicLoginDialog({ appId, admins, open, onOpenChange }) {
         </ul>
       )}
 
-      {/* Said plainly, because this is impersonation and the activity log
-          records it by name. Someone reading the log later should not be the
-          first person to learn that. */}
+      {/* This is impersonation, and the activity log records it by name. */}
       <p className="text-xs text-muted-foreground">{t("auditNote")}</p>
     </FormModal>
   );

@@ -17,50 +17,25 @@ import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 
 /**
- * What this site type needs before it can be created, and one press to get it.
+ * What this site type needs before it can be created, with one press to
+ * install it all. Each missing service is a row with its own state, since the
+ * queue runs one job at a time and `queued` must be visible.
  *
- * The user's words: "detecting all the required dependencies upfront and
- * clearly informing the user that they are needed. Ideally, the installer could
- * list the required services and ask for permission to install them all at
- * once, rather than requiring the user to go back and forth."
- *
- * So: the list is the screen, not a sentence. Every missing service is a row
- * with its own state, because they finish at different times — the queue runs
- * one job at a time, and a second row sitting silently for four minutes is
- * indistinguishable from a stuck one. `queued` is a state you can see.
- *
- * It does NOT create the site. The reference mock had one button reading
- * "Install Nextcloud + dependencies", which cannot be honest here: the site
- * needs a domain and an admin password that are further down the form. This
- * installs the services while the form is filled in, and Create unlocks itself
+ * It does not create the site (domain and admin password come later in the
+ * form); it installs services while the form is filled in, and Create unlocks
  * when the last one lands.
  */
 
 /*
- * The rows never re-order.
- *
- * They sorted by state at first, most-urgent up top, which looked sensible
- * written down and was wrong on screen: the moment the first install finished
- * it dropped to the bottom and the second row jumped up to take its place,
- * under a cursor that was resting there. Caught by driving it.
- *
- * The order is the order the services were listed in, and it holds for the
- * whole run — the badges carry the change, which is what badges are for.
+ * Rows never re-order: sorting by state made rows jump under the cursor as
+ * installs finished. The badges carry the change.
  */
 
 const ICONS = { node: Hexagon, php: FileCode2, database: Database };
 
 /*
- * A square glyph per row, not the vendor's lockup.
- *
- * The brand marks were tried first and they are the wrong shape for this:
- * MySQL is 239×60, MariaDB 789×196, MongoDB 1102×278 — four-to-one lockups
- * that either hang out of a square slot or force a slot so wide it dwarfs the
- * text beside it. Neither reads as a list.
- *
- * So the icon says what KIND of thing the row is — a database, a runtime — and
- * the name beside it says which. That is what the reference this came from did
- * too, and it keeps every row identical whatever is in it.
+ * A square glyph per kind (database, runtime), not the vendor's wide lockup,
+ * so every row has the same shape; the name says which.
  */
 function ServiceMark({ service }) {
   const Icon = ICONS[service.kind] ?? Database;
@@ -82,9 +57,8 @@ function StateBadge({ service }) {
       return (
         <Badge variant="warning" className="font-normal">
           <Loader2 className="size-3 animate-spin" />
-          {/* The phase apt reported, never a percentage — the install is one
-              call whose total is unknown until it ends, so a number would be
-              invented. This matches what the PHP and Node pages already say. */}
+          {/* The phase apt reported, never a percentage (the total is unknown), as on
+              the PHP and Node pages. */}
           {service.step ? t(`step.${service.step}`) : t("state.installing")}
         </Badge>
       );
@@ -111,22 +85,13 @@ function StateBadge({ service }) {
         </ReasonTooltip>
       );
     /*
-     * Nothing this panel can install satisfies the application.
-     *
-     * PrestaShop wants PHP 7.2–8.1 and the install list offers 8.3 and 8.4:
-     * the range is real, the shortfall is real, and there is no button that
-     * would help. Saying so is the only honest option — an Install that cannot
-     * work is the failure this whole screen exists to stop.
+     * Nothing this panel can install satisfies the application (e.g. PrestaShop
+     * needs PHP 7.2–8.1 and only 8.3/8.4 are installable). No Install button.
      */
     case "impossible":
       /*
-       * Two different impossibilities, and the badge has to say which.
-       *
-       * "No version fits" is about a RANGE — PrestaShop wanting PHP 7.2-8.1
-       * against an install list of 8.3 and 8.4. For an engine the vendor has
-       * published nothing for, there is no range and no version; the label was
-       * simply wrong, and the correct sentence was hidden in a tooltip nobody
-       * on a touch screen can open.
+       * The badge distinguishes "no version fits" (a range) from an engine with no
+       * published versions at all.
        */
       return (
         <ReasonTooltip reason={service.reason ?? t("state.impossibleReason")}>
@@ -164,25 +129,14 @@ export function RequiredServicesPanel({
   );
   const settled = services.every((service) => service.state === "installed");
 
-  /*
-   * What the button would actually do if pressed.
-   *
-   * Counting only `missing` left it disabled after a failure — the one moment
-   * the reader most wants to press it. A failed service is outstanding; it
-   * just has an attempt behind it.
-   */
+  // Failed services count as outstanding, so the button works for a retry.
   const outstanding = services.filter(
     (service) => service.state === "missing" || service.state === "failed",
   );
 
   const remaining = services.filter((service) => service.state !== "installed");
-  /*
-   * Nothing left that anything on this screen can do.
-   *
-   * Two ways to get here and they need different sentences: the reader lacks
-   * the permission, or no version we can install fits. Both must stop the
-   * footer promising an install that is not going to happen.
-   */
+  // Nothing on this screen can help: no permission, or no installable version.
+  // Either way, the footer must not promise an install.
   const stuck = services.filter((service) => service.state === "impossible");
   const blocked = outstanding.length === 0 && (denied.length > 0 || stuck.length > 0);
 
@@ -208,9 +162,7 @@ export function RequiredServicesPanel({
           <p className="text-sm font-medium">
             {settled
               ? t("headingReady", { app: typeTitle })
-              : // Counted from what is still OUTSTANDING, not from the list.
-                // After the first of two lands, "needs 2 more services" is a
-                // header arguing with the green tick underneath it.
+              : // Counts what remains, so the header agrees with finished rows.
                 t("heading", { app: typeTitle, count: remaining.length })}
           </p>
           <p className="text-sm text-muted-foreground">
@@ -225,8 +177,7 @@ export function RequiredServicesPanel({
         </div>
       </div>
 
-      {/* One row per service. Not a sentence listing them: they have separate
-          states and separate failures, and a sentence can hold neither. */}
+      {/* One row per service: each has its own state and failure. */}
       <ul className="divide-y">
         {services.map((service) => (
           <li key={service.key} className="px-4 py-3">
@@ -236,37 +187,22 @@ export function RequiredServicesPanel({
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">{service.name}</span>
-                {/* Wraps, not truncates.
-                
-                    `truncate` was fine while every line here was "PrestaShop
-                    needs PHP 7.2 – 8.1". The end-of-life sentence is longer
-                    and its second half is the part that matters — it cut off
-                    at "That line is no longer supported, but it is t…", which
-                    leaves a warning with no resolution. A row that is one
-                    pixel taller is cheaper than a half-read one. */}
+                {/* Wraps, not truncates: the end of the end-of-life sentence is the part
+                    that matters. */}
                 <span className="block text-xs text-pretty text-muted-foreground">
                   {service.state === "failed" && service.error
                     ? service.error
                     : /*
-                       * The REQUIREMENT, when the application states one.
-                       *
-                       * The row's title is one exact build — "Node 24.12.0" —
-                       * and on its own that reads as the thing n8n demands.
-                       * It demands 24 or newer; 24.12.0 is merely the version
-                       * this panel will install to satisfy it. Saying both
-                       * stops the next person asking why their Node 24 is not
-                       * good enough.
+                       * The requirement when stated: the title is the exact
+                       * build to install ("Node 24.12.0"), not what the app
+                       * demands ("24 or newer").
                        */
                       service.requirement
                       ? t(
                           /*
-                           * A separate sentence when the only version this
-                           * type can run on is one the language no longer
-                           * patches. PrestaShop's whole window (7.2 – 8.1) is
-                           * end-of-life; "this is what we will install" on its
-                           * own hands someone an unsupported PHP without
-                           * mentioning it, and the lifecycle was in the same
-                           * payload all along.
+                           * A separate sentence when the only versions this
+                           * type runs on are end-of-life, so an unsupported PHP
+                           * is never installed without saying so.
                            */
                           service.eol ? `needsEol.${service.kind}` : `needs.${service.kind}`,
                           { app: typeTitle, requirement: service.requirement },
@@ -284,18 +220,8 @@ export function RequiredServicesPanel({
               </span>
             </div>
 
-            {/*
-             * The reason, in the row, at full length.
-             *
-             * It was only in the badge's tooltip. A tooltip does not open on a
-             * touch screen and nobody hovers a badge they have already read as
-             * a label, so the one sentence that explains a dead end was
-             * effectively unpublished — the same mistake as the engine card,
-             * where the text was right and invisible.
-             *
-             * Only for this state. A row that is merely missing has a button
-             * and needs no paragraph.
-             */}
+            {/* The reason in full, in the row: tooltips do not open on touch. Only for
+                this state; a missing row has a button instead. */}
             {service.reason ? (
               <p className="mt-2 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-2.5 text-xs leading-relaxed text-destructive">
                 <CircleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
@@ -318,13 +244,10 @@ export function RequiredServicesPanel({
                   : t("footerImpossible")
                 : failed.length
                   ? t("footerFailed", { count: failed.length })
-                  : // "the second one waits its turn" is a lie when there is
-                    // only one. Most blocked types need exactly one thing.
+                  : // Singular copy when only one service is outstanding.
                     t(outstanding.length > 1 ? "footerIdle" : "footerIdleOne")}
         </p>
-        {/* Nothing here can be installed by this reader, so there is no button
-            to grey out — a disabled control with no explanation is the thing
-            the footer line is already saying better. */}
+        {/* No button when this reader cannot install anything; the footer explains. */}
         {settled || outstanding.length === 0 ? null : (
           <Button size="sm" onClick={onInstall} disabled={busy || working}>
             {working ? (

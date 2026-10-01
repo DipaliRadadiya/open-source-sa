@@ -28,14 +28,8 @@ const ACTION_VARIANTS = {
 };
 
 /**
- * Everything one run found, in one table.
- *
- * One table rather than nine sections: the types are wildly uneven — a box can
- * have two hundred vhosts and three certificates — and per-type sections would
- * each need their own pagination to cope with that, turning one list into nine
- * lists with nine sets of controls. The per-type counts that sections would
- * have given for free are carried by the filter chips above instead, so no
- * count is hidden to show another.
+ * Everything one run found, in one table. Per-type sections would each need
+ * pagination (type counts are very uneven); the filter chips carry the counts.
  */
 export function SyncResults({
   items,
@@ -59,8 +53,7 @@ export function SyncResults({
     return counts;
   }, [items]);
 
-  // Only the types this run actually produced, in the backend's dependency
-  // order — a chip reading "Workers 0" is a control that does nothing.
+  // Only types this run produced, in the backend's dependency order.
   const presentTypes = useMemo(
     () => SYNC_RESOURCE_TYPES.filter((type) => countsByType.has(type)),
     [countsByType],
@@ -143,8 +136,7 @@ export function SyncResults({
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
                 <TableHead className="w-10 px-1 sm:px-2" />
-                {/* Below sm the type rides under the name: four columns did
-                    not fit a phone, and Status and Dismiss were what fell off. */}
+                {/* Below sm the type moves under the name so the row fits a phone. */}
                 <TableHead className="hidden w-[16%] sm:table-cell">{t("results.columns.type")}</TableHead>
                 <TableHead>{t("results.columns.name")}</TableHead>
                 <TableHead className="w-[12%]">{t("results.columns.outcome")}</TableHead>
@@ -156,10 +148,9 @@ export function SyncResults({
                 const key = ignoreKey(item);
                 const ignored = ignoredKeys.has(key);
                 // One line standing for every worker, certificate or PHP
-                // setting of the sites a preview found: they cannot be read
-                // until the sites exist. Its key is the type itself, so it is
-                // not a name to show, and ignoring it would put that type name
-                // on the ignore list.
+                // setting of the sites a preview found (unreadable until the
+                // sites exist). Its key is the type itself, so it is neither
+                // shown as a name nor ignorable.
                 const wholeType = item.action === "skipped" && item.resource_key === item.resource_type;
                 const isOpen = expanded.has(item.id);
 
@@ -169,9 +160,6 @@ export function SyncResults({
                     className={cn(ignored && "opacity-55")}
                   >
                     <TableCell className="px-1 align-top sm:px-2">
-                      {/* A chevron on its own is a guess. The aria-label names
-                          the row for a screen reader; the tooltip is the same
-                          answer for everyone else. */}
                       {/* A whole-type line has no details to open. */}
                       {wholeType ? null : (
                         <Tooltip>
@@ -200,9 +188,8 @@ export function SyncResults({
                     <TableCell className="hidden align-top text-sm text-muted-foreground sm:table-cell">
                       {t(`types.${item.resource_type}`)}
                     </TableCell>
-                    {/* Wraps: TableCell is nowrap, so one long "skipped" reason
-                        set the table's width — Status and Dismiss went off the
-                        card at 1280 and the name was cut on a phone. */}
+                    {/* Wraps: TableCell is nowrap, so a long reason would set
+                        the table's width. */}
                     <TableCell className="align-top whitespace-normal">
                       {wholeType ? (
                         <span className="text-sm">{t("results.wholeType")}</span>
@@ -214,9 +201,7 @@ export function SyncResults({
                       <p className="text-xs text-muted-foreground sm:hidden">
                         {t(`types.${item.resource_type}`)}
                       </p>
-                      {/* The reason is already a full sentence in the reader's
-                          language — the backend localizes it — so one line of
-                          it here is the whole explanation, not a label. */}
+                      {/* The backend localizes the reason, so it is shown as is. */}
                       {item.reason ? (
                         <p className={cn("mt-0.5 text-xs text-muted-foreground", wholeType ? "max-w-xl" : "line-clamp-2 break-words")}>
                           {item.reason}
@@ -237,9 +222,8 @@ export function SyncResults({
                       {canManage && !wholeType ? (
                         <Tooltip>
                           {/* The trigger wraps a span: a disabled button
-                              swallows pointer events, so the tooltip would
-                              vanish exactly while the row is working — which is
-                              when someone is most likely to hover it. */}
+                              swallows pointer events, hiding the tooltip while
+                              the row is working. */}
                           <TooltipTrigger asChild>
                             <span className="inline-flex">
                               <Button
@@ -255,9 +239,7 @@ export function SyncResults({
                                 }
                                 onClick={() => (ignored ? onUnignore(item) : onIgnore(item))}
                               >
-                                {/* The button was disabled while the write was
-                                    in flight and nothing else changed, so a
-                                    click looked like it had done nothing. */}
+                                {/* A spinner, since disabling alone is not feedback. */}
                                 {pendingKeys.includes(key) ? (
                                   <Loader2 className="size-4 animate-spin" aria-hidden />
                                 ) : ignored ? (

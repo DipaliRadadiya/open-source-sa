@@ -30,18 +30,9 @@ export function SearchInput({
   const input = useRef(null);
 
   /*
-   * Follow the URL when something else changes it.
-   *
-   * This box seeded itself from the URL once and then owned its own value, so
-   * anything that cleared `search` elsewhere — "Clear filters" on the
-   * no-matches state, the back button, a link with its own query — emptied the
-   * table and left the term sitting in the input. The list then said "no
-   * matches" for a search that was no longer being applied.
-   *
-   * Synced during render rather than in an effect: an effect would paint the
-   * stale term for a frame first, and setting state in one is the cascading
-   * render the lint rule refuses. Typing is unaffected — the URL only catches
-   * up after the debounce below, and by then the two already agree.
+   * Follow the URL when something else changes it (Clear filters, back button,
+   * links). Synced during render, not in an effect, to avoid painting a stale
+   * term for a frame.
    */
   const [seenUrlValue, setSeenUrlValue] = useState(urlValue);
   if (seenUrlValue !== urlValue) {
@@ -62,10 +53,8 @@ export function SearchInput({
       );
     }, delay);
     return () => clearTimeout(id);
-    // `extraQuery` is excluded, and that exclusion is what makes this work: a
-    // caller passes it as an object literal (account-tabs.jsx does), so a new
-    // identity arrives on every parent render. Included, the timer would be
-    // cleared and restarted each time and the search would never fire.
+    // `extraQuery` MUST stay excluded: callers pass an object literal, so its
+    // identity changes every render and would keep resetting the timer.
     // `paramKey`, `delay` and `setQuery` are fixed for the life of the box.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
@@ -88,7 +77,7 @@ export function SearchInput({
       {value ? (
         <button
           type="button"
-          // Back to the box: the × goes away with the text, and focus went with it.
+          // Refocus the input: the × unmounts, taking focus with it.
           onClick={() => {
             setValue("");
             input.current?.focus();

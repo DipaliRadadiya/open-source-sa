@@ -15,11 +15,8 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { trackPush } from "@/lib/browser/navigation-pending";
 
 /**
- * Knows whether any panel surface has edits that were never saved.
- *
- * Cards and forms save independently, so the surrounding shell cannot infer
- * their state. They register here, and every shell escape route asks this one
- * provider before it navigates or changes the session.
+ * Tracks unsaved edits across independently saving cards. Shell navigation
+ * and session actions ask this provider before leaving.
  */
 const UnsavedContext = createContext(null);
 
@@ -29,8 +26,7 @@ export function UnsavedProvider({ children }) {
   // A set of ids rather than a boolean: two cards can be dirty at once, and one
   // of them saving must not clear the warning for the other.
   const [dirty, setDirty] = useState(() => new Set());
-  // One panel-wide confirmation, rather than a dialog mounted beside every
-  // sidebar, breadcrumb and tab link that can leave dirty work behind.
+  // One panel-wide confirmation dialog.
   const [pendingAction, setPendingAction] = useState(null);
 
   const setSectionDirty = useCallback((id, isDirty) => {
@@ -73,8 +69,7 @@ export function UnsavedProvider({ children }) {
     [guardAction, guardNavigation, hasUnsaved, setSectionDirty],
   );
 
-  // Covers the browser's own exits — reload, close, back out of the app — which
-  // no in-app handler can intercept.
+  // Covers browser exits (reload, close) that in-app handlers cannot intercept.
   useEffect(() => {
     if (!value.hasUnsaved) return;
     const onBeforeUnload = (event) => {
@@ -111,8 +106,7 @@ export function UnsavedProvider({ children }) {
 }
 
 export function useUnsaved() {
-  // Outside a panel shell there is nothing registered to lose. Degrade to an
-  // unguarded action rather than forcing public/auth surfaces to mount this.
+  // Outside the panel shell (e.g. auth pages), actions are unguarded.
   return (
     useContext(UnsavedContext) ?? {
       hasUnsaved: false,

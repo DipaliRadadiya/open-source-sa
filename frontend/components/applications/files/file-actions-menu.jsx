@@ -17,11 +17,9 @@ import { MenuItemHint } from "@/components/data-table/menu-item-hint";
 const ARCHIVE_RE = /\.(zip|tar\.gz|tgz)$/i;
 
 /**
- * The full action list for one file — shared between the row's "…" dropdown
- * and its right-click context menu, which need the exact same items and
- * rules but render through different menu primitives. `Item`/`Separator` are
- * passed in (DropdownMenuItem/DropdownMenuSeparator or
- * ContextMenuItem/ContextMenuSeparator) since both share an identical prop API.
+ * The full action list for one file, shared by the row's "…" dropdown and its
+ * right-click context menu. `Item`/`Separator` are passed in (Dropdown or
+ * Context menu primitives), which share an identical prop API.
  */
 export function FileActionItems({
   file,
@@ -30,10 +28,8 @@ export function FileActionItems({
   onAction,
   Item,
   Separator,
-  // The row's own "…" dropdown already has Download/Copy path as standalone
-  // icon buttons next to it — repeating them inside that menu too would just
-  // be clutter. The right-click context menu has no such icons, so it needs
-  // them folded in here instead.
+  // The "…" dropdown already has Download/Copy path as icon buttons beside it; the
+  // context menu has none, so it includes them here.
   showQuickActions = true,
 }) {
   const t = useTranslations("applications.files");
@@ -84,9 +80,7 @@ export function FileActionItems({
         </>
       ) : null}
 
-      {/* Directories only — a file's size is already in the row, and asking
-          the backend to walk a single file would be a request for a fact we
-          were handed. */}
+      {/* Directories only: a file's size is already in the row. */}
       {file.type === "dir" ? (
         <Item onSelect={() => onAction("size", file)}>
           <Scale className="size-4" />

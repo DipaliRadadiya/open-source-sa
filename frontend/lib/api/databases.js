@@ -6,26 +6,19 @@ export function getEngines({ signal } = {}) {
 }
 
 /**
- * Queued — apt takes minutes and holds a lock, so this returns 202 and the
- * caller polls `getEngines`. An engine already present returns 200 with
- * `queued: false`: a migrated server that already had MariaDB is a success,
- * not a conflict.
+ * Queued: returns 202 and the caller polls `getEngines`. An engine already
+ * present returns 200 with `queued: false` (success, not a conflict).
  */
 export function installEngine(engine) {
   return api.post(`/databases/engines/${encodeURIComponent(engine)}`);
 }
 
 /**
- * The databases attached to one site, for the delete dialog's checkbox.
+ * The databases attached to one site, for the delete dialog (client-side
+ * counterpart of `getApplicationDatabases`).
  *
- * Server-side filtered — `getApplicationDatabases` does the same thing for
- * pages. This is the client half, because the dialog only needs it when it
- * opens and fetching every database on the server to filter three out is a
- * page of work for one sentence.
- *
- * For NAMING them only. The delete call sends a flag, never these ids: the API
- * resolves the list itself when it deletes, so a database attached since this
- * dialog opened is still taken.
+ * For naming them only: the delete call sends a flag, never these ids, and the
+ * API resolves the list itself at delete time.
  */
 export function getDatabasesForApplication(applicationId, { signal } = {}) {
   return api.get("/databases", {
@@ -41,13 +34,9 @@ export function createDatabase(payload) {
 /**
  * Point a database at a site, move it to another, or detach it (null).
  *
- * `application_id` is sent even when null: the API treats an ABSENT key as a
- * 422 rather than a detach, on the grounds that forgetting a field and asking
- * to unlink are different requests.
- *
- * Bookkeeping only. Nothing rewrites `wp-config.php` or an `.env` — what the
- * link decides is which database backups, staging, cloning and restoring treat
- * as the site's.
+ * `application_id` is always sent: an absent key is a 422, not a detach.
+ * Bookkeeping only; nothing rewrites `wp-config.php` or `.env`. The link decides
+ * which database backups, staging, cloning and restores use.
  */
 export function attachDatabase(databaseId, applicationId) {
   return api.put(`/databases/${databaseId}/application`, {
@@ -82,11 +71,7 @@ export function getConnections({ signal } = {}) {
   return api.get("/databases/connections", { signal });
 }
 
-/**
- * Saves the connection. `test: true` makes the API try it and return
- * `reachable`, so a save can report whether it actually worked rather than
- * only that it was written.
- */
+/** Saves the connection; `test: true` makes the API also return `reachable`. */
 export function updateConnection(engine, payload) {
   return api.put(`/databases/connections/${encodeURIComponent(engine)}`, {
     ...payload,
@@ -124,9 +109,8 @@ export function deleteDatabaseUser(databaseId, userId) {
 }
 
 /**
- * Queued: `202` with the row already at `status: "queued"` and no file yet.
- * A dump of any real database outlives nginx's read timeout, so this used to
- * report failure while the dump quietly succeeded.
+ * Queued: `202` with the row at `status: "queued"` and no file yet, since a
+ * dump can outlive nginx's read timeout.
  */
 export function createExport(databaseId) {
   return api.post(`/databases/${databaseId}/export`);
@@ -176,20 +160,15 @@ export function getTables(databaseId, { signal } = {}) {
 /**
  * A one-click login to phpMyAdmin for this database.
  *
- * Answers a `redirect_url` carrying a token good for 60 seconds, which the
- * shim on the phpMyAdmin site consumes once — so the browser has to be sent
- * there immediately rather than the link being stored or shown.
- *
- * MySQL and MariaDB only, and only when a phpMyAdmin site exists on this
- * server. Both refusals come back as 422 with the reason in the message.
+ * `redirect_url` carries a single-use token valid for 60 seconds, so navigate
+ * immediately. MySQL/MariaDB only, and only with a phpMyAdmin site present;
+ * refusals are 422 with the reason.
  */
 export function phpmyadminSso(databaseId, databaseUserId, applicationId) {
   const params = {};
   if (databaseUserId) params.database_user_id = databaseUserId;
-  // Which installation to sign into, on a server with more than one. Omitted,
-  // the API takes the lowest id — stable, but not necessarily the one meant.
-  // It has to be named here: the token is written into the chosen site's own
-  // directory, so no redirect afterwards can reach a different one.
+  // Which phpMyAdmin site to use; the token is written into that site's
+  // directory. Omitted, the API picks the lowest id.
   if (applicationId) params.application_id = applicationId;
 
   return api.post(`/databases/${databaseId}/phpmyadmin-sso`, null, {

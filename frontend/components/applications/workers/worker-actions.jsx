@@ -26,11 +26,7 @@ const BY_STATE = {
   stopped: ["start"],
 };
 
-/**
- * Per-row start/stop/restart. Edit/Delete live in the row ⋯ menu instead —
- * five raw icons on every row reads as clutter next to the app's other lists,
- * where secondary actions are always tucked behind ⋯.
- */
+/** Per-row start/stop/restart. Edit/Delete live in the row ⋯ menu. */
 export function WorkerActions({ worker, appId, canManage, onBusyChange, onUpdated, reserveSlots = true }) {
   const t = useTranslations("applications.workers");
   const [pending, setPending] = useState(null);
@@ -45,23 +41,13 @@ export function WorkerActions({ worker, appId, canManage, onBusyChange, onUpdate
   const busy = pending !== null;
 
   /**
-   * What actually happened, in the worker's own words.
-   *
-   * The endpoint answers with the worker as supervisord reports it after the
-   * action — the controller's "state is never stored: every response asks
-   * supervisord what is actually running". So the outcome is knowable, and saying
-   * "Starting…" on a green tick and stopping there was throwing that away.
-   *
-   * The unhappy case is the one worth having: `systemctl start` succeeds for a
-   * unit that starts and dies immediately, which is what a mistyped command
-   * does. `apply()` guards against that with `is-active`; `start()` does not.
-   * So a worker can come back still stopped from a "successful" start, and
-   * that has to read as a problem rather than a success.
+   * Report the real outcome from the worker's post-action state. A
+   * "successful" start can still come back stopped (e.g. a mistyped command
+   * dies immediately), which must read as a problem.
    */
   function reportOutcome(id, action, next) {
     const name = worker.name;
-    // No readable state means we genuinely do not know the outcome; the
-    // request was accepted, and claiming more than that would be a guess.
+    // No readable state: only report that the request was accepted.
     if (!next?.state) {
       toast.info(t(`toast.${action}`, { name }), { id });
       return;
@@ -85,21 +71,16 @@ export function WorkerActions({ worker, appId, canManage, onBusyChange, onUpdate
 
   async function run(action) {
     setBusyAction(action);
-    // One toast for the whole action: it opens as a spinner and is replaced in
-    // place by the outcome, so there is never a moment with nothing to read.
+    // One toast, replaced in place by the outcome.
     const id = toast.loading(t(`toast.${action}`, { name: worker.name }));
     try {
       const { data } = await runWorkerAction(appId, worker.id, action);
       const next = data?.worker;
-      // Applied before the busy flag clears, so the badge goes straight from
-      // "Starting…" to the new state instead of flashing the old one back.
+      // Applied before the busy flag clears so the old state never flashes back.
       if (next?.id === worker.id) onUpdated?.(next);
       reportOutcome(id, action, next);
-      // Deliberately NOT router.refresh(): that re-reads supervisord a second time
-      // and its answer landed *after* this one, overwriting the row — measured
-      // as a badge going "Starting…" → "Stopped" → "Running", which is the
-      // flicker this was meant to remove. The panel already polls both the
-      // workers and the checks alert, so nothing here needs a server render.
+      // Deliberately NOT router.refresh(): a second supervisord read can land
+      // later and overwrite the row. The panel already polls.
     } catch (error) {
       toast.error(apiMessage(error, t(`error.${action}`, { name: worker.name })), { id });
     } finally {

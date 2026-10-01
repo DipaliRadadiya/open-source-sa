@@ -1,13 +1,9 @@
 import { z } from "zod";
 
 /**
- * One entry of GET /system-users/shells.
- *
- * `allows_login` is the field that matters: a shell that refuses login cannot
- * be combined with SSH access, and the server rejects the pair from either
- * side. It is nullable — an unrecognised shell on an adopted server means
- * "we do not know", which is NOT the same as "denies login" and must not be
- * drawn as a refusal.
+ * One entry of GET /system-users/shells. `allows_login: false` cannot be
+ * combined with SSH access (the server rejects the pair). Null means unknown
+ * (e.g. an unrecognised shell on an adopted server), never "denies login".
  */
 export const shellSchema = z.object({
   value: z.string(),
@@ -16,9 +12,8 @@ export const shellSchema = z.object({
   allows_login: z.boolean().nullable().default(null),
 });
 
-// The default a new account gets when the form is left alone. The full list of
-// acceptable shells belongs to the server (GET /system-users/shells) — keeping
-// a copy here is how the picker ends up offering something the server refuses.
+// The default for a new account. The full shell list belongs to the server
+// (GET /system-users/shells); do not copy it here.
 export const DEFAULT_SHELL = "/bin/bash";
 
 // Mirrors the backend OS-password policy: min 10, mixed case + a number.
@@ -29,8 +24,8 @@ export const passwordField = z
   .regex(/[A-Z]/, "uppercase")
   .regex(/[0-9]/, "number");
 
-// Linux username rules: ^[a-z_][a-z0-9_-]{0,31}$ (backend also blocks reserved
-// names + enforces uniqueness — surfaced as a server-side error).
+// Linux username rules: ^[a-z_][a-z0-9_-]{0,31}$ (the backend also blocks
+// reserved names and enforces uniqueness).
 export const usernameField = z
   .string()
   .min(1, "required_username")
@@ -43,14 +38,12 @@ const publicKeyField = z
   .trim()
   .regex(/^(ssh-(rsa|ed25519|dss)|ecdsa-sha2-\S+)\s+\S+/, "sshKey");
 
-// Everything past `username` is optional and defaults to what creation always
-// did (bash, no sudo, no SSH, no password), so the username-only path is
-// unchanged — the backend's `sometimes` rules say the same thing.
+// Everything past `username` is optional and defaults to bash, no sudo, no SSH,
+// no password, matching the backend's `sometimes` rules.
 export const createSystemUserSchema = z.object({
   username: usernameField,
   public_key: z.union([z.literal(""), publicKeyField]).optional(),
-  // Not an enum any more — the server owns the list, and a stale copy here
-  // would reject a shell the server is perfectly happy with.
+  // Not an enum: the server owns the list.
   shell: z.string().optional(),
   sudo: z.boolean().optional(),
   ssh_access: z.boolean().optional(),
@@ -68,8 +61,7 @@ export const systemUserPasswordSchema = z
   });
 
 export const sshKeySchema = z.object({
-  // The API's own cap. Without it a longer label went to the server and came
-  // back as its English sentence about a "name" field the form calls Label.
+  // The API's own cap.
   name: z.string().min(1, "required_name").max(255, "max255"),
   public_key: publicKeyField,
 });

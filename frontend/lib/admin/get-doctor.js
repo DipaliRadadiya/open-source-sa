@@ -5,14 +5,8 @@ import { doctorSchema } from "@/lib/schemas/doctor";
 
 /**
  * Installation self-check (GET /admin/doctor). Admin-only on the backend, so
- * only call it for an admin. A "Re-check" is a full router.refresh(), which
- * re-invokes this.
- *
- * Through `read()` rather than its own try/catch, which is what it was: it
- * returned a bare `null` for a 403, a 500, a dead request and a shape mismatch
- * alike, so the page could say nothing more than "could not be loaded" — and
- * nothing was written to the journal either, because `report()` never ran.
- * Four different problems with four different fixes, collapsed into one word.
+ * only call it for an admin. "Re-check" is a full router.refresh(). Goes
+ * through `read()` so failures keep their status and are reported.
  */
 export const getDoctor = cache(async function getDoctor() {
   const { data, failed, status, failure, message, debug } = await read(

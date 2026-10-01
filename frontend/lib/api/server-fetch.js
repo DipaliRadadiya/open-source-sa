@@ -3,13 +3,10 @@ import { serverLocale } from "@/lib/i18n/server-locale";
 
 /**
  * Server-side GET against the Laravel API, forwarding the Sanctum session
- * cookie plus Referer/Origin (required for stateful-domain auth). Mirrors the
- * pattern used by get-current-user / get-permissions.
+ * cookie plus Referer/Origin (required for stateful-domain auth).
  *
- * IMPORTANT: cookies() is awaited by the CALLER-facing path here (top of the
- * function, outside any try/catch) so Next's DynamicServerError propagates and
- * the route is correctly treated as dynamic — swallowing it caused the earlier
- * auth redirect loop.
+ * IMPORTANT: cookies() is awaited at the top, outside any try/catch, so Next's
+ * DynamicServerError propagates and the route is treated as dynamic.
  *
  * @param {string} path  API path beginning with "/" (relative to `${API}/api`)
  * @param {{ searchParams?: Record<string, string | number | undefined> }} [opts]

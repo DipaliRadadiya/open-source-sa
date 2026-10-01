@@ -2,8 +2,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TableSkeleton } from "@/components/data-table/table-skeleton";
 
 /**
- * See the History skeleton: the section-level one draws the Overview tab, and
- * the heading and tabs are layout that is already on screen.
+ * The section-level skeleton draws the Overview tab; heading and tabs are
+ * layout already on screen.
  */
 export default function Loading() {
   return (

@@ -24,44 +24,32 @@ export async function generateMetadata() {
 
 export default async function ApplicationsPage({ searchParams }) {
   const sp = await searchParams;
-  // Serialised so React's `cache` sees a stable primitive argument — an object
-  // literal is a fresh identity on every call and would defeat the dedupe.
+  // Serialised so React's `cache` sees a stable primitive and can dedupe.
   const query = new URLSearchParams(
     Object.entries(sp ?? {}).filter(([, v]) => typeof v === "string"),
   ).toString();
 
   const [permissions, appPermissions, t, result] = await Promise.all([
     getPermissions(),
-    // The application-level catalog, unfiltered: role grants are global,
-    // and `application_id` only narrows the list by that one site's
-    // features. So one call answers "does this user hold Magic Login" for
-    // every row, instead of one request per application.
+    // Application-level catalog, unfiltered: role grants are global, so one
+    // call answers Magic Login for every row.
     getPermissions("application").catch(() => []),
     getTranslations("applications"),
     getApplications(query),
   ]);
-  // The filter's options come from the catalog, not from the ten rows we hold.
+  // Filter options come from the catalog, not the current page of rows.
   const { siteTypes } = await getSiteTypes();
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("title")} />;
-  // Databases are a server-level permission: a reader without it gets no
-  // marker rather than a marker they could do nothing about.
+  // Without the server-level database permission, no missing-database marker.
   const dbCounts = can(permissions, "database", "view")
     ? await getDatabaseCounts()
     : { counts: null, known: false };
 
   /*
-   * Only to learn which service each git site came from.
-   *
-   * A site built from a connected account carries `git_account_id` and a
-   * `repository` of "owner/repo" — no host anywhere in the payload — so the
-   * accounts list is the only thing that can name GitHub from GitLab. A
-   * public-URL site needs none of this; its address says so itself.
-   *
-   * Skipped entirely when no row needs it, and a failure costs the badges
-   * rather than the page: those rows keep the generic git mark, which is what
-   * every one of them showed until now. Same for a reader without the
-   * integration permission — the request would 403 and the answer is the same.
+   * Git accounts, only to tell each account-linked git site's provider (the
+   * payload carries no host). Skipped when no row needs it or without the
+   * `git` permission; a failure falls back to the generic git mark.
    */
   const needsGitAccounts =
     can(permissions, "git", "view") &&
@@ -74,9 +62,7 @@ export default async function ApplicationsPage({ searchParams }) {
   const gitProviders = needsGitAccounts
     ? providersByAccountId(await getGitAccounts().then((r) => r.accounts ?? []).catch(() => []))
     : new Map();
-  // A 422 here is the URL, not the server: an old bookmark or a hand-typed
-  // `?status=foo` made the whole list "could not be loaded", and Try again
-  // could never succeed. Drop the filters and sort, keep the search.
+  // A 422 means a bad filter/sort in the URL: drop them, keep the search.
   if (result.failed && result.status === 422 && (sp?.status || sp?.site_type || sp?.sort)) {
     const kept = new URLSearchParams();
     if (typeof sp.search === "string" && sp.search) kept.set("search", sp.search);
@@ -85,16 +71,13 @@ export default async function ApplicationsPage({ searchParams }) {
   if (result.failed) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
 
-  // Before anything renders: a page past the end sends the reader to the
-  // last real page instead of painting an error for it.
+  // A page past the end redirects to the last real page.
   redirectOutOfRange("/applications", sp, result.meta, result.failed);
   return (
     <div className="space-y-6">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
       <RefreshOnReturn />
-      {/* Opening a site that no longer exists lands here, because the list is
-          the only place left to go. Saying so on arrival is what separates a
-          redirect from being silently teleported somewhere you did not ask for. */}
+      {/* `?gone` is set when a deleted site redirects here; explain the redirect. */}
       {sp?.gone ? (
         <div className="flex items-start gap-2.5 rounded-lg border bg-muted/40 p-3 text-sm">
           <Globe2 className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
@@ -109,13 +92,8 @@ export default async function ApplicationsPage({ searchParams }) {
         meta={result.meta}
         siteTypes={siteTypes}
         canManage={can(permissions, "application", "manage")}
-        // Gated on the Magic Login permission, not on `application`
-        // manage. The API enforces `app_magic_login`, so showing it to
-        // an application manager who lacks that grant would render a
-        // button whose only outcome is a 403.
-        //
-        // The catalog here is unfiltered by site type, so unlike the
-        // Dashboard the row has to check `site_type` itself.
+        // The API enforces `app_magic_login`, not `application` manage. The
+        // catalog is unfiltered by site type, so the row checks `site_type`.
         canMagicLogin={can(appPermissions, "app_magic_login", "manage", "application")}
         gitProviders={gitProviders}
         missingDatabase={sitesMissingDatabase(

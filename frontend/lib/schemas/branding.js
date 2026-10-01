@@ -1,10 +1,8 @@
 import { z } from "zod";
 
-// Every field is tolerant on purpose: branding is whatever the panel owner
-// configured, and one unusable value must never discard the rest of it.
-// `.catch(null)` degrades a single bad field instead of failing the object.
-// Usability (scheme, emptiness, colour validity) is decided in
-// lib/branding/get-branding.js, which fills each gap from the defaults.
+// Every field is tolerant: one unusable value must not discard the rest, so
+// `.catch(null)` degrades a single bad field. Usability is decided in
+// lib/branding/get-branding.js, which fills gaps from the defaults.
 const brandingField = z.string().nullish().catch(null);
 
 export const brandingSchema = z

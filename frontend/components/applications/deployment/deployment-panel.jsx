@@ -21,16 +21,16 @@ import { RuntimeCard } from "@/components/applications/deployment/runtime-card";
 import { DeployHistoryCard } from "@/components/applications/deployment/deploy-history-card";
 import { LoadFailed } from "@/components/data-table/load-failed";
 
-// A deploy flips status to "provisioning" while it runs; poll the resource so
-// steps[] and the commit/timestamp update in place without leaving the page.
+// A deploy sets status to "provisioning" while it runs; poll so steps[] and the
+// commit/timestamp update in place.
 const POLL_MS = 2500;
 const TABS = ["history", "settings", "automation"];
-// Longer than any deploy the backend allows to run. Past it the poll stops
-// costing requests and the page re-reads instead of spinning on.
+// Longer than any deploy the backend allows; past it the poll stops and the page
+// re-reads instead.
 const DEPLOY_WATCH_LIMIT_MS = 30 * 60 * 1000;
 
-// Matching components/applications/domains/domains-ssl-tabs.jsx exactly:
-// !h-auto overrides shadcn TabsList's hard-coded height so the py padding lands.
+// Matches components/applications/domains/domains-ssl-tabs.jsx: !h-auto overrides
+// shadcn TabsList's fixed height so the py padding applies.
 const TRIGGER = "!h-auto gap-2 px-4 py-2";
 
 export function DeploymentPanel({
@@ -44,14 +44,12 @@ export function DeploymentPanel({
   gitAccounts = [],
 }) {
   const t = useTranslations("applications.deployment");
-  // Step labels live under `details` — the namespace of the first screen that
-  // needed them — and a raw `verify` in a toast is as unreadable as in a card.
+  // Step labels live under `details`; raw step ids are unreadable in a toast.
   const ts = useTranslations("applications.details");
   const router = useRouter();
   const [application, setApplication] = useState(initial);
-  // Held in state so a poll can move it between server renders, but a new
-  // render must still win: a saved branch refreshed the page and the Deploy
-  // card went on naming the old one until a reload.
+  // Held in state so a poll can update it, but a new server render must still win
+  // (e.g. after saving a branch).
   const [renderedFrom, setRenderedFrom] = useState(initial);
   if (initial !== renderedFrom) {
     setRenderedFrom(initial);
@@ -60,8 +58,8 @@ export function DeploymentPanel({
   const [deploying, setDeploying] = useState(false);
   const searchParams = useSearchParams();
   const [tab, setTabState] = useState(() => (TABS.includes(searchParams.get("tab")) ? searchParams.get("tab") : "history"));
-  // In the address, like Domains & SSL, so a reload or a shared link lands on
-  // the same tab. replaceState, not router: a tab is not a navigation.
+  // In the URL so a reload or shared link keeps the tab. replaceState, not the
+  // router: a tab change is not a navigation.
   const setTab = useCallback((next) => {
     setTabState(next);
     const params = new URLSearchParams(window.location.search);
@@ -69,16 +67,14 @@ export function DeploymentPanel({
     window.history.replaceState(null, "", `?${params.toString()}`);
   }, []);
   const pollRef = useRef(null);
-  // Set when a poll gives up. Without it the provisioning watch below took
-  // over the moment the deploy poll stopped, and polled on without end.
+  // Set when a poll gives up, so the provisioning watch below does not take over
+  // and poll forever.
   const gaveUpRef = useRef(false);
-  // The failure banner and the build log sit in two different cards; this is
-  // the one place that can see both.
+  // The failure banner and build log are in different cards; this sees both.
   const historyRef = useRef(null);
 
-  // Only the newest deploy's log answers "why did THIS fail". An older failed
-  // run further down the list is a different question, and `failed_step` can
-  // also come from provisioning, where there is no deploy to open at all.
+  // Only the newest deploy's log explains this failure; `failed_step` can also
+  // come from provisioning, with no deploy to open.
   const lastFailed = deployments[0]?.status === "failed" ? deployments[0] : null;
 
   const stopPoll = useCallback(() => {
@@ -91,14 +87,8 @@ export function DeploymentPanel({
   useEffect(() => () => stopPoll(), [stopPoll]);
 
   /*
-   * Switch tab and open the log in one go.
-   *
-   * No waiting for the tab to become active first: every TabsContent here is
-   * `forceMount`, so the history card is mounted from the start and its ref is
-   * live whichever tab is showing. An earlier version parked the deployment in
-   * state and opened it from an effect once the tab changed, which was both a
-   * `set-state-in-effect` lint error and a dance around a problem that
-   * `forceMount` had already solved.
+   * Switch tab and open the log in one go. Every TabsContent is `forceMount`, so
+   * the history card's ref is live whichever tab is showing.
    */
   const showBuildLog = useCallback((deployment) => {
     setTab("history");
@@ -114,12 +104,11 @@ export function DeploymentPanel({
         return parsed.data;
       }
     } catch {
-      // Transient poll error — keep the last good state and try again.
+      // Transient poll error: keep the last good state and retry.
     }
     return null;
   }, [application.id]);
 
-  // The verdict on a finished deploy, whichever way it was started.
   const announce = useCallback(
     (next, before) => {
       if (next.code_on_disk?.state === "incomplete") {
@@ -153,15 +142,12 @@ export function DeploymentPanel({
         }
         const next = await refresh();
         if (!next) return;
-        // Back to a settled state — a failed redeploy leaves the site "active"
-        // with failed_step set, so read that, not the status, for the verdict.
+        // A failed redeploy leaves the site "active" with failed_step set; read that,
+        // not the status, for the verdict.
         if (next.status === "active" || next.status === "failed") {
           stopPoll();
           setDeploying(false);
-          // The history is a server-component prop, and polling only ever
-          // re-read the application — so the run that just finished never
-          // appeared, and its commit never appeared, until someone reloaded
-          // the page by hand. Re-run the server component instead.
+          // The history is a server-component prop; re-run it so the finished run appears.
           router.refresh();
           announce(next, before);
         }
@@ -173,21 +159,18 @@ export function DeploymentPanel({
   }, [application.id, application.last_deployed_at, refresh, stopPoll, router, t, announce]);
 
   /*
-   * Watch for deploys this page did not start: a push, or someone else.
+   * Watch for deploys this page did not start (a push, another user).
    *
-   * The history is a server render, so a deploy started by a webhook stayed
-   * invisible until a reload. Every 5 s (2.5 s while one runs) the page asks
-   * for the newest deploy and re-reads only when it differs from the top row.
-   * Paused while the tab is hidden and asked again on return: a background tab
-   * polling a shared rate limit helps nobody.
+   * The history is a server render, so every 5 s (2.5 s while one runs) ask for the
+   * newest deploy and re-read only when it differs from the top row. Paused while
+   * the tab is hidden, to spare the shared rate limit.
    *
-   * The top row and `deploying` are read through refs so a history that just
-   * re-rendered does not restart the timer.
+   * The top row and `deploying` are read through refs so a history re-render does
+   * not restart the timer.
    */
   const topRef = useRef(deployments[0] ?? null);
-  // The deploy being watched to its end, kept apart from `topRef`: the history
-  // re-render that follows a change can land after the deploy finished, and
-  // reading "was it running?" off the refreshed row then missed the ending.
+  // Kept apart from `topRef`: the history refresh can land after the deploy
+  // finished, and reading "was it running?" off the refreshed row misses the end.
   const watchingRef = useRef(deployments[0]?.in_flight ? deployments[0].id : null);
   const deployingRef = useRef(deploying);
   useEffect(() => {
@@ -212,11 +195,9 @@ export function DeploymentPanel({
           const latest = parsed.data.latest;
           const top = topRef.current;
           delay = watchDelay(latest, deployingRef.current);
-          // A deploy this page did not start (a push, a redeploy from the
-          // list, another tab) just ended: say how, as a deploy started here
-          // would. This page's own deploy is announced by its own poll.
-          // Decided before and apart from `latestChanged`, whose comparison
-          // row a history refresh may already have moved past the ending.
+          // A deploy this page did not start just ended: announce it as a local one would.
+          // This page's own deploy is announced by its own poll. Decided before
+          // `latestChanged`, whose row a refresh may already have moved past the ending.
           if (latest?.in_flight && !deployingRef.current) watchingRef.current = latest.id;
           const finished = Boolean(latest) && latest.id === watchingRef.current && !latest.in_flight;
           if (finished) watchingRef.current = null;
@@ -224,11 +205,11 @@ export function DeploymentPanel({
             if (isNewPush(latest, top) && !deployingRef.current) {
               toast.info(t("history.pushStarted", { branch: latest.branch ?? application.branch ?? "main" }));
             }
-            // Held until the refreshed history replaces it, so the same change
-            // is not acted on twice while the server render is on its way.
+            // Held until the refreshed history replaces it, so one change is not handled
+            // twice.
             topRef.current = latest;
-            // The Deploy card reads the application (commit, failed step), the
-            // history reads the server render: both have moved.
+            // The Deploy card reads the application and the history reads the server
+            // render; both have changed.
             const next = await refresh();
             router.refresh();
             if (finished && next) announce(next);
@@ -259,13 +240,8 @@ export function DeploymentPanel({
   }, [application.id, application.branch, refresh, router, t, announce]);
 
   /*
-   * A deploy this page did not start.
-   *
-   * Auto-deploy fires from a push, and the panel only ever polled after its own
-   * button was pressed — so an open page sat on a stale history while a deploy
-   * ran and finished behind it. Provisioning is the same signal either way, so
-   * watching for it covers both without polling a page where nothing is
-   * happening.
+   * Auto-deploy from a push: watch for provisioning so an open page does not sit on
+   * a stale history.
    */
   useEffect(() => {
     if (deploying || application.status !== "provisioning" || pollRef.current || gaveUpRef.current) return undefined;
@@ -289,11 +265,8 @@ export function DeploymentPanel({
 
   return (
     <div className="space-y-6">
-      {/* The hero, outside the tabs: what is deployed and the button that
-          changes it are the two things that must be true on every tab. Five
-          cards of identical weight is what made this page read as a wall, and
-          the flattest part was that the thing the page exists for had the same
-          weight as the port number. */}
+      {/* Outside the tabs: what is deployed and the button that changes it must be
+          visible on every tab. */}
       <DeployCard
         application={application}
         deploying={deploying || application.status === "provisioning" || Boolean(deployments[0]?.in_flight)}
@@ -322,12 +295,9 @@ export function DeploymentPanel({
           </TabsList>
         </ScrollFade>
 
-        {/* History first: it is what you want the second after pressing Deploy,
-            and it used to be a thousand pixels below the button. */}
+        {/* History first: it is what is wanted right after pressing Deploy. */}
         <TabsContent value="history" forceMount className="data-[state=inactive]:hidden">
-          {/* An unanswered read is not an empty history: "No deploys yet" on
-              a site with fifty was the page asserting something it never
-              learned. */}
+          {/* A failed read is not an empty history. */}
           {history?.failed ? (
             <LoadFailed description={t("history.loadFailed")} status={history.status} failure={history.failure} message={history.message} debug={history.debug} />
           ) : (
@@ -356,8 +326,7 @@ export function DeploymentPanel({
               canManage={canManage}
             />
           ) : null}
-          {/* Only a site that runs a process has one to start, and the fields
-              are meaningless on a static or PHP site — the API nulls them. */}
+          {/* Only process-running sites have these fields; the API nulls them otherwise. */}
           {application.has_process ? (
             <RuntimeCard application={application} canManage={canManage} />
           ) : null}

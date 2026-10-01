@@ -1,18 +1,6 @@
 /**
- * One ECharts option shape for every time-series card in the panel.
- *
- * The five charts differ in about six ways — area or line, one axis or two,
- * percent or bytes or a bare number, a capacity line or not — and were
- * otherwise the same eighty lines of configuration copied five times. Under
- * Recharts that duplication is what let the dashboard's 2x2 grid drift: four
- * cards that are supposed to read as one instrument, each free to disagree
- * about grid colour, tick density or tooltip wording.
- *
- * This is a pure function on purpose. Everything above it is React and canvas
- * and therefore awkward to test; the decisions worth pinning — that a gap in
- * the samples is never joined, that the legend follows declaration order, that
- * an axis floor is respected — are all decisions about this object, and can be
- * asserted directly.
+ * One ECharts option shape for every time-series card in the panel, so the
+ * charts stay visually consistent. Kept a pure function so it can be unit-tested.
  */
 
 /** Colour of a series, or a readable fallback if the token has not resolved. */
@@ -21,12 +9,9 @@ function colourOf(series, tokens) {
 }
 
 /**
- * The same colour, see-through.
- *
- * Tokens arrive as `rgb(r, g, b)` — the chart host converts them, because
- * ECharts cannot do arithmetic on `oklch()`. That makes the alpha form a string
- * edit rather than a colour-space problem. Anything unexpected is returned
- * unchanged: a tint is decoration, and it is not worth risking a blank chart.
+ * The same colour, see-through. Tokens arrive as `rgb(r, g, b)` (the chart
+ * host converts them; ECharts cannot handle `oklch()`). Anything else is
+ * returned unchanged.
  */
 function withAlpha(colour, alpha) {
   const m = /^rgb\((\s*\d+\s*,\s*\d+\s*,\s*\d+\s*)\)$/.exec(colour ?? "");
@@ -65,8 +50,7 @@ export function timeSeriesOption({
       yAxisIndex: s.axis ?? 0,
       showSymbol: false,
       smooth: true,
-      // A missing sample is a gap in what we know. Joining across it draws a
-      // straight line through a collector outage as though it were data.
+      // Never join across a missing sample; it would draw an outage as data.
       connectNulls: false,
       lineStyle: { width: s.width ?? 2, color: colour },
       itemStyle: { color: colour },
@@ -80,9 +64,7 @@ export function timeSeriesOption({
     return line;
   });
 
-  // The capacity reference hangs off the first series rather than being a
-  // series of its own, so it never appears in the legend as though it were
-  // something measured.
+  // Attached to the first series so the capacity line stays out of the legend.
   if (markLine && built[0]) {
     built[0].markLine = {
       silent: true,
@@ -97,28 +79,18 @@ export function timeSeriesOption({
   }
 
   const option = {
-    // ECharts' generated description, alongside the hidden table the wrapper
-    // renders. A canvas is one opaque element without both.
+    // Pairs with the hidden data table the wrapper renders for screen readers.
     aria: { enabled: true, decal: { show: true } },
-    // These redraw on a poll. A chart that re-animates every few seconds is
-    // unreadable, and on the 2x2 grid it is four of them out of step.
+    // Charts redraw on a poll; re-animating each time is unreadable.
     animation: false,
     /*
-     * Everything below the plot is stacked from the bottom edge up, and the
-     * numbers have to be kept in step by hand -- ECharts does not lay these
-     * out relative to each other.
+     * Bands below the plot are stacked by hand; ECharts does not lay them out
+     * relative to each other. Keep these numbers in step:
      *
      *   slider   4 .. 34   (bottom 4, height 30)
      *   legend  42 .. 56   (clears the slider by 8)
      *   labels  68 .. 80   (ECharts puts them at gridBottom-20 .. gridBottom-8)
      *   grid bottom 88     (so the labels clear the legend by 12)
-     *
-     * The legend used to sit at 28, which put it INSIDE the slider's band --
-     * they overlapped by six pixels and read as one smudged strip. Moving it
-     * to 46 then walked it into the axis labels instead, because those hang
-     * BELOW the grid line rather than above it. Hence the arithmetic written
-     * out: three bands stacked from the bottom edge, none of them aware of
-     * each other.
      */
     grid: {
       left: 56,
@@ -128,17 +100,12 @@ export function timeSeriesOption({
       containLabel: false,
     },
     legend: {
-      // Declaration order. Recharts built the legend from its own internal
-      // ordering, so load average listed itself "1m · 15m · 5m" against the
-      // order the stat card above used, and a custom content component had to
-      // put it back. Nothing to work around here.
+      // Declaration order.
       data: series.map((s) => s.label),
       bottom: zoom ? 42 : 4,
       icon: "roundRect",
-      // 8px swatches with 6px of air, and 22px between entries. At 10px square
-      // with ECharts' default 10px item gap, the swatch sat as far from its own
-      // label as the entries sat from each other — so "In Out" read as four
-      // loose things rather than two pairs.
+      // Gap between entries larger than swatch-to-label, so each swatch reads
+      // as paired with its own label.
       itemWidth: 8,
       itemHeight: 8,
       itemGap: 22,
@@ -171,9 +138,7 @@ export function timeSeriesOption({
       axisLine: { show: false },
       axisTick: { show: false },
       splitLine: { show: false },
-      // 11px, matching the legend under it. The scale around the plot is
-      // annotation; at the same 12px as the card's body text it competed with
-      // the numbers it was supposed to be labelling.
+      // 11px to match the legend and stay below body text.
       axisLabel: { color: muted, fontSize: 11, hideOverlap: true, formatter: xLabel },
     },
     yAxis: axes.map((axis, index) => ({
@@ -185,18 +150,8 @@ export function timeSeriesOption({
       position: axis.position ?? (index === 0 ? "left" : "right"),
       axisLine: { show: false },
       axisTick: { show: false },
-      // Only the first axis draws grid lines; two sets of them on one plot is
-      // a grid that looks broken rather than two scales.
-      /*
-       * Solid and faint, not dashed.
-       *
-       * A dashed rule draws the eye along itself — it is a mark in its own
-       * right, and there are five of them behind every plot. The grid is
-       * scaffolding for reading heights off the line, so it wants to be barely
-       * there. Opacity rather than a lighter token because `--border` is
-       * already the faintest line in the system and the dark theme resolves it
-       * to an alpha over the surface, which cannot be lightened further.
-       */
+      // Only the first axis draws grid lines. Solid and faint rather than
+      // dashed; opacity because `--border` is already the faintest token.
       splitLine:
         index === 0
           ? { lineStyle: { color: border, type: "solid", width: 1, opacity: 0.7 } }
@@ -204,9 +159,7 @@ export function timeSeriesOption({
       axisLabel: {
         color: muted,
         fontSize: 11,
-        // Same rule the x-axis already uses. A forced `max` lands a label
-        // wherever the ceiling happens to be, so the load chart printed "4.2"
-        // and "4" touching each other — two readings of one gridline.
+        // A forced `max` gets its own label, which can collide with a tick.
         hideOverlap: true,
         ...(axis.formatter ? { formatter: axis.formatter } : {}),
       },
@@ -221,18 +174,12 @@ export function timeSeriesOption({
       { type: "inside", throttle: 50 },
       {
         type: "slider",
-        /*
-         * Taller than the 18px it was, and coloured from the palette rather
-         * than left on ECharts' defaults. At 18px with grey factory handles it
-         * read as a divider under the chart -- people did not know it zoomed,
-         * which is the only thing it is there for.
-         */
+        // Tall and tinted so it reads as a zoom control, not a divider.
         height: 30,
         bottom: 4,
         borderColor: border,
         backgroundColor: "transparent",
-        // The unselected span, so the selected one reads as a window cut out
-        // of the whole range rather than a bar sitting on top of it.
+        // Muted unselected span so the selection reads as a window.
         dataBackground: {
           lineStyle: { color: muted, opacity: 0.35 },
           areaStyle: { color: muted, opacity: 0.12 },
@@ -257,12 +204,8 @@ export function timeSeriesOption({
 }
 
 /**
- * The same numbers as text, for anyone who cannot see the canvas.
- *
- * Built here rather than per chart so it cannot quietly diverge from what is
- * drawn: same data, same series order, same formatters. A chart that renders
- * without one is a chart a screen reader cannot read at all — the SVG this
- * replaced at least exposed its points.
+ * The same numbers as a text table for screen readers. Built from the same
+ * data, series order and formatters as the chart so the two cannot diverge.
  */
 export function seriesDataTable({ caption, timeLabel, data = [], series = [], xLabel, value }) {
   return {
@@ -280,10 +223,8 @@ export function seriesDataTable({ caption, timeLabel, data = [], series = [], xL
 }
 
 /**
- * An axis ceiling that leaves headroom without letting a quiet series look
- * dramatic. `floor` is what the axis must always include — 64 KB/s for the
- * I/O charts, the core count for load — so a flat idle line reads as idle
- * rather than being auto-scaled into a mountain range.
+ * An axis ceiling with headroom. `floor` is always included (e.g. 64 KB/s for
+ * I/O, core count for load) so an idle series is not auto-scaled to look busy.
  */
 export function axisMax(data, keys, { floor = 0, headroom = 1.2 } = {}) {
   let peak = 0;
@@ -299,18 +240,10 @@ export function axisMax(data, keys, { floor = 0, headroom = 1.2 } = {}) {
 
 /**
  * Round a ceiling up to a number the tick sequence would have chosen anyway
- * (1, 2, 2.5 or 5 x 10^n).
+ * (1, 2, 2.5 or 5 x 10^n), so a forced `max` label does not sit beside a tick.
  *
- * A forced `max` always gets its own label, so an arbitrary ceiling prints one
- * nobody asked for right beside a real tick: the load chart's floor is
- * `cores * 1.05`, which on a four-core box drew "4.2" and "4" touching each
- * other — two readings of the same gridline, and the smaller number was the
- * meaningful one. Rounding 4.2 up to 5 puts the capacity line on an ordinary
- * tick with room above it, which is what the 5% headroom was for.
- *
- * Applied by the caller, not inside `axisMax`. The two I/O charts floor at
- * 65536 — 64 KB/s, already round in the units their axis is labelled in — and
- * this would push them to 100000, i.e. "97.7 KB/s".
+ * Applied by the caller, not inside `axisMax`: the I/O charts' 65536 floor is
+ * already round in KB/s and would become "97.7 KB/s".
  */
 export function niceCeiling(value) {
   if (!Number.isFinite(value) || value <= 0) return 1;

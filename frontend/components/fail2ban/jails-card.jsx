@@ -35,47 +35,27 @@ import {
 import { apiMessage } from "@/lib/api/error-message";
 
 /**
- * The jails, and the guard that stops you locking yourself out.
- *
- * Enabling the SSH jail when your own address isn't on the ignore list can end
- * with fail2ban banning you from your own server. The API refuses that unless
- * you're ignored or you explicitly acknowledge — and rather than forwarding the
- * refusal as an error, this asks first and makes **adding an address the primary
- * action**. The safe path should be the easy one.
- *
- * The guard fires on every attempt to switch a risky jail on, and again if the
- * server refuses anyway. It used to be skipped whenever `your_ip` appeared in
- * the ignore list — but `your_ip` is the address the API saw, and this page is
- * rendered on the server, so that address is the panel's own host. The result
- * was a jail you could switch off and never switch back on: no dialog, no way
- * to add an address, no way to acknowledge, just a red toast.
+ * The jails, with a lockout guard. Enabling a risky jail (e.g. SSH) asks first,
+ * with adding an ignored address as the primary action; the API refuses unless
+ * the address is ignored or the risk acknowledged. The guard fires on every
+ * attempt, and again if the server refuses: the API's `your_ip` is the panel
+ * host, not the browser, so it cannot prove the user is safe.
  */
 export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, asked, onAskedChange }) {
   const t = useTranslations("fail2ban");
   const { refreshAndWait } = useRefresh();
   const [pending, setPending] = useState(null);
-  // What the user asked for, held until the server catches up. Stored WITH the
-  // value it was based on, so once the server moves off that value the answer
-  // has landed and the override retires itself. Without this the switch did not
-  // move on click and still read "on" after a successful off, because `checked`
-  // was the server value and the refresh had not come back yet.
-  // Owned by ProtectionSection, because the ban list has to read it too.
+  // Optimistic overrides, stored with the server value they were based on so
+  // they retire once the server moves. Owned by ProtectionSection (the ban list
+  // reads it too).
   const setAsked = onAskedChange;
   const [guarding, setGuarding] = useState(null);
-  // Which of the guard's two answers is in flight. `pending` only knows a jail
-  // is busy, and both buttons here act on the same jail — without this neither
-  // could show a spinner, so the dialog sat inert through a config rewrite and
-  // a fail2ban reload, which takes seconds.
+  // Which guard button is in flight; both act on the same jail.
   const [guardAction, setGuardAction] = useState(null);
   const [explaining, setExplaining] = useState(false);
 
-  // Pre-filled, never trusted. `your_ip` is whatever address the API saw make
-  // the request — and this page is server-rendered, so on a real install that
-  // is the panel's own server, not the browser. Checking it against the ignore
-  // list used to "prove" you were safe and skip the warning entirely, which is
-  // how the SSH jail became a switch you could turn off and never back on.
-  // Derived until typed in: the address arrives from the browser after the
-  // first render, and a useState seed would have kept it empty.
+  // Pre-filled, never trusted. Derived until typed in, because the browser IP
+  // arrives after the first render.
   const [typedIp, setIgnoreIp] = useState(null);
   const ignoreIp = typedIp ?? yourIp ?? "";
 
@@ -86,22 +66,15 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
 
   async function apply(jail, enabled, { addIp = null, acknowledged = false } = {}) {
     setPending(jail.name);
-    // Read the server value NOW, not off the `jail` the caller is holding: the
-    // guard dialog hands back the jail as it was when it opened, which can be
-    // two refreshes old. The override retires when the server moves off the
-    // value it was based on, so a stale base retires it instantly and the
-    // switch snaps back to a state the user just changed — it did exactly that
-    // after a successful "turn it on", while the toast said it had worked.
+    // Read the live server value, not the `jail` passed in: the guard dialog's
+    // copy can be stale, and a stale base would retire the override at once.
     const server = (jails.find((entry) => entry.name === jail.name) ?? jail).enabled;
     setAsked((current) => ({ ...current, [jail.name]: { value: enabled, from: server } }));
     try {
       await updateFail2ban({
-        // The settings numbers ride along on every call — this endpoint rewrites
-        // the config as a unit and rejects a payload without them. Without this
-        // a jail toggle fails validation before it ever reaches fail2ban.
+        // Required on every call: the endpoint rewrites the config as a unit.
         ...settingsPayload(settings, ignoreIps),
-        // Only this jail is sent: the API keeps omitted jails as they are, so a
-        // single toggle can't disturb the others.
+        // The API leaves omitted jails unchanged.
         jails: { [jail.name]: enabled },
         ...(addIp && !ignoreIps.includes(addIp) ? { ignore_ips: [...ignoreIps, addIp] } : null),
         ...(acknowledged ? { acknowledged: true } : null),
@@ -113,18 +86,14 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
       setGuarding(null);
     } catch (error) {
       const data = error.response?.data;
-      // Put the switch back where it was: it must not sit showing a state the
-      // server refused.
+      // Revert the switch: it must not show a refused state.
       setAsked((current) => {
         const next = { ...current };
         delete next[jail.name];
         return next;
       });
-      // The server's own lockout refusal. It arrives as a bare 422 with a
-      // `message` and no `errors` bag, so keying off `errors["fail2ban.lockout_risk"]`
-      // alone silently missed every real refusal and left a dead-end toast:
-      // switching a risky jail ON is the only thing here that earns a 422, so
-      // that combination IS the refusal.
+      // The lockout refusal can arrive as a bare 422 without an `errors` bag;
+      // a 422 on switching a risky jail ON is that refusal.
       const refusedForLockout =
         Boolean(data?.errors?.["fail2ban.lockout_risk"]) ||
         (error.response?.status === 422 && enabled && jail.lockout_risk);
@@ -140,8 +109,7 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
     }
   }
 
-  // The guard's two ways out, both of which write the config and reload
-  // fail2ban. Named so the button that was pressed is the one that spins.
+  // The guard's two answers; `action` names the button that spins.
   function answerGuard(action, options) {
     if (!guarding) return;
     setGuardAction(action);
@@ -149,11 +117,8 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
   }
 
   function toggle(jail, enabled) {
-    // Ask before the API has to refuse: turning ON a risky jail is the move
-    // that locks people out. Asked every time rather than only when we think
-    // your address isn't ignored — we cannot tell from here (see `ignoreIp`),
-    // and a warning shown once too often costs a click, while one skipped
-    // costs the server.
+    // Always ask before enabling a risky jail: whether the user's address is
+    // ignored cannot be known here.
     if (enabled && jail.lockout_risk) {
       setGuarding({ jail, enabled });
       return;
@@ -169,10 +134,7 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
           <CardDescription>{t("jails.description")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {/* Asked, not told. The explanation matters once — on someone's first
-              visit — and after that it is three lines of wall between them and
-              the switches. A link costs one click for the person who needs it
-              and nothing for the person who doesn't. */}
+          {/* The explanation is behind a toggle so it does not crowd the switches. */}
           <div>
             <button
               type="button"
@@ -190,26 +152,16 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
             ) : null}
           </div>
 
-          {/* "Nothing is switched on" used to be said here too. It fires on the
-              exact same condition as the Set up protection card above, so the
-              page said it twice — once as a warning with no action, once as a
-              card with the button. One instruction, one place. */}
-
-          {/* A grid, not a list: at full width one jail per row leaves most of
-              the row empty, and a real install has five to eight of these. */}
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {jails.map((jail) => (
               <div
                 key={jail.name}
                 className={cn(
                   "rounded-lg border p-3",
-                  // An attack in progress is the one thing on this page that wants
-                  // to interrupt you.
+                  // Highlight an attack in progress.
                   jail.stats?.currently_failed > 0 && "border-warning/40 bg-warning/5",
                 )}
               >
-                {/* Name and switch on one line, stats under: in a narrow tile the
-                    switch can't sit beside a block of numbers. */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
                     <span className="font-medium">{jailLabel(t, jail)}</span>
@@ -239,12 +191,7 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
                   </ReasonTooltip>
                 </div>
 
-                {/* One sentence, not four labelled numbers. Twelve figures
-                    across three tiles is a dashboard nobody asked for; what you
-                    need at a glance is whether this jail is doing anything and
-                    whether anything is happening to it right now. The lifetime
-                    totals are still there, one hover away, because they answer a
-                    question you only ask deliberately. */}
+                {/* One-line state; lifetime totals are one hover away. */}
                 <JailState jail={jail} t={t} />
               </div>
             ))}
@@ -252,17 +199,12 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
         </CardContent>
       </Card>
 
-      {/* Not dismissible mid-write: the config rewrite and reload are already
-          under way, and a dialog that vanishes on Escape reads as "cancelled"
-          when nothing was cancelled. */}
+      {/* Not dismissible mid-write: closing would read as "cancelled". */}
       <Dialog
         open={guarding !== null}
         onOpenChange={(open) => !open && pending === null && setGuarding(null)}
       >
-        {/* Matches FormModal's width, because this is a form dialog in all but
-            name — a labelled input, a hint, and two long buttons. On the bare
-            `sm:max-w-sm` default it was the narrowest dialog in the panel while
-            carrying the most content. */}
+        {/* Matches FormModal's width. */}
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <div className="flex items-center gap-3">
@@ -276,10 +218,7 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
             </DialogDescription>
           </DialogHeader>
 
-          {/* Editable, and the primary way out. The address is pre-filled from
-              the API when it looks like a real client address, but it is the
-              person at the keyboard who knows what they are connecting from —
-              the panel only ever sees its own server. */}
+          {/* Editable: only the user knows the address they connect from. */}
           <div className="space-y-2 py-2">
             <Label htmlFor="lockout-ip" hint={t("lockout.ipLabelHint")}>{t("lockout.ipLabel")}</Label>
             <Input
@@ -289,9 +228,7 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
               placeholder={t("lockout.ipPlaceholder")}
               autoComplete="off"
               spellCheck={false}
-              // Locked while the write is in flight: the address is part of the
-              // payload already sent, so editing it here would change nothing
-              // and say otherwise.
+              // Locked in flight: the address was already sent.
               disabled={pending !== null}
               className="font-mono text-xs"
             />
@@ -299,9 +236,7 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
           </div>
 
           <DialogFooter>
-            {/* Deliberate order: the risky choice is the quiet one. In the
-                default footer layout this reads left-to-right as quiet →
-                primary, same as Cancel-then-Confirm everywhere else. */}
+            {/* Deliberate order: the risky choice is the quiet one. */}
             <Button
               variant="ghost"
               disabled={pending !== null}
@@ -327,12 +262,8 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
 }
 
 /**
- * What this jail is doing, in one line.
- *
- * Ordered by urgency: an attack in progress beats a standing block, which beats
- * "quiet". A switched-off jail counts nothing at all, so it reports that rather
- * than a row of zeroes that would read as "nothing is happening" — which is
- * true, but only because nobody is looking.
+ * What this jail is doing, in one line, by urgency: attack in progress, then
+ * active bans, then quiet. A disabled jail says so rather than showing zeroes.
  */
 function JailState({ jail, t }) {
   const failing = jail.stats?.currently_failed ?? 0;

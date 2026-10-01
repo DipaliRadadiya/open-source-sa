@@ -8,7 +8,7 @@ import { assessHealth } from "@/lib/databases/health";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
-// Worst first, so the lead line is the thing that matters most.
+// Worst first, so the lead line is the most important issue.
 const RANK = { normal: 0, high: 1, review: 2 };
 
 const TONE = {
@@ -32,12 +32,7 @@ const TONE = {
 const ISSUE_TEXT = "text-sm";
 
 /**
- * The verdict, before any numbers.
- *
- * Someone opening a page called "Database health" is asking one question, and
- * a row of counters does not answer it — you have to already know that 42 of
- * 151 connections is fine and that a two-minute query is not. This says
- * healthy or not, and then says exactly why.
+ * The verdict (healthy or not, and why) before any numbers.
  */
 export function HealthSummary({ engine, status, processes = [] }) {
   const t = useTranslations("databases.monitor.health");
@@ -45,8 +40,7 @@ export function HealthSummary({ engine, status, processes = [] }) {
   const format = useFormatter();
   const { tone, issues, recentlyRestarted } = assessHealth({ status, processes });
 
-  // No status means the check did not answer. "Healthy" over an unanswered
-  // request is the reassuring false fact; say we could not tell.
+  // No status means the check did not answer: say so instead of "Healthy".
   if (!status) {
     return (
       <Card className="gap-0 overflow-hidden py-0">
@@ -70,9 +64,7 @@ export function HealthSummary({ engine, status, processes = [] }) {
   const styles = TONE[tone];
   const Icon = styles.icon;
 
-  // The worst issue is stated next to the verdict, not left in a list below
-  // it: "Needs attention / 1 thing to look at" made you read further to learn
-  // what the thing was. Anything else stays in the strip underneath.
+  // The worst issue sits beside the verdict; the rest go in the strip below.
   const ranked = [...issues].sort((a, b) => RANK[b.tone] - RANK[a.tone]);
   const [lead, ...rest] = ranked;
   const issueText = (issue) =>
@@ -120,8 +112,7 @@ export function HealthSummary({ engine, status, processes = [] }) {
           </div>
         </div>
 
-        {/* The facts you would otherwise scroll for: which engine, which
-            version, is it up, how long. */}
+        {/* Engine, version, state and uptime. */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
           <span className="flex items-center gap-2">
             <span className="font-medium">{engine?.engine ? tEngines(engine.engine) : null}</span>

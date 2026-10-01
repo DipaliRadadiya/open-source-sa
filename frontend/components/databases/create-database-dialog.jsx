@@ -45,28 +45,22 @@ import { CreatedCredentials } from "@/components/databases/created-credentials";
 /**
  * Create a database, and the credential that makes it usable.
  *
- * The user is created in the SAME step, opt-out rather than a second errand: a
- * database with no user cannot be connected to by anything, so leaving it off
- * by default builds a trap and calls it a choice.
- *
- * Charset and collation are collapsed. They have correct defaults, the API
- * rejects mismatched pairs, and most people creating a database for an app have
- * no reason to think about either.
+ * The user is created in the same step (opt-out): a database without a user
+ * cannot be connected to. Charset and collation are collapsed: they have
+ * correct defaults and the API rejects mismatched pairs.
  */
 export function CreateDatabaseDialog({
   engines = [],
   open,
   onOpenChange,
-  // The sites this database could belong to, and which of them already have
-  // one. Empty means the picker is not offered at all.
+  // Sites this database could belong to, and which already have one. Empty
+  // hides the picker.
   applications = [],
   databaseCounts = null,
   databasesKnown = false,
-  // The catalogue, only so the picker can say which sites cannot speak the
-  // engine chosen above. Empty means no pairing is blocked.
+  // Only used to mark sites that cannot use the chosen engine. Empty blocks nothing.
   siteTypes = [],
-  // Opened from a site's own page: the site is already the answer, so the
-  // picker is not a question worth asking. Sent all the same.
+  // Opened from a site's page: the picker is hidden but the id is still sent.
   applicationId = null,
 }) {
   const t = useTranslations("databases");
@@ -74,9 +68,7 @@ export function CreateDatabaseDialog({
   const restart = useRestartConfirm();
   const { refreshAndWait } = useRefresh();
   const [advanced, setAdvanced] = useState(false);
-  // Set on success. The dialog then shows the credential instead of the form —
-  // a closed dialog and a toast leaves you hunting for the connection details
-  // you just created.
+  // Set on success: the dialog then shows the credential instead of the form.
   const [created, setCreated] = useState(null);
 
   const usable = engines.filter((engine) => engine.running);
@@ -96,54 +88,41 @@ export function CreateDatabaseDialog({
   };
 
   /*
-   * The names the server owns, read from the engines it reported rather than
-   * from a list compiled into this bundle. Memoised on the engine rows because
-   * a new resolver on every render resets the form.
+   * Reserved names come from the engines the server reported. Memoised on the
+   * engine rows because a new resolver on every render resets the form.
    */
   const schema = useMemo(() => createDatabaseSchema(reservedNames(engines)), [engines]);
 
   const form = useForm({
     resolver: zodResolver(schema),
-    // Not onBlur: tabbing from an empty Database name into Username marked the
-    // name invalid before anyone had finished filling the form in. Errors wait
-    // for a submit attempt, then clear as each one is fixed.
+    // Not onBlur: errors would fire while tabbing through an unfinished form.
+    // They wait for a submit attempt, then clear as each one is fixed.
     mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues: defaults,
   });
 
-  // Generated after mount and refreshed every time the dialog opens: doing it
-  // in the defaults would render a different value on the server than in the
-  // browser, and would reuse one name for every database created in a session.
+  // Generated after mount and on every open: in the defaults it would cause a
+  // hydration mismatch and reuse one name for the whole session.
   useEffect(() => {
     if (open) form.setValue("username", randomUsername());
   }, [open, form]);
 
   const values = useWatch({ control: form.control });
   const engine = usable.find((item) => item.engine === values.engine);
-  // Defaults true so an older API — which sends no such field — keeps offering
-  // the choice rather than hiding a control that works.
+  // Defaults to true so an older API without the field keeps the choice.
   const remoteUsers = engine?.supports_remote_users !== false;
   /*
-   * Which pair of words this engine uses for the two selects.
-   *
-   * PostgreSQL has neither a "character set" nor a "collation": it has an
-   * ENCODING and an LC_COLLATE, and its values say so — `UTF8` and `C.UTF-8`,
-   * not `utf8mb4` and `utf8mb4_unicode_ci`. Labelling those "Character set"
-   * and "Collation" asks someone to match a documented name against a word
-   * their database has never used.
-   *
-   * Keyed on the driver rather than the engine name, like everything else
-   * here. The lists themselves come from the API and already differ.
+   * PostgreSQL uses ENCODING / LC_COLLATE (`UTF8`, `C.UTF-8`), not "character
+   * set" / "collation", so the labels follow the driver. The value lists come
+   * from the API.
    */
   const charsetWording = engine?.driver === "pgsql" ? "pgsqlWords" : "sqlWords";
   const charsets = engine?.charsets ?? {};
   const charsetNames = Object.keys(charsets);
-  // A collation from the wrong charset is a 422, so the second list is always
-  // derived from the first rather than offering everything.
-  // The `_0900_` collations are MySQL 8's; MariaDB has none of them, and the
-  // API's list for the mysql driver offers them to both — picking one failed
-  // with a bare 500.
+  // A collation from the wrong charset is a 422, so the list derives from the
+  // charset. `_0900_` collations are MySQL 8 only; the API offers them for
+  // MariaDB too, where they fail with a 500.
   const collations = (values.charset ? (charsets[values.charset] ?? []) : []).filter(
     (collation) => engine?.engine !== "mariadb" || !/_0900_/.test(collation),
   );
@@ -153,9 +132,7 @@ export function CreateDatabaseDialog({
       name: submitted.name,
       engine: submitted.engine,
     };
-    // Sent only when a site was chosen. The API takes null for "no site", but
-    // omitting the key entirely is the same thing and keeps the request honest
-    // about what the form actually asked for.
+    // Sent only when a site was chosen; omitting the key equals null.
     if (submitted.application_id) {
       payload.application_id = Number(submitted.application_id);
     }
@@ -167,8 +144,7 @@ export function CreateDatabaseDialog({
         username: submitted.username,
         connection_preference: submitted.connection_preference,
       };
-      // Omitted means the API generates one, which is better than anything a
-      // person types in a hurry.
+      // Omitted means the API generates one.
       if (submitted.password) payload.create_user.password = submitted.password;
       if (submitted.restart_cluster) payload.create_user.restart_cluster = true;
       if (submitted.connection_preference === "remote") {
@@ -199,7 +175,6 @@ export function CreateDatabaseDialog({
 
   const isSubmitting = form.formState.isSubmitting;
 
-  // Step two: what was made, and how to connect to it.
   if (created) {
     return (
       <CreatedCredentials
@@ -252,14 +227,12 @@ export function CreateDatabaseDialog({
                   {...field}
                 />
               </FormControl>
-              {/* Says what IS allowed. "Invalid name" makes people guess. */}
               <FormMessage />
             </FormItem>
           )}
         />
 
-        {/* One engine is not a choice, and a select with a single option reads
-            as a required step. */}
+        {/* A single-option select would read as a required step. */}
         {usable.length > 1 ? (
           <FormField
             control={form.control}
@@ -272,12 +245,10 @@ export function CreateDatabaseDialog({
                   onValueChange={(next) => {
                     field.onChange(next);
                     /*
-                     * Clear a preference the new engine cannot honour. Picking
-                     * "remote" on MariaDB and then switching to PostgreSQL
-                     * left `remote` in the form with no control showing it —
-                     * an invisible value the API then refuses. Reset at the
-                     * point of change rather than in an effect, which would be
-                     * the cascading render the lint rule refuses.
+                     * Clear a host choice the new engine cannot honour (e.g.
+                     * `remote` after switching to PostgreSQL), or the API
+                     * refuses a value no control shows. Done here, not in an
+                     * effect, to avoid a cascading render.
                      */
                     const chosen = usable.find((item) => item.engine === next);
                     if (chosen?.supports_remote_users === false) {
@@ -305,11 +276,8 @@ export function CreateDatabaseDialog({
           />
         ) : null}
 
-        {/* Which site this database belongs to.
-            Optional, and the reason it exists: backups dump exactly the
-            databases attached to a site, so one created here with no site is
-            absent from every backup — silently, and with nothing on any screen
-            that would say so. */}
+        {/* Optional site link: backups dump only databases attached to a site,
+            so an unattached one is silently absent from every backup. */}
         {applications.length > 0 && !applicationId ? (
           <FormField
             control={form.control}
@@ -330,9 +298,8 @@ export function CreateDatabaseDialog({
                         databaseCounts,
                         databasesKnown,
                         t("create.applicationTaken"),
-                        // Reads the engine chosen above, so switching engine
-                        // re-answers this — the pairing the API refuses
-                        // depends on both halves.
+                        // Depends on the engine chosen above: the API refuses
+                        // some engine/site pairings.
                         (application) =>
                           engineAccepted({ application, siteTypes, engine: values.engine })
                             ? undefined
@@ -346,9 +313,8 @@ export function CreateDatabaseDialog({
                     className="w-full"
                   />
                 </FormControl>
-                {/* The backend asks for this sentence in as many words: someone
-                    who links a database expecting the site to start using it
-                    has been misled. */}
+                {/* The backend requires this hint: linking does not make the
+                    site use the database. */}
                 <FormMessage />
               </FormItem>
             )}
@@ -412,15 +378,9 @@ export function CreateDatabaseDialog({
                           hint: t("access.localhost.hint"),
                         },
                         /*
-                         * Only where the engine can honour them. A PostgreSQL
-                         * role is cluster-wide and carries no host, so the API
-                         * refuses `remote` and `anywhere` there — offering
-                         * them would collect a 422 after the choice.
-                         *
-                         * Read from `supports_remote_users` on the engine row,
-                         * never from its name: the backend publishes the fact
-                         * precisely so this file does not have to know which
-                         * engine PostgreSQL is.
+                         * A PostgreSQL role is cluster-wide with no host, so
+                         * the API refuses `remote` and `anywhere`. Read from
+                         * `supports_remote_users`, never from the engine name.
                          */
                         ...(remoteUsers
                           ? [
@@ -430,10 +390,8 @@ export function CreateDatabaseDialog({
                                 hint: t("access.remote.hint"),
                               },
                               {
-                                // Opens the engine port to every address on
-                                // the internet. That is a sentence people
-                                // should read before choosing it, not discover
-                                // in the firewall.
+                                // Opens the engine port to the whole internet,
+                                // so it carries an explanation.
                                 value: "anywhere",
                                 label: t("access.anywhere.label"),
                                 hint: t("access.anywhere.hint"),
@@ -473,8 +431,7 @@ export function CreateDatabaseDialog({
           </>
         ) : null}
 
-        {/* Correct defaults, an API that rejects bad pairs, and no reason for
-            most people to look — so it starts closed. */}
+        {/* Collapsed by default: the defaults are correct and bad pairs are rejected. */}
         {charsetNames.length > 0 ? (
           <Collapsible open={advanced} onOpenChange={setAdvanced}>
             <CollapsibleTrigger asChild>
@@ -501,8 +458,7 @@ export function CreateDatabaseDialog({
                       value={field.value}
                       onValueChange={(next) => {
                         field.onChange(next);
-                        // The old collation almost certainly belongs to the old
-                        // charset, and sending that pair is a 422.
+                        // The old collation belongs to the old charset; that pair is a 422.
                         form.setValue("collation", "");
                       }}
                     >
@@ -551,11 +507,8 @@ export function CreateDatabaseDialog({
                         ))}
                       </SelectContent>
                     </Select>
-                    {/* Why it is disabled goes under the control, not inside it.
-                        As a placeholder this sentence set the trigger's minimum
-                        width and pushed it past the dialog's edge at larger text
-                        sizes — and a hint no one can finish reading is not a
-                        hint. */}
+                    {/* The disabled reason goes under the control: as a
+                        placeholder it widened the trigger past the dialog edge. */}
                     {!values.charset ? (
                       <FormDescription>{t(`create.${charsetWording}.chooseFirst`)}</FormDescription>
                     ) : null}
@@ -573,9 +526,8 @@ export function CreateDatabaseDialog({
 }
 
 // The first user is sent nested as `create_user`, so its errors come back as
-// `create_user.username` / `.host` — keys no field is named, and a refused
-// username made Create do nothing (or, at best, raise a toast). They are set on
-// the fields directly and left out of what the generic handler sees.
+// `create_user.username` / `.host`. They are set on the fields directly and
+// left out of what the generic handler sees.
 function withUserFieldErrors(error, form) {
   const errors = error?.response?.data?.errors;
   if (!errors) return error;

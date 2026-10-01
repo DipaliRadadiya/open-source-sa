@@ -17,15 +17,13 @@ export default async function EditRolePage({ params }) {
     getTranslations("roles"),
   ]);
 
-  // A failed fetch is not a missing role. Matching an id against an empty list
-  // and calling notFound() states, with a 404, that something exists nowhere —
-  // on the evidence of one request that did not come back.
+  // A failed fetch is not a missing role; never answer it with notFound().
   if (failed) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
   if (catalog.failed) return <LoadFailed description={t("catalogLoadFailed")} status={catalog.status} failure={catalog.failure} />;
 
   const role = roles.find((r) => String(r.id) === String(roleId));
   if (!role) notFound();
-  // System roles (Administrator) can't be edited — the backend rejects it.
+  // System roles (Administrator) cannot be edited; the backend rejects it.
   if (role.is_system) redirect("/admin/roles");
 
   return (

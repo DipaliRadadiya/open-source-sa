@@ -47,10 +47,8 @@ function useFormField() {
   }
 }
 
-// FormItemContext carries the label so FormMessage can render "The Name field
-// is required." instead of the generic sentence. It is derived from the direct
-// FormLabel child rather than written through a ref during render — refs are
-// not render state, and React correctly rejects reading or mutating them here.
+// Carries the label so FormMessage can say "The Name field is required.".
+// Derived from the direct FormLabel child; refs cannot be written during render.
 const FormItemContext = React.createContext({ label: null })
 
 function formLabelText(children) {
@@ -73,9 +71,7 @@ function FormItem({ className, children, ...props }) {
 
   return (
     <FormItemContext.Provider value={{ id, label }}>
-      {/* content-start: without it a shorter field stretched by a taller
-          neighbour in the same grid row spreads the leftover height into its
-          gap, dropping its input below the neighbour's. */}
+      {/* content-start keeps inputs aligned when a grid neighbour is taller. */}
       <div data-slot="form-item" className={cn("grid content-start gap-2", className)} {...props}>
         {children}
       </div>
@@ -83,24 +79,16 @@ function FormItem({ className, children, ...props }) {
   )
 }
 
-// The asterisk-tooltip itself, exported standalone for the handful of forms
-// that label a field with a plain <Label> instead of the FormField/FormLabel
-// trio (no react-hook-form field context to read `required` off of there) —
-// one implementation either way, not a second copy.
-// The asterisk is purely decorative — hover shows the tooltip, no tab stop needed.
-// Removing tabIndex={0} also prevents Radix Dialog from auto-focusing it
-// and opening the tooltip when a modal first renders (RAD-2315 / radix-ui#1949).
+// Exported for forms that use a plain <Label> outside react-hook-form.
+// No tab stop on purpose: Radix Dialog would auto-focus it and open the
+// tooltip when a modal first renders (radix-ui#1949).
 function RequiredMark() {
   const t = useTranslations("common")
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <span className="ml-0.5 text-destructive">
-          {/* The asterisk is a picture of the word, and the tooltip explaining
-              it needs a hover — which a screen reader does not have and a
-              keyboard cannot reach, since this deliberately has no tab stop.
-              So the word goes in the label too, where it is announced as part
-              of the field's name: "Name, required, edit text". */}
+          {/* The tooltip is unreachable without hover, so the word is in the label for screen readers. */}
           <span aria-hidden="true">*</span>
           <span className="sr-only">{t("required")}</span>
         </span>
@@ -110,20 +98,10 @@ function RequiredMark() {
   )
 }
 
-// `required` marks a mandatory field with the same asterisk-tooltip
-// everywhere, instead of every form re-implementing (or forgetting) it.
 /**
- * `hint` is the explanation of a technical field, shown behind a "?".
- *
- * Forwarded to Label, which owns the "?" for the whole panel — half the
- * dialogs label their controls with a plain Label and never touch
- * react-hook-form, and two implementations would drift.
- *
- * The "?" renders after the required asterisk, so the order reading out is
- * "Web root, required, What is this?".
- *
- * Not every field wants one. A "?" beside Password is noise, and noise is what
- * stops people reading the ones that matter.
+ * `required` adds the shared asterisk. `hint` is forwarded to Label, which owns
+ * the "?" explanation and renders it after the asterisk. Use `hint` only on
+ * technical fields.
  */
 function FormLabel({ className, required, hint, children, ...props }) {
   const { error, formItemId } = useFormField()
@@ -166,11 +144,7 @@ function FormDescription({ className, ...props }) {
     <p
       data-slot="form-description"
       id={formDescriptionId}
-      // Smaller and lighter than the label above it. Both were text-sm, so a
-      // hint carried the same visual weight as the thing it was explaining and
-      // the form read as a wall of equal-sized lines. Colour stays at
-      // muted-foreground rather than going fainter: this is still body text
-      // someone has to read, and the token is already near the contrast floor.
+      // Smaller than the label; muted-foreground is already near the contrast floor.
       className={cn("text-muted-foreground text-xs leading-relaxed font-normal", className)}
       {...props}
     />
@@ -183,13 +157,9 @@ function FormMessage({ className, field, ...props }) {
   const tc = useTranslations("common")
   const { label: detectedLabel } = React.useContext(FormItemContext)
 
-  // Zod messages are validation keys (e.g. "min10") — translate them. Anything
-  // that isn't a known key (e.g. a backend error, already localized) renders
-  // as-is.
-  // Explicit children win over the field's own error. Settings schemas emit
-  // keys that live under `settings.validation`, not this namespace, so the
-  // form translates them itself and passes the sentence in — before this, the
-  // raw error always shadowed it and the user read "invalidHostname".
+  // Zod messages are validation keys and get translated; anything else (e.g.
+  // an already localised backend error) renders as-is. Explicit children win,
+  // for forms whose keys live in another namespace.
   const raw = props.children ?? (error ? String(error?.message ?? "") : null)
   // "requiredField" means the field was left empty. Priority: explicit `field`
   // prop > auto-detected label from FormLabel > generic message.

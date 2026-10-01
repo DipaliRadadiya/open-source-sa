@@ -10,9 +10,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { typeBadgeClass, typeLabel } from "@/lib/activity-log/labels";
 
-// Backend timestamps may be ISO or MySQL-style ("YYYY-MM-DD HH:mm:ss"); parse
-// both, return null if neither is valid so we skip the tooltip instead of
-// rendering "Invalid Date".
+// API timestamps may be ISO or MySQL-style ("YYYY-MM-DD HH:mm:ss"); null when
+// invalid so the tooltip is skipped instead of showing "Invalid Date".
 function toDate(value) {
   if (!value) return null;
   let d = new Date(value);
@@ -22,7 +21,7 @@ function toDate(value) {
 }
 
 /* Cells at module level: flexRender treats a cell function's identity as the
- * component type, so an inline cell remounts on every render of this table. */
+ * component type, so an inline cell remounts on every render. */
 
 function WhenCell({ row }) {
   const format = useFormatter();
@@ -50,8 +49,7 @@ function TypeCell({ row }) {
   const t = useTranslations("activity");
   const { type } = row.original;
   if (!type) return <span className="text-muted-foreground">—</span>;
-  // Colour by family (people / security / runtimes / sites / housekeeping) so a
-  // long page can be scanned without reading every word.
+  // Coloured by family so a long page can be scanned.
   return (
     <Badge variant="outline" className={cn("font-normal whitespace-nowrap", typeBadgeClass(type))}>
       {typeLabel(t, type)}
@@ -79,21 +77,15 @@ function DescriptionCell({ row }) {
 
 /**
  * Activity for one scope, fixed by the page. `showUser` adds the "who" column
- * for the server log, which spans everyone; the account tab is only you.
- *
- * No scope column either — each page fixes its own scope, so a column repeating
- * "Server" on every row would be a constant.
+ * for the server log, which spans all users.
  */
 export function MyActivityTable({ data, emptyMessage, hasFilters = false, showUser = false }) {
   const t = useTranslations("activity");
 
-  // Type and Event are shorthand for the description — "Php" + "Install Started"
-  // against "Started installing PHP 8.5". A phone has room for one of the two,
-  // and the sentence is the one worth keeping; without this it is the column
-  // that scrolls out of sight.
+  // Type is hidden below md: it is shorthand for the description, which is the
+  // column worth keeping on a phone.
   const columns = [
-    // Headers may wrap: at 390 in Russian the unbroken headers and "1 час
-    // назад" made the table 43px wider than the phone.
+    // Headers may wrap so long locales fit on a phone.
     { accessorKey: "created_at_human", header: wrap(t("table.when")), cell: WhenCell, meta: { className: "whitespace-normal sm:whitespace-nowrap" } },
     ...(showUser ? [{ id: "user", header: t("columns.user"), cell: UserCell }] : []),
     {
@@ -106,22 +98,13 @@ export function MyActivityTable({ data, emptyMessage, hasFilters = false, showUs
       accessorKey: "description",
       header: wrap(t("table.description")),
       cell: DescriptionCell,
-      // TableCell is whitespace-nowrap for everything, which suits short values
-      // and ruins this one: at 320 the sentence ran straight off the card with
-      // no scrollbar to suggest it. A log line is the one cell that should wrap.
+      // TableCell is nowrap by default; the description must wrap.
       meta: { className: "whitespace-normal" },
     },
   ];
 
-  /*
-   * A filtered-empty table needs the way out, not just the news.
-   *
-   * This one printed "Nothing matches those filters." as a bare line inside the
-   * table and left the reader to work out which of a search box and two selects
-   * to undo — while the identical dead end on Applications, Databases and the
-   * ADMIN copy of this very table all offered one button. Same strings as the
-   * admin table, because it is the same situation.
-   */
+  // A filtered-empty table offers a way to clear the filters (same strings as
+  // the admin table).
   if (data.length === 0 && hasFilters) {
     return (
       <EmptyState

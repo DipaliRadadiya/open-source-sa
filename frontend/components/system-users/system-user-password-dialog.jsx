@@ -34,8 +34,8 @@ export function SystemUserPasswordDialog({ user, open, onOpenChange }) {
   async function onSubmit(values) {
     try {
       await setSystemUserPassword(user.id, values);
-      // Saving… holds until the list has the new value, so reopening straight
-      // away never shows the old one.
+      // Saving… holds until the list has the new value, so reopening never shows the
+      // old one.
       await new Promise((resolve) => refreshThen(resolve));
       toast.success(t("toast.passwordSet"));
       handleOpenChange(false);
@@ -52,8 +52,8 @@ export function SystemUserPasswordDialog({ user, open, onOpenChange }) {
 
   const isSubmitting = form.formState.isSubmitting;
 
-  // Clear values + validation errors when the modal closes (it only hides —
-  // the form stays mounted, so stale errors would show on reopen).
+  // Clear values and errors on close: the form stays mounted, so stale errors would
+  // show on reopen.
   function handleOpenChange(next) {
     if (!next) form.reset();
     onOpenChange?.(next);
@@ -66,8 +66,8 @@ export function SystemUserPasswordDialog({ user, open, onOpenChange }) {
         onOpenChange={handleOpenChange}
         asForm
         onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
-        // The new password, not the eye on the current one: landing there
-        // opened its tooltip, and the first Escape only closed that.
+        // Focus the new password, not the reveal button, whose tooltip would swallow the
+        // first Escape.
         initialFocus="input[name=password]"
         icon={KeyRound}
         title={`${t("password.title")} — ${user?.username ?? ""}`}
@@ -89,7 +89,6 @@ export function SystemUserPasswordDialog({ user, open, onOpenChange }) {
           </>
         }
       >
-        {/* Current */}
         <div className="space-y-1.5 rounded-lg border bg-muted/30 p-3">
           <p className="text-xs font-medium text-muted-foreground">
             {t("password.current")}
@@ -97,7 +96,6 @@ export function SystemUserPasswordDialog({ user, open, onOpenChange }) {
           <PasswordReveal password={user?.password} />
         </div>
 
-        {/* Set new */}
         <div className="space-y-4 rounded-lg border p-3">
           <p className="text-sm font-medium">{t("password.setNew")}</p>
           <FormField
@@ -113,8 +111,7 @@ export function SystemUserPasswordDialog({ user, open, onOpenChange }) {
                     {...field}
                   />
                 </FormControl>
-                {/* Same control as the create dialog. Fills both fields —
-                    nobody retypes a generated password to confirm it. */}
+                {/* Same control as the create dialog; fills both fields. */}
                 <Button
                   type="button"
                   variant="link"

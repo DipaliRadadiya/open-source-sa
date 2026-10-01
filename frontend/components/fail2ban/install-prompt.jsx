@@ -11,46 +11,31 @@ import { parseApiDate } from "@/lib/format/api-date";
 import { Button } from "@/components/ui/button";
 import { apiMessage } from "@/lib/api/error-message";
 
-// apt is allowed ten minutes server-side. Past that we still do not claim it
-// failed — only the server knows that — but we stop implying it is on track.
+// apt is allowed ten minutes server-side; past that the copy stops implying
+// the install is on track, without claiming it failed.
 const SLOW_AFTER_MS = 10 * 60 * 1000;
 
 /**
- * Not installed is a normal state on a fresh server, so the resting state is an
- * invitation rather than an error: what fail2ban does, and one button.
- *
- * The three states come from the API's `install` object, not from this
- * component's memory of having clicked. That is the whole point: `installed` is
- * a boolean derived from the package being on disk, so a screen built on it
- * alone shows nothing for the ten minutes apt is allowed and nothing at all
- * when the install fails. Reading the server also means a reload keeps the
- * progress, and a second person watching sees the same thing.
- *
- * Worth saying plainly in the copy: **the install arms nothing**. A fail2ban
- * that started banning the moment it appeared would be a nasty surprise, so the
- * user picks which jails to enable afterwards.
+ * Install prompt for fail2ban. State comes from the API's `install` object, not
+ * local click state, so progress and failures survive a reload. Installing
+ * enables no jails.
  */
 export function InstallPrompt({ canManage, install = null }) {
   const t = useTranslations("fail2ban");
   const router = useRouter();
-  // Covers only the gap between the click and the next read of the server —
-  // after that `install.status` is the answer.
+  // Covers only the gap until the next server read.
   const [starting, setStarting] = useState(false);
 
   const installing = install?.status === "installing" || starting;
   const failed = install?.status === "failed" && !starting;
 
-  // Elapsed time is a clock read, so it cannot happen during render — it would
-  // give a different answer every time React re-ran this. Same shape as
-  // useIsMobile: the initial value comes through the tick the interval uses,
-  // scheduled out of the effect body.
+  // Elapsed time is a clock read, so it is computed in an effect, not render.
   const [slow, setSlow] = useState(false);
   const startedAtRaw = install?.started_at;
 
   useEffect(() => {
     const startedAt = parseApiDate(startedAtRaw);
-    // One callback for every case, including "no longer installing" — a bare
-    // setState in the effect body is a cascading render.
+    // One callback for every case: a bare setState in the effect body cascades.
     const tick = () =>
       setSlow(
         Boolean(installing && startedAt && Date.now() - startedAt.getTime() > SLOW_AFTER_MS),
@@ -68,8 +53,6 @@ export function InstallPrompt({ canManage, install = null }) {
     try {
       await installFail2ban();
       toast.info(t("install.started"));
-      // The next server read carries `install.status`, and the page refreshes
-      // itself while that says installing.
       router.refresh();
     } catch (error) {
       setStarting(false);
@@ -85,9 +68,7 @@ export function InstallPrompt({ canManage, install = null }) {
       ? t("install.failedTitle")
       : t("install.title");
 
-  // The API renders the reason in the viewer's locale. Ours is only the
-  // fallback for a failure it could not classify — inventing copy for someone
-  // else's failure would be a guess.
+  // The API localizes the reason; ours is only the fallback.
   const body = installing
     ? t("install.installing")
     : failed
@@ -121,8 +102,7 @@ export function InstallPrompt({ canManage, install = null }) {
               {t("install.stalled")}
             </p>
           ) : null}
-          {/* Small and last, like the error box: meaningless to most people, and
-              the first thing support asks for. */}
+          {/* Small and last: mainly for support. */}
           {failed && install?.reference ? (
             <p className="pt-1 font-mono text-xs text-muted-foreground">{install.reference}</p>
           ) : null}

@@ -1,28 +1,19 @@
 /**
- * Opening a sign-in in a new tab only once its address exists.
- *
- * Opening an empty tab on the click and filling it in later kept the browser's
- * permission to open a tab, but left `about:blank` in the address bar for the
- * whole round trip (Krishna, 2026-09-29). The tab now opens straight onto the
- * real address, so its first page is the destination.
- *
- * The tab opens when the answer arrives and nothing is offered in its place
- * (Krishna, 2026-09-30): a second "Open" button in a toast was one click too
- * many. When a slow answer lands after the browser's ~5 s window, the browser
- * shows its own pop-up notice, and allowing pop-ups for the panel once makes
- * every later sign-in open directly.
+ * Opening sign-ins in a new tab only once the address is known, so the tab
+ * opens straight onto the destination instead of `about:blank`. If the answer
+ * arrives after the browser's ~5 s user-activation window, the browser shows
+ * its own pop-up notice; allowing pop-ups once fixes later sign-ins.
  */
 
 /** A GET address in a new tab. False when the browser refused. */
 export function openUrlInNewTab(url) {
   const tab = window.open(url, "_blank");
   if (!tab) return false;
-  // The site runs its own code in that tab; without this it could reach back
-  // through window.opener and navigate the panel.
+  // Stop the opened site reaching back through window.opener to navigate the panel.
   try {
     tab.opener = null;
   } catch {
-    // Already cross-origin on some browsers — nothing left to cut.
+    // Already cross-origin on some browsers; nothing left to cut.
   }
   return true;
 }

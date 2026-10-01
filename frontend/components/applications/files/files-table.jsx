@@ -17,13 +17,11 @@ import { useModeSentence } from "@/components/applications/files/use-mode-senten
 import { isWorldWritable, symbolicMode } from "@/lib/files/describe-mode";
 import { SORT_COOKIE, serializeSort, writePref } from "@/lib/files/view-prefs";
 
-// Cells are module-level so flexRender's identity stays stable across
-// re-renders — see the same note in workers-table.jsx.
+// Cells are module-level so flexRender's identity stays stable across re-renders
+// (see workers-table.jsx).
 
-// "DD-MM-YYYY HH:mm:ss" (the format every date on this API comes in) isn't
-// chronologically sortable as a plain string — parse it into a comparable
-// number, falling back to 0 (ties, sorts with whatever else is unparseable)
-// rather than throwing on an unexpected shape.
+// "DD-MM-YYYY HH:mm:ss" (every API date) does not sort as a string; parse to a
+// number, falling back to 0 rather than throwing on an unexpected shape.
 function parseApiDate(value) {
   const m = /^(\d{2})-(\d{2})-(\d{4}) (\d{2}):(\d{2}):(\d{2})$/.exec(value ?? "");
   if (!m) return 0;
@@ -31,10 +29,8 @@ function parseApiDate(value) {
   return new Date(+yyyy, +mm - 1, +dd, +hh, +min, +ss).getTime();
 }
 
-// Folders always sort above files regardless of which column is active or
-// which direction it's sorted — the same "browse structure first" convention
-// every file manager uses. Each column supplies its own tiebreaker for rows
-// of the same type.
+// Folders always sort above files regardless of column or direction; each column
+// supplies its own tiebreaker.
 function withDirsFirst(compare) {
   return (rowA, rowB) => {
     const aDir = rowA.original.type === "dir";
@@ -49,10 +45,9 @@ const sortBySize = withDirsFirst((a, b) => (a.size ?? 0) - (b.size ?? 0));
 const sortByModified = withDirsFirst((a, b) => parseApiDate(a.modified_at) - parseApiDate(b.modified_at));
 
 /**
- * Selection lives in the panel, not in TanStack's own row-selection state: the
- * panel is what runs the bulk calls, and a selection keyed by row index would
- * point at the wrong file the moment the list re-sorts or refreshes. Paths are
- * the stable identity here.
+ * Selection lives in the panel (which runs the bulk calls), keyed by path, not
+ * TanStack row index, which would point at the wrong file after a re-sort or
+ * refresh.
  */
 function SelectCell({ row, table }) {
   const t = useTranslations("applications.files");
@@ -63,8 +58,7 @@ function SelectCell({ row, table }) {
       checked={selected.includes(file.path)}
       onCheckedChange={() => onToggle(file.path)}
       aria-label={t("bulk.selectOne", { name: file.name })}
-      // The row is a navigation target for folders — a tick must not follow
-      // the link it happens to sit inside.
+      // Folder rows are links; a tick must not follow the link.
       onClick={(event) => event.stopPropagation()}
     />
   );
@@ -78,8 +72,7 @@ function SelectAllHeader({ table }) {
   const some = !all && rows.some((path) => selected.includes(path));
   return (
     <Checkbox
-      // "This folder", never "everything on the site" — a select-all that
-      // silently reaches past what you can see is how bulk deletes go wrong.
+      // "This folder" only: select-all must never reach past what is visible.
       checked={all ? true : some ? "indeterminate" : false}
       onCheckedChange={() => onToggleAll(rows, !all)}
       aria-label={t("bulk.selectAll")}
@@ -126,10 +119,8 @@ function NameCell({ row, table }) {
             <span className={FILE_NAME} title={file.name}>
               {file.name}
             </span>
-            {/* Where it points, inline rather than only on hover: a link is
-                the one row whose name tells you nothing about what it is, and
-                a dangling one is otherwise indistinguishable from a working
-                one. */}
+            {/* Shown inline: a link's name says nothing about what it is, and a dangling one
+                looks like a working one. */}
             {file.link_target ? (
               <span className="truncate font-mono text-xs text-muted-foreground/70">
                 → {file.link_target}
@@ -144,12 +135,9 @@ function NameCell({ row, table }) {
     );
   }
 
-  // An archive or a binary has nowhere to go: the editor answers "this file
-  // isn't text" and the preview cannot decode it. Offering the click and then
-  // refusing it is a worse answer than not offering it — download and extract
-  // are still on the row's menu.
-  // Opening reads the file, which needs File Manager manage — a view-only
-  // role gets the name, not a click that answers 403.
+  // Archives and binaries cannot be opened (editor and preview both refuse), so no
+  // click is offered; download and extract stay in the menu.
+  // Opening needs File Manager manage, so a view-only role gets plain text, not a 403.
   if (!canManage || !canOpenFile(file.name)) {
     return (
       <span className="flex w-full min-w-0 items-center gap-2 font-medium">
@@ -165,12 +153,8 @@ function NameCell({ row, table }) {
     <button
       type="button"
       onClick={() => onAction(isImageFile(file.name) ? "preview" : "edit", file)}
-      // `w-full` for the same reason as the card view: a <button> is a form
-      // control and sizes to its own content even as a flex box, so the inner
-      // `truncate` measured against the name's full width rather than the
-      // cell's. A long name ran past the column and into Size instead of
-      // ellipsing. Folders never showed it — they render as an <a>, which does
-      // fill the cell.
+      // `w-full`: a <button> sizes to its content even as a flex box, so `truncate`
+      // would not clip at the cell. Folders render as an <a>, which fills the cell.
       className="flex w-full min-w-0 items-center gap-2 rounded text-left font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
       <FileThumb file={file} appId={appId} className="size-5" canPreview={canManage} />
@@ -186,20 +170,16 @@ function SizeCell({ row, table }) {
   const t = useTranslations("applications.files");
   const { folderSizes = {}, sizingPaths = [], onAction } = table.options.meta;
 
-  // A folder has no size until someone asks: the backend walks the tree to
-  // work one out, so the listing does not carry it and the dash is honest
-  // rather than a gap.
+  // A folder has no size until requested (the backend walks the tree), so the dash
+  // is accurate.
   if (sizingPaths.includes(file.path)) {
     return <Loader2 className="ml-auto size-3.5 animate-spin text-muted-foreground" />;
   }
 
-  // A folder shows only a MEASURED size. The listing's `size_human` for a
-  // directory is the 4 KB of the directory entry itself — every folder read
-  // "4.0 KB" while the Storage panel put the same tree at 100 MB. "Folder
-  // size" on the row's menu measures the real one and it lands here.
+  // A folder shows only a MEASURED size: the listing's `size_human` for a directory
+  // is the 4 KB directory entry itself.
   const shown = file.type === "dir" ? folderSizes[file.path] : file.size_human;
-  // Asked for where the answer will appear. It was only in the ⋯ menu, which
-  // is where nobody looks for a number that has its own column.
+  // Offered in the size column, where the answer appears.
   if (file.type === "dir" && !shown) {
     return (
       <button
@@ -222,9 +202,8 @@ function ModifiedCell({ row }) {
   const format = useFormatter();
   const file = row.original;
   if (!file.modified_at) return <span className="text-muted-foreground">—</span>;
-  // The exact time on hover, in words: the API's "23-09-2026 11:28:55" is
-  // day-first and reads as a US date to half the people hovering it. Read as
-  // a wall-clock time so it stays in the server's own clock.
+  // Exact time on hover in words: the API's day-first "23-09-2026 11:28:55" reads as
+  // a US date. Parsed as wall-clock so it stays in the server's clock.
   const when = parseApiWallClock(file.modified_at);
   const exact = when
     ? format.dateTime(when, { dateStyle: "medium", timeStyle: "medium", timeZone: "UTC" })
@@ -232,9 +211,8 @@ function ModifiedCell({ row }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        {/* Not a tab stop: with the permissions cell that made seven per row,
-            ~140 presses through a 20-row folder. The exact time still reaches
-            a screen reader, and the tooltip still opens on hover. */}
+        {/* Not a tab stop (seven per row adds up); the exact time still reaches screen
+            readers and the tooltip opens on hover. */}
         <span className="text-muted-foreground">
           {file.modified_at_human ?? file.modified_at}
           <span className="sr-only"> ({exact})</span>
@@ -246,26 +224,17 @@ function ModifiedCell({ row }) {
 }
 
 /**
- * User and group, always both — `deploy:www-data`, the way `ls -l` reports it.
- *
- * Shown even when they are the same. Hiding the repeat would be tidier, but it
- * makes the column's meaning depend on its value: a reader seeing one name
- * cannot tell whether the group matches or simply was not rendered, and
- * "which of these is group-owned by the web server?" stops being answerable by
- * scanning.
+ * User and group, always both (`deploy:www-data`, as `ls -l` shows it), even when
+ * equal, so the column means the same thing on every row.
  */
 function OwnerCell({ row }) {
   const file = row.original;
 
-  // Null for a symlink, whose own ownership is not a meaningful thing to show
-  // — the same reason its mode is omitted.
+  // Null for a symlink, whose ownership is not meaningful (its mode is omitted too).
   if (!file.owner) return <span className="text-muted-foreground">—</span>;
 
-  // Stacked, owner over group — the same shape as Permissions beside it.
-  // On one line `my-blog-ngkx:my-blog-ngkx` needs ~180px and was cut to
-  // "my-blo…:my-blo…", which answers nothing; stacked it needs the width of
-  // the longer name alone. `truncate` stays as the last resort for a truly
-  // long account name, with the whole value on hover.
+  // Stacked owner over group, like Permissions, so it needs only the longer name's
+  // width; `truncate` with the full value on hover is the last resort.
   return (
     <span
       className="flex min-w-0 flex-col gap-0.5 font-mono text-xs text-muted-foreground"
@@ -284,27 +253,16 @@ function PermissionsCell({ row }) {
   if (!file.mode) return <span className="text-muted-foreground">—</span>;
   const worldWritable = isWorldWritable(file.mode);
   const symbolic = symbolicMode(file.mode, file.type);
-  // "Owner: read and write. Everyone else: read." — the same sentence the
-  // permission picker and Fix permissions use, on hover, the way Modified
-  // keeps its exact date. `-rw-r--r--` is exact but has to be decoded.
+  // The picker's plain-language sentence, on hover.
   const sentence = sentenceFor(file.mode);
   return (
     /*
-     * Both notations, stacked, because they are one value.
-     *
-     * `drwxr-xr-x` is what anyone reads at a glance and shows WHICH of
-     * read/write/execute is missing; `755` is what the Permissions dialog,
-     * chmod and every how-to guide speak in. The octal was on hover only, so
-     * the column and the dialog looked like two different readings of the same
-     * file — reported as an inconsistency, and a fair reading of it.
-     *
-     * Stacked rather than side by side: measured with the sidebar in place,
-     * one line overflowed this column by 40px at 1024, 21px at 1152 and 2px at
-     * 1280, and the table only renders at all from 1024 up. Two lines need the
-     * width of the longer string alone, which already fit.
+     * Both notations stacked, as one value: `drwxr-xr-x` shows which bit is missing,
+     * `755` matches the Permissions dialog and chmod.
+     * Stacked because one line overflowed this column at 1024-1280px with the sidebar.
      */
-    // One tooltip for the whole cell: the sentence, plus the world-writable
-    // warning when it applies — which used to be a second, icon-only tooltip.
+    // One tooltip for the whole cell: the sentence, plus the world-writable warning
+    // when it applies.
     <Tooltip>
       <TooltipTrigger asChild>
         <span className="flex flex-col gap-0.5 whitespace-nowrap font-mono text-xs w-fit cursor-help rounded text-muted-foreground">
@@ -314,11 +272,10 @@ function PermissionsCell({ row }) {
             </span>
             {worldWritable ? <TriangleAlert className="size-3.5 shrink-0 text-destructive" aria-hidden /> : null}
           </span>
-          {/* Omitted when the mode could not be read symbolically — the line
-              above is then already the octal, and repeating it says nothing. */}
+          {/* Omitted when the mode has no symbolic form; the line above is already octal. */}
           {symbolic ? <span className="text-muted-foreground/70">{file.mode}</span> : null}
-          {/* The tooltip's sentence, for a screen reader: this cell is no
-              longer a tab stop (see ModifiedCell). */}
+          {/* The tooltip's sentence for screen readers, since the cell is not a tab stop
+              (see ModifiedCell). */}
           {sentence ? <span className="sr-only">{sentence}</span> : null}
         </span>
       </TooltipTrigger>
@@ -361,30 +318,17 @@ export function FilesTable({
 }) {
   const t = useTranslations("applications.files");
 
-  // Percentages, not px, and they sum to 100 — paired with `fixedLayout`
-  // below so the table stays full width but Name's share of it is actually
-  // bounded, instead of `auto` layout treating a width as a hint and still
-  // handing Name whatever's left over.
+  // Percentages summing to 100 with `fixedLayout`, so Name's share is really
+  // bounded (`auto` layout treats widths as hints).
   //
-  // Rebalanced for the width the table actually has. The last split was tuned
-  // for a Storage side-rail that took 340px off it; Storage is a sheet now, so
-  // the table has its full width back and was still dividing it as if it
-  // didn't. With `px-6` on all seven columns, a third of the row was padding,
-  // and Name — the one column whose content has no ceiling — got 22% of the
-  // rest: every name in wp-admin/images was cut at "about-header-cre…".
+  // Name takes a third and wraps to two lines (`FILE_NAME`). Inner cells use the
+  // base `px-4`; the outer edges keep 24px to align with the card. Owner hides
+  // below `xl`, like the applications table.
   //
-  // Name now takes a third and wraps to two lines (`FILE_NAME`). Inner cells
-  // use the base cell's `px-4`, the same gap at every boundary; only the two
-  // outer edges keep 24px to line up with the card. Owner is the column
-  // people consult least, so it gives way below `xl` rather than squeezing
-  // the others — the same trade the applications table makes.
-  //
-  // The checkbox column is a fixed 48px, not a share: its content is a 16px box
-  // behind a 24px edge at every width, and as a percentage it came out 28px at
-  // 1024 and spilled into Name. The shares below therefore sum to 92–93, leaving
-  // room for it on the narrowest table (704px) instead of overflowing it —
-  // once without Owner (below `xl`) and once with it, because a hidden
-  // column's share is not handed back to the others.
+  // The checkbox column is a fixed 48px (as a percentage it spilled into Name at
+  // 1024), so the shares sum to 92-93 to leave room for it on the narrowest table
+  // (704px), both with and without Owner, since a hidden column's share is not
+  // redistributed.
   const columns = [
     {
       id: "select",
@@ -415,15 +359,9 @@ export function FilesTable({
       sortingFn: sortByModified,
     },
     {
-      // Not sortable, like permissions. The argument for it was "show me
-      // everything root ended up owning", and the sort does not answer that:
-      // it orders by `owner` alone while the column shows `owner:group`, so
-      // the halves of one value sort by half of it, and folders are pinned
-      // above files first regardless — which scatters any owner that appears
-      // in both. A control that reorders the list without answering the
-      // question it was added for is worse than no control, because its
-      // presence claims otherwise. Filtering is what that question wants, and
-      // the search box already narrows on the text.
+      // Not sortable: the sort would order by `owner` alone while the cell shows
+      // `owner:group`, and dirs-first scatters it further. The search box covers
+      // "what does X own".
       accessorKey: "owner",
       header: t("columns.owner"),
       meta: { className: "hidden w-[14%] px-4 whitespace-normal hyphens-auto xl:table-cell" },

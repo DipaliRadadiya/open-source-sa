@@ -11,9 +11,8 @@ import { useModeSentence } from "@/components/applications/files/use-mode-senten
 import { useRefresh } from "@/hooks/use-refresh";
 
 /**
- * The whole-site reset — a different, page-level action from any one file's
- * own Permissions (⋯ menu), always targeting the application's own document
- * root, never a path the user picked.
+ * The whole-site reset: a page-level action, always targeting the application's
+ * own document root, never a user-picked path.
  */
 export function FixPermissionsButton({ appId, canManage }) {
   const t = useTranslations("applications.files");
@@ -42,10 +41,8 @@ export function FixPermissionsButton({ appId, canManage }) {
   return (
     <>
       <ReasonTooltip reason={canFix ? null : t("noPermission")}>
-        {/* Outlined and styled exactly like New folder / New file. Muted text
-            read as disabled on the tinted strip, and a muted icon beside
-            full-strength text read as a styling bug; ghost, tried before that,
-            had no surface at all and read as a caption. */}
+        {/* Outlined like New folder / New file; muted or ghost styles read as disabled on
+            the tinted strip. */}
         <Button
           variant="outline"
           size="sm"
@@ -71,14 +68,8 @@ export function FixPermissionsButton({ appId, canManage }) {
         onConfirm={onConfirm}
         className="w-full sm:!max-w-lg"
       >
-        {/* What changes, as scannable facts — not buried in the same
-            sentence as when to use it.
-
-            Each mode is spelled out in the same words the permission picker
-            uses, from the same helper. This dialog used to show `755` and `644`
-            and nothing else: the one screen that changes every file on the site
-            was the only one that expected you to read octal, while the dialog
-            for a single file explained itself in full. */}
+        {/* What changes, as scannable facts, with each mode described by the same helper
+            the permission picker uses. */}
         <div className="divide-y rounded-lg border">
           {[
             { label: t("fixPermissions.foldersLabel"), mode: "755" },
@@ -86,13 +77,9 @@ export function FixPermissionsButton({ appId, canManage }) {
           ].map(({ label, mode }) => (
             <div key={mode} className="space-y-1 px-4 py-3">
               <div className="flex items-center justify-between gap-3">
-                {/* The label at reading size, not caption size — this is the
-                    subject of the row, and the whole block used to be text-xs
-                    grey, which is a footnote pretending to be the content. */}
+                {/* The label is the row's subject, so it uses reading size. */}
                 <span className="text-sm font-medium">{label}</span>
-                {/* The number as a chip: it is a value, not a heading, and
-                    right-aligned against the far edge it read as a column of
-                    unrelated digits. */}
+                {/* The number as a chip: a value, not a heading. */}
                 <span className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs tabular-nums text-muted-foreground">
                   {mode}
                 </span>

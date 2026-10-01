@@ -8,24 +8,15 @@ import { LoadFailed } from "@/components/data-table/load-failed";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 
 /**
- * What is inside the database.
- *
- * Deliberately not a data browser — the API returns names and sizes only, and
- * browsing rows is phpMyAdmin's job. This answers "why is this database 2 GB",
- * which is the question a size figure on the list page raises and cannot
- * answer.
- *
- * It used to carry Optimize and Repair buttons. Both were removed on
- * 2026-09-08 along with their endpoints, because neither did what its label
- * said: `REPAIR TABLE` is unsupported on InnoDB and reports success anyway, and
- * `OPTIMIZE TABLE` on InnoDB is a whole-table rebuild that ran inside the HTTP
- * request. Read-only now, which is what the card was always for.
+ * What is inside the database: names and sizes only (the API returns nothing
+ * more; browsing rows is phpMyAdmin's job). Read-only by design: Optimize and
+ * Repair were removed with their endpoints, as neither is reliable on InnoDB.
  */
 export function DatabaseTables({ database, tables = [], read = null, unavailable = null }) {
   const t = useTranslations("databases.tables");
   const format = useFormatter();
 
-  // Mongo has collections, not tables, and says so in its own words.
+  // Mongo has collections, not tables, and uses its own wording.
   const isMongo = database?.driver === "mongo";
 
   const totalRows = tables.reduce((sum, table) => sum + (table.rows ?? 0), 0);
@@ -74,13 +65,8 @@ export function DatabaseTables({ database, tables = [], read = null, unavailable
             <p className="text-sm text-muted-foreground">{t("empty")}</p>
           </div>
         ) : (
-          /* Bounded, because the list is every table in the database and
-               that is not a small number for the applications this panel
-               installs — Nextcloud ships ~150, a mature WordPress more.
-               Unbounded, the card grew to whatever the schema happened to be
-               and pushed the charset footer, and everything below the card,
-               off the screen. Roughly ten rows before it scrolls; short
-               lists never show a scrollbar. */
+          /* Bounded (~10 rows, then scrolls): apps like Nextcloud ship ~150
+               tables, which would push everything below off the screen. */
           <div className="max-h-96 divide-y overflow-y-auto">
             {tables.map((table) => (
               <div
@@ -89,8 +75,7 @@ export function DatabaseTables({ database, tables = [], read = null, unavailable
               >
                 <span className="truncate font-mono text-sm">{table.name}</span>
                 <span className="flex shrink-0 items-center gap-4 text-sm text-muted-foreground">
-                  {/* Row counts on InnoDB are an estimate, and saying so
-                        beats someone treating it as a total. */}
+                  {/* InnoDB row counts are estimates; labelled as such. */}
                   <span className="tabular-nums">
                     {t("rowCount", { rows: format.number(table.rows ?? 0) })}
                   </span>
@@ -104,8 +89,6 @@ export function DatabaseTables({ database, tables = [], read = null, unavailable
         )}
       </CardContent>
 
-      {/* Charset and collation belong to the storage, not to the page
-            heading where they used to sit. Read once, if ever. */}
       {estimated || database?.collation ? (
         <div className="space-y-1 border-t bg-muted/30 px-5 py-3">
           {database?.collation ? (

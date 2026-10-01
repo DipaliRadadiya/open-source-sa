@@ -1,38 +1,25 @@
 /**
- * Deep links to where a token is created, and where it is revoked.
- *
- * Not from the API — the backend sends prose explaining which token to make,
- * and this turns that sentence into one click with the scopes already ticked.
- * The revoke link matters just as much: disconnecting here removes our copy of
- * a credential that stays live at the provider until it is deleted there.
- *
- * Self-hosted GitLab keeps its own token page, so the host is used when there
- * is one.
+ * Deep links to where a token is created (scopes pre-ticked where possible)
+ * and where it is revoked: disconnecting here does not revoke the token at the
+ * provider. Self-hosted GitLab uses its own host.
  */
 const GITLAB_PATH = "/-/user_settings/personal_access_tokens";
 
-// Atlassian removed Bitbucket app passwords on 2026-07-28, taking
-// /account/settings/app-passwords with them — the old link 404'd for everyone.
-// Tokens now live on the Atlassian account, not on Bitbucket, and are created
-// through "Create API token with scopes" rather than a prefilled form, so
-// unlike GitHub there is no scope to pass in the URL.
+// Bitbucket app passwords were removed; tokens now live on the Atlassian
+// account and are created via "Create API token with scopes", so unlike GitHub
+// no scope can be passed in the URL.
 const BITBUCKET_TOKENS = "https://id.atlassian.com/manage-profile/security/api-tokens";
 
 export function createTokenUrl(provider, host, brand) {
   switch (provider) {
     case "github":
-      // Scopes pre-ticked and the note pre-filled — this is the step people
-      // get wrong, and the fix is a link, not a longer paragraph. The note is
-      // the panel's own name because it is what the customer later reads on
-      // GitHub's token list, long after they have forgotten making it.
-      // `admin:repo_hook` is what lets the panel add the deploy webhook to the
-      // repository itself; without it GitHub refuses and the user pastes the
-      // URL and secret by hand.
+      // Scopes and note pre-filled; the note is the brand name the customer
+      // later sees in GitHub's token list. `admin:repo_hook` lets the panel add
+      // the deploy webhook itself.
       return `https://github.com/settings/tokens/new?scopes=repo,admin:repo_hook&description=${encodeURIComponent(brand)}`;
     case "gitlab":
-      // GitLab takes the name and the scopes in the URL too. `api` is the only
-      // GitLab scope that can add a webhook, and it is a broad one, so the
-      // connect form says so in plain words beside this link.
+      // `api` is the only GitLab scope that can add a webhook, and it is broad,
+      // so the connect form says so beside this link.
       return `${base(host, "https://gitlab.com")}${GITLAB_PATH}?name=${encodeURIComponent(brand ?? "")}&scopes=api,read_repository`;
     case "bitbucket":
       return BITBUCKET_TOKENS;

@@ -14,8 +14,8 @@ export function getBranches(accountId, repository) {
   });
 }
 
-// Takes `app_deployment,manage` — the Deployment screen's permission, not the
-// server-level `application` one. Git sites only; anything else 404s.
+// Needs `app_deployment,manage`, not the server-level `application` permission.
+// Git sites only; anything else 404s.
 export function deployApplication(id) {
   return api.post(`/applications/${id}/deploy`);
 }
@@ -26,69 +26,38 @@ export function controlApplicationProcess(id, action) {
 }
 
 /**
- * Measure this site on disk, now, and store the result.
- *
- * Nothing else computes it from scratch: file operations queue a re-measure
- * about a minute later, and there is no schedule — so a site nobody has touched
- * through the panel has never been measured at all. This is the only way to ask.
- *
- * `du` walks every inode, so the cost is the site's file count rather than its
- * size. The API throttles it to 10/min for that reason; the caller shows the
- * wait rather than pretending it is instant.
+ * Measure this site on disk now and store the result. Nothing else measures a
+ * site that has not been touched through the panel. Cost scales with file
+ * count, so the API throttles it to 10/min.
  */
 export function measureApplicationSize(id) {
   return api.post(`/applications/${id}/directory-size`);
 }
 
 /**
- * Read the site's own directory and say what is installed in it.
- *
- * A POST because it records its verdict as well as returning it — the same
- * shape as `POST /domains/{domain}/verify`. Returns
- * `{ site_type_detection: {...} }`, never a full application.
- *
- * Throttled 10/min server-side, so the button must be disabled while this is
- * in flight rather than relying on the user not double-clicking.
- *
- * A git site is not probed at all and comes back with its previous (usually
- * empty) verdict unchanged: its type can never be changed, so every finding
- * would be one nothing may act on.
+ * Detect what is installed in the site's directory and record the verdict.
+ * Returns `{ site_type_detection: {...} }`, not a full application. Throttled
+ * 10/min, so disable the button while in flight. Git sites are not probed.
  */
 export function detectApplicationSiteType(id) {
   return api.post(`/applications/${id}/detect-type`);
 }
 
 /**
- * Relabel a site — tell the panel what is actually installed in it.
- *
- * **This changes what the panel offers, not what is on disk.** No installer
- * runs and nothing is downloaded; the type decides which screens the site
- * gets. Synchronous, and it returns the FULL `{ application }` because the
- * change alters which sidebar items exist — so callers re-read the route
- * rather than patching a field locally.
- *
- * Refuses, with a sentence worth showing verbatim, when: the site is (or the
- * target is) a git deployment, the type is unchanged, the target is not one
- * the panel can recognise on disk, the current type is not generic, or the
- * disk does not actually contain the target. That last check is re-probed HERE
- * at apply time rather than trusting the stored verdict, so there is nothing
- * for this side to guard against going stale.
+ * Relabel a site's type. Changes which screens the panel offers, not what is
+ * on disk. Returns the full `{ application }`; callers re-read the route since
+ * sidebar items change. Refusals carry a sentence worth showing verbatim; the
+ * backend re-probes the disk at apply time.
  */
 export function changeApplicationSiteType(id, siteType) {
   return api.put(`/applications/${id}/site-type`, { site_type: siteType });
 }
 
 /**
- * Turn a site's visitors away without taking anything apart.
- *
- * The web server config is pointed at a small holding page and reloaded. Files,
- * database, backups, cron jobs and certificates are all left alone, and
- * `enableApplication` puts the real config back. Throttled 10/min server-side,
- * because each call reloads the web server.
- *
- * Both 422 when the site is already in the state being asked for — which is
- * what happens when someone else did it in another tab, not an error worth a
- * red toast on its own. Callers show the API's own sentence and re-read.
+ * Point the site at a holding page without touching files, databases, backups,
+ * cron jobs or certificates. Throttled 10/min (each call reloads the web server).
+ * Both this and enable 422 when already in the requested state (e.g. changed in
+ * another tab); callers show the API's sentence and re-read.
  */
 export function disableApplication(id) {
   return api.post(`/applications/${id}/disable`);
@@ -102,18 +71,10 @@ export function retryProvisioning(id) {
   return api.post(`/applications/${id}/provision`);
 }
 
-// Files are kept unless `remove_files` is sent — deleting the panel record must
-// not silently destroy someone's code, so the flag is always the user's choice.
+// Files are kept unless `remove_files` is sent; removing them is always the user's choice.
 export function deleteApplication(id, { removeFiles = false, removeDatabases = false } = {}) {
-  /*
-   * Both flags are omitted when false rather than sent as `false`. The API
-   * reads them with `boolean()`, so either works — but a delete that carries
-   * no destructive flag at all is the one you want in a request log.
-   *
-   * No database ids: the API resolves the site's databases itself, at the
-   * moment it deletes. What this dialog listed a minute ago is not what the
-   * server should act on.
-   */
+  // Flags are omitted when false. No database ids: the API resolves the site's
+  // databases itself at delete time.
   const params = {};
   if (removeFiles) params.remove_files = true;
   if (removeDatabases) params.remove_databases = true;
@@ -123,13 +84,7 @@ export function deleteApplication(id, { removeFiles = false, removeDatabases = f
   });
 }
 
-/**
- * The runtime settings a process-backed site actually runs with.
- *
- * The API has taken these on `PUT /applications/{id}` all along; only the
- * create form ever offered them, so a site started with the wrong entry file
- * could not be corrected — the site had to be deleted and made again.
- */
+/** The runtime settings a process-backed site runs with. */
 export function updateApplicationRuntime(id, { start_command, app_port }) {
   return api.put(`/applications/${id}`, { start_command, app_port });
 }
@@ -138,33 +93,24 @@ export function checkApplicationPort(port) {
   return api.get("/applications/port-check", { params: { port } });
 }
 
-// One call does enable, credential change, AND disable — `enabled: false`
-// ignores username/password entirely. There is no separate "just change the
-// password" call: the API always takes both together.
+// One call covers enable, credential change and disable; `enabled: false`
+// ignores username/password. The API always takes both credentials together.
 export function updateApplicationSecurity(id, payload) {
   return api.put(`/applications/${id}/security`, payload);
 }
 
-// `policy` is one of allow_all | block_training | block_all — the keys of
-// GET /ai-bot-policies, never a locally invented list.
 /**
- * One site's PHP settings.
- *
- * Every write tests the FPM configuration and reloads the daemon, and a reload
- * touches every PHP site on this server — which is why the backend throttles
- * this at 10/min and why the UI saves once, deliberately, rather than on every
- * keystroke.
+ * One site's PHP settings. Every write tests and reloads FPM, affecting every
+ * PHP site on the server, so the backend throttles it at 10/min and the UI
+ * saves explicitly.
  */
 export function updateApplicationPhp(id, payload) {
   return api.put(`/applications/${id}/php`, payload);
 }
 
 /**
- * Drop this site's own value for one or more directives, so they inherit again.
- *
- * A partial payload on purpose: every rule is `sometimes`, and the controller
- * `fill()`s only what it was sent, so nulling one field cannot disturb a value
- * the user is midway through editing elsewhere on the form.
+ * Drop this site's own value for the given directives so they inherit again.
+ * Partial payload on purpose: the controller only `fill()`s what it is sent.
  */
 export function resetApplicationPhpFields(id, names) {
   return api.put(
@@ -178,43 +124,28 @@ export function isolateApplicationPhp(id) {
   return api.post(`/applications/${id}/php/isolate`);
 }
 
-// There is no un-isolate. `DELETE /applications/{id}/php/isolate` was removed
-// (405 since backend 9ff978c): on the shared pool a site runs as the web
-// server's own account, so one compromised site can read every other site's
-// .env. It is not a mode anyone gets to choose any more.
+// There is no un-isolate (the DELETE route returns 405): on the shared pool one
+// compromised site could read every other site's .env.
 
 /**
- * The policy and this site's own exceptions, in one request.
- *
- * `policy` is always required. Both lists are replaced wholesale when sent and
- * left alone when omitted, so they go together with the policy rather than
- * through a second save — the backend resolves them against each other (an
- * allow beats a block of the same bot), and saving half of that would enforce
- * a rule nobody asked for.
+ * The bot policy and this site's exceptions, saved together. `policy` (one of
+ * the GET /ai-bot-policies keys) is required; each list is replaced when sent
+ * and left alone when omitted. The backend resolves them against each other.
  */
 export function updateApplicationBotBlocker(id, { policy, blocked, allowed }) {
   return api.put(`/applications/${id}/bot-blocker`, { policy, blocked, allowed });
 }
 
-// One atomic save for the whole firewall screen — toggle, mode, categories and
-// both rule lists go together. Note `categories: []` means ALL SIX on the
-// backend, not none, so callers must never send an empty array to mean "check
-// nothing"; turning the firewall off is what expresses that.
+// One atomic save for the whole firewall screen. `categories: []` means ALL six
+// on the backend, so never send an empty array to mean "none".
 export function updateApplicationWaf(id, payload) {
   return api.put(`/applications/${id}/waf`, payload);
 }
 
 /**
- * Per-site fail2ban. A different feature from the server-level one: this jail
- * watches this site's own access log.
- *
- * Both halves go together because the backend rejects a partial submission —
- * a jail whose filter does not exist stops fail2ban reloading at all.
- *
- * The save is also the config test: the backend runs the pair through
- * `fail2ban-client` first and answers `{testOk: false, output}` when it does
- * not parse. It uses status 500 for that, so callers must read the body rather
- * than treating any failure as an outage.
+ * Per-site fail2ban jail watching this site's access log. Jail and filter must
+ * be sent together. The save runs `fail2ban-client` as a config test and
+ * answers 500 with `{testOk: false, output}` when it fails, so read the body.
  */
 export function saveApplicationFail2ban(id, { jail, filter }) {
   return api.post(`/applications/${id}/fail2ban`, {
@@ -228,15 +159,9 @@ export function deleteApplicationFail2ban(id) {
 }
 
 /**
- * Staging: a WordPress-only copy of the site to break safely.
- *
- * Both calls are synchronous on the backend and slow — create provisions a
- * site and rsyncs it, push takes production offline and rsyncs the other way
- * (300s timeout). There is no job to poll, so the caller has to hold a pending
- * state for the whole round trip rather than showing progress.
- *
- * There is no delete: the staging site is an application, removed like any
- * other one.
+ * WordPress staging. Create and push are synchronous and slow (300s timeout)
+ * with no job to poll, so the caller holds a pending state. A staging site is
+ * deleted like any other application.
  */
 export function createApplicationStaging(id, domain) {
   return api.post(`/applications/${id}/staging`, { domain });
@@ -247,27 +172,22 @@ export function pushApplicationStaging(id, mode) {
 }
 
 /**
- * Change the directory the web server serves.
- *
- * Creates it if missing, rewrites the vhost, config-tests and reloads — so a
- * wrong value takes the site down until it is corrected, which is why the
- * dialog says so before saving.
+ * Change the directory the web server serves. Rewrites the vhost and reloads,
+ * so a wrong value takes the site down until corrected.
  */
 export function updateWebRoot(id, webRoot) {
   return api.put(`/applications/${id}/web-root`, { web_root: webRoot });
 }
 
 /**
- * Hand the site folder to root and lock it — the Lock button for a site server
- * sync adopted. 422 with a translated message, and nothing changed, when the
- * folder is not safe to lock. Throttled to 10/min.
+ * Hand the site folder to root and lock it. 422 with a translated message when
+ * the folder is not safe to lock. Throttled to 10/min.
  */
 export function lockApplicationRoot(id) {
   return api.post(`/applications/${id}/root-lock`);
 }
 
-// Just the status word, to notice a deploy or first setup ending. The whole
-// application comes back; nothing else here is read from it.
+// Only the status word is read, to notice a deploy or first setup ending.
 export async function getApplicationStatus(id) {
   const res = await api.get(`/applications/${id}`);
   return res.data?.application?.status ?? null;

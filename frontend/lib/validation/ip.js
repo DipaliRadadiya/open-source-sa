@@ -1,13 +1,8 @@
 /**
- * Address checks for anything the user types into a firewall config.
+ * Address checks for firewall config input; a typo written into fail2ban's
+ * config would silently protect nobody.
  *
- * These lists are written straight into fail2ban's config file, so a typo does
- * not fail loudly — it becomes a line that silently protects nobody. Catching
- * it in the field is the only place the user still has the context to fix it.
- *
- * Deliberately permissive on IPv6 (shape, not full RFC grammar): rejecting a
- * valid address someone needs is worse than passing an odd one to the server,
- * which validates too.
+ * IPv6 is checked by shape only, deliberately permissive; the server validates too.
  */
 
 function isIpv4(value) {

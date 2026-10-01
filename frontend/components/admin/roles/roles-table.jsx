@@ -19,9 +19,8 @@ import { RolesCards } from "@/components/admin/roles/roles-cards";
 import { grantedCount } from "@/lib/roles/granted-count";
 
 /* Cells at module level: flexRender treats a cell function's identity as the
- * component type, and this table re-renders on every keystroke in its search
- * box — inline cells were remounting the row actions (and their dialogs) each
- * time. */
+ * component type, and this table re-renders on every search keystroke, which
+ * would remount the row actions and their dialogs. */
 
 function NameCell({ row }) {
   const t = useTranslations("roles");
@@ -72,12 +71,10 @@ export function RolesTable(props) {
 
 function RolesList({ data, meta }) {
   const t = useTranslations("roles");
-  // The list returns everything at once, so filter on the client — no round-trip.
   const searchParams = useSearchParams();
   const setQuery = useSetQuery();
 
-  // Filtered and paged by the API — filtering here would only ever search the
-  // ten rows this page happens to hold.
+  // Filtered and paged by the API.
   const filtered = data;
 
   const columns = [
@@ -139,7 +136,6 @@ function RolesList({ data, meta }) {
         )
       ) : (
         <>
-          {/* Cards below lg, the table from lg up. */}
           <div className="lg:hidden">
             <RolesCards roles={filtered} />
           </div>

@@ -1,12 +1,10 @@
 import { api } from "@/lib/api/client";
 
 /**
- * Mint a token, and hand back the only copy that will ever exist.
+ * Mint a token; the response is the only copy that will ever exist.
  *
- * Also the rotate path: called while a connection is live, it replaces the
- * existing token and the old one stops working immediately. The API draws no
- * distinction between the two, so the calling screen has to — a second press
- * of this is a breaking change to whatever is already connected.
+ * Also rotates: on a live connection the old token stops working immediately,
+ * so the calling screen must treat a second press as breaking.
  */
 export function enableCentral() {
   return api.post("/central/enable");
@@ -17,8 +15,7 @@ export function getCentralStatus({ signal } = {}) {
   return api.get("/central/status", { signal });
 }
 
-/** Revoke. The guard compares every request against the stored value, so
- *  access ends on the next call rather than at the end of a session. */
+/** Revoke. Access ends on the next request, not at the end of a session. */
 export function disableCentral() {
   return api.delete("/central");
 }

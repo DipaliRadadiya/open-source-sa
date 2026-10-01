@@ -7,13 +7,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { peekRememberedPath } from "@/lib/auth/last-path";
 
 /**
- * Says why the reader is looking at a sign-in form they did not ask for.
- *
- * A session that runs out mid-task used to drop them here with no word about
- * it — reading as a crash or a logout they did not make. The tab still holds
- * the screen they were on (see RememberPath), and a deliberate sign-out clears
- * it, so its presence is exactly "your session ended by itself". The server
- * has no sessionStorage, so it renders nothing and the browser fills it in.
+ * Explains an unexpected sign-in form after the session expired. A remembered
+ * path (see RememberPath) means expiry, since deliberate sign-out clears it.
+ * Client-only: renders nothing on the server (no sessionStorage).
  */
 const noSubscribe = () => () => {};
 const readExpired = () => Boolean(peekRememberedPath());

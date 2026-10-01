@@ -1,12 +1,7 @@
 /**
- * Which commit a site is really running, and whether it got there cleanly.
- *
- * `last_commit` is written on a successful deploy only. Deploys replace the
- * files before the build, so a deploy that fails after its checkout leaves the
- * new commit serving while `last_commit` still names the old one — and the
- * screens said "the previous version is still live", which was the opposite of
- * true. `code_on_disk` is the backend's answer; `last_commit` is only the
- * fallback for a payload that does not carry it (the site list).
+ * Which commit a site is really running. `last_commit` is written only on
+ * success, but a deploy failing after checkout leaves the new code live, so
+ * `code_on_disk` wins; `last_commit` is the fallback when it is absent (site list).
  */
 export function liveCommit(application) {
   const onDisk = application?.code_on_disk?.commit;

@@ -97,8 +97,7 @@ export function QueryChart({ metrics = [], timeZone }) {
         tokens,
         xLabel: clock,
         value: decimal,
-        // Rates on the left, whole connections on the right: a QPS figure and
-        // a connection count share no unit and flatten each other on one axis.
+        // Rates on the left, connection counts on the right: no shared unit.
         axes: [{ formatter: axisNumber }, { minInterval: 1 }],
         zoom: true,
       }),
@@ -165,9 +164,7 @@ export function QueryChart({ metrics = [], timeZone }) {
 
       <CardContent className="space-y-2">
         <EChart option={option} dataTable={table} height="h-80" />
-        {/* The slider is the only control on this card and the only one with
-            nothing naming it. Styling made it look like a control; this says
-            what it does, which is what nobody could tell. */}
+        {/* Explains the slider, the card's only unlabelled control. */}
         <p className="text-xs text-muted-foreground">{t("zoomHint")}</p>
       </CardContent>
     </Card>

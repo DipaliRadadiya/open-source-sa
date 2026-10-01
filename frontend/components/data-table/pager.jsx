@@ -22,11 +22,8 @@ export function pageList(current, last) {
 }
 
 /**
- * The page numbers themselves, with no opinion on where the page number lives.
- *
- * Server-driven tables keep it in the URL; a list that is already fully loaded
- * in the browser (PHP extensions) keeps it in component state. Both should look
- * and behave identically, so the buttons live here and the caller owns the state.
+ * The page buttons only; the caller owns the page state (URL for server-driven
+ * tables, component state for in-memory lists).
  */
 export function Pager({ page, lastPage, total, onPageChange, pending = false }) {
   const t = useTranslations("pagination");

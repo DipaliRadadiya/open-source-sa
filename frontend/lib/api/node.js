@@ -8,11 +8,7 @@ export function setDefaultNodeVersion(version) {
   return api.put("/node/default", { default: version });
 }
 
-/**
- * Queued — fnm downloads and unpacks, so this returns 202 and the caller polls.
- * Idempotent: a version already installed returns 200, so two clicks collapse
- * into one job.
- */
+/** Queued: returns 202 and the caller polls. Already installed returns 200. */
 export function installNodeVersion(version) {
   return api.post("/node/versions", { version });
 }
@@ -22,10 +18,7 @@ export function removeNodeVersion(version) {
   return api.delete(`/node/versions/${encodeURIComponent(version)}`);
 }
 
-/**
- * Updates npm inside that version, using that version's own npm. Returns the
- * new npm_version so the row can update without refetching the whole page.
- */
+/** Updates npm inside that version; returns the new npm_version. */
 export function updateNodeNpm(version) {
   return api.post(`/node/versions/${encodeURIComponent(version)}/npm`);
 }

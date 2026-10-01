@@ -1,6 +1,5 @@
-// `/bin/false` does exactly what "No login" does, so offering both reads as a
-// choice that is not one. It stays in the list only for an account that
-// already has it — otherwise that account's picker would have no current value.
+// `/bin/false` behaves like "No login", so it is offered only to an account that
+// already has it; otherwise that account's picker would have no current value.
 const LEGACY_SHELLS = ["/bin/false"];
 
 export function offeredShells(shells, current) {

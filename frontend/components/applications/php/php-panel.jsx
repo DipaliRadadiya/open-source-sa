@@ -67,13 +67,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-/** The sizes people actually pick, so most visits are a click and not typing. */
+/** Common values, so most edits are a pick rather than typing. */
 const UPLOAD_SIZES = ["8M", "32M", "64M", "128M", "256M", "512M"];
 const MEMORY_SIZES = ["128M", "256M", "512M", "1G"];
 const EXECUTION_TIMES = [30, 60, 120, 300];
 const INPUT_VARS = [1000, 3000, 5000, 10000];
-// 10 is what a fresh pool actually gets, so it belongs on the list — without
-// it every unconfigured site opens in Custom.
+// 10 is the default pool size; without it unconfigured sites open in Custom.
 const WORKERS = [2, 4, 6, 8, 10, 12];
 
 const TABS = [
@@ -83,11 +82,9 @@ const TABS = [
 ];
 
 /**
- * Which tab owns which field, so a change made behind a hidden tab can be
- * marked there. Two of these cross a tab boundary on purpose: a worker preset
- * also writes `pm_type`, and raising the upload limit also raises
- * `post_max_size` — both live on Advanced, and the marker says so rather than
- * letting the change happen invisibly.
+ * Which tab owns which field, so a change behind a hidden tab can be marked.
+ * A worker preset also writes `pm_type` and the upload limit also raises
+ * `post_max_size`; both live on Advanced, so that tab gets the marker.
  */
 const TAB_FIELDS = {
   basic: [
@@ -117,20 +114,8 @@ const TAB_FIELDS = {
 };
 
 /**
- * One site's PHP.
- *
- * Every panel surveyed (Plesk, CloudPanel, RunCloud, cPanel) labels these
- * fields with the raw php.ini directive and groups them the way the php.ini
- * manual does. Nobody opens this screen wanting to configure PHP — they open it
- * because an upload failed, an import timed out, or a page builder dropped half
- * a form. So the label is the plain thing, the directive is secondary, and the
- * grouping follows the symptom.
- *
- * The first cut of that was still a document: label, box, explanatory sentence,
- * eight times down the page. Values are picked here, not typed — nobody wants
- * to work out that 64M is the string to write — the explanation is one line per
- * group rather than one per field, and the header keeps a live count of what
- * the site is actually set to.
+ * One site's PHP settings. Labels are plain language with the php.ini
+ * directive secondary, and fields are grouped by the symptom they fix.
  */
 export function PhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", applicationPath = "", timezones = [], canManage }) {
   const t = useTranslations("applications.php");
@@ -157,15 +142,13 @@ export function PhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", appl
       <div className="max-w-4xl space-y-4">
         <IsolationCard php={php} canManage={canManage} busy={busy} onIsolate={isolate} />
   
-        {/* Said before they press save, not after their work has gone. */}
         {php.isolated && php.managed === false ? (
           <p className="flex items-start gap-2.5 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
             <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
             <span>{t("unmanaged")}</span>
           </p>
         ) : php.isolated && php.managed === null ? (
-          // Could not be checked, which is neither answer: no warning about
-          // edits nobody may have made.
+          // Unknown is neither answer, so no warning about hand edits.
           <p className="flex items-start gap-2.5 rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
             <Info className="mt-0.5 size-4 shrink-0" />
             <span>{t("managedUnknown")}</span>
@@ -173,7 +156,6 @@ export function PhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", appl
         ) : null}
   
         {php.isolated ? (
-          /** Dedicated mode — full editable form */
           <DedicatedPhpPanel
             appId={appId}
             php={php}
@@ -186,7 +168,6 @@ export function PhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", appl
             setSaving={setSaving}
           />
         ) : (
-          /** Shared mode — clean locked state */
           <SharedPhpState
             php={php}
             phpRange={phpRange}
@@ -210,15 +191,9 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, b
   const { refreshAndWait } = useRefresh();
   const settings = php.settings;
 
-  // The version is the one thing a pool-less site CAN still change: it lives in
-  // the vhost, not the pool, and the API strips it before refusing the rest.
-  // This screen offered it nowhere, so those sites were stuck on whatever
-  // version they were created with.
-  // What the user picked, until the server agrees with it — the same shape the
-  // access and cron switches use. Held as plain state it was seeded once at
-  // mount, so a version changed anywhere else (another tab, another admin) left
-  // this dropdown showing the old one AND claiming an unsaved change the user
-  // had not made.
+  // The version is the one setting a pool-less site can still change (it lives
+  // in the vhost). `picked` only overrides the server value until they match,
+  // so a version changed elsewhere is not shown as a stale unsaved edit.
   const [picked, setPicked] = useState(null);
   const serverVersion = php.php_version ?? "";
   const version = picked !== null && picked !== serverVersion ? picked : serverVersion;
@@ -226,16 +201,14 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, b
   const [savingVersion, setSavingVersion] = useState(false);
   const versions = php.available_versions ?? [];
   const versionChanged = version !== serverVersion;
-  // Whether the version now selected is one this application supports. The
-  // create form refuses these; this screen used to accept them silently.
+  // Whether the selected version is one this application supports.
   const unsupportedVersion =
     Boolean(phpRange) && Boolean(version) && !versionWithin(version, phpRange);
 
   async function saveVersion() {
     setSavingVersion(true);
     try {
-      // Only the version. Sending the settings alongside it earns a 422 for the
-      // whole request — they need a pool file and there isn't one.
+      // Only the version: settings need a pool file, so sending them 422s.
       await updateApplicationPhp(php.application_id, { php_version: version });
       await refreshAndWait();
       toast.success(t("saved"));
@@ -249,9 +222,6 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, b
   return (
     <Card className="overflow-hidden shadow-sm">
       <CardContent className="p-0">
-        {/* The "no per-site pools here" note belongs to these settings, so it
-            sits inside the card with them. Floating above it, it read as an
-            unrelated page-level banner. */}
         {!php.isolation_supported ? (
           <p className="flex items-start gap-2.5 border-b px-5 py-3 text-sm">
             <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
@@ -262,15 +232,12 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, b
           </p>
         ) : null}
 
-        {/* Current values strip. The bottom border belongs to the block below
-            it — without the preview there is nothing to divide, and the rule
-            left an empty band under the card. */}
+        {/* Border only when the preview block follows; otherwise it leaves an empty band. */}
         <div className={cn("bg-muted/20 px-5 py-4", php.isolation_supported && "border-b")}>
           <p className="mb-3 text-sm font-medium text-muted-foreground">
             {tShared("currentLabel")}
           </p>
-          {/* Same status line as the dedicated panel — one screen should not
-              show the same five facts two different ways. */}
+          {/* Same status line as the dedicated panel. */}
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
             <Stat
               icon={MemoryStick}
@@ -291,8 +258,7 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, b
           </div>
         </div>
 
-        {/* Promoted out of the read-only strip above, because unlike every
-            other value there this one is still changeable without a pool. */}
+        {/* Separate from the read-only strip: the version is editable without a pool. */}
         <div className="flex flex-wrap items-end justify-between gap-3 border-t px-5 py-4">
           <div className="min-w-0 space-y-1.5">
             <p className="text-sm font-medium">{t("fields.version")}</p>
@@ -313,9 +279,8 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, b
               </SelectContent>
             </Select>
             {unsupportedVersion ? (
-              /* The API accepts this — `SavePhpSettingsRequest` only checks the
-                 version is installed — so nothing else in the stack will stop
-                 it. The site just breaks after the save. */
+              /* The API only checks the version is installed, so an
+                 unsupported one saves and breaks the site. */
               <p className="flex items-start gap-1.5 text-xs text-warning">
                 <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
                 {t("versionUnsupported", {
@@ -335,8 +300,7 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, b
           ) : null}
         </div>
 
-        {/* Preview of what dedicated PHP unlocks — withheld where the web
-            server has no per-site pools, since it can never be unlocked. */}
+        {/* Hidden where the web server has no per-site pools: it can never be unlocked. */}
         {php.isolation_supported ? (
           <div className="border-t px-5 py-4">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -382,13 +346,11 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
   const router = useRouter();
   const { refreshAndWait } = useRefresh();
   const [tab, setTab] = useState("basic");
-  // The server's own sentence when it refuses the whole save (`errors.settings`):
-  // PHP-FPM rejected the config, or the pool has gone. Null the rest of the time.
+  // The server's message when it refuses the whole save (`errors.settings`):
+  // PHP-FPM rejected the config, or the pool has gone.
   const [rejected, setRejected] = useState(null);
   const settings = php.settings;
-  // A read-only role used to be able to change every dropdown and preset;
-  // only Save was blocked, so the page claimed "Not saved yet" for edits it
-  // could never save.
+  // Lock every control for read-only roles, not just Save.
   const locked = !canManage || saving;
   // Bumped on Discard and after a save: remounts the tabs so per-control UI
   // state (an open "Custom" box, a half-typed function name) resets with the form.
@@ -421,7 +383,6 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
     defaultValues: defaults,
   });
 
-  // Without this a sidebar click throws the edit away silently.
   useWatchUnsaved("app-php-settings", form.formState.isDirty);
 
   const version = useWatch({ control: form.control, name: "php_version" });
@@ -453,11 +414,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
     TAB_FIELDS[key].some((field) => errors[field]),
   );
 
-  /*
-   * A refusal on a tab nobody is looking at showed nothing at all: no toast, no
-   * marker, and Save just seemed to do nothing. Go to the first tab holding
-   * one, and say so.
-   */
+  // An error on a hidden tab is invisible, so switch to the first tab with one.
   function showErrors(fields) {
     const withErrors = TABS.map(({ key }) => key).filter((key) =>
       TAB_FIELDS[key].some((field) => fields[field]),
@@ -485,11 +442,9 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
     setRejected(null);
     try {
       /*
-       * Only what changed. Sending the whole form turned every value it held —
-       * defaults the site was merely inheriting — into a site override: one
-       * edit to Memory made twelve fields "set here", a Reset appeared on each,
-       * and a later change to the server default no longer reached this site.
-       * The version always rides along; the API validates it on every save.
+       * Only changed fields: sending the whole form would turn every inherited
+       * default into a site override. The version is always sent; the API
+       * validates it on every save.
        */
       const payload = Object.fromEntries(
         Object.entries(values).filter(([key]) => key === "php_version" || dirtyFields[key]),
@@ -502,14 +457,9 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
     } catch (error) {
       const refused = error.response?.data?.errors;
       /*
-       * `settings` is not a field on this form, so setError would file it
-       * against nothing. It is the server refusing the save as a whole — most
-       * often PHP-FPM rejecting the config (a directive it cannot parse), rarely
-       * the pool file having gone. It used to be drawn as "the pool is gone"
-       * with a dedicated-PHP button, at the top of a page scrolled to the
-       * Advanced tab. Now it is said where Save is, and the page re-reads: a
-       * site that really lost its pool comes back in the shared state, which
-       * carries the way to fix that.
+       * `settings` is not a form field: it is the server refusing the whole save
+       * (usually PHP-FPM rejecting the config, rarely a missing pool). Shown by
+       * Save; the refresh brings a pool-less site back in the shared state.
        */
       if (refused?.settings) {
         setRejected(refused.settings[0]);
@@ -527,12 +477,8 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
   }
 
   /**
-   * A cleared field takes the value the response came back with — the default
-   * it now inherits, which the form had no way of knowing before asking.
-   *
-   * Only the cleared fields are written; anything else the user is midway
-   * through editing keeps its value AND its dirty state, so a Reset in one
-   * corner of the form never quietly discards work in another.
+   * A cleared field takes the inherited value from the response. Only the
+   * cleared fields are written, so other in-progress edits stay dirty.
    */
   function onReset(fields, next) {
     const settings = next?.settings;
@@ -541,8 +487,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
         form.setValue(field, settings[field] ?? "", { shouldDirty: false });
       }
     }
-    // The `overridden` map lives on the server-rendered prop, so the buttons
-    // only disappear once this lands.
+    // `overridden` comes from the server-rendered prop.
     router.refresh();
   }
 
@@ -556,9 +501,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
         onSubmit={form.handleSubmit(save, (invalid) => showErrors(invalid))}
         className="space-y-3"
       >
-        {/* Its own strip above the form, not the form's first row: it is what
-            the site IS, not something you edit. It still tracks the fields,
-            so an unsaved change is visible as the value it would become. */}
+        {/* Tracks the fields, so an unsaved change shows as the value it would become. */}
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border bg-muted/30 px-4 py-2.5 text-xs">
           <Stat icon={Cpu} label={t("summary.version")} value={version || "—"} saved={defaults.php_version || "—"} unsavedLabel={tCommon("saveFooter.unsaved")} />
           <Stat icon={MemoryStick} label={t("summary.memory")} value={memoryLimit} saved={defaults.memory_limit} unsavedLabel={tCommon("saveFooter.unsaved")} />
@@ -574,28 +517,17 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
         </div>
 
         <Card className="gap-0 overflow-hidden py-0 shadow-sm">
-          {/* Three tabs, not one long page.
-              Everything a normal site ever needs is on Basic; the FPM knobs and
-              the raw directive box are a deliberate second trip. All three
-              panels stay mounted — an unmounting tab throws away a half-typed
-              value, and a form that loses your work when you look at something
-              else is the same bug as a dialog that closes itself. */}
+          {/* All tab panels stay mounted (forceMount): unmounting would discard half-typed values. */}
           <Tabs key={resetKey} value={tab} onValueChange={setTab} className="gap-0">
             <div className="border-b px-5 py-3">
-              {/* Wraps rather than clips: at 390px the third trigger ran off
-                  the card edge with no scroll affordance to say so. */}
-              {/* Scrolls rather than wraps, same as the Settings tab bar: a bar that
-                  reflows to two rows stops reading as one control. ScrollFade is what
-                  says there is more to the side. */}
+              {/* Scrolls rather than wraps, like the Settings tab bar; ScrollFade signals overflow. */}
               <ScrollFade className="-mx-1 px-1 pb-1">
                 <TabsList className="!h-auto w-fit gap-1 p-1">
                   {TABS.map(({ key, icon: Icon }) => (
                     <TabsTrigger key={key} value={key} className="gap-2 px-3 py-1.5">
                       <Icon className="size-4" />
                       {t(`tabs.${key}`)}
-                      {/* A change hidden behind another tab still has to be
-                          findable — otherwise "Not saved yet" points at nothing
-                          on screen. */}
+                      {/* Marks errors or unsaved changes behind a hidden tab. */}
                       {errorTabs.includes(key) ? (
                         <span
                           className="size-1.5 rounded-full bg-destructive"
@@ -627,9 +559,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
                   label={t("fields.version")}
                   name="php_version"
                   directive="php_version"
-                  // Same warning as the shared-mode switcher. The API checks
-                  // only that the version is installed, so an unsupported one
-                  // saves cleanly and breaks the site instead of the request.
+                  // The API only checks the version is installed, so warn here.
                   warning={
                     unsupportedVersion
                       ? t("versionUnsupported", {
@@ -693,9 +623,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
                         </Button>
                       ))}
                     </div>
-                    {/* The description used to live in a `title` attribute, so
-                        on a phone there was no way to learn what "Busy" meant.
-                        It is now read out for whichever preset is selected. */}
+                    {/* Shown as text, not a `title`, so it is readable on touch. */}
                     <p className="mt-1.5 min-h-4 text-xs text-muted-foreground">
                       {activePreset?.description ?? t("presetsCustom")}
                     </p>
@@ -703,7 +631,6 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
                 ) : null}
               </div>
 
-              {/* Directly under the two numbers it multiplies. */}
               <MemoryBudget budget={budget} workers={maxChildren} limit={memoryLimit} />
 
               <div className="border-t pt-5">
@@ -716,13 +643,9 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
                   name="upload_max_filesize"
                   directive="upload_max_filesize + post_max_size"
                   error={postTooSmall ? t("hints.postTooSmall") : null}
-                  /* Saving this now rewrites the site's web server config too,
-                     as of the backend change on 2026-09-08 — nginx refuses a
-                     large upload with 413 before PHP ever sees it, so until
-                     then raising these two did nothing at all and every nginx
-                     site was stuck on the built-in 1 MB. Worth saying, because
-                     a site set up before that carries the old limit until its
-                     vhost is next written, and saving here is what writes it. */
+                  /* Saving also rewrites the web server vhost (nginx returns
+                     413 before PHP sees a large upload). Older sites keep the
+                     old limit until the vhost is next written. */
                   explain={t("hints.upload")}
                 >
                   <ValueSelect
@@ -769,9 +692,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
               hidden={tab !== "security"}
               className="space-y-5 px-5 py-5"
             >
-              {/* Promoted out of the toggle pair: it is the only setting here
-                  that has a value, a state the server may disagree with, and a
-                  state we cannot read at all. A switch could say none of that. */}
+              {/* Not a plain toggle: it has paths, a live value that may differ, and an unknown state. */}
               <OpenBasedir form={form} php={php} disabled={locked} />
 
               <ToggleRow
@@ -792,7 +713,6 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
               hidden={tab !== "advanced"}
               className="space-y-5 bg-muted/20 px-5 py-5"
             >
-              {/* Said before the fields, not after someone has changed one. */}
               <p className="flex items-start gap-2.5 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
                 <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
                 <span>{t("advancedNote")}</span>
@@ -868,10 +788,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
                       />
                       <FormControl>
                         <Combobox
-                          // `timezones` is grouped by region, not a flat list of
-                          // strings — mapping it directly put the region object
-                          // where the label goes and took the page down as soon
-                          // as the list opened.
+                          // `timezones` is grouped by region, not a flat list of strings.
                           options={phpTimezoneOptionsWith(timezones, field.value)}
                           value={field.value}
                           onChange={field.onChange}
@@ -895,9 +812,8 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
                   mono
                 />
 
-                {/* Kept, even though the upload control writes it: a pool that
-                    was tuned by hand may hold a value the picker cannot
-                    express, and hiding the field would silently overwrite it. */}
+                {/* Kept though the upload control writes it: a hand-tuned value
+                    may not fit the picker, and hiding it would overwrite it. */}
                 <TextField
                   form={form}
                   name="post_max_size"
@@ -985,39 +901,24 @@ function ValueSelect({
   numeric = false,
   onPick,
   customLabel,
-  // Choosing "Custom" replaces the list with an empty box, and the format is
-  // not guessable: memory wants "256M", execution time wants a plain number of
-  // seconds. An example is the shortest way to say which.
+  // Example for the Custom box: formats differ ("256M" vs plain seconds).
   placeholder,
 }) {
   const tValidation = useTranslations("validation");
   const tCommon = useTranslations("common");
   const value = useWatch({ control: form.control, name });
   const inList = options.some((option) => String(option) === String(value));
-  // Chosen by hand. The panel remounts these on Discard and after a save, so it
-  // cannot outlive the edit it belongs to — it used to: Discard put 256M back
-  // and left the box open around it, as if a custom value were still set.
+  // Reset by the panel's remount on Discard and after a save.
   const [customPicked, setCustomPicked] = useState(false);
   const custom = !inList || customPicked;
 
   /*
-   * Read here rather than through <FormMessage>, because the dropdown branch is
-   * not inside a <FormField> and FormMessage needs that context. Six settings
-   * are drawn this way — version, memory, max children, upload size, execution
-   * time, input vars — and every one of them had NOWHERE to show a refusal.
-   *
-   * Not theoretical: each offers a "Custom" box, so a value the API's size
-   * pattern rejects is one keystroke away, and `php_version` carries a rule
-   * that fails with "PHP 8.3 is not installed" whenever a version is removed
-   * between opening this page and saving it. Both landed in form state and
-   * rendered nothing — Save just did nothing at all.
-   *
-   * Same translation rule as FormMessage: Zod emits keys, the API sends
-   * finished sentences, and running a sentence through t() returns the key.
+   * Read here, not via <FormMessage>: the dropdown branch is outside a
+   * <FormField>, which FormMessage needs. Same translation rule as FormMessage:
+   * Zod emits keys, the API sends finished sentences.
    */
   const raw = form.formState.errors?.[name]?.message;
-  // `requiredField` lives in `common`, as FormMessage reads it; checking only
-  // the validation namespace printed the key itself when the box was emptied.
+  // `requiredField` lives in `common`, not `validation`.
   const error = raw
     ? raw === "requiredField"
       ? tCommon("requiredField")
@@ -1065,8 +966,7 @@ function ValueSelect({
             <FormControl>
               <Input
                 {...field}
-                // A typed size goes through the same path as a picked one, so
-                // "Largest upload" raises post_max_size with it either way.
+                // Typed sizes go through onPick too, so post_max_size follows.
                 onChange={onPick && !numeric ? (event) => onPick(event.target.value) : field.onChange}
                 type={numeric ? "number" : "text"}
                 inputMode={numeric ? "numeric" : undefined}
@@ -1089,16 +989,8 @@ function ValueSelect({
 }
 
 /**
- * One fact in the status line.
- *
- * These were cells: five bordered boxes with uppercase headings, which read as
- * the header row of a table nobody had written. They are a sentence about the
- * site, so they are set as one — label and value on the same line, separated
- * by a dot from the next.
- */
-/*
- * A changed field shows as "saved → new", marked as not saved yet: showing the
- * new value alone read as though it were already in effect.
+ * One fact in the status line. A changed field shows as "saved → new" so an
+ * unsaved value is not mistaken for one already in effect.
  */
 function Stat({ icon: Icon, label, value, saved = value, unsavedLabel }) {
   const pending = saved !== value;
@@ -1121,37 +1013,23 @@ function Stat({ icon: Icon, label, value, saved = value, unsavedLabel }) {
 }
 
 /**
- * Whether this site has its own PHP pool, and the way to give it one.
- *
- * No longer a switch between two modes. The shared pool runs every site as the
- * web server's account, so one compromised site can read every other site's
- * `.env` — the backend removed the way back (405), and a button offering it
- * would be promising something the API refuses.
- *
- * What is left is a repair: sites created before pools existed still have none,
- * and this converts them.
+ * Offers a dedicated PHP pool to a site on the shared pool. One-way only: the
+ * API refuses going back to shared (405), since the shared pool lets one site
+ * read every other site's files.
  */
 function IsolationCard({ php, canManage, busy, onIsolate }) {
   const t = useTranslations("applications.php.isolation");
 
-  // Nothing can be done about this one — no action, no decision, no way to
-  // change it from here. There is no card to show, and the explanation lives
-  // inside the settings card it applies to (see SharedPhpState).
+  // Nothing to offer; SharedPhpState explains why inside its card.
   if (!php.isolation_supported) return null;
 
-  // An isolated site has nothing to do here. The card carried no action and no
-  // fact the strip below it does not already state ("Runs as <user>"), so it
-  // was a banner announcing that things are normal — on every visit, above the
-  // settings somebody came to change.
   if (php.isolated) return null;
 
   return (
     <Card className="gap-0 overflow-hidden border-blue-200 bg-blue-50/60 py-0 shadow-sm dark:border-blue-800 dark:bg-blue-950/20">
       <CardContent className="grid gap-4 px-5 py-4 sm:grid-cols-[1fr_auto] sm:items-center">
         <div className="flex min-w-0 items-start gap-3">
-          {/* The chip is back. A bare 16px icon against a wide tinted card left
-              the row looking like a toolbar rather than a header. Hidden on the
-              narrowest screens, where it costs a quarter of the column. */}
+          {/* Hidden on the narrowest screens, where it costs a quarter of the column. */}
           <div className="hidden size-9 shrink-0 items-center justify-center rounded-full bg-blue-100 sm:flex dark:bg-blue-900">
             <Lock className="size-4 text-blue-600 dark:text-blue-400" />
           </div>
@@ -1160,10 +1038,8 @@ function IsolationCard({ php, canManage, busy, onIsolate }) {
               {t("offTitle")}
               <Badge
                 variant="outline"
-                // whitespace-normal: this badge carries a sentence with the
-                // pool user in it ("Shared PHP · runs as www-data"), and a badge
-                // is nowrap and shrink-0 by default — 234px that could not fit a
-                // 244px card, so it pushed the whole row past the edge.
+                // whitespace-normal: Badge is nowrap by default and this text
+                // is long enough to overflow a narrow card.
                 className="h-auto border-blue-300 bg-blue-100/60 py-0.5 text-xs font-normal whitespace-normal text-blue-700 dark:border-blue-700 dark:bg-blue-900/60 dark:text-blue-300"
               >
                 {t("sharedBadge", { user: php.runs_as ?? "www-data" })}
@@ -1181,10 +1057,7 @@ function IsolationCard({ php, canManage, busy, onIsolate }) {
             type="button"
             onClick={onIsolate}
             disabled={busy}
-            // "Give this site dedicated PHP" is 28 characters and a button is
-            // whitespace-nowrap, so as a grid item with min-width:auto it set the
-            // whole card|s minimum width and pushed the copy flush against the
-            // right edge. It wraps instead.
+            // Wraps: a nowrap button grid item would set the card's minimum width.
             className="h-auto max-w-full justify-self-start py-2 text-center whitespace-normal sm:justify-self-end"
           >
             {busy ? <Loader2 className="size-4 animate-spin" /> : null}
@@ -1196,15 +1069,7 @@ function IsolationCard({ php, canManage, busy, onIsolate }) {
   );
 }
 
-/**
- * The sum, written out.
- *
- * It used to read "About 12 GB at full load — 12 workers at once" with "More
- * than this server's 2 GB" at the other end of the line: two halves of one
- * sentence, and the reader had to join them. The multiplication is the whole
- * point of the card, so it is now shown as a multiplication, and when it does
- * not fit the numbers and the way out are one sentence rather than a colour.
- */
+/** Memory limit × workers against the server's memory, with an over-commit warning. */
 function MemoryBudget({ budget, workers, limit }) {
   const t = useTranslations("applications.php.budget");
 
@@ -1281,9 +1146,7 @@ function Stack({ label, name, directive, error, warning, explain, children }) {
     <FormItem>
       <Label label={label} name={name} directive={directive} explain={explain} />
       {children}
-      {/* Only what the current VALUE provokes. What the setting means lives
-          behind the ⓘ, so a refusal never has to compete with a definition for
-          the same line — which is where people stopped reading. */}
+      {/* Only value-driven messages here; the field's meaning lives behind the ⓘ. */}
       {error ? (
         <p className="text-sm text-destructive">{error}</p>
       ) : warning ? (
@@ -1296,35 +1159,20 @@ function Stack({ label, name, directive, error, warning, explain, children }) {
   );
 }
 
-/**
- * Everything the per-field Reset needs, so the six field components below do
- * not each grow four props to pass it down.
- */
+/** What the per-field Reset needs, without threading props through each field. */
 const OverrideContext = createContext(null);
 
 /*
- * `explain` is the ⓘ beside the label, and it is now the ONLY way this screen
- * explains a field. Half of them said it in a grey line under the control
- * instead, which made two fields doing the same job look like different kinds
- * of thing and added eight sentences to a form that is already sixteen numbers
- * deep. What stays visible is only what the value provokes: an error, a
- * warning, or a line that changes as you type.
- *
- * The directive is already printed beside the label, so the text behind the ⓘ
- * says what the setting does and never restates its name.
+ * `explain` is the ⓘ beside the label, the only place a field is explained.
+ * The directive is printed beside the label, so the hint never restates it.
  */
 function Label({ label, name, directive, explain }) {
   return (
     <div className="flex min-h-5 items-center justify-between gap-2">
       <FormLabel className="min-w-0 flex-wrap gap-1" hint={directive ? undefined : explain}>
         <span>{label}</span>
-        {/* Tied to the directive rather than left to the `hint` prop, which
-            appends it last: "Restart a worker after this many requests
-            (pm.max_requests)" fills the column, and the ⓘ alone would drop to a
-            second line with nothing beside it. It wraps rather than staying one
-            nowrap run: "(upload_max_filesize + post_max_size)" was wider than a
-            390px column in German and pushed Reset and the inputs past the
-            card's edge. */}
+        {/* ⓘ grouped with the directive so it never wraps alone; break-all
+            lets long directives wrap on narrow columns. */}
         {directive ? (
           <span className="inline-flex min-w-0 items-center gap-1">
             <span className="font-mono text-xs font-normal break-all text-muted-foreground">
@@ -1340,18 +1188,9 @@ function Label({ label, name, directive, explain }) {
 }
 
 /**
- * "This site sets its own value — put it back."
- *
- * Its presence IS the marker: a field with no button is inheriting. The
- * alternative — a "Default" chip on every untouched field — is sixteen grey
- * chips on a form already dense with numbers, and it decorates the common case
- * to describe the rare one.
- *
- * It saves rather than editing the form, because it has to. The API returns
- * effective values only, so an inherited 128M and an override that happens to
- * be 128M are indistinguishable here; the value this field will fall back to is
- * only knowable by asking. The response carries it, so one round trip both
- * clears the override and shows the result.
+ * Clears a site override; its presence marks the field as overridden.
+ * Saves immediately: the API returns effective values only, so the inherited
+ * value is known only from the reset response.
  */
 function ResetOverride({ name }) {
   const context = useContext(OverrideContext);
@@ -1359,8 +1198,7 @@ function ResetOverride({ name }) {
   const [busy, setBusy] = useState(false);
 
   if (!context || !name || !RESETTABLE.has(name)) return null;
-  // `fields` is what this control clears — usually itself, but the upload
-  // control writes two directives and has to clear both (see RESET_FIELDS).
+  // Usually just itself; see RESET_FIELDS for controls owning two directives.
   const fields = (RESET_FIELDS[name] ?? [name]).filter((field) => RESETTABLE.has(field));
   if (!fields.some((field) => context.overridden[field])) return null;
 
@@ -1394,32 +1232,17 @@ function ResetOverride({ name }) {
 }
 
 /**
- * Controls that own more than one directive.
- *
- * "Largest upload" writes `upload_max_filesize` AND `post_max_size` together —
- * that pairing is the whole point of the control, since a `post_max_size`
- * smaller than the upload limit is the trap every PHP guide warns about. So its
- * Reset has to clear both; clearing only the one it is named after would leave
- * a stale override behind and break uploads exactly the way the single control
- * exists to prevent.
+ * Controls that own more than one directive. The upload control writes both
+ * sizes, so its Reset must clear both or a stale `post_max_size` breaks uploads.
  */
 const RESET_FIELDS = {
   upload_max_filesize: ["upload_max_filesize", "post_max_size"],
 };
 
 /**
- * The directives the API will actually accept a null for.
- *
- * `SavePhpSettingsRequest` marks every rule `sometimes`; these are the ones that
- * also carry `nullable`, so null clears the override and the site falls back to
- * the server default. The four pool and fopen directives were added by the
- * backend on 2026-08-13 (they used to 422, so they had no button rather than a
- * broken one — a control that looks available and is not is worse than its
- * absence).
- *
- * `open_basedir_enabled` stays off this list on purpose, and it is not an
- * oversight: it is a plain boolean with a column default of `false`, so it has
- * no override to clear. "Reset" for that one is just switching it off.
+ * Directives `SavePhpSettingsRequest` marks `nullable`: null clears the
+ * override. Keep in step with the backend; anything else 422s.
+ * `open_basedir_enabled` is excluded on purpose: a plain boolean with no override.
  */
 const RESETTABLE = new Set([
   "memory_limit",
@@ -1506,11 +1329,7 @@ function ToggleRow({ form, name, label, directive, explain, disabled }) {
       name={name}
       render={({ field }) => (
         <FormItem className="flex items-start justify-between gap-4 rounded-lg border px-3 py-2.5">
-          {/* flex-1: without it this block is only as wide as its longest line,
-              so the Label's own justify-between has nothing to distribute and
-              Reset ends up jammed against the label text mid-row instead of
-              right-aligned like every other Reset on the page. The switch owns
-              the far right, so Reset lands immediately left of it. */}
+          {/* flex-1 so the Label's justify-between pushes Reset right, beside the switch. */}
           <div className="min-w-0 flex-1 space-y-1">
             <Label label={label} name={name} directive={directive} explain={explain} />
           </div>
@@ -1522,9 +1341,7 @@ function ToggleRow({ form, name, label, directive, explain, disabled }) {
               disabled={disabled}
             />
           </FormControl>
-          {/* Inside the label column so it wraps with the text rather than
-              squeezing the switch. The two toggles here were the last fields on
-              the form with no way to show a refusal. */}
+          {/* basis-full so it wraps below rather than squeezing the switch. */}
           <FormMessage className="basis-full" />
         </FormItem>
       )}
@@ -1532,8 +1349,7 @@ function ToggleRow({ form, name, label, directive, explain, disabled }) {
   );
 }
 
-// One path per line, however it was stored (the API joins with `:`, the
-// textarea gives back newlines, and a paste from a php.ini uses either).
+// The API joins with `:`, the textarea gives newlines; a paste may use either.
 function splitPaths(value) {
   return (value ?? "")
     .split(/[:\n,]+/)
@@ -1542,16 +1358,9 @@ function splitPaths(value) {
 }
 
 /**
- * open_basedir: the fence, what is inside it, and whether the server agrees.
- *
- * The three answers the API gives can all differ, and the difference is the
- * point — see `open_basedir_live` in the schema. A switch alone said none of
- * it: someone could be looking at "on" while PHP enforced something else
- * entirely, or at "off" with no idea what turning it on would cost them.
- *
- * The three paths the backend always prepends are shown as fixed chips rather
- * than seeded into the textarea. Seeding them reads as "yours to edit", and
- * deleting one would simply bring it back on the next save.
+ * open_basedir: the saved paths, the live value, and whether they agree (see
+ * `open_basedir_live` in the schema). Paths the backend always prepends are
+ * fixed chips, not textarea content: deleting one would return on save.
  */
 function OpenBasedir({ form, php, disabled }) {
   const t = useTranslations("applications.php");
@@ -1563,13 +1372,10 @@ function OpenBasedir({ form, php, disabled }) {
   const effective = php.open_basedir_effective ?? null;
   const recommended = splitPaths(php.open_basedir_recommended);
 
-  // Distinct from "off" on purpose. Null is "we could not find out", and
-  // drawing that as "nothing is restricted" would be a guess, wrong about half
-  // the time, about a security control.
+  // Null means the live value could not be read; never show it as "off".
   const unknown = enabled && live === null;
 
-  // Compared as sets: the pool file may list the same paths in another order,
-  // and re-ordering a colon list changes nothing about what PHP allows.
+  // Compared as sets: path order in the pool file does not matter.
   const sameAsSaved = (() => {
     if (live === null || effective === null) return false;
     const [a, b] = [splitPaths(live), splitPaths(effective)];
@@ -1577,18 +1383,9 @@ function OpenBasedir({ form, php, disabled }) {
   })();
 
   /**
-   * Strictly "the live value is not the saved one".
-   *
-   * Deliberately NOT `|| php.managed === false`: a hand-edited pool may have
-   * touched anything, and if its open_basedir still matches ours then this
-   * particular setting is fine — saying otherwise would be a false alarm
-   * pointing at the wrong line. The panel already carries its own banner for
-   * hand-edited pools, which is the right place for that.
-   *
-   * Only once the setting is on: with it off `effective` is null by definition,
-   * so every site would wear a permanent warning. And never while `live` is
-   * unknown — not knowing what the server enforces is its own state, not
-   * evidence of disagreement.
+   * Strictly "live differs from saved". Deliberately not tied to
+   * `php.managed === false` (hand-edited pools have their own banner). Only
+   * when enabled (`effective` is null when off) and never while `live` is unknown.
    */
   const disagrees = enabled && !unknown && !sameAsSaved;
 
@@ -1621,9 +1418,6 @@ function OpenBasedir({ form, php, disabled }) {
         )}
       />
 
-      {/* Above the fields, not below them: this is the answer to "why is my
-          site still reaching that folder", and it is worth reading before
-          anyone edits a path. */}
       {disagrees ? (
         <div className="space-y-1.5 rounded-lg border border-warning/40 bg-warning/10 p-3">
           <p className="flex items-start gap-2 text-sm">
@@ -1671,9 +1465,7 @@ function OpenBasedir({ form, php, disabled }) {
           />
         </div>
       ) : (
-        // What it would cost, before committing to it. Someone deciding whether
-        // to switch this on is really asking "will it break my site", and the
-        // honest answer is this list.
+        // Preview of the paths that would be allowed before switching it on.
         <Collapsible>
           <CollapsibleTrigger className="text-xs text-muted-foreground underline-offset-2 hover:underline">
             {tb("previewTrigger")}
@@ -1708,20 +1500,14 @@ function PathList({ paths, label, hint }) {
 }
 
 /**
- * The blocked-function list.
- *
- * It was a textarea holding `exec,passthru,shell_exec,…` — the stored value,
- * shown raw. Nobody reads a comma-separated line to check whether `system` is
- * in it, and the one thing people do here is add or remove a single name. So
- * the list is a list, each name removable, with an input to add one. The form
- * value is still the same comma-joined string the API takes.
+ * disable_functions as removable chips plus an add box. The form value stays
+ * the comma-joined string the API takes.
  */
 function BlockedFunctions({ form, php, disabled }) {
   const t = useTranslations("applications.php");
   const tb = useTranslations("applications.php.blocked");
   const [draft, setDraft] = useState("");
-  // Names from the last Add that were not function names, said by name rather
-  // than added as chips the save would then refuse.
+  // Invalid names from the last Add, reported instead of added.
   const [refused, setRefused] = useState([]);
 
   const value = useWatch({ control: form.control, name: "disable_functions" }) ?? "";
@@ -1736,9 +1522,8 @@ function BlockedFunctions({ form, php, disabled }) {
       shouldValidate: true,
     });
 
-  // The API sends the starting points, safest first, already localised. An
-  // older backend only sends the flat suggested string — treat that as a
-  // one-entry list so there is a single code path.
+  // Presets come from the API, safest first, localised. Older backends send
+  // only the flat suggested string, treated as a one-entry list.
   const presets = php.disable_functions_presets?.length
     ? php.disable_functions_presets
     : php.suggested_disable_functions
@@ -1751,9 +1536,7 @@ function BlockedFunctions({ form, php, disabled }) {
           },
         ]
       : [];
-  // Order and spacing are noise here — a list is the same list however it was
-  // typed, and a preset that quietly stops matching over whitespace would keep
-  // claiming the site is unhardened.
+  // Order and whitespace are ignored when matching a preset.
   const asSet = (list) =>
     (list ?? "")
       .split(",")
@@ -1766,9 +1549,7 @@ function BlockedFunctions({ form, php, disabled }) {
   );
 
   function add() {
-    // A pasted list is a list — splitting it here saves adding five names one
-    // at a time. The Set drops duplicates inside the paste as well as ones
-    // already listed; "exec, system exec" used to add exec twice.
+    // Accepts a pasted list; the Set drops duplicates within the paste.
     const typed = [...new Set(draft.split(/[,\s]+/).map((name) => name.trim()).filter(Boolean))];
     const valid = typed.filter((name) => /^[A-Za-z0-9_]+$/.test(name));
     const added = valid.filter((name) => !names.includes(name));
@@ -1854,11 +1635,7 @@ function BlockedFunctions({ form, php, disabled }) {
             </p>
           ) : null}
 
-          {/* One button per starting point, same shape as the FPM presets
-              above: the matching one is filled in, and its description is read
-              out underneath rather than hidden in a `title` no phone can
-              reach. Rendered from the API, so a third preset needs no change
-              here. */}
+          {/* Same pattern as the FPM presets: description shown as text, not a `title`. */}
           {presets.length ? (
             <div className="self-start">
               <Label label={tb("presetsLabel")} />

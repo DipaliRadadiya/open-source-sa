@@ -1,12 +1,10 @@
 /**
- * The detect log is nginx/Apache `combined` — the same line format an access
- * log uses, written only for requests the firewall *would* have refused:
+ * The detect log is nginx/Apache `combined` format, written only for requests
+ * the firewall *would* have refused:
  *
- *   1.2.3.4 - - [13/Aug/2026:05:12:33 +0000] "GET /path?a=b HTTP/1.1" 200 512 "ref" "ua"
+ * 1.2.3.4 - - [13/Aug/2026:05:12:33 +0000] "GET /path?a=b HTTP/1.1" 200 512 "ref" "ua"
  *
- * Note what is NOT in it: **which check matched**. Combined format has no field
- * for it, so the panel can show which requests were caught and must not claim
- * to know why.
+ * It has no field for which check matched, so the panel must not claim to know why.
  */
 const LINE =
   /^(\S+) \S+ \S+ \[([^\]]+)\] "(\S+) ([^"]*?) (\S+)" (\d{3}) (\S+) "([^"]*)" "([^"]*)"/;

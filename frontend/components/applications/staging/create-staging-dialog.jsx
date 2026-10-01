@@ -23,24 +23,17 @@ import {
 } from "@/components/ui/form";
 
 /**
- * Make the copy.
+ * Creates a staging copy. The request is synchronous (provision + rsync, no job
+ * to poll), so the dialog stays open until it finishes.
  *
- * One field, because the backend takes one: everything else about the staging
- * site is derived from production. The wait is the notable part — creating
- * provisions a site and rsyncs the whole document root synchronously, with no
- * job to poll — so the dialog holds itself open and says so rather than
- * closing on a request that has not finished.
- *
- * Callers MUST pass a `key` that changes when this opens, so a domain typed
- * once is not still in the field the next time.
+ * Callers MUST pass a `key` that changes on open so the field resets.
  */
 export function CreateStagingDialog({ appId, production, open, onOpenChange }) {
   const t = useTranslations("applications.staging.createDialog");
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [awaitingPage, setAwaitingPage] = useState(false);
-  // The success toast waits for the dialog to go: shown on the API's answer,
-  // it sat beside a dialog still saying "Creating…" for seconds.
+  // The success toast waits until the dialog unmounts.
   const announce = useRef(null);
   useEffect(() => () => announce.current?.(), []);
   useEffect(() => {
@@ -54,10 +47,7 @@ export function CreateStagingDialog({ appId, production, open, onOpenChange }) {
     return () => window.clearTimeout(timer);
   }, [awaitingPage, onOpenChange]);
 
-  // Offered, not imposed: `staging.` in front of the production domain is what
-  // almost everyone types, and an empty box makes them invent it. Anyone with
-  // another convention types over it, and the DNS caveat below still applies
-  // either way.
+  // Suggested default; the user can type over it.
   const suggestion = production?.domain ? `staging.${production.domain}` : "";
 
   const form = useForm({
@@ -70,9 +60,8 @@ export function CreateStagingDialog({ appId, production, open, onOpenChange }) {
     setPending(true);
     try {
       await createApplicationStaging(appId, values.domain);
-      // Open on "Creating…" until the page shows the copy — this dialog lives
-      // in the no-staging state, so it goes when that state does. Closing
-      // first uncovered "Create staging" for the length of the refresh.
+      // Stays on "Creating…" until the refresh replaces the no-staging state
+      // this dialog lives in.
       announce.current = () => toast.success(t("done", { domain: values.domain }));
       router.refresh();
       setAwaitingPage(true);
@@ -82,8 +71,7 @@ export function CreateStagingDialog({ appId, production, open, onOpenChange }) {
         handleValidationError(error, form);
       } else {
         toast.error(apiMessage(error, t("failed")));
-        // Most often another tab made a copy first; the page behind still
-        // offered to create one. Re-read so it shows the copy that exists.
+        // Usually a copy already exists (made elsewhere); refresh to show it.
         router.refresh();
       }
     }
@@ -141,8 +129,7 @@ export function CreateStagingDialog({ appId, production, open, onOpenChange }) {
           )}
         />
 
-        {/* The wait is minutes, not seconds, and nothing reports progress.
-            Better said before the click than discovered after it. */}
+        {/* Warns up front: creation takes minutes with no progress reported. */}
         <p className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
           {t("slow")}
         </p>

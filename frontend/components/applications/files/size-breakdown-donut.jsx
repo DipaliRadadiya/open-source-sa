@@ -12,8 +12,8 @@ const TOKENS = [
 ];
 
 /**
- * The Storage sheet's donut, in a file of its own so the chart library is only
- * fetched when someone opens the sheet — see size-breakdown-sheet.jsx.
+ * The Storage sheet's donut, in its own file so the chart library is only fetched
+ * when the sheet opens (see size-breakdown-sheet.jsx).
  */
 export function SizeBreakdownDonut({ slices, label, dataTable }) {
   const tokens = useChartTokens(TOKENS);

@@ -1,22 +1,12 @@
 /**
- * Krishna: "we cannot define what is issue from error page… not showing api in
- * network tab so how user will identify that what is issue?"
+ * A failed server-side request, carrying what a Network tab row would show.
  *
- * Both halves of that are true, and the second one is why the first matters so
- * much. The session and the permission catalog are fetched **on the server**
- * during SSR, so when one of them fails there is no entry in the browser's
- * Network tab to open — the request happened on a machine the reader cannot
- * see. The error page is not one clue among several; it is the only one there
- * will ever be. A digest gives them nothing to act on.
+ * The session and permission catalog are fetched on the server during SSR, so
+ * the browser's Network tab never sees them; the error page is the only place
+ * to explain the failure. Nothing here is secret: the API base URL is already
+ * public via `NEXT_PUBLIC_*`.
  *
- * So the failure carries what a Network tab row would have shown — method,
- * path, host, status — and the page prints it. None of it is secret: the API
- * base URL is `NEXT_PUBLIC_*`, already in the client bundle, and the status is
- * the user's own server answering about their own account.
- *
- * `kind` deliberately reuses the vocabulary `read()` and `LoadFailed` already
- * use for failures inside a page, so the whole panel explains a failure the
- * same way whether it took out a card or the entire screen.
+ * `kind` reuses the vocabulary of `read()` and `LoadFailed`.
  */
 export class RequestFailedError extends Error {
   /**
@@ -32,34 +22,22 @@ export class RequestFailedError extends Error {
     this.url = url;
     this.status = status;
     this.cause = cause;
-    // What the API itself said, already sanitised by its own exception
-    // handler. `debug` means the response also carried a trace, which only
-    // happens with APP_DEBUG=true.
+    // The API's own (already sanitised) message. `debug` means the response
+    // also carried a trace (APP_DEBUG=true).
     this.serverMessage = serverMessage;
     this.debug = debug;
   }
 
   /**
-   * Which explanation describes this.
+   * Which explanation describes this:
    *
-   * Krishna: "and what message now it will show for other status codes?"
+   *   4xx other the server rejected what the panel sent (often a panel/API
+   *             version mismatch or a proxy rewriting the request).
+   *   502/504   the web server answered but the API behind it did not
+   *             (PHP-FPM stopped or timed out).
+   *   5xx other the API itself errored; the reason is in its log.
    *
-   * It used to answer "server" for everything that was not 403 or 404, so a
-   * 400 or a 405 was reported as "something failed inside the API" — which is
-   * the opposite of what a 4xx means, and sends the reader to the wrong log.
-   * Each group now gets the cause that is actually true of it:
-   *
-   *   4xx other the server REJECTED what the panel sent — not an internal
-   *             fault. Usually panel and API on different versions, or
-   *             something in between rewriting the request.
-   *   502/504   the web server answered but the API behind it did not. A
-   *             different fix from a 500: PHP-FPM stopped, or the request
-   *             timed out. Worth its own message because it is common and
-   *             the reader would otherwise go reading an empty Laravel log.
-   *   5xx other the API itself errored; the reason is in ITS log.
-   *
-   * 401/419 (signed out), 429 (rate limited) and 503 (maintenance) never get
-   * here — the fetchers answer those before throwing.
+   * 401/419, 429 and 503 never get here: the fetchers handle them first.
    */
   get kind() {
     if (this.status === null) return "network";
@@ -67,10 +45,7 @@ export class RequestFailedError extends Error {
     if (this.status === 404) return "notFound";
     if (this.status === 502 || this.status === 504) return "gateway";
     if (this.status >= 500) return "server";
-    // Anything left is a 4xx. A 3xx cannot reach here: `fetch` follows
-    // redirects, so an http->https API address either resolves or fails as a
-    // transport error, which is already `network` above. Verified by driving
-    // a 301 against a stub — it arrives as "no reply", not as a status.
+    // Only 4xx is left: `fetch` follows redirects, so a 3xx never arrives here.
     return "rejected";
   }
 
@@ -99,10 +74,8 @@ export function isRequestFailed(error) {
 }
 
 /**
- * The props the card needs, as a plain object.
- *
- * A thrown Error does not cross the server/client boundary as itself — only
- * serialisable values do — so the page reads this and passes the result.
+ * The props the card needs, as a plain object: an Error does not cross the
+ * server/client boundary, only serialisable values do.
  */
 export function requestFailureProps(error) {
   return {

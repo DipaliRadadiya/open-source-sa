@@ -38,25 +38,14 @@ import {
 } from "@/components/applications/application-status-badge";
 
 
-/* Every cell is defined at module level — flexRender treats a cell function's
- * identity as the component TYPE, so a cell written inline in the columns array
- * is a brand new type on every render and React unmounts it. This list refreshes
- * itself every 4s while any site is provisioning, so an inline actions cell threw
- * away its own state four seconds after you opened the delete dialog. */
+/* Cells at module level: flexRender treats a cell function's identity as the
+ * component type, so an inline cell remounts on every render. This list
+ * refreshes every 4s while a site provisions, which would reset open dialogs. */
 
-/* `block` before `truncate`: on an inline span the ellipsis never appears,
- * because there is no box to overflow. The title carries the whole value —
- * clipping a username without one hides which account a site runs as. */
-/*
- * The version only, because the column says PHP. "PHP 8.4" under a "PHP"
- * header is the label twice.
- *
- * An em-dash for the sites this does not apply to — Node, static, anything the
- * API returns `null` for. The same dash `OwnerCell` uses, so a column with
- * nothing in it looks the same everywhere in this table rather than blank in
- * one place and dashed in another. Tabular numerals so the versions line up
- * down the column instead of drifting with digit width.
- */
+/* `block` before `truncate`: an inline span never shows the ellipsis. The title
+ * carries the full value. */
+/* Version only (the header says PHP); an em dash where it does not apply, the
+ * same as OwnerCell. */
 function PhpCell({ row }) {
   const value = phpVersionShown(row.original);
   return (
@@ -83,17 +72,9 @@ function CreatedCell({ row }) {
   );
 }
 
-/* A scheduled sweep measures every site every minute, so the number here is
- * current without anybody asking for it — see `applications:measure-sizes` in
- * routes/console.php. This cell therefore shows the figure alone; the manual
- * re-measure that used to live in the row menu was doing by hand what the
- * sweep already does each tick.
- *
- * The one state the sweep cannot cover is a site it has not reached yet: one
- * created seconds ago, a server where `application_size.per_run` bounds the
- * pass, or a scheduler that is not running at all. Those show "Not measured"
- * rather than a zero, and the words are the trigger — clicking them tells the
- * three apart, which an empty column never could. */
+/* A scheduled sweep (`applications:measure-sizes`) keeps sizes current, so this
+ * shows the figure alone. A site the sweep has not reached shows "Not measured",
+ * and clicking the words re-measures it. */
 function SizeCell({ row }) {
   const t = useTranslations("applications");
   const format = useFormatter();
@@ -107,8 +88,8 @@ function SizeCell({ row }) {
       await measureApplicationSize(row.original.id);
       router.refresh();
     } catch (error) {
-      // Throttled at 10/min, and it refuses outright when the site has no
-      // directory — both are real answers worth passing on verbatim.
+      // Throttled at 10/min and refused when the site has no directory; pass the
+      // API's message on.
       toast.error(apiMessage(error, t("size.measureFailed")));
     } finally {
       setMeasuring(false);
@@ -116,12 +97,6 @@ function SizeCell({ row }) {
   }
 
   // Never measured: the words themselves are the trigger.
-  //
-  // A button here was a button on every row — ten of them down one column,
-  // shouting over the numbers the column exists to show. And the re-measure
-  // action already has a home: the row's ⋯ menu, where every other per-row
-  // action in this table lives. So the cell adds no chrome at all; the reader
-  // clicks the only thing in it that is already about the missing number.
   if (size === null) {
     return (
       <Tooltip>
@@ -140,10 +115,6 @@ function SizeCell({ row }) {
     );
   }
 
-  // The number alone. When it was measured used to sit beside it, and on a
-  // freshly measured site that read "10 seconds ago" against every row — a
-  // second value competing with the one the column is named for, and the least
-  // interesting reading of it at exactly the moment it appears.
   return <span className="whitespace-nowrap tabular-nums">{size}</span>;
 }
 
@@ -173,26 +144,12 @@ function StatusCell({ row }) {
 }
 
 
-/*
- * `FacetSelect`, not a hand-assembled Select.
- *
- * This screen built its own pair, and they differed from every other filter in
- * the panel in one way that mattered: the clear-the-filter option was labelled
- * with the COLUMN name — "Status", "Type" — which reads as the heading of the
- * list you are looking at, not as a choice you can make. Backups says "All
- * statuses", Cron Jobs says "All users"; only this one asked you to work out
- * that the first item was the way back.
- *
- * The shared control also carries a guard this copy never had: a `?status=junk`
- * URL matched no item and rendered the trigger blank while the filter was still
- * applied server-side.
- */
+/* `FacetSelect`, like every other list filter: "All statuses"-style clear
+ * option, and a guard against an unknown `?status=` value. */
 function Filters({ statusOptions, typeOptions, t }) {
   return (
     <div className="flex flex-col gap-2 sm:flex-row">
-      {/* Server-side and debounced. The list pages at ten, so a browser-side
-          filter answered "which of these ten" while the reader was asking
-          "which of my sites" — and found nothing for anything on page two. */}
+      {/* Server-side and debounced: the list is paged. */}
       <SearchInput placeholder={t("searchPlaceholder")} />
       <FacetSelect
         paramKey="status"
@@ -211,22 +168,15 @@ function Filters({ statusOptions, typeOptions, t }) {
 }
 
 /**
- * The applications list.
+ * The applications list. Search, filters, sort and paging live in the URL and
+ * are answered by the API (the list is paged).
  *
- * Search, filters, sort and paging all live in the URL and are answered by the
- * API. They used to be React state over the whole table, which worked only
- * while the whole table arrived in one response — once the backend began paging
- * at ten, every one of them silently operated on the first page alone.
- *
- * `siteTypes` comes from `GET /site-types` rather than from the rows on screen:
- * options derived from the current page can only offer the types that happen to
- * be on it, so filtering to a type would become impossible as soon as its sites
- * fell off page one.
+ * `siteTypes` comes from `GET /site-types`, not the visible rows, so every type
+ * stays filterable.
  */
 export function ApplicationsTable(props) {
-  // One transition shared by search, both filters and the pager — that shared
-  // signal is what puts a spinner in the search box and dims the table while
-  // the server answers, instead of the page appearing frozen.
+  // One transition shared by search, filters and pager, so the table shows
+  // pending state while the server answers.
   return (
     <NavTransitionProvider>
       <ApplicationsList {...props} />
@@ -243,9 +193,8 @@ function ApplicationsList({
   // Ids of sites whose type needs a database and that have none. Empty when
   // the reader cannot see databases, or when the count could not be read.
   missingDatabase = new Set(),
-  // `git_account_id` → provider, resolved on the server. Empty when no row
-  // needs it, when the reader cannot see the integrations, or when that fetch
-  // failed — every one of which means the rows keep the generic git mark.
+  // `git_account_id` → provider, resolved on the server. Empty (generic git mark)
+  // when not needed, not permitted, or the fetch failed.
   gitProviders = new Map(),
 }) {
   const t = useTranslations("applications");
@@ -270,8 +219,7 @@ function ApplicationsList({
   const hasWorkingApplication = applications.some((application) => application.status === "pending" || application.status === "provisioning");
   useEffect(() => { if (!hasWorkingApplication) return undefined; const timer = window.setInterval(() => router.refresh(), 4000); return () => window.clearInterval(timer); }, [hasWorkingApplication, router]);
 
-  // Shown to viewers too, off and with the reason, like every other page's
-  // primary action — hidden, the list gave no hint that creating was possible.
+  // Shown disabled to viewers, with the reason, like other pages' primary action.
   const createButton = canManage ? (
     <Button asChild><Link href="/applications/create"><Plus className="size-4" />{t("create")}</Link></Button>
   ) : (
@@ -281,91 +229,33 @@ function ApplicationsList({
   );
   const columns = useMemo(
     () => [
-      // `col` is the API's own sort key, from the whitelist on
-      // IndexApplicationsRequest. Anything outside it is a 422 rather than an
-      // ignored parameter — which is the right call on their side: a sort that
-      // silently does nothing looks exactly like one that works.
+      // `col` is the API's sort key (IndexApplicationsRequest whitelist); anything
+      // else is a 422. Sorting is server-side because the table only holds one page.
       //
-      // The columns used to carry TanStack's `sortingFn` and accessors that
-      // existed only to sort — including one returning -1 for never-measured
-      // sites. All of it was dead once the list began paging: DataTable is only
-      // handed one page, so sorting here reordered ten rows and presented that
-      // as the order of the list. The server has the whole set, and pins
-      // never-measured to the small end itself.
-      //
-      // The percentages are what stop a long site name taking the table with
-      // it. Every cell here already carried `truncate`, and none of it ever
-      // fired: in the browser's default `auto` layout a column is as wide as
-      // its longest cell, so a 61-character name simply made the Application
-      // column 657px and pushed the table 547px past its container — a
-      // sideways scrollbar with Size, Created and the row menu off the end of
-      // it. Truncation needs a bound to truncate against, and `fixedLayout`
-      // below is what gives the columns one. Measured at the four content
-      // widths this table can have (704 / 960 / 1120 / 1216px — the shell is a
-      // 16rem sidebar plus `max-w-screen-xl p-8`, so the viewport is not the
-      // container); below 1024 the cards render instead.
-      //
-      // Created hides below xl, and the rest re-base to 100% without it. Seven
-      // columns do not fit 704px: sharing it evenly truncated Type to "Next…"
-      // and Owner to "akaunti…", which is not a narrower column but a column
-      // that has stopped saying anything. Created is the one whose absence
-      // costs least — it is not actionable, it never changes, and the detail
-      // page carries it.
+      // The percentages plus `fixedLayout` give columns a bound so `truncate` works;
+      // in auto layout a long name widens the table past its container. Below lg the
+      // cards render instead. Created hides below xl and the rest re-base to 100%.
       { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, meta: { className: "w-[32%] xl:w-[29%]", sortKey: "name" }, cell: ({ row }) => <NameCell row={row} missingDatabase={missingDatabase.has(row.original.id)} gitProvider={gitProviderFor(row.original, gitProviders)} /> },
       /*
-       * PHP stands where Type stood. The logo carries the type now — it is
-       * labelled and hoverable — and a version is much shorter than "Craft
-       * CMS", so the slot narrows from 15/11 to 9/8 and the surplus goes to
-       * Application, which grew a padlock.
+       * Not sortable: the API allow-lists sort columns.
        *
-       * Not sortable. Sorting sites by framework was not wanted and sorting
-       * them by PHP version is a stranger request still; the API also
-       * allow-lists sort columns, so offering one it does not accept is a 500
-       * rather than a fallback.
-       *
-       * Totals, because `fixedLayout` SILENTLY squeezes a column when they are
-       * wrong rather than erroring:
+       * Widths must total 100, or `fixedLayout` silently squeezes a column:
        *   lg  32 + 8 + 16 + 23 + 14 + 7          = 100
        *   xl  29 + 7 + 14 + 19 + 11 + 14 + 6     = 100
-       *
-       * Status and Created keep the width they had. Measured against a build
-       * of HEAD, narrowing them to pay for System user clipped the
-       * "Provisioning" badge in de/fr/ru and the Created header in pt at
-       * widths where they used to fit — a rename is not a reason to break a
-       * column it never touched. Application pays instead: it truncates by
-       * design and 29% is still 329px against a 261px longest cell.
        */
       { id: "php", header: t("columns.php"), meta: { className: "w-[8%] xl:w-[7%]" }, cell: PhpCell },
       { accessorKey: "status", header: () => <SortHeader col="status">{t("columns.status")}</SortHeader>, meta: { className: "w-[16%] xl:w-[14%]", sortKey: "status" }, cell: StatusCell },
-      // Not sortable, and deliberately so on the API's side: the owner lives on
-      // a relation, so ordering by it would mean a join, and the list can
-      // already be searched by username.
-      //
-      // 23/19, not the 16/13 that fitted "Owner": the header is "System user"
-      // now, and measured across all eight locales the widest — Russian's
-      // "Системный пользователь" at 213px — needs 19% of the 1134px table. At
-      // 13% it was clipped in six of the eight. The surplus comes from Created
-      // and PHP, both of which were carrying 60-80px more than their longest
-      // locale asks for.
-      //
-      // `whitespace-normal` on top, because 19% is only 213px from 1280px up.
-      // Below that the table has 960px or 704px to divide and the sum of every
-      // column's widest locale is 1064px, so no split exists that keeps this
-      // header on one line — measured, not guessed. A label that wraps to two
-      // lines still says what it says; `truncate` would turn it into
-      // "Системный польз…", and the cell under it is a username nobody can
-      // infer. `h-auto min-h-11` because TableHead fixes the height at 44px,
-      // which would clip the second line instead.
+      // Not sortable (the owner is a relation on the API side). Sized for the widest
+      // locale's header (ru, ~213px). `whitespace-normal` lets it wrap below xl, where
+      // no split fits every header; `h-auto min-h-11` because TableHead fixes 44px.
       { id: "owner", header: t("columns.owner"), meta: { className: "w-[23%] xl:w-[19%] h-auto min-h-11 whitespace-normal" }, cell: OwnerCell },
-      // descFirst on both: nobody opens a size column to find their smallest
-      // application, or a date column to find the oldest.
+      // descFirst: largest and newest first is what people look for.
       { id: "size", header: () => <SortHeader col="directory_size_bytes" descFirst>{t("columns.size")}</SortHeader>, meta: { className: "w-[14%] xl:w-[11%]", sortKey: "directory_size_bytes" }, cell: SizeCell },
       { id: "created", header: () => <SortHeader col="created_at" descFirst>{t("columns.created")}</SortHeader>, meta: { className: "hidden xl:table-cell xl:w-[14%]", sortKey: "created_at" }, cell: CreatedCell },
       { id: "actions", header: "", meta: { className: "w-[7%] xl:w-[6%]" }, cell: ActionsCell },
     ],
-    // `missingDatabase` belongs here: attaching a database refreshes the route,
-    // and without it the columns keep the closure from the previous render and
-    // the badge stays on a site that now has one.
+    // `missingDatabase` is a dependency: attaching a database refreshes the route,
+    // and a stale closure would keep the badge.
     [t, missingDatabase],
   );
 
@@ -377,11 +267,7 @@ function ApplicationsList({
     </div>
   );
 
-  // Past the last page. Distinct from both other empties: the server has sites,
-  // this page just is not one of them — and the pager only renders when there
-  // are rows, so without this the screen that says nothing is here also removes
-  // the control that would take you back.
-  // No rows AND nothing asked for: this server genuinely has no sites.
+  // No rows and no filters: the server has no sites.
   if (!applications.length && !filtering) return <ApplicationEmptyState canManage={canManage} />;
 
   if (!applications.length) {
@@ -396,10 +282,7 @@ function ApplicationsList({
               variant="outline"
               onClick={() => setQuery({ search: undefined, status: undefined, site_type: undefined }, { resetPage: true })}
             >
-              {/* "Clear filters", not "Clear search". This button clears all
-                  three — and this is the only list with more than a search
-                  box, so filtering by Status and being offered "Clear search"
-                  names a control the reader never touched. */}
+              {/* Clears search and both filters, hence "Clear filters". */}
               {tCommon("clearFilters")}
             </Button>
           }
@@ -411,13 +294,9 @@ function ApplicationsList({
   return (
     <div className="space-y-4">
       {toolbar}
-      {/* Cards below lg, the table from lg up — same rule as services and
-          workers. Six columns cannot fit a phone, and the table quietly hid
-          five of them. */}
+      {/* Cards below lg, the table from lg up. */}
       <div className="lg:hidden"><ApplicationsCards applications={applications} canManage={canManage} canMagicLogin={canMagicLogin} gitProviders={gitProviders} /></div>
-      {/* fixedLayout, so the percentages above are obeyed instead of treated as
-          hints the browser is free to ignore — the same fix services-table
-          needed, for the same reason. */}
+      {/* fixedLayout so the column percentages are obeyed, not treated as hints. */}
       <div className="hidden lg:block"><DataTable columns={columns} data={applications} meta={{ canManage, canMagicLogin }} fixedLayout /></div>
       <DataTablePagination meta={meta} />
     </div>

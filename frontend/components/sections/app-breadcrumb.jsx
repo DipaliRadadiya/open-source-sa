@@ -18,17 +18,12 @@ import {
 } from "@/components/ui/breadcrumb";
 
 /**
- * The trail above the page, and the only way back out of a site.
+ * The trail above the page, and the way back out of a site. Ancestors are real
+ * links, with the site itself as a step.
  *
- * The ancestors are real links: application screens used to carry a separate
- * "Back to Applications" button that skipped the site you were standing in and
- * dropped you on the full list. Here the site itself is a step, so you can go
- * back one level or all the way.
- *
- * The two panels order their parts differently, and it is not arbitrary: an
- * application owns its screens (`/applications/13/php` → Applications › Shop ›
- * PHP Settings), while a server screen owns its records (`/databases/shop` →
- * Server › Database › shop). The entity sits where the URL puts it.
+ * Ordering follows the URL: an application owns its screens
+ * (`/applications/13/php` → Applications › Shop › PHP Settings), while a server
+ * screen owns its records (`/databases/shop` → Server › Database › shop).
  */
 export function AppBreadcrumb({ items }) {
   const pathname = usePathname();
@@ -40,23 +35,18 @@ export function AppBreadcrumb({ items }) {
   const { crumb } = usePageCrumb();
 
   // Inside an application the server-level "Applications" item also matches the
-  // path, so match against that panel's items only — otherwise every
-  // application screen is labelled "Application".
+  // path, so match against that panel's items only.
   const panelItems = resolveNavItems(items, applicationId).filter((item) =>
     applicationId ? item.level === "application" : item.level !== "application",
   );
   const current = findActiveNavItem(panelItems, pathname);
-  // `navTitle`, not `current.title`: the catalog calls the firewall screen "8G
-  // Firewall" after the upstream ruleset, and the frontend renames it. The
-  // sidebar went through the override and this did not, so the same screen was
-  // "Web Firewall" in the rail and "8G Firewall" in the trail above it.
+  // `navTitle`, not `current.title`: the frontend renames some catalog titles
+  // (e.g. "8G Firewall"), and the trail must match the sidebar.
   const title = current ? navTitle(current, t) : undefined;
 
   const trail = [];
-  // A page that owns its whole trail. Account is reached from the user menu
-  // rather than the sidebar, so `findActiveNavItem` had nothing to match and it
-  // rendered a lone "Server" — no page name, and the wrong parent for a screen
-  // about you rather than the machine.
+  // A page that owns its whole trail (e.g. Account, reached from the user menu, has
+  // no sidebar item to match).
   if (crumb?.root) {
     trail.push({ key: "root", label: crumb.label, mono: crumb.mono });
   } else if (applicationId) {
@@ -65,8 +55,7 @@ export function AppBreadcrumb({ items }) {
     if (crumb) {
       trail.push({ key: "entity", label: crumb.label, href: applicationHref, mono: crumb.mono });
     }
-    // On the site's own dashboard the section IS the site — one crumb, not two
-    // saying the same thing.
+    // On the site's own dashboard the section is the site: one crumb, not two.
     if (title && current?.href !== applicationHref) {
       trail.push({ key: "section", label: title });
     }
@@ -74,7 +63,7 @@ export function AppBreadcrumb({ items }) {
     trail.push({
       key: "root",
       label: t("breadcrumbServer"),
-      // The root points at the dashboard, so on the dashboard it points at itself.
+      // The root points at the dashboard, so on the dashboard it is not a link.
       href: pathname === "/dashboard" ? undefined : "/dashboard",
     });
     if (title) {
@@ -85,8 +74,7 @@ export function AppBreadcrumb({ items }) {
     }
   }
 
-  // Below `sm` there is no room for a full trail, so only the last two steps
-  // survive — the parent you would actually tap, plus where you are.
+  // Below `sm` only the last two steps show: the parent to tap, and the current page.
   const foldedBelowSm = (index) => index < trail.length - 2;
 
   return (
@@ -101,8 +89,8 @@ export function AppBreadcrumb({ items }) {
                 <BreadcrumbSeparator
                   className={cn(
                     "text-muted-foreground/50",
-                    // Tied to the crumb BEFORE it, so a folded trail never
-                    // opens with a dangling chevron.
+                    // Tied to the crumb BEFORE it, so a folded trail never opens with a dangling
+                    // chevron.
                     foldedBelowSm(index - 1) && "hidden sm:block",
                   )}
                 />
@@ -111,8 +99,8 @@ export function AppBreadcrumb({ items }) {
                 className={cn("min-w-0", foldedBelowSm(index) && "hidden sm:inline-flex")}
               >
                 {isLast ? (
-                  // Foreground against muted ancestors is enough to say "you are
-                  // here"; bolding it too competes with the h1 repeating it.
+                  // Foreground against muted ancestors marks "you are here"; bold would compete with
+                  // the h1.
                   <BreadcrumbPage className={cn("truncate", item.mono && "font-mono")}>
                     {item.label}
                   </BreadcrumbPage>

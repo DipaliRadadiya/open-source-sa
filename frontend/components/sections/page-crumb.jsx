@@ -3,12 +3,8 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
 /**
- * Lets a detail page put its own name in the header breadcrumb.
- *
- * The breadcrumb is built from the nav catalog, which only knows section names
- * — so every database read "Server › Database" and nothing said WHICH one you
- * had open. Context rather than a store: it is one entry, and the panel has no
- * client state library.
+ * Lets a detail page put its own name (e.g. which database) in the header
+ * breadcrumb, which otherwise only knows section names from the nav catalog.
  */
 const PageCrumbContext = createContext(null);
 
@@ -22,24 +18,19 @@ export function PageCrumbProvider({ children }) {
 }
 
 export function usePageCrumb() {
-  // Null outside the app shell: the header is the only consumer, and a missing
-  // provider should mean "no extra crumb" rather than throw.
+  // Null outside the app shell: a missing provider means "no extra crumb", not a
+  // throw.
   return useContext(PageCrumbContext) ?? { crumb: null, setCrumb: () => {} };
 }
 
 /**
- * Rendered by a detail page or by the application layout. Clears itself on the
- * way out, so navigating back to the list does not leave a stale name behind.
+ * Rendered by a detail page or the application layout; clears itself on the way
+ * out so no stale name remains.
  *
- * `href` makes the entry a link — the application name is an ancestor of every
- * screen inside that site, not a dead end. `mono` is for entries that are
- * identifiers you might retype (a database name), not for display names.
- *
- * `root` replaces the trail entirely instead of hanging off "Server". The
- * breadcrumb takes its section name from the sidebar catalog, so a page that is
- * deliberately NOT in the sidebar — Account, reached from the user menu — found
- * no name and rendered a bare "Server". Wrong twice over: it named no page, and
- * your account is not part of the server.
+ * `href` makes the entry a link (the application name is an ancestor of every
+ * screen in the site). `mono` is for identifiers you might retype (a database
+ * name). `root` replaces the trail entirely, for pages not in the sidebar (e.g.
+ * Account, reached from the user menu).
  */
 export function PageCrumb({ children, href, mono = false, root = false }) {
   const { setCrumb } = usePageCrumb();

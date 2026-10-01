@@ -9,14 +9,8 @@ import {
 } from "@/lib/charts/time-series-option";
 
 /**
- * Three percentages on one 0-100 axis.
- *
- * ServerAvatar's own "Resource Usage" plots memory, disk and *load* together,
- * and their docs then have to warn people not to confuse it with the Server
- * Load Monitor. Load is a queue depth, not a percentage — on a shared axis it
- * either flattens the percentages or gets flattened by them. CPU % answers the
- * same "is it busy" question in the right unit, and load keeps its own card
- * where a cores line gives it a scale.
+ * Three percentages on one 0-100 axis. Load is a queue depth, not a
+ * percentage, so it has its own card; CPU % answers "is it busy" here.
  */
 /** Resolved from globals.css at runtime; never restated as literals here. */
 const TOKENS = [
@@ -41,12 +35,8 @@ export function ResourceUsageChart({ history = [], timeZone }) {
   const percentValue = (value) =>
     format.number(Number(value) / 100, { style: "percent", maximumFractionDigits: 1 });
 
-  // Disk joins only when the collector actually reports a filesystem. On a box
-  // where disk_total is 0 a flat 0 % line would read as "empty disk" when the
-  // truth is "not measured".
-  // A collector that cannot read the filesystem stores 0, not null — so an
-  // all-zero disk column is "not measured" here too, and a flat 0 % line would
-  // read as an empty disk.
+  // Disk joins only when measured: a collector that cannot read the filesystem
+  // stores 0, not null, and a flat 0 % line would read as an empty disk.
   const hasDisk = history.some((point) => Number(point.disk) > 0);
   const latest = history.at(-1);
   const series = [
@@ -61,8 +51,7 @@ export function ResourceUsageChart({ history = [], timeZone }) {
     tokens,
     xLabel: clock,
     value: percentValue,
-    // Fixed 0-100 with explicit ticks. Left to pick its own on a percentage
-    // scale, an auto axis lands on -2%.
+    // Fixed 0-100 with explicit ticks; an auto axis lands on -2%.
     axes: [{ max: 100, interval: 25, formatter: percentTick }],
   });
   const table = seriesDataTable({

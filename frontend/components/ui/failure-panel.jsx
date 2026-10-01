@@ -2,27 +2,12 @@ import { TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * The panel an error boundary renders in place of the thing that threw.
+ * What every error boundary (root, server panel, admin, sign-in) renders.
+ * Icon, tone and `role="alert"` are fixed on purpose. Not for `LoadFailed` or
+ * `RateLimited`, which differ deliberately.
  *
- * All four boundaries — root, server panel, admin and sign-in — drew this by
- * hand, and `diff` between two of them was empty once the comments and the
- * function name were stripped. Two of those copies were made this week, from
- * the copy before them, which is how four of a thing happen.
- *
- * Deliberately fixed rather than configurable: the icon, the destructive tone
- * and `role="alert"` are the same in every case and should not be a decision a
- * call site can get wrong. `role` in particular — a boundary that forgot it
- * would fail silently for anyone using a screen reader, and nothing would ever
- * report it.
- *
- * Deliberately NOT used by `LoadFailed` or `RateLimited`. Those look similar
- * and are not: one reports a section failing inside a working page and shows an
- * HTTP status, the other is amber on purpose because nothing is broken and
- * waiting fixes it. Folding them in would mean props for tone, icon, spacing
- * and detail, and the reason each is what it is would stop being visible.
- *
- * No hooks and no data, on purpose. The root boundary renders this, and if it
- * threw there would be nothing left to catch it.
+ * No hooks and no data: the root boundary renders this, and nothing would
+ * catch a throw here.
  *
  * @param title       the heading — what happened
  * @param description one sentence on what to do about it
@@ -55,9 +40,7 @@ export function FailurePanel({
       <div className="space-y-1">
         <p className="font-medium">{title}</p>
         <p className="max-w-md text-sm text-muted-foreground">{description}</p>
-        {/* The digest, not `error.message`: the raw message can leak server
-            internals and means nothing to the reader, while the digest is what
-            correlates with the server log. */}
+        {/* The digest, not `error.message`, which can leak server internals. */}
         {detail ? (
           <p className="pt-1 font-mono text-xs text-muted-foreground">{detail}</p>
         ) : null}

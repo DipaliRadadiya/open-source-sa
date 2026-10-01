@@ -42,13 +42,9 @@ import { hasNoDatabase } from "@/lib/backups/database-availability";
 
 /**
  * This site's backups: whether it is protected, how, and what has run.
- *
- * A status screen, not a settings screen. The configuration form used to sit
- * expanded on the page, which made a page you visit to *check* something look
- * like a page you came to *change* something. It now lives in the same modal
- * the server-level screen uses — one component, so the two doors cannot drift.
+ * The configuration form lives in the same modal as the server-level screen.
  */
-// How long we will say "queued" before admitting the worker has not taken it.
+// How long "queued" is shown before reporting that the worker has not taken it.
 const QUEUE_STALLED_MS = 3 * 60 * 1000;
 
 export function BackupsPanel({
@@ -60,27 +56,25 @@ export function BackupsPanel({
   activeRestore = null,
   canManage,
   canRestore,
-  // `backup` manage: removing the schedule can take every archive with it,
-  // so the API asks for the server-level permission, not `app_backup`.
+  // `backup` manage: removing the schedule can delete every archive, so the
+  // API requires the server-level permission, not `app_backup`.
   canTurnOff = false,
   databaseCounts = null,
   databasesKnown = false,
-  // The site's own databases, and what could be attached to it. Only supplied
-  // when the reader can manage databases at all.
+  // Only supplied when the reader can manage databases.
   siteDatabases = [],
-  // False when the site's database read failed. An empty list then means "we
-  // could not ask", and the warning below must not fire on it.
+  // False when the database read failed: an empty list then means unknown,
+  // and the warning below must not fire.
   siteDatabasesKnown = true,
   unattachedDatabases = [],
   engines = [],
   needsDatabase = false,
   siteTypes = null,
   canManageDatabases = false,
-  // The history request came back empty because it failed, not because the
-  // site has never been backed up.
+  // The history request failed (empty is not "never backed up").
   backupsFailed = false,
-  // The read was refused (403) rather than broken: the history needs the
-  // server-level Backups permission, which a site-only role may not have.
+  // 403: the history needs the server-level Backups permission, which a
+  // site-only role may lack.
   backupsForbidden = false,
   // `GET /backup-targets/options`; null when it could not be read.
   backupOptions = null,
@@ -94,65 +88,44 @@ export function BackupsPanel({
   const [restoring, setRestoring] = useState(null);
   const [editing, setEditing] = useState(false);
   const [turningOff, setTurningOff] = useState(false);
-  // Seeded from the server, then replaced the moment a restore is started here
-  // so the progress appears on the click rather than after a round trip.
+  // Replaced when a restore starts here so progress shows without a round trip.
   const [restore, setRestore] = useState(activeRestore);
-  // Whether this restore was started here, which is the only case that should
-  // move the viewport. Restore is pressed from a table row well below the fold.
+  // Only a restore started here should scroll the viewport.
   const [restoreStartedHere, setRestoreStartedHere] = useState(false);
-  // The banner polls the restore itself; this is its latest status, so the
-  // rest of the page knows when the site is being overwritten. The table used
-  // to keep offering Restore and Back up now all the way through — the API
-  // refused the one, and accepted the other: a backup of a half-restored site.
+  // Latest status reported by the restore banner's polling, so the rest of the
+  // page can block Restore and Back up now while the site is being overwritten.
   const [restoreStatus, setRestoreStatus] = useState(null);
   const restoreRunning = RESTORE_IN_FLIGHT.includes(restoreStatus ?? restore?.status);
   // The newest backup id at the moment a run was started here, or null.
-  //
-  // `POST /applications/{id}/backups` answers 202 with the *target* — the
-  // backup row does not exist until a worker picks the job up. So the refresh
-  // that follows the click returns exactly the page that was already on screen:
-  // no new row, nothing in flight, so no polling either. The run was invisible
-  // until someone reloaded by hand, which is the whole complaint.
+  // `POST /applications/{id}/backups` returns 202 before the backup row exists,
+  // so this keeps the queued state (and polling) alive until the row appears.
   const [queuedAfter, setQueuedAfter] = useState(null);
   const [stalled, setStalled] = useState(false);
 
-  // A run in flight is the one moment this page changes without the user
-  // touching it. Polling only then keeps a page nobody is waiting on quiet.
+  // Poll only while a run is in flight.
   const busy = backups.some((backup) => BACKUP_IN_FLIGHT.includes(backup.status));
 
-  // Derived, so it resolves itself: the wait is over as soon as a backup newer
-  // than the one we started from appears, whatever state that row is in.
+  // The wait ends as soon as a backup newer than the starting one appears.
   const newestId = newestBackupId(backups);
   const queued = isBackupQueued(backups, queuedAfter);
 
   /*
-   * Forget the mark the moment the wait is over.
-   *
-   * It was only ever set, never cleared — a high-water mark that outlived the
-   * run it was watching for. Delete the newest backup afterwards and the list's
-   * newest id falls back below the mark, so "still queued" became true again:
-   * the button span, the page started polling, and a finished backup was drawn
-   * as queued, with nothing running anywhere. Reported exactly that way.
-   *
-   * Cleared during render rather than in an effect: this is React's own
-   * "adjust state when the data changes" shape, and it re-renders before
-   * anything is painted instead of flashing the wrong state for a frame.
+   * Clear the mark once the wait is over; otherwise deleting the newest backup
+   * drops the newest id below it and the page shows "queued" again.
+   * Done during render (React's "adjust state on data change" pattern) to
+   * avoid painting the wrong state for a frame.
    */
   if (queuedAfter !== null && !queued) setQueuedAfter(null);
 
-  // Say so rather than quietly reverting to "nothing happened" — that is the
-  // state this whole change exists to remove.
+  // Report a stalled queue instead of silently reverting to "nothing happened".
   useEffect(() => {
     if (!queued || stalled) return undefined;
     const id = setTimeout(() => setStalled(true), QUEUE_STALLED_MS);
     return () => clearTimeout(id);
   }, [queued, stalled]);
 
-  // Reached from a failed row, so it reads as "try that one again" — but the
-  // endpoint checks the row is failed and then dispatches `RunBackup` for the
-  // target, exactly as "Back up now" does. It is a fresh run either way, it
-  // creates a *new* row rather than reviving this one, and so it lands in the
-  // same invisible queue window. Hence the same bookkeeping.
+  // Retry dispatches a fresh `RunBackup` (a new row, not this one), so it
+  // needs the same queue-window bookkeeping as "Back up now".
   async function retry(backup) {
     setRetryingId(backup.id);
     setStalled(false);
@@ -190,8 +163,7 @@ export function BackupsPanel({
     setStalled(false);
     try {
       await runBackupNow(application.id);
-      // Remember where the list stood, so the queued state can end itself the
-      // moment the worker's row shows up.
+  // Remember where the list stood so the queued state ends when the row appears.
       setQueuedAfter(newestId);
       await refreshAndWait();
       toast.success(t("started"));
@@ -206,8 +178,7 @@ export function BackupsPanel({
     <div className="space-y-6">
       {busy || queued ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
 
-      {/* Above everything: a restore is rewriting this site's files and
-          database right now, and it carries the undo once it lands. */}
+      {/* First: a restore is rewriting this site's files and database now. */}
       {restore ? (
         <ActiveRestore
           key={restore.id}
@@ -219,16 +190,8 @@ export function BackupsPanel({
         />
       ) : null}
 
-      {/* The server-level screen has always warned that a destination is
-          rejecting writes; this page never did — so a site could show a green
-          "This site is backed up" shield while every run it made was being
-          refused by the bucket. Scoped to the one destination this site uses. */}
-
-      {/* On the page, not in the settings dialog. The dialog says the same
-          thing while you are filling the form in, which is the right place to
-          say what you are about to save — but an action there would open a
-          second dialog over a half-filled one and refresh the page underneath
-          it. Here there is nothing to lose. */}
+      {/* On the page rather than in the settings dialog: an action there would
+          open a second dialog over a half-filled form. */}
       {canManageDatabases && needsDatabase && siteDatabasesKnown && siteDatabases.length === 0 ? (
         <div className="flex flex-col gap-3 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex items-start gap-2.5">
@@ -258,27 +221,18 @@ export function BackupsPanel({
       <ProtectionCard
         target={target}
         options={backupOptions}
-        // The newest run, for the one thing the target cannot answer: what
-        // actually happened. `last_run_at` is unset when a run crashes.
+        // The newest run: `last_run_at` is unset when a run crashes.
         lastBackup={backups[0] ?? null}
-        // Without this, a target that has never written `last_run_at` plus a
-        // failed history read renders as "No backup has run yet" — the
-        // reassuring answer, produced by not knowing.
+        // Otherwise a failed history read plus no `last_run_at` renders as
+        // "No backup has run yet".
         lastBackupUnknown={backupsFailed}
-        // Known to hold nothing — not "could not ask". A deleted history still
-        // leaves `last_run_at` on the target, and the card went on saying
-        // "Last backup 28 minutes ago" in green beside an empty list.
-        // A run still in progress is not a kept backup either: with one
-        // running and none finished, the card fell back to the target's old
-        // `last_run_at` — the time of a backup already deleted.
+        // Known to hold nothing (not "could not ask"). `last_run_at` survives a
+        // deleted history, and in-flight runs are not kept backups.
         noneKept={!backupsFailed && total - backups.filter((b) => BACKUP_IN_FLIGHT.includes(b.status)).length === 0}
         canManage={canManage}
-        // A spinner only for a run this page is actually waiting on — our POST,
-        // or the queue window after it. A run that is merely *listed* as in
-        // flight gets a disabled button and a sentence instead: the backend
-        // refuses a second run either way, but a row can sit at "running"
-        // forever if its worker died, and a spinner that never stops is a
-        // promise of progress nothing here can keep.
+        // Spinner only for a run this page is waiting on. A row merely listed as
+        // in flight can stay "running" forever if its worker died, so it gets a
+        // disabled button and a sentence instead.
         running={running || queued}
         blockedReason={
           restoreRunning
@@ -312,19 +266,16 @@ export function BackupsPanel({
         busyId={retryingId}
         queued={queued}
         stalled={stalled}
-        // A second run cannot start while one is under way — the endpoint
-        // answers 422. Say so on the button instead of letting the click
-        // discover it. Every row here belongs to this site, so the answer is
-        // the same for all of them.
+        // The endpoint answers 422 while a run is under way; say so on the
+        // button. All rows belong to this site, so the reason is shared.
         retryBlockedReason={
           restoreRunning ? t("restoreRunning") : queued || busy ? t("alreadyRunning") : null
         }
         restoreInFlight={restoreRunning}
       />
 
-      {/* The same modal the Backups screen opens, in edit mode when a target
-          already exists. `applicationId` is fixed here, so the site picker
-          never renders. */}
+      {/* Edit mode when a target exists; `applicationId` is fixed, so the site
+          picker never renders. */}
       <SetupBackupsDialog
         open={editing}
         onOpenChange={setEditing}
@@ -337,17 +288,15 @@ export function BackupsPanel({
         siteTypes={siteTypes}
         siteType={application.site_type}
         options={backupOptions}
-        // "Back up now" in the saved step starts the same invisible queue
-        // window as the card's button, so it needs the same bookkeeping —
-        // without it the run never appeared until a manual reload.
+        // Starts the same queue window as the card's button.
         onStarted={() => {
           setStalled(false);
           setQueuedAfter(newestId);
         }}
       />
 
-      {/* Kept while open: a successful turn-off refreshes the page to no
-          target, and the dialog has to outlive that to close and say so. */}
+      {/* Kept while open: a successful turn-off refreshes to no target, and
+          the dialog must outlive that to close and confirm. */}
       {target || turningOff ? (
         <TurnOffBackupsDialog
           open={turningOff}
@@ -355,9 +304,7 @@ export function BackupsPanel({
           application={application}
           target={target}
           count={backupsFailed ? null : total}
-          // Every destination this site's archives sit in, not just the one
-          // it uses now: two of three were on another bucket and the dialog
-          // named only the current one.
+          // Every destination this site's archives sit in, not just the current one.
           destinationNames={[
             ...new Set(
               [target?.storage_destination_name, ...(backups ?? []).map((backup) => backup.storage_destination_name)].filter(Boolean),
@@ -387,8 +334,8 @@ export function BackupsPanel({
                 ...restoring,
                 application_domain: application.domain,
                 application_name: application.name,
-                // A type that never has a database: its "files and database"
-                // archives hold files only, so "Database only" restores nothing.
+                // A type that never has a database: its archives hold files only,
+                // so "Database only" restores nothing.
                 files_only:
                   Boolean(siteTypes?.length) &&
                   !needsDatabase &&
@@ -425,40 +372,28 @@ const STATE = {
 
 function stateOf(target, noneKept) {
   if (!target) return "unprotected";
-  // A disabled target and a manual one both run on no schedule. That state
-  // looks configured on any screen that only asks "is there a target?", and
-  // backs up nothing — so it is never reported as protected.
+  // A disabled or manual target runs on no schedule and backs up nothing, so
+  // it is never reported as protected.
   if (!target.enabled || target.frequency === "manual") return "paused";
-  // Scheduled, but nothing to restore from: not what "backed up" promises.
+  // Scheduled, but nothing to restore from.
   if (noneKept) return "empty";
   return "protected";
 }
 
 /**
- * Everything about this site's protection, in one card: the headline, the six
- * facts, and the two actions. No form — the answer to "am I covered?" should
- * not require reading a set of inputs.
+ * This site's protection in one card: headline, six facts, and two actions.
  */
 function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown = false, noneKept = false, canManage, running, blockedReason, onBackUpNow, onEdit, canTurnOff = false, turnOffBlockedReason = null, onTurnOff }) {
   const t = useTranslations("backups.application");
   const tHistory = useTranslations("backups.history");
   const state = stateOf(target, noneKept);
   const { icon: Icon, tone, ring } = STATE[state];
-  // The stored time is 24-hour; the picker that sets it renders in the
-  // browser's locale. Formatting here is what stops the card and the picker
-  // showing one time two ways.
+  // The stored time is 24-hour; format it so the card matches the locale-based picker.
   const format = useFormatter();
 
-  // "Every day at 02:00", or just the interval when there is no time to name.
-  // Built once: the sentence at the top of the card and the fact row below it
-  // were describing the same schedule in two different amounts of detail.
-  /*
-   * The zone rides along with the time or not at all: "Every day at 2:00 AM"
-   * on its own reads as the reader's own clock, and the panel has no other
-   * place on this card that reveals otherwise.
-   */
-  // Hourly reads only the minute of the stored time, so it is printed as
-  // ":30", not as one of its twenty-four hours.
+  // "Every day at 02:00", or just the interval when there is no time. The zone
+  // is shown with the time, otherwise it reads as the reader's own clock.
+  // Hourly shows only the minute (":30").
   const when = scheduleWhen(target, options, format);
   const frequencyTitle = target?.frequency_title ?? target?.frequency;
   const scheduleKey = when?.minute ? "summary.howOftenMinute" : "summary.howOftenAt";
@@ -476,33 +411,17 @@ function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown 
         { label: t("summary.what"), value: target.type_title ?? target.type },
         {
           label: t("summary.howOften"),
-          // The time, not just the interval. "Every day" left the one question
-          // people actually ask of a schedule — *when* — answered only inside
-          // the settings dialog.
-          //
-          // Formatted for the reader's clock convention, NOT their timezone.
-          // The hour and minute are the PROJECT's — `target.timezone`, which
-          // is the app clock and not the server's, whatever this comment used
-          // to say — and stay exactly as stored; only 24-hour versus AM/PM
-          // changes. That is what makes this agree with the picker that sets
-          // it, which is a native time input and renders in the browser's
-          // locale whatever we do — `lang` does not override it. Converting
-          // the zone would name an hour the scheduler never runs at, and this
-          // does not; naming the zone beside it is what makes the unconverted
-          // number readable.
+          // Formatted for the reader's clock convention, NOT their timezone:
+          // the hour is the project's (`target.timezone`, the app clock) and
+          // stays as stored, matching the native time input that sets it.
+          // Converting would name an hour the scheduler never runs at.
           value: schedule,
         },
         {
           label: t("summary.keeps"),
           /*
-           * A number, or what the absence of one means — never a dash.
-           *
-           * Zero is not "no history": `RetentionEnforcer` returns early on
-           * `keep <= 0` with the comment that treating it as "delete
-           * everything" would be an unrecoverable reading, so zero means keep
-           * every backup. And a target with no count at all is not pruned by
-           * anything, which is a different sentence again. Both were drawn as
-           * "—", which says neither.
+           * Never a dash. Zero means keep every backup (`RetentionEnforcer`
+           * returns early on `keep <= 0`); no count at all means never pruned.
            */
           value:
             target.retention_count === null || target.retention_count === undefined
@@ -518,10 +437,8 @@ function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown 
         {
           label: t("summary.lastBackup"),
           // Falls back to the run itself: a crashed run never writes
-          // last_run_at, and "No backup has run yet" over a failure from ten
-          // minutes ago is the opposite of the truth.
-          // "—" rather than "Never" when the history read failed: the crashed-run
-          // fallback below cannot be checked, so neither answer is known.
+          // last_run_at. "—" when the history read failed, since neither
+          // answer is known.
           value: noneKept
             ? target.last_run_at
               ? t("noneKept")
@@ -532,10 +449,8 @@ function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown 
         },
         {
           label: t("summary.nextBackup"),
-          // `is_due` outranks the timestamp: a brand-new target runs its first
-          // backup on the next scheduler tick, not at tonight's slot, so
-          // showing `next_run_at` alone would name tomorrow at exactly the
-          // moment the first backup is about to run.
+          // `is_due` outranks the timestamp: a new target runs on the next
+          // scheduler tick, not at the next scheduled slot.
           value: target.is_due
             ? t("summary.runsShortly")
             : (target.next_run_at_human ?? t("summary.noNextRun")),
@@ -554,10 +469,7 @@ function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown 
         </span>
         <div className="min-w-0 flex-1">
           <p className="font-semibold tracking-tight">{t(`state.${state}.title`)}</p>
-          {/* `state.protected.body` takes {schedule} and {destination}. The
-              rewrite called it without them and the page rendered the raw
-              placeholders — pass the values, and give the other states their
-              own argument-free branch rather than one call for all three. */}
+          {/* `state.protected.body` requires {schedule} and {destination}. */}
           <p className="text-sm text-muted-foreground">
             {state === "protected"
               ? t("state.protected.body", {
@@ -570,14 +482,8 @@ function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown 
           </p>
         </div>
 
-        {/* Stacked on a phone, side by side from `sm`. `flex-1` was not
-            enough: a flex item will not shrink below its own content, and
-            these buttons never wrap their labels — so at a larger text size
-            the pair simply ran past the card's edge and clipped. A column
-            cannot overflow no matter how wide the labels get. */}
-        {/* Shown to a read-only role too, disabled with the reason, as every
-            other page does — they used to vanish, which reads as a missing
-            feature rather than a permission. */}
+        {/* Column on a phone so long labels cannot overflow (buttons never
+            wrap). Read-only roles see the buttons disabled with a reason. */}
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <Button
             variant="outline"
@@ -609,11 +515,6 @@ function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown 
 
       {target ? (
         <CardContent className="px-5 py-4">
-          {/* Six facts on one grid rather than six rows: this is a readout, and
-              a readout should be scannable in a glance, not read line by line. */}
-          {/* Label small and quiet, value large and dark. Six labels and six
-              values at the same size made the reader work out which was which
-              on every cell; the size difference does that for them. */}
           <dl className="grid gap-x-6 gap-y-5 sm:grid-cols-3">
             {facts.map((fact) => (
               <div key={fact.label} className="min-w-0">
@@ -627,15 +528,15 @@ function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown 
             ))}
           </dl>
 
-          {/* Exclusions change what a restore gives you back, so their
-              existence belongs here even when the patterns do not. */}
+          {/* Exclusions change what a restore returns, so they are shown even
+              when there are no patterns to list. */}
           {excludes > 0 || target ? (
             <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t pt-3">
               <p className="text-xs text-muted-foreground">
                 {excludes > 0 ? t("summary.excludes", { count: excludes }) : null}
               </p>
-              {/* Quiet and last: a way out, not something to press by accident
-                  beside "Back up now". The dialog carries the weight. */}
+              {/* Quiet and last, so it is not pressed by accident beside
+                  "Back up now". */}
               {target ? (
                 <Button
                   variant="ghost"
@@ -658,15 +559,8 @@ function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown 
 }
 
 /**
- * This site's recent runs — the same table the History screen uses, minus the
- * Site column.
- *
- * It was a hand-built list of rows before, and that was the problem: no column
- * headers, so "4 hours ago" and "Not yet" sat under nothing and the reader had
- * to work out what each value was. Row heights varied too, because a note
- * under the row made some rows two lines and others one. Sharing the table
- * gives it headers, one row rhythm, and a guarantee the two screens describe a
- * backup identically.
+ * This site's recent runs: the History screen's table without the Site column,
+ * so both screens describe a backup identically.
  */
 function RecentBackups({
   backups,
@@ -688,15 +582,13 @@ function RecentBackups({
   const t = useTranslations("backups.application");
   const router = useRouter();
 
-  // "No backups have run for this site yet" is a claim about this site's
-  // history, and a request that did not come back is not evidence for it.
+  // A failed request is not evidence that the site has no history.
   const emptyMessage = forbidden ? t("historyForbidden") : failed ? t("historyFailed") : t("noRuns");
 
   const listProps = {
     backups,
     canRestore,
-    // Same permission as restore — deleting removes the archive from the
-    // customer's bucket, not just the row.
+    // Same permission as restore: deleting removes the archive from the bucket.
     canDelete: canRestore,
     onDeleted: () => router.refresh(),
     canRun: canManage,
@@ -713,10 +605,7 @@ function RecentBackups({
   return (
     <Card className="gap-0 overflow-hidden py-0 shadow-sm">
       <div className="flex flex-wrap items-center gap-2 border-b px-5 py-3.5">
-        {/* Said only when it is true: this list is the newest five, and with
-            exactly five rows and nothing else on screen it looked like the
-            whole history. At five or fewer runs there is no cap to admit, so
-            the count would be noise. */}
+        {/* The count only shows when the list is capped at the newest five. */}
         <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <h3 className="text-base font-semibold tracking-tight">{t("recentTitle")}</h3>
           {total > backups.length ? (
@@ -725,13 +614,10 @@ function RecentBackups({
             </span>
           ) : null}
         </div>
-        {/* Matched to the RefreshButton it sits beside: that one is a 36px
-            outline icon button, so a 28px ghost link next to it read as loose
-            text rather than the second half of a pair. */}
+        {/* Sized to match the 36px RefreshButton beside it. */}
         <div className="flex shrink-0 items-center gap-2">
           <RefreshButton />
-          {/* The full history needs the same permission this list was refused
-              for, so the link would only lead to "no access". */}
+          {/* Full history needs the permission this list was refused for. */}
           {forbidden ? null : (
             <Button asChild variant="outline">
               <Link href={`/backups/history?application=${applicationId}`}>
@@ -743,11 +629,8 @@ function RecentBackups({
         </div>
       </div>
 
-      {/* The gap the toast could not cover. A queued run has no row yet, so
-          without this the list a person is staring at looks identical to the
-          one they were staring at before they clicked. It sits inside this card
-          because this is where the run will appear, and it goes away by itself
-          the moment it does. */}
+      {/* A queued run has no row yet; this shows where it will appear and
+          disappears once it does. */}
       {queued ? (
         <div
           role="status"
@@ -766,8 +649,7 @@ function RecentBackups({
       ) : null}
 
       <CardContent className="p-0">
-        {/* Cards below xl: with a site's columns the table needs ~930px,
-            and at 1024 that pushed Size, Download and Restore off the card. */}
+        {/* Cards below xl: with a site's columns the table needs ~930px. */}
         <div className="xl:hidden p-4">
           {backups.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">{emptyMessage}</p>

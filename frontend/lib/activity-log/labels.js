@@ -1,4 +1,3 @@
-// Turn a raw activity key like "user.created" into a readable "User Created".
 export function humanizeActivity(key) {
   if (!key) return "";
   return key
@@ -34,7 +33,6 @@ export function actionBadgeVariant(action) {
   return "muted";
 }
 
-// Tailwind bg class for a status dot, keyed off the same verb semantics.
 export function actionDotClass(action) {
   const variant = actionBadgeVariant(action);
   if (variant === "destructive") return "bg-destructive";
@@ -44,21 +42,13 @@ export function actionDotClass(action) {
 }
 
 /**
- * A colour for the entity an activity row is about.
- *
- * Grouped into five families rather than one colour per type: with ~15 types,
- * a colour each stops being a signal and becomes decoration. The families are
- * the ones you actually scan for — "was this security, or someone's account?"
- *
- * Uses the theme's chart palette, which is the panel's only categorical scale
- * and already has dark-mode values. Inventing new hues here would repeat the
- * mistake the lifecycle badge made.
+ * A colour for the entity an activity row is about, in five families from the
+ * theme's chart palette (which already has dark-mode values).
  */
 // Full class strings, not built from a variable: Tailwind scans source text, so
-// a composed `bg-${family}/12` is never generated and the badge comes out bare.
-// Text is the chart colour mixed with the foreground: the chart colours are
-// made for fills, and as 12px text they read 2.4–3.4:1. Mixing towards the
-// foreground darkens them in light mode and lightens them in dark mode.
+// a composed `bg-${family}/12` is never generated.
+// Text mixes the chart colour with the foreground; chart colours alone are too
+// low-contrast as 12px text.
 const PEOPLE = "border-transparent bg-chart-5/12 text-[color-mix(in_oklch,var(--chart-5)_55%,var(--foreground))]";
 const SECURITY = "border-transparent bg-chart-4/12 text-[color-mix(in_oklch,var(--chart-4)_55%,var(--foreground))]";
 const RUNTIME = "border-transparent bg-chart-1/12 text-[color-mix(in_oklch,var(--chart-1)_55%,var(--foreground))]";
@@ -101,11 +91,9 @@ export function typeBadgeClass(type) {
   return TYPE_FAMILY[type] ?? "border-border text-muted-foreground";
 }
 
-// Which entities belong to which scope, per the API docs: `account` is the
-// panel's people, `server` is the machine. The filters endpoint isn't
-// scope-aware — it returns every type the caller has rows for — so a page that
-// fixes its scope has to narrow the list itself, or it offers `user` on the
-// server page where it can never match.
+// Which entities belong to which scope: `account` is the panel's people,
+// `server` is the machine. The filters endpoint isn't scope-aware, so a page
+// with a fixed scope narrows the list itself.
 // Mirrors config/activity.php `scopes.account`.
 const ACCOUNT_TYPES = new Set(["user", "role", "permission", "central"]);
 
@@ -117,20 +105,17 @@ export function typesForScope(types = [], scope) {
 }
 
 /**
- * The verbs worth offering for a scope.
- *
- * `actions.all` spans both scopes, so on the server page it would list
- * "Logged In". Rebuilt from the per-type lists of the types that survive the
- * scope filter; falls back to `all` when the API sends no per-type breakdown.
+ * The verbs worth offering for a scope: the union of the per-type lists for
+ * types in scope (`actions.all` spans both scopes); falls back to `all` when
+ * the API sends no per-type breakdown.
  */
 export function actionsForScope(actions = {}, types = [], scope) {
   if (!scope) return actions;
   const allowed = typesForScope(types, scope);
   const union = new Set();
   for (const type of allowed) for (const action of actions[type] ?? []) union.add(action);
-  // `all` only stands in when the API sent no per-type lists at all. With
-  // them, an empty union means none of these verbs belong here — falling back
-  // offered "Logged In" on the server log, a filter that matches nothing.
+  // `all` only stands in when the API sent no per-type lists at all; with
+  // them, an empty union means none of these verbs belong here.
   const perType = Object.keys(actions).some((key) => key !== "all");
   const scoped = { ...actions, all: union.size || perType ? [...union].sort() : (actions.all ?? []) };
   for (const type of Object.keys(scoped)) {

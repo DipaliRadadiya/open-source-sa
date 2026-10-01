@@ -16,17 +16,12 @@ import {
 import { apiMessage } from "@/lib/api/error-message";
 
 /**
- * "Test configuration" — nginx -t and friends. Read-only: it never reloads,
- * which is the whole value. You ask whether a change is safe *before* applying
- * it, instead of finding out by taking the site down.
+ * "Test configuration" (nginx -t and friends). Read-only: it never reloads.
+ * Only rendered where the API says `testable`.
  *
- * Only rendered where the API says `testable`; a service with no real test is
- * not given an invented one.
- *
- * **Split into a hook and a dialog**, because the trigger now lives in the
- * row's actions menu. A `<Dialog>` rendered inside `DropdownMenuContent`
- * unmounts the instant the menu closes, so the result would flash and vanish:
- * the menu owns the item, and the dialog is rendered as the menu's sibling.
+ * Split into a hook and a dialog: a `<Dialog>` inside `DropdownMenuContent`
+ * unmounts when the menu closes, so the dialog is rendered as the menu's
+ * sibling.
  */
 export function useConfigTest(service) {
   const t = useTranslations("services");
@@ -64,8 +59,7 @@ export function ConfigTestDialog({ service, result, onDismiss }) {
       <Dialog open={result !== null} onOpenChange={(open) => !open && onDismiss()}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            {/* Icon beside the title, not above it — same markup as
-                ConfirmDialog, which is the panel's one header shape. */}
+            {/* Icon beside the title, matching ConfirmDialog's header. */}
             <div className="flex min-w-0 items-center gap-3">
               <span
                 className={cn(
@@ -92,17 +86,11 @@ export function ConfigTestDialog({ service, result, onDismiss }) {
             </DialogDescription>
           </DialogHeader>
 
-          {/* The tool's own words, verbatim: it names the offending file and
-              line, which is the entire point. Summarising it would throw away
-              the only part that fixes anything.
-              Rendered on the console surface with the log viewer's severity
-              tints — this IS terminal output, and the panel already has one
-              honest way to display that. */}
+          {/* The tool's output verbatim (it names the file and line), on the
+              console surface with the log viewer's severity tints. */}
           {result?.output ? (
             <div className="overflow-hidden rounded-lg border border-console-border bg-console">
-              {/* A strip of its own rather than a button floating over the
-                  output: on the dark canvas it was invisible, and it sat on top
-                  of the first line — which is the line that names the problem. */}
+              {/* Its own strip, so the copy button does not cover the first line. */}
               <div className="flex items-center justify-between border-b border-console-border px-3 py-1.5">
                 <span className="font-mono text-xs uppercase tracking-wide text-console-muted">
                   {service.unit}

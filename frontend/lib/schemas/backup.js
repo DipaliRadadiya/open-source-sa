@@ -1,36 +1,24 @@
 import { z } from "zod";
 
-/**
- * What a backup holds, and what a restore can put back.
- *
- * The same three values do double duty: on a target they mean "capture this",
- * on a restore they mean "put this back". The restore side is constrained —
- * you cannot ask for a database out of an archive that never had one — which
- * `restorableTypes` below works out so the user is never rejected *after*
- * typing the domain to confirm.
- */
 /** The windows the History filter offers, and the only ones it honours. */
 export const BACKUP_PERIODS = ["7", "30", "90"];
 
+/**
+ * What a backup holds (on a target) or what a restore puts back. See
+ * `restorableTypes` for the restore-side constraint.
+ */
 export const BACKUP_TYPES = ["full", "filesystem", "database"];
 
 /**
- * The hour the backend falls back to when no time is stored.
- *
- * A copy of `BackupTarget::CRON`'s own `0 2 * * *`. `BackupTargetResource` now
- * returns `schedule_time`, so this is no longer papering over a missing field —
- * it is only what the form shows for a target that has genuinely never set one,
- * where the API correctly sends `null`.
+ * The hour the backend falls back to when no time is stored (a copy of
+ * `BackupTarget::CRON`'s `0 2 * * *`). Shown only when the API sends `null`.
  */
 export const BACKUP_DEFAULT_TIME = "02:00";
 
 /**
- * What the settings form offers, from `GET /backup-targets/options`.
- *
- * The backend builds it from the same constants its save validation reads, so
- * every frequency listed is one the PUT accepts. The list used to be typed out
- * here and stopped at monthly; the four sub-daily schedules would have been
- * rejected by this form before the API ever saw them.
+ * What the settings form offers, from `GET /backup-targets/options`. Built
+ * from the backend's save-validation constants, so every frequency listed is
+ * accepted by the PUT.
  *
  * `time` is which picker a frequency needs: `minute` (hourly — only the minute
  * of `schedule_time` is used), `time`, or null (manual).
@@ -52,12 +40,9 @@ export const backupTargetOptionsSchema = z.object({
 });
 
 /**
- * Which types a given archive can satisfy.
- *
- * Mirrors `RestoreBackupRequest::withValidator()` exactly: what is asked for
- * must be a subset of what the archive holds. Duplicated here on purpose —
- * the alternative is letting someone choose "database", type their domain, and
- * only then be told no, which is the worst possible moment to be refused.
+ * Which types a given archive can satisfy. Mirrors
+ * `RestoreBackupRequest::withValidator()` so an impossible choice is refused
+ * before the user types the confirmation.
  */
 export function restorableTypes(backupType) {
   if (backupType === "full") return ["full", "filesystem", "database"];
@@ -67,17 +52,9 @@ export function restorableTypes(backupType) {
 }
 
 /**
- * The one status that means the run finished and left an archive behind.
- *
- * There is no "completed" backup. `BackupStatus` on the backend is
- * pending | running | verifying | verified | failed, and `verified` is the
- * success state — the run wrote an archive and then proved it could read it
- * back. The download button tested `status !== "completed"`, which is true of
- * every backup that has ever existed, so Download was blocked on all of them
- * and said the backup had failed while the row beside it said Complete.
- *
- * Named once here because two screens ask the same question. A string literal
- * at each call site is how they came to disagree.
+ * The one status meaning the run finished and left an archive. There is no
+ * "completed": `BackupStatus` is pending | running | verifying | verified |
+ * failed, and `verified` is success. Use this constant, not a string literal.
  */
 export const BACKUP_SUCCEEDED = "verified";
 
@@ -98,10 +75,7 @@ export const RESTORE_STATUSES = ["pending", "running", "succeeded", "failed"];
 
 /**
  * `BackupStatus` on the backend, and what `filter[status]` will accept.
- *
- * Ordered as the filter offers them — finished first, because that is what
- * people look for. Named here rather than written out at the filter, so the
- * dropdown and the guard that drops a junk `?status=` cannot disagree.
+ * Ordered as the filter offers them; shared by the dropdown and the `?status=` guard.
  */
 export const BACKUP_STATUSES = ["verified", "verifying", "running", "pending", "failed"];
 
@@ -109,22 +83,15 @@ export const backupSchema = z
   .object({
     id: z.number(),
     /*
-     * The name this archive has in the bucket.
-     *
-     * `id` is an autoincrement that means nothing outside this panel's own
-     * database, so it cannot match a row on screen to an object in the
-     * destination — which is the question asked when someone is looking at the
-     * bucket directly and needs to know which file is which.
-     *
-     * Nullish, not required: rows written before the column existed have none.
+     * The archive's name in the bucket (`id` means nothing outside this panel).
+     * Nullish: older rows have none.
      */
     uid: z.string().nullish(),
     application_id: z.number().nullish(),
     type: z.string(),
     type_title: z.string().nullish(),
-    // Taken automatically just before a restore overwrote the site, and exempt
-    // from retention. It is the row someone hunts for after a bad restore, so
-    // the list marks it rather than leaving it looking like any other backup.
+    // Taken automatically just before a restore, exempt from retention; the list
+    // marks it because it is what people look for after a bad restore.
     is_safety: z.boolean().default(false),
     status: z.string(),
     status_title: z.string().nullish(),
@@ -133,15 +100,9 @@ export const backupSchema = z
     reason: z.string().nullish(),
     reason_title: z.string().nullish(),
     size_bytes: z.number().nullish(),
-    // Where this archive actually went. A target's destination is editable, so
-    // the site's CURRENT setting does not say where an older archive was
-    // written — which is exactly the question the history screen gets asked,
-    // and pointing someone at the wrong bucket mid-restore is the failure.
-    //
-    // Absent, not null, on an API that predates it: the backend sends it only
-    // when the relation was eager-loaded, deliberately, so a caller can tell
-    // "no destination" from "not asked for". The column reads that difference
-    // rather than rendering a blank that looks like data.
+    // Where this archive actually went (a target's destination is editable).
+    // Absent, not null, unless the relation was eager-loaded, so "no
+    // destination" and "not asked for" stay distinguishable.
     storage_destination_name: z.string().nullish(),
     // Sent on the server-wide history, where a row has to name its own site.
     application_name: z.string().nullish(),
@@ -163,7 +124,6 @@ const metaSchema = z.object({
   total: z.number().default(0),
   last_page: z.number().default(1),
   // Per-status totals across the whole filtered set, not just this page.
-  // Undeclared, Zod stripped these and the summary row silently read zero.
   counts: z
     .object({
       total: z.number().default(0),
@@ -197,33 +157,23 @@ export const backupTargetSchema = z
     retention_count: z.number(),
     frequency: z.string(),
     frequency_title: z.string().nullish(),
-    // "HH:MM" in `timezone` below — the PANEL's clock, not the server's, which
-    // is what this comment used to claim. Nullish because a target that has
-    // never set a time stores none, not because the API withholds it.
+    // "HH:MM" in `timezone` below (the panel's clock, not the server's). Null
+    // when the target never set a time.
     schedule_time: z.string().nullish(),
     enabled: z.boolean().default(true),
     file_excludes: z.array(z.string()).default([]),
     database_excludes: z.array(z.string()).default([]),
     last_run_at: z.string().nullish(),
     last_run_at_human: z.string().nullish(),
-    // Sent by the backend since 2026-08-07. Never recompute these from their
-    // cron constants — a frontend copy of a server-side schedule drifts the
-    // first time someone changes it.
+    // Never recompute these from cron constants; a frontend copy would drift.
     next_run_at: z.string().nullish(),
     next_run_at_human: z.string().nullish(),
     /*
      * Which clock `schedule_time` and `next_run_at` are in, IANA format.
      *
-     * Listed here or it does not exist: the object is `.passthrough()`d but
-     * every screen reads the PARSED result, and an unlisted key is simply not
-     * on it. The backend has sent this since 2026-09-17 and the panel was
-     * dropping it on the floor.
-     *
-     * 🔴 Deliberately NOT the same value as a cron job's `timezone`, which
-     * names the server's clock because Linux cron runs on the OS clock.
-     * Backups do not — the scheduler resolves the slot against the app
-     * timezone. Same field name, same format, different value on purpose: do
-     * not "fix" one to match the other.
+     * Deliberately NOT the same value as a cron job's `timezone` (the server's
+     * OS clock): backups resolve against the app timezone. Do not "fix" one to
+     * match the other.
      */
     timezone: z.string().nullish(),
     is_due: z.boolean().nullish(),
@@ -233,12 +183,8 @@ export const backupTargetSchema = z
   .passthrough();
 
 /**
- * One row of the cross-application overview: a site, whether it is configured,
- * and how its last backup went.
- *
- * `backup_target` is nested rather than flattened on purpose — on an
- * unprotected site every target field would be null, and a caller could not
- * tell "not configured" from "configured with nothing set".
+ * One row of the cross-application overview. `backup_target` is nested so
+ * "not configured" (null) differs from "configured with nothing set".
  */
 export const applicationBackupSchema = z
   .object({
@@ -251,11 +197,8 @@ export const applicationBackupSchema = z
   .passthrough();
 
 // `total` is how many sites exist; `matched` is how many the current search and
-// filter hit. Two different numbers, and the header needs both.
-//
-// `protected`/`unprotected` are the API's own count, and this screen does NOT
-// use them — see the note in `getBackupCoverage`. Declared anyway so they are
-// visible here rather than silently dropped.
+// filter hit. `protected`/`unprotected` are not used by this screen (see
+// `getBackupCoverage`).
 export const backupTargetsResponseSchema = z.object({
   backup_targets: z.array(applicationBackupSchema).default([]),
   meta: z
@@ -287,20 +230,11 @@ export const backupTargetResponseSchema = z.object({
 export const restoreSchema = z
   .object({
     id: z.number(),
-    /*
-     * Null once the backup this restore came from is deleted.
-     *
-     * `restores.backup_id` is `nullable()->nullOnDelete()`, so deleting one
-     * backup sets it to null on every restore that used it — and `z.number()`
-     * then rejected the WHOLE response, taking the entire Restores tab down
-     * with "The panel could not read this". One deleted backup, no history at
-     * all. Reported by Krishna; the box only named it because it had just
-     * learned to name failures.
-     */
+    // Null once the source backup is deleted (`nullOnDelete`); required here
+    // would reject the whole Restores response.
     backup_id: z.number().nullish(),
     application_id: z.number().nullish(),
-    // Carried on the row now, so the table names the site without a second
-    // request. Null when the site has since been deleted.
+    // Null when the site has since been deleted.
     application_name: z.string().nullish(),
     application_domain: z.string().nullish(),
     type: z.string(),
@@ -309,9 +243,8 @@ export const restoreSchema = z
     status_title: z.string().nullish(),
     current_step: z.string().nullish(),
     current_step_title: z.string().nullish(),
-    // Position in the sequence. Present so a progress bar can be drawn without
-    // the frontend keeping its own copy of the step list — that list is
-    // config on the backend and would drift the first time it changed.
+    // Position in the sequence, so a progress bar needs no frontend copy of the
+    // backend's step list.
     step_number: z.number().nullish(),
     total_steps: z.number().nullish(),
     reason: z.string().nullish(),
@@ -335,11 +268,8 @@ export const restoresResponseSchema = z.object({
 });
 
 /**
- * The settings form, mirroring `SaveBackupTargetRequest`.
- *
- * `retention_count` has a floor of 1 on the backend for a reason worth
- * repeating in the UI: zero would prune the backup the run had just taken, so
- * "keep 0" reads as "backups silently do nothing".
+ * The settings form, mirroring `SaveBackupTargetRequest`. `retention_count`
+ * has a floor of 1: zero would prune the backup the run had just taken.
  */
 export function backupTargetFormSchema(options) {
   const frequencies = options?.frequencies.map((f) => f.value) ?? [];
@@ -356,19 +286,15 @@ export function backupTargetFormSchema(options) {
       .int("retentionRange")
       .min(retention.min, "retentionRange")
       .max(retention.max, "retentionRange"),
-    // Only what the API offered. Without options nothing is accepted, and the
-    // dialog says why instead of saving a value it cannot check.
+    // Only what the API offered; without options nothing is accepted.
     frequency: z.string().refine((value) => frequencies.includes(value), "required_frequency"),
-    // `date_format:H:i` on the backend. The browser's own time input already
-    // refuses anything else, so this is the guard for a value that arrives some
-    // other way rather than a message anyone should see.
+    // `date_format:H:i` on the backend; guards values that bypass the time input.
     schedule_time: z
       .string()
       .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "scheduleTime")
       .default(BACKUP_DEFAULT_TIME),
     enabled: z.boolean().default(true),
-    // Relative to the site folder; `..` or an absolute path points outside it,
-    // where there is nothing of this site's to leave out.
+    // Relative to the site folder; `..` and absolute paths point outside it.
     file_excludes: z
       .array(
         z
@@ -383,11 +309,8 @@ export function backupTargetFormSchema(options) {
 }
 
 /**
- * The restore confirmation.
- *
- * `confirm` has to equal the application's domain exactly — the backend
- * compares them after trimming. Validated against the real domain at the call
- * site, because a schema cannot know which site is being restored.
+ * The restore confirmation. `confirm` must equal the application's domain
+ * (backend trims both); checked at the call site, which knows the domain.
  */
 export const restoreFormSchema = z.object({
   type: z.enum(BACKUP_TYPES),

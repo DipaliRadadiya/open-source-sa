@@ -28,8 +28,7 @@ export default async function CreateApplicationPage({ searchParams }) {
   const [permissions, t, tEngines, format, types, systemUsers, accounts, php, node, capabilities, timezones, engines] = await Promise.all([
     getPermissions(),
     getTranslations("applications"),
-    // The engine labels the databases pages already use, rather than a second
-    // set that can drift from them.
+    // Reuses the databases page labels so the two cannot drift.
     getTranslations("databases.engines"),
     getFormatter(),
     getSiteTypes(),
@@ -37,20 +36,16 @@ export default async function CreateApplicationPage({ searchParams }) {
     getGitAccounts(),
     getPhp(),
     getNode(),
-    // For the temporary-domain option: the server names both the address to
-    // point at and the wildcard-DNS hosts it will answer for.
+    // Temporary-domain option: target address and wildcard-DNS hosts.
     getServerCapabilities().catch(() => null),
     getTimezones().catch(() => []),
-    // Cheap and cached, and the only way to answer "will a WordPress install
-    // actually work here" before someone spends a minute filling this in.
+    // Cheap and cached; tells whether a WordPress install can work here.
     getEngines().catch(() => ({ engines: [], failed: true })),
   ]);
 
   const phpVersions = (php.data?.versions ?? []).filter((version) => !version.status || version.status === "ready");
-  // The system Node is only worth offering when the panel does not already
-  // manage that number. Listing it twice put two options with the SAME value in
-  // the picker, and Radix renders every matching item's text into the trigger —
-  // which is where "24.19.024.19.0" came from.
+  // Offer the system Node only when the panel does not already manage that
+  // version: duplicate values make Radix render every match into the trigger.
   const managedNode = (node.data?.versions ?? []).filter(
     (version) => !version.status || version.status === "ready",
   );
@@ -60,30 +55,24 @@ export default async function CreateApplicationPage({ searchParams }) {
       : [];
   const nodeVersions = [...managedNode, ...systemNode];
 
-  // Said, not redirected: bounced to the list, a view-only reader who
-  // followed a link here was never told why the form did not open.
+  // Explain instead of redirecting, so a view-only reader learns why.
   if (!can(permissions, "application", "manage")) {
     return <PermissionDenied title={t("createTitle")} description={t("noPermission")} />;
   }
 
   if (types.failed) return <LoadFailed description={t("loadFailed")} status={types.status} failure={types.failure} message={types.message} debug={types.debug} />;
 
-  // Marked here rather than in the picker so the whole form works from one
-  // list: the prefill below reads the same `available` the grid greys on, and
-  // a link to ?type=wordpress on a server that cannot host it lands on an
-  // empty picker instead of a card that is disabled and selected at once.
-  //
-  // One pass over every check, not one pass per check. Two passes is what sent
-  // a user to install MySQL and then, on the next visit, Node.
+  // Availability is marked here so the prefill below reads the same
+  // `available` the grid uses. One pass over every check, so all missing
+  // requirements are reported together.
   const siteTypes = withAvailability(
     types.siteTypes,
     {
       runtimes: {
         phpVersions,
         nodeVersions,
-        // The lists the PHP and Node pages will actually offer, so a blocked
-        // card can name a version that exists rather than a range that sent
-        // somebody hunting for an end-of-life release we refuse to install.
+        // The versions the PHP and Node pages actually offer, so a blocked
+        // card names an installable version rather than a range.
         phpInstallable: php.data?.installable ?? [],
         nodeInstallable: node.data?.installable ?? [],
         failed: php.failed || node.failed,
@@ -101,8 +90,7 @@ export default async function CreateApplicationPage({ searchParams }) {
       }
 
       return t(`unavailableDatabase.${block.state}`, {
-        // `t.has`, so an engine the backend adds before we have a label for it
-        // prints its own name rather than throwing on the create page.
+        // `t.has`: an engine without a label prints its own name instead of throwing.
         engines: format.list(
           block.engines.map((engine) => (tEngines.has(engine) ? tEngines(engine) : engine)),
           { type: "disjunction" },
@@ -111,20 +99,15 @@ export default async function CreateApplicationPage({ searchParams }) {
     },
   );
 
-  // Only a type the server actually offers, and only one it can actually
-  // create. A query parameter is somebody else's input, and a made-up one
-  // would seed the form with a site type that does not exist.
+  // Query parameters are untrusted: only prefill a type the server offers
+  // and can create.
   const prefillType = siteTypes.some((type) => type.name === sp?.type && type.available)
     ? sp.type
     : "";
 
   /*
    * The account the Git page just connected, checked against the real list.
-   *
-   * Same discipline as `type` directly above: a query parameter is somebody
-   * else's input. An id that does not exist would seed the picker with an
-   * account nobody can select and a form that cannot submit — so an unknown
-   * one is dropped and the form opens exactly as it does from any other door.
+   * An unknown id is dropped, since it would seed a picker that cannot submit.
    */
   const prefillGitAccount = (accounts.accounts ?? []).some(
     (account) => String(account.id) === String(sp?.git_account),
@@ -135,21 +118,16 @@ export default async function CreateApplicationPage({ searchParams }) {
   return (
     <div className="space-y-6">
       <PageHeader title={t("createTitle")} subtitle={t("createSubtitle")} />
-      {/* A precondition of the server, not a field of the form, so it sits
-          above it rather than in the readiness checklist — that list focuses
-          the input it names, and there is no input for this. */}
+      {/* A server precondition, not a form field, so it sits above the form
+          rather than in the readiness checklist (which focuses inputs). */}
       {noDatabaseEngine(engines) ? (
         <NoDatabaseEngineNotice installing={engineInstalling(engines)} />
       ) : null}
 
       <CreateApplicationForm
-        // Prefilled from the URL, and only ever with a type the server
-        // actually offers — a query parameter is somebody else's input, and a
-        // made-up one would seed the form with a site type that does not exist.
         initialType={prefillType}
-        // Same value as the name: a marketplace type's slug is a valid site
-        // name, and it saves the one field that has to be filled before the
-        // temporary domain can be generated from it.
+        // A marketplace slug is a valid site name, and the temporary domain
+        // is generated from the name.
         initialName={prefillType}
         siteTypes={siteTypes}
         systemUsers={systemUsers.users}
@@ -167,11 +145,9 @@ export default async function CreateApplicationPage({ searchParams }) {
         serverIp={capabilities?.serverIp ?? null}
         temporaryDomainSuffixes={capabilities?.temporaryDomainSuffixes ?? []}
         timezones={timezones ?? []}
-        // For the required-services panel: what is missing, what could be
-        // installed to fix it, and whether this reader is allowed to.
+        // For the required-services panel: what is missing and what can be installed.
         engines={engines?.engines ?? []}
-        // Unfiltered: `phpVersions` above drops anything not `ready`, which is
-        // precisely the version being installed.
+        // Unfiltered: `phpVersions` drops non-ready versions, including the one installing.
         phpVersionsAll={php.data?.versions ?? []}
         nodeVersionsAll={node.data?.versions ?? []}
         phpInstallable={php.data?.installable ?? []}

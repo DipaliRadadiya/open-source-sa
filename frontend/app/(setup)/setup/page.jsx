@@ -16,8 +16,7 @@ export async function generateMetadata() {
   return { title: t("title") };
 }
 
-// A component still needing a runtime installed → we'll want its version list
-// for the inline picker.
+// A component still needing a runtime installed needs its version list for the inline picker.
 function needsVersions(setup, key) {
   return setup?.components?.some((c) => c.key === key && c.state !== "installed" && c.state !== "installing");
 }
@@ -30,17 +29,14 @@ export default async function SetupPage() {
     getPermissions(),
     getFail2ban(),
   ]);
-  // Installing fail2ban turns no jail on, so "installed" protected nothing and
-  // the checklist said nothing about it. "unknown" when it could not be read:
-  // better silent than telling someone with protection on to turn it on.
+  // Installing fail2ban enables no jail, so jail state is checked too.
+  // "unknown" when unreadable, so no false prompt is shown.
   const fail2banProtection = fail2ban.failed
     ? "unknown"
     : fail2ban.data?.installed && (fail2ban.data.jails ?? []).some((jail) => jail.enabled)
       ? "on"
       : "off";
-  // Opening this page needs only `setting` view, but each install is gated by
-  // its own feature's manage permission — without this a view-only role saw
-  // working Install buttons that answered 403.
+  // Each install is gated by its own feature's manage permission, not `setting` view.
   const canInstall = {
     database: can(permissions, "database", "manage"),
     fail2ban: can(permissions, "fail2ban", "manage"),
@@ -72,9 +68,8 @@ export default async function SetupPage() {
         </div>
       </div>
 
-      {/* key by locale: the checklist seeds server data into useState once at
-          mount, so switching language must re-mount it to adopt the newly
-          localized payload (the frontend strings update via context anyway). */}
+      {/* Keyed by locale: the checklist seeds useState from the localised
+          payload once, so a language switch must remount it. */}
       {result.failed || !result.setup ? (
         <LoadFailed
           description={t("loadFailed")}

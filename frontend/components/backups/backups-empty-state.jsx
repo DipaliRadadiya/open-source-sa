@@ -9,17 +9,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { SetupBackupsDialog } from "@/components/backups/setup-backups-dialog";
 
 /**
- * Nothing on this server is backed up yet.
- *
- * Deliberately the same shape as the Git and Storage empty states — icon chip,
- * semibold title, a reassurance line, chips naming what is covered, a numbered
- * three-step panel, then one action. Matching that structure is the whole
- * point: three screens that teach the same way read as one product, and the
- * last time this was "matched" by copying only the icon chip it was missing
- * five of the six parts.
- *
- * Showing the coverage list instead would be a wall of red rows with no
- * explanation of what a backup here even is.
+ * Nothing on this server is backed up yet. Same structure as the Git and
+ * Storage empty states: icon chip, title, reassurance, chips, three steps, one action.
  */
 export function BackupsEmptyState({
   applications,
@@ -46,16 +37,12 @@ export function BackupsEmptyState({
             <div className="space-y-2">
               <p className="text-base font-semibold tracking-tight">{t("title")}</p>
               <p className="max-w-md text-sm leading-6 text-muted-foreground">{t("body")}</p>
-              {/* Git promises "we only read, never push"; storage promises the
-                  keys are encrypted. The equivalent truth here is the one that
-                  makes restoring survivable, so it is worth saying up front. */}
               <p className="max-w-md text-xs leading-5 text-muted-foreground">
                 {t("reassurance")}
               </p>
             </div>
 
-            {/* What a backup actually contains — the same job the provider
-                chips do on the other two screens. */}
+            {/* What a backup contains, like the provider chips on the other screens. */}
             <div className="flex flex-wrap justify-center gap-2">
               {["files", "database", "schedule", "offsite"].map((item) => (
                 <span
@@ -81,8 +68,7 @@ export function BackupsEmptyState({
               </ol>
             </div>
 
-            {/* Storage is the prerequisite, so an install with no destination
-                gets sent there instead of into a form it cannot finish. */}
+            {/* Storage is the prerequisite: with no destination, send them there. */}
             {!canManage ? null : hasDestination ? (
               <Button size="lg" onClick={() => setOpen(true)}>
                 <ShieldCheck className="size-4" />

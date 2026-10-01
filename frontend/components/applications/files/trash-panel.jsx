@@ -22,18 +22,12 @@ import { useRefresh } from "@/hooks/use-refresh";
 /**
  * What is recoverable, and the two ways out of it.
  *
- * Grouped by batch because that is the unit a person recognises — "the twelve
- * things I deleted at 10:45", not twelve unrelated rows. The API assigns one
- * batch id per delete for exactly this reason.
+ * Grouped by batch (the API assigns one batch id per delete), the unit a person
+ * recognises. Not a table: each row is one path and one button, and a bordered
+ * block per batch works at every width.
  *
- * Not a table: every row is one path and one button, and a table here would
- * duplicate itself into a card list below `md` for no gain. A bordered block
- * per batch reads the same at 390px as at 1440px.
- *
- * **Restore is per row and there is no "restore all".** The API takes one
- * `{batch, path}` per call, so restoring a batch of twelve would be twelve
- * requests against a 30/min throttle. Emptying one batch IS a single call, so
- * that one is offered. See memory/backend-asks.md.
+ * No "restore all": the API restores one `{batch, path}` per call against a
+ * 30/min throttle. Emptying a batch is a single call, so that is offered.
  */
 export function TrashPanel({
   appId,
@@ -49,20 +43,18 @@ export function TrashPanel({
 }) {
   const t = useTranslations("applications.files.trash");
   const { pending: refreshing, refresh, refreshThen } = useRefresh();
-  // Emptying (one batch or all) goes through a dialog that stays open until it
-  // is done; restores are per row and can overlap, so they are tracked apart.
+  // Emptying runs in a dialog that stays open until done; per-row restores can
+  // overlap, so they are tracked separately.
   const [pending, setPending] = useState(null);
   const restoring = usePendingKeys();
-  // Taken off the list the moment the API says yes. The refresh that removes
-  // it for real takes seconds on a real server, and until then its Restore
-  // button was live again — a second press answered "already exists".
+  // Removed from the list as soon as the API confirms, so Restore cannot be pressed
+  // again before the refresh lands ("already exists").
   const [restored, setRestored] = useState(() => new Set());
   const [confirming, setConfirming] = useState(null);
 
   const manageReason = canManage ? null : t("noPermission");
 
-  // Preserves the order the API sends (newest first) — Map keeps insertion
-  // order, so the newest batch stays at the top without a second sort.
+  // Map keeps insertion order, so the API's newest-first order survives.
   const batches = new Map();
   for (const entry of trash.filter((e) => !restored.has(`${e.batch}:${e.path}`))) {
     if (!batches.has(entry.batch)) batches.set(entry.batch, []);
@@ -79,9 +71,8 @@ export function TrashPanel({
       toast.success(t("restored", { name: entry.path }));
       refresh();
     } catch (error) {
-      // 422 here is the non-overwrite rule: something is back at that path and
-      // the file sitting there now is the one somebody kept. Worth saying in
-      // full rather than as "couldn't restore".
+      // 422 is the non-overwrite rule: something is already back at that path. The
+      // API's message says so.
       toast.error(apiMessage(error, t("restoreFailed")));
     } finally {
       restoring.finish(key);
@@ -106,21 +97,15 @@ export function TrashPanel({
 
   return (
     <Card>
-      {/* A card, like every other panel on this screen. This section used to
-          float straight on the page background under the page's own title, so
-          the screen read as two stacked headings and a loose list. */}
+      {/* A card, like every other panel on this screen. */}
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-48 space-y-1">
             <CardTitle className="text-base font-semibold">{t("title")}</CardTitle>
             <CardDescription>{t("subtitle")}</CardDescription>
-            {/* The two things this screen alone can answer, and neither was on
-                it. Deleting a file frees no disk until the trash is emptied —
-                someone clearing space watches the free figure not move and
-                concludes the panel is broken. And every batch is swept after
-                the retention window, so things vanish on their own with
-                nothing here having warned them. Both come from the response;
-                the window is per-install and must never be hardcoded. */}
+            {/* Deleting frees no disk until the trash is emptied, and batches are swept after
+                the retention window; both come from the response. The window is per-install
+                and must never be hardcoded. */}
             {trash.length > 0 && (totalSize || retentionDays) ? (
               <p className="text-sm text-muted-foreground">
                 {totalSize ? (
@@ -143,9 +128,8 @@ export function TrashPanel({
             </Button>
             {trash.length > 0 ? (
               <ReasonTooltip reason={manageReason}>
-                {/* Outline, not solid. Two solid red buttons on one screen —
-                    this and the per-batch one — competed for the eye, and the
-                    one you want most of the time is Restore. */}
+                {/* Outline, not solid: Restore is the common action, and two solid red buttons
+                    compete. */}
                 <Button
                   variant="destructive"
                   size="sm"
@@ -166,16 +150,15 @@ export function TrashPanel({
       {failed ? (
         <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />
       ) : trash.length === 0 ? (
-        // An empty trash is a normal answer, not a problem to solve — so this
-        // says what the feature does rather than offering an action.
+        // An empty trash is normal, so this explains the feature rather than offering an
+        // action.
         <EmptyState icon={Undo2} title={t("empty.title")} description={t("empty.description")} />
       ) : (
         <div className="space-y-3">
           {[...batches].map(([batch, entries]) => (
             <div key={batch} className="rounded-xl border">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/40 px-4 py-2.5">
-                {/* Labelled. A bare `14-08-2026 07:05:53` sitting where a title
-                    goes reads as an id, not as when this happened. */}
+                {/* Labelled, or a bare timestamp reads as an id. */}
                 <div className="flex min-w-48 flex-wrap items-baseline gap-x-2 gap-y-0.5">
                   <span className="text-xs text-muted-foreground">{t("deletedAt")}</span>
                   <span className="text-sm font-medium tabular-nums">
@@ -207,19 +190,14 @@ export function TrashPanel({
                       key={`${entry.batch}:${entry.path}`}
                       className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
                     >
-                      {/* Name first, folder underneath. The row used to be one
-                          long mono path and a button an inch of empty space
-                          away — the thing you are looking for was the hardest
-                          part to read. The folder still has to be there:
-                          "config.php" alone does not say which one it was, and
-                          it is exactly where Restore puts it back. */}
+                      {/* Name first, folder underneath; the folder says which file it was and where
+                          Restore puts it back. */}
                       <div className="flex min-w-48 items-start gap-2.5">
                         <FileIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                         <div className="min-w-0">
                           <p className="flex flex-wrap items-baseline gap-x-2">
                             <span className="font-medium break-all">{basename(entry.path)}</span>
-                            {/* Which batch is worth emptying is a size question,
-                                and it was the one thing the row could not say. */}
+                            {/* Size helps decide which batch to empty. */}
                             {entry.size_human ? (
                               <span className="text-xs tabular-nums text-muted-foreground">
                                 {entry.size_human}

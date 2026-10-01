@@ -1,8 +1,7 @@
 import { z } from "zod";
 
-// Empty says "enter one" first: the rules checklist beside the field already
-// lists "at least 10 characters", so repeating it in red on a blank field read
-// as a second, separate complaint.
+// Empty gets "required" first; the checklist beside the field already shows
+// the length rule.
 const passwordField = z
   .string()
   .min(1, "required_password")
@@ -40,9 +39,8 @@ export const myActivityEntrySchema = z.object({
   id: z.number(),
   type: z.string().nullable().optional(),
   action: z.string(),
-  // Is this row about the panel's people or the machine? Drives the chip on
-  // the server Activity page; the account tab filters to `account` and so has
-  // no use for it.
+  // People vs machine; drives the chip on the server Activity page (this tab
+  // shows `account` only).
   scope: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   created_at: z.string().nullable().optional(),

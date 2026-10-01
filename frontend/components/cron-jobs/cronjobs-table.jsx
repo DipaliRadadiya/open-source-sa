@@ -15,41 +15,31 @@ import { CronjobsCards } from "@/components/cron-jobs/cronjobs-cards";
 
 /**
  * Labels an expression using the API's own preset list ("Daily (midnight)"),
- * falling back to the raw cron string. Deliberately not a cron-to-prose library
- * — one more dependency with its own translations to cover the long tail.
+ * falling back to the raw cron string. Deliberately not a cron-to-prose library.
  */
 function scheduleLabel(expression, presets) {
   return presets.find((p) => p.expression && p.expression === expression)?.label ?? null;
 }
 
 /* ---------------------------------------------------------------------------
- * Cells are module-level components on purpose.
- *
- * flexRender calls `createElement(cellFn)`, so a cell function's identity IS the
- * component type. Defined inline they get a fresh identity on every render, and
- * React unmounts and remounts the whole cell — destroying any state inside it,
- * including an open dialog in the row actions. Harmless until something
- * re-renders the table; a trap the moment anything does.
- *
+ * Cells are module-level components on purpose: flexRender calls
+ * `createElement(cellFn)`, so an inline cell function gets a new identity each
+ * render and React remounts the cell, losing its state (e.g. an open dialog).
  * Per-table values reach them through `table.options.meta`.
  * ------------------------------------------------------------------------- */
 
-/* The four value renderers are exported so the phone cards show exactly what the
- * table shows — the same "—" for a paused job's next run, the same unmanaged
- * badge, the same server-timezone timestamp. */
+/* The value renderers are exported so the phone cards show exactly what the
+ * table shows. */
 
 export function CronjobName({ job }) {
   const t = useTranslations("cronJobs");
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-      {/* Wraps, even inside a word: a 255-character name with no spaces made
-          the table 2,700px wide and pushed ⋯ off the screen. */}
+      {/* Wraps even inside a word, so a long unbroken name cannot widen the table. */}
       <span className="max-w-56 font-medium whitespace-normal [overflow-wrap:anywhere]">{job.name}</span>
-      {/* Paused is the exception worth calling out — without a badge the only
-          signal is a switch position you have to look for. */}
+      {/* Paused gets a badge; a switch position alone is easy to miss. */}
       {!job.active ? (
-        // Amber like a paused application, and the same size: nothing is
-        // broken, but it must be seen at a glance.
+        // Amber like a paused application: nothing is broken, but it must be seen.
         <Badge variant="warning" className="font-normal">
           {t("paused")}
         </Badge>
@@ -64,14 +54,12 @@ export function CronjobSchedule({ job, presets = [] }) {
   // A custom schedule gets its sentence, so "0 0 2 * *" is not left to be
   // read as 2 AM daily.
   const label = preset ?? custom?.sentence ?? null;
-  // Plain language leads when we can name the schedule; the expression is the
-  // supporting detail. With no match — including when the preset list failed to
-  // load — show the expression alone rather than calling it "Custom", which
-  // would be a false claim about a preset schedule.
+  // Plain language leads when the schedule can be named. Otherwise (including
+  // when presets failed to load) show the expression alone, not "Custom".
   return label ? (
     <div className="flex flex-col gap-0.5">
-      {/* A sentence wraps (table cells default to nowrap, which ran it into
-          the next column); only the short preset names stay on one line. */}
+      {/* A sentence wraps (TableCell defaults to nowrap); only short preset
+          names stay on one line. */}
       <span className={preset ? "whitespace-nowrap" : "max-w-44 whitespace-normal"}>{label}</span>
       <span className="font-mono text-xs text-muted-foreground">{job.expression}</span>
     </div>
@@ -84,24 +72,19 @@ export function CronjobNextRun({ job }) {
   const format = useFormatter();
   const now = useNow({ updateInterval: 15000 });
   const { next_run_at: at } = job;
-  // A paused job has no next run. A dash says that; "—" beats inventing a time
-  // that will never happen.
+  // A paused job has no next run.
   if (!at) return <span className="text-muted-foreground">—</span>;
 
-  // Counted down here rather than taken from `next_run_at_human`, which was
-  // true only at the moment the page loaded: a job that had run three times
-  // still read "15 seconds from now". The panel re-reads the list when the run
-  // is due; until it lands, a due run reads "now", never "ago".
+  // Counted down live rather than using `next_run_at_human`, which is only true
+  // at page load. The panel re-reads when the run is due; until then it reads "now".
   const epoch = serverTimeToEpoch(at, job.timezone);
   const human = epoch === null ? job.next_run_at_human : format.relativeTime(Math.max(epoch, now.getTime()), now);
 
-  // Shown exactly as the API computed it, in the server's zone. Running it
-  // through the browser's formatter would silently restate it in the reader's
-  // timezone while the page subtitle claims the server's.
+  // Shown as the API computed it, in the server's zone; the browser's formatter
+  // would restate it in the reader's timezone.
   return (
     <div className="flex flex-col gap-0.5">
-      {/* The server renders this a moment before the browser takes over, so
-          "in 19 seconds" can hydrate as "in 18 seconds". Expected, not a bug. */}
+      {/* Server and client render a moment apart ("in 19s" vs "in 18s"); expected. */}
       <span className="whitespace-nowrap" suppressHydrationWarning>{human}</span>
       <span className="whitespace-nowrap text-xs text-muted-foreground">{at}</span>
     </div>
@@ -123,8 +106,7 @@ export function CronjobRunAs({ job }) {
   );
 }
 
-// Headers may take two lines: "ВЫПОЛНЯЕТСЯ ОТ ИМЕНИ" on one line made the
-// Russian table 97px wider than the screen at 1280 and hid the ⋯ column.
+// Headers may wrap, so long translations don't push the ⋯ column off screen.
 function Head({ children }) {
   return <span className="block whitespace-normal">{children}</span>;
 }
@@ -208,16 +190,7 @@ export function CronjobsTable({
     { accessorKey: "expression", header: () => <Head>{t("columns.schedule")}</Head>, cell: ScheduleCell },
     {
       accessorKey: "next_run_at",
-      /*
-       * The zone belongs to the column, not to the page.
-       *
-       * It was the last four words of a grey sentence above the filters —
-       * true, and nowhere near the timestamps it governs, so the question
-       * "12:00 where?" was asked while looking at a place that could not
-       * answer it. Every row shares one zone, so repeating it per row would be
-       * noise; a column header is exactly the place a table states the unit of
-       * the values beneath it, once.
-       */
+      // The timezone is stated once, in the column header it applies to.
       header: () => <Head>{timezone ? t("columns.nextRunIn", { timezone }) : t("columns.nextRun")}</Head>,
       cell: NextRunCell,
     },
@@ -225,7 +198,7 @@ export function CronjobsTable({
     { accessorKey: "command", header: () => <Head>{t("columns.command")}</Head>, cell: CommandCell },
     { id: "active", header: () => <Head>{t("columns.active")}</Head>, cell: ActiveCell },
     // Always there: a view-only reader still gets the menu, with each item
-    // saying why it is off, rather than a row with nothing to press.
+    // saying why it is off.
     {
       id: "actions",
       header: () => <span className="sr-only">{t("actions.label")}</span>,
@@ -235,9 +208,7 @@ export function CronjobsTable({
 
   return (
     <>
-      {/* Cards below xl, the table from xl up. Seven columns need ~950px; at
-          lg the content box is 702px, and the ⋯ column sat off-screen behind a
-          sideways scroll — on a real command it did at 1280 too. */}
+      {/* Cards below xl: seven columns need ~950px, more than lg provides. */}
       <div className="xl:hidden">
         <CronjobsCards
           jobs={data}

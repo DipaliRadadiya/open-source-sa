@@ -1,16 +1,10 @@
 import { acceptedEngines } from "../applications/database-readiness.js";
 
 /**
- * Whether a site's application can speak the engine a database runs on.
- *
- * `UpdateDatabaseApplicationRequest::refuseUnusableEngine()` rejects the pair —
- * a MongoDB database attached to WordPress, say — but the panel offered every
- * site in the picker and let the refusal arrive after the choice. Same source
- * of truth as the create form's type grid: the catalogue's `accepted_engines`.
- *
- * A type that needs no database accepts anything. That is the backend's rule
- * verbatim: for a custom or static site the link is bookkeeping, and the panel
- * does not know better than the user what their own code connects to.
+ * Whether a site's application can use a database's engine. Mirrors
+ * `UpdateDatabaseApplicationRequest::refuseUnusableEngine()`, using the
+ * catalogue's `accepted_engines`. Types that need no database accept anything,
+ * as on the backend.
  */
 export function engineAccepted({ application, siteTypes, engine } = {}) {
   if (!engine) return true;
@@ -19,14 +13,12 @@ export function engineAccepted({ application, siteTypes, engine } = {}) {
     (candidate) => candidate?.name === application?.site_type,
   );
 
-  // A site type we cannot find is one we cannot rule on. Blocking on a
-  // catalogue that failed to load would empty the picker over a fetch.
+  // Unknown type (e.g. the catalogue failed to load): do not block.
   if (!type) return true;
   if (!type.needs_database) return true;
 
   const accepted = acceptedEngines(type);
-  // Null means the catalogue named no engines, which is an answer: there is
-  // nothing to hold the pairing to.
+  // Null: the catalogue names no engines, so nothing to check against.
   if (accepted === null) return true;
 
   return accepted.includes(engine);

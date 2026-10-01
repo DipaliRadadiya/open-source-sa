@@ -6,36 +6,19 @@ import { toast } from "sonner";
 import { apiMessage } from "@/lib/api/error-message";
 
 /**
- * Run one API call and know, on screen, that it is running.
- *
- * Seventy handlers across sixty-one components were written out longhand: raise
- * a flag, try, call, toast, catch, `apiMessage`, finally lower the flag. Not a
- * style problem — fourteen of them raised the flag and then rendered nothing
- * for it, so the button greyed out and the click read as ignored. Every one of
- * those was somebody re-deriving the same six lines and dropping one.
- *
- * Shaped from what those handlers actually do, counted rather than guessed:
- * 89% show a success toast, 73% call `router.refresh()`, 26% close a dialog.
- * So the toast and the refresh are options here, and anything else goes in
- * `onSuccess`.
- *
- * `key` is for lists. Pass the row's id and `pendingKey` names the row being
- * worked on, so one row spins instead of all of them — the shape the backups
- * and sync lists already hand-rolled as `busyId`.
+ * Run one API call with pending state, success/error toasts and an optional
+ * refresh. `key` is for lists: pass the row's id and `pendingKey` names the
+ * busy row, so only that row spins.
  *
  *   const { run, pending } = useAction();
  *   run(() => deleteThing(id), { success: t("deleted"), error: t("deleteFailed"), refresh: true })
  *
- * Errors are reported, never rethrown: every one of the seventy ended in a
- * toast, and a rejected promise escaping a click handler is an unhandled
- * rejection nobody sees. `run` resolves to `true` or `false` so a caller can
- * branch on the outcome — closing a dialog only when it worked, say.
+ * Errors are reported, never rethrown (a rejection escaping a click handler
+ * goes unseen). `run` resolves to `true` or `false` so callers can branch.
  */
 export function useAction() {
   const { refreshAndWait } = useRefresh();
-  // The key of the work in flight, or null. A plain boolean cannot say WHICH
-  // row is busy, and a list that disables every row while one of them saves is
-  // the same silence in a different costume.
+  // The key of the work in flight, or null, so a list can tell WHICH row is busy.
   const [pendingKey, setPendingKey] = useState(null);
 
   const run = useCallback(
@@ -43,8 +26,7 @@ export function useAction() {
       setPendingKey(key);
       try {
         const result = await fn();
-        // Re-read first, then say so and close: the other order left the old
-        // row on screen under a "deleted" toast.
+        // Re-read first, then toast and close, or the old row stays on screen.
         if (refresh) await refreshAndWait();
         if (success) toast.success(success);
         await onSuccess?.(result);

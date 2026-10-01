@@ -8,30 +8,18 @@ import { apiMessage } from "@/lib/api/error-message";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 /**
- * Confirms deleting one or more backups, and reports what actually happened.
- *
- * A backup is the thing somebody reaches for when everything else has already
- * gone wrong, so this says plainly that the archive goes too — the record
- * disappearing is the visible half, the object leaving the customer's bucket
- * is the half that cannot be undone.
- *
- * The result is reported per outcome rather than as success or failure,
- * because a batch genuinely half-works: one backup mid-run refuses while the
- * other nineteen delete. Calling that a failure invites the user to repeat
- * nineteen deletions that already happened; calling it a success hides the
- * archive still sitting in the bucket being paid for.
+ * Confirms deleting one or more backups (the archive leaves the bucket too)
+ * and reports per outcome: a batch can partly succeed, and calling that
+ * success or failure would mislead either way.
  */
 export function DeleteBackupsDialog({ open, onOpenChange, backups = [], onDeleted }) {
   const t = useTranslations("backups.history.delete");
   const [pending, setPending] = useState(false);
-  // What came back refusing, and why. Held in state rather than announced and
-  // discarded: a count in a toast that vanishes cannot tell you which archive
-  // is still in your bucket.
+  // Refusals and their reasons, kept on screen rather than only in a toast.
   const [failures, setFailures] = useState([]);
 
-  // Cleared where the dialog is opened, not in onOpenChange — reopening from
-  // the toolbar button never routes through that, so last time's failures
-  // would still be on screen above a fresh selection.
+  // Cleared where the dialog is opened, not in onOpenChange: opening from the
+  // toolbar button skips it, so old failures would survive.
   const [wasOpen, setWasOpen] = useState(open);
   if (wasOpen !== open) {
     setWasOpen(open);
@@ -39,9 +27,7 @@ export function DeleteBackupsDialog({ open, onOpenChange, backups = [], onDelete
   }
 
   const count = backups.length;
-  // The automatic copy taken before a restore — the parachute for a restore
-  // that goes wrong. Deleting one is allowed and sometimes right, but it
-  // deserves saying out loud rather than being counted in silently.
+  // Pre-restore safety copies: deleting them is allowed, but called out.
   const safetyCount = backups.filter((backup) => backup.is_safety).length;
 
   const { refreshAndWait } = useRefresh();
@@ -53,11 +39,9 @@ export function DeleteBackupsDialog({ open, onOpenChange, backups = [], onDelete
       const failed = Array.isArray(data?.failed) ? data.failed : [];
       const succeeded = Array.isArray(data?.succeeded) ? data.succeeded : [];
 
-      // The successes are reported either way, so the table loses those rows
-      // immediately and the two numbers in the toast are about real work.
+  // Successes are reported either way, so those rows leave the table now.
       onDeleted?.(succeeded, failed.map((entry) => entry.id));
-      // The list re-read before the toast: closing first left the deleted rows
-      // on screen under "deleted".
+      // Re-read the list before the toast, or deleted rows stay on screen.
       await refreshAndWait();
 
       if (failed.length === 0) {
@@ -66,10 +50,8 @@ export function DeleteBackupsDialog({ open, onOpenChange, backups = [], onDelete
         return;
       }
 
-      // Stays open on anything less than a clean sweep. The reader has just
-      // pressed a destructive button and is owed the list, not a number — and
-      // the two reasons want opposite things done about them. The selection now
-      // holds exactly the refusals, so pressing Delete again retries those.
+      // Stays open unless everything was deleted, listing the refusals. The
+      // selection now holds exactly those, so Delete again retries them.
       setFailures(failed);
       if (succeeded.length === 0) toast.error(t("noneDeleted", { count: failed.length }));
       else toast.warning(t("partial", { done: succeeded.length, failed: failed.length }));
@@ -105,9 +87,8 @@ export function DeleteBackupsDialog({ open, onOpenChange, backups = [], onDelete
           <ul className="space-y-2">
             {failures.map((entry) => {
               const backup = backups.find((item) => item.id === entry.id);
-              // Literal keys, not `failures.reason.${entry.reason}`: a key built
-              // at runtime cannot be checked, and check-i18n exists to catch
-              // exactly the missing one a fallback would hide.
+              // Literal keys, not `failures.reason.${entry.reason}`, so
+              // check-i18n can verify them.
               const reason =
                 entry.reason === "running"
                   ? t("failures.reason.running")
@@ -118,17 +99,12 @@ export function DeleteBackupsDialog({ open, onOpenChange, backups = [], onDelete
               return (
                 <li key={entry.id} className="space-y-0.5 text-xs">
                   <p className="font-medium">
-                    {/* The exact timestamp, not "1 day ago": this list exists to
-                        say WHICH backup, and two of the same type taken on the
-                        same day render as the same sentence in human time. */}
+                    {/* Exact timestamp, not relative time, so two same-day backups are distinguishable. */}
                     {[backup?.type_title, backup?.created_at ?? backup?.created_at_human]
                       .filter(Boolean)
                       .join(" · ") || t("failures.unknownBackup")}
                   </p>
-                  {/* Two refusals, two different things to do: one resolves
-                      itself, the other leaves an object you are still paying
-                      for. An unrecognised reason falls back rather than
-                      rendering a key. */}
+                  {/* An unrecognised reason falls back rather than rendering a key. */}
                   <p className="text-muted-foreground">{reason}</p>
                 </li>
               );

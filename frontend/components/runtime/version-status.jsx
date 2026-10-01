@@ -4,21 +4,15 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/data-table/empty-state";
 
 /**
- * What a runtime version is doing, said the same way on both pages.
- *
- * PHP grew all four states (`installing | removing | ready | failed`) and Node
- * grew none — a Node version being installed rendered as an ordinary ready one,
- * so there was nothing to look at at all. Rather than copying PHP's markup into
- * Node and letting the two drift, both now read from here.
+ * What a runtime version is doing, shared by the PHP and Node pages.
  *
  * `ready` (and a missing `status`, which older responses omit) render nothing:
  * a settled version is described by the rest of the card.
  */
 
 export function versionState(version) {
-  // A failed REMOVAL leaves the version installed and working — it is not the
-  // failed install every "failed" used to be read as, which blocked its
-  // default switch, php.ini and extensions with "did not install".
+  // A failed REMOVAL leaves the version installed and working, so it is not
+  // treated as a failed install.
   if (removeFailed(version)) return null;
   return version?.status && version.status !== "ready" ? version.status : null;
 }
@@ -28,11 +22,8 @@ export function removeFailed(version) {
 }
 
 /**
- * The badge beside the version name.
- *
- * `useTranslations` rather than `getTranslations`: this renders inside the PHP
- * page (a server component) and inside the Node version card (a client one),
- * and only the hook form works in both.
+ * The badge beside the version name. `useTranslations`, not `getTranslations`:
+ * it renders in both a server component (PHP page) and a client one (Node card).
  */
 export function RuntimeStatusBadge({ version, namespace }) {
   const t = useTranslations(namespace);
@@ -59,10 +50,7 @@ export function RuntimeStatusBadge({ version, namespace }) {
       <Loader2 className="size-3 animate-spin" />
       {state === "removing"
         ? t("versions.statusRemoving")
-        : // The phase apt reported, not a percentage. There is no honest
-          // percentage available — the install is one apt call whose total is
-          // unknown until it finishes — so a number would be invented. A named
-          // phase is something the server actually said.
+        : // The apt phase, not a percentage: the total is unknown until apt finishes.
           version.current_step
           ? t(`versions.steps.${version.current_step}`)
           : t("versions.statusInstalling")}
@@ -71,12 +59,8 @@ export function RuntimeStatusBadge({ version, namespace }) {
 }
 
 /**
- * The block that stands in for whatever cannot be shown while the version is
- * not on disk. Rendering nothing there read as a broken page.
- *
- * Removing used to fall through to "Install failed" here, because the only
- * branch was `installing ? … : failed` — so a purge in progress accused itself
- * of a failure that had not happened.
+ * Stands in for whatever cannot be shown while the version is not on disk,
+ * with distinct wording for installing, removing and failed.
  */
 export function RuntimeStatusNotice({ version, versionLabel, namespace }) {
   const t = useTranslations(namespace);
@@ -89,9 +73,8 @@ export function RuntimeStatusNotice({ version, versionLabel, namespace }) {
         icon={TriangleAlert}
         title={t("versions.installFailedTitle", { version: versionLabel })}
         description={
-          // The server's own explanation, when it has one. Ours would be a
-          // guess about a failure we did not witness. The reference gets its
-          // own line — it is a string to copy, not prose.
+          // The server's explanation when it has one; the reference gets its
+          // own line because it is meant to be copied.
           <>
             {version.message || t("versions.installFailedBody")}
             {version.reference ? (
@@ -114,12 +97,8 @@ export function RuntimeStatusNotice({ version, versionLabel, namespace }) {
           : t("versions.installingTitle", { version: versionLabel })
       }
       description={
-        // "Started 17 minutes ago" is what tells you whether it is progressing
-        // or wedged; "this takes a few minutes" never does.
-        //
-        // Removing gets its own sentence rather than reusing the install one,
-        // which promises "extensions will appear once it finishes" — the
-        // opposite of what happens when a version is being purged.
+        // "Started 17 minutes ago" shows whether it is progressing or stuck.
+        // Removing has its own sentence (the install one promises extensions).
         version.started_at_human
           ? t(removing ? "versions.removingSince" : "versions.installingSince", {
               when: version.started_at_human,

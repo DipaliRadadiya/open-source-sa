@@ -1,39 +1,24 @@
 import { useSyncExternalStore } from "react";
 import { cn } from "@/lib/utils";
 
-// Never changes for the life of the page, so there is nothing to subscribe to.
+// The platform never changes, so there is nothing to subscribe to.
 const noop = () => () => {};
 const isMac = () =>
   /mac/i.test(navigator.userAgentData?.platform ?? navigator.platform ?? "");
-// The server has no platform to read, and Ctrl is the safer guess: showing a
-// key most keyboards do not have is worse than briefly showing one they do.
+// Server snapshot: Ctrl is the safer guess.
 const notMac = () => false;
 
 /**
- * The keyboard shortcut for the control it sits beside.
- *
- * Both file editors already saved on Cmd/Ctrl+S and neither said so, which
- * makes the shortcut worth nothing to everyone who has not tried it — and on a
- * page where the browser's own Ctrl+S does something else entirely, trying it
- * is not an obvious thing to risk.
- *
- * Decorative: the control it labels already names itself, so a screen reader
- * that reads "Save · Ctrl S" is being read punctuation. The shortcut itself is
- * bound by the editor, not here.
- *
- * Hidden below `sm`. A phone has no Ctrl key and the hint is pure noise there.
+ * Displays the keyboard shortcut for the control beside it. Decorative
+ * (aria-hidden) and hidden below `sm`; the shortcut itself is bound elsewhere.
  */
 export function ShortcutHint({ letter, className }) {
-  // useSyncExternalStore rather than state-in-an-effect: it takes an explicit
-  // server snapshot, so React does the hydration handoff itself instead of us
-  // rendering the wrong key and correcting it afterwards.
+  // useSyncExternalStore gives React an explicit server snapshot for hydration.
   const mac = useSyncExternalStore(noop, isMac, notMac);
 
   return (
     <kbd
-      // The tooltip surface already styles `data-slot=kbd` — it reserves the
-      // right padding for one and lifts it above the arrow. That hook was
-      // written for this and had no user until now.
+      // TooltipContent styles `data-slot=kbd`.
       data-slot="kbd"
       aria-hidden="true"
       className={cn(
@@ -41,7 +26,7 @@ export function ShortcutHint({ letter, className }) {
         className,
       )}
     >
-      {/* The symbol carries no space after it on a Mac — "⌘S", not "⌘ S". */}
+      {/* "⌘S" on a Mac, "Ctrl+S" elsewhere. */}
       {mac ? "⌘" : "Ctrl"}
       {mac ? null : <span className="opacity-60">+</span>}
       {letter}

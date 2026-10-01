@@ -10,20 +10,13 @@ import {
 } from "@/components/ui/card";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 
-/**
- * What cleaning has actually done lately.
- *
- * Rendered only when there is history: an empty "Recent cleanups" card on a
- * fresh server is a heading with nothing under it, which the panel has been
- * bitten by before.
- */
-// The API has not documented its status vocabulary, so treat anything that is
-// not an explicit success as suspect rather than guessing the failure words —
-// a wrongly-flagged run is recoverable, a silently-failing schedule is not.
+// The API's status vocabulary is undocumented, so anything that is not an
+// explicit success is flagged: a false alarm beats a silently failing schedule.
 function failed(status) {
   return Boolean(status) && !["success", "completed", "ok", "done"].includes(status);
 }
 
+/** Recent cleanups; rendered only when there is history. */
 export async function RunsCard({ runs }) {
   if (!runs?.length) return null;
   const t = await getTranslations("diskCleaner");
@@ -50,17 +43,14 @@ export async function RunsCard({ runs }) {
               </div>
 
               <div className="flex shrink-0 items-center gap-2">
-                {/* A run that crashed and a run that found nothing both freed
-                    "0 B". Without this the list quietly reports a broken
-                    schedule as a working one. */}
+                {/* A crashed run and an empty run both freed "0 B"; flag the crash. */}
                 {failed(run.status) ? (
                   <Badge variant="destructive" className="font-normal">
                     {t("runs.failed")}
                   </Badge>
                 ) : null}
 
-                {/* Manual or automatic — the only reason to look at this list is
-                    usually "did the schedule actually run?". */}
+                {/* Manual or automatic: answers "did the schedule run?". */}
                 <Badge variant="outline" className="font-normal">
                   {t.has(`runs.trigger.${run.trigger}`)
                     ? t(`runs.trigger.${run.trigger}`)

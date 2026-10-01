@@ -24,21 +24,19 @@ import {
 } from "@/components/ui/form";
 
 /**
- * Changing a password breaks every app still using the old one, at the moment
- * it is saved. That consequence is stated before the button, not after.
+ * Changing a password breaks every app still using the old one; the dialog
+ * says so before the button.
  */
 export function UserPasswordDialog({ database, user, open, onOpenChange }) {
   const t = useTranslations("databases.users");
   const { refreshAndWait } = useRefresh();
-  // The new connection string, shown once the change lands — otherwise the
-  // user is left to reassemble it by hand from a password they just typed.
+  // The new connection string, shown once the change lands.
   const [result, setResult] = useState(null);
 
   const form = useForm({
     resolver: zodResolver(passwordFormSchema),
-    // Radix moves focus when the dialog opens, which fired a blur on the empty
-    // field and showed "at least 8 characters" before anyone had typed. Wait
-    // for the submit, then correct live.
+    // Radix moves focus on open, which would blur the empty field and show an
+    // error before typing. Validate on submit, then live.
     mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues: { password: "" },
@@ -68,10 +66,8 @@ export function UserPasswordDialog({ database, user, open, onOpenChange }) {
     onOpenChange?.(next);
   }
 
-  // Filled in on open rather than left blank. The dialog already offered a
-  // Generate button and people typed their own anyway — which is where a weak
-  // database password comes from. Fresh each open: one generated at mount would
-  // be handed to every user whose password is changed in this session.
+  // Pre-filled with a generated password, fresh on each open so no two users
+  // in a session share one.
   useEffect(() => {
     if (!open) return;
     form.setValue("password", randomPassword());
@@ -131,11 +127,9 @@ export function UserPasswordDialog({ database, user, open, onOpenChange }) {
               control={form.control}
               name="password"
               render={({ field }) => (
-                // Generate is positioned by the label but comes after the input
-                // in the markup, so Tab reaches the field first. Same shape as
-                // the system-user and basic-auth password fields — it used to
-                // be an outline button beside the input, which made this the
-                // one password field in the panel at half width.
+                // Generate is placed by the label but follows the input in the
+                // markup, so Tab reaches the field first. Same as the other
+                // password fields in the panel.
                 <FormItem className="relative">
                   <FormLabel required>{t("newPassword")}</FormLabel>
                   <FormControl>

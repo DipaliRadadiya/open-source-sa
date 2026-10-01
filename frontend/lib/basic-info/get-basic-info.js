@@ -6,9 +6,8 @@ const DEFAULT_BASIC_INFO = {
   app_version: null,
   locales_available: [],
   cookie_auth_enabled: true,
-  // The server publishes the real policy; this is only what to show when the
-  // endpoint could not be read. A password field with no stated rules is worse
-  // than one stating slightly stale ones.
+  // Fallback only when the endpoint cannot be read; the server publishes the
+  // real policy.
   password_policy: DEFAULT_PASSWORD_POLICY,
 };
 
@@ -24,9 +23,7 @@ export const getBasicInfo = cache(async () => {
     const info = data?.basic_info;
     if (!info) return DEFAULT_BASIC_INFO;
 
-    // Merged, not replaced: an older backend sends no password_policy at all,
-    // and spreading a missing key would leave the checklist with nothing to
-    // render.
+    // Merged: an older backend sends no password_policy.
     return { ...DEFAULT_BASIC_INFO, ...info, password_policy: info.password_policy ?? DEFAULT_PASSWORD_POLICY };
   } catch {
     return DEFAULT_BASIC_INFO;

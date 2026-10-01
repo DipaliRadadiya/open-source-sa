@@ -22,19 +22,15 @@ const DEFAULT_PRESET = "aws";
 /**
  * Adding a destination.
  *
- * The API cannot check the credentials at creation — its test endpoint takes a
- * saved destination id — so this saves first and then immediately tests, and
- * reports the result of that test rather than a bare "Added". Without it, a
- * mistyped secret key looks like success here and only surfaces as a failed
- * backup at 3am, which is the worst possible moment to learn it.
+ * The API's test endpoint needs a saved destination id, so this saves first,
+ * then tests and reports that result rather than a bare "Added".
  */
 export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri }) {
   const t = useTranslations("storage.connect");
   const { refreshAndWait } = useRefresh();
 
-  // The preset lives in component state rather than the form, because it
-  // selects the *schema* — a resolver cannot be rebuilt from a value it is
-  // itself validating.
+  // The preset lives in component state because it selects the schema; a
+  // resolver cannot be rebuilt from a value it is validating.
   const [preset, setPreset] = useState(DEFAULT_PRESET);
   const provider = providerForPreset(preset);
 
@@ -67,25 +63,17 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri 
       reset(DEFAULT_PRESET);
 
       /*
-       * A Drive destination cannot pass this check on the way in.
-       *
-       * Approving access needs the destination to exist first — that is what
-       * the consent redirect is keyed to — so a brand-new one is never
-       * connected, and probing it always fails. The reader had just filled in
-       * a form correctly and got a red error toast for it, with no way to act
-       * on it from where they were standing.
-       *
-       * So say what actually happened and what comes next. The Connect button
-       * is on the row behind this dialog.
+       * A new Drive destination cannot pass the check: consent is keyed to an
+       * existing destination, so it is never connected yet. Explain the next
+       * step (Connect on the row) instead of showing an error.
        */
       if (created && provider === "google_drive_oauth") {
         toast.info(t("addedNeedsConnect"), { duration: 8000 });
         return;
       }
 
-      // Saved is not the same as working. The check runs after the dialog
-      // closes so it never blocks the save, and its verdict is what the user
-      // is actually told.
+      // The check runs after the dialog closes so it never blocks the save; its
+      // verdict is what the user is told.
       if (created?.id) {
         const verdict = await probeDestination(created.id, t("testFailed"));
         if (verdict.ok) toast.success(t("testPassed"));
@@ -97,9 +85,7 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri 
   }
 
   const submitting = form.formState.isSubmitting;
-  // Suppressed for Drive: the setup guide links each Console page from the
-  // step that needs it, and a lone link to the credentials page underneath
-  // five numbered steps is the vaguer of the two.
+  // Not for Drive: its setup guide links each Console page from its own step.
   const keyDocs = provider === "google_drive_oauth" ? null : keyDocsUrl(preset);
 
   function reset(nextPreset) {
@@ -115,10 +101,8 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri 
     const nextProvider = providerForPreset(next);
     setPreset(next);
 
-    // Switching between providers swaps the whole field set, so values typed
-    // under the old one are not merely irrelevant — they would be submitted.
-    // Within the S3 family the fields are the same, so what was typed is kept
-    // and only the requiredness moves.
+    // Switching providers swaps the field set, so old values are cleared (they
+    // would be submitted). Within the S3 family the values are kept.
     if (nextProvider !== provider) {
       form.reset({
         name: form.getValues("name"),
@@ -128,9 +112,8 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri 
       return;
     }
 
-    // Requiredness moves with the preset, so an error raised under the old one
-    // has to be re-judged — otherwise "Endpoint is required" stays on screen
-    // after switching to AWS, where it is not.
+    // Requiredness moves with the preset, so re-validate errors raised under
+    // the old one.
     if (form.formState.isSubmitted) form.trigger(["config.endpoint", "config.region"]);
   }
 
@@ -173,34 +156,22 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri 
           disabled={submitting}
         />
 
-        {/* Above the client ID and secret, because all of it is needed before
-            either of them exists: the reader is about to go to Google Cloud
-            Console and make an OAuth client, and this is where they find out
-            how. Open by default here — somebody adding a destination has done
-            none of it yet. */}
+        {/* The setup guide comes first: the OAuth client must be created in
+            Google Cloud Console before these fields can be filled. */}
         {provider === "google_drive_oauth" ? (
           <GoogleDriveSetup redirectUri={oauthRedirectUri} defaultOpen />
         ) : null}
 
-        {/* Said BEFORE the credentials are created, not after the test fails.
-            The probe writes an object, reads it back and deletes it, and
-            backups prune old archives when they pass the retention limit — so
-            a read-only credential cannot work, and that is the single most
-            common reason one of these never starts working.
-
-            Not for Drive: there is no permission to get wrong there. The scope
-            is fixed by the panel and the guide above already says what it
-            grants, so a second box would be noise beside the steps. */}
+        {/* The probe writes, reads and deletes an object, and backups prune
+            old archives, so a read-only credential cannot work. Not shown for
+            Drive, whose scope is fixed by the panel. */}
         {provider === "google_drive_oauth" ? null : (
           <div className="rounded-lg border bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
             {provider === "s3" ? t("permissionsNote") : t("permissionsNoteRemote")}
           </div>
         )}
 
-        {/* Where these come from, for the service actually chosen. Every one
-            calls them something else — an API token at Cloudflare, an
-            Application Key at Backblaze — so "paste your access key" sends a
-            first-time user hunting a console for a phrase that is not there. */}
+        {/* Provider-specific docs: each service names its keys differently. */}
         {keyDocs ? (
           <a
             href={keyDocs}
@@ -213,9 +184,8 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri 
           </a>
         ) : null}
 
-        {/* Said before they are typed: these are stored encrypted and the API
-            never sends them back, so the panel genuinely cannot show them
-            again — replacing is the only way to change them later. */}
+        {/* Credentials are stored encrypted and never returned; replacing is
+            the only way to change them. */}
         <p className="text-xs text-muted-foreground">{t("credentialsNote")}</p>
       </FormModal>
     </Form>
@@ -225,11 +195,9 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri 
 /**
  * Drop the keys the user left empty.
  *
- * An empty string is not the same as "not set": sending `password: ""` for an
- * SFTP destination authenticating by key would store an empty password and
- * phpseclib would try to authenticate with it. Booleans are kept as they are —
- * `false` is a deliberate answer, and stripping it would silently re-enable
- * TLS on a destination whose owner turned it off.
+ * An empty string is not "not set": `password: ""` on a key-auth SFTP
+ * destination would be stored and used by phpseclib. Booleans are kept, since
+ * stripping `false` would silently re-enable TLS.
  */
 function cleanConfig(config = {}) {
   return Object.fromEntries(

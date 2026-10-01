@@ -7,9 +7,8 @@ export function updateWebhook(id, payload) {
   return api.put(`/applications/${id}/webhook`, payload);
 }
 
-// Poll target after a deploy: a deploy flips status to "provisioning" with
-// steps[] filling, then back to "active". Re-reading the whole resource keeps
-// last_commit / last_deployed_at / failed_step in sync too.
+// Poll target after a deploy (status goes "provisioning" → "active"); the whole
+// resource also refreshes last_commit / last_deployed_at / failed_step.
 export function readApplication(id) {
   return api.get(`/applications/${id}`);
 }
@@ -27,10 +26,7 @@ export function fetchDeployments(id) {
   return api.get(`/applications/${id}/deployments`);
 }
 
-/**
- * Start a deploy. Answers 202 with the row, so the screen can show it as queued
- * straight away rather than waiting to be told it exists.
- */
+/** Start a deploy. Answers 202 with the queued row. */
 export function startDeployment(id) {
   return api.post(`/applications/${id}/deployments`);
 }
@@ -46,12 +42,8 @@ export function redeployDeployment(id, deploymentId) {
 }
 
 /**
- * Branch, deploy script and auto-deploy.
- *
- * The toggle goes as `webhook_enabled`. The response calls the same fact
- * `auto_deploy`, and the API reference's request example uses that name — but
- * the FormRequest accepts only `webhook_enabled`, so `auto_deploy` would be
- * dropped without an error.
+ * Branch, deploy script and auto-deploy. Send the toggle as `webhook_enabled`:
+ * the response calls it `auto_deploy`, but the request silently drops that name.
  */
 export function updateDeploySettings(id, payload) {
   return api.put(`/applications/${id}/deployment-settings`, payload);

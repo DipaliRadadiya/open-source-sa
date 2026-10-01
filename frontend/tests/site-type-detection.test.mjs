@@ -251,7 +251,8 @@ test("the generic list is quarantined in one named place", () => {
    * when the API carries the flag.
    */
   assert.match(lib, /export const GENERIC_SITE_TYPES = \["php", "static"\]/);
-  assert.match(lib, /DUPLICATED/);
+  assert.match(lib, /Mirrors `config\('server\.site_type_detection\.generic'\)`/);
+  assert.match(lib, /Replace with the API flag once it exists/);
   const others = [card, dialog].map(strip).join("\n");
   assert.doesNotMatch(others, /"php", "static"|\["static"/, "the list must not be copied into components");
 });

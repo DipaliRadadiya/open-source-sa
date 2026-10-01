@@ -3,11 +3,8 @@ import { read } from "@/lib/api/read";
 import { storageDestinationsResponseSchema } from "@/lib/schemas/storage";
 
 /**
- * Connected S3-compatible destinations.
- *
- * Cached per request because the application Backups screen needs the same
- * list to populate its destination picker — asking twice on one render would
- * be two round trips for one answer.
+ * Connected S3-compatible destinations. Cached per request: the Backups screen
+ * also needs this list for its destination picker.
  */
 export const getStorageDestinations = cache(async function getStorageDestinations() {
   const result = await read("/integrations/storage/destinations", storageDestinationsResponseSchema);

@@ -3,15 +3,10 @@ import { ArrowRight, ArrowUpCircle, CircleCheck, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * The band every resting state of this page opens with, so the three of them
- * are the same object in three moods rather than three different boxes.
- *
- * Shape is fixed: status chip, a one-word status, the version, then the meta
- * nobody reads until something is wrong — and the actions on the same line,
- * where they close the row off instead of leaving the right half blank.
- *
- * The version is 18px, not a display size. It is the fact you came for, but the
- * page heading above it should still be the largest thing on screen.
+ * The band every resting state of this page opens with, so the three states
+ * share one shape: status chip, one-word status, the version, then meta, with
+ * the actions closing the same row. The version is 18px so the page heading
+ * stays the largest text.
  */
 const TONES = {
   update: {
@@ -54,14 +49,13 @@ export function UpdateHeader({ state, divided = false, actions = null }) {
       : t("published", { date: format.dateTime(date, { dateStyle: "medium" }) });
   })();
 
-  // Where the panel came from. `branch` is null once updated (a tag checkout is
-  // a detached HEAD), so it drops out rather than printing an empty separator.
+  // `branch` is null once updated (a tag checkout is a detached HEAD), so it drops
+  // out rather than printing an empty separator.
   const source = [installed.commit_short, installed.branch].filter(Boolean).join(" · ");
   const meta = [publishedLabel, source].filter(Boolean);
 
   return (
-    // Only ruled off when something follows it. Up to date, the band IS the
-    // card, and a bottom border there is a line drawn under nothing.
+    // Bottom border only when something follows the band.
     <div
       className={cn(
         "flex flex-wrap items-center gap-x-6 gap-y-4 px-6 py-5",
@@ -73,11 +67,8 @@ export function UpdateHeader({ state, divided = false, actions = null }) {
         <Icon className={cn("size-5", tint)} aria-hidden />
       </span>
 
-      {/* Natural width, not flex-1: the slack in this row belongs to whatever
-          the actions bring with them — a reason that has to wrap onto two lines
-          while 500px sits empty beside it is the space being wasted, not used.
-          min-w so the column drops to its own line rather than being squeezed
-          to one word per line. */}
+      {/* Natural width from sm up so the row's slack goes to the actions. min-w-48 makes
+          the column wrap to its own line rather than squeeze to one word per line. */}
       <div className="min-w-48 flex-1 basis-0 space-y-1.5 sm:flex-none sm:basis-auto">
         <h2 className={cn("text-xs font-semibold tracking-wider uppercase", tint)}>
           {tone === "update"
@@ -108,8 +99,7 @@ export function UpdateHeader({ state, divided = false, actions = null }) {
         ) : null}
       </div>
 
-      {/* Spacer for the states that carry no actions, so the band still ends
-          flush instead of the version column stretching to fill it. */}
+      {/* Spacer for states with no actions, so the band still ends flush. */}
       {actions ?? <span className="flex-1" />}
     </div>
   );

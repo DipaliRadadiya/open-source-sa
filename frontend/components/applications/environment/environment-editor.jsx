@@ -27,10 +27,9 @@ import { RestoreBackupDialog } from "@/components/applications/environment/resto
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 /**
- * Keys the panel writes and the app depends on staying put. A new
- * N8N_ENCRYPTION_KEY makes every credential n8n saved unreadable — the file's
- * own first line says it must never change — and the port and folder must
- * match the service and proxy the panel set up. The API only checks syntax.
+ * Keys the panel writes that must not change: a new N8N_ENCRYPTION_KEY makes
+ * every saved n8n credential unreadable, and the port and folder must match
+ * the service and proxy. The API only checks syntax.
  */
 const GUARDED_KEYS = ["N8N_ENCRYPTION_KEY", "N8N_PORT", "N8N_USER_FOLDER"];
 
@@ -50,9 +49,8 @@ function guardedChanges(saved, next) {
   return GUARDED_KEYS.filter((key) => before.has(key) && before.get(key) !== after.get(key));
 }
 
-// Rewrite (or append) a KEY's line to the suggested value — the one-click fix
-// behind a check. Matches an optional `export ` and leading indent; leaves the
-// rest of the file untouched.
+// Rewrite (or append) a KEY's line to the suggested value, keeping any indent
+// and `export ` prefix; the rest of the file is untouched.
 function applySuggestion(text, key, suggested) {
   const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const line = new RegExp(`^(\\s*)(export\\s+)?${escaped}\\s*=.*$`, "m");
@@ -62,20 +60,17 @@ function applySuggestion(text, key, suggested) {
   return `${text}${sep}${key}=${suggested}\n`;
 }
 
-// The API's own limit (`max:262144` on `raw`, counted in characters). Checked
-// here so an oversized file is refused before it is sent, in words about size —
-// the server's 422 arrived in the box titled "syntax error".
+// The API's limit (`max:262144` characters on `raw`), checked client-side so
+// the error talks about size instead of showing as a syntax error.
 const MAX_CHARS = 262144;
 
 function overLimit(text) {
-  // `.length` counts UTF-16 units, never fewer than characters; only a file
-  // that is over by that measure is worth counting properly.
+  // `.length` (UTF-16 units) is a cheap upper bound; count code points only past it.
   return text.length > MAX_CHARS && Array.from(text).length > MAX_CHARS;
 }
 
-// A file of only blank lines is shown as empty, so its placeholder says what
-// to do with it. The API writes an emptied file back as a single newline, and
-// a black box holding one invisible line said nothing.
+// A whitespace-only file is shown as empty so the placeholder appears (the API
+// saves an emptied file as a single newline).
 function editable(raw) {
   return (raw ?? "").trim() ? raw : "";
 }
@@ -91,33 +86,18 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [guarded, setGuarded] = useState([]);
 
-  // The file changed underneath this component.
-  //
-  // `useState(initialEnv)` reads its argument once and ignores it forever
-  // after, so a restore from the history card below — which writes the file and
-  // calls router.refresh() — re-rendered the page with the restored text and
-  // left this editor showing the old one. The refresh worked; the editor was
-  // not listening. Only a manual reload fixed it.
-  //
-  // Adjusted during render rather than in an effect: this is the sanctioned
-  // React pattern for a prop-driven reset, and an effect here would be the
-  // cascading render the lint rules refuse.
-  //
-  // `seenRaw` is the last value this prop carried, and it moves only when the
-  // prop does. It used to be set to the SAVED text on save, while the prop
-  // still held the old text until the refresh landed — so the very next render
-  // saw a "change", copied the old file back in, and the editor showed the
-  // pre-save text for a second or more after "Environment saved.", wiping
-  // anything typed meanwhile.
+  // Picks up a file changed elsewhere (e.g. a restore + router.refresh()), since
+  // useState ignores later props. Adjusted during render, React's pattern for a
+  // prop-driven reset. `seenRaw` must track only the prop, never the saved text,
+  // or the stale prop is copied back in before the refresh lands.
   const propRaw = initialEnv.raw ?? "";
   const [seenRaw, setSeenRaw] = useState(propRaw);
 
   if (propRaw !== seenRaw) {
     setSeenRaw(propRaw);
     setEnv(initialEnv);
-    // A refresh that only confirms what this editor already saved leaves the
-    // text alone. Anything else is a write from elsewhere (a restore from the
-    // history card), and the file on disk is the truth to show.
+    // A refresh confirming this editor's own save leaves the text alone; any
+    // other change came from elsewhere and replaces it.
     if (propRaw !== (env.raw ?? "")) {
       setContents(editable(propRaw));
       setSyntaxError(null);
@@ -127,14 +107,11 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
   const dirty = contents !== editable(env.raw);
   const tooLarge = overLimit(contents);
 
-  // Registered with the panel's guard, which asks before the sidebar, header
-  // or breadcrumb leave and covers reload/close too. A beforeunload of its own
-  // covered only the last two: a click on another page in the sidebar threw the
-  // edits away without a word.
+  // The panel guard covers in-app navigation as well as reload/close.
   useWatchUnsaved("environment-editor", dirty);
 
-  // The button must say what the save will actually do — otherwise a Node app
-  // ignores the file until restart, or a cached config quietly overrides it.
+  // The label says whether the save also restarts or applies, since otherwise
+  // the app may ignore the new file.
   const sendRestart = Boolean(env.requires_restart);
   const saveLabel = env.requires_restart
     ? t("saveRestart")
@@ -161,8 +138,7 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
       const next = data?.environment;
       if (next) {
         setEnv(next);
-        // Only if nothing was typed while the request ran; otherwise those
-        // keystrokes stay, as unsaved changes on top of the saved file.
+        // Keep anything typed while the request ran as unsaved changes.
         setContents((current) => (current === sent ? editable(next.raw ?? sent) : current));
       }
       toast.success(
@@ -173,15 +149,11 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
             : t("saved"),
       );
 
-      // The save just wrote a row this page renders from the server — the
-      // change history below. Updating local state alone leaves that card
-      // showing the file's past as of page load, missing the edit the user is
-      // looking at the toast for. Cheap here: the editor keeps the response's
-      // own copy, so the textarea does not flicker or lose the cursor.
+      // Refresh the server-rendered change history; the textarea keeps its
+      // own state, so it does not flicker.
       router.refresh();
     } catch (error) {
-      // Syntax errors come back verbatim under errors.raw; nothing was written
-      // (the previous file stands), which is what the reader needs to know.
+      // Syntax errors come back verbatim under errors.raw; nothing was written.
       const raw = error.response?.data?.errors?.raw;
       if (raw) {
         setSyntaxError(Array.isArray(raw) ? raw.join("\n") : String(raw));
@@ -216,8 +188,7 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
   return (
     <Card>
       <CardContent className="space-y-4">
-        {/* Checks — rendered verbatim (backend-localized), styled by severity,
-            each with a one-click fix when it carries a suggested value. */}
+        {/* Checks are backend-localised; shown verbatim. */}
         {env.checks?.length ? (
           <div className="space-y-2">
             {env.checks.map((check, i) => {
@@ -275,8 +246,6 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
           </div>
         ) : null}
 
-        {/* Console surface — a machine's own file, same visual language as the
-            log viewer and php.ini editor. */}
         <div className="overflow-hidden rounded-lg border border-console-border bg-console">
           <div className="flex items-center justify-between gap-2 border-b border-console-border px-3 py-1.5">
             <span className="flex min-w-0 items-center gap-2">
@@ -304,9 +273,7 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
                   {t("restore.action")}
                 </Button>
               ) : null}
-              {/* Trimmed: CopyButton already hides itself on an empty string, but
-                  a file holding only a newline is just as empty to the reader,
-                  and offering to copy it ticks "copied" over nothing. */}
+              {/* Whitespace-only counts as empty so CopyButton hides itself. */}
               <CopyButton
                 value={contents.trim() ? contents : ""}
                 label={t("copy")}
@@ -329,7 +296,7 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
         {tooLarge ? (
           <NotSaved title={t("tooLargeTitle")}>{t("tooLarge")}</NotSaved>
         ) : syntaxError ? (
-          // The site's config was NOT changed — say so in the backend's words.
+          // Nothing was written; show the backend's own message.
           <NotSaved title={t("syntaxTitle")}>{syntaxError}</NotSaved>
         ) : null}
 
@@ -386,8 +353,7 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
               setContents(editable(next.raw));
               setSyntaxError(null);
             }
-            // A restore is a change to the file like any other and writes its
-            // own history row. Same reason as the save above.
+            // A restore also writes a history row.
             router.refresh();
           }}
         />

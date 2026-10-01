@@ -32,16 +32,15 @@ export default async function ActivityLogPage({ searchParams }) {
   const user = await getCurrentUser();
   const [{ activity_log: entries, meta, failed, status, failure, message }, filters] = await Promise.all([
     getServerActivity(sp),
-    // There is no server-wide filter list yet (FS-C11): admins get the full
-    // catalog, everyone else the types they have touched themselves.
+    // No server-wide filter list exists yet: admins get the full catalog,
+    // everyone else the types they have touched.
     user?.is_admin ? getActivityFilters() : getMyActivityFilters(),
   ]);
 
   const isFiltered = Boolean(sp.search || sp.type || sp.action);
 
 
-  // Read-only, so a delete cannot strand anyone here — but a typed or
-  // bookmarked ?page=99 still would, and it must not read as an empty log.
+  // A bookmarked out-of-range ?page must not read as an empty log.
   redirectOutOfRange("/activity-log", sp, meta, failed);
   return (
     <div className="space-y-6">
@@ -63,9 +62,8 @@ export default async function ActivityLogPage({ searchParams }) {
             emptyMessage={isFiltered ? t("mine.emptyFiltered") : t("server.empty")}
             hasFilters={isFiltered}
           />
-          {/* Not behind a row count: the selector hides itself when the list is too
-              short to paginate, and gating it on the current page as well is how it
-              used to vanish on the very page you needed it. */}
+          {/* Not gated on row count: the selector hides itself when there is
+              nothing to paginate. */}
           <DataTablePagination meta={meta} />
         </NavTransitionProvider>
       )}

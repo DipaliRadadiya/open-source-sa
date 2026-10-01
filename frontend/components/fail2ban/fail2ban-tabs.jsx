@@ -10,35 +10,23 @@ import { ScrollFade } from "@/components/ui/scroll-fade";
 const TRIGGER = "gap-2 px-3 py-1.5";
 
 /**
- * Splits the page into what is happening now and what you configured once.
- *
- * Everything on one screen meant five blocks competing at first glance, and
- * four of them are things you read rather than act on. Jails and bans are the
- * live picture; the rules and the ignore list are settings you set and forget.
- *
- * Both panels stay mounted (`forceMount`, hidden by state) so half-typed
- * settings survive a trip to the other tab — an unmounting tab silently
- * discards edits, which is the same class of bug as a dialog that closes itself.
- *
- * The one thing that must NOT hide behind a tab is the lockout risk, so an
- * unignored address puts a marker on the settings trigger.
+ * Splits the page into live state (jails, bans) and settings (rules, ignore list).
+ * Both panels stay mounted (`forceMount`) so unsaved edits survive a tab switch.
+ * The lockout risk must not hide behind a tab: an unignored own IP marks the
+ * settings trigger.
  */
 export function Fail2banTabs({ live, settings, ignoreIps = [], status }) {
   const t = useTranslations("fail2ban");
-  // Your address, as the browser sees it, is not on the ignore list.
   const yourIp = useBrowserIp();
   const needsAttention = Boolean(yourIp && !ignoreIps.includes(yourIp));
   const [tab, setTab] = useState("live");
 
   return (
     <Tabs value={tab} onValueChange={setTab} className="gap-4">
-      {/* Status rides along the tab row rather than owning a row of its own —
-          "everything is fine" does not deserve its own band. The unhealthy
-          state is not passed here; it stays a full-width alert above. */}
+      {/* Healthy status sits in the tab row; the unhealthy state stays a
+          full-width alert above. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* Scrolls rather than wraps, same as the Settings tab bar: a bar that
-            reflows to two rows stops reading as one control. ScrollFade is what
-            says there is more to the side. */}
+        {/* Scrolls rather than wraps, like the Settings tab bar. */}
         <ScrollFade className="-mx-1 px-1 pb-1">
           <TabsList className="!h-auto w-fit gap-1 p-1">
             <TabsTrigger value="live" className={TRIGGER}>

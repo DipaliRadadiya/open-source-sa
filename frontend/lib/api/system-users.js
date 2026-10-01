@@ -1,7 +1,6 @@
 import { api } from "@/lib/api/client";
 
-// Client-side System User mutations (server panel). Each hits the configured
-// Axios instance (cookie + XSRF); callers refresh the server component after.
+// Client-side System User mutations; callers refresh the server component after.
 
 export function createSystemUser(values) {
   return api.post("/system-users", values);
@@ -27,9 +26,8 @@ export function setSystemUserSsh(id, ssh_access) {
   return api.put(`/system-users/${id}/ssh`, { ssh_access });
 }
 
-// The shells this server accepts, titles already localised. Client-side too,
-// because the create dialog is opened from the applications form as well as
-// from this page and cannot rely on a prop from one of them.
+// Accepted shells, localised. Client-side because the create dialog also opens
+// from the applications form.
 export function getShellCatalog() {
   return api.get("/system-users/shells").then((res) => res.data?.shells ?? []);
 }

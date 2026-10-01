@@ -1,8 +1,6 @@
 import { api } from "@/lib/api/client";
 
-// Client-side user mutations (admin). Each hits the configured Axios instance
-// (cookie + XSRF) and returns the response; callers refresh the server
-// component with router.refresh() after success.
+// Client-side user mutations (admin); callers router.refresh() after success.
 export function createUser(values) {
   return api.post("/admin/users", values);
 }

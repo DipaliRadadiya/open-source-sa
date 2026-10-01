@@ -1,9 +1,6 @@
 import { api } from "@/lib/api/client";
 
-/**
- * The source catalog, re-read on an interval so sizes and the "written just
- * now" dots describe the box as it is rather than as it was on page load.
- */
+/** The source catalog, re-read on an interval to keep sizes and activity current. */
 export function listLogSources({ signal } = {}) {
   return api.get("/logs", { signal });
 }
@@ -30,17 +27,11 @@ export function logDownloadUrl(key) {
 }
 
 /**
- * Empty one server log.
+ * Empty one server log (truncated, never deleted, so the writer keeps its handle).
  *
- * Truncated server-side, never deleted — the writer keeps its file handle, so
- * nginx or MySQL carries on appending to the same inode with the same owner.
- *
- * `logs` **manage**; a viewer gets 403. **404** for a source the registry does
- * not mark `clearable` — auth.log, ufw.log, fail2ban.log, syslog, kern.log,
- * mail.log, the Let's Encrypt log and the journal. Those record what happened
- * to the machine, so the panel offers no button and the API refuses even when
- * one is asked for directly. Read `clearable` off the source rather than
- * guessing from its key.
+ * Needs `logs` manage (403 otherwise). **404** for sources not marked
+ * `clearable` (system/security logs); read `clearable` off the source, never
+ * guess from its key.
  */
 export function clearLog(key) {
   return api.delete(`/logs/${encodeURIComponent(key)}`);

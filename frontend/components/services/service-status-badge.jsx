@@ -2,8 +2,7 @@ import { useTranslations } from "next-intl";
 import { CircleCheck, CircleMinus, CircleAlert, CircleHelp, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-// Icon + word + colour. Colour alone would leave the one state that matters —
-// failed — invisible to anyone who can't separate red from green.
+// Icon + word + colour, so failed is not signalled by colour alone.
 const STATUS_META = {
   active: { icon: CircleCheck, variant: "success" },
   inactive: { icon: CircleMinus, variant: "muted" },
@@ -11,15 +10,12 @@ const STATUS_META = {
 };
 
 /**
- * The status of one service, shared by the desktop table and the mobile cards
- * so the two layouts can't drift into describing the same state differently.
+ * The status of one service, shared by the desktop table and the mobile cards.
  */
 export function ServiceStatusBadge({ status, state = "installed", busyAction }) {
   const t = useTranslations("services");
 
-  // While an action is in flight the old status is no longer true and the new
-  // one isn't known yet — so the badge reports the transition rather than a
-  // state we can't vouch for.
+  // While an action is in flight, report the transition rather than a stale state.
   if (busyAction && t.has(`busy.${busyAction}`)) {
     return (
       <Badge variant="outline" className="gap-1.5 font-normal text-muted-foreground">
@@ -29,15 +25,10 @@ export function ServiceStatusBadge({ status, state = "installed", busyAction }) 
     );
   }
 
-  // Still installing: there is no unit yet, so the API reports `inactive` —
-  // truthfully, but "Stopped" is the wrong word for something mid-install and
-  // would read as a thing you could start. Same reasoning as `busyAction`
-  // above: report the transition rather than a resting state that misleads.
-  //
-  // A FAILED install deliberately falls through to the badge below. The API
-  // sends `failed` for it because to the person looking at the row it is
-  // broken and should read as broken; which kind of broken is said in words
-  // next to the name, not by inventing a fourth badge colour.
+  // Still installing: the API reports `inactive` (no unit yet), but "Stopped"
+  // would suggest it can be started, so the transition is shown. A FAILED
+  // install falls through to the `failed` badge; the reason is shown as text
+  // beside the name.
   if (state === "installing") {
     return (
       <Badge variant="outline" className="gap-1.5 font-normal text-muted-foreground">
@@ -47,8 +38,7 @@ export function ServiceStatusBadge({ status, state = "installed", busyAction }) 
     );
   }
 
-  // An unrecognised status is shown verbatim rather than bucketed into one of
-  // ours — guessing here would misreport the state of the box.
+  // An unrecognised status is shown verbatim rather than guessed.
   const meta = STATUS_META[status];
   const Icon = meta?.icon ?? CircleHelp;
   return (

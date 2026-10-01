@@ -13,32 +13,22 @@ import {
 } from "@/components/ui/dialog";
 
 /**
- * Show an image that lives in the site.
+ * Shows an image that lives in the site, via the preview endpoint (the download
+ * endpoint sends `application/octet-stream` with `nosniff`, so it cannot render).
  *
- * This pointed at the download endpoint, which cannot work: that response is
- * `application/octet-stream` with `nosniff`, so the browser is explicitly told
- * not to treat it as an image. It is what "images not loading" was.
- *
- * The preview endpoint decides previewability from the file's own BYTES, not
- * its name, so the answer can disagree with the extension in both directions —
- * a .png that is really text is refused, and the refusal is the truth. Nothing
- * here second-guesses it.
- *
- * Two of the three refusals have a way out, and Download is it: an SVG is
- * refused deliberately (it can carry script, and this would be served inline
- * from the API origin), and a file over the size limit is still perfectly
- * downloadable. Only "not an image" leaves nothing to offer.
+ * Previewability is decided from the file's BYTES, not its name; nothing here
+ * second-guesses it. SVG (can carry script, would be served inline from the API
+ * origin) and oversized files are refused but downloadable, so Download is
+ * offered; "not an image" leaves nothing to offer.
  */
 export function ImagePreviewDialog({ appId, file, open, onOpenChange }) {
   const t = useTranslations("applications.files");
   const [state, setState] = useState({ status: "loading" });
 
   /*
-   * Back to "loading" when the file changes, synced during render rather than
-   * in the effect below. The panel mounts this fresh per file so today it only
-   * ever runs once — but resetting inside the effect is the cascading render
-   * the lint rule refuses, and an effect would paint the previous image for a
-   * frame first. Same pattern as the search box.
+   * Back to "loading" when the file changes, synced during render rather than in
+   * the effect: resetting in the effect is a cascading render the lint rule
+   * refuses, and would paint the previous image for a frame.
    */
   const [seenPath, setSeenPath] = useState(file?.path);
   if (seenPath !== file?.path) {
@@ -54,8 +44,8 @@ export function ImagePreviewDialog({ appId, file, open, onOpenChange }) {
     fetchFilePreview(appId, file.path, { signal: controller.signal })
       .then((result) => {
         if (controller.signal.aborted) {
-          // Resolved after the dialog closed: nothing will revoke it later, so
-          // it has to go now or it leaks for the life of the document.
+          // Resolved after the dialog closed: revoke now, or it leaks for the life of the
+          // document.
           if (result.url) URL.revokeObjectURL(result.url);
           return;
         }
@@ -104,9 +94,8 @@ export function ImagePreviewDialog({ appId, file, open, onOpenChange }) {
 
           {state.status === "error" ? (
             <div className="flex h-56 flex-col items-center justify-center gap-2 px-6 text-center">
-              {/* The API's sentence says which of the three it is and, for an
-                  SVG, why it is refused rather than broken. Our own copy is
-                  only for a failure that carried no message at all. */}
+              {/* The API's sentence says which refusal it is (and why, for SVG); our copy is only
+                  for a failure with no message. */}
               <p className="max-w-sm text-sm text-muted-foreground">
                 {state.message ?? t("imagePreview.loadFailed")}
               </p>
@@ -114,8 +103,7 @@ export function ImagePreviewDialog({ appId, file, open, onOpenChange }) {
           ) : null}
 
           {state.status === "loaded" ? (
-            // A blob URL, so next/image has nothing to optimise and no remote
-            // host to whitelist — a plain <img> is the right tool.
+            // A blob URL: next/image has nothing to optimise, so a plain <img> is right.
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={state.url}

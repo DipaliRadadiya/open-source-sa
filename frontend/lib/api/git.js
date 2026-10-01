@@ -3,12 +3,9 @@ import { api } from "@/lib/api/client";
 const BASE = "/integrations/git";
 
 /**
- * Live token health for every connected account, one row each.
- *
- * Nothing about this is cached: a token can be revoked at the provider at any
- * moment, so a stored verdict would lie. It is fetched from the browser
- * alongside the server-rendered list rather than blocking it — a slow provider
- * must not hold up the page.
+ * Live token health for every connected account. Never cached (tokens can be
+ * revoked at any time); fetched client-side so a slow provider does not block
+ * the page.
  */
 export function getAccountStatuses({ signal } = {}) {
   return api.get(`${BASE}/accounts/status`, { signal });
@@ -41,27 +38,16 @@ export function disconnectAccount(id) {
 }
 
 /**
- * What repositories this account can see.
- *
- * Fetched by "Test repositories" on the account row. `?per_page=1` is enough
- * to get the total count; fetching the full list would be slow for someone
- * with hundreds of repos.
- */
-/**
- * Point an application at a different git account (`PUT .../git-account`).
- *
- * Everything omitted is taken from the application as it stands, so repairing a
- * site that merely lost its credential is `{git_account_id}` and nothing else —
- * the user never restates an owner/repo they did not change.
- *
- * Verified before it is stored: the candidate account is asked to list the
- * repository's branches, and a rejected re-link leaves the application exactly
- * as it was. A `422` on `repository` means that account cannot reach it.
+ * Point an application at a different git account. Omitted fields keep their
+ * current values, so `{git_account_id}` alone repairs a lost credential.
+ * Verified before storing; a `422` on `repository` means that account cannot
+ * reach it, and the application is left unchanged.
  */
 export function relinkGitAccount(applicationId, payload) {
   return api.put(`/applications/${applicationId}/git-account`, payload);
 }
 
+/** Repositories this account can see; `?per_page=1` is enough for the total count. */
 export function getRepositories(accountId, params = {}) {
   return api.get(`${BASE}/accounts/${accountId}/repositories`, { params });
 }

@@ -21,25 +21,16 @@ import { activeQueries, isIdle } from "@/lib/databases/health";
 const POLL_MS = 5000;
 
 /**
- * A long-running query is what "the site is slow" usually turns out to be, so
- * anything past this is marked rather than left for the reader to spot in a
- * column of numbers. Two thresholds, not one: ten seconds is worth noticing,
- * a full minute is the thing you came here to kill.
+ * Long-running queries are marked. Two thresholds: ten seconds is worth
+ * noticing, a minute is likely the one to kill.
  */
 const SLOW_SECONDS = 10;
 const STUCK_SECONDS = 60;
 
 /**
- * How many rows the list shows before it offers to expand.
- *
- * A busy engine can have fifty connections doing work, and an unbounded list
- * would push the 24h chart arbitrarily far down — the page's height would
- * depend on how bad a day the database is having. Neither RDS Performance
- * Insights nor Percona PMM stacks an unbounded live list above a history
- * chart: the list is always bounded, or the two live on separate screens.
- * See memory/research-database-health-layout.md. Three, matching
- * `PREVIEW_COUNT` on the dashboard's process card — the two collapsed lists in
- * this product should agree on what "a glance" is.
+ * Rows shown before the list offers to expand, so a busy engine cannot push
+ * the 24h chart arbitrarily far down. Matches `PREVIEW_COUNT` on the
+ * dashboard's process card.
  */
 const VISIBLE_COUNT = 3;
 
@@ -50,11 +41,8 @@ function tone(seconds) {
 }
 
 /**
- * The accent bar alone marks the row.
- *
- * The tinted row background used to stack with a red time pill, a red badge
- * and a red button, so the worst row was four shades of the same alarm. One
- * marker plus one coloured number reads as "this one" — four reads as noise.
+ * The accent bar alone marks the row; no tinted background on top of the red
+ * time and badge.
  */
 const ROW_ACCENT = {
   destructive: "border-l-destructive",
@@ -68,7 +56,7 @@ const TIME_STYLE = {
   neutral: "bg-muted text-muted-foreground",
 };
 
-/** "2m 8s" beats "128s" — nobody divides by sixty while a site is down. */
+/** "2m 8s" rather than "128s". */
 function duration(seconds, t) {
   const total = Math.max(0, Math.round(seconds ?? 0));
   if (total < 60) return t("durationSeconds", { seconds: total });
@@ -78,22 +66,15 @@ function duration(seconds, t) {
 }
 
 /**
- * One `Label: value` pair on the row's meta line.
- *
- * Inline, not stacked: label-above-value turned each row into three tall
- * blocks and the list read as a stack of debug cards. The label still has to
- * be there — `analytics · reporting@10.0.0.9` alone leaves you guessing which
- * is which — it just does not get its own line.
+ * One inline `Label: value` pair on the row's meta line.
  */
 function Fact({ label, last, children }) {
   return (
     <span className="inline-flex min-w-0 items-baseline gap-1">
       <span className="text-muted-foreground">{label}:</span>
       <span className="truncate text-foreground">{children}</span>
-      {/* The separator belongs to the fact before it — as its own flex child it
-          wrapped onto a line by itself on a phone. Hidden below `sm`, where
-          each fact gets its own line anyway and the dot would just dangle off
-          the end of one. Separators are for facts that share a line. */}
+      {/* The separator belongs to the preceding fact so it never wraps alone;
+          hidden below `sm`, where each fact has its own line. */}
       {last ? null : (
         <span className="ml-1.5 hidden text-muted-foreground/60 sm:inline" aria-hidden>
           ·
@@ -104,22 +85,18 @@ function Fact({ label, last, children }) {
 }
 
 /**
- * What the engine is doing right now, refreshed every five seconds.
- *
- * Idle connections are the majority on any real server and say nothing, so they
- * are counted rather than listed — a table of forty `Sleep` rows buries the one
- * query that is actually stuck.
+ * What the engine is doing right now, refreshed every five seconds. Idle
+ * connections are counted, not listed, so a stuck query is not buried.
  */
 export function ProcessList({ engine, processes: initial = [], canManage, connections = [] }) {
   const t = useTranslations("databases.monitor");
   const { refreshAndWait } = useRefresh();
   const [polled, setPolled] = useState(null);
-  // Holds the row, the in-flight flag AND the last failure, so a refused
-  // stop explains itself in the dialog instead of in a toast that leaves.
+  // Holds the row, in-flight flag and last failure, so a refused stop is
+  // explained in the dialog.
   const stop = useConfirmAction();
-  // The panel's own admin accounts for this engine. On a quiet server its
-  // monitoring connection is the ONLY row here, so without this the single
-  // Stop button on screen kills the thing that drew the screen.
+  // The panel's own admin accounts: on a quiet server its monitoring
+  // connection may be the only row, and stopping it breaks this screen.
   const ownUsers = panelUsernames(connections, engine);
   const [expanded, setExpanded] = useState(false);
   const [query, setQuery] = useState("");
@@ -127,18 +104,11 @@ export function ProcessList({ engine, processes: initial = [], canManage, connec
 
   const all = polled ?? initial;
   const idle = all.filter(isIdle);
-  // Longest-running first. The query you opened this page to find is the one
-  // that has been going the longest, and it should never be the one you have
-  // to hunt for down the list.
-  //
-  // Both tests come from lib/databases/health.js, which the stat cards above
-  // read by: two copies of "what counts as running" is how the headline and the
-  // list below it end up disagreeing, which is exactly what PostgreSQL exposed.
+  // Longest-running first. Both tests come from lib/databases/health.js, shared
+  // with the stat cards so the headline and the list cannot disagree.
   const running = activeQueries(all);
 
-  // Search covers everything a row displays — the statement, the database, the
-  // user and the host — because "which of these is the reporting job" is asked
-  // by any of those four depending on who is asking.
+  // Search covers everything a row displays: statement, database, user, host.
   const term = query.trim().toLowerCase();
   const active = running.filter((p) => {
     if (slowOnly && (p.time ?? 0) < SLOW_SECONDS) return false;
@@ -148,15 +118,12 @@ export function ProcessList({ engine, processes: initial = [], canManage, connec
       .some((value) => String(value).toLowerCase().includes(term));
   });
 
-  // The controls only exist once there is a list worth filtering; below that
-  // they are chrome asking to be ignored.
+  // Controls only appear once there is a list worth filtering.
   const filterable = running.length > VISIBLE_COUNT;
   const filtered = term !== "" || slowOnly;
 
-  // The cap is only honest because the list is sorted longest-first — the rows
-  // it hides are the short, fast ones. Anything past the stuck threshold is
-  // exempt regardless of position, so a wedged query can never end up behind a
-  // "show all" nobody clicks.
+  // The cap hides only short queries because the list is sorted longest-first;
+  // anything past the stuck threshold is always shown.
   const shown = expanded
     ? active
     : active.filter((p, i) => i < VISIBLE_COUNT || tone(p.time) === "destructive");
@@ -184,9 +151,8 @@ export function ProcessList({ engine, processes: initial = [], canManage, connec
     await stop.run(() => killProcess(stop.target.id, engine), {
       fallback: t("killFailed"),
       onDone: async () => {
-        // Drop back to the server's list so the row disappears from the same
-        // place everything else on this page comes from — and wait for it, so
-        // the toast and the close never sit over the stopped query.
+        // Wait for the server's list so the toast and close never sit over the
+        // stopped query.
         await refreshAndWait();
         setPolled(null);
         toast.success(t("killed"));
@@ -212,11 +178,8 @@ export function ProcessList({ engine, processes: initial = [], canManage, connec
             </div>
           </div>
 
-          {/* The running count belongs here, not just in the rows below: the
-              question this section answers is "is anything stuck?", and the
-              header should answer it before you read a single query. Idle
-              connections stay a count — noise in a list, information as a
-              number. */}
+          {/* The running count answers "is anything stuck?" in the header; idle
+              connections stay a count. */}
           <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
             {t("runningCount", { count: running.length })}
             {idle.length > 0 ? ` · ${t("idleCount", { count: idle.length })}` : ""}
@@ -246,7 +209,7 @@ export function ProcessList({ engine, processes: initial = [], canManage, connec
         <CardContent className="px-5 py-0">
           {active.length === 0 ? (
             // "Nothing running" and "nothing matched your filter" are different
-            // facts, and only one of them has a way out.
+            // states; only the latter can be cleared.
             <div className="space-y-2 py-8 text-center">
               <p className="text-sm text-muted-foreground">
                 {filtered ? t("noMatches") : t("noProcesses")}
@@ -265,8 +228,7 @@ export function ProcessList({ engine, processes: initial = [], canManage, connec
               ) : null}
             </div>
           ) : (
-            // Expanded scrolls inside a fixed height rather than growing the
-            // page: fifty busy connections must not decide where the chart is.
+            // Expanded scrolls inside a fixed height so the chart stays put.
             <div
               className={cn(
                 "-mx-5 divide-y",
@@ -285,8 +247,7 @@ export function ProcessList({ engine, processes: initial = [], canManage, connec
                   >
                     <div className="min-w-0 flex-1 space-y-3">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        {/* The elapsed time leads: it is what makes a row worth
-                            reading, and it is what you sort by in your head. */}
+                        {/* The elapsed time leads. */}
                         <span
                           className={cn(
                             "inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-sm font-semibold tabular-nums",
@@ -296,8 +257,7 @@ export function ProcessList({ engine, processes: initial = [], canManage, connec
                           <Clock className="size-3.5" />
                           {duration(process.time, t)}
                         </span>
-                        {/* Named, not left for the reader to infer from a red
-                            bar: the row that matters should say why. */}
+                        {/* Named, not only signalled by the red bar. */}
                         {level === "destructive" ? (
                           <Badge
                             variant="outline"
@@ -324,16 +284,9 @@ export function ProcessList({ engine, processes: initial = [], canManage, connec
                         </Fact>
                       </p>
 
-                      {/* The statement is the whole reason to look at this
-                          list, so it gets a surface of its own rather than
-                          being another line of grey text. Wrapped, not
-                          truncated — a query cut at 80 characters tells you
-                          nothing about what it was doing. */}
-                      {/* A code block, not a line of mono text: border and
-                          surface say "this is the statement", and the looser
-                          leading makes a wrapped 200-character query readable
-                          rather than a wall. `break-words` over `break-all` so
-                          it breaks between tokens where it can. */}
+                      {/* A code block, wrapped not truncated: a cut-off query
+                          says nothing. `break-words` over `break-all` so it
+                          breaks between tokens where it can. */}
                       {process.query ? (
                         <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded-md border bg-muted px-3 py-2.5 font-mono text-[13px] leading-relaxed text-foreground dark:bg-muted/60">
                           {process.query}
@@ -341,18 +294,10 @@ export function ProcessList({ engine, processes: initial = [], canManage, connec
                       ) : null}
                     </div>
 
-                    {/* Three states, deliberately separated so they cannot
-                        fight each other:
-                          rest          neutral outline
-                          row hover     turns red — "this is what it acts on"
-                          button hover  fills — "and this is the thing you press"
-                        The row state changes border and text only; the fill is
-                        the button's alone. Sharing the background between them
-                        is what made hovering the button feel like nothing
-                        happened. The outline variant also hovers to `bg-muted`,
-                        which turned it grey mid-gesture — overridden here.
-                        It stays a legible outlined button at rest because touch
-                        devices never get a hover state at all. */}
+                    {/* Three separate states: rest is a neutral outline, row
+                        hover turns border/text red, button hover fills. The
+                        outline variant's `bg-muted` hover is overridden. Legible
+                        at rest because touch devices never hover. */}
                     <ReasonTooltip
                       reason={
                         !canManage
@@ -384,20 +329,16 @@ export function ProcessList({ engine, processes: initial = [], canManage, connec
             </div>
           )}
 
-          {/* Only when the cap is actually hiding something. A toggle that
-              says "show all 3 of 3" is a control asking to be ignored. */}
+          {/* Only when the cap is actually hiding something. */}
           {hidden > 0 || expanded ? (
             <div className="-mx-5 border-t px-5 py-2">
-              {/* The ghost variant fills on hover AND on aria-expanded, so the
-                  expanded button sat on a permanent grey block. A row-wide
-                  toggle is not a button you want shouting — neutralise both
-                  fills and let the text colour carry the interaction. */}
+              {/* The ghost variant fills on hover and on aria-expanded; both
+                  fills are neutralised so text colour carries the state. */}
               <Button
                 variant="ghost"
                 size="sm"
                 // aria-expanded beats hover on equal specificity, so the
-                // expanded state needs the compound variant or hovering it
-                // does nothing.
+                // expanded state needs the compound variant.
                 className="w-full text-muted-foreground hover:bg-transparent hover:text-foreground aria-expanded:bg-transparent aria-expanded:text-muted-foreground aria-expanded:hover:text-foreground dark:hover:bg-transparent"
                 onClick={() => setExpanded((prev) => !prev)}
                 aria-expanded={expanded}

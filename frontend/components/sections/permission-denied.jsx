@@ -4,20 +4,14 @@ import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/data-table/empty-state";
 
 /**
- * "You do not have access to X" — on the screen X, named as X.
+ * "You do not have access to X", on the screen X, named as X.
  *
- * Every permission-gated page used to `redirect("/dashboard")`. That is fine
- * for an administrator, who lands somewhere they can read. For a role that
- * cannot open the dashboard either, asking for /php produced a bounce to a
- * second wall which then explained the WRONG wall: the reader asked about PHP
- * and the panel answered "you don't have access to the dashboard".
+ * Refusing in place instead of redirecting: a role that cannot open the dashboard
+ * either would otherwise be refused for the wrong page. It also keeps the URL, so
+ * back, the address bar and shared links refer to the right screen.
  *
- * Refusing in place also keeps the URL the reader typed, so the address bar,
- * the back button and a link pasted into a support thread all still refer to
- * the thing being discussed.
- *
- * `title` is the page's own heading, passed in by the page, so the refusal
- * never carries a second name for a screen the sidebar already labels.
+ * `title` is the page's own heading, so the refusal never gives the screen a
+ * second name.
  */
 export async function PermissionDenied({ title, description }) {
   const t = await getTranslations("common.permissionDenied");

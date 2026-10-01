@@ -5,16 +5,8 @@ import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 
 /**
- * The footer strip that saves a settings card.
- *
- * Three screens had grown their own copy — Password Protection, the AI Bot
- * Blocker and the Firewall — and they had already started to disagree: the
- * "this takes a few seconds" note had to be added twice, and only one of them
- * carried an unsaved marker.
- *
- * `submit` picks the button type: the Password Protection card is a real form
- * driven by react-hook-form, the other two save from local state on click.
- * That is the only difference between them, so it is the only knob here.
+ * The footer strip that saves a settings card. `submit` makes Save a submit
+ * button for react-hook-form cards; otherwise it calls `onSave`.
  */
 export function CardSaveFooter({
   saving,
@@ -24,28 +16,19 @@ export function CardSaveFooter({
   onDiscard,
   submit = false,
   savingNote,
-  // Said while the change is still unsaved, for a save whose cost is not
-  // obvious from the button — PHP settings reload the site's FPM pool.
+  // Shown while unsaved, for a save with a non-obvious cost (e.g. an FPM reload).
   note,
-  // Prints `saveReason` next to the disabled button instead of leaving it in
-  // the tooltip. Worth it on a long form, where "why is Save grey" is asked
-  // often enough that it should not need a hover to answer.
+  // Prints `saveReason` beside the disabled button, not only in the tooltip.
   showReason = false,
-  // A card that saves one named thing can say so — "Save PHP settings" rather
-  // than a bare "Save" that could belong to anything on the page.
   saveLabel,
-  // Off for a screen that already marks the unsaved thing where it lives — the
-  // AI Bot Blocker badges the chosen card, and a second marker down here would
-  // be the same fact twice.
+  // Off when the screen already marks unsaved changes elsewhere.
   showUnsaved = true,
 }) {
   const t = useTranslations("common.saveFooter");
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-2 border-t bg-muted/20 px-5 py-3">
-      {/* These saves re-render a vhost, config-test it and reload the web
-          server — noticeably slower than a form usually is, so the wait is
-          explained rather than left to read as a hang. */}
+      {/* These saves reload the web server, so the wait is explained. */}
       {saving && savingNote ? (
         <p className="mr-auto text-xs text-muted-foreground">{savingNote}</p>
       ) : null}
@@ -60,10 +43,7 @@ export function CardSaveFooter({
       {!saving && !dirty && showReason && saveReason ? (
         <p className="mr-auto text-xs text-muted-foreground">{saveReason}</p>
       ) : null}
-      {/* Discard and save prefer one line — split across two rows they read as
-          two separate decisions — but they may wrap rather than overflow. With
-          shrink-0 under a justify-end parent the group overflowed to the LEFT,
-          pushing Discard outside the card. */}
+      {/* Wraps rather than shrink-0: under justify-end it would overflow to the left. */}
       <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
         {dirty && onDiscard ? (
           <Button type="button" variant="ghost" onClick={onDiscard} disabled={saving}>
@@ -75,9 +55,7 @@ export function CardSaveFooter({
             type={submit ? "submit" : "button"}
             onClick={submit ? undefined : onSave}
             disabled={Boolean(saveReason) || saving}
-            // Save labels are named after what they save ("Turn on attack
-            // protection") and grow again in other locales, so the label wraps
-            // instead of forcing the button wider than the card.
+            // Long, localised labels wrap instead of widening the card.
             className="h-auto max-w-full py-2 text-center whitespace-normal"
           >
             {saving ? <Loader2 className="size-4 animate-spin" /> : null}

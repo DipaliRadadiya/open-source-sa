@@ -1,20 +1,11 @@
 /**
- * Where a single 422 field error should be shown.
+ * Where a single 422 field error should be shown, or null when no control on
+ * screen would render it (the caller then shows it elsewhere). An error set on
+ * a name nothing renders is silently lost.
  *
- * Pure, and its own module, because getting this wrong is silent: the message
- * is written into form state, nothing renders it, and the user presses Save
- * over and over against a form that never explains itself. Three real bugs
- * came from the three answers below.
- *
- * `fields` is the form's own value object, `sent` is the submitted body.
- *
- * `unrendered` is the fourth answer, and the one the other three cannot reach:
- * a field that is in the form's values AND in the body AND still has no control
- * on screen. A worker's `kind` is set by picking a preset rather than by an
- * input, so "you can't run Horizon and a queue worker on the same app" passed
- * both tests above and landed on nothing — Save did nothing, silently, every
- * time. A form that holds a value it never renders has to say so; there is no
- * way to detect it from here.
+ * `fields` is the form's value object, `sent` is the submitted body.
+ * `unrendered` lists fields held in form values with no control on screen
+ * (e.g. a worker's `kind`, set by a preset); this cannot be detected here.
  */
 export function errorTarget(field, fields = {}, sent = {}, unrendered = []) {
   // Nested keys arrive dotted (`settings.token`); the root is what was sent.
@@ -26,24 +17,13 @@ export function errorTarget(field, fields = {}, sent = {}, unrendered = []) {
   const rendered = Object.prototype.hasOwnProperty.call(fields, root);
   const wasSent = Object.prototype.hasOwnProperty.call(sent, root);
 
-  // BOTH tests, because each catches a different disappearance.
-  //
-  // Sent but not in the form: the firewall dialog sends `port_from` while its
-  // input is called `ports`, so setError wrote to a name nothing renders.
-  //
-  // In the form but not sent: the cron dialog sends `system_user_id` and the
-  // API answers on `username` — a real field, on the branch the user is not
-  // looking at.
+  // Both checks: a sent key may have a differently named input, and a form
+  // value may belong to a branch that was not sent.
   if (!rendered || !wasSent) return null;
 
-  // An error on ONE ITEM of a list arrives as `file_excludes.3`. Setting it
-  // there stores it nested, so `errors.file_excludes` becomes `{ 3: {...} }`
-  // and the <FormMessage> bound to the list reads `.message` off an object,
-  // gets undefined, and renders nothing. The control is the list, so that is
-  // where the message belongs.
-  //
-  // Only a NUMERIC last segment folds up: `settings.token` is a real nested
-  // field with its own input and keeps its own error.
+  // A list item error (`file_excludes.3`) folds up to the list, whose
+  // <FormMessage> would otherwise read `.message` off a nested object. Only a
+  // numeric last segment folds; `settings.token` keeps its own error.
   if (parts.length > 1 && /^\d+$/.test(parts.at(-1))) {
     return parts.slice(0, -1).join(".");
   }

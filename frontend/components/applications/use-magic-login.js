@@ -17,38 +17,25 @@ export function launchMagicLogin(session) {
 }
 
 /**
- * One click, and a picker only when there is something to pick.
+ * Magic login: one administrator signs straight in; none or several opens the
+ * picker. The count comes from WP-CLI, so the button shows a wait first
+ * (fetching per row up front would be a WP-CLI call per site).
  *
- * Most WordPress sites have a single administrator, and the dialog asked that
- * site's operator to choose from a list of one — then click again. So the
- * count decides: one administrator signs straight in, none or several opens
- * the picker.
- *
- * The count cannot be known in advance. It comes from WP-CLI on the server, so
- * the button spins briefly before either a tab appears or the dialog does. The
- * alternative was fetching an administrator list for every WordPress site on
- * the applications page, which is a WP-CLI call per row.
- *
- * Lives in a hook because both the site dashboard's button and the row menu
- * need exactly this, and the sequence below is easy to half-copy.
+ * Shared by the site dashboard's button and the row menu.
  */
 export function useMagicLogin(appId) {
   const t = useTranslations("applications.magicLogin");
-  // "fetching" while WordPress lists its administrators, then "signing" only
-  // once there is one to sign in as — the button says which wait it is.
+  // "fetching" while WordPress lists administrators, then "signing"; the button
+  // shows which.
   const [phase, setPhase] = useState(null);
-  // Non-null while the picker is open. Carries the list already fetched, so
-  // the dialog never asks WordPress a second time for what we just read.
+  // Non-null while the picker is open; carries the fetched list so the dialog
+  // does not ask WordPress again.
   const [choice, setChoice] = useState(null);
 
   const start = useCallback(async () => {
     /*
-     * No tab until there is somewhere to send it. Opening about:blank first
-     * kept the click's permission to open a tab, but it showed a blank page
-     * for the whole WP-CLI round trip — and when there were several
-     * administrators it closed that tab again to show the picker. The button
-     * carries the wait instead (`phase`), and the tab opens straight onto
-     * WordPress.
+     * No tab until there is somewhere to send it: the button carries the wait
+     * (`phase`) and the tab opens straight onto WordPress, rather than a blank tab.
      */
     setPhase("fetching");
     try {
@@ -62,11 +49,8 @@ export function useMagicLogin(appId) {
       }
 
       /*
-       * None or several: the picker. Zero is not merged into the error path on
-       * purpose — "this site has no administrators" and "we could not ask
-       * WordPress" look identical as an empty list, and only one of them is the
-       * operator's problem. The dialog says the first; the catch says the
-       * second.
+       * None or several: the picker. Zero is kept apart from the error path: "no
+       * administrators" and "could not ask WordPress" are different problems.
        */
       setChoice({ admins });
     } catch (error) {

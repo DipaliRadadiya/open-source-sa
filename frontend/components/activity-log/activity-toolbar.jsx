@@ -15,15 +15,13 @@ import {
 } from "@/components/ui/select";
 
 /**
- * Search + type/action filters for both activity views. The admin log and a
- * user's own log return the same filter shape, so one toolbar serves both —
- * only the data source differs.
+ * Search + type filter for both activity views (admin log and a user's own
+ * log share one filter shape). `extraQuery` is merged into every navigation so
+ * the account page keeps its tab in the URL.
  *
- * `extraQuery` is merged into every navigation: the account page keeps its tab
- * in the URL, and filtering must not drop it.
+ * No action filter: the API only filters by exact event id, and those ids are
+ * untranslated.
  */
-// No action filter: the server can only filter by an exact event id, and the
-// 166 ids were English in every language. Type and search stay.
 export function ActivityToolbar({ types, searchKey = "searchPlaceholder", extraQuery }) {
   const t = useTranslations("activity");
   const setQuery = useSetQuery();
@@ -31,17 +29,14 @@ export function ActivityToolbar({ types, searchKey = "searchPlaceholder", extraQ
 
   const selectedType = searchParams.get("type") ?? "all";
 
-  // Own-history filters are built from rows that actually exist, so an empty
-  // list means this user has no activity — offering "All types" over nothing
-  // is a control that can only disappoint.
+  // Own-history types come from existing rows, so empty means no activity at all.
   const hasFilters = types.length > 0;
 
   const apply = (updates) => setQuery({ ...updates, ...extraQuery }, { resetPage: true });
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-      {/* The admin log searches actor names too; a personal history has one
-          actor, so promising "or user" there would be a lie. */}
+      {/* The admin log also searches actor names; a personal history has one actor. */}
       <SearchInput placeholder={t(searchKey)} extraQuery={extraQuery} />
 
       {hasFilters ? (
@@ -49,7 +44,7 @@ export function ActivityToolbar({ types, searchKey = "searchPlaceholder", extraQ
           <Select
             value={selectedType}
             onValueChange={(v) =>
-              // Clear the action when the type changes — it may not apply anymore.
+              // The current action may not apply to the new type.
               apply({ type: v === "all" ? undefined : v, action: undefined })
             }
           >

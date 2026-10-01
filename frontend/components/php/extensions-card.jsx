@@ -30,12 +30,9 @@ import {
 import { apiMessage } from "@/lib/api/error-message";
 
 /**
- * Which SAPIs disagree, if any.
- *
- * `sapis` is read-only and only ever drifts when someone ran `phpenmod` or
- * `phpdismod` by hand — the panel's toggle always writes every SAPI. Returns a
- * translation key, or null when everything agrees (the normal case, which says
- * nothing at all).
+ * Which SAPIs disagree, if any. `sapis` only drifts after a manual `phpenmod`
+ * or `phpdismod`; the panel's toggle writes every SAPI. Returns a translation
+ * key, or null when everything agrees.
  */
 function driftOf(extension) {
   const sapis = Object.entries(extension.sapis ?? {});
@@ -49,12 +46,9 @@ function driftOf(extension) {
 }
 
 /**
- * One switch per extension.
- *
- * A row is a PACKAGE, not a module: `php8.4-mysql` provides mysqli, mysqlnd and
- * pdo_mysql, and three switches that must always move together would be a trap
- * rather than a choice. Turning one on installs it if it isn't there — an
- * install control plus a separate enable control is the same trap one level up.
+ * One switch per extension. A row is a PACKAGE, not a module (`php8.4-mysql`
+ * provides mysqli, mysqlnd and pdo_mysql), and turning it on installs it if
+ * needed.
  */
 export function ExtensionsCard({ version, extensions, panelRequired = [], toggleSupported = true, canManage }) {
   const t = useTranslations("php");
@@ -62,22 +56,16 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
   const { refreshAndWait } = useRefresh();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
-  // Which extension is mid-request AND which way it is going, so the row can
-  // say "Enabling…" rather than only spinning. A bare name could not tell the
-  // two apart, and "something is happening here" is the weaker half of the
-  // answer.
+  // Which extension is mid-request and in which direction, so the row can say
+  // "Enabling…" or "Disabling…".
   const [pending, setPending] = useState(null);
 
-  // Two lists, not one. A real server reports 96 extensions of which 16 are
-  // compiled into PHP and can never be switched — and they sorted alphabetically
-  // through the rest, so the first two pages were rows nobody can act on. They
-  // are also the only rows with no description, which is what made the list
-  // lurch between tall and short rows.
+  // Built-ins are listed separately: they can never be switched and have no
+  // description.
   const builtins = extensions.filter((extension) => extension.builtin);
   const changeable = extensions.filter((extension) => !extension.builtin);
 
-  // Counted over what you can actually change. "29 of 96" included the 16 that
-  // are on because they cannot be off.
+  // Counted over what can actually change (excludes built-ins).
   const onCount = changeable.filter((extension) => extension.enabled).length;
 
   const term = query.trim().toLowerCase();
@@ -89,17 +77,13 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
       if (!term) return true;
       if (extension.name.toLowerCase().includes(term)) return true;
       if (extension.modules.some((module) => module.toLowerCase().includes(term))) return true;
-      // Searching the description is the point of having one: you know you want
-      // to resize images, not that the package is called `imagick`.
+      // Descriptions are searched too: users know the purpose, not the package name.
       const key = `extensionInfo.${extension.name}`;
       return t.has(key) && t(key).toLowerCase().includes(term);
     });
 
-  // No pager. Seven pages of a list that already has a search box and an
-  // on/off filter is paging you have to navigate to use a filter you can see —
-  // and it hid the answer to "is mysql on?" behind page 4. The list scrolls
-  // inside a fixed height instead, so the card stays the same size whether it
-  // holds three matches or eighty.
+  // No pager: the list scrolls inside a fixed height, and search and filter
+  // already narrow it.
   const shown = matched;
 
   // Did the search only miss because the answer is compiled into PHP?
@@ -114,8 +98,7 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
     try {
       const response = await setPhpExtension(version, extension.name, next);
       await refreshAndWait();
-      // 202 means apt is queued — minutes, not milliseconds — so the message
-      // says so rather than implying it is already done.
+      // 202 means apt is queued (minutes), so the message says so.
       toast.success(
         response.status === 202
           ? t("extensions.installing", { name: extension.name })
@@ -124,8 +107,7 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
             : t("extensions.disabled", { name: extension.name }),
       );
     } catch (error) {
-      // apiMessage keeps the reference: a 500 here is exactly when someone
-      // will be asked to quote it.
+      // apiMessage keeps the reference, which support may ask for.
       toast.error(apiMessage(error, t("extensions.failed")));
       // A 500 can mean "changed, but PHP was not reloaded", so the switch must
       // re-read what is on disk rather than keep showing the old state.
@@ -142,8 +124,7 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
         <CardDescription>
           {t("extensions.summary", { on: onCount, total: changeable.length })}
         </CardDescription>
-        {/* Said once for the list, not on every row: on OpenLiteSpeed the rows
-            have no switch, and without this that reads as a missing control. */}
+        {/* Said once for the list: on OpenLiteSpeed the rows have no switch. */}
         {!toggleSupported ? (
           <p className="flex items-start gap-2 pt-1 text-xs text-muted-foreground">
             <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
@@ -154,9 +135,7 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
 
       <CardContent className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
-          {/* The shared box, not a bare Input: it brings the search icon and
-              the clear (×), which this had neither of — a mistyped filter could
-              only be undone by selecting the text and deleting it. */}
+          {/* The shared search box, with icon and clear button. */}
           <LocalSearchInput
             value={query}
             onChange={setQuery}
@@ -171,10 +150,8 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
               setFilter(next);
             }}
             variant="outline"
-            // flex-wrap: with `gap-1` these are three separate bordered buttons,
-            // not a joined segmented bar, so they can drop to a second line
-            // rather than run past the card. "Todas / Activadas / Desactivadas"
-            // is wider than the English on a narrow card.
+            // flex-wrap: separate bordered buttons, so they wrap rather than
+            // overflow in longer locales.
             className="flex-wrap gap-1"
           >
             <ToggleGroupItem value="all" className="px-3">
@@ -192,9 +169,8 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
         {shown.length === 0 ? (
           <p className="flex items-center justify-center gap-2 py-8 text-center text-sm text-muted-foreground">
             <SearchX className="size-4 shrink-0" />
-            {/* Searching for a built-in used to answer "no extensions match",
-                which reads as "it is not here" about something PHP always has.
-                Name it instead. */}
+            {/* A search that only matches a built-in names it instead of
+                saying "no extensions match". */}
             {builtinMatch
               ? t("extensions.noMatchesBuiltin", { name: builtinMatch.name })
               : t("extensions.noMatches")}
@@ -204,13 +180,10 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
             <div className="max-h-[32rem] overflow-y-auto rounded-lg border">
             <Table>
               <TableHeader>
-                {/* The right column holds a switch on one row and a badge on the
-                    next; unlabelled, they read as unrelated things. */}
+                {/* Header labels the column of switches and badges. */}
                 <TableRow className="sticky top-0 z-10 bg-muted hover:bg-muted">
                   <TableHead>{t("extensions.colName")}</TableHead>
-                  {/* Narrow on a phone: at 390px a fixed 14rem column pushed the
-                      switches off the screen entirely, so the one control on the
-                      row couldn't be seen or touched. */}
+                  {/* Narrow on a phone so the switches stay on screen. */}
                   <TableHead className="w-24 text-right sm:w-56">
                     {t("extensions.colStatus")}
                   </TableHead>
@@ -219,9 +192,8 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
               <TableBody>
                 {shown.map((extension) => {
                   const required = panelRequired.includes(extension.name);
-                  // One at a time: each switch installs packages and restarts
-                  // PHP, and a second apt run while the first holds the lock
-                  // fails. The others wait, and say for what.
+                  // One at a time: each switch runs apt and restarts PHP, and a
+                  // second apt run would fail on the lock.
                   const reason = !canManage
                     ? t("noPermission")
                     : required
@@ -232,33 +204,24 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
 
                   return (
                     <TableRow key={extension.name}>
-                      {/* min-h keeps every row the same height. Not every
-                          extension has a description, and a list that jumps
-                          between 47px and 61px rows cannot be scanned. */}
+                      {/* min-h keeps every row the same height, with or
+                          without a description. */}
                       <TableCell className="max-w-0">
                         <span className="flex min-h-9 flex-col justify-center">
                         <span className="font-mono text-sm font-medium">{extension.name}</span>
 
-                        {/* What it's FOR, in plain words. Only the extensions we
-                            have real copy for get a line; a generic filler would
-                            be worse than none. Wrapped, not truncated: at 1280
-                            every locale fits on one line anyway, and on a phone
-                            truncation cut most of the sentence with no way to
-                            read the rest by touch. `max-w-0` on the cell keeps it
-                            from widening the table; `whitespace-normal` undoes
-                            the nowrap every TableCell carries. */}
+                        {/* Only extensions with real copy get a line. Wraps
+                            instead of truncating (unreadable on touch); max-w-0
+                            keeps the column from widening the table,
+                            whitespace-normal undoes TableCell's nowrap. */}
                         {t.has(`extensionInfo.${extension.name}`) ? (
                           <span className="block text-xs whitespace-normal text-muted-foreground">
                             {t(`extensionInfo.${extension.name}`)}
                           </span>
                         ) : null}
 
-                        {/* apt's last words, while this extension is installing
-                            and after it has failed. A toast said "installing"
-                            and then vanished; when the install failed minutes
-                            later there was nothing on the row to say why, and
-                            "could not get lock" and "unable to locate package"
-                            need different answers. */}
+                        {/* apt's output while installing and after a failure,
+                            since different failures need different fixes. */}
                         {extension.status === "installing" || extension.status === "failed" ? (
                           <span className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                             {extension.status === "installing" ? (
@@ -266,8 +229,7 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
                             ) : null}
                             {extension.status === "failed" && extension.message ? (
                               // The server's sentence, not apt's last line: after
-                              // `reload_failed` apt succeeded and its tail reads
-                              // as fine.
+                              // `reload_failed` apt succeeded and its tail looks fine.
                               <span className="text-destructive">
                                 {extension.message}
                                 {extension.reference ? (
@@ -290,26 +252,13 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
                       </TableCell>
 
                       <TableCell className="text-right">
-                        {/* Compiled into PHP: nothing to switch and the API
-                            refuses. Listed anyway so searching for it finds it.
-                            The old "Built in" tag beside the name said the same
-                            thing twice — this column is the answer. */}
-                        {/* One shape for every row in this list: a switch, on
-                            the same spot, every time. A panel-required row used
-                            to swap the switch for an amber pill, so the right
-                            edge of the table alternated between three unrelated
-                            shapes and could not be scanned. It is still locked —
-                            disabled, with the reason on hover — but it now reads
-                            as "this one is fixed on", not as a different kind of
-                            thing. */}
-                        {/* A spinner beside it, not only a disabled switch.
-                            Enabling an extension restarts FPM, so the request
-                            runs for a second or two — and a switch that stops
-                            responding without saying anything reads as broken,
-                            which is exactly when someone clicks it again. */}
+                        {/* Every row gets the same control in the same spot;
+                            locked rows are disabled with the reason on hover.
+                            A spinner shows while the request runs (enabling
+                            restarts FPM). */}
                         {!toggleSupported && extension.installed ? (
                           // OpenLiteSpeed: installed means on, and it cannot be
-                          // switched off. No switch, so none can be refused.
+                          // switched off.
                           <span className="text-xs text-muted-foreground">{t("extensions.alwaysOn")}</span>
                         ) : !toggleSupported ? (
                           // Not installed yet: installing still works, but a
@@ -336,12 +285,9 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
                           {pending?.name === extension.name ? (
                             <span className="flex min-w-0 items-center gap-1.5 text-xs text-foreground">
                               <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
-                              {/* The word, not only the glyph. A muted 14px
-                                  spinner tucked against the switch reads as part
-                                  of the switch: it was reported as "no loading
-                                  indicator" while it was on screen. Hidden on a
-                                  phone, where the whole column is 96px and the
-                                  spinner has to carry it alone. */}
+                              {/* The word as well as the spinner, which alone
+                                  reads as part of the switch. Hidden on a phone,
+                                  where the column is too narrow. */}
                               <span className="hidden truncate sm:inline">
                                 {pending.on ? t("extensions.enabling") : t("extensions.disabling")}
                               </span>
@@ -353,19 +299,15 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
                               onCheckedChange={() => toggle(extension)}
                               disabled={Boolean(reason) || pending?.name === extension.name}
                               aria-label={t("extensions.toggle", { name: extension.name })}
-                              // Screen readers get the same news the spinner
-                              // gives everyone else.
                               aria-busy={pending?.name === extension.name || undefined}
                             />
                           </ReasonTooltip>
                         </span>
                         )}
 
-                        {/* Sits with the switch because it explains the switch:
-                            `enabled` is all-or-nothing, so a manual `phpdismod`
-                            leaves this reading "off" while the extension is still
-                            live for websites — site works, cron job fails. Rare
-                            enough that it costs a taller row only when it fires. */}
+                        {/* `enabled` is all-or-nothing, so a manual `phpdismod`
+                            can show "off" while the extension is still live for
+                            websites. */}
                         {driftOf(extension) ? (
                           <span className="mt-1 flex items-center justify-end gap-1.5 text-xs text-warning">
                             <TriangleAlert className="size-3.5 shrink-0" />
@@ -379,14 +321,12 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
               </TableBody>
             </Table>
             </div>
-            {/* The cut-off row at the bottom looked like a rendering fault. */}
+            {/* Fade so the cut-off last row reads as scrollable. */}
             <div className="pointer-events-none absolute inset-x-px bottom-px h-8 rounded-b-lg bg-gradient-to-t from-background to-transparent" />
           </div>
         )}
 
-        {/* The ones compiled into PHP. Kept — searching for `json` should find
-            it and be told why there is no switch — but folded away, because
-            there is nothing to decide about any of them. */}
+        {/* Built-ins: kept so search finds them, folded since nothing can change. */}
         {builtins.length > 0 ? (
           <details className="group rounded-lg border">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground">

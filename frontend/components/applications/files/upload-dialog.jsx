@@ -19,9 +19,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-// Retry-After is not in the API's CORS exposed headers, so the browser hides
-// it; without it, wait in steps. The server's window is a minute, so four
-// steps always outlast it.
+// Retry-After is not in the API's CORS exposed headers, so the browser hides it;
+// wait in steps instead. The server's window is a minute, so four steps outlast it.
 const RATE_LIMIT_WAIT_SECONDS = 20;
 const RATE_LIMIT_MAX_WAITS = 4;
 
@@ -30,11 +29,9 @@ function retryAfterSeconds(error) {
   return Number.isFinite(header) && header > 0 && header <= 120 ? Math.ceil(header) : RATE_LIMIT_WAIT_SECONDS;
 }
 
-// The API takes one file per request and REFUSES a name that already exists
-// in the folder (`upload_exists`) — this orchestrates multiple drops sequentially against that
-// single-file endpoint, with its own progress/success/fail per file, so a
-// five-file drop doesn't read as "it uploaded one file and silently ignored
-// the rest."
+// The API takes one file per request and REFUSES an existing name
+// (`upload_exists`); this sends multiple files sequentially with per-file
+// progress and outcome.
 export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = null, existingNames = [], onSuccess }) {
   const t = useTranslations("applications.files");
   const format = useFormatter();
@@ -43,36 +40,25 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const inputRef = useRef(null);
-  // The run in progress, so Stop can cut it off mid-file. Both upload paths
-  // honour the signal; the chunked one also deletes its half-written parts.
+  // The run in progress, so Stop can cut it off mid-file. Both upload paths honour
+  // the signal; the chunked one also deletes its half-written parts.
   const abortRef = useRef(null);
-  // Tracks which `initialFiles` reference has already been folded into
-  // `items`, so a drop on the panel (a fresh FileList each time, even while
-  // this dialog is already open) is seeded exactly once — a render-phase
-  // update per the "adjusting state when a prop changes" pattern, not an
-  // effect, since seeding on every commit rather than the actual change would
-  // re-add the same files after they'd already been removed from the list.
+  // Which `initialFiles` reference has been folded into `items`, so each panel drop
+  // (a fresh FileList) is seeded exactly once. Render-phase "adjust state on prop
+  // change", not an effect, which would re-add files the user removed.
   const [seenInitialFiles, setSeenInitialFiles] = useState(null);
 
-  // name+size+lastModified, not object identity — a dropped screenshot is a
-  // known case where the OS hands the browser the same file twice in one
-  // `dataTransfer.files` (multiple pasteboard representations resolving to
-  // two File objects), and a user re-dropping the same file they already
-  // queued shouldn't double it either.
+  // name+size+lastModified, not identity: the OS can hand over the same dropped
+  // file twice (e.g. screenshots), and a re-drop should not double it.
   function fileKey(file) {
     return `${file.name}:${file.size}:${file.lastModified}`;
   }
 
   function addFiles(fileList) {
-    // Copied out of the FileList *before* the state updater, not inside it.
-    // `FileList` is live: `<input>.value = ""` empties it, and a dropped
-    // `dataTransfer` is neutered when the event ends. React runs an updater
-    // during the next render — after both of those have happened — so reading
-    // the list in there iterated nothing and the picked files vanished with no
-    // error. It survived review because the very first pick works: with no
-    // update queued React evaluates the updater eagerly, inside the call,
-    // while the list still has contents. Every pick after that was silently
-    // dropped.
+    // Copied out of the FileList *before* the state updater: `FileList` is live
+    // (`<input>.value = ""` empties it, a drop's `dataTransfer` is neutered after the
+    // event), and React may run the updater later. The first pick works because
+    // React evaluates it eagerly; later picks would be silently empty.
     const picked = Array.from(fileList);
     if (!picked.length) return;
 
@@ -85,11 +71,8 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
         if (seen.has(key)) continue;
         seen.add(key);
         /*
-         * Said when the file is picked, not after it has been sent: the server
-         * refuses a name that is already taken here, and the dialog used to
-         * promise it would overwrite instead. Only catches names in the
-         * listing — a hidden file the reader has hidden still meets the
-         * server's own refusal, which is shown on the row the same way.
+         * Flagged when picked: the server refuses a taken name. Only names in the listing
+         * are known; a hidden file still meets the server's refusal, shown on the row.
          */
         const taken = existing.has(file.name);
         next.push({
@@ -108,17 +91,12 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
     checkSpace();
   }
 
-  // Flags files the disk cannot take, at the moment they are picked rather
-  // than partway through sending them — uploads here are unbounded in size,
-  // so "we ran out of room" can otherwise arrive an hour in.
+  // Flags files the disk cannot take when picked, not partway through sending
+  // (uploads are unbounded in size). Checked against the cumulative size of
+  // everything queued.
   //
-  // Checked against the *cumulative* size of everything still queued, not
-  // each file alone: five 3 GB files fit individually and not together.
-  //
-  // Advisory. The server re-checks on every write, because this number is
-  // stale the moment it arrives — every other site on the box shares the
-  // disk and is writing to it too. A failure here is therefore ignored: it
-  // must never be the reason an upload the disk could take is refused.
+  // Advisory: the server re-checks every write, since other sites share the disk.
+  // A failure here is ignored so it never blocks an upload that would fit.
   async function checkSpace() {
     let usable;
     try {
@@ -132,14 +110,13 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
       return prev.map((item) => {
         if (item.status === "done" || item.nameTaken) return item;
 
-        // A file that does not fit is never sent, so it uses none of the room:
-        // counting it anyway blocked every smaller file listed after it.
+        // A file that does not fit is never sent, so it uses no room; counting it would
+        // block smaller files after it.
         if (queued + item.file.size > usable) {
           return { ...item, status: "error", error: t("uploadDialog.noSpace"), spaceBlocked: true };
         }
         queued += item.file.size;
-        // Room again — because something ahead of it was removed, or the
-        // disk was freed up elsewhere.
+        // Room again: something ahead was removed or disk space was freed.
         return item.spaceBlocked
           ? { ...item, status: "pending", error: null, spaceBlocked: false }
           : item;
@@ -154,7 +131,7 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
 
   function removeItem(id) {
     setItems((prev) => prev.filter((i) => i.id !== id));
-    // Dropping one file can make room for the ones behind it.
+    // Removing one file can make room for the ones behind it.
     checkSpace();
   }
 
@@ -192,16 +169,12 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
     setUploading(true);
     let stopped = false;
     let anySucceeded = false;
-    // Tracked separately from `items` state — the closure over `items` here
-    // stays the array from when this run started, never the `setItems`
-    // updates made along the way, so it can't be used to tell afterward which
-    // files actually went through.
+    // Tracked separately: the `items` closure is the snapshot from when this run
+    // started and cannot tell which files went through.
     const succeededNames = [];
-    // Counted here rather than read back off `items` afterwards, for the same
-    // reason: the closure is the snapshot from before the run.
+    // Counted here for the same reason: the closure predates the run.
     let failedCount = 0;
-    // A taken name is skipped on purpose, not a failure — the toast said
-    // "1 failed" for a file the dialog had already said it would not send.
+    // A taken name is skipped deliberately, not counted as a failure.
     let skippedCount = 0;
     for (const item of items) {
       if (item.status === "done") {
@@ -209,8 +182,8 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
         succeededNames.push(item.file.name);
         continue;
       }
-      // Known not to fit. Sending it anyway would fill the disk that every
-      // hosted site shares, only to be refused at the last chunk.
+      // Taken names and files known not to fit are skipped; sending them would fail (or
+      // fill the shared disk) only to be refused at the end.
       if (item.nameTaken) {
         skippedCount += 1;
         continue;
@@ -233,19 +206,16 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
           update({ status: "done", progress: 1 });
         } catch (error) {
           /*
-           * The server takes a fixed number of uploads a minute, so a folder
-           * of twelve files used to end with four rows reading "Too Many
-           * Attempts." Waiting is the whole fix — a refused request does not
-           * count against the limit, so trying again after the window loses
-           * nothing.
+           * The server allows a fixed number of uploads per minute. A refused request does
+           * not count against the limit, so waiting and retrying loses nothing.
            */
           if (!controller.signal.aborted && error?.response?.status === 429 && waits < RATE_LIMIT_MAX_WAITS) {
             waits += 1;
             await countDown(retryAfterSeconds(error), update, controller.signal);
             if (!controller.signal.aborted) continue;
           }
-          // Stopped by the reader, not refused by the server: the file goes
-          // back to waiting, with no error on it, so Upload can pick it up again.
+          // Stopped by the user, not refused: the file goes back to waiting with no error,
+          // so Upload can resume it.
           if (controller.signal.aborted) {
             stopped = true;
             update({ status: "pending", progress: 0, error: null, waitSeconds: 0 });
@@ -267,11 +237,7 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
     const uploaded = succeededNames.length;
     const clean = !stopped && !failedCount && uploaded > 0 && !skippedCount;
     const report = () => {
-      // Say what happened. Previously nothing did: the only completion signal
-      // was a row's spinner turning into a tick, which is invisible if the list
-      // has scrolled, and the auto-close never fired at all — it tested the
-      // `items` closure captured before the run, where every item is still
-      // "pending", so the "everything finished" condition could never be true.
+      // Report the outcome explicitly; a row's tick is invisible once the list scrolls.
       if (stopped) {
         toast.info(t("uploadDialog.stopped", { done: uploaded, count: items.filter((i) => !i.nameTaken).length }));
         return;
@@ -298,17 +264,13 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
     };
 
     if (anySucceeded) {
-      // After the list has re-read, not before: closing first showed a list
-      // without the new file for seconds on a real server.
+      // Close after the list has re-read, so the new file is already shown.
       refreshThen(() => {
-        // Said once the list shows the files: the toast used to land ~1.5 s
-        // before the rows did.
+        // Reported once the list shows the files.
         report();
-        // Only unambiguous with exactly one file — a multi-file batch has no
-        // single row that "the" upload landed at.
+        // Only unambiguous with exactly one file.
         if (succeededNames.length === 1) onSuccess?.(joinPath(path, succeededNames[0]));
-        // Only on a clean run — a partial failure has to stay on screen,
-        // since the per-file reason is only shown here.
+        // Only on a clean run: per-file failure reasons are only shown here.
         if (clean) handleOpenChange(false);
       });
     } else {
@@ -316,27 +278,24 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
     }
   }
 
-  // A file known not to fit is skipped like a taken name, so it is not "to do":
-  // counting it left Upload enabled with nothing it could send.
+  // A file known not to fit is skipped like a taken name; counting it as pending
+  // would leave Upload enabled with nothing to send.
   const hasPending = items.some(
     (i) => !i.nameTaken && !i.spaceBlocked && (i.status === "pending" || i.status === "error"),
   );
 
-  // Batch progress, weighted by bytes rather than by file count: with a 2 GB
-  // file next to four 10 KB ones, "4 of 5 done" would sit at 80% for almost
-  // the entire upload and then crawl. A finished file counts whole, so the
-  // total never goes backwards when one completes.
-  // A file refused for its name is never sent, so it is not part of "how far".
+  // Batch progress weighted by bytes, not file count, so one large file does not
+  // stall the bar at 80%. A finished file counts whole so the total never goes
+  // backwards. Name-refused files are never sent and excluded.
   const totalBytes = items.reduce((sum, i) => (i.nameTaken ? sum : sum + i.file.size), 0);
   const sentBytes = items.reduce(
-    // A failed file sent nothing that stayed, so it adds nothing — otherwise
-    // a run where four files were refused still ended at 100%.
+    // A failed file adds nothing, or a run with failures would still reach 100%.
     (sum, i) =>
       sum + (i.status === "done" ? i.file.size : i.status === "error" ? 0 : i.file.size * (i.progress || 0)),
     0,
   );
   const doneCount = items.filter((i) => i.status === "done").length;
-  // Same set the byte total uses: a file refused for its name is never sent.
+  // Same set as the byte total: name-refused files are never sent.
   const sendable = items.filter((i) => !i.nameTaken).length;
   const overallPercent = totalBytes ? Math.round((sentBytes / totalBytes) * 100) : 0;
 
@@ -444,10 +403,7 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
                         style={{ width: `${Math.round(item.progress * 100)}%` }}
                       />
                     </div>
-                    {/* How far along, in bytes as well as percent: on a file
-                        large enough to need chunking, a bar that has barely
-                        moved for a minute is indistinguishable from a stall
-                        unless the number behind it is visible. */}
+                    {/* Bytes as well as percent, so a large chunked upload does not look stalled. */}
                     <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground tabular-nums">
                       <span>
                         {formatBytes(item.file.size * (item.progress || 0), format)} /{" "}

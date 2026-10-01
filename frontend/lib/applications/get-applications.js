@@ -17,16 +17,8 @@ import { applicationStagingResponseSchema } from "@/lib/schemas/application-stag
 
 
 /**
- * One page of the applications list.
- *
- * Search, both filters and the sort are the API's, not the browser's: it pages
- * at ten, so filtering the page we happen to hold would answer "which of these
- * ten" while the reader is asking "which of my sites".
- *
- * Both filters are validated server-side against the real sets, so a stale
- * value in the URL is a 422 rather than an empty list — which is the point.
- * "You have no applications" and "that filter matched nothing" look identical
- * on screen and mean completely different things.
+ * One page of the applications list. Search, filters and sort run in the API
+ * (it paginates). A stale filter value is a 422, not an empty list.
  */
 export const getApplications = cache(async function getApplications(query = "") {
   const result = await read("/applications", applicationsResponseSchema, {
@@ -43,16 +35,9 @@ export const getApplications = cache(async function getApplications(query = "") 
 });
 
 /**
- * Every application, for the pickers — a backup filter's dropdown, the clone
- * target list — which need the whole set rather than a page of it.
- *
- * Capped at the API's own maximum of 100. A server with more sites than that
- * would silently lose the tail here, which is worth knowing about; the honest
- * fix at that point is a searchable combobox that queries the API, not a
- * bigger number.
- *
- * Takes no arguments so React's `cache` actually dedupes it — three of these
- * callers run on the same request.
+ * Every application, for pickers. Capped at the API maximum of 100: beyond
+ * that the tail is lost, and the fix is a searchable combobox. Argument-free
+ * so `cache` dedupes it across callers.
  */
 export const getAllApplications = cache(async function getAllApplications() {
   const result = await read("/applications", applicationsResponseSchema, {
@@ -66,31 +51,21 @@ export const getSiteTypes = cache(async function getSiteTypes() {
   return { siteTypes: result.data?.site_types ?? [], failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 });
 
-// Server-wide catalog, identical for every application — cached per request so
-// the bot list is fetched once even if something else on the page asks for it.
+// Server-wide catalog, cached per request.
 export const getAiBotPolicies = cache(async function getAiBotPolicies() {
   const result = await read("/ai-bot-policies", aiBotPoliciesResponseSchema);
   return { policies: result.data?.ai_bot_policies ?? null, failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 });
 
-// Cached per request: the layout needs the name for the breadcrumb, the page
-// needs the record, and `generateMetadata` needs the title — three asks for one
-// site that used to be three round-trips.
+// Cached per request: layout, page and `generateMetadata` all ask for it.
 export const getApplication = cache(async function getApplication(id) {
   const result = await read(`/applications/${id}`, applicationResponseSchema);
   return { application: result.data?.application ?? null, failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 });
 
 /**
- * What the server thinks is wrong with this site.
- *
- * Not cached: the page's own warnings are derived from data it already holds,
- * but these are live checks — a certificate's remaining days and the disk's
- * percentage both move on their own.
- *
- * A failure returns nothing rather than an error. The strip is a summary; a
- * site whose issue check had a wobble should show the rows the page worked out
- * for itself, not an error banner over a page that otherwise loaded.
+ * What the server thinks is wrong with this site. Not cached: live checks.
+ * A failure returns nothing, so the page falls back to its own warnings.
  */
 export async function getApplicationIssues(id) {
   const { data, failed } = await read(
@@ -100,15 +75,14 @@ export async function getApplicationIssues(id) {
   return { issues: data?.issues ?? [], healthy: data?.healthy ?? true, failed };
 }
 
-// The firewall's own read. Same ApplicationResource, but with `wafRules`
-// loaded — the exceptions and custom rules are absent from every other
-// application endpoint, so this is not interchangeable with getApplication.
+// Same ApplicationResource but with `wafRules` loaded; not interchangeable
+// with getApplication.
 export async function getApplicationWaf(id) {
   const result = await read(`/applications/${id}/waf`, applicationResponseSchema);
   return { application: result.data?.application ?? null, failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 }
 
-// Server-wide, identical for every application — cached per request.
+// Server-wide, cached per request.
 export const getWafOptions = cache(async function getWafOptions() {
   const result = await read("/waf-options", wafOptionsResponseSchema);
   return {
@@ -120,17 +94,11 @@ export const getWafOptions = cache(async function getWafOptions() {
   };
 });
 
-/**
- * One site's fail2ban: whether it is watching, and what it has caught.
- *
- * Read live on the server for every load — bans expire on their own and new
- * ones arrive without anyone asking, so a cached answer here is a wrong one.
- */
+/** One site's fail2ban config and bans. Not cached: bans change constantly. */
 export async function getApplicationFail2ban(id) {
   const result = await read(`/applications/${id}/fail2ban`, applicationFail2banResponseSchema);
   return {
-    // Null means "never set up", which the screen says differently from
-    // "set up and switched off" — there is no such state any more.
+    // Null means "never set up".
     config: result.data?.fail2ban ?? null,
     jailTemplate: result.data?.jail_template ?? "",
     filterTemplate: result.data?.filter_template ?? "",
@@ -144,9 +112,7 @@ export async function getApplicationFail2ban(id) {
 
 /**
  * One site's PHP: version, limits, pool and the server's memory budget.
- *
- * Only for site types that serve PHP — the permission middleware answers 404
- * for the rest, which is a real answer rather than a failure.
+ * Non-PHP site types get a 404, which is an answer, not a failure.
  */
 export async function getApplicationPhp(id) {
   const result = await read(`/applications/${id}/php`, applicationPhpResponseSchema);
@@ -174,11 +140,8 @@ export const getServerCapabilities = cache(async function getServerCapabilities(
 });
 
 /**
- * One site's staging copy, if it has one.
- *
- * A 404 is an answer rather than a failure: staging is WordPress-only, so any
- * other site type is told it cannot have one instead of being shown an error
- * it can do nothing about.
+ * One site's staging copy, if any. A 404 means unsupported (staging is
+ * WordPress-only), not a failure.
  */
 export async function getApplicationStaging(id) {
   const result = await read(`/applications/${id}/staging`, applicationStagingResponseSchema);
@@ -193,28 +156,10 @@ export async function getApplicationStaging(id) {
 }
 
 /**
- * Every active phpMyAdmin site on this server.
- *
- * Asks the same question the SSO endpoint asks before it will issue a token:
- *
- *     Application::where('site_type', 'phpmyadmin')->where('status', Active)
- *
- * Without it the database pages cannot tell "open phpMyAdmin" from "there is
- * no phpMyAdmin to open", so the button was offered either way and you found
- * out by being refused. Matching the backend's own condition is what keeps the
- * two answers from drifting apart.
- *
- * A failed request returns `null`, NOT false: "we could not ask" and "there
- * isn't one" are different, and only the second should change what the button
- * says. Callers treat null as "carry on as before".
- *
- * The whole list, not just the first: a server can have several, and the
- * button has to know whether there is a choice to offer before it is clicked.
- * The SSO endpoint takes the lowest id when none is named, so an unasked
- * choice is stable but not necessarily the one meant.
- *
- * `cache`d and argument-free so the list page and a detail page on the same
- * request share one call.
+ * Every active phpMyAdmin site, matching the SSO endpoint's condition
+ * (`site_type` phpmyadmin, status Active). Returns the whole list since a
+ * server can have several. A failed request returns `null`, NOT false.
+ * Argument-free so `cache` dedupes it.
  */
 export const getPhpmyadminSite = cache(async function getPhpmyadminSite() {
   const result = await read("/applications", applicationsResponseSchema, {

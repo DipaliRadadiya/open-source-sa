@@ -19,25 +19,22 @@ import { apiMessage } from "@/lib/api/error-message";
  * "Start on boot" — enable/disable, driven by the service's own `actions` so a
  * protected unit (the panel's own web server) can't be switched off.
  *
- * Turning it ON runs immediately; turning it OFF asks first. The asymmetry is
- * deliberate: the cost is asymmetric. Forgetting you disabled a database is
- * something you discover at the next reboot, which is the worst time to find it.
+ * Turning it ON runs immediately; turning it OFF asks first, since a disabled
+ * service is only noticed at the next reboot.
  */
 export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
   const t = useTranslations("services");
   const { refreshAndWait } = useRefresh();
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  // The value we asked for, until the server agrees with it.
+  // The requested value, until the server agrees with it.
   const [asked, setAsked] = useState(null);
 
   const allowed = service.actions ?? [];
   const canToggle =
     canManage && allowed.includes(service.enabled ? "disable" : "enable");
 
-  // Same reason as the cron and system-user switches: `service.enabled` only
-  // changes when `router.refresh()` lands, and enabling a unit is not instant,
-  // so the knob sat in its old position for the whole call.
+  // Optimistic: `service.enabled` only changes once `router.refresh()` lands.
   const shown =
     asked !== null && asked !== service.enabled ? asked : service.enabled;
 
@@ -50,7 +47,7 @@ export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
       await refreshAndWait();
       toast.success(t(`toast.${action}`, { name: service.label }));
     } catch (error) {
-      // Put the knob back where it was: the change did not happen.
+  // Revert: the change did not happen.
       setAsked(null);
       const data = error.response?.data;
       showActionError({
@@ -74,17 +71,14 @@ export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
     }
   }
 
-  // Nothing to enable: an installing or failed-to-install row has no unit yet,
-  // so `actions` is empty and the switch would render permanently disabled —
-  // the pale half-lit control this component already refuses to draw below. A
-  // dash, matching the empty usage figures on the same row.
+  // Installing or failed-install rows have no unit yet (`actions` is empty),
+  // so a dash is shown, matching the empty usage figures on the row.
   if (service.state && service.state !== "installed") {
     return <span className="text-muted-foreground">—</span>;
   }
 
-  // A service that can never be switched off shouldn't be represented by a
-  // switch. Disabled-and-on renders as a pale half-lit control that reads as a
-  // glitch — "is that on? loading?" — so the fact is stated in words instead.
+  // A service that can never be switched off is stated in words; a
+  // disabled-and-on switch reads as a glitch.
   if (service.protected) {
     return (
       <Tooltip>
@@ -114,8 +108,7 @@ export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
 
   return (
     <>
-      {/* A locked switch with no explanation reads as a bug. ReasonTooltip,
-          not Tooltip: a plain tooltip never opens on a tap. */}
+      {/* ReasonTooltip, not Tooltip: a plain tooltip never opens on a tap. */}
       <ReasonTooltip reason={canToggle ? null : t("noPermission")}>{control}</ReasonTooltip>
 
       <ConfirmDialog

@@ -7,15 +7,13 @@ export const api = axios.create({
   withCredentials: true,
   xsrfCookieName: "XSRF-TOKEN",
   xsrfHeaderName: "X-XSRF-TOKEN",
-  // Since Axios 1.6, the XSRF header is only auto-attached to same-origin
-  // requests unless this is set. Our API is a different origin (Sanctum SPA),
-  // so this is required or every mutation fails CSRF (419).
+  // Axios >= 1.6 only attaches the XSRF header same-origin unless this is set;
+  // the API is a different origin (Sanctum SPA), so without it mutations 419.
   withXSRFToken: true,
 });
 
-// Stamp the user's chosen locale (NEXT_LOCALE cookie) on every request so the
-// backend localizes validation/error/success messages to match the UI. Falls
-// back to the browser's own Accept-Language when the cookie isn't set.
+// Send the UI locale (NEXT_LOCALE cookie) so backend messages match; otherwise
+// the browser's own Accept-Language applies.
 api.interceptors.request.use((config) => {
   if (typeof document !== "undefined") {
     const match = document.cookie.match(/(?:^|;\s*)NEXT_LOCALE=([^;]+)/);
@@ -40,11 +38,8 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const config = error.config;
 
-    // 419 = the XSRF token expired with the Laravel session. It was only ever
-    // fetched at login, so every mutation started failing a couple of hours in
-    // and the user's only escape was to sign out and back in. Fetch a fresh
-    // token and replay the request once — `_csrfRetried` makes it exactly once,
-    // so a genuinely rejected token surfaces instead of looping.
+    // 419 = expired XSRF token: fetch a fresh one and replay exactly once
+    // (`_csrfRetried`), so a genuinely rejected token surfaces instead of looping.
     if (status === 419 && config && !config._csrfRetried && typeof window !== "undefined") {
       config._csrfRetried = true;
       try {

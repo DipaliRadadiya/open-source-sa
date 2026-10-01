@@ -6,21 +6,13 @@ import { ServiceStatusBadge } from "@/components/services/service-status-badge";
 import { installHome } from "@/lib/services/install-home";
 
 /**
- * The services that need a person, listed rather than tabulated.
+ * Services that need attention, listed rather than tabulated (they have no
+ * usage figures worth columns). Two kinds:
  *
- * These rows have nothing to put in a Memory, CPU or Start-on-boot column: a
- * failed install has no unit at all, and a crashed one has no measurements
- * worth comparing. Kept in the table they were four columns of em-dashes with
- * the one useful thing — how to fix it — pushed to the far right edge.
- *
- * Two kinds of trouble live here, because both need the same thing from the
- * reader (attention) while needing different things done:
- *
- *   install_failed  never installed. There is no unit to start, so the only
- *                   move is the screen that owns the install — which is not
- *                   always the setup page. See lib/services/install-home.js.
- *   crashed unit    installed and not running. Start/restart are real options
- *                   and its log exists, so both are offered.
+ *   install_failed  never installed; the only move is the screen that owns the
+ *                   install (see lib/services/install-home.js).
+ *   crashed unit    installed and not running; start/restart and its log are
+ *                   offered.
  */
 export function ServiceAttentionList({ services, phpVersions = [], canManage, busy, setRowBusy }) {
   const t = useTranslations("services");
@@ -31,18 +23,15 @@ export function ServiceAttentionList({ services, phpVersions = [], canManage, bu
         const failedInstall = service.state === "install_failed";
         const home = installHome(service.key);
 
-        // Say what is wrong in one line. A specific reason from the API is
-        // always better than ours; `unknown` is its generic bucket, whose
-        // sentence adds nothing to the badge and points at a reference this
-        // screen does not have.
+        // The API's specific reason when it has one; its generic `unknown`
+        // bucket adds nothing, so ours is used then.
         const reason = failedInstall
           ? service.install_reason && service.install_reason !== "unknown"
             ? service.install_message
             : t("state.install_failed")
           : (service.log_keys ?? []).length > 0
             ? t("attention.unitFailed")
-            // No log the panel can open (MariaDB, PostgreSQL): "Its log will
-            // say why" pointed at nothing on this screen.
+            // No log the panel can open (MariaDB, PostgreSQL).
             : t("attention.unitFailedNoLog");
 
         return (
@@ -52,9 +41,7 @@ export function ServiceAttentionList({ services, phpVersions = [], canManage, bu
           >
             <div className="min-w-0 space-y-1">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
-                {/* text-sm, matching the running table on this same page. Left
-                    at the default it was 16px — the size of the section heading
-                    above it — so a row label competed with a section title. */}
+                {/* text-sm, matching the running table on this page. */}
                 <p className="text-sm font-medium">{service.label}</p>
                 <ServiceStatusBadge
                   status={service.status}
@@ -65,16 +52,13 @@ export function ServiceAttentionList({ services, phpVersions = [], canManage, bu
               <p className="text-sm whitespace-normal wrap-anywhere text-muted-foreground">
                 {reason}
               </p>
-              {/* Only for a real unit: the file is what you would type into
-                  systemctl, and a failed install has no file to name. */}
+              {/* Only for a real unit: a failed install has no unit file. */}
               {!failedInstall ? (
                 <p className="truncate font-mono text-xs text-muted-foreground">{service.unit}</p>
               ) : null}
             </div>
 
-            {/* The fix, at a fixed place on every row. A button rather than a
-                text link — this is the primary action of the row, and the whole
-                reason the row is in this section. */}
+              {/* The fix, at a fixed place on every row. */}
             <div className="flex shrink-0 items-center gap-1">
               {failedInstall ? (
                 canManage ? (
@@ -86,9 +70,8 @@ export function ServiceAttentionList({ services, phpVersions = [], canManage, bu
                 ) : null
               ) : (
                 <>
-                  {/* No logs link of our own here: ServiceActions already
-                      renders one when `log_keys` is non-empty, and adding a
-                      second put two identical icons on the row. */}
+                  {/* No separate logs link: ServiceActions renders one when
+                      `log_keys` is non-empty. */}
                   <ServiceActions
                     service={service}
                     canManage={canManage}

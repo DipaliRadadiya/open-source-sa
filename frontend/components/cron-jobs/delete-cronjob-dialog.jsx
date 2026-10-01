@@ -7,9 +7,8 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { apiMessage } from "@/lib/api/error-message";
 import { useRefresh } from "@/hooks/use-refresh";
 
-// No type-the-name gate here (unlike system users): deleting a cron job removes
-// a schedule, not an account and its data, and it's re-creatable from the row's
-// own values. The confirm step alone is proportionate.
+// No type-the-name gate (unlike system users): a cron job is easily
+// re-created, so a plain confirm is proportionate.
 export function DeleteCronjobDialog({ job, open, onOpenChange, prevPage = null }) {
   const t = useTranslations("cronJobs");
   const { refreshThen, navigateThen } = useRefresh();

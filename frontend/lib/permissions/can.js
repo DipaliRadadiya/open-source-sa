@@ -8,10 +8,7 @@ export function findPermission(catalog, name, level = "server") {
 }
 
 // True when the caller holds `action` (view | manage) on the named feature.
-// `manage` implies `view`.
-// `level` matters for the app_* features: an application permission and a
-// server one can share neither name nor meaning ("this site's domains" vs
-// "every application"), so the lookup has to say which it wants.
+// `manage` implies `view`. Pass `level: "application"` for app_* features.
 export function can(catalog, name, action = "view", level = "server") {
   const p = findPermission(catalog, name, level);
   if (!p) return false;

@@ -26,36 +26,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 /**
- * One storage destination.
+ * One storage destination: name first, then bucket and prefix (destinations
+ * often differ only by prefix). On a phone everything stacks under one indent.
  *
- * The name leads, because that is what someone picks from the dropdown on a
- * backup target later. Underneath it is the thing that actually identifies
- * where the data goes — bucket, and the prefix inside it — since two
- * destinations can easily differ only by prefix.
- *
- * Two layouts, one set of content. On a wide screen it reads left to right:
- * identity, then region and age, then the actions. On a phone everything
- * stacks into ONE indent under the icon and the actions drop to their own
- * line — the first attempt let the actions share the top line and put the
- * facts flush against the card edge, which gave the row four different left
- * edges and read as clutter.
- *
- * The test verdict SURVIVES a reload. It used to be deliberately ephemeral,
- * because the API stored nothing and a badge outliving the request would have
- * been claiming knowledge the panel did not have. The API now persists it —
- * and clears it whenever a credential, endpoint, region or bucket changes — so
- * showing it is honest, and losing it on every reload was just forgetting.
- *
- * The age is shown with it on purpose: "tested 40 days ago" is not "works
- * tonight", and a tick with no date invites exactly that reading.
+ * The stored test verdict is shown with its age: the API persists it and
+ * clears it when credentials, endpoint, region or bucket change.
  */
 /**
- * One sentence per failure category the API can report.
- *
- * Deliberately exhaustive rather than a two-way branch, and deliberately
- * fallback-to-generic rather than fallback-to-unreachable: a category added by
- * a later driver is one this build knows nothing about, and guessing it is a
- * network fault is how a host-key mismatch got shown as a firewall problem.
+ * One sentence per failure category the API can report. Unknown categories
+ * fall back to the generic failure, not "unreachable", since a newer category
+ * (e.g. host-key mismatch) is not necessarily a network fault.
  */
 const FAILURE_KEYS = {
   invalid_credentials: "failedCredentials",
@@ -84,31 +64,19 @@ export function DestinationRow({
   onDelete,
 }) {
   const t = useTranslations("storage");
-  // Per-provider: "bucket/prefix" is meaningless for an FTP host, and an
-  // empty bucket column beside a hostname is worse than no column at all.
+  // Per-provider: "bucket/prefix" is meaningless for an FTP host.
   const { location, address } = describeDestination(destination);
   const isS3 = destination.provider === "s3";
 
-  // Written once, placed twice — inside the content column on a phone, in its
-  // own column on a wide screen. Two copies of this markup is how they drift.
   /*
-   * A Drive destination exists before anyone has approved it.
-   *
-   * The panel told people "Not connected yet. Use Connect to approve access"
-   * and then offered no Connect: the row's only recovery button was Replace
-   * credentials, gated on a different failure, and the real button lived at the
-   * bottom of the Edit dialog where nobody would look for it.
-   *
-   * Read from `config.connected` — the flag the API publishes for exactly this
-   * decision — rather than from the failed-test category. That category is
-   * currently wrong for this case anyway: the backend derives it with
-   * `Str::after($key, 'storage.test.')` and this driver's key is
-   * `storage.oauth.not_connected`, so the whole key comes through instead of
-   * the word. Reported separately; the UI does not need it to be right.
+   * A Drive destination exists before access is approved; it needs a Connect
+   * button on the row. Read from `config.connected`, not the failed-test
+   * category, which the backend currently reports incorrectly for this case.
    */
   const needsConnect =
     destination.provider === "google_drive_oauth" && destination.config?.connected === false;
 
+  // Written once, placed twice (phone and wide layouts) so they cannot drift.
   const facts = (
     <>
       <p className="text-foreground">
@@ -130,10 +98,7 @@ export function DestinationRow({
           <div className="min-w-0 flex-1 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="min-w-0 font-medium break-all">{destination.name}</span>
-              {/* Read from the API, not inferred. This used to match the
-                  endpoint hostname against a list because the API stored
-                  `driver: s3` for everything; `provider` is a real column now,
-                  so the row states a fact instead of a guess. */}
+              {/* From the API's `provider` column, not inferred. */}
               {destination.provider_title ? (
                 <Badge variant="outline" className="font-normal">
                   {destination.provider_title}
@@ -146,9 +111,7 @@ export function DestinationRow({
               ) : (
                 <>
                   <Badge variant="warning">{t("row.credentialsMissing")}</Badge>
-                  {/* Without keys this destination cannot work at all, so the fix
-                      is offered next to the problem rather than hidden behind the
-                      overflow menu. */}
+                  {/* Without keys nothing works, so the fix is offered inline. */}
                   {canManage ? (
                     <Button
                       type="button"
@@ -173,8 +136,7 @@ export function DestinationRow({
               <p className="text-xs text-muted-foreground">{t("row.awsDefault")}</p>
             ) : null}
   
-            {/* Phone: region and age join the same indent as everything else
-                rather than starting a new left edge at the card border. */}
+            {/* Phone: region and age share the same indent as everything else. */}
             <div className="space-y-0.5 text-xs text-muted-foreground sm:hidden">{facts}</div>
   
             {testing ? (
@@ -183,10 +145,8 @@ export function DestinationRow({
                 {t("row.testing")}
               </p>
             ) : needsConnect ? (
-              /* Said once, where the action is. Not the red failed-test line
-                 as well — "the test failed" and "you have not connected yet"
-                 are the same fact told twice, and the second telling is the
-                 one with a button. */
+              /* Shown instead of the failed-test line: same fact, and this one
+                 has the button. */
               <div className="space-y-1.5 pt-0.5">
                 <p className="flex items-start gap-1.5 text-xs text-warning">
                   <TriangleAlert className="mt-0.5 size-3 shrink-0" />
@@ -208,9 +168,7 @@ export function DestinationRow({
                   ) : (
                     <TriangleAlert className="mt-0.5 size-3 shrink-0" />
                   )}
-                  {/* The round-trip time comes back from the probe and was being
-                      thrown away. It is also the plainest evidence the check
-                      really went out to the provider rather than short-circuiting. */}
+                  {/* The probe's round-trip time, evidence the check reached the provider. */}
                   <span>
                     {result.ok
                       ? result.latency
@@ -219,9 +177,7 @@ export function DestinationRow({
                       : result.message}
                   </span>
                 </p>
-                {/* A failure with no next step leaves people re-clicking Test.
-                    Wrong keys are the common cause, so the fix is offered here
-                    instead of only in the overflow menu. */}
+                {/* Wrong keys are the common cause, so the fix is offered inline. */}
                 {!result.ok && canManage ? (
                   <Button
                     type="button"
@@ -241,18 +197,14 @@ export function DestinationRow({
           </div>
         </div>
   
-        {/* Wide screen only: its own column, right-aligned so the numbers line up
-            down the list instead of floating wherever the name ends. */}
+        {/* Wide screen only: own column, right-aligned so values line up. */}
         <div className="hidden space-y-0.5 text-xs text-muted-foreground sm:block sm:min-w-40 sm:text-right">
           {facts}
         </div>
   
-        {/* `ml-auto` is what drops these to their own line, right-aligned, once
-            the identity block takes the full width on a phone. */}
+        {/* `ml-auto` drops these to their own right-aligned line on a phone. */}
         <div className="ml-auto flex shrink-0 items-center gap-1">
-          {/* Nothing to test without keys — the probe would fail on every
-              click and teach the user nothing. Disabled with the reason said
-              out loud, rather than letting them discover it. */}
+          {/* Nothing to test without keys: disabled with the reason. */}
           <ReasonTooltip
             reason={
               !canManage
@@ -301,12 +253,8 @@ export function DestinationRow({
 }
 
 /**
- * What the last probe found, from before this page was opened.
- *
- * Only rendered when there is no fresh result on screen — a test you just ran
- * outranks one from last month. `never_tested` gets said out loud rather than
- * left blank: a destination nobody has ever checked is the one most likely to
- * fail at 2am, and silence reads as "fine".
+ * The stored result of the last probe, shown only when there is no fresh one.
+ * `never_tested` is stated explicitly rather than left blank.
  */
 function StoredVerdict({ destination, canManage, onReplace }) {
   const t = useTranslations("storage");
@@ -334,17 +282,9 @@ function StoredVerdict({ destination, canManage, onReplace }) {
     <div className="space-y-1.5 pt-0.5">
       <p className="flex items-start gap-1.5 text-xs text-destructive">
         <TriangleAlert className="mt-0.5 size-3 shrink-0" />
-        {/* Branching on the stable category, never on a message: the raw
-            provider text is not sent, and would not be translatable if it were.
-
-            Every category the API can return gets its own sentence. This used
-            to be a two-way branch that rendered everything except
-            `invalid_credentials` as "could not be reached" — so a CHANGED HOST
-            KEY, the one failure that can mean someone else is answering,
-            displayed as a network problem. An unknown category falls back to
-            the generic failure rather than to "unreachable", because a build
-            that has not heard of a category does not know it is a network
-            one. */}
+        {/* Branches on the stable category, never on a message (raw provider
+            text is not sent or translatable). Unknown categories fall back to
+            the generic failure. */}
         <span>{t(`row.${FAILURE_KEYS[destination.last_test_error] ?? "failed"}`, { when: when ?? "" })}</span>
       </p>
       {destination.last_test_error === "invalid_credentials" && canManage ? (

@@ -29,17 +29,14 @@ import { DatabaseRowActions } from "@/components/databases/database-row-actions"
 
 /* Cells are module-level components: flexRender treats a cell function's
  * identity as the component type, so inline definitions remount every cell on
- * each keystroke in the search box that lives in this same component. */
+ * each keystroke in the search box. */
 
-// The name is the way in: users, credentials and the connection string all
-// live on the detail page, so the row has to lead somewhere.
+// The name links to the detail page (users, credentials, connection string).
 function NameCell({ row }) {
   return (
     <Link
       href={`/databases/${row.original.id}`}
-      // Primary colour, not plain text: nothing else said this name was the
-      // way into the database. The chevron repeats it for anyone who does not
-      // read colour as "clickable".
+      // Primary colour plus chevron, so the link does not rely on colour alone.
       className="group inline-flex items-center gap-1.5 font-mono font-medium text-primary underline-offset-4 hover:underline"
     >
       {row.original.name}
@@ -52,12 +49,9 @@ function EngineCell({ row, table }) {
   const name = table.options.meta.engineName(row.original.engine);
   return (
     <span className="flex items-center gap-2 text-muted-foreground">
-      {/* The logo carries the brand; the name stays because the column is
-          sortable and searchable on it, and because an engine we have no
-          artwork for — PostgreSQL — would otherwise be a bare glyph. */}
+      {/* The name stays beside the logo: the column sorts and searches on it. */}
       <EngineLogo engine={row.original.engine} />
-      {/* PostgreSQL's logo is the elephant alone: without the printed name
-          its rows were the only ones that never said which engine. */}
+      {/* Mark-only logos (PostgreSQL's elephant) need the printed name. */}
       {engineLogo(row.original.engine)?.wordmark ? (
         <span className="sr-only">{name}</span>
       ) : (
@@ -76,29 +70,16 @@ function SizeCell({ row }) {
 }
 
 /**
- * Zero users is the state worth seeing: nothing can connect to that database,
- * so it is doing no work and nobody would otherwise notice.
- */
-/**
- * Which site this database belongs to.
- *
- * "Not linked" is a warning badge and not an empty cell, because the two look
- * identical and mean opposite things: a blank reads as "nothing to say", while
- * this one means no backup of any site contains this database.
- *
- * Matches the no-users badge beside it — same shape, same severity, same
- * "something here needs doing".
+ * Which site this database belongs to. "Not linked" is a warning badge, not a
+ * blank cell: it means no site backup contains this database.
  */
 function ApplicationCell({ database, applications, onAttach }) {
   const t = useTranslations("databases");
   const application = applicationById(applications, database.application_id);
 
   if (application) {
-    // `block truncate` and not a bare inline link: an inline element never
-    // shows the ellipsis, and without a bound the column simply grew to the
-    // longest site name and took the rest of the table with it — the same
-    // fault the applications table carries a comment about. `title` keeps the
-    // full name reachable once it is cut.
+    // `block truncate`: an inline link never shows the ellipsis. `title`
+    // keeps the full name reachable.
     return (
       <Link
         href={`/applications/${application.id}`}
@@ -111,16 +92,14 @@ function ApplicationCell({ database, applications, onAttach }) {
     );
   }
 
-  // Attached to a site outside this user's reach: not the same as unattached,
-  // and calling it "not linked" would invite an attach that would be refused.
+  // Attached to a site outside this user's reach is not "not linked": an
+  // attach there would be refused.
   if (database.application_id !== null && database.application_id !== undefined) {
     return <span className="text-muted-foreground">{t("columns.applicationUnknown")}</span>;
   }
 
-  // The badge IS the control when there is something to do about it: this is
-  // where the reader finds out, and sending them to the detail page first to
-  // act on it is a detour with no purpose. Plain badge for a reader who cannot
-  // change it, rather than a button that would refuse.
+  // The badge is the attach control when the reader can act; otherwise a
+  // plain badge rather than a button that would refuse.
   if (!onAttach) {
     return (
       <Badge variant="warning" className="font-normal">
@@ -146,6 +125,7 @@ function ApplicationCell({ database, applications, onAttach }) {
   );
 }
 
+// Zero users is highlighted: nothing can connect to that database.
 function UsersCell({ row }) {
   const t = useTranslations("databases");
   const count = row.original.users_count ?? 0;
@@ -161,11 +141,8 @@ function UsersCell({ row }) {
 }
 
 /**
- * The question the list could not answer: is this database protected?
- *
- * A 2 GB production database nobody has ever dumped looked identical to one
- * exported ten minutes ago. "Never" is the state worth the colour — and when
- * the exports request itself failed, this says nothing rather than lie.
+ * Whether this database has ever been exported. "Never" is highlighted; when
+ * the exports request failed, nothing is claimed.
  */
 function BackupCell({ row, table }) {
   const t = useTranslations("databases");
@@ -210,12 +187,6 @@ function RowActionsCell({ row, table }) {
   );
 }
 
-/**
- * Delete is the only row action, so it is the button — a menu that opens to
- * reveal one item costs a click and hides the only thing you can do. When a
- * second action arrives (export is the likely one) this goes back to a menu.
- */
-
 export function DatabasesTable(props) {
   // One shared transition for search and paging, so the box spins and the table
   // dims while the server answers.
@@ -249,12 +220,8 @@ function DatabasesList({
   // The database whose site is being chosen, or null.
   const [attaching, setAttaching] = useState(null);
 
-  // Whether to show the Engine column is a question about the SERVER, not
-  // about the ten rows on screen. Counted from the page, the column appeared
-  // and vanished as you turned it — the same mistake as building filter
-  // options out of the current page.
-  // `engines` is the server's own list, already a prop here for the create
-  // guard below.
+  // Based on the server's engine list, not the current page, so the column
+  // does not appear and vanish while paging.
   const showEngine = engines.length > 1;
 
   const columns = [
@@ -263,20 +230,13 @@ function DatabasesList({
       ? [{ accessorKey: "engine", header: () => <SortHeader col="engine">{t("columns.engine")}</SortHeader>, meta: { sortKey: "engine" }, cell: EngineCell }]
       : []),
     {
-      // The link that decides what gets backed up, which had no column at all —
-      // so a database missing from its site's backups looked exactly like one
-      // that was in them.
+      // The site link decides what gets backed up.
       id: "application",
       accessorFn: (row) =>
         applicationById(applications, row.application_id)?.name ?? "",
       header: t("columns.application"),
-      // This table is auto-layout, so `truncate` alone has nothing to bind
-      // against — the column grew to the longest site name and pushed the rest
-      // of the table out. `max-w-0` lets the cell stop claiming max-content so
-      // the link can ellipsise, but on its own it collapses the column to ~70px
-      // and shows one character. The width pairs with it: the percentage is
-      // what the column actually gets, max-w-0 is what stops content overriding
-      // it. Measured at 1440/1600/1920 with a 61-character name.
+      // Auto-layout table: `max-w-0` lets the link ellipsise, and the width %
+      // stops the column collapsing to ~70px.
       meta: { className: "w-[22%] max-w-0" },
       cell: ({ row }) => (
         <ApplicationCell
@@ -291,11 +251,7 @@ function DatabasesList({
       accessorKey: "size_bytes",
       header: t("columns.size"),
       cell: SizeCell,
-      // NOT sortable: `size_bytes` is absent from the API's sort whitelist, so
-      // asking for it is a 422. It used to sort here, and as the DEFAULT — which
-      // once the list was paged meant "biggest on this page first" while
-      // reading as "biggest first". Backend ask filed; a header that lies is
-      // worse than one that does nothing.
+      // NOT sortable: `size_bytes` is not in the API's sort whitelist (422).
     },
     {
       accessorKey: "users_count",
@@ -306,31 +262,16 @@ function DatabasesList({
     {
       id: "lastBackup",
       // Sorts on the dump's timestamp, so "Never" (0) sinks to the bottom
-      // ascending and rises to the top descending — the sort someone reaches
-      // for this column to do.
+      // ascending and rises to the top descending.
       accessorFn: (row) => lastBackup?.[row.id]?.at ?? 0,
       header: t("columns.lastExport"),
       cell: BackupCell,
       sortingFn: "basic",
     },
     {
-      // The API sorts this one properly. It used to sort by id in the browser,
-      // standing in for a date it could not compare: "2 months ago" is a
-      // sentence and created_at arrives as DD-MM-YYYY, which sorts
-      // alphabetically into nonsense. The server has the real column.
-      //
-      // Hidden under 1600px of viewport. Eight columns need ~1290px and the
-      // sidebar takes 320 of whatever the screen has, so on a 1440 laptop the
-      // row ran past the edge and put Manage, phpMyAdmin and Delete off-screen
-      // behind a scrollbar nothing pointed at. Age is the one column here that
-      // no operational decision turns on, and it is still on the database's own
-      // page — the actions are not recoverable anywhere else.
-      // Hidden below 1536px. Eight columns need ~1290px and the sidebar takes
-      // 320 of whatever the screen has, so on a 1440 laptop the row ran past
-      // the edge and left Manage, phpMyAdmin and Delete off-screen behind a
-      // scrollbar nothing pointed at. Age is the one column here no operational
-      // decision turns on, and it is still on the database's own page — the
-      // actions are not recoverable anywhere else.
+      // Sorted by the API: created_at arrives as DD-MM-YYYY, which cannot be
+      // sorted client-side. Hidden below 1536px so the row actions stay on
+      // screen; the age is still on the database's own page.
       meta: { className: "hidden 2xl:table-cell", sortKey: "created_at" },
       id: "created",
       header: () => <SortHeader col="created_at" descFirst>{t("columns.created")}</SortHeader>,
@@ -342,9 +283,7 @@ function DatabasesList({
             id: "actions",
             enableSorting: false,
             header: () => <span className="sr-only">{t("actions")}</span>,
-            // Same shape as the firewall table: last column, fixed width,
-            // right-aligned, so every list in the panel puts its row actions in
-            // the same place.
+      // Same placement as other lists: last column, fixed width, right-aligned.
             meta: { className: "w-40 text-right" },
             cell: RowActionsCell,
           },
@@ -369,9 +308,8 @@ function DatabasesList({
     </ReasonTooltip>
   );
 
-  // `attached` counts too. It has no control of its own — the banner's "Show
-  // them" is the only thing that sets it — so without this an empty result read
-  // as "this server has no databases" while a filter was quietly on.
+  // `attached` has no control of its own (only the banner sets it), so it
+  // must count as a filter or an empty result reads as "no databases".
   const onlyUnlinked = searchParams.get("attached") === "0";
   const isFiltered = Boolean(searchParams.get("search")) || onlyUnlinked;
 
@@ -380,9 +318,8 @@ function DatabasesList({
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="flex min-w-48 flex-1 flex-wrap items-center gap-2">
           <SearchInput placeholder={t("searchPlaceholder")} />
-          {/* The one filter with no control of its own. Arriving here from the
-              banner used to leave a filtered list with nothing saying so and no
-              way back except navigating away and returning. */}
+          {/* The one filter with no control of its own, so it is shown with a
+              way to clear it. */}
           {onlyUnlinked ? (
             <span className="flex items-center gap-1.5 rounded-full border border-warning/40 bg-warning/10 px-3 py-1 text-xs">
               <FilterX className="size-3.5 shrink-0 text-warning" />
@@ -423,17 +360,10 @@ function DatabasesList({
           />
         )
       ) : (
-        /* Cards below lg, the table from lg up — the same rule as applications,
-           services, cron jobs and the rest. Databases was the one list that
-           never got a narrow-screen view: at 390px its seven columns are
-           1115px wide inside a 356px scroller. */
+        /* Cards below the breakpoint, the table above it. */
         <>
-        {/* 1440, not a named breakpoint, because that is where it measured:
-            seven columns need 1118px and the sidebar plus padding take 320 of
-            whatever the screen has, so 1440 is the first width the row fits.
-            Below it the actions sat off the right edge behind a scrollbar
-            nothing pointed at. The cards carry every field including the site,
-            so using them wider loses nothing. */}
+        {/* 1440 is measured: seven columns plus the sidebar first fit there.
+            The cards carry every field, so using them wider loses nothing. */}
         <div className="min-[1440px]:hidden">
           <DatabasesCards
             databases={data}
@@ -478,8 +408,6 @@ function DatabasesList({
             databasesKnown={databasesKnown}
             siteTypes={siteTypes}
           />
-          {/* Reached from the "Not linked" badge, so the fix is where the
-              problem is announced. */}
           <AttachApplicationDialog
             database={attaching}
             open={attaching !== null}

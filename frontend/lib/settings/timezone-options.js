@@ -1,16 +1,7 @@
 /**
- * Flattens `GET /timezones` into a flat option list for a Combobox.
- *
- * The API answers grouped by region — `[{ region, zones: [{ value, label,
- * offset }] }]` — which the grouped <Select> on Settings → Server renders
- * directly. A Combobox takes a flat list, and passing the groups to one
- * straight puts a region OBJECT where React expects a label, which throws the
- * whole page into its error boundary the moment the list opens. That is a real
- * bug this shape invited twice, so the flattening lives here now.
- *
- * The offset rides along in the label because it is the thing people check a
- * timezone against, and the API recomputes it per request so it stays correct
- * across daylight saving.
+ * Flattens `GET /timezones` (`[{ region, zones: [{ value, label, offset }] }]`)
+ * into Combobox options. Passing the groups directly crashes the Combobox.
+ * The offset (recomputed by the API per request) is appended to the label.
  */
 export function timezoneOptions(groups) {
   if (!Array.isArray(groups)) return [];
@@ -23,11 +14,8 @@ export function timezoneOptions(groups) {
 }
 
 /**
- * The same list, guaranteed to contain `value`.
- *
- * A pool tuned by hand can hold a zone the API's list does not offer. Without
- * this the field falls back to its placeholder and hides the value it is about
- * to save — the reader sees an empty picker over a server that is set.
+ * The same list, guaranteed to contain `value`, which may be a zone the API
+ * does not list (e.g. set by hand).
  */
 export function timezoneOptionsWith(groups, value) {
   const options = timezoneOptions(groups);
@@ -55,9 +43,8 @@ function phpAccepts(zone) {
 }
 
 /**
- * The list for a site's `date.timezone`, which the API validates against PHP's
- * own list rather than the server's. `Etc/UTC` is the visible case: it read as
- * a second "UTC" and failed to save while the other one worked.
+ * Options for a site's `date.timezone`: the API validates against PHP's own
+ * list, which lacks e.g. `Etc/UTC`.
  */
 export function phpTimezoneOptionsWith(groups, value) {
   const accepted = Array.isArray(groups)

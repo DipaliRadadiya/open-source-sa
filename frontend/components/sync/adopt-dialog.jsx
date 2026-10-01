@@ -10,12 +10,9 @@ import { Label } from "@/components/ui/label";
 /**
  * The one screen in this feature that writes.
  *
- * It carries more than a yes/no because the API's scope model is unusual and
- * invisible from the list: there is no per-item selection, so what gets adopted
- * is "everything found, of the types ticked here, that you have not ignored".
- * Every product this pattern was surveyed against is opt-in with a checkbox per
- * row; ours is opt-out, and the only honest mitigation is to state the exact
- * count and its composition immediately above the button.
+ * The API has no per-item selection: it adopts everything found, of the ticked
+ * types, that is not ignored. So the exact count and composition are stated
+ * immediately above the button.
  */
 export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPresent, pending, onConfirm }) {
   const t = useTranslations("sync");
@@ -26,33 +23,18 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
   );
 
   /*
-   * null until the reader ticks something, and everything until then.
-   *
-   * `useState(adoptable)` looked equivalent and was not: the dialog is keyed on
-   * the scan run, which exists long before its items do — they arrive a page at
-   * a time — so it mounted while `adoptable` was still empty and froze that in.
-   * Opening it then showed "0 resources", and the first tick was what made the
-   * number correct, which is exactly backwards.
-   *
-   * Deriving keeps it current while the dialog is shut and stops the moment
-   * there is a real choice to respect.
+   * null until the reader ticks something, meaning "everything adoptable".
+   * Not `useState(adoptable)`: the dialog mounts before its items arrive (they
+   * load a page at a time), which would freeze an empty selection.
    */
   const [picked, setPicked] = useState(null);
   const selected = picked ?? adoptable;
   const [includeFirewall, setIncludeFirewall] = useState(false);
 
   /*
-   * Closing throws the selection away.
-   *
-   * `sync-panel` keys this on the scan run, so a NEW scan already gets a fresh
-   * dialog — but within one run the component stays mounted while the dialog
-   * is shut, and `useState` only runs its initialiser once. So untick four of
-   * five resource types, press Cancel, reopen, and the four are still unticked:
-   * the box states a plan the user abandoned, and Cancel is the one button that
-   * must not leave anything behind.
-   *
-   * Done on close rather than on open so the reset happens while nothing is on
-   * screen — resetting on open would visibly repaint the checkboxes.
+   * Closing discards the selection: within one scan run the component stays
+   * mounted, so Cancel must not leave unticked types behind. Reset on close,
+   * not open, so the checkboxes do not visibly repaint.
    */
   function handleOpenChange(next) {
     if (!next) {
@@ -65,16 +47,9 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
   const hasFirewall = typesPresent.includes(FIREWALL_RESOURCE_TYPE);
 
   /*
-   * The types this adopt will actually run, computed ONCE.
-   *
-   * Firewall rules have no tick-box of their own — they are gated by the
-   * warning checkbox instead — so `selected` never contains them. This was
-   * added to the `only` list sent to the API but NOT to the list the summary
-   * counts, and the two quietly disagreed: ticking the box adopted firewall
-   * rules while the dialog said "Nothing will be added across 0 types" and
-   * disabled the button that would have done it.
-   *
-   * One value for both, so a future third reader cannot pick the wrong one.
+   * The types this adopt will actually run, computed ONCE and used for both
+   * the request and the summary. Firewall rules have no tick-box (they are
+   * gated by the warning checkbox), so `selected` never contains them.
    */
   const adopting = useMemo(
     () => (includeFirewall ? [...selected, FIREWALL_RESOURCE_TYPE] : selected),
@@ -87,10 +62,6 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
   );
 
   // `adopting`, not `selected` — the same list the count and the request use.
-  // Firewall rules have no dependency today so this changes nothing yet, which
-  // is exactly why it is worth fixing now: the last time two of these three
-  // read different lists, ticking a box adopted rules the dialog said it would
-  // not.
   const unmet = useMemo(() => unmetDependencies(adopting), [adopting]);
 
   function toggleType(type, checked) {
@@ -146,10 +117,8 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
           </div>
         </fieldset>
 
-        {/* Set apart deliberately, and never ticked by default: adopting a rule
-            set is the one step here that can lock someone out of their own
-            box, which is why the backend put it behind its own flag instead of
-            leaving it in `only` with the rest. */}
+        {/* Set apart and never ticked by default: adopting a rule set can lock
+            someone out, which is why the backend has a separate flag for it. */}
         {hasFirewall ? (
           <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/5 p-3">
             <Checkbox
@@ -169,9 +138,8 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
           </div>
         ) : null}
 
-        {/* Unticking a parent type does not narrow the run, it makes every
-            child fail with `requires_…`. Saying which ones, by name, is the
-            difference between a choice and twelve silent skips. */}
+        {/* Unticking a parent type makes every child fail with `requires_…`;
+            name them so it is a visible choice. */}
         {unmet.length ? (
           <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/5 p-3 text-xs text-warning">
             <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />

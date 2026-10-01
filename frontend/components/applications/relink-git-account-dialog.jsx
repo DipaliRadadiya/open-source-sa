@@ -15,35 +15,18 @@ import {
 } from "@/components/ui/select";
 
 /**
- * Point a site that lost its git account at another one.
- *
- * Only the account is asked for. The endpoint takes the repository, branch and
- * mode from the application as it already stands, so repairing a site that
- * merely lost its credential does not make anyone retype an owner/repo they
- * never changed.
- *
- * The server verifies the pairing before storing it — it asks the candidate
- * account to list the repository's branches — so a wrong account comes back as
- * a 422 naming the repository, and the application is left exactly as it was.
+ * Point a site that lost its git account at another one. Only the account is
+ * asked for; the endpoint keeps the existing repository, branch and mode. The
+ * server verifies the account can list the repo's branches, so a wrong account
+ * is a 422 and nothing changes.
  */
 export function RelinkGitAccountDialog({ application, accounts = [], open, onOpenChange }) {
   const t = useTranslations("applications.source");
   const { refreshAndWait } = useRefresh();
   /*
-   * Preselected when there is nothing to choose.
-   *
-   * With one connected account the dialog opened with an empty picker and a
-   * disabled Confirm, so relinking meant opening a menu, picking the only
-   * entry, and only then being allowed to proceed — a question with a single
-   * possible answer, asked before the answer was accepted.
-   *
-   * Still a picker, not a fixed value: the moment a second account exists the
-   * choice is real, and this is the screen for making it.
-   *
-   * Held as a named default because the two resets below must target it rather
-   * than "". This dialog is not remounted between opens — it takes an `open`
-   * prop — so resetting to the empty string would put the picker back to
-   * unanswered on the second open and quietly undo the preselection.
+   * Preselected when there is only one account. A named default because the
+   * resets below must target it, not "": the dialog is not remounted between
+   * opens, so resetting to "" would undo the preselection.
    */
   const defaultAccountId = accounts.length === 1 ? String(accounts[0].id) : "";
   const [accountId, setAccountId] = useState(defaultAccountId);
@@ -88,9 +71,8 @@ export function RelinkGitAccountDialog({ application, accounts = [], open, onOpe
         <SelectContent>
           {accounts.map((account) => (
             <SelectItem key={account.id} value={String(account.id)}>
-              {/* The provider matters here: moving to a different one disables
-                  deploy-on-push, because a webhook verifies signatures against
-                  its own provider's scheme. */}
+              {/* Provider matters: switching providers disables deploy-on-push, since
+                  webhooks verify signatures per provider. */}
               {account.label} · {account.provider_title ?? account.provider}
             </SelectItem>
           ))}

@@ -12,35 +12,25 @@ import { compareVersions } from "@/lib/runtime/version-range";
 /**
  * Which version the rest of the page is about. Shared by PHP and Node.
  *
- * Only rendered when there is more than one version — on a one-version server
- * there is nothing to switch, and a control with a single option reads as a
- * step you must complete before the page will work.
- *
- * The selection lives in the URL, not in state: the page is rendered on the
- * server, and the version you were looking at should survive a reload and be
- * linkable.
+ * Only rendered with more than one version. The selection lives in the URL so
+ * it survives a reload and is linkable.
  */
 export function VersionBar({
   versions,
   selected,
   namespace,
   lifecycleAvailable = false,
-  // Sits at the end of the chips, inside the same scrolling row. Adding a
-  // version belongs beside choosing one — pushed to the far right of the page
-  // it reads as an unrelated page-level action.
+  // Rendered at the end of the chips, in the same scrolling row.
   action,
 }) {
   const t = useTranslations(namespace);
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  // Newest first, whatever order the API sends. It lists a version still
-  // installing ahead of the installed ones, so without this the chips swapped
-  // places under the pointer the moment an install finished.
+  // Newest first: the API lists in-flight installs ahead of installed versions.
   const ordered = [...versions].sort((a, b) => compareVersions(b.version, a.version));
   const navRef = useRef(null);
 
-  // On a phone the strip scrolls, and the version you are looking at could sit
-  // half off the edge — 22.23.3 read as "Node.js 22" with the rest under the fade.
+  // On a phone the strip scrolls; keep the selected chip fully in view.
   useEffect(() => {
     navRef.current
       ?.querySelector('[aria-current="page"]')
@@ -49,8 +39,7 @@ export function VersionBar({
 
   return (
     <div className="space-y-2">
-      {/* The label is the whole point: an unlabelled row of version chips looks
-          like a heading, and nobody clicks a heading. */}
+      {/* Labelled, so the chips do not read as a heading. */}
       <p className="text-sm font-medium">{t("versions.switchLabel")}</p>
 
       <ScrollFade className="-mx-1 px-1 pb-1">
@@ -72,8 +61,7 @@ export function VersionBar({
                 )}
               >
                 {t("versions.name", { version: version.version })}
-                {/* Only the dead one is flagged while choosing — a badge on every
-                    chip is noise, and this is the one worth noticing. */}
+                {/* Only end-of-life versions are flagged here. */}
                 {version.lifecycle?.status === "eol" ? (
                   <LifecycleBadge
                     lifecycle={version.lifecycle}

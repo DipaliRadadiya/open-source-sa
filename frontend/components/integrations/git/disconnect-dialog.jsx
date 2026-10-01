@@ -10,12 +10,9 @@ import { useBranding } from "@/components/branding-provider";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 /**
- * Disconnecting, and the thing every other panel leaves unsaid.
- *
- * Removing the account deletes the panel's copy of the credential. It does not
- * revoke anything: the token keeps working at the provider until it is deleted
- * there. Someone who believes otherwise walks away from a live credential they
- * think is dead, so the dialog says it and links to the page that fixes it.
+ * Removing the account deletes only the panel's copy of the token; it stays
+ * valid at the provider until revoked there, so the dialog says so and links
+ * to the provider page.
  */
 export function DisconnectDialog({ account, open, onOpenChange }) {
   const t = useTranslations("git.disconnect");

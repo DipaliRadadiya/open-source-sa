@@ -9,21 +9,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 /**
- * This service's logs, as items in the row's actions menu.
- *
- * The whole point of a failed row is finding out why, and until this existed
- * that meant leaving for the Logs page and guessing which file belonged to the
- * thing that broke.
- *
- * One source → one item. Several (nginx has error and access) → a submenu,
- * because picking the wrong one wastes the trip.
- *
- * This was an icon button on the row. It is a menu item now for the reason the
- * whole column changed: six undifferentiated glyphs per row, none of them
- * labelled, and a scroll and a shield that read as the same rectangle at 16px.
+ * This service's logs, as items in the row's actions menu. One source is one
+ * item; several (nginx error and access) become a submenu.
  *
  * Nothing renders when `log_keys` is empty: the API only lists sources that
- * exist on the box, so an empty array means there is genuinely nothing to open.
+ * exist on the box.
  */
 export function ServiceLogItems({ service }) {
   const t = useTranslations("services");
@@ -53,9 +43,7 @@ export function ServiceLogItems({ service }) {
           <DropdownMenuItem key={key} asChild>
             <Link href={`/logs?source=${encodeURIComponent(key)}`}>
               <ScrollText className="size-4" />
-              {/* The raw key: the Logs page owns the friendly labels, and
-                  inventing a second name for the same file here would let the
-                  two drift. */}
+              {/* The raw key: the Logs page owns the friendly labels. */}
               <span className="font-mono text-xs">{key}</span>
             </Link>
           </DropdownMenuItem>

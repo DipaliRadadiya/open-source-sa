@@ -1,9 +1,6 @@
 /**
- * The state machine behind the restart curtain.
- *
- * Pure on purpose: the sequencing below is the whole feature, and it is only
- * testable if it is not tangled up in an effect. The component owns timers and
- * fetches; this owns what a probe result means.
+ * The state machine behind the restart curtain, kept pure for testing; the
+ * component owns timers and fetches.
  */
 
 export const PHASE = {
@@ -22,19 +19,16 @@ export const GIVE_UP_MS = 480_000;
 export const PROBE_TIMEOUT_MS = 4000;
 export const PERSIST_MAX_AGE_MS = 600_000;
 
-// Two, not one. A half-started nginx answers a single probe and then drops
-// while php-fpm is still coming up; reloading on that lands on a 502.
+// Two: a half-started nginx can answer once, then 502 while php-fpm starts.
 export const REQUIRED_OK_STREAK = 2;
 
-// Past this, a restart we are resuming has almost certainly already taken the
-// machine down while no tab was watching, so requiring a fresh down would wait
-// out the give-up timer against a server that is already back.
+// Past this, a resumed restart is assumed to have already gone down unobserved.
 export const MISSED_DOWN_AFTER_MS = 20_000;
 
 export function createRestartState(startedAt) {
   return {
     phase: PHASE.GOING_DOWN,
-    // The reboot is not real until we have watched it fail at least once.
+    // Not "back" until at least one probe has seen it down.
     sawDown: false,
     okStreak: 0,
     startedAt,
@@ -43,12 +37,9 @@ export function createRestartState(startedAt) {
 }
 
 /**
- * Rebuild state for a restart that was already running when this tab loaded.
- *
- * The transition we normally watch for happened while nothing was looking, so
- * past a short grace window we take it as already seen. Inside that window the
- * machine may not have gone down yet, and assuming otherwise would declare
- * "back" against a server that has not left.
+ * State for a restart already running when this tab loaded. Past a grace
+ * window the down transition is assumed seen; inside it the server may not
+ * have gone down yet.
  */
 export function resumeRestartState(startedAt, now) {
   const elapsedMs = Math.max(0, now - startedAt);
@@ -61,11 +52,8 @@ export function resumeRestartState(startedAt, now) {
 }
 
 /**
- * Fold one probe result into the state.
- *
- * `apiUp` is /api/health answering; `panelUp` is this Next server answering.
- * They are separate systemd units and the frontend regularly lags the API, so
- * "the API is back" is not "the panel is usable".
+ * Folds one probe result into the state. `apiUp` (/api/health) and `panelUp`
+ * (this Next server) are separate units; the frontend often lags the API.
  */
 export function reduceProbe(state, { at, apiUp, panelUp }) {
   if (state.phase === PHASE.BACK || state.phase === PHASE.GAVE_UP) return state;
@@ -74,8 +62,7 @@ export function reduceProbe(state, { at, apiUp, panelUp }) {
   const next = { ...state, elapsedMs };
 
   if (elapsedMs >= GIVE_UP_MS) {
-    // Announced, never silent. A spinner that has quietly stopped spinning is
-    // the worst version of this screen — it still claims work is happening.
+    // Giving up is announced, never silent.
     return { ...next, phase: PHASE.GAVE_UP };
   }
 
@@ -83,9 +70,8 @@ export function reduceProbe(state, { at, apiUp, panelUp }) {
     return { ...next, sawDown: true, okStreak: 0, phase: PHASE.OFFLINE };
   }
 
-  // `shutdown -r now` takes several seconds to actually kill anything, so the
-  // first probes answer from the server that is on its way down. Treating that
-  // as recovery flashes "back online" two seconds in and then dies.
+  // `shutdown -r now` takes seconds to kill anything, so early successes come
+  // from the server on its way down and must not count as recovery.
   if (!next.sawDown) {
     return { ...next, okStreak: 0, phase: PHASE.GOING_DOWN };
   }
@@ -108,10 +94,7 @@ export function probeIntervalMs(elapsedMs) {
   return elapsedMs >= SLOW_AFTER_MS ? SLOW_PROBE_INTERVAL_MS : PROBE_INTERVAL_MS;
 }
 
-/**
- * Whether to admit this is slower than advertised. Not a phase of its own —
- * it changes the words while the machine keeps doing exactly what it was.
- */
+/** Whether the restart is slower than expected; changes copy only, not phase. */
 export function isTakingLonger(state) {
   return (
     state.elapsedMs >= TAKING_LONGER_MS &&
@@ -119,7 +102,7 @@ export function isTakingLonger(state) {
   );
 }
 
-/** A restart we stored and then left sitting is not one we should resume. */
+/** Whether a stored restart is recent enough to resume. */
 export function isResumable(startedAt, now) {
   if (!Number.isFinite(startedAt) || startedAt <= 0) return false;
   const age = now - startedAt;

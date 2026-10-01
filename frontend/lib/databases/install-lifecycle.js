@@ -48,14 +48,7 @@ export function findInstallCandidate(engines = []) {
   return findInstallCandidates(engines)[0] ?? null;
 }
 
-/**
- * Every engine that could be added right now, retryable failures first.
- *
- * Plural because the button that offers them has to NAME them: with one
- * candidate it reads "Install MongoDB", with several it becomes a menu of
- * names. A generic "Add engine" that then asks which is the step this feature
- * used to have and no longer does.
- */
+/** Every engine that could be added right now, retryable failures first. */
 export function findInstallCandidates(engines = []) {
   if (installingEngineName(engines)) return [];
 
@@ -65,7 +58,7 @@ export function findInstallCandidates(engines = []) {
     !engineIsPresent(engine) &&
     engine.install_status !== "installing" &&
     (engine.install_status !== "failed" || engineInstallCanRetry(engine)) &&
-    // One SQL engine per server: offering a second is offering a failure.
+    // One SQL engine per server.
     !(hasSql && isSqlEngine(engine));
 
   const addable = engines.filter(canAdd);

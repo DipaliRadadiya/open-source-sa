@@ -35,10 +35,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { RelinkGitAccountDialog } from "@/components/applications/relink-git-account-dialog";
 
-// Best-effort link to the commit on the provider, built from a public repo URL.
-// Only the hosts whose commit paths we actually know; anything else falls back
-// to the copyable SHA. Account-based repos have no URL here, so no link — never
-// a guessed one.
+// Best-effort commit link from a public repo URL, only for hosts whose commit
+// paths are known; otherwise the copyable SHA. Never a guessed link.
 function commitUrl(repositoryUrl, sha) {
   if (!repositoryUrl || !sha) return null;
   try {
@@ -58,8 +56,7 @@ function commitUrl(repositoryUrl, sha) {
 function Fact({ icon: Icon, label, children }) {
   return (
     <div className="min-w-0 space-y-1">
-      {/* 1.5 stroke, not Lucide's default 2 — these sit at 14px in a dense
-          row, where the default reads as heavy. */}
+      {/* 1.5 stroke, not Lucide's default 2, which reads heavy at 14px in a dense row. */}
       <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <Icon className="size-3.5 shrink-0" strokeWidth={1.5} />
         {label}
@@ -70,19 +67,16 @@ function Fact({ icon: Icon, label, children }) {
 }
 
 /**
- * Where the reason for a failed step actually is.
- *
- * `verify` is the odd one out: everything ran, the process started, and the
- * site still did not answer — so the evidence is the application's own runtime
- * log, not the deploy's output. Every other step failed before or during the
- * deploy itself, and its output is the build log.
+ * Where the reason for a failed step is. `verify` ran everything and the site
+ * still did not answer, so the evidence is the runtime log; every other step's
+ * evidence is the build log.
  */
 function evidenceFor(step, application) {
   if (step !== "verify") return { kind: "build" };
   return {
     kind: "logs",
-    // A static or client-rendered git site runs no process, so it has no
-    // application log — its 404 or 500 is the web server's to explain.
+    // A static or client-rendered site runs no process and has no application log;
+    // the web server's error log explains its 404/500.
     source: application.has_process ? "application_error" : "error",
   };
 }
@@ -99,24 +93,23 @@ export function DeployCard({
   const t = useTranslations("applications.deployment");
   const tSource = useTranslations("applications.source");
   const [relinking, setRelinking] = useState(false);
-  // The account this site deployed with was deleted: it keeps its repository
-  // and branch but has no credential, so a deploy can only fail at the fetch.
+  // The deploy's Git account was deleted: no credential, so a deploy can only fail
+  // at the fetch.
   const unlinked = Boolean(application.git_account_missing);
-  // A deploy records into the same `steps[]` as provisioning, so it reads the
-  // same catalog of labels — which lives under `details` because that is where
-  // the first screen to need them was.
+  // Deploys write the same `steps[]` as provisioning, whose labels live under
+  // `details`.
   const ts = useTranslations("applications.details");
   const stepLabel = (step) => provisionStepLabel(step, ts);
   const commit = liveCommit(application);
   const incomplete = isDeployIncomplete(application);
   const repository = application.repository ?? application.repository_url;
   const branch = application.branch ?? "main";
-  // The site is serving the OLD code, so a set failed_step is a deploy warning,
-  // not an outage — saying that plainly is the point.
+  // The site still serves the OLD code, so a failed_step is a deploy warning, not
+  // an outage.
   const deployFailed =
     application.status === "active" && (Boolean(application.failed_step) || incomplete);
-  // A git app is created "active" serving a placeholder; until the first deploy
-  // there is no code. Say what to do rather than showing a blank "—".
+  // A git app starts "active" serving a placeholder; until the first deploy there
+  // is no code, so say what to do instead of "—".
   const neverDeployed = !application.last_deployed_at && !commit;
   const commitHref = commitUrl(application.repository_url, commit);
   const steps = application.steps ?? [];
@@ -125,20 +118,16 @@ export function DeployCard({
   return (
     <Card className={cn(PANEL_CARD, "border-primary/20 bg-gradient-to-br from-primary/[0.04] via-card to-card")}>
       <CardHeader>
-        {/* Filled, where the tab cards get a 10%-alpha tint: this is the one
-            card on the page that is not a peer of the others. */}
         <CardTitle className="flex items-center gap-2.5">
-          {/* Filled, where the tab cards get a 10%-alpha tint: this is the one
-              card on the page that is not a peer of the others. */}
+          {/* Filled rather than tinted: this card is not a peer of the tab cards. */}
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-e1">
             <Rocket className="size-4" />
           </span>
           {t("deploy.title")}
         </CardTitle>
         <CardDescription>{t("deploy.subtitle")}</CardDescription>
-        {/* Shown to a read-only role too, disabled with the reason — the same
-            answer the history's own Deploy again buttons give, rather than a
-            card whose one action silently is not there. */}
+        {/* Shown disabled with the reason to read-only roles, as in the history's Deploy
+            again buttons. */}
         <CardAction>
             <ReasonTooltip
               reason={deploying ? null : !canManage ? t("history.noPermission") : unlinked ? tSource("accountMissing") : null}
@@ -183,9 +172,8 @@ export function DeployCard({
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />
             <div className="min-w-0 flex-1 space-y-2">
               <div className="space-y-0.5">
-                {/* "The previous version is still live" is only true when the
-                    deploy failed before its checkout. After it, the new commit
-                    is serving, half-built, and the backend says so. */}
+                {/* "Previous version still live" is only true when the deploy failed before its
+                    checkout; after it, the new commit is serving half-built, per the backend. */}
                 {incomplete ? (
                   <>
                     {application.failed_step ? (
@@ -202,9 +190,7 @@ export function DeployCard({
                   </p>
                 ) : null}
               </div>
-              {/* The banner names the step that failed; on its own that still
-                  leaves "so where do I look?" — which cost a morning of
-                  guessing at a crash-looping site. This is that answer. */}
+              {/* Points to where the evidence for the failed step is. */}
               {evidence.kind === "logs" ? (
                 canViewLogs ? (
                   <Button variant="outline" size="sm" asChild>
@@ -231,7 +217,6 @@ export function DeployCard({
           </div>
         ) : null}
 
-        {/* Four facts across the full width instead of two hugging the left. */}
         <dl className="grid grid-cols-1 gap-4 rounded-lg border bg-muted/30 p-4 sm:grid-cols-2 md:grid-cols-4">
           <Fact icon={FolderGit2} label={t("deploy.repository")}>
             {repository ? (
@@ -306,10 +291,8 @@ export function DeployCard({
           </Fact>
         </dl>
 
-        {/* The same shape as the "setting up your site" screen — two screens
-            answering "is my thing being built?" should not look like two
-            products. No percentage: which steps run depends on the site, so
-            there is no denominator that would not be invented. */}
+        {/* Same shape as the "setting up your site" screen. No percentage: which steps run
+            depends on the site, so there is no real denominator. */}
         {deploying ? (
           <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
             <p className="flex items-center gap-2 text-sm font-medium">
@@ -329,8 +312,7 @@ export function DeployCard({
           </div>
         ) : null}
 
-        {/* A deploy is fetch + reset --hard, so edits made on the server are
-            discarded. Say so before the surprise, not after. */}
+        {/* A deploy is fetch + reset --hard, so server-side edits are discarded; warn first. */}
         {canManage && !deploying ? (
           <p className="text-xs text-muted-foreground">
             {t("deploy.resetNote", { branch })}

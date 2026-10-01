@@ -8,24 +8,14 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 /**
  * The pieces a rule is drawn from, shared by the table and the mobile cards.
- *
- * These are columns, not a sentence. The API also sends a ready-made `summary`
- * ("Allow 443/tcp from Anywhere") and the first version used it for the whole
- * row — but a list of sentences can only be read one at a time, while columns
- * can be scanned downwards. Comparing ten rules is the actual job here, so the
- * facts are separated and the sentence is kept for the narrow layout.
- *
- * Copy arrives as a `labels` object: these are presentational and shouldn't own
- * a translation namespace.
+ * Columns rather than the API's `summary` sentence, so rules can be compared down
+ * a column; the sentence is kept for the narrow layout.
+ * Copy arrives as a `labels` object; these components own no translation namespace.
  */
 
 /**
- * The rule's name.
- *
- * Seeded rules carry no description, so this used to print "Untitled rule" three
- * times in a row — a column of nothing. The port already says what the rule is
- * for, so an unnamed rule borrows the service name that owns that port and falls
- * back to the port itself. A name is only invented when it would be accurate.
+ * The rule's name. Seeded rules have no description, so an unnamed rule borrows
+ * the service name for its port, falling back to the port itself.
  */
 export function RuleName({ rule, muted, labels }) {
   const off = rule.enabled === false;
@@ -59,7 +49,7 @@ export function RuleName({ rule, muted, labels }) {
   );
 }
 
-/** Allow and deny are opposite instructions, so they never share a colour. */
+/** Allow and deny never share a colour. */
 export function ActionBadge({ rule, labels }) {
   const deny = rule.action === "deny";
   return (
@@ -89,7 +79,7 @@ export function ProtocolText({ rule, labels }) {
   );
 }
 
-/** No source means every address, which is a fact worth stating in words. */
+/** No source means every address, stated in words. */
 export function SourceText({ rule, labels }) {
   return (
     <span
@@ -104,18 +94,14 @@ export function SourceText({ rule, labels }) {
 }
 
 /**
- * Delete, with the reason it's unavailable when it is.
- *
- * A system-seeded rule can't be removed while the firewall is on — that's the
- * lockout guard, and it's the most confusing disabled button on the page, so it
- * explains itself rather than just being grey.
+ * Delete, with the reason when unavailable: a system-seeded rule is protected by
+ * the lockout guard, the page's most confusing disabled button.
  */
 export { protectedReasonFor };
 
 export function DeleteRuleButton({ rule, enabled, canManage, pending, onDelete, labels }) {
-  // Deleting a seeded rule sets the same trap as switching it off — ufw sees
-  // one and the same thing — so it is refused whether or not the firewall is
-  // currently enforcing.
+  // Deleting a seeded rule sets the same trap as switching it off, so it is refused
+  // whether or not the firewall is enforcing.
   const reason = protectedReasonFor({ rule, enabled, canManage, labels });
   const lockedByGuard = Boolean(rule.protected);
 
@@ -124,8 +110,7 @@ export function DeleteRuleButton({ rule, enabled, canManage, pending, onDelete, 
       <Button
         variant="ghost"
         size="sm"
-        // Red, not grey: a grey icon in a row of grey text reads as disabled,
-        // and this is the one destructive action on the row.
+        // Red, not grey: grey reads as disabled, and this is the row's destructive action.
         className="text-destructive/80 hover:bg-destructive/10 hover:text-destructive"
         disabled={!canManage || lockedByGuard || pending}
         onClick={() => onDelete(rule)}

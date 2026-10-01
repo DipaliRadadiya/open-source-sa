@@ -46,8 +46,7 @@ export default async function PhpPage({ searchParams }) {
   const versions = php?.versions ?? [];
   const lifecycleAvailable = Boolean(php?.lifecycle_available);
 
-  // The version in the URL wins so a reload keeps your place; otherwise the
-  // default, which is the one most people came to look at.
+  // The URL's version wins so a reload keeps your place; otherwise the default.
   const selected =
     versions.find((version) => version.version === sp?.version)?.version ??
     php?.default ??
@@ -56,26 +55,15 @@ export default async function PhpPage({ searchParams }) {
 
   const current = versions.find((version) => version.version === selected) ?? null;
 
-  // An install that failed or is still running has nothing on disk, so the
-  // extensions endpoint 404s. Asking anyway spends a request to learn what the
-  // version list already said.
   const installState = versionState(current);
-  // Both endpoints 404 on a version that is still installing or failed, so
-  // neither is asked for then — the same reason the extensions call is
-  // skipped. Fetched together: they are independent and waiting for one to
-  // start the other adds a round trip to every load of this page.
+  // Both endpoints 404 for a version that is not installed (installing, failed,
+  // removing), so skip them then. Fetched in parallel.
   const [{ data: extensions }, { data: ioncube, failed: ionCubeFailed }] = installState
     ? [{ data: null }, { data: null, failed: false }]
     : await Promise.all([getPhpExtensions(selected), getIonCube(selected)]);
 
-  // An install or a purge takes minutes and finishes without telling anyone, so
-  // a page rendered once sits on "Installing" until you navigate away and back.
-  // That is what made a finished install look stuck. Polling only while
-  // something is actually running: a settled server asks for nothing.
-  // ionCube joins the same poll rather than running a timer of its own: its
-  // install is queued behind a ~29 MB download and reports through the same
-  // `installing | ready | failed` tracker the versions use, so a page rendered
-  // once would otherwise sit on "Installing" until you navigated away.
+  // Installs and purges finish without notification, so poll only while
+  // something (version, extension or ionCube) is in flight.
   const inFlight =
     anyInFlight(versions) ||
     anyInFlight(extensions?.extensions ?? []) ||
@@ -89,15 +77,13 @@ export default async function PhpPage({ searchParams }) {
 
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
-      {/* No PHP at all is a normal state on a fresh server, not an error. */}
+      {/* No PHP installed is a normal state, not an error. */}
       {versions.length === 0 ? (
         <EmptyState
           icon={FileCode2}
           title={t("empty.title")}
           description={t("empty.description")}
-          // The install button lives in the version card, which doesn't exist
-          // yet on a fresh server — so the empty state has to carry it, or
-          // there is no way to install PHP at all.
+          // With no versions there is no version bar, so the empty state carries Install.
           action={
             <InstallVersionButton
               runtime="php"
@@ -110,10 +96,8 @@ export default async function PhpPage({ searchParams }) {
         />
       ) : (
         <div className="max-w-5xl space-y-4">
-          {/* Install sits at the end of the version chips: adding a version is
-              the same decision as choosing one. With a single version there are
-              no chips to sit beside, so the button stands alone — it must still
-              be reachable, or a one-version server could never get a second. */}
+          {/* Install sits after the version chips; with one version there are no
+              chips, so it stands alone but must stay reachable. */}
           {versions.length > 1 ? (
             <VersionBar
               versions={versions}
@@ -142,18 +126,9 @@ export default async function PhpPage({ searchParams }) {
 
           {current ? (
             /*
-             * Keyed on the version for the same reason as the Node page: local
-             * state seeded from props does not re-seed when the props change,
-             * because React reuses the instance.
-             *
-             * It matters more here than the stale value it prevents. IniEditor
-             * holds the *edited php.ini text* in state, along with the file it
-             * was loaded from and whether the warning was acknowledged, and
-             * nothing re-syncs any of it when the version changes. Being a
-             * modal Dialog probably makes that unreachable today — you cannot
-             * click the version bar behind it — but "probably unreachable"
-             * guarding a save that writes one version's configuration into
-             * another's is not a guarantee worth keeping.
+             * Keyed on the version so state seeded from props resets. IniEditor
+             * holds edited php.ini text; without the key a save could write one
+             * version's configuration into another's.
              */
             <VersionSummary
               key={current.version}
@@ -165,8 +140,6 @@ export default async function PhpPage({ searchParams }) {
                 version={selected}
                 canManage={canManage}
                 unavailableReason={
-                  // Removing had no branch here either, so a purge in progress
-                  // told you the install had failed.
                   installState === "installing"
                     ? t("versions.stillInstalling")
                     : installState === "removing"
@@ -179,31 +152,20 @@ export default async function PhpPage({ searchParams }) {
             </VersionSummary>
           ) : null}
 
-          {/* Where the extensions card would be. Rendering nothing read as a
-              broken page; the reason is a fact the version list already knows. */}
+          {/* In place of the extensions card, explain why it is unavailable. */}
           {installState ? (
-            // Shared with Node so the two pages cannot drift. This branch used
-            // to be `installing ? … : failed`, so a version being REMOVED
-            // announced "Install failed" — a failure that had not happened.
+            // Shared with the Node page so the two cannot drift.
             <RuntimeStatusNotice version={current} versionLabel={selected} namespace="php" />
           ) : (
-            /*
-             * One at a time, not stacked. The extensions list is ~96 rows and
-             * anything under it starts a thousand pixels down — so whichever
-             * section came second was the one nobody found.
-             */
+            // Tabs rather than stacked: the extensions list is long enough to bury what follows.
             <PhpVersionTabs
               initial={sp?.tab}
-              // The same total the card counts from ("15 of 80 turned on").
-              // Built-ins are listed apart with their own count, so counting
-              // them here made the tab and the card disagree.
+              // Excludes built-ins, matching the card's own count.
               extensionCount={extensions?.extensions?.filter((e) => !e.builtin).length}
               ionCubeState={ioncube}
               ionCubeFailed={ionCubeFailed}
               extensions={
-                /* Still conditional: a failed extensions fetch rendered nothing
-                   before and should keep doing so, rather than an empty list
-                   claiming this PHP has no extensions. */
+                /* A failed fetch renders nothing, never an empty list. */
                 extensions ? (
                   <ExtensionsCard
                     version={selected}
@@ -215,9 +177,7 @@ export default async function PhpPage({ searchParams }) {
                 ) : null
               }
               ioncube={
-                /* Rendered even when its own fetch failed — the card says so,
-                   where returning nothing would read as a feature that is not
-                   there. */
+                /* Rendered even when its fetch failed; the card reports it. */
                 <IonCubeCard
                   version={selected}
                   ioncube={ioncube}

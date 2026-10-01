@@ -18,15 +18,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-// The rule lives in lib/applications/worker-kind.js: the kind select sets the
-// same field from the same list, and two copies of "which kinds cannot coexist"
-// is how one ends up greying out an option the other still offers.
+// The kind-conflict rule lives in lib/applications/worker-kind.js, shared with
+// the kind select so the two never disagree.
 
 /**
- * Command field with a "Use template" dropdown into the preset list. The API
- * only takes a single command string (no per-flag fields like queue connection
- * or backoff), so a preset's job is to hand over a full, editable command —
- * not to drive a guided form the backend has nothing to receive.
+ * Command field with a "Use template" dropdown. The API takes a single command
+ * string, so a preset just fills in a full, editable command.
  */
 export function WorkerCommandField({ form, presets, onPick, workers = [] }) {
   const t = useTranslations("applications.workers");
@@ -77,9 +74,7 @@ export function WorkerCommandField({ form, presets, onPick, workers = [] }) {
               className="font-mono"
               autoComplete="off"
               spellCheck={false}
-              // This application's own example, from its presets. A fixed
-              // Laravel command showed on Craft and git sites too — exactly the
-              // command that fails to start there.
+              // An example from this application's own presets, not a fixed Laravel command.
               placeholder={presets.find((p) => p.command)?.command ?? t("form.commandPlaceholder")}
               {...field}
             />

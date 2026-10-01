@@ -6,21 +6,17 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 /**
- * The databases this site's backups will actually contain.
+ * The databases this site's backups will contain: the link that backups,
+ * staging, cloning and restoring use, not what the site actually connects to
+ * (the panel cannot know that).
  *
- * Not a list of what the site connects to — the panel cannot know that, and it
- * is spelled out here so nobody reads the card as one. What it shows is the
- * link that backups, staging, cloning and restoring go by.
- *
- * The empty state is a warning ONLY for a site type that declares it needs a
- * database. A static site or a git deploy showing permanent amber is how a
- * warning becomes wallpaper.
+ * The empty state warns only for site types that declare a database need.
  */
 export async function DatabaseCard({
   application,
   databases = [],
-  // The databases on this server that belong to no site — what "attach" can
-  // actually offer. Empty means the only honest next step is creating one.
+  // Server databases attached to no site (what "attach" can offer). Empty means
+  // the next step is creating one.
   unattached = [],
   engines = [],
   failed = false,
@@ -31,8 +27,6 @@ export async function DatabaseCard({
   const t = await getTranslations("applications.databaseCard");
 
   const missing = databases.length === 0;
-  // Missing AND the type wanted one. The two halves are separate on purpose:
-  // a site with no database is only a problem when its kind needs one.
   const warn = missing && needsDatabase && !failed;
 
   return (
@@ -43,7 +37,6 @@ export async function DatabaseCard({
             <Database className="size-4 text-primary" />
             {t("title")}
           </CardTitle>
-          {/* Says what the link means before anything below implies otherwise. */}
           <CardDescription>{t("description")}</CardDescription>
         </div>
 
@@ -61,8 +54,7 @@ export async function DatabaseCard({
 
       <CardContent className="flex flex-1 flex-col p-0">
         {failed ? (
-          // Never rendered as "none": a failed check and an empty site look the
-          // same here and mean opposite things.
+          // Never rendered as "none": a failed check is not an empty site.
           <p className="px-(--card-spacing) text-sm text-muted-foreground">{t("loadFailed")}</p>
         ) : missing ? (
           <p
@@ -75,9 +67,6 @@ export async function DatabaseCard({
             {databases.map((database) => (
               <li key={database.id} className="flex items-center gap-3 px-6 py-3">
                 <Database className="size-4 shrink-0 text-muted-foreground" />
-                {/* The name is the way in. Reading it here and then hunting
-                    for it in a server-wide list is the detour this card was
-                    adding to every visit. */}
                 <Link
                   href={`/databases/${database.id}`}
                   prefetch={false}
@@ -93,8 +82,7 @@ export async function DatabaseCard({
           </ul>
         )}
 
-        {/* Only for someone who could actually act on it. Databases are a
-            server-level permission, so a site-level reader may have none. */}
+        {/* Databases are a server-level permission; a site-level reader may lack it. */}
         {canSeeDatabases ? (
           <div className="px-(--card-spacing) pt-(--card-spacing)">
             <DatabaseCardActions

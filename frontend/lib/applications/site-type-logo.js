@@ -1,16 +1,7 @@
 /**
- * The logo for an application type.
- *
- * Keyed on the type's `name` — the stable identifier the API sends — and not
- * on its title, which is translated, nor on its `icon`, which mixes brand
- * slugs ("wordpress") with generic ones ("shopping-cart") and so cannot tell a
- * brand apart from a category.
- *
- * The filenames are written out rather than derived from the name. Two of them
- * do not match (`craftcms` is `craft.svg`, `static` is `selfhosted.png`), and a
- * clever transform that handles those would also happily invent a path for a
- * type we have no logo for — which renders as a broken image rather than as
- * the fallback icon, on the one screen that is meant to look considered.
+ * Application type logos, keyed on the API's stable `name` (not the translated
+ * title or the generic `icon`). Filenames are explicit, not derived, so an
+ * unknown type gets the fallback icon rather than a broken image.
  */
 const LOGOS = {
   wordpress: "wordpress.svg",
@@ -29,10 +20,7 @@ const LOGOS = {
   nodebb: "nodebb.svg",
   git: "git.svg",
   php: "php.svg",
-  // Not a brand — a static site is plain HTML, CSS and JavaScript, so it gets
-  // the thing it IS rather than a logo. The file that was here first came from
-  // the supplied set's "Reseller Panel" entry, which is a different product
-  // and meant nothing on this row.
+  // Not a brand: a static site is plain HTML, CSS and JavaScript.
   static: "html5.svg",
 };
 

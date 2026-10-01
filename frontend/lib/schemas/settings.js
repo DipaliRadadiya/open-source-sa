@@ -7,16 +7,12 @@ import { z } from "zod";
 export const generalSettingsSchema = z.object({
   timezone: z.string(),
   ntp: z.boolean(),
-  // Whether the clock is ACTUALLY in sync, not just whether NTP is switched on.
-  // Enabled-but-not-syncing is a silent failure: cron fires late and log
-  // timestamps lie, and the toggle alone reports intent rather than reality.
+  // Whether the clock is actually in sync, not just whether NTP is switched on.
   clock_synchronized: z.boolean().nullable().optional(),
   hostname: z.string(),
 });
 
-// `size`/`used`/`free` are BYTES (read from /proc/meminfo), while the write
-// field is `size_mb`. Keeping the unit in the name here so the conversion at
-// the form boundary is deliberate rather than accidental.
+// `size`/`used`/`free` are BYTES (from /proc/meminfo); the write field is `size_mb`.
 export const swapSettingsSchema = z.object({
   enabled: z.boolean(),
   path: z.string(),
@@ -30,27 +26,21 @@ export const swapSettingsSchema = z.object({
 
 export const securitySettingsSchema = z.object({
   port: z.number(),
-  // Any string: `sshd -T` can print values the form does not offer
-  // (forced-commands-only), and an enum failed the whole /settings response —
-  // every tab went "could not be loaded". The old alias maps to its new name.
+  // Any string: `sshd -T` can print values the form does not offer, and an enum
+  // would fail the whole /settings response. The old alias maps to its new name.
   permit_root_login: z
     .string()
     .transform((value) => (value === "without-password" ? "prohibit-password" : value)),
   password_authentication: z.boolean(),
-  // The lockout guard, surfaced before it fires: PUT /settings/security 422s
-  // when password auth is disabled with no key present, so without this the
-  // user only learns after confirming a scary dialog.
+  // PUT /settings/security 422s when password auth is disabled with no key
+  // present; this lets the form warn before the confirm dialog.
   has_ssh_key: z.boolean().nullable().optional(),
 });
 
 /**
- * One security update the panel was asked to install.
- *
- * `status` is a code and `reason` is a code — this side owns the wording, the
- * same way it already does for `unattended_last_result` in the same card.
- *
- * `output` is null for a viewer without `setting,manage`, so the absence of a
- * log here is not evidence that there was nothing to show.
+ * One security update the panel was asked to install. `status` and `reason`
+ * are codes; this side owns the wording. `output` is null for viewers without
+ * `setting,manage`, so a missing log is not evidence of nothing to show.
  */
 export const securityUpdateRunSchema = z.object({
   id: z.number(),
@@ -77,14 +67,11 @@ export const updateSettingsSchema = z.object({
   security_updates_enabled: z.boolean(),
   auto_reboot: z.boolean(),
   reboot_time: z.string(),
-  // Whether an automatic reboot goes ahead while someone is logged in.
-  // unattended-upgrades defaults this to true; the API treats an omitted field
-  // as false, so leaving it out of the form was silently choosing for the user.
+  // Whether an automatic reboot goes ahead while someone is logged in. The API
+  // treats an omitted field as false, so the form must always send it.
   reboot_with_users: z.boolean().optional().default(false),
   reboot_required: z.boolean().optional().default(false),
-  // What is actually waiting, and whether the automation is alive. The toggle
-  // above promises "security patches install automatically" and could not show
-  // the result of that promise.
+  // What is actually waiting, and whether the automation is alive.
   updates_available: z.number().nullable().optional(),
   security_updates_available: z.number().nullable().optional(),
   lists_refreshed_at: z.string().nullable().optional(),
@@ -93,32 +80,23 @@ export const updateSettingsSchema = z.object({
   unattended_last_run_at_human: z.string().nullable().optional(),
   // "success" | "failed" | null. Null means it has never run.
   unattended_last_result: z.string().nullable().optional(),
-  // The log line that decided "failed", verbatim and untranslated —
-  // "failed" alone sends the reader to SSH for the one sentence that
-  // explains it, and the commonest one is a transient apt lock.
+  // The log line that decided "failed", verbatim and untranslated.
   unattended_last_error: z.string().nullable().optional(),
-  // The failed run itself, from both unattended-upgrades' log and dpkg's.
-  // One line says whether this is urgent; it cannot say why a package
-  // refused, because dpkg narrates that in a different file. Null on
+  // The failed run from both unattended-upgrades' and dpkg's logs. Null on
   // success, and null for a viewer without `setting,manage`.
   unattended_last_log: z.string().nullable().optional(),
   unattended_last_log_truncated: z.boolean().optional().default(false),
-  // Whether the log could be opened at all. Distinct from every field above
-  // being null, which is what a box that has never run one looks like —
-  // both used to render as silence, and only one of them is a broken panel.
+  // Whether the log could be opened at all; distinct from all fields above
+  // being null (never run).
   unattended_log_readable: z.boolean().optional().default(true),
-  // The panel's own run, carried on the first paint. Without it the page would
-  // show no run in progress until the first poll lands, and the likeliest
-  // moment to open this page is straight after pressing the button.
+  // The panel's own run, so an in-progress run shows before the first poll.
   security_update: securityUpdateRunSchema.nullable().optional(),
 });
 
 /**
- * A restart on a cadence — not the same thing as the `updates` auto-reboot,
- * which only fires when a patch demands one.
- *
- * `timezone` is the SERVER's, because that is what cron reads. Shown rather
- * than converted: a silent UTC conversion is how a 3am window fires at 8am.
+ * A restart on a cadence, unlike the `updates` auto-reboot, which fires only
+ * when a patch demands one. `timezone` is the SERVER's (cron's clock); shown,
+ * never converted.
  */
 export const rebootScheduleSchema = z.object({
   enabled: z.boolean().optional().default(false),
@@ -127,30 +105,24 @@ export const rebootScheduleSchema = z.object({
   day_of_week: z.number().nullable().optional(),
   day_of_month: z.number().nullable().optional(),
   timezone: z.string().nullable().optional(),
-  // Computed from the expression actually on disk, so there is nothing to guess.
+  // Computed from the expression actually on disk.
   next_run: z.string().nullable().optional(),
   next_run_human: z.string().nullable().optional(),
 });
 
 /**
- * A restart that is already counting down (`GET /settings/reboot`), and what
- * `POST` and `DELETE` answer with.
- *
- * `at` is the absolute moment on the server's clock, "DD-MM-YYYY HH:mm:ss". It
- * is null on the rare pending shutdown whose systemd record carries no USEC —
- * `scheduled` is still the answer to act on, so the UI must not treat a missing
- * time as "nothing pending".
+ * A pending restart (`GET /settings/reboot`), and what `POST`/`DELETE` return.
+ * `at` is server time, "DD-MM-YYYY HH:mm:ss", and null when the systemd record
+ * has no USEC; act on `scheduled`, not on a missing `at`.
  */
 export const rebootStatusSchema = z.object({
   scheduled: z.boolean().default(false),
   at: z.string().nullable().optional(),
-  // How long is left, measured on the server. Required, not optional: Zod
-  // strips keys it was not told about, so an optional field that stopped
-  // arriving would take the countdown off the screen with nothing failing
-  // anywhere. Nullable because a systemd record without a USEC has no answer.
+  // Time left, measured on the server. Required so a missing field fails loudly
+  // instead of hiding the countdown; null when systemd has no USEC.
   seconds_remaining: z.number().int().nullable(),
-  // Only on the POST response — the literal `shutdown` argument, and the delay
-  // as asked for. Kept because they explain `at`, never used to compute it.
+  // POST response only: the literal `shutdown` argument and requested delay.
+  // Explain `at`; never used to compute it.
   when: z.string().nullable().optional(),
   delay_minutes: z.number().int().nullable().optional(),
 });
@@ -159,8 +131,7 @@ export const rebootStatusResponseSchema = z.object({
   reboot: rebootStatusSchema,
 });
 
-// Dropdown options, localized by the API — never hardcoded here, same rule as
-// the permission sub-level titles and the activity scopes.
+// Dropdown options, localized by the API; never hardcode them here.
 const presetOption = (value) => z.object({ value, label: z.string() });
 
 export const rebootSchedulePresetsSchema = z.object({
@@ -173,42 +144,26 @@ export const redisSettingsSchema = z.object({
   maxmemory: z.string(),
   maxmemory_policy: z.string(),
   /*
-   * Three states, not two. `null` means the panel could not read the config to
-   * tell — which is NOT "no password is set", and drawing it as such would
-   * invite someone to set one on a server that already has one.
-   *
-   * This was `z.boolean()`, so a server answering null failed the whole
-   * settings response and every tab on the page — Server, Access, Memory,
-   * Updates — rendered "This part could not be loaded". One unreadable Redis
-   * config took down a page that is mostly about neither Redis nor passwords.
+   * Three states: `null` means the config could not be read, which is NOT "no
+   * password is set". Must stay nullable or the whole settings response fails.
    */
   has_password: z.boolean().nullable(),
-  // Sent since 2026-08-31, and only to a caller with `setting` manage. Null
-  // when none is set, when the panel could not read it, or when the caller is
-  // not allowed it — `has_password` is what tells those apart.
+  // Only sent to a caller with `setting` manage. Null when unset, unreadable or
+  // not allowed; `has_password` tells those apart.
   password: z.string().nullable().optional(),
-  // False when the panel cannot write its own .env. The docs are explicit that
-  // the control should be disabled rather than offered and then refused.
+  // False when the panel cannot write its own .env; disable the control.
   password_manageable: z.boolean().optional().default(true),
-  // A memory limit means nothing without the usage it limits, and a configured
-  // Redis that is not running is a different fact from a healthy one.
+  // Usage beside the limit; a configured Redis that is not running differs from a healthy one.
   running: z.boolean().nullable().optional(),
   memory_used: z.number().nullable().optional(),
   memory_used_human: z.string().nullable().optional(),
 });
 
-// Groups are detect-gated server-side: an absent group means "not installed on
-// this server", which is a different thing from "installed with no values".
 /**
- * Every group the API can return must be listed here.
- *
- * Zod strips unknown keys, so a group the backend sends and this object does
- * not name is deleted before any page sees it — silently, with no error and a
- * 200 response. The page then renders its empty state as though the server had
- * said there was nothing there, which is the hardest kind of wrong to find:
- * the API is correct, the logs are clean, and only the screen disagrees. That
- * cost an afternoon once. See tests/settings-schema.test.mjs, which reads the
- * backend and fails if a group it can return is missing from this list.
+ * Every group the API can return must be listed here, or Zod strips it and the
+ * page shows an empty state with no error. Groups are detect-gated: absent
+ * means "not installed", not "no values". tests/settings-schema.test.mjs checks
+ * this list against the backend.
  */
 export const settingsSchema = z.object({
   general: generalSettingsSchema.optional(),
@@ -290,8 +245,7 @@ export const updatesFormSchema = z.object({
 
 export const REBOOT_FREQUENCIES = ["daily", "weekly", "monthly"];
 
-// The API caps this at 28 so "monthly" happens twelve times a year — the 31st
-// silently skips February and the short months.
+// The API caps this at 28 so "monthly" runs every month, February included.
 export const MAX_DAY_OF_MONTH = 28;
 
 export const scheduleFormSchema = z.object({

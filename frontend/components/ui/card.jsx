@@ -3,25 +3,9 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 
 /*
- * ONE edge treatment, not three.
- *
- * Krishna: make it read like "a professional server-management product, not an
- * AI-generated SaaS template". The card drew its boundary three ways at once —
- * `ring-1 ring-foreground/10` AND `shadow-sm` AND a 14px radius — and with 370
- * of them in the panel (11 on the dashboard alone) that stacked into 29
- * bordered and 12 shadowed elements on a single screen. A hairline border is
- * enough for something sitting IN the page; elevation is reserved for things
- * that float over it, which is why `popover`, `dropdown-menu` and `dialog`
- * keep their shadow and are untouched here.
- *
- * The type scale is the other half. 97% of the text on the dashboard measured
- * 14px, so nothing looked more important than anything else and the boxes were
- * doing the work that type should do. A card now reads 16 semibold / 14 / 12
- * instead of 16 medium / 14 / 14.
- *
- * Deliberately NOT tighter. "dont make anything too compact. ui should be
- * breathable and properly scannable" — the padding is unchanged; the density
- * comes from removing chrome, not from squeezing content.
+ * One edge treatment: a hairline border, no ring or shadow. Elevation is for
+ * floating surfaces (popover, dropdown, dialog). Type scale: title 16 semibold,
+ * body 14, description 12.
  */
 
 function Card({
@@ -57,14 +41,8 @@ function CardHeader({
 }
 
 /*
- * `as` exists because a card title usually IS a section heading, and shipping
- * it as a <div> left whole pages with a single <h1> and no outline beneath it —
- * nothing to jump between with a screen reader, and no structure for anything
- * that reads the document rather than looks at it.
- *
- * It stays a <div> by default: cards also appear inside dialogs and nested in
- * other sections, where an <h2> would land at the wrong depth. Callers that
- * know they are a top-level section on a page pass `as="h2"`.
+ * A <div> by default, since cards also nest inside dialogs and sections.
+ * Top-level page sections pass `as="h2"` to give the page a heading outline.
  */
 function CardTitle({
   as: Comp = "div",

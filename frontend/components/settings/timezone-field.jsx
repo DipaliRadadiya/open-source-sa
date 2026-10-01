@@ -2,12 +2,9 @@ import { useFormatter, useTranslations } from "next-intl";
 import { Combobox } from "@/components/ui/combobox";
 
 /**
- * One field, one value — the same string the API takes.
- *
- * The list comes from `GET /timezones`, which is the exact list the save
- * validates against. It used to come from the browser, which spells Kolkata
- * "Calcutta" and has no `Etc/UTC` at all — so this server's own setting
- * rendered as an empty dropdown.
+ * One field, one value: the same string the API takes. The list comes from
+ * `GET /timezones`, the exact list the save validates against (the browser's
+ * list differs, e.g. "Calcutta", no `Etc/UTC`).
  */
 export function TimezoneField({ value, onChange, disabled, groups = [], id }) {
   const t = useTranslations("settings.server");
@@ -30,28 +27,17 @@ export function TimezoneField({ value, onChange, disabled, groups = [], id }) {
     localTime = null;
   }
 
-  /*
-   * Searchable, because the list is ~400 long.
-   *
-   * A plain Select meant scrolling for a zone you already knew the name of —
-   * the one list in the panel where typing is faster than looking. The region
-   * becomes the option's hint rather than a group heading: Combobox has no
-   * groups, and the hint is searched too, so "Asia", "Kolkata", "+05:30" and
-   * the raw `Asia/Kolkata` all find the same row.
-   */
+  // Searchable (~400 zones). Combobox has no groups, so the region becomes the
+  // option's hint, which is searched too.
   const options = groups.flatMap((group) =>
     group.zones.map((zone) => ({
       value: zone.value,
-      // The offset is the thing people actually check a timezone against, and
-      // the API recomputes it per request so it stays right across daylight
-      // saving.
+      // The API recomputes the offset per request, so it stays right across DST.
       label: zone.offset ? `${zone.label} (${zone.offset})` : zone.label,
       hint: group.region,
     })),
   );
 
-  // A value the list does not contain still has to be selectable, or the field
-  // renders blank and the user cannot even see what the server is set to.
   if (!known && value) options.unshift({ value, label: value });
 
   return (

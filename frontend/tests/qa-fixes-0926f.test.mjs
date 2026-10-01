@@ -22,7 +22,7 @@ test("ST-B: push is only offered for a copy that finished being created", () => 
 });
 
 test("ST-D: a failed push or create re-reads the page", () => {
-  assert.match(push, /toast\.error\(apiMessage\(error, t\("failed"\)\)\);\n\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*router\.refresh\(\);/);
+  assert.match(push, /toast\.error\(apiMessage\(error, t\("failed"\)\)\);\n(\s*\/\/[^\n]*\n)*\s*router\.refresh\(\);/);
   assert.match(create, /toast\.error\(apiMessage\(error, t\("failed"\)\)\);[\s\S]{0,200}router\.refresh\(\);/);
 });
 

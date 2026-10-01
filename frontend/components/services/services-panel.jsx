@@ -10,19 +10,16 @@ import { ServiceStatusBadge } from "@/components/services/service-status-badge";
 import { ServicesCards } from "@/components/services/services-cards";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 
-// Fast enough that CPU reads as live, slow enough to stay off the box's back.
+// Fast enough that CPU reads as live, light enough on the server.
 const POLL_MS = 3000;
 
 /**
- * Owns the services list on the client so CPU can exist at all: `cpu_percent`
- * is a delta between two samples, so the value only appears once we've polled
- * twice. The poll therefore isn't a convenience — without it that column is
- * permanently empty.
+ * Owns the services list on the client because `cpu_percent` is a delta
+ * between two samples: without polling the CPU column stays empty.
  *
- * The "checked at" stamp is updated by the same poll, and ONLY on success. If
- * the backend stops answering the time visibly stops advancing, so the page
- * goes stale in the open rather than quietly serving old numbers as current —
- * the failure mode we hit with the log activity dots.
+ * The "checked at" stamp updates only on a successful poll, so a stalled
+ * backend shows as a stopped clock rather than stale numbers presented as
+ * current.
  */
 export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, canManage }) {
   const t = useTranslations("services");
@@ -46,8 +43,7 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
     let active = true;
 
     async function tick() {
-      // Nothing to show while hidden, and a background tab shouldn't keep
-      // shelling out to systemd on the user's server.
+      // Skip while the tab is hidden, to avoid needless systemd calls.
       if (document.hidden) return;
       try {
         const { data } = await listServices();
@@ -56,9 +52,8 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
         setServices(parsed.data.services);
         setCheckedAt(format.dateTime(new Date(), { timeStyle: "short" }));
       } catch {
-        // Leave both the rows and the timestamp alone: the numbers on screen
-        // are the last ones we actually measured, and the clock not moving is
-        // how the reader finds out.
+        // Keep the last measured rows and timestamp; the stopped clock shows
+        // the failure.
       }
     }
 
@@ -71,12 +66,9 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
     };
   }, [format]);
 
-  // Three groups, because the reader is asking three different questions and a
-  // single list answered none of them well. On a server whose engines all failed
-  // to install, the table was every row empty except its name.
-  //
+  // Three groups:
   //   attention   needs a person: never installed, or installed and not running
-  //   running     has a unit that is up — the only rows where Memory, CPU and
+  //   running     has a unit that is up; the only rows where Memory, CPU and
   //               Start on boot mean anything, so they keep the table
   //   installing  in progress; nothing to do but wait
   const attention = services.filter(
@@ -86,25 +78,21 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
   const running = services.filter(
     (s) => (s.state ?? "installed") === "installed" && s.status !== "failed",
   );
-  // The table lists stopped units with the running ones; the counts must not.
-  // "All 8 services are running" sat above a row that said Stopped.
+  // The table lists stopped units with running ones; the counts must not.
   const active = running.filter((s) => s.status !== "inactive");
   const stopped = running.length - active.length;
 
   return (
     <div className="space-y-6">
-      {/* The two counts people open this page for, plus when the numbers were
-          taken. Tinted only when something is actually wrong — a permanently
-          coloured strip is decoration, and a permanently calm one that goes red
-          is a signal. */}
+      {/* The two key counts plus the sample time. Tinted only when something
+          is wrong. */}
       <div
         className={`flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border px-4 py-3 text-sm ${
           attention.length > 0 ? "border-destructive/30 bg-destructive/5" : "bg-muted/30"
         }`}
       >
-        {/* One phrase when all is well: "Everything is running · 5 running"
-            said the same thing twice. The count only earns its own slot when it
-            is the REMAINDER after something has gone wrong. */}
+        {/* One phrase when all is well; the count only appears as the remainder
+            when something is wrong. */}
         {attention.length > 0 ? (
           <>
             <span className="font-medium text-destructive">
@@ -132,9 +120,8 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
             {t("summary.installing", { count: installing.length })}
           </span>
         ) : null}
-        {/* The stamp and the button that renews it, together, and in the one
-            place that speaks for the whole page. In a section header the same
-            button read as "refresh these rows". */}
+        {/* The stamp and its refresh button sit at page level, since they
+            cover the whole page, not one section. */}
         <span className="ms-auto flex items-center gap-2 text-xs tabular-nums text-muted-foreground">
           {t("checkedAt", { time: checkedAt })}
           <RefreshButton />
@@ -166,21 +153,13 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
         </Section>
       ) : null}
 
-      {/* Hidden when nothing is running: on a server whose engines all failed
-          to install, this drew a full six-column table with one "No services
-          detected" cell in it — a large empty frame saying what the summary
-          line already said in two words.
-
-          Kept when there are NO services at all, because then it is the only
-          thing that can explain an otherwise blank page. */}
+      {/* Hidden when nothing is running (the summary already says so). Kept
+          when there are no services at all, to explain an otherwise blank page. */}
       {running.length > 0 || services.length === 0 ? (
       <Section title={t("sections.running.title")} hint={t("sections.running.hint")}>
         {/* Cards when the content area is narrow, the table when it has room.
-            A container query, not lg: with the sidebar open at 1024 the table
-            got ~700px and "Memory" and "CPU" no longer fitted their columns;
-            900px is where the widest locale's headers fit. The table scrolls
-            sideways on a phone, but its action buttons land off-screen with
-            nothing hinting at a swipe. */}
+            A container query, not lg: 900px is where the widest locale's
+            headers fit, with or without the sidebar. */}
         <div className="@container/svc">
         <div className="@min-[900px]/svc:hidden">
           <ServicesCards
@@ -208,8 +187,7 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
 }
 
 /**
- * A titled group of rows. Same shape as the setup page's sections: a heading
- * that says what the group is and one line saying why it is separate.
+ * A titled group of rows, shaped like the setup page's sections.
  */
 function Section({ title, hint, children }) {
   return (

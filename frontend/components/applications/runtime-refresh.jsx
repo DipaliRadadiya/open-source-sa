@@ -6,23 +6,11 @@ import { cn } from "@/lib/utils";
 import { useRefresh } from "@/hooks/use-refresh";
 
 /**
- * Re-read the runtime versions the server has, without losing the form.
+ * Re-read the server's runtime versions without losing the form's values.
  *
- * Installing a PHP version happens on another screen. Before this, the only way
- * to see it in the create form was to reload — which threw away everything
- * already typed, so the real choice was "fill the form again" or "pick a
- * version you did not want".
- *
- * `useRefresh` re-runs the page's server component rather than fetching the
- * list itself. That keeps ONE source for the versions — the same fetch the
- * form was rendered from — and it also re-runs `withAvailability`, so a
- * site type greyed out for having no usable PHP becomes selectable in the same
- * press. A client-side fetch into local state would have updated the select and
- * left the type cards stale, which is the half-refresh that looks like a bug.
- *
- * Verified in a real build rather than taken from the docs, because "without
- * losing what you entered" is the whole point: a filled form keeps every value,
- * including the version already chosen, across the refresh.
+ * `useRefresh` re-runs the page's server component rather than fetching here,
+ * keeping one source for the versions and also re-running `withAvailability`,
+ * so site type cards update in the same press.
  *
  * @param runtime  "PHP" | "Node.js" — a technical token, not translated.
  * @param versions the full installed list for this runtime, as rendered.
@@ -30,9 +18,8 @@ import { useRefresh } from "@/hooks/use-refresh";
 export function RuntimeRefresh({ runtime, versions }) {
   const t = useTranslations("applications");
   const { pending, refresh } = useRefresh();
-  // What was installed at the moment of the press. Null when no press of ours
-  // is outstanding — the pending signal is shared with the rest of the page, so
-  // without this a refresh started somewhere else would toast about versions.
+  // Installed versions when this button was pressed; null otherwise. The pending
+  // signal is shared with the page, so this avoids toasting for other refreshes.
   const before = useRef(null);
 
   useEffect(() => {
@@ -51,9 +38,7 @@ export function RuntimeRefresh({ runtime, versions }) {
       return;
     }
 
-    // Not silence. A version that is still installing is not in this list yet —
-    // the form only offers ready ones — so the commonest reason for pressing
-    // this button is also the one where nothing appears to happen.
+    // Explain an unchanged list: a version still installing is not offered yet.
     toast.info(t("form.versionsUnchanged", { runtime }));
   }, [pending, versions, runtime, t]);
 
@@ -65,9 +50,7 @@ export function RuntimeRefresh({ runtime, versions }) {
         refresh();
       }}
       disabled={pending}
-      // Same shape and weight as the "Generate" action on password fields: this
-      // row is a label, and a second button-looking control in it would compete
-      // with the field underneath.
+      // Styled like the "Generate" action: a link-like control in a label row.
       className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-primary hover:underline disabled:opacity-60 disabled:hover:no-underline"
       // "Refresh" alone is ambiguous when the form has one per runtime.
       aria-label={t("form.refreshVersionsHint", { runtime })}

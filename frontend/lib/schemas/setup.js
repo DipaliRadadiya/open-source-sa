@@ -31,8 +31,8 @@ const componentSchema = z
     recommended: z.boolean().default(false),
     action: actionSchema.default(null),
     options: z.array(optionSchema).default([]),
-    // reason/message can be present even when state is not "failed" (a stale
-    // prior attempt) — only ever shown when state === "failed".
+    // reason/message may linger from a prior attempt; show them only when
+    // state === "failed".
     reason: z.string().nullish(),
     message: z.string().nullish(),
     retryable: z.boolean().default(false),

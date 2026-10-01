@@ -20,8 +20,8 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
   const minimal = user?.applications ?? []; // list gives id + name only
   const [apps, setApps] = useState(null); // null = loading
 
-  // Fetch full detail on open (domain/status live on the detail endpoint).
-  // Falls back to the minimal list data if the fetch fails.
+  // Fetch full detail on open (domain/status live on the detail endpoint). Falls
+  // back to the minimal list data if the fetch fails.
   useEffect(() => {
     if (!open || !user) return;
     let active = true;
@@ -34,9 +34,8 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
     return () => {
       active = false;
     };
-    // `minimal` is excluded: it is only the fallback for a failed fetch, derived
-    // from the same user prop, and refetching when it changes identity would
-    // mean refetching on every parent render.
+    // `minimal` is excluded: it is only the failure fallback, derived from the same
+    // user prop, and would refetch on every parent render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, user?.id]);
 
@@ -46,8 +45,8 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
   }
 
   const skeletonCount = Math.max(minimal.length, 2);
-  // The names are already in the list row, so they show at once; only the
-  // domain and status wait for the detail request (1–4 s on a real server).
+  // Names come from the list row and show at once; only domain and status wait for
+  // the detail request.
   const loading = apps === null;
   const shown = apps ?? minimal;
 

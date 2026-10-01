@@ -7,17 +7,13 @@ import {
   cleanerRunsSchema,
 } from "@/lib/schemas/disk-cleaner";
 
-// Schemas are imported, never restated here: a second copy of the shape drifts
-// the moment the API changes and the page reads "we couldn't load this" with
-// nothing actually wrong.
+// Schemas are imported, never restated here: a local copy drifts when the API changes.
 
 /** Live disk usage + what each category could reclaim. Read fresh every time. */
 export const getDiskCleaner = cache(async function getDiskCleaner() {
   const result = await read("/disk-cleaner", cleanerPreviewSchema);
 
-  // Every field `read()` knows, not just whether it worked: without the
-  // status and the kind, the failure box on this screen could not tell a
-  // 403 from a 500 and printed the same unfalsifiable sentence for both.
+  // Pass through every field `read()` knows so the failure box can tell a 403 from a 500.
   return {
     data: result.failed ? null : (result.data ?? null),
     failed: result.failed,

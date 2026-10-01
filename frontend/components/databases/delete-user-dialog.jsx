@@ -8,10 +8,8 @@ import { apiMessage } from "@/lib/api/error-message";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 /**
- * Removing a user is not destructive to data, but it IS destructive to whatever
- * is connecting with it — so the dialog names that rather than asking "are you
- * sure?". No type-to-confirm: unlike dropping a database, this is recoverable
- * by making the user again.
+ * Removing a user breaks whatever connects with it, so the dialog names that.
+ * No type-to-confirm: the user can be recreated.
  */
 export function DeleteUserDialog({ database, user, open, onOpenChange }) {
   const t = useTranslations("databases.users");
@@ -50,18 +48,13 @@ export function DeleteUserDialog({ database, user, open, onOpenChange }) {
       pending={pending}
       onConfirm={onConfirm}
     >
-      {/* Who is being removed, as a value rather than a word inside a sentence.
-          A database user is a name AND where it may connect from, and two rows
-          can share the name with different hosts — reading that distinction out
-          of prose is exactly the mistake worth not making here. Same block the
-          user row shows, so the dialog and the row are recognisably about the
-          same line. */}
+      {/* A user is a name AND a host, and two rows can share the name; shown
+          as the same block the user row uses. */}
       <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2">
         <User className="size-4 shrink-0 text-muted-foreground" />
         <code className="min-w-0 font-mono text-sm font-medium break-all">
           {user?.username}
         </code>
-        {/* The row's own words for the same fact, not a second wording of it. */}
         <span className="text-xs text-muted-foreground">
           {tAccess(`${access}.label`)}
           {access === "remote" && user?.host ? ` · ${user.host}` : ""}

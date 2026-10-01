@@ -12,21 +12,9 @@ import { apiMessage } from "@/lib/api/error-message";
 import { useBrowserIpSettled } from "@/components/network/browser-ip";
 
 /**
- * One click to a protected server.
- *
- * A fresh fail2ban has every jail switched off — deliberately, so it doesn't
- * start banning the moment it appears. But that leaves the user with a list of
- * unfamiliar names and no idea which matter, and the one thing they must do
- * first (put their own address on the never-ban list) is on a different tab.
- * Almost nobody does it in the right order, and the ones who don't lock
- * themselves out.
- *
- * So this does the whole thing as a single action: add your address, then enable
- * the jails that exist. Same request, so it cannot half-apply and leave the
- * dangerous middle state — jails on, your address not yet exempt.
- *
- * Shown only while nothing is enabled. Once the server is protected this is
- * noise, and the jail switches are the right control for tuning.
+ * One-click setup: ignores the user's own IP and enables every jail in a single
+ * request, so it can never leave jails on with the user still bannable.
+ * Shown only while no jail is enabled.
  */
 export function RecommendedSetup({ jails, settings, yourIp, ignoreIps = [], canManage }) {
   const t = useTranslations("fail2ban");
@@ -43,23 +31,17 @@ export function RecommendedSetup({ jails, settings, yourIp, ignoreIps = [], canM
     setPending(true);
     try {
       await updateFail2ban({
-        // The three numbers go on EVERY call: this endpoint rewrites the config
-        // file as a unit and rejects a payload without them. Omitting them is
-        // what made the first version fail with "the bantime field is required".
+        // Required on every call: the endpoint rewrites the config as a unit.
         ...settingsPayload(settings, ignoreIps),
-        // Every jail the server actually has. Enabling a jail that isn't there
-        // would be inventing config; the API decides what exists, not us.
+        // Only the jails the server reports.
         jails: Object.fromEntries(jails.map((jail) => [jail.name, true])),
-        // Sent in the same call as the jails, so there is no window where the
-        // SSH jail is live and the operator's own address is still bannable.
+        // Same call as the jails, so there is no window where the user is bannable.
         ...(willIgnoreMe ? { ignore_ips: [...ignoreIps, yourIp] } : null),
-        // Only when the reader's address is known and covered above. Until the
-        // browser has it, the API's own lockout check runs against this very
-        // request — which comes from the browser, so it sees the right address.
+        // Only when the user's IP is known and covered above; otherwise the
+        // API's lockout check runs against this request's address.
         acknowledged: Boolean(yourIp),
       });
-      // The card and the jails re-read first, then the toast: "Protection is
-      // on" above a card still saying "not protected" read as a failure.
+      // Refresh first, so the toast never sits above stale "not protected" state.
       await refreshAndWait();
       toast.success(t("recommended.done"));
     } catch (error) {
@@ -80,8 +62,6 @@ export function RecommendedSetup({ jails, settings, yourIp, ignoreIps = [], canM
           </span>
           <div className="space-y-1">
             <p className="text-base font-semibold">{t("recommended.title")}</p>
-            {/* Says exactly what the click will do, including the part the user
-                would otherwise have to remember on their own. */}
             <p className="text-sm text-muted-foreground">
               {willIgnoreMe
                 ? t("recommended.bodyWithIp", { count: jails.length, ip: yourIp })

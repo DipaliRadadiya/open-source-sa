@@ -1,8 +1,8 @@
 // Reads a 5-field cron expression the way the backend's parser does
 // (dragonmantank/cron-expression): lists, ranges, steps, month and weekday
 // names, 7 as Sunday, and day-of-month OR day-of-week when both are set.
-// Returns null for anything it cannot read — the preview then says nothing
-// rather than guessing, and the form's own validation takes over.
+// Returns null for anything it cannot read, so the preview stays silent and the
+// form's validation takes over.
 
 const MACROS = {
   "@yearly": "0 0 1 1 *",

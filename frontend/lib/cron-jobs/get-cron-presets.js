@@ -1,8 +1,7 @@
 import { serverFetch } from "@/lib/api/server-fetch";
 
-// Preset lists are convenience only — the create form still works with plain
-// expression/command fields if either endpoint is unavailable, so a failure
-// degrades to [] instead of taking the page down.
+// Presets are a convenience; the form works without them, so a failure degrades
+// to [] instead of taking the page down.
 async function fetchJson(path, pick) {
   try {
     const res = await serverFetch(path);

@@ -39,8 +39,7 @@ export default async function NodePage({ searchParams }) {
   const versions = node?.versions ?? [];
   const lifecycleAvailable = Boolean(node?.lifecycle_available);
 
-  // The version in the URL wins so a reload keeps your place; otherwise the
-  // default, which is the one most people came to look at.
+  // The version in the URL wins so a reload keeps the selection; otherwise the default.
   const selected =
     versions.find((version) => version.version === sp?.version)?.version ??
     node?.default ??
@@ -49,8 +48,7 @@ export default async function NodePage({ searchParams }) {
 
   const current = versions.find((version) => version.version === selected) ?? null;
 
-  // Same reason as PHP: fnm takes minutes and finishes silently, so a page
-  // rendered once sits on "Installing" until you navigate away and back.
+  // fnm installs take minutes and finish silently, so in-flight versions are polled.
   const inFlight = anyInFlight(versions);
 
   return (
@@ -61,15 +59,13 @@ export default async function NodePage({ searchParams }) {
 
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
-      {/* No managed Node is a normal state on a fresh server, not an error —
-          and the box may still have one of its own, which the note explains. */}
+      {/* No managed Node is a normal state, not an error; the note covers a system Node. */}
       {versions.length === 0 ? (
         <div className="max-w-5xl space-y-4">
           <EmptyState
             icon={Hexagon}
             title={t("empty.title")}
-            // With nothing installable there is no button to offer, so inviting
-            // someone to install would be a dead end. Say why instead.
+            // With nothing installable there is no install button; explain why instead.
             description={
               (node?.installable ?? []).length === 0
                 ? t("empty.noneInstallable")
@@ -89,10 +85,8 @@ export default async function NodePage({ searchParams }) {
         </div>
       ) : (
         <div className="max-w-5xl space-y-4">
-          {/* Install sits at the end of the version chips: adding a version is
-              the same decision as choosing one. With a single version there are
-              no chips to sit beside, so the button stands alone — it must still
-              be reachable, or a one-version server could never get a second. */}
+          {/* Install sits at the end of the version chips. With a single version
+              there are no chips, so the button stands alone and stays reachable. */}
           {versions.length > 1 ? (
             <VersionBar
               versions={versions}
@@ -121,19 +115,9 @@ export default async function NodePage({ searchParams }) {
 
           {current ? (
             /*
-             * Keyed on the version, so switching versions remounts the card.
-             *
-             * It holds the npm version in state — seeded from the prop, then
-             * replaced in place when npm is updated from here. A `useState`
-             * initialiser only ever runs on mount, so picking a different Node
-             * version re-rendered the same instance and left the previous
-             * version's npm number sitting under the new one. Every other field
-             * on the card reads straight from props, which is why npm was the
-             * only thing that lied, and why a reload "fixed" it.
-             *
-             * The key resets the confirm dialog and the pending flag too: a
-             * remove-confirmation opened for one version has no business
-             * surviving a switch to another.
+             * Keyed on the version so switching remounts the card: it seeds npm's
+             * version into state (useState only reads the prop on mount), and the
+             * key also resets the confirm dialog and pending flag.
              */
             <VersionSummary
               key={current.version}
@@ -143,9 +127,7 @@ export default async function NodePage({ searchParams }) {
             />
           ) : null}
 
-          {/* What is happening to this version, when it is not simply ready.
-              Node had nothing here at all — an install in flight looked like a
-              finished one. Shared with PHP so the two cannot drift. */}
+          {/* Status of this version when it is not simply ready. Shared with PHP. */}
           <RuntimeStatusNotice version={current} versionLabel={selected} namespace="node" />
 
           <SystemNodeNote system={node?.system} versions={node?.versions} />

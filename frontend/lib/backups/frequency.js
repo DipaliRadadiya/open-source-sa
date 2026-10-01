@@ -1,11 +1,7 @@
 /**
- * Reading `GET /backup-targets/options` for the form and the lists.
- *
- * The labels, hints and the list itself come from the API. What it does not
- * send is how far apart two runs are, which the retention hint needs: on
- * `hourly` a retention of 7 is seven HOURS of history, and "about 7 days"
- * would be a promise the schedule cannot keep. A value this file does not
- * recognise gets no span, and the hint falls back to counting backups.
+ * Helpers over `GET /backup-targets/options`. The API does not send the
+ * spacing between runs, which the retention hint needs, so it is derived here;
+ * unknown values get no span and the hint falls back to a backup count.
  */
 
 /** The API's entry for one frequency, or null. */
@@ -42,10 +38,7 @@ export function hoursBetweenRuns(value) {
 
 /**
  * How much history `count` backups cover: `{ unit: "hours" | "days", amount }`,
- * or null when the spacing is unknown.
- *
- * Hours below a day, because "about 0 days" is what a day count says about
- * seven hourly backups.
+ * or null when the spacing is unknown. Hours below a day, to avoid "about 0 days".
  */
 export function historySpan(value, count) {
   const hours = hoursBetweenRuns(value);
@@ -62,10 +55,8 @@ export function minuteOf(time) {
 }
 
 /**
- * The stored time with only its minute changed.
- *
- * `hourly` reads only the minute, but the hour is kept rather than zeroed so
- * that switching back to a daily schedule returns to the hour it had.
+ * The stored time with only its minute changed. The hour is kept so switching
+ * back from `hourly` to daily restores it.
  */
 export function withMinute(time, minute) {
   const hour = TIME.exec(String(time ?? ""))?.[1] ?? "00";
@@ -73,12 +64,7 @@ export function withMinute(time, minute) {
   return `${hour.padStart(2, "0")}:${String(n).padStart(2, "0")}`;
 }
 
-/**
- * The API's backup types, the full backup first.
- *
- * The API lists files, database, full. The form leads with the one that
- * restores a whole site, because it is the one a first-timer should pick.
- */
+/** The API's backup types with `full` first, the sensible default. */
 export function orderedTypes(options) {
   const types = options?.types ?? [];
   return [...types.filter((t) => t.value === "full"), ...types.filter((t) => t.value !== "full")];

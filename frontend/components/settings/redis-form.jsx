@@ -37,10 +37,8 @@ import {
 export function RedisForm({ redis, canManage, changedBy }) {
   // Changing the password also rewrites the panel's own REDIS_PASSWORD, so an
   // install that cannot write its .env cannot do this at all.
-  // `has_password === null` means the panel's stored credential does not open
-  // a connection, and the API answers 422 to a password change in that state —
-  // it is applied after the response, so accepting one would report success for
-  // something that could not work. Offering the field would be inviting that.
+  // `has_password === null` means the stored credential does not connect; the
+  // API answers 422 to a password change in that state.
   const passwordUnreadable = redis?.has_password === null;
   const passwordLocked =
     !canManage || redis?.password_manageable === false || passwordUnreadable;
@@ -50,19 +48,15 @@ export function RedisForm({ redis, canManage, changedBy }) {
   const { refreshAndWait } = useRefresh();
   const [removing, setRemoving] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState(false);
-  // A password change is in flight (HTTP 202). There is no endpoint that
-  // reports when it lands, and `has_password` cannot answer it either — it is
-  // already true when one password is being replaced by another. So this state
-  // says what was submitted and offers a re-read, and never claims a result it
-  // did not observe.
+  // A password change is in flight (HTTP 202). Nothing reports when it lands
+  // (`has_password` is already true), so this says what was submitted and
+  // offers a re-read, never claiming a result.
   const [applying, setApplying] = useState(false);
-  // Swapped in only when someone asks to replace the password, so the row
-  // normally reads as the credential it holds rather than an empty form field.
+  // Swapped in only when replacing the password; normally the row shows the stored credential.
   const [changing, setChanging] = useState(false);
 
-  // One automatic re-read, so the common case settles without being asked.
-  // Not a poll: with nothing to poll for, repeating the request would only
-  // redraw the same page.
+  // One automatic re-read so the common case settles; not a poll, as there is
+  // nothing to poll for.
   useEffect(() => {
     if (!applying) return undefined;
     const timer = setTimeout(() => router.refresh(), 5000);
@@ -87,7 +81,7 @@ export function RedisForm({ redis, canManage, changedBy }) {
   });
 
   // Its own request: the flag is destructive, so it must not ride along with
-  // an unrelated memory-limit edit the user happens to have in the form.
+  // an unrelated memory-limit edit.
   async function removePassword() {
     setPendingRemoval(true);
     try {
@@ -100,9 +94,7 @@ export function RedisForm({ redis, canManage, changedBy }) {
       toast.success(t("redis.removed"));
       setRemoving(false);
     } catch (error) {
-      // The fallback is what a reader sees when the API sends no message of
-      // its own, so it has to be the failure — this said "Redis settings
-      // saved." in a red toast, which is the one thing that had not happened.
+      // The fallback must describe the failure.
       toast.error(apiMessage(error, t("redis.removeFailed")));
     } finally {
       setPendingRemoval(false);
@@ -118,11 +110,8 @@ export function RedisForm({ redis, canManage, changedBy }) {
 
       const response = await updateRedisSettings(payload);
 
-      // 202: the password is applied AFTER this response, because the
-      // credential the panel is using is the one being replaced. Saying
-      // "Saved" and refreshing here reported success for something still in
-      // flight and re-read state that had not changed yet — which is exactly
-      // what "the password was not updated" looks like.
+      // 202: the password is applied AFTER this response (the panel's current
+      // credential is the one being replaced), so don't report "Saved" or refresh.
       if (response?.status === 202) {
         form.reset({ ...values, password: "" });
         setChanging(false);
@@ -159,9 +148,7 @@ export function RedisForm({ redis, canManage, changedBy }) {
               />
             }
           >
-            {/* Said where the change was made, and it stays until the reader
-                dismisses it. A toast would have faded well before the change
-                landed, which is how this looked like nothing happened. */}
+            {/* Stays until dismissed; a toast would fade before the change lands. */}
             {applying ? (
               <div
                 role="status"
@@ -256,10 +243,7 @@ export function RedisForm({ redis, canManage, changedBy }) {
               )}
             />
   
-            {/* One row, not two. A permanent second password box read as a
-                form asking for two passwords; nobody is changing this often
-                enough to keep an input on screen for it. The stored value is
-                what the row shows, and replacing it is a deliberate step. */}
+            {/* One row: the stored value, with replacing it as a deliberate step. */}
             <FormField
               control={form.control}
               name="password"
@@ -267,8 +251,7 @@ export function RedisForm({ redis, canManage, changedBy }) {
                 <Row
                   label={t("redis.password")}
                   hint={
-                    // The full sentence lives here, where it has the width to
-                    // be read. It was the placeholder too, in a 224px box.
+                    // The full sentence lives here; the input is too narrow for it.
                     passwordUnreadable
                       ? t("redis.passwordUnknown")
                       : redis?.password_manageable === false
@@ -327,11 +310,8 @@ export function RedisForm({ redis, canManage, changedBy }) {
                       </>
                     )}
 
-                    {/* Setting a password was possible; clearing one was not, so
-                        a password could only ever be replaced. The API has taken
-                        `remove_password` all along. Its own action rather than a
-                        magic empty value — the API needs the distinction too,
-                        because Laravel rewrites "" to null before validation. */}
+                    {/* Removing is its own action (`remove_password`), not an
+                        empty value: Laravel rewrites "" to null before validation. */}
                     {!passwordLocked && !changing ? (
                       <div className="flex flex-wrap items-center gap-2">
                         {showStored ? (
@@ -346,10 +326,8 @@ export function RedisForm({ redis, canManage, changedBy }) {
                         ) : null}
 
                         {redis?.has_password === true ? (
-                          // The `destructive` variant, not a ghost tinted red by
-                          // hand: ghost has no fill and no border, so beside an
-                          // outlined "Change password" this read as a stray red
-                          // sentence rather than the other half of a pair.
+                          // The `destructive` variant, so it pairs visually with
+                          // the outlined "Change password".
                           <Button
                             type="button"
                             variant="destructive"

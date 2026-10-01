@@ -1,8 +1,7 @@
 import { TriangleAlert, Info, OctagonAlert } from "lucide-react";
 
-// Every case documented against a real failure mode (queue:restart silently
-// no-op'ing on the array cache driver being the one the API explicitly calls
-// out to surface prominently) — rendered as its own banner, not a tooltip.
+// A banner, not a tooltip: each check is a real failure mode (e.g. queue:restart
+// silently does nothing with the array cache driver).
 const SEVERITY_META = {
   warning: {
     icon: TriangleAlert,

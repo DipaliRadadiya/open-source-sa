@@ -8,15 +8,9 @@ import { appShortcuts } from "@/lib/files/app-shortcuts";
 const ICONS = { uploads: ImageIcon, themes: Palette, plugins: Plug, config: FileCog };
 
 /**
- * "Jump to" chips for the app this is — Uploads, Themes, Plugins,
- * wp-config.php for WordPress.
- *
- * People arrive with a place in mind by its everyday name ("my uploads"),
- * and the path to it is three folders deep behind names they did not choose.
- * Renders nothing for a site type with no confirmed layout.
- *
- * Its own slim row under the breadcrumb, not part of the toolbar: these are
- * places to go, not things to do to this folder.
+ * "Jump to" chips for the app type (Uploads, Themes, Plugins, wp-config.php for
+ * WordPress). Renders nothing for a site type with no confirmed layout.
+ * Its own row under the breadcrumb: these are places, not folder actions.
  */
 export function FileShortcuts({ appId, siteType, path, onAction, canManage = true }) {
   const t = useTranslations("applications.files");
@@ -33,8 +27,7 @@ export function FileShortcuts({ appId, siteType, path, onAction, canManage = tru
         const Icon = ICONS[key];
         const label = t(`shortcuts.${key}`);
         if (type === "file") {
-          // A file opens where every file opens — in the editor — instead of
-          // navigating to a folder view that would only show its parent.
+          // A file opens in the editor rather than navigating to its parent folder.
           const name = target.split("/").pop();
           return (
             <ReasonTooltip key={key} reason={canManage ? null : t("noPermission")}>

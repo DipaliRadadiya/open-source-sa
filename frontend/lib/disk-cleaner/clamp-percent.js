@@ -1,23 +1,12 @@
 /**
- * What the disk-usage threshold box should hold after a keystroke.
+ * What the disk-usage threshold box should hold after a keystroke (the API
+ * 422s outside 1–100):
  *
- * The field used to accept any three digits, so `150` could be typed and saved
- * — and the API rejects anything outside 1–100 with a 422 the reader cannot
- * act on. A number that will be refused should not be typeable in the first
- * place.
+ *   - digits only
+ *   - no clamping: an out-of-range value is reported by `thresholdProblem`
+ *   - `0` empties the field, since an empty box already means "always"
  *
- * Three rules, in the order they matter:
- *
- *   - digits only, so a stray letter or minus never reaches the value
- *   - no clamping: 150 used to become 100 without a word, and "above 100%"
- *     never happens, so the schedule showed On and never ran. The card says
- *     what is allowed instead (`thresholdProblem`).
- *   - `0` empties the field, because "run when usage is above 0%" is what an
- *     empty box already means. Mapping it to nothing keeps the two ways of
- *     saying "always" as one state instead of one valid and one refused.
- *
- * Leading zeros are dropped for the same reason: `080` is `80`, and sending
- * the string through unchanged would let it grow past three characters.
+ * Leading zeros are dropped so `080` is `80` and the value stays short.
  */
 export function clampPercent(input) {
   const digits = String(input ?? "").replace(/[^0-9]/g, "");

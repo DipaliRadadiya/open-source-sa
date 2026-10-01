@@ -39,12 +39,9 @@ import { toast } from "sonner";
 const CUSTOM_LINES = "custom";
 
 /**
- * Viewer controls. The source's name lives here as the pane heading.
- *
- * The window size ("last 200 lines") is stated by the selector and nowhere
- * else; the line under the title reports the *result* — and only when it says
- * something the selector doesn't, i.e. when a filter narrowed the buffer or the
- * whole file turned out to be smaller than the window.
+ * Viewer controls. The source's name lives here as the pane heading. The window
+ * size is stated only by the selector; the line under the title reports the
+ * result, and only when a filter narrowed it or the file is smaller than the window.
  */
 export function LogToolbar({
   label,
@@ -68,18 +65,15 @@ export function LogToolbar({
   downloadUrl,
   // App logs have no download endpoint, so the action is hidden there.
   showDownload = true,
-  // Emptying the log. Null when the viewer has no such action or the reader
-  // lacks `manage` — hidden rather than disabled, because an always-disabled
-  // destructive control invites "why not" and the answer is "you may not".
+  // Emptying the log. Null when unavailable or the reader lacks `manage`:
+  // hidden rather than disabled.
   onClear = null,
   clearing = false,
   busy,
   disabled,
-  // A read that failed says "try again"; Reload is how, so it stays usable
-  // while everything that needs lines on screen is disabled.
+  // After a failed read, Reload stays usable while other controls are disabled.
   reloadable = false,
-  // Why Reload is off when it is: the log is locked or gone, which is what
-  // the viewer's own box says.
+  // Why Reload is off: the log is locked or gone.
   reloadReason = null,
   searchRef,
   tailState = "idle",
@@ -90,13 +84,9 @@ export function LogToolbar({
   const [customLines, setCustomLines] = useState(false);
 
   return (
-    // Tinted like a window title bar, so the card reads as one terminal —
-    // chrome above, screen below — rather than two stacked panels.
-    //
-    // Two rows, not one. Above: identity — the source's name, what we're
-    // holding of it, and whether it's still being tailed. Below: every control,
-    // filter left and actions right. Crammed onto one line the controls win
-    // every pixel and the heading collapses to an ellipsis in a 60px column.
+    // Tinted like a window title bar so the card reads as one terminal. Two
+    // rows: identity and tail mode above, every control below (one row would
+    // squeeze the heading to an ellipsis).
     <div className="flex flex-col gap-3 border-b bg-muted/40 px-4 py-3">
       <div className="flex items-center gap-3">
         <div className="min-w-0 flex-1">
@@ -106,18 +96,14 @@ export function LogToolbar({
               <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
             ) : null}
           </div>
-          {/* No count for a log we couldn't open — "0 lines" would state
-            something we don't know. The count appears only when it isn't
-            already legible from the line selector. */}
+          {/* No count for a log that could not be opened ("0 lines" would be
+              unknown), and none when the line selector already says it. */}
           {!disabled ? (
             <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
-              {/* The clock note lives here permanently: timestamps are about to
-                appear below it, and "whose clock?" is the question that costs
-                an hour at 3am. */}
+              {/* The clock note stays permanently: timestamps are server time. */}
               {[
-                // Severity hides part of what we hold, so both numbers matter.
-                // Grep runs server-side, so what we hold *is* the match set —
-                // "200 of 200" would be a strange way to say "200 matches".
+                // Severity hides part of the buffer, so both numbers matter.
+                // Grep runs server-side, so the buffer is the match set.
                 severity !== "all"
                   ? t("shownOfLoaded", { shown, loaded })
                   : term
@@ -133,26 +119,10 @@ export function LogToolbar({
           ) : null}
         </div>
 
-        {/* Live is a mode, not an action — a switch, with the indicator telling
-            the truth about the tail: pulsing while polling, amber while
-            retrying, and an explicit Resume once it has given up. A tail that
-            quietly stopped looks exactly like a log that went quiet.
-            It sits with the heading rather than with the controls below: it
-            describes the source's state, it doesn't act on the view.
-            No border — a boxed control would read as another input. */}
-        {/*
-         * py-1.5, and the same box in every state.
-         *
-         * There was no vertical padding at all: the container took its height
-         * from the Switch inside it, and in `paused` the Switch is replaced by
-         * a bare text button — so the tinted pill closed onto the text. At 20px
-         * tall and 197px wide with 8px of side padding, "Tail stopped — resume"
-         * read as cramped, which is exactly how it was reported.
-         *
-         * Padded in every state rather than only the tinted ones, so the pill
-         * does not change size at the moment the tail drops. Measured first:
-         * the row around it is 42px, so a 32px pill costs nothing in layout.
-         */}
+        {/* Live is a mode, so a switch; the indicator pulses while polling,
+            turns amber while retrying, and offers Resume once it gives up.
+            Fixed height in every state so the pill does not resize when the
+            tail drops. */}
         <div
           className={cn(
             "flex h-8 shrink-0 items-center gap-2 rounded-full px-3",
@@ -167,7 +137,7 @@ export function LogToolbar({
               tailState === "paused" && "text-destructive",
               tailState === "live" &&
                 "animate-pulse text-success motion-reduce:animate-none",
-              // Filtering is an expected pause, not a fault — muted, not amber.
+              // Filtering is an expected pause, not a fault: muted, not amber.
               (tailState === "idle" || tailState === "filtering") &&
                 "text-muted-foreground",
             )}
@@ -200,18 +170,14 @@ export function LogToolbar({
         </div>
       </div>
 
-      {/* Every control on one band: the filter anchored left (it's the only one
-          that can be long, so it takes the slack), everything that acts on the
-          view pushed right. Row one keeps nothing but identity and the tail
-          mode, which is what gives the heading room to breathe. */}
+      {/* Filter anchored left (takes the slack), view actions pushed right. */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative w-full min-w-40 flex-1 sm:max-w-sm">
           <Input
             ref={searchRef}
             value={term}
             onChange={(e) => onTermChange(e.target.value)}
-            // The API's own limit (grep ≤ 200): past it the server refused the
-            // search while the previous results stayed under the new text.
+            // The API's own limit (grep ≤ 200).
             maxLength={200}
             placeholder={t("searchPlaceholder")}
             disabled={disabled}
@@ -234,25 +200,9 @@ export function LogToolbar({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-          {/* Severity is a display filter over the loaded buffer, which is why it
-              can run while tailing — grep can't (it re-reads the whole file).
-              Segmented rather than a dropdown: three options, and "show me the
-              errors" is the one-click reason people open this page. */}
-          {/*
-            Separate buttons, not one segmented strip.
-
-            As a joined strip with one lit segment this was the same picture as
-            the tab bar above it — a grey tray, one active cell — so the page
-            showed one control twice for two unrelated jobs: switching WHICH
-            log, and filtering the one you are in. Reported as "everything
-            looks equally important".
-
-            The tabs keep the segmented look, since that is what they are
-            everywhere else in the panel; this becomes what it actually is, a
-            set of filter toggles. Still three visible buttons rather than a
-            dropdown — "show me only errors" is the reason most people open
-            this page, and it should stay one click.
-          */}
+          {/* Severity filters the loaded buffer, so it works while tailing
+              (grep cannot). Separate toggle buttons, not a segmented strip, so
+              it does not look like the tab bar; kept one click. */}
           <div role="group" aria-label={t("severityLabel")} className="flex items-center gap-1">
             {SEVERITY_FILTERS.map((key) => (
               <button
@@ -272,18 +222,9 @@ export function LogToolbar({
             ))}
           </div>
 
-          {/*
-            * Five presets cover the usual windows, and the sixth option hands
-            * the field over: someone chasing one incident wants the last 40
-            * lines, not the last 100, and someone reading a whole morning
-            * wants 2500. The API takes any integer up to its own cap, so the
-            * only reason the number was a fixed list is that nobody offered
-            * the box.
-            *
-            * A value that is not a preset — arrived at by typing, or restored
-            * from a previous visit — is shown as its own item, or the trigger
-            * would render empty and the selector would look broken.
-            */}
+          {/* Presets plus a custom field (the API takes any integer up to its
+              cap). A non-preset value is shown as its own item, or the trigger
+              would render empty. */}
           {customLines ? (
             <div className="flex items-center gap-1.5">
               <Input
@@ -305,12 +246,10 @@ export function LogToolbar({
                     setCustomLines(false);
                   }
                 }}
-                // Applied on leaving the field, not on every keystroke: each
-                // change refetches the log, and typing "500" would fetch 5,
-                // then 50, then 500.
+                // Applied on blur, not per keystroke: each change refetches the log.
                 onBlur={(event) => {
                   const next = normalizeLineCount(event.target.value);
-                  // 6000 quietly became "Last 5,000 lines"; say so.
+                  // Values above the cap are clamped; say so.
                   if (Number.parseInt(event.target.value, 10) > MAX_LINES) {
                     toast.info(t("linesCapped", { max: MAX_LINES }));
                   }
@@ -351,15 +290,9 @@ export function LogToolbar({
             </Select>
           )}
 
-          {/* One segmented group, not four floating squares: these are view
-              actions on the same object, so they read as a single control. */}
-          {/* h-9 so the tray matches the controls beside it. Its children are
-              36px squares, which with the border made the group 38 — two pixels
-              taller than everything else on the row. */}
+          {/* One segmented group: view actions on the same object. h-9 matches
+              the controls beside it. */}
           <div className="flex h-9 items-center overflow-hidden rounded-lg border divide-x">
-            {/* Which end the newest line is at. A view action on the same
-                object as wrap, so it belongs in the same group rather than as
-                a seventh floating control. */}
             <IconAction
               icon={newestFirst ? ArrowUpNarrowWide : ArrowDownNarrowWide}
               label={newestFirst ? t("orderOldestFirst") : t("orderNewestFirst")}
@@ -398,25 +331,15 @@ export function LogToolbar({
             ) : null}
           </div>
 
-          {/* Last: everything before it changes what you SEE, this one empties
-              the file for good. It used to sit between the line picker and the
-              view buttons, in the middle of the harmless ones. */}
+          {/* Last, apart from the view actions: it empties the file for good. */}
           {onClear ? (
             <Button
               type="button"
               variant="outline"
               size="sm"
-              /* h-9 and rounded-lg: `size="sm"` is 32px with an 8px radius,
-                 and every other control on this band is 36px with 10px. A
-                 button a notch shorter than its neighbours is most of why the
-                 row read as unrelated parts. */
-              /* Destructive weight, because the consequence is destructive.
-                 As a plain outline button it was indistinguishable from the
-                 "Last 200 lines" dropdown beside it — one changes the view,
-                 the other empties the file for good. */
-              /* ml-auto: pushed to the far end, apart from the view actions
-                 without a divider — a divider left at the start of a wrapped
-                 line on a phone. */
+              /* h-9 rounded-lg match the rest of the band; destructive tone
+                 because it empties the file; ml-auto instead of a divider,
+                 which would strand at the start of a wrapped line. */
               className="ml-auto h-9 rounded-lg border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
               onClick={onClear}
               disabled={disabled || clearing}
@@ -439,8 +362,7 @@ function IconAction({ icon: Icon, label, onClick, href, active, disabled }) {
   const shared = {
     variant: "ghost",
     size: "icon",
-    // Square, borderless, square-cornered: the group's border and dividers do
-    // the framing so the buttons read as segments of one control.
+    // The group's border and dividers do the framing, so buttons are square segments.
     className: cn(
       "size-9 h-full rounded-none",
       active && "bg-secondary text-secondary-foreground",

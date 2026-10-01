@@ -23,19 +23,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 /**
- * What is running, plus any second engine currently being added.
- *
- * This surface remains mounted whenever at least one engine is reachable, so
- * it owns the complete lifecycle for an additional engine. Closing the install
- * confirmation must not close the only evidence that work was queued.
+ * EngineBar stays mounted while any engine is reachable, so it owns the whole
+ * lifecycle of an additional engine install: closing the confirmation must not
+ * hide the only evidence that work was queued.
  */
 /**
- * A logo, plus the name when the logo does not contain one.
- *
- * PostgreSQL's mark is the elephant alone, so a tile holding only the logo and
- * a version number never says which engine it is. Its entry also carries its
- * own `size` — it is square where the others are wide — which at tile scale
- * rendered a 32px elephant beside 14px wordmarks, so the height is forced here.
+ * A logo, plus the name when the logo does not contain one (PostgreSQL's mark
+ * is the elephant alone). Its square logo's own `size` is overridden here so
+ * it matches the wordmarks' height.
  */
 function EngineMark({ engine, status, t }) {
   const name = t(`engines.${engine}`);
@@ -44,13 +39,8 @@ function EngineMark({ engine, status, t }) {
     <>
       <EngineLogo engine={engine} className="!h-4 w-auto max-w-16" />
       {/*
-        The accessible name is assembled here, once.
-        
-        The logo images are `aria-hidden`, so a wordmark tile has no name at all
-        without the sr-only text — but on PostgreSQL, where the name is also
-        printed, having both said "PostgreSQL PostgreSQL". Caught by reading the
-        rendered text content, not by looking at it; the duplicate is invisible
-        on screen and only a screen reader would ever have met it.
+        The accessible name is assembled once: logos are `aria-hidden`, and
+        printing the name plus sr-only text would read "PostgreSQL PostgreSQL".
       */}
       {wordmark ? (
         <span className="sr-only">{status ? `${name} · ${status}` : name}</span>
@@ -83,9 +73,8 @@ export function EngineBar({ engines = [], canManage, summary }) {
   const failed = list.filter(
     (engine) => !engine.running && engine.install_status === "failed",
   );
-  // Installed but not answering (stopped service, broken socket). It used to
-  // get no tile at all beside a running engine, so its databases were listed
-  // with nothing saying none of them could be reached.
+  // Installed but not answering (stopped service, broken socket): gets a tile
+  // so its listed databases are not presented as reachable.
   const stopped = list.filter(
     (engine) =>
       engine.installed &&
@@ -93,14 +82,11 @@ export function EngineBar({ engines = [], canManage, summary }) {
       !["installing", "failed"].includes(engine.install_status),
   );
 
-  // Recovery wins over a fresh choice. Previously failed engines were excluded
-  // by `!engine.install_status`, so Retry vanished permanently whenever another
-  // engine kept this populated page visible.
+  // Recovery wins over a fresh choice, so failed engines keep their Retry.
   const addable = findInstallCandidates(list);
   const only = addable.length === 1 ? addable[0] : null;
-  // Only one apt install can run. Prefer its live lifecycle; otherwise retain
-  // the newest failed lifecycle so diagnostics do not disappear beside a
-  // healthy engine.
+  // Only one apt install can run. Prefer its live lifecycle; otherwise keep the
+  // newest failed one so diagnostics stay visible beside a healthy engine.
   const progressEngine =
     installing.find((engine) => engine.install_progress) ??
     failed.find((engine) => engine.install_progress) ??
@@ -112,16 +98,8 @@ export function EngineBar({ engines = [], canManage, summary }) {
   return (
     <div className="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-e1 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       {/*
-        One tile per engine, with the logo, rather than a run-on line of names.
-        
-        This was three names, three version strings and three green "Running"
-        badges on a single wrapping line — every part the same weight, nothing
-        grouped, and no logos at all on the page whose empty state had just been
-        given them. Reported as needing work, and it did.
-        
-        A green dot rather than a badge for the normal case: three identical
-        "Running" badges say the same thing three times and leave nothing louder
-        for the states that matter. Installing and failed keep their words.
+        One tile per engine with its logo. A green dot for the normal case;
+        installing and failed keep their words so they stand out.
       */}
       <div className="flex flex-wrap items-center gap-2">
         {running.map((engine) => (
@@ -194,8 +172,6 @@ export function EngineBar({ engines = [], canManage, summary }) {
           <p className="text-sm text-muted-foreground">{summary}</p>
         ) : null}
 
-        {/* Plain `outline`, which is now a filled button everywhere — the fix
-            went into the variant rather than into this one call site. */}
         <Button asChild variant="outline" size="sm">
           <Link href="/databases/monitor">
             <Activity className="size-4" />
@@ -203,9 +179,8 @@ export function EngineBar({ engines = [], canManage, summary }) {
           </Link>
         </Button>
 
-        {/* Named, always. One candidate gets its own button ("Install
-            MongoDB"); several get a menu of names. Neither opens a dialog that
-            asks which — the click is the answer. */}
+        {/* Always named: one candidate gets its own button, several get a menu.
+            The click is the choice, no follow-up dialog asks which. */}
         {only ? (
           <ReasonTooltip reason={canManage ? null : t("noPermission")}>
             <Button
@@ -257,9 +232,7 @@ export function EngineBar({ engines = [], canManage, summary }) {
           label={t(`engines.${progressEngine.engine}`)}
           slow={slow && installingEngine === progressEngine.engine}
           pollIssue={pollIssue && installingEngine === progressEngine.engine}
-          // Straight through the same confirmation the Install button uses:
-          // it names the engine and states what an install costs, and a retry
-          // is the same operation.
+          // Same confirmation as Install: a retry is the same operation.
           onRetry={canManage ? () => setPending(progressEngine) : undefined}
           className="basis-full"
         />

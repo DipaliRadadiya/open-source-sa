@@ -11,9 +11,7 @@ import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
-// Stands in for a password a viewer is not entitled to. Never rendered: the
-// only thing that prints the value is the Set-password dialog, which is
-// manage-only.
+// Stands in for a password a viewer may not see; never rendered.
 const REDACTED = "••••••••";
 
 export default async function SystemUsersPage({ searchParams }) {
@@ -26,22 +24,14 @@ export default async function SystemUsersPage({ searchParams }) {
     getTranslations("systemUsers"),
   ]);
 
-  // Feature is permission-gated; without `view`, bounce to the dashboard.
   if (!can(permissions, "system_user", "view")) return <PermissionDenied title={t("title")} />;
-  // Shells come from the server so the picker can never offer one it refuses.
+  // Shells come from the server so the picker never offers one it refuses.
   const [usersPage, shells] = await Promise.all([getSystemUsersPage(query), getShells()]);
   const canManage = can(permissions, "system_user", "manage");
 
-  // The index endpoint returns every account's cleartext OS password, and
-  // handing the rows straight to a client component put all of them in the
-  // page payload for anyone who can merely VIEW this list — including roles
-  // that cannot open the dialog that shows it.
-  //
-  // The list itself only needs to know WHETHER one is set — the "No password"
-  // badge reads `!password` — so a viewer gets a marker that keeps that test
-  // true without carrying the secret. It must stay truthy: an empty string
-  // would flip every account to "No password", which is a different lie.
-  // Managers get the real value, which is what PasswordReveal shows.
+  // SECURITY: the index endpoint returns cleartext passwords. Viewers get a
+  // placeholder so they never reach the client payload. It must stay truthy:
+  // the "No password" badge reads `!password`.
   const users = canManage
     ? usersPage.users
     : usersPage.users.map((user) => ({
@@ -50,16 +40,12 @@ export default async function SystemUsersPage({ searchParams }) {
       }));
 
 
-  // Before anything renders: a page past the end sends the reader to the
-  // last real page instead of painting an error for it.
+  // A page past the end redirects to the last real page.
   redirectOutOfRange("/system-users", sp, usersPage.meta, usersPage.failed);
   return (
     <div className="space-y-6">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
-      {/* `failed` was never read, so a 500 or a rejected shape rendered the
-          empty state: "No system users yet" over a server that has accounts,
-          with an Add button inviting you to create one that already exists.
-          Every sibling list page branches here; this one did not. */}
+      {/* A failed read must not render the empty state. */}
       {usersPage.failed ? (
         <LoadFailed
           description={t("loadFailed")}

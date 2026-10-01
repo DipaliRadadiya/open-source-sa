@@ -1,13 +1,8 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
- * The role form's loading shape, shared by "new" and "edit" because the form
- * is the same one — a name, a description, then the permission matrix, which is
- * most of the page and most of the wait.
- *
- * Its own component rather than a copy in each `loading.jsx`: the two would
- * drift the first time a field is added, and a skeleton that no longer matches
- * the form is worse than none — it moves the page twice instead of once.
+ * Loading shape of the role form, shared by "new" and "edit" so the two
+ * `loading.jsx` files cannot drift from the form.
  */
 export function RoleFormSkeleton() {
   return (
@@ -28,7 +23,6 @@ export function RoleFormSkeleton() {
         </div>
       </div>
 
-      {/* The permission matrix: a header row and one row per feature. */}
       <div className="space-y-2 rounded-xl border p-4">
         <Skeleton className="h-4 w-40" />
         {Array.from({ length: 8 }).map((_, row) => (

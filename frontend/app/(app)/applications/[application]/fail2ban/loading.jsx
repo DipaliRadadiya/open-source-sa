@@ -1,12 +1,8 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
- * Mirrors `Fail2banPanel`, capped at `max-w-4xl` like the panel.
- *
- * Sized to the not-yet-set-up state (306px), which is what most sites are in:
- * a site that HAS a jail shows a status card and a tall editor instead, and
- * there is no way to know which before the page loads. Guessing the taller
- * one would leave a hole under every unconfigured site.
+ * Mirrors `Fail2banPanel`. Sized to the not-yet-set-up state, which most sites
+ * are in; the configured state cannot be known before the page loads.
  */
 export default function Loading() {
   return (

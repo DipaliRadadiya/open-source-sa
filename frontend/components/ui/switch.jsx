@@ -12,9 +12,8 @@ function Switch({
   ...props
 }) {
   const inheritedReason = useDisabledReason();
-  // Disabled = no pointer events, like Button: a disabled switch fires no
-  // click and its widened hit area covers what sits beside it, so on a phone
-  // the ReasonTooltip wrapped around it never opened.
+  // Disabled = no pointer events, like Button, so taps reach the wrapping
+  // ReasonTooltip instead of the widened hit area.
   const control = (
     <SwitchPrimitive.Root
       data-slot="switch"
@@ -31,9 +30,7 @@ function Switch({
     </SwitchPrimitive.Root>
   );
 
-  // A parent already showing a tooltip over this area wins — two bubbles for
-  // one control is worse than none. A parent that only SUPPLIES a reason does
-  // not, so the control renders it as its own.
+  // A parent already showing a tooltip here wins, to avoid two bubbles.
   if (disabled && inheritedReason?.handled && !disabledReason) return control;
 
   return (

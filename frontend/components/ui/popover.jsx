@@ -43,12 +43,8 @@ function PopoverAnchor({
 }
 
 /**
- * The little pointer back to the trigger.
- *
- * Unstyled on purpose — a menu-shaped popover wants no arrow at all, and the
- * one place that does want one (the "?" field hint, which has to match the
- * tooltip it sits beside) needs to colour it to match its own background.
- * Same rotated-square trick the tooltip uses, so the two cannot drift apart.
+ * Arrow pointing to the trigger. Unstyled on purpose so callers colour it to
+ * their own background; same rotated-square technique as the tooltip.
  */
 function PopoverArrow({
   className,

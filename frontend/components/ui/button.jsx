@@ -7,18 +7,13 @@ import { Slot } from "radix-ui"
 import { ReasonTooltip, useDisabledReason } from "@/components/ui/reason-tooltip";
 import { cn } from "@/lib/utils"
 
-// A light brand tint with brand text, only for buttons inside a box — a card
-// or list card (anything on `bg-card`), a Caution, or a notice marked
-// `data-slot="notice"` — where a white or grey outline button looked like the
-// cards and grey badges around it (Krishna, 30 Sep). Dialog buttons (dialogs
-// are `bg-popover`), page toolbars, filters and the header stay neutral.
-// Written out per scope because Tailwind only generates classes it finds
-// literally in the source.
+// Brand tint for labelled outline buttons inside a card (`bg-card`), a Caution,
+// or a `data-slot="notice"`; dialogs (`bg-popover`), toolbars and the header
+// stay neutral. Written out per scope: Tailwind only generates literal classes.
 const TINT_IN_CARDS =
   "in-[.bg-card]:border-transparent in-[.bg-card]:bg-[color-mix(in_oklch,var(--primary)_9%,var(--background))] in-[.bg-card]:text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] in-[.bg-card]:hover:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-[.bg-card]:aria-expanded:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-[.bg-card]:dark:bg-primary/15 in-[.bg-card]:dark:text-[color-mix(in_oklch,var(--primary)_70%,white)] in-[.bg-card]:dark:hover:bg-primary/25 in-[.bg-card]:dark:aria-expanded:bg-primary/25 in-data-[slot=caution]:border-transparent in-data-[slot=caution]:bg-[color-mix(in_oklch,var(--primary)_9%,var(--background))] in-data-[slot=caution]:text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] in-data-[slot=caution]:hover:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-data-[slot=caution]:aria-expanded:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-data-[slot=caution]:dark:bg-primary/15 in-data-[slot=caution]:dark:text-[color-mix(in_oklch,var(--primary)_70%,white)] in-data-[slot=caution]:dark:hover:bg-primary/25 in-data-[slot=caution]:dark:aria-expanded:bg-primary/25 in-data-[slot=notice]:border-transparent in-data-[slot=notice]:bg-[color-mix(in_oklch,var(--primary)_9%,var(--background))] in-data-[slot=notice]:text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] in-data-[slot=notice]:hover:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-data-[slot=notice]:aria-expanded:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-data-[slot=notice]:dark:bg-primary/15 in-data-[slot=notice]:dark:text-[color-mix(in_oklch,var(--primary)_70%,white)] in-data-[slot=notice]:dark:hover:bg-primary/25 in-data-[slot=notice]:dark:aria-expanded:bg-primary/25";
 
-// Icon-only buttons (Refresh, pager, copy, reveal) stay neutral: a row of blue
-// squares beside every table reads as noise, not as actions (Krishna, 30 Sep).
+// Icon-only buttons stay neutral everywhere; tinted icon squares read as noise.
 const NEUTRAL =
   "border-border bg-secondary hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_6%)] hover:text-foreground aria-expanded:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_6%)] aria-expanded:text-foreground dark:border-input dark:bg-input/40 dark:hover:bg-input/60";
 
@@ -29,24 +24,7 @@ const buttonVariants = cva(
       variant: {
         default:
           "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 hover:shadow-sm",
-        /*
-         * Filled, not hollow.
-         *
-         * This was `bg-background` — white on a white card — so the panel's
-         * most-used button variant (240 call sites) rendered as a hairline
-         * rectangle with text in it. Reported repeatedly, and finally as "that
-         * even not looks like button", which is exactly right: an outline with
-         * no fill is a boundary, not a surface, and a control has to look like
-         * a surface you can press.
-         *
-         * The border stays. The fill alone would vanish against `bg-muted`
-         * panels, which several screens use; keeping both means the button
-         * reads on every surface we have.
-         *
-         * Changed here rather than at the 240 call sites: they are all asking
-         * for the same thing — "a button that is not the primary action" — and
-         * that is one decision, not 240.
-         */
+        // Filled plus border so it reads as a button on white and `bg-muted`.
         // Colour comes from compoundVariants below: neutral, tinted only when a
         // labelled button sits inside a card or notice.
         outline: "",
@@ -61,8 +39,7 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:
           "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
-        // A solid tint, not /10: see-through, it took on the colour of whatever
-        // card it sat on and the red text fell to 4.4:1 on the green status card.
+        // Solid tint, not /10: a translucent one takes on the card colour and loses contrast.
         destructive:
           "bg-[color-mix(in_oklch,var(--destructive)_10%,var(--background))] text-destructive hover:bg-[color-mix(in_oklch,var(--destructive)_18%,var(--background))] focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:text-[color-mix(in_oklch,var(--destructive)_80%,var(--foreground))] dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
@@ -71,11 +48,7 @@ const buttonVariants = cva(
         default:
           "h-9 gap-1.5 px-3.5 has-data-[icon=inline-end]:pr-2.5 has-data-[icon=inline-start]:pl-2.5",
         xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        // h-8 with a full-size label, not h-7 at 12.8px. Row actions and
-        // toolbar buttons are the panel's most-used controls and they were
-        // reading as captions rather than buttons — reported three times on
-        // three different screens before it was clear the token was the fault,
-        // not the call sites. This is also what shadcn ships for `sm`.
+        // h-8 with a full-size label (shadcn's `sm`), so row actions read as buttons.
         sm: "h-8 gap-1.5 rounded-[min(var(--radius-md),12px)] px-3 text-sm in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3.5",
         lg: "h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
         icon: "size-8",
@@ -121,12 +94,8 @@ function Button({
     />
   );
 
-  // Native disabled controls do not emit hover or focus events. The wrapper
-  // gives every disabled Button a reachable explanation by default, while a
-  // call site can pass `disabledReason` for its specific prerequisite.
-  // A parent already showing a tooltip over this area wins — two bubbles for
-  // one control is worse than none. A parent that only SUPPLIES a reason does
-  // not, so the control renders it as its own.
+  // Disabled buttons get a reason tooltip (own `disabledReason` or inherited).
+  // A parent already showing a tooltip here wins, to avoid two bubbles.
   if (disabled && inheritedReason?.handled && !disabledReason) return control;
 
   return (

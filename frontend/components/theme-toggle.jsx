@@ -11,11 +11,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-/*
- * Every string here was English in all eight locales, and three of them sit
- * inside a closed dropdown — so a sweep that reads the rendered page never
- * sees them. The menu has to be opened to find them.
- */
 export function ThemeToggle() {
   const t = useTranslations("common.theme");
   const { setTheme } = useTheme();

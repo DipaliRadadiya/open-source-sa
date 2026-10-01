@@ -10,49 +10,26 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useHoverPopover } from "@/lib/hooks/use-hover-popover";
 
 /**
- * Site health as a chip on a line the card already has, with the detail one
- * click away.
- *
- * A chip reading "1 site needs attention" answers none of the three questions
- * it raises — which site, what is wrong, what do I do — so the chip is only
- * the door. Everything behind it names the site, says the problem in a
- * sentence a non-sysadmin can act on, and links to the screen that fixes it
- * rather than to the site's front page.
- *
- * A Popover, not a Tooltip: Radix tooltips never open on touch, so on a phone
- * a tooltip here would be a dead end.
- *
- * Silent when nothing is wrong. The services chip beside it says "All 7
- * running" even when fine because that is a fact somebody may want confirmed;
- * a second permanent reassurance would just crowd the busiest line on the card.
+ * Site health as a chip; the popover names each site, the problem, and links
+ * to the screen that fixes it. A Popover, not a Tooltip: Radix tooltips never
+ * open on touch. Renders nothing when all is well.
  */
 export function SiteAttention({ findings = [] }) {
   const t = useTranslations("serverDashboard.attention");
-  /*
-   * Hover opens it as well as click.
-   *
-   * The chip sits in a row of purely decorative badges — php 8.4, node 24,
-   * "All 9 services running" — so nothing about being a badge suggested this
-   * one did anything. Hover is half the answer; the chevron below is the other
-   * half, and the one that works for a finger or a keyboard.
-   *
-   * 180ms rather than instant: this panel is ~350px of card, and a pointer
-   * crossing the footer on its way elsewhere should not fire it.
-   */
+  // Opens on hover as well as click; the chevron is the cue for touch and
+  // keyboard. 180ms delay so a pointer passing by does not open it.
   const { open, onOpenChange, hoverOpened, triggerProps, contentProps } = useHoverPopover({
     openDelay: 180,
   });
 
   if (!findings.length) return null;
 
-  // One finding names itself on the chip — that is the whole answer, and
-  // making somebody open a popover to read six words is a click charged for
-  // nothing.
+  // A single finding names itself on the chip.
   const label =
     findings.length === 1
       ? t(`${findings[0].kind}.chip`, { site: findings[0].site })
       : // Applications, not findings: the sentence counts applications, and one
-        // with a failed deploy AND a stopped process was counted twice.
+        // with two findings must count once.
         t("count", { count: new Set(findings.map((finding) => finding.site)).size });
 
   return (
@@ -66,12 +43,7 @@ export function SiteAttention({ findings = [] }) {
           <button type="button" {...triggerProps}>
             <CircleAlert className="size-3.5 shrink-0" />
             {label}
-            {/*
-             * The affordance. A chevron is the one mark that reads as "there is
-             * more behind this" without a pointer, a hover, or a language —
-             * and it doubles as the state, so an open panel is not a mystery
-             * about which chip it belongs to.
-             */}
+            {/* The chevron signals "more behind this" and shows open state. */}
             <ChevronDown
               className={cn(
                 "size-3.5 shrink-0 opacity-70 transition-transform",
@@ -87,17 +59,14 @@ export function SiteAttention({ findings = [] }) {
         align="end"
         className="w-[22rem] p-0"
         {...contentProps}
-        // A panel the pointer merely summoned must not take focus off whatever
-        // the reader was doing. One opened by a click or the keyboard must hand
-        // focus over, or the Fix button inside is unreachable without a mouse.
+        // Hover-opened: don't steal focus. Click/keyboard-opened: take focus so
+        // the Fix button is reachable without a mouse.
         onOpenAutoFocus={(event) => {
           if (hoverOpened.current) event.preventDefault();
         }}
       >
         <p className="border-b px-4 py-2.5 text-sm font-medium">{t("title")}</p>
-        {/* Bounded and scrolled. Four findings already reach 550px; a server
-            with twenty broken sites would otherwise open a popover taller than
-            the window, with its last rows unreachable. */}
+        {/* Bounded and scrolled so many findings cannot exceed the window. */}
         <ul className="max-h-[21rem] divide-y overflow-y-auto">
           {findings.map((finding) => (
             <li key={finding.id} className="space-y-2 px-4 py-3">
@@ -106,8 +75,7 @@ export function SiteAttention({ findings = [] }) {
                   <CircleAlert className="size-3.5 shrink-0 text-warning" aria-hidden />
                   {finding.site}
                 </p>
-                {/* Plain language, then the API's own reason when it has one —
-                    it knows which step failed and this component does not. */}
+                {/* Plain language, then the API's own reason when it has one. */}
                 <p className="text-xs leading-5 text-muted-foreground">
                   {t(`${finding.kind}.detail`)}
                   {finding.detail ? ` — ${finding.detail}` : ""}

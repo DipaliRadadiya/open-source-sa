@@ -1,32 +1,13 @@
 /**
- * Which installed runtime versions a site type will actually run on.
- *
- * Each type can declare a supported range — NodeBB wants Node 22 or newer, n8n
- * wants 20.19 to 24, PrestaShop wants PHP 7.2 to 8.1 — and the create form
- * ignored it, offering every installed version for every type. Picking Node 20
- * for NodeBB was one click away, and nothing said no until the install failed.
- *
- * Both ends are INCLUSIVE and a null end is unbounded, matching
+ * Which installed runtime versions a site type will run on, given its declared
+ * range. Both ends are INCLUSIVE and a null end is unbounded, matching
  * `AbstractSiteType::installedPhpVersionsInRange()`.
  *
- * It does NOT copy that method's fallback. The backend returns the whole
- * unfiltered list when nothing installed is in range, and this did too — which
- * is why the filter looked broken on a server with only PHP 8.4: PrestaShop
- * wants 7.2 to 8.1, nothing qualified, and the dropdown quietly offered 8.4
- * anyway. Identical to doing nothing, and the server then refuses the create.
- *
- * So an empty result is returned as an empty result, and `rangeUnsatisfied`
- * below lets the caller say so before anyone fills the form in. A select with
- * no options IS useless — the answer is a sentence naming the range and what
- * is installed, not a wrong option to pick.
+ * Unlike that method, an empty result stays empty (no fallback to the full
+ * list); `rangeUnsatisfied` lets the caller explain it.
  */
 
-/**
- * `[{ version }]` filtered to a `{ min, max }` range.
- *
- * The list is returned untouched when there is no range, which is the common
- * case: most types run on anything installed.
- */
+/** `[{ version }]` filtered to a `{ min, max }` range; untouched without one. */
 export function versionsInRange(versions, range) {
   const list = Array.isArray(versions) ? versions : [];
   const min = range?.min ?? null;
@@ -37,12 +18,8 @@ export function versionsInRange(versions, range) {
 }
 
 /**
- * A declared range that no installed version satisfies.
- *
- * The distinction that matters: false when there is no range (most types run
- * on anything) and false when nothing is installed at all (a different
- * problem, with a different fix, already reported elsewhere). True only for
- * "this server has runtimes, and none of them will do".
+ * True only when versions are installed and none satisfies the declared range.
+ * False with no range, and false when nothing is installed (reported elsewhere).
  */
 export function rangeUnsatisfied(versions, range) {
   const list = Array.isArray(versions) ? versions : [];
@@ -72,78 +49,26 @@ export function versionWithin(version, range) {
 }
 
 /**
- * A version cut to the number of segments the bound actually states.
- *
- * Only the UPPER bound, and only because of what a partial one means. n8n
- * declares a max of `24` and the comment beside it in the backend says "Node
- * 20.19 to 24.x inclusive" — the whole 24 line. Padding the missing segments
- * with zero turned that into `24.0.0`, so a server running the current Node
- * 24.20.0 was told it needed 20.19, which is end-of-life and deliberately not
- * offered for install. A dead end from both directions, reported by a user.
- *
- * Cutting instead of padding says what the bound says: `24` compares majors,
- * `8.1` compares major and minor, so PrestaShop's `8.1` still accepts PHP
- * 8.1.9 and still refuses 8.2. A fully-stated bound is unchanged.
- *
- * The lower bound is left alone — it needs no help. `20.19` against 20.19.3
- * already compares correctly, and cutting there would let 20.18.x in.
+ * A version cut to the number of segments the bound states, for the UPPER
+ * bound only: a max of `24` means the whole 24.x line, and `8.1` accepts 8.1.9
+ * but not 8.2. The lower bound needs no cutting.
  */
 function toPrecisionOf(version, bound) {
   const segments = String(bound).split(".").length;
   return String(version).split(".").slice(0, segments).join(".");
 }
 
-/**
- * The newest version in a list that satisfies a range, or null.
- *
- * Fed the `installable` list rather than the installed one, to answer the
- * question a blocked card leaves open: not "what does this need" but "what do
- * I go and install". Printing the range alone is what sent a user hunting for
- * Node 20.19 — the bottom of n8n's range, and a version this panel refuses to
- * install because the line is dead. Newest, because among versions that all
- * satisfy the range the supported one is the one to recommend.
- *
- * Null is a real answer and a different sentence: the range is satisfiable in
- * principle and nothing we can install satisfies it.
- */
+/** The newest version in a list that satisfies a range, or null. */
 export function highestInRange(versions, range) {
   return sortedInRange(versions, range).at(-1) ?? null;
 }
 
 /**
- * The version to install for a type that declares a range.
- *
- * Krishna, about n8n on a fresh server: "the requirement should be based on
- * n8n's actual runtime/dependency requirement, not simply whether the
- * default/latest Node.js version is installed."
- *
- * n8n declares `>=24.0.0` and the panel offered Node 26.9.0, because that was
- * the newest thing it could install. Nothing was *wrong* — 26 satisfies the
- * range — but the row read "Node 26.9.0 — the runtime n8n runs on", which
- * states a requirement n8n does not have, and it installs the least-tested
- * major for an application that names 24 as its floor. So: the LOWEST that
- * fits, not the newest.
- *
- * NOT the bottom of the declared range, either: n8n once declared a floor of
- * 20.19, the card printed it, and a reporter went looking for a Node 20 the
- * install list deliberately hides. The answer comes from `installable`, the
- * list the runtime page will actually show.
- *
- * The part this replaced got PHP wrong. It assumed the offered list hides
- * end-of-life lines — true of Node, false of PHP, which offers everything back
- * to 5.6 and labels each one. So PrestaShop (7.2 – 8.1, every version in that
- * window now EOL) was answered with **PHP 7.2**, unsupported since November
- * 2020, under the words "this is what we will install". The lifecycle was in
- * the same payload the whole time.
- *
- * Lowest SUPPORTED, then. And when a range contains nothing supported — which
- * is PrestaShop's situation and will be more types' every year — the highest
- * in range instead: the least-stale option, and for PrestaShop it is 8.1,
- * which is the version their own requirements recommend.
- *
- * Returns `{ version, eol }` rather than a string, because "we will install
- * PHP 8.1" and "we will install PHP 8.1, which PHP no longer supports" are
- * different sentences and only the caller can write them.
+ * The version to install for a type that declares a range, chosen from the
+ * `installable` list (what the runtime page offers): the LOWEST supported
+ * version in range (the newest major may be untested by the app); if none in
+ * range is supported (the PHP list includes EOL lines), the highest in range.
+ * Returns `{ version, eol }` so the caller can mention end-of-life.
  */
 export function installTarget(versions, range) {
   const candidates = versionsInRange(Array.isArray(versions) ? versions : [], range)
@@ -171,13 +96,9 @@ function sortedInRange(versions, range) {
 }
 
 /**
- * Segment-wise numeric comparison, the part of PHP's `version_compare` these
- * versions actually use.
- *
- * A missing segment counts as zero, so "22" and "22.0" are equal and "20.19"
- * sorts above "20" — which is exactly the n8n lower bound. Anything
- * non-numeric compares as zero rather than throwing: a version string we
- * cannot read must not decide a field is unusable.
+ * Segment-wise numeric comparison (the subset of PHP's `version_compare` used
+ * here). Missing segments count as zero ("22" == "22.0"); non-numeric ones
+ * compare as zero rather than throwing.
  */
 export function compareVersions(a, b) {
   const left = String(a).split(".");

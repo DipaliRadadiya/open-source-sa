@@ -16,8 +16,7 @@ import { DeleteRoleDialog } from "@/components/admin/roles/delete-role-dialog";
 export function RoleRowActions({ role }) {
   const t = useTranslations("roles");
   const [deleteOpen, setDeleteOpen] = useState(false);
-  // System roles (e.g. Administrator) are protected — the backend rejects
-  // edit/delete with a 422, so we disable both here.
+  // System roles are protected: the backend rejects edit/delete with a 422.
   const isSystem = role.is_system;
 
   return (

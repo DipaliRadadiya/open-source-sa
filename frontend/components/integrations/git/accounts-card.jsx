@@ -23,54 +23,34 @@ import { ReplaceTokenDialog } from "@/components/integrations/git/replace-token-
 import { DisconnectDialog } from "@/components/integrations/git/disconnect-dialog";
 
 /**
- * Connected accounts, and whether their tokens still work.
- *
- * The list itself is server-rendered from the database and arrives instantly.
- * Health is fetched here, from the browser, because it makes live calls out to
- * GitHub, GitLab and Bitbucket — putting it in the server render would let one
- * slow provider hold up the whole page. Badges fill in when it answers.
+ * Connected accounts and their token health. Health is fetched in the browser
+ * because it calls the providers live; one slow provider must not block the page.
  */
 export function AccountsCard({ accounts = [], providers = [], canManage, providersFailed }) {
   const t = useTranslations("git");
   const { name: brand } = useBranding();
   const { refreshAndWait } = useRefresh();
   const [statuses, setStatuses] = useState(null);
-  // Only the manual re-check spins the button. The first load is silent — the
-  // rows carry their own "checking" state, and two spinners for one request
-  // read as two requests.
+  // Only the manual re-check spins the button; rows show their own "checking".
   const [rechecking, setRechecking] = useState(false);
   const [connecting, setConnecting] = useState(false);
-  /*
-   * The account just connected, or null.
-   *
-   * Only ever set by a connect that happened in this tab, and cleared by a
-   * refresh or a navigation — a next-step prompt belongs to the action that
-   * earned it. Made permanent it would be an advert on a page you visit to
-   * manage accounts, not to make sites.
-   *
-   * The account rather than a boolean, because the prompt names it and the
-   * link carries its id. With two accounts connected, "your Git account is
-   * connected" does not say which.
-   */
+  // The account just connected in this tab (cleared on refresh/navigation);
+  // the next-step prompt names it and links with its id.
   const [justConnected, setJustConnected] = useState(null);
   const [editing, setEditing] = useState(null);
   const [replacing, setReplacing] = useState(null);
   const [disconnecting, setDisconnecting] = useState(null);
-  // Tests can run side by side, one spinner each.
   const testing = usePendingKeys();
 
-  // No setState before the first await: called straight from an effect, a
-  // synchronous one cascades an extra render on every mount.
+  // No setState before the first await: it is called from an effect.
   const load = useCallback(async (signal) => {
     try {
       const { data } = await getAccountStatuses({ signal });
       const parsed = gitStatusesResponseSchema.safeParse(data);
-      // A malformed or failed check leaves every badge saying it has not been
-      // checked, which is the one honest answer when we do not know.
+      // On a malformed response every badge stays "not checked".
       if (parsed.success) setStatuses(parsed.data.statuses);
     } catch {
-      // Deliberately quiet: this is a background check, and a toast for a
-      // provider being slow would be noise on a page that otherwise works.
+      // Deliberately quiet: a background check.
     }
   }, []);
 
@@ -84,8 +64,6 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
     if (accounts.length === 0) return undefined;
 
     const controller = new AbortController();
-    // Inline and awaited before anything is set: calling a state-setting
-    // helper straight from an effect body cascades a render on mount.
     (async () => {
       await load(controller.signal);
     })();
@@ -97,8 +75,6 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
     testing.start(account.id);
     try {
       await testAccount(account.id);
-      // Refreshes identifier, scopes and last-verified on the row, then the
-      // badge from the same live source as the rest.
       await refreshAndWait();
       toast.success(t("actions.checked", { label: account.label }));
       await load();
@@ -175,7 +151,6 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
                 <p className="max-w-md text-sm leading-6 text-muted-foreground">
                   {t("empty.description")}
                 </p>
-                {/* Said before the credential is asked for, not after. */}
                 <p className="max-w-md text-xs leading-5 text-muted-foreground">
                   {t("connect.readOnly", { brand })}
                 </p>
@@ -221,9 +196,6 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
                 <div className="border-b py-4">
                   <div className="flex flex-col gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                     <div className="flex min-w-0 items-start gap-3">
-                      {/* Which account, in its own colours — the same mark the
-                          row below it carries, so the prompt reads as being
-                          about the thing that just appeared in the list. */}
                       <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-card ring-1 ring-foreground/10">
                         <ProviderLogo provider={justConnected.provider} className="size-4" />
                       </span>
@@ -236,16 +208,9 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
                         </p>
                       </div>
                     </div>
-                    {/* Straight to the Git type rather than the empty picker:
-                        this button only exists because an account was just
-                        connected, so the type is already known. The page drops
-                        an unrecognised `type` on the floor, so a renamed site
-                        type degrades to the plain form rather than breaking. */}
+                    {/* Opens the create form on the Git type with this account
+                        preselected; the create page validates both. */}
                     <Button size="sm" asChild className="shrink-0">
-                      {/* The account travels with the link, so the form opens
-                          with it chosen rather than making you find in a picker
-                          the thing you just made. The create page validates the
-                          id against the real list before trusting it. */}
                       <Link
                         href={
                           justConnected.id
@@ -289,9 +254,8 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
             onAccountConnected={setJustConnected}
             onOpenChange={setConnecting}
           />
-          {/* Keyed and mounted only while open: a dialog that keeps its state
-              after closing shows the previous account's values for a moment
-              when the next one opens. */}
+          {/* Keyed and mounted only while open, so no previous account's values
+              flash on open. */}
           {editing ? (
             <EditDialog
               key={`edit-${editing.id}`}

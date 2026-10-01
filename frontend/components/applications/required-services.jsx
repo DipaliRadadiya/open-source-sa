@@ -10,22 +10,14 @@ import { installTarget, rangeLabel } from "@/lib/runtime/version-range";
 import { RequiredServicesPanel } from "@/components/applications/required-services-panel";
 
 /**
- * Install what the chosen application needs, from the form that needs it.
+ * Install what the chosen application needs, from the create form.
  *
- * The user's words: "detecting all the required dependencies upfront … the
- * installer could list the required services and ask for permission to install
- * them all at once, rather than requiring the user to go back and forth
- * between different sections and discover dependencies one at a time."
+ * Uses the existing install endpoints (`POST /databases/engines/{engine}`,
+ * `/php/versions`, `/node/versions`): each is an idempotent 202 on a
+ * single-worker queue, so firing them all is safe.
  *
- * No new endpoint. `POST /databases/engines/{engine}`, `POST /php/versions`
- * and `POST /node/versions` are each already a 202 and a queued job, already
- * idempotent, and the queue runs a single worker — so firing all of them is
- * safe and they simply run in turn.
- *
- * NO local state machine. Every row's state is read from the same live data
- * the rest of the page renders from: an engine's `installed`/`running`, a
- * version's `status`. A second copy of "is it installed yet" kept in this
- * component is a copy that can disagree with the page around it.
+ * No local state machine: each row's state is read from the same live data the
+ * page renders from, so it cannot disagree with the rest of the page.
  */
 
 const RUNTIME_NAMES = { php: "PHP", node: "Node" };
@@ -39,10 +31,8 @@ const ENGINE_LABELS = {
 
 /**
  * The blockers as rows, each with the exact thing this panel would install.
- *
- * Computed ONCE, when an application is chosen. The blockers vanish as they
- * are cleared — that is the point of them — and a list derived from them on
- * every render would delete the row that just went green before anyone saw it.
+ * Computed once per chosen application: blockers vanish as they are cleared, so
+ * deriving on every render would drop a row the moment it turned green.
  */
 function servicesFor(type, { phpInstallable, nodeInstallable }) {
   const blockers = Array.isArray(type?.blockers) ? type.blockers : [];
@@ -75,20 +65,10 @@ function servicesFor(type, { phpInstallable, nodeInstallable }) {
     if (!runtime) return [];
 
     /*
-     * WHICH version, decided here rather than left to the reader.
-     *
-     * `suggest` is set when a range excluded everything installed. When the
-     * server has none of this runtime at all there is no range to satisfy and
-     * no `suggest`, so the newest version on offer is the answer — the same
-     * one the runtime's own page would put at the top of its list.
-     *
-     * Null means nothing we can install fits, which is a state of its own:
-     * PrestaShop wants PHP 7.2–8.1 and this panel only offers 8.3 and 8.4.
-     * Offering a button there would be a button that cannot work.
-     *
-     * The LOWEST that fits, matching `runtime-readiness`. On a fresh server
-     * there is no range to satisfy and no `suggest`, and taking the newest on
-     * offer is how n8n came to demand Node 26.9.0 when it asks for 24.
+     * Which version to install: the server's `suggest` when a range excluded
+     * everything installed, otherwise the lowest installable version that fits
+     * (matching `runtime-readiness`). Null means nothing installable fits, a
+     * separate state with no button.
      */
     const target = blocker.suggest
       ? { version: blocker.suggest, eol: Boolean(blocker.suggestEol) }
@@ -101,16 +81,13 @@ function servicesFor(type, { phpInstallable, nodeInstallable }) {
         key: `runtime-${runtime}`,
         kind: runtime,
         version,
-        // What the application actually asked for, so the exact version above
-        // does not read as the requirement. "Node 24.12.0" alone looks like
-        // n8n needs that build; it needs 24 or newer.
+        // The application's requirement, so the exact version above does not read as
+        // what the app demands.
         requirement: blocker.range ? rangeLabel(blocker.range) : null,
-        // True when the only version this type can use is one PHP no longer
-        // patches. Saying "we will install PHP 8.1" without that is the panel
-        // knowing something about the reader's security and not mentioning it.
+        // True when the only usable version is end-of-life; the row must say so.
         eol: Boolean(target?.eol),
-        // Never the bare runtime name: "PHP — Not installed" is false on a
-        // server running PHP 8.4. It is the wrong LINE, not absent.
+        // Never the bare runtime name: "PHP — Not installed" is false on a server
+        // running another PHP version.
         name: version ? `${label} ${version}` : blocker.label ? `${label} ${blocker.label}` : label,
       },
     ];
@@ -127,14 +104,9 @@ function liveState(row, { engines, phpVersions, nodeVersions, canInstall, errors
     if (engine?.install_status === "installing") return "installing";
     if (engine?.install_status === "failed") return "failed";
     /*
-     * An engine the panel cannot install here at all — MongoDB on Ubuntu
-     * 26.04, where the vendor has published no server build. NodeBB needs it,
-     * so the create form was offering an Install button whose only outcome is
-     * a 422.
-     *
-     * The runtime branch below has drawn this line for a while: "Null means
-     * nothing we can install fits… Offering a button there would be a button
-     * that cannot work." Same state, same word — `impossible`, not `missing`.
+     * An engine the panel cannot install here at all (e.g. MongoDB where the
+     * vendor ships no build for this OS): `impossible`, not `missing`, so no
+     * Install button that can only 422.
      */
     if (engine && engine.installable === false && !engine.installed) return "impossible";
     if (!canInstall.database) return "denied";
@@ -184,12 +156,8 @@ export function RequiredServices({
           ...row,
           state,
           /*
-           * Why it is impossible, in the server's words, when it has them.
-           *
-           * The generic sentence is about version ranges — "nothing we can
-           * install fits" — which is true of PrestaShop and PHP and says
-           * nothing useful about an engine the vendor has not shipped for this
-           * Ubuntu release.
+           * The server's own reason when it has one; the generic sentence is about
+           * version ranges and does not fit an unavailable engine.
            */
           reason:
             state === "impossible" && row.kind === "database"
@@ -204,11 +172,9 @@ export function RequiredServices({
   const working = services.some((service) => service.state === "installing");
 
   /*
-   * Poll only while something is running, and by re-running the page rather
-   * than fetching here. The versions, the engines and the type's own blockers
-   * are all computed server-side from one another — refreshing moves them
-   * together, and a client fetch into local state would update this panel and
-   * leave the card grid above it still saying the application cannot be made.
+   * Poll only while something is running, by refreshing the page rather than
+   * fetching here: versions, engines and blockers are computed together on the
+   * server, so the card grid above updates too.
    */
   useEffect(() => {
     if (!working) return undefined;
@@ -230,9 +196,7 @@ export function RequiredServices({
         return next;
       });
 
-      // Sequentially, though each call only enqueues: a failure part-way
-      // through should stop asking for the rest rather than firing them at a
-      // server that has just refused something.
+      // Sequential, so a refusal part-way stops the remaining requests.
       for (const service of queue) {
         try {
           await INSTALL[service.kind](service);

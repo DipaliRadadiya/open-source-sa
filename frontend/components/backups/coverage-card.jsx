@@ -22,17 +22,13 @@ import { CoverageTable, sortCoverage } from "@/components/backups/coverage-table
 import { CoverageCards } from "@/components/backups/coverage-cards";
 import { SetupBackupsDialog } from "@/components/backups/setup-backups-dialog";
 
-// How long a press of "Run backup" keeps the page watching on its own. Long
-// enough for a queue to pick the job up and the row to start reporting it;
-// short enough that a job which never starts stops polling on its own.
+// How long a "Run backup" press keeps the page polling on its own: long enough
+// for the queue to pick the job up, short enough to stop if it never starts.
 const JUST_STARTED_MS = 90_000;
 
 /**
- * Which sites are protected, and which are not.
- *
- * Filtering is client-side on purpose: the coverage list is already fully
- * loaded (one call per application during SSR), so a round trip to narrow ten
- * rows would be slower and would lose the instant feel.
+ * Which sites are protected, and which are not. Filtering is client-side: the
+ * coverage list is already fully loaded during SSR.
  */
 export function CoverageCard({
   coverage,
@@ -49,14 +45,11 @@ export function CoverageCard({
   const { refreshAndWait } = useRefresh();
   const [setupFor, setSetupFor] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  // Several applications can be started at once — the runs are queued — so
-  // each row keeps its own spinner.
+  // Runs are queued, so several can start at once; each row keeps its own spinner.
   const starting = usePendingKeys();
-  // Set when "Run backup" is pressed, so the poller can cover the gap between
-  // accepting the run and the row showing it. A timer clears it rather than a
-  // comparison against `Date.now()`, which would make the render impure.
-  // Also true when this card has just replaced the empty state, whose "Back up
-  // now" started a run these rows do not show yet. Only an invisible poller
+  // Set when "Run backup" is pressed (or the empty state just started a run),
+  // so polling covers the gap before the row shows it. Cleared by a timer, not
+  // a `Date.now()` comparison, to keep render pure. Only an invisible poller
   // depends on it, so a server/client difference changes no markup.
   const [justStarted, setJustStarted] = useState(() => backupStartedWithin(JUST_STARTED_MS));
 
@@ -69,8 +62,7 @@ export function CoverageCard({
     return sortCoverage(
       coverage.rows.filter((row) => {
         if (state === "protected" && row.state !== "protected") return false;
-        // "Not protected" means anything that is not actually backing up —
-        // paused and unreadable belong here, not with the healthy sites.
+        // "Not protected" includes paused and unreadable, not just unconfigured.
         if (state === "unprotected" && row.state === "protected") return false;
         if (type !== "all" && row.target?.type !== type) return false;
         if (
@@ -98,9 +90,8 @@ export function CoverageCard({
     starting.start(applicationId);
     try {
       await runBackupNow(applicationId);
-      // Before the refresh, not after. The run is queued, so the row the
-      // server is about to send still carries the PREVIOUS backup's finished
-      // status — see `watching` below.
+      // Before the refresh: the row the server sends next still carries the
+      // previous backup's finished status (see `watching`).
       setJustStarted(true);
       await refreshAndWait();
       toast.success(t("started", { name }));
@@ -111,8 +102,7 @@ export function CoverageCard({
     }
   }
 
-  // Stop watching on our own if the run never shows up — a job that was
-  // accepted and then never ran must not poll for as long as the tab is open.
+  // Stop watching if the run never shows up, rather than polling indefinitely.
   useEffect(() => {
     if (!justStarted) return undefined;
     const id = setTimeout(() => setJustStarted(false), JUST_STARTED_MS);
@@ -121,27 +111,14 @@ export function CoverageCard({
 
   const listProps = { rows, options: backupOptions, canManage, onSetUp: openSetup, onBackUpNow: backUpNow, busyIds: starting.pendingKeys };
 
-  /*
-   * The clock the Schedule column's hours are in.
-   *
-   * Only when every configured target agrees, and never invented: an older
-   * backend that sends no timezone leaves the caption off rather than
-   * asserting UTC over hours it cannot vouch for.
-   */
+  // The Schedule column's timezone, only when every target agrees. An older
+  // backend that sends none leaves the caption off rather than assuming UTC.
   const scheduleZones = new Set(rows.map((row) => row.target?.timezone).filter(Boolean));
   const scheduleTimezone = scheduleZones.size === 1 ? [...scheduleZones][0] : null;
 
-  // Pressing "Run backup" used to leave the row unchanged until someone
-  // reloaded. While any site's newest run is still being written, re-run the
-  // server component so the status dot and the last-run time keep up.
-  //
-  // The status alone is not enough to start watching. `router.refresh()` fires
-  // the instant the API accepts the run, and at that moment the newest backup
-  // on the row is still the *last* one, finished — so nothing looked in
-  // flight, the poller never mounted, and a run that completed four seconds
-  // later left the row reading the old timestamp until someone reloaded by
-  // hand. Pressing the button is itself evidence that work has begun, so it
-  // opens a window in which we keep watching regardless of what the row says.
+  // Poll while any newest run is in flight, or just after "Run backup": right
+  // after the API accepts a run the row still shows the previous, finished
+  // backup, so status alone would never start the poller.
   const inFlight = coverage.rows.some((row) => BACKUP_IN_FLIGHT.includes(row.lastBackup?.status));
   const watching = inFlight || justStarted;
 
@@ -150,22 +127,14 @@ export function CoverageCard({
       {watching ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
 
       <div className="space-y-4">
-        {/* Above the coverage banner: a site can be perfectly configured and
-            still be backing up to a bucket that rejects every write, which no
-            amount of green in the table below would reveal. */}
+        {/* Above the coverage banner: a well-configured site can still be
+            backing up to a bucket that rejects every write. */}
         <DestinationHealth
           destinations={destinations}
           inUse={coverage.rows.map((row) => row.target?.storage_destination_id).filter(Boolean)}
         />
 
-        {/* The state of the server, said properly. A thin one-line bar made the
-            most important sentence on the page look like a dismissible
-            notification — this is a headline, a consequence, and the one action
-            that fixes it. */}
-        {/* Warning, not danger. Red says "something is broken right now";
-            unprotected sites are a risk you should fix, which is amber. It
-            still leads the page — it just stops shouting over the table it is
-            meant to introduce. */}
+        {/* Warning (amber), not danger: unprotected sites are a risk, not a breakage. */}
         <div
           data-slot="notice"
           className={`flex flex-col items-start gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:gap-4 ${
@@ -217,9 +186,7 @@ export function CoverageCard({
 
           <LocalSearchInput value={search} onChange={setSearch} placeholder={t("searchPlaceholder")} />
 
-          {/* The same dropdown History uses. It filters in memory here — the
-              coverage list is already loaded, so putting this in the URL would
-              buy shareability at the cost of an API call per change. */}
+          {/* Same dropdown as History, but filtering in memory (not in the URL). */}
           <FilterSelect
             value={type}
             onChange={setType}
@@ -235,9 +202,7 @@ export function CoverageCard({
           <RefreshButton />
         </div>
 
-        {/* Three filters live here and none of them is in the URL, so a
-            narrowed-to-nothing list showed an empty table with no hint of
-            which one did it. */}
+        {/* The filters are not in the URL, so an emptied list must say so. */}
         {rows.length === 0 ? (
           <EmptyState
             icon={SearchX}
@@ -258,14 +223,8 @@ export function CoverageCard({
         ) : (
           <>
             {/*
-              Which clock the hours in the Schedule column are on, said once
-              for the whole list — every target on a server shares it.
-
-              Not in the column header, which is where it first went: the
-              header is the widest thing in a 96px column, and "Schedule ·
-              Asia/Kolkata" pushed the table 96px further into horizontal
-              scroll at 1024 and 1280. Measured before and after; here it
-              costs the table nothing.
+              The Schedule column's timezone, stated once for the list. Not in
+              the column header, where it widened the table into horizontal scroll.
             */}
             {scheduleTimezone ? (
               <p className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -273,10 +232,8 @@ export function CoverageCard({
                 {t("timesShownIn", { timezone: scheduleTimezone })}
               </p>
             ) : null}
-            {/* By the room the table actually has, not the viewport: it needs
-                1,035px in English and 1,179px in French (measured), and at 1280
-                beside the sidebar it got 958 — the Run button sat off-screen
-                behind a sideways scroll. Cards until the widest locale fits. */}
+            {/* Container query, not viewport: the table needs ~1,180px in the
+                widest locale. Cards until it fits. */}
             <div className="@container">
               <div className="@min-[1180px]:hidden">
                 <CoverageCards {...listProps} />

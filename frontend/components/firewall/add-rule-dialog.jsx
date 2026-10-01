@@ -50,22 +50,9 @@ const DEFAULTS = {
 };
 
 /**
- * The custom rule — the one Quick add can't make.
- *
- * Three things were wrong with the previous version and all three came from
- * treating this as the main path rather than the exception:
- *
- *   - **The summary was below the fold**, so the sentence explaining the rule
- *     was the one thing you had to scroll to reach. It leads now, pinned under
- *     the header where it is always in view.
- *   - **Protocol came before Port.** The port is the subject of the rule;
- *     protocol is a qualifier on it. Port leads and takes the width.
- *   - **"Up to port" was a whole field for a rare case.** One field now accepts
- *     `443` or `8000-8090` and splits it on submit — a forgiving format, rather
- *     than making the user fill in the API's data model.
- *
- * The service chips stay, but as a shortcut that fills the port, not as the
- * subject: choosing services is what Quick add is for.
+ * The custom rule, for what Quick add can't make. The summary leads, Port comes
+ * before Protocol, and one port field accepts `443` or `8000-8090` (split on
+ * submit). Service chips only fill the port; choosing services is Quick add's job.
  */
 function valuesFrom(rule) {
   if (!rule) return DEFAULTS;
@@ -85,27 +72,22 @@ export function AddRuleDialog({
   canManage,
   yourIp,
   riskyPorts = [],
-  // Editing: the caller owns open/closed and passes the rule. Creating: this
-  // component owns its own trigger button and state.
+  // Editing: the caller owns open state and passes the rule. Creating: this
+  // component owns its trigger button and state.
   rule = null,
-  // Whether the firewall is enforcing. `ProtectedRuleGuard` only locks a
-  // seeded rule while it is — with ufw off there is nothing to cut off, so the
-  // same edit is allowed.
+  // Whether the firewall is enforcing (`ProtectedRuleGuard` locks seeded rules only
+  // while it is).
   firewallEnabled = false,
   onClose,
 }) {
   const t = useTranslations("firewall");
   const { refreshAndWait } = useRefresh();
   const editing = rule !== null;
-  // What the API will refuse on this rule: port, protocol, action and source
-  // on a panel-seeded rule while the firewall is enforcing. The name is
-  // deliberately NOT in the list — the guard allows a rename, on the grounds
-  // that a label never reaches ufw and blocking a typo fix is pure
-  // obstruction. So the fields lock, not the button.
-  // Locked whether or not the firewall is on. The API allows these edits while
-  // it is off, but turning it on then re-adds the panel's own allow rule AFTER
-  // the edited one — ufw matches the first — so an SSH rule edited to Block
-  // locks you out the moment the firewall starts.
+  // Fields the API refuses to change on a panel-seeded rule. The name is not
+  // included: the guard allows renames, so the fields lock, not the button.
+  // Locked even when the firewall is off: enabling it re-adds the panel's own allow
+  // rule AFTER the edited one and ufw matches the first, so an SSH rule edited to
+  // Block would lock the user out.
   const ruleLocked = editing && Boolean(rule.protected);
   const [selfOpen, setSelfOpen] = useState(false);
   const open = editing ? true : selfOpen;
@@ -114,11 +96,8 @@ export function AddRuleDialog({
       if (!next) onClose?.();
       return;
     }
-    // Reset HERE, not only in the dialog's onOpenChange. Radix fires that for
-    // its own interactions (Esc, overlay, X) but not for our own Cancel button
-    // or trigger — and in create mode this component never unmounts, so the
-    // last attempt's red "already exists" banner and its filled-in port came
-    // back the next time the dialog was opened.
+    // Reset here too: Radix fires onOpenChange for Esc/overlay/X but not for our own
+    // Cancel or trigger, and in create mode this component never unmounts.
     if (!next) resetForm();
     setSelfOpen(next);
   };
@@ -128,10 +107,8 @@ export function AddRuleDialog({
   const form = useForm({
     resolver: zodResolver(createFirewallRuleSchema),
     defaultValues: valuesFrom(rule),
-    // Not on blur: leaving a field you haven't filled in yet is not a mistake,
-    // and clicking "Only my IP" blurred the empty port field and reported
-    // "Enter a port" for an action that had nothing to do with the port.
-    // Errors appear when you try to save, then correct themselves as you type.
+    // Not on blur: e.g. clicking "Only my IP" would blur the empty port field and
+    // flag it. Errors show on save and clear as the user types.
     mode: "onSubmit",
     reValidateMode: "onChange",
   });
@@ -139,14 +116,12 @@ export function AddRuleDialog({
   const values = useWatch({ control: form.control });
   const blocking = values.action === "deny";
 
-  // The last name this dialog filled in by itself. Anything the user typed is
-  // theirs and is never overwritten — but a name we put there is fair game to
-  // replace when they pick a different service, so switching HTTPS → MySQL
-  // doesn't leave a rule called "HTTPS" on port 3306.
+  // The last name this dialog filled in itself. User-typed names are never
+  // overwritten, but an auto-filled one is replaced when the service changes.
   const [autoName, setAutoName] = useState("");
 
-  // Everything a closed dialog must forget: the values, the field errors and
-  // the server's refusal banner.
+  // Everything a closed dialog must forget: values, field errors and the server's
+  // refusal banner.
   function resetForm() {
     setAutoName("");
     form.reset(valuesFrom(rule));
@@ -170,9 +145,7 @@ export function AddRuleDialog({
   }
 
   async function onSubmit(submitted) {
-    // Last attempt's refusal, cleared before this one. It is not bound to a
-    // field, so nothing else clears it — and a stale "already exists" sitting
-    // above a rule you just changed is worse than no message.
+    // Not bound to a field, so nothing else clears the previous refusal.
     form.clearErrors("root.server");
     const parsed = parsePorts(submitted.ports);
     const payload = {
@@ -186,8 +159,7 @@ export function AddRuleDialog({
 
     try {
       if (editing) {
-        // Explicit nulls: on an edit these fields are being CLEARED when empty,
-        // where on a create they are simply absent.
+        // Explicit nulls: on an edit, empty means CLEAR; on a create it means absent.
         payload.port_to = parsed.to ?? null;
         payload.source_ip = submitted.source_ip?.trim() || null;
         payload.description = submitted.description?.trim() || null;
@@ -203,10 +175,8 @@ export function AddRuleDialog({
       setAutoName("");
       form.reset(editing ? valuesFrom(rule) : DEFAULTS);
     } catch (error) {
-      // 422 is usually "you already have this rule" — that belongs on the form,
-      // not in a toast that vanishes while the form sits there. It is not a
-      // port problem either: the server compares port AND protocol AND action
-      // AND source, so pinning it under Port would name the wrong culprit.
+      // 422 is usually a duplicate rule: shown on the form, not as a toast. Not pinned
+      // to Port, since the server compares port, protocol, action and source.
       handleValidationError(error, form, { formError: true });
     }
   }
@@ -219,8 +189,7 @@ export function AddRuleDialog({
   const serverError = form.formState.errors.root?.server?.message;
 
   const parsed = parsePorts(values.ports);
-  // Named here rather than only after the server says 422: the form already has
-  // the rule list, so it can warn while the button is still unpressed.
+  // Warned before submit: the form already has what it needs.
   const risky = riskyExposure({
     port: parsed?.from,
     portTo: parsed?.to,
@@ -242,8 +211,7 @@ export function AddRuleDialog({
 
   return (
     <>
-      {/* Plain <Button>, same as every other "add" in the app (cron jobs,
-          users, system users). It was outline+sm, which reads as secondary. */}
+      {/* Plain <Button>, like every other "add" in the app. */}
       {editing ? null : (
         <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
           <Button disabled={!canManage} onClick={() => setOpen(true)}>
@@ -257,8 +225,7 @@ export function AddRuleDialog({
         open={open}
         onOpenChange={(next) => {
           if (isSubmitting) return;
-          // setOpen resets on its own now, so Cancel, Esc, the overlay and the
-          // X all go through the same path.
+          // setOpen handles the reset, so Cancel, Esc, overlay and X share one path.
           setOpen(next);
           if (!next && editing) resetForm();
         }}
@@ -286,9 +253,7 @@ export function AddRuleDialog({
         }
       >
         <div className="space-y-5">
-          {/* What the server refused, kept on screen. Above the summary because
-              it is the reason the dialog is still open — everything below it is
-              the rule you were trying to make. */}
+          {/* What the server refused, kept on screen above the summary. */}
           {serverError ? (
             <p
               role="alert"
@@ -299,11 +264,8 @@ export function AddRuleDialog({
             </p>
           ) : null}
 
-          {/* Leads, and scrolls with everything else.
-              It was `sticky`, which meant the ACTION label and the Allow/Block
-              buttons slid underneath it — and the checked toggle item carries
-              its own z-10, so it painted back over the top. Pinning something
-              inside a short dialog buys nothing and costs a z-index fight. */}
+          {/* Not sticky: inside a short dialog it caused a z-index fight with the toggle
+              items (which carry z-10). */}
           <div
             className={cn(
               "rounded-lg border px-3 py-2.5",
@@ -321,9 +283,7 @@ export function AddRuleDialog({
             </p>
           </div>
 
-          {/* A database facing the whole internet is the most expensive mistake
-              available on this screen, so it is said out loud before the rule
-              exists — not left for the user to work out from a port number. */}
+          {/* Warns about a database open to the whole internet before the rule exists. */}
           {risky ? (
             <p className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/5 px-3 py-2.5 text-xs leading-relaxed text-warning">
               <TriangleAlert className="mt-0.5 size-4 shrink-0" />
@@ -331,9 +291,8 @@ export function AddRuleDialog({
             </p>
           ) : null}
 
-          {/* Said once, above the locked fields, instead of four identical
-              tooltips. The name below stays editable and the sentence says so,
-              because a form where everything looks dead reads as broken. */}
+          {/* Said once above the locked fields instead of per-field tooltips; the name stays
+              editable and the sentence says so. */}
           {ruleLocked ? <Caution>{t("add.protectedLocked")}</Caution> : null}
 
           {duplicate ? (
@@ -362,8 +321,6 @@ export function AddRuleDialog({
             </ToggleGroup>
           </Group>
 
-          {/* Equal halves: two short fields side by side read as a pair, and a
-              lopsided pair looks like one of them is more important than it is. */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="fw-ports">
@@ -372,8 +329,6 @@ export function AddRuleDialog({
               </Label>
               <Input
                 id="fw-ports"
-                // The first thing you came here to type. Opening a dialog and
-                // then having to click before typing is a wasted step.
                 autoFocus
                 inputMode="numeric"
                 placeholder={t("add.portsPlaceholder")}
@@ -415,8 +370,7 @@ export function AddRuleDialog({
             </div>
           </div>
 
-          {/* A shortcut for filling the port, not a question of its own — hence
-              the quiet label and the small chips. */}
+          {/* A shortcut for filling the port, hence the quiet label and small chips. */}
           {services.length > 0 ? (
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground">{t("add.orPickService")}</p>
@@ -450,18 +404,14 @@ export function AddRuleDialog({
                 aria-invalid={Boolean(sourceError)}
                 {...form.register("source_ip")}
               />
-              {/* Nobody goes and looks up their own address mid-task, so the
-                  choice was really "anywhere" or nothing. One click makes the
-                  safe option the easy one. */}
+              {/* One click makes the safe option the easy one. */}
               {yourIp ? (
                 <Button
                   type="button"
                   variant="secondary"
                   className="gap-1.5"
                   onClick={() => form.setValue("source_ip", yourIp, { shouldDirty: true })}
-                  // Writes straight into the source field, so it has to follow
-                  // the same lock — otherwise one button quietly makes the
-                  // exact edit the greyed input beside it is refusing.
+                  // Writes into the source field, so it must follow the same lock.
                   disabled={ruleLocked || values.source_ip === yourIp}
                   disabledReason={ruleLocked ? t("rules.protectedReason") : t("add.onlyMyIpAlready")}
                 >
@@ -481,8 +431,7 @@ export function AddRuleDialog({
             <Label htmlFor="fw-name">{t("add.nameLabel")}</Label>
             <Input
               id="fw-name"
-              // The API's own limit. Stops the overrun at the keyboard rather
-              // than at the server.
+              // The API's own limit.
               maxLength={255}
               placeholder={t("add.namePlaceholder")}
               aria-invalid={Boolean(nameError)}
@@ -491,9 +440,7 @@ export function AddRuleDialog({
             <p className="text-xs leading-relaxed text-muted-foreground">
               {t("add.nameHint")}
             </p>
-            {/* This was the only field with no error slot, so anything the
-                server said about it was written into form state and rendered
-                nowhere. */}
+            {/* Server errors for this field need their own slot to be shown. */}
             {nameError ? (
               <p role="alert" className="text-xs text-destructive">
                 {message(t, nameError)}
@@ -506,7 +453,6 @@ export function AddRuleDialog({
   );
 }
 
-/** A small muted heading: it labels the group without competing with it. */
 function Group({ title, children }) {
   return (
     <div className="space-y-2">
@@ -531,7 +477,7 @@ function protocolWord(t, protocol) {
 
 /**
  * Zod carries a key; the server carries a finished sentence. Translate ours, pass
- * theirs through — a server message run through `t()` comes out as the key.
+ * theirs through (a server message run through `t()` comes out as the key).
  */
 function message(t, text) {
   const KEYS = [

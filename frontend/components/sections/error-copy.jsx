@@ -9,11 +9,10 @@ import {
 } from "@/lib/api/generic-error";
 
 /**
- * Hands the translated last-resort and rate-limit sentences to the plain
- * module that needs them (see `lib/api/generic-error.js`).
- *
- * Renders nothing. It lives in the shells rather than in one page because the
- * function that reads it is called from every form in the panel.
+ * Hands the translated last-resort and rate-limit sentences to the plain module
+ * that needs them (see `lib/api/generic-error.js`).
+ * Renders nothing. Lives in the shells because every form in the panel calls the
+ * reading function.
  */
 export function ErrorCopy() {
   const t = useTranslations("errors");

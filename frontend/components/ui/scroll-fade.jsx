@@ -1,13 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
-/**
- * A horizontal scroller that fades only the edge it can still scroll towards.
- *
- * A permanent fade is worse than none: at the end of the strip it still looks
- * like something is cut off, so you keep swiping at nothing. This tracks the
- * scroll position and drops the fade the moment that edge is reached.
- */
+/** A horizontal scroller that fades only the edges it can still scroll towards. */
 export function ScrollFade({ className, children, ...props }) {
   const ref = useRef(null);
   const [edges, setEdges] = useState({ start: false, end: false });
@@ -23,8 +17,7 @@ export function ScrollFade({ className, children, ...props }) {
     measure();
     const el = ref.current;
     if (!el) return;
-    // Content can arrive or the window can change size after mount, and either
-    // changes whether there is anything to scroll to.
+    // Content or size changes after mount affect whether it can scroll.
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     for (const child of el.children) observer.observe(child);

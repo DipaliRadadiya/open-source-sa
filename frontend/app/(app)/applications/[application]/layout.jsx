@@ -9,10 +9,8 @@ import { getGitAccounts } from "@/lib/git/get-git";
 import { gitProviderFor, providersByAccountId } from "@/lib/applications/git-provider";
 
 /**
- * Exists for one reason: the sidebar sits in the `(app)` layout and never sees
- * the `[application]` param, so it cannot ask for that site's menu. This layout
- * can, and hands it over — along with the site's name for the breadcrumb, so no
- * screen inside the site can forget to say which site you are in.
+ * The sidebar in the `(app)` layout never sees the `[application]` param, so
+ * this layout supplies the site's menu and its name for the breadcrumb.
  */
 export default async function ApplicationLayout({ children, params }) {
   const { application } = await params;
@@ -22,11 +20,11 @@ export default async function ApplicationLayout({ children, params }) {
     getPermissions().catch(() => []),
   ]);
   const name = result?.application?.name;
-  // Null, not absent: the site's own endpoint always loads the user, so null
-  // means it is gone and every other route for this site answers 409.
+  // Null, not absent: the endpoint always loads the user, so null means it is
+  // gone and other routes for this site answer 409.
   const orphaned = result?.application?.system_user === null;
-  // Only an account-linked git site needs the accounts list; a public URL names
-  // its host itself. Cached, so the dashboard page reuses this read.
+  // Only an account-linked git site needs the accounts list. Cached, so the
+  // dashboard page reuses this read.
   const gitAccounts = result?.application?.git_account_id
     ? await getGitAccounts().then((r) => r.accounts ?? []).catch(() => [])
     : [];
@@ -34,8 +32,7 @@ export default async function ApplicationLayout({ children, params }) {
 
   return (
     <>
-      {/* Always reported, even as null — "this site has no menu" is exactly the
-          fact the sidebar needs when the site is gone. */}
+      {/* Always reported, even as null: the sidebar needs to know the site has no menu. */}
       <ApplicationNav items={items} application={result?.application ?? null} gitProvider={gitProvider} />
       {name ? <PageCrumb href={`/applications/${application}`}>{name}</PageCrumb> : null}
       {result?.application ? (

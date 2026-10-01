@@ -9,22 +9,12 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { PhpmyadminButton } from "@/components/databases/phpmyadmin-button";
 
 /**
- * The five values an application needs, at the top of the page.
- *
- * These used to be reachable only by opening the Users tab and finding the
- * right row — three clicks for the thing everyone comes back for, while charset
- * and collation, which nobody watches, sat above the fold. This is a placement
- * change, not new data: the same fields, where the task starts.
- *
- * Rendered only when something can actually connect. A database with no users
- * has no credentials to show, and the Users tab says so properly.
+ * The five values an application needs, at the top of the page. Rendered only
+ * when a user exists to connect with; the Users tab covers the empty case.
  */
 /**
- * Fields that get two grid tracks.
- *
- * Measured, not guessed: a generated name is 31 characters, which needs about
- * 275px at this font and gets 129px in a single track. Host, port and the
- * masked password all fit in one.
+ * Fields that get two grid tracks: a generated name (~31 chars) needs ~275px,
+ * more than one track. Host, port and the masked password fit in one.
  */
 const WIDE_FIELDS = new Set(["database", "username"]);
 
@@ -41,11 +31,8 @@ export function ConnectionDetails({ database, canManage = false, phpmyadminSites
     { key: "port", value: port },
     { key: "database", value: database.name },
     { key: "username", value: user.username },
-    // Masked, not hidden behind a reveal: it exists to be copied into a config
-    // file, and reading a 24-character password off a screen is nobody's plan.
-    // Null without `database` manage (DB-01) while `password_known` still says
-    // one exists: shown as withheld rather than dropped, so the card does not
-    // read as an account with no password.
+    // Masked, not hidden: it is meant to be copied. Null without `database`
+    // manage while `password_known` is true: shown as withheld, not dropped.
     {
       key: "password",
       value: user.password,
@@ -69,13 +56,9 @@ export function ConnectionDetails({ database, canManage = false, phpmyadminSites
           </div>
         </div>
 
-        {/* Labelled, not a bare icon: it sits alone in the header with no value
-            beside it to say what it would copy — and on a phone the masked
-            preview is too wide to show at all. */}
-        {/* Both ways in, together: the connection string is how an
-            application reaches this database, phpMyAdmin is how a person does.
-            Someone who wants to look at their data starts here — the page
-            header was where it was easy to put, not where it is looked for. */}
+        {/* The copy button is labelled: it sits alone in the header, and on a
+            phone the masked preview is too wide to show. The connection string
+            and phpMyAdmin sit together as the two ways in. */}
         <div className="flex flex-wrap items-center gap-2">
           {user.connection_string ? (
             <CopyButton
@@ -92,41 +75,22 @@ export function ConnectionDetails({ database, canManage = false, phpmyadminSites
         </div>
       </div>
 
-      {/* Three columns at the top end, not five. At five each cell was 132px
-          and the database name needs 256px, so the panel's own identifier was
-          cut in half — and generated names differ only in their suffix, which
-          is exactly the half that disappeared. */}
-      {/* Track counts are even numbers so the database name can take two of
-          them and still leave whole rows: 2 / 4 / 6, with the name spanning 2
-          at every size. Four short values and one long one in equal columns
-          made the name the only cell that wrapped, which dragged its row
-          taller than the rest and left the others floating at the top of it.
-          Six tracks at xl is exactly Host + Port + name(2) + Username(2),
-          which fills the first row with nothing wrapped; the password sits on
-          the second. A password is masked, so it is the one value that costs
-          nothing to move. */}
+      {/* Even track counts (2 / 4 / 6) so wide fields span two and rows stay
+          whole. At xl, Host + Port + name(2) + Username(2) fill the first row
+          and the masked password moves to the second. */}
       <CardContent className="grid grid-cols-2 gap-x-4 gap-y-3.5 px-5 py-4 sm:grid-cols-4 xl:grid-cols-6">
         {fields.map((field) => (
           <div
             key={field.key}
             className={cn(
               "min-w-0",
-              // The database name and the username are both generated, both the
-              // same shape, and the same length — but only the name was given
-              // two tracks. The username got one, wrapped onto a second line at
-              // every width, and dragged its row taller than the rest.
-              // Two tracks is enough at xl, where a track is ~137px. Between
-              // sm and xl the grid is only four tracks in a narrower container,
-              // so two of them is ~210px and the same string wrapped again —
-              // there, the field takes the whole row instead.
+              // Two tracks at xl (~137px each); between sm and xl two tracks
+              // are too narrow, so the field takes the whole row.
               WIDE_FIELDS.has(field.key) && "col-span-2 sm:col-span-4 xl:col-span-2",
             )}
           >
-            {/* Label and copy button on one line, value on its own beneath —
-                the same cell as the dialog that created this database, so the
-                two screens showing these five values read as one thing. Inline
-                beside the value the button also took its width off every
-                wrapped line. */}
+            {/* Label and copy button on one line, value beneath: same cell as
+                the create dialog, and the button does not narrow the value. */}
             <div className="flex items-center gap-0.5">
               <p className="min-w-0 truncate text-xs text-muted-foreground">
                 {t(field.key)}
@@ -139,9 +103,7 @@ export function ConnectionDetails({ database, canManage = false, phpmyadminSites
                 />
               ) : null}
             </div>
-            {/* Wraps rather than truncating. These are values to be read and
-                typed into a config file; a name cut short still looks like a
-                name, which is worse than a value that takes two lines. */}
+            {/* Wraps rather than truncating: a cut-off name still looks valid. */}
             {field.withheld ? (
               <p className="text-sm text-muted-foreground">{t("passwordWithheld")}</p>
             ) : (
@@ -153,8 +115,7 @@ export function ConnectionDetails({ database, canManage = false, phpmyadminSites
         ))}
       </CardContent>
 
-      {/* One credential is shown, but a database can have several — say so
-          rather than let someone conclude the others were lost. */}
+      {/* One credential is shown; say when there are others. */}
       {others > 0 ? (
         <div className="border-t bg-muted/30 px-5 py-3">
           <p className="text-xs leading-relaxed text-muted-foreground">

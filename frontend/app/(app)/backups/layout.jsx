@@ -22,10 +22,8 @@ export default async function BackupsLayout({ children }) {
   ]);
 
   if (!can(permissions, "backup", "view")) return <PermissionDenied title={t("title")} />;
-  // A restore in flight outranks whichever tab you are looking at: it is
-  // rewriting a live site right now, and finding out by wandering onto the
-  // right tab is not good enough. Seeded from the server so a reload — or
-  // someone else's browser — still shows it.
+  // An in-flight restore is shown on every tab; seeded from the server so it
+  // survives a reload and shows in other browsers.
   const { restores } = await getRestores({ per_page: 5 });
   const active = restores.find((restore) => RESTORE_IN_FLIGHT.includes(restore.status)) ?? null;
 
@@ -33,8 +31,7 @@ export default async function BackupsLayout({ children }) {
     <div className="space-y-6">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
-      {/* Wraps the tabs and the pages so a restore started on any of them can
-          raise the banner here without waiting for the server to notice. */}
+      {/* Lets a restore started on any tab raise the banner immediately. */}
       <RestoreWatch initial={active}>
         <BackupsTabs />
         {children}

@@ -9,24 +9,14 @@ import { startDriveConnect } from "@/lib/api/storage";
 import { apiMessage } from "@/lib/api/error-message";
 
 /**
- * The approval step for a user-owned Google Drive.
+ * The approval step for a user-owned Google Drive: one button that fetches a
+ * consent URL and sends the browser there; the callback page finishes.
  *
- * One button. It asks the panel for a consent URL and sends the browser there;
- * Google sends it back to the callback page, which finishes the job. Nothing is
- * polled and nothing is typed — the previous device flow made the operator read
- * a code off one screen and type it into another, which existed only to avoid a
- * redirect URI.
+ * The redirect URI is shown by {@link GoogleDriveRedirectUri} above the
+ * credential fields, since it is needed before the OAuth client exists.
  *
- * The redirect URI is *not* shown here — see {@link GoogleDriveRedirectUri},
- * which sits above the credential fields. It is needed when the Google OAuth
- * client is created, which is before there is a client ID to type into this
- * form and before this component is reachable at all.
- *
- * `compact` renders the button and nothing else, for the destination row. The
- * row is where someone actually meets this problem — the panel tells them "use
- * Connect" there — so the button has to be there. It is the same start() either
- * way: one implementation of "ask for a consent URL and leave", because two
- * would drift the moment one of them learned something.
+ * `compact` renders only the button, for the destination row. Both modes share
+ * one start() so they cannot drift.
  */
 export function GoogleDriveConnect({ destination, compact = false }) {
   const t = useTranslations("storage.oauth");
@@ -43,15 +33,9 @@ export function GoogleDriveConnect({ destination, compact = false }) {
     try {
       const { data } = await startDriveConnect(destination.id);
 
-      // A full navigation, not a popup: a popup here is blocked often enough
-      // that the button would appear to do nothing, and Google's consent screen
-      // is not something to render in 400 pixels.
-      //
-      // Nothing is rendered between here and leaving the page. An earlier
-      // version set the redirect URI into state on this line to display it —
-      // dead code, because the browser navigates away before React commits.
-      // The URI belongs above the form anyway, where it is needed *before* the
-      // OAuth client exists; see `GoogleDriveRedirectUri`.
+      // A full navigation, not a popup: popups are often blocked, and the
+      // consent screen needs the room. Nothing renders after this line, since
+      // the browser leaves before React commits.
       window.location.assign(data.oauth.authorize_url);
     } catch (e) {
       setError(apiMessage(e, t("start_failed")));
@@ -89,8 +73,7 @@ export function GoogleDriveConnect({ destination, compact = false }) {
           {state === "starting" ? <Loader2 className="size-3 animate-spin" /> : null}
           {t("connect")}
         </Button>
-        {/* Errors still surface here. A button that silently does nothing is
-            how the row would end up as confusing as the state it replaced. */}
+        {/* Errors still surface in compact mode. */}
         {error ? (
           <p className="flex items-start gap-1.5 text-xs text-destructive">
             <TriangleAlert className="mt-0.5 size-3 shrink-0" />
@@ -117,8 +100,7 @@ export function GoogleDriveConnect({ destination, compact = false }) {
       </Button>
 
 
-      {/* Same shape as the provider warning above it, so a failure here reads
-          as part of this panel rather than as a new kind of thing. */}
+      {/* Same shape as the provider warning above it. */}
       {error ? (
         <div className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs leading-relaxed">
           <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-destructive" />

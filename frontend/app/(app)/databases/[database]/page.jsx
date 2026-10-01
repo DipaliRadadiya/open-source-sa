@@ -57,27 +57,20 @@ export default async function DatabasePage({ params, searchParams }) {
     getPermissions(),
     getTranslations("databases"),
     getDatabase(id),
-    // Exports are global (rows outlive their database), so this is filtered by
-    // the card rather than requested per database.
+    // Exports are global (they outlive their database); the card filters them.
     getExports(),
     getTables(id),
     getPhpmyadminSite(),
-    // `DatabaseResource` carries `application_id` and no name, so the site has
-    // to be joined in here. The counts drive the picker's "already has one".
+    // `DatabaseResource` has only `application_id`, so sites are joined here.
+    // The counts drive the picker's "already has one".
     getAllApplications(),
     getDatabaseCounts(),
-    // Only so the site picker can grey a site whose application cannot speak
-    // this database's engine. A failure costs the greying, not the page.
+    // Lets the site picker grey out sites that cannot use this engine.
+    // A failure only loses the greying.
     getSiteTypes().catch(() => ({ siteTypes: [] })),
     /*
-     * Only for `supports_remote_users`. A failure costs the narrowing, not the
-     * page — the user dialogs then offer the full choice, as they always did.
-     *
-     * `{ engines, failed }`, NOT an array: this fetcher wraps its list like the
-     * others here. Assuming the array shape took every `/databases/{id}` page
-     * down with `engines.find is not a function`, and the `.catch` did not
-     * save it — nothing rejected, it returned an object and the crash came
-     * later, at the call site.
+     * For `supports_remote_users`; a failure only loses the narrowing.
+     * Returns `{ engines, failed }`, NOT an array.
      */
     getEngines().catch(() => ({ engines: [] })),
   ]);
@@ -86,8 +79,7 @@ export default async function DatabasePage({ params, searchParams }) {
   if (!can(permissions, "database", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "database", "manage");
 
-  // A database that was dropped in another tab is gone, not broken — the 404
-  // page says that better than "we couldn't load this".
+  // Deleted elsewhere: show the 404 page, not a load error.
   if (status === 404) notFound();
   if (failed || !data)
     return (
@@ -98,8 +90,8 @@ export default async function DatabasePage({ params, searchParams }) {
       />
     );
 
-  // The API answers 200 with no tables and size 0 when the engine is down
-  // (FS-C12), so the engine's own state is the only honest signal here.
+  // The API answers 200 with no tables and size 0 when the engine is down,
+  // so the engine's own state is the reliable signal.
   const engineRow = (engines.engines ?? []).find((row) => row.engine === data.engine);
   const engineDown = Boolean(engineRow?.installed) && !engineRow.running;
   const engineName = t(`engines.${data.engine}`);
@@ -136,8 +128,7 @@ export default async function DatabasePage({ params, searchParams }) {
           </Caution>
         ) : null}
 
-        {/* Above the tabs: connecting an application is what this page is
-            opened for, and it was three clicks deep inside Users. */}
+        {/* Above the tabs: connecting an application is the main task here. */}
         <ConnectionDetails
           database={data}
           canManage={canManage}
@@ -190,9 +181,6 @@ export default async function DatabasePage({ params, searchParams }) {
           }
         />
 
-        {/* Outside the tabs: deleting the database is not one of its sections,
-            and it belongs at the end of the page past everything that might
-            change your mind. */}
         <DeleteDatabaseCard
           database={data}
           application={applicationById(appList.applications, data.application_id)}

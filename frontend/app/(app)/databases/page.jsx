@@ -48,30 +48,24 @@ export default async function DatabasesPage({ searchParams }) {
 
   if (failed) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
 
-  // Only a REACHABLE engine can hold databases. An install that is queued or
-  // failed has none, so asking for a list would spend a request to render a
-  // table that then invites you to create a database nothing could store.
+  // Only a running engine can hold databases; skip the list otherwise.
   const usable = engines.some((engine) => engine.running);
 
   const [{ databases, meta: dbMeta, failed: dbFailed, status: dbStatus, failure: dbFailure, message: dbMessage }, untracked, connections, exportList, phpmyadmin, appList, dbCounts, unlinkedCount, catalogue] = await Promise.all([
     usable ? getDatabases(query) : Promise.resolve({ databases: [], failed: false }),
     usable && canManage ? getUntracked(engines) : Promise.resolve([]),
-    // Needed most when nothing is reachable — that is when someone has to look
-    // at these settings.
+  // Needed most when nothing is reachable.
     canManage ? getConnections() : Promise.resolve([]),
-    // For the "Last backup" column. Global, so one request covers the whole
-    // table rather than one per row.
+  // For the "Last backup" column; one global request, not one per row.
     usable ? getExports() : Promise.resolve({ exports: [], failed: false }),
-    // Whether this server has a phpMyAdmin to open at all. Without it the
-    // button was offered on every row and refused on click.
+  // Whether this server has a phpMyAdmin to open at all.
     usable ? getPhpmyadminSite() : Promise.resolve(null),
-    // The site picker in the create dialog, and which sites already have a
-    // database. Only fetched for someone who can actually create one.
+  // The create dialog's site picker and which sites already have a database.
     usable && canManage ? getAllApplications() : Promise.resolve({ applications: [] }),
     usable && canManage ? getDatabaseCounts() : Promise.resolve({ counts: null, known: false }),
-    // Server-wide, so it survives the search and paging the table is under.
+  // Server-wide, so it is unaffected by the table's search and paging.
     usable ? getUnlinkedCount() : Promise.resolve(0),
-    // `cache`d, and a failure costs the greying rather than the page.
+  // `cache`d; a failure only loses the greying, not the page.
     usable && canManage
       ? getSiteTypes().catch(() => ({ siteTypes: [] }))
       : Promise.resolve({ siteTypes: [] }),
@@ -79,13 +73,8 @@ export default async function DatabasesPage({ searchParams }) {
 
   if (dbFailed) return <LoadFailed description={t("loadFailed")} status={dbStatus} failure={dbFailure} message={dbMessage} />;
 
-  // The newest dump per database that you could actually restore from:
-  // finished, and its file still on disk. A completed export whose file was
-  // removed by hand is not protection, and showing its date as the last backup
-  // is the one answer worse than saying "Never".
-  //
-  // Compared on the timestamp rather than trusting the endpoint's ordering or
-  // that ids ascend with time.
+  // The newest restorable dump per database: completed and its file still on
+  // disk. Compared by timestamp, not by endpoint order or id.
   const lastBackup = {};
   for (const row of exportList.exports) {
     if (row.status !== "completed" || row.available === false) continue;
@@ -95,19 +84,9 @@ export default async function DatabasesPage({ searchParams }) {
   }
 
   /*
-   * "4 databases · 212 MB" beside the engine, rather than two stat tiles for
-   * numbers nobody makes a decision from.
-   *
-   * The count is `meta.total` — the server's answer. It was `databases.length`,
-   * which is the PAGE, and the list pages at ten: a server with forty
-   * databases read "10 databases", and a search or engine filter turned it
-   * into the filtered count with nothing saying so. Wrong with no failure
-   * involved, which is why it survived.
-   *
-   * The size cannot be fixed the same way — there is no server-side total, and
-   * summing this page is a real sum of the wrong set. So it is shown only when
-   * the page IS every database. A partial sum printed as a total is the same
-   * bug wearing different units.
+   * The count is `meta.total` (the page holds at most ten). There is no
+   * server-side size total, so the size is shown only when this page holds
+   * every database; a partial sum must not pose as a total.
    */
   const totalBytes = databases.reduce(
     (sum, db) => sum + (Number(db.size_bytes) || 0),
@@ -124,8 +103,7 @@ export default async function DatabasesPage({ searchParams }) {
     : null;
 
 
-  // Before anything renders: a page past the end sends the reader to the
-  // last real page instead of painting an error for it.
+  // A page past the end redirects to the last real page instead of erroring.
   redirectOutOfRange("/databases", sp, dbMeta, dbFailed);
   return (
     <div className="space-y-6">
@@ -140,8 +118,7 @@ export default async function DatabasesPage({ searchParams }) {
             summary={summary}
           />
           <UntrackedBanner untracked={untracked} canManage={canManage} />
-          {/* Under Adopt: an untracked database is not in the panel at all,
-              which has to be fixed before its link can be. */}
+          {/* Below Adopt: an untracked database must be adopted before it can be linked. */}
           <UnlinkedBanner
             count={unlinkedCount}
             filtered={new URLSearchParams(query).get("attached") === "0"}
@@ -152,23 +129,19 @@ export default async function DatabasesPage({ searchParams }) {
             engines={engines}
             canManage={canManage}
             lastBackup={lastBackup}
-            // A failed exports request must not read as "never backed up" —
-            // that is the one wrong answer this column can give.
+            // A failed exports request must not read as "never backed up".
             backupsUnknown={exportList.failed}
-            // An empty list only when we actually looked and found none; null
-            // when the lookup failed, which must not read as "there isn't one".
+            // Null when the lookup failed, which must not read as "none".
             phpmyadminSites={phpmyadmin.known ? phpmyadmin.sites : null}
             applications={appList.applications}
             databaseCounts={dbCounts.counts}
             databasesKnown={dbCounts.known}
-            // Only so the site picker can grey a site whose application cannot
-            // speak the chosen engine — the pairing the attach endpoint refuses.
+            // Lets the site picker grey sites that cannot use the chosen engine.
             siteTypes={catalogue.siteTypes}
           />
         </div>
       ) : (
-        // Nothing to connect to: installing, failed, or never installed. The
-        // engine's state is the page.
+        // Nothing to connect to: the engine's state is the page.
         <EngineState
           engines={engines}
           connections={connections}

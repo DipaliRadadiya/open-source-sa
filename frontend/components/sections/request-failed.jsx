@@ -4,29 +4,20 @@ import { RetryButton } from "@/components/ui/retry-button";
 import { FailureScreen, FailureFooterLabel } from "@/components/sections/failure-screen";
 
 /**
- * Krishna: "not like this showing api and all. i want to see proper error
- * message why this error is getting."
+ * Leads with the cause in plain words; each `kind` gets its own explanation:
  *
- * The card leads with the cause in plain words. Each `kind` gets a real
- * explanation instead of a shared "try again":
+ * network    nothing answered: stopped service or a blocked port
+ * server     the API answered with an error; the reason is in its log
+ * forbidden  the API refused this account
+ * notFound   the endpoint is missing, usually a panel/API version mismatch
  *
- *   network    nothing answered at all — stopped service, or a blocked port
- *   server     the API answered with an error; the reason is in ITS log
- *   forbidden  the API refused this account
- *   notFound   the endpoint is missing, which usually means the panel and the
- *              API are different versions
+ * The request line is evidence (the fetch ran during SSR, so there is no Network
+ * tab entry) but a support artefact, so it sits in a closed native `<details>`,
+ * which needs no hydration on a failure screen.
  *
- * The request line is real evidence — the fetch happens during SSR, so it
- * leaves no Network tab row and this is the only record that will ever exist —
- * but it is a support artefact, so it sits in a closed `<details>` under the
- * advice. Native `<details>`, not state: this renders inside a failure, and a
- * screen that has already lost one thing should not need hydration to open.
- *
- * The server's own `message` IS shown, and leads the footer — Krishna: "why we
- * cannot see actual message instead of showing just Your server returned an
- * error". It is the reason; our sentence is only the category. `trace`, `file`
- * and `line` are still never carried; their PRESENCE is reported instead, as a
- * warning that the server is in debug mode on a page anyone can reach.
+ * The server's own `message` is shown and leads the footer. `trace`, `file` and
+ * `line` are never carried; only their PRESENCE is reported, as a warning that
+ * the server is in debug mode.
  */
 export function RequestFailedCard({ kind, method, path, host, status, serverMessage = null, debug = false }) {
   const t = useTranslations("errors");
@@ -40,9 +31,8 @@ export function RequestFailedCard({ kind, method, path, host, status, serverMess
       action={<RetryButton />}
       footer={
         <>
-          {/* The server's OWN words come first, above our category. It knows
-              why; we only know what kind of thing happened. Quoted and
-              attributed so nobody mistakes it for the panel talking. */}
+          {/* The server's own words come first, quoted and attributed so they are not
+              mistaken for the panel's. */}
           {serverMessage ? (
             <div className="mb-5">
               <FailureFooterLabel>{t("request.serverSaid")}</FailureFooterLabel>

@@ -96,10 +96,7 @@ function CommandCell({ row }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        {/* Foreground, not muted. The command is the row's identity — what the
-            other five columns are describing — and it was the only cell in the
-            smallest size AND the quietest colour, so the row led with its PID.
-            Stays text-xs: mono needs the width here more than the weight. */}
+        {/* Foreground, not muted: the command is the row's identity. */}
         <span
           tabIndex={0}
           className="block w-full truncate font-mono text-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -115,19 +112,15 @@ function CommandCell({ row }) {
 }
 
 /**
- * `limit` renders the same table with fewer rows, so the collapsed dashboard
- * card and the expanded one share one shape — expanding adds rows rather than
- * swapping a bespoke list for a table. Only the summary footer and the scroll
- * cap belong to the full view; the stop button stays, because spotting a
- * runaway process in the top three and then having to expand before you can do
- * anything about it is friction in exactly the case the preview exists for.
+ * `limit` renders the same table with fewer rows for the collapsed dashboard
+ * card. Only the summary footer and scroll cap are full-view only; the stop
+ * button stays in the preview.
  */
 export function ProcessTable({
   data,
   query = "",
   failed = false,
-  // How many processes the box is running. The rows are the heaviest `limit`
-  // of them, so without this the footer could only count itself.
+  // How many processes the box is running; the rows are only the heaviest `limit`.
   total = null,
   canManage = false,
   limit = null,
@@ -194,23 +187,14 @@ export function ProcessTable({
       id: "actions",
       header: () => <span className="sr-only">{t("processes.actions")}</span>,
       enableSorting: false,
-      // 64px = the 32px button plus the cell's own px-4 either side. w-12 was
-      // narrower than its contents, so the browser overrode it anyway and the
-      // declared width told the reader nothing true.
+      // 64px = the 32px button plus the cell's own px-4 either side.
       meta: { className: "w-16 text-right" },
       cell: ActionsCell,
     },
   ];
 
-  /*
-   * Two states, two meanings, two sentences.
-   *
-   * `failed` is the request: non-2xx, or a body the schema rejected. An empty
-   * `data` is a 200 whose list had nothing in it. They were being told apart
-   * here already, but both ended up describing the other's cause — the empty
-   * branch claimed the list could not be read, which is the failed branch's
-   * story. Whichever one a reader hits, it now describes only itself.
-   */
+  // `failed` is the request (non-2xx or a schema rejection); an empty `data`
+  // is a 200 with nothing in it. Each state describes only itself.
   if (failed) {
     return (
       <EmptyState
@@ -224,14 +208,8 @@ export function ProcessTable({
 
   if (rows.length === 0) {
     /*
-     * Compact: this sits inside a card that already carries a title and a
-     * description, so the page-sized empty state was a second empty box inside
-     * the first one.
-     *
-     * "Busy" is fair here even though there is no threshold: the endpoint only
-     * ever returns the top processes by CPU, so an empty response is the server
-     * reporting none of them — not the panel failing to ask. The detail says
-     * what would change it without promising a mechanism that does not exist.
+     * Compact: the card already has a title. The endpoint returns only the top
+     * processes by CPU, so an empty response is the server reporting none.
      */
     return query ? (
       <EmptyState compact icon={SearchX} title={t("processes.noMatch")} />
@@ -246,8 +224,7 @@ export function ProcessTable({
   }
 
   return (
-    // Narrow cards drop PID, user and memory rather than scroll: at 390 the
-    // 48rem table hid every Stop button 454px off-screen.
+    // Narrow cards drop PID, user and memory rather than scroll the Stop button off screen.
     <div className="space-y-3 @container/procs">
       {/* Fixed-height scroll area keeps the page short no matter how many
           processes the server reports. */}
@@ -264,37 +241,21 @@ export function ProcessTable({
           meta={{ canManage }}
           sortable={!limit}
           stickyHeader={!limit}
-          // Busiest first — the reason to look at this table at all.
           defaultSorting={[{ id: "cpu", desc: true }]}
         />
       </div>
       {limit ? null : (
       <div className="flex flex-wrap items-center justify-between gap-2">
-        {/* What this list IS, not what it counts.
-
-            The API sends the heaviest processes by CPU and nothing else — the cap
-            is a server setting, 25 by default. Counting the rows and printing
-            "25 processes" claimed the machine was running 25, when a box with a
-            database and a web server on it runs hundreds. Stopping one then
-            looked broken: it left the list, the 26th took its place, and the
-            number never moved. It never can.
-
-            So the count is labelled as the size of the list, and the two
-            percentages say they are what these rows add up to rather than what
-            the server is doing. "Showing x of y" only appears while a search is
-            narrowing them, where both numbers mean what they say — without one it
-            read "Showing 25 of 25", which is the sentence that started the
-            confusion. */}
+        {/* The API sends only the heaviest processes by CPU (capped by a server
+            setting, 25 by default), so the count describes the list, not the
+            machine. "Showing x of y" appears only while a search narrows it. */}
         <p className="text-sm text-muted-foreground">
           {query.trim()
             ? t("processes.showing", { shown: filtered.length, total: data.length })
             : null}
         </p>
         <p className="text-sm tabular-nums text-muted-foreground">
-          {/* "Top 25 of 160" once the server says how many there are. It said
-              "Top 25" on every server, and stopping a process never moved it,
-              because the only number available was the row count — which is
-              the limit, and says nothing about the machine. */}
+          {/* "Top 25 of 160" once the server reports the total. */}
           {t(total != null && total > data.length ? "processes.summaryOfTotal" : "processes.summary", {
             count: data.length,
             total,

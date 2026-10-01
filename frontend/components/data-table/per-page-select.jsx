@@ -14,13 +14,11 @@ import {
  * Rows-per-page selector, URL-driven (writes `per_page`, resets to page 1).
  */
 export function PerPageSelect({ label, value, onValueChange }) {
-  // The visible "Per page" names the trigger; without the link the select was
-  // announced as an unnamed combobox.
+  // Links the visible "Per page" label so the combobox has a name.
   const labelId = useId();
   const searchParams = useSearchParams();
   const setQuery = useSetQuery();
-  // A `per_page` the list refuses (?per_page=7) is shown as 10 rows by the
-  // fetcher, so the control says 10 too rather than going blank.
+  // An unsupported `per_page` falls back to 10 in the fetcher; match it here.
   const fromUrl = searchParams.get("per_page");
   const current = value ?? (PER_PAGE_OPTIONS.includes(Number(fromUrl)) ? fromUrl : String(PER_PAGE_OPTIONS[0]));
   const change = onValueChange ?? ((next) => setQuery({ per_page: next }, { resetPage: true }));

@@ -31,29 +31,24 @@ export default async function ApplicationStagingPage({ params }) {
   ]);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
-  // The site is gone. Land on the list — the only place left to go — and say
-  // why on arrival, rather than parking on a dead end that offers one link.
+  // The site is gone: back to the list, which explains why.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   const application = result.application;
   if (!can(appPermissions, "app_staging", "view", "application")) {
-    // The grant exists only for WordPress, and an administrator holds every
-    // feature a site type offers — so for them a missing grant means "not
-    // this site type", and "ask an administrator" was the wrong answer.
+    // The grant exists only for WordPress; for an administrator a missing
+    // grant means "not this site type", not a permission problem.
     if ((await getCurrentUser().catch(() => null))?.is_admin) return <TypeNotSupported application={application} t={t} />;
     return <PermissionDenied title={t("pageTitle")} />;
   }
 
   const canManage = can(appPermissions, "app_staging", "manage", "application");
-  // Removing the copy is an ordinary application delete, so it is gated the
-  // way the API gates it, not by the staging permission.
+  // Removing the copy is an application delete, gated as the API gates it.
   const canDelete = can(permissions, "application", "manage");
   const settled = isSettled(application);
 
   const staging = settled ? await getApplicationStaging(id) : null;
-  // A 403 on the read is a permissions answer, so it gets the same page every
-  // other screen shows rather than an error box inside this one.
   if (staging?.status === 403) return <PermissionDenied title={t("pageTitle")} />;
 
   return (
@@ -68,9 +63,7 @@ export default async function ApplicationStagingPage({ params }) {
           {t("provisioning")}
         </div>
       ) : staging.status === 404 ? (
-        // Staging is WordPress-only. For every other site type the endpoint
-        // answers 404, which is a fact about the site rather than a failure to
-        // read it — so it reads as an answer, not an error.
+        // Staging is WordPress-only; other site types answer 404, which is not an error.
         <Unsupported>{t("unsupported", { type: application.site_type_title ?? application.site_type })}</Unsupported>
       ) : staging.failed ? (
         <LoadFailed description={t("loadFailed")} status={staging.status} failure={staging.failure} message={staging.message} debug={staging.debug} />

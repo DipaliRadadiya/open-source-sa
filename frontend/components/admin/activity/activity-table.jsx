@@ -81,9 +81,7 @@ export function ActivityTable({ data, hasFilters }) {
   const columns = [
     { accessorKey: "created_at_human", header: t("columns.when"), cell: WhenCell },
     { id: "user", header: t("columns.user"), cell: UserCell },
-    // Event is shorthand for the description — "Php" + "Install started" against
-    // "Started installing PHP 8.5". A phone has room for one of the two, and the
-    // sentence is the one worth keeping. Same call as the self-service log.
+    // Hidden on phones: the description column carries the same information.
     { id: "type", header: t("table.type"), cell: TypeCell, meta: { className: "hidden md:table-cell" } },
     {
       accessorKey: "description",

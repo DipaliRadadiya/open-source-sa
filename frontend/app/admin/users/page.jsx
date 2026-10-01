@@ -21,7 +21,6 @@ export default async function AdminUsersPage({ searchParams }) {
     getTranslations("users"),
   ]);
 
-  // The roles picker needs id + name (+ description when present).
   const roleOptions = roles.map((r) => ({
     id: r.id,
     name: r.name,
@@ -31,18 +30,13 @@ export default async function AdminUsersPage({ searchParams }) {
   const hasFilters = Boolean(sp.search || sp.is_admin);
 
 
-  // Before the redirect below, which reads `meta`: a failed load answers with
-  // an empty page-1 meta, so bouncing on it would send the reader to page 1 to
-  // read the same error. `failed` is passed on for the same reason.
+  // Before the redirect below: a failed load returns an empty page-1 meta, so
+  // redirecting on it would land on page 1 with the same error.
   if (failed) {
-    // status + failure let the panel name the cause — a 403 is the reader's
-    // situation, a 500 is ours. The description is the fallback for the
-    // failures it has no specific words for.
     return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
   }
 
-  // Before anything renders: a page past the end sends the reader to the
-  // last real page instead of painting an error for it.
+  // A page past the end redirects to the last real page.
   redirectOutOfRange("/admin/users", sp, meta, failed);
   return (
     <div className="space-y-6">
@@ -57,9 +51,8 @@ export default async function AdminUsersPage({ searchParams }) {
           currentUserId={user?.id}
           hasFilters={hasFilters}
         />
-        {/* Not behind a row count: the selector hides itself when the list is too
-            short to paginate, and gating it on the current page as well is how it
-            used to vanish on the very page you needed it. */}
+        {/* Not gated on row count: the selector hides itself when the list is too
+            short to paginate. */}
         <DataTablePagination meta={meta} />
       </UsersView>
     </div>

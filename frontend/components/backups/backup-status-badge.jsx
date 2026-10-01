@@ -4,16 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { BACKUP_OUTCOME, outcomeOf } from "@/components/backups/status-meta";
 
 /**
- * The status of one backup — icon + word + colour.
- *
- * Same shape as `ServiceStatusBadge` and `WorkerStatusBadge`, deliberately:
- * three features describing state three different ways is how a panel stops
- * feeling like one product. Colour alone is never the signal either — the one
- * state that matters most, `failed`, has to survive being read by someone who
- * cannot separate red from green, so it carries an icon and a word too.
- *
- * `status_title` comes from the API already translated; the local key is the
- * fallback for a status this build has not met.
+ * The status of one backup: icon + word + colour, never colour alone. Same
+ * shape as `ServiceStatusBadge` and `WorkerStatusBadge`. `status_title` comes
+ * translated from the API; the local key is the fallback for unknown statuses.
  */
 export function BackupStatusBadge({ backup }) {
   const t = useTranslations("backups.history");
@@ -30,12 +23,8 @@ export function BackupStatusBadge({ backup }) {
 }
 
 /**
- * A safety copy — taken automatically just before a restore overwrote the site,
- * and exempt from retention.
- *
- * Its own badge rather than a grey pill among grey pills: this is the row
- * someone hunts for after putting the wrong thing live, and on that day it has
- * to be the one thing on screen that stands out.
+ * A safety copy, taken automatically before a restore overwrote the site and
+ * exempt from retention. Its own badge so it stands out.
  */
 export function SafetyBadge() {
   const t = useTranslations("backups.history");

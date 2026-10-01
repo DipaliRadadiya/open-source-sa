@@ -51,27 +51,14 @@ export function ScheduleField({ form, presets, timezone }) {
   const expression = useWatch({ control: form.control, name: "expression" });
 
   const matched = presets.find((p) => p.expression && p.expression === expression);
-  // An expression that matches no preset IS a custom one — derived, not a flag
-  // somebody has to remember to set. Without this, editing a job whose schedule
-  // came from anywhere but the dropdown ("17 * * * *", and near enough every
-  // entry Server Sync adopts out of /etc/cron.d) showed "Select a schedule"
-  // over a job that plainly has one, hid the raw field that would reveal it,
-  // and left Save disabled because nothing was dirty.
+  // An expression matching no preset IS custom (e.g. jobs adopted from
+  // /etc/cron.d); derived, so editing such a job shows its raw schedule.
   const selected = customMode || (expression && !matched) ? CUSTOM : matched?.key;
 
   /*
-   * Picking "Custom" hands focus to the expression field.
-   *
-   * Custom is not a schedule, it is a mode: it changes nothing by itself, so
-   * `isDirty` stays false and Save stays disabled with "No changes made" —
-   * correct, and reported as a bug anyway, because the dropdown had visibly
-   * changed and a field had appeared. Every other way of changing the schedule
-   * enables Save; this was the one dead end.
-   *
-   * Force-dirtying instead would be a lie: it would arm a button that writes
-   * the value the job already has. Moving the cursor into the field that IS
-   * the change turns the dead end into the next step, and the first keystroke
-   * enables Save honestly.
+   * Picking "Custom" changes nothing by itself, so Save stays disabled; focus
+   * moves to the expression field instead of force-dirtying the form, and the
+   * first keystroke enables Save.
    */
   const rawFieldRef = useRef(null);
   const focusRawOnClose = useRef(false);
@@ -81,15 +68,8 @@ export function ScheduleField({ form, presets, timezone }) {
     focusRawOnClose.current = key === CUSTOM;
     const preset = presets.find((p) => p.key === key);
     if (preset?.expression) {
-      /*
-       * `shouldDirty`, or Save never wakes up.
-       *
-       * The edit dialog gates Save on `isDirty`, and setValue leaves that flag
-       * alone unless asked. So changing ONLY the schedule on an existing job
-       * updated the expression, redrew the dropdown, and left the button dead —
-       * and typing in the Custom box worked, because that input is registered
-       * normally, which made the whole thing look intermittent.
-       */
+      // `shouldDirty`: the edit dialog gates Save on `isDirty`, which setValue
+      // leaves alone unless asked.
       form.setValue("expression", preset.expression, {
         shouldValidate: true,
         shouldDirty: true,
@@ -139,11 +119,8 @@ export function ScheduleField({ form, presets, timezone }) {
     <div className="space-y-4">
       {hasPresets ? (
         <FormItem>
-          {/* Required like every other field it sits with: the form refuses to
-              submit without a schedule, and the only way to learn that was to
-              press Create and be told. */}
-          {/* Not a FormField (the value is derived, not bound), so the
-              error state the other fields get for free is passed by hand. */}
+          {/* Not a FormField (the value is derived, not bound), so the error
+              state is passed by hand. */}
           <FormLabel required hint={t("form.scheduleHint")} data-error={selectInvalid}>{t("form.schedule")}</FormLabel>
           <Select value={selected} onValueChange={onPreset}>
             <FormControl aria-invalid={selectInvalid}>
@@ -169,11 +146,8 @@ export function ScheduleField({ form, presets, timezone }) {
                 would otherwise open on top of the fields above it. */}
             <SelectContent
               /*
-               * Radix returns focus to the trigger on close, which is AFTER any
-               * effect or handler fired by the selection — a first attempt
-               * focused the field and watched Radix take it straight back, and
-               * the probe caught it (`activeElement` was the trigger button).
-               * This is the one moment where the redirect sticks.
+               * Radix returns focus to the trigger on close, after any selection
+               * handler, so the focus redirect must happen here.
                */
               onCloseAutoFocus={(event) => {
                 if (!focusRawOnClose.current) return;
@@ -226,10 +200,8 @@ export function ScheduleField({ form, presets, timezone }) {
       {/* "0 0 2 * *" reads as 2 AM daily to most people; it is midnight on the 2nd. */}
       {showRawField ? <SchedulePreview expression={expression} timezone={timezone} /> : null}
 
-      {/* Timezone only. The trigger already shows the label and expression, so
-          repeating them was noise; what it can't show is which clock the
-          schedule runs on — and the page subtitle saying so is hidden behind
-          this dialog. */}
+      {/* Timezone only: the trigger already shows label and expression, and the
+          page subtitle is hidden behind this dialog. */}
       {timezone ? (
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Clock className="size-3.5 shrink-0" />

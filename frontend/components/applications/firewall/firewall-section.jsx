@@ -21,9 +21,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { RuleList } from "@/components/applications/firewall/rule-list";
 
-// Our own plain-language line per category — the API sends a title and nothing
-// else. Keyed by the values the backend defines, so a category it adds later
-// still renders (title only) instead of throwing on a missing message.
+// Local plain-language hints per category (the API sends only a title). A
+// category the backend adds later renders title-only instead of throwing.
 const DESCRIBED_CATEGORIES = new Set([
   "query_string",
   "request_uri",
@@ -33,9 +32,6 @@ const DESCRIBED_CATEGORIES = new Set([
   "method",
 ]);
 
-// Watch mode writes matches into the site's own document root. There is no API
-// that reads it, but the Files browser can open the folder — a real route to
-// the evidence rather than a dead end.
 
 const COLLAPSIBLE_ANIMATION =
   "overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down";
@@ -45,17 +41,9 @@ function sameList(a, b) {
 }
 
 /**
- * The 8G Firewall for one site.
- *
- * Six independently switchable categories rather than one on/off switch,
- * because the ruleset has a documented false-positive history (phpinfo, a
- * forum plugin's own path, a page whose name contained a banned substring) and
- * a single switch makes "fix one false positive" mean "give up all protection".
- * GridPane's production port of the same ruleset splits it the same way.
- *
- * Everything saves in one call — the API is a single atomic PUT, and separate
- * per-section Save buttons would imply an independence the endpoint does not
- * have.
+ * The 8G Firewall for one site. Six independently switchable categories, so
+ * fixing one false positive does not mean disabling all protection.
+ * Everything saves in one call: the API is a single atomic PUT.
  */
 export function FirewallSection({ appId, application, categories: catalog, modes, canManage, detectCount = 0, detectFailed = false }) {
   const t = useTranslations("applications.firewall");
@@ -75,8 +63,7 @@ export function FirewallSection({ appId, application, categories: catalog, modes
   const [exceptions, setExceptions] = useState(saved.exceptions);
   const [blocks, setBlocks] = useState(saved.blocks);
   const [saving, setSaving] = useState(false);
-  // Opened by default only for a site that already has tuning to show —
-  // otherwise this is the part nobody needs until something breaks.
+  // Opened by default only when the site already has exceptions or blocks.
   const [advancedOpen, setAdvancedOpen] = useState(
     saved.exceptions.length > 0 || saved.blocks.length > 0,
   );
@@ -95,22 +82,17 @@ export function FirewallSection({ appId, application, categories: catalog, modes
   const saveReason = !canManage ? t("noPermission") : !isDirty ? t("nothingToSave") : null;
 
   /*
-   * The badge, tint and hint describe what the site IS — the last save, not
-   * the switch. They used to say "Blocking" the moment "Actually block" was
-   * picked, while nothing had been applied. Our own save is held until the
-   * refreshed page agrees, so they do not lag a second behind the toast.
+   * The badge, tint and hint describe the saved state, not the switch. A local
+   * save is held until the refreshed page agrees, so they do not lag the toast.
    */
   const [justSaved, setJustSaved] = useState(null);
   if (justSaved && justSaved.enabled === saved.enabled && justSaved.mode === saved.mode) setJustSaved(null);
   const live = justSaved ?? saved;
   const blocking = live.enabled && live.mode === "enforce";
-  // Watch mode is not protection, so it must not borrow protection's colour —
-  // the same rule that stopped "nothing blocked" rendering as a green shield
-  // on the bot blocker.
+  // Watch mode is not protection, so it must not use the success colour.
   const statusVariant = blocking ? "success" : live.enabled ? "warning" : "muted";
   const statusLabel = blocking ? t("statusBlocking") : live.enabled ? t("statusWatching") : t("statusOff");
-  // The log only exists once the site has actually been running in watch mode —
-  // linking to it off an unsaved selection would point at a file that isn't there.
+  // The log exists only once watch mode is saved and running.
   const showDetectLog = saved.enabled && saved.mode === "detect";
 
   function toggleCategory(value, checked) {
@@ -126,10 +108,8 @@ export function FirewallSection({ appId, application, categories: catalog, modes
       await updateApplicationWaf(appId, {
         enabled,
         mode,
-        // Never an empty array: the backend reads `categories: []` as "all six",
-        // so an empty list would silently turn everything back on. The UI
-        // guarantees at least one is selected, and this is the second line of
-        // that defence.
+        // Never an empty array: the backend reads `categories: []` as "all six".
+        // The UI already prevents it; this is the second line of defence.
         categories: active.length > 0 ? active : catalog.map((item) => item.value),
         exceptions,
         custom_rules: blocks,
@@ -222,21 +202,17 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                       name="waf-mode"
                       options={modes.map((option) => ({
                         value: option.value,
-                        // Straight from the API — never a local copy.
+                        // Straight from the API, never a local copy.
                         label: option.title,
                         hint: option.value === "enforce" ? t("modeEnforceHint") : t("modeDetectHint"),
                         tone: option.value === "enforce" ? "warning" : undefined,
                       }))}
                     />
                     {showDetectLog ? (
-                      // Points down the page at the real evidence rather than
-                      // out to the file browser. The number is here, next to the
-                      // switch, so turning blocking on is a decision with a
-                      // figure in front of it instead of a guess.
+                      // The caught count sits next to the mode choice so enabling
+                      // blocking is an informed decision.
                       <p className="pt-1 text-xs text-muted-foreground">
-                        {/* "Nothing caught yet" on an unread log was the
-                            reassuring answer produced by not knowing, shown
-                            right where blocking gets switched on. */}
+                        {/* An unreadable log must not claim "Nothing caught yet". */}
                         {detectFailed
                           ? t("detectUnknown")
                           : detectCount > 0
@@ -253,9 +229,7 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                       {catalog.map((category) => {
                         const checked = active.includes(category.value);
                         // Unticking the last one would send `categories: []`,
-                        // which the API reads as ALL SIX — the opposite of what
-                        // the click means. Blocked at the source, with the way
-                        // out named.
+                        // which the API reads as ALL SIX, so it is blocked.
                         const lastOne = checked && active.length === 1;
                         return (
                           <label
@@ -265,11 +239,8 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                               locked || lastOne ? "cursor-not-allowed" : "cursor-pointer hover:bg-muted/40",
                             )}
                           >
-                            {/* The switch pairs with the TITLE, and the
-                                explanation runs the full width beneath. Sharing a
-                                row with the switch left the sentence 148px wide
-                                over four lines on a narrow screen — the switch is
-                                44px of a 208px row and never gives any of it up. */}
+                            {/* Switch pairs with the title; the hint runs full
+                                width beneath so it is not squeezed on narrow screens. */}
                             <div className="flex items-center justify-between gap-4">
                               <span className="min-w-0 text-sm font-medium">{category.title}</span>
                               <ReasonTooltip reason={lastOne ? t("lastCategory") : null}>
@@ -294,9 +265,7 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                     </div>
                   </div>
   
-                  {/* Progressive disclosure: two rule lists are the answer to a
-                      problem most sites never have, so they stay folded away
-                      until someone goes looking for them. */}
+                  {/* Rule lists stay folded away; most sites never need them. */}
                   <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen} className="border-t pt-5">
                     <CollapsibleTrigger asChild>
                       <Button type="button" variant="ghost" size="sm" className="-ml-2">
@@ -316,9 +285,8 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                             disabled={locked}
                             placeholder={t("exceptionsPlaceholder")}
                             emptyText={t("exceptionsEmpty")}
-                            // An exception skips every check, and "a" is in
-                            // every browser name: one letter turned the whole
-                            // firewall off. Refused, not just warned about.
+                            // An exception skips every check, and a short one
+                            // (e.g. "a") matches every user agent.
                             minLength={4}
                           />
                         </div>

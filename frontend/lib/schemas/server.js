@@ -13,11 +13,8 @@ export const serverFactsSchema = z.object({
     .nullable()
     .optional(),
   ip: nullableString,
-  // The address the internet reaches this server on — what DNS points at, and
-  // what a dashboard should show. `ip` is whatever the machine sees on its own
-  // interfaces, which on any cloud host is a private 10.x nobody can use.
-  // Null when it genuinely cannot be determined (bare metal behind a hardware
-  // NAT), which is why the card falls back rather than assuming.
+  // The public address (what DNS points at). `ip` is the interface address,
+  // often private on cloud hosts. Null when undeterminable (e.g. behind NAT).
   public_ip: nullableString,
   cpu: z
     .object({ model: nullableString, cores: nullableNumber })
@@ -59,10 +56,8 @@ export const liveMetricsSchema = z.object({
     in_human: nullableString,
     out_human: nullableString,
   }),
-  // The API has sent this all along and Zod was stripping it. Throughput
-  // answers "is the disk saturated"; the ops counts answer "is it thrashing" —
-  // on a database server the second is usually the real question, and a disk
-  // can be pinned at 100% busy while moving very few megabytes.
+  // Throughput shows saturation; op counts show thrashing (a disk can be 100%
+  // busy while moving few megabytes).
   disk_io: z
     .object({
       read: nullableNumber,
@@ -87,8 +82,7 @@ export const historyPointSchema = z.object({
   load_15: nullableNumber,
   net_in: nullableNumber,
   net_out: nullableNumber,
-  // Bytes/second, same units as the network pair. IOPS is live-only, so the
-  // history charts can show throughput but never the op counts.
+  // Bytes/second. IOPS is live-only, so history charts show throughput only.
   disk_read: nullableNumber,
   disk_write: nullableNumber,
 });

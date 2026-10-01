@@ -18,22 +18,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 /* ---------------------------------------------------------------------------
- * One list of every site, sorted worst-first.
+ * One list of every site, sorted worst-first. No row tinting; the status
+ * badge carries the state.
  *
- * No row tinting: eight pink rows plus eight red badges was the same alarm
- * twice, and when most of the table shouts nothing reads as urgent. The status
- * badge carries the state on its own.
- *
- * Cells are module-level components — flexRender treats a cell function's
- * identity as the component type, so one defined inside render remounts every
- * time the parent renders.
+ * Cells are module-level components: flexRender treats a cell function's
+ * identity as the component type, so one defined in render remounts every time.
  * ------------------------------------------------------------------------- */
 
-// Failing first — it is the only row that needs someone today; a site that was
-// never set up has been unprotected for weeks and can wait a minute longer.
-// Then protected. The placeholders below are what make the rest work: an
-// unprotected row states its state in every column instead of showing four
-// blanks, so it stays legible without needing to be at the top of the list.
+// Failing first, as it needs attention today; unprotected last, since its
+// placeholders keep it legible anywhere in the list.
 const STATE_ORDER = { failing: 0, protected: 1, paused: 2, unknown: 3, unprotected: 4 };
 
 export function sortCoverage(rows) {
@@ -83,14 +76,7 @@ function StatusCell({ row }) {
   );
 }
 
-/**
- * A site with no schedule states that in every column.
- *
- * These cells used to render blank, which reads as missing data — eight rows
- * of empty cells look like the table failed to load. Muted placeholder text
- * says "this is a state, not an absence", which is the truth, and it costs no
- * extra colour on the row.
- */
+/** A site with no schedule states that in every column, so it does not look like missing data. */
 function Placeholder({ children }) {
   return <span className="text-sm text-muted-foreground">{children}</span>;
 }
@@ -108,19 +94,8 @@ function ScheduleCell({ row, options }) {
   const { target } = row.original;
   if (!target) return <Placeholder>{t("placeholders.schedule")}</Placeholder>;
 
-  /*
-   * The hour, which this column has never shown.
-   *
-   * It was written on 2026-08-07, a day before `schedule_time` reached the
-   * frontend, so "Daily" was all there was to say — and nothing came back to
-   * it once the field arrived. This is the one screen that lists every site's
-   * schedule side by side, and answering "when does this run" meant opening
-   * each site in turn.
-   *
-   * Its own line rather than joined to the frequency: measured, the column is
-   * 96px at 1024–1280 and "Daily · 2:00 AM" needs 99. A manual target has no
-   * hour to name and gets no line.
-   */
+  // The hour on its own line: the column is too narrow for "Daily · 2:00 AM".
+  // A manual target has no hour and gets no line.
   const when = scheduleWhen(target, options, format);
   const time = when?.minute ? t("minutePast", { minute: when.minute }) : (when?.time ?? null);
 
@@ -147,13 +122,8 @@ function StorageCell({ row }) {
 }
 
 /**
- * When it last ran, how that went, and when it goes again.
- *
- * `last_backup` is the real outcome — before the API carried it this column
- * could only say when a run was *attempted*, which meant a failed backup and a
- * good one looked identical here. `next_run_at_human` comes from the backend
- * too; computing it from a copy of their cron constants was a mistake worth
- * not repeating.
+ * When it last ran, how that went, and when it goes again. `last_backup` is
+ * the real outcome; `next_run_at_human` comes from the backend, never computed here.
  */
 function RunsCell({ row }) {
   const t = useTranslations("backups.coverage");
@@ -169,19 +139,14 @@ function RunsCell({ row }) {
             label={lastBackup.status_title ?? lastBackup.status}
           />
         ) : null}
-        {/* The backup's own timestamp is the fallback, not "Never".
-            `last_run_at` is written by the runner, and its crash path does not
-            write it — so a site whose every run has crashed reported "Never"
-            with a red dot beside it: two contradictory claims in one cell, on
-            a site that had in fact tried eight minutes ago. If a run exists,
-            something has run. */}
+        {/* Falls back to the backup's own timestamp, not "Never": the runner's
+            crash path does not write `last_run_at`. */}
         <span className="truncate text-sm tabular-nums">
           {target.last_run_at_human ?? lastBackup?.created_at_human ?? t("neverRunShort")}
         </span>
       </div>
-      {/* `is_due` outranks the timestamp — a brand-new target takes its first
-          backup on the next tick, so `next_run_at` alone would name tomorrow
-          in the very minute the first run starts. */}
+      {/* `is_due` outranks the timestamp: a new target's first backup runs on
+          the next tick while `next_run_at` still names tomorrow. */}
       {target.is_due ? (
         <p className="truncate text-xs text-muted-foreground">{t("runsShortly")}</p>
       ) : target.next_run_at_human ? (
@@ -193,13 +158,7 @@ function RunsCell({ row }) {
   );
 }
 
-/**
- * Outcome of the last run, at a glance, without a second badge in the row.
- *
- * Named as well as coloured. It was a six-pixel dot, `aria-hidden`, with no
- * title — so "your last backup failed" was carried entirely by a colour a
- * screen reader never announced and a reader had to already know.
- */
+/** Outcome of the last run: coloured and named, so it is not colour-only. */
 function BackupStatusDot({ status, label }) {
   const tone =
     status === "verified"
@@ -217,10 +176,7 @@ function BackupStatusDot({ status, label }) {
   );
 }
 
-/**
- * One shape of action per state, so the column has a single rhythm: an
- * unprotected site gets the one thing it needs, a protected one gets its two.
- */
+/** One shape of action per state, so the column has a single rhythm. */
 function ActionsCell({ row, table }) {
   const t = useTranslations("backups.coverage");
   const tc = useTranslations("common");
@@ -234,17 +190,13 @@ function ActionsCell({ row, table }) {
           <ShieldCheck className="size-4" />
           {t("setUpShort")}
         </Button>
-        {/* Holds the space the ⋯ takes on configured rows. Without it the two
-            protected rows sat 36px inset from the eight below them and the
-            column had two right edges. */}
+        {/* Reserves the ⋯ space so all rows share one right edge. */}
         <span className="size-8 shrink-0" aria-hidden />
       </div>
     ) : null;
   }
 
-  // One button plus a menu, not two buttons. Two full-width labels per row for
-  // ten rows is twenty competing targets; the thing you came to press stays a
-  // button, and the two you might want occasionally move behind the ⋯.
+  // One button plus a menu for the occasional actions.
   return (
     <div className="flex items-center justify-end gap-1">
       {canManage ? (
@@ -297,8 +249,7 @@ export function CoverageTable({ rows, options = null, canManage, onSetUp, onBack
       meta: { className: "min-w-52" },
       cell: SiteCell,
     },
-    // Headers may wrap: "TYPE DE SAUVEGARDE" on one line was wider than any
-    // value under it.
+    // Headers may wrap so long translations don't widen the columns.
     { accessorKey: "state", header: wrapping(t("columns.status")), meta: { className: "w-32" }, cell: StatusCell },
     { id: "type", header: wrapping(t("columns.type")), meta: { className: "w-28" }, cell: TypeCell },
     { id: "schedule", header: wrapping(t("columns.schedule")), meta: { className: "w-32" }, cell: (ctx) => <ScheduleCell {...ctx} options={options} /> },
@@ -317,9 +268,7 @@ export function CoverageTable({ rows, options = null, canManage, onSetUp, onBack
       columns={columns}
       data={rows}
       emptyMessage={t("noMatches")}
-      // A site with no target has nothing to say in four separate columns. One
-      // sentence says it once; four muted placeholders per row turned ten rows
-      // into thirty-two pieces of grey text repeating a single fact.
+      // A site with no target gets one sentence across the four columns.
       spanCells={{
         columns: ["type", "schedule", "storage", "runs"],
         render: (row) => (row.target ? null : <NotSetUp />),
@@ -335,8 +284,7 @@ const wrapping = (label) => function WrappingHeader() {
 
 function NotSetUp() {
   const t = useTranslations("backups.coverage");
-  // Wraps: unwrapped, this sentence set the width of the four columns it
-  // spans and pushed the row's Run button off-screen at 1280 (by 112px in
-  // English, 300px in French).
+  // Wraps, or this sentence sets the width of the columns it spans and pushes
+  // the Run button off-screen.
   return <span className="text-sm whitespace-normal text-muted-foreground/80">{t("notSetUpLine")}</span>;
 }

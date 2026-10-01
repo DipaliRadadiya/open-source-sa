@@ -22,8 +22,8 @@ function PageChangeWatcher() {
 }
 
 /**
- * A thin bar across the top while a page is on its way. Links report into it
- * (components/ui/app-link.jsx); it goes away when the page has changed.
+ * A thin bar across the top while a page loads. Links report into it
+ * (components/ui/app-link.jsx); it clears when the page has changed.
  */
 export function NavigationProgress() {
   const t = useTranslations("common");
@@ -32,8 +32,8 @@ export function NavigationProgress() {
     currentNavigation,
     () => null,
   );
-  // Which wait has outlasted the delay. A new wait has a new number, so
-  // nothing needs resetting when one ends.
+  // Which wait has outlasted the delay. Each wait has a new number, so nothing
+  // needs resetting when one ends.
   const [slowNavigation, setSlowNavigation] = useState(null);
 
   useEffect(() => {

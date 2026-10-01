@@ -9,32 +9,23 @@ import { Card, CardContent } from "@/components/ui/card";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-// The ranges the backend accepts (it caps at 90). Kept short: this is a
-// "what's been hitting me lately" question, not an analytics history.
+// Ranges in days; the backend caps at 90.
 export const TRAFFIC_RANGES = [7, 30, 90];
 export const DEFAULT_RANGE = 7;
 
-// A bounded, already-sorted list of at most a few dozen rows — a plain Table,
-// not the DataTable. Nobody needs to paginate or filter their own bot list.
+// The list is small and pre-sorted, so a plain Table rather than DataTable.
 const CATEGORY_LABELS = new Set(["training", "search", "agent", "custom"]);
 
 /**
- * Which AI bots actually visited, and what the current settings do to each.
- *
- * This is the difference between picking a policy blind and picking one from
- * evidence — it is the reason the endpoint was asked for. It sits BELOW the
- * choices rather than above them: on most sites it is empty or unreadable, and
- * an empty panel must not push the actual control off the screen.
+ * Which AI bots visited, and what the current settings do to each. Placed
+ * below the controls, since it is often empty.
  */
 export async function BotTrafficCard({ appId, traffic, failed, days }) {
   const t = await getTranslations("applications.botBlocker.traffic");
-  // The summary line gets thousands separators from its own ICU formatting;
-  // the column has to match, or the same card reads "3,481 requests" above a
-  // row that says "1841".
+  // Formats counts to match the ICU-formatted summary line.
   const format = await getFormatter();
 
-  // A failed request and a log that could not be read are the same thing to a
-  // reader: no evidence. Neither is allowed to render as "nothing visits you".
+  // A failed request or unreadable log must never render as "no bots".
   const status = failed || !traffic ? "unavailable" : traffic.status;
   const bots = traffic?.bots ?? [];
   const totals = traffic?.totals ?? { bots: 0, hits: 0, blocked_hits: 0 };
@@ -49,8 +40,7 @@ export async function BotTrafficCard({ appId, traffic, failed, days }) {
             <p className="text-xs text-muted-foreground">{t("subtitle")}</p>
           </div>
         </div>
-        {/* Plain links, so the range is in the URL and the server component
-            re-runs — no client state for something a page reload should keep. */}
+        {/* Links, so the range lives in the URL and the server component re-runs. */}
         <div className="flex items-center gap-1">
           <RefreshButton className="me-1 size-8" />
           {TRAFFIC_RANGES.map((range) => (
@@ -58,11 +48,8 @@ export async function BotTrafficCard({ appId, traffic, failed, days }) {
               key={range}
               asChild
               size="sm"
-              /* Outline, never ghost: a borderless control in a card header
-                 reads as a label, which is how three clickable ranges came to
-                 look like static text. The active one is tinted rather than
-                 filled grey — same rule as the log viewer's severity filter,
-                 from one definition so the two cannot drift apart. */
+              /* Outlined so it reads as clickable; active style shared with
+                 the log viewer's filter via filterToggleClass. */
               variant="field"
               className={cn("h-8 px-2.5 text-xs", filterToggleClass(range === days))}
             >
@@ -82,9 +69,7 @@ export async function BotTrafficCard({ appId, traffic, failed, days }) {
       </div>
 
       <CardContent className="p-3 sm:p-5">
-        {/* A lone grey sentence in an otherwise blank card reads as a failure.
-            Both of these are ordinary, expected states — a quiet icon and
-            centred text says "nothing to report", not "something broke". */}
+        {/* Both are ordinary states, shown as a quiet empty state, not an error. */}
         {status === "unavailable" || bots.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-6 text-center">
             <span className="flex size-9 items-center justify-center rounded-full bg-muted-foreground/10 text-muted-foreground">
@@ -113,25 +98,20 @@ export async function BotTrafficCard({ appId, traffic, failed, days }) {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="px-2 sm:px-4">{t("columns.bot")}</TableHead>
-                    {/* Five columns do not fit a phone. Rather than let the
-                        table clip — which hid the settings column, the one that
-                        answers "is this bot getting in?" — the two least
-                        urgent drop out below `sm` and reappear above it. */}
+                    {/* The two least urgent columns hide below `sm` so the
+                        settings column stays visible on phones. */}
                     <TableHead className="hidden sm:table-cell">{t("columns.kind")}</TableHead>
                     <TableHead className="h-auto px-2 py-2 text-right whitespace-normal sm:px-4">{t("columns.requests")}</TableHead>
-                    {/* From xl, not md: at 768 and 1024 in French and Portuguese this
-                        column pushed the settings column past the table's edge. */}
+                    {/* From xl: longer locales overflow the table at md and lg. */}
                     <TableHead className="hidden xl:table-cell">{t("columns.lastSeen")}</TableHead>
-                    {/* Allowed to wrap: "Suas configurações" / "Tu configuración"
-                        ran 40px past a 390px screen on one line. */}
+                    {/* Allowed to wrap: longer locales overflow a 390px screen. */}
                     <TableHead className="h-auto px-2 py-2 whitespace-normal sm:px-4">{t("columns.status")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {bots.map((bot) => (
                     <TableRow key={bot.bot}>
-                      {/* Only a name too long for any screen may break: on
-                          every row, `break-all` split "Bytespider" mid-word. */}
+                      {/* Breaks only names too long for the screen, not every word. */}
                       <TableCell
                         className={cn(
                           "px-2 font-mono text-xs sm:px-4",
@@ -139,8 +119,7 @@ export async function BotTrafficCard({ appId, traffic, failed, days }) {
                         )}
                       >
                         {bot.bot}
-                        {/* The kind still has to be readable once its own
-                            column is gone, so it rides along under the name. */}
+                        {/* Shows the kind under the name when its column is hidden. */}
                         <span className="block text-xs font-sans text-muted-foreground sm:hidden">
                           {CATEGORY_LABELS.has(bot.category)
                             ? t(`kinds.${bot.category}`)
@@ -159,10 +138,8 @@ export async function BotTrafficCard({ appId, traffic, failed, days }) {
                         {bot.last_seen_human ?? "—"}
                       </TableCell>
                       <TableCell className="px-2 sm:px-4">
-                        {/* What your settings say to do with this bot — not
-                            what happened: the API decides this by name, not
-                            from the status codes in the log, so "Blocked" was
-                            shown beside requests that were answered 200. */}
+                        {/* The configured policy for this bot, decided by name;
+                            not whether its logged requests were blocked. */}
                         {bot.blocked ? (
                           <Badge variant="muted">{t("blocked")}</Badge>
                         ) : (
@@ -175,9 +152,7 @@ export async function BotTrafficCard({ appId, traffic, failed, days }) {
               </Table>
             </div>
 
-            {/* Said rather than hidden: a truncated scan is a partial answer,
-                and a partial answer presented as a whole one is how someone
-                concludes a bot never visits them. */}
+            {/* A truncated scan is flagged so it is not read as complete. */}
             {status === "partial" ? (
               <p className="text-xs text-warning">{t("partial")}</p>
             ) : null}

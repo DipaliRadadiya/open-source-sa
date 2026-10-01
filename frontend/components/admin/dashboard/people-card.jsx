@@ -4,21 +4,14 @@ import { ArrowRight, ShieldCheck, UserRoundCog, Users } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 /**
- * Who can get in, and with what.
- *
- * Demoted from two of the four hero tiles: the raw number of users is not a
- * thing that ever needs action. How many of them are ADMINISTRATORS is — it is
- * the one figure here with a security answer attached — so it leads, and the
- * total is its context rather than the other way round.
+ * Who can get in, and with what. The administrator count leads, since it is
+ * the security-relevant figure; the total user count is context.
  */
 export async function PeopleCard({ users, roles, impersonation }) {
   const [t, format] = await Promise.all([getTranslations("admin.people"), getFormatter()]);
   const num = (n) => format.number(n ?? 0);
 
-  // Signing in as another user is the single most powerful thing anyone can do
-  // here, and until now it was one line among eight hundred in the log. It sits
-  // with the other access facts because that is the question it answers: who
-  // has been able to act as whom.
+  // Impersonation is the most powerful action available, so it is surfaced here.
   const impersonationRow = impersonation?.failed
     ? null
     : {
@@ -34,14 +27,7 @@ export async function PeopleCard({ users, roles, impersonation }) {
           : t("impersonationNever"),
       };
 
-  /*
-   * A dash, not a zero, when the stats read did not come back.
-   *
-   * `?? 0` turned a failed `GET /admin/dashboard` — including the 403 its own
-   * fetcher anticipates — into "0 of 0 users" and "0 roles configured" on a
-   * panel full of both. The impersonation row above already refuses to speak
-   * without an answer; two of this card's three rows did not.
-   */
+  // A dash, never a zero, when the stats read failed (including a 403).
   const rows = [
     {
       key: "admins",
@@ -80,9 +66,6 @@ export async function PeopleCard({ users, roles, impersonation }) {
               <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
                 <row.icon className="size-3.5" aria-hidden />
               </span>
-              {/* Label then the fact in words. A bare figure in a right-hand
-                  column made you pair "Administrators" with "2" across the
-                  width of the card and work out what the 2 counted. */}
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">{row.label}</p>
                 <p className="text-xs text-muted-foreground">{row.value}</p>

@@ -11,14 +11,9 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { AttachApplicationDialog } from "@/components/databases/attach-application-dialog";
 
 /**
- * Which site this database belongs to, and the button that changes it.
- *
- * Above the tabs rather than inside them: Users, Tables and Exports are all
- * things the database CONTAINS, and this is a fact ABOUT it.
- *
- * The unattached state is a warning rather than a neutral blank, because it has
- * a consequence nothing else on this page would reveal — backups of a site dump
- * exactly the databases attached to it, so this one is in none of them.
+ * Which site this database belongs to, and the button that changes it. Above
+ * the tabs: it is a fact about the database, not its contents. Unattached is a
+ * warning because site backups only dump attached databases.
  */
 export function UsedByCard({
   database,
@@ -32,8 +27,8 @@ export function UsedByCard({
   const [open, setOpen] = useState(false);
 
   const application = applicationById(applications, database.application_id);
-  // Attached to a site this user cannot see, or one that vanished between the
-  // two requests. Saying "not linked" would be a lie that invites an attach.
+  // Attached to a site this user cannot see, or one deleted between requests;
+  // "not linked" would be false and invite an attach.
   const attachedButUnknown = database.application_id !== null
     && database.application_id !== undefined
     && application === null;
@@ -45,9 +40,8 @@ export function UsedByCard({
           <p className="text-sm font-medium">{t("title")}</p>
 
           {application ? (
-            // The name sits mid-sentence, so it wraps rather than truncates —
-            // but a site name is one unbroken token with no space to wrap at,
-            // so without break-words a long one overflows the card instead.
+            // Mid-sentence, so it wraps; break-words handles a long site name
+            // with no spaces.
             <p className="text-sm break-words text-muted-foreground">
               <Link
                 href={`/applications/${application.id}`}

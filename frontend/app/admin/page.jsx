@@ -17,8 +17,8 @@ import { QuickActions } from "@/components/admin/dashboard/quick-actions";
 
 export const dynamic = "force-dynamic";
 
-// The window the error tile counts over. Named in the hint, because "3
-// problems" over an unstated period is a number you cannot act on.
+// The window the error tile counts over; named in the hint so the count is
+// actionable.
 const ERROR_WINDOW = 100;
 
 export default async function AdminDashboardPage() {
@@ -30,9 +30,7 @@ export default async function AdminDashboardPage() {
       getPanelUpdate(),
       getCentralStatus(),
       getErrorLogs(ERROR_WINDOW),
-      // The largest page the endpoint offers, and the same single request
-      // either way. Anything other than a login is rare enough that a shorter
-      // window collapses to one row of "logged in" and shows nothing else.
+      // Largest page the endpoint offers; a shorter window is usually all logins.
       getActivityLog({ per_page: 100 }),
       getImpersonation(),
     ]);
@@ -40,8 +38,7 @@ export default async function AdminDashboardPage() {
   const doctor = doctorResult.doctor;
   const panelUpdate = updateResult.state;
 
-  // Every tile has a "we could not ask" state. A dashboard that renders a
-  // healthy-looking tile over a failed read is worse than one that says so.
+  // Every tile has a failed-read state; never show a healthy tile over a failed read.
   const errorGroups = errors.failed ? [] : groupErrorLogs(errors.data?.error_logs ?? []);
   const centralOn = central.failed ? null : Boolean(central.data?.central?.enabled);
 
@@ -65,19 +62,15 @@ export default async function AdminDashboardPage() {
     if (!panelUpdate) return { tone: "idle", value: t("unknown"), hint: t("tiles.versionUnknown") };
     const installed = panelUpdate.installed.version;
     if (panelUpdate.update_available) {
-      // An update you cannot install is not the same news as one you can, and
-      // the tile said the same thing for both. The count comes from the same
-      // response — nothing extra is fetched to say this.
-      // Advisory checks are excluded: they do not gate the update, so counting
-      // one would promise a blocker the update page cannot show you.
+      // Separates updates that can be installed from blocked ones, from the same
+      // response. Advisory checks do not gate the update, so they are not counted.
       const blocking = panelUpdate.preflight.checks.filter(
         (c) => !c.passed && !c.advisory,
       ).length;
       return {
         tone: panelUpdate.preflight.ready ? "action" : "warning",
         value: t("tiles.versionAvailable", { version: panelUpdate.available.version }),
-        // Always says which version you are on: "v1.0.2 available" alone
-        // leaves you working out whether that is one release ahead or six.
+        // Always names the current version so the gap to the new one is clear.
         hint: panelUpdate.preflight.ready
           ? t("tiles.versionCurrent", { version: installed ?? "?" })
           : t("tiles.versionBlocked", { version: installed ?? "?", count: blocking }),
@@ -109,8 +102,7 @@ export default async function AdminDashboardPage() {
         ? { tone: "good", value: t("tiles.centralOn"), hint: t("tiles.centralOnHint") }
         : { tone: "idle", value: t("tiles.centralOff"), hint: t("tiles.centralOffHint") };
 
-  // Ordering happens inside the list, which interleaves these with the recorded
-  // failures; here they are just the ones that are not passing.
+  // Ordering happens inside the list, which interleaves these with recorded failures.
   const attentionChecks = doctor ? doctor.checks.filter((c) => c.status !== "pass") : [];
 
   return (
@@ -133,11 +125,8 @@ export default async function AdminDashboardPage() {
 
       <QuickActions />
 
-      {/* Weighted but equal height: the feed is the wider of the two because
-          its rows are sentences, and both stretch to the taller so the row
-          ends on one line. Each card pins its own footer link to the bottom,
-          so the slack falls between the list and the link rather than leaving
-          a card that stops halfway up its neighbour. */}
+      {/* Feed is wider (its rows are sentences); both stretch to equal height and each
+          card pins its footer link to the bottom. */}
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <ActivityFeed

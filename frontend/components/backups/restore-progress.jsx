@@ -20,40 +20,27 @@ const POLL_MS = 2000;
 const POLL_LIMIT_MS = 20 * 60 * 1000;
 
 /**
- * A restore that has not even STARTED is a different wait, and a much shorter
- * one: it is sitting on the queue waiting for a worker, which takes seconds.
- * Judging it by the 20-minute rule meant a restore whose worker never existed
- * claimed to be under way for twenty minutes before admitting otherwise.
+ * A restore that has not STARTED is waiting for a worker, which takes seconds,
+ * so it gets a much shorter limit.
  */
 const QUEUED_LIMIT_MS = 2 * 60 * 1000;
 
 /*
- * The two kinds of button on these banners, and nothing else.
- *
- * The action the banner offers (Undo, Check again) is the panel's ordinary
- * filled button. Closing it (Dismiss, Hide) is neutral: a plain white surface,
- * no outline and no status colour — green or red belongs to the message, not
- * to a button that only closes it. The grey default fill disappeared into the
- * pale tints, which is why the neutral one is white rather than grey.
+ * Banner buttons: the action (Undo, Check again) is the default filled button;
+ * closing (Dismiss, Hide) is neutral white, never the message's status colour.
  */
 const NEUTRAL =
   "border-transparent bg-background text-foreground shadow-xs hover:bg-muted dark:bg-secondary dark:hover:bg-muted";
 
 /**
- * A restore, while it happens and after it finishes.
- *
- * A toast would be wrong here: this is minutes long, it is the most
- * consequential thing the panel does, and the user has nothing to do but
- * watch. The named steps come from the API (`step_number` / `total_steps`), so
- * the bar is real rather than a spinner pretending — and one of those steps is
- * "Taking a safety copy", which is what turns the promise made in the
- * confirmation dialog into something the user watches happen.
+ * A restore, while it happens and after it finishes. The steps come from the
+ * API (`step_number` / `total_steps`), so the bar reflects real progress.
  */
 export function RestoreProgress({
   restore: initial,
   applicationDomain,
-  // True when the run that is on screen restored a safety copy — i.e. it was
-  // itself an undo. Supplied by the page so a reload mid-undo says so too.
+  // True when the run on screen restored a safety copy, i.e. it was an undo.
+  // Supplied by the page so a reload mid-undo says so too.
   restoredSafetyCopy = false,
   // Told each status this banner learns, so the page can block the actions
   // that must wait for a restore.
@@ -65,17 +52,9 @@ export function RestoreProgress({
   const router = useRouter();
   const [restore, setRestore] = useState(initial);
   const [undoBackup, setUndoBackup] = useState(null);
-  /*
-   * Whether the run on screen put the safety copy back.
-   *
-   * An undo is itself a restore, and every restore takes its own safety copy —
-   * so once the undo finished, the banner found a `safety_backup_id` and
-   * offered "Undo this restore" again. Pressing it did not undo anything: it
-   * put back what the first restore had installed. Same words, opposite
-   * effect, and repeatable forever.
-   *
-   * Seeded from the prop so a page that loads mid-undo says the same thing.
-   */
+  // Whether this run put the safety copy back. An undo takes its own safety
+  // copy, so without this the banner would offer to "undo" the undo, which
+  // reinstalls the first restore. Seeded from the prop for reloads mid-undo.
   const [wasUndo, setWasUndo] = useState(Boolean(restoredSafetyCopy));
   const [loadingUndo, setLoadingUndo] = useState(false);
   // Set when polling gives up: the restore is still `pending`/`running` as far
@@ -95,10 +74,7 @@ export function RestoreProgress({
 
   const inFlight = RESTORE_IN_FLIGHT.includes(restore?.status);
 
-  // Queued, not started: the API reports `pending` with no `started_at`, which
-  // means the worker has not touched the site. Worth separating, because
-  // "Restoring the site" over a restore that has not begun tells someone their
-  // live site is being overwritten when nothing has happened to it at all.
+  // Queued: `pending` with no `started_at` means the site has not been touched yet.
   const queued = restore?.status === "pending" && !restore?.started_at;
 
   const id = restore?.id;
@@ -113,25 +89,18 @@ export function RestoreProgress({
         if (!next) return;
         setRestore(next);
         statusRef.current?.(next.status, next.id);
-        // The site's files and database just changed underneath every other
-        // panel screen; refresh so nothing keeps showing the old world.
+        // The site's files and database changed; refresh every other screen.
         if (!RESTORE_IN_FLIGHT.includes(next.status)) router.refresh();
       } catch {
-        // A blip mid-restore is not worth alarming anyone about — the next
-        // tick picks it up, and the restore runs on the server regardless.
+        // Transient errors are ignored; the next tick retries.
       }
     }
 
     timer.current = setInterval(poll, POLL_MS);
-    // A restore whose worker never picks it up stays `pending` forever, and
-    // this would have kept asking every 2 seconds for as long as the tab was
-    // open. The endpoint is built to be polled, not to be polled indefinitely
-    // by a page nobody is watching finish.
+    // Stop polling eventually: a restore no worker picks up stays `pending` forever.
     const stop = setTimeout(() => {
       clearInterval(timer.current);
-      // Say so, rather than going quiet. A spinner that has silently stopped
-      // spinning towards anything is the worst version of this screen: it
-      // still claims work is happening.
+      // Say so, rather than leave a spinner implying work is happening.
       setStalled(true);
     }, queued ? QUEUED_LIMIT_MS : POLL_LIMIT_MS);
 
@@ -141,9 +110,8 @@ export function RestoreProgress({
     };
   }, [inFlight, id, queued, router, round]);
 
-  // Ask about THIS restore, not the page. A refresh re-rendered the layout,
-  // but the banner keeps its own copy, so it went on saying "has not started"
-  // over a restore that had long finished.
+  // Ask about THIS restore: the banner keeps its own copy, so a page refresh
+  // would not update it.
   async function checkAgain() {
     setChecking(true);
     try {
@@ -175,8 +143,7 @@ export function RestoreProgress({
       const response = await fetchBackup(restore.safety_backup_id);
       const backup = response.data?.backup;
       if (!backup) throw new Error("missing");
-      // Put back what this restore replaced, no more: undoing a database-only
-      // restore defaulted to "Files and database" and would also rewind files.
+      // Put back only what this restore replaced (e.g. database only).
       setUndoBackup({ ...backup, application_domain: applicationDomain, preferred_type: restore.type });
     } catch (error) {
       toast.error(apiMessage(error, t("undoFailed")));
@@ -205,11 +172,7 @@ export function RestoreProgress({
             </div>
           </div>
 
-          {/* The way back. Nobody else in this class of product has one, and
-              burying it in a table row would waste the only thing that makes
-              a wrong restore survivable. */}
-          {/* One size and one style for both: a filled button beside bare
-              text read as one control and a caption. */}
+          {/* Undo and Dismiss share one size and style. */}
           <div className="ml-14 flex flex-wrap gap-2">
             {restore.safety_backup_id && !wasUndo ? (
               <Button size="sm" onClick={openUndo} disabled={loadingUndo}>
@@ -240,9 +203,7 @@ export function RestoreProgress({
           onStarted={(next) => {
             setUndoBackup(null);
             if (!next) return;
-            // The run that follows IS the undo, so the banner it produces must
-            // not offer to undo it — that would just be the first restore
-            // again, under a word that means the opposite.
+            // The run that follows IS the undo, so its banner must not offer undo.
             setWasUndo(true);
             setRestore(next);
             onStatusChange?.(next.status, next.id);
@@ -261,8 +222,8 @@ export function RestoreProgress({
           </span>
           <div className="min-w-0 space-y-1">
             <p className="font-medium">{t("failed")}</p>
-            {/* A translated key naming the step that failed — never raw
-                stderr, which the backend deliberately does not send. */}
+            {/* A translated key naming the failed step, never raw stderr (the
+                backend does not send it). */}
             <p className="text-sm text-muted-foreground">
               {reasonText(restore.reason_title, t("unknownReason"))}
             </p>
@@ -284,10 +245,7 @@ export function RestoreProgress({
     );
   }
 
-  // Still in flight by the API's reckoning, but it has not moved for a long
-  // time. Amber, not red: nothing has been reported as broken, and the site
-  // may well be mid-restore — but a spinner that says "in progress" forever
-  // is the screen telling a comfortable lie.
+  // Still in flight per the API, but not moving. Amber: nothing has reported a failure.
   if (stalled) {
     return (
       <div className="flex flex-col items-start gap-3 rounded-2xl border border-warning/30 bg-warning/5 p-5">
@@ -296,13 +254,8 @@ export function RestoreProgress({
             <TriangleAlert className="size-6 text-warning" aria-hidden />
           </span>
           <div className="min-w-0 space-y-1">
-            {/* Two timers, so two messages. There was one, hardcoded to "20
-                minutes" — but a restore still sitting on the queue gives up
-                after two, so it announced a twenty-minute wait it had not
-                waited. Worse, it said "it may still be running on the server"
-                over a restore the worker never picked up: the queued banner
-                one state earlier correctly says nothing has been changed, and
-                this replaced that with a reason to panic. */}
+            {/* Queued and running restores time out on different limits and
+                mean different things, so each gets its own message. */}
             <p className="font-medium">{t(queued ? "stalledQueued" : "stalled")}</p>
             <p className="text-sm text-muted-foreground">
               {t(queued ? "stalledQueuedBody" : "stalledBody")}
@@ -329,9 +282,7 @@ export function RestoreProgress({
     );
   }
 
-  // Queued: no step has run, so there is no progress to draw and — the part
-  // that matters — nothing on the site has changed yet. Saying so is the whole
-  // point of this branch.
+  // Queued: no step has run, so nothing on the site has changed yet.
   if (queued) {
     return (
       <div className="space-y-3 rounded-2xl border bg-muted/20 p-5">
@@ -364,10 +315,8 @@ export function RestoreProgress({
             {restore.current_step_title ?? t("starting")}
           </p>
         </div>
-        {/* Hiding it entirely means a restore that never finishes leaves a
-            banner nobody can clear. Off to the side so it does not compete
-            with the thing they are watching, but a real button: as ghost text
-            it read as a label, not as something to press. */}
+        {/* Hide, so a restore that never finishes does not leave an
+            uncloseable banner. */}
         <Button variant="secondary" size="sm" onClick={onDismiss} className={cn("shrink-0", NEUTRAL)}>
           <EyeOff className="size-4" />
           {t("hide")}
@@ -381,8 +330,6 @@ export function RestoreProgress({
         ) : null}
       </div>
 
-      {/* Said while they wait, because this is the minute in which someone
-          decides whether they trust the feature. */}
       <p className="ml-14 text-xs text-muted-foreground">{t("dontLeave")}</p>
     </div>
   );

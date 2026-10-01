@@ -6,18 +6,10 @@ import { engineLogo } from "@/lib/databases/engine-logo";
 /**
  * A database engine's logo, swapping variant with the theme.
  *
- * Both images are rendered and CSS shows one, rather than reading the theme in
- * JavaScript: the theme is applied by a class on `<html>` before paint, so a
- * component that decided in JS would render the light logo on the server, the
- * dark one after hydration, and flash on every load of a dark-mode page.
- *
- * Sized by height for the reason the application logos are: these are wide
- * lockups — MongoDB's is 1102×278 — and a square box would shrink them to a
- * smear while a square mark filled it.
- *
- * No fixed-width slot, unlike SiteTypeLogo: nothing is laid out beside these —
- * the engine name in the cell is `sr-only` — so a varying width moves no text,
- * and left-flush edges read better than centring in a column of logos alone.
+ * Both images render and CSS shows one: the theme class is set on `<html>`
+ * before paint, so choosing in JS would flash on dark-mode loads. Sized by
+ * height because these are wide lockups. No fixed-width slot: the engine name
+ * beside it is `sr-only`, so a varying width moves no text.
  */
 export function EngineLogo({ engine, className, size = "h-5 w-auto max-w-20" }) {
   const logo = engineLogo(engine);

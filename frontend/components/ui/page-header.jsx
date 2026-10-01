@@ -1,19 +1,7 @@
 /**
- * The heading every detail screen opens with: a title and one line saying what
- * the screen is for.
- *
- * Ten pages had this block copied out by hand, which is how the firewall page
- * ended up with a title that disagreed with its own sidebar label — there was
- * no single place to look at them together.
- *
- * It used to carry a "Back to …" button too. The breadcrumb above the page now
- * does that job properly — it names the site you are in and lets you stop
- * there, where the button always jumped past it to the full list.
- *
- * `children` renders under the subtitle for the screens that carry more (a
- * status badge, a facts row); the pages with a genuinely different heading —
- * the application and database detail pages, which lead with a name and a
- * status — keep their own markup rather than being bent into this one.
+ * The page heading: a title and a one-line subtitle. No back button; the
+ * breadcrumb handles navigation. `children` renders under the subtitle (e.g. a
+ * status badge or facts row).
  */
 export function PageHeader({ title, subtitle, children }) {
   return (

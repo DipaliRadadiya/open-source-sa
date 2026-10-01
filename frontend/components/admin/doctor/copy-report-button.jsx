@@ -6,8 +6,7 @@ import { toast } from "sonner";
 import { Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// Copies the whole health report as plain text — the `detail` lines are meant
-// to be pasted to support, so this hands over the entire thing in one click.
+// Copies the whole health report as plain text, for pasting to support.
 export function CopyReportButton({ text }) {
   const t = useTranslations("doctor");
   const [copied, setCopied] = useState(false);

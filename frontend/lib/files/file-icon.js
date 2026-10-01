@@ -1,8 +1,6 @@
 import { Image, FileArchive, FileJson, FileCode2, FileText, FileCog, File } from "lucide-react";
 
-// Groups by extension, not by guessing MIME from bytes (this list only ever
-// sees a filename) — good enough for a browse view, and it's exactly what
-// every panel this feature was benchmarked against does for the same reason.
+// Groups by extension: the listing only has a filename.
 const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "gif", "svg", "webp", "ico", "bmp", "avif"];
 
 const GROUPS = [
@@ -35,9 +33,7 @@ export function fileIconFor(name) {
   return group ?? { icon: File, className: "text-muted-foreground" };
 }
 
-// A browser-native <img> renders these safely (SVG included — loaded as an
-// image resource, not inlined, so it can't execute a script) without routing
-// through the text editor's "looks binary" rejection.
+// Rendered via <img>, which is safe for SVG too (an image resource cannot run scripts).
 export function isImageFile(name) {
   return IMAGE_EXTENSIONS.includes(extensionOf(name));
 }

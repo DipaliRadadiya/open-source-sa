@@ -6,12 +6,10 @@ import { RotateCw } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 /**
- * Remote access on an engine that only listens locally needs the engine
- * restarted. The API answers 409 `restart_required` and expects the same
- * request again with `restart_cluster: true` — which nothing here ever sent,
- * so Remote and Anywhere could not be chosen on a fresh MySQL/MariaDB/
- * PostgreSQL at all. `ask(error)` returns null for any other error, else a
- * promise of the reader's answer.
+ * Remote access on an engine that only listens locally needs a restart: the
+ * API answers 409 `restart_required` and expects the same request again with
+ * `restart_cluster: true`. `ask(error)` returns null for any other error, else
+ * a promise of the reader's answer.
  */
 export function useRestartConfirm() {
   const t = useTranslations("databases.restartForRemote");
@@ -35,8 +33,7 @@ export function useRestartConfirm() {
       icon={RotateCw}
       tone="warning"
       title={t("title")}
-      // Our sentence, not the API's: its message ends "Send the request again
-      // with restart_cluster to go ahead", written for a developer.
+      // Own wording: the API's message is written for a developer.
       description={t("description")}
       cancelLabel={t("cancel")}
       confirmLabel={t("confirm")}

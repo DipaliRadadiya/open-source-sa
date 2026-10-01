@@ -13,13 +13,9 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 /**
  * Remove an application's backup schedule.
  *
- * The API will not remove it while backups exist unless they are deleted
- * with it, so when there are any the checkbox is required, not optional —
- * an optional one would promise a "keep them" the server refuses. Keeping
- * them means pausing, which this dialog can do in place.
- *
- * `count` is null when the history read failed: the box then names no number
- * rather than claiming there are none.
+ * The API refuses while backups exist unless they are deleted too, so the
+ * checkbox is required when there are any; keeping them means pausing.
+ * `count` is null when the history read failed: no number is claimed then.
  */
 export function TurnOffBackupsDialog({ open, onOpenChange, application, target, count, destinationNames = [] }) {
   const t = useTranslations("backups.application.turnOff");
@@ -28,9 +24,8 @@ export function TurnOffBackupsDialog({ open, onOpenChange, application, target, 
   const [savingPause, setSavingPause] = useState(false);
   const [deleteBackups, setDeleteBackups] = useState(false);
   /*
-   * Open until the page behind has re-read. Closing on the API's answer left
-   * the old card, and its Turn off button, on screen for two to four seconds
-   * on a real server, under a toast saying it was done.
+   * Stays open until the page behind has re-read, so the old card and its
+   * Turn off button are not left on screen after success.
    */
   const [refreshing, startRefresh] = useTransition();
   const doneMessage = useRef(null);
@@ -44,7 +39,7 @@ export function TurnOffBackupsDialog({ open, onOpenChange, application, target, 
   const working = pending || savingPause || refreshing;
   const pauseBusy = savingPause || (refreshing && action === "pause");
   const hasBackups = count === null || count > 0;
-  // Already paused: offering to pause it is no alternative at all.
+  // Already paused: pausing is no alternative.
   const canPause = Boolean(target?.enabled) && target?.frequency !== "manual";
 
   function handleOpenChange(next) {
@@ -71,9 +66,8 @@ export function TurnOffBackupsDialog({ open, onOpenChange, application, target, 
   }
 
   /*
-   * The target's own values sent back with `enabled: false`, which is what the
-   * settings dialog's switch does. Same retention count on purpose: lowering it
-   * deletes backups on save, and this exists to keep them.
+   * Sends the target's own values with `enabled: false`, as the settings
+   * switch does. Retention is unchanged: lowering it deletes backups on save.
    */
   async function pause() {
     setAction("pause");

@@ -16,20 +16,12 @@ import { WorkersCards } from "@/components/applications/workers/workers-cards";
 import { CreateWorkerDialog } from "@/components/applications/workers/create-worker-dialog";
 import { WorkerSiteProvider } from "@/components/applications/workers/worker-site-context";
 
-// Status is read from supervisord on every GET — nothing is cached server-side, so
-// the "refresh" here is just re-fetching, same as the Services page.
-//
-// 15s, not 4s. Services polls fast because `cpu_percent` is a delta between two
-// samples and the column is empty until it has two; a worker has no such
-// reading. Since start/stop/restart now apply their own response, the only
-// thing left for the poll to catch is a worker dying on its own — which does
-// not need four-second granularity, and cost a request every four seconds for
-// the whole time the page was open. Refresh and returning to the tab both still
-// re-read immediately.
+// Status is read live from supervisord on every GET. Actions apply their own
+// response, so the poll only needs to catch a worker dying on its own; returning
+// to the tab re-reads immediately.
 const POLL_MS = 15000;
 
-// Same tokens as WorkerStatusBadge's state colours, so the summary dots read
-// as the same language rather than a second, unrelated colour system.
+// Keep in step with WorkerStatusBadge's state colours.
 const STATE_DOT = {
   running: "bg-success",
   degraded: "bg-warning",
@@ -45,9 +37,7 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
   const [createOpen, setCreateOpen] = useState(false);
   const [seed, setSeed] = useState(undefined);
 
-  // A fresh server render (create/edit/delete's router.refresh()) is newer
-  // than anything the poll holds — without this, a mutation's own toast
-  // fires instantly but the row only catches up on the next poll tick.
+  // A fresh server render (after router.refresh()) is newer than the poll's data.
   const [renderedWith, setRenderedWith] = useState(initialWorkers);
   if (renderedWith !== initialWorkers) {
     setRenderedWith(initialWorkers);
@@ -58,14 +48,8 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
 
   const setRowBusy = (id, action) => setBusy((prev) => ({ ...prev, [id]: action }));
 
-  // start/stop/restart answer with the worker as supervisord reports it *after* the
-  // action, so the row can be corrected from the response itself. Previously
-  // the answer was thrown away and the badge fell back to its old value until
-  // the next poll — which is what made a start look like nothing had happened.
-  // Replaced, not merged. The response is the whole resource, and merging keeps
-  // whatever it omits — which showed up as a row carrying a fresh `state` of
-  // "running" beside the previous `state_title` of "Stopped", so the badge
-  // contradicted its own buttons.
+  // start/stop/restart answer with the worker's post-action state. Replaced,
+  // not merged: merging could keep a stale `state_title` beside a new `state`.
   const applyWorker = (next) =>
     setWorkers((prev) => prev.map((w) => (w.id === next.id ? next : w)));
 
@@ -74,9 +58,7 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
     setCreateOpen(true);
   }
 
-  // Paused outright while an action is running: that request answers with the
-  // worker's own post-action state, and a poll landing on top of it can only
-  // race with a reading that is already newer.
+  // Paused while an action runs, so a poll cannot race the action's newer response.
   const anyBusy = Object.values(busy).some(Boolean);
 
   useEffect(() => {
@@ -115,10 +97,7 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
     </ReasonTooltip>
   );
 
-  // Only worth the line once there's enough of a list to want a head-count —
-  // with one or two workers it'd just repeat what's already on screen. Dots
-  // reuse the same colour tokens as the state badges, so the strip is
-  // scannable at a glance instead of needing to be read.
+  // State summary only for three or more workers.
   let summaryParts = null;
   if (workers.length > 2) {
     const counts = workers.reduce((acc, w) => {
@@ -133,8 +112,7 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
   return (
     <WorkerSiteProvider value={{ appRoot }}>
     <div className="space-y-4">
-      {/* Above the config warnings: nothing below matters on a server that
-          cannot run a worker at all. */}
+      {/* First: nothing below matters if no worker can run. */}
       {supervisorMissing ? (
         <SupervisorMissingAlert appId={appId} canManage={canManage} />
       ) : null}

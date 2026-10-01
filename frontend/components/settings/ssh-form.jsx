@@ -28,16 +28,12 @@ import {
 } from "@/components/settings/setting-row";
 
 /**
- * The two fields here that can end an operator's access to their own server —
- * the SSH port and password authentication — are confirmed before they're sent,
- * and the dialog lists what will actually happen rather than asking "are you
- * sure?".
+ * The SSH port and password authentication can lock the user out, so changes
+ * to them are confirmed with a list of consequences.
  *
- * `oldPortRule` is the firewall rule holding the CURRENT port open. Move the
- * port and it guards a port nothing listens on, so the dialog offers to switch
- * it off — disabled, not deleted, because deleting a system-seeded rule is
- * refused and because the user may want it back if the new port turns out to be
- * unreachable.
+ * `oldPortRule` is the firewall rule holding the CURRENT port open. After a
+ * port move the dialog offers to disable it (not delete: system-seeded rules
+ * cannot be deleted, and it may be needed back).
  */
 export function SshForm({
   security,
@@ -99,9 +95,8 @@ export function SshForm({
       await updateSecuritySettings(values);
       toast.success(t("saved"));
 
-      // Strictly after the port change, and only then: closing the old port
-      // first would leave a window with neither port reachable. A failure here
-      // is reported on its own — the SSH change itself already worked.
+      // Strictly after the port change: closing the old port first would leave
+      // neither reachable. A failure here is reported separately.
       if (
         canCloseOldPort &&
         closeOldPort &&
@@ -162,9 +157,7 @@ export function SshForm({
               />
             }
           >
-            {/* Only shown when the SAVED config is actually dangerous, and it names
-                the fix. No summary of the settings themselves — they are the three
-                rows directly below it. */}
+            {/* Only when the SAVED config is dangerous; names the fix. */}
             {security?.permit_root_login === "yes" ? (
               <div className="mt-3.5 flex max-w-2xl gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
                 <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
@@ -172,8 +165,7 @@ export function SshForm({
               </div>
             ) : null}
   
-            {/* Each choice is a sentence with its own consequence under it, so
-                these two take the row rather than an 11rem control column. */}
+            {/* Each choice has its consequence under it, so these take the full row. */}
             <FormField
               control={form.control}
               name="password_authentication"
@@ -204,24 +196,10 @@ export function SshForm({
                         hint: t("signIn.option.key.hint"),
                         /*
                          * The API refuses this with a 422 when no key is present
-                         * (its lockout guard). Blocking it here turns a rejection
-                         * you discover after confirming into a precondition you
-                         * can read before choosing — and names the fix.
-                         *
-                         * Keyed on the SAVED setting, not on `field.value`.
-                         *
-                         * `field.value` is the live radio state, so on a server
-                         * already set to key-only the option started enabled,
-                         * disabled itself the instant you picked "password", and
-                         * then could not be picked back — you could leave the
-                         * choice but not return to it without reloading the page.
-                         * Reported exactly that way.
-                         *
-                         * The lockout risk is a fact about the server, and it does
-                         * not change because someone clicked a radio button. Using
-                         * `defaults` means the option's availability holds still
-                         * while the form is being edited, which is the only way a
-                         * choice between two radios can work.
+                         * (its lockout guard), so block it up front and name the fix.
+                         * Keyed on the SAVED setting (`defaults`), not `field.value`:
+                         * otherwise the option disables itself the moment another
+                         * radio is picked and cannot be picked back.
                          */
                         disabledReason:
                           security?.has_ssh_key === false &&
@@ -293,8 +271,7 @@ export function SshForm({
           onOpenChange={(open) => !open && setPendingValues(null)}
           icon={ShieldAlert}
           tone="warning"
-          // Matches the worst thing in the list, not the fact that this is a
-          // Save. Moving the port stays blue; losing your way in does not.
+          // Matches the worst consequence in the list.
           confirmVariant={isSevereSshChange(risks) ? "destructive" : "default"}
           title={t("confirm.title")}
           cancelLabel={t("confirm.cancel")}

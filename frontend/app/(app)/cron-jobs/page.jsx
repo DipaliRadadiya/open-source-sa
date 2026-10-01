@@ -33,49 +33,32 @@ export default async function CronjobsPage({ searchParams }) {
 
   if (!can(permissions, "cronjob", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "cronjob", "manage");
-  // A permission of its own: the output lives in the Logs registry, which
-  // `/logs/{key}` gates on `logs` — cron access neither grants nor needs it.
+  // Output lives in the Logs registry, gated on `logs`, not `cronjob`.
   const canViewLogs = can(permissions, "logs", "view");
   const [{ cronjobs, meta, failed, status, failure, message }, runAs, schedulePresets, commandPresets, facts, sites] =
     await Promise.all([
       getCronjobs(sp),
-      // Not gated on `canManage`: the "Runs as" FILTER is part of the toolbar,
-      // which every viewer sees. Tied to manage, a view-only role got a filter
-      // offering only the usernames that happened to be on the current page —
-      // no panel-managed account at all — which is not the job that filter has.
-      //
-      // `failed` is kept rather than flattened away: this endpoint needs the
-      // `system_user` permission, which is unrelated to `cronjob`, so a 403 is
-      // ordinary here. Without the flag an empty picker is indistinguishable
-      // from "this server has no system users".
+      // Not gated on `canManage`: every viewer sees the "Runs as" filter.
+      // `failed` is kept: this needs the unrelated `system_user` permission,
+      // so a 403 is ordinary and must not read as "no system users".
       getSystemUserOptions(),
       getSchedulePresets(),
       canManage ? getCommandPresets() : Promise.resolve({ presets: [] }),
-      // Only for the timezone: a schedule is meaningless without knowing which
-      // clock it runs on, and users assume their own. /server/facts shells out
-      // on the backend, so it's bounded — a nice-to-have subtitle must never
-      // hold up the page, and losing it costs nothing.
+      // Only for the timezone. /server/facts shells out on the backend, so it
+      // is bounded and must never hold up the page.
       withTimeout(getServerFacts(), 2000),
-      // For the command form's path picker. A failure here costs the
-      // convenience, not the form — it falls back to typing a path.
+      // For the command form's path picker; on failure the user types a path.
       canManage ? getAllApplications() : Promise.resolve({ applications: [] }),
     ]);
 
   const timezone = facts?.timezone;
 
 
-  // Before anything renders: a page past the end sends the reader to the
-  // last real page instead of painting an error for it.
   redirectOutOfRange("/cron-jobs", sp, meta, failed);
   return (
     <div className="space-y-6">
-      {/* The zone moved to the "Next run" column header, beside the
-          timestamps it applies to. Saying it here as well would state the
-          same fact twice, and the copy that mattered was never this one. */}
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
-      {/* The list failed, so we can't say what jobs exist — but the heading and
-          the shell are still true. Only the list says it's broken. */}
       {failed ? (
         <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />
       ) : (

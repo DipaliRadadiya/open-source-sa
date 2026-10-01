@@ -28,8 +28,8 @@ const STORAGE_KEY = "sv-oss:restarting-since";
 const ServerRestartContext = createContext(null);
 
 /**
- * Starts the restart curtain. Callers hand it nothing — a restart is a restart,
- * and the screen is the same wherever it was triggered from.
+ * Starts the restart curtain. Takes no arguments: the screen is the same wherever
+ * the restart was triggered.
  */
 export function useServerRestart() {
   const context = useContext(ServerRestartContext);
@@ -39,14 +39,12 @@ export function useServerRestart() {
   return context;
 }
 
-// A dead host and a blocked origin are the same rejected promise here. There is
-// no way to tell them apart from the browser, which is exactly why this screen
-// gives up out loud instead of waiting forever.
+// A dead host and a blocked origin are the same rejected promise here; the
+// browser cannot tell them apart, so this screen eventually gives up visibly.
 async function probeOnce(url) {
   const controller = new AbortController();
-  // Without this a connect to a machine that is already gone can hang far
-  // longer than the poll interval, and the down phase is slept straight
-  // through — the screen would never notice the restart it is reporting.
+  // Without a timeout, connecting to a host already gone can hang past the poll
+  // interval and the down phase is never observed.
   const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
 
   try {
@@ -76,7 +74,7 @@ function writeStoredStart(startedAt) {
   try {
     window.sessionStorage.setItem(STORAGE_KEY, String(startedAt));
   } catch {
-    // A blocked sessionStorage costs resume-after-reload, nothing else.
+    // A blocked sessionStorage only costs resume-after-reload.
   }
 }
 
@@ -89,7 +87,7 @@ function clearStoredStart() {
 }
 
 export function ServerRestartProvider({ children }) {
-  // `null` is idle. Every other value means a restart is being watched.
+  // `null` is idle; any other value means a restart is being watched.
   const [state, setState] = useState(null);
 
   const start = useCallback(() => {
@@ -98,9 +96,8 @@ export function ServerRestartProvider({ children }) {
     setState(createRestartState(startedAt));
   }, []);
 
-  // A restart that was already running when this tab loaded — someone reloaded
-  // out of impatience, or the tab was restored. Without this they land on a
-  // panel that looks fine and is talking to a server that is on its way down.
+  // A restart already running when this tab loaded (reload or restored tab);
+  // otherwise the panel looks fine while the server is going down.
   useEffect(() => {
     const storedAt = readStoredStart();
     if (storedAt === null) return;
@@ -110,17 +107,15 @@ export function ServerRestartProvider({ children }) {
       return;
     }
 
-    // Deferred rather than set in the effect body: sessionStorage is only
-    // readable after mount, and setting state during commit is the cascading
-    // render the lint rule is right to refuse. A timeout, not rAF — a restored
-    // background tab is exactly the case this exists for, and frames do not
-    // fire there.
+    // Deferred, not set in the effect body: sessionStorage is only readable after
+    // mount, and a setState during commit is a cascading render. A timeout, not rAF,
+    // because frames do not fire in a restored background tab.
     const timer = setTimeout(() => setState(resumeRestartState(storedAt, Date.now())), 0);
     return () => clearTimeout(timer);
   }, []);
 
-  // One probe, then schedule the next off the result. A plain interval would
-  // stack requests whenever a probe outlives its own tick.
+  // One probe, then schedule the next from its result; an interval would stack
+  // requests when a probe outlives its tick.
   useEffect(() => {
     if (!state) return;
     if (state.phase === PHASE.BACK || state.phase === PHASE.GAVE_UP) return;
@@ -150,9 +145,8 @@ export function ServerRestartProvider({ children }) {
     if (state?.phase !== PHASE.BACK) return;
 
     clearStoredStart();
-    // A beat so the recovery is seen rather than inferred from a page that
-    // simply reappeared. A hard reload, not router.refresh(): the RSC payload
-    // came from a server that has since been rebooted.
+    // A short beat so the recovery is visible. A hard reload, not router.refresh():
+    // the RSC payload came from a server that has since rebooted.
     const timer = setTimeout(() => window.location.reload(), 900);
     return () => clearTimeout(timer);
   }, [state?.phase]);
@@ -178,8 +172,7 @@ function Elapsed({ startedAt }) {
   const t = useTranslations("serverRestart");
   const [now, setNow] = useState(() => Date.now());
 
-  // Its own second, independent of the probe interval: a counter that only
-  // moved every three seconds reads as a frozen screen.
+  // Ticks every second, independent of the probe interval, so it never looks frozen.
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
@@ -190,8 +183,7 @@ function Elapsed({ startedAt }) {
   const seconds = total % 60;
 
   return (
-    // Padding, not margin: the parent stacks these two paragraphs directly and
-    // a margin here reads as part of the sentence above it.
+    // Padding, not margin: as a margin it reads as part of the sentence above.
     <p className="pt-2 text-sm tabular-nums text-muted-foreground">
       {minutes > 0
         ? t("elapsedMinutes", { minutes, seconds })
@@ -207,7 +199,7 @@ function RestartCurtain({ state, onDismiss }) {
   const gaveUp = state.phase === PHASE.GAVE_UP;
   const done = state.phase === PHASE.BACK;
 
-  // Nothing behind this is reachable or alive, so the focus ring belongs here.
+  // Nothing behind this is usable, so focus belongs here.
   useEffect(() => {
     cardRef.current?.focus();
   }, []);
@@ -238,8 +230,7 @@ function RestartCurtain({ state, onDismiss }) {
   const Icon = gaveUp ? Unplug : done ? RotateCcw : Loader2;
 
   return (
-    // Opaque, not a scrim. A dimmed-but-legible panel invites clicking controls
-    // that now point at a server which is not there.
+    // Opaque, not a scrim: visible controls would point at a server that is gone.
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background p-4">
       <div
         ref={cardRef}
@@ -256,8 +247,7 @@ function RestartCurtain({ state, onDismiss }) {
             <Icon
               className={cn(
                 "size-5",
-                // The spinner is the only motion here. Reduced motion drops the
-                // spin and keeps the icon — never the other way round.
+                // Reduced motion drops the spin and keeps the icon.
                 !gaveUp && !done && "animate-spin motion-reduce:animate-none",
               )}
             />
@@ -265,8 +255,7 @@ function RestartCurtain({ state, onDismiss }) {
           <h2 className="text-lg font-semibold">{title}</h2>
         </div>
 
-        {/* Polite, not assertive: each phase change is worth saying once, and
-            none of them is worth cutting the reader off mid-sentence. */}
+        {/* Polite, not assertive: each phase change is said once without interrupting. */}
         <div role="status" aria-live="polite" aria-atomic="true" className="pt-3">
           <p className="text-sm text-muted-foreground">{body}</p>
           {!done && !gaveUp ? <Elapsed startedAt={state.startedAt} /> : null}
