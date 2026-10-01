@@ -313,6 +313,25 @@ try {
       }
     } catch { /* reported above */ }
 
+    // Then its system user. Deleting a site deliberately does NOT remove one -- a system
+    // user can host several sites -- so the create form's generated user outlives the run
+    // and this suite was leaking one per run (seven had piled up before anyone looked).
+    // Only possible after the site is gone: the menu item is disabled while it owns apps.
+    try {
+      await goto("/system-users");
+      const urow = page.locator("tr", { hasText: `${TAG}site` });
+      if (await urow.count()) {
+        await urow.first().getByRole("button", { name: "Actions" }).click();
+        await page.getByRole("menuitem", { name: "Delete" }).click();
+        await page.waitForTimeout(1200);
+        const ud = page.locator("[role=alertdialog], [role=dialog]").first();
+        // Confirmation is the username typed exactly.
+        await ud.locator("input").last().fill(`${TAG}site`);
+        await ud.getByRole("button", { name: /^Delete/ }).last().click();
+        await page.waitForTimeout(6000);
+      }
+    } catch { /* best effort */ }
+
     await goto("/docker");
     for (const name of [`${TAG}-net`, `${TAG}-vol`]) {
       const r = page.locator("tr", { hasText: name });
