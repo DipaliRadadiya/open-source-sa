@@ -13,6 +13,7 @@ use App\Models\Application;
 use App\Models\Deployment;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\DeployQueue;
+use App\Services\Server\Applications\DeployScriptPhp;
 use App\Services\Server\Applications\GitDeployer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -175,7 +176,8 @@ class DeploymentController extends Controller
 
             // The placeholders a script may use. Sent rather than hardcoded in
             // the frontend, the same way the cron command presets are.
-            'placeholders' => ['{path}', '{branch}', '{domain}', '{php}'],
+            // Plus v7's `{PHP84}`-style variable for every installed version.
+            'placeholders' => ['{path}', '{branch}', '{domain}', '{php}', ...array_keys(app(DeployScriptPhp::class)->aliases())],
         ];
     }
 

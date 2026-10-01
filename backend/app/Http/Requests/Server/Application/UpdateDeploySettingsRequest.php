@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Server\Application;
 
+use App\Rules\DeployScriptPhpInstalled;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateDeploySettingsRequest extends FormRequest
@@ -28,7 +29,8 @@ class UpdateDeploySettingsRequest extends FormRequest
             // site user — refusing characters would be theatre, since every
             // one of them is legitimate in a script. The control that matters
             // is the privilege drop, not a denylist.
-            'deploy_script' => ['sometimes', 'nullable', 'string', 'max:65535'],
+            // One exception: a v7-style `{PHP81}` must name an installed PHP.
+            'deploy_script' => ['sometimes', 'nullable', 'string', 'max:65535', new DeployScriptPhpInstalled],
 
             'webhook_enabled' => ['sometimes', 'boolean'],
         ];

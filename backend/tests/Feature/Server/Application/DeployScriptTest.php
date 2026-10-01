@@ -6,6 +6,7 @@ use App\Models\Application;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\ActivityLogger;
+use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\DeploymentRecorder;
 use App\Services\Server\Applications\GitDeployer;
@@ -276,4 +277,77 @@ it('lists each deploy stage once, however many commands it took', function () {
     }
 
     expect($deployment->fresh()->steps)->toBe(['init', 'fetch', 'checkout']);
+});
+
+/*
+ * v7's `{PHP81}`-style variables (operator, 2026-10-01: many sites come from
+ * v7). One per installed version; a version that is not installed is refused.
+ */
+describe('v7 {PHPxx} variables', function () {
+    beforeEach(function () {
+        $this->phpDir = sys_get_temp_dir().'/sv-oss-deploy-php-'.getmypid();
+        foreach (['8.3', '8.4'] as $version) {
+            @mkdir("{$this->phpDir}/{$version}/fpm", 0755, true);
+        }
+        config(['server.php_dir' => $this->phpDir]);
+    });
+
+    afterEach(fn () => exec('rm -rf '.escapeshellarg($this->phpDir)));
+
+    it('turns {PHP83} into that version\'s PHP', function () {
+        $this->application->update(['deploy_script' => "{PHP83} artisan migrate --force\n{PHP84} -v"]);
+
+        deployNow();
+
+        expect(scriptCommand())->toContain('/usr/bin/php8.3 artisan migrate --force')
+            ->toContain('/usr/bin/php8.4 -v')
+            ->not->toContain('{PHP');
+    });
+
+    it('refuses to save a script naming a PHP that is not installed', function () {
+        $this->actingAs($this->admin)
+            ->putJson("/api/applications/{$this->application->id}/deployment-settings", ['deploy_script' => "{PHP74} artisan migrate\n{PHP84} -v"])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['deploy_script' => __('deployment.script_php_missing', ['variables' => '{PHP74}', 'versions' => '7.4'])]);
+
+        $this->actingAs($this->admin)
+            ->putJson("/api/applications/{$this->application->id}/deployment-settings", ['deploy_script' => '{PHP84} artisan migrate'])
+            ->assertOk();
+    });
+
+    it('stops a deploy before anything runs when the version has gone since', function () {
+        // Saved while 7.4 was installed; removed since.
+        $this->application->update(['deploy_script' => '{PHP74} artisan migrate']);
+
+        deployNow();
+
+        Process::assertNotRan(fn ($process) => in_array('runuser', $process->command, true)
+            && str_contains((string) end($process->command), "\ncd "));
+
+        expect($this->application->fresh()->failed_reason)->toBe('script_php_missing')
+            ->and($this->application->fresh()->failed_step)->toBe('script');
+    });
+
+    it('lists a variable for every installed version', function () {
+        $placeholders = $this->actingAs($this->admin)
+            ->getJson("/api/applications/{$this->application->id}/deployments")
+            ->json('settings.placeholders');
+
+        expect($placeholders)->toContain('{php}')->toContain('{PHP83}')->toContain('{PHP84}')->not->toContain('{PHP74}');
+    });
+
+    it('refuses the same when a git site is created with one', function () {
+        $rules = app(SiteTypeManager::class)->find('git')->rules();
+
+        expect(validator(['deploy_script' => '{PHP74} artisan migrate'], ['deploy_script' => $rules['deploy_script']])->fails())->toBeTrue()
+            ->and(validator(['deploy_script' => '{PHP83} artisan migrate'], ['deploy_script' => $rules['deploy_script']])->fails())->toBeFalse();
+    });
+
+    it('leaves a script without them exactly as it was', function () {
+        $this->application->update(['deploy_script' => 'php artisan migrate --force']);
+
+        deployNow();
+
+        expect(scriptCommand())->toContain("\nphp artisan migrate --force");
+    });
 });

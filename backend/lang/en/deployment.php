@@ -19,4 +19,6 @@ return [
         'initial' => 'First deploy',
     ],
 
+    'script_php_missing' => 'Your deploy script uses :variables, but PHP :versions is not installed on this server. Install it on the PHP screen, or use {php} for the site\'s own version.',
+
 ];

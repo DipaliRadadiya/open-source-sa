@@ -8,6 +8,11 @@ moved and why it matters**, so nobody has to diff the reference to find out.
 
 ## 2026-10-01
 
+### Deployment → deploy script: v7's `{PHP84}` variables (backend 2026-10-01)
+- `settings.placeholders` now also lists one `{PHPxx}` per installed PHP version (e.g. `{PHP84}`, `{PHP83}`), the variables v7 used. Show them with the others; nothing else to build.
+- Saving a script with a `{PHPxx}` for a version that isn't installed returns 422 on `deploy_script` with a translated message naming the variable and version. Show it under the editor.
+- New failure reason `script_php_missing` (in `failed_reason_title`, translated) if the version was removed after saving.
+
 ### 0. File manager: folder sizes without a click (new endpoint)
 - `GET /api/applications/{id}/files/sizes?path=<dir>` returns the size of **every folder in that directory** at once (see API_REFERENCE). Call it right after the listing loads, without waiting on it, and fill the size column by folder name. Hidden folders are included; a name missing from `sizes` means "not measured", so show "—".
 - Show `measured_at` (e.g. "measured 3 min ago") and a **refresh** button that calls it with `refresh=1`. Answers are kept 5 minutes; panel changes clear them immediately.

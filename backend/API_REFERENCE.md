@@ -842,6 +842,7 @@ and fall back to `failed_step` + `reference` when it is `null`.
 | `serving_error` | The application started, but answers every request with a 5xx. Usually assets that did not build completely. |
 | `not_answering` | The application started but never answered a request at all. |
 | `composer_platform` | Composer refused to install the dependencies under the PHP version the site is set to — the version, or an extension, does not meet what the project requires. |
+| `script_php_missing` | The deploy script uses a `{PHPxx}` variable for a PHP version not installed on this server; nothing ran. Install it on the PHP screen or use `{php}`. |
 | `script_git_auth` | The deploy script ran a git command (usually `git pull`) that needed a login; the script has none, so it fails on a private repository. The panel already fetches the branch before the script runs — remove the line. Only on the `script` step (since 2026-10-01). |
 | `composer_dependencies_missing` | The project requires Composer packages and none were installed, so there is no `vendor/autoload.php` and every request to the site would fail. Raised at the new `dependencies` step, **before** the site is curled. |
 
@@ -1462,9 +1463,11 @@ Newest first.
   "default_deploy_script": "cd {path}\nif [ -f composer.json ]; then\n    composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader\nfi\n",
   "auto_deploy": false, "webhook_enabled": false,
   "last_commit": "a1b2c3d", "last_deployed_at": "28-07-2026 11:01:30",
-  "placeholders": ["{path}", "{branch}", "{domain}", "{php}"]
+  "placeholders": ["{path}", "{branch}", "{domain}", "{php}", "{PHP84}", "{PHP83}"]
 }}
 ```
+
+**`{PHPxx}` — v7's variables, since 2026-10-01.** One per **installed** PHP version, named like v7: `{PHP84}` is PHP 8.4's interpreter (`/usr/bin/php8.4` on nginx/Apache, `/usr/local/lsws/lsphp84/bin/php` on OpenLiteSpeed), so a script copied from v7 runs unchanged. `placeholders` lists the ones this server has. A script using a `{PHPxx}` whose version is not installed is refused on save (`PUT …/deployment-settings` and site creation, `422` on `deploy_script`, `deployment.script_php_missing` naming the variable and version) and, if the version was removed afterwards, the deploy stops before anything runs with `failed_reason: script_php_missing`. Prefer `{php}` (the site's own version) for new scripts.
 
 **`status` is `queued` · `running` · `succeeded` · `failed`.** There is no `completed` and no `pending`. Rather than hardcoding which of those are terminal, poll on **`in_flight`** — it is the backend's own answer to "is this still going", so a new status added later cannot silently break the list's polling.
 
