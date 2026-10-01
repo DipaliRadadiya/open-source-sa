@@ -25,13 +25,7 @@ import {
 } from "@/components/ui/select";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
-/**
- * The fields that describe *where* the data goes, shared by create and edit.
- *
- * Every provider's inputs come from one declaration (`lib/storage/providers`)
- * rendered by one loop. The provider picker is a real field: it is stored and
- * decides what the rest of the form asks for.
- */
+// Shared by create and edit; every provider's inputs come from `lib/storage/providers`.
 export function DestinationFormFields({
   // True when editing, where changing the folder affects existing archives.
   existing = false,
@@ -39,9 +33,8 @@ export function DestinationFormFields({
   preset,
   onPresetChange,
   disabled,
-  // Editing never renders credentials: the API treats their presence as
-  // "rotate this", so they would overwrite the stored secret. Rotation has its
-  // own dialog; not drawing the inputs is the guarantee.
+  // Never render credentials when editing: the API reads their presence as "rotate"
+  // and would overwrite the stored secret.
   hideSecrets = false,
 }) {
   const t = useTranslations("storage.form");
@@ -90,12 +83,7 @@ export function DestinationFormFields({
         )}
       />
 
-      {/*
-        * Provider constraints, stated before credentials are entered. Google
-        * Drive: a service account has no quota, so personal-Drive folders are
-        * refused. pCloud: its WebDAV is documented as unreliable for large
-        * files.
-        */}
+      {/* Provider constraints, stated before credentials are entered. */}
       {warning ? (
         <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs leading-relaxed">
           <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-warning" />
@@ -135,11 +123,7 @@ export function DestinationFormFields({
             <p className="text-xs text-muted-foreground">
               {provider === "s3" ? t("prefixHint") : t("prefixHintRemote")}
             </p>
-            {/*
-              * The folder is the S3 disk root (or appended to the FTP/SFTP root)
-              * and stored keys are relative to it, so changing it strands every
-              * existing archive. Only shown when editing.
-              */}
+            {/* Stored keys are relative to the folder, so changing it strands every archive. */}
             {existing ? (
               <p className="flex items-start gap-1.5 text-xs text-warning">
                 <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
@@ -154,15 +138,11 @@ export function DestinationFormFields({
   );
 }
 
-/**
- * One config input, drawn according to its declared kind. Labels and help text
- * are looked up by field name, so there is no per-provider branch here.
- */
+// Labels and help text are looked up by field name; no per-provider branch.
 function ConfigField({ definition, form, preset, disabled, endpointHint, existing = false, t }) {
   const { name, kind, mono, placeholder, warnWhenOff, hintsEndpoint } = definition;
-  // An existing S3 destination is edited without knowing which service it is,
-  // so endpoint and region follow the shared rule in
-  // `editStorageDestinationSchema` rather than any one preset's.
+  // The S3 service of an existing destination is unknown, so endpoint and region follow
+  // `editStorageDestinationSchema`, not a preset.
   const sharedS3Rule = existing && providerForPreset(preset) === "s3" && (name === "endpoint" || name === "region");
   const required = !sharedS3Rule && isRequired(definition, preset);
   const help = t.has(`help.${name}`) ? t(`help.${name}`) : null;
@@ -185,9 +165,7 @@ function ConfigField({ definition, form, preset, disabled, endpointHint, existin
               <div className="space-y-1">
                 <FormLabel>{t(`fields.${name}`)}</FormLabel>
                 {help ? <p className="text-xs text-muted-foreground">{help}</p> : null}
-                {/*
-                  * Shown only when off, naming what travels unencrypted.
-                  */}
+                {/* Shown only when off, naming what travels unencrypted. */}
                 {warnWhenOff && !on ? (
                   <p className="flex items-start gap-1.5 text-xs text-warning">
                     <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />

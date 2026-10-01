@@ -96,32 +96,17 @@ function Instructions({ label, text, placeholder }) {
   );
 }
 
-/**
- * Deploy on push. First-time setup needs the provider (stored, never sniffed
- * from the request) and, for GitLab, a signing token, so it is a form. Once
- * configured, the header Switch toggles it; disabling keeps the URL and secret,
- * so re-enabling never invalidates what was pasted at the provider.
- */
+// Disabling keeps the URL and secret, so re-enabling never invalidates what was pasted at the provider.
 export function WebhookCard({ application, providers, canManage, onChange }) {
   const t = useTranslations("applications.deployment");
   const tc = useTranslations("common");
   const webhook = application.webhook ?? { enabled: false };
   const enabled = Boolean(webhook.enabled);
-  /*
-   * The PROVIDER makes a hook configured, not the URL.
-   *
-   * Relinking the Git account keeps `webhook_identifier` (so `webhook.url`
-   * survives) but clears provider and secret. Keyed on the URL, the card would show
-   * the switch instead of the setup form, and enabling would post
-   * `{ enabled: true, provider: null }`, which the API rejects (`required_if`).
-   */
+  // The provider, not the URL, marks a hook configured: relinking the Git account keeps the URL
+  // but clears the provider, and enabling with `provider: null` is rejected by the API.
   const configured = Boolean(webhook.provider);
 
-  /*
-   * Preselected when there is nothing to choose: the page narrows the list to the
-   * account's provider. The stored value wins, in case the hook was set up before
-   * the account moved.
-   */
+  // The stored provider wins, in case the hook was set up before the account moved.
   const [providerName, setProviderName] = useState(
     webhook.provider ?? (providers.length === 1 ? providers[0].name : ""),
   );
@@ -129,11 +114,7 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [rotateOpen, setRotateOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  /*
-   * Why the panel could not add the hook itself, from the last save. Only a save's
-   * response carries it; after a reload `webhook.registered` still says it must be
-   * pasted, without the reason.
-   */
+  // Only a save's response carries the reason; after a reload it is gone.
   const [manualReason, setManualReason] = useState(null);
 
   const selectedProvider = providers.find((p) => p.name === providerName) ?? null;
@@ -195,9 +176,7 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
   }
 
   async function rotate() {
-    // The endpoint validates the whole webhook: `enabled` is always required and
-    // `provider` whenever it is true; `{ rotate: true }` alone returns 422.
-    // Rotating is only offered on a live webhook, so both are known here.
+    // `{ rotate: true }` alone returns 422: `enabled` is always required, and `provider` when enabled.
     const ok = await save(
       { enabled: true, provider: webhook.provider, rotate: true },
       { successKey: "webhook.rotated", failKey: "webhook.rotateFailed" },
@@ -251,10 +230,6 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
             )}
           </CardAction>
         ) : canManage && providers.length ? (
-          /*
-           * Same top-right slot whether configured or not, like Deploy now above.
-           * Disabled with a reason when a provider must be chosen first in the body.
-           */
           <CardAction>
             <ReasonTooltip
               reason={
@@ -438,10 +413,6 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
             {t("webhook.disabledBody")}
           </p>
         ) : providers.length ? (
-          /*
-           * One sentence and one button. The setup steps live in the configured state,
-           * next to the URL and secret, which do not exist until this is pressed.
-           */
           <div className="space-y-4">
             <div className="space-y-3">
               <p className="max-w-prose text-sm text-muted-foreground">
@@ -449,9 +420,7 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
                   ? t("webhook.disabledBodyNamed", { provider: providers[0].title })
                   : t("webhook.disabledBody")}
               </p>
-              {/* One provider: state it, do not ask. The page resolves it from the linked
-                  account or the repository URL; the picker is only for self-hosted hosts the
-                  URL cannot identify. */}
+              {/* The picker is only for self-hosted hosts the URL cannot identify. */}
               {providers.length === 1 ? null : (
                 <div className="space-y-1.5">
                   <Label className="text-sm" hint={t("webhook.providerHint")}>{t("webhook.provider")}</Label>

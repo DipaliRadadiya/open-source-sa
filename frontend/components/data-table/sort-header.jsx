@@ -4,14 +4,8 @@ import { useSetQuery } from "@/hooks/use-set-query";
 import { sortDirection } from "@/lib/data-table/sort-direction";
 import { cn } from "@/lib/utils";
 
-/**
- * A column header that sorts through the API (via `?sort=`) rather than in the
- * table, for server-paged lists where a local sort would only reorder one page.
- *
- * `col` must be one of the API's `SORTS` keys; anything else is a 422.
- * Cycles unsorted → ascending → descending → API default. `descFirst` starts
- * with descending (e.g. size columns).
- */
+// Sorts through the API (`?sort=`); `col` must be an API `SORTS` key, else 422.
+// Cycles unsorted → asc → desc → default; `descFirst` starts with descending.
 export function SortHeader({ col, children, descFirst = false, className }) {
   const setQuery = useSetQuery();
   const params = useSearchParams();
@@ -35,11 +29,7 @@ export function SortHeader({ col, children, descFirst = false, className }) {
     <button
       type="button"
       onClick={onClick}
-      /*
-       * Deliberately no `aria-label`: it would replace the column name for the
-       * button and for every cell under the `<th>`. Direction is exposed via
-       * `aria-sort` on the `<th>`.
-       */
+      /* No `aria-label`: it would rename the button and every cell under the `<th>`. */
       data-state={asc ? "asc" : desc ? "desc" : "none"}
       className={cn(
         // `text-transform:inherit` undoes Preflight's `button { text-transform: none }`

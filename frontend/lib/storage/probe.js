@@ -1,14 +1,7 @@
 import { testDestination } from "@/lib/api/storage";
 import { storageTestResponseSchema } from "@/lib/schemas/storage";
 
-/**
- * Run the connection probe and return a plain verdict.
- *
- * The endpoint returns 200 whether or not the connection works; the outcome
- * is `test.success` in the body, so "did not throw" does not mean "works".
- * A transport failure also returns `{ok: false}`: either way the destination
- * cannot be relied on.
- */
+// The endpoint returns 200 either way; the outcome is `test.success`. A transport failure is also `{ok: false}`.
 export async function probeDestination(id, fallbackMessage) {
   try {
     const { data } = await testDestination(id);

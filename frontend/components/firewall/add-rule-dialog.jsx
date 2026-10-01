@@ -49,11 +49,7 @@ const DEFAULTS = {
   description: "",
 };
 
-/**
- * The custom rule, for what Quick add can't make. The summary leads, Port comes
- * before Protocol, and one port field accepts `443` or `8000-8090` (split on
- * submit). Service chips only fill the port; choosing services is Quick add's job.
- */
+// One port field accepts `443` or `8000-8090` (split on submit); service chips only fill the port.
 function valuesFrom(rule) {
   if (!rule) return DEFAULTS;
   return {
@@ -72,22 +68,18 @@ export function AddRuleDialog({
   canManage,
   yourIp,
   riskyPorts = [],
-  // Editing: the caller owns open state and passes the rule. Creating: this
-  // component owns its trigger button and state.
+  // Editing: the caller owns open state and passes the rule. Creating: this owns its trigger.
   rule = null,
-  // Whether the firewall is enforcing (`ProtectedRuleGuard` locks seeded rules only
-  // while it is).
+  // Whether the firewall is enforcing (`ProtectedRuleGuard` locks seeded rules only while it is).
   firewallEnabled = false,
   onClose,
 }) {
   const t = useTranslations("firewall");
   const { refreshAndWait } = useRefresh();
   const editing = rule !== null;
-  // Fields the API refuses to change on a panel-seeded rule. The name is not
-  // included: the guard allows renames, so the fields lock, not the button.
-  // Locked even when the firewall is off: enabling it re-adds the panel's own allow
-  // rule AFTER the edited one and ufw matches the first, so an SSH rule edited to
-  // Block would lock the user out.
+  // Fields the API refuses to change on a panel-seeded rule (renames are allowed).
+  // Locked even when the firewall is off: enabling it re-adds the panel's allow rule AFTER this one
+  // and ufw matches the first, so an SSH rule edited to Block would lock the user out.
   const ruleLocked = editing && Boolean(rule.protected);
   const [selfOpen, setSelfOpen] = useState(false);
   const open = editing ? true : selfOpen;
@@ -96,8 +88,7 @@ export function AddRuleDialog({
       if (!next) onClose?.();
       return;
     }
-    // Reset here too: Radix fires onOpenChange for Esc/overlay/X but not for our own
-    // Cancel or trigger, and in create mode this component never unmounts.
+    // Reset here too: Radix skips onOpenChange for our own Cancel/trigger, and create mode never unmounts.
     if (!next) resetForm();
     setSelfOpen(next);
   };
@@ -107,8 +98,7 @@ export function AddRuleDialog({
   const form = useForm({
     resolver: zodResolver(createFirewallRuleSchema),
     defaultValues: valuesFrom(rule),
-    // Not on blur: e.g. clicking "Only my IP" would blur the empty port field and
-    // flag it. Errors show on save and clear as the user types.
+    // Not on blur: clicking "Only my IP" would blur and flag the empty port field.
     mode: "onSubmit",
     reValidateMode: "onChange",
   });
@@ -116,12 +106,10 @@ export function AddRuleDialog({
   const values = useWatch({ control: form.control });
   const blocking = values.action === "deny";
 
-  // The last name this dialog filled in itself. User-typed names are never
-  // overwritten, but an auto-filled one is replaced when the service changes.
+  // The last auto-filled name: replaced when the service changes; user-typed names never are.
   const [autoName, setAutoName] = useState("");
 
-  // Everything a closed dialog must forget: values, field errors and the server's
-  // refusal banner.
+  // Everything a closed dialog must forget: values, field errors and the server's refusal.
   function resetForm() {
     setAutoName("");
     form.reset(valuesFrom(rule));
@@ -175,8 +163,7 @@ export function AddRuleDialog({
       setAutoName("");
       form.reset(editing ? valuesFrom(rule) : DEFAULTS);
     } catch (error) {
-      // 422 is usually a duplicate rule: shown on the form, not as a toast. Not pinned
-      // to Port, since the server compares port, protocol, action and source.
+      // 422 is usually a duplicate rule; shown on the form, not pinned to Port (the server compares all fields).
       handleValidationError(error, form, { formError: true });
     }
   }
@@ -264,8 +251,7 @@ export function AddRuleDialog({
             </p>
           ) : null}
 
-          {/* Not sticky: inside a short dialog it caused a z-index fight with the toggle
-              items (which carry z-10). */}
+          {/* Not sticky: it fought the toggle items' z-10 inside a short dialog. */}
           <div
             className={cn(
               "rounded-lg border px-3 py-2.5",
@@ -291,8 +277,7 @@ export function AddRuleDialog({
             </p>
           ) : null}
 
-          {/* Said once above the locked fields instead of per-field tooltips; the name stays
-              editable and the sentence says so. */}
+          {/* Said once above the locked fields; the name stays editable and the sentence says so. */}
           {ruleLocked ? <Caution>{t("add.protectedLocked")}</Caution> : null}
 
           {duplicate ? (
@@ -475,10 +460,7 @@ function protocolWord(t, protocol) {
   return protocol === "all" ? t("add.protocolAllShort") : String(protocol).toUpperCase();
 }
 
-/**
- * Zod carries a key; the server carries a finished sentence. Translate ours, pass
- * theirs through (a server message run through `t()` comes out as the key).
- */
+// Zod carries a key, the server a finished sentence; `t()` on the latter would return the key.
 function message(t, text) {
   const KEYS = [
     "required",

@@ -8,12 +8,7 @@ import { collapseRepeats } from "@/lib/activity-log/collapse-repeats";
 import { pickFeedRows, QUIET_ACTIONS } from "@/lib/activity-log/pick-feed-rows";
 import { lowerFirst } from "@/lib/activity-log/lower-first";
 
-/**
- * The last few things anyone did. Repeats are collapsed before the cap so a
- * run of logins cannot fill the card.
- *
- * `created_at_human` is already localised by the API and used verbatim.
- */
+// Repeats are collapsed before the cap so a run of logins cannot fill the card.
 const SHOWN = 6;
 
 export async function ActivityFeed({ entries = [], todayCount = 0, failed = false, todayKnown = true }) {

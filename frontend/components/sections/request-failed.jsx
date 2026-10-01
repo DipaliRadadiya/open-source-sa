@@ -3,22 +3,8 @@ import { TriangleAlert } from "lucide-react";
 import { RetryButton } from "@/components/ui/retry-button";
 import { FailureScreen, FailureFooterLabel } from "@/components/sections/failure-screen";
 
-/**
- * Leads with the cause in plain words; each `kind` gets its own explanation:
- *
- * network    nothing answered: stopped service or a blocked port
- * server     the API answered with an error; the reason is in its log
- * forbidden  the API refused this account
- * notFound   the endpoint is missing, usually a panel/API version mismatch
- *
- * The request line is evidence (the fetch ran during SSR, so there is no Network
- * tab entry) but a support artefact, so it sits in a closed native `<details>`,
- * which needs no hydration on a failure screen.
- *
- * The server's own `message` is shown and leads the footer. `trace`, `file` and
- * `line` are never carried; only their PRESENCE is reported, as a warning that
- * the server is in debug mode.
- */
+// The request line sits in a native `<details>`: no hydration on a failure screen.
+// `trace`/`file`/`line` are never carried; only their presence is reported (debug mode).
 export function RequestFailedCard({ kind, method, path, host, status, serverMessage = null, debug = false }) {
   const t = useTranslations("errors");
   const values = { host: host ?? "", status: status ?? "", path };
@@ -31,8 +17,7 @@ export function RequestFailedCard({ kind, method, path, host, status, serverMess
       action={<RetryButton />}
       footer={
         <>
-          {/* The server's own words come first, quoted and attributed so they are not
-              mistaken for the panel's. */}
+          {/* Quoted and attributed so they are not mistaken for the panel's. */}
           {serverMessage ? (
             <div className="mb-5">
               <FailureFooterLabel>{t("request.serverSaid")}</FailureFooterLabel>

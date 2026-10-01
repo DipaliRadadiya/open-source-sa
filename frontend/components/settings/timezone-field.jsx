@@ -1,11 +1,8 @@
 import { useFormatter, useTranslations } from "next-intl";
 import { Combobox } from "@/components/ui/combobox";
 
-/**
- * One field, one value: the same string the API takes. The list comes from
- * `GET /timezones`, the exact list the save validates against (the browser's
- * list differs, e.g. "Calcutta", no `Etc/UTC`).
- */
+// The list comes from `GET /timezones`, which the save validates against; the browser's
+// list differs (e.g. "Calcutta", no `Etc/UTC`).
 export function TimezoneField({ value, onChange, disabled, groups = [], id }) {
   const t = useTranslations("settings.server");
   const format = useFormatter();

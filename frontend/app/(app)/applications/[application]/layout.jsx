@@ -8,10 +8,7 @@ import { can } from "@/lib/permissions/can";
 import { getGitAccounts } from "@/lib/git/get-git";
 import { gitProviderFor, providersByAccountId } from "@/lib/applications/git-provider";
 
-/**
- * The sidebar in the `(app)` layout never sees the `[application]` param, so
- * this layout supplies the site's menu and its name for the breadcrumb.
- */
+// The `(app)` sidebar never sees the `[application]` param, so this layout supplies the site's menu and crumb.
 export default async function ApplicationLayout({ children, params }) {
   const { application } = await params;
   const [items, result, permissions] = await Promise.all([
@@ -20,11 +17,9 @@ export default async function ApplicationLayout({ children, params }) {
     getPermissions().catch(() => []),
   ]);
   const name = result?.application?.name;
-  // Null, not absent: the endpoint always loads the user, so null means it is
-  // gone and other routes for this site answer 409.
+  // Null, not absent: null means the system user is gone (other routes answer 409).
   const orphaned = result?.application?.system_user === null;
-  // Only an account-linked git site needs the accounts list. Cached, so the
-  // dashboard page reuses this read.
+  // Only account-linked git sites need the accounts list; cached for the dashboard page.
   const gitAccounts = result?.application?.git_account_id
     ? await getGitAccounts().then((r) => r.accounts ?? []).catch(() => [])
     : [];

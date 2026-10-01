@@ -9,12 +9,7 @@ import { LifecycleBadge } from "@/components/runtime/lifecycle-badge";
 import { ScrollFade } from "@/components/ui/scroll-fade";
 import { compareVersions } from "@/lib/runtime/version-range";
 
-/**
- * Which version the rest of the page is about. Shared by PHP and Node.
- *
- * Only rendered with more than one version. The selection lives in the URL so
- * it survives a reload and is linkable.
- */
+// Only rendered with more than one version; the selection lives in the URL.
 export function VersionBar({
   versions,
   selected,

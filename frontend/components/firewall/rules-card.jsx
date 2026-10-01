@@ -72,8 +72,7 @@ function ActionsCell({ row, table }) {
   const rule = row.original;
   const busy = pending.includes(rule.id);
   // Same guard as the API: switching a seeded rule off is, to ufw, a delete.
-  // `turningOff` is what the switch would DO: a protected rule that is off can be
-  // switched back on, the only way out of the lock-out trap.
+  // A protected rule that is off can be switched back on, the only way out of a lock-out.
   const guarded = protectedReasonFor({
     rule,
     enabled,
@@ -145,9 +144,7 @@ export function RulesCard({
   const pending = deletingId === null ? toggling.pendingKeys : [...toggling.pendingKeys, deletingId];
   const [confirming, setConfirming] = useState(null);
   const [editing, setEditing] = useState(null);
-  // The requested state, held until the server catches up and stored WITH the value
-  // it was based on, so it retires once the refreshed rule moves off that value.
-  // Same behaviour as the fail2ban jail switch.
+  // The requested state, stored with the value it was based on so it retires once the rule moves off it.
   const [asked, setAsked] = useState({});
 
   // An unnamed rule is named after the service on its port, from the API's preset
@@ -181,9 +178,7 @@ export function RulesCard({
   };
 
   async function onToggle(rule) {
-    // Read what the switch is SHOWING: `pending` clears when the PUT resolves, but
-    // `rules` only updates when `router.refresh()` lands, so the server value can be
-    // stale for a second click.
+    // `rules` updates only when `router.refresh()` lands, so the server value can be stale for a second click.
     if (toggling.isPending(rule.id)) return;
     const next = !shownEnabled(rule);
     toggling.start(rule.id);
@@ -421,9 +416,8 @@ export function RulesCard({
         )}
       </CardContent>
 
-      {/* Same form as "Custom rule", seeded from the rule. Editing beats
-          delete-and-recreate: the API adds the replacement before removing the old one,
-          so a deny rule never lapses. Keyed by id so each rule opens with its own values. */}
+      {/* Edit, not delete-and-recreate: the API adds the replacement first, so a deny rule never lapses.
+          Keyed by id so each rule opens with its own values. */}
       {editing ? (
         <AddRuleDialog
           key={editing.id}

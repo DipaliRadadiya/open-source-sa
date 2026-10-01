@@ -4,11 +4,7 @@ import { useTranslations } from "next-intl";
 import { HardDrive } from "lucide-react";
 import { StatCard } from "@/components/ui/stat-card";
 
-/**
- * How full the disk is and how much this page can reclaim. Uses the
- * dashboard's StatCard so thresholds and styling match it. Client-side because
- * the icon component cannot cross the server boundary as a prop.
- */
+// Client-side because the icon component cannot cross the server boundary as a prop.
 export function DiskSummary({ disk, reclaimableHuman }) {
   const t = useTranslations("diskCleaner");
 

@@ -67,12 +67,7 @@ const consoleHighlight = HighlightStyle.define([
   { tag: tags.invalid, color: "var(--console-error)" },
 ]);
 
-/**
- * The Files editor's editing surface: CodeMirror with line numbers, bracket
- * matching, folding and highlighting, themed to the console tokens. Language
- * comes from the file extension (`codeLanguageFor`); unknown ones fall back to
- * plain text.
- */
+// Language comes from the file extension; unknown ones fall back to plain text.
 export function CodeEditor({ filename, value, onChange, readOnly = false, className }) {
   const language = useMemo(() => codeLanguageFor(filename), [filename]);
   const extensions = useMemo(

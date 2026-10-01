@@ -22,13 +22,8 @@ const POLL_MS = 4000;
  *  moved by then is stuck. */
 const POLL_LIMIT_MS = 20 * 60 * 1000;
 
-/**
- * The whole page while a site is being built (Create redirects here). Shares
- * the clone progress screen's visual language.
- *
- * The bar is indeterminate: provisioning reports only finished steps, and
- * which steps run depends on the site type, so there is no total.
- */
+// The bar is indeterminate: provisioning reports only finished steps, and the
+// steps depend on the site type, so there is no total.
 export function ProvisioningCard({ application, canManage = false }) {
   const t = useTranslations("applications.details");
   const { refresh, refreshThen, pending: refreshing } = useRefresh();
@@ -138,9 +133,8 @@ export function ProvisioningCard({ application, canManage = false }) {
           label={stepLabel}
         />
 
-        {/* No percentage (the step count varies). Elapsed time uses the API's own
-            phrase from `provisioning_started_at`, which resets on retry, so a skewed
-            browser clock cannot invent a duration. */}
+        {/* Elapsed time is the API's phrase from `provisioning_started_at`, so a
+            skewed browser clock cannot invent a duration. */}
         {working && !stalled ? (
           <p className="border-t pt-3 text-xs text-muted-foreground">
             {application.provisioning_started_at_human

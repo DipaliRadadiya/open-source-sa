@@ -7,11 +7,7 @@ import { Pager } from "@/components/data-table/pager";
 import { useSetQuery } from "@/hooks/use-set-query";
 import { useNavPending } from "@/components/data-table/nav-transition";
 
-/**
- * Numbered pagination driven by `meta` from the server (current_page, last_page,
- * total), with a per-page selector. The page number lives in the URL so a list
- * you were reading survives a reload.
- */
+// The page number lives in the URL so a list being read survives a reload.
 export function DataTablePagination({ meta }) {
   const t = useTranslations("pagination");
   const setQuery = useSetQuery();

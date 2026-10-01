@@ -1,9 +1,5 @@
-/**
- * The settings fields every `PUT /api/fail2ban` must carry: the endpoint
- * validates the whole config on every call, so unchanged parts are resent.
- *
- * `ignoreIps` overrides the stored list for callers that build their own.
- */
+// The endpoint validates the whole config on every call, so unchanged parts are
+// resent. `ignoreIps` overrides the stored list.
 export function settingsPayload(settings, ignoreIps) {
   if (!settings) return {};
   return {

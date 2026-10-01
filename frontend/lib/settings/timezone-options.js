@@ -1,8 +1,4 @@
-/**
- * Flattens `GET /timezones` (`[{ region, zones: [{ value, label, offset }] }]`)
- * into Combobox options. Passing the groups directly crashes the Combobox.
- * The offset (recomputed by the API per request) is appended to the label.
- */
+// Passing the API's groups directly crashes the Combobox. The offset is appended to the label.
 export function timezoneOptions(groups) {
   if (!Array.isArray(groups)) return [];
   return groups.flatMap((group) =>
@@ -13,19 +9,14 @@ export function timezoneOptions(groups) {
   );
 }
 
-/**
- * The same list, guaranteed to contain `value`, which may be a zone the API
- * does not list (e.g. set by hand).
- */
+// Guaranteed to contain `value`, which may be a zone the API does not list.
 export function timezoneOptionsWith(groups, value) {
   const options = timezoneOptions(groups);
   if (!value || options.some((option) => option.value === value)) return options;
   return [{ value, label: value }, ...options];
 }
 
-// Linked names from tzdata's `backward` file that `timedatectl` lists and PHP's
-// `DateTimeZone::listIdentifiers()` does not. Every `Etc/*` zone and every
-// one-word zone but UTC are in the same set, so they are matched by rule below.
+// tzdata `backward` links that `timedatectl` lists and PHP does not; `Etc/*` and one-word zones are matched by rule.
 const PHP_UNLISTED = new Set([
   "Africa/Timbuktu", "America/Atka", "America/Coral_Harbour", "America/Ensenada",
   "America/Montreal", "America/Nipigon", "America/Pangnirtung", "America/Porto_Acre",
@@ -42,10 +33,7 @@ function phpAccepts(zone) {
   return !PHP_UNLISTED.has(zone);
 }
 
-/**
- * Options for a site's `date.timezone`: the API validates against PHP's own
- * list, which lacks e.g. `Etc/UTC`.
- */
+// The API validates against PHP's own list, which lacks e.g. `Etc/UTC`.
 export function phpTimezoneOptionsWith(groups, value) {
   const accepted = Array.isArray(groups)
     ? groups.map((group) => ({ ...group, zones: (group?.zones ?? []).filter((zone) => phpAccepts(zone.value)) }))

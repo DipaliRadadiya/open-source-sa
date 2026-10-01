@@ -6,11 +6,7 @@ import { getEnvironmentDiff } from "@/lib/api/environment";
 import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
 
-/**
- * Old and new values for one change, loaded lazily when the row is opened
- * (they come from backup files, not the activity log). Fetched once per row
- * and kept, since a past state cannot change.
- */
+// Values come from backup files, so they load when the row opens and are kept: a past state cannot change.
 export function useEnvironmentDiff(appId, entry) {
   const t = useTranslations("applications.environment.history");
   const [open, setOpen] = useState(false);
@@ -129,10 +125,7 @@ function KeyName({ change }) {
   );
 }
 
-/**
- * One side of a change. Wraps anywhere (values rarely contain spaces). An
- * absent side is an em dash, since an empty string is a real `.env` value.
- */
+// An absent side is an em dash, since an empty string is a real `.env` value.
 function Value({ value, tone }) {
   const t = useTranslations("applications.environment.history");
 

@@ -30,11 +30,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useRestoreWatch } from "@/components/backups/restore-watch";
 import { BackupsHistoryTable } from "@/components/backups/backups-history-table";
 
-/**
- * Every backup that has run, across every application. Server-paginated: the
- * list grows without bound. Restore uses the same dialog and permission
- * (`backup,manage`) as the application page.
- */
+// Server-paginated: the list grows without bound.
 export function BackupsHistory({
   backups,
   counts,
@@ -54,18 +50,13 @@ export function BackupsHistory({
   const [restoring, setRestoring] = useState(null);
   const [clearing, setClearing] = useState(null);
   const [busyId, setBusyId] = useState(null);
-  // Runs started here: application id → that site's newest backup id at the
-  // click, per site. Needed because retry answers 202 with the *target* and no
-  // row exists until a worker starts, so the list would not look in flight.
+  // Application id → that site's newest backup id at the click. Retry answers 202
+  // with no row yet, so the list alone would not look in flight.
   const [started, setStarted] = useState({});
   const [stalled, setStalled] = useState(false);
 
-  // Retry re-runs the target and creates a NEW row, so wait for "a newer run
-  // for this site", not for this row to change.
-  /**
-   * Confirm first: Retry starts a full new backup (hours, gigabytes) and on a
-   * failed restore it can be mistaken for "retry the restore".
-   */
+  // Retry creates a NEW row, so wait for a newer run for this site. Confirm first:
+  // it starts a full backup and can be mistaken for "retry the restore".
   function askRetry(backup) {
     setRetrying(backup);
   }
@@ -326,10 +317,7 @@ export function BackupsHistory({
   );
 }
 
-/**
- * One line per figure: dot, number, label. The dot colours match the status
- * badges in the table.
- */
+/** The dot colours match the status badges in the table. */
 function Tally({ label, value, tone, dot }) {
   return (
     <Card className="gap-0 py-0 shadow-sm">

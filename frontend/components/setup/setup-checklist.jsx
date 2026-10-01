@@ -25,9 +25,8 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
   const [setup, setSetup] = useState(initialSetup);
   // Keys with a POST in flight, until "installing" or the poll takes over.
   const [busy, setBusy] = useState({});
-  // Installs started here. The backend tracks progress only for database, php
-  // and node (SetupCatalog::progressFor), so e.g. fail2ban reports `pending`
-  // throughout; without this the poll would revert it to an Install button.
+  // The backend tracks progress only for database, php and node (SetupCatalog::progressFor);
+  // without this the poll would revert e.g. fail2ban to an Install button.
   const [started, setStarted] = useState({});
   const [slow, setSlow] = useState(false);
   const [finishing, startTransition] = useTransition();
@@ -116,9 +115,7 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
   const pending = ordered.filter((c) => c.state !== "installed");
   const done = ordered.filter((c) => c.state === "installed");
 
-  // "Also available" (not "Optional", not under "Recommended") for components
-  // that are neither advised nor skippable. Attention is failed only; installing
-  // stays in its own group.
+  // Attention is failed only; installing stays in its own group.
   const attention = pending.filter((c) => c.state === "failed");
   const advised = pending.filter((c) => !attention.includes(c) && c.recommended);
   const optional = pending.filter((c) => !attention.includes(c) && !c.recommended);
@@ -261,10 +258,6 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
   );
 }
 
-/**
- * A titled group, rendered only when it has items. The count sits beside the
- * heading, not inside it.
- */
 function Section({ title, hint, items, render, className = "space-y-3" }) {
   if (!items.length) return null;
   return (

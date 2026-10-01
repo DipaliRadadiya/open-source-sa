@@ -7,13 +7,7 @@ import {
   withArchiveFormat,
 } from "@/lib/files/path-helpers";
 
-/**
- * Which container the archive goes into. Not interchangeable: zip does not carry
- * Unix permissions (a 0600 `wp-config.php` will not stay 0600); tar keeps mode,
- * owner and symlinks.
- *
- * The choice writes into the path field, so the filename shown is the one created.
- */
+// zip drops Unix permissions; tar keeps mode, owner and symlinks.
 export function useArchiveFormat() {
   const t = useTranslations("applications.files.archiveFormat");
   // Kept apart from the path, so a name typed without an extension still gets the

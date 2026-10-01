@@ -22,13 +22,7 @@ import {
 } from "@/components/ui/card";
 import { apiMessage } from "@/lib/api/error-message";
 
-/**
- * What the selected version is, and everything you can do from here.
- *
- * `makeDefault` and `remove` appear only when available (neither exists on a
- * one-version server). `children` carries the php.ini button, owned by the
- * page (a Server Component). Install lives beside the version picker.
- */
+// `children` carries the php.ini button, owned by the page (a Server Component).
 export function VersionSummary({
   version,
   canManage,
@@ -49,11 +43,8 @@ export function VersionSummary({
   // The API omits `status` on older responses; absent means ready.
   const installState = versionState(version);
 
-  /*
-   * Present, but not a version this panel set up (e.g. `lsphp83` pulled in by
-   * OpenLiteSpeed, missing curl, sqlite3, redis, intl, pgsql). Only shown while
-   * nothing else is happening: mid-install the list is legitimately incomplete.
-   */
+  // Present but not set up by the panel (e.g. `lsphp83` from OpenLiteSpeed).
+  // Hidden mid-install, when the list is legitimately incomplete.
   const missingPackages = version.missing_packages ?? [];
   const incomplete = missingPackages.length > 0 && !installState;
 
@@ -144,10 +135,7 @@ export function VersionSummary({
   // Each action appears only when it applies: the default cannot be made
   // default again, and the panel's own version cannot be removed.
   const showMakeDefault = !version.is_default;
-  /*
-   * A failed install put nothing on disk and `destroy()` refuses a version
-   * that is not installed, so reinstall is offered instead of Remove.
-   */
+  // `destroy()` refuses a version not installed, so a failed install offers reinstall.
   const nothingToRemove = failedWithNothingInstalled(version);
   const showRemove = !version.in_use_by_panel && !nothingToRemove;
 
@@ -205,15 +193,11 @@ export function VersionSummary({
           )}
         </CardTitle>
 
-          {/* All actions on one line. Not shrink-0: a shrink-0 item keeps its
-              max-content width, so flex-wrap never wraps and longer locales
-              overflow the card. */}
+          {/* Not shrink-0: it keeps max-content width, so flex-wrap never wraps. */}
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             {children}
 
-            {/* An incomplete version cannot become the server default: `php`
-             * would resolve to an interpreter missing curl, redis or pgsql for
-             * cron jobs, composer and SSH. The API allows it; the UI does not. */}
+            {/* The API allows an incomplete version as default; the UI does not. */}
             {!showMakeDefault ? null : (
               <ReasonTooltip
                 reason={
@@ -234,10 +218,7 @@ export function VersionSummary({
               </ReasonTooltip>
             )}
 
-            {/* The repair: `PhpController::store` only short-circuits when the
-             * version is installed AND complete, so this falls through to an
-             * idempotent apt install. Not in the install dialog, which disables
-             * installed versions. */}
+            {/* `PhpController::store` falls through to an idempotent apt install when incomplete. */}
             {!incomplete ? null : (
               <ReasonTooltip reason={canManage ? null : t("noPermission")}>
                 <Button

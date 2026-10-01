@@ -22,14 +22,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-/**
- * Restoring a site, the only destructive action in the panel. Every backend
- * guard is mirrored here so nothing is refused after the domain is typed.
- *
- * Callers MUST pass `key={backup?.id}`: a dialog opened from its own row
- * skips `onOpenChange`, so without a remount the typed domain would carry
- * over to the next site.
- */
+// Mirrors every backend guard. Callers MUST pass `key={backup?.id}`: opening from
+// a row skips `onOpenChange`, so the typed domain would carry over.
 export function RestoreDialog({ backup, open, onOpenChange, onStarted }) {
   const t = useTranslations("backups.restore");
   const format = useFormatter();
@@ -68,9 +62,7 @@ export function RestoreDialog({ backup, open, onOpenChange, onStarted }) {
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      {/* Width needs `!`, and `size` must stay `default`: the base's
-          `data-[size=default]:sm:max-w-sm` outranks a plain `sm:max-w-2xl`,
-          and `size` also controls the header's left alignment. */}
+      {/* `!` and `size="default"` are needed: `data-[size=default]:sm:max-w-sm` outranks `sm:max-w-2xl`. */}
       <AlertDialogContent className="sm:!max-w-2xl">
         <AlertDialogHeader>
           <div className="flex items-center gap-3">
@@ -186,11 +178,7 @@ function Fact({ label, value }) {
   );
 }
 
-/**
- * Why this backup cannot be restored, or null when it can. Mirrors
- * `RestoreBackupRequest::withValidator()` in order; exported so a row can
- * disable its own menu item.
- */
+// Mirrors `RestoreBackupRequest::withValidator()` in order; null when restorable.
 export function restoreBlocker(backup, t, restoreInFlight = false) {
   // A backup still being written has simply not finished; don't call it "unverified".
   if (BACKUP_IN_FLIGHT.includes(backup.status)) return t("blocked.inFlight");

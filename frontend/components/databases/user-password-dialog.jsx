@@ -23,10 +23,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-/**
- * Changing a password breaks every app still using the old one; the dialog
- * says so before the button.
- */
 export function UserPasswordDialog({ database, user, open, onOpenChange }) {
   const t = useTranslations("databases.users");
   const { refreshAndWait } = useRefresh();
@@ -127,9 +123,7 @@ export function UserPasswordDialog({ database, user, open, onOpenChange }) {
               control={form.control}
               name="password"
               render={({ field }) => (
-                // Generate is placed by the label but follows the input in the
-                // markup, so Tab reaches the field first. Same as the other
-                // password fields in the panel.
+                // Generate follows the input in the markup so Tab reaches the field first.
                 <FormItem className="relative">
                   <FormLabel required>{t("newPassword")}</FormLabel>
                   <FormControl>

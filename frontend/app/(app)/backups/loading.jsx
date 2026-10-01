@@ -1,9 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/**
- * Mirrors the Backups section shell: title, tabs, and the coverage card.
- * The restore banner is not reserved: it appears only while a restore runs.
- */
+// The restore banner is not reserved: it appears only while a restore runs.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

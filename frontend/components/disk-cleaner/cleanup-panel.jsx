@@ -25,10 +25,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-/**
- * Pick what to clean, review it, then do it. Nothing is pre-selected: a
- * destructive action must be deliberate.
- */
+// Nothing is pre-selected: a destructive action must be deliberate.
 export function CleanupPanel({ categories, canManage, measuredAt }) {
   const t = useTranslations("diskCleaner");
   const { refreshAndWait } = useRefresh();
@@ -45,8 +42,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
     [categories],
   );
 
-  // Sorted by measured size rather than by the API's `package`/`logs`/`temp`
-  // grouping.
+  // By measured size, not the API's category grouping.
   const ordered = useMemo(
     () =>
       categories
@@ -85,15 +81,13 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
     try {
       const response = await cleanDisk(chosen.map((c) => c.key));
       const parsed = cleanResultSchema.safeParse(response.data);
-      // Show what the disk actually freed, not the prediction. Sizes are re-read
-      // first so the result never sits beside stale sizes.
+      // What the disk actually freed; sizes are re-read first so the result never sits beside stale ones.
       await refreshAndWait();
       if (parsed.success) setResult(parsed.data);
       setConfirming(false);
       setSelected(new Set());
     } catch (err) {
-      // Kept in the dialog as well as a toast: the dialog stays open on failure
-      // (selection kept) and needs the explanation and the support reference.
+      // Also kept in the dialog, which stays open on failure and needs the support reference.
       const reference = err.response?.data?.reference;
       setError([apiMessage(err, t("clean.failed")), reference].filter(Boolean).join(" · "));
       toast.error(apiMessage(err, t("clean.failed")));
@@ -119,8 +113,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
                   })
                 : t("list.subtitle")}
             </CardDescription>
-            {/* Freshness and the folder toggle share one row: both are about the
-                view, neither is an action. */}
+            {/* Both about the view, neither an action. */}
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
               {measuredAt ? <MeasuredAt at={measuredAt} /> : <span />}
   
@@ -205,8 +198,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
                               )}
                             >
                               <div className="flex flex-wrap items-center gap-2">
-                                {/* Name and its ⓘ stay together so the icon cannot
-                                    wrap onto its own line. */}
+                                {/* Keeps the ⓘ from wrapping onto its own line. */}
                                 <span className="inline-flex items-center gap-1.5">
                                   <span className="text-sm font-medium">{category.label}</span>
                                   {category.note ? (
@@ -222,8 +214,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
                                   </Badge>
                                 ) : null}
   
-                                {/* The API decides what is safe to remove
-                                    unattended; anything else is flagged. */}
+                                {/* The API decides what is safe to remove unattended. */}
                                 {!category.safe && !empty ? (
                                   <Badge variant="warning" className="font-normal">
                                     {t("list.checkFirst")}
@@ -288,8 +279,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
                     <Button
                       disabled={!canManage || chosen.length === 0}
                       onClick={() => {
-                        // Opening from here skips the dialog's onOpenChange, so clear
-                        // a stale error explicitly.
+                        // Opening from here skips onOpenChange, so clear a stale error explicitly.
                         setError(null);
                         setConfirming(true);
                       }}
@@ -313,8 +303,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
             if (open) setError(null);
             setConfirming(open);
           }}
-          // The base width lives on a data-attribute variant, so a plain
-          // sm:max-w-* never wins; override it in the same form.
+          // The base width is a data-attribute variant; a plain sm:max-w-* never wins.
           className="data-[size=default]:max-w-[calc(100vw-2rem)] data-[size=default]:sm:max-w-xl"
           icon={Trash2}
           tone="destructive"
@@ -325,8 +314,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
           pending={pending}
           onConfirm={clean}
         >
-          {/* The review step: what was picked, what it frees, and the real
-              folders it touches, before anything is deleted. */}
+          {/* Review before anything is deleted. */}
           <div className="overflow-hidden rounded-lg border">
             <ul className="max-h-72 divide-y overflow-auto">
               {chosen.map((category) => (
@@ -409,8 +397,7 @@ function PathList({ paths, moreLabel }) {
           type="button"
           className="mt-0.5 text-xs text-muted-foreground underline-offset-4 hover:underline"
           onClick={(e) => {
-            // Inside the row's <label>, so without this the click also toggles
-            // the checkbox.
+            // Inside the row's <label>: without this the click also toggles the checkbox.
             e.preventDefault();
             setExpanded((v) => !v);
           }}

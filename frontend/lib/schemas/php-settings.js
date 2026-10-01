@@ -1,9 +1,6 @@
 import { z } from "zod";
 
-/**
- * PHP's own size vocabulary: `128M`, `1G`, `-1` for unlimited. A copy of
- * `SavePhpSettingsRequest`'s rule; covered in `tests/backend-mirror.test.mjs`.
- */
+/** A copy of `SavePhpSettingsRequest`'s rule; covered in `tests/backend-mirror.test.mjs`. */
 export const PHP_SIZE_PATTERN = /^(-1|\d+[KMG]?)$/i;
 
 export const PM_TYPES = ["ondemand", "dynamic", "static"];
@@ -11,10 +8,8 @@ export const PM_TYPES = ["ondemand", "dynamic", "static"];
 /** `SavePhpSettingsRequest::MAX_CHILDREN`. */
 export const MAX_CHILDREN = 100;
 
-/**
- * `256M` → bytes, mirroring `ApplicationPhpSettings::toBytes()`. `-1` counts
- * as 128M rather than zero, so unlimited pools are not reported as empty.
- */
+// Mirrors `ApplicationPhpSettings::toBytes()`; `-1` counts as 128M so unlimited pools
+// are not reported as empty.
 export function phpSizeToBytes(value) {
   const trimmed = String(value ?? "").trim();
 
@@ -31,19 +26,13 @@ export function phpSizeToBytes(value) {
   return number;
 }
 
-/**
- * What this site could take at full tilt, mirroring
- * `ApplicationPhpSettings::memoryCeilingBytes()`. The API only returns it for
- * saved settings; the budget bar needs it for unsaved ones.
- */
+// Mirrors `ApplicationPhpSettings::memoryCeilingBytes()`: the API only returns it for
+// saved settings, and the budget bar needs it for unsaved ones.
 export function memoryCeilingBytes(memoryLimit, maxChildren) {
   return phpSizeToBytes(memoryLimit) * (Number(maxChildren) || 0);
 }
 
-/**
- * The budget with unsaved numbers folded in. `committed` already includes this
- * site's saved ceiling, so it is subtracted before adding the proposed one.
- */
+/** `committed` already includes this site's saved ceiling, so it is subtracted first. */
 export function budgetWith(memory, memoryLimit, maxChildren) {
   const total = memory?.total ?? 0;
   const others = Math.max(0, (memory?.committed ?? 0) - (memory?.this_site ?? 0));
@@ -61,10 +50,7 @@ export function budgetWith(memory, memoryLimit, maxChildren) {
   };
 }
 
-/*
- * Stricter than the API: a bare `64` is 64 BYTES (PHP falls back to 128M),
- * and `0`/`-1` switch the limit off.
- */
+// Stricter than the API: a bare `64` is 64 BYTES, and `0`/`-1` switch the limit off.
 const sizeWithUnit = z
   .string()
   .trim()
@@ -111,9 +97,8 @@ export const applicationPhpSchema = z
         additional_directives: z.string().nullish(),
       })
       .passthrough(),
-    // True for each directive explicitly set; false means the panel default
-    // shows through. Needed for "Reset to default", since an override equal to
-    // the default looks identical.
+    // False means the panel default shows through; needed for "Reset to default", since
+    // an override equal to the default looks identical.
     overridden: z.record(z.string(), z.boolean()).default({}),
     presets: z
       .array(
@@ -136,19 +121,8 @@ export const applicationPhpSchema = z
         this_site: z.number().default(0),
       })
       .default({ total: 0, committed: 0, available: 0, over_committed: false, sites: 0, this_site: 0 }),
-    /**
-     * Three answers to "what is open_basedir here", and they can all differ.
-     *
-     * `effective`   — what the panel would write from the stored row. Null when
-     *                 the setting is off.
-     * `live`        — what the pool file on disk actually says. Null means it
-     *                 could not be determined, never "no restriction".
-     * `recommended` — the full value from enabling it with no extras; not a
-     *                 value to paste into the paths box (extras only).
-     *
-     * `live` differing from `effective` means the pool was hand-edited or the
-     * additional directives set their own `open_basedir`, which wins.
-     */
+    // `effective`: what the panel would write (null when off). `live`: the pool file on
+    // disk, null meaning undetermined, never "no restriction". `recommended`: not for the paths box.
     open_basedir_effective: z.string().nullish(),
     open_basedir_live: z.string().nullish(),
     open_basedir_recommended: z.string().nullish(),
@@ -171,10 +145,7 @@ export const applicationPhpSchema = z
 
 export const applicationPhpResponseSchema = z.object({ php: applicationPhpSchema });
 
-/**
- * The form, mirroring `SavePhpSettingsRequest`. Every bound is the backend's
- * own, repeated so values are refused before a 422.
- */
+/** Mirrors `SavePhpSettingsRequest`'s bounds so values are refused before a 422. */
 export const phpSettingsFormSchema = z.object({
   php_version: z.string().min(1, "requiredField"),
   memory_limit: sizeWithUnit.refine((value) => phpSizeToBytes(value) >= MIN_MEMORY, "phpMemoryMin"),
@@ -188,10 +159,7 @@ export const phpSettingsFormSchema = z.object({
   pm_max_children: z.coerce.number().int("integer").min(1, "rangeWorkers").max(MAX_CHILDREN, "rangeWorkers"),
   pm_max_requests: z.coerce.number().int("integer").min(0, "rangeMaxRequests").max(100000, "rangeMaxRequests"),
   open_basedir_enabled: z.boolean().default(false),
-  /**
-   * Extra folders, one per line (backend rules, `SavePhpSettingsRequest`):
-   * absolute only, never bare `/` (would allow everything), and no `..`.
-   */
+  // Backend rules: absolute only, never bare `/` (would allow everything), and no `..`.
   open_basedir_paths: z
     .string()
     .trim()
@@ -238,10 +206,7 @@ export const phpSettingsFormSchema = z.object({
     .trim()
     .max(4000, "max4000")
     .refine((value) => !/^\s*\[/m.test(value), "noSections")
-    /*
-     * PHP settings only: a pool line such as `user = root` or another site's
-     * user would change who the pool runs as.
-     */
+    // PHP settings only: a pool line such as `user = root` would change who the pool runs as.
     .refine(
       (value) =>
         value
@@ -253,10 +218,8 @@ export const phpSettingsFormSchema = z.object({
     .default(""),
 });
 
-/**
- * The form's rules that need the server: memory no larger than the machine
- * has, and a POST limit at least the upload limit (PHP otherwise drops $_POST).
- */
+// Rules that need server facts: memory within the machine's, and a POST limit at least
+// the upload limit (PHP otherwise drops $_POST).
 export function phpSettingsFormSchemaFor(totalMemoryBytes = 0, applicationPath = "") {
   const root = String(applicationPath ?? "").replace(/\/+$/, "");
   return phpSettingsFormSchema.superRefine((values, ctx) => {

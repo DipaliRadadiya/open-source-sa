@@ -1,9 +1,6 @@
 import { cn } from "@/lib/utils";
 
-/**
- * The icon beside a section heading: a plain muted icon, no tinted tile, so
- * the brand colour keeps its meaning and the heading carries the weight.
- */
+// No tinted tile, so the brand colour keeps its meaning.
 export function SectionIcon({ icon: Icon, className }) {
   return (
     <Icon

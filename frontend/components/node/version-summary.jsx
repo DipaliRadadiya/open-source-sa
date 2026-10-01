@@ -27,34 +27,19 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-/**
- * The selected Node version and its actions. Same card as PHP's, minus the
- * panel-version rule and plus npm, which belongs to the version. Install lives
- * beside the version picker.
- */
+// Same card as PHP's, minus the panel-version rule and plus npm.
 export function VersionSummary({ version, canManage, lifecycleAvailable = false }) {
   const t = useTranslations("node");
   const { refreshAndWait } = useRefresh();
   const [confirming, setConfirming] = useState(false);
-  /*
-   * WHICH action is running. All buttons disable together (they act on one version
-   * and must not race), but only the pressed one shows a spinner.
-   */
+  // All buttons disable together (one version, no racing); only the pressed one spins.
   const [running, setRunning] = useState(null);
   const pending = running !== null;
   // Read from props: the card re-reads after an update, and a local copy would go
   // stale.
   const npm = version.npm_version ?? null;
-  /*
-   * `npm_latest` is per Node version, not the registry's `latest` (npm 12 requires
-   * Node ^22.22.2 || ^24.15.0 || >=26).
-   *
-   * The comparison is the API's: a string compare would sort '9.8.1' after '10.2.4'.
-   *
-   * `npm_update_available` is also false when the catalog is empty (no egress, or
-   * before the daily refresh), so "already current" is claimed only when a latest
-   * is known; otherwise the button stays offered.
-   */
+  // `npm_latest` is per Node version, compared by the API (strings misorder versions).
+  // `npm_update_available` is also false with an empty catalog, so "current" needs a known latest.
   const npmLatest = version.npm_latest ?? null;
   const npmKnown = Boolean(npm && npmLatest);
   const npmBehind = !npmKnown
@@ -147,10 +132,7 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
       const after = data?.npm_version ?? null;
       // Re-read: "update still available" is the server's semver answer.
       await refreshAndWait();
-      /*
-       * The API reports the version after the attempt, so an unchanged number means it
-       * was already current; say that rather than "updated".
-       */
+      // The API reports the version after the attempt; unchanged means it was already current.
       toast.success(
         after && before && after === before
           ? t("npm.alreadyLatest", { version: after })

@@ -15,20 +15,13 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-/**
- * One API-driven database installation lifecycle for Setup and both database
- * page states. The backend owns stage/failure wording; this component owns only
- * the surrounding controls and accessibility text.
- */
+// The backend owns stage and failure wording; this owns the controls and a11y text.
 export function DatabaseInstallProgress({
   progress,
   label,
   slow = false,
   pollIssue = false,
-  /*
-   * Retry handler, passed in because each screen already owns the install
-   * action; a second one here would be a second code path to keep in step.
-   */
+  // Passed in: each screen already owns the install action.
   onRetry,
   retrying = false,
   className,
@@ -45,10 +38,7 @@ export function DatabaseInstallProgress({
         ? t("queued")
         : t("working"));
 
-  /*
-   * The engine name goes in the title because server step wording never names
-   * one, and this <p> is the aria-live region.
-   */
+  // Server step wording never names the engine, and this <p> is the aria-live region.
   const title = label ? t("titleWithEngine", { name: label, step }) : step;
 
   return (
@@ -106,10 +96,7 @@ export function DatabaseInstallProgress({
               {t("reference", { reference: progress.reference })}
             </p>
           ) : null}
-          {/*
-            * Offered only when the server says the failure is retryable (e.g.
-            * `port_in_use_by_mariadb` would fail the same way again).
-            */}
+          {/* Only when the server says the failure is retryable. */}
           {onRetry && progress.retryable !== false ? (
             <Button
               type="button"

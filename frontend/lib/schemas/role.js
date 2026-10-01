@@ -1,10 +1,7 @@
 import { z } from "zod";
 import { listMetaSchema } from "./list.js";
 
-/**
- * The three states a grant can hold. The pivot stores two booleans, but
- * "manage without view" rewrites itself, so the form offers one three-way choice.
- */
+// The pivot stores two booleans, but "manage without view" rewrites itself.
 export const ACCESS_NONE = "none";
 export const ACCESS_VIEW = "view";
 export const ACCESS_MANAGE = "manage";
@@ -46,9 +43,7 @@ export const rolePermissionSchema = z
       ),
   }));
 
-// One section of the role form, bucketed by the server. Keyed on level AND
-// sub_level: `logs` exists at both server and application level as two
-// different permissions.
+// Keyed on level AND sub_level: `logs` is two permissions (server and application).
 export const permissionGroupSchema = z.object({
   level: z.string().default(""),
   sub_level: z.string().default(""),

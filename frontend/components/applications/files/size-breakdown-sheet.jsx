@@ -21,16 +21,7 @@ const SizeBreakdownDonut = dynamic(
   { ssr: false, loading: () => <Skeleton className="h-56 w-full rounded-lg" /> },
 );
 
-/**
- * What is using this folder's space, on demand from the toolbar, so the listing
- * keeps its full width.
- *
- * A sheet rather than a dialog: it is reference material read while deciding
- * what to delete, with the listing still visible.
- *
- * Measured for the directory on screen, not the whole site, so the walk's cost is
- * bounded by where the user is.
- */
+// Measured for the directory on screen, so the walk's cost is bounded.
 export function SizeBreakdownSheet({ breakdown }) {
   const t = useTranslations("applications.files.breakdown");
 
@@ -40,18 +31,11 @@ export function SizeBreakdownSheet({ breakdown }) {
 
   const label = useCallback((key) => t(`types.${key}`), [t]);
 
-  /*
-   * Not measurable is not empty: "no files" would be a false statement about the
-   * disk. `getBreakdown` returns null on a non-ok response, schema mismatch or
-   * throw, so null must count as not measurable.
-   */
+  // `getBreakdown` returns null on any failure; null is not measurable, never "no files".
   const unavailable = !breakdown || breakdown.available === false;
   const empty = breakdown?.available && categories.length === 0;
 
-  /*
-   * `available: false` means the walk was too big to finish; `null` means the
-   * request failed, where "too large" would be a guess.
-   */
+  // `available: false` means too big to walk; `null` means the request failed.
   const unavailableMessage = breakdown ? t("unavailable") : t("measureFailed");
 
   // Swatch token per category so the legend matches its segment; past the fifth,
@@ -106,9 +90,8 @@ export function SizeBreakdownSheet({ breakdown }) {
               }}
             />
 
-            {/* Every category, not just those the chart shows, with visible values: two
-                categorical hues are under 3:1 on this surface, so values cannot be hover-only.
-                A real table so screen readers get the column headers. */}
+            {/* Every category with visible values: two hues are under 3:1 here, so values
+                cannot be hover-only. */}
             <table className="w-full text-sm">
               <thead className="border-b text-xs text-muted-foreground">
                 <tr>

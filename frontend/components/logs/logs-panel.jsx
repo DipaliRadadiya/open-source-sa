@@ -110,15 +110,8 @@ export function LogsPanel({
 
   const cursor = useRef(initial?.log?.cursor ?? 0);
 
-  /*
-   * A navigation to a different `?source=` is not a remount, so state seeded
-   * from the previous log must be reset: `follow` (auto-follow depends on the
-   * source's size) and `lines` (the old content would sit under the new name).
-   * Reset during render, not in an effect, so the old log never paints.
-   *
-   * Deliberately NOT reset: search term, severity, wrap and line count; those
-   * are reader preferences, not facts about one file.
-   */
+  // A new `?source=` is not a remount: reset `follow` and `lines` during render so the old log never paints.
+  // Search, severity, wrap and line count are reader preferences and deliberately kept.
   const [renderedSource, setRenderedSource] = useState(selected);
   if (renderedSource !== selected) {
     setRenderedSource(selected);
@@ -318,10 +311,7 @@ export function LogsPanel({
     return () => document.removeEventListener("keydown", onKey);
   }, []);
 
-  /**
-   * Empty the selected log. The server truncates in place, so the byte cursor
-   * must reset to 0 or the next poll asks for a range past the end.
-   */
+  // The server truncates in place, so the byte cursor must reset to 0 or the next poll overshoots.
   const clearSelected = useCallback(async () => {
     if (!source) return;
 

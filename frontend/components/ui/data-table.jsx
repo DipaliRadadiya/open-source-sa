@@ -39,18 +39,8 @@ function SortableHeader({ header, label }) {
   );
 }
 
-/**
- * Generic presentational data grid (TanStack Table v8 + shadcn Table).
- * Server-driven by default: it receives already-fetched `data` and renders it —
- * pagination/filtering/sorting are manual (handled by URL controls).
- *
- * `sortable` opts a fully client-side dataset into in-table sorting;
- * `stickyHeader` pins the header row inside a caller's scroll container.
- * `rowClassName(row)` styles rows by their original data.
- * `fixedLayout` uses `table-layout: fixed` so `meta.className` widths are
- * respected rather than treated as hints.
- * `contextMenu(row)` returns `<ContextMenuItem>`s for right-click, or falsy to skip.
- */
+// Server-driven by default: pagination, filtering and sorting come from URL controls.
+// `fixedLayout` makes `meta.className` widths binding rather than hints.
 export function DataTable({
   columns,
   data,
@@ -63,18 +53,14 @@ export function DataTable({
   rowClassName,
   fixedLayout = false,
   contextMenu,
-  // Opt-in: collapse a run of columns into one spanning cell.
-  // `{ columns: [id, …], render: (rowOriginal) => node | null }`; null renders
-  // the row normally.
+  // `{ columns: [id, …], render: (rowOriginal) => node | null }`; null renders normally.
   spanCells,
   // Drops the border and rounding, for tables already inside a Card.
   bare = false,
   // Readable from any cell as `table.options.meta`. Use this instead of a
   // closure: a new cell function each render remounts the cell and loses its state.
   meta,
-  // Opt-in row selection, owned by the caller (whatever acts on it lives
-  // outside the table). `rowId` gives stable keys so selection survives a
-  // refetch or reorder.
+  // Caller-owned selection; `rowId` keeps it stable across refetch or reorder.
   rowSelection,
   onRowSelectionChange,
   rowId,
@@ -147,11 +133,7 @@ export function DataTable({
                       stickyHeader && "bg-muted",
                       header.column.columnDef.meta?.className,
                     )}
-                    /*
-                     * `canSort` is client-side sorting; server-driven columns
-                     * sort via the URL, so `meta.sortKey` (the key in `?sort=`)
-                     * supplies aria-sort for them.
-                     */
+                    /* Server-driven columns sort via the URL; `meta.sortKey` supplies aria-sort. */
                     aria-sort={
                       canSort
                         ? { asc: "ascending", desc: "descending" }[direction] ?? "none"

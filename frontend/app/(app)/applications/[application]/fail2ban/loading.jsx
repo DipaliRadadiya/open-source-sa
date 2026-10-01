@@ -1,9 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/**
- * Mirrors `Fail2banPanel`. Sized to the not-yet-set-up state, which most sites
- * are in; the configured state cannot be known before the page loads.
- */
+// Sized to the not-yet-set-up state, which most sites are in.
 export default function Loading() {
   return (
     <div className="space-y-6">

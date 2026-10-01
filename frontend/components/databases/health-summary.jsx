@@ -31,9 +31,6 @@ const TONE = {
 
 const ISSUE_TEXT = "text-sm";
 
-/**
- * The verdict (healthy or not, and why) before any numbers.
- */
 export function HealthSummary({ engine, status, processes = [] }) {
   const t = useTranslations("databases.monitor.health");
   const tEngines = useTranslations("databases.engines");

@@ -14,20 +14,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-/**
- * Point a site that lost its git account at another one. Only the account is
- * asked for; the endpoint keeps the existing repository, branch and mode. The
- * server verifies the account can list the repo's branches, so a wrong account
- * is a 422 and nothing changes.
- */
+// Only the account changes; the server keeps repo/branch/mode and 422s an account that cannot list branches.
 export function RelinkGitAccountDialog({ application, accounts = [], open, onOpenChange }) {
   const t = useTranslations("applications.source");
   const { refreshAndWait } = useRefresh();
-  /*
-   * Preselected when there is only one account. A named default because the
-   * resets below must target it, not "": the dialog is not remounted between
-   * opens, so resetting to "" would undo the preselection.
-   */
+  // Resets target this default, not "": the dialog is not remounted between opens.
   const defaultAccountId = accounts.length === 1 ? String(accounts[0].id) : "";
   const [accountId, setAccountId] = useState(defaultAccountId);
   const [pending, setPending] = useState(false);
@@ -71,8 +62,7 @@ export function RelinkGitAccountDialog({ application, accounts = [], open, onOpe
         <SelectContent>
           {accounts.map((account) => (
             <SelectItem key={account.id} value={String(account.id)}>
-              {/* Provider matters: switching providers disables deploy-on-push, since
-                  webhooks verify signatures per provider. */}
+              {/* Switching providers disables deploy-on-push: webhooks verify per provider. */}
               {account.label} · {account.provider_title ?? account.provider}
             </SelectItem>
           ))}

@@ -4,10 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 
-/**
- * The footer strip that saves a settings card. `submit` makes Save a submit
- * button for react-hook-form cards; otherwise it calls `onSave`.
- */
+// `submit` makes Save a submit button for react-hook-form cards; otherwise it calls `onSave`.
 export function CardSaveFooter({
   saving,
   dirty,

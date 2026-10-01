@@ -2,13 +2,8 @@ import { useTranslations } from "next-intl";
 import { confidenceBand } from "@/lib/schemas/sync";
 import { cn } from "@/lib/utils";
 
-/**
- * The evidence behind one guess, rendered as whatever keys arrived: they
- * differ per resource type, so a per-row panel rather than table columns.
- *
- * Keys are printed raw: they are the API's own names, and translated labels
- * would go stale when a discoverer adds a field.
- */
+// Keys differ per resource type and are printed raw: translated labels would
+// go stale when a discoverer adds a field.
 function EvidenceValue({ value }) {
   if (value == null) return <span className="text-muted-foreground">—</span>;
   if (typeof value === "boolean") return <span>{String(value)}</span>;
@@ -35,8 +30,7 @@ export function SyncEvidence({ item }) {
   const t = useTranslations("sync");
   const entries = Object.entries(item.evidence ?? {});
 
-  /* Confidence is only shown where it varies: most discoverers hardcode 100,
-     which is not a measurement. */
+  /* Most discoverers hardcode 100, which is not a measurement. */
   const showConfidence = item.confidence != null && item.confidence < 100;
   const band = confidenceBand(item.confidence);
 

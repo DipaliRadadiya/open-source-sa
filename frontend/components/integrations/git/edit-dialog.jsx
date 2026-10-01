@@ -27,10 +27,7 @@ const schema = z.object({
   workspace: z.string().trim().optional(),
 });
 
-/**
- * Edits the label and non-secret settings. The token is deliberately absent:
- * replacing it is a verified round-trip in its own dialog.
- */
+// The token is deliberately absent: replacing it is a verified round-trip in its own dialog.
 export function EditDialog({ account, open, onOpenChange }) {
   const t = useTranslations("git.edit");
   const { refreshAndWait } = useRefresh();

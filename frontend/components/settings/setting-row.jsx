@@ -7,11 +7,7 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 
-/**
- * One settings row: name and helper text on the left, the control on the
- * right. The control column is a FIXED width with left-aligned contents, so
- * controls of different widths start on the same vertical line.
- */
+// A fixed-width control column with left-aligned contents, so controls start on one vertical line.
 const ROW =
   "grid gap-x-8 gap-y-2 py-3.5 sm:grid-cols-[minmax(0,1fr)_14rem] sm:items-center";
 
@@ -52,10 +48,7 @@ export function InfoRow({ label, hint, children, className }) {
   );
 }
 
-/**
- * One settings group as its own card: header band, rows, action band. Each
- * group saves on its own, so the card boundary shows what a Save covers.
- */
+// Each group saves on its own, so the card boundary shows what a Save covers.
 export function Section({
   icon: Icon,
   title,

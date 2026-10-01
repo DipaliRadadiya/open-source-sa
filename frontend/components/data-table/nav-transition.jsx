@@ -13,13 +13,7 @@ export function useNavPending() {
   return useContext(NavContext)?.isPending ?? false;
 }
 
-/**
- * Wraps a list's URL-driven controls in a single useTransition so search /
- * filter / pagination share one `isPending` signal — used to show a spinner in
- * the search box, disable pagination, and dim the table while the server
- * re-fetches. Any control using `useSetQuery` under this provider routes
- * through the shared transition automatically.
- */
+// One transition shared by search, filters and pagination; `useSetQuery` routes through it automatically.
 export function NavTransitionProvider({ children }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -38,11 +32,7 @@ export function NavTransitionProvider({ children }) {
       }
       if (resetPage) params.delete("page");
       const qs = params.toString();
-      /*
-       * `push` the first time the URL gains a query, `replace` after that, so
-       * Back clears the filters once instead of stepping through keystrokes or
-       * leaving the page.
-       */
+      // `push` the first time the URL gains a query, `replace` after, so Back clears filters in one step.
       const hadQuery = searchParams.toString() !== "";
       const navigate = hadQuery || !qs ? router.replace : router.push;
       startTransition(() =>

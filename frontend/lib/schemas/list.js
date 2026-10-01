@@ -1,10 +1,6 @@
 import { z } from "zod";
 
-/**
- * The paging envelope every list endpoint returns. Deliberately NOT optional:
- * a missing `meta` must fail loudly as a shape error (reported by `read()`)
- * rather than silently treating the first page as the whole list.
- */
+// Deliberately NOT optional: a missing `meta` must fail loudly, not pass page one off as the whole list.
 export const listMetaSchema = z.object({
   current_page: z.number(),
   per_page: z.number(),
@@ -17,12 +13,7 @@ export const LIST_PER_PAGE_OPTIONS = [10, 20, 50, 100];
 
 export const EMPTY_LIST_META = { current_page: 1, per_page: 10, total: 0, last_page: 1 };
 
-/**
- * Turn a page's query string into the API's query shape. Takes the serialised
- * string so callers can pass it through React's `cache` (objects defeat the
- * dedupe). `filters` maps the page URL key to the API's `filter[…]` key so shared
- * links stay readable.
- */
+// Takes the serialised string so `cache` can dedupe. `filters` maps page URL keys to `filter[…]` keys.
 export function listQuery(query = "", { filters = {}, sort = true } = {}) {
   const params = new URLSearchParams(query);
   const perPage = LIST_PER_PAGE_OPTIONS.includes(Number(params.get("per_page")))

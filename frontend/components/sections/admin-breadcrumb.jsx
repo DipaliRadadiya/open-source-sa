@@ -14,10 +14,6 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 
-/**
- * The admin panel's trail, at the top of the page content like the server
- * panel's, with a root that is a link.
- */
 export function AdminBreadcrumb() {
   const pathname = usePathname();
   const t = useTranslations("admin");

@@ -2,9 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { NotFoundContent } from "@/components/sections/not-found-content";
 import { getQuickLinks } from "@/lib/navigation/get-quick-links";
 
-// Next resolves unmatched URLs against the root not-found, outside the panel
-// layout, so this page carries its own destinations. notFound() under (app)
-// gets the in-shell version instead.
+// Root not-found renders outside the panel layout, so it carries its own links.
 export async function generateMetadata() {
   const t = await getTranslations("errors.notFound");
   return { title: t("title") };

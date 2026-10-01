@@ -21,10 +21,7 @@ import {
 // The kind-conflict rule lives in lib/applications/worker-kind.js, shared with
 // the kind select so the two never disagree.
 
-/**
- * Command field with a "Use template" dropdown. The API takes a single command
- * string, so a preset just fills in a full, editable command.
- */
+// The API takes one command string, so a preset fills in a full, editable command.
 export function WorkerCommandField({ form, presets, onPick, workers = [] }) {
   const t = useTranslations("applications.workers");
 

@@ -67,12 +67,6 @@ import {
   CloneNextSteps,
 } from "@/components/applications/clone/clone-progress";
 
-/**
- * Duplicate this site to a new domain. The form shares a band with the
- * source→target summary and the submit button; what is and is not copied gets
- * its own column, since password protection not carrying over is a security
- * surprise. Only the form card gets a filled mark.
- */
 export function CloneApplicationPanel({
   application,
   siteType,
@@ -490,10 +484,7 @@ function SiteChip({ name, domain, highlight = false }) {
   );
 }
 
-/**
- * Shown while looking up a remembered clone; the empty form here would invite
- * a second clone of a site already being copied.
- */
+// The empty form here would invite a second clone of a site already being copied.
 function Resuming() {
   const t = useTranslations("applications.clone.progress");
 
@@ -510,10 +501,7 @@ function Resuming() {
   );
 }
 
-/**
- * Will copy / Will not copy, one row per item (no `truncate`, which cut labels
- * mid-word). Not-copied items use foreground text so they don't read as disabled.
- */
+// No `truncate` (it cut labels mid-word). Not-copied items use foreground text so they don't read as disabled.
 function ImpactCard({ siteType, application, sourceProtected, className }) {
   const t = useTranslations("applications.clone.what");
 
@@ -581,10 +569,6 @@ function ImpactList({ ok = false, title, items, warn = null }) {
   );
 }
 
-/**
- * The pre-flight list: one card with a toned mark instead of stacked warning
- * banners. Only items that change what someone does next.
- */
 function BeforeCard({ sourceProtected }) {
   const t = useTranslations("applications.clone");
 
@@ -670,10 +654,7 @@ export function CloneTypeNotSupported({ typeTitle }) {
   );
 }
 
-/**
- * Copies already made from this site, from each application's
- * `cloned_from_application_id`. The date is shown because names are not unique.
- */
+// From each application's `cloned_from_application_id`. Dated because names are not unique.
 function ExistingCopies({ copies }) {
   const t = useTranslations("applications.clone.copies");
 

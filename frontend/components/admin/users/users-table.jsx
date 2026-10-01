@@ -17,9 +17,7 @@ import { UsersCards } from "@/components/admin/users/users-cards";
 
 const MAX_ROLE_BADGES = 2;
 
-/* Cells at module level: flexRender treats a cell function's identity as the
- * component type, so inline cells would remount (losing dialog state) on every
- * render. Per-table values arrive through `table.options.meta`. */
+// Cells at module level: inline cells would remount (losing dialog state) every render.
 
 function NameCell({ row, table }) {
   const t = useTranslations("users");

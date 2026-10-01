@@ -1,23 +1,13 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-/**
- * Slides the sidebar's menu when it changes level (server menu ↔ application
- * menu), as a drill-down.
- *
- * Direction carries the meaning: into an application slides in from the right,
- * back out from the left.
- *
- * Enter-only, deliberately: a cross-fade would keep the outgoing menu mounted,
- * and its `Link`s derive `active` from the live pathname, so it would re-render
- * mid-flight with the new page highlighted.
- */
+// Enter-only on purpose: a cross-fade keeps the old menu mounted, and its `Link`s would
+// re-render mid-flight with the new page highlighted.
 export function SidebarLevelTransition({ level, children, className }) {
   const direction = useLevelDirection(level);
 
-  // The key goes on the INNER element, not on this component: remounting replays
-  // the CSS animation, but remounting the element that holds the direction state
-  // would reset it, and going back would slide the wrong way.
+  // Key the INNER element: remounting this one would reset the direction state and
+  // going back would slide the wrong way.
   return (
     <div
       key={level}
@@ -39,11 +29,7 @@ export function SidebarLevelTransition({ level, children, className }) {
   );
 }
 
-/**
- * Which way navigation just went: into an application, or back out. Tracked from the
- * previous level, not the route, because the sidebar decides what "level" means
- * (including falling back to the server panel for an empty application menu).
- */
+// Tracked from the previous level, not the route: the sidebar decides what "level" means.
 function useLevelDirection(level) {
   const [seen, setSeen] = React.useState({ level, direction: "forward" });
 

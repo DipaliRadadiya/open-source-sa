@@ -1,9 +1,6 @@
 import { z } from "zod";
 
-/**
- * Disk cleaner preview, clean result, schedule and run history. Display the
- * API's `*_human` sizes; use raw bytes only for arithmetic.
- */
+// Display the API's `*_human` sizes; use raw bytes only for arithmetic.
 export const diskSchema = z.object({
   path: z.string(),
   total: z.number(),
@@ -62,11 +59,7 @@ export const cleanerScheduleSchema = z.object({
   notify: z.boolean().optional().default(false),
   last_run_at: z.string().nullable().optional(),
   last_run_at_human: z.string().nullable().optional(),
-  /*
-   * Null while the cleaner is off: the API names no run that will not happen.
-   * `timezone` is the panel's clock, matching the backup target and
-   * deliberately NOT a cron job's. See backup.js for why the two differ.
-   */
+  // Null while the cleaner is off. `timezone` is the panel's clock, deliberately NOT a cron job's (see backup.js).
   next_run_at: z.string().nullable().optional(),
   next_run_at_human: z.string().nullable().optional(),
   timezone: z.string().nullable().optional(),

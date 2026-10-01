@@ -1,10 +1,6 @@
 import { listFiles } from "@/lib/api/files";
 
-/**
- * Whether a 404 from move / copy / extract / compress is about the destination
- * folder (the API's message is the same generic "not found"). Lists the folder
- * only after a 404. Resolves true only when it is confirmed missing.
- */
+// The API's 404 message is the same generic "not found", so list the folder to confirm.
 export async function destinationMissing(appId, error, folder) {
   if (error?.response?.status !== 404 || !folder) return false;
   try {

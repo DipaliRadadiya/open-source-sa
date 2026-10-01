@@ -19,9 +19,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-// Renders one run: a live progress bar, then a success or failure card. The
-// parent owns polling and passes `reconnecting` while the panel restarts
-// (503 / refused), which is normal progress, not an error.
+// `reconnecting` (503 / refused while the panel restarts) is normal progress, not an error.
 function UpdateOutput({ run, defaultOpen = false }) {
   const t = useTranslations("panelUpdate");
 

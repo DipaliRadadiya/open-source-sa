@@ -20,16 +20,10 @@ const POLL_MS = 2000;
 /** Give up after 20 minutes — a job that has not moved by then is stuck. */
 const POLL_LIMIT_MS = 20 * 60 * 1000;
 
-/**
- * Still `pending` after this long, it may never start: the queue can accept
- * and then drop a second clone of the same site.
- */
+/** Still `pending` after this, it may never start: the queue can drop a duplicate clone. */
 const NOT_STARTING_MS = 2 * 60 * 1000;
 
-/**
- * A clone, while it runs and after it lands. Shows the four named steps the
- * backend reports. Not a modal: leaving the page does not abandon the job.
- */
+/** Not a modal: leaving the page does not abandon the job. */
 export function CloneProgress({ clone: initial, sourceApplication, onDone, onAgain, onRetry }) {
   const t = useTranslations("applications.clone.progress");
   const { refresh, pending: refreshing } = useRefresh();
@@ -185,10 +179,7 @@ export function CloneProgress({ clone: initial, sourceApplication, onDone, onAga
   );
 }
 
-/**
- * The stages the backend reports, in order. Mirrors `CloneResource`'s list so
- * numbering matches `step_number`; labels are local because every step needs one.
- */
+/** Mirrors `CloneResource`'s order so numbering matches `step_number`. */
 const STEP_KEYS = ["provisioning", "copying_files", "cloning_database", "starting_process"];
 
 function Completed({ clone, sourceApplication, onAgain }) {

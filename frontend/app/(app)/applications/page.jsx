@@ -46,11 +46,8 @@ export default async function ApplicationsPage({ searchParams }) {
     ? await getDatabaseCounts()
     : { counts: null, known: false };
 
-  /*
-   * Git accounts, only to tell each account-linked git site's provider (the
-   * payload carries no host). Skipped when no row needs it or without the
-   * `git` permission; a failure falls back to the generic git mark.
-   */
+  // Only to tell each account-linked git site's provider (the payload has no host).
+  // A failure falls back to the generic git mark.
   const needsGitAccounts =
     can(permissions, "git", "view") &&
     result.applications?.some(

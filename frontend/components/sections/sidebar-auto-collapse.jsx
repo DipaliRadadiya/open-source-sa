@@ -4,16 +4,8 @@ import { useEffect, useRef } from "react";
 import { useIsTablet } from "@/hooks/use-mobile";
 import { useSidebar } from "@/components/ui/sidebar";
 
-/**
- * Collapses the sidebar to its icon rail on tablet widths, and expands it again
- * on the way back to desktop.
- *
- * Only on the transition, never on every render: inside the range the user may
- * still open it.
- *
- * Renders nothing; it runs inside SidebarProvider without editing the generated
- * primitive.
- */
+// Collapses to the icon rail on tablet widths, only on the transition: inside the range
+// the user may still open it.
 export function SidebarAutoCollapse() {
   const isTablet = useIsTablet();
   const { setOpen } = useSidebar();

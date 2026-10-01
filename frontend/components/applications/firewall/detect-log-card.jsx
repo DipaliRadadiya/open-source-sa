@@ -4,14 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 
-/**
- * What watching mode caught, shown in place.
- *
- * Deliberately does NOT offer "allow requests like this": an exception is a
- * substring tested against URL, query string AND user agent and skips all six
- * checks, so a one-click exception could silently disable the firewall for a
- * whole slice of the site. Same shape as the bot-blocker traffic card.
- */
+// Deliberately no "allow requests like this": an exception skips all six checks for any URL, query
+// or user agent containing it, so one click could silently disable the firewall.
 export async function DetectLogCard({ rows = [], failed = false }) {
   const t = await getTranslations("applications.firewall.detect");
   const format = await getFormatter();

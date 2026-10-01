@@ -6,17 +6,12 @@ import {
   splitRemaining,
 } from "@/lib/settings/reboot-countdown";
 
-/**
- * The live half of the pending-restart banner: "Restarting in 14:32", ticking.
- * `secondsRemaining` is the server's measurement (see
- * lib/settings/reboot-countdown.js). At zero, `onElapsed` fires once and the
- * restart curtain takes over, since this page's server is going down.
- */
+// `secondsRemaining` is the server's measurement. At zero `onElapsed` fires once and
+// the restart curtain takes over.
 export function RebootCountdown({ secondsRemaining, onElapsed }) {
   const t = useTranslations("settings.maintenance.reboot");
-  // Anchored in lazy initializers, the only place the current time may be read
-  // (`Date.now()` in render is impure). The parent keys this component on
-  // `seconds_remaining`, so a new measurement remounts it and re-anchors.
+  // Lazy initializers, since `Date.now()` in render is impure. The parent keys this on
+  // `seconds_remaining`, so a new measurement re-anchors.
   const [deadline] = useState(() => deadlineFrom(secondsRemaining, Date.now()));
   const [now, setNow] = useState(() => Date.now());
 

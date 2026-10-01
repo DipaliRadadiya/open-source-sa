@@ -2,15 +2,8 @@ import { z } from "zod";
 import { serverFetch } from "@/lib/api/server-fetch";
 import { accessLevelSchema, permissionGroupSchema } from "@/lib/schemas/role";
 
-/**
- * GET /admin/permissions — everything the role form needs (admin-only).
- *
- * `permissions` is the flat ordered list; `groups` buckets it by level AND
- * sub-level with localised titles (so same-named keys at different levels stay
- * separate); `accessLevels` lists a grant's states in display order.
- *
- * Distinct from getPermissions(), the caller's own effective grants.
- */
+// `groups` buckets by level AND sub-level, so same-named keys at different levels stay
+// separate. Distinct from getPermissions(), the caller's own effective grants.
 export async function getPermissionCatalog() {
   // The role form MUST NOT open on an empty catalog: it saves every grant it
   // shows, so saving an empty list would strip the role's permissions.

@@ -1,10 +1,7 @@
 import { api } from "@/lib/api/client";
 
-/**
- * Clean the selected categories. Category KEYS only: paths are resolved
- * server-side so a client can never name a path to delete. Synchronous and
- * possibly slow; keep the dialog open until it resolves.
- */
+// Category keys only: paths are resolved server-side so a client can never name one.
+// Synchronous and possibly slow.
 export function cleanDisk(categories) {
   return api.post("/disk-cleaner/clean", { categories });
 }

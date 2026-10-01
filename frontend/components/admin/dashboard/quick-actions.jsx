@@ -4,10 +4,7 @@ import { ArrowUpCircle, Bug, PlugZap, Stethoscope, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
-/**
- * Shortcuts to common admin screens. Links only, never direct actions: e.g.
- * "Update panel" must go through that screen's pre-flight checks and confirmation.
- */
+// Links only, never direct actions: e.g. "Update panel" must go through its pre-flight checks.
 const ACTIONS = [
   { key: "health", icon: Stethoscope, href: "/admin/doctor" },
   { key: "update", icon: ArrowUpCircle, href: "/admin/panel-update" },

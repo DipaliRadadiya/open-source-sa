@@ -1,10 +1,7 @@
 import { z } from "zod";
 import { lifecycleSchema } from "@/lib/schemas/php";
 
-/**
- * Node.js versions. Same shape as PHP, except every version reports its own
- * npm, and the box may carry a `system` Node the panel never touches.
- */
+// Like PHP, except every version reports its own npm and a `system` Node may exist that the panel never touches.
 export const nodeVersionSchema = z.object({
   version: z.string(),
   path: z.string().nullable().optional(),

@@ -3,13 +3,8 @@ import { apiMessage } from "@/lib/api/error-message";
 import { errorTarget } from "@/lib/api/error-target";
 import { genericErrorMessage } from "@/lib/api/generic-error";
 
-/**
- * Show a 422 where the user can act on it.
- *
- * Field errors go next to their field. Errors on fields that were not sent or
- * have no control on screen (see `errorTarget`) would be stored invisibly, so
- * they are shown on the form (`formError`) or as a toast instead.
- */
+// Errors on fields not sent or with no control on screen (see `errorTarget`) would be
+// stored invisibly, so they go on the form (`formError`) or a toast.
 export function handleValidationError(error, form, { formError = false, unrendered = [] } = {}) {
   const errors = error.response?.data?.errors;
 

@@ -21,16 +21,13 @@ import { RuntimeCard } from "@/components/applications/deployment/runtime-card";
 import { DeployHistoryCard } from "@/components/applications/deployment/deploy-history-card";
 import { LoadFailed } from "@/components/data-table/load-failed";
 
-// A deploy sets status to "provisioning" while it runs; poll so steps[] and the
-// commit/timestamp update in place.
+// Poll while a deploy runs ("provisioning") so steps and commit update in place.
 const POLL_MS = 2500;
 const TABS = ["history", "settings", "automation"];
-// Longer than any deploy the backend allows; past it the poll stops and the page
-// re-reads instead.
+// Longer than any deploy the backend allows; past it the poll stops and the page re-reads.
 const DEPLOY_WATCH_LIMIT_MS = 30 * 60 * 1000;
 
-// Matches components/applications/domains/domains-ssl-tabs.jsx: !h-auto overrides
-// shadcn TabsList's fixed height so the py padding applies.
+// `!h-auto` overrides TabsList's fixed height (as in domains-ssl-tabs.jsx).
 const TRIGGER = "!h-auto gap-2 px-4 py-2";
 
 export function DeploymentPanel({
@@ -48,8 +45,7 @@ export function DeploymentPanel({
   const ts = useTranslations("applications.details");
   const router = useRouter();
   const [application, setApplication] = useState(initial);
-  // Held in state so a poll can update it, but a new server render must still win
-  // (e.g. after saving a branch).
+  // In state so a poll can update it; a new server render still wins.
   const [renderedFrom, setRenderedFrom] = useState(initial);
   if (initial !== renderedFrom) {
     setRenderedFrom(initial);
@@ -58,8 +54,7 @@ export function DeploymentPanel({
   const [deploying, setDeploying] = useState(false);
   const searchParams = useSearchParams();
   const [tab, setTabState] = useState(() => (TABS.includes(searchParams.get("tab")) ? searchParams.get("tab") : "history"));
-  // In the URL so a reload or shared link keeps the tab. replaceState, not the
-  // router: a tab change is not a navigation.
+  // In the URL so a reload keeps the tab; replaceState because a tab change is not a navigation.
   const setTab = useCallback((next) => {
     setTabState(next);
     const params = new URLSearchParams(window.location.search);
@@ -67,8 +62,7 @@ export function DeploymentPanel({
     window.history.replaceState(null, "", `?${params.toString()}`);
   }, []);
   const pollRef = useRef(null);
-  // Set when a poll gives up, so the provisioning watch below does not take over
-  // and poll forever.
+  // Set when a poll gives up, so the provisioning watch does not take over and poll forever.
   const gaveUpRef = useRef(false);
   // The failure banner and build log are in different cards; this sees both.
   const historyRef = useRef(null);
@@ -86,10 +80,7 @@ export function DeploymentPanel({
 
   useEffect(() => () => stopPoll(), [stopPoll]);
 
-  /*
-   * Switch tab and open the log in one go. Every TabsContent is `forceMount`, so
-   * the history card's ref is live whichever tab is showing.
-   */
+  // Every TabsContent is `forceMount`, so the history ref is live on any tab.
   const showBuildLog = useCallback((deployment) => {
     setTab("history");
     historyRef.current?.show(deployment);
@@ -142,8 +133,7 @@ export function DeploymentPanel({
         }
         const next = await refresh();
         if (!next) return;
-        // A failed redeploy leaves the site "active" with failed_step set; read that,
-        // not the status, for the verdict.
+        // A failed redeploy leaves the site "active" with failed_step set; read that, not the status.
         if (next.status === "active" || next.status === "failed") {
           stopPoll();
           setDeploying(false);
@@ -158,19 +148,10 @@ export function DeploymentPanel({
     }
   }, [application.id, application.last_deployed_at, refresh, stopPoll, router, t, announce]);
 
-  /*
-   * Watch for deploys this page did not start (a push, another user).
-   *
-   * The history is a server render, so every 5 s (2.5 s while one runs) ask for the
-   * newest deploy and re-read only when it differs from the top row. Paused while
-   * the tab is hidden, to spare the shared rate limit.
-   *
-   * The top row and `deploying` are read through refs so a history re-render does
-   * not restart the timer.
-   */
+  // Watch for deploys this page did not start: re-read the history when the newest deploy differs.
+  // Paused while hidden (shared rate limit); refs keep a history re-render from restarting the timer.
   const topRef = useRef(deployments[0] ?? null);
-  // Kept apart from `topRef`: the history refresh can land after the deploy
-  // finished, and reading "was it running?" off the refreshed row misses the end.
+  // Apart from `topRef`: a refreshed row may already be past the end, so "was it running?" misses it.
   const watchingRef = useRef(deployments[0]?.in_flight ? deployments[0].id : null);
   const deployingRef = useRef(deploying);
   useEffect(() => {
@@ -195,9 +176,8 @@ export function DeploymentPanel({
           const latest = parsed.data.latest;
           const top = topRef.current;
           delay = watchDelay(latest, deployingRef.current);
-          // A deploy this page did not start just ended: announce it as a local one would.
-          // This page's own deploy is announced by its own poll. Decided before
-          // `latestChanged`, whose row a refresh may already have moved past the ending.
+          // A deploy this page did not start just ended (its own are announced by its poll).
+          // Decided before `latestChanged`, whose row a refresh may already have moved past the end.
           if (latest?.in_flight && !deployingRef.current) watchingRef.current = latest.id;
           const finished = Boolean(latest) && latest.id === watchingRef.current && !latest.in_flight;
           if (finished) watchingRef.current = null;
@@ -205,11 +185,9 @@ export function DeploymentPanel({
             if (isNewPush(latest, top) && !deployingRef.current) {
               toast.info(t("history.pushStarted", { branch: latest.branch ?? application.branch ?? "main" }));
             }
-            // Held until the refreshed history replaces it, so one change is not handled
-            // twice.
+            // Held until the refreshed history replaces it, so one change is not handled twice.
             topRef.current = latest;
-            // The Deploy card reads the application and the history reads the server
-            // render; both have changed.
+            // Both the Deploy card (application) and the history (server render) have changed.
             const next = await refresh();
             router.refresh();
             if (finished && next) announce(next);
@@ -239,10 +217,7 @@ export function DeploymentPanel({
     };
   }, [application.id, application.branch, refresh, router, t, announce]);
 
-  /*
-   * Auto-deploy from a push: watch for provisioning so an open page does not sit on
-   * a stale history.
-   */
+  // Auto-deploy from a push: watch provisioning so an open page does not show a stale history.
   useEffect(() => {
     if (deploying || application.status !== "provisioning" || pollRef.current || gaveUpRef.current) return undefined;
 
@@ -265,8 +240,7 @@ export function DeploymentPanel({
 
   return (
     <div className="space-y-6">
-      {/* Outside the tabs: what is deployed and the button that changes it must be
-          visible on every tab. */}
+      {/* Outside the tabs: the deployed state and its button must be visible on every tab. */}
       <DeployCard
         application={application}
         deploying={deploying || application.status === "provisioning" || Boolean(deployments[0]?.in_flight)}

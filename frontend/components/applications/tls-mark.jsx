@@ -1,25 +1,13 @@
 import { ShieldCheck, ShieldOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/**
- * Whether the site is actually served over TLS, read from the scheme of `url`.
- * The server sets `https` only when the certificate is servable and covers the
- * domain; the list payload has no certificate field.
- *
- * Scoped to the primary domain (all `url` describes); per-domain status lives
- * on Domains & SSL.
- */
+// The server sets `https` only when the certificate is servable and covers the
+// primary domain; the list payload has no certificate field.
 export function isServedOverTls(application) {
   return String(application?.url ?? "").startsWith("https://");
 }
 
-/**
- * The padlock next to a domain. Icons and tones match `domains-card.jsx`; a
- * missing certificate is not destructive, since every new site lacks one for
- * its first minutes. An icon, not a badge, since it repeats per row.
- *
- * Renders nothing without a `url`: a provisioning site has no answer yet.
- */
+// A missing certificate is not destructive: every new site lacks one at first.
 export function TlsMark({ application, label, className }) {
   if (!application?.url) return null;
 

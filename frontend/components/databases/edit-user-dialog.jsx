@@ -24,12 +24,8 @@ import {
 } from "@/components/ui/form";
 import { UserFields } from "@/components/databases/user-fields";
 
-/**
- * Rename a user, or change where it may connect from.
- *
- * SQL engines use `RENAME USER`, so grants survive. Mongo drops and recreates
- * the user, so a rename there needs a password and shows a warning.
- */
+// SQL engines use `RENAME USER`, so grants survive. Mongo drops and recreates
+// the user, so a rename there needs a password.
 export function EditUserDialog({ database, user, open, onOpenChange, remoteUsers = true }) {
   const t = useTranslations("databases.users");
   const restart = useRestartConfirm();

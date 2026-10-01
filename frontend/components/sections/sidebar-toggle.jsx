@@ -7,11 +7,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-/**
- * The sidebar toggle with a dynamic tooltip (Expand / Collapse) so it reads as a
- * control. The span wrapper forwards hover to the tooltip (SidebarTrigger does not
- * forward a ref). The tooltip also names the Cmd/Ctrl+B shortcut, per platform.
- */
+// The span forwards hover to the tooltip: SidebarTrigger does not forward a ref.
 export function SidebarToggle() {
   const t = useTranslations("common");
   const { state } = useSidebar();

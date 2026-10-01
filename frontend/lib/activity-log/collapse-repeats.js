@@ -1,8 +1,4 @@
-/**
- * Collapse a run of identical entries (same action, actor and type) into one
- * row carrying a count. Only CONSECUTIVE entries merge, so the feed keeps
- * its order.
- */
+// Only CONSECUTIVE identical entries merge, so the feed keeps its order.
 const sameEvent = (a, b) =>
   a.action === b.action &&
   a.type === b.type &&
@@ -12,11 +8,7 @@ const sameEvent = (a, b) =>
 const identity = (entry) =>
   [entry.type, entry.action, entry.user?.id ?? "", Boolean(entry.is_system)].join("|");
 
-/**
- * `mergeAcross` lists actions that merge per actor even when NOT adjacent
- * (e.g. interleaved logins). Each merged group keeps the position of that
- * actor's most recent entry.
- */
+// `mergeAcross` actions merge per actor even when not adjacent, at that actor's latest position.
 export function collapseRepeats(entries = [], { max = Infinity, mergeAcross = [] } = {}) {
   const groups = [];
   const merged = new Map();

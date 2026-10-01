@@ -1,15 +1,6 @@
-/**
- * The window between pressing "Back up now" and the run appearing in the list.
- *
- * The POST answers 202 with the target; the backup row only exists once a
- * worker picks the job up. So remember the newest id at the click and treat
- * the wait as over once something newer appears.
- */
+// The POST answers 202; the backup row exists only once a worker picks the job up.
 
-/**
- * The highest backup id in a list, or 0 for an empty one. Ids, not timestamps:
- * ids are auto-increment, while `created_at` has only second resolution.
- */
+// Ids, not timestamps: `created_at` has only second resolution.
 export function newestBackupId(backups = []) {
   return backups.reduce((max, backup) => {
     const id = Number(backup?.id);
@@ -17,23 +8,14 @@ export function newestBackupId(backups = []) {
   }, 0);
 }
 
-/**
- * Is a run started here still invisible in the list?
- *
- * `queuedAfter` is the newest id before the click, or null when nothing was
- * started. Checks for any newer id rather than an in-flight status, since a
- * small backup can finish between two polls.
- */
+// `queuedAfter` is the newest id before the click, or null. Any newer id ends
+// the wait, since a small backup can finish between two polls.
 export function isBackupQueued(backups, queuedAfter) {
   if (queuedAfter === null || queuedAfter === undefined) return false;
   return newestBackupId(backups) <= queuedAfter;
 }
 
-/**
- * The same question across every site. `started` maps applicationId to its
- * newest id at the click, so one site's run cannot clear another's wait.
- * Returns the application ids still waiting, as strings.
- */
+// `started` maps applicationId to its newest id at the click. Returns ids as strings.
 export function queuedApplications(backups = [], started = {}) {
   const newest = new Map();
   for (const backup of backups) {

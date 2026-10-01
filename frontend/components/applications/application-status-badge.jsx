@@ -7,11 +7,7 @@ import { PROVISION_STEPS, provisionStepLabel } from "@/lib/applications/provisio
 import { isRedeploying } from "@/lib/applications/settled";
 import { Badge } from "@/components/ui/badge";
 
-/**
- * Single source for how an application's state is shown. Kept out of
- * `applications-table.jsx` because the sidebar's app card uses it on every page,
- * and importing the table would pull the DataTable into the shell bundle.
- */
+/* Kept out of `applications-table.jsx` so the sidebar does not pull DataTable into the shell bundle. */
 // The statuses `filter[status]` accepts, in API order. Fixed rather than derived
 // from the current page's rows, which would only offer statuses on that page.
 export const APPLICATION_STATUSES = ["pending", "provisioning", "active", "failed"];
@@ -23,11 +19,7 @@ export const STATUS_VARIANTS = {
   pending: "muted",
 };
 
-/**
- * Status is split into badge and notes because the card and table place them
- * differently; both read from one definition so they cannot drift. Notes flag
- * an "active" site whose process died or whose last deploy failed.
- */
+// Badge and notes are split because the card and table place them differently.
 export function ApplicationStatusBadge({ application }) {
   const t = useTranslations("applications");
 
@@ -69,11 +61,7 @@ const DOT_TONES = {
   secondary: "bg-muted-foreground/50",
 };
 
-/**
- * Status as a dot and a word, for the sidebar's application card. Reuses
- * `STATUS_VARIANTS` and the `is_disabled` precedence above so the two cannot
- * disagree. A dot keeps the sidebar quiet; trouble still turns it red or amber.
- */
+// Sidebar variant; shares `STATUS_VARIANTS` and the `is_disabled` precedence above.
 export function ApplicationStatusDot({ application, className }) {
   const t = useTranslations("applications");
   const paused = Boolean(application.is_disabled);
@@ -120,9 +108,8 @@ export function ApplicationStatusNotes({ application, className }) {
       {/* Shows where it stopped rather than the bare support id; falls back to the
           reference when the API sends no failed_step. */}
       {reference ? (
-        // Prefer the server's localized cause. The step is shown only when it is one
-        // `provisionStepLabel` can name: its fallback ("Completed a step") reads as
-        // nonsense in this sentence.
+        // Prefer the server's localized cause. Show the step only when `provisionStepLabel`
+        // can name it; its fallback reads as nonsense here.
         application.failed_reason_title ? (
           /* Wrapped: a truncated sentence loses its meaning. */
           <p className="max-w-52 text-xs text-pretty text-destructive">

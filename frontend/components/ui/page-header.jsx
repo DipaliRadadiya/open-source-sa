@@ -1,8 +1,4 @@
-/**
- * The page heading: a title and a one-line subtitle. No back button; the
- * breadcrumb handles navigation. `children` renders under the subtitle (e.g. a
- * status badge or facts row).
- */
+// No back button: the breadcrumb handles navigation.
 export function PageHeader({ title, subtitle, children }) {
   return (
     <div className="space-y-1">

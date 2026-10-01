@@ -70,10 +70,7 @@ export default async function ApplicationFirewallPage({ params }) {
   const detectFailed = detect?.status === "failed" || detect?.status === "locked";
   const detectRows = detect?.log?.lines?.length ? parseDetectLog(detect.log.lines) : [];
 
-  /*
-   * Prefer the API's per-application `waf_supported`. The web server name check
-   * is a fallback for APIs that predate the field.
-   */
+  // `waf_supported` wins; the web server name check is for older APIs.
   const unsupported =
     typeof application.waf_supported === "boolean"
       ? !application.waf_supported

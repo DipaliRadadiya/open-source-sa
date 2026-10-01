@@ -1,11 +1,5 @@
-/**
- * Where to send someone who arrives with no page in mind: the first
- * server-level screen in the permission catalog (the sidebar's source) that
- * they can open, so a restricted role does not land on a refused dashboard.
- *
- * Server level only: an `application` entry's `url` (e.g. `/domains`) needs an
- * application id.
- */
+// First server-level screen the role can open. Server level only: an `application`
+// entry's `url` needs an application id.
 export function landingPath(catalog, fallback = "/dashboard") {
   for (const entry of catalog ?? []) {
     if (entry?.level !== "server") continue;
@@ -16,7 +10,6 @@ export function landingPath(catalog, fallback = "/dashboard") {
     return entry.url;
   }
 
-  // No server-level view at all: the dashboard explains the refusal, whereas
-  // /login would look like a bad password and throwing would crash.
+  // The dashboard explains the refusal; /login would look like a bad password.
   return fallback;
 }

@@ -9,10 +9,7 @@ export const LINE_OPTIONS = [100, 200, 500, 1000, 5000];
 export const MIN_LINES = 1;
 export const MAX_LINES = 5000;
 
-/**
- * A typed line count, or null when it is not a number. Clamped rather than
- * rejected at the ends, as the server does.
- */
+// Null when not a number; clamped at the ends rather than rejected, as the server does.
 export function normalizeLineCount(value) {
   const n = Number.parseInt(String(value ?? "").trim(), 10);
   if (!Number.isFinite(n)) return null;

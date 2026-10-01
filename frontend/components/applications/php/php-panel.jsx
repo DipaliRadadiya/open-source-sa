@@ -81,11 +81,7 @@ const TABS = [
   { key: "advanced", icon: Settings2 },
 ];
 
-/**
- * Which tab owns which field, so a change behind a hidden tab can be marked.
- * A worker preset also writes `pm_type` and the upload limit also raises
- * `post_max_size`; both live on Advanced, so that tab gets the marker.
- */
+// Marks a change behind a hidden tab. Presets and the upload limit also write Advanced fields.
 const TAB_FIELDS = {
   basic: [
     "php_version",
@@ -113,10 +109,6 @@ const TAB_FIELDS = {
   ],
 };
 
-/**
- * One site's PHP settings. Labels are plain language with the php.ini
- * directive secondary, and fields are grouped by the symptom they fix.
- */
 export function PhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", applicationPath = "", timezones = [], canManage }) {
   const t = useTranslations("applications.php");
   const { refreshAndWait } = useRefresh();
@@ -191,9 +183,7 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, b
   const { refreshAndWait } = useRefresh();
   const settings = php.settings;
 
-  // The version is the one setting a pool-less site can still change (it lives
-  // in the vhost). `picked` only overrides the server value until they match,
-  // so a version changed elsewhere is not shown as a stale unsaved edit.
+  // `picked` only overrides the server value until they match, so an external change is not a stale edit.
   const [picked, setPicked] = useState(null);
   const serverVersion = php.php_version ?? "";
   const version = picked !== null && picked !== serverVersion ? picked : serverVersion;
@@ -441,11 +431,8 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
     setSaving(true);
     setRejected(null);
     try {
-      /*
-       * Only changed fields: sending the whole form would turn every inherited
-       * default into a site override. The version is always sent; the API
-       * validates it on every save.
-       */
+      // Only changed fields: sending the whole form would turn every inherited default into an override.
+      // The version is always sent; the API validates it on every save.
       const payload = Object.fromEntries(
         Object.entries(values).filter(([key]) => key === "php_version" || dirtyFields[key]),
       );
@@ -456,11 +443,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
       toast.success(t("saved"));
     } catch (error) {
       const refused = error.response?.data?.errors;
-      /*
-       * `settings` is not a form field: it is the server refusing the whole save
-       * (usually PHP-FPM rejecting the config, rarely a missing pool). Shown by
-       * Save; the refresh brings a pool-less site back in the shared state.
-       */
+      // `settings` is the server refusing the whole save (usually PHP-FPM rejecting the config).
       if (refused?.settings) {
         setRejected(refused.settings[0]);
         toast.error(refused.settings[0]);
@@ -476,10 +459,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
     }
   }
 
-  /**
-   * A cleared field takes the inherited value from the response. Only the
-   * cleared fields are written, so other in-progress edits stay dirty.
-   */
+  // Only the cleared fields are written, so other in-progress edits stay dirty.
   function onReset(fields, next) {
     const settings = next?.settings;
     if (settings) {
@@ -643,9 +623,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
                   name="upload_max_filesize"
                   directive="upload_max_filesize + post_max_size"
                   error={postTooSmall ? t("hints.postTooSmall") : null}
-                  /* Saving also rewrites the web server vhost (nginx returns
-                     413 before PHP sees a large upload). Older sites keep the
-                     old limit until the vhost is next written. */
+                  /* Saving also rewrites the vhost (nginx returns 413 before PHP sees a large upload). */
                   explain={t("hints.upload")}
                 >
                   <ValueSelect
@@ -912,11 +890,7 @@ function ValueSelect({
   const [customPicked, setCustomPicked] = useState(false);
   const custom = !inList || customPicked;
 
-  /*
-   * Read here, not via <FormMessage>: the dropdown branch is outside a
-   * <FormField>, which FormMessage needs. Same translation rule as FormMessage:
-   * Zod emits keys, the API sends finished sentences.
-   */
+  // Not <FormMessage>: the dropdown branch is outside a <FormField>. Zod emits keys, the API sends sentences.
   const raw = form.formState.errors?.[name]?.message;
   // `requiredField` lives in `common`, not `validation`.
   const error = raw
@@ -988,10 +962,7 @@ function ValueSelect({
   );
 }
 
-/**
- * One fact in the status line. A changed field shows as "saved → new" so an
- * unsaved value is not mistaken for one already in effect.
- */
+// A changed field shows "saved → new" so an unsaved value is not mistaken for one in effect.
 function Stat({ icon: Icon, label, value, saved = value, unsavedLabel }) {
   const pending = saved !== value;
   return (
@@ -1012,11 +983,7 @@ function Stat({ icon: Icon, label, value, saved = value, unsavedLabel }) {
   );
 }
 
-/**
- * Offers a dedicated PHP pool to a site on the shared pool. One-way only: the
- * API refuses going back to shared (405), since the shared pool lets one site
- * read every other site's files.
- */
+// One-way: the API refuses going back to shared (405), since the shared pool lets one site read every other site's files.
 function IsolationCard({ php, canManage, busy, onIsolate }) {
   const t = useTranslations("applications.php.isolation");
 
@@ -1162,10 +1129,7 @@ function Stack({ label, name, directive, error, warning, explain, children }) {
 /** What the per-field Reset needs, without threading props through each field. */
 const OverrideContext = createContext(null);
 
-/*
- * `explain` is the ⓘ beside the label, the only place a field is explained.
- * The directive is printed beside the label, so the hint never restates it.
- */
+// `explain` is the only place a field is explained; the hint never restates the directive.
 function Label({ label, name, directive, explain }) {
   return (
     <div className="flex min-h-5 items-center justify-between gap-2">
@@ -1187,11 +1151,7 @@ function Label({ label, name, directive, explain }) {
   );
 }
 
-/**
- * Clears a site override; its presence marks the field as overridden.
- * Saves immediately: the API returns effective values only, so the inherited
- * value is known only from the reset response.
- */
+// Saves immediately: the API returns effective values only, so the inherited value comes from the reset response.
 function ResetOverride({ name }) {
   const context = useContext(OverrideContext);
   const t = useTranslations("applications.php");
@@ -1231,19 +1191,12 @@ function ResetOverride({ name }) {
   );
 }
 
-/**
- * Controls that own more than one directive. The upload control writes both
- * sizes, so its Reset must clear both or a stale `post_max_size` breaks uploads.
- */
+// The upload control writes both sizes, so its Reset must clear both or a stale `post_max_size` breaks uploads.
 const RESET_FIELDS = {
   upload_max_filesize: ["upload_max_filesize", "post_max_size"],
 };
 
-/**
- * Directives `SavePhpSettingsRequest` marks `nullable`: null clears the
- * override. Keep in step with the backend; anything else 422s.
- * `open_basedir_enabled` is excluded on purpose: a plain boolean with no override.
- */
+// `SavePhpSettingsRequest` `nullable` directives (null clears the override). Keep in step with the backend; anything else 422s.
 const RESETTABLE = new Set([
   "memory_limit",
   "upload_max_filesize",
@@ -1357,11 +1310,7 @@ function splitPaths(value) {
     .filter(Boolean);
 }
 
-/**
- * open_basedir: the saved paths, the live value, and whether they agree (see
- * `open_basedir_live` in the schema). Paths the backend always prepends are
- * fixed chips, not textarea content: deleting one would return on save.
- */
+// Paths the backend always prepends are fixed chips: deleting one from the textarea would return on save.
 function OpenBasedir({ form, php, disabled }) {
   const t = useTranslations("applications.php");
   const tb = useTranslations("applications.php.basedir");
@@ -1382,11 +1331,7 @@ function OpenBasedir({ form, php, disabled }) {
     return a.length === b.length && [...a].sort().join(":") === [...b].sort().join(":");
   })();
 
-  /**
-   * Strictly "live differs from saved". Deliberately not tied to
-   * `php.managed === false` (hand-edited pools have their own banner). Only
-   * when enabled (`effective` is null when off) and never while `live` is unknown.
-   */
+  // Strictly "live differs from saved", deliberately not tied to `php.managed`. Never while `live` is unknown.
   const disagrees = enabled && !unknown && !sameAsSaved;
 
   return (
@@ -1499,10 +1444,7 @@ function PathList({ paths, label, hint }) {
   );
 }
 
-/**
- * disable_functions as removable chips plus an add box. The form value stays
- * the comma-joined string the API takes.
- */
+// The form value stays the comma-joined string the API takes.
 function BlockedFunctions({ form, php, disabled }) {
   const t = useTranslations("applications.php");
   const tb = useTranslations("applications.php.blocked");

@@ -10,23 +10,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-/**
- * Remove an application's backup schedule.
- *
- * The API refuses while backups exist unless they are deleted too, so the
- * checkbox is required when there are any; keeping them means pausing.
- * `count` is null when the history read failed: no number is claimed then.
- */
+// The API refuses while backups exist unless they are deleted too; keeping them means
+// pausing. `count` is null when the history read failed.
 export function TurnOffBackupsDialog({ open, onOpenChange, application, target, count, destinationNames = [] }) {
   const t = useTranslations("backups.application.turnOff");
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [savingPause, setSavingPause] = useState(false);
   const [deleteBackups, setDeleteBackups] = useState(false);
-  /*
-   * Stays open until the page behind has re-read, so the old card and its
-   * Turn off button are not left on screen after success.
-   */
+  // Stays open until the page has re-read, so the stale card is not left on screen.
   const [refreshing, startRefresh] = useTransition();
   const doneMessage = useRef(null);
   const [action, setAction] = useState(null);
@@ -65,10 +57,8 @@ export function TurnOffBackupsDialog({ open, onOpenChange, application, target, 
     }
   }
 
-  /*
-   * Sends the target's own values with `enabled: false`, as the settings
-   * switch does. Retention is unchanged: lowering it deletes backups on save.
-   */
+  // Sends the target's own values with `enabled: false`. Never lower retention here:
+  // that deletes backups on save.
   async function pause() {
     setAction("pause");
     setSavingPause(true);

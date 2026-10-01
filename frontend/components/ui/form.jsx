@@ -47,8 +47,7 @@ function useFormField() {
   }
 }
 
-// Carries the label so FormMessage can say "The Name field is required.".
-// Derived from the direct FormLabel child; refs cannot be written during render.
+// Label for "The Name field is required."; derived from the FormLabel child (refs cannot be written during render).
 const FormItemContext = React.createContext({ label: null })
 
 function formLabelText(children) {
@@ -79,9 +78,7 @@ function FormItem({ className, children, ...props }) {
   )
 }
 
-// Exported for forms that use a plain <Label> outside react-hook-form.
-// No tab stop on purpose: Radix Dialog would auto-focus it and open the
-// tooltip when a modal first renders (radix-ui#1949).
+// No tab stop on purpose: Radix Dialog would auto-focus it and open the tooltip (radix-ui#1949).
 function RequiredMark() {
   const t = useTranslations("common")
   return (
@@ -98,11 +95,7 @@ function RequiredMark() {
   )
 }
 
-/**
- * `required` adds the shared asterisk. `hint` is forwarded to Label, which owns
- * the "?" explanation and renders it after the asterisk. Use `hint` only on
- * technical fields.
- */
+// Use `hint` only on technical fields.
 function FormLabel({ className, required, hint, children, ...props }) {
   const { error, formItemId } = useFormField()
 
@@ -157,12 +150,9 @@ function FormMessage({ className, field, ...props }) {
   const tc = useTranslations("common")
   const { label: detectedLabel } = React.useContext(FormItemContext)
 
-  // Zod messages are validation keys and get translated; anything else (e.g.
-  // an already localised backend error) renders as-is. Explicit children win,
-  // for forms whose keys live in another namespace.
+  // Zod messages are keys and get translated; anything else renders as-is. Explicit children win.
   const raw = props.children ?? (error ? String(error?.message ?? "") : null)
-  // "requiredField" means the field was left empty. Priority: explicit `field`
-  // prop > auto-detected label from FormLabel > generic message.
+  // Explicit `field` prop > label detected from FormLabel > generic message.
   const label = field ?? detectedLabel ?? null
   const body =
     typeof raw === "string" && raw

@@ -2,14 +2,8 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
-/**
- * How long this version is still getting fixes. Shared by PHP (`active |
- * security | eol`) and Node (`current | lts | maintenance | eol`): tone is
- * mapped here, wording comes from the caller's namespace.
- *
- * Absent data shows nothing rather than "unknown": firewalled servers never
- * reach the upstream schedule.
- */
+// Shared by PHP and Node: tone is mapped here, wording comes from the caller.
+// Absent data shows nothing: firewalled servers never reach the upstream schedule.
 const TONE = {
   active: "success",
   current: "success",

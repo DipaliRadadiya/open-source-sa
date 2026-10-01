@@ -5,11 +5,7 @@ import { useTranslations } from "next-intl"
 import { cn } from "@/lib/utils"
 import { InfoHint } from "@/components/ui/info-hint"
 
-/**
- * `hint` explains a technical field behind a "?". Lives here (not only on
- * FormLabel) so plain-Label dialogs get the same control. It is a Popover
- * because Radix tooltips never open on touch.
- */
+// A Popover, not a tooltip: Radix tooltips never open on touch.
 function Label({
   className,
   hint,
@@ -41,8 +37,5 @@ function LabelHint({ children }) {
   )
 }
 
-/*
- * LabelHint is exported for labels that must place the ⓘ themselves (e.g.
- * beside a php.ini directive so it wraps with it).
- */
+/* LabelHint is for labels that must place the ⓘ themselves. */
 export { Label, LabelHint }

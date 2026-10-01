@@ -17,11 +17,8 @@ export function permKey(level, name) {
   return `${level}:${name}`;
 }
 
-/**
- * Two checkboxes over one stored access level (`none`, `view` or `manage`).
- * Manage implies View: ticking Manage ticks View and clearing View clears
- * Manage, so no state the server would rewrite is reachable.
- */
+// Two checkboxes over one access level (`none`/`view`/`manage`). Manage implies View,
+// so no state the server would rewrite is reachable.
 function viewOf(access) {
   return access === ACCESS_VIEW || access === ACCESS_MANAGE;
 }
@@ -88,9 +85,8 @@ export function PermissionMatrix({ groups = [], value, onChange }) {
     onChange({ ...value, ...updates });
   }
 
-  // `t.has()`, not a comparison against the key: next-intl returns the full key
-  // path for a missing key. Permission names come from the API, so new ones may
-  // have no copy yet.
+  // `t.has()`: next-intl returns the key path for a missing key, and permission names
+  // come from the API, so new ones may have no copy yet.
   const permDesc = (name) => {
     const key = `permDesc.${name}`;
     return t.has(key) ? t(key) : "";

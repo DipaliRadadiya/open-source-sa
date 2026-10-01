@@ -1,30 +1,18 @@
 import { noAnswerMessage, rateLimitedMessage } from "./generic-error.js";
 
-// Laravel's own untranslated text for a throttled or crashed request; the
-// caller's fallback says more.
+// Laravel's untranslated text for a throttled or crashed request; the fallback says more.
 const FRAMEWORK_RATE_LIMIT = /^too many (attempts|requests)\.?$/i;
 const FRAMEWORK_SERVER_ERROR = /^server error\.?$/i;
 
-/**
- * A write that never got a response. Reads are left to their own fallback —
- * "could not be read" is simply true when nothing came back.
- */
+// Reads are left to their own fallback: "could not be read" is true when nothing came back.
 export function isUnansweredWrite(error) {
   if (!error?.isAxiosError || error.response || error.code === "ERR_CANCELED") return false;
   const method = String(error.config?.method ?? "get").toLowerCase();
   return !["get", "head", "options"].includes(method);
 }
 
-/**
- * The message to show when a request fails.
- *
- * Prefers the API's sentence, but ignores key-shaped strings such as
- * `errors/php.operation_failed` (no spaces, slashes/dots) in favour of `fallback`.
- *
- * Appends the API's `reference` (` · ref`) so it can be quoted to support. Pass
- * `{ reference: false }` where the caller renders it separately
- * (e.g. `showActionError`).
- */
+// Ignores key-shaped strings (`errors/php.operation_failed`) in favour of `fallback`.
+// Appends ` · ref`; pass `{ reference: false }` where the caller renders it separately.
 export function apiMessage(error, fallback, { reference: withReference = true } = {}) {
   if (isUnansweredWrite(error)) return noAnswerMessage();
 

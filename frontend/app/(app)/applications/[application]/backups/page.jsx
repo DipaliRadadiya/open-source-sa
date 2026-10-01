@@ -54,8 +54,7 @@ export default async function ApplicationBackupsPage({ params }) {
   const canManageDatabases = can(permissions, "database", "manage");
   const settled = isSettled(application);
 
-  // A site still provisioning has nothing to back up, so nothing is fetched.
-  // `meta.total` is the whole history; the list itself is capped at five.
+  // A provisioning site has nothing to back up. `meta.total` is the whole history; the list is capped at five.
   // `backupsFailed` keeps "could not ask" distinct from "nothing has run".
   const [{ target }, { destinations }, { backups, meta, failed: backupsFailed, status: backupsStatus }, activeRestore, databases, siteDbs, spareDbs, engineList, siteTypes, { options: backupOptions }] = await Promise.all([
     settled ? getBackupTarget(id) : Promise.resolve({ target: null }),

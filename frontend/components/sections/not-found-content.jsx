@@ -7,12 +7,7 @@ import { ArrowLeft, ArrowRight, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NavIcon } from "@/components/nav-icon";
 
-/**
- * Shared 404 body for the root `not-found` (outside the panel layout, no sidebar)
- * and the panel's own (inside the shell).
- * Two columns: the message, and places to go. `links` is already permission-
- * filtered by the caller.
- */
+// Shared by the root `not-found` and the panel's own. `links` is already permission-filtered.
 export function NotFoundContent({ links = [] }) {
   const t = useTranslations("errors.notFound");
   const router = useRouter();

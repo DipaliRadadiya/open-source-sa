@@ -24,10 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-/**
- * Replaces the token. The API verifies the new token before replacing, so a
- * rejected one leaves the working credential in place; the dialog says so.
- */
+// The API verifies the new token first, so a rejected one leaves the working credential in place.
 export function ReplaceTokenDialog({ account, open, onOpenChange }) {
   const t = useTranslations("git.replace");
   // Reuses the connect form's per-provider token strings.

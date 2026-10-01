@@ -31,10 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-/**
- * @param certificate the site's certificate, or null. Only an active one
- *   matters: a pending or failed one is not serving anything.
- */
+// Only an active certificate matters: a pending or failed one serves nothing.
 export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, certificate = null }) {
   const t = useTranslations("applications.domains");
   const tForm = useTranslations("applications.form");
@@ -207,9 +204,7 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
           </>
         ) : null}
 
-        {/* A name does nothing until its DNS points here. On a secured site the
-            neutral text is used, since `dnsNote` promises HTTPS "can be issued"
-            and the notice below covers the certificate. */}
+        {/* On a secured site the neutral text is used: `dnsNote` promises HTTPS "can be issued". */}
         <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
           <Info className="size-3.5 shrink-0" />
           {serverIp ? (
@@ -225,9 +220,7 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
           )}
         </div>
 
-        {/* On an HTTPS site the new name joins the TLS server block, so it
-            answers on 443 with a certificate that does not cover it and the
-            browser refuses the page. */}
+        {/* On HTTPS the new name answers on 443 with a certificate that does not cover it. */}
         {active ? (
           <Caution size="md">
             <p>

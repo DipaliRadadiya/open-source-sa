@@ -33,10 +33,7 @@ import { WorkerCommandField } from "@/components/applications/workers/worker-com
 import { WorkerKindField } from "@/components/applications/workers/worker-kind-field";
 import { useWorkerSite } from "@/components/applications/workers/worker-site-context";
 
-/**
- * Presets prefill name and command as an editable starting point. Advanced
- * fields sit behind a disclosure.
- */
+// Presets prefill name and command as an editable starting point.
 export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], workers = [], seed, siteUser = null }) {
   const t = useTranslations("applications.workers");
   const { pending: refreshing, refreshThen } = useRefresh();

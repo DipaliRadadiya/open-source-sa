@@ -22,10 +22,7 @@ import { EditDialog } from "@/components/integrations/git/edit-dialog";
 import { ReplaceTokenDialog } from "@/components/integrations/git/replace-token-dialog";
 import { DisconnectDialog } from "@/components/integrations/git/disconnect-dialog";
 
-/**
- * Connected accounts and their token health. Health is fetched in the browser
- * because it calls the providers live; one slow provider must not block the page.
- */
+// Health is fetched in the browser: it calls providers live, and one slow provider must not block the page.
 export function AccountsCard({ accounts = [], providers = [], canManage, providersFailed }) {
   const t = useTranslations("git");
   const { name: brand } = useBranding();

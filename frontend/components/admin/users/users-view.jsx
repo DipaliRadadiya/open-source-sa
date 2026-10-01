@@ -10,11 +10,7 @@ export function useCreateUser() {
   return useContext(CreateUserContext);
 }
 
-/**
- * Client shell for the users list: shares one transition across URL-driven
- * controls (NavTransitionProvider) and hosts the create-user dialog so both
- * the toolbar and the empty state can open it.
- */
+// Hosts the create-user dialog so both the toolbar and the empty state can open it.
 export function UsersView({ roles, rolesFailed = false, children }) {
   const [createOpen, setCreateOpen] = useState(false);
 

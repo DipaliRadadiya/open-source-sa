@@ -9,14 +9,7 @@ import { Caution } from "@/components/ui/caution";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { GoogleDriveRedirectUri } from "@/components/integrations/storage/google-drive-redirect-uri";
 
-/**
- * Numbered steps for getting a Google client ID and secret, each linking to the
- * exact Console page. The steps that fail silently later (Drive API disabled,
- * consent screen left in "Testing", redirect URI not registered) are called out.
- *
- * `defaultOpen`: open when adding a destination, closed when editing (the
- * reader already has a client).
- */
+// `defaultOpen`: open when adding a destination, closed when editing.
 export function GoogleDriveSetup({ redirectUri, defaultOpen = false }) {
   const t = useTranslations("storage.oauth.setup");
   const [open, setOpen] = useState(defaultOpen);
@@ -104,9 +97,6 @@ function Step({ n, title, children }) {
   );
 }
 
-/**
- * A link to the exact Console page, not the Console front door.
- */
 function ConsoleLink({ href, label }) {
   return (
     <a

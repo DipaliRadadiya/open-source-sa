@@ -12,13 +12,7 @@ import { apiMessage } from "@/lib/api/error-message";
 
 const STORAGE_PAGE = "/integrations/storage";
 
-/**
- * The card this page is, in each of its three states.
- *
- * Presentational and exported so every state can be rendered (the connected
- * state otherwise needs a live single-use Google code). A centred card like the
- * 404, with the heading owned by the state.
- */
+// Exported so every state can be rendered; the connected state otherwise needs a live single-use Google code.
 export function CallbackCard({ status, message }) {
   const t = useTranslations("storage.oauth");
 
@@ -78,24 +72,15 @@ export function CallbackCard({ status, message }) {
   );
 }
 
-/**
- * Turns Google's redirect into an authenticated request, once.
- *
- * The code and sealed `state` are single-use, and strict mode runs effects
- * twice, so a second exchange would paint a failure over a success. The ref is
- * set before the await, so two runs in the same tick cannot both pass.
- */
+// The code and `state` are single-use and strict mode runs effects twice; the ref is set
+// before the await so a second exchange cannot paint a failure over a success.
 export function GoogleDriveCallback({ code, state, deniedError }) {
   const t = useTranslations("storage.oauth");
   const router = useRouter();
   const [result, setResult] = useState(null);
   const started = useRef(false);
 
-  /*
-   * Derived during render: these are pure functions of the props, and setState
-   * from the effect would be a cascading render the lint rule rejects. Google
-   * signals refusal with `error`, so "cancelled" is told apart from "broke".
-   */
+  // Derived during render: setState from the effect is a cascading render the lint rule rejects.
   const blocked = deniedError
     ? deniedError === "access_denied"
       ? t("denied")

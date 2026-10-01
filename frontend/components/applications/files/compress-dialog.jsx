@@ -30,11 +30,7 @@ export function CompressDialog({ appId, file, existingPaths, open, onOpenChange,
       successMessage={() => t("compressDialog.done", { name: file.name })}
       failureMessage={t("compressDialog.failed")}
       onSuccess={onSuccess}
-      /*
-       * The backend resolves the whole relative path, so the archive can go anywhere.
-       * Naming the destination folder live makes that visible; `dirname` because the
-       * file name is already in the field.
-       */
+      /* The backend resolves the whole relative path, so show the destination folder. */
       destinationLabel={t("compressDialog.savesTo")}
       destinationOf={dirname}
       warning={t("compressDialog.folderMustExist")}

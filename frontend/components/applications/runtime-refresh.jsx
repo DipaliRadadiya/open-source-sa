@@ -5,16 +5,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useRefresh } from "@/hooks/use-refresh";
 
-/**
- * Re-read the server's runtime versions without losing the form's values.
- *
- * `useRefresh` re-runs the page's server component rather than fetching here,
- * keeping one source for the versions and also re-running `withAvailability`,
- * so site type cards update in the same press.
- *
- * @param runtime  "PHP" | "Node.js" — a technical token, not translated.
- * @param versions the full installed list for this runtime, as rendered.
- */
+// Re-runs the page's server component so versions keep one source and site type cards
+// update too. `runtime` is a technical token, not translated.
 export function RuntimeRefresh({ runtime, versions }) {
   const t = useTranslations("applications");
   const { pending, refresh } = useRefresh();

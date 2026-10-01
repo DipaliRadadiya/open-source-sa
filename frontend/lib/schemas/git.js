@@ -1,14 +1,8 @@
 import { z } from "zod";
 
-/**
- * Connected git provider accounts. The token is write-only at the API, so it
- * never appears in these shapes.
- */
+// The token is write-only at the API, so it never appears in these shapes.
 
-/**
- * One input on the connect form, described by the backend. Fields differ per
- * provider, so the form renders from this and new providers need no frontend change.
- */
+// Fields differ per provider; the form renders from this, so new providers need no frontend change.
 export const providerFieldSchema = z.object({
   name: z.string(),
   label: z.string(),
@@ -34,8 +28,7 @@ export const gitAccountSchema = z.object({
   provider: z.string(),
   provider_title: z.string(),
   label: z.string(),
-  // Fetched from the provider during verification: the GitHub/GitLab username
-  // or the Bitbucket workspace slug.
+  // From the provider: the GitHub/GitLab username or the Bitbucket workspace slug.
   identifier: z.string().nullish(),
   host: z.string().nullish(),
   workspace: z.string().nullish(),
@@ -50,10 +43,7 @@ export const gitAccountsResponseSchema = z.object({
   git_accounts: z.array(gitAccountSchema).default([]),
 });
 
-/**
- * Live token health, one row per account. `unknown` means the provider could
- * not be reached; never tell the user to act on it.
- */
+// `unknown` means the provider could not be reached; never tell the user to act on it.
 export const gitStatusSchema = z.object({
   id: z.number(),
   label: z.string().nullish(),
@@ -78,10 +68,7 @@ export const labelSchema = z
   .min(1, "requiredField")
   .max(60, "tooLong");
 
-/**
- * The connect form's shape, built from the chosen provider's fields so
- * provider-specific keys are not stripped by Zod.
- */
+// Built from the provider's fields so provider-specific keys are not stripped.
 export function connectFormSchema(provider) {
   const shape = { label: labelSchema };
 
@@ -98,9 +85,6 @@ export const replaceTokenSchema = z.object({
   token: z.string().trim().min(1, "requiredField"),
 });
 
-/**
- * One repository the connected account can see, from "Test repositories".
- */
 export const repositorySchema = z.object({
   full_name: z.string(),
   name: z.string(),

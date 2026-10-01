@@ -9,10 +9,7 @@ import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
 
 export const dynamic = "force-dynamic";
 
-/**
- * Every restore this server has run. No permission check of its own: the
- * layout already gates the section on `backup,view`.
- */
+// No permission check here: the layout gates the section on `backup,view`.
 export default async function RestoresPage({ searchParams }) {
   const sp = await searchParams;
   const [{ restores, meta, failed, status, failure, message }, { applications }, t] = await Promise.all([
@@ -33,8 +30,7 @@ export default async function RestoresPage({ searchParams }) {
     <NavTransitionProvider>
       <div className="space-y-4">
         <RestoresList restores={restores} applications={applications} hasFilters={hasFilters} />
-        {/* Not gated on row count: the selector hides itself when the list is
-            too short to paginate (see data-table-pagination.jsx). */}
+        {/* Not gated on row count: the selector hides itself when too short to paginate. */}
         <DataTablePagination meta={meta} />
       </div>
     </NavTransitionProvider>

@@ -3,11 +3,7 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getServices } from "@/lib/services/get-services";
 
-/**
- * "Is anything down?" for the dashboard: returns the units that are not active.
- * Null when services cannot be read, so the caller renders nothing rather
- * than an unsupported "all running".
- */
+// Null when services cannot be read, so the caller does not claim "all running".
 export const getServiceHealth = cache(async function getServiceHealth() {
   const permissions = await getPermissions();
   if (!can(permissions, "service", "view")) return null;

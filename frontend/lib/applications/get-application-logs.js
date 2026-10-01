@@ -22,10 +22,7 @@ export async function getApplicationLogs(id) {
   }
 }
 
-/**
- * First screen of one source, rendered server-side so the console paints with
- * content. 403/404 are states the UI explains, not failures.
- */
+/** Rendered server-side so the console paints with content. 403/404 are states, not failures. */
 export async function getApplicationLog(id, key, { lines = 200 } = {}) {
   try {
     const res = await serverFetch(

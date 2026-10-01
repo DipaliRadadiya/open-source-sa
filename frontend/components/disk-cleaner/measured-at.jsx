@@ -3,10 +3,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { RotateCw } from "lucide-react";
 
-/**
- * How old these sizes are, with a re-measure button. Shown instead of polling
- * because the scan walks the filesystem.
- */
+// A re-measure button instead of polling, because the scan walks the filesystem.
 export function MeasuredAt({ at }) {
   const t = useTranslations("diskCleaner");
   const router = useRouter();

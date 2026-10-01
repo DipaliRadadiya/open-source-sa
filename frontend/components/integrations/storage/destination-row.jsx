@@ -25,18 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-/**
- * One storage destination: name first, then bucket and prefix (destinations
- * often differ only by prefix). On a phone everything stacks under one indent.
- *
- * The stored test verdict is shown with its age: the API persists it and
- * clears it when credentials, endpoint, region or bucket change.
- */
-/**
- * One sentence per failure category the API can report. Unknown categories
- * fall back to the generic failure, not "unreachable", since a newer category
- * (e.g. host-key mismatch) is not necessarily a network fault.
- */
+// Unknown categories fall back to the generic failure: a newer one is not necessarily a network fault.
 const FAILURE_KEYS = {
   invalid_credentials: "failedCredentials",
   drive_personal: "failedDrivePersonal",
@@ -68,11 +57,7 @@ export function DestinationRow({
   const { location, address } = describeDestination(destination);
   const isS3 = destination.provider === "s3";
 
-  /*
-   * A Drive destination exists before access is approved; it needs a Connect
-   * button on the row. Read from `config.connected`, not the failed-test
-   * category, which the backend currently reports incorrectly for this case.
-   */
+  // Read `config.connected`, not the failed-test category, which the backend reports incorrectly here.
   const needsConnect =
     destination.provider === "google_drive_oauth" && destination.config?.connected === false;
 
@@ -252,10 +237,7 @@ export function DestinationRow({
   );
 }
 
-/**
- * The stored result of the last probe, shown only when there is no fresh one.
- * `never_tested` is stated explicitly rather than left blank.
- */
+// Shown only when there is no fresh probe result.
 function StoredVerdict({ destination, canManage, onReplace }) {
   const t = useTranslations("storage");
   const { status, last_test_success: success, last_tested_at_human: when } = destination;
@@ -282,9 +264,7 @@ function StoredVerdict({ destination, canManage, onReplace }) {
     <div className="space-y-1.5 pt-0.5">
       <p className="flex items-start gap-1.5 text-xs text-destructive">
         <TriangleAlert className="mt-0.5 size-3 shrink-0" />
-        {/* Branches on the stable category, never on a message (raw provider
-            text is not sent or translatable). Unknown categories fall back to
-            the generic failure. */}
+        {/* Branches on the stable category, never on a message (provider text is not translatable). */}
         <span>{t(`row.${FAILURE_KEYS[destination.last_test_error] ?? "failed"}`, { when: when ?? "" })}</span>
       </p>
       {destination.last_test_error === "invalid_credentials" && canManage ? (

@@ -1,8 +1,4 @@
-/**
- * Application type logos, keyed on the API's stable `name` (not the translated
- * title or the generic `icon`). Filenames are explicit, not derived, so an
- * unknown type gets the fallback icon rather than a broken image.
- */
+// Keyed on the API's stable `name`. Explicit filenames, so an unknown type gets the fallback icon.
 const LOGOS = {
   wordpress: "wordpress.svg",
   nextcloud: "nextcloud.svg",

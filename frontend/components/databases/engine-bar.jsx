@@ -22,26 +22,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-/**
- * EngineBar stays mounted while any engine is reachable, so it owns the whole
- * lifecycle of an additional engine install: closing the confirmation must not
- * hide the only evidence that work was queued.
- */
-/**
- * A logo, plus the name when the logo does not contain one (PostgreSQL's mark
- * is the elephant alone). Its square logo's own `size` is overridden here so
- * it matches the wordmarks' height.
- */
+// EngineBar owns the install lifecycle: closing the confirmation must not hide queued work.
+// Adds the name when the logo lacks one (PostgreSQL's elephant); `size` matches wordmark height.
 function EngineMark({ engine, status, t }) {
   const name = t(`engines.${engine}`);
   const wordmark = engineLogo(engine)?.wordmark;
   return (
     <>
       <EngineLogo engine={engine} className="!h-4 w-auto max-w-16" />
-      {/*
-        The accessible name is assembled once: logos are `aria-hidden`, and
-        printing the name plus sr-only text would read "PostgreSQL PostgreSQL".
-      */}
+      {/* One accessible name: logos are `aria-hidden`, so the name is not read twice. */}
       {wordmark ? (
         <span className="sr-only">{status ? `${name} · ${status}` : name}</span>
       ) : (
@@ -97,10 +86,7 @@ export function EngineBar({ engines = [], canManage, summary }) {
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-e1 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-      {/*
-        One tile per engine with its logo. A green dot for the normal case;
-        installing and failed keep their words so they stand out.
-      */}
+      {/* Installing and failed keep their words so they stand out. */}
       <div className="flex flex-wrap items-center gap-2">
         {running.map((engine) => (
           <span

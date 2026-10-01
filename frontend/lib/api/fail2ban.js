@@ -4,21 +4,13 @@ export function getFail2ban({ signal } = {}) {
   return api.get("/fail2ban", { signal });
 }
 
-/**
- * Queued: returns 202 and the caller polls `GET /fail2ban` until `installed`
- * flips. The install enables no jails.
- */
+// 202, queued: poll `GET /fail2ban` until `installed` flips. Enables no jails.
 export function installFail2ban() {
   return api.post("/fail2ban/install");
 }
 
-/**
- * Settings, ignore list and jail toggles in one call (one file rewritten
- * whole). Omitted jails keep their current state.
- *
- * `acknowledged` is only needed to enable a lockout-risk jail without the
- * caller's own IP on the ignore list.
- */
+// One file rewritten whole; omitted jails keep their state.
+// `acknowledged` is needed to enable a lockout-risk jail without the caller's IP on the ignore list.
 export function updateFail2ban(payload) {
   return api.put("/fail2ban", payload);
 }

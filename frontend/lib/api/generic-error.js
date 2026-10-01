@@ -1,8 +1,5 @@
-/**
- * Last-resort error sentences in the reader's language, for plain functions
- * (e.g. `handleValidationError`) that cannot call `useTranslations`. The app
- * shell hands the translated strings over once, on mount.
- */
+// Error sentences for plain functions that cannot call `useTranslations`; the app
+// shell hands the translated strings over once, on mount.
 let message = "Something went wrong";
 
 export function setGenericErrorMessage(next) {
@@ -25,10 +22,7 @@ export function rateLimitedMessage() {
   return rateLimited;
 }
 
-/**
- * A write that got no answer at all (dropped connection, timeout). The server
- * may still have done it, so the caller's "could not ..." fallback is not used.
- */
+/** No answer at all: the server may still have done it, so no "could not ..." fallback. */
 let noAnswer =
   "No answer from the server. It may or may not have happened — reload the page to see where it stands.";
 

@@ -45,10 +45,7 @@ const TONE = {
   queued: { icon: Loader2, badge: "muted", dot: "text-muted-foreground", spin: true },
 };
 
-/**
- * Every deploy this site has run. The API sends the build output only on the
- * detail call, so a row opens it rather than the list carrying every log.
- */
+// Build output is only on the detail call, so a row opens it.
 export function DeployHistoryCard({ ref, applicationId, deployments, canManage }) {
   const t = useTranslations("applications.deployment.history");
   const { refreshAndWait } = useRefresh();
@@ -102,9 +99,7 @@ export function DeployHistoryCard({ ref, applicationId, deployments, canManage }
     };
   }, [applicationId, openId, openRunning]);
 
-  // Lets the Deploy card's failure banner open a build log here. Imperative
-  // because the trigger is a click; routing it through state would mean opening a
-  // dialog from an effect.
+  // Lets the Deploy card's failure banner open a build log here without an effect.
   useImperativeHandle(ref, () => ({ show }), [show]);
 
   async function redeploy(deployment) {

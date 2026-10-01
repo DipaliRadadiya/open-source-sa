@@ -12,13 +12,8 @@ import { Combobox } from "@/components/ui/combobox";
 import { FormModal } from "@/components/ui/form-modal";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 
-/**
- * Choose which site a database belongs to.
- *
- * One modal for attach, move and detach: the API takes a single nullable
- * `application_id`. This decides what gets backed up; it rewrites no
- * connection string.
- */
+// Attach, move and detach in one: the API takes a single nullable `application_id`.
+// Decides what gets backed up; rewrites no connection string.
 export function AttachApplicationDialog({
   database,
   open,
@@ -154,10 +149,7 @@ export function AttachApplicationDialog({
   );
 }
 
-/**
- * The counts, minus this database's own site, so reopening the dialog does
- * not grey out the current site as "already has a database".
- */
+// Excludes this database's own site, so it is not greyed out as "already has a database".
 function excludeSelf(counts, applicationId) {
   if (!counts || applicationId === null || applicationId === undefined) return counts;
 

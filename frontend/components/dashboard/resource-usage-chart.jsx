@@ -8,10 +8,7 @@ import {
   timeSeriesOption,
 } from "@/lib/charts/time-series-option";
 
-/**
- * Three percentages on one 0-100 axis. Load is a queue depth, not a
- * percentage, so it has its own card; CPU % answers "is it busy" here.
- */
+// Load is a queue depth, not a percentage, so it has its own card.
 /** Resolved from globals.css at runtime; never restated as literals here. */
 const TOKENS = [
   "chart-1",

@@ -22,19 +22,12 @@ import {
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { apiMessage } from "@/lib/api/error-message";
 
-/**
- * Edit a PHP version's FPM php.ini.
- *
- * A bad ini can stop FPM and take down every site on the version, so the API
- * requires an explicit `acknowledged` flag (the checkbox). The backend backs up,
- * writes, runs `php-fpm -t` and reloads, restoring the old file if PHP refuses;
- * that is stated up front.
- */
+// A bad ini can stop FPM for every site on the version, so the API requires
+// `acknowledged`. The backend restores the old file if `php-fpm -t` refuses.
 export function IniEditor({ version, canManage, unavailableReason = null }) {
   const t = useTranslations("services");
   const tPhp = useTranslations("php");
-  // Reading only needs view access (GET …/ini is `permission:php`), so a
-  // view-only user gets the file without the save path.
+  // Reading only needs view access (GET …/ini is `permission:php`).
   const readOnly = !canManage;
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -71,8 +64,7 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
       toast.success(t("phpIni.saved", { version }));
       setOpen(false);
     } catch (error) {
-      // A 422 is PHP refusing the file (the old one is already restored) or a
-      // form error; shown beside the editor rather than in a toast.
+      // A 422 is PHP refusing the file (old one already restored) or a form error.
       if (error.response?.status === 422) {
         setPhpError(apiMessage(error, t("phpIni.saveFailed")));
       } else {
@@ -96,8 +88,7 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
     <>
       {/* There is no file to edit until the install finishes. */}
       <ReasonTooltip reason={unavailableReason}>
-        {/* Not disabled while loading: a disabled button drops focus, so
-            closing the dialog would not return focus here. */}
+        {/* Not disabled while loading: a disabled button drops focus, so closing would not return it. */}
         <Button
           variant="outline"
           disabled={Boolean(unavailableReason)}
@@ -109,9 +100,7 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
       </ReasonTooltip>
 
       <Dialog open={open} onOpenChange={(next) => !saving && setOpen(next)}>
-        {/* Header, body, footer with only the body scrolling, like the file
-            editor. A fixed height (not max-height) keeps Save and Cancel
-            pinned regardless of file length. */}
+        {/* Fixed height, not max-height, keeps Save and Cancel pinned regardless of file length. */}
         <DialogContent className="grid-rows-[auto_minmax(0,1fr)_auto] h-[85vh] sm:max-w-5xl">
           <DialogHeader>
             <div className="flex min-w-0 items-center gap-3">
@@ -131,8 +120,7 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
             </DialogDescription>
           </DialogHeader>
 
-        {/* The only scrolling part, so the acknowledgement below the editor
-            stays reachable; the editor keeps a minimum height. */}
+        {/* The only scrolling part, so the acknowledgement stays reachable. */}
         <div className="flex min-h-0 flex-col gap-4 overflow-y-auto">
           {/* Console surface, matching the log viewer and config-test output. */}
           <div className="flex min-h-48 flex-1 flex-col overflow-hidden rounded-lg border border-console-border bg-console">
@@ -146,8 +134,7 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
                 className="text-console-muted hover:bg-console-foreground/10 hover:text-console-foreground"
               />
             </div>
-            {/* h-full, not a vh fraction: the editor fills whatever the dialog
-                gives it, so the footer's position never depends on the file. */}
+            {/* h-full, not a vh fraction, so the footer's position never depends on the file. */}
             {loading ? (
               <div className="flex min-h-0 flex-1 items-center justify-center">
                 <Loader2 className="size-5 animate-spin text-console-muted" />
@@ -200,8 +187,7 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
             <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>
               {readOnly ? t("phpIni.close") : t("phpIni.cancel")}
             </Button>
-            {/* Three gates (changed, acknowledged, not saving); the button says
-                which one is blocking. */}
+            {/* The button says which gate is blocking. */}
             {readOnly ? null : (
             <ReasonTooltip reason={blockedReason}>
               <Button onClick={save} disabled={Boolean(blockedReason) || saving || loading}>

@@ -31,13 +31,8 @@ import {
 const CUSTOM = "custom";
 const CUSTOM_PATH = "__custom_path__";
 
-/**
- * Command field with framework templates tucked into the label row. A template
- * fills BOTH command and expression — the API pairs them deliberately, since
- * WordPress cron wants a five-minute tick while the Laravel scheduler wants
- * every minute. Template commands carry a {path} placeholder that must be
- * resolved before submit, so picking one reveals the path input.
- */
+// A template fills BOTH command and expression (the API pairs them: WordPress wants 5 min, Laravel 1).
+// Its {path} placeholder must be resolved before submit, so picking one reveals the path input.
 export function CommandField({
   form,
   presets,
@@ -54,15 +49,12 @@ export function CommandField({
   // Which site the path came from, or CUSTOM_PATH; empty means nothing picked yet.
   const [source, setSource] = useState("");
 
-  // Only sites with a `path` (absent on an older API, which would write
-  // "undefined"). Provisioning sites are kept: the backend derives the path,
-  // so it is correct before the directory exists.
+  // Only sites with a `path` (absent on older APIs). Provisioning sites are kept: the path is derived.
   const sites = applications.filter((application) => application.path);
   const selectedSite = sites.find((application) => String(application.id) === source);
 
   function applyTemplate(tpl, dir) {
-    // The placeholder stays visible until a path is typed, so it's obvious what
-    // still needs filling — Zod blocks submitting it unresolved.
+    // The placeholder stays until a path is typed; Zod blocks submitting it unresolved.
     const resolved = dir.trim()
       ? tpl.replaceAll(placeholder, dir.trim().replace(/\/+$/, ""))
       : tpl;
@@ -77,11 +69,9 @@ export function CommandField({
     if (preset.key === CUSTOM || !preset.command) {
       setTemplate(null);
       setPath("");
-      // Reset `source` too: the site picker renders from it, and a stale site
-      // would make the next template resolve {path} against nothing.
+      // Reset `source` too, or the next template resolves {path} against a stale site.
       setSource("");
-      // Clearing it is an edit too: on an existing job this is how you take a
-      // template off, and Save has to be reachable afterwards.
+      // Clearing is an edit too: it takes a template off an existing job, and Save must be reachable.
       form.setValue("command", "", { shouldValidate: false, shouldDirty: true });
       return;
     }
@@ -112,8 +102,7 @@ export function CommandField({
 
     onPath(site.path);
 
-    // Fill "Run as" only while empty: the wrong user leaves root-owned files
-    // that break deploys, but an existing choice is the user's.
+    // Fill "Run as" only while empty: root-owned files break deploys, but an existing choice stands.
     if (!form.getValues("run_as") && site.system_user?.id) {
       form.setValue("run_as", String(site.system_user.id), {
         shouldValidate: true,
@@ -122,8 +111,7 @@ export function CommandField({
     }
   }
 
-  // A quick-start template writes itself into the form on mount. No
-  // `shouldDirty`, unlike elsewhere: an untouched form must not trip the leave-guard.
+  // A quick-start template fills the form on mount; no `shouldDirty`, so the leave-guard stays quiet.
   useEffect(() => {
     if (!starter) return;
     form.setValue("command", starter.command, { shouldValidate: false });
@@ -194,24 +182,17 @@ export function CommandField({
         <FormItem>
           <FormLabel required hint={t("form.pathHint")}>{t("form.path")}</FormLabel>
 
-          {/* Pick the site rather than type its directory (a typo fails
-              silently in cron). "Enter a path myself" covers other directories. */}
+          {/* Pick the site rather than type its directory: a typo fails silently in cron. */}
           {sites.length > 0 ? (
             <Select value={source} onValueChange={onPickSite}>
               <FormControl>
-                {/* Two-line value (name + path) needs four overrides at
-                    SelectTrigger's specificity: the fixed `h-9`, `line-clamp-1`,
-                    the value's `items-center`, and `flex!` because
-                    `line-clamp-none` resets display to `block`. */}
+                {/* Two-line value: overrides h-9, line-clamp-1 and items-center; `flex!` as line-clamp-none sets block. */}
                 <SelectTrigger
-                  // `text-left`: SelectTrigger is a <button>, which the UA
-                  // stylesheet centres; visible at full width on the placeholder.
+                  // `text-left`: SelectTrigger is a <button>, which the UA stylesheet centres.
                   className="h-auto w-full py-2 text-left data-[size=default]:h-auto *:data-[slot=select-value]:line-clamp-none *:data-[slot=select-value]:flex! *:data-[slot=select-value]:w-full *:data-[slot=select-value]:min-w-0 *:data-[slot=select-value]:flex-col *:data-[slot=select-value]:items-stretch! *:data-[slot=select-value]:gap-0.5"
                 >
                   <SelectValue placeholder={t("form.pathPickerPlaceholder")}>
-                    {/* `items-stretch!` is important-flagged because tailwind-merge
-                        does not dedupe two `*:data-[slot=…]` variants, so the base
-                        `items-center` would win. */}
+                    {/* `items-stretch!`: tailwind-merge does not dedupe `*:data-[slot=…]` variants. */}
                     {selectedSite ? (
                       <>
                         <span className="w-full truncate text-left">{selectedSite.name}</span>
@@ -237,8 +218,7 @@ export function CommandField({
 
                 <SelectSeparator />
 
-                {/* SelectGroup is required: Radix throws "`SelectLabel` must be
-                    used within `SelectGroup`" at render time. */}
+                {/* SelectGroup is required: Radix throws if `SelectLabel` is used outside it. */}
                 <SelectGroup>
                   <SelectLabel>{t("form.pathSitesGroup")}</SelectLabel>
 

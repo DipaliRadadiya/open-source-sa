@@ -3,12 +3,7 @@ import { KeyRound, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 
-/**
- * The only time this key is readable.
- *
- * Inline rather than in a dialog: Escape dismisses a dialog by reflex, and a
- * dialog that cannot be closed turns a failed copy into a trap.
- */
+// The only time this key is readable. Inline, not a dialog: Escape would dismiss it by reflex.
 export function KeyReveal({ token, onDone }) {
   const t = useTranslations("central");
 

@@ -1,33 +1,22 @@
 import { databaseBlock } from "./database-readiness.js";
 import { runtimeBlocks } from "./runtime-readiness.js";
 
-/**
- * EVERY reason a site type cannot be created here, not just the first, so the
- * user is not sent to fix dependencies one at a time. The backend's
- * `unavailable()` returns only its first blocker, so each blocker is computed
- * independently; the server's blocker only fills a category not computed here,
- * since the local one is more specific (missing vs stopped vs installing).
- */
+// EVERY reason, not just the first: the backend's `unavailable()` returns one,
+// so each is computed here; the server's fills only categories not computed.
 
 /** The order blockers are read and fixed in. */
 const ORDER = ["web_server", "runtime", "database", "server"];
 
-/**
- * Whether every blocker could be installed from the panel (runtime, database;
- * not a web-server refusal). The picker uses it to let a greyed card still be
- * chosen, which is the way to reach the install prompts.
- */
+// True when every blocker can be installed from the panel, so the greyed card
+// can still be chosen to reach the install prompts.
 export function blockersAreFixable(type) {
   const blockers = Array.isArray(type?.blockers) ? type.blockers : [];
   if (blockers.length === 0) return false;
   return blockers.every(isFixable);
 }
 
-/**
- * Whether installing something clears this blocker. Includes the server's own
- * runtime/database blockers: a runtime missing entirely is reported only by
- * the API.
- */
+// Includes the server's own runtime/database blockers: a missing runtime is
+// reported only by the API.
 function isFixable(blocker) {
   if (blocker.kind === "runtime" || blocker.kind === "database") return true;
   if (blocker.kind !== "server") return false;
@@ -50,11 +39,7 @@ function serverBlocker(type) {
   };
 }
 
-/**
- * Every blocker for one type, most-actionable first.
- *
- * @returns {Array<object>} empty when the type can be created here
- */
+// Most-actionable first; empty when the type can be created here.
 export function typeBlockers({ type, runtimes, engines } = {}) {
   const ours = [
     ...runtimeBlocks({ type, ...(runtimes ?? {}) }),
@@ -73,11 +58,7 @@ export function typeBlockers({ type, runtimes, engines } = {}) {
   return list.sort((a, b) => ORDER.indexOf(a.kind) - ORDER.indexOf(b.kind));
 }
 
-/**
- * The catalogue with every blocked type marked, in one pass.
- * `available` / `unavailable_code` / `unavailable_reason` carry the primary
- * blocker; `blockers` is the full list the picker reads.
- */
+// `available` / `unavailable_*` carry the primary blocker; `blockers` the full list.
 export function withAvailability(siteTypes, context, reasonFor) {
   return (Array.isArray(siteTypes) ? siteTypes : []).map((type) => {
     const blockers = typeBlockers({ type, ...(context ?? {}) });

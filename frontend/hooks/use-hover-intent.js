@@ -1,13 +1,7 @@
 import * as React from "react";
 
-/**
- * Hover, but only when the pointer means it: a delay filters out pointers
- * merely crossing the rail. Closing waits longer than opening so moving
- * between items does not snap it shut.
- *
- * Touch has no real hover (a tap "hovers" and sticks), so this is gated on a
- * fine pointer.
- */
+// A delay filters out pointers crossing the rail; closing waits longer so moving between items does not snap shut.
+// Gated on a fine pointer: on touch a tap "hovers" and sticks.
 export function useHoverIntent({ enterDelay = 120, leaveDelay = 260, enabled = true } = {}) {
   const [hovered, setHovered] = React.useState(false);
   const timer = React.useRef(null);
@@ -22,9 +16,8 @@ export function useHoverIntent({ enterDelay = 120, leaveDelay = 260, enabled = t
 
   const active = enabled && canHover;
 
-  // Leaving the enabled state (sidebar opened via toggle, or touch device) must
-  // drop the hover. Adjusted during render, not in an effect, so a stale
-  // `hovered` cannot reopen the panel the next time the rail collapses.
+  // Leaving the enabled state drops the hover, during render so a stale `hovered`
+  // cannot reopen the panel the next time the rail collapses.
   const [wasActive, setWasActive] = React.useState(active);
 
   if (wasActive !== active) {
@@ -35,9 +28,7 @@ export function useHoverIntent({ enterDelay = 120, leaveDelay = 260, enabled = t
     if (!active) setHovered(false);
   }
 
-  // Cancel a pending open/close when the hook goes inactive, and again on
-  // unmount, so a timer cannot land on a sidebar that is already open or a
-  // tree that is already gone.
+  // Cancel pending timers when inactive and on unmount, so none lands on an open sidebar or a gone tree.
   React.useEffect(() => {
     if (!active) clear();
 

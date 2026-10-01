@@ -5,15 +5,8 @@ import { ServiceActions } from "@/components/services/service-actions";
 import { ServiceStatusBadge } from "@/components/services/service-status-badge";
 import { installHome } from "@/lib/services/install-home";
 
-/**
- * Services that need attention, listed rather than tabulated (they have no
- * usage figures worth columns). Two kinds:
- *
- *   install_failed  never installed; the only move is the screen that owns the
- *                   install (see lib/services/install-home.js).
- *   crashed unit    installed and not running; start/restart and its log are
- *                   offered.
- */
+// `install_failed` links to the screen that owns the install; a crashed unit
+// offers start/restart and its log.
 export function ServiceAttentionList({ services, phpVersions = [], canManage, busy, setRowBusy }) {
   const t = useTranslations("services");
 

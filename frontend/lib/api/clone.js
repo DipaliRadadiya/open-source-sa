@@ -1,11 +1,6 @@
 import { api } from "@/lib/api/client";
 
-/**
- * Start a clone. Throttled 5/min. Answers **202 with a Clone record** (copying
- * runs on the queue); poll `fetchClone` for progress.
- *
- * `name` is optional; the backend defaults to "{source} (Clone)".
- */
+// Throttled 5/min. Answers 202 with a Clone record (copy runs queued); poll `fetchClone`.
 export function createClone(applicationId, payload) {
   return api.post(`/applications/${applicationId}/clone`, payload);
 }

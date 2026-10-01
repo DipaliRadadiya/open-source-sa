@@ -5,12 +5,8 @@ import { isReference } from "@/lib/schemas/error-log";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-/**
- * Look one failure up by its reference (shown to the user as "Install failed —
- * reference abc-…"). Goes through the URL to the server, since the entry may
- * be older than the loaded lines. Validated here because the backend 422s
- * anything that is not a uuid.
- */
+// Looked up via the URL on the server, since the entry may predate the loaded
+// lines. The backend 422s anything that is not a uuid, so validate here.
 export function ReferenceLookup({ value, onSubmit, onClear }) {
   const t = useTranslations("errorLogs");
   const [draft, setDraft] = useState(value ?? "");

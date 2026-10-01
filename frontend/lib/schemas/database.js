@@ -1,19 +1,11 @@
 import { z } from "zod";
 import { listMetaSchema } from "./list.js";
 
-/**
- * Databases, their users, and the engines they run on.
- *
- * Three engines behind one shape: `mysql` and `mariadb` share the `sql` driver,
- * `mongodb` has its own. A database user belongs to exactly one database, so
- * users are always nested rather than a resource of their own.
- */
+// `mysql` and `mariadb` share the `sql` driver; `mongodb` has its own. Users
+// belong to one database, so they are always nested.
 
-/*
- * Fallback list of names the server owns, used when the API does not publish
- * `system_schemas` (see `reservedNames()`). The union across every engine,
- * because the check can run before an engine is chosen.
- */
+// Fallback when the API publishes no `system_schemas`: the union across engines,
+// since the check can run before an engine is chosen.
 export const RESERVED_NAMES = [
   // MySQL / MariaDB
   "mysql",
@@ -31,11 +23,7 @@ export const RESERVED_NAMES = [
   "template1",
 ];
 
-/**
- * Names the server owns, as the server reports them: the union across every
- * engine (the check can run before an engine is chosen). Falls back to the
- * fixed list when no engine carries `system_schemas`.
- */
+// The union across every engine (the check can run before one is chosen).
 export function reservedNames(engines = []) {
   const published = engines.flatMap((engine) =>
     Array.isArray(engine?.system_schemas) ? engine.system_schemas : [],
@@ -48,10 +36,7 @@ export const DATABASE_NAME = /^[A-Za-z0-9_]{1,63}$/;
 
 export const CONNECTION_PREFERENCES = ["localhost", "remote", "anywhere"];
 
-/**
- * Persistent lifecycle returned while a database engine is queued, installing,
- * or failed. Titles/messages are already localized by Laravel for the viewer.
- */
+// Titles/messages are already localized by Laravel for the viewer.
 export const databaseInstallProgressSchema = z.object({
   status: z.string(),
   started_at: z.string().nullish(),
@@ -65,13 +50,8 @@ export const databaseInstallProgressSchema = z.object({
   retryable: z.boolean().optional(),
 });
 
-/**
- * `charsets` maps a charset to the collations it allows — a collation from the
- * wrong charset is a 422, so the second select is driven by the first.
- *
- * Mongo has no charsets and sends `[]` rather than `{}`; an array would fail a
- * record schema, so it is accepted and normalized away.
- */
+// A collation from the wrong charset is a 422. Mongo sends `[]` rather than
+// `{}`, which a record schema would reject, so it is normalized away.
 const charsetsSchema = z
   .union([z.record(z.string(), z.array(z.string())), z.array(z.unknown())])
   .nullable()
@@ -81,20 +61,14 @@ const charsetsSchema = z
 export const engineSchema = z.object({
   engine: z.string(),
   driver: z.string().nullable().optional(),
-  /*
-   * False for PostgreSQL: roles carry no host and access lives in
-   * `pg_hba.conf`, which the panel does not manage, so the API refuses
-   * `remote`/`anywhere`. Defaults true for older APIs.
-   */
+  // False for PostgreSQL (access lives in `pg_hba.conf`, not managed). Defaults
+  // true for older APIs.
   supports_remote_users: z.boolean().default(true),
   // The engine's own databases, which the panel must never create, drop or
   // alter. Read by `reservedNames()`.
   system_schemas: z.array(z.string()).nullish(),
-  /*
-   * Why this engine cannot be installed here, or null when it can.
-   * `{ code, reason }`: a stable code to branch on and an already-translated
-   * sentence, the same shape a blocked site-type card carries.
-   */
+  // `{ code, reason }`: a stable code plus a translated sentence, as on a
+  // blocked site-type card.
   unavailable: z
     .object({ code: z.string(), reason: z.string() })
     .nullable()
@@ -132,11 +106,8 @@ export const databaseUserSchema = z.object({
   host: z.string().nullable().optional(),
   // Ready to paste into an app's config.
   connection_string: z.string().nullable().optional(),
-  /*
-   * Whether the panel holds this user's password. False for users adopted from
-   * a migrated server (only a hash exists); the API then withholds
-   * `connection_string`, and the screen explains why.
-   */
+  // False for users adopted from a migrated server (only a hash exists); the
+  // API then withholds `connection_string`.
   password_known: z.boolean().nullish(),
   created_at: z.string().nullable().optional(),
   created_at_human: z.string().nullable().optional(),
@@ -193,11 +164,8 @@ export function hostProblem(value) {
   return null;
 }
 
-/**
- * Create a database, and optionally its first user (opt-out: a database with no
- * user cannot be connected to). A factory so the reserved list can come from
- * the engines the server reported. Messages are key tokens the form translates.
- */
+// A first user is opt-out: a database with no user cannot be connected to.
+// Messages are key tokens the form translates.
 export const createDatabaseSchema = (reserved = reservedNames()) =>
   z
   .object({
@@ -241,11 +209,8 @@ export const createDatabaseSchema = (reserved = reservedNames()) =>
     }
   });
 
-/**
- * The admin connection the panel itself uses, per engine. The password is
- * never returned (`has_password` says whether one exists); an empty field on
- * save means "leave it alone", not "clear it".
- */
+// The password is never returned (`has_password`); an empty field on save means
+// "leave it alone", not "clear it".
 export const connectionSchema = z.object({
   engine: z.string(),
   driver: z.string().nullable().optional(),
@@ -323,10 +288,7 @@ export const passwordFormSchema = z.object({
   password: z.string().min(8, "min8").max(255, "max255"),
 });
 
-/**
- * A dump. Queued work, so a row exists from the moment the button is pressed —
- * `file` and `download_url` stay null until it finishes.
- */
+// The row exists once queued; `file` and `download_url` stay null until done.
 export const exportSchema = z.object({
   id: z.number(),
   database_id: z.number().nullable().optional(),

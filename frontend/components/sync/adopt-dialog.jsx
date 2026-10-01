@@ -7,13 +7,8 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
-/**
- * The one screen in this feature that writes.
- *
- * The API has no per-item selection: it adopts everything found, of the ticked
- * types, that is not ignored. So the exact count and composition are stated
- * immediately above the button.
- */
+// The API adopts everything found of the ticked types, with no per-item selection,
+// so the exact count and composition are stated right above the button.
 export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPresent, pending, onConfirm }) {
   const t = useTranslations("sync");
 
@@ -22,20 +17,14 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
     [typesPresent],
   );
 
-  /*
-   * null until the reader ticks something, meaning "everything adoptable".
-   * Not `useState(adoptable)`: the dialog mounts before its items arrive (they
-   * load a page at a time), which would freeze an empty selection.
-   */
+  // null means "everything adoptable". Not `useState(adoptable)`: the dialog mounts
+  // before its items arrive, which would freeze an empty selection.
   const [picked, setPicked] = useState(null);
   const selected = picked ?? adoptable;
   const [includeFirewall, setIncludeFirewall] = useState(false);
 
-  /*
-   * Closing discards the selection: within one scan run the component stays
-   * mounted, so Cancel must not leave unticked types behind. Reset on close,
-   * not open, so the checkboxes do not visibly repaint.
-   */
+  // The component stays mounted within a scan run, so Cancel must discard the selection.
+  // Reset on close, not open, so the checkboxes do not visibly repaint.
   function handleOpenChange(next) {
     if (!next) {
       setPicked(null);
@@ -46,11 +35,8 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
 
   const hasFirewall = typesPresent.includes(FIREWALL_RESOURCE_TYPE);
 
-  /*
-   * The types this adopt will actually run, computed ONCE and used for both
-   * the request and the summary. Firewall rules have no tick-box (they are
-   * gated by the warning checkbox), so `selected` never contains them.
-   */
+  // Computed ONCE for both the request and the summary. Firewall rules have no tick-box
+  // (the warning checkbox gates them), so `selected` never contains them.
   const adopting = useMemo(
     () => (includeFirewall ? [...selected, FIREWALL_RESOURCE_TYPE] : selected),
     [selected, includeFirewall],

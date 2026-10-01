@@ -3,10 +3,7 @@ import { RestoreProgress } from "@/components/backups/restore-progress";
 import { RESTORE_IN_FLIGHT } from "@/lib/schemas/backup";
 import { rememberDismissedRestore } from "@/lib/backups/dismissed-restores";
 
-/**
- * The restore currently rewriting a site, seeded from the server. Keeps
- * showing the outcome (and the undo) after a terminal state until dismissed.
- */
+// Keeps showing the outcome (and the undo) after a terminal state until dismissed.
 export function ActiveRestore({ restore, applicationDomain, scrollIntoView = false,
   restoredSafetyCopy = false,
   onStatusChange,

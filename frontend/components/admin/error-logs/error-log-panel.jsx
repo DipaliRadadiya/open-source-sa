@@ -20,20 +20,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-/**
- * The grouped error list plus its controls. Two searches on purpose: the text
- * box filters what is on screen; the reference lookup queries the server's
- * `?reference=`, because the entry may be older than the loaded lines.
- * `lines` goes through the URL so the server component re-runs.
- */
+// Two searches on purpose: the text box filters what is loaded; the reference
+// lookup queries the server, since the entry may be older than the loaded lines.
 export function ErrorLogPanel({ groups, now, truncated, lines, reference }) {
   const t = useTranslations("errorLogs");
   const tc = useTranslations("common");
   const setQuery = useSetQuery();
   const [search, setSearch] = useState("");
 
-  /* With no entries, search and the size selector have nothing to act on;
-     Refresh stays. */
+  /* With no entries, search and size have nothing to act on; Refresh stays. */
   const hasEntries = groups.length > 0;
 
   const visible = useMemo(
@@ -91,8 +86,7 @@ export function ErrorLogPanel({ groups, now, truncated, lines, reference }) {
         </p>
       ) : null}
 
-      {/* A failed lookup needs its own wording: "no failures recorded" would
-          misread as the log being clean. */}
+      {/* Own wording: "no failures recorded" would misread as a clean log. */}
       {!hasEntries && reference ? (
         <EmptyState
           icon={SearchX}

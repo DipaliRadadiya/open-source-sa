@@ -35,10 +35,6 @@ const SLOW_AFTER_MS = 8 * 60 * 1000;
 
 const isActive = (run) => Boolean(run) && (run.status === "pending" || run.status === "running");
 
-/**
- * Owns the whole screen, heading included: "Check again" sits beside the title
- * and drives the same state the card below reads.
- */
 export function PanelUpdatePanel({ initialState, title, subtitle }) {
   const t = useTranslations("panelUpdate");
   const router = useRouter();
@@ -81,9 +77,7 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
     };
   }, [run?.id, run?.status]);
 
-  // Poll only while a run is active; a terminal status re-runs the effect and
-  // clears the interval. The panel restarts mid-update (503 / refused), so errors
-  // only flag "reconnecting".
+  // Poll only while a run is active. The panel restarts mid-update, so errors only flag "reconnecting".
   useEffect(() => {
     if (!activeRunId) return undefined;
     const startedAt = Date.now();
@@ -129,9 +123,8 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
       setRun(started);
       setConfirmOpen(false);
     } catch (error) {
-      // A failed reply does not prove the update failed to start: the response can be
-      // lost as the panel restarts, or a schema mismatch can reject a valid 202. Ask
-      // the source of truth; if a run exists, show its progress.
+      // A failed reply does not prove the update failed (lost on restart, or schema mismatch
+      // on a valid 202); ask the source of truth.
       let recovered = false;
 
       try {

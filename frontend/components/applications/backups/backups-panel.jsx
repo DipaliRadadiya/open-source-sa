@@ -40,10 +40,6 @@ import { TurnOffBackupsDialog } from "@/components/applications/backups/turn-off
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { hasNoDatabase } from "@/lib/backups/database-availability";
 
-/**
- * This site's backups: whether it is protected, how, and what has run.
- * The configuration form lives in the same modal as the server-level screen.
- */
 // How long "queued" is shown before reporting that the worker has not taken it.
 const QUEUE_STALLED_MS = 3 * 60 * 1000;
 
@@ -96,9 +92,8 @@ export function BackupsPanel({
   // page can block Restore and Back up now while the site is being overwritten.
   const [restoreStatus, setRestoreStatus] = useState(null);
   const restoreRunning = RESTORE_IN_FLIGHT.includes(restoreStatus ?? restore?.status);
-  // The newest backup id at the moment a run was started here, or null.
-  // `POST /applications/{id}/backups` returns 202 before the backup row exists,
-  // so this keeps the queued state (and polling) alive until the row appears.
+  // Newest backup id when a run was started here. The POST returns 202 before the row exists,
+  // so this keeps the queued state and polling alive until it appears.
   const [queuedAfter, setQueuedAfter] = useState(null);
   const [stalled, setStalled] = useState(false);
 
@@ -109,12 +104,8 @@ export function BackupsPanel({
   const newestId = newestBackupId(backups);
   const queued = isBackupQueued(backups, queuedAfter);
 
-  /*
-   * Clear the mark once the wait is over; otherwise deleting the newest backup
-   * drops the newest id below it and the page shows "queued" again.
-   * Done during render (React's "adjust state on data change" pattern) to
-   * avoid painting the wrong state for a frame.
-   */
+  // Clear once the wait is over, or deleting the newest backup shows "queued" again.
+  // Done during render to avoid painting the wrong state for a frame.
   if (queuedAfter !== null && !queued) setQueuedAfter(null);
 
   // Report a stalled queue instead of silently reverting to "nothing happened".
@@ -230,9 +221,8 @@ export function BackupsPanel({
         // deleted history, and in-flight runs are not kept backups.
         noneKept={!backupsFailed && total - backups.filter((b) => BACKUP_IN_FLIGHT.includes(b.status)).length === 0}
         canManage={canManage}
-        // Spinner only for a run this page is waiting on. A row merely listed as
-        // in flight can stay "running" forever if its worker died, so it gets a
-        // disabled button and a sentence instead.
+        // Spinner only for a run this page is waiting on: a listed in-flight row can stay
+        // "running" forever if its worker died.
         running={running || queued}
         blockedReason={
           restoreRunning
@@ -380,9 +370,6 @@ function stateOf(target, noneKept) {
   return "protected";
 }
 
-/**
- * This site's protection in one card: headline, six facts, and two actions.
- */
 function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown = false, noneKept = false, canManage, running, blockedReason, onBackUpNow, onEdit, canTurnOff = false, turnOffBlockedReason = null, onTurnOff }) {
   const t = useTranslations("backups.application");
   const tHistory = useTranslations("backups.history");
@@ -391,9 +378,7 @@ function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown 
   // The stored time is 24-hour; format it so the card matches the locale-based picker.
   const format = useFormatter();
 
-  // "Every day at 02:00", or just the interval when there is no time. The zone
-  // is shown with the time, otherwise it reads as the reader's own clock.
-  // Hourly shows only the minute (":30").
+  // The zone is shown with the time, otherwise it reads as the reader's own clock.
   const when = scheduleWhen(target, options, format);
   const frequencyTitle = target?.frequency_title ?? target?.frequency;
   const scheduleKey = when?.minute ? "summary.howOftenMinute" : "summary.howOftenAt";
@@ -411,18 +396,13 @@ function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown 
         { label: t("summary.what"), value: target.type_title ?? target.type },
         {
           label: t("summary.howOften"),
-          // Formatted for the reader's clock convention, NOT their timezone:
-          // the hour is the project's (`target.timezone`, the app clock) and
-          // stays as stored, matching the native time input that sets it.
+          // Reader's clock format, NOT their timezone: the hour is the app clock, as stored.
           // Converting would name an hour the scheduler never runs at.
           value: schedule,
         },
         {
           label: t("summary.keeps"),
-          /*
-           * Never a dash. Zero means keep every backup (`RetentionEnforcer`
-           * returns early on `keep <= 0`); no count at all means never pruned.
-           */
+          // Never a dash: zero means keep every backup (`RetentionEnforcer` skips `keep <= 0`).
           value:
             target.retention_count === null || target.retention_count === undefined
               ? t("summary.keepsNotApplicable")
@@ -436,9 +416,7 @@ function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown 
         },
         {
           label: t("summary.lastBackup"),
-          // Falls back to the run itself: a crashed run never writes
-          // last_run_at. "—" when the history read failed, since neither
-          // answer is known.
+          // Falls back to the run itself: a crashed run never writes last_run_at.
           value: noneKept
             ? target.last_run_at
               ? t("noneKept")
@@ -558,10 +536,7 @@ function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown 
   );
 }
 
-/**
- * This site's recent runs: the History screen's table without the Site column,
- * so both screens describe a backup identically.
- */
+// The History screen's table without the Site column, so both describe a backup identically.
 function RecentBackups({
   backups,
   total = 0,

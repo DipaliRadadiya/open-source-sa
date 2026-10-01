@@ -3,13 +3,8 @@ import { read } from "@/lib/api/read";
 import { systemUsersResponseSchema } from "@/lib/schemas/application";
 import { listQuery, EMPTY_LIST_META } from "@/lib/schemas/list";
 
-/**
- * Every panel-managed OS account, for pickers ("run as" on a cron job, the owner
- * on a new site).
- *
- * Requests the API maximum, since `/system-users` pages at ten. More than 100
- * accounts would need a searchable combobox, not a larger number.
- */
+// Requests the API maximum, since `/system-users` pages at ten. Past 100 accounts the
+// picker needs search, not a larger number.
 export async function getSystemUserOptions() {
   try {
     const res = await serverFetch("/system-users", { searchParams: { per_page: 100 } });
@@ -28,10 +23,7 @@ export async function getSystemUsers() {
   return result.users;
 }
 
-/**
- * One page of the system users list, with search applied by the API. Separate
- * from the options fetcher: a picker needs every account, a table needs one page.
- */
+/** A picker needs every account; a table needs one page. */
 export async function getSystemUsersPage(query = "") {
   const result = await read("/system-users", systemUsersResponseSchema, {
     searchParams: listQuery(query),

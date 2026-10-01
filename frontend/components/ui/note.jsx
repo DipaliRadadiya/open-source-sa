@@ -1,10 +1,7 @@
 import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/**
- * An informational note about a feature: the calm sibling of `Caution`, with
- * the same shape. `icon` is the feature's own mark; `title` is optional.
- */
+// The calm sibling of `Caution`, with the same shape.
 export function Note({ icon: Icon = Info, title, children, className }) {
   return (
     <div

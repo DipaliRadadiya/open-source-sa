@@ -1,15 +1,11 @@
-// Auto-follow is off above this size whatever the reader chose, so a tail
-// never runs against a huge file.
+// Above this size auto-follow is off whatever the reader chose.
 export const AUTO_FOLLOW_MAX_BYTES = 2 * 1024 * 1024;
 
 export const FOLLOW_COOKIE = "sv_logs_follow";
 // The line window, remembered the same way as on the application Logs page.
 export const LINES_COOKIE = "sv_logs_lines";
 
-/**
- * Whether live tailing starts on. An explicit "off" is always honoured; an
- * explicit "on" is still subject to the size limit.
- */
+// An explicit "off" is always honoured; "on" is still subject to the size limit.
 export function resolveFollow(preference, source) {
   if (preference === "off") return false;
 

@@ -8,10 +8,7 @@ import {
 } from "@/lib/schemas/database";
 
 
-/**
- * Health, history and live processes for one engine. Each part fails
- * independently.
- */
+// Each part fails independently.
 export const getEngineStatus = cache(async function getEngineStatus(engine) {
   const data = await readOr(
     `/databases/status/${encodeURIComponent(engine)}`,

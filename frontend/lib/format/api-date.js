@@ -1,10 +1,7 @@
 // The API sends "DD-MM-YYYY HH:mm:ss" (not ISO), in the server's timezone.
 const STAMP = /^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/;
 
-/**
- * One of the API's timestamps as a Date, or null if it is not one. Never pass
- * these to `new Date()` directly: the format is not reliably parseable.
- */
+/** Never pass these to `new Date()` directly: the format is not reliably parseable. */
 export function parseApiDate(value) {
   const m = String(value ?? "").match(STAMP);
   if (!m) return null;
@@ -13,11 +10,8 @@ export function parseApiDate(value) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-/**
- * How long something took, as "45s" / "2m 14s" / "1h 03m", or null when either
- * end is missing or the pair makes no sense. Both stamps share one clock, so
- * the difference is valid without a timezone. Unit letters are not translated.
- */
+// "45s" / "2m 14s" / "1h 03m", or null when either end is missing or the pair makes no
+// sense. Both stamps share one clock, so no timezone is needed.
 export function apiDuration(start, end) {
   const from = parseApiDate(start);
   const to = parseApiDate(end);
@@ -37,11 +31,8 @@ export function apiDuration(start, end) {
   return `${hours}h ${String(minutes % 60).padStart(2, "0")}m`;
 }
 
-/**
- * The stamp as a Date to format with `timeZone: "UTC"`. The stamp is a
- * zone-less wall-clock time; reading and writing it as UTC returns exactly what
- * the server wrote.
- */
+// Format with `timeZone: "UTC"`: the stamp is a zone-less wall-clock time, and reading
+// and writing it as UTC returns exactly what the server wrote.
 export function parseApiWallClock(value) {
   const m = String(value ?? "").match(STAMP);
   if (!m) return null;

@@ -28,8 +28,7 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations("auth");
-  // `router.push` cannot be awaited, so a transition keeps the button busy
-  // until the navigation and its server work finish.
+  // `router.push` cannot be awaited, so a transition keeps the button busy until navigation ends.
   const [navigating, startNavigation] = useTransition();
   const form = useForm({
     resolver: zodResolver(loginSchema),
@@ -40,12 +39,7 @@ export function LoginForm() {
     try {
       await login(values);
       startNavigation(() => {
-        /*
-         * `?next=` first, then the path remembered when the session ended (see
-         * `RememberPath`). Both are untrusted and go through `safeNext`.
-         * Otherwise "/", not "/dashboard": app/page.js picks the landing page
-         * for this role.
-         */
+        // Both sources are untrusted and go through `safeNext`. "/" lets app/page.js pick the role's landing page.
         router.push(safeNext(searchParams.get("next")) ?? takeRememberedPath() ?? "/");
         router.refresh();
       });

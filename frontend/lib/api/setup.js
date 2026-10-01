@@ -7,10 +7,7 @@ function toClientPath(endpoint) {
   return endpoint.replace(/^\/api/, "");
 }
 
-/**
- * Runs a component/option install action. `action` is the `{method, endpoint}`
- * object from the setup payload (the same endpoints the PHP/Node/database screens use).
- */
+// `action` is the `{method, endpoint}` object from the setup payload.
 export function runSetupAction(action, body) {
   return api.request({
     method: action.method ?? "POST",

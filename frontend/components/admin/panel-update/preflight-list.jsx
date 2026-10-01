@@ -2,22 +2,8 @@ import { useTranslations, useFormatter } from "next-intl";
 import { Check, CircleX, TriangleAlert } from "lucide-react";
 import { isUnknownDetail, megabytes, parseSizeDetail } from "@/lib/admin/preflight-detail";
 
-/**
- * The preflight gate: each check must pass before an update can start.
- *
- * Three shapes, decided by the data:
- * - failing: a full-width red row, the only actionable item on the page;
- * - passing with a MEASUREMENT: a tile leading with the figure;
- * - everything else: a compact row.
- *
- * An ADVISORY check never gets a red row: it does not gate the update (see
- * UpdatePreflight::run()). It keeps its tile and shows a muted warning instead
- * of a tick when short, since a green tick over a low figure would mislead.
- *
- * Grids are `auto-fit`, never a fixed column count, so the last row fills.
- * Unknown keys fall back to the raw key. `clean_working_tree` fails closed when
- * the tree state is unknown (a forced checkout would discard uncommitted work).
- */
+// An ADVISORY check never gets a red row: it does not gate the update (UpdatePreflight::run()).
+// Grids are `auto-fit`, never a fixed column count, so the last row fills.
 const FILL = "grid gap-3 grid-cols-[repeat(auto-fit,minmax(14rem,1fr))]";
 
 function StatusIcon({ passed, advisory = false }) {
@@ -49,8 +35,7 @@ export function PreflightList({ checks }) {
   const failed = withSize.filter((c) => !c.passed && !c.advisory);
   const tiles = withSize.filter((c) => (c.passed || c.advisory) && c.measured);
   const rows = withSize.filter((c) => (c.passed || c.advisory) && !c.measured);
-  // Counts only gating checks, so an advisory shortfall does not read as "4 of 5
-  // ready" beside an update that can start.
+  // Gating checks only, so an advisory shortfall does not read as "4 of 5 ready".
   const gating = checks.filter((c) => !c.advisory);
   const passedCount = gating.filter((c) => c.passed).length;
 
@@ -104,8 +89,7 @@ export function PreflightList({ checks }) {
                   {size(c.measured.haveMb)}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {/* "recommended", not "needed", when the shortfall blocks nothing; the caption
-                      must agree with the button. */}
+                  {/* "recommended", not "needed", when nothing is blocked; must agree with the button. */}
                   {c.passed
                     ? t(c.measured.kind === "free" ? "captionFree" : "captionAvailable", {
                         need: size(c.measured.needMb),
@@ -121,8 +105,7 @@ export function PreflightList({ checks }) {
       {rows.length ? (
         <ul className={FILL}>
           {rows.map((c) => (
-            // No `shrink-0` on the detail: the backend's detail text can grow (e.g.
-            // "+ 0MB swap") and must wrap instead of overflowing into the next card.
+            // No `shrink-0`: the backend's detail text can grow and must wrap, not overflow.
             <li
               key={c.key}
               className="flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-xl border px-4 py-3 text-sm"

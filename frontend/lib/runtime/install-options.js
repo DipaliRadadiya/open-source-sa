@@ -1,14 +1,8 @@
-/**
- * The install picker's options, with installed ones marked rather than removed
- * (PHP's `installable()` excludes them, Node's does not). Matching is exact,
- * not by major: a newer patch of an installed major is a real upgrade.
- */
+// Installed versions are marked, not removed (PHP's `installable()` excludes
+// them, Node's does not). Exact match: a newer patch is a real upgrade.
 
-/**
- * `[{ version, ... }]` → the same, each with `installed: boolean`. A failed
- * install does not count (so it can be retried); in-flight ones do, to avoid
- * a second concurrent apt run.
- */
+// A failed install does not count (so it can be retried); in-flight ones do,
+// to avoid a second concurrent apt run.
 export function installOptions(installable = [], installed = []) {
   const have = new Set(
     (Array.isArray(installed) ? installed : [])
@@ -23,10 +17,7 @@ export function installOptions(installable = [], installed = []) {
     .map((option) => ({ ...option, installed: have.has(String(option.version)) }));
 }
 
-/**
- * The first installable version, or "" when everything is installed (Install
- * stays disabled; `allInstalled` explains why).
- */
+// "" when everything is installed (`allInstalled` explains why).
 export function firstInstallable(options = []) {
   return (Array.isArray(options) ? options : []).find((option) => !option.installed)?.version ?? "";
 }
@@ -37,12 +28,8 @@ export function allInstalled(options = []) {
   return list.length > 0 && list.every((option) => option.installed);
 }
 
-/**
- * The version the picker should show. Starting an install removes that version
- * from the options, and a `<Select>` whose value matches no item renders empty,
- * so the stored choice is kept only while still installable. Derived, not set
- * in an effect, to avoid a blank frame.
- */
+// Starting an install removes that version, and a `<Select>` with no matching
+// item renders empty. Derived, not set in an effect, to avoid a blank frame.
 export function resolveVersion(chosen, options = []) {
   const list = Array.isArray(options) ? options : [];
   const stillValid = list.some((option) => option.version === chosen && !option.installed);

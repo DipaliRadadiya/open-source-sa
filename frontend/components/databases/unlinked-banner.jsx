@@ -3,13 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { DatabaseZap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-/**
- * Databases that belong to no site, and so are in no backup.
- *
- * Its action filters the list rather than attaching, since only the reader
- * knows which site each belongs to. Hidden at zero, and while the list is
- * already filtered to unlinked.
- */
+// Databases in no site, and so in no backup. Filters rather than attaches:
+// only the reader knows which site each belongs to.
 export async function UnlinkedBanner({ count = 0, filtered = false }) {
   const t = await getTranslations("databases.unlinked");
 

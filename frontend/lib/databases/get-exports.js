@@ -2,10 +2,7 @@ import { cache } from "react";
 import { read } from "@/lib/api/read";
 import { exportsResponseSchema } from "@/lib/schemas/database";
 
-/**
- * Every dump on the server, newest first. Global on purpose: dumps outlive
- * their database. Callers filter.
- */
+// Global on purpose: dumps outlive their database. Callers filter.
 export const getExports = cache(async function getExports() {
   const result = await read("/databases/exports", exportsResponseSchema);
 

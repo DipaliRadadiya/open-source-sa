@@ -12,9 +12,8 @@ import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { useUnsaved } from "@/components/ui/unsaved-guard";
 
 export function AdminHeader() {
-  // Kept deliberately: nothing reads the path, but `usePathname` is a subscription,
-  // and dropping it would stop this header re-rendering on navigation. Safe to
-  // remove, but a behaviour change, so it is a separate decision.
+  // `usePathname` is kept as a subscription: dropping it stops this header
+  // re-rendering on navigation.
   // eslint-disable-next-line no-unused-vars -- pending a decision; see above
   const pathname = usePathname();
   const t = useTranslations("admin");

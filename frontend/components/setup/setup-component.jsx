@@ -42,8 +42,7 @@ function VersionInstall({ versions, action, disabled, disabledReason, onInstall 
           searchPlaceholder={t("chooseVersion")}
         />
       </div>
-      {/* No spinner: this picker unmounts once its own install starts, so a
-          spinner could only mean another install. Disabled with a reason instead. */}
+      {/* No spinner: this picker unmounts once its own install starts, so one could only mean another install. */}
       <Button
         className="shrink-0"
         disabled={!version || disabled}
@@ -70,8 +69,7 @@ function IconChip({ meta, small = false }) {
 // States where the component stands, in words (never colour alone).
 function StatusPill({ state, recommended, detail }) {
   const t = useTranslations("setup");
-  // Detail sits beside the badge, not inside: a badge is shrink-0 and does not
-  // wrap, so a sentence inside it overflows narrow screens.
+  // Beside the badge, not inside: a shrink-0 badge would overflow narrow screens.
   if (state === "installed") {
     return (
       <>
@@ -104,11 +102,7 @@ function StatusPill({ state, recommended, detail }) {
   ) : null;
 }
 
-/**
- * One setup component, rendered from its API state: icon for identity, pill
- * for state, button for the next action. Failure UI is gated strictly on
- * `state === "failed"`.
- */
+// Failure UI is gated strictly on `state === "failed"`.
 export function SetupComponent({ component, versions = [], busy = false, locked = false, denied = false, tier = "secondary", note = null, onInstall }) {
   const t = useTranslations("setup");
   const { state, action, options } = component;
@@ -121,22 +115,17 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
   const installed = state === "installed";
   const failed = state === "failed";
   const installing = state === "installing" || busy;
-  // Kept separate: `installing` is this component's own progress (spinner);
-  // `blocked` is apt's lock held by another component, or no permission
-  // (disabled + reason only).
+  // `installing` is this component's own progress (spinner); `blocked` is apt's lock
+  // held elsewhere or no permission (disabled + reason only).
   const blocked = busy || locked || denied;
   const blockedReason = denied ? t("installNotPermitted") : locked ? t("lockedByOtherInstall") : null;
-  // A runtime with no versions reported: a neutral fact, so the card sits back
-  // like a finished one.
+  // A neutral fact, so the card sits back like a finished one.
   const unavailable = isRuntime && runtimeVersions.length === 0 && !installed && !installing;
   // Title, sentence and one button: the button sits beside them.
   const simple = !hasOptions && !isRuntime;
   const meta = componentMeta(component.key);
 
-  /**
-   * A finished component, as a compact line rather than a card, so what still
-   * needs a decision carries the weight.
-   */
+  /** A finished component is a compact line, so what still needs a decision carries the weight. */
   const primary = tier === "primary";
 
   if (tier === "compact") {
@@ -158,8 +147,7 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
           ) : null}
           {note ? <p className="text-xs">{note}</p> : null}
         </div>
-        {/* Status in one right-hand column across rows. Wraps, since `detail` can be
-            a sentence. */}
+        {/* Wraps, since `detail` can be a sentence. */}
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-1">
           <StatusPill state="installed" detail={component.detail} />
         </div>
@@ -170,9 +158,8 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
   return (
     <div
       aria-busy={installing}
-      // Two weights: waiting (plain) and done/unavailable (sunk). Failure is shown
-      // by the badge and the reason box, not a red card. No tint for recommended:
-      // a primary border means "selected" elsewhere.
+      // Failure shows in the badge and reason box, not a red card. No tint for
+      // recommended: a primary border means "selected" elsewhere.
       className={cn(
         "rounded-2xl border transition-colors",
         // Primary: a surface with a banded header; secondary: same anatomy, flatter.
@@ -191,8 +178,7 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
         <IconChip meta={meta} small={!primary} />
 
         <div className="min-w-0 flex-1">
-          {/* Title + description stay a tight unit; the interactive blocks below are
-              outside this group so `space-y` cannot squeeze them. */}
+          {/* The interactive blocks stay outside this group so `space-y` cannot squeeze them. */}
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <p className={cn("font-medium leading-tight", primary && "text-base")}>
@@ -225,8 +211,7 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
           )}
         </div>
 
-        {/* Right-side action for the simple states (the others render inline
-            above). */}
+        {/* Simple states only; the others render inline above. */}
         <div className="shrink-0">
           {installed || installing || isRuntime || hasOptions ? null : failed ? (
             action && component.retryable ? (
@@ -281,11 +266,7 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
   );
 }
 
-/**
- * The part of a component that asks something: why it failed, which engine,
- * which version. Shared so the primary (under the band) and secondary (inline)
- * placements cannot drift.
- */
+// Shared so the primary and secondary placements cannot drift.
 function Body({
   t,
   component,

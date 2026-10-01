@@ -111,19 +111,14 @@ const COMMON_FIELD_NAMES = new Set([
   "branch",
 ]);
 
-/**
- * Joomla refuses a table prefix that does not start with a letter and end with
- * an underscore, and the install then stops at "install_app" with no reason.
- */
+// Joomla's install fails silently on a prefix not starting with a letter and ending with "_".
 const FIELD_PATTERNS = {
   joomla: {
     table_prefix: { pattern: /^[A-Za-z][A-Za-z0-9]*_$/, message: "form.tablePrefixInvalid" },
   },
 };
 
-// The API sometimes sends an untranslated key as the label
-// (`application.fields.shop_name`). Never show a raw key: humanise the field
-// name instead. A real label (with spaces) is left untouched.
+// The API sometimes sends a raw key as the label; humanise the field name instead.
 function fieldLabel(config) {
   const label = config.label;
   const looksLikeKey = !label || /^[a-z0-9_]+(\.[a-z0-9_]+)+$/i.test(label);
@@ -133,11 +128,7 @@ function fieldLabel(config) {
   return words ? words.charAt(0).toUpperCase() + words.slice(1) : label;
 }
 
-/**
- * A step marked by an icon for what it is for, replaced by a tick once
- * finished. Progress comes from the same checklist the Create button uses, so
- * the badge and button cannot disagree.
- */
+// Progress comes from the Create button's checklist, so the two cannot disagree.
 function SectionHeading({ icon: Icon, title, description, headingId, done = false }) {
   return (
     <div className="flex items-start gap-3">
@@ -173,9 +164,7 @@ function PickerStatus({ state, messages }) {
   return null;
 }
 
-// app_port mistakes only surface when provisioning fails, so it is checked as
-// the user types. The API answers free, registered name (a warning, not a
-// block), or taken.
+// Checked as the user types: the API answers free, registered (a warning) or taken.
 function PortField({ field, config, placeholder }) {
   const t = useTranslations("applications");
   const [check, setCheck] = useState(null); // { state, message, suggested }
@@ -283,10 +272,7 @@ function startCommandProblem(value) {
   return null;
 }
 
-/**
- * One line for the review panel. Multi-line values (a deploy script) show
- * their first line plus a count, so newlines do not look swallowed.
- */
+// Multi-line values show their first line plus a count.
 function summariseValue(value, t) {
   const lines = value.split("\n").filter((line) => line.trim());
   if (lines.length <= 1) return value;
@@ -345,11 +331,7 @@ function ConfigField({
   const isRuntime =
     config.source === "php_versions" || config.source === "node_versions";
 
-  /*
-   * The application's own version requirement, so a filtered dropdown explains
-   * missing versions. Only shown with a real bound: `rangeLabel` returns "" for
-   * an app that runs on anything.
-   */
+  // `rangeLabel` returns "" for an app that runs on any version.
   const runtimeRange =
     config.source === "php_versions"
       ? phpRange
@@ -357,12 +339,8 @@ function ConfigField({
         ? nodeRange
         : null;
   const runtimeRequirement = isRuntime ? rangeLabel(runtimeRange) : "";
-  /*
-   * Whether the chosen version is a real install. An interpreter pulled in as a
-   * dependency (`openlitespeed` brings `lsphp83`) lacks common extensions, and the
-   * failure would surface later inside the site. Checked on the selected value,
-   * since a closed dropdown cannot warn anyone.
-   */
+  // A dependency-installed interpreter (`openlitespeed` brings `lsphp83`) lacks
+  // common extensions; warn on the selected value.
   const chosenVersion = useWatch({ control: form.control, name: config.name });
   const chosenIncomplete = useMemo(() => {
     if (!isRuntime || !chosenVersion) return null;
@@ -382,17 +360,10 @@ function ConfigField({
   const isStartCommand = config.name === "start_command";
   const isDatabaseEngine = config.name === "database_engine";
   const isToggle = config.type === "toggle";
-  /**
-   * The API declares multi-line fields as `textarea`; a single-line input would
-   * silently drop every newline. Textareas take the full grid row so scripts do
-   * not soft-wrap.
-   */
-  // build_command too: declared `text`, but its package-manager templates are two
-  // lines ("npm ci\nnpm run build").
+  // An input would silently drop newlines. build_command is declared `text`, but its
+  // templates are two lines ("npm ci\nnpm run build").
   const isTextarea = config.type === "textarea" || config.name === "build_command";
-  // `GitDeployer::script()` runs the deploy script when present and ignores
-  // build_command otherwise; warn here, since the API's hint sits under the other
-  // field.
+  // `GitDeployer::script()` ignores build_command when a deploy script is present.
   const deployScript = useWatch({ control: form.control, name: "deploy_script" });
   const supersededByDeployScript =
     config.name === "build_command" && String(deployScript ?? "").trim() !== "";
@@ -656,11 +627,7 @@ function ConfigField({
               {t("form.buildCommandSuperseded")}
             </FormDescription>
           ) : isDatabaseEngine ? (
-            /*
-             * The one choice that cannot be revised: no operation moves a site to another
-             * engine. Shown only when the server has two engines this type accepts. Keyed
-             * on the API-defined field name; the API has no "irreversible" capability.
-             */
+            /* Irreversible: no operation moves a site to another engine. The API has no capability flag, so keyed on the field name. */
             <FormDescription className="flex items-start gap-1.5 text-warning">
               <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
               {t("form.databaseEnginePermanent")}
@@ -824,11 +791,7 @@ export function CreateApplicationForm({
   const isDirty = form.formState.isDirty && !submitted;
   useWatchUnsaved("application-create", isDirty);
 
-  /**
-   * A temporary domain for a site that has none yet. Offered only when the
-   * server reported an address for the wildcard-DNS host to point at; `own`
-   * stays the default.
-   */
+  // Temporary domain only when the server reported an IP for wildcard DNS.
   const canUseTemporary = Boolean(ipToLabel(serverIp));
   const [domainMode, setDomainMode] = useState(() =>
     initialDomainMode({ serverIp }),
@@ -888,10 +851,8 @@ export function CreateApplicationForm({
         (config.depends_on !== "node_rendering" ||
           ["ssr", "csr"].includes(renderingType)),
     )
-    // GitSiteType::rules() requires `start_command` exactly when rendering_type is
-    // "ssr", which is the only time the field shows, but the schema does not mark
-    // it required. Keyed on the name, not `depends_on`, because `app_port` shares
-    // that dependency and is optional.
+    // The API requires start_command when rendering_type is "ssr" but the schema
+    // does not say so. Keyed on the name: `app_port` shares the dependency and is optional.
     .map((config) =>
       config.name === "start_command" ? { ...config, required: true } : config,
     );
@@ -1012,12 +973,7 @@ export function CreateApplicationForm({
   ];
   const missingReadinessItems = readinessItems.filter((item) => !item.ready);
 
-  /*
-   * Which section each outstanding item belongs to, derived from the checklist
-   * the submit button uses so the two cannot disagree. Section 3 owns everything
-   * that is not the type or the details, and cannot be done before a type is
-   * chosen.
-   */
+  // Derived from the submit button's checklist, so the two cannot disagree.
   const DETAIL_TARGETS = ["name", "domain", "system_user_id", "system_user_username"];
   const sectionDone = {
     1: Boolean(selected),
@@ -1029,10 +985,7 @@ export function CreateApplicationForm({
       ),
   };
 
-  /*
-   * A blocked application can be chosen (so its requirements can be installed)
-   * but not created until the server reports no blockers.
-   */
+  // A blocked type can be chosen (to install its requirements) but not created.
   const outstandingServices = Array.isArray(selected?.blockers) ? selected.blockers.length : 0;
 
   const submitReason = !selected
@@ -1056,11 +1009,7 @@ export function CreateApplicationForm({
     setBranchesState("idle");
   }
 
-  /**
-   * Pick up an account connected since the form opened ("Connect Git" opens in a
-   * new tab). The accounts are a server prop, so `router.refresh()` re-reads
-   * them; it is a soft refresh, so typed values survive.
-   */
+  // Accounts are a server prop; `router.refresh()` re-reads them and keeps typed values.
   function refreshGitAccounts() {
     startAccountsRefresh(() => router.refresh());
   }
@@ -1142,14 +1091,8 @@ export function CreateApplicationForm({
           shouldValidate: true,
         });
     }
-    // Pre-fill declared defaults (web_root "/web", admin_username "admin", …) so a
-    // required field with a default is not shown empty. Passwords and runtime
-    // selects are handled elsewhere; common fields are separate inputs.
-    //
-    // On a type change, defaults are re-applied: otherwise a shared field (e.g.
-    // web_root) keeps the old type's value and the site points at the wrong
-    // directory. A user-typed value is never overwritten; `shouldDirty: false`
-    // keeps prefilled values clean so the two can be told apart.
+    // Re-apply declared defaults on a type change, or a shared field keeps the old
+    // type's value. `shouldDirty: false` keeps user-typed values distinguishable.
     for (const field of selected.fields ?? []) {
       if (
         COMMON_FIELD_NAMES.has(field.name) ||
@@ -1181,20 +1124,11 @@ export function CreateApplicationForm({
     typePhpVersions,
   ]);
 
-  /*
-   * Site title tracks the name until the user edits it. `site_title` declares
-   * no default (it is derived), so the defaults loop above cannot fill it.
-   *
-   * Ownership is tracked by comparing with the last value written here, not by
-   * `isDirty`: RHF marks a field without a declared default dirty on its first
-   * write. Empty counts as ours, so the suggestion returns after a type switch
-   * re-registers the field; `site_title` is required anyway.
-   */
+  // Site title tracks the name until edited. Ownership compares with the last value
+  // written, not `isDirty`: RHF marks an undeclared-default field dirty on first write.
   const suggestedTitle = useRef("");
   useEffect(() => {
-    // Keyed on the field, not the site type: several types ask for a site title
-    // under different field names. Joomla's `admin_name` (a person) and Moodle's
-    // `short_name` (an abbreviation) are deliberately excluded.
+    // Joomla's `admin_name` (a person) and Moodle's `short_name` are deliberately excluded.
     const field = selected?.fields?.find((f) => TITLE_FIELDS.has(f.name));
     if (!field) return;
     const key = field.name;
@@ -1285,11 +1219,7 @@ export function CreateApplicationForm({
     };
   }, [form, gitAccountId, gitSource, isGit, repository, repositories]);
 
-  /**
-   * Bring a failed submit into view, opening the Advanced section first when the
-   * error is inside it. Scrolls only after the fields mount (Radix unmounts
-   * collapsed content).
-   */
+  // Opens Advanced first when needed; scrolls after mount (Radix unmounts collapsed content).
   function revealErrors(names = []) {
     if (names.some((name) => advancedFieldNames.has(name))) setAdvancedOpen(true);
     setScrollRequest((count) => count + 1);
@@ -1387,11 +1317,8 @@ export function CreateApplicationForm({
       domain: values.domain.trim(),
       system_user_id: Number(values.system_user_id),
     };
-    // Type fields go at the top level on create: the backend builds its rules from
-    // the same schema. `settings` is only a merge bag on the update endpoint.
-    //
-    // Only visible fields: e.g. a start_command typed under "ssr" must not be sent
-    // once rendering_type is "php".
+    // Type fields go top-level on create; `settings` is only for update.
+    // Only visible fields are sent.
     for (const config of visibleFields) {
       const value = values[config.name];
       // A toggle is always sent as a boolean: the backend requires "true or false",
@@ -1409,19 +1336,14 @@ export function CreateApplicationForm({
         payload.git_account_id = Number(values.git_account_id);
         payload.repository = values.repository;
       } else {
-        /*
-         * Bitbucket's clone URL includes a username (`https://you@bitbucket.org/...`),
-         * which the API rejects since it ends up in `git clone`. For a public repo the
-         * prefix is meaningless, so it is stripped; the field says so.
-         */
+        /* The API rejects a username in the clone URL (Bitbucket adds one); strip it. */
         payload.repository_url = normalizeRepositoryUrl(values.repository_url).url;
       }
       if (values.branch?.trim()) payload.branch = values.branch.trim();
     }
 
-    // A generated user is created first, with the name and password shown on the
-    // form (`generate_system_user` would pick its own name and set no password).
-    // It is removed again if the application is refused.
+    // Create the generated user first (`generate_system_user` sets no password);
+    // it is removed if the application is refused.
     let newUser = null;
     if (values.generate_system_user) {
       try {
@@ -1479,9 +1401,7 @@ export function CreateApplicationForm({
         className="mx-auto max-w-6xl"
       >
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-          {/* @container, not a viewport breakpoint: available width depends on the
-              sidebar, the summary panel and zoom. The threshold is in rem so it scales
-              with text. */}
+          {/* @container, not a viewport breakpoint: width depends on sidebar, summary and zoom. */}
           <div className="@container min-w-0 space-y-6">
             <section
               className="space-y-3 rounded-xl bg-card p-4 shadow-sm ring-1 ring-foreground/10 sm:p-5"

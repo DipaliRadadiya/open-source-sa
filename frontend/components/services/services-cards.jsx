@@ -8,10 +8,6 @@ import { ServiceBootSwitch } from "@/components/services/service-boot-switch";
 import { ServiceStatusBadge } from "@/components/services/service-status-badge";
 import { CardList, CardListItem } from "@/components/data-table/card-list";
 
-/**
- * The same services as cards, for screens too narrow for the table, so the
- * actions are not hidden off the right edge.
- */
 export function ServicesCards({ data, phpVersions = [], canManage, busy, setRowBusy }) {
   const t = useTranslations("services");
   const format = useFormatter();

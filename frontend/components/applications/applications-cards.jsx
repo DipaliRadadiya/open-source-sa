@@ -12,11 +12,7 @@ import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { TlsMark, isServedOverTls } from "@/components/applications/tls-mark";
 import { gitProviderFor } from "@/lib/applications/git-provider";
 
-/**
- * The sites list on a narrow screen, where the table's status, type and row
- * menu would be cut off. The status badge shares the facts line so the name
- * keeps the wide line at 320px.
- */
+// Narrow-screen sites list; the badge shares the facts line so the name fits at 320px.
 export function ApplicationsCards({
   applications = [],
   canManage = false,

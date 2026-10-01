@@ -6,12 +6,7 @@ import { useTranslations } from "next-intl";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-/**
- * Re-runs the server component on an interval, only while the tab is visible;
- * returning to the tab refreshes immediately. `router.refresh()` keeps client
- * form state. When `stopAfterMs` elapses it says so and offers "Check again",
- * so a stale "Installing…" is never left looking live.
- */
+// Refreshes only while visible. After `stopAfterMs` it offers "Check again", so a stale "Installing…" never looks live.
 export function AutoRefresh({ intervalMs = 10000, stopAfterMs = null }) {
   const router = useRouter();
   const t = useTranslations("common.autoRefresh");

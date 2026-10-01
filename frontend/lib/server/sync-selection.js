@@ -1,9 +1,7 @@
 import { FIREWALL_RESOURCE_TYPE, SYNC_RESOURCE_TYPES } from "@/lib/schemas/sync";
 
-/**
- * Ignore-list identity: (resource_type, resource_key), matching the backend's
- * unique index. Never use item ids; they change every run.
- */
+// (resource_type, resource_key), matching the backend's unique index. Never item ids:
+// they change every run.
 export function ignoreKey(item) {
   return `${item.resource_type} ${item.resource_key}`;
 }
@@ -12,14 +10,8 @@ export function ignoreKeySet(ignores) {
   return new Set((ignores ?? []).map(ignoreKey));
 }
 
-/**
- * What pressing Adopt would do. The API's `only` takes types, not ids, so the
- * plan follows the backend's rules in order:
- * 1. a type not in `selectedTypes` is not run;
- * 2. firewall rules are excluded unless `includeFirewall` (lockout risk);
- * 3. an ignored (type, key) is dropped.
- * Only `found` rows count; earlier applies are already adopted.
- */
+// Follows the backend (`only` takes types, not ids): skip unselected types, firewall rules
+// unless `includeFirewall` (lockout risk) and ignored keys; `found` rows only.
 export function adoptionPlan({ items, ignoredKeys, selectedTypes, includeFirewall }) {
   const selected = new Set(selectedTypes ?? []);
   const ignored = ignoredKeys ?? new Set();
@@ -57,10 +49,7 @@ const DEPENDS_ON = {
   cronjob: "system_user",
 };
 
-/**
- * Selected types that ServerSync will skip entirely because the type they
- * depend on was not selected.
- */
+/** Selected types ServerSync skips because the type they depend on was not selected. */
 export function unmetDependencies(selectedTypes) {
   const selected = new Set(selectedTypes ?? []);
   return SYNC_RESOURCE_TYPES.filter(
@@ -74,10 +63,8 @@ export function typesPresent(items) {
   return SYNC_RESOURCE_TYPES.filter((type) => present.has(type));
 }
 
-/**
- * The four counts summed across types. `totals` arrives keyed by resource type
- * ({application: {found, adopted, …}}), not flat as API_REFERENCE.md shows.
- */
+// `totals` arrives keyed by resource type ({application: {found, adopted, …}}), not
+// flat as API_REFERENCE.md shows.
 export function runTotals(totals) {
   const sum = { found: 0, adopted: 0, skipped: 0, failed: 0 };
   for (const perType of Object.values(totals ?? {})) {

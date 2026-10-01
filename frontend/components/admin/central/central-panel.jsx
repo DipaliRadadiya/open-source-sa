@@ -16,13 +16,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 
-/**
- * Connect this server to a central panel, and the two ways to undo it.
- *
- * "Connect" and "regenerate" are the same endpoint: pressing it while
- * connected rotates the token and breaks the old one, so only that press
- * is confirmed.
- */
+// Connect and regenerate share one endpoint; pressing it while connected
+// rotates the token and breaks the old one, so only that press is confirmed.
 export function CentralPanel({ status }) {
   const t = useTranslations("central");
   const router = useRouter();

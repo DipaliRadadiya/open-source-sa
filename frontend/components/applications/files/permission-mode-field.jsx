@@ -18,11 +18,7 @@ const PRESETS = [
   { mode: "600", labelKey: "permissionsDialog.preset600" },
 ];
 
-/**
- * Choosing a permission mode: one control used everywhere Files asks for one
- * (single file, multi-select). The octal mode is still what gets sent, just not
- * what gets typed.
- */
+// The octal mode is what gets sent, just not what gets typed.
 export function PermissionModeField({ mode, onChange, invalid = false }) {
   const t = useTranslations("applications.files");
   const sentenceFor = useModeSentence();
@@ -39,9 +35,7 @@ export function PermissionModeField({ mode, onChange, invalid = false }) {
 
   return (
     <div className="space-y-3">
-      {/* Buttons are nowrap by default; on a phone the longer labels (widest in Spanish)
-          overflowed, so they wrap and take the full line (h-auto overrides the preset
-          height). */}
+      {/* Labels wrap on a phone (widest in Spanish); h-auto overrides the preset height. */}
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         {PRESETS.map((p) => (
           <Button
@@ -57,9 +51,7 @@ export function PermissionModeField({ mode, onChange, invalid = false }) {
         ))}
       </div>
 
-      {/* Nine checkboxes rather than a number, so the 4/2/1 mask is not required.
-          Columns narrow on a phone so "Everyone else" fits; the gap keeps the header
-          words apart in wide locales. */}
+      {/* Columns narrow on a phone so "Everyone else" fits; the gap separates wide-locale headers. */}
       <div className={invalid ? "overflow-hidden rounded-lg border border-destructive" : "overflow-hidden rounded-lg border"}>
         <div className="grid grid-cols-[1fr_repeat(3,2.75rem)] items-center gap-x-1.5 gap-y-1 px-3 py-2 text-xs font-medium text-muted-foreground sm:grid-cols-[1fr_repeat(3,4.5rem)]">
           <span />

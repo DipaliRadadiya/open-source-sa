@@ -7,11 +7,7 @@ import { CardList, CardListItem } from "@/components/data-table/card-list";
 import { DatabaseRowActions } from "@/components/databases/database-row-actions";
 import { userCount } from "@/lib/databases/phpmyadmin-state";
 
-/**
- * The same databases as cards, for screens too narrow for the table. The name
- * leads, then the states worth noticing (no users, never exported, no site),
- * then plain figures. Engine shows only when the server has more than one.
- */
+// Engine shows only when the server has more than one.
 export function DatabasesCards({
   databases = [],
   canManage = false,

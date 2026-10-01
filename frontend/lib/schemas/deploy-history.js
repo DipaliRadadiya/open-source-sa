@@ -1,11 +1,7 @@
 import { z } from "zod";
 
-/**
- * `GET /applications/{id}/deployments`: history and settings in one response.
- * Written against `DeploymentResource`, not the API reference: the status is
- * `succeeded` (not `completed`), the commit is `commit_hash`/`commit_short`,
- * and `output` is sent only on the detail view.
- */
+// Written against `DeploymentResource`, not the API reference: status `succeeded`,
+// commit `commit_hash`/`commit_short`, and `output` only on the detail view.
 export const DEPLOY_STATUSES = ["queued", "running", "succeeded", "failed"];
 
 export const deploymentSchema = z
@@ -68,11 +64,7 @@ export const deploymentResponseSchema = z.object({ deployment: deploymentSchema 
 /** `GET /deployments/latest`: the newest row, the same shape as the history's. */
 export const latestDeploymentResponseSchema = z.object({ latest: deploymentSchema.nullable() });
 
-/**
- * How the process is started. Mirrors `UpdateApplicationRequest` plus the
- * backend's StartCommand rule: systemd execs `ExecStart` directly, so shell
- * constructs would fail only at start time.
- */
+// systemd execs `ExecStart` directly, so shell constructs would fail only at start.
 export const runtimeFormSchema = z.object({
   start_command: z
     .string()
@@ -89,11 +81,7 @@ export const runtimeFormSchema = z.object({
     .default(""),
 });
 
-/**
- * The settings form. `UpdateDeploySettingsRequest` accepts only `branch`,
- * `deploy_script` and `webhook_enabled`; `auto_deploy` (the response's name
- * for the same fact) is silently dropped.
- */
+// The API accepts `webhook_enabled`, not `auto_deploy`, which it silently drops.
 export const deploySettingsFormSchema = z.object({
   // A git ref: it lands in `git fetch origin <ref>`. Same charset as the backend.
   branch: z

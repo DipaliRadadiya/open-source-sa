@@ -110,9 +110,7 @@ export function FilesPanel({
   const [bulkAction, setBulkAction] = useState(null);
   const [bulkOutcome, setBulkOutcome] = useState(null);
 
-  // Leaving the folder clears the selection, so nothing unseen can be acted on.
-  // Adjusted during render rather than in an effect to avoid painting one frame
-  // with the old selection.
+  // Leaving the folder clears the selection, adjusted during render to avoid a stale frame.
   const [selectionPath, setSelectionPath] = useState(path);
   if (selectionPath !== path) {
     setSelectionPath(path);
@@ -153,11 +151,8 @@ export function FilesPanel({
     const needle = query.trim().toLowerCase();
     return needle ? files.filter((f) => f.name.toLowerCase().includes(needle)) : files;
   }, [files, query]);
-  /*
-   * Only rows on screen count as selected, so a filter or search cannot leave a
-   * hidden .htaccess in the selection. Derived, not pruned: clearing the filter
-   * restores the ticks.
-   */
+  // Only rows on screen count as selected, so a filter cannot leave a hidden file selected.
+  // Derived, not pruned: clearing the filter restores the ticks.
   const shownSelection = useMemo(() => {
     const onScreen = new Set(filtered.map((f) => f.path));
     return selected.filter((entry) => onScreen.has(entry));
@@ -232,20 +227,10 @@ export function FilesPanel({
     }
   }
 
-  // Plain, always-labelled buttons; `flex-wrap` handles narrow screens by wrapping,
-  // not by hiding labels. Grouped by job (view, add, repair, leave); Upload is the
-  // only primary action.
   const addButtons = (
     <div className="flex flex-wrap items-center gap-2">
-      {/* Divides "looking at this folder" from "changing it".
-          
-          A CONTAINER query, not a viewport one: the strip's width depends on the
-          sidebar. Below the threshold the groups wrap onto separate lines and the rule
-          would dangle.
-          
-          73rem is measured: the groups stop fitting at a 1176px strip, and container
-          queries measure the content box (18px narrower). 72rem made the rule itself
-          cause the wrap; 74rem hid it on rows that fit. */}
+      {/* A container query: the strip's width depends on the sidebar. 73rem is measured;
+          72rem made the rule itself cause the wrap, 74rem hid it on rows that fit. */}
       <Separator
         orientation="vertical"
         // `!self-center` because the primitive's `data-vertical:self-stretch` beats the
@@ -274,14 +259,7 @@ export function FilesPanel({
           button; grey text on this strip read as disabled. */}
       <Separator orientation="vertical" className="mx-0.5 !h-5 !self-center" />
       <FixPermissionsButton appId={appId} canManage={canManage} />
-      {/* Trash is reached from this toolbar, swapping the list, as in other panels.
-          
-          Light red tint (outline, 5% fill, red text) so it does not read as disabled,
-          while staying below the solid red of truly destructive controls.
-          
-          Text is destructive red mixed 22% toward the foreground in light mode: plain
-          `text-destructive` on this tint is under 4.5:1 for 14px text. Dark mode passes
-          with the plain token. */}
+      {/* Text is red mixed 22% toward foreground: plain `text-destructive` on this tint is under 4.5:1. */}
       <Button
         variant="outline"
         size="sm"
@@ -348,9 +326,7 @@ export function FilesPanel({
               className="sm:max-w-56"
             />
           ) : null}
-          {/* Files change outside the panel (deploys, cron, SSH). Re-runs the server
-              component, so it refreshes the trash view and search results too. Grouped with
-              the view controls: none of these change anything on disk. */}
+          {/* Files change outside the panel (deploys, cron, SSH); this also refreshes trash and search. */}
           <RefreshButton className="size-8" />
           {/* Context for the listing, not an action, so it sits with the view controls. */}
           <SizeBreakdownSheet breakdown={breakdown} />
@@ -392,10 +368,7 @@ export function FilesPanel({
       {siteSearch ? (
         <SiteSearchResults appId={appId} query={query} onAction={onAction} canManage={canManage} />
       ) : files.length === 0 && !showHidden && hiddenCount > 0 ? (
-        /*
-         * There ARE files here, just hidden: "empty" would be false. The action reuses
-         * the toggle's href, so "show hidden" has one definition.
-         */
+        /* Files exist but are hidden, so "empty" would be false. Reuses the toggle's href. */
         <EmptyState
           icon={EyeOff}
           title={t("empty.hiddenOnlyTitle", { count: hiddenCount })}
@@ -410,10 +383,6 @@ export function FilesPanel({
           }
         />
       ) : files.length === 0 ? (
-        /*
-         * Explain, then offer the way out (including drag-and-drop), and only actions the
-         * reader may take.
-         */
         <EmptyState
           icon={Folder}
           title={t("empty.title")}

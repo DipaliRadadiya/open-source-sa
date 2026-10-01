@@ -5,8 +5,7 @@ export function humanizeActivity(key) {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-// Semantic badge variant for an activity verb (green for additions, red for
-// removals/failures, neutral otherwise).
+// Badge variant for a verb: green for additions, red for removals/failures.
 export function actionBadgeVariant(action) {
   if (!action) return "muted";
   const a = action.toLowerCase();
@@ -41,14 +40,8 @@ export function actionDotClass(action) {
   return "bg-muted-foreground/40";
 }
 
-/**
- * A colour for the entity an activity row is about, in five families from the
- * theme's chart palette (which already has dark-mode values).
- */
-// Full class strings, not built from a variable: Tailwind scans source text, so
-// a composed `bg-${family}/12` is never generated.
-// Text mixes the chart colour with the foreground; chart colours alone are too
-// low-contrast as 12px text.
+// Full class strings: Tailwind scans source, so a composed `bg-${family}/12` is never generated.
+// Text mixes in the foreground: chart colours alone are too low-contrast at 12px.
 const PEOPLE = "border-transparent bg-chart-5/12 text-[color-mix(in_oklch,var(--chart-5)_55%,var(--foreground))]";
 const SECURITY = "border-transparent bg-chart-4/12 text-[color-mix(in_oklch,var(--chart-4)_55%,var(--foreground))]";
 const RUNTIME = "border-transparent bg-chart-1/12 text-[color-mix(in_oklch,var(--chart-1)_55%,var(--foreground))]";
@@ -80,8 +73,7 @@ const TYPE_FAMILY = {
   server: HOUSEKEEPING,
 };
 
-// The type's name in the reader's language (`activity.types.*`); a type the
-// panel has no key for falls back to its humanised id.
+// Translated type name; a type without a key falls back to its humanised id.
 export function typeLabel(t, type) {
   if (!type) return "";
   return t.has(`types.${type}`) ? t(`types.${type}`) : humanizeActivity(type);
@@ -91,9 +83,7 @@ export function typeBadgeClass(type) {
   return TYPE_FAMILY[type] ?? "border-border text-muted-foreground";
 }
 
-// Which entities belong to which scope: `account` is the panel's people,
-// `server` is the machine. The filters endpoint isn't scope-aware, so a page
-// with a fixed scope narrows the list itself.
+// The filters endpoint is not scope-aware, so a fixed-scope page narrows the list itself.
 // Mirrors config/activity.php `scopes.account`.
 const ACCOUNT_TYPES = new Set(["user", "role", "permission", "central"]);
 
@@ -104,18 +94,13 @@ export function typesForScope(types = [], scope) {
   );
 }
 
-/**
- * The verbs worth offering for a scope: the union of the per-type lists for
- * types in scope (`actions.all` spans both scopes); falls back to `all` when
- * the API sends no per-type breakdown.
- */
+// Union of the per-type verbs for types in scope; `all` only when the API sends no breakdown.
 export function actionsForScope(actions = {}, types = [], scope) {
   if (!scope) return actions;
   const allowed = typesForScope(types, scope);
   const union = new Set();
   for (const type of allowed) for (const action of actions[type] ?? []) union.add(action);
-  // `all` only stands in when the API sent no per-type lists at all; with
-  // them, an empty union means none of these verbs belong here.
+  // With per-type lists, an empty union means none of these verbs belong here.
   const perType = Object.keys(actions).some((key) => key !== "all");
   const scoped = { ...actions, all: union.size || perType ? [...union].sort() : (actions.all ?? []) };
   for (const type of Object.keys(scoped)) {

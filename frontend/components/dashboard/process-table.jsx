@@ -40,12 +40,8 @@ function UsageCell({ value, tone, label, format }) {
   );
 }
 
-/* ---------------------------------------------------------------------------
- * Cells are module-level components: flexRender calls `createElement(cellFn)`,
- * so an inline cell gets a new component type on every render and React
- * remounts the whole cell. This table re-renders on every keystroke in the
- * search box above it.
- * ------------------------------------------------------------------------- */
+// Cells are module-level: an inline cell is a new component type each render, and this table
+// re-renders on every search keystroke.
 
 function PidCell({ row }) {
   return <span className="tabular-nums text-muted-foreground">{row.original.pid}</span>;
@@ -111,11 +107,7 @@ function CommandCell({ row }) {
   );
 }
 
-/**
- * `limit` renders the same table with fewer rows for the collapsed dashboard
- * card. Only the summary footer and scroll cap are full-view only; the stop
- * button stays in the preview.
- */
+// `limit` is the collapsed dashboard card; the stop button stays in the preview.
 export function ProcessTable({
   data,
   query = "",
@@ -146,9 +138,7 @@ export function ProcessTable({
       accessorKey: "command",
       header: t("processes.command"),
       enableSorting: false,
-      // The command is the row's identity, so it owns every pixel left after
-      // the compact fact columns. A minimum keeps it useful before the table
-      // falls back to horizontal scrolling; max-w-0 lets its child ellipsize.
+      // The command takes the remaining width; max-w-0 lets its child ellipsize.
       meta: { className: "w-full min-w-36 max-w-0 @xl/procs:min-w-64" },
       cell: CommandCell,
     },
@@ -207,10 +197,7 @@ export function ProcessTable({
   }
 
   if (rows.length === 0) {
-    /*
-     * Compact: the card already has a title. The endpoint returns only the top
-     * processes by CPU, so an empty response is the server reporting none.
-     */
+    // The endpoint returns only the top processes, so empty means the server reported none.
     return query ? (
       <EmptyState compact icon={SearchX} title={t("processes.noMatch")} />
     ) : (
@@ -246,9 +233,7 @@ export function ProcessTable({
       </div>
       {limit ? null : (
       <div className="flex flex-wrap items-center justify-between gap-2">
-        {/* The API sends only the heaviest processes by CPU (capped by a server
-            setting, 25 by default), so the count describes the list, not the
-            machine. "Showing x of y" appears only while a search narrows it. */}
+        {/* The API sends only the heaviest processes, so the count describes the list, not the machine. */}
         <p className="text-sm text-muted-foreground">
           {query.trim()
             ? t("processes.showing", { shown: filtered.length, total: data.length })

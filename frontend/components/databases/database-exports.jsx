@@ -32,10 +32,7 @@ import {
 
 const POLL_MS = 3000;
 
-/**
- * Above this size a dump can take minutes and lands on the same disk as the
- * database, so it is confirmed first.
- */
+// Above this a dump can take minutes and lands on the database's own disk, so it is confirmed first.
 const CONFIRM_ABOVE_BYTES = 512 * 1024 * 1024;
 const IN_FLIGHT = ["queued", "running"];
 
@@ -49,19 +46,13 @@ const TONE = {
   queued: "muted",
 };
 
-/**
- * Dumps of this database.
- *
- * The work is queued: a row appears immediately and fills in as it goes.
- * Polling stops as soon as nothing is in flight.
- */
+// Polling stops as soon as nothing is in flight.
 export function DatabaseExports({ database, exports: initial = [], canManage, read = null }) {
   const t = useTranslations("databases.exports");
   const router = useRouter();
   const { refreshAndWait } = useRefresh();
   const [polled, setPolled] = useState(null);
-  // Polled rows override the server render until the server render changes
-  // (e.g. after `router.refresh()`), so deletions and completions both show.
+  // Polled rows override the server render until it changes (e.g. after `router.refresh()`).
   // Reacts to the prop change during render, not in an effect.
   const [seenInitial, setSeenInitial] = useState(initial);
   if (seenInitial !== initial) {
@@ -110,9 +101,7 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
         const still = parsed.data.exports.some(
           (row) => row.database_id === database.id && IN_FLIGHT.includes(row.status),
         );
-        // Kept even when finished: `initial` is the page-load snapshot, so
-        // falling back to it reverted a completed export to "Waiting" and
-        // restarted polling. Polled rows already carry size and download URL.
+        // Kept even when finished: falling back to `initial` reverted a completed export to "Waiting".
         setPolled(parsed.data.exports);
 
         if (!still) {

@@ -7,11 +7,7 @@ import { useRefresh } from "@/hooks/use-refresh";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-/**
- * Re-fetches the current list without a full page reload by re-running the
- * server component. Under a <NavTransitionProvider> it shares the list's
- * pending signal (so the table dims); otherwise it uses a local transition.
- */
+// Under a <NavTransitionProvider> it shares the list's pending signal; otherwise local.
 export function RefreshButton({ className }) {
   const t = useTranslations("common");
   const { pending, refresh } = useRefresh();

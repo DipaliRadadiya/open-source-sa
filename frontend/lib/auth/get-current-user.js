@@ -7,18 +7,15 @@ import { PanelUnavailableError } from "@/lib/api/unavailable";
 import { RequestFailedError } from "@/lib/api/request-failed";
 import { readErrorBody } from "@/lib/api/error-body";
 
-// Single cached `/auth/me` fetch per request. Returns the full payload:
-// `{ user, impersonatedBy }`. `getCurrentUser` / `getImpersonator` derive from
-// it so they share one request (deduped via React `cache`).
+// One cached `/auth/me` per request; `getCurrentUser`/`getImpersonator` derive from it.
 export const getMe = cache(async () => {
   // Read cookies OUTSIDE any try/catch: cookies() throws Next's internal
   // DynamicServerError, and swallowing it prerenders the page as logged-out.
   const cookieStore = await cookies();
   const locale = await serverLocale();
 
-  // Only 401/419 mean signed out; any other failure must reach the error
-  // boundary rather than log the user out. Retried once on a 5xx since this
-  // runs on every page.
+  // Only 401/419 mean signed out; other failures reach the error boundary rather
+  // than log the user out. Retried once on a 5xx.
   const url = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`;
 
   // Transport errors (refused connection, DNS) are wrapped so the boundary can

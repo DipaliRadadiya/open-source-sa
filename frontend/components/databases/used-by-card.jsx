@@ -10,11 +10,7 @@ import { Card } from "@/components/ui/card";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { AttachApplicationDialog } from "@/components/databases/attach-application-dialog";
 
-/**
- * Which site this database belongs to, and the button that changes it. Above
- * the tabs: it is a fact about the database, not its contents. Unattached is a
- * warning because site backups only dump attached databases.
- */
+// Unattached is a warning: site backups only dump attached databases.
 export function UsedByCard({
   database,
   canManage,
@@ -27,8 +23,7 @@ export function UsedByCard({
   const [open, setOpen] = useState(false);
 
   const application = applicationById(applications, database.application_id);
-  // Attached to a site this user cannot see, or one deleted between requests;
-  // "not linked" would be false and invite an attach.
+  // Attached to a site this user cannot see (or just deleted); "not linked" would be false.
   const attachedButUnknown = database.application_id !== null
     && database.application_id !== undefined
     && application === null;
@@ -40,8 +35,7 @@ export function UsedByCard({
           <p className="text-sm font-medium">{t("title")}</p>
 
           {application ? (
-            // Mid-sentence, so it wraps; break-words handles a long site name
-            // with no spaces.
+            // Mid-sentence, so it wraps; break-words handles a long name with no spaces.
             <p className="text-sm break-words text-muted-foreground">
               <Link
                 href={`/applications/${application.id}`}

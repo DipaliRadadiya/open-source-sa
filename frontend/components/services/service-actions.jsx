@@ -38,9 +38,7 @@ import {
 } from "@/components/ui/tooltip";
 import { apiMessage } from "@/lib/api/error-message";
 
-// Ordered by how much they disturb the service: reload re-reads config without
-// dropping connections, restart drops everything briefly, stop ends it. Colour
-// follows that escalation.
+// Ordered by disruption (reload keeps connections, restart drops them, stop ends it); colour follows.
 const ACTION_META = {
   start: { icon: Play, tone: "text-success hover:bg-success/10 hover:text-success" },
   reload: { icon: RefreshCcw, tone: "text-primary hover:bg-primary/10 hover:text-primary" },
@@ -62,15 +60,8 @@ const BY_STATUS = {
 // `failed` leads with start: recovery means bringing it up.
 const PRIMARY = { active: "restart", inactive: "start", failed: "start" };
 
-/**
- * Per-row controls: one labelled button for the state-appropriate action, and
- * a named menu for the rest (same shape as FileRowActions). Stop sits in the
- * menu, away from Restart.
- *
- * Stop asks first: it takes something offline now, and undo can't give back the
- * seconds it was down. Restart of a running unit asks too: it drops every
- * connection. Start and reload just run.
- */
+// Stop asks first (undo can't give back the downtime); restarting a running unit asks too
+// (it drops every connection). Start and reload just run.
 export function ServiceActions({ service, canManage, phpVersion, onBusyChange }) {
   const t = useTranslations("services");
   const { refreshAndWait } = useRefresh();
@@ -85,15 +76,13 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
   }
 
   const allowed = service.actions ?? [];
-  // Intersected with what the API permits for THIS service, so a protected unit
-  // never shows Stop no matter what state it's in.
+  // Intersected with what the API permits, so a protected unit never shows Stop.
   const actions = (BY_STATUS[service.status] ?? ["restart"]).filter((a) =>
     allowed.includes(a),
   );
   const busy = pending !== null;
 
-  // If the state's primary is not permitted (e.g. a reload-only protected
-  // unit), fall back to whatever is allowed.
+  // If the primary is not permitted (e.g. a reload-only protected unit), use whatever is allowed.
   const primary = actions.includes(PRIMARY[service.status])
     ? PRIMARY[service.status]
     : (actions[0] ?? null);
@@ -117,11 +106,9 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
       });
     } catch (error) {
       const data = error.response?.data;
-      // Name the service and action, and say the state is unchanged; the API
-      // message alone does not.
+      // Name the service and action and say the state is unchanged; the API message alone does not.
       showActionError({
-        // No answer at all (connection dropped) is not "left as it was": the
-        // server may have done it. The list re-reads every 3 s and shows which.
+        // No answer at all is not "left as it was": the server may have done it.
         title: error.response
           ? t(`error.${action}`, { name: service.label })
           : t("error.noAnswer", { name: service.label }),
@@ -140,8 +127,7 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
   }
 
   function trigger(action) {
-    // Restarting a running unit drops every connection; a failed unit has
-    // nothing to drop, so it just runs.
+    // Restarting a running unit drops every connection; a failed unit has nothing to drop.
     const disruptive =
       DISRUPTIVE_ACTIONS.includes(action) ||
       (action === "restart" && service.status === "active");
@@ -158,12 +144,10 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
       {primary ? (
         <Tooltip>
           <TooltipTrigger asChild>
-            {/* Wrapped: a disabled button swallows pointer events, and the
-                no-permission case is exactly when the tooltip matters. */}
+            {/* Wrapped: a disabled button swallows pointer events, and that is when the tooltip matters. */}
             <span tabIndex={!canManage || busy ? 0 : -1} className="inline-flex">
               <Button
-                // Neutral, not outline: inside a card the outline variant
-                // turns blue and overrides the verb's colour.
+                // Neutral, not outline: inside a card outline turns blue and overrides the verb's colour.
                 variant="neutral"
                 size="sm"
                 className={cn(ACTION_META[primary].tone)}
@@ -233,8 +217,7 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
 
             {service.testable ? (
               <DropdownMenuItem
-                // A read: it runs `nginx -t` / `php-fpm -t` and changes nothing,
-                // and the API allows it with view access.
+                // A read (`nginx -t` / `php-fpm -t`); the API allows it with view access.
                 disabled={configTest.pending}
                 // Closing the menu is fine: the dialog is rendered outside it.
                 onSelect={() => configTest.run()}
@@ -248,8 +231,7 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
               </DropdownMenuItem>
             ) : null}
 
-            {/* PHP version settings live on the PHP page; starting and
-                stopping the FPM unit stays here. */}
+            {/* PHP version settings live on the PHP page; FPM start/stop stays here. */}
             {phpVersion ? (
               <DropdownMenuItem asChild>
                 <Link href={`/php?version=${encodeURIComponent(phpVersion)}`}>
@@ -271,8 +253,7 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
       <ConfirmDialog
         open={confirming !== null}
         onOpenChange={(open) => !open && setConfirming(null)}
-        // Restart brings the service back by itself, so it warns rather than
-        // alarms; Stop leaves it down.
+        // Restart brings the service back by itself, so it warns rather than alarms.
         icon={confirmIsRestart ? RotateCw : TriangleAlert}
         tone={confirmIsRestart ? "warning" : "destructive"}
         title={confirming ? t(`confirm.${confirming}.title`, { name: service.label }) : ""}

@@ -1,18 +1,11 @@
-/**
- * How busy a measured resource is, as one ladder. The bar colour is derived
- * from the level word so the two cannot drift apart.
- */
+// The bar colour derives from the level word so the two cannot drift.
 
 export function pct(value) {
   const n = Number(value);
   return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0;
 }
 
-/**
- * `normal` < 75 <= `watch` < 90 <= `high`, or null when there is no
- * percentage (no swap, unreadable disk). Never report those as "normal";
- * the caller names them.
- */
+// `normal` < 75 <= `watch` < 90 <= `high`; null without a percentage, never "normal".
 export function usageStatus(percent) {
   if (percent == null) return null;
   const p = pct(percent);

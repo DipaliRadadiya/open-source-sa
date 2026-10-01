@@ -1,14 +1,8 @@
 import { TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/**
- * A consequence to know before acting, shown next to its cause. Amber by
- * default; `tone="destructive"` where something is actually wrong. Colour lives
- * on the icon and surface; the text stays foreground for readability.
- * Red uses a lower tint than amber on purpose: it reads hotter at equal opacity.
- *
- * `size="md"` is for a note with a button or more than one sentence.
- */
+// Colour lives on the icon and surface; the text stays foreground for readability.
+// Red uses a lower tint than amber on purpose: it reads hotter at equal opacity.
 const SURFACE = {
   // Soft tint and hairline border; the icon carries the colour.
   warning: "border-warning/25 bg-warning/5",

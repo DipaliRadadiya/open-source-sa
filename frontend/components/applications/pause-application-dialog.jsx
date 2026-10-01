@@ -7,16 +7,8 @@ import { disableApplication } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-/**
- * Pausing turns visitors away, so it asks first. Nothing is deleted or
- * stopped: the web server serves a holding page until resumed, and the dialog
- * leads with that.
- *
- * The search-engine warning matters: the holding page is served as 200, not
- * 503, so long pauses can hurt rankings. Keep it until the API answers 503.
- *
- * Resuming needs no dialog.
- */
+// The holding page is served as 200, not 503, so long pauses can hurt rankings.
+// Keep the search-engine warning until the API answers 503.
 export function PauseApplicationDialog({ application, open, onOpenChange }) {
   const t = useTranslations("applications.pause");
   const { refreshThen } = useRefresh();
@@ -24,8 +16,7 @@ export function PauseApplicationDialog({ application, open, onOpenChange }) {
   const [error, setError] = useState(null);
 
   function handleOpenChange(next) {
-    // Also cleared where the dialog is opened: reopening from its own button skips
-    // onOpenChange, which would show the last failure.
+    // Also cleared at the open site: reopening from its own button skips onOpenChange.
     if (!next) setError(null);
     onOpenChange(next);
   }
@@ -42,8 +33,7 @@ export function PauseApplicationDialog({ application, open, onOpenChange }) {
         setPending(false);
       });
     } catch (requestError) {
-      // Stays open with the API's message (a 422 usually means already paused
-      // elsewhere).
+      // A 422 usually means already paused elsewhere.
       setError(apiMessage(requestError, t("failed")));
       setPending(false);
     }

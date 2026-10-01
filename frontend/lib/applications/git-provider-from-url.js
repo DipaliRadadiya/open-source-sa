@@ -1,11 +1,4 @@
-/**
- * Which provider a public repository URL belongs to, or null.
- *
- * Deliberately a closed list of exact hostnames, not a pattern: self-hosted
- * instances cannot be identified from a URL, so they return null and the user
- * picks. This only sets a form default; webhook verification uses the stored
- * `webhook_provider`.
- */
+// Exact hostnames only: self-hosted instances return null and the user picks.
 
 /** Exact hosts, and the `www.` form each one also answers on. */
 const HOSTS = {

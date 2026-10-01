@@ -17,13 +17,7 @@ import { DestinationFormFields } from "@/components/integrations/storage/destina
 import { GoogleDriveConnect } from "@/components/integrations/storage/google-drive-connect";
 import { GoogleDriveSetup } from "@/components/integrations/storage/google-drive-setup";
 
-/**
- * Editing where a destination points, without credentials or provider.
- *
- * The API reads the presence of a credential as "rotate this", so credentials
- * have their own dialog. The provider is immutable server-side (it defines the
- * config shape), so the copy says to delete and recreate instead.
- */
+// No credentials (the API reads their presence as "rotate") and no provider (immutable).
 export function EditDestinationDialog({ destination, open, onOpenChange, oauthRedirectUri }) {
   const t = useTranslations("storage.edit");
   const { refreshAndWait } = useRefresh();
@@ -109,9 +103,7 @@ export function EditDestinationDialog({ destination, open, onOpenChange, oauthRe
           hideSecrets
           existing
         />
-        {/* Approval lives here, not in create: the OAuth `state` is issued
-            against an existing destination id. No completion handler: Connect
-            navigates the browser to Google and returns to the callback page. */}
+        {/* Here, not in create: the OAuth `state` is issued against an existing id. */}
         {provider === "google_drive_oauth" ? (
           <>
             {/* Collapsed; still available because reconnecting is when a wrong
@@ -130,12 +122,8 @@ export function EditDestinationDialog({ destination, open, onOpenChange, oauthRe
   );
 }
 
-/**
- * Only the non-secret fields, always sent — including the empty ones.
- *
- * A credential key must never appear here: its presence is what the API reads
- * as "rotate", so including an empty `password` would clear a working one.
- */
+// Non-secret fields only, empty ones included. A credential key must never appear:
+// an empty `password` would clear a working one.
 function submittableConfig(provider, config = {}) {
   const entries = fieldsFor(provider)
     .filter((f) => f.kind !== "secret" && f.kind !== "textarea")

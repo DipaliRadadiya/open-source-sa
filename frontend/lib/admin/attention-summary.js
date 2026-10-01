@@ -1,8 +1,4 @@
-/**
- * Summarises diagnostics for the dashboard: counts plus a few names. The full
- * report lives on System Health and the Error Log. Nothing is inferred; names
- * and reasons come straight from the API.
- */
+// Counts plus a few names for the dashboard; names and reasons come straight from the API.
 
 /** How many names to print before falling back to "and N more". */
 export const MAX_NAMES = 3;

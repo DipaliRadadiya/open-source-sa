@@ -11,13 +11,7 @@ import { useBranding } from "@/components/branding-provider";
 const STEP_ICONS = [CircleDot, CheckCircle2, Globe2];
 const STEPS = ["choose", "configure", "provision"];
 
-/**
- * `compact` is for the dashboard, where full height pushed the stat cards below
- * the fold. Same copy and keys either way; only the arrangement changes.
- *
- * `"use client"` is required: the dashboard is a Server Component, and
- * importing this without the directive builds clean but fails at render.
- */
+// `"use client"` is required: the dashboard is a Server Component and this fails at render without it.
 export function ApplicationEmptyState({ canManage = false, compact = false }) {
   const t = useTranslations("applications");
   const { name: brand } = useBranding();

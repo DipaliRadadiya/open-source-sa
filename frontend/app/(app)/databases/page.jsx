@@ -83,11 +83,8 @@ export default async function DatabasesPage({ searchParams }) {
     if (!current || at > current.at) lastBackup[row.database_id] = { ...row, at };
   }
 
-  /*
-   * The count is `meta.total` (the page holds at most ten). There is no
-   * server-side size total, so the size is shown only when this page holds
-   * every database; a partial sum must not pose as a total.
-   */
+  // No server-side size total: show the size only when this page holds every
+  // database, so a partial sum never poses as a total.
   const totalBytes = databases.reduce(
     (sum, db) => sum + (Number(db.size_bytes) || 0),
     0,

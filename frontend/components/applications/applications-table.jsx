@@ -38,9 +38,8 @@ import {
 } from "@/components/applications/application-status-badge";
 
 
-/* Cells at module level: flexRender treats a cell function's identity as the
- * component type, so an inline cell remounts on every render. This list
- * refreshes every 4s while a site provisions, which would reset open dialogs. */
+/* Cells at module level: flexRender treats an inline cell as a new component type,
+ * which remounts on every 4s poll and resets open dialogs. */
 
 /* `block` before `truncate`: an inline span never shows the ellipsis. The title
  * carries the full value. */
@@ -72,9 +71,7 @@ function CreatedCell({ row }) {
   );
 }
 
-/* A scheduled sweep (`applications:measure-sizes`) keeps sizes current, so this
- * shows the figure alone. A site the sweep has not reached shows "Not measured",
- * and clicking the words re-measures it. */
+/* Sizes come from a scheduled sweep; unmeasured sites show "Not measured", which re-measures on click. */
 function SizeCell({ row }) {
   const t = useTranslations("applications");
   const format = useFormatter();
@@ -167,13 +164,7 @@ function Filters({ statusOptions, typeOptions, t }) {
   );
 }
 
-/**
- * The applications list. Search, filters, sort and paging live in the URL and
- * are answered by the API (the list is paged).
- *
- * `siteTypes` comes from `GET /site-types`, not the visible rows, so every type
- * stays filterable.
- */
+// `siteTypes` comes from `GET /site-types`, not the visible rows, so every type stays filterable.
 export function ApplicationsTable(props) {
   // One transition shared by search, filters and pager, so the table shows
   // pending state while the server answers.
@@ -229,25 +220,15 @@ function ApplicationsList({
   );
   const columns = useMemo(
     () => [
-      // `col` is the API's sort key (IndexApplicationsRequest whitelist); anything
-      // else is a 422. Sorting is server-side because the table only holds one page.
-      //
-      // The percentages plus `fixedLayout` give columns a bound so `truncate` works;
-      // in auto layout a long name widens the table past its container. Below lg the
-      // cards render instead. Created hides below xl and the rest re-base to 100%.
+      // `col` must be on the API's sort whitelist (else 422). Percentages plus
+      // `fixedLayout` bound the columns so `truncate` works.
       { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, meta: { className: "w-[32%] xl:w-[29%]", sortKey: "name" }, cell: ({ row }) => <NameCell row={row} missingDatabase={missingDatabase.has(row.original.id)} gitProvider={gitProviderFor(row.original, gitProviders)} /> },
-      /*
-       * Not sortable: the API allow-lists sort columns.
-       *
-       * Widths must total 100, or `fixedLayout` silently squeezes a column:
-       *   lg  32 + 8 + 16 + 23 + 14 + 7          = 100
-       *   xl  29 + 7 + 14 + 19 + 11 + 14 + 6     = 100
-       */
+      // Widths must total 100 at lg (32+8+16+23+14+7) and xl (29+7+14+19+11+14+6),
+      // or `fixedLayout` squeezes a column.
       { id: "php", header: t("columns.php"), meta: { className: "w-[8%] xl:w-[7%]" }, cell: PhpCell },
       { accessorKey: "status", header: () => <SortHeader col="status">{t("columns.status")}</SortHeader>, meta: { className: "w-[16%] xl:w-[14%]", sortKey: "status" }, cell: StatusCell },
-      // Not sortable (the owner is a relation on the API side). Sized for the widest
-      // locale's header (ru, ~213px). `whitespace-normal` lets it wrap below xl, where
-      // no split fits every header; `h-auto min-h-11` because TableHead fixes 44px.
+      // Sized for the widest locale's header (ru). Wraps below xl; `h-auto min-h-11`
+      // because TableHead fixes 44px.
       { id: "owner", header: t("columns.owner"), meta: { className: "w-[23%] xl:w-[19%] h-auto min-h-11 whitespace-normal" }, cell: OwnerCell },
       // descFirst: largest and newest first is what people look for.
       { id: "size", header: () => <SortHeader col="directory_size_bytes" descFirst>{t("columns.size")}</SortHeader>, meta: { className: "w-[14%] xl:w-[11%]", sortKey: "directory_size_bytes" }, cell: SizeCell },

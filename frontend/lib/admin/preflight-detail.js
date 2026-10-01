@@ -1,9 +1,5 @@
-/**
- * Parses the preflight `detail`, an English sentence built by the backend
- * (`UpdatePreflight`), so it can be translated and shown in readable units.
- * Keep in step with the backend format; unmatched text falls back to the raw
- * string. The swap term is optional: only the memory check sends it.
- */
+// Parses the backend's English `UpdatePreflight` detail; keep in step with its format.
+// Unmatched text falls back to the raw string. Only the memory check sends swap.
 const SIZE = /^(\d+)MB (free|available)(?: \+ (\d+)MB swap)?, (\d+)MB required$/;
 
 export function parseSizeDetail(detail) {
@@ -24,10 +20,7 @@ export function isUnknownDetail(detail) {
   return String(detail ?? "").trim() === "unknown";
 }
 
-/**
- * Megabytes → MB or GB with suitable decimals. Under 10 GB keeps one decimal
- * so rounding never overstates headroom.
- */
+/** Under 10 GB keeps one decimal so rounding never overstates headroom. */
 export function megabytes(mb) {
   if (!Number.isFinite(mb) || mb < 0) return null;
   if (mb < 1024) return { value: mb, unit: "MB", maximumFractionDigits: 0 };

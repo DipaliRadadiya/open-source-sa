@@ -12,11 +12,8 @@ import { PushStagingDialog } from "@/components/applications/staging/push-stagin
 import { DeleteApplicationDialog } from "@/components/applications/delete-application-dialog";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 
-/**
- * A site's staging copy: create it and push it back over production. Push
- * takes production offline and rsyncs with `--delete` (`files` mode keeps no
- * safety copy), so it needs typed confirmation and has no default mode.
- */
+// Push takes production offline and rsyncs with `--delete` (`files` mode keeps no
+// safety copy), so it needs typed confirmation and has no default mode.
 export function StagingPanel({ appId, production, staging, canManage, canDelete = false }) {
   const t = useTranslations("applications.staging");
   const tApp = useTranslations("applications");

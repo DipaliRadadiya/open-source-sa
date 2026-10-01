@@ -1,10 +1,7 @@
 import { read } from "@/lib/api/read";
 import { phpExtensionsResponseSchema } from "@/lib/schemas/php";
 
-/**
- * The extension catalog for one PHP version — ~96 rows on a normal server.
- * The API returns them installed-first, so the order is kept as received.
- */
+// The API returns installed-first, so the order is kept.
 export async function getPhpExtensions(version) {
   if (!version) return { data: null, failed: false };
 

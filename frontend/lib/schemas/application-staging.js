@@ -3,24 +3,14 @@ import { z } from "zod";
 // loader does not guess it.
 import { applicationSchema } from "./application.js";
 
-/**
- * One site's staging copy. The staging site IS an application (`is_staging`
- * true, `production_application_id` pointing back), so it is deleted like any
- * site.
- *
- * `staging: null` means this site never had one; a 404 means the site type
- * cannot have one (staging is WordPress-only). Render them differently.
- */
+// `staging: null` means the site never had one; a 404 means the site type cannot
+// (staging is WordPress-only). Render them differently.
 export const applicationStagingResponseSchema = z.object({
   staging: applicationSchema.nullable().default(null),
 });
 
-/**
-/**
- * The domain rule from `CreateStagingRequest`. Identical to the clone rule but
- * duplicated so a server-side change to one does not silently apply to the
- * other. A laxer client rule promises an acceptance that will be refused.
- */
+// `CreateStagingRequest`'s rule, duplicated from clone's so a server change to one does
+// not silently apply to the other.
 export const STAGING_DOMAIN_PATTERN = /^[a-z0-9.-]+\.[a-z]{2,}$/;
 
 export const createStagingFormSchema = z.object({
@@ -33,17 +23,8 @@ export const createStagingFormSchema = z.object({
     .regex(STAGING_DOMAIN_PATTERN, "stagingDomainInvalid"),
 });
 
-/**
-/**
- * What a push overwrites, per mode. Deliberately no default: each mode destroys
- * something different.
- * - `files` runs `rsync --delete`, so production-only files go (uploads are kept).
- * - `database` replaces production's database under its existing files, which
- *   can white-screen if staging has plugin/theme versions production lacks.
- * - `full` does both. Pre-push dumps cannot be restored from the panel.
- *
- * Ordered by what each one replaces: files, database, both.
- */
+// No default: `files` runs `rsync --delete` (uploads kept), `database` can white-screen
+// production if plugin versions differ, `full` does both; pre-push dumps can't be restored.
 export const PUSH_MODES = ["files", "database", "full"];
 
 export const pushStagingFormSchema = z.object({

@@ -50,18 +50,12 @@ function sameList(a, b) {
   return key(a) === key(b);
 }
 
-/*
- * robots.txt product tokens, not crawlers: no request carries these user agents,
- * so a rule blocks nothing. Shown, marked, and not counted as blocked.
- */
+// robots.txt product tokens, not crawlers: no request carries them, so they are not counted as blocked.
 const ROBOTS_TXT_ONLY = new Set(["google-extended", "applebot-extended"]);
 const isRobotsTxtOnly = (bot) => ROBOTS_TXT_ONLY.has(String(bot).toLowerCase());
 const enforceableCount = (bots) => bots.filter((bot) => !isRobotsTxtOnly(bot)).length;
 
-/*
- * Dedupes case variants (`Meta-ExternalAgent` / `meta-externalagent`), which
- * the vhost matches case-insensitively as one bot.
- */
+// The vhost matches bot names case-insensitively, so case variants are one bot.
 function dedupedPolicies(policies) {
   return Object.fromEntries(
     Object.entries(policies).map(([key, option]) => {
@@ -107,10 +101,7 @@ function botGroups(keys, policies, selected) {
   return groups;
 }
 
-/*
- * Sorted alphabetically (case-insensitive) for lookup. Display order only;
- * grouping is unaffected.
- */
+// Sorted alphabetically (case-insensitive); display order only.
 function BotList({ bots }) {
   const t = useTranslations("applications.botBlocker");
   const sorted = [...bots].sort((a, b) =>
@@ -150,11 +141,7 @@ function BotList({ bots }) {
   );
 }
 
-/**
- * One of the two exception lists. Names are checked against the backend's
- * rules before adding (e.g. `bot` would match `Googlebot` and drop the site
- * from search).
- */
+// Names are checked against the backend's rules before adding (`bot` would match Googlebot).
 function RuleEditor({ kind, icon: Icon, bots, refused = {}, disabled, onAdd, onRemove }) {
   const t = useTranslations("applications.botBlocker.exceptions");
   const [draft, setDraft] = useState("");
@@ -284,12 +271,7 @@ function BotGroup({ label, bots }) {
   );
 }
 
-/**
- * Whole-site AI crawler control: several policies rather than an on/off
- * switch, since blocking training scrapers and search crawlers are separate
- * decisions. All labels, counts and bot names come from GET /ai-bot-policies,
- * which reads the same config the vhost is built from.
- */
+// Labels, counts and bot names all come from GET /ai-bot-policies.
 export function BotBlockerSection({
   appId,
   policies: sentPolicies,

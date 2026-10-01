@@ -10,11 +10,7 @@ import { useLiveMetrics } from "@/components/dashboard/use-live-metrics";
 import { StatCards } from "@/components/dashboard/stat-cards";
 import { ChartCardSkeleton } from "@/components/dashboard/chart-card-skeleton";
 
-/**
- * Charts load after the page: Recharts is ~400 KB and this is the login
- * landing screen. `ssr: false` because none can render real content on the
- * server (I/O needs a second poll sample; history is client-polled).
- */
+// Recharts is ~400 KB on the login landing screen. `ssr: false`: nothing real renders on the server.
 const chart = (load) => dynamic(load, { ssr: false, loading: ChartCardSkeleton });
 
 const ServerLoadChart = chart(() =>
@@ -95,10 +91,7 @@ function LiveStatus({ failed, reason, updatedAt, timeZone }) {
   );
 }
 
-/**
- * Names one of the two clocks on this page (live vs 24h). h2 under the page
- * h1, so the cards inside use h3.
- */
+// h2 under the page h1, so the cards inside use h3.
 function SectionHeading({ icon: Icon, title, children }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b pb-2">
@@ -119,8 +112,7 @@ export function LiveMetricsSection({ timeZone, history = [] }) {
 
   return (
     <div className="space-y-6">
-      {/* Grouped by clock, not subject: the 3s live poll vs the five-minute
-          24h collector. */}
+      {/* Grouped by clock: the 3s live poll vs the five-minute 24h collector. */}
       <ConnectionAnnouncement failed={failed} />
 
       <section className="space-y-4">

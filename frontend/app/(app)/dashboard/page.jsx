@@ -46,11 +46,8 @@ export default async function DashboardPage() {
   const canManage = can(permissions, "dashboard", "manage");
   // Needed to lead with the "create an application" invitation on an empty server.
   const canViewApplications = can(permissions, "application", "view");
-  /*
-   * Database engines come from `/databases/engines`, like the databases page,
-   * not `/server/facts`: `facts.runtimes` reports the mysql client version
-   * (wrong on MariaDB) and misses MongoDB and PostgreSQL.
-   */
+  // Engines from `/databases/engines`, not `/server/facts`: facts misreport
+  // MariaDB and miss MongoDB and PostgreSQL.
   const canViewDatabases = can(permissions, "database", "view");
   // History is the last 24 hours at five-minute samples, so fetched once per
   // render rather than polled.

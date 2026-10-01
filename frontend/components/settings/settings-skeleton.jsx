@@ -1,9 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/**
- * The shape of a settings card while its data is in flight. Mirrors `Section`
- * so the real card swaps in place.
- */
+// Mirrors `Section` so the real card swaps in place.
 export function SettingsCardSkeleton({ rows = 3, action = true }) {
   return (
     <div className="overflow-hidden rounded-xl border shadow-sm">

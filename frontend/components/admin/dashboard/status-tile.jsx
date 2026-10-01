@@ -3,12 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 
-/**
- * One thing that can be wrong, linking to where to fix it.
- *
- * Severity is a left-edge accent and tinted icon, never a filled card, so a
- * row of tiles stays readable.
- */
+// Severity is a left-edge accent and tinted icon, never a filled card, so a row stays readable.
 const TONES = {
   attention: { chip: "bg-destructive/10 text-destructive", accent: "bg-destructive/50", value: "text-destructive", card: "bg-destructive/[0.02]" },
   warning: { chip: "bg-warning/10 text-warning", accent: "bg-warning/50", value: "", card: "" },

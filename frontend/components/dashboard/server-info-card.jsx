@@ -12,10 +12,7 @@ import { EngineLogo } from "@/components/databases/engine-logo";
 import { engineLogo } from "@/lib/databases/engine-logo";
 import { shortVersion } from "@/lib/databases/short-version";
 
-/*
- * Database engines are listed from `/databases/engines` below, with logos;
- * `/server/facts` also reports some as runtimes, so they are filtered out there.
- */
+// Listed from `/databases/engines` instead, so filtered out of `/server/facts` runtimes.
 const DATABASE_ENGINES = new Set(["mysql", "mariadb", "mongodb", "postgresql"]);
 
 function Field({ icon: Icon, label, value, mono, copyLabel, className }) {
@@ -56,10 +53,7 @@ function Field({ icon: Icon, label, value, mono, copyLabel, className }) {
   );
 }
 
-/**
- * A full-width band under the page title, not a card in the metrics grid, so
- * the facts fit on one line and the charts below form an even 2×2.
- */
+// A band, not a grid card, so the facts fit one line and the charts below form a 2×2.
 export async function ServerInfoCard({
   facts,
   health,
@@ -69,11 +63,8 @@ export async function ServerInfoCard({
 }) {
   const t = await getTranslations("serverDashboard");
   const tDatabases = await getTranslations("databases");
-  /*
-   * `mysql` is dropped: `/server/facts` builds it from `mysql --version`, which
-   * on MariaDB reports the client version under the wrong name. The engines
-   * below come from the databases API instead.
-   */
+  // `mysql` is dropped: `/server/facts` builds it from `mysql --version`, which on
+  // MariaDB reports the client under the wrong name.
   const runtimes = Object.entries(facts?.runtimes ?? {}).filter(
     ([name, version]) => version && !DATABASE_ENGINES.has(name),
   );
@@ -169,11 +160,8 @@ export async function ServerInfoCard({
         ) : null}
       </CardContent>
 
-      {/*
-       * Installed runtimes and service status share one CardFooter, which keeps
-       * its shape when the services list is empty. gap-y-4 separates the two
-       * groups once the row wraps; gap-2 spaces chips within each.
-       */}
+      {/* Runtimes and service status share one footer, which keeps its shape when the
+          services list is empty. */}
       <CardFooter className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           {/* mr-1 plus gap-2 so the label reads as a heading, not another chip. */}
@@ -245,10 +233,6 @@ export async function ServerInfoCard({
   );
 }
 
-/**
- * Whether the machine's services are running. Distinguishes no permission or
- * failed request (silent), none reported, and something down.
- */
 function ServiceHealthLine({ health, down, t }) {
   // No permission, or the request failed: there is no verdict to give.
   if (!health) return null;

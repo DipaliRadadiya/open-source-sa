@@ -35,11 +35,7 @@ export default async function AdminLayout({ children }) {
     throw error;
   }
   if (!user) redirect(await signedOutPath());
-  /*
-   * Home, not /dashboard: a layout is the shell, so it cannot render an in-place
-   * refusal, and /dashboard is not open to every role. `app/page.js` picks the
-   * destination from the caller's permissions.
-   */
+  // Home, not /dashboard: /dashboard is not open to every role.
   if (!user.is_admin) redirect("/");
 
   return (

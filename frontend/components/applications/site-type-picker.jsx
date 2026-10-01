@@ -23,10 +23,7 @@ import { acceptedEngines } from "@/lib/applications/database-readiness";
 import { blockersAreFixable } from "@/lib/applications/blockers";
 import { TruncatedText } from "@/components/ui/truncated-text";
 
-/**
- * The category glyph for a type with no logo of its own; types with artwork go
- * through SiteTypeLogo (see TypeTile).
- */
+// Category glyph for a type with no logo; types with artwork use SiteTypeLogo.
 function TypeIcon({ type, className }) {
   const Icon =
     type.method === "git"
@@ -37,10 +34,7 @@ function TypeIcon({ type, className }) {
   return <Icon className={className} aria-hidden />;
 }
 
-/**
- * The mark at the top of a card, or beside the chosen type. Logos get no tile;
- * only the fallback glyph keeps one.
- */
+// Logos get no tile; only the fallback glyph keeps one.
 function TypeTile({ type, dimmed, size = "h-9 w-14" }) {
   if (siteTypeLogo(type.name)) {
     return <SiteTypeLogo name={type.name} size={size} className={cn(dimmed && "opacity-50")} />;
@@ -57,11 +51,8 @@ function TypeTile({ type, dimmed, size = "h-9 w-14" }) {
   );
 }
 
-/**
- * A short label for why a card is greyed, or null to fall back to the API's
- * full sentence (too long under a 190px card). Keyed on `unavailable_code` and
- * the declared range; anything unrecognised keeps the server's sentence.
- */
+// A short reason for a greyed card, or null to keep the API's full sentence (too long
+// for a 190px card). Unrecognised codes keep the server's sentence.
 function blockerItem(blocker, type, { t, tEngines, format }) {
   if (blocker?.kind === "database") {
     const names = engineNames(blocker.engines ?? acceptedEngines(type) ?? [], tEngines);
@@ -72,11 +63,7 @@ function blockerItem(blocker, type, { t, tEngines, format }) {
 
   const name = RUNTIME_NAMES[blocker.runtime];
   if (!name) return null;
-  /*
-   * Name a version to install (`suggest`, one this panel will offer within the
-   * range), not the range: users tried to install the range's lower bound, which
-   * may be end-of-life and hidden. The range is shown only when nothing fits.
-   */
+  // Name `suggest`, not the range: the range's lower bound may be end-of-life and hidden.
   if (blocker.suggest) return `${name} ${blocker.suggest}`;
   return blocker.label ? `${name} ${blocker.label}` : name;
 }
@@ -90,12 +77,8 @@ function engineNames(engines, tEngines) {
 
 const RUNTIME_NAMES = { php: "PHP", node: "Node" };
 
-/**
- * Every blocker in one line ("Needs Node 24 and MySQL or MariaDB"), so no
- * errand is missed; the tooltip carries the full sentences.
- *
- * Null when any blocker has no short form, so the server's sentence is shown.
- */
+// Every blocker in one line so no errand is missed. Null when any blocker has no short
+// form, so the server's sentence is shown.
 function blockerLine(type, { t, tEngines, format }) {
   const blockers = Array.isArray(type?.blockers) ? type.blockers : [];
   if (blockers.length === 0) return legacyBlockerLabel(type, { t, tEngines, format });
@@ -106,18 +89,11 @@ function blockerLine(type, { t, tEngines, format }) {
   return t("form.needs", { items: format.list(items, { type: "conjunction" }) });
 }
 
-/**
- * The same line for a type without a `blockers` array (added by the create
- * page; other callers or cached payloads may lack it).
- */
+// The same line for payloads without a `blockers` array.
 function legacyBlockerLabel(type, { t, tEngines, format }) {
   if (type?.unavailable_code === "database") {
-    /*
-     * Name the accepted engines (`accepted_engines`; the SQL pair is the fallback
-     * for older APIs), since "needs a database" does not say whether an installed
-     * engine would do. `format.list` with a disjunction gives each locale's own
-     * "or".
-     */
+    // Name the accepted engines (SQL pair is the fallback for older APIs); the
+    // disjunction list gives each locale's own "or".
     const engines = acceptedEngines(type) ?? [];
     const names = engines.map((engine) =>
       tEngines.has(`engines.${engine}`) ? tEngines(`engines.${engine}`) : engine,
@@ -128,11 +104,7 @@ function legacyBlockerLabel(type, { t, tEngines, format }) {
   }
   if (type?.unavailable_code !== "runtime") return null;
 
-  /*
-   * Include the version range ("Needs Node 20.19 – 24"), so the reader knows
-   * whether an upgrade or an install is needed. `rangeLabel` returns "" for an
-   * unbounded range.
-   */
+  // Include the range so the reader knows upgrade vs install. `rangeLabel` returns "" when unbounded.
   if (type.php_version_range) {
     const range = rangeLabel(type.php_version_range);
     return range ? t("form.blockedPhpVersion", { range }) : t("form.blockedPhp");
@@ -169,10 +141,7 @@ const RUNTIME_FIX = {
 
 const DATABASE_FIX = { href: "/databases", label: "form.installDatabaseEngine" };
 
-/**
- * Every place this type sends you, so a type with two blockers shows both. A
- * runtime blocker without `suggest` still links to its page.
- */
+// Every fix link, so a type with two blockers shows both.
 function blockerFixes(type) {
   const blockers = Array.isArray(type?.blockers) ? type.blockers : [];
 
@@ -195,14 +164,8 @@ function blockerFixes(type) {
     .filter(Boolean);
 }
 
-/**
- * The application type: a grid of logos while nothing is chosen (logos are
- * scanned faster than names), collapsing to one row with Change once chosen,
- * so the form below is not pushed down.
- *
- * Keeps search, popular first, taglines, and unavailable types shown greyed
- * with their reason and fix link rather than hidden.
- */
+// A logo grid while nothing is chosen, collapsing to one row with Change once chosen.
+// Unavailable types stay visible, greyed, with their reason and fix link.
 export function SiteTypePicker({ types = [], value, onChange }) {
   const t = useTranslations("applications");
   const tg = useTranslations("applications.guided");
@@ -223,10 +186,7 @@ export function SiteTypePicker({ types = [], value, onChange }) {
   const groups = useMemo(() => groupsWithTypes(types), [types]);
   const popularCount = useMemo(() => types.filter((type) => type.popular).length, [types]);
 
-  /*
-   * Opens on Popular (the backend's `popular` flag; there is no usage data), or
-   * All when nothing is flagged.
-   */
+  // `popular` is a backend flag, not usage data; All when nothing is flagged.
   const [activeGroup, setActiveGroup] = useState(() => (popularCount ? "popular" : "all"));
 
   // Uses the chip's own label, so the empty state matches the visible words.
@@ -245,11 +205,7 @@ export function SiteTypePicker({ types = [], value, onChange }) {
         ? Boolean(type.popular)
         : groupForType(type) === activeGroup;
 
-  /*
-   * The chip and the search narrow together, so the grid never contradicts the
-   * active chip. The empty state offers to widen when the chip hides matches
-   * (see `hiddenByGroup`).
-   */
+  // Chip and search narrow together, so the grid never contradicts the active chip.
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
     const pool = ordered.filter(inGroup);
@@ -257,10 +213,7 @@ export function SiteTypePicker({ types = [], value, onChange }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ordered, query, activeGroup]);
 
-  /*
-   * Matches the chip is hiding. Zero means no match anywhere, which gets
-   * different wording.
-   */
+  // Matches the chip is hiding; zero means no match anywhere.
   const hiddenByGroup = useMemo(() => {
     const term = query.trim().toLowerCase();
     if (!term || filtered.length) return 0;
@@ -281,10 +234,7 @@ export function SiteTypePicker({ types = [], value, onChange }) {
     return [...byHref.values()];
   }, [filtered]);
 
-  /*
-   * Change clears the field rather than reopening over it: the section 3 fields
-   * belong to the type, and must not stay mounted under a half-made choice.
-   */
+  // Change clears the field: type-specific fields must not stay mounted under a half-made choice.
   if (selectedType) {
     return (
       <div className="flex items-center gap-3 rounded-xl border bg-muted/30 p-3">
@@ -341,9 +291,8 @@ export function SiteTypePicker({ types = [], value, onChange }) {
         ) : null}
       </div>
 
-      {/* Chips over four buckets from type-categories.js (the API's 11 categories
-          are mostly single-type); empty buckets are not rendered. Chips, not Tabs:
-          they filter one searchable grid rather than switching panels. */}
+      {/* Four buckets from type-categories.js; empty ones are not rendered. Chips, not Tabs:
+          they filter one grid rather than switching panels. */}
       {groups.length > 1 ? (
         <div className="flex flex-wrap gap-1.5">
           {/* Popular first, All last. */}
@@ -379,16 +328,10 @@ export function SiteTypePicker({ types = [], value, onChange }) {
         <div className="grid grid-cols-1 gap-4 @xl:grid-cols-2 @3xl:grid-cols-3">
           {filtered.map((type) => {
             const disabled = !type.available;
-            /*
-             * A blocked card is still choosable when everything blocking it can be
-             * installed from here: the form then offers those installs, and Create stays
-             * refused until the server reports them present.
-             */
+            // Blocked but choosable when every blocker is installable from here; Create
+            // stays refused until the server reports them present.
             const choosable = !disabled || blockersAreFixable(type);
-            /*
-             * An unchoosable card is a `div`, not a disabled `button`: text inside a
-             * disabled button is skipped by screen readers.
-             */
+            // A `div`, not a disabled `button`: screen readers skip text in disabled buttons.
             const Card = choosable ? "button" : "div";
             const cardProps = choosable
               ? { type: "button", onClick: () => onChange(type.name) }
@@ -401,10 +344,7 @@ export function SiteTypePicker({ types = [], value, onChange }) {
                 className={cn(
                   // Logo beside the words, keeping cards two lines tall.
                   "flex w-full items-center gap-3 rounded-xl border bg-muted/40 p-2.5 text-left transition-colors",
-                  /*
-                   * Dashed and faded means unchoosable, not "something is missing": a card
-                   * that can be chosen must look pressable. The reason line carries the caveat.
-                   */
+                  // Dashed means unchoosable; a choosable card must look pressable.
                   !choosable && "border-dashed",
                   choosable &&
                     "hover:border-primary/40 hover:bg-card hover:shadow-[0_1px_2px_rgb(0_0_0/0.04),0_2px_6px_rgb(0_0_0/0.05)] focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
@@ -441,10 +381,7 @@ export function SiteTypePicker({ types = [], value, onChange }) {
           })}
         </div>
       ) : (
-        /*
-         * When the search matches only outside the active chip, name the chip and
-         * offer one click back to the matches.
-         */
+        /* Search matches only outside the active chip: name it and offer one click back. */
         <div className="rounded-xl border border-dashed px-3 py-8 text-center">
           <p className="text-sm text-muted-foreground">
             {hiddenByGroup

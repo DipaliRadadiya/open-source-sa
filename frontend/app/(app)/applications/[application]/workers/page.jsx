@@ -48,11 +48,8 @@ export default async function ApplicationWorkersPage({ params }) {
   const canManage = can(appPermissions, "app_worker", "manage", "application");
   const settled = isSettled(application);
 
-  /*
-   * Whether supervisord is installed: an uninstalled service is absent from the
-   * services list. Without it, `POST /workers` answers 202 and starts an apt
-   * install instead. A failed read just means unknown.
-   */
+  // supervisord absent from services means not installed; `POST /workers` would then
+  // start an apt install. A failed read means unknown.
   const [workersResult, services] = settled
     ? await Promise.all([getWorkers(id), getServices().catch(() => ({ services: [], failed: true }))])
     : [{ workers: [], presets: [], checks: [], failed: false }, { services: [], failed: true }];

@@ -7,9 +7,8 @@ import { Slot } from "radix-ui"
 import { ReasonTooltip, useDisabledReason } from "@/components/ui/reason-tooltip";
 import { cn } from "@/lib/utils"
 
-// Brand tint for labelled outline buttons inside a card (`bg-card`), a Caution,
-// or a `data-slot="notice"`; dialogs (`bg-popover`), toolbars and the header
-// stay neutral. Written out per scope: Tailwind only generates literal classes.
+// Brand tint for labelled outline buttons in a card, Caution or notice; dialogs, toolbars
+// and the header stay neutral. Written out per scope: Tailwind needs literal classes.
 const TINT_IN_CARDS =
   "in-[.bg-card]:border-transparent in-[.bg-card]:bg-[color-mix(in_oklch,var(--primary)_9%,var(--background))] in-[.bg-card]:text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] in-[.bg-card]:hover:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-[.bg-card]:aria-expanded:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-[.bg-card]:dark:bg-primary/15 in-[.bg-card]:dark:text-[color-mix(in_oklch,var(--primary)_70%,white)] in-[.bg-card]:dark:hover:bg-primary/25 in-[.bg-card]:dark:aria-expanded:bg-primary/25 in-data-[slot=caution]:border-transparent in-data-[slot=caution]:bg-[color-mix(in_oklch,var(--primary)_9%,var(--background))] in-data-[slot=caution]:text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] in-data-[slot=caution]:hover:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-data-[slot=caution]:aria-expanded:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-data-[slot=caution]:dark:bg-primary/15 in-data-[slot=caution]:dark:text-[color-mix(in_oklch,var(--primary)_70%,white)] in-data-[slot=caution]:dark:hover:bg-primary/25 in-data-[slot=caution]:dark:aria-expanded:bg-primary/25 in-data-[slot=notice]:border-transparent in-data-[slot=notice]:bg-[color-mix(in_oklch,var(--primary)_9%,var(--background))] in-data-[slot=notice]:text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] in-data-[slot=notice]:hover:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-data-[slot=notice]:aria-expanded:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-data-[slot=notice]:dark:bg-primary/15 in-data-[slot=notice]:dark:text-[color-mix(in_oklch,var(--primary)_70%,white)] in-data-[slot=notice]:dark:hover:bg-primary/25 in-data-[slot=notice]:dark:aria-expanded:bg-primary/25";
 
@@ -24,9 +23,8 @@ const buttonVariants = cva(
       variant: {
         default:
           "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 hover:shadow-sm",
-        // Filled plus border so it reads as a button on white and `bg-muted`.
-        // Colour comes from compoundVariants below: neutral, tinted only when a
-        // labelled button sits inside a card or notice.
+        // Filled plus border so it reads on white and `bg-muted`; colour comes from
+        // compoundVariants below.
         outline: "",
         // The same neutral look for header chrome that has a label (the
         // language switcher), which sits beside icon-only controls.

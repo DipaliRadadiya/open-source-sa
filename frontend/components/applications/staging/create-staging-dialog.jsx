@@ -22,12 +22,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-/**
- * Creates a staging copy. The request is synchronous (provision + rsync, no job
- * to poll), so the dialog stays open until it finishes.
- *
- * Callers MUST pass a `key` that changes on open so the field resets.
- */
+// The request is synchronous (no job to poll), so the dialog stays open until it finishes.
+// Callers MUST pass a `key` that changes on open so the field resets.
 export function CreateStagingDialog({ appId, production, open, onOpenChange }) {
   const t = useTranslations("applications.staging.createDialog");
   const router = useRouter();

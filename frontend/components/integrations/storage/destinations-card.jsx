@@ -22,10 +22,7 @@ import { ReplaceCredentialsDialog } from "@/components/integrations/storage/repl
 // Named in the empty state so "S3-compatible" is concrete; "other" is omitted.
 const EMPTY_STATE_PROVIDERS = ["aws", "r2", "b2", "wasabi", "spaces"];
 
-/**
- * Where backups are sent. A plain card of rows rather than a DataTable: the
- * list is always short.
- */
+// A plain card of rows rather than a DataTable: the list is always short.
 export function DestinationsCard({ destinations = [], canManage, oauthRedirectUri = null }) {
   const t = useTranslations("storage");
   const { refreshAndWait } = useRefresh();
@@ -82,9 +79,8 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
           <div>
             <div className="flex items-center gap-1.5">
               <p className="text-sm font-medium">{t("card.title")}</p>
-              {/* Test writes, reads back and deletes a small file, so a
-                  read-only key never passes. Popover, not tooltip, so it works
-                  on touch. */}
+              {/* Test writes, reads back and deletes a file, so a read-only key never
+                  passes. Popover, not tooltip, so it works on touch. */}
               <InfoHint label={t("card.whatTestDoes")}>
                 <p className="text-xs leading-relaxed">{t("card.testExplained")}</p>
               </InfoHint>
@@ -194,9 +190,8 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
         error={removal.error}
         onConfirm={remove}
       >
-        {/* The API refuses while any application backs up here or any backup
-            is still stored here, and names them in its answer (shown in the
-            dialog as the error). */}
+        {/* The API refuses while anything backs up or is stored here, and names it in
+            the error. */}
         <p className="text-sm text-muted-foreground">{t("delete.warning")}</p>
       </ConfirmDialog>
     </Card>

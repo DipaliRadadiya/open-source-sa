@@ -28,8 +28,7 @@ export async function generateMetadata({ params }) {
 export default async function ApplicationBotBlockerPage({ params, searchParams }) {
   const { application: id } = await params;
   const { days: rawDays } = await searchParams;
-  // Only ranges the card offers; a hand-typed ?days=365 would be clamped by the
-  // backend to something the UI never showed.
+  // Only offered ranges; the backend would clamp any other value silently.
   const days = TRAFFIC_RANGES.includes(Number(rawDays)) ? Number(rawDays) : DEFAULT_RANGE;
   const [permissions, appPermissions, t, result] = await Promise.all([
     getPermissions(),
@@ -50,9 +49,8 @@ export default async function ApplicationBotBlockerPage({ params, searchParams }
   const canManage = can(appPermissions, "app_bot_blocker", "manage", "application");
   const settled = isSettled(application);
 
-  // The screen is built from this catalog, so a failure is a load failure, not an
-  // empty option set. Traffic reads the access log, gated by the separate
-  // `app_log` grant; without it the panel is hidden rather than misreporting "no bots".
+  // A catalog failure is a load failure, not an empty option set.
+  // Traffic needs the separate `app_log` grant; hidden without it rather than showing "no bots".
   const canSeeTraffic = can(appPermissions, "app_log", "view", "application");
 
   const [{ policies, failed: policiesFailed, status: policiesStatus, failure: policiesFailure, message: policiesMessage }, traffic] = settled
@@ -85,8 +83,7 @@ export default async function ApplicationBotBlockerPage({ params, searchParams }
             currentAllowed={application.bot_allowed ?? []}
             canManage={canManage}
           />
-          {/* Below the choices: it is often empty or unreadable and must not push the
-              main control off screen. */}
+          {/* Below the choices: often empty, must not push the main control off screen. */}
           {canSeeTraffic ? (
             <BotTrafficCard
               appId={id}

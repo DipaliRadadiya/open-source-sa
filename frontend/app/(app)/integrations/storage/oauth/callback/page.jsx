@@ -11,21 +11,12 @@ export async function generateMetadata() {
   return { title: t("callbackTitle") };
 }
 
-/**
- * Google's OAuth redirect target. The browser arrives without a Sanctum token,
- * so only a panel page (which holds the user's credentials) can turn the
- * redirect into an authenticated API request. It also lets a declined consent
- * show a readable message instead of a JSON error.
- *
- * This path is registered with Google: it must not move, and the API route
- * behind it must never be registered as an authorized redirect URI.
- */
+// Google's OAuth redirect target: only a panel page holds the token to make the API call.
+// This path is registered with Google: never move it, and never register the API route instead.
 export default async function StorageOauthCallbackPage({ searchParams }) {
   const [permissions, params] = await Promise.all([getPermissions(), searchParams]);
 
-  // Writes a credential to the user's Google account; the API enforces this too.
-  // Redirects home rather than showing a refusal: this screen is reached from
-  // Google, not from the panel, so there is no page to refuse.
+  // The API enforces this too. Redirects home: reached from Google, there is no page to refuse.
   if (!can(permissions, "storage", "manage")) redirect("/");
   return (
     /* Centred one-job card, like the 404; the card owns its own heading. */

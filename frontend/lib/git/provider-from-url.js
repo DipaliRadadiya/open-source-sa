@@ -1,11 +1,5 @@
-/**
- * Which service a repository URL points at, or null. Sites built from a public
- * URL have no account, so the host is the only signal (derived, not stored).
- *
- * Only the three hosted services, by exact host: a self-hosted GitLab is
- * indistinguishable from Gitea or a bare SSH remote, so null is returned and
- * the caller shows a generic mark.
- */
+// Exact hosts only: a self-hosted GitLab is indistinguishable from Gitea or a bare SSH remote,
+// so null is returned and the caller shows a generic mark.
 const HOSTS = {
   "github.com": "github",
   "www.github.com": "github",
@@ -15,10 +9,7 @@ const HOSTS = {
   "www.bitbucket.org": "bitbucket",
 };
 
-/**
- * `git@github.com:owner/repo.git` is not a parseable URL, but clone buttons
- * hand it out. The host is everything between the `@` and the `:`.
- */
+// `git@github.com:owner/repo.git` is not a parseable URL, but clone buttons hand it out.
 const SCP_LIKE = /^[^@/\s]+@([^:/\s]+):/;
 
 export function providerFromRepositoryUrl(url) {

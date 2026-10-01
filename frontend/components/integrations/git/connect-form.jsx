@@ -34,10 +34,7 @@ function isSecret(field) {
   return field.type === "password" || field.name === "token";
 }
 
-/**
- * The credential last: the "Create a token" link is built from fields like
- * `host`, which must be filled first.
- */
+// Credential last: its "Create a token" link is built from fields like `host`.
 function credentialLast(fields) {
   return [...fields].sort((a, b) => Number(isSecret(a)) - Number(isSecret(b)));
 }
@@ -45,20 +42,14 @@ function credentialLast(fields) {
 // Fields with a local placeholder (the API sends none); others get no placeholder.
 const PLACEHOLDER_FIELDS = new Set(["host", "workspace"]);
 
-/**
- * Local help text for a field the API sends without `help`, keyed by provider
- * and field. Undefined for anything unlisted.
- */
+// Local help for fields the API sends without `help`.
 function fieldHelp(t, providerName, fieldName) {
   const key = `fieldHelp.${providerName}_${fieldName}`;
   return t.has(key) ? t(key) : undefined;
 }
 const TOKEN_PROVIDERS = new Set(["github", "gitlab", "bitbucket"]);
 
-/**
- * One line naming the scopes to tick, as code. Falls back to the backend's
- * sentence for providers without local copy.
- */
+// Falls back to the backend's sentence for providers without local copy.
 function ScopeHint({ provider, fallback }) {
   const t = useTranslations("git.connect");
   const key = `scopeHint_${provider.name}`;
@@ -106,11 +97,7 @@ function fieldPlaceholder(t, providerName, fieldName) {
   return PLACEHOLDER_FIELDS.has(fieldName) ? t(`placeholders.${fieldName}`) : undefined;
 }
 
-/**
- * The connect form for one provider, rendered from the backend's field list.
- * Mounted fresh per provider (keyed by the caller) so the generated Zod schema
- * is fixed for the life of the form.
- */
+// Keyed per provider by the caller, so the generated Zod schema is fixed for the form's life.
 
 export function ConnectForm({
   provider,
@@ -313,11 +300,7 @@ export function ConnectForm({
   );
 }
 
-/**
- * Under the token input: the scope hint, plus a warning when the value looks
- * like a URL. Scope names are spelled out exactly, since Bitbucket's and
- * GitLab's token pages do not preselect them.
- */
+// Scope names are spelled out: Bitbucket's and GitLab's token pages do not preselect them.
 function TokenHelp({ fallback, value, provider }) {
   const t = useTranslations("git.connect");
   const pastedUrl = LOOKS_LIKE_URL.test(value ?? "");

@@ -19,10 +19,6 @@ import { apiMessage } from "@/lib/api/error-message";
 import { initials } from "@/lib/format/initials";
 import { useUnsaved } from "@/components/ui/unsaved-guard";
 
-/**
- * Avatar dropdown shared by both panels' headers. `extraItems` slots
- * panel-specific actions (e.g. the Admin Panel / Exit switch) above Log out.
- */
 export function UserMenu({ extraItems, impersonating = false }) {
   const router = useRouter();
   const user = useUser();
@@ -46,10 +42,7 @@ export function UserMenu({ extraItems, impersonating = false }) {
         return;
       }
     }
-    /*
-     * A deliberate logout forgets the last page, so the next user on this browser
-     * does not land on (or learn) the previous user's page.
-     */
+    // A deliberate logout forgets the last page, so the next user does not land on the previous user's page.
     forgetRememberedPath();
     // Deliberately not cleared, so the menu keeps saying "signing out" until the login
     // page replaces it.

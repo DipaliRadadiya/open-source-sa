@@ -22,12 +22,7 @@ import {
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { cn } from "@/lib/utils";
 
-/**
- * The page when no engine is reachable yet: every engine and where it stands,
- * as a grid of logo cards. A failed install is one card's status plus the
- * server's sentence, not the whole page. No outer Card: cards inside a card
- * would be a box inside a box.
- */
+// Shown when no engine is reachable yet. No outer Card: it would be a box inside a box.
 export function EngineState({ engines = [], connections = [], canManage }) {
   const t = useTranslations("databases");
   const router = useRouter();
@@ -43,20 +38,13 @@ export function EngineState({ engines = [], connections = [], canManage }) {
   // SQL engine can never join it.
   const sqlPresent = findPresentSqlEngine(list);
 
-  /*
-   * "Recommended" is advice for a first choice only, so it is withdrawn once
-   * any engine is on the server.
-   */
+  // "Recommended" is withdrawn once any engine is on the server.
   const anyPresent = list.some((engine) => engineIsPresent(engine));
 
   return (
     <>
       <section className="space-y-5">
-        {/*
-          * No Health link here, unlike the populated bar: this renders only when
-          * nothing is running, and the monitor needs a running engine. The
-          * cards carry the recovery routes (Services, Connection).
-          */}
+        {/* No Health link: the monitor needs a running engine, and none is. */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-48 flex-1 items-center gap-2.5">
             <span className="flex shrink-0 items-center justify-center text-muted-foreground">
@@ -155,11 +143,7 @@ function EngineCard({
       ? t("install.oneAtATime")
       : null;
 
-  /*
-   * The whole card is clickable only when installing is its one action.
-   * Otherwise it stays a div with real controls, so a click is never silently
-   * swallowed. Matches the site-type picker.
-   */
+  // Clickable only when installing is the card's one action, so no click is swallowed.
   const clickable = !installing && !useless && !blocked;
 
   // Only for an actionable first choice: not once an engine is present,
@@ -221,10 +205,7 @@ function EngineCard({
         <span
           aria-hidden
           className={cn(
-            /*
-             * Filled on every installable card: these are equal choices. The
-             * recommendation is carried by the badge.
-             */
+            /* Filled on every installable card; the badge carries the recommendation. */
             buttonVariants({ variant: failed ? "outline" : "default", size: "sm" }),
             "pointer-events-none",
           )}

@@ -1,18 +1,12 @@
 import { read } from "@/lib/api/read";
 import { syncRunResponseSchema, syncIgnoresResponseSchema } from "@/lib/schemas/sync";
 
-/**
- * The most recent sync run. `sync` is null when none has run yet, which is not
- * a load failure. Items are not included; fetch them from GET /server/sync/{run}.
- */
+// `sync` is null when none has run yet, which is not a failure. Items are not included.
 export function getLatestSyncRun() {
   return read("/server/sync/latest", syncRunResponseSchema);
 }
 
-/**
- * One run's items from a cursor, at most 500 per call. Server-side fetches only
- * the first page; the client drains the rest while polling.
- */
+// At most 500 per call; the server fetches the first page and the client drains the rest.
 export function getSyncRunItems(runId, since = 0) {
   return read(`/server/sync/${runId}`, syncRunResponseSchema, {
     searchParams: { since },

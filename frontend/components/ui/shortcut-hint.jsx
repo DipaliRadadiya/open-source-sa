@@ -8,10 +8,7 @@ const isMac = () =>
 // Server snapshot: Ctrl is the safer guess.
 const notMac = () => false;
 
-/**
- * Displays the keyboard shortcut for the control beside it. Decorative
- * (aria-hidden) and hidden below `sm`; the shortcut itself is bound elsewhere.
- */
+// Decorative only; the shortcut itself is bound elsewhere.
 export function ShortcutHint({ letter, className }) {
   // useSyncExternalStore gives React an explicit server snapshot for hydration.
   const mac = useSyncExternalStore(noop, isMac, notMac);

@@ -10,10 +10,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useModeSentence } from "@/components/applications/files/use-mode-sentence";
 import { useRefresh } from "@/hooks/use-refresh";
 
-/**
- * The whole-site reset: a page-level action, always targeting the application's
- * own document root, never a user-picked path.
- */
+// Always targets the application's own document root, never a user-picked path.
 export function FixPermissionsButton({ appId, canManage }) {
   const t = useTranslations("applications.files");
   const sentenceFor = useModeSentence();

@@ -8,21 +8,12 @@ import {
 import { apiMessage } from "@/lib/api/error-message";
 import { openMagicLogin } from "@/lib/applications/magic-login-window";
 
-/**
- * Open WordPress with a minted session, once the answer is here. No fallback
- * button — see `lib/browser/new-tab.js`.
- */
+// No fallback button: see `lib/browser/new-tab.js`.
 export function launchMagicLogin(session) {
   openMagicLogin(session);
 }
 
-/**
- * Magic login: one administrator signs straight in; none or several opens the
- * picker. The count comes from WP-CLI, so the button shows a wait first
- * (fetching per row up front would be a WP-CLI call per site).
- *
- * Shared by the site dashboard's button and the row menu.
- */
+// One administrator signs straight in; none or several opens the picker.
 export function useMagicLogin(appId) {
   const t = useTranslations("applications.magicLogin");
   // "fetching" while WordPress lists administrators, then "signing"; the button
@@ -33,10 +24,7 @@ export function useMagicLogin(appId) {
   const [choice, setChoice] = useState(null);
 
   const start = useCallback(async () => {
-    /*
-     * No tab until there is somewhere to send it: the button carries the wait
-     * (`phase`) and the tab opens straight onto WordPress, rather than a blank tab.
-     */
+    // No tab until the session exists, so it opens straight onto WordPress.
     setPhase("fetching");
     try {
       const admins = await getWordPressAdministrators(appId);
@@ -48,10 +36,7 @@ export function useMagicLogin(appId) {
         return;
       }
 
-      /*
-       * None or several: the picker. Zero is kept apart from the error path: "no
-       * administrators" and "could not ask WordPress" are different problems.
-       */
+      // Zero admins is not an error: "none" and "could not ask" are different problems.
       setChoice({ admins });
     } catch (error) {
       toast.error(apiMessage(error, t("listFailed")));

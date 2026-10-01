@@ -1,8 +1,4 @@
-/**
- * Display groups for the application-type grid. The API's `category` is too
- * fine to filter by, so categories are folded into a few buckets; unknown ones
- * land in `others`. The grouping is deliberately a frontend decision.
- */
+// The API's `category` is too fine to filter by, so it is folded into a few buckets; unknown ones go to `others`.
 export const CATEGORY_GROUPS = [
   { key: "cms", categories: ["cms", "ecommerce"] },
   { key: "development", categories: ["developer"] },
@@ -20,10 +16,7 @@ export function groupForType(type) {
   return group?.key ?? "others";
 }
 
-/**
- * The non-empty groups for a catalogue, in order, with counts. Empty groups
- * (including `others`) are dropped rather than shown disabled.
- */
+// Empty groups (including `others`) are dropped, not shown disabled.
 export function groupsWithTypes(types = []) {
   const counts = new Map();
   for (const type of types) {

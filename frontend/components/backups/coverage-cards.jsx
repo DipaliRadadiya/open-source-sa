@@ -12,18 +12,14 @@ import { DomainText } from "@/components/ui/domain-text";
 import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-table/card-list";
 import { COVERAGE_STATE } from "@/components/backups/status-meta";
 
-/**
- * The same list on a phone, where a table would scroll sideways and hide the
- * action button (as Services does below `lg`).
- */
+// Phone layout: a table would scroll sideways and hide the action button.
 
 export function CoverageCards({ rows, options = null, canManage, onSetUp, onBackUpNow, busyIds = [] }) {
   const t = useTranslations("backups.coverage");
   const tc = useTranslations("common");
   const format = useFormatter();
 
-  // "Daily · 2:00 AM · keeps 7", dropping the hour a manual target lacks. The
-  // timezone is named on the site's own backups page, not on every card.
+  // "Daily · 2:00 AM · keeps 7"; the timezone is named on the site's backups page instead.
   const scheduleFact = (target) => {
     const when = scheduleWhen(target, options, format);
     return [
@@ -98,8 +94,7 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
                 className={cn(!target && "text-muted-foreground")}
               >
                 <span className="block truncate">
-                  {/* Same fallback as the table: a crashed run leaves
-                      last_run_at unset, so "Never" would be wrong. */}
+                  {/* Same fallback as the table: a crashed run leaves last_run_at unset, so not "Never". */}
                   {target
                     ? (target.last_run_at_human ?? lastBackup?.created_at_human ?? t("neverRunShort"))
                     : t("placeholders.lastRun")}
@@ -110,8 +105,7 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
               </CardFact>
             </CardFacts>
 
-            {/* Skipped only for an unprotected site without manage permission,
-                which would have nothing but Set up. */}
+            {/* Skipped for an unprotected site without manage permission: only Set up would remain. */}
             {state !== "unprotected" || canManage ? (
               <div className="mt-auto flex flex-wrap justify-end gap-2">
                 {state === "unprotected" ? (

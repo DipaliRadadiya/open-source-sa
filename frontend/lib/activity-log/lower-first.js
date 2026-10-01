@@ -1,8 +1,4 @@
-/**
- * Lowercase the first letter so a standalone label (the API's capitalised
- * `description`) fits mid-sentence. Only when the second character is
- * lowercase, so "SSH key added" or a leading name stays untouched.
- */
+// Only when the second character is lowercase, so "SSH key added" stays untouched.
 export function lowerFirst(text) {
   if (typeof text !== "string" || text.length < 2) return text ?? "";
   const [first, second] = [text[0], text[1]];

@@ -19,10 +19,8 @@ export function AppHeader({ impersonating = false }) {
   const isAdmin = user?.is_admin;
 
   return (
-    // Stickiness is owned by the wrapping cluster in the layout (so an impersonation
-    // banner can pin above it); this stays a plain bar.
-    // Controls are mouse-sized (28-32px), so on small screens each gets a 44px
-    // minimum touch box without changing its visual size.
+    // Stickiness belongs to the layout's wrapping cluster. Small screens get a 44px
+    // touch box without changing the controls' visual size.
     <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-6 max-sm:[&_button]:min-h-11 max-sm:[&_button]:min-w-11">
       {/* The trail lives at the top of the page content, where it has the page's width. */}
       <SidebarToggle />

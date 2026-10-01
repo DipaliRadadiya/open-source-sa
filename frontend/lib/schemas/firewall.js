@@ -2,13 +2,8 @@ import { z } from "zod";
 import { isIpOrCidr } from "@/lib/validation/ip";
 import { listMetaSchema } from "@/lib/schemas/list";
 
-/**
- * `summary` is the API's localized sentence for the rule ("Allow 443/tcp from
- * Anywhere"); render it rather than rebuilding one from the parts.
- *
- * `protected: true` marks a system-seeded rule (SSH, the panel's own ports),
- * which cannot be deleted while the firewall is on (lockout guard).
- */
+// Render the API's localized `summary`, not a sentence from the parts.
+// `protected` rules cannot be deleted while the firewall is on (lockout guard).
 export const firewallRuleSchema = z.object({
   id: z.union([z.number(), z.string()]),
   port_from: z.number().nullable().optional(),
@@ -40,9 +35,8 @@ export const firewallResponseSchema = z.object({
   // from Settings and would fall back to 22.
   ssh_port: z.number().nullable().optional(),
   your_ip: z.string().nullable().optional(),
-  // What is actually bound on the machine. `public` matters: a socket on
-  // 127.0.0.1 cannot be exposed by any rule. `program` is usually null (the
-  // panel is unprivileged) and is deliberately not inferred from the port.
+  // A socket on 127.0.0.1 cannot be exposed by any rule. `program` is usually
+  // null and is deliberately not inferred from the port.
   listening: z
     .array(
       z.object({
@@ -81,10 +75,7 @@ export const firewallPresetsResponseSchema = z.object({
   presets: z.array(firewallPresetSchema).default([]),
 });
 
-/**
- * The paginated rules endpoint skips GET /firewall's live UFW work. `meta` is
- * required: treating a page as the complete list would hide later rules.
- */
+// `meta` is required: treating a page as the complete list would hide later rules.
 export const firewallRulesResponseSchema = z.object({
   rules: z.array(firewallRuleSchema).default([]),
   meta: listMetaSchema,
@@ -92,10 +83,7 @@ export const firewallRulesResponseSchema = z.object({
 
 export const CUSTOM_PRESET = "custom";
 
-/**
- * The add-rule form. Ports are ONE field ("443", "8000-8090"), split by
- * `parsePorts`. Blank `source_ip` means "from anywhere", not a missing value.
- */
+// Ports are ONE field, split by `parsePorts`. Blank `source_ip` means anywhere.
 export const createFirewallRuleSchema = z
   .object({
     preset: z.string().default(CUSTOM_PRESET),
@@ -129,10 +117,8 @@ export const createFirewallRuleSchema = z
     }
   });
 
-/**
- * "443" | "8000-8090" | "8000:8090" | "8000 - 8090" → `{from, to}`. Null for
- * anything else, so "unparseable" and "out of range" get different messages.
- */
+// "443" | "8000-8090" | "8000:8090" → `{from, to}`. Null otherwise, so
+// "unparseable" and "out of range" get different messages.
 export function parsePorts(input) {
   const text = String(input ?? "").trim();
   if (!text) return null;

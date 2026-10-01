@@ -1,13 +1,7 @@
 import { parseApiWallClock } from "../format/api-date.js";
 
-/*
- * Keep in step with `StaleBackupReaper::isStale`, which `POST /backups/{id}/clear`
- * enforces (earlier attempts get a 422).
- *
- * Windows are the backend defaults (`no_heartbeat_stale_seconds`;
- * `upload_stall_seconds` plus the unique-lock grace). Timestamps are UTC wall
- * clock, so they are parsed as UTC, not in the browser's zone.
- */
+// Keep in step with `StaleBackupReaper::isStale` (`POST /backups/{id}/clear` enforces it).
+// Windows are the backend defaults; timestamps are UTC wall clock.
 const NO_HEARTBEAT_STALE_MS = 3900 * 1000;
 const HEARTBEAT_GRACE_MS = (1200 + 300) * 1000;
 

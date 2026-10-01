@@ -1,12 +1,4 @@
-/**
- * The error log grouped by fault: repeated occurrences collapse into one row
- * with a count.
- */
-
-/**
- * Monolog writes ISO-8601, not the "DD-MM-YYYY HH:mm:ss" the rest of the API
- * sends, so parseApiDate() (strict on purpose) cannot be used here.
- */
+// Monolog writes ISO-8601, not the API's "DD-MM-YYYY HH:mm:ss", so parseApiDate() cannot be used.
 export function parseLogDate(value) {
   if (!value) return null;
   const date = new Date(value);
@@ -20,22 +12,13 @@ export function shortException(name) {
   return parts[parts.length - 1] || String(name);
 }
 
-/**
- * "api" or "operation". The `server-ops` channel carries both and they share
- * almost no fields: API exceptions have status/method/route/exception, failed
- * shell operations have feature/op/exit_code/stderr.
- */
+// The `server-ops` channel carries both API exceptions and failed shell operations, with almost no shared fields.
 export function entryKind(entry) {
   return entry.feature || entry.operation || entry.exit_code != null ? "operation" : "api";
 }
 
-/**
- * Group entries by "same problem": exception + method + route + status for API
- * errors, feature + operation + exit code for operations. Not by message
- * (it varies with ids and paths) or reference (unique per entry).
- *
- * Returns groups newest-last-seen first, occurrences in API order (newest first).
- */
+// Not grouped by message (varies with ids and paths) or reference (unique per entry).
+// Returns groups newest-last-seen first, occurrences in API order (newest first).
 export function groupErrorLogs(entries = []) {
   const groups = new Map();
 

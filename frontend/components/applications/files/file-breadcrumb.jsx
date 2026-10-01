@@ -8,9 +8,7 @@ function href(appId, segments, upTo) {
   return path ? `/applications/${appId}/files?path=${encodeURIComponent(path)}` : `/applications/${appId}/files`;
 }
 
-// The in-page path navigator (not the header breadcrumb): root plus each folder
-// segment, all but the last clickable. Collapses the middle once a path is deep
-// enough to wrap.
+// In-page path navigator; collapses the middle once a path is deep enough to wrap.
 export function FileBreadcrumb({ appId, path }) {
   const t = useTranslations("applications.files");
   const segments = path ? path.split("/").filter(Boolean) : [];

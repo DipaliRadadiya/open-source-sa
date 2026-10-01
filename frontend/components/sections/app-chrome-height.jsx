@@ -2,15 +2,8 @@
 
 import { useEffect, useRef } from "react";
 
-/**
- * Publishes the height of the sticky chrome as `--app-chrome` on <html>.
- *
- * The sticky cluster (header, breadcrumb band, impersonation and reboot banners)
- * has no fixed height: banners are conditional and can wrap. Anything else that
- * sticks must offset by this variable, never a hardcoded value.
- *
- * Rendered inside the cluster and measures its own parent, so it cannot drift.
- */
+// Publishes the sticky chrome's height as `--app-chrome`. Its banners are conditional and
+// wrap, so anything else that sticks must offset by this, never a hardcoded value.
 export function AppChromeHeight() {
   const ref = useRef(null);
 

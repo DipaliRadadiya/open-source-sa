@@ -14,11 +14,7 @@ import {
 
 const RESET_MS = 1500;
 
-/**
- * Copy-to-clipboard control for a single value. Success shows a tick; only
- * failure toasts, since a clipboard write can be refused (insecure context,
- * denied permission).
- */
+// Only failure toasts: a clipboard write can be refused (insecure context, denied permission).
 export function CopyButton({ value, label, className, text = false }) {
   const t = useTranslations("common");
   const [copied, setCopied] = useState(false);
@@ -42,8 +38,7 @@ export function CopyButton({ value, label, className, text = false }) {
 
   const title = label ?? t("copy");
 
-  /* Labelled form, for when the value is not beside the button. Uses the real
-   * Button variant so it matches neighbouring `sm` buttons. */
+  /* For when the value is not beside the button. */
   if (text) {
     return (
       <Button

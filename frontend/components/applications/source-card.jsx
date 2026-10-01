@@ -16,17 +16,9 @@ import { Button } from "@/components/ui/button";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-/**
- * Git sites only. "Deploy" sits here rather than in the ⋯ menu. A failed
- * redeploy leaves the old code serving, so the card reports the last
- * successful deploy, not "broken".
- */
+// A failed redeploy leaves the old code serving, so the card reports the last successful deploy.
 export function SourceCard({ application, gitAccounts = [], canDeploy = false, canSeeDeployment = true, deployInFlight = false, className }) {
-  /*
-   * The provider, from the git account (the application only carries
-   * `git_account_id`). Hidden when the account is gone: `git_account_missing`
-   * has its own banner below.
-   */
+  // Hidden when the account is gone: `git_account_missing` has its own banner.
   const account = gitAccounts.find((a) => a.id === application.git_account_id) ?? null;
   const providerTitle = application.git_account_missing ? null : account?.provider_title;
   const t = useTranslations("applications.source");

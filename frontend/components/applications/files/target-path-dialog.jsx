@@ -13,14 +13,7 @@ import { Label } from "@/components/ui/label";
 import { FormModal } from "@/components/ui/form-modal";
 import { useRefresh } from "@/hooks/use-refresh";
 
-/**
- * The shared shape behind Rename, Copy, Compress and Extract: one pre-filled
- * "target path" field. The API takes `{path, target}` for all four; only the
- * default and the copy differ.
- *
- * `selectFrom`/`selectTo` pre-select part of the value on open (Rename selects
- * just the filename, as OS file pickers do).
- */
+/** Shared by Rename, Copy, Compress and Extract; the API takes `{path, target}` for all four. */
 // Refusals about what was typed belong under the field; 403, rate limits and
 // server faults are not about the path and stay toasts.
 const REFUSED_HERE = new Set([404, 409, 422]);
@@ -60,31 +53,23 @@ export function TargetPathDialog({
   // Completes the typed value before checking/sending (Compress adds the extension
   // to a bare name).
   normalize = (value) => value,
-  /*
-   * The "where does this land" line under the field; null hides it. A label, not a
-   * boolean: Extract pours files INTO the path, Compress writes one file AT it
-   * (`destinationOf` resolves the folder). Rename has none: its field is a name.
-   */
+  // The "where does this land" line; null hides it. Extract pours files INTO the
+  // path, Compress writes one file AT it (`destinationOf` resolves the folder).
   destinationLabel = null,
   destinationOf = (value) => value,
 }) {
   const t = useTranslations("applications.files");
   const tc = useTranslations("common");
   const { pending: refreshing, refreshThen } = useRefresh();
-  // Mounted fresh per file (see files-panel.jsx), so the default is the initial
-  // state.
+  // Mounted fresh per file (see files-panel.jsx), so the default is the initial state.
   const [value, setValue] = useState(defaultTarget);
   const [error, setError] = useState(null);
   const [submitting, setBusy] = useState(false);
   const busy = submitting || refreshing;
   const inputRef = useRef(null);
 
-  /*
-   * The typed path as the breadcrumb would say it, and as a value to paste. Empty
-   * means the site root and gets the breadcrumb's wording.
-   */
   // A bare name stays in the item's own folder (not the app's top folder, which on
-  // WordPress is the public web root).
+  // WordPress is the public web root). Empty means the site root.
   const place = (typed) => placeTarget(typed, file.path, defaultTarget);
   const trimmedTarget = destinationOf(place(value.trim())).replace(/^\/+|\/+$/g, "");
   const destinationValue = trimmedTarget;
@@ -93,8 +78,7 @@ export function TargetPathDialog({
     : t("root");
 
   useEffect(() => {
-    // After the value is committed to the DOM so the selection sticks; DOM side
-    // effect only, no setState.
+    // After the value is committed to the DOM, so the selection sticks.
     const id = requestAnimationFrame(() => {
       inputRef.current?.focus();
       if (selectFrom !== undefined) {
@@ -190,13 +174,8 @@ export function TargetPathDialog({
         />
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-        {/* Where this lands, updated as the user types (the field is relative to the
-            site's folder, and the root renders as an empty box).
-            
-            Deliberately NOT an absolute path: the browser is rooted at `publicHtmlPath()`,
-            and no API field reliably equals it (`document_root` is deeper with a web root,
-            `path` diverges for non-git sites with a custom web root). Uses the
-            breadcrumb's vocabulary instead. */}
+        {/* Deliberately NOT an absolute path: no API field reliably equals the browser's
+            root (`publicHtmlPath()`), so it uses the breadcrumb's vocabulary. */}
         {destinationLabel ? (
           <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
             <span className="shrink-0">{destinationLabel}</span>

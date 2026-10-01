@@ -27,10 +27,6 @@ const STORAGE_KEY = "sv-oss:restarting-since";
 
 const ServerRestartContext = createContext(null);
 
-/**
- * Starts the restart curtain. Takes no arguments: the screen is the same wherever
- * the restart was triggered.
- */
 export function useServerRestart() {
   const context = useContext(ServerRestartContext);
   if (!context) {
@@ -107,8 +103,7 @@ export function ServerRestartProvider({ children }) {
       return;
     }
 
-    // Deferred, not set in the effect body: sessionStorage is only readable after
-    // mount, and a setState during commit is a cascading render. A timeout, not rAF,
+    // Deferred: sessionStorage is only readable after mount. A timeout, not rAF,
     // because frames do not fire in a restored background tab.
     const timer = setTimeout(() => setState(resumeRestartState(storedAt, Date.now())), 0);
     return () => clearTimeout(timer);

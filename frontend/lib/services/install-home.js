@@ -1,12 +1,5 @@
-/**
- * Where a failed service install is retried. Not `/setup`: setup marks a
- * component installed once ANY part is (any engine, any PHP version), hiding
- * the part that failed. Matched on the service key; `/setup` is the fallback.
- *
- * `label` (services.attention.*) and `retryLabel` (services.state.*) are built
- * as template keys at the call sites, so grep will not find them; they are
- * asserted by scripts/check-install-home.mjs.
- */
+// Not `/setup`: it marks a component installed once ANY part is, hiding the failed one.
+// `label`/`retryLabel` keys are built dynamically; scripts/check-install-home.mjs asserts them.
 const HOMES = [
   {
     // The service key is `postgresql`, not `postgres`.

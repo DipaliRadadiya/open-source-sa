@@ -9,11 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useHoverPopover } from "@/lib/hooks/use-hover-popover";
 
-/**
- * Site health as a chip; the popover names each site, the problem, and links
- * to the screen that fixes it. A Popover, not a Tooltip: Radix tooltips never
- * open on touch. Renders nothing when all is well.
- */
+// A Popover, not a Tooltip: Radix tooltips never open on touch.
 export function SiteAttention({ findings = [] }) {
   const t = useTranslations("serverDashboard.attention");
   // Opens on hover as well as click; the chevron is the cue for touch and

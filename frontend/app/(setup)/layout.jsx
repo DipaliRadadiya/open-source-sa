@@ -11,20 +11,14 @@ import { ErrorCopy } from "@/components/sections/error-copy";
 
 export const dynamic = "force-dynamic";
 
-/**
- * A focused shell for first-run setup: authenticated but without the app
- * sidebar. No session → login; no `setting` permission → home.
- */
+// First-run setup shell without the sidebar. No session → login; no `setting` → home.
 export default async function SetupLayout({ children }) {
   const user = await getCurrentUser();
   if (!user) redirect(await signedOutPath());
 
   const permissions = await getPermissions();
-  /*
-   * A layout cannot render an in-place refusal (it IS the shell), so redirect
-   * to "/", which `app/page.js` resolves from the caller's permissions;
-   * /dashboard is not open to every role.
-   */
+  // A layout cannot render an in-place refusal; "/" resolves home from permissions
+  // (/dashboard is not open to every role).
   if (!can(permissions, "setting", "view")) redirect("/");
 
   return (

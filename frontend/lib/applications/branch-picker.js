@@ -1,13 +1,6 @@
-/**
- * Whether the deployment screen's branch field is a picker or a text box.
- * When the list is unavailable it falls back to free text and says why; it
- * must never render an empty, disabled picker.
- */
+// The branch field must never render an empty, disabled picker; it falls back to free text.
 
-/**
- * "picker" | "text". `text` when there is no linked account, the account is
- * gone (`git_account_missing`), or the request failed or returned nothing.
- */
+/** "picker" | "text". */
 export function branchFieldMode({ application, state, branches = [] } = {}) {
   const linked =
     Boolean(application?.git_account_id) &&
@@ -19,10 +12,7 @@ export function branchFieldMode({ application, state, branches = [] } = {}) {
   return "picker";
 }
 
-/**
- * The notice for the text-box state, or `null` when nothing is wrong (e.g. a
- * site with no linked account).
- */
+/** `null` when nothing is wrong (e.g. a site with no linked account). */
 export function branchFieldNotice({ application, state, branches, current } = {}) {
   // Checked first: a deleted account nulls `git_account_id`.
   if (application?.git_account_missing && application?.repository) return "unlinked";
@@ -38,10 +28,7 @@ export function branchFieldNotice({ application, state, branches, current } = {}
   return null;
 }
 
-/**
- * Branch options, always including the saved branch even if deleted upstream,
- * so the picker never silently shows a different branch.
- */
+/** Always includes the saved branch, even if deleted upstream. */
 export function branchOptions(branches = [], current) {
   const names = (Array.isArray(branches) ? branches : [])
     .map((item) => (typeof item === "string" ? item : item?.name))

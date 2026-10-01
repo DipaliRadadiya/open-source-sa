@@ -1,10 +1,7 @@
 import { z } from "zod";
 import { isRedeploying } from "../applications/settled.js";
 
-/**
- * The domain rule from `CreateCloneRequest`. Keep in step with the backend: a
- * laxer client rule promises an acceptance the server will refuse.
- */
+// From `CreateCloneRequest`; keep in step with the backend.
 export const CLONE_DOMAIN_PATTERN = /^[a-z0-9.-]+\.[a-z]{2,}$/;
 
 export const cloneFormSchema = z.object({
@@ -60,17 +57,10 @@ export const cloneResponseSchema = z.object({ clone: cloneSchema });
 /** Still working. Polling continues while the status is one of these. */
 export const CLONE_IN_FLIGHT = ["pending", "running"];
 
-/**
- * Site types that have a `CloneStrategy` on the backend. `CloneManager` refuses
- * a database-backed type without one; listing them lets the screen say so
- * up front. Types with no database always clone.
- */
+// Types with a backend `CloneStrategy`; `CloneManager` refuses a database-backed type without one.
 const CLONE_STRATEGY_SITE_TYPES = ["wordpress"];
 
-/**
- * Why this site cannot be cloned, or null when it can. Ordered by what the
- * person can do about it.
- */
+// Ordered by what the person can do about it.
 export function cloneBlockedReason(application, siteType) {
   // A failed build is not "still being set up"; that state is not coming.
   if (application?.status === "failed") return "sourceFailed";
@@ -84,18 +74,11 @@ export function cloneBlockedReason(application, siteType) {
   return null;
 }
 
-/**
- * What a clone does and does not inherit, read off `CloneManager`'s create
- * array and the per-application tables.
- */
+// Read off `CloneManager`'s create array and the per-application tables.
 export const CLONE_CARRIES = ["files", "phpVersion", "webRoot", "buildCommand", "repository"];
 
 export const CLONE_DROPS = ["ssl", "backups", "cronJobs", "workers", "passwordProtection", "deploys"];
 
-/**
- * What this site's copy inherits: the database line only for types that have
- * one, build/repository only for a site with a repository.
- */
 export function cloneCarries(siteType, application = null) {
   const git = Boolean(application?.repository);
   return [
@@ -112,10 +95,7 @@ export function cloneDrops(application = null) {
   return application?.repository ? CLONE_DROPS : CLONE_DROPS.filter((key) => key !== "deploys");
 }
 
-/**
- * The name the backend gives an unnamed copy (`Application::uniqueName()`):
- * `{source} (Clone)`, then `(Clone) 2`, `(Clone) 3`… Untranslated, as stored.
- */
+// Mirrors `Application::uniqueName()`: `{source} (Clone)`, then `(Clone) 2`… Untranslated, as stored.
 export function defaultCloneName(sourceName, takenNames = []) {
   const taken = new Set(takenNames.map((value) => String(value)));
   const base = `${sourceName} (Clone)`;
@@ -126,11 +106,7 @@ export function defaultCloneName(sourceName, takenNames = []) {
   return base;
 }
 
-/**
- * A failure reason worth showing. The backend may echo raw exception text in
- * `reason_title` (translation keys, SQL, paths); those fall back to the generic
- * sentence.
- */
+// The backend may echo raw exception text in `reason_title`; that falls back to the generic sentence.
 export function cloneFailureTitle(clone) {
   const title = clone?.reason_title;
   if (!title) return null;
@@ -138,11 +114,7 @@ export function cloneFailureTitle(clone) {
   return title;
 }
 
-/**
- * A domain to offer for the copy: `blog.example.com` → `copy.blog.example.com`,
- * then `copy-2.`, `copy-3.` … when taken, so the offer is never one the API
- * will reject.
- */
+// `blog.example.com` → `copy.blog.example.com`, then `copy-2.`… so the offer is never one the API rejects.
 export function suggestCloneDomain(sourceDomain, takenDomains = []) {
   if (!sourceDomain) return "";
   const taken = new Set(takenDomains.map((value) => String(value).toLowerCase()));

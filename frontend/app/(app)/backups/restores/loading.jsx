@@ -1,10 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableSkeleton } from "@/components/data-table/table-skeleton";
 
-/**
- * The section-level skeleton draws the Overview tab; heading and tabs are
- * layout already on screen.
- */
+// Overview tab skeleton only; heading and tabs are already on screen.
 export default function Loading() {
   return (
     <div className="space-y-4" aria-busy="true">

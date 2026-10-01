@@ -7,11 +7,6 @@ import { useSetQuery } from "@/hooks/use-set-query";
 import { nextSearchValue } from "@/lib/tables/search-sync";
 import { useNavPending } from "@/components/data-table/nav-transition";
 
-/**
- * Debounced search box that writes the `search` param to the URL (resetting to
- * page 1). Shows a spinner while a navigation is pending and a clear (×) button
- * when it has a value. Reusable across any list page.
- */
 export function SearchInput({
   placeholder,
   paramKey = "search",
@@ -29,11 +24,8 @@ export function SearchInput({
   const first = useRef(true);
   const input = useRef(null);
 
-  /*
-   * Follow the URL when something else changes it (Clear filters, back button,
-   * links). Synced during render, not in an effect, to avoid painting a stale
-   * term for a frame.
-   */
+  // Follow URL changes from elsewhere. Synced during render, not in an effect,
+  // so a stale term is never painted.
   const [seenUrlValue, setSeenUrlValue] = useState(urlValue);
   if (seenUrlValue !== urlValue) {
     setSeenUrlValue(urlValue);
@@ -53,9 +45,8 @@ export function SearchInput({
       );
     }, delay);
     return () => clearTimeout(id);
-    // `extraQuery` MUST stay excluded: callers pass an object literal, so its
-    // identity changes every render and would keep resetting the timer.
-    // `paramKey`, `delay` and `setQuery` are fixed for the life of the box.
+    // `extraQuery` MUST stay excluded: it is a new object every render and
+    // would keep resetting the timer.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 

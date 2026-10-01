@@ -1,13 +1,7 @@
 import { Check, CircleAlert, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/**
- * The ringed list of steps a long job has finished, plus a live row for the
- * current one. Shared by provisioning and deploying (same `steps[]` field).
- *
- * Only completed steps get a row: the API reports what finished, never what
- * started, and which steps run depends on the site.
- */
+// Only completed steps get a row: the API reports what finished, never what started.
 function Marker({ tone, children }) {
   return (
     <span

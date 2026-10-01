@@ -1,9 +1,4 @@
-/**
- * Strips formatting markers from GitHub release markdown for plain-text
- * display. Release notes are untrusted remote content and there is no
- * sanitizer, so they are never rendered as HTML. Conservative: anything
- * unrecognised passes through untouched.
- */
+// Release notes are untrusted remote content with no sanitizer: never render them as HTML.
 
 // Only paired markers: a lone asterisk is usually a bullet or a glob.
 const BOLD = /(\*\*|__)(?=\S)([\s\S]*?\S)\1/g;

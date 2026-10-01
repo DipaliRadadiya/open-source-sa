@@ -8,12 +8,7 @@ import { Button } from "@/components/ui/button";
 import { AttachDatabaseDialog } from "@/components/applications/attach-database-dialog";
 import { CreateDatabaseDialog } from "@/components/databases/create-database-dialog";
 
-/**
- * The Database card's action, by state:
- *   has one          → open that database
- *   none, spares     → attach one here, in a dialog
- *   none, no spares  → create one for this site, in a dialog
- */
+// Opens the attached database; otherwise attaches a spare or creates one, in a dialog.
 export function DatabaseCardActions({
   application,
   databases = [],

@@ -7,13 +7,7 @@ import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { FormModal } from "@/components/ui/form-modal";
 
-/**
- * What was just created, and how to connect to it.
- *
- * Not a one-time secret reveal: `DatabaseUserResource` returns the password on
- * every read and the database page shows all values. The connection string
- * leads; the parts follow for clients that ask for host and port separately.
- */
+// Not a one-time secret: `DatabaseUserResource` returns the password on every read.
 // `forUser`: shown after adding a user on the database's own page.
 export function CreatedCredentials({ database, open, onOpenChange, forUser = false }) {
   const t = useTranslations("databases");
@@ -26,14 +20,11 @@ export function CreatedCredentials({ database, open, onOpenChange, forUser = fal
     { key: "port", value: port },
     { key: "database", value: database?.name },
     { key: "username", value: user?.username },
-    // Shown in full (masked only at rest): the connection string above already
-    // prints it in clear.
+    // In full: the connection string above already prints it in clear.
     { key: "password", value: user?.password },
   ].filter((field) => field.value);
 
-  // Whether the string carries an escaped password (`+` as `%2B`), which needs
-  // a note. Compared on the two real strings rather than re-deriving PHP's
-  // rawurlencode, so it fires exactly when they differ.
+  // Compared on the two real strings rather than re-deriving PHP's rawurlencode.
   const escapedPassword = Boolean(
     user?.password &&
       user?.connection_string &&
@@ -71,8 +62,7 @@ export function CreatedCredentials({ database, open, onOpenChange, forUser = fal
         </>
       }
     >
-      {/* One bordered block with a divider, matching the detail page's
-          connection card. */}
+      {/* Matches the detail page's connection card. */}
       {user?.connection_string || fields.length ? (
         <div className="overflow-hidden rounded-lg border">
           {user?.connection_string ? (
@@ -98,9 +88,7 @@ export function CreatedCredentials({ database, open, onOpenChange, forUser = fal
           ) : null}
 
           {fields.length ? (
-            /* Two columns, not the detail card's three: at this dialog's width
-               three columns wrap the password, the one value read character
-               by character. */
+            /* Two columns: at this width three would wrap the password. */
             <div className="grid grid-cols-2 gap-x-4 gap-y-3.5 px-4 py-3.5">
               {fields.map((field) => (
                 // The name takes both tracks, as on the detail page's card.
@@ -111,8 +99,7 @@ export function CreatedCredentials({ database, open, onOpenChange, forUser = fal
                     field.key === "database" && "col-span-2",
                   )}
                 >
-                  {/* Copy button beside the label, not the value, so it does
-                      not narrow wrapped values. */}
+                  {/* Beside the label, not the value, so it does not narrow wrapped values. */}
                   <div className="flex items-center gap-0.5">
                     <p className="min-w-0 truncate text-xs text-muted-foreground">
                       {t(`created.${field.key}`)}

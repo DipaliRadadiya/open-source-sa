@@ -21,10 +21,7 @@ function PageChangeWatcher() {
   return null;
 }
 
-/**
- * A thin bar across the top while a page loads. Links report into it
- * (components/ui/app-link.jsx); it clears when the page has changed.
- */
+// Links report into it (components/ui/app-link.jsx); it clears when the page has changed.
 export function NavigationProgress() {
   const t = useTranslations("common");
   const navigation = useSyncExternalStore(

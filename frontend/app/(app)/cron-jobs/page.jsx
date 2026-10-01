@@ -38,14 +38,12 @@ export default async function CronjobsPage({ searchParams }) {
   const [{ cronjobs, meta, failed, status, failure, message }, runAs, schedulePresets, commandPresets, facts, sites] =
     await Promise.all([
       getCronjobs(sp),
-      // Not gated on `canManage`: every viewer sees the "Runs as" filter.
-      // `failed` is kept: this needs the unrelated `system_user` permission,
-      // so a 403 is ordinary and must not read as "no system users".
+      // Not gated on `canManage`. Keep `failed`: this needs the `system_user` permission,
+      // so a 403 must not read as "no system users".
       getSystemUserOptions(),
       getSchedulePresets(),
       canManage ? getCommandPresets() : Promise.resolve({ presets: [] }),
-      // Only for the timezone. /server/facts shells out on the backend, so it
-      // is bounded and must never hold up the page.
+      // Only for the timezone; /server/facts shells out, so it must never hold up the page.
       withTimeout(getServerFacts(), 2000),
       // For the command form's path picker; on failure the user types a path.
       canManage ? getAllApplications() : Promise.resolve({ applications: [] }),

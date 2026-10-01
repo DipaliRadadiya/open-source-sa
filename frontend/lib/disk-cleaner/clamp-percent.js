@@ -1,13 +1,5 @@
-/**
- * What the disk-usage threshold box should hold after a keystroke (the API
- * 422s outside 1–100):
- *
- *   - digits only
- *   - no clamping: an out-of-range value is reported by `thresholdProblem`
- *   - `0` empties the field, since an empty box already means "always"
- *
- * Leading zeros are dropped so `080` is `80` and the value stays short.
- */
+// Digits only, no clamping (`thresholdProblem` reports range); `0` empties the
+// field, since an empty box already means "always".
 export function clampPercent(input) {
   const digits = String(input ?? "").replace(/[^0-9]/g, "");
   if (digits === "") return "";

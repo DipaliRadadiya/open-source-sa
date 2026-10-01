@@ -1,7 +1,4 @@
-/**
- * Polls `GET /deployments/latest` for deploys this page did not start (a push
- * or another user), since the history is server-rendered.
- */
+// Polls for deploys this page did not start (a push or another user).
 
 export const WATCH_MS = 5000;
 export const WATCH_BUSY_MS = 2500;

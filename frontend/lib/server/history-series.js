@@ -1,8 +1,5 @@
-/**
- * Parses the 24h collector's `sampled_at`, sent as `d-m-Y H:i:s` (day first,
- * which `new Date()` misreads), by position. It has no offset: read as local
- * time, then formatted in the server's zone by `clockFormatter`.
- */
+// `sampled_at` is `d-m-Y H:i:s` (day first, which `new Date()` misreads), parsed by position.
+// It has no offset: read as local time, then formatted in the server's zone.
 export function sampleTime(value) {
   const match = /^(\d{2})-(\d{2})-(\d{4})[ T](\d{2}):(\d{2}):(\d{2})$/.exec(
     String(value ?? "").trim(),
@@ -13,10 +10,7 @@ export function sampleTime(value) {
   return Number.isNaN(at.getTime()) ? null : at.getTime();
 }
 
-/**
- * Samples for Recharts: `t` in milliseconds (shared x-axis key with the live
- * series), sorted oldest first since an unsorted array draws garbage silently.
- */
+// `t` in milliseconds; sorted oldest first since an unsorted array draws garbage silently.
 export function historySeries(points) {
   return (points ?? [])
     .map((point) => ({ ...point, t: sampleTime(point.sampled_at) }))

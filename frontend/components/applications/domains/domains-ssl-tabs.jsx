@@ -24,11 +24,8 @@ function SslIcon({ status, label }) {
   return <ShieldOff className="size-4 text-muted-foreground" aria-label={label} />;
 }
 
-/**
- * Domains and SSL tabs. Both panels stay mounted (`forceMount`) so an in-flight
- * certificate issue keeps polling across tab switches. The active tab is
- * mirrored to `?tab=`.
- */
+// Both panels stay mounted (`forceMount`) so an in-flight certificate issue
+// keeps polling across tab switches.
 export function DomainsSslTabs({ domains, ssl, sslStatus = "none" }) {
   const t = useTranslations("applications.domains");
   const searchParams = useSearchParams();

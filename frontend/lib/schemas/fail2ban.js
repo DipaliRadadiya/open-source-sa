@@ -1,7 +1,6 @@
 import { z } from "zod";
 
-// No stats means the jail is not enabled, not zero activity; keep fields
-// nullable so the UI can tell them apart.
+// No stats means the jail is not enabled, not zero activity.
 const jailStatsSchema = z.object({
   currently_failed: z.number().nullable().optional(),
   total_failed: z.number().nullable().optional(),
@@ -23,8 +22,7 @@ export const banSchema = z.object({
   ip: z.string(),
   jail: z.string(),
   banned_at: z.string().nullable().optional(),
-  // Null on a live ban means permanent, or a fail2ban too old to report timing;
-  // never "expires now".
+  // Null means permanent or an old fail2ban; never "expires now".
   expires_at: z.string().nullable().optional(),
   seconds_left: z.number().nullable().optional(),
 });
@@ -43,16 +41,11 @@ export const bantimePresetSchema = z.object({
   label: z.string(),
 });
 
-/**
- * The install as the server sees it; `null` once fail2ban is on disk. Needed
- * because apt may take ten minutes, and `installed` alone cannot show progress
- * or failure. Same shape as the PHP/Node runtime installs.
- */
+// `null` once fail2ban is on disk; apt may take minutes, so `installed` alone cannot show progress.
 export const fail2banInstallSchema = z.object({
   // installing | failed
   status: z.string(),
-  // A stable code (package_not_found, apt_lock, network, no_space, worker,
-  // unknown) and its localized title; show the title, never local wording.
+  // Show the localized title, never local wording.
   reason: z.string().nullable().optional(),
   reason_title: z.string().nullable().optional(),
   // Locates the server-ops log entry for support.

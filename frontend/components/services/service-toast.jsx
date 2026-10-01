@@ -2,12 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Copy, Check, RotateCw } from "lucide-react";
 
-/**
- * Toasts for a service action, shared by the row buttons and the boot switch.
- *
- * Interactive parts live in the toast body, not Sonner's `action` slot: that
- * slot won't shrink and pushes the button outside on two-line messages.
- */
+// Interactive parts live in the body, not Sonner's `action` slot: it won't shrink on two-line messages.
 
 const COPIED_RESET_MS = 2000;
 
@@ -35,8 +30,7 @@ function ToastBody({ message, reference, copyLabel, copiedLabel, actionLabel, on
 
       {reference ? (
         <span className="flex w-full min-w-0 items-center gap-1.5">
-          {/* min-w-0 + flex-1: only the reference may be truncated, so the
-              label is not broken mid-word. */}
+          {/* Only the reference may be truncated. */}
           <span className="min-w-0 flex-1 truncate font-mono text-xs">{reference}</span>
           <button
             type="button"
@@ -44,8 +38,7 @@ function ToastBody({ message, reference, copyLabel, copiedLabel, actionLabel, on
             onClick={copy}
             className="shrink-0 rounded p-0.5 opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            {/* The icon swap is the confirmation (no room for a word); the
-                state is announced through aria-label. */}
+            {/* The icon swap is the confirmation; the state is announced through aria-label. */}
             {copied ? (
               <Check className="size-3.5 text-success" />
             ) : (
@@ -78,8 +71,7 @@ export function showActionError({
   retryLabel,
   onRetry,
 }) {
-  // Both the sentence and the reference: the backend names the failed step,
-  // and the reference identifies the incident.
+  // The backend names the failed step; the reference identifies the incident.
   toast.error(title, {
     description: (
       <ToastBody

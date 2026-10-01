@@ -1,11 +1,7 @@
 import { z } from "zod";
 
-/**
- * A site's own logs. Unlike the server logs these carry no byte cursor (so no
- * incremental tail — the client re-reads the last N lines) and no group, size
- * or readable flag. `kind` is file | journal; a `journal` "application" source
- * only appears for a site that runs a process.
- */
+// No byte cursor (the client re-reads the last N lines) and no group, size or readable flag.
+// `kind` is file | journal.
 export const applicationLogSourceSchema = z
   .object({
     key: z.string(),

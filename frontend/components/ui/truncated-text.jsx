@@ -3,19 +3,10 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-/**
- * One truncated line with a tooltip showing the full text, only when it is
- * actually clipped (measured, not guessed).
- *
- * `tooltip` overrides the bubble text when the line is a summary rather than a
- * truncation; passing it always shows the bubble.
- */
+// Tooltip only when actually clipped; passing `tooltip` always shows it.
 export function TruncatedText({ children, tooltip, className, as: Tag = "span" }) {
-  /*
-   * A callback ref into state, NOT `useRef`: when clipped, the element is
-   * remounted inside a TooltipTrigger, and the observer must follow the new
-   * node (a detached one measures 0×0, i.e. "fits").
-   */
+  // A callback ref, NOT `useRef`: the node remounts inside a TooltipTrigger when
+  // clipped, and a detached node measures 0×0 ("fits").
   const [node, setNode] = useState(null);
   const [clipped, setClipped] = useState(false);
 

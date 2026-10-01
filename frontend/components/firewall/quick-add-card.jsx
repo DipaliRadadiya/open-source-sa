@@ -41,12 +41,8 @@ const QUICK_KEYS = ["http", "https", "ssh", "mysql"];
 // One click, three rules: the set a web server needs.
 const STACK_KEYS = ["http", "https", "ssh"];
 
-/**
- * One click, one rule, no form: most firewall rules have no parameters.
- *
- * A tile whose rule already exists says so and removes it on the next click, so
- * it cannot create duplicates (422) and the tile that opened a port also closes it.
- */
+// A tile whose rule exists removes it on the next click, so it cannot create
+// duplicates (422).
 export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, riskyPorts = [] }) {
   const t = useTranslations("firewall");
   const { refreshAndWait } = useRefresh();

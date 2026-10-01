@@ -1,34 +1,15 @@
-/**
- * One ECharts option shape for every time-series card in the panel, so the
- * charts stay visually consistent. Kept a pure function so it can be unit-tested.
- */
-
 /** Colour of a series, or a readable fallback if the token has not resolved. */
 function colourOf(series, tokens) {
   return tokens[series.token] ?? "currentColor";
 }
 
-/**
- * The same colour, see-through. Tokens arrive as `rgb(r, g, b)` (the chart
- * host converts them; ECharts cannot handle `oklch()`). Anything else is
- * returned unchanged.
- */
+// Tokens arrive as `rgb(r, g, b)` (ECharts cannot handle `oklch()`); anything else is returned unchanged.
 function withAlpha(colour, alpha) {
   const m = /^rgb\((\s*\d+\s*,\s*\d+\s*,\s*\d+\s*)\)$/.exec(colour ?? "");
   return m ? `rgba(${m[1]}, ${alpha})` : colour;
 }
 
-/**
- * @param {object}   spec
- * @param {object[]} spec.data     points, each carrying `t` plus one field per series
- * @param {object[]} spec.series   { key, label, token, kind, axis, width }
- * @param {object[]} spec.axes     { min, max, formatter, ticks, minInterval, position }
- * @param {object}   spec.tokens   resolved CSS custom properties
- * @param {Function} spec.xLabel   formats an x value for the axis and tooltip header
- * @param {Function} spec.value    formats a y value for the tooltip
- * @param {boolean}  spec.zoom     add the dataZoom pair
- * @param {object}   [spec.markLine] { value, label, token } — a capacity reference
- */
+// `data` points carry `t` plus one field per series; `markLine` is a capacity reference.
 export function timeSeriesOption({
   data = [],
   series = [],
@@ -83,15 +64,8 @@ export function timeSeriesOption({
     aria: { enabled: true, decal: { show: true } },
     // Charts redraw on a poll; re-animating each time is unreadable.
     animation: false,
-    /*
-     * Bands below the plot are stacked by hand; ECharts does not lay them out
-     * relative to each other. Keep these numbers in step:
-     *
-     *   slider   4 .. 34   (bottom 4, height 30)
-     *   legend  42 .. 56   (clears the slider by 8)
-     *   labels  68 .. 80   (ECharts puts them at gridBottom-20 .. gridBottom-8)
-     *   grid bottom 88     (so the labels clear the legend by 12)
-     */
+    /* ECharts does not lay out these bands relative to each other; keep in step: slider 4–34,
+     * legend 42–56, labels 68–80 (ECharts: gridBottom-20..-8), grid bottom 88. */
     grid: {
       left: 56,
       right: 20,
@@ -104,8 +78,7 @@ export function timeSeriesOption({
       data: series.map((s) => s.label),
       bottom: zoom ? 42 : 4,
       icon: "roundRect",
-      // Gap between entries larger than swatch-to-label, so each swatch reads
-      // as paired with its own label.
+      // Wider gap between entries than swatch-to-label, so each swatch pairs with its label.
       itemWidth: 8,
       itemHeight: 8,
       itemGap: 22,
@@ -150,8 +123,7 @@ export function timeSeriesOption({
       position: axis.position ?? (index === 0 ? "left" : "right"),
       axisLine: { show: false },
       axisTick: { show: false },
-      // Only the first axis draws grid lines. Solid and faint rather than
-      // dashed; opacity because `--border` is already the faintest token.
+      // Opacity because `--border` is already the faintest token.
       splitLine:
         index === 0
           ? { lineStyle: { color: border, type: "solid", width: 1, opacity: 0.7 } }
@@ -203,10 +175,7 @@ export function timeSeriesOption({
   return option;
 }
 
-/**
- * The same numbers as a text table for screen readers. Built from the same
- * data, series order and formatters as the chart so the two cannot diverge.
- */
+// Screen-reader table built from the same data and formatters, so the two cannot diverge.
 export function seriesDataTable({ caption, timeLabel, data = [], series = [], xLabel, value }) {
   return {
     caption,
@@ -222,10 +191,7 @@ export function seriesDataTable({ caption, timeLabel, data = [], series = [], xL
   };
 }
 
-/**
- * An axis ceiling with headroom. `floor` is always included (e.g. 64 KB/s for
- * I/O, core count for load) so an idle series is not auto-scaled to look busy.
- */
+// `floor` (e.g. 64 KB/s, core count) keeps an idle series from being scaled to look busy.
 export function axisMax(data, keys, { floor = 0, headroom = 1.2 } = {}) {
   let peak = 0;
   for (const point of data) {
@@ -238,13 +204,8 @@ export function axisMax(data, keys, { floor = 0, headroom = 1.2 } = {}) {
   return Math.max(floor, peak * headroom, 1);
 }
 
-/**
- * Round a ceiling up to a number the tick sequence would have chosen anyway
- * (1, 2, 2.5 or 5 x 10^n), so a forced `max` label does not sit beside a tick.
- *
- * Applied by the caller, not inside `axisMax`: the I/O charts' 65536 floor is
- * already round in KB/s and would become "97.7 KB/s".
- */
+// Rounds to 1, 2, 2.5 or 5 x 10^n so a forced `max` label does not sit beside a tick.
+// Not inside `axisMax`: the I/O 65536 floor would become "97.7 KB/s".
 export function niceCeiling(value) {
   if (!Number.isFinite(value) || value <= 0) return 1;
   const magnitude = 10 ** Math.floor(Math.log10(value));

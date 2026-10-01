@@ -1,18 +1,7 @@
-/**
- * A bot name someone types in, checked by the same rules as
- * `App\Rules\BotUserAgent`. Keep in step: a laxer client rule promises an
- * acceptance the server will refuse.
- *
- * The value ends up inside a web-server regex written by an elevated process,
- * hence a charset allowlist rather than escaping. The value is matched
- * case-insensitively within the user agent, so broad words (`bot`) would also
- * block search engines.
- */
+// Mirrors `App\Rules\BotUserAgent`; keep in step, or the client accepts what the server refuses.
+// Ends up in a web-server regex written by an elevated process, hence an allowlist, not escaping.
 
-/**
- * Letters, digits and the punctuation real crawler tokens use. Exported for
- * `tests/backend-mirror.test.mjs`.
- */
+// Exported for `tests/backend-mirror.test.mjs`.
 export const SHAPE = /^[A-Za-z0-9._\-/]{2,100}$/;
 
 /** Values that match a legitimate crawler, or everything. */
@@ -30,11 +19,7 @@ export const SEARCH_ENGINES = new Set([
 /** The backend's own cap on each list. */
 export const BOT_RULE_LIMIT = 50;
 
-/**
- * Why this value cannot be used, as a message key, or null when it can.
- * Compared against the whole value, never a prefix: `applebot` is a search
- * engine but `Applebot-Extended` is a legitimate opt-out token.
- */
+// A message key, or null. Whole value, never a prefix: `Applebot-Extended` is a legitimate opt-out token.
 export function botRuleError(value) {
   const trimmed = String(value ?? "").trim();
 
@@ -45,16 +30,14 @@ export function botRuleError(value) {
 
   if (CATCH_ALLS.has(lower)) return "tooBroad";
   if (SEARCH_ENGINES.has(lower)) return "searchEngine";
-  // The web server matches any part of the user agent, so a word inside a
-  // browser's or search engine's user agent would block it.
+  // The web server matches any part of the user agent, so this would block browsers or search engines.
   if (BROWSER_USER_AGENTS.some((agent) => agent.includes(lower))) return "browserWord";
   if (SEARCH_USER_AGENTS.some((agent) => agent.includes(lower))) return "searchEngine";
 
   return null;
 }
 
-// Real visitors' user agents, lower-cased: anything that is part of one of
-// these would block people rather than bots.
+// Real visitors' user agents, lower-cased; any part of one would block people.
 const BROWSER_USER_AGENTS = [
   "mozilla/5.0 (windows nt 10.0; win64; x64) applewebkit/537.36 (khtml, like gecko) chrome/129.0.0.0 safari/537.36 edg/129.0.0.0",
   "mozilla/5.0 (macintosh; intel mac os x 10_15_7) applewebkit/605.1.15 (khtml, like gecko) version/18.0 safari/605.1.15",
@@ -78,11 +61,7 @@ export function hasBot(list, value) {
   return list.some((entry) => String(entry).toLowerCase() === lower);
 }
 
-/**
- * What is actually enforced: the policy's list plus this site's additions,
- * minus its exemptions. Mirrors `AbstractWebServerDriver::botBlockPattern()`,
- * including that an allow beats a block of the same name.
- */
+// Policy list plus additions, minus exemptions; mirrors `botBlockPattern()`, where allow beats block.
 export function effectiveBlockedBots(policyBots = [], blocked = [], allowed = []) {
   const allow = new Set(allowed.map((bot) => String(bot).toLowerCase()));
   const seen = new Set();

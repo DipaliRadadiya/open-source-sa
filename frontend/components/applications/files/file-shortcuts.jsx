@@ -7,11 +7,7 @@ import { appShortcuts } from "@/lib/files/app-shortcuts";
 
 const ICONS = { uploads: ImageIcon, themes: Palette, plugins: Plug, config: FileCog };
 
-/**
- * "Jump to" chips for the app type (Uploads, Themes, Plugins, wp-config.php for
- * WordPress). Renders nothing for a site type with no confirmed layout.
- * Its own row under the breadcrumb: these are places, not folder actions.
- */
+// Renders nothing for a site type with no confirmed layout.
 export function FileShortcuts({ appId, siteType, path, onAction, canManage = true }) {
   const t = useTranslations("applications.files");
   const shortcuts = appShortcuts(siteType);

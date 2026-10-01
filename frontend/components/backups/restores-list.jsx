@@ -23,14 +23,7 @@ import { ClearFiltersButton } from "@/components/data-table/clear-filters-button
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { RESTORE_OUTCOME, outcomeOf } from "@/components/backups/status-meta";
 
-/**
- * Every restore this server has run. Read-only: undo goes through the safety
- * copy, via the normal restore flow.
- */
-/**
- * What to call this restore's status. `t()` throws on a missing key and this
- * key comes from the API, so guard with the fallback to the raw status.
- */
+// The key comes from the API and `t()` throws on a miss, so fall back to the raw status.
 function statusLabel(restore, t) {
   if (restore.status_title) return restore.status_title;
   const key = `statuses.${restore.status}`;
@@ -54,8 +47,7 @@ export function RestoresList({ restores, applications = [], hasFilters = false }
     <div className="space-y-4">
       {running ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
 
-      {/* Same four filters, order and widths as the backup history tab; all
-          URL-driven, so a filtered view is a link. */}
+      {/* Same filters, order and widths as the backup history tab; URL-driven, so a view is a link. */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <FacetSelect
           paramKey="application"
@@ -183,10 +175,7 @@ function WhenCell({ row }) {
   );
 }
 
-/**
- * Whether the site can still be put back as it was before this restore. The
- * safety copy is exempt from retention, so it does not age out.
- */
+// The safety copy is exempt from retention, so it does not age out.
 function UndoCell({ row }) {
   const t = useTranslations("backups.restores");
   const restore = row.original;

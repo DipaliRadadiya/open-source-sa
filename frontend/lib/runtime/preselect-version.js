@@ -1,13 +1,7 @@
-/**
- * Which runtime version a form should start on. The API lists versions newest
- * first and marks the server's configured one `is_default`; losing that flag
- * silently preselects the newest instead. Keep all forms on these helpers.
- */
+// Lists come newest first with the server's default flagged `is_default`; keep all forms
+// on these helpers, or a lost flag silently preselects the newest.
 
-/**
- * From an API list `[{ version, is_default }]`. `preferred` (a separate server
- * default) wins only when the list contains it.
- */
+// `preferred` wins only when the list contains it.
 export function preselectVersion(versions = [], preferred = null) {
   const list = Array.isArray(versions) ? versions : [];
   const has = (v) => Boolean(v) && list.some((item) => item?.version === v);

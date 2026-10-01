@@ -3,10 +3,7 @@ import { useTranslations } from "next-intl";
 import { runTotals } from "@/lib/server/sync-selection";
 import { cn } from "@/lib/utils";
 
-/**
- * What this run was, and what it did. Preview and apply share this screen, so
- * the preview banner is what states that nothing has been written yet.
- */
+// Preview and apply share this screen; the preview banner states nothing is written yet.
 export function SyncSummary({ run, loaded, running }) {
   const t = useTranslations("sync");
   const totals = runTotals(run.totals);

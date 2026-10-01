@@ -3,12 +3,8 @@ import { cn } from "@/lib/utils";
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useHoverPopover } from "@/lib/hooks/use-hover-popover";
 
-/**
- * An explanation that opens on hover (mouse), tap (touch) or keyboard Tab, but
- * not from focus a dialog handed over. A Popover because Radix tooltips never
- * open on touch; hover is added back only for hover-capable pointers. Styled
- * like a tooltip to match the rest of the panel.
- */
+// Opens on hover, tap or Tab, not from focus a dialog handed over. A Popover
+// because Radix tooltips never open on touch.
 const TOOLTIP_SKIN =
   "w-auto max-w-xs gap-0 rounded-md bg-foreground px-3 py-1.5 text-xs text-background shadow-none ring-0";
 export function InfoHint({ label, children, className }) {

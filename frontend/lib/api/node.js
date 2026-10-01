@@ -1,9 +1,6 @@
 import { api } from "@/lib/api/client";
 
-/**
- * Sets what bare `node` resolves to, by moving symlinks in `/usr/local/bin`.
- * A site that pinned a version is unaffected — its unit holds an absolute path.
- */
+// A site that pinned a version is unaffected: its unit holds an absolute path.
 export function setDefaultNodeVersion(version) {
   return api.put("/node/default", { default: version });
 }

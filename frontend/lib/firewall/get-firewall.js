@@ -7,12 +7,8 @@ import {
   firewallRulesResponseSchema,
 } from "@/lib/schemas/firewall";
 
-/**
- * GET /api/firewall: status, default policy and rules.
- *
- * Returns `{ data, failed }`. A firewall that is off is a valid answer; only a
- * real failure sets `failed`, so "couldn't ask" never renders as "unprotected".
- */
+// Only a real failure sets `failed` (an off firewall is a valid answer), so "couldn't
+// ask" never renders as "unprotected".
 export async function getFirewall() {
   const result = await read("/firewall", firewallResponseSchema);
 
@@ -20,12 +16,8 @@ export async function getFirewall() {
   return { data: result.failed ? null : (result.data ?? null), failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 }
 
-/**
- * GET /api/firewall/rules: the paginated table data.
- *
- * The status endpoint still supplies live UFW state and the full rule set for the
- * safety checks, but its `rules` array must not drive the paginated list.
- */
+// The status endpoint's full `rules` array feeds the safety checks; it must not drive
+// this paginated list.
 export async function getFirewallRules(searchParams = {}) {
   const query = new URLSearchParams(searchParams).toString();
   const params = listQuery(query, {
@@ -58,10 +50,7 @@ export async function getFirewallRules(searchParams = {}) {
   };
 }
 
-/**
- * Preset shortcuts for the add-rule form. A failure is not worth failing the page
- * over; the form falls back to raw port entry (the `custom` path).
- */
+/** A failure falls back to raw port entry (the `custom` path), not a page failure. */
 export async function getFirewallPresets() {
   try {
     const res = await serverFetch("/firewall/presets");

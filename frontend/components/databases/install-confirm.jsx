@@ -6,11 +6,8 @@ import { installEngine } from "@/lib/api/databases";
 import { apiMessage } from "@/lib/api/error-message";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-/**
- * Confirms installing ONE engine, already chosen by the control that opened it
- * (never asks which). States the consequence: one SQL engine per server, with
- * no migration afterwards.
- */
+// The engine is already chosen by the opener. States the consequence: one SQL
+// engine per server, no migration afterwards.
 export function InstallConfirm({ engine, open, onOpenChange, onSuccess }) {
   const t = useTranslations("databases");
   const [pending, setPending] = useState(false);

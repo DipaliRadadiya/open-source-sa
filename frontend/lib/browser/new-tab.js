@@ -1,9 +1,5 @@
-/**
- * Opening sign-ins in a new tab only once the address is known, so the tab
- * opens straight onto the destination instead of `about:blank`. If the answer
- * arrives after the browser's ~5 s user-activation window, the browser shows
- * its own pop-up notice; allowing pop-ups once fixes later sign-ins.
- */
+// Opened only once the address is known, so the tab never sits on `about:blank`. Past the
+// ~5 s user-activation window the browser shows its pop-up notice instead.
 
 /** A GET address in a new tab. False when the browser refused. */
 export function openUrlInNewTab(url) {
@@ -18,11 +14,7 @@ export function openUrlInNewTab(url) {
   return true;
 }
 
-/**
- * A POST in a new tab, for sign-ins that must not put their token in a URL.
- * Submitted from this page with `target="_blank"`, so the tab's first
- * navigation is the POST itself.
- */
+// For sign-ins that must not put their token in a URL.
 export function postInNewTab(url, fields) {
   const form = document.createElement("form");
   form.method = "POST";

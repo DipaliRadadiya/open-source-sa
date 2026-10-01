@@ -16,10 +16,7 @@ export function scaleRate(value) {
   return { value: n < 0 ? -scaled : scaled, unit: RATE_UNITS[index] };
 }
 
-/**
- * "1.4 MB/s" with locale-aware decimals. Whole bytes and values >= 10 render
- * without a fraction.
- */
+/** Whole bytes and values >= 10 render without a fraction. */
 export function formatRate(value, format) {
   const scaled = scaleRate(value);
   if (!scaled) return "—";
@@ -32,10 +29,7 @@ export function formatRate(value, format) {
   return `${number} ${scaled.unit}`;
 }
 
-/**
- * Human byte size — "212 MB". Pass a next-intl formatter. Returns null for
- * anything that is not a byte count, so a missing value is not "NaN B".
- */
+/** Null for anything that is not a byte count, so a missing value is not "NaN B". */
 export function formatBytes(bytes, format) {
   // Reject nullish and "" first: Number() turns them into 0, so "not measured"
   // would render as "0 B".

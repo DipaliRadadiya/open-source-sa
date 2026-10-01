@@ -40,10 +40,7 @@ const CodeEditor = dynamic(
   },
 );
 
-/*
- * fail2ban's output starts with an unrelated `allowipv6` warning; return only
- * the ERROR lines when there are any.
- */
+// fail2ban's output starts with an unrelated `allowipv6` warning; keep only ERROR lines when present.
 function errorLines(output) {
   const errors = output.split("\n").filter((line) => /\bERROR\b/.test(line));
   return errors.length > 0 ? errors.join("\n") : output;
@@ -54,24 +51,13 @@ const FILES = [
   { key: "filter", icon: FileCode2, filename: "filter.conf" },
 ];
 
-/**
- * One site's brute-force protection: an editor for the two raw INI files the
- * backend writes verbatim to `/etc/fail2ban/{jail,filter}.d/`. There is no
- * enable flag, jail state or ban list.
- *
- * Saving also runs the config test; `fail2ban-client`'s rejection text is shown
- * verbatim next to the editor rather than in a toast.
- */
+// Edits the two raw INI files the backend writes verbatim to `/etc/fail2ban/{jail,filter}.d/`.
 export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filterTemplate, canManage }) {
   const t = useTranslations("applications.fail2ban");
   const router = useRouter();
   const { refreshAndWait } = useRefresh();
 
-  /*
-   * The last create or remove until refreshed props agree: `null` = removed
-   * here, an object = created here. Covers the gap between the toast and
-   * `router.refresh()`, when the stale form could resubmit.
-   */
+  // `null` = removed here, object = created here; covers the gap until `router.refresh()` lands.
   const [override, setOverride] = useState(undefined);
   if (override !== undefined && (override === null ? !serverConfig : Boolean(serverConfig))) {
     setOverride(undefined);
@@ -94,10 +80,7 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
 
   const [draft, setDraft] = useState(saved);
 
-  // What "unchanged" is measured against: the server's copy at load, or the
-  // last successful save. Not `saved`: Laravel's TrimStrings strips the
-  // trailing newline, so the reloaded config never matches the draft. Keyed on
-  // "the server accepted this" rather than guessing its normalisation.
+  // Not `saved`: Laravel's TrimStrings strips the trailing newline, so the reloaded config never matches the draft.
   const [savedBaseline, setSavedBaseline] = useState(null);
   const baseline = savedBaseline ?? saved;
 
@@ -325,9 +308,7 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
             </p>
           ) : null}
 
-          {/* fail2ban's refusal, kept on screen for the next edit. Quoted inside
-              the alert rather than as a dark console box, which would read as
-              another file. */}
+          {/* fail2ban's refusal, kept on screen for the next edit. */}
           {testError ? (
             <div className="flex items-start gap-2.5 border-b border-destructive/30 bg-destructive/5 px-5 py-3.5">
               <TriangleAlert className="mt-0.5 size-4 shrink-0 text-destructive" />

@@ -8,10 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { SetupBackupsDialog } from "@/components/backups/setup-backups-dialog";
 
-/**
- * Nothing on this server is backed up yet. Same structure as the Git and
- * Storage empty states: icon chip, title, reassurance, chips, three steps, one action.
- */
+// Same structure as the Git and Storage empty states.
 export function BackupsEmptyState({
   applications,
   destinations,

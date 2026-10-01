@@ -5,10 +5,7 @@ export function listLogSources({ signal } = {}) {
   return api.get("/logs", { signal });
 }
 
-/**
- * Client-side read used for tailing, grep and reload.
- * `after` = the previous response's cursor → only newly-appended lines.
- */
+/** `after` = the previous response's cursor → only newly-appended lines. */
 export function readLog(key, { lines, grep, after, signal } = {}) {
   return api.get(`/logs/${encodeURIComponent(key)}`, {
     params: {
@@ -26,13 +23,8 @@ export function logDownloadUrl(key) {
   return `${process.env.NEXT_PUBLIC_API_URL}/api/logs/${encodeURIComponent(key)}/download`;
 }
 
-/**
- * Empty one server log (truncated, never deleted, so the writer keeps its handle).
- *
- * Needs `logs` manage (403 otherwise). **404** for sources not marked
- * `clearable` (system/security logs); read `clearable` off the source, never
- * guess from its key.
- */
+// Truncates, never deletes, so the writer keeps its handle. 404 for sources not marked
+// `clearable`; read `clearable` off the source, never guess from its key.
 export function clearLog(key) {
   return api.delete(`/logs/${encodeURIComponent(key)}`);
 }

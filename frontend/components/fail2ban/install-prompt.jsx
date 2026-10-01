@@ -11,15 +11,10 @@ import { parseApiDate } from "@/lib/format/api-date";
 import { Button } from "@/components/ui/button";
 import { apiMessage } from "@/lib/api/error-message";
 
-// apt is allowed ten minutes server-side; past that the copy stops implying
-// the install is on track, without claiming it failed.
+// apt gets ten minutes server-side; past that the copy stops implying it is on track.
 const SLOW_AFTER_MS = 10 * 60 * 1000;
 
-/**
- * Install prompt for fail2ban. State comes from the API's `install` object, not
- * local click state, so progress and failures survive a reload. Installing
- * enables no jails.
- */
+// State comes from the API's `install` object, so progress and failures survive a reload.
 export function InstallPrompt({ canManage, install = null }) {
   const t = useTranslations("fail2ban");
   const router = useRouter();

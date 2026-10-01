@@ -30,14 +30,8 @@ function secondsToHuman(seconds, t) {
   return t("uptimeMinutes", { minutes: Math.max(1, Math.floor(seconds / 60)) });
 }
 
-/**
- * The four key numbers for a database engine, using the shared StatCard.
- *
- * Client component: StatCard takes an `icon` component, which cannot cross the
- * server/client boundary. Connections carries a usage bar since the count only
- * means something against the ceiling. Mongo returns nulls for SQL-only
- * fields, so missing values are omitted rather than shown as zero.
- */
+// Client component: StatCard's `icon` cannot cross the server/client boundary.
+// Mongo returns nulls for SQL-only fields; those are omitted, not shown as zero.
 export function EngineStatusCards({ status, processes = [] }) {
   const t = useTranslations("databases.monitor");
   const format = useFormatter();

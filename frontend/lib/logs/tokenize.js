@@ -29,9 +29,7 @@ const LEVEL_TO_KEY = {
   info: "info",
 };
 
-/**
- * @returns {{ time: string|null, level: string|null, levelKey: string|null, message: string }}
- */
+/** @returns {{ time: string|null, level: string|null, levelKey: string|null, message: string }} */
 export function tokenizeLine(line) {
   if (!line) return { time: null, level: null, levelKey: null, message: line ?? "" };
 

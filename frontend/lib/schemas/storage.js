@@ -23,9 +23,8 @@ export const storageDestinationSchema = z
     last_tested_at_human: z.string().nullish(),
     // `null` is "never tested", which is a different state from `false`.
     last_test_success: z.boolean().nullish(),
-    // A stable category: `invalid_credentials` | `unreachable` |
-    // `host_key_mismatch` | `invalid_private_key` | `mismatch`. Always keep a
-    // fallback: an unknown category must degrade to the generic message.
+    // A stable category (`invalid_credentials`, `unreachable`, …). Always keep a fallback:
+    // an unknown category must degrade to the generic message.
     last_test_error: z.string().nullish(),
     created_at: z.string().nullish(),
     created_at_human: z.string().nullish(),
@@ -42,10 +41,7 @@ export const storageDestinationsResponseSchema = z.object({
   google_oauth_redirect_uri: z.string().optional().nullable(),
 });
 
-/**
- * The connection probe. This endpoint answers **200 even when the probe
- * fails**; the verdict is in `test.success`, not in a thrown error.
- */
+// Answers **200 even when the probe fails**; the verdict is in `test.success`.
 export const storageTestResponseSchema = z.object({
   test: z.object({
     success: z.boolean().default(false),
@@ -138,10 +134,7 @@ const CONFIG_FIELDS = {
   passive: z.boolean(),
 };
 
-/**
- * Whatever the chosen preset needs, and nothing it doesn't. Built from the same
- * declaration the form renders from, so shown and validated fields cannot drift.
- */
+// Built from the declaration the form renders from, so shown and validated fields cannot drift.
 function configSchemaFor(preset, { requireSecrets = true } = {}) {
   const provider = providerForPreset(preset);
   const shape = {};
@@ -151,15 +144,8 @@ function configSchemaFor(preset, { requireSecrets = true } = {}) {
     const required = isRequired(field, preset) && (requireSecrets || field.kind !== "secret");
 
     if (required) {
-      /*
-       * Emptiness is judged BEFORE the field's own rules, and stops there: an
-       * untouched field is `undefined` (Zod's raw English error) and "" would
-       * fail format rules like the bucket pattern.
-       *
-       * `requiredField`, not `required_<name>`: these names are the API's
-       * snake_case, the `required_*` catalogue is camelCase. FormMessage builds
-       * the sentence from the field's label.
-       */
+      // Emptiness is judged BEFORE the field's own rules: untouched is `undefined` and "" fails format rules.
+      // `requiredField`, not `required_<name>`: these names are the API's snake_case.
       const rules = schema;
       schema = z.any().superRefine((value, ctx) => {
         if (String(value ?? "").trim() === "") {
@@ -180,11 +166,7 @@ function configSchemaFor(preset, { requireSecrets = true } = {}) {
   return z.object(shape).passthrough();
 }
 
-/*
- * No `preset` key: the preset lives in component state because it selects the
- * schema. Declaring it here fails every submit on a field the form never
- * renders, with no visible error.
- */
+// No `preset` key: it lives in component state, and declaring it here fails every submit silently.
 export function createStorageDestinationSchema(preset) {
   const provider = providerForPreset(preset);
 
@@ -207,10 +189,7 @@ export function createStorageDestinationSchema(preset) {
     });
 }
 
-/**
- * Editing sends no credentials: PATCH treats a present credential as "rotate"
- * (rotation is its own dialog). Provider is absent too; it is immutable on the API.
- */
+// No credentials: PATCH treats a present credential as "rotate". Provider is immutable on the API.
 export function editStorageDestinationSchema(destination) {
   if (destination?.provider !== "s3") {
     return z.object({
@@ -220,10 +199,7 @@ export function editStorageDestinationSchema(destination) {
     });
   }
 
-  /*
-   * The S3 preset is not known on edit, so neither field can carry a preset's
-   * rule. The rule both presets share: an endpoint, or a region for Amazon S3.
-   */
+  // The S3 preset is unknown on edit, so only the shared rule applies: an endpoint, or a region for Amazon S3.
   return z
     .object({
       name: nameField,

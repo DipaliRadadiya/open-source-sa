@@ -42,19 +42,13 @@ import {
 } from "@/components/ui/form";
 import { CreatedCredentials } from "@/components/databases/created-credentials";
 
-/**
- * Create a database, and the credential that makes it usable.
- *
- * The user is created in the same step (opt-out): a database without a user
- * cannot be connected to. Charset and collation are collapsed: they have
- * correct defaults and the API rejects mismatched pairs.
- */
+// The user is created in the same step: a database without one cannot be connected to.
+// Charset and collation are collapsed: correct defaults, and the API rejects mismatched pairs.
 export function CreateDatabaseDialog({
   engines = [],
   open,
   onOpenChange,
-  // Sites this database could belong to, and which already have one. Empty
-  // hides the picker.
+  // Empty hides the site picker.
   applications = [],
   databaseCounts = null,
   databasesKnown = false,
@@ -87,23 +81,18 @@ export function CreateDatabaseDialog({
     host: "",
   };
 
-  /*
-   * Reserved names come from the engines the server reported. Memoised on the
-   * engine rows because a new resolver on every render resets the form.
-   */
+  /* Memoised on the engine rows: a new resolver on every render resets the form. */
   const schema = useMemo(() => createDatabaseSchema(reservedNames(engines)), [engines]);
 
   const form = useForm({
     resolver: zodResolver(schema),
     // Not onBlur: errors would fire while tabbing through an unfinished form.
-    // They wait for a submit attempt, then clear as each one is fixed.
     mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues: defaults,
   });
 
-  // Generated after mount and on every open: in the defaults it would cause a
-  // hydration mismatch and reuse one name for the whole session.
+  // After mount and on every open: in the defaults it would cause a hydration mismatch.
   useEffect(() => {
     if (open) form.setValue("username", randomUsername());
   }, [open, form]);
@@ -112,17 +101,12 @@ export function CreateDatabaseDialog({
   const engine = usable.find((item) => item.engine === values.engine);
   // Defaults to true so an older API without the field keeps the choice.
   const remoteUsers = engine?.supports_remote_users !== false;
-  /*
-   * PostgreSQL uses ENCODING / LC_COLLATE (`UTF8`, `C.UTF-8`), not "character
-   * set" / "collation", so the labels follow the driver. The value lists come
-   * from the API.
-   */
+  /* PostgreSQL uses ENCODING / LC_COLLATE, so the labels follow the driver. */
   const charsetWording = engine?.driver === "pgsql" ? "pgsqlWords" : "sqlWords";
   const charsets = engine?.charsets ?? {};
   const charsetNames = Object.keys(charsets);
-  // A collation from the wrong charset is a 422, so the list derives from the
-  // charset. `_0900_` collations are MySQL 8 only; the API offers them for
-  // MariaDB too, where they fail with a 500.
+  // A wrong-charset collation is a 422. `_0900_` is MySQL 8 only; the API offers it
+  // for MariaDB too, where it fails with a 500.
   const collations = (values.charset ? (charsets[values.charset] ?? []) : []).filter(
     (collation) => engine?.engine !== "mariadb" || !/_0900_/.test(collation),
   );
@@ -244,12 +228,8 @@ export function CreateDatabaseDialog({
                   value={field.value}
                   onValueChange={(next) => {
                     field.onChange(next);
-                    /*
-                     * Clear a host choice the new engine cannot honour (e.g.
-                     * `remote` after switching to PostgreSQL), or the API
-                     * refuses a value no control shows. Done here, not in an
-                     * effect, to avoid a cascading render.
-                     */
+                    /* Clear a host choice the new engine cannot honour, or the API refuses a value no
+                     * control shows. Here, not in an effect, to avoid a cascading render. */
                     const chosen = usable.find((item) => item.engine === next);
                     if (chosen?.supports_remote_users === false) {
                       form.setValue("connection_preference", "localhost");
@@ -276,8 +256,7 @@ export function CreateDatabaseDialog({
           />
         ) : null}
 
-        {/* Optional site link: backups dump only databases attached to a site,
-            so an unattached one is silently absent from every backup. */}
+        {/* Backups dump only databases attached to a site; an unattached one is absent from every backup. */}
         {applications.length > 0 && !applicationId ? (
           <FormField
             control={form.control}
@@ -298,8 +277,7 @@ export function CreateDatabaseDialog({
                         databaseCounts,
                         databasesKnown,
                         t("create.applicationTaken"),
-                        // Depends on the engine chosen above: the API refuses
-                        // some engine/site pairings.
+                        // The API refuses some engine/site pairings.
                         (application) =>
                           engineAccepted({ application, siteTypes, engine: values.engine })
                             ? undefined
@@ -313,8 +291,7 @@ export function CreateDatabaseDialog({
                     className="w-full"
                   />
                 </FormControl>
-                {/* The backend requires this hint: linking does not make the
-                    site use the database. */}
+                {/* The backend requires this hint: linking does not make the site use the database. */}
                 <FormMessage />
               </FormItem>
             )}
@@ -377,11 +354,8 @@ export function CreateDatabaseDialog({
                           label: t("access.localhost.label"),
                           hint: t("access.localhost.hint"),
                         },
-                        /*
-                         * A PostgreSQL role is cluster-wide with no host, so
-                         * the API refuses `remote` and `anywhere`. Read from
-                         * `supports_remote_users`, never from the engine name.
-                         */
+                        /* A PostgreSQL role has no host, so the API refuses `remote` and `anywhere`.
+                         * Read `supports_remote_users`, never the engine name. */
                         ...(remoteUsers
                           ? [
                               {
@@ -390,8 +364,7 @@ export function CreateDatabaseDialog({
                                 hint: t("access.remote.hint"),
                               },
                               {
-                                // Opens the engine port to the whole internet,
-                                // so it carries an explanation.
+                                // Opens the engine port to the whole internet, so it carries an explanation.
                                 value: "anywhere",
                                 label: t("access.anywhere.label"),
                                 hint: t("access.anywhere.hint"),
@@ -507,8 +480,7 @@ export function CreateDatabaseDialog({
                         ))}
                       </SelectContent>
                     </Select>
-                    {/* The disabled reason goes under the control: as a
-                        placeholder it widened the trigger past the dialog edge. */}
+                    {/* Under the control: as a placeholder it widened the trigger past the dialog edge. */}
                     {!values.charset ? (
                       <FormDescription>{t(`create.${charsetWording}.chooseFirst`)}</FormDescription>
                     ) : null}
@@ -526,8 +498,7 @@ export function CreateDatabaseDialog({
 }
 
 // The first user is sent nested as `create_user`, so its errors come back as
-// `create_user.username` / `.host`. They are set on the fields directly and
-// left out of what the generic handler sees.
+// `create_user.username` / `.host`; set them on the fields directly.
 function withUserFieldErrors(error, form) {
   const errors = error?.response?.data?.errors;
   if (!errors) return error;

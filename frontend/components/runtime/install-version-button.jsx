@@ -26,11 +26,7 @@ import { allInstalled, installOptions, resolveVersion } from "@/lib/runtime/inst
 // runtime and the installer is picked here.
 const INSTALL = { php: installPhpVersion, node: installNodeVersion };
 
-/**
- * Install a version the server can actually get (from the package index). The
- * request is queued (202) because apt takes minutes and holds a lock, so the
- * message says it is running, not done.
- */
+// Queued (202): apt takes minutes and holds a lock, so the message says running, not done.
 export function InstallVersionButton({
   runtime,
   installable = [],

@@ -2,12 +2,7 @@ import { useSearchParams } from "next/navigation";
 import { useSetQuery } from "@/hooks/use-set-query";
 import { FilterSelect } from "@/components/data-table/filter-select";
 
-/**
- * URL-driven filter select. Writes `paramKey` (or clears it on the "all"
- * option) and resets to page 1. `options` is [{ value, label }].
- *
- * The control itself is `FilterSelect`; in-memory screens use it directly.
- */
+// URL-driven filter: writes `paramKey` (cleared on "all") and resets to page 1.
 export function FacetSelect({ paramKey, allLabel, options, className, label }) {
   const searchParams = useSearchParams();
   const setQuery = useSetQuery();

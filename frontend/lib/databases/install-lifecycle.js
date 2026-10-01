@@ -1,8 +1,6 @@
 export const SQL_ENGINE_NAMES = ["mysql", "mariadb"];
 
-// Older APIs did not expose an authoritative retryable flag. Preserve their
-// known terminal failures while preferring the nested progress contract when
-// it is present.
+// Older APIs had no retryable flag; keep their known terminal failures.
 const LEGACY_NON_RETRYABLE_REASONS = [
   "port_in_use_by_mysql",
   "port_in_use_by_mariadb",
@@ -37,13 +35,8 @@ export function installingEngineName(engines = []) {
   );
 }
 
-/**
- * The next engine the populated page can offer.
- *
- * Failed work wins so Retry cannot be displaced by a fresh candidate. MySQL
- * and MariaDB are identified by engine name rather than a driver value that
- * older capability payloads omitted.
- */
+// Failed work wins so Retry cannot be displaced. MySQL/MariaDB are matched by engine name
+// (older payloads omit the driver).
 export function findInstallCandidate(engines = []) {
   return findInstallCandidates(engines)[0] ?? null;
 }

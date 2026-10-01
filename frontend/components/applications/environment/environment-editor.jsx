@@ -26,11 +26,8 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { RestoreBackupDialog } from "@/components/applications/environment/restore-backup-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-/**
- * Keys the panel writes that must not change: a new N8N_ENCRYPTION_KEY makes
- * every saved n8n credential unreadable, and the port and folder must match
- * the service and proxy. The API only checks syntax.
- */
+// Must not change: a new N8N_ENCRYPTION_KEY makes every saved n8n credential
+// unreadable; port and folder must match the service and proxy. The API only checks syntax.
 const GUARDED_KEYS = ["N8N_ENCRYPTION_KEY", "N8N_PORT", "N8N_USER_FOLDER"];
 
 function envValues(text) {
@@ -42,15 +39,13 @@ function envValues(text) {
   return values;
 }
 
-/** Guarded keys the saved file has and the edit changes or removes. */
 function guardedChanges(saved, next) {
   const before = envValues(saved);
   const after = envValues(next);
   return GUARDED_KEYS.filter((key) => before.has(key) && before.get(key) !== after.get(key));
 }
 
-// Rewrite (or append) a KEY's line to the suggested value, keeping any indent
-// and `export ` prefix; the rest of the file is untouched.
+// Keeps any indent and `export ` prefix.
 function applySuggestion(text, key, suggested) {
   const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const line = new RegExp(`^(\\s*)(export\\s+)?${escaped}\\s*=.*$`, "m");
@@ -60,8 +55,7 @@ function applySuggestion(text, key, suggested) {
   return `${text}${sep}${key}=${suggested}\n`;
 }
 
-// The API's limit (`max:262144` characters on `raw`), checked client-side so
-// the error talks about size instead of showing as a syntax error.
+// The API's `max:262144` on `raw`, checked here so the error talks about size, not syntax.
 const MAX_CHARS = 262144;
 
 function overLimit(text) {
@@ -69,8 +63,7 @@ function overLimit(text) {
   return text.length > MAX_CHARS && Array.from(text).length > MAX_CHARS;
 }
 
-// A whitespace-only file is shown as empty so the placeholder appears (the API
-// saves an emptied file as a single newline).
+// The API saves an emptied file as a single newline; show it as empty.
 function editable(raw) {
   return (raw ?? "").trim() ? raw : "";
 }
@@ -86,18 +79,15 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [guarded, setGuarded] = useState([]);
 
-  // Picks up a file changed elsewhere (e.g. a restore + router.refresh()), since
-  // useState ignores later props. Adjusted during render, React's pattern for a
-  // prop-driven reset. `seenRaw` must track only the prop, never the saved text,
-  // or the stale prop is copied back in before the refresh lands.
+  // Picks up a file changed elsewhere (useState ignores later props). `seenRaw` must
+  // track only the prop, never the saved text, or the stale prop is copied back in.
   const propRaw = initialEnv.raw ?? "";
   const [seenRaw, setSeenRaw] = useState(propRaw);
 
   if (propRaw !== seenRaw) {
     setSeenRaw(propRaw);
     setEnv(initialEnv);
-    // A refresh confirming this editor's own save leaves the text alone; any
-    // other change came from elsewhere and replaces it.
+    // A refresh confirming this editor's own save leaves the text alone.
     if (propRaw !== (env.raw ?? "")) {
       setContents(editable(propRaw));
       setSyntaxError(null);
@@ -110,8 +100,7 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
   // The panel guard covers in-app navigation as well as reload/close.
   useWatchUnsaved("environment-editor", dirty);
 
-  // The label says whether the save also restarts or applies, since otherwise
-  // the app may ignore the new file.
+  // Says whether the save also restarts, since otherwise the app may ignore the new file.
   const sendRestart = Boolean(env.requires_restart);
   const saveLabel = env.requires_restart
     ? t("saveRestart")
@@ -149,8 +138,7 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
             : t("saved"),
       );
 
-      // Refresh the server-rendered change history; the textarea keeps its
-      // own state, so it does not flicker.
+      // The textarea keeps its own state, so it does not flicker.
       router.refresh();
     } catch (error) {
       // Syntax errors come back verbatim under errors.raw; nothing was written.

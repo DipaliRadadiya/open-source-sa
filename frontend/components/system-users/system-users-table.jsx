@@ -24,13 +24,8 @@ import { SystemUserRowActions } from "@/components/system-users/system-user-row-
 import { CreateSystemUserDialog } from "@/components/system-users/create-system-user-dialog";
 import { SystemUsersCards } from "@/components/system-users/system-users-cards";
 
-/* ---------------------------------------------------------------------------
- * Cells are module-level components on purpose: flexRender calls
- * `createElement(cellFn)`, so an inline cell gets a new identity each render
- * and every keystroke in the search box would remount every cell.
- *
- * `canManage` reaches them through `table.options.meta`.
- * ------------------------------------------------------------------------- */
+// Cells are module-level on purpose: an inline cell gets a new identity each
+// render, so every keystroke would remount every cell.
 
 // Headers may wrap: in French and Russian a one-line "NOM D'UTILISATEUR" pushed
 // the row menu off the edge.
@@ -148,16 +143,8 @@ function SystemUsersList({ data, meta, shells = [], canManage = false, canOpenSe
     { id: "sudo", header: () => <Head>{t("sudo")}</Head>, meta: { className: "px-3" }, cell: SudoCell },
     { id: "ssh", header: () => <Head>{t("ssh")}</Head>, meta: { className: "px-3" }, cell: SshCell },
     { id: "applications", header: () => <Head>{t("columns.applications")}</Head>, cell: ApplicationsCell },
-    /*
-     * Hidden below 2xl: at 1440 nine columns overflow and push Actions off screen.
-     * Created is dropped because nothing is decided by it (same as the applications
-     * table).
-     *
-     * Home stays, under the username: `home_path` comes from /etc/passwd via
-     * SystemUserDiscoverer during Server Sync, so adopted accounts can live anywhere.
-     *
-     * Below 1280 the list is cards, so the table only has to fit from there.
-     */
+    // Hidden below 2xl, where nine columns push Actions off screen. Home stays:
+    // adopted accounts can live anywhere.
     {
       accessorKey: "created_at_human",
       header: () => <Head>{t("columns.created")}</Head>,
@@ -194,9 +181,8 @@ function SystemUsersList({ data, meta, shells = [], canManage = false, canOpenSe
         </div>
       </div>
 
-      {/* Above the rows, beside the switches it concerns: until Settings → Access &
-          security is saved, sshd has no AllowGroups line, so "SSH login: off" keeps
-          nobody out. Only `false`: `null` means sshd could not be asked. */}
+      {/* Until Access & security is saved, sshd has no AllowGroups line, so "SSH
+          login: off" keeps nobody out. Only `false`: `null` means sshd was not asked. */}
       {/* Managers only: the fix is theirs; a viewer can neither change the switches nor
           save the setting. */}
       {canManage && sshEnforced === false && data.length ? (

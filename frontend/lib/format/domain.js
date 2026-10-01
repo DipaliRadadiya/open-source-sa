@@ -1,12 +1,5 @@
-/**
- * Split a domain into a head that may truncate and a tail that never shrinks,
- * so the identifying end survives ("a-very-long-customer-subdo….example.co.uk").
- * Pure flexbox, no measurement.
- *
- * The tail is the last two labels, or three for a two-part public suffix
- * (so "example.co.uk", not ".co.uk"). A short list instead of the full
- * public-suffix list: a miss costs one label of tail, not correctness.
- */
+// The tail (last two labels, three for a two-part suffix) never shrinks. A short
+// list, not the public-suffix list: a miss costs one label of tail.
 const TWO_PART_SUFFIXES = new Set([
   "co.uk", "org.uk", "me.uk", "ltd.uk", "plc.uk", "net.uk", "sch.uk", "ac.uk", "gov.uk",
   "com.au", "net.au", "org.au", "edu.au", "gov.au",

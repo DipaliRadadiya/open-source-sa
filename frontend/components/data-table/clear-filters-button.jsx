@@ -2,12 +2,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { useSetQuery } from "@/hooks/use-set-query";
 
-/**
- * The way out of a filtered-empty table.
- *
- * `keys` names every param the screen filters by; each is dropped from the URL,
- * and `SearchInput` follows the URL so the search box empties too.
- */
+// `keys` lists every filter param; `SearchInput` follows the URL so the search box empties too.
 export function ClearFiltersButton({
   keys = [],
   extraQuery,

@@ -1,8 +1,6 @@
 import { z } from "zod";
 
-// A single update run — returned by POST (202), the poll endpoint, and as
-// `latest_run` on the state. Drive the progress bar from step_number/total_steps
-// (never hardcode the step list); show the localized *_title fields as labels.
+// Drive the progress bar from step_number/total_steps; never hardcode the step list.
 export const panelUpdateRunSchema = z
   .object({
     id: z.union([z.string(), z.number()]).transform(String),
@@ -20,9 +18,8 @@ export const panelUpdateRunSchema = z
     // the localized explanation. rolled_back means the previous version was restored.
     reason: z.string().nullish(),
     reason_title: z.string().nullish(),
-    // `.nullish()` then coalesce, NOT `.default(false)`: the API sends `null`
-    // until a run finishes, and Zod's default only fills `undefined`. A throw
-    // here breaks both the start response and every poll.
+    // NOT `.default(false)`: the API sends `null` until a run finishes, and a throw here
+    // breaks the start response and every poll.
     rolled_back: z.boolean().nullish().transform((value) => value ?? false),
     reference: z.string().nullish(),
     // Sanitized, bounded tail of the detached runner log. The backend never

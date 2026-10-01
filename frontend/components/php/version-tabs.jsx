@@ -7,23 +7,11 @@ import { ScrollFade } from "@/components/ui/scroll-fade";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isInFlight } from "@/lib/runtime/in-flight";
 
-/**
- * One PHP version's sections as tabs, like `DatabaseTabs`, so neither section
- * is buried below the ~96-row extensions list.
- *
- * ionCube stays separate from the extensions list: it is a vendor `.so`, not an
- * apt package, and can be unavailable for a PHP version. php.ini stays a button
- * on the version header (it is a dialog). The tab label carries ionCube's state.
- */
+// ionCube is separate from extensions: a vendor `.so`, not an apt package.
 
 const VALUES = ["extensions", "ioncube"];
 
-/**
- * ionCube's state as one short word for the tab.
- *
- * Uses `isInFlight` (shared with the card), never a hand-written test: the API
- * sends `idle` for untouched servers, which is not in flight.
- */
+// Uses `isInFlight`, never a hand-written test: the API sends `idle` when untouched.
 function ionCubeBadge(ioncube, failed, t) {
   if (failed || !ioncube) return null;
   // An older version installed it on 7.4, so unsupported can still be running.

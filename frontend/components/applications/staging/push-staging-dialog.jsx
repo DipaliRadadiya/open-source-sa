@@ -36,15 +36,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-/**
- * Copies staging over production. The backend rsyncs with `--delete` (uploads
- * merged, never removed); its snapshot only restores production if the push
- * fails, so a typed domain is required, as in the restore dialog.
- * Files mode is preselected because it leaves production's database alone.
- *
- * Callers MUST pass a `key` that changes on open, so the mode and typed domain
- * never carry over between visits.
- */
+// rsync `--delete` overwrites production and the snapshot only restores on a failed
+// push, so a typed domain is required. Callers MUST pass a `key` that changes on open.
 export function PushStagingDialog({ appId, production, staging, open, onOpenChange }) {
   const t = useTranslations("applications.staging.pushDialog");
   const router = useRouter();

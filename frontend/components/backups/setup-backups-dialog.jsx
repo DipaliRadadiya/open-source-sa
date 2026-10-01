@@ -25,11 +25,8 @@ import { FormModal } from "@/components/ui/form-modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { BackupSettingsFields } from "@/components/backups/backup-settings-fields";
 
-/**
- * Setting up backups for a site, from the Backups screen; the application is
- * the first field. After saving it does NOT close: a second step offers
- * "Back up now", since a daily schedule proves nothing for up to 24 hours.
- */
+// Does NOT close after saving: a second step offers "Back up now", since a daily
+// schedule proves nothing for up to 24 hours.
 export function SetupBackupsDialog({
   open,
   onOpenChange,
@@ -61,11 +58,8 @@ export function SetupBackupsDialog({
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [running, setRunning] = useState(false);
   const [finishing, setFinishing] = useState(false);
-  /*
-   * Destinations as of the last refresh. The prop comes from a server component
-   * and cannot change while open, but "Add destination" opens a new tab. Null
-   * until refreshed, so the prop stays authoritative; cleared on close.
-   */
+  // "Add destination" opens a new tab, so destinations are re-read. Null until
+  // refreshed, so the prop stays authoritative; cleared on close.
   const [refreshed, setRefreshed] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const available = refreshed ?? destinations;
@@ -135,9 +129,8 @@ export function SetupBackupsDialog({
       const application = applications.find(
         (candidate) => candidate.id === Number(values.application_id),
       );
-      // No refresh yet: on the Backups empty state it swaps the page for the
-      // overview, which unmounts this dialog and loses the "Back up now" step.
-      // Done and Back up now refresh instead.
+      // No refresh here: on the empty state it would unmount this dialog and
+      // lose the "Back up now" step.
       setSaved({
         id: Number(values.application_id),
         name: application?.name ?? applicationName ?? "",
@@ -201,10 +194,7 @@ export function SetupBackupsDialog({
   // useWatch, not form.watch(): the latter returns a fresh function every
   // render and opts the whole component out of the React compiler.
   const values = useWatch({ control: form.control });
-  /**
-   * Re-read destinations without disturbing the form. Not `router.refresh()`,
-   * which would re-render this dialog's parent.
-   */
+  // Not `router.refresh()`, which would re-render this dialog's parent.
   async function refreshDestinations() {
     setRefreshing(true);
     try {

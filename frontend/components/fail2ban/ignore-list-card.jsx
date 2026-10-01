@@ -27,11 +27,8 @@ import { apiMessage } from "@/lib/api/error-message";
 // Matches `ignore_ips => array|max:100` in UpdateFail2banRequest.
 const MAX_IGNORE_IPS = 100;
 
-/**
- * Addresses that are never banned. Saves the whole settings object because the
- * backend rewrites the file as a unit; sending only the list would drop the
- * ban rules.
- */
+// Saves the whole settings object: the backend rewrites the file as a unit, so
+// sending only the list would drop the ban rules.
 export function IgnoreListCard({ settings, canManage }) {
   const yourIp = useBrowserIp();
   const t = useTranslations("fail2ban");

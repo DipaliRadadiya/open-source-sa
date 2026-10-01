@@ -9,11 +9,7 @@ const FAILURES_BEFORE_BACKOFF = 3;
 // 100 points x 3s = a five-minute window, long enough to read a trend.
 const MAX_POINTS = 100;
 
-/**
- * Polls GET /server/metrics/live and keeps one rolling window that feeds every
- * chart on the dashboard. Pauses while the tab is hidden and aborts the
- * in-flight request on unmount. Timestamps stay raw; callers format them.
- */
+// One rolling window feeds every dashboard chart. Pauses while the tab is hidden; timestamps stay raw.
 export function useLiveMetrics(initial = null) {
   const [metrics, setMetrics] = useState(initial);
   const [series, setSeries] = useState([]);

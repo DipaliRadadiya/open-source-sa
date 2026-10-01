@@ -6,13 +6,8 @@ import { FailureScreen, FailureFooterLabel } from "@/components/sections/failure
 
 const COMMAND = "php artisan up";
 
-/**
- * Shown instead of the panel when the API is in maintenance mode.
- *
- * Not destructive styling: nothing is broken. Unlike a rate limit it may not
- * clear on its own (an update that stops between `artisan down` and `artisan up`),
- * so the footer gives the command that ends it, on its own row with a copy button.
- */
+// Not destructive styling: nothing is broken. May not clear on its own (an
+// update stopped between `artisan down` and `up`), so the footer gives the command.
 export function PanelUnavailableCard() {
   const t = useTranslations("errors.unavailable");
 
@@ -37,10 +32,8 @@ export function PanelUnavailableCard() {
   );
 }
 
-/**
- * Full-screen form for layouts that own the viewport. Auth pages render the card
- * directly: their layout already centres it, and a nested min-h-svh squeezes it.
- */
+// For layouts that own the viewport. Auth pages render the card directly: a
+// nested min-h-svh squeezes it.
 export function PanelUnavailable() {
   return (
     <div className="flex min-h-svh items-center justify-center p-6">

@@ -1,11 +1,7 @@
 import { serverFetch } from "@/lib/api/server-fetch";
 import { activityResponseSchema } from "@/lib/schemas/activity";
 
-/**
- * How often an administrator has signed in as somebody else, and when it last
- * happened. Its own request because logins dominate the feed. Counts only
- * `impersonation_started`; `meta.total` is the all-time count.
- */
+// Its own request because logins dominate the feed. `meta.total` is the all-time count.
 const EMPTY = { total: 0, last: null, failed: false };
 
 export async function getImpersonation() {

@@ -15,14 +15,8 @@ import {
 } from "@/components/ui/dialog";
 import { apiMessage } from "@/lib/api/error-message";
 
-/**
- * "Test configuration" (nginx -t and friends). Read-only: it never reloads.
- * Only rendered where the API says `testable`.
- *
- * Split into a hook and a dialog: a `<Dialog>` inside `DropdownMenuContent`
- * unmounts when the menu closes, so the dialog is rendered as the menu's
- * sibling.
- */
+// Read-only: it never reloads. A `<Dialog>` inside `DropdownMenuContent` unmounts with the menu,
+// so the dialog is rendered as the menu's sibling.
 export function useConfigTest(service) {
   const t = useTranslations("services");
   const [pending, setPending] = useState(false);
@@ -48,9 +42,6 @@ export function useConfigTest(service) {
   return { run, pending, result, dismiss: () => setResult(null) };
 }
 
-/**
- * The result of a config test. Rendered by the row, outside its menu.
- */
 export function ConfigTestDialog({ service, result, onDismiss }) {
   const t = useTranslations("services");
 
@@ -86,8 +77,7 @@ export function ConfigTestDialog({ service, result, onDismiss }) {
             </DialogDescription>
           </DialogHeader>
 
-          {/* The tool's output verbatim (it names the file and line), on the
-              console surface with the log viewer's severity tints. */}
+          {/* The tool's output verbatim (it names the file and line). */}
           {result?.output ? (
             <div className="overflow-hidden rounded-lg border border-console-border bg-console">
               {/* Its own strip, so the copy button does not cover the first line. */}

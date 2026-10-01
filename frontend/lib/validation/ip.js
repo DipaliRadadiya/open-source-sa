@@ -1,9 +1,5 @@
-/**
- * Address checks for firewall config input; a typo written into fail2ban's
- * config would silently protect nobody.
- *
- * IPv6 is checked by shape only, deliberately permissive; the server validates too.
- */
+// A typo written into fail2ban's config would silently protect nobody. IPv6 is checked
+// by shape only; the server validates too.
 
 function isIpv4(value) {
   const parts = value.split(".");

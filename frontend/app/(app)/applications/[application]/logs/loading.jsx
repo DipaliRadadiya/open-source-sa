@@ -1,11 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/**
- * Mirrors `ApplicationLogsPanel`: source tabs above one full-width viewer, no
- * sidebar rail (unlike the server logs page), so the page does not shift when
- * the real panel lands. Heights track the panel's
- * `h-[calc(100svh-16rem)] min-h-[24rem]`.
- */
+// Heights track ApplicationLogsPanel's `h-[calc(100svh-16rem)] min-h-[24rem]`.
 export default function Loading() {
   return (
     <div className="space-y-6">

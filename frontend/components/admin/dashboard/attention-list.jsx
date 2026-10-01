@@ -5,10 +5,7 @@ import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { MAX_NAMES, summarizeAttention } from "@/lib/admin/attention-summary";
 
-/**
- * Whether anything is urgent and where to go next: one row per kind of problem
- * (at most three) with a count, a few names, and a link to the detail page.
- */
+// One row per kind of problem (at most three), linking to its detail page.
 function Row({ tone, icon: Icon, title, summary, action, href }) {
   return (
     <li>

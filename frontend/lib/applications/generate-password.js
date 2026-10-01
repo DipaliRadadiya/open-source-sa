@@ -1,5 +1,4 @@
-// Passwords for one-click installs. Uses Web Crypto, not Math.random. The
-// alphabet drops look-alikes (0/O, 1/l/I) so retyped passwords survive.
+// Web Crypto, not Math.random. No look-alikes (0/O, 1/l/I), so retyped passwords survive.
 const UPPER = "ABCDEFGHJKLMNPQRSTUVWXYZ";
 const LOWER = "abcdefghijkmnopqrstuvwxyz";
 const DIGIT = "23456789";
@@ -8,8 +7,7 @@ const ALPHABET = UPPER + LOWER + DIGIT + SYMBOL;
 
 /** A uniform index into `set`, rejecting the biased tail of the RNG range. */
 function pick(set) {
-  // 2^32 is not a multiple of most set sizes, so the low indices would come up
-  // slightly more often. Redraw the values that fall in the remainder.
+  // Rejection sampling: 2^32 is not a multiple of most set sizes, which would bias low indices.
   const limit = Math.floor(0x100000000 / set.length) * set.length;
   const buf = new Uint32Array(1);
   let n;
@@ -20,11 +18,7 @@ function pick(set) {
   return set[n % set.length];
 }
 
-/**
- * A password that always passes validation. A uniform draw misses a digit ~7%
- * of the time, so one character of each class is placed first, the rest drawn
- * from the full alphabet, and the result shuffled.
- */
+// One of each class is placed first: a uniform draw misses a digit ~7% of the time.
 export function generatePassword(length = 20) {
   const required = [pick(UPPER), pick(LOWER), pick(DIGIT), pick(SYMBOL)];
   const chars = required.slice(0, Math.min(length, required.length));

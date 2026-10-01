@@ -14,14 +14,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-/**
- * Search + type filter for both activity views (admin log and a user's own
- * log share one filter shape). `extraQuery` is merged into every navigation so
- * the account page keeps its tab in the URL.
- *
- * No action filter: the API only filters by exact event id, and those ids are
- * untranslated.
- */
+// `extraQuery` is merged into every navigation so the account page keeps its tab.
+// No action filter: the API only filters by exact, untranslated event ids.
 export function ActivityToolbar({ types, searchKey = "searchPlaceholder", extraQuery }) {
   const t = useTranslations("activity");
   const setQuery = useSetQuery();

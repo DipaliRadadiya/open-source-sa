@@ -43,17 +43,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { WebRootDialog } from "@/components/applications/web-root-dialog";
 
-/**
- * What this site is and where it lives, as tiles matching the server
- * dashboard's identity band. Paths and versions are monospaced, pasteable ones
- * carry a copy control, and facts that do not apply to the site type are left
- * out rather than shown as "—".
- */
-/*
- * A lookup, not a template: Tailwind needs full class strings at build time.
- * The fact count varies by site type (6 or 8), so pick 3 or 4 columns to keep
- * the last row full.
- */
+// Facts that do not apply to the site type are left out, not shown as "—".
+// Full class strings for Tailwind; 3 or 4 columns keeps the last row full (6 or 8 facts).
 const FACT_COLUMNS = { 3: "xl:grid-cols-3", 4: "xl:grid-cols-4" };
 
 function factColumns(count) {
@@ -74,8 +65,7 @@ function Fact({ icon: Icon, label, value, mono, copy, onEdit, editLabel, action,
         >
           {value}
         </p>
-        {/* Optional second line; not truncated, since a filename or refusal is the
-            content. */}
+        {/* Not truncated: a filename or refusal is the content. */}
         {note ? <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{note}</p> : null}
       </div>
       {copy ? <CopyButton value={String(value)} /> : null}
@@ -87,8 +77,7 @@ function Fact({ icon: Icon, label, value, mono, copy, onEdit, editLabel, action,
               type="button"
               variant="ghost"
               size="icon-sm"
-              /* `menuBusy` too: an action started from this menu has no Review button to
-                 show it is running. */
+              /* `menuBusy` too: a menu action has no Review button to show it is running. */
               disabled={menuBusy || action?.busy}
               aria-label={menuLabel}
               title={menuLabel}
@@ -112,8 +101,7 @@ function Fact({ icon: Icon, label, value, mono, copy, onEdit, editLabel, action,
         </DropdownMenu>
       ) : null}
 
-      {/* `text` makes a labelled button for an actionable finding ("Looks like
-          WordPress"); optional probes stay a quiet icon. */}
+      {/* `text` gives an actionable finding a labelled button; optional probes stay an icon. */}
       {action ? (
         action.text ? (
           <Button
@@ -181,19 +169,14 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
   const router = useRouter();
   const { refreshAndWait } = useRefresh();
 
-  /*
-   * Probe the site's directory for its type. Button-triggered, never on mount:
-   * files often arrive after the site is created, so an automatic probe would
-   * record "nothing found" too early. Throttled 10/min server-side, hence
-   * disabled while in flight.
-   */
+  // On click, never on mount: files often arrive later, so an automatic probe records "nothing found"
+  // too early. Throttled 10/min server-side.
   async function detect() {
     setDetecting(true);
     try {
       const { data } = await detectApplicationSiteType(application.id);
 
-      // Toast the verdict straight from the response, so the click is acknowledged;
-      // the card still re-reads for the stored copy.
+      // Toast the verdict from the response; the card still re-reads for the stored copy.
       const found = data?.site_type_detection;
       const type = found?.detected_title ?? found?.detected;
       if (found?.suggested) {
@@ -209,11 +192,7 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
         toast.info(t("siteTypeDetection.detectedNothing"));
       }
 
-      /*
-       * Re-read rather than merge: the verdict is stored on the application. In a
-       * transition so `refreshing` stays true until the new data is on screen
-       * (`router.refresh()` cannot be awaited).
-       */
+      // A transition keeps `refreshing` true until the new data shows (`router.refresh()` cannot be awaited).
       startRefresh(() => router.refresh());
     } catch (err) {
       toast.error(apiMessage(err, t("siteTypeDetection.detectFailed")));
@@ -226,11 +205,7 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
   const detectionState = siteTypeDetectionState(application);
   const suggestion = suggestedSiteType(application);
 
-  /*
-   * The Type tile's note. A probe that found nothing says so, with when, so it
-   * is distinguishable from a button that did nothing. Shows `matched` (the
-   * file), which is checkable, rather than `confidence`.
-   */
+  // Shows `matched` (a checkable file) rather than `confidence`; an empty probe says when it ran.
   const typeNote = (() => {
     if (detectionState === "suggested") {
       return detection?.matched
@@ -242,11 +217,7 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
             type: detection.detected_title ?? suggestion,
           });
     }
-    /*
-     * Recognised something with nothing to offer (usually the label is already
-     * right). States what it saw without judging, so it stays true whether or not
-     * it matches the current type.
-     */
+    // Recognised but nothing to offer: state what it saw without judging the current type.
     if (detectionState === "recognised") {
       const type = detection?.detected_title ?? detection?.detected;
       return detection?.matched
@@ -257,11 +228,7 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
     return null;
   })();
 
-  /*
-   * Probe, and set the type back by hand (the confirm dialog promises this is
-   * possible). Titles come from the catalog, as type names are not in the
-   * frontend's i18n; without a catalog the targets are not offered.
-   */
+  // Type titles come from the catalog (not in frontend i18n); without one, no targets are offered.
   const typeMenu = (() => {
     if (!canManage || !canDetectSiteType(application)) return [];
 
@@ -294,10 +261,7 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
       ? (detection?.detected_title ?? relabelTo)
       : (siteTypes.find((type) => type.name === relabelTo)?.title ?? relabelTo);
 
-  /*
-   * Measuring walks every inode, so it is always the user's choice, never a side
-   * effect of opening the page.
-   */
+  // Walks every inode, so only ever on the user's click.
   async function measure() {
     setMeasuring(true);
     try {
@@ -313,8 +277,7 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
     }
   }
 
-  // Null for an unmeasured site: shown as "Not measured" (as in the sites
-  // list), never "0 B".
+  // Null when unmeasured: shown as "Not measured", never "0 B".
   const size = formatBytes(application.directory_size_bytes, format);
 
   const facts = [
@@ -323,11 +286,7 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
       label: t("columns.type"),
       value: application.site_type_title ?? application.site_type,
       note: typeNote,
-      /*
-       * Detection is offered on every non-git site; the backend refuses to probe git
-       * sites since their type can never change. Only a suggestion gets its own
-       * button; everything else lives in the menu.
-       */
+      // The backend refuses to probe git sites. Only a suggestion gets its own button.
       action:
         canManage && suggestion
           ? {
@@ -399,11 +358,8 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
         onOpenChange={(next) => setRelabelTo(next ? relabelTo : null)}
         application={application}
         target={relabelTo}
-        /*
-         * From the API's `detected_title`, never from frontend messages: type titles are
-         * not in the frontend's i18n. Do not write an example lookup call here either:
-         * check-i18n greps comments and would report it as an unresolved key.
-         */
+        /* Type titles are not in frontend i18n. No example lookup call here: check-i18n greps
+           comments and would flag it as an unresolved key. */
         targetTitle={relabelTitle}
         matched={relabelTo === suggestion ? detection?.matched : null}
       />

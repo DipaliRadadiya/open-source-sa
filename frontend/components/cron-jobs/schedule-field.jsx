@@ -23,9 +23,7 @@ import {
 
 const CUSTOM = "custom";
 
-// Buckets a preset by the coarsest unit its expression varies on, so a long
-// flat list reads as three short ones. Anything unrecognised falls into
-// "days" rather than being dropped — a preset must never vanish from the menu.
+// Groups a preset by the coarsest unit it varies on. Unrecognised goes to "days": never drop a preset.
 function groupOf(preset) {
   if (preset.key === CUSTOM || !preset.expression) return "custom";
   const [minute, hour] = preset.expression.split(/\s+/);
@@ -35,31 +33,19 @@ function groupOf(preset) {
 
 const GROUP_ORDER = ["minutes", "hours", "days", "custom"];
 
-/**
- * Schedule picker. Each option carries its cron expression so the dropdown
- * teaches the syntax while you use it. The editable cron field appears only
- * under "Custom", which is also where a command template's expression lands
- * when it doesn't match any preset.
- */
+// The editable cron field appears only under "Custom", where an unmatched template expression lands.
 export function ScheduleField({ form, presets, timezone }) {
   const t = useTranslations("cronJobs");
   const tValidation = useTranslations("validation");
-  // Only "did the user ask to hand-write it" is state. Which preset is showing
-  // is derived from the expression itself, so a command template that rewrites
-  // the expression can never leave the dropdown displaying a stale label.
+  // Only "hand-writing" is state; the shown preset derives from the expression, so it cannot go stale.
   const [customMode, setCustomMode] = useState(false);
   const expression = useWatch({ control: form.control, name: "expression" });
 
   const matched = presets.find((p) => p.expression && p.expression === expression);
-  // An expression matching no preset IS custom (e.g. jobs adopted from
-  // /etc/cron.d); derived, so editing such a job shows its raw schedule.
+  // An expression matching no preset IS custom (e.g. jobs adopted from /etc/cron.d).
   const selected = customMode || (expression && !matched) ? CUSTOM : matched?.key;
 
-  /*
-   * Picking "Custom" changes nothing by itself, so Save stays disabled; focus
-   * moves to the expression field instead of force-dirtying the form, and the
-   * first keystroke enables Save.
-   */
+  // "Custom" changes nothing, so focus the field instead of force-dirtying; a keystroke enables Save.
   const rawFieldRef = useRef(null);
   const focusRawOnClose = useRef(false);
 
@@ -68,8 +54,7 @@ export function ScheduleField({ form, presets, timezone }) {
     focusRawOnClose.current = key === CUSTOM;
     const preset = presets.find((p) => p.key === key);
     if (preset?.expression) {
-      // `shouldDirty`: the edit dialog gates Save on `isDirty`, which setValue
-      // leaves alone unless asked.
+      // `shouldDirty`: the edit dialog gates Save on `isDirty`, which setValue leaves alone unless asked.
       form.setValue("expression", preset.expression, {
         shouldValidate: true,
         shouldDirty: true,
@@ -81,8 +66,7 @@ export function ScheduleField({ form, presets, timezone }) {
   const showRawField = !hasPresets || selected === CUSTOM;
   const selectedPreset = presets.find((p) => p.key === selected);
 
-  // Zod emits translation keys (e.g. "cronExpression"); mirror FormMessage's
-  // lookup, falling back to the raw string for already-localized API errors.
+  // Zod emits translation keys; fall back to the raw string for already-localized API errors.
   const errorKey = form.formState.errors.expression?.message;
   const expressionError = errorKey
     ? tValidation.has(errorKey)
@@ -101,9 +85,7 @@ export function ScheduleField({ form, presets, timezone }) {
 
   const renderItem = (preset) => (
     <SelectItem key={preset.key} value={preset.key}>
-      {/* Radix wraps item children in a content-sized span, so w-full can't
-          stretch here — a fixed label column is what actually aligns the
-          expressions into a readable second column. */}
+      {/* Radix wraps children in a content-sized span, so a fixed label column aligns the expressions. */}
       <span className="flex items-center gap-3">
         <span className="min-w-36">{preset.label}</span>
         {preset.expression ? (
@@ -119,15 +101,12 @@ export function ScheduleField({ form, presets, timezone }) {
     <div className="space-y-4">
       {hasPresets ? (
         <FormItem>
-          {/* Not a FormField (the value is derived, not bound), so the error
-              state is passed by hand. */}
+          {/* Not a FormField (the value is derived), so the error state is passed by hand. */}
           <FormLabel required hint={t("form.scheduleHint")} data-error={selectInvalid}>{t("form.schedule")}</FormLabel>
           <Select value={selected} onValueChange={onPreset}>
             <FormControl aria-invalid={selectInvalid}>
               <SelectTrigger className="w-full">
-                {/* Explicit trigger content: Radix would otherwise reuse the
-                    option markup, dragging the list's fixed label column into
-                    the trigger and indenting the value by ~15px. */}
+                {/* Explicit content: Radix would reuse the option markup, label column and all. */}
                 <SelectValue placeholder={t("form.schedulePlaceholder")}>
                   {selectedPreset ? (
                     <span className="flex items-center gap-2">
@@ -142,13 +121,9 @@ export function ScheduleField({ form, presets, timezone }) {
                 </SelectValue>
               </SelectTrigger>
             </FormControl>
-            {/* popper, not the default item-aligned: with 10 presets the menu
-                would otherwise open on top of the fields above it. */}
+            {/* popper: item-aligned would open the 10-preset menu over the fields above it. */}
             <SelectContent
-              /*
-               * Radix returns focus to the trigger on close, after any selection
-               * handler, so the focus redirect must happen here.
-               */
+              /* Radix refocuses the trigger on close, after selection handlers, so redirect focus here. */
               onCloseAutoFocus={(event) => {
                 if (!focusRawOnClose.current) return;
                 focusRawOnClose.current = false;
@@ -200,8 +175,7 @@ export function ScheduleField({ form, presets, timezone }) {
       {/* "0 0 2 * *" reads as 2 AM daily to most people; it is midnight on the 2nd. */}
       {showRawField ? <SchedulePreview expression={expression} timezone={timezone} /> : null}
 
-      {/* Timezone only: the trigger already shows label and expression, and the
-          page subtitle is hidden behind this dialog. */}
+      {/* Timezone only: the trigger shows label and expression; the page subtitle is behind this dialog. */}
       {timezone ? (
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Clock className="size-3.5 shrink-0" />

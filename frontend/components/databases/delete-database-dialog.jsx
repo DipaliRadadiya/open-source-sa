@@ -11,13 +11,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Caution } from "@/components/ui/caution";
 
-/**
- * Dropping a database: requires typing the name, like the system-user delete,
- * and names the consequences. The engine also drops the database's users, so
- * the app's credential stops working.
- *
- * `application` is the attached site, when the caller knows it.
- */
+// The engine also drops the database's users, so the app's credential stops working.
 export function DeleteDatabaseDialog({ database, application = null, open, onOpenChange, redirectTo }) {
   const t = useTranslations("databases");
   const { refreshAndWait, pushAndWait } = useRefresh();

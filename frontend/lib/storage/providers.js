@@ -1,15 +1,5 @@
-/**
- * What each storage provider needs, declared once. `provider` is a real API
- * column validated per provider, so nothing is inferred from the endpoint.
- *
- * Two layers:
- *
- * - **PRESETS** is what the user picks from. Amazon S3, R2, Backblaze and
- *   Wasabi are all `s3` to the backend, but keep separate presets for their
- *   endpoint examples and key-docs links.
- * - **FIELDS** is keyed by the backend provider and says which inputs to
- *   render. One renderer reads it; nothing hand-rolls a per-provider form.
- */
+// `provider` is a real API column; nothing is inferred from the endpoint. PRESETS is what the user
+// picks (several are `s3` to the backend); FIELDS, keyed by backend provider, says which inputs to render.
 
 /** Input kinds the renderer knows how to draw. */
 export const TEXT = "text";
@@ -18,13 +8,7 @@ export const NUMBER = "number";
 export const TOGGLE = "toggle";
 export const TEXTAREA = "textarea";
 
-/**
- * The list shown in the picker, in the order shown.
- *
- * `endpointHint` is a hint, never an auto-filled value: each contains a part
- * only the account owner knows (account id, region), so a template value would
- * fail validation.
- */
+// `endpointHint` is never auto-filled: each contains a part only the account owner knows.
 export const PRESETS = [
   { value: "aws", provider: "s3", endpointHint: "" },
   { value: "r2", provider: "s3", endpointHint: "https://<account-id>.r2.cloudflarestorage.com" },
@@ -34,21 +18,14 @@ export const PRESETS = [
   { value: "other", provider: "s3", endpointHint: "" },
   { value: "ftp", provider: "ftp" },
   { value: "sftp", provider: "sftp" },
-  /*
-   * Legacy service-account Drive: hidden from the picker (`legacy`) but kept
-   * resolvable, since `presetForProvider` would otherwise fall back to the S3
-   * "other" preset and render the wrong edit form for existing destinations.
-   */
+  // Hidden from the picker but kept resolvable, or existing destinations get the S3 "other" edit form.
   { value: "google_drive", provider: "google_drive", legacy: true },
   // Drive accessed as the user (OAuth): the only way a free Gmail account can
   // use Drive.
   { value: "google_drive_oauth", provider: "google_drive_oauth" },
 ];
 
-/**
- * Where a preset's credentials are created (each provider names them
- * differently). Null where there is nowhere to send anyone ("Other", FTP).
- */
+// Null where there is nowhere to send anyone ("Other", FTP).
 const KEY_DOCS = {
   aws: "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html",
   r2: "https://developers.cloudflare.com/r2/api/tokens/",
@@ -72,23 +49,13 @@ export function providerForPreset(value) {
   return presetFor(value)?.provider ?? "s3";
 }
 
-/**
- * The first preset that maps to a given backend provider, for editing. `s3`
- * deliberately resolves to the generic "other" preset rather than guessing the
- * service from the endpoint.
- */
+// `s3` deliberately resolves to the generic "other" preset rather than guessing from the endpoint.
 export function presetForProvider(provider) {
   if (provider === "s3") return "other";
   return PRESETS.find((p) => p.provider === provider)?.value ?? "other";
 }
 
-/**
- * Field definitions per backend provider.
- *
- * `name` is the key inside the API's `config` object. `required` drives the
- * asterisk. `mono` marks addresses and keys, where a proportional font hides
- * l/1 mix-ups.
- */
+// `name` is the key inside the API's `config`. `mono` marks addresses and keys, where a proportional font hides l/1.
 export const FIELDS = {
   s3: [
     { name: "bucket", kind: TEXT, required: true, mono: true },
@@ -112,9 +79,8 @@ export const FIELDS = {
     { name: "passive", kind: TOGGLE, default: true },
   ],
   google_drive_oauth: [
-    // No folder id: the `drive.file` scope only sees files this app made, so the
-    // panel creates its own folder. The refresh token is written by the connect
-    // flow and never shown, so it is not a field.
+    // No folder id: the `drive.file` scope only sees files this app made, so the panel creates its own.
+    // The refresh token is written by the connect flow and never shown.
     { name: "client_id", kind: TEXT, required: true, mono: true },
     { name: "client_secret", kind: SECRET, required: true, mono: true },
   ],
@@ -135,11 +101,7 @@ export const FIELDS = {
   ],
 };
 
-/**
- * Constraints worth stating before the form is filled in, keyed by preset
- * first and provider second. Empty at present; kept as the lookup for the next
- * provider that needs one.
- */
+// Keyed by preset first, provider second. Empty at present; kept for the next provider that needs one.
 const WARNINGS = {
   presets: {},
   providers: {},
@@ -158,10 +120,7 @@ export function secretFieldsFor(provider) {
   return fieldsFor(provider).filter((f) => f.kind === SECRET || f.kind === TEXTAREA);
 }
 
-/**
- * Whether a field is required given the chosen preset (two S3 fields depend
- * on the service picked).
- */
+// Two S3 fields depend on the service picked.
 export function isRequired(field, preset) {
   if (field.required) return true;
   if (field.requiredForPresets) return field.requiredForPresets.includes(preset);
@@ -169,11 +128,7 @@ export function isRequired(field, preset) {
   return false;
 }
 
-/**
- * The two lines a list row shows under the name: where this destination is,
- * and how it is addressed. Per provider, returned as strings so the row keeps
- * control of layout.
- */
+// Returned as strings so the row keeps control of layout.
 export function describeDestination(destination) {
   const config = destination?.config ?? {};
   const prefix = destination?.prefix ?? "";
@@ -209,13 +164,8 @@ export function describeDestination(destination) {
   };
 }
 
-/**
- * The config defaults for a provider, so a create form starts as the backend
- * would save it (e.g. the FTP TLS toggle on).
- *
- * Other fields start as "" rather than absent: a missing key would mount the
- * input uncontrolled. `cleanConfig` strips the blanks before sending.
- */
+// So a create form starts as the backend would save it. Other fields start as "", since a missing key
+// would mount the input uncontrolled; `cleanConfig` strips the blanks.
 export function defaultConfig(provider) {
   return Object.fromEntries(
     fieldsFor(provider).map((f) => [f.name, f.default !== undefined ? f.default : ""]),

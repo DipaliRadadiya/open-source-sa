@@ -30,11 +30,7 @@ import { ErrorCopy } from "@/components/sections/error-copy";
 
 export const dynamic = "force-dynamic";
 
-/**
- * Sits above every error.jsx, so a throw here reaches Next's unstyled error
- * page; a rate-limit error is caught and given its own screen. The session
- * resolves first, then the other three reads run in parallel.
- */
+// A throw here reaches Next's unstyled error page; rate-limit errors get their own screen.
 export default async function AppLayout({ children }) {
   let user;
   try {
@@ -76,14 +72,11 @@ export default async function AppLayout({ children }) {
             <SidebarProvider style={{ "--sidebar-width-icon": "3.5rem" }}>
               <SidebarAutoCollapse />
               <AppSidebar items={permissions} />
-              {/* min-w-0: without it this flex child keeps min-width:auto and wide
-              content (tables/charts) pushes the page into horizontal overflow. */}
+              {/* min-w-0: otherwise wide tables/charts push the page into horizontal overflow. */}
               <SidebarInset className="min-w-0">
-                {/* Banners + header form one sticky cluster so the impersonation
-                banner never scrolls away. */}
+                {/* One sticky cluster so the impersonation banner never scrolls away. */}
                 <div className="sticky top-0 z-20">
-                  {/* Publishes this cluster's measured height as `--app-chrome`
-                      for other sticky elements. */}
+                  {/* Publishes this cluster's height as `--app-chrome` for other sticky elements. */}
                   <AppChromeHeight />
                   {impersonatedBy ? (
                     <ImpersonationBanner
@@ -97,9 +90,7 @@ export default async function AppLayout({ children }) {
                     />
                   ) : null}
                   <AppHeader impersonating={!!impersonatedBy} />
-                  {/* Inside the sticky cluster, not a fixed `top-16` offset: the
-                      banners above are conditional. Frosted so scrolling content
-                      does not show through. */}
+                  {/* Inside the sticky cluster, not `top-16`: the banners above are conditional. */}
                   <div className="border-b bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/70">
                     <div className="mx-auto w-full max-w-screen-xl px-4 py-2.5 sm:px-6 lg:px-8">
                       <AppBreadcrumb items={permissions} />

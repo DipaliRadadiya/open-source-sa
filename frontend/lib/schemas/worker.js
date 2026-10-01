@@ -4,11 +4,8 @@ import { z } from "zod";
 // redirects and `$(…)` would be literal arguments. Mirrors `SaveWorkerRequest`.
 const SHELL_METACHARACTERS = /[|;&`$<>()]/;
 
-/*
- * Laravel's `not_regex:/\.\./` and `new SingleLine`. These paths go into a
- * supervisord config that runs as root: no climbing out of the site, and one
- * value cannot become two directives.
- */
+// These paths go into a supervisord config run as root: no climbing out of the site,
+// and one value cannot become two directives.
 const noTraversal = (v) => !v.includes("..");
 const singleLine = (v) => !/[\r\n]/.test(v);
 
@@ -99,10 +96,7 @@ export const workerFormSchema = z.object({
   auto_start: z.boolean().optional(),
 });
 
-/**
- * The form with the application's own folder: an absolute working directory
- * or log file must be inside it.
- */
+// An absolute working directory or log file must be inside the application's folder.
 export function workerFormSchemaFor(appRoot = "") {
   const root = String(appRoot ?? "").replace(/\/+$/, "");
   if (!root) return workerFormSchema;
@@ -155,10 +149,7 @@ export const workerSchema = z.object({
   state: z.enum(["running", "degraded", "stopped"]).catch("stopped"),
   state_title: z.string().nullish(),
   directory: z.string().nullish(),
-  /*
-   * `user` is what was asked for, `effective_user` what it resolves to (the
-   * site's system user when unset).
-   */
+  // `effective_user` is what `user` resolves to (the site's system user when unset).
   user: z.string().nullish(),
   effective_user: z.string().nullish(),
   // Where supervisord writes this program's output; the panel reads logs from it.

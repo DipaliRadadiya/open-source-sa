@@ -1,11 +1,7 @@
 import { useTranslations } from "next-intl";
 import { Checkbox } from "@/components/ui/checkbox";
 
-/**
- * Multi-select for a user's roles. `roles` is the catalog
- * ([{ id, name, description? }]); `value` is an array of selected role ids.
- * Every user needs at least one role (enforced by the form schema).
- */
+// `value` is an array of role ids; at least one is required (form schema).
 export function RolesField({ roles, value = [], onChange, failed = false }) {
   const t = useTranslations("users");
 

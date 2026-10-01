@@ -7,11 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useChromeOffset } from "@/hooks/use-chrome-offset";
 
-/**
- * Searchable single-select; use it instead of Select for long or data-driven
- * lists. Built on Popover without cmdk. `options` are `{ value, label, hint? }`;
- * `value`/`onChange` use the option value.
- */
+// Searchable single-select for long or data-driven lists. `options` are `{ value, label, hint? }`.
 export function Combobox({
   options = [],
   value,
@@ -36,11 +32,8 @@ export function Combobox({
   const listId = useId();
   const searchRef = useRef(null);
   const triggerRef = useRef(null);
-  /*
-   * Modal only inside a dialog: the Dialog's react-remove-scroll blocks wheel
-   * events in the portalled popover, and a modal popover nests its own scroll
-   * lock. On a normal page modal would block the rest of the screen.
-   */
+  // Modal only inside a dialog: the Dialog's scroll lock blocks wheel events in
+  // the portalled popover. On a normal page modal would block the screen.
   const [modal, setModal] = useState(false);
 
   const selected = options.find((option) => String(option.value) === String(value));

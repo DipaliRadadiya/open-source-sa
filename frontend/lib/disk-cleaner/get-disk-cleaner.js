@@ -24,11 +24,7 @@ export const getDiskCleaner = cache(async function getDiskCleaner() {
   };
 });
 
-/**
- * The automatic-cleanup profile. A missing schedule is not a failure — the API
- * returns defaults — so this degrades to `null` and the card renders its "off"
- * state rather than an error.
- */
+// A missing schedule is not a failure (the API returns defaults), so this degrades to `null`.
 export const getCleanerSchedule = cache(async function getCleanerSchedule() {
   try {
     const res = await serverFetch("/disk-cleaner/schedule");

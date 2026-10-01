@@ -1,11 +1,5 @@
-/**
- * Which installed runtime versions a site type will run on, given its declared
- * range. Both ends are INCLUSIVE and a null end is unbounded, matching
- * `AbstractSiteType::installedPhpVersionsInRange()`.
- *
- * Unlike that method, an empty result stays empty (no fallback to the full
- * list); `rangeUnsatisfied` lets the caller explain it.
- */
+// Both ends INCLUSIVE, a null end unbounded, matching `installedPhpVersionsInRange()`;
+// unlike it, an empty result stays empty.
 
 /** `[{ version }]` filtered to a `{ min, max }` range; untouched without one. */
 export function versionsInRange(versions, range) {
@@ -17,10 +11,7 @@ export function versionsInRange(versions, range) {
   return list.filter((item) => versionWithin(item?.version, range));
 }
 
-/**
- * True only when versions are installed and none satisfies the declared range.
- * False with no range, and false when nothing is installed (reported elsewhere).
- */
+/** False with no range, and when nothing is installed (reported elsewhere). */
 export function rangeUnsatisfied(versions, range) {
   const list = Array.isArray(versions) ? versions : [];
   if (list.length === 0) return false;
@@ -48,11 +39,8 @@ export function versionWithin(version, range) {
   return true;
 }
 
-/**
- * A version cut to the number of segments the bound states, for the UPPER
- * bound only: a max of `24` means the whole 24.x line, and `8.1` accepts 8.1.9
- * but not 8.2. The lower bound needs no cutting.
- */
+// Upper bound only: a max of `24` means the whole 24.x line, and `8.1` accepts 8.1.9
+// but not 8.2.
 function toPrecisionOf(version, bound) {
   const segments = String(bound).split(".").length;
   return String(version).split(".").slice(0, segments).join(".");
@@ -63,13 +51,8 @@ export function highestInRange(versions, range) {
   return sortedInRange(versions, range).at(-1) ?? null;
 }
 
-/**
- * The version to install for a type that declares a range, chosen from the
- * `installable` list (what the runtime page offers): the LOWEST supported
- * version in range (the newest major may be untested by the app); if none in
- * range is supported (the PHP list includes EOL lines), the highest in range.
- * Returns `{ version, eol }` so the caller can mention end-of-life.
- */
+// The LOWEST supported version in range (the newest major may be untested by the app);
+// if none is supported (PHP lists EOL lines), the highest. Returns `{ version, eol }`.
 export function installTarget(versions, range) {
   const candidates = versionsInRange(Array.isArray(versions) ? versions : [], range)
     .filter((item) => typeof item?.version === "string" && item.version !== "")
@@ -95,11 +78,8 @@ function sortedInRange(versions, range) {
     .sort(compareVersions);
 }
 
-/**
- * Segment-wise numeric comparison (the subset of PHP's `version_compare` used
- * here). Missing segments count as zero ("22" == "22.0"); non-numeric ones
- * compare as zero rather than throwing.
- */
+// A subset of PHP's `version_compare`: missing segments count as zero ("22" == "22.0"),
+// and non-numeric ones compare as zero rather than throwing.
 export function compareVersions(a, b) {
   const left = String(a).split(".");
   const right = String(b).split(".");

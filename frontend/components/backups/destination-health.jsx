@@ -3,10 +3,7 @@ import { useTranslations } from "next-intl";
 import { HardDrive, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-/**
- * Warns when a destination that backups depend on is failing or never tested.
- * Unused destinations are ignored so the banner stays meaningful.
- */
+// Unused destinations are ignored so the banner stays meaningful.
 export function DestinationHealth({ destinations, inUse }) {
   const t = useTranslations("backups.destinationHealth");
 

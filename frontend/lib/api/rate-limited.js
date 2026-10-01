@@ -1,8 +1,4 @@
-/**
- * A 429 from the per-user rate limit: "ask again shortly", never a crash or
- * "no permissions". Thrown from the panel layout's session/permission fetches,
- * which sit above every error.jsx, so the layout catches it by identity.
- */
+// A per-user 429. Thrown above every error.jsx, so the panel layout catches it by identity.
 export class RateLimitedError extends Error {
   constructor(source) {
     super(`${source} responded 429`);

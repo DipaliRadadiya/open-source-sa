@@ -29,10 +29,7 @@ import { cleanLines } from "@/lib/logs/clean-lines";
 const POLL_MS = 3000;
 const TAIL_FAILURES_BEFORE_PAUSE = 3;
 
-/*
- * Sources whose lines carry an HTTP status rather than a level word.
- * `waf_detect` is written in `combined` format, the same shape as the access log.
- */
+// Sources whose lines carry an HTTP status; `waf_detect` uses `combined` format.
 const WEB_FORMAT_KEYS = new Set(["access", "waf_detect"]);
 const groupFor = (key) => (WEB_FORMAT_KEYS.has(key) ? "web" : "system");
 
@@ -59,9 +56,8 @@ export function ApplicationLogsPanel({
     setCurrent(selected);
   }
   const source = sources.find((s) => s.key === current) ?? null;
-  // An "application" source only exists on a site that runs a process; when it
-  // does, access/error describe the reverse proxy, not the app. Keyed on the
-  // source key, not `kind`: the unit can write to files, not just the journal.
+  // With an app process, access/error describe the reverse proxy. Keyed on the
+  // source key, not `kind`: the unit can write to files too.
   const hasAppOutput = sources.some((s) => s.key.startsWith("application"));
 
   const [lines, setLines] = useState(() => cleanLines(initial?.log?.lines));
@@ -248,11 +244,7 @@ export function ApplicationLogsPanel({
     return () => document.removeEventListener("keydown", onKey);
   }, []);
 
-  /**
-   * Empty the selected log. The server truncates rather than deletes. Lines are
-   * cleared locally instead of re-read: a busy log may already have new lines,
-   * which would look like the clear failed.
-   */
+  // Cleared locally, not re-read: a busy log may already have new lines.
   const clearLog = useCallback(async () => {
     setClearing(true);
     try {

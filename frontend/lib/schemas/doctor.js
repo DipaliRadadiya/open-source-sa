@@ -1,8 +1,6 @@
 import { z } from "zod";
 
-// One installation self-check. `title` and `fix` are localized by the backend;
-// `detail` is raw evidence (a version, a path, a unit name) and deliberately
-// NOT translated. `fix` is null when the check passed.
+// `detail` is raw evidence and deliberately NOT translated. `fix` is null when the check passed.
 const checkSchema = z
   .object({
     key: z.string(),

@@ -1,9 +1,6 @@
 import { useCallback, useState } from "react";
 
-/**
- * Which rows of a list have a request in flight. A set rather than a single
- * slot, so concurrent rows keep their own spinners.
- */
+// A set rather than a single slot, so concurrent rows keep their own spinners.
 export function usePendingKeys() {
   const [keys, setKeys] = useState([]);
   const start = useCallback((key) => setKeys((current) => (current.includes(key) ? current : [...current, key])), []);

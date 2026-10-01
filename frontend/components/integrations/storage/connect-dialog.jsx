@@ -19,12 +19,7 @@ import { GoogleDriveSetup } from "@/components/integrations/storage/google-drive
 
 const DEFAULT_PRESET = "aws";
 
-/**
- * Adding a destination.
- *
- * The API's test endpoint needs a saved destination id, so this saves first,
- * then tests and reports that result rather than a bare "Added".
- */
+// The test endpoint needs a saved id, so this saves first, then tests.
 export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri }) {
   const t = useTranslations("storage.connect");
   const { refreshAndWait } = useRefresh();
@@ -62,11 +57,7 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri 
       onOpenChange?.(false);
       reset(DEFAULT_PRESET);
 
-      /*
-       * A new Drive destination cannot pass the check: consent is keyed to an
-       * existing destination, so it is never connected yet. Explain the next
-       * step (Connect on the row) instead of showing an error.
-       */
+      // Drive consent is keyed to an existing destination, so a new one cannot pass yet.
       if (created && provider === "google_drive_oauth") {
         toast.info(t("addedNeedsConnect"), { duration: 8000 });
         return;
@@ -162,9 +153,8 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri 
           <GoogleDriveSetup redirectUri={oauthRedirectUri} defaultOpen />
         ) : null}
 
-        {/* The probe writes, reads and deletes an object, and backups prune
-            old archives, so a read-only credential cannot work. Not shown for
-            Drive, whose scope is fixed by the panel. */}
+        {/* The probe writes and deletes, and backups prune, so read-only credentials fail.
+            Drive's scope is fixed by the panel. */}
         {provider === "google_drive_oauth" ? null : (
           <div className="rounded-lg border bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
             {provider === "s3" ? t("permissionsNote") : t("permissionsNoteRemote")}
@@ -192,13 +182,8 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri 
   );
 }
 
-/**
- * Drop the keys the user left empty.
- *
- * An empty string is not "not set": `password: ""` on a key-auth SFTP
- * destination would be stored and used by phpseclib. Booleans are kept, since
- * stripping `false` would silently re-enable TLS.
- */
+// Drop empty keys: `password: ""` on key-auth SFTP would be stored and used. Keep
+// booleans: stripping `false` would re-enable TLS.
 function cleanConfig(config = {}) {
   return Object.fromEntries(
     Object.entries(config).filter(([, value]) =>

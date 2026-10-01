@@ -1,23 +1,8 @@
 import { TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/**
- * What every error boundary (root, server panel, admin, sign-in) renders.
- * Icon, tone and `role="alert"` are fixed on purpose. Not for `LoadFailed` or
- * `RateLimited`, which differ deliberately.
- *
- * No hooks and no data: the root boundary renders this, and nothing would
- * catch a throw here.
- *
- * @param title       the heading — what happened
- * @param description one sentence on what to do about it
- * @param detail      optional, small and last: the digest support can look up
- * @param action      the retry control, passed as a node so each boundary keeps
- *                    its own `reset` and this stays unaware of boundaries
- * @param className   spacing only; the four differ in vertical padding
- * @param centered    wraps in a full-height centring flex, for a boundary that
- *                    replaces the whole viewport rather than a slot inside one
- */
+// What every error boundary renders. No hooks and no data: the root boundary
+// renders this, and nothing would catch a throw here.
 export function FailurePanel({
   title,
   description,

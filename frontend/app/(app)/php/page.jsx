@@ -125,11 +125,7 @@ export default async function PhpPage({ searchParams }) {
           )}
 
           {current ? (
-            /*
-             * Keyed on the version so state seeded from props resets. IniEditor
-             * holds edited php.ini text; without the key a save could write one
-             * version's configuration into another's.
-             */
+            /* Keyed on version: without it a save could write one version's php.ini into another's. */
             <VersionSummary
               key={current.version}
               version={current}

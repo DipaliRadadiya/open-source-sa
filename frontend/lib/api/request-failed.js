@@ -1,20 +1,7 @@
-/**
- * A failed server-side request, carrying what a Network tab row would show.
- *
- * The session and permission catalog are fetched on the server during SSR, so
- * the browser's Network tab never sees them; the error page is the only place
- * to explain the failure. Nothing here is secret: the API base URL is already
- * public via `NEXT_PUBLIC_*`.
- *
- * `kind` reuses the vocabulary of `read()` and `LoadFailed`.
- */
+// SSR fetches never reach the browser's Network tab, so the error page explains
+// them. Nothing here is secret: the API base URL is public via `NEXT_PUBLIC_*`.
 export class RequestFailedError extends Error {
-  /**
-   * @param method  "GET"
-   * @param url     the absolute URL that was fetched
-   * @param status  the HTTP status, or null when the request never completed
-   * @param cause   the transport error, when there was no response at all
-   */
+  // `status` is null when the request never completed; `cause` is then the transport error.
   constructor({ method = "GET", url, status = null, cause = null, serverMessage = null, debug = false }) {
     super(`${method} ${url} ${status === null ? "failed" : `responded ${status}`}`);
     this.name = "RequestFailedError";
@@ -28,17 +15,8 @@ export class RequestFailedError extends Error {
     this.debug = debug;
   }
 
-  /**
-   * Which explanation describes this:
-   *
-   *   4xx other the server rejected what the panel sent (often a panel/API
-   *             version mismatch or a proxy rewriting the request).
-   *   502/504   the web server answered but the API behind it did not
-   *             (PHP-FPM stopped or timed out).
-   *   5xx other the API itself errored; the reason is in its log.
-   *
-   * 401/419, 429 and 503 never get here: the fetchers handle them first.
-   */
+  // 502/504: the API behind the web server did not answer. 401/419, 429 and 503
+  // never get here: the fetchers handle them first.
   get kind() {
     if (this.status === null) return "network";
     if (this.status === 403) return "forbidden";
@@ -73,10 +51,7 @@ export function isRequestFailed(error) {
   return error instanceof RequestFailedError || error?.name === "RequestFailedError";
 }
 
-/**
- * The props the card needs, as a plain object: an Error does not cross the
- * server/client boundary, only serialisable values do.
- */
+// An Error does not cross the server/client boundary; plain values do.
 export function requestFailureProps(error) {
   return {
     kind: error.kind,

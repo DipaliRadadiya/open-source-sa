@@ -9,9 +9,8 @@ function Input({
   ...props
 }) {
   const inheritedReason = useDisabledReason();
-  // 14px everywhere, 16px on iOS only (`ios:`, see globals.css) to avoid
-  // Safari's focus zoom. placeholder:text-sm keeps placeholders at 14px: the
-  // zoom keys off the input's font-size, not ::placeholder.
+  // 16px on iOS only (`ios:`) to avoid Safari's focus zoom, which keys off the input's
+  // font-size, not ::placeholder; placeholder:text-sm keeps placeholders at 14px.
   const control = (
     <input
       type={type}

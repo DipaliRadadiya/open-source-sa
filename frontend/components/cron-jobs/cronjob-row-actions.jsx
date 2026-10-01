@@ -52,9 +52,7 @@ export function CronjobRowActions({
             e.preventDefault();
           }}
         >
-          {/* Cron keeps no "last run" record, so captured output (with its
-              `exit=` line) is the only answer to "did it work?". Null until the
-              job is saved with capture on. */}
+          {/* Cron keeps no "last run" record; captured output is the only answer to "did it work?". */}
           {!canViewLogs ? (
             <MenuItemHint hint={t("actions.noLogsPermission")}>
               <DropdownMenuItem disabled>

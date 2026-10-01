@@ -27,14 +27,8 @@ import {
   SectionActions,
 } from "@/components/settings/setting-row";
 
-/**
- * The SSH port and password authentication can lock the user out, so changes
- * to them are confirmed with a list of consequences.
- *
- * `oldPortRule` is the firewall rule holding the CURRENT port open. After a
- * port move the dialog offers to disable it (not delete: system-seeded rules
- * cannot be deleted, and it may be needed back).
- */
+// `oldPortRule` holds the CURRENT port open; after a move it is disabled, not deleted
+// (system-seeded rules cannot be deleted).
 export function SshForm({
   security,
   canManage,
@@ -194,13 +188,8 @@ export function SshForm({
                         value: "key",
                         label: t("signIn.option.key.label"),
                         hint: t("signIn.option.key.hint"),
-                        /*
-                         * The API refuses this with a 422 when no key is present
-                         * (its lockout guard), so block it up front and name the fix.
-                         * Keyed on the SAVED setting (`defaults`), not `field.value`:
-                         * otherwise the option disables itself the moment another
-                         * radio is picked and cannot be picked back.
-                         */
+                        // The API 422s this without a key (lockout guard). Keyed on the SAVED setting, not
+                        // `field.value`, or the option disables itself once another radio is picked.
                         disabledReason:
                           security?.has_ssh_key === false &&
                           defaults.password_authentication

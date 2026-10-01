@@ -11,11 +11,7 @@ export function safeTimeZone(timeZone) {
   }
 }
 
-/**
- * Builds a `(value) => string` clock formatter bound to a timezone, for use as
- * a Recharts tick/label formatter. Falls back to the app-wide zone when the
- * server didn't report a usable one.
- */
+// Falls back to the app-wide zone when the server did not report a usable one.
 export function clockFormatter(format, timeZone, options = {}) {
   const zone = safeTimeZone(timeZone);
   return (value) => {

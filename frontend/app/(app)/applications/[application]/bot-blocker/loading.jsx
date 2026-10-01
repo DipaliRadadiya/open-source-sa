@@ -1,9 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/**
- * Mirrors `BotBlockerSection`: the policy card and the traffic card beneath it,
- * both capped at `max-w-4xl`; heights measured from the rendered page.
- */
+// Mirrors `BotBlockerSection`; heights measured from the rendered page.
 export default function Loading() {
   return (
     <div className="space-y-6">

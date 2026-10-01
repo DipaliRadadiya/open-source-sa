@@ -5,17 +5,8 @@ import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { apiMessage } from "@/lib/api/error-message";
 
-/**
- * Run one API call with pending state, success/error toasts and an optional
- * refresh. `key` is for lists: pass the row's id and `pendingKey` names the
- * busy row, so only that row spins.
- *
- *   const { run, pending } = useAction();
- *   run(() => deleteThing(id), { success: t("deleted"), error: t("deleteFailed"), refresh: true })
- *
- * Errors are reported, never rethrown (a rejection escaping a click handler
- * goes unseen). `run` resolves to `true` or `false` so callers can branch.
- */
+// `key` names the busy row in lists. Errors are reported, never rethrown;
+// `run` resolves to `true` or `false`.
 export function useAction() {
   const { refreshAndWait } = useRefresh();
   // The key of the work in flight, or null, so a list can tell WHICH row is busy.

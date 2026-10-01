@@ -10,17 +10,12 @@ import { DomainText } from "@/components/ui/domain-text";
 // Four rows plus a counted remainder; the full list is on the Domains screen.
 const SHOWN = 4;
 
-/**
- * What names the site answers to, and whether it is encrypted. Everything else
- * belongs on the Domains screen. Rows match the Security card's layout beside
- * it. No certificate is a normal state (plain HTTP), not an error.
- */
+// No certificate is a normal state (plain HTTP), not an error.
 export function DomainsCard({ application, domains = [], certificate = null, failed = false, href = null }) {
   const t = useTranslations("applications.domains");
 
   const secure = certificate?.status === "active";
-  // A new application gets its certificate automatically shortly after going
-  // live; do not prompt for one already on its way.
+  // A new site gets its certificate automatically; do not prompt for one on its way.
   const issuing = certificate?.status === "pending" || certificate?.status === "issuing";
   const promptCertificate = !failed && !secure && !issuing;
 
@@ -35,8 +30,7 @@ export function DomainsCard({ application, domains = [], certificate = null, fai
 
   return (
     <Card>
-      {/* Re-reads until the certificate is issued or fails, so the card and the
-          attention strip update without a reload. */}
+      {/* Re-reads until the certificate is issued or fails. */}
       {issuing ? <AutoRefresh intervalMs={5000} stopAfterMs={300000} /> : null}
       <CardHeader className="gap-1.5">
         <div className="min-w-0 space-y-1">

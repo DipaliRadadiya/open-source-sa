@@ -1,8 +1,7 @@
 import { api } from "@/lib/api/client";
 
-// PUT /applications/{id}/webhook — { enabled, provider?, secret?, rotate? }.
-// Git apps only (422 otherwise). Disabling keeps the URL and secret so
-// switching it back on doesn't invalidate what the user pasted at the provider.
+// Git apps only (422 otherwise). Disabling keeps the URL and secret so re-enabling
+// doesn't invalidate what the user pasted at the provider.
 export function updateWebhook(id, payload) {
   return api.put(`/applications/${id}/webhook`, payload);
 }
@@ -13,10 +12,7 @@ export function readApplication(id) {
   return api.get(`/applications/${id}`);
 }
 
-/**
- * The newest deploy only, for polling while the Deployment screen is open, so a
- * deploy started by a push shows up without a reload. `{ latest: row | null }`.
- */
+// Newest deploy only, for polling. `{ latest: row | null }`.
 export function fetchLatestDeployment(id) {
   return api.get(`/applications/${id}/deployments/latest`);
 }
@@ -41,10 +37,8 @@ export function redeployDeployment(id, deploymentId) {
   return api.post(`/applications/${id}/deployments/${deploymentId}/redeploy`);
 }
 
-/**
- * Branch, deploy script and auto-deploy. Send the toggle as `webhook_enabled`:
- * the response calls it `auto_deploy`, but the request silently drops that name.
- */
+// Send the toggle as `webhook_enabled`: the response calls it `auto_deploy`, but the
+// request silently drops that name.
 export function updateDeploySettings(id, payload) {
   return api.put(`/applications/${id}/deployment-settings`, payload);
 }

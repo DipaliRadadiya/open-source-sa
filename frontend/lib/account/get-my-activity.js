@@ -17,10 +17,7 @@ const failedWith = (result) => ({
   debug: result.debug,
 });
 
-/**
- * The current user's own activity history (GET /activity-log). Returns a safe
- * empty result on failure.
- */
+// Returns a safe empty result on failure.
 export async function getMyActivity(searchParams = {}, scope) {
   const perPage = PER_PAGE_OPTIONS.includes(Number(searchParams.per_page))
     ? Number(searchParams.per_page)

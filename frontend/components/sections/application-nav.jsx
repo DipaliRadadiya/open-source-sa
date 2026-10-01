@@ -2,14 +2,8 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 
-/**
- * Carries ONE application's nav catalog from its layout up to the sidebar.
- *
- * The sidebar lives in the `(app)` layout and never sees the `[application]`
- * param, so the application layout fetches the catalog and hands it over, like
- * PageCrumb. Only `?level=application&application_id=…` applies the site-type
- * filter (e.g. static sites have no PHP settings).
- */
+// Carries one application's nav catalog from its layout up to the sidebar, which never
+// sees the `[application]` param.
 const ApplicationNavContext = createContext(null);
 
 export function ApplicationNavProvider({ children }) {
@@ -27,10 +21,7 @@ export function useApplicationNav() {
   );
 }
 
-/**
- * Rendered by the application layout. Clears on the way out so a server page
- * never inherits the last application's menu.
- */
+// Clears on the way out so a server page never inherits the last application's menu.
 export function ApplicationNav({ items, application = null, gitProvider = null }) {
   const { setState } = useApplicationNav();
 

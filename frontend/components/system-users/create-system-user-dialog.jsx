@@ -36,9 +36,8 @@ import {
 } from "@/components/ui/form";
 
 export function CreateSystemUserDialog({ open, onOpenChange, onCreated, initialShells = [] }) {
-  // Fetched on open: the dialog is used from the system-users page and the
-  // application form, and only the page has the catalog. The page passes its copy
-  // so the field never shows a raw "/bin/bash" while loading.
+  // Fetched on open: only the system-users page has the catalog. The page passes
+  // its copy so the field never shows a raw "/bin/bash" while loading.
   const [shells, setShells] = useState(initialShells);
   useEffect(() => {
     if (!open) return undefined;
@@ -69,20 +68,17 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated, initialS
     },
   });
 
-  // A fresh password on each open. Not in `defaultValues`: the form resets to those
-  // on close, so a mount-time password would be reused for every user created, and
-  // generating during render is a side effect.
+  // Not in `defaultValues`: the form resets to those on close, so one password
+  // would be reused for every user created.
   useEffect(() => {
     if (!open) return;
     form.setValue("password", generatePassword());
-    // form is stable; re-running on anything else would replace a password the user
-    // had already typed.
+    // Re-running on anything else would replace a password the user typed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   async function onSubmit(values) {
-    // Checked client-side from the catalog: SSH access with a shell that refuses login
-    // is invalid (ShellSelect enforces the same rule from the other side).
+    // SSH access with a no-login shell is invalid (ShellSelect enforces the other side).
     if (values.ssh_access) {
       const chosen = shells.find((entry) => entry.value === (values.shell || DEFAULT_SHELL));
       if (chosen?.allows_login === false) {
@@ -96,8 +92,7 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated, initialS
 
     const payload = { username: values.username };
     if (values.public_key?.trim()) payload.public_key = values.public_key.trim();
-    // Only send what was chosen: the backend treats these as `sometimes`, so untouched
-    // fields stay absent and "just a username" remains a single useradd.
+    // The backend treats these as `sometimes`; "just a username" stays a single useradd.
     if (values.shell && values.shell !== DEFAULT_SHELL) payload.shell = values.shell;
     if (values.sudo) payload.sudo = true;
     if (values.ssh_access) payload.ssh_access = true;
@@ -108,8 +103,7 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated, initialS
       await new Promise((resolve) => refreshThen(resolve));
       toast.success(t("toast.created"));
       onCreated?.(data?.system_user ?? data?.user ?? null);
-      // handleOpenChange, not onOpenChange: closing from our own code skips Radix's
-      // callback, which would leave "More options" expanded on the next open.
+      // Not onOpenChange: our own close skips Radix's callback, leaving "More options" expanded.
       handleOpenChange(false);
     } catch (error) {
       handleValidationError(error, form);
@@ -121,8 +115,7 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated, initialS
   const [sudoOn, chosenShell] = useWatch({ control: form.control, name: ["sudo", "shell"] });
   const chosenShellEntry = shells.find((entry) => entry.value === (chosenShell || DEFAULT_SHELL));
   const sshViaSudo = sudoOn && chosenShellEntry?.allows_login !== false;
-  // A shell that refuses login cannot carry SSH access (the API refuses the pair),
-  // so the switch goes off and stays off while that shell is chosen.
+  // The API refuses SSH access with a no-login shell.
   const noLoginShell = chosenShellEntry?.allows_login === false;
   useEffect(() => {
     if (noLoginShell && form.getValues("ssh_access")) {
@@ -184,16 +177,12 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated, initialS
             </FormItem>
           )}
         />
-        {/* On the main form and pre-filled: several later operations need a password.
-            Safe to pre-fill because it is recoverable (the backend stores it and Set
-            password shows it again), unlike the site basic-auth one. Clearing it works;
-            `password` is optional on the API. */}
+        {/* Safe to pre-fill: recoverable (Set password shows it again), unlike site basic-auth. Optional on the API. */}
         <FormField
           control={form.control}
           name="password"
           render={({ field }) => (
-            // Generate is positioned by the label but follows the input in the markup, so Tab
-            // reaches the field first.
+            // Generate follows the input in the markup, so Tab reaches the field first.
             <FormItem className="relative">
               <FormLabel hint={t("create.passwordHint")}>{t("create.password")}</FormLabel>
               <FormControl>
@@ -233,8 +222,7 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated, initialS
                 <Textarea
                   rows={3}
                   placeholder={t("create.publicKeyPlaceholder")}
-                  // font-mono only: the size comes from Textarea. An explicit text-xs would also
-                  // drop below 16px, which makes iOS zoom on focus.
+                  // No text-xs: below 16px makes iOS zoom on focus.
                   className="font-mono"
                   {...field}
                 />
@@ -272,8 +260,7 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated, initialS
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {/* Title first, path underneath. Until the catalog arrives the default is the
-                            single option, so the field is never empty. */}
+                        {/* Until the catalog arrives the default is the single option, so the field is never empty. */}
                         {(shells.length
                           ? offeredShells(shells, field.value)
                           : [{ value: DEFAULT_SHELL, title: DEFAULT_SHELL }]
@@ -299,8 +286,7 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated, initialS
                 {
                   name: "ssh_access",
                   label: t("create.sshAccess"),
-                  // Same rule as the list: sudo users always get SSH, so the switch shows that and
-                  // stays out of the way.
+                  // Sudo users always get SSH.
                   hint: noLoginShell
                     ? t("create.sshNeedsLoginShell", { shell: chosenShellEntry.title })
                     : sshViaSudo
@@ -339,8 +325,7 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated, initialS
                           </FormControl>
                         </div>
                       </label>
-                      {/* The server refuses SSH on a no-login shell by erroring on `ssh_access`, so these
-                          fields need a message slot. */}
+                      {/* The server refuses SSH on a no-login shell by erroring on `ssh_access`. */}
                       <FormMessage />
                     </FormItem>
                   )}

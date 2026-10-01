@@ -1,12 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/**
- * Mirrors `BackupsPanel` (two full-width cards); without this file the route
- * would inherit the dashboard skeleton with its side rail.
- *
- * Heights are measured from the rendered cards. The active-restore banner is
- * omitted because it is usually absent.
- */
+// Mirrors `BackupsPanel`; without this file the route inherits the dashboard skeleton.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

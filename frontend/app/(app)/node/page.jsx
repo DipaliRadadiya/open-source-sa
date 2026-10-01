@@ -114,11 +114,7 @@ export default async function NodePage({ searchParams }) {
           )}
 
           {current ? (
-            /*
-             * Keyed on the version so switching remounts the card: it seeds npm's
-             * version into state (useState only reads the prop on mount), and the
-             * key also resets the confirm dialog and pending flag.
-             */
+            // Keyed on the version: the card seeds state from it on mount only.
             <VersionSummary
               key={current.version}
               version={current}

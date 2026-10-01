@@ -8,10 +8,7 @@ import { describeCron, nextRuns, parseCron, wallClockNow } from "@/lib/cron-jobs
 // them into the reader's own zone; the times are the server's.
 const UTC = { timeZone: "UTC" };
 
-/**
- * The schedule in words when it can be said in a sentence, and always the
- * next three run times, which are exact either way.
- */
+// Words when the schedule can be said in a sentence; the next three run times always.
 export function useScheduleText(expression, timezone) {
   const t = useTranslations("cronJobs.preview");
   const format = useFormatter();

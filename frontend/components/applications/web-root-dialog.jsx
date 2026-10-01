@@ -22,11 +22,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-/**
- * Which directory the web server serves. Rules mirror `UpdateWebRootRequest`
- * (character set, no `..`) to avoid a 422. Saving rewrites the vhost and
- * reloads the web server, so a wrong value takes the site down until fixed.
- */
+// Mirrors `UpdateWebRootRequest`. A wrong value takes the site down until fixed.
 const schema = z.object({
   web_root: z
     .string()
@@ -58,11 +54,8 @@ export function WebRootDialog({ application, open, onOpenChange }) {
     try {
       const folder = String(values.web_root ?? "").trim().replace(/^\/+|\/+$/g, "");
       if (folder) {
-        /*
-         * The API saves a missing folder and the site then answers 403, so check it
-         * exists. Only a clear "no" blocks the save: a 403 from the file list (no
-         * file access) says nothing about the folder.
-         */
+        /* The API saves a missing folder and the site then answers 403. Only a clear "no"
+         * blocks: a 403 from the file list says nothing about the folder. */
         const missing = await listFiles(application.id, folder).then(
           () => false,
           (error) => [404, 422].includes(error.response?.status),

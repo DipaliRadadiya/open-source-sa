@@ -34,20 +34,14 @@ import {
 } from "@/components/ui/tooltip";
 import { apiMessage } from "@/lib/api/error-message";
 
-/**
- * The jails, with a lockout guard. Enabling a risky jail (e.g. SSH) asks first,
- * with adding an ignored address as the primary action; the API refuses unless
- * the address is ignored or the risk acknowledged. The guard fires on every
- * attempt, and again if the server refuses: the API's `your_ip` is the panel
- * host, not the browser, so it cannot prove the user is safe.
- */
+// Enabling a risky jail asks first, every attempt: the API's `your_ip` is the panel
+// host, not the browser, so it cannot prove the user is safe.
 export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, asked, onAskedChange }) {
   const t = useTranslations("fail2ban");
   const { refreshAndWait } = useRefresh();
   const [pending, setPending] = useState(null);
-  // Optimistic overrides, stored with the server value they were based on so
-  // they retire once the server moves. Owned by ProtectionSection (the ban list
-  // reads it too).
+  // Optimistic overrides keyed to the server value they were based on; owned by
+  // ProtectionSection because the ban list reads them too.
   const setAsked = onAskedChange;
   const [guarding, setGuarding] = useState(null);
   // Which guard button is in flight; both act on the same jail.
@@ -261,10 +255,7 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
   );
 }
 
-/**
- * What this jail is doing, in one line, by urgency: attack in progress, then
- * active bans, then quiet. A disabled jail says so rather than showing zeroes.
- */
+// By urgency: attack in progress, active bans, quiet. A disabled jail says so.
 function JailState({ jail, t }) {
   const failing = jail.stats?.currently_failed ?? 0;
   const blocked = jail.stats?.currently_banned ?? 0;

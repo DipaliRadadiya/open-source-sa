@@ -9,11 +9,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { DeleteApplicationDialog } from "@/components/applications/delete-application-dialog";
 
-/**
- * Every screen of an application whose system user no longer exists. The API
- * answers 409 on every `/applications/{id}/...` route except opening and
- * deleting, so one panel says it once and offers delete.
- */
+// The API answers 409 on every app route except open and delete, so this offers delete.
 export function SystemUserMissing({ application, canDelete }) {
   const t = useTranslations("applications.systemUserMissing");
   const ta = useTranslations("applications");

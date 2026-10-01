@@ -12,15 +12,12 @@ import { useRefresh } from "@/hooks/use-refresh";
 
 const DEFAULT_MODE = "644";
 
-// Mounted fresh per file (see files-panel.jsx), so the preselected mode is the
-// initial state. Starts from the listing's `mode` when sent; backends that don't
-// send it fall back to 644.
+// Mounted fresh per file (see files-panel.jsx); falls back to 644 when the listing has no `mode`.
 export function PermissionsDialog({ appId, file, open, onOpenChange }) {
   const t = useTranslations("applications.files");
   const { pending: refreshing, refreshThen } = useRefresh();
   const currentMode = file?.mode ?? null;
-  // One piece of state, the mode; the checkboxes edit its digits, so no combination
-  // the server would reject can be entered.
+  // The checkboxes edit the mode's digits, so no rejected combination can be entered.
   const [mode, setMode] = useState(() =>
     modeParts(currentMode) ? currentMode : DEFAULT_MODE,
   );
@@ -68,10 +65,7 @@ export function PermissionsDialog({ appId, file, open, onOpenChange }) {
       onSubmit={onSubmit}
       icon={Lock}
       title={t("permissionsDialog.title", { name: file.name })}
-      /*
-       * Names the mode both ways (octal and symbolic), matching the listing's
-       * Permissions column.
-       */
+      /* Octal and symbolic, matching the listing's Permissions column. */
       description={
         currentMode
           ? t(

@@ -13,14 +13,8 @@ import { RefreshButton } from "@/components/data-table/refresh-button";
 // Fast enough that CPU reads as live, light enough on the server.
 const POLL_MS = 3000;
 
-/**
- * Owns the services list on the client because `cpu_percent` is a delta
- * between two samples: without polling the CPU column stays empty.
- *
- * The "checked at" stamp updates only on a successful poll, so a stalled
- * backend shows as a stopped clock rather than stale numbers presented as
- * current.
- */
+// Polls because `cpu_percent` is a delta between samples. "Checked at" updates only
+// on success, so a stalled backend shows as a stopped clock, not stale numbers.
 export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, canManage }) {
   const t = useTranslations("services");
   const format = useFormatter();
@@ -66,11 +60,8 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
     };
   }, [format]);
 
-  // Three groups:
-  //   attention   needs a person: never installed, or installed and not running
-  //   running     has a unit that is up; the only rows where Memory, CPU and
-  //               Start on boot mean anything, so they keep the table
-  //   installing  in progress; nothing to do but wait
+  // attention: never installed, or not running. running: the only rows where
+  // Memory, CPU and boot mean anything. installing: in progress.
   const attention = services.filter(
     (s) => s.state === "install_failed" || (s.state !== "installing" && s.status === "failed"),
   );
@@ -157,9 +148,7 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
           when there are no services at all, to explain an otherwise blank page. */}
       {running.length > 0 || services.length === 0 ? (
       <Section title={t("sections.running.title")} hint={t("sections.running.hint")}>
-        {/* Cards when the content area is narrow, the table when it has room.
-            A container query, not lg: 900px is where the widest locale's
-            headers fit, with or without the sidebar. */}
+        {/* Container query, not lg: 900px is where the widest locale's headers fit. */}
         <div className="@container/svc">
         <div className="@min-[900px]/svc:hidden">
           <ServicesCards
@@ -186,9 +175,6 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
   );
 }
 
-/**
- * A titled group of rows, shaped like the setup page's sections.
- */
 function Section({ title, hint, children }) {
   return (
     <section className="space-y-3">

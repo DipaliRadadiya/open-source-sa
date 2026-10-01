@@ -1,11 +1,7 @@
 import { acceptedEngines } from "../applications/database-readiness.js";
 
-/**
- * Whether a site's application can use a database's engine. Mirrors
- * `UpdateDatabaseApplicationRequest::refuseUnusableEngine()`, using the
- * catalogue's `accepted_engines`. Types that need no database accept anything,
- * as on the backend.
- */
+// Mirrors `UpdateDatabaseApplicationRequest::refuseUnusableEngine()`; types that need
+// no database accept anything.
 export function engineAccepted({ application, siteTypes, engine } = {}) {
   if (!engine) return true;
 
@@ -24,10 +20,7 @@ export function engineAccepted({ application, siteTypes, engine } = {}) {
   return accepted.includes(engine);
 }
 
-/**
- * The engines a site's type accepts, for the sentence that says why not.
- * Empty when there is nothing to say.
- */
+// Empty when there is nothing to say.
 export function acceptedEnginesFor({ application, siteTypes } = {}) {
   const type = (Array.isArray(siteTypes) ? siteTypes : []).find(
     (candidate) => candidate?.name === application?.site_type,

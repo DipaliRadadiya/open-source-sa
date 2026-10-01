@@ -1,10 +1,7 @@
 import { read } from "@/lib/api/read";
 import { trashResponseSchema } from "@/lib/schemas/file";
 
-/**
- * The site's trash. A failed read must never render as an empty trash; going
- * through `read()` keeps the failure kind and logs it.
- */
+// A failed read must never render as an empty trash; `read()` keeps the failure kind.
 export async function getTrash(appId) {
   const { data, failed, status, failure, message, debug } = await read(
     `/applications/${appId}/files/trash`,

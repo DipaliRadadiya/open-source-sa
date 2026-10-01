@@ -28,11 +28,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 
-/**
- * Whole-site Basic Auth: one shared credential. When `enabled` is true the API
- * always requires username and password together; there is no
- * password-only update.
- */
+// When `enabled` is true the API requires username and password together.
 export function SecuritySection({ appId, application, domain, canManage }) {
   const t = useTranslations("applications.security");
   const { name: brand } = useBranding();
@@ -299,10 +295,7 @@ export function SecuritySection({ appId, application, domain, canManage }) {
   );
 }
 
-/**
- * One saved credential value: named, copyable, and masked if it is the
- * password. Copy works while masked.
- */
+// Masked if secret; copy works while masked.
 function SavedValue({ label, value, secret = false }) {
   const t = useTranslations("applications.security");
   const [revealed, setRevealed] = useState(false);

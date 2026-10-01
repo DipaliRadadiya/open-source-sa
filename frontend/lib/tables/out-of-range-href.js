@@ -1,7 +1,4 @@
-/**
- * Where an out-of-range page redirects: the last page, not page 1. Filters
- * are kept; only `page` changes.
- */
+// The last page, not page 1; filters are kept.
 export function outOfRangeHref(searchParams, lastPage = 1) {
   const next = new URLSearchParams(searchParams);
   next.delete("page");

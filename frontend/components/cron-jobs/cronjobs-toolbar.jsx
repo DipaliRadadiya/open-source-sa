@@ -5,11 +5,7 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { FacetSelect } from "@/components/data-table/facet-select";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 
-/**
- * Filters are URL-driven and applied server-side. No search box: the cron
- * endpoint filters only by system_user_id / username / active, and a
- * client-side search would only match the current page.
- */
+// No search box: the cron endpoint filters only by system_user_id / username / active.
 export function CronjobsToolbar({
   systemUsers = [],
   cronjobs = [],
@@ -18,10 +14,8 @@ export function CronjobsToolbar({
 }) {
   const t = useTranslations("cronJobs");
 
-  // Jobs can run as accounts the panel doesn't manage (root, www-data). Those
-  // filter by username instead of id, so surface the ones actually in use.
-  // Limitation: only usernames on the current page — there's no endpoint
-  // listing every distinct cron username.
+  // Unmanaged accounts (root, www-data) filter by username. Only the current page's usernames:
+  // no endpoint lists every distinct cron username.
   const unmanaged = [
     ...new Set(cronjobs.filter((j) => !j.system_user).map((j) => j.username)),
   ].sort();

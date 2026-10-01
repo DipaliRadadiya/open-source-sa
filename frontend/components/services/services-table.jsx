@@ -8,14 +8,8 @@ import { ServiceBootSwitch } from "@/components/services/service-boot-switch";
 import { ServiceStatusBadge } from "@/components/services/service-status-badge";
 import { installHome } from "@/lib/services/install-home";
 
-/* ---------------------------------------------------------------------------
- * Cells are module-level components on purpose.
- *
- * flexRender uses the cell function's identity as the component type, so cells
- * defined inside render would remount on every 3s poll, wiping local state
- * (open dialogs, pending actions). Anything a cell needs comes through
- * `table.options.meta`.
- * ------------------------------------------------------------------------- */
+// Cells are module-level on purpose: flexRender uses the function as the
+// component type, so inline cells would remount on every poll and lose state.
 
 function ServiceCell({ row }) {
   const t = useTranslations("services");
@@ -35,10 +29,8 @@ function ServiceCell({ row }) {
   // adds nothing, so the retry link is the useful content there.
   const note = installReason && installReason !== "unknown" ? installMessage : null;
 
-  // Installing or failed-install rows have no unit yet, so the reason takes
-  // the unit's place. `whitespace-normal` is load-bearing: TableCell's
-  // inherited `whitespace-nowrap` would paint the sentence across the other
-  // columns (cells do not clip overflow).
+  // `whitespace-normal` is load-bearing: the inherited `whitespace-nowrap`
+  // would paint the reason across the other columns.
   let secondLine = null;
   if (installed) {
   // The unit name (what systemctl takes), quietly under the friendly name.
@@ -50,9 +42,8 @@ function ServiceCell({ row }) {
         {retryable ? (
           <>
             {note ? " " : null}
-            {/* A link: the retry belongs on the screen that owns this install
-                (see lib/services/install-home.js), so two installs cannot run
-                at once. */}
+            {/* The retry belongs on the screen that owns this install, so two
+                installs cannot run at once. */}
             <Link
               href={home.href}
               className="font-medium whitespace-nowrap text-foreground underline underline-offset-2"
@@ -183,9 +174,7 @@ export function ServicesTable({ data, phpVersions = [], canManage = false, busy,
     <DataTable
       columns={columns}
       data={data}
-      // Fixed layout, so column widths are obeyed: with `auto`, a failed
-      // install's sentence widened the first column and pushed Actions off
-      // screen. Long text wraps inside its column instead.
+      // With `auto`, a failed install's sentence pushed Actions off screen.
       fixedLayout
       meta={{ busy, setRowBusy, canManage, phpVersions }}
       emptyMessage={t("empty.title")}
@@ -204,12 +193,7 @@ export function ServicesTable({ data, phpVersions = [], canManage = false, busy,
   );
 }
 
-/**
- * One usage figure, right-aligned and tabular for vertical comparison.
- *
- * A null renders as an em dash, never 0: "not measured" and "used none" are
- * different facts, and a stopped service at 0% would look idle.
- */
+// Null renders as an em dash, never 0: "not measured" and "used none" differ.
 function Measure({ value }) {
   if (value == null || value === "") {
     return <span className="text-sm text-muted-foreground">—</span>;

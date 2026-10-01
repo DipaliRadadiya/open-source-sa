@@ -7,11 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 
-/**
- * What is inside the database: names and sizes only (the API returns nothing
- * more; browsing rows is phpMyAdmin's job). Read-only by design: Optimize and
- * Repair were removed with their endpoints, as neither is reliable on InnoDB.
- */
+// Names and sizes only: the API returns nothing more. Read-only by design
+// (Optimize/Repair are unreliable on InnoDB).
 export function DatabaseTables({ database, tables = [], read = null, unavailable = null }) {
   const t = useTranslations("databases.tables");
   const format = useFormatter();
@@ -65,8 +62,7 @@ export function DatabaseTables({ database, tables = [], read = null, unavailable
             <p className="text-sm text-muted-foreground">{t("empty")}</p>
           </div>
         ) : (
-          /* Bounded (~10 rows, then scrolls): apps like Nextcloud ship ~150
-               tables, which would push everything below off the screen. */
+          /* Bounded: apps like Nextcloud ship ~150 tables. */
           <div className="max-h-96 divide-y overflow-y-auto">
             {tables.map((table) => (
               <div

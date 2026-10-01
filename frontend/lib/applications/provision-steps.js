@@ -1,9 +1,4 @@
-/**
- * Step identifiers the backend records in `steps[]` and `failed_step`; each
- * gets a translated label. Sources: ApplicationProvisioner::step(), the
- * installers' run() calls, and GitDeployer. Unordered: the API's sequence
- * depends on the site type.
- */
+// Keep in step with ApplicationProvisioner::step(), the installers' run() calls, and GitDeployer.
 export const PROVISION_STEPS = new Set([
   // Core provisioning.
   "create_directory",
@@ -44,11 +39,7 @@ export const PROVISION_STEPS = new Set([
   "verify_serving",
 ]);
 
-/**
- * Human label for a step. `prefix` selects the namespace (`applications.details`
- * or `applications`). Unknown steps still go through `t()`, whose fallback
- * (i18n/message-fallback.js) humanises the key; `unknownStep` is only for no step.
- */
+// Unknown steps still go through `t()`, whose fallback humanises the key; `unknownStep` is only for no step.
 export function provisionStepLabel(step, t, prefix = "") {
   if (!step) return t(`${prefix}unknownStep`);
   return t(`${prefix}steps.${step}`);

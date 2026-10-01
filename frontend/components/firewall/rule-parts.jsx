@@ -6,17 +6,9 @@ import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-/**
- * The pieces a rule is drawn from, shared by the table and the mobile cards.
- * Columns rather than the API's `summary` sentence, so rules can be compared down
- * a column; the sentence is kept for the narrow layout.
- * Copy arrives as a `labels` object; these components own no translation namespace.
- */
+// Shared by the table and the mobile cards; copy arrives as a `labels` object.
 
-/**
- * The rule's name. Seeded rules have no description, so an unnamed rule borrows
- * the service name for its port, falling back to the port itself.
- */
+/** Seeded rules have no description, so an unnamed rule borrows its port's service name. */
 export function RuleName({ rule, muted, labels }) {
   const off = rule.enabled === false;
   return (
@@ -93,10 +85,7 @@ export function SourceText({ rule, labels }) {
   );
 }
 
-/**
- * Delete, with the reason when unavailable: a system-seeded rule is protected by
- * the lockout guard, the page's most confusing disabled button.
- */
+/** Delete, with the reason when a system-seeded rule is protected by the lockout guard. */
 export { protectedReasonFor };
 
 export function DeleteRuleButton({ rule, enabled, canManage, pending, onDelete, labels }) {

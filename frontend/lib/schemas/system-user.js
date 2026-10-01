@@ -1,10 +1,7 @@
 import { z } from "zod";
 
-/**
- * One entry of GET /system-users/shells. `allows_login: false` cannot be
- * combined with SSH access (the server rejects the pair). Null means unknown
- * (e.g. an unrecognised shell on an adopted server), never "denies login".
- */
+// `allows_login: false` cannot be combined with SSH access. Null means unknown,
+// never "denies login".
 export const shellSchema = z.object({
   value: z.string(),
   title: z.string(),

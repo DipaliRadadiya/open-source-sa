@@ -34,25 +34,14 @@ export function fileDownloadUrl(appId, path) {
   return `${base}/api/applications/${appId}/files/download?path=${encodeURIComponent(path)}`;
 }
 
-/*
- * `preview` as a plain `<img src>`, for list thumbnails. Not `download`: that is
- * octet-stream + `nosniff` (SVG will not draw) and throttled at 20/min; `preview`
- * allows 60/min. A refused thumbnail just falls back to the file icon.
- */
+// Not `download`: that is octet-stream + `nosniff` (SVG will not draw) and throttled at 20/min.
 export function fileThumbnailUrl(appId, path) {
   const base = process.env.NEXT_PUBLIC_API_URL;
   return `${base}/api/applications/${appId}/files/preview?path=${encodeURIComponent(path)}`;
 }
 
-/**
- * Fetch an image for display, as a blob URL.
- *
- * Fetched rather than `<img src>` so a 422 refusal's reason can be shown, and
- * so it works when the panel and API are on unrelated domains.
- *
- * Returns `{ url }` on success; the CALLER OWNS IT and must
- * `URL.revokeObjectURL` it. Otherwise `{ error }` with the API's sentence.
- */
+// Fetched rather than `<img src>` so a 422's reason can be shown and cross-domain APIs work.
+// The CALLER OWNS the returned `url` and must `URL.revokeObjectURL` it.
 export async function fetchFilePreview(appId, path, { signal } = {}) {
   const base = process.env.NEXT_PUBLIC_API_URL;
   const url = `${base}/api/applications/${appId}/files/preview?path=${encodeURIComponent(path)}`;
@@ -95,23 +84,14 @@ export { CHUNK_THRESHOLD_BYTES, MAX_CHUNK_BYTES, chunkSizeFor };
 
 const CHUNK_RETRIES = 3;
 
-/**
- * What the server's disk can still take, in bytes. Compare files against
- * `usable` (safety floor already subtracted); `available` is for display.
- * Advisory only: the server re-checks on every write.
- */
+// Compare files against `usable` (safety floor subtracted); `available` is for display. Advisory only.
 export async function uploadSpace(appId, { signal } = {}) {
   const { data } = await api.get(`/applications/${appId}/files/uploads/space`, { signal });
   return data;
 }
 
-/**
- * Resumable upload of a file of any size.
- *
- * Chunks go up sequentially so one upload cannot saturate the panel's small
- * FPM pool, and so the part file's size is the resume offset. After any
- * failure the server's received count is the authority.
- */
+// Sequential chunks so one upload cannot saturate the small FPM pool, and the part file's size is the resume offset.
+// After any failure the server's received count is the authority.
 export async function uploadFileChunked(appId, path, file, { onProgress, signal } = {}) {
   const { data } = await api.post(
     `/applications/${appId}/files/uploads`,
@@ -260,10 +240,7 @@ export function fixApplicationPermissions(appId) {
   return api.post(`/applications/${appId}/fix-permissions`);
 }
 
-/**
- * Running archive operations plus those finished in the last few minutes, so
- * a poll can tell a finished job from one that vanished.
- */
+// Includes recently finished jobs so a poll can tell finished from vanished.
 export function getArchiveJobs(appId, { signal } = {}) {
   return api.get(`/applications/${appId}/files/archive-jobs`, { signal });
 }

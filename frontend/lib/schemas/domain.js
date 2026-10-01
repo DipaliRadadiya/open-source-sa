@@ -1,11 +1,7 @@
 import { z } from "zod";
 import { isValidApplicationDomain } from "./application.js";
 
-/**
- * A site is not one hostname: every name it answers to is a row, and `type`
- * says what that name does — canonical, a second name for the same content, or
- * a redirect that serves nothing.
- */
+// Every name a site answers to is a row; `type` says what that name does.
 export const domainSchema = z.object({
   id: z.number(),
   domain: z.string(),
@@ -42,11 +38,8 @@ export const certificateSchema = z.object({
   issued_at: z.string().nullish(),
   expires_at: z.string().nullish(),
   expires_at_human: z.string().nullish(),
-  /*
-   * What the web server is actually presenting, versus what is on disk; they
-   * differ when a renewal was never picked up. `serving_stale` is nullable and
-   * NOT defaulted: null means no handshake completed, never "all good".
-   */
+  // What the web server presents versus what is on disk. NOT defaulted:
+  // null means no handshake completed, never "all good".
   serving_stale: z.boolean().nullish(),
   served_expires_at: z.string().nullish(),
   served_checked_at: z.string().nullish(),
@@ -58,11 +51,7 @@ export const certificateSchema = z.object({
   reference: z.string().nullish(),
 }).passthrough();
 
-/**
- * What this site can be issued, decided server-side. Only `available` gates a
- * choice; `reason` may be informational on an available type, so never branch
- * on its presence.
- */
+// Only `available` gates a choice; `reason` may be informational, so never branch on its presence.
 export const certificateTypeSchema = z.object({
   type: z.string(),
   label: z.string(),
@@ -82,9 +71,7 @@ export const certificateResponseSchema = z.object({
 // Redirect targets used by the add-domain form.
 export const REDIRECT_STATUSES = [301, 302, 307, 308];
 
-// Add-domain form. Messages are `validation`-namespace keys; the backend does
-// the authoritative check and its 422 is mapped onto the field. `primary` is not
-// an option: promoting a name is a separate endpoint.
+// The backend's 422 is mapped onto the field. `primary` is not an option: promoting is a separate endpoint.
 export const addDomainFormSchema = z
   .object({
     // Lowercased rather than rejected: the backend stores `strtolower(trim(...))`
@@ -100,21 +87,13 @@ export const addDomainFormSchema = z
       .refine((value) => value.split(".").every((label) => label.length <= 63), "hostnameLabelTooLong")
       .refine(isValidApplicationDomain, "hostnameInvalid"),
     type: z.enum(["alias", "redirect"]).default("alias"),
-    /*
-     * A full URL with a scheme (Laravel's `url` rule). http/https only:
-     * `javascript:` and `data:` parse as URLs, and this value is written into
-     * the web server's redirect directive.
-     */
+    // http/https only: `javascript:` and `data:` parse as URLs, and this goes into the redirect directive.
     redirect_to: z.string().trim().optional().default(""),
     redirect_status: z.coerce.number().refine((n) => REDIRECT_STATUSES.includes(n)).default(301),
   })
   .superRefine(redirectRules);
 
-/**
- * Edit form for an attached name: what it does, never what it is called.
- * `PUT …/domains/{domain}` accepts exactly these fields; redirect rules are
- * shared with the add form.
- */
+// `PUT …/domains/{domain}` accepts exactly these fields.
 export const editDomainFormSchema = z
   .object({
     type: z.enum(["alias", "redirect"]).default("alias"),

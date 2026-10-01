@@ -9,20 +9,15 @@ import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 
-/**
- * Download the archive. The presigned link expires in five minutes, so it is
- * fetched on click and opened immediately; never rendered into the page, as
- * the URL is the credential.
- */
+// The presigned link expires in five minutes, so fetch on click; never render it, as
+// the URL is the credential.
 export function DownloadBackupButton({ backup, canDownload, label = false }) {
   const t = useTranslations("backups.download");
   const format = useFormatter();
   const [pending, setPending] = useState(false);
 
-  // Only a verified run has an archive; in-flight and failed runs get a 422
-  // download_no_artifact (there is no partial archive). The success state is
-  // `verified`, not "completed", so use the shared predicate, not a literal.
-  // `reason_title` is the run's own failure explanation.
+  // Only a verified run has an archive (others get 422 download_no_artifact). Use the
+  // shared predicate: the success state is `verified`, not "completed".
   const blocker = !canDownload
     ? t("blocked.noPermission")
     : BACKUP_IN_FLIGHT.includes(backup.status)
@@ -38,9 +33,8 @@ export function DownloadBackupButton({ backup, canDownload, label = false }) {
       const url = response.data?.download?.url;
       if (!url) throw new Error("missing");
       toast.success(t("started"));
-      // Not fetch(): our interceptor's headers are not covered by the signature,
-      // and the bucket is cross-origin. A detached anchor, not `location.href`:
-      // an expired link returns an S3 error page that would replace the panel.
+      // Not fetch(): our headers break the signature. Not `location.href`: an expired
+      // link's S3 error page would replace the panel.
       const link = document.createElement("a");
       link.href = url;
       link.rel = "noopener";

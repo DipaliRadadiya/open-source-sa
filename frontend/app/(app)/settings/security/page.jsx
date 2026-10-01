@@ -21,9 +21,8 @@ export default async function SettingsSecurityPage() {
   if (failed || !data?.security)
     return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
 
-  // The rule holding the current SSH port open. After a port change it guards a
-  // port nothing listens on, so the confirm dialog offers to switch it off.
-  // Only looked up with firewall view permission.
+  // The rule holding the current SSH port open; after a port change the confirm
+  // dialog offers to switch it off. Needs firewall view permission.
 
   const firewall = can(permissions, "firewall", "view")
     ? await getFirewall()

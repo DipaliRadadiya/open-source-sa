@@ -31,15 +31,8 @@ import {
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-/**
- * Who changed this application's `.env`, when, and which keys.
- *
- * The list carries key names only. Values are loaded on demand from the backup
- * files, for `manage` users only, never from the activity log (which is
- * unpruned and visible under different permissions).
- *
- * Restoring a row puts the file back to its state *before* that change.
- */
+// Key names only. Values load on demand from backup files for `manage` users,
+// never from the activity log. Restore returns the file to its state before the change.
 export function EnvironmentHistoryCard({
   appId,
   entries,

@@ -21,10 +21,7 @@ function base(name) {
   return RESERVED.has(slug) ? `app-${slug}`.slice(0, MAX) : slug;
 }
 
-/**
- * A system user name for an application called `name`, avoiding `taken`.
- * Empty when the name has nothing usable in it; see fallbackSystemUsername.
- */
+// Empty when the name has nothing usable; see fallbackSystemUsername.
 export function suggestSystemUsername(name, taken = []) {
   const first = base(name);
   if (!first) return "";
@@ -39,10 +36,7 @@ export function suggestSystemUsername(name, taken = []) {
   }
 }
 
-/**
- * The backend's fallback name: `app-` plus four random characters.
- * Call after mount only, to avoid a hydration mismatch.
- */
+// Call after mount only, to avoid a hydration mismatch.
 export function fallbackSystemUsername(taken = []) {
   const used = new Set(taken);
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";

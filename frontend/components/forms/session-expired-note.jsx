@@ -6,11 +6,7 @@ import { Clock } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { peekRememberedPath } from "@/lib/auth/last-path";
 
-/**
- * Explains an unexpected sign-in form after the session expired. A remembered
- * path (see RememberPath) means expiry, since deliberate sign-out clears it.
- * Client-only: renders nothing on the server (no sessionStorage).
- */
+// A remembered path means expiry, since sign-out clears it. Client-only (sessionStorage).
 const noSubscribe = () => () => {};
 const readExpired = () => Boolean(peekRememberedPath());
 const readOnServer = () => false;

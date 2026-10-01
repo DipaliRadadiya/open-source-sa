@@ -1,9 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
-/**
- * Size and age, on one line under the name. Charset and collation live in the
- * Tables tab.
- */
+// Charset and collation live in the Tables tab.
 export async function DatabaseFacts({ database, hideSize = false }) {
   const t = await getTranslations("databases.detail");
 

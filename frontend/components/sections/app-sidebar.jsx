@@ -35,11 +35,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
-/**
- * Closes the mobile sidebar sheet after a nav click, and holds the click when the
- * page has unsaved edits. A sidebar click is a client-side route change that
- * `beforeunload` never sees; every nav item funnels through here.
- */
+// Every nav item funnels through here: a sidebar click is a client-side route change
+// that `beforeunload` never sees, so unsaved edits are held here.
 function MobileNavLink({ item, built, active, children, className }) {
   const { isMobile, setOpenMobile } = useSidebar()
   const t = useTranslations("common")
@@ -106,9 +103,8 @@ export function AppSidebar({ items }) {
   const applicationId = params?.application;
   const iconOnly = state === "collapsed" && !isMobile;
 
-  // Inside an application, prefer the catalog its layout fetched: only that one is
-  // filtered by site type. Until it arrives, the shared catalog renders the same
-  // items without that filter.
+  // Inside an application, prefer its layout's catalog (filtered by site type);
+  // until it arrives the shared catalog renders the same items unfiltered.
   const { items: applicationItems, resolved, application, gitProvider } = useApplicationNav();
   // Once the layout answers "no menu", the site does not exist: fall back to the
   // SERVER panel rather than a site menu whose links all 404.
@@ -165,10 +161,7 @@ export function AppSidebar({ items }) {
                 item={{ href: `/applications/${application.id}`, title: application.name }}
                 built
                 active={false}
-                /*
-                 * Tinted and bordered so the card reads as the subject of the nav below, not as
-                 * another nav item.
-                 */
+                /* Tinted so the card reads as the subject of the nav below, not another item. */
                 className="h-auto min-h-20 items-start rounded-xl border border-primary/25 bg-primary/5 p-3 hover:bg-primary/10 group-data-[collapsible=icon]:min-h-8! group-data-[collapsible=icon]:p-2!"
               >
                 <Link
@@ -197,9 +190,8 @@ export function AppSidebar({ items }) {
                   </span>
                 </Link>
               </MobileNavLink>
-              {/* Sibling, not child: the card is already a link and anchors cannot nest. Only
-                  while the site is served (a provisioning site would show a connection error).
-                  Hidden when the rail is collapsed to icons. */}
+              {/* Sibling, not child: anchors cannot nest. Only while the site is served
+                  (a provisioning site would show a connection error). */}
               {application.status === "active" && application.url ? (
                 <VisitSiteLink
                   href={application.url}
@@ -241,9 +233,8 @@ export function AppSidebar({ items }) {
                 return (
                   <SidebarMenuItem key={`${item.name}-${item.href}`}>
                     <MobileNavLink item={item} built active={active}>
-                      {/* No prefetch: every route is dynamic and cookie-gated, so each prefetch is a full
-                          server render against the API's rate limit, and the whole menu is always on
-                          screen. The item spins until the page arrives instead. */}
+                      {/* No prefetch: each one is a full server render against the API's rate
+                          limit, and the whole menu is always on screen. */}
                       <Link href={item.href} prefetch={false}>
                         <PendingNavIcon name={item.icon} />
                         <span>{navTitle(item, t)}</span>

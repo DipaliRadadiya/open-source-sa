@@ -42,10 +42,7 @@ function PopoverAnchor({
   return <PopoverPrimitive.Anchor data-slot="popover-anchor" {...props} />;
 }
 
-/**
- * Arrow pointing to the trigger. Unstyled on purpose so callers colour it to
- * their own background; same rotated-square technique as the tooltip.
- */
+// Unstyled on purpose so callers colour it to their own background.
 function PopoverArrow({
   className,
   ...props

@@ -137,12 +137,8 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
       ) : filesResult.failed ? (
         <LoadFailed description={t("loadFailed")} status={filesResult.status} failure={filesResult.failure} message={filesResult.message} debug={filesResult.debug} />
       ) : (
-        /*
-         * Keyed on the path: a client-side folder change would otherwise keep
-         * search, selection and dialogs from the previous folder (a bulk action
-         * could hit files no longer shown). `showHidden` deliberately does not
-         * remount, so a selection survives toggling hidden files.
-         */
+        /* Keyed on path so a folder change drops the old folder's selection and dialogs.
+           `showHidden` deliberately does not remount, so a selection survives the toggle. */
         <FilesPanel
             key={filesResult.path}
             appId={id}

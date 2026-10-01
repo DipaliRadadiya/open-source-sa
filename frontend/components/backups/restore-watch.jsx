@@ -3,12 +3,8 @@
 import { createContext, useContext, useState } from "react";
 import { ActiveRestore } from "@/components/backups/active-restore";
 
-/**
- * The one place a running restore is shown. A restore started in this tab is
- * held in client state and shown immediately; `initial` covers reloads, other
- * tabs and restores started by someone else. Rendering the banner here (not
- * per screen) prevents duplicates once the server reports the same restore.
- */
+// A restore started in this tab shows at once; `initial` covers reloads and other tabs.
+// One banner here, not per screen, so the server's copy of the same restore never duplicates it.
 const RestoreWatchContext = createContext({ active: null, start: () => {} });
 
 export function RestoreWatch({ initial = null, children }) {

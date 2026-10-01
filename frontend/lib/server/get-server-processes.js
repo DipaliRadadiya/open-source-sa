@@ -2,11 +2,8 @@ import { z } from "zod";
 import { serverFetch } from "@/lib/api/server-fetch";
 import { processSchema } from "@/lib/schemas/server";
 
-/*
- * Returns { data, failed, total }. Rows are the top `meta.limit` by CPU;
- * `meta.total` counts every process. `total` is null on older APIs, and the
- * card then shows no count.
- */
+// Rows are the top `meta.limit` by CPU; `total` is null on older APIs, and the card
+// then shows no count.
 export async function getServerProcesses() {
   const res = await serverFetch("/server/processes");
   if (!res.ok) return { data: [], failed: true, total: null };

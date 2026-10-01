@@ -9,11 +9,7 @@ import { RequestFailedError } from "@/lib/api/request-failed";
 import { readErrorBody } from "@/lib/api/error-body";
 import { signedOutPath } from "@/lib/auth/signed-out-path";
 
-/**
- * `level`/`applicationId` are forwarded verbatim; with an application id the
- * API also filters by what the site type supports, which the frontend cannot
- * re-derive.
- */
+// With an application id the API also filters by what the site type supports.
 export const getPermissions = cache(async (level, applicationId) => {
   const cookieStore = await cookies();
   const locale = await serverLocale();
@@ -23,9 +19,8 @@ export const getPermissions = cache(async (level, applicationId) => {
   if (applicationId) query.set("application_id", String(applicationId));
   const suffix = query.size ? `?${query}` : "";
 
-  // An empty catalog means "may do nothing", so a failed request must NEVER
-  // degrade to []. 401/419 redirects to sign-in here because layouts do not
-  // re-run on client navigation. Retried once on a 5xx, since this gates every page.
+  // An empty catalog means "may do nothing", so a failed request must NEVER degrade to [].
+  // 401/419 redirects here because layouts do not re-run on client navigation.
   const url = `${process.env.NEXT_PUBLIC_API_URL}/api/permissions${suffix}`;
 
   let res;

@@ -16,9 +16,7 @@ import { WorkersCards } from "@/components/applications/workers/workers-cards";
 import { CreateWorkerDialog } from "@/components/applications/workers/create-worker-dialog";
 import { WorkerSiteProvider } from "@/components/applications/workers/worker-site-context";
 
-// Status is read live from supervisord on every GET. Actions apply their own
-// response, so the poll only needs to catch a worker dying on its own; returning
-// to the tab re-reads immediately.
+// Actions apply their own response; the poll only catches a worker dying on its own.
 const POLL_MS = 15000;
 
 // Keep in step with WorkerStatusBadge's state colours.

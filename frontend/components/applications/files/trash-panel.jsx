@@ -19,16 +19,7 @@ import { LoadFailed } from "@/components/data-table/load-failed";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { useRefresh } from "@/hooks/use-refresh";
 
-/**
- * What is recoverable, and the two ways out of it.
- *
- * Grouped by batch (the API assigns one batch id per delete), the unit a person
- * recognises. Not a table: each row is one path and one button, and a bordered
- * block per batch works at every width.
- *
- * No "restore all": the API restores one `{batch, path}` per call against a
- * 30/min throttle. Emptying a batch is a single call, so that is offered.
- */
+// No "restore all": the API restores one `{batch, path}` per call against a 30/min throttle.
 export function TrashPanel({
   appId,
   trash,
@@ -103,9 +94,7 @@ export function TrashPanel({
           <div className="min-w-48 space-y-1">
             <CardTitle className="text-base font-semibold">{t("title")}</CardTitle>
             <CardDescription>{t("subtitle")}</CardDescription>
-            {/* Deleting frees no disk until the trash is emptied, and batches are swept after
-                the retention window; both come from the response. The window is per-install
-                and must never be hardcoded. */}
+            {/* The retention window is per-install and must never be hardcoded. */}
             {trash.length > 0 && (totalSize || retentionDays) ? (
               <p className="text-sm text-muted-foreground">
                 {totalSize ? (

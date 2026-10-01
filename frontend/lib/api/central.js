@@ -1,11 +1,7 @@
 import { api } from "@/lib/api/client";
 
-/**
- * Mint a token; the response is the only copy that will ever exist.
- *
- * Also rotates: on a live connection the old token stops working immediately,
- * so the calling screen must treat a second press as breaking.
- */
+// The response is the only copy of the token. Also rotates: the old token stops
+// working immediately, so a second press is breaking.
 export function enableCentral() {
   return api.post("/central/enable");
 }

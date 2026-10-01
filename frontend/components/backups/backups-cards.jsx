@@ -15,10 +15,7 @@ import { restoreBlocker } from "@/components/backups/restore-dialog";
 import { sizeNote } from "@/components/backups/backups-history-table";
 import { DeleteBackupsDialog } from "@/components/backups/delete-backups-dialog";
 
-/**
- * Backup rows on a phone. Shared by History and the application page;
- * `showSite` is off on a site's own page.
- */
+// `showSite` is off on a site's own page.
 export function BackupsCards({
   backups,
   canRestore,
@@ -104,8 +101,7 @@ export function BackupsCards({
               </p>
             ) : null}
 
-            {/* mt-auto pins the buttons to the bottom in a grid row. The blocker
-                gets its own line so it does not push a button onto a new row. */}
+            {/* mt-auto pins the buttons to the bottom; the blocker gets its own line. */}
             <div className="mt-auto flex flex-col items-end gap-2">
               {blocker && backup.status !== "failed" ? (
                 <span className="text-xs text-muted-foreground">{blocker}</span>

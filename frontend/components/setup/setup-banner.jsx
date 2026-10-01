@@ -21,14 +21,9 @@ function readDismissed() {
   }
 }
 
-/**
- * A dismissible dashboard nudge while the recommended setup is incomplete.
- * Rendered only when `remaining > 0`.
- */
 export function SetupBanner({ remaining }) {
   const t = useTranslations("setup");
-  // useSyncExternalStore with a hidden server snapshot, so hydration matches and
-  // a dismissed banner never flashes in.
+  // A hidden server snapshot keeps hydration matching, so a dismissed banner never flashes in.
   const stored = useSyncExternalStore(subscribeStorage, readDismissed, () => true);
   const [justDismissed, setJustDismissed] = useState(false);
   const dismissed = stored || justDismissed;
@@ -47,8 +42,7 @@ export function SetupBanner({ remaining }) {
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-primary/[0.04] px-4 py-3">
       <Sparkles className="size-4 shrink-0 text-primary" />
-      {/* min-w-48, not min-w-0: with flex-1's 0 basis it would shrink to one word
-          per line instead of wrapping the button. */}
+      {/* min-w-48, not min-w-0: flex-1 would shrink it to one word per line instead of wrapping. */}
       <p className="min-w-48 flex-1 text-sm">
         <span className="font-medium">{t("bannerTitle")}</span>{" "}
         <span className="text-muted-foreground">{t("bannerBody", { count: remaining })}</span>

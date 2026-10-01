@@ -7,9 +7,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 
-// Shared modal shell: icon-chip header, scrollable body, pinned footer.
-// `asForm` + `onSubmit` wrap body and footer in a <form> so a footer submit
-// button works. `iconTone="success"` is for dialogs reporting a finished action.
+// `asForm` + `onSubmit` wrap body and footer in a <form> so a footer submit works.
 const FOCUSABLE =
   "input:not([type=hidden]), textarea, select, button, a[href], [tabindex]:not([tabindex='-1'])";
 
@@ -75,9 +73,7 @@ export function FormModal({
           "flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg",
           className,
         )}
-        // Focus the first real control, never a label's "?" hint (Radix would
-        // focus it and open the note). Radix's hidden native inputs are
-        // aria-hidden and filtered out below.
+        // Never focus a label's "?" hint: Radix would open the note.
         onOpenAutoFocus={(event) => {
           const chosen = initialFocus ? event.currentTarget.querySelector(initialFocus) : null;
           if (chosen) {

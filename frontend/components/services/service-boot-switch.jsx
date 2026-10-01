@@ -15,13 +15,8 @@ import {
 } from "@/components/ui/tooltip";
 import { apiMessage } from "@/lib/api/error-message";
 
-/**
- * "Start on boot" — enable/disable, driven by the service's own `actions` so a
- * protected unit (the panel's own web server) can't be switched off.
- *
- * Turning it ON runs immediately; turning it OFF asks first, since a disabled
- * service is only noticed at the next reboot.
- */
+// Driven by the service's `actions`, so a protected unit cannot be switched off.
+// OFF asks first: a disabled service is only noticed at the next reboot.
 export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
   const t = useTranslations("services");
   const { refreshAndWait } = useRefresh();

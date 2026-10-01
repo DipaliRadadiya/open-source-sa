@@ -29,9 +29,8 @@ export default async function SystemUsersPage({ searchParams }) {
   const [usersPage, shells] = await Promise.all([getSystemUsersPage(query), getShells()]);
   const canManage = can(permissions, "system_user", "manage");
 
-  // SECURITY: the index endpoint returns cleartext passwords. Viewers get a
-  // placeholder so they never reach the client payload. It must stay truthy:
-  // the "No password" badge reads `!password`.
+  // SECURITY: the index returns cleartext passwords; viewers get a placeholder.
+  // It must stay truthy: the "No password" badge reads `!password`.
   const users = canManage
     ? usersPage.users
     : usersPage.users.map((user) => ({

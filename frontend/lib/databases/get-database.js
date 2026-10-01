@@ -2,10 +2,7 @@ import { cache } from "react";
 import { serverFetch } from "@/lib/api/server-fetch";
 import { databaseResponseSchema } from "@/lib/schemas/database";
 
-/**
- * One database and its users. The detail response embeds `users`, so the nested
- * list endpoint is only needed when refreshing them on their own.
- */
+/** The detail response embeds `users`; the nested endpoint is only for refreshing them. */
 export const getDatabase = cache(async function getDatabase(id) {
   try {
     const res = await serverFetch(`/databases/${id}`);

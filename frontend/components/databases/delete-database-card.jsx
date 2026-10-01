@@ -8,10 +8,7 @@ import { Card } from "@/components/ui/card";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { DeleteDatabaseDialog } from "@/components/databases/delete-database-dialog";
 
-/**
- * Deleting the database being viewed. Its own card at the bottom: destructive
- * actions live at the end of a page.
- */
+// Its own card at the bottom: destructive actions live at the end of a page.
 export function DeleteDatabaseCard({ database, application = null, canManage }) {
   const t = useTranslations("databases.delete");
   const [open, setOpen] = useState(false);

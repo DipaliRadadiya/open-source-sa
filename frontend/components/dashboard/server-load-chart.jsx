@@ -10,11 +10,7 @@ import {
   timeSeriesOption,
 } from "@/lib/charts/time-series-option";
 
-/**
- * 5- and 15-minute load against the core count, which gives load its scale;
- * the axis always includes the cores line. No 1-minute average (too noisy);
- * the stat card shows all three.
- */
+// 5- and 15-minute load against the core count; the axis always includes the cores line.
 /** Resolved from globals.css at runtime; never restated as literals here. */
 const TOKENS = [
   "chart-1",

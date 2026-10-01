@@ -22,12 +22,8 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Card, CardContent } from "@/components/ui/card";
 import { apiMessage } from "@/lib/api/error-message";
 
-/**
- * On or off, and what that means. Both directions are confirmed:
- * - ON makes "blocked" the default for anything unlisted; the API seeds SSH and
- *   the panel's ports first, and the user is told before clicking.
- * - OFF stops enforcing every rule; the dialog says the rules are kept.
- */
+// Both directions are confirmed: ON blocks anything unlisted (the API seeds SSH and
+// panel ports first); OFF stops every rule but keeps them.
 export function FirewallStatusCard({ enabled, reference = null, policy, ruleCount, canManage }) {
   const t = useTranslations("firewall");
   const { refreshAndWait } = useRefresh();
@@ -38,12 +34,8 @@ export function FirewallStatusCard({ enabled, reference = null, policy, ruleCoun
   const state = firewallState(enabled, policy);
   const safeLooking = state === "on";
 
-  /*
-   * `secure` re-runs the enable path: ToggleFirewall::execute(true) seeds the SSH
-   * and panel-port rules, then runs `ufw default deny incoming` + `allow outgoing`
-   * + `ufw --force enable` (a no-op when already enabled), so the posture is
-   * repaired with no unprotected window.
-   */
+  // `secure` re-runs the enable path, which seeds SSH and panel rules before changing
+  // the policy, so there is no unprotected window.
   async function apply(next, { secured = false } = {}) {
     setPending(true);
     try {
@@ -169,9 +161,7 @@ export function FirewallStatusCard({ enabled, reference = null, policy, ruleCoun
         onConfirm={() => apply(true)}
       />
 
-      {/* Confirmed because traffic that was getting in stops. The description can
-          truthfully say SSH and panel access are kept: the same call seeds those rules
-          before changing the policy. */}
+      {/* The same call seeds SSH and panel rules first, so the copy can promise access is kept. */}
       <ConfirmDialog
         open={confirming === "secure"}
         onOpenChange={(open) => !pending && setConfirming(open ? "secure" : null)}
@@ -201,10 +191,7 @@ export function FirewallStatusCard({ enabled, reference = null, policy, ruleCoun
   );
 }
 
-/**
- * One direction and its default. Text stays in the text colour (badge colours
- * failed contrast on the tint); tint and icon carry the tone.
- */
+// Text stays in the text colour (badge colours fail contrast on the tint).
 function PolicyBadge({ icon: Icon, label, value, tone }) {
   return (
     <Badge variant={tone} className="gap-1.5 font-normal">
@@ -215,20 +202,14 @@ function PolicyBadge({ icon: Icon, label, value, tone }) {
   );
 }
 
-/**
- * Allow-by-default contradicts "your server is protected", which only checks that
- * the firewall is enabled; this badge is what flags it.
- */
+// Allow-by-default is not flagged anywhere else, so this badge must flag it.
 function incomingTone(value) {
   if (value === "deny") return "success";
   if (value === "allow") return "warning";
   return "muted";
 }
 
-/**
- * Outgoing-allow is normal, so it is green. Outgoing-deny is deliberate
- * hardening: neither praised nor flagged.
- */
+// Outgoing-deny is deliberate hardening: neither praised nor flagged.
 function outgoingTone(value) {
   if (value === "allow") return "success";
   return "muted";

@@ -1,18 +1,6 @@
 import { cn } from "@/lib/utils";
 
-/**
- * The shared skeleton for the two whole-screen failures: "the panel is updating"
- * and "a request failed".
- *
- * Three groups, with larger gaps between than within:
- * 1. what happened  icon, heading, one sentence; centred.
- * 2. the way out    the retry control, alone.
- * 3. what to do     below a rule, left-aligned and labelled as reference
- *                   material (it contains commands and hostnames).
- *
- * Unlike `FailurePanel`, this takes a tone: updating is a warning, not an error,
- * and must not be styled as one.
- */
+// Takes a tone, unlike `FailurePanel`: updating is a warning and must not be styled as an error.
 export function FailureScreen({
   icon: Icon,
   tone = "destructive",
@@ -27,9 +15,7 @@ export function FailureScreen({
     <div
       role="alert"
       className={cn(
-        // A solid surface with a shadow (`bg-card` + `shadow-xl shadow-black/5`, as the
-        // login card uses); a translucent fill had no edge on the auth gradient. Tone is
-        // carried by the icon and border tint.
+        // Solid surface, as the login card: a translucent fill had no edge on the auth gradient.
         "flex w-full flex-col items-center rounded-xl border bg-card px-6 py-10 text-center shadow-xl shadow-black/5",
         muted ? "border-border" : "border-destructive/25",
       )}
@@ -57,10 +43,6 @@ export function FailureScreen({
   );
 }
 
-/**
- * Small uppercase heading over a footer block, so troubleshooting text does not
- * read as part of the explanation.
- */
 export function FailureFooterLabel({ children }) {
   return (
     <p className="mb-2 text-[0.6875rem] font-medium tracking-wide text-muted-foreground uppercase">

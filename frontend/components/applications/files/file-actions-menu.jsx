@@ -16,11 +16,7 @@ import { MenuItemHint } from "@/components/data-table/menu-item-hint";
 
 const ARCHIVE_RE = /\.(zip|tar\.gz|tgz)$/i;
 
-/**
- * The full action list for one file, shared by the row's "…" dropdown and its
- * right-click context menu. `Item`/`Separator` are passed in (Dropdown or
- * Context menu primitives), which share an identical prop API.
- */
+// Shared by the row dropdown and context menu; their `Item`/`Separator` share one prop API.
 export function FileActionItems({
   file,
   appId,

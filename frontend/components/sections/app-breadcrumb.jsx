@@ -17,14 +17,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 
-/**
- * The trail above the page, and the way back out of a site. Ancestors are real
- * links, with the site itself as a step.
- *
- * Ordering follows the URL: an application owns its screens
- * (`/applications/13/php` → Applications › Shop › PHP Settings), while a server
- * screen owns its records (`/databases/shop` → Server › Database › shop).
- */
+// Ordering follows the URL: `/applications/13/php` → Applications › Shop › PHP Settings.
 export function AppBreadcrumb({ items }) {
   const pathname = usePathname();
   const params = useParams();

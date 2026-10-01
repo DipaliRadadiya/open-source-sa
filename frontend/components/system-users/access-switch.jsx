@@ -10,11 +10,8 @@ import { apiMessage } from "@/lib/api/error-message";
 import { genericErrorMessage } from "@/lib/api/generic-error";
 import { useRefresh } from "@/hooks/use-refresh";
 
-// Inline access toggle for the table. `field` is "sudo" | "ssh". Applies
-// immediately with a toast; read-only when !canManage. Enabling sudo (a root
-// grant) asks for confirmation first; disabling and SSH stay instant.
-// `sshEnforced` is the list's `meta.ssh_access_enforced`: only `false` changes the
-// SSH toast.
+// Enabling sudo (a root grant) asks first; everything else applies immediately.
+// `sshEnforced` is the list's `meta.ssh_access_enforced`: only `false` changes the SSH toast.
 export function AccessSwitch({ user, field, canManage = true, sshEnforced = null }) {
   const t = useTranslations("systemUsers");
   const { refresh, refreshThen } = useRefresh();
@@ -26,10 +23,8 @@ export function AccessSwitch({ user, field, canManage = true, sshEnforced = null
   const checked = field === "sudo" ? user.sudo : user.ssh_access;
   const label = field === "sudo" ? t("access.sudo") : t("access.ssh");
 
-  // The server value only changes when `router.refresh()` lands, so show the
-  // requested value meanwhile. Derived rather than cleared in an effect: once the
-  // server catches up `asked` stops mattering, and changes made elsewhere show
-  // through immediately.
+  // Shows the requested value until `router.refresh()` lands. Derived, not cleared in
+  // an effect, so changes made elsewhere show through immediately.
   const shown = asked !== null && asked !== checked ? asked : checked;
 
   async function apply(v) {
@@ -72,9 +67,8 @@ export function AccessSwitch({ user, field, canManage = true, sshEnforced = null
     apply(v);
   }
 
-  // The server rejects SSH access with a shell that refuses login.
-  // `shell_allows_login: null` is an unrecognised shell (unknown, not refusing), so
-  // it is not blocked on a guess.
+  // The server rejects SSH with a shell that refuses login; `shell_allows_login: null`
+  // is an unrecognised shell, so it is not blocked on a guess.
   const sshBlocked =
     field === "ssh" && !checked && user.shell_allows_login === false;
   // sshd's AllowGroups always admits the sudo group, so for a sudo user this switch

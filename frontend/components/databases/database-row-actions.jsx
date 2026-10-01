@@ -5,14 +5,7 @@ import { Button } from "@/components/ui/button";
 import { IconTooltip } from "@/components/ui/icon-tooltip";
 import { PhpmyadminButton } from "@/components/databases/phpmyadmin-button";
 
-/**
- * Row actions for one database, shared by the table and the cards so both
- * views offer the same actions.
- */
-/**
- * Layout is the caller's; the default is the table's. No `flex-wrap`: the
- * table's action column should widen, not stack. Cards pass their own layout.
- */
+// No `flex-wrap`: the table's action column should widen, not stack. Cards pass their own layout.
 const TABLE_ROW = "flex items-center justify-end gap-1";
 
 export function DatabaseRowActions({

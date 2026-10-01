@@ -38,11 +38,7 @@ import { toast } from "sonner";
 // Not a line count, so it can never collide with one.
 const CUSTOM_LINES = "custom";
 
-/**
- * Viewer controls. The source's name lives here as the pane heading. The window
- * size is stated only by the selector; the line under the title reports the
- * result, and only when a filter narrowed it or the file is smaller than the window.
- */
+// The line under the title reports the result only when a filter narrowed it or the file is short.
 export function LogToolbar({
   label,
   shown,
@@ -65,8 +61,7 @@ export function LogToolbar({
   downloadUrl,
   // App logs have no download endpoint, so the action is hidden there.
   showDownload = true,
-  // Emptying the log. Null when unavailable or the reader lacks `manage`:
-  // hidden rather than disabled.
+  // Emptying the log; null when unavailable or without `manage` (hidden, not disabled).
   onClear = null,
   clearing = false,
   busy,
@@ -84,9 +79,7 @@ export function LogToolbar({
   const [customLines, setCustomLines] = useState(false);
 
   return (
-    // Tinted like a window title bar so the card reads as one terminal. Two
-    // rows: identity and tail mode above, every control below (one row would
-    // squeeze the heading to an ellipsis).
+    // Two rows: one would squeeze the heading to an ellipsis.
     <div className="flex flex-col gap-3 border-b bg-muted/40 px-4 py-3">
       <div className="flex items-center gap-3">
         <div className="min-w-0 flex-1">
@@ -96,14 +89,12 @@ export function LogToolbar({
               <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
             ) : null}
           </div>
-          {/* No count for a log that could not be opened ("0 lines" would be
-              unknown), and none when the line selector already says it. */}
+          {/* No count for an unopened log ("0 lines" would be false), nor when the selector says it. */}
           {!disabled ? (
             <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
               {/* The clock note stays permanently: timestamps are server time. */}
               {[
-                // Severity hides part of the buffer, so both numbers matter.
-                // Grep runs server-side, so the buffer is the match set.
+                // Severity hides part of the buffer, so both numbers matter; grep runs server-side.
                 severity !== "all"
                   ? t("shownOfLoaded", { shown, loaded })
                   : term
@@ -119,10 +110,7 @@ export function LogToolbar({
           ) : null}
         </div>
 
-        {/* Live is a mode, so a switch; the indicator pulses while polling,
-            turns amber while retrying, and offers Resume once it gives up.
-            Fixed height in every state so the pill does not resize when the
-            tail drops. */}
+        {/* Fixed height in every state so the pill does not resize when the tail drops. */}
         <div
           className={cn(
             "flex h-8 shrink-0 items-center gap-2 rounded-full px-3",
@@ -200,9 +188,7 @@ export function LogToolbar({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-          {/* Severity filters the loaded buffer, so it works while tailing
-              (grep cannot). Separate toggle buttons, not a segmented strip, so
-              it does not look like the tab bar; kept one click. */}
+          {/* Severity filters the loaded buffer, so it works while tailing (grep cannot). */}
           <div role="group" aria-label={t("severityLabel")} className="flex items-center gap-1">
             {SEVERITY_FILTERS.map((key) => (
               <button
@@ -222,9 +208,7 @@ export function LogToolbar({
             ))}
           </div>
 
-          {/* Presets plus a custom field (the API takes any integer up to its
-              cap). A non-preset value is shown as its own item, or the trigger
-              would render empty. */}
+          {/* A non-preset value gets its own item, or the trigger would render empty. */}
           {customLines ? (
             <div className="flex items-center gap-1.5">
               <Input
@@ -290,8 +274,7 @@ export function LogToolbar({
             </Select>
           )}
 
-          {/* One segmented group: view actions on the same object. h-9 matches
-              the controls beside it. */}
+          {/* One segmented group; h-9 matches the controls beside it. */}
           <div className="flex h-9 items-center overflow-hidden rounded-lg border divide-x">
             <IconAction
               icon={newestFirst ? ArrowUpNarrowWide : ArrowDownNarrowWide}
@@ -337,9 +320,7 @@ export function LogToolbar({
               type="button"
               variant="outline"
               size="sm"
-              /* h-9 rounded-lg match the rest of the band; destructive tone
-                 because it empties the file; ml-auto instead of a divider,
-                 which would strand at the start of a wrapped line. */
+              /* Destructive: it empties the file. ml-auto, not a divider, which would strand on a wrapped line. */
               className="ml-auto h-9 rounded-lg border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
               onClick={onClear}
               disabled={disabled || clearing}

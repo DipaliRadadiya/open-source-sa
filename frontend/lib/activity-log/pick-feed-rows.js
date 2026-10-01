@@ -1,9 +1,5 @@
-/**
- * Choose which collapsed groups the dashboard feed shows. Quiet actions
- * (logins) get a fixed allowance of the most recent runs; the rest of the
- * card goes to everything else. Order is never changed. `quiet` is a
- * parameter so the caller (and tests) decide.
- */
+// Quiet actions (logins) get a fixed allowance of recent runs; the rest goes to everything else.
+// Order is never changed.
 export const QUIET_ACTIONS = ["logged_in"];
 
 export function pickFeedRows(groups = [], { max = 6, quiet = QUIET_ACTIONS, maxQuiet = 2 } = {}) {

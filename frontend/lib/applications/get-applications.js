@@ -16,10 +16,7 @@ import { applicationFail2banResponseSchema } from "@/lib/schemas/application-fai
 import { applicationStagingResponseSchema } from "@/lib/schemas/application-staging";
 
 
-/**
- * One page of the applications list. Search, filters and sort run in the API
- * (it paginates). A stale filter value is a 422, not an empty list.
- */
+// Search, filters and sort run in the API. A stale filter value is a 422, not an empty list.
 export const getApplications = cache(async function getApplications(query = "") {
   const result = await read("/applications", applicationsResponseSchema, {
     searchParams: listQuery(query, { filters: { status: "status", site_type: "site_type" } }),
@@ -34,11 +31,7 @@ export const getApplications = cache(async function getApplications(query = "") 
   };
 });
 
-/**
- * Every application, for pickers. Capped at the API maximum of 100: beyond
- * that the tail is lost, and the fix is a searchable combobox. Argument-free
- * so `cache` dedupes it across callers.
- */
+// Capped at the API maximum of 100. Argument-free so `cache` dedupes it.
 export const getAllApplications = cache(async function getAllApplications() {
   const result = await read("/applications", applicationsResponseSchema, {
     searchParams: { per_page: 100 },
@@ -63,10 +56,7 @@ export const getApplication = cache(async function getApplication(id) {
   return { application: result.data?.application ?? null, failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 });
 
-/**
- * What the server thinks is wrong with this site. Not cached: live checks.
- * A failure returns nothing, so the page falls back to its own warnings.
- */
+// Not cached: live checks. A failure returns nothing, so the page falls back to its own warnings.
 export async function getApplicationIssues(id) {
   const { data, failed } = await read(
     `/applications/${id}/issues`,
@@ -110,10 +100,7 @@ export async function getApplicationFail2ban(id) {
   };
 }
 
-/**
- * One site's PHP: version, limits, pool and the server's memory budget.
- * Non-PHP site types get a 404, which is an answer, not a failure.
- */
+// Non-PHP site types get a 404, which is an answer, not a failure.
 export async function getApplicationPhp(id) {
   const result = await read(`/applications/${id}/php`, applicationPhpResponseSchema);
   return { php: result.data?.php ?? null, failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
@@ -139,10 +126,7 @@ export const getServerCapabilities = cache(async function getServerCapabilities(
   };
 });
 
-/**
- * One site's staging copy, if any. A 404 means unsupported (staging is
- * WordPress-only), not a failure.
- */
+// A 404 means unsupported (WordPress-only), not a failure.
 export async function getApplicationStaging(id) {
   const result = await read(`/applications/${id}/staging`, applicationStagingResponseSchema);
   return {
@@ -155,12 +139,8 @@ export async function getApplicationStaging(id) {
   };
 }
 
-/**
- * Every active phpMyAdmin site, matching the SSO endpoint's condition
- * (`site_type` phpmyadmin, status Active). Returns the whole list since a
- * server can have several. A failed request returns `null`, NOT false.
- * Argument-free so `cache` dedupes it.
- */
+// Active phpMyAdmin sites, matching the SSO endpoint's condition.
+// A failed request returns `null`, NOT false. Argument-free so `cache` dedupes it.
 export const getPhpmyadminSite = cache(async function getPhpmyadminSite() {
   const result = await read("/applications", applicationsResponseSchema, {
     searchParams: { "filter[site_type]": "phpmyadmin", "filter[status]": "active", per_page: 100 },

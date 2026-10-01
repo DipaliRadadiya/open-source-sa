@@ -21,22 +21,15 @@ import {
 // How long a finished restore keeps its banner (and its Undo) across reloads.
 const FINISHED_RESTORE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
-/**
- * `per_page` from the URL, held to the values the selector offers (the API
- * answers 422 above 100). Numbers come from internal callers and pass through.
- * An absent value must still resolve to a number: the backend defaults to 20
- * while `PerPageSelect` shows 10.
- */
+// Held to the selector's values (the API 422s above 100). An absent value must
+// still resolve to a number: the backend defaults to 20, `PerPageSelect` shows 10.
 function perPage(value) {
   if (typeof value === "number") return value;
   if (value === undefined || value === null) return PER_PAGE_OPTIONS[0];
   return PER_PAGE_OPTIONS.includes(Number(value)) ? Number(value) : PER_PAGE_OPTIONS[0];
 }
 
-/**
- * Backup history across every application, paginated by the server because
- * the table grows without bound.
- */
+// Paginated by the server: the table grows without bound.
 export async function getBackups(searchParams = {}) {
   const result = await read("/backups", backupsResponseSchema, {
     searchParams: {
@@ -58,11 +51,8 @@ export async function getBackups(searchParams = {}) {
   };
 }
 
-/**
- * A `?period=7` style filter turned into the date the API wants. Computed on
- * the server so the cutoff matches server timestamps, not the browser's clock.
- * Returns undefined for anything unrecognised (drops the filter instead of a 422).
- */
+// Computed on the server so the cutoff matches server timestamps. Undefined for
+// anything unrecognised, which drops the filter instead of a 422.
 export function since(period) {
   // Only the picker's values: a huge number goes past year zero, where
   // `toISOString` emits an expanded-year format the API cannot parse.
@@ -78,10 +68,7 @@ function oneOf(value, allowed) {
   return allowed.includes(String(value)) ? String(value) : undefined;
 }
 
-/**
- * How many backups are complete, failed or in flight, from `meta.counts`
- * (filtered the same way as the rows).
- */
+// From `meta.counts`, filtered the same way as the rows.
 export function backupCounts(meta) {
   const counts = meta?.counts ?? {};
   return {
@@ -115,13 +102,8 @@ export async function getRestores(searchParams = {}) {
   };
 }
 
-/**
- * The restore currently rewriting THIS site (or one that recently finished), or null.
- *
- * Filtered to the site by the API; a server-wide page could hold only other
- * sites. The in-flight check is local because `filter[status]` takes one value.
- * Only one restore can run per application (the backend 422s a second).
- */
+// Filtered to the site by the API; the in-flight check is local because
+// `filter[status]` takes one value. The backend 422s a second restore per app.
 export async function getActiveRestore(applicationId, { dismissed = [] } = {}) {
   const { restores } = await getRestores({ application: applicationId, per_page: 5 });
   const active = restores.find((restore) => RESTORE_IN_FLIGHT.includes(restore.status)) ?? null;
@@ -160,24 +142,14 @@ export async function getActiveRestore(applicationId, { dismissed = [] } = {}) {
   };
 }
 
-/**
- * One application's backup settings, or null when not configured. Cached per
- * request: the form and the status strip both read it.
- */
+// Null when not configured. Cached per request: the form and status strip both read it.
 export const getBackupTarget = cache(async function getBackupTarget(applicationId) {
   const result = await read(`/applications/${applicationId}/backup-target`, backupTargetResponseSchema);
   return { target: result.data?.backup_target ?? null, failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 });
 
-/**
- * Which sites are protected and which are not.
- *
- * `GET /backup-targets` returns each site with its target and latest backup.
- * The cached applications list adds `is_staging` and the site type.
- *
- * Requests the API maximum of 100 rows: the counts below need every row, not
- * a page. Sites beyond 100 are missing until the backend offers a full count.
- */
+// Requests the API maximum of 100 rows: the counts need every row. Sites beyond
+// 100 are missing until the backend offers a full count.
 export async function getBackupCoverage() {
   const [result, { applications }] = await Promise.all([
     read("/backup-targets", backupTargetsResponseSchema, { searchParams: { per_page: 100 } }),
@@ -202,9 +174,8 @@ export async function getBackupCoverage() {
 
   return {
     rows,
-    // Counted here, not from `meta` or `filter[protected]`: the backend treats
-    // any target as protected, including disabled or manual ones that back
-    // nothing up.
+    // Counted here: the backend treats any target as protected, including
+    // disabled or manual ones that back nothing up.
     protected: rows.filter((row) => row.state === "protected").length,
     unprotected: rows.filter((row) => row.state === "unprotected").length,
     paused: rows.filter((row) => row.state === "paused").length,
@@ -216,10 +187,7 @@ export async function getBackupCoverage() {
   };
 }
 
-/**
- * The backup settings form's choices, localised by the API. Cached per request.
- * `null` when unreadable: the form offers a retry, never a hard-coded list.
- */
+// `null` when unreadable: the form offers a retry, never a hard-coded list.
 export const getBackupTargetOptions = cache(async function getBackupTargetOptions() {
   const result = await read("/backup-targets/options", backupTargetOptionsSchema);
   return { options: result.failed ? null : result.data, failed: result.failed };

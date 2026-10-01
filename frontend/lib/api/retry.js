@@ -1,11 +1,5 @@
-/**
- * Retry for the two fetches the app cannot render without: the session and the
- * permission catalog.
- *
- * Retries a 5xx or transport error once. A 429 gets a couple of backed-off
- * attempts honouring a small `Retry-After`, capped so SSR never hangs. Other
- * 4xx are returned as-is.
- */
+// For the session and permission fetches: 5xx/transport retry once; 429 gets backed-off attempts
+// honouring a small `Retry-After`, capped so SSR never hangs.
 const RETRY_DELAY_MS = 250;
 const RATE_LIMIT_BACKOFFS_MS = [400, 900];
 const RETRY_AFTER_CAP_MS = 2000;

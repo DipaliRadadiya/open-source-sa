@@ -5,21 +5,13 @@ export function getEngines({ signal } = {}) {
   return api.get("/databases/engines", { signal });
 }
 
-/**
- * Queued: returns 202 and the caller polls `getEngines`. An engine already
- * present returns 200 with `queued: false` (success, not a conflict).
- */
+// 202, then poll `getEngines`. An engine already present returns 200 with `queued: false`.
 export function installEngine(engine) {
   return api.post(`/databases/engines/${encodeURIComponent(engine)}`);
 }
 
-/**
- * The databases attached to one site, for the delete dialog (client-side
- * counterpart of `getApplicationDatabases`).
- *
- * For naming them only: the delete call sends a flag, never these ids, and the
- * API resolves the list itself at delete time.
- */
+// For naming them only: the delete call sends a flag and the API resolves the
+// list itself.
 export function getDatabasesForApplication(applicationId, { signal } = {}) {
   return api.get("/databases", {
     params: { "filter[application_id]": applicationId, per_page: 100 },
@@ -31,13 +23,8 @@ export function createDatabase(payload) {
   return api.post("/databases", payload);
 }
 
-/**
- * Point a database at a site, move it to another, or detach it (null).
- *
- * `application_id` is always sent: an absent key is a 422, not a detach.
- * Bookkeeping only; nothing rewrites `wp-config.php` or `.env`. The link decides
- * which database backups, staging, cloning and restores use.
- */
+// `application_id` is always sent: an absent key is a 422, not a detach (null).
+// Bookkeeping only; nothing rewrites `wp-config.php` or `.env`.
 export function attachDatabase(databaseId, applicationId) {
   return api.put(`/databases/${databaseId}/application`, {
     application_id:
@@ -96,10 +83,7 @@ export function updateUserPassword(databaseId, userId, password) {
   });
 }
 
-/**
- * SQL renames with `RENAME USER` so grants survive; Mongo drops and recreates,
- * which is why a password is required there to change anything.
- */
+// Mongo drops and recreates the user, so a password is required there.
 export function updateDatabaseUser(databaseId, userId, payload) {
   return api.patch(`/databases/${databaseId}/users/${userId}`, payload);
 }
@@ -108,10 +92,7 @@ export function deleteDatabaseUser(databaseId, userId) {
   return api.delete(`/databases/${databaseId}/users/${userId}`);
 }
 
-/**
- * Queued: `202` with the row at `status: "queued"` and no file yet, since a
- * dump can outlive nginx's read timeout.
- */
+// 202 with `status: "queued"` and no file yet: a dump can outlive nginx's timeout.
 export function createExport(databaseId) {
   return api.post(`/databases/${databaseId}/export`);
 }
@@ -157,13 +138,8 @@ export function getTables(databaseId, { signal } = {}) {
   return api.get(`/databases/${databaseId}/tables`, { signal });
 }
 
-/**
- * A one-click login to phpMyAdmin for this database.
- *
- * `redirect_url` carries a single-use token valid for 60 seconds, so navigate
- * immediately. MySQL/MariaDB only, and only with a phpMyAdmin site present;
- * refusals are 422 with the reason.
- */
+// `redirect_url` holds a single-use token valid for 60 seconds: navigate
+// immediately. Refusals are 422 with the reason.
 export function phpmyadminSso(databaseId, databaseUserId, applicationId) {
   const params = {};
   if (databaseUserId) params.database_user_id = databaseUserId;

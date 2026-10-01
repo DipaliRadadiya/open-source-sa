@@ -27,9 +27,7 @@ import { DeleteDatabaseDialog } from "@/components/databases/delete-database-dia
 import { AttachApplicationDialog } from "@/components/databases/attach-application-dialog";
 import { DatabaseRowActions } from "@/components/databases/database-row-actions";
 
-/* Cells are module-level components: flexRender treats a cell function's
- * identity as the component type, so inline definitions remount every cell on
- * each keystroke in the search box. */
+/* Cells are module-level: inline cell functions remount every cell on each search keystroke. */
 
 // The name links to the detail page (users, credentials, connection string).
 function NameCell({ row }) {
@@ -69,10 +67,7 @@ function SizeCell({ row }) {
   );
 }
 
-/**
- * Which site this database belongs to. "Not linked" is a warning badge, not a
- * blank cell: it means no site backup contains this database.
- */
+// "Not linked" is a warning: no site backup contains this database.
 function ApplicationCell({ database, applications, onAttach }) {
   const t = useTranslations("databases");
   const application = applicationById(applications, database.application_id);
@@ -140,10 +135,7 @@ function UsersCell({ row }) {
   return <span className="tabular-nums">{count}</span>;
 }
 
-/**
- * Whether this database has ever been exported. "Never" is highlighted; when
- * the exports request failed, nothing is claimed.
- */
+// When the exports request failed, nothing is claimed.
 function BackupCell({ row, table }) {
   const t = useTranslations("databases");
   const { lastBackup, backupsUnknown } = table.options.meta;
@@ -269,9 +261,7 @@ function DatabasesList({
       sortingFn: "basic",
     },
     {
-      // Sorted by the API: created_at arrives as DD-MM-YYYY, which cannot be
-      // sorted client-side. Hidden below 1536px so the row actions stay on
-      // screen; the age is still on the database's own page.
+      // Sorted by the API: created_at arrives as DD-MM-YYYY. Hidden below 1536px so row actions stay on screen.
       meta: { className: "hidden 2xl:table-cell", sortKey: "created_at" },
       id: "created",
       header: () => <SortHeader col="created_at" descFirst>{t("columns.created")}</SortHeader>,

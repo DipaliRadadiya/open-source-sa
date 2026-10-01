@@ -3,10 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
-/**
- * Refreshes the page when the user returns to the tab after a while, for lists
- * that change elsewhere. Not a poll: nothing is fetched while in use or hidden.
- */
+// Not a poll: refreshes only on returning to the tab after `afterMs`.
 export function RefreshOnReturn({ afterMs = 10000 }) {
   const router = useRouter();
   const hiddenAt = useRef(null);

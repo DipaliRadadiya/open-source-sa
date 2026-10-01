@@ -1,18 +1,8 @@
 import { z } from "zod";
 
-/**
- * Server Sync: reading an existing server's resources into the panel.
- *
- * Shapes follow the migrations and SyncItem casts, not API_REFERENCE.md:
- * - `confidence` is an integer score 0–100, not a string.
- * - `evidence` is a json column whose keys differ per resource type.
- * - `totals` is keyed by resource type first.
- */
+// Shapes follow the migrations and SyncItem casts, not API_REFERENCE.md.
 
-/**
- * The nine discoverers, in ServerSync's dependency order. A type whose parent
- * did not run is skipped with a reason, so this is also the reading order.
- */
+// ServerSync's dependency order, which is also the reading order.
 export const SYNC_RESOURCE_TYPES = [
   "system_user",
   "ssh_key",
@@ -25,10 +15,7 @@ export const SYNC_RESOURCE_TYPES = [
   "firewall_rule",
 ];
 
-/**
- * Adopting firewall rules can lock you out, so the backend puts it behind its
- * own flag: excluded unless `include_firewall` is sent.
- */
+// Adopting firewall rules can lock you out, so the backend excludes them unless `include_firewall` is sent.
 export const FIREWALL_RESOURCE_TYPE = "firewall_rule";
 
 /** What became of one discovered thing. `found` is every preview row. */
@@ -36,10 +23,7 @@ export const SYNC_ACTIONS = ["found", "adopted", "skipped", "failed"];
 
 export const SYNC_MODES = ["preview", "apply"];
 
-/**
- * Poll on `finished` (SyncStatus::finished()), never on a local list of
- * terminal statuses.
- */
+// Poll on `finished` (SyncStatus::finished()), never on a local list of terminal statuses.
 export const syncItemSchema = z
   .object({
     id: z.number().int(),
@@ -47,10 +31,8 @@ export const syncItemSchema = z
     resource_key: z.string(),
     action: z.enum(SYNC_ACTIONS).catch("found"),
     confidence: z.number().int().min(0).max(100).nullish(),
-    // Keys vary per type — application {path, document_root, owner},
-    // php_settings {pool, values}, system_user {uid, home_path, shell},
-    // firewall_rule {to, from}, ssh_key {system_user, path}. An empty json
-    // array is normalized to {} rather than rejecting the item.
+    // Keys vary per type (e.g. application {path, document_root, owner}).
+    // An empty json array is normalized to {} rather than rejecting the item.
     evidence: z
       .union([z.record(z.string(), z.unknown()), z.array(z.never())])
       .nullish()
@@ -121,12 +103,8 @@ export const syncIgnoresResponseSchema = z
   .object({ ignores: z.array(syncIgnoreSchema).default([]) })
   .passthrough();
 
-/**
- * Confidence as a band rather than a raw 0–100 number. Thresholds follow
- * ApplicationDiscoverer::inferType() (wp-config.php 95 … index.html 40); 10
- * means nothing matched, which is a warning: serving a PHP app as static
- * publishes its source.
- */
+// Thresholds follow ApplicationDiscoverer::inferType(). 10 means nothing matched, a warning:
+// serving a PHP app as static publishes its source.
 export function confidenceBand(confidence) {
   if (confidence == null) return "unknown";
   if (confidence >= 90) return "high";

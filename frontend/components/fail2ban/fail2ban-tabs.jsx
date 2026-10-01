@@ -9,12 +9,8 @@ import { ScrollFade } from "@/components/ui/scroll-fade";
 
 const TRIGGER = "gap-2 px-3 py-1.5";
 
-/**
- * Splits the page into live state (jails, bans) and settings (rules, ignore list).
- * Both panels stay mounted (`forceMount`) so unsaved edits survive a tab switch.
- * The lockout risk must not hide behind a tab: an unignored own IP marks the
- * settings trigger.
- */
+// `forceMount` keeps unsaved edits across tab switches. An unignored own IP
+// marks the settings trigger so the lockout risk does not hide behind a tab.
 export function Fail2banTabs({ live, settings, ignoreIps = [], status }) {
   const t = useTranslations("fail2ban");
   const yourIp = useBrowserIp();
@@ -23,8 +19,7 @@ export function Fail2banTabs({ live, settings, ignoreIps = [], status }) {
 
   return (
     <Tabs value={tab} onValueChange={setTab} className="gap-4">
-      {/* Healthy status sits in the tab row; the unhealthy state stays a
-          full-width alert above. */}
+      {/* The unhealthy state stays a full-width alert above. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Scrolls rather than wraps, like the Settings tab bar. */}
         <ScrollFade className="-mx-1 px-1 pb-1">

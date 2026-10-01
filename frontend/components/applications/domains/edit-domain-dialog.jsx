@@ -29,12 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-/**
- * Changes an attached domain's type or redirect in place (`PUT …/domains/{domain}`),
- * avoiding a delete + add that drops the name from the vhost and can break renewal.
- *
- * @param domain the row being edited, or null when the dialog is closed.
- */
+// Edits in place: delete + add drops the name from the vhost and can break renewal.
 export function EditDomainDialog({ appId, domain, open, onOpenChange }) {
   const t = useTranslations("applications.domains");
   const { pending: refreshing, refreshThen } = useRefresh();

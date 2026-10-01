@@ -18,11 +18,8 @@ import { CreateCronjobDialog } from "@/components/cron-jobs/create-cronjob-dialo
 // Starter templates offered on the empty state, from the API's own templates.
 const STARTER_KEYS = ["laravel", "wordpress"];
 
-/**
- * Owns the create-dialog state for the whole page so the empty state, the
- * quick starters and the row-level Duplicate can all open the same dialog with
- * different seed values.
- */
+// Owns the create dialog so the empty state, quick starters and Duplicate can
+// open it with different seed values.
 export function CronjobsPanel({
   cronjobs,
   meta,

@@ -17,27 +17,20 @@ import { genericErrorMessage } from "@/lib/api/generic-error";
 import { useRefresh } from "@/hooks/use-refresh";
 import { offeredShells } from "@/lib/system-users/offered-shells";
 
-/**
- * Inline login-shell picker. Shows the shell's TITLE ("No login"), with the path
- * as the option's description.
- *
- * A shell that refuses login cannot be set while SSH access is on (the server
- * rejects the pair), so that option is disabled with the reason.
- */
+// A login-refusing shell cannot be set while SSH access is on (the server
+// rejects the pair), so that option is disabled with the reason.
 export function ShellSelect({ user, shells = [], canManage = true, className }) {
   const t = useTranslations("systemUsers");
   const { refresh, refreshThen } = useRefresh();
   const [busy, setBusy] = useState(false);
-  // The requested shell, until the server agrees: `user.shell` only changes when
-  // router.refresh() lands, so without this the trigger snaps back during the
-  // usermod round trip.
+  // The requested shell until router.refresh() lands, or the trigger snaps back
+  // during the usermod round trip.
   const [asked, setAsked] = useState(null);
 
   const shown = asked !== null && asked !== user.shell ? asked : user.shell;
 
-  // `shell_allows_login: null` is an unrecognised shell on an adopted server
-  // ("unknown", not "denies login"); the raw path is shown rather than an invented
-  // title.
+  // `shell_allows_login: null` is an unrecognised shell ("unknown", not "denies
+  // login"); the raw path is shown.
   const current = shells.find((entry) => entry.value === shown);
   const label =
     (shown === user.shell ? user.shell_title : null) ?? current?.title ?? shown;

@@ -13,23 +13,14 @@ import { CronjobActiveSwitch } from "@/components/cron-jobs/cronjob-active-switc
 import { CronjobRowActions } from "@/components/cron-jobs/cronjob-row-actions";
 import { CronjobsCards } from "@/components/cron-jobs/cronjobs-cards";
 
-/**
- * Labels an expression using the API's own preset list ("Daily (midnight)"),
- * falling back to the raw cron string. Deliberately not a cron-to-prose library.
- */
+// Labels from the API's own preset list; deliberately not a cron-to-prose library.
 function scheduleLabel(expression, presets) {
   return presets.find((p) => p.expression && p.expression === expression)?.label ?? null;
 }
 
-/* ---------------------------------------------------------------------------
- * Cells are module-level components on purpose: flexRender calls
- * `createElement(cellFn)`, so an inline cell function gets a new identity each
- * render and React remounts the cell, losing its state (e.g. an open dialog).
- * Per-table values reach them through `table.options.meta`.
- * ------------------------------------------------------------------------- */
+// Cells at module level: inline cells would remount (losing dialog state) every render.
 
-/* The value renderers are exported so the phone cards show exactly what the
- * table shows. */
+// Exported so the phone cards show exactly what the table shows.
 
 export function CronjobName({ job }) {
   const t = useTranslations("cronJobs");
@@ -51,15 +42,12 @@ export function CronjobName({ job }) {
 export function CronjobSchedule({ job, presets = [] }) {
   const custom = useScheduleText(job.expression, job.timezone);
   const preset = scheduleLabel(job.expression, presets);
-  // A custom schedule gets its sentence, so "0 0 2 * *" is not left to be
-  // read as 2 AM daily.
+  // A custom schedule gets its sentence: "0 0 2 * *" is not 2 AM daily.
   const label = preset ?? custom?.sentence ?? null;
-  // Plain language leads when the schedule can be named. Otherwise (including
-  // when presets failed to load) show the expression alone, not "Custom".
+  // Plain language when nameable; otherwise the expression alone, not "Custom".
   return label ? (
     <div className="flex flex-col gap-0.5">
-      {/* A sentence wraps (TableCell defaults to nowrap); only short preset
-          names stay on one line. */}
+      {/* A sentence wraps (TableCell defaults to nowrap); short preset names do not. */}
       <span className={preset ? "whitespace-nowrap" : "max-w-44 whitespace-normal"}>{label}</span>
       <span className="font-mono text-xs text-muted-foreground">{job.expression}</span>
     </div>
@@ -75,13 +63,11 @@ export function CronjobNextRun({ job }) {
   // A paused job has no next run.
   if (!at) return <span className="text-muted-foreground">—</span>;
 
-  // Counted down live rather than using `next_run_at_human`, which is only true
-  // at page load. The panel re-reads when the run is due; until then it reads "now".
+  // Counted down live (`next_run_at_human` is only true at page load); reads "now" until the re-read.
   const epoch = serverTimeToEpoch(at, job.timezone);
   const human = epoch === null ? job.next_run_at_human : format.relativeTime(Math.max(epoch, now.getTime()), now);
 
-  // Shown as the API computed it, in the server's zone; the browser's formatter
-  // would restate it in the reader's timezone.
+  // As the API computed it, in the server's zone; the browser's formatter would convert it.
   return (
     <div className="flex flex-col gap-0.5">
       {/* Server and client render a moment apart ("in 19s" vs "in 18s"); expected. */}
@@ -197,8 +183,7 @@ export function CronjobsTable({
     { accessorKey: "username", header: () => <Head>{t("columns.runAs")}</Head>, cell: RunAsCell },
     { accessorKey: "command", header: () => <Head>{t("columns.command")}</Head>, cell: CommandCell },
     { id: "active", header: () => <Head>{t("columns.active")}</Head>, cell: ActiveCell },
-    // Always there: a view-only reader still gets the menu, with each item
-    // saying why it is off.
+    // Always there: a view-only reader still gets the menu, each item saying why it is off.
     {
       id: "actions",
       header: () => <span className="sr-only">{t("actions.label")}</span>,
@@ -241,8 +226,7 @@ export function CronjobsTable({
             canViewLogs,
           }}
           emptyMessage={t("empty.title")}
-          // De-emphasise the row's text, not the controls: the switch and actions
-          // must stay at full contrast so a paused job is still operable.
+          // De-emphasise text, not controls: a paused job must stay operable.
           rowClassName={(job) => cn(!job.active && "[&_td]:text-muted-foreground")}
         />
       </div>

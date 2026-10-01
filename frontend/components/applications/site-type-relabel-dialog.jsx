@@ -9,10 +9,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 
-/**
- * One side of the change: a mark and its name. `min-w-0` + `truncate` so a
- * long title shortens rather than pushing the arrow off-centre.
- */
+// `min-w-0` + `truncate` so a long title shortens instead of pushing the arrow off-centre.
 function TypeSide({ name, title, emphasis = false }) {
   return (
     <span className="flex min-w-0 items-center gap-2">
@@ -49,22 +46,14 @@ function Consequence({ icon: Icon, tone, label, children }) {
   );
 }
 
-/**
- * Confirm a relabel, in either direction (accepting a suggestion or narrowing
- * back to a generic type); `target` decides the wording.
- *
- * Relabelling changes what the panel offers, not what is on disk: nothing is
- * installed (see UpdateSiteTypeRequest). The body states both what changes and
- * what does not, before the button.
- */
+// Relabelling changes what the panel offers, not what is on disk; the body states both.
 export function SiteTypeRelabelDialog({
   open,
   onOpenChange,
   application,
   target,
   targetTitle,
-  // The file the verdict rests on (for an accepted suggestion); checkable,
-  // unlike a confidence score.
+  // The file the verdict rests on; checkable, unlike a confidence score.
   matched = null,
 }) {
   const t = useTranslations("applications.siteTypeDetection");
@@ -73,8 +62,7 @@ export function SiteTypeRelabelDialog({
   const [error, setError] = useState(null);
 
   function handleOpenChange(next) {
-    // Cleared here: the dialog is opened by setting `target` directly, which skips
-    // onOpenChange, so a stale error would survive.
+    // Cleared here: opening via `target` skips onOpenChange, so a stale error would survive.
     if (!next) setError(null);
     onOpenChange(next);
   }
@@ -84,16 +72,12 @@ export function SiteTypeRelabelDialog({
     setError(null);
     try {
       await changeApplicationSiteType(application.id, target);
-      /*
-       * Refresh, not a local patch: the type decides which screens the site has
-       * (e.g. WordPress adds Staging, Clone, Magic Login), so the nav changes too.
-       */
+      // Refresh, not a local patch: the type decides the site's screens, so the nav changes too.
       await refreshAndWait();
       toast.success(t("applied", { type: targetTitle }));
       onOpenChange(false);
     } catch (err) {
-      // Backend refusals are worth reading (e.g. the git one explains what would be
-      // hidden); kept in the dialog rather than a short-lived toast.
+      // Backend refusals are worth reading, so kept in the dialog rather than a toast.
       setError(apiMessage(err, t("failed")));
     } finally {
       setPending(false);
@@ -115,8 +99,7 @@ export function SiteTypeRelabelDialog({
       onConfirm={confirm}
     >
       <div className="space-y-3">
-        {/* Each mark paired with its own name and one arrow between: most marks do
-            not spell their name. */}
+        {/* Each mark with its own name: most marks do not spell their name. */}
         <div className="flex items-center justify-center gap-3 rounded-lg border bg-muted/30 p-3">
           <TypeSide
             name={application.site_type}
@@ -137,8 +120,7 @@ export function SiteTypeRelabelDialog({
           </Consequence>
         </dl>
 
-        {/* Narrowing back to a generic type is always allowed (the endpoint needs no
-            evidence), so this promise holds. Only shown when widening. */}
+        {/* Only when widening; narrowing back needs no evidence, so this promise holds. */}
         {matched ? (
           <p className="text-xs text-muted-foreground">
             {t("reversible", { from: application.site_type_title ?? application.site_type })}

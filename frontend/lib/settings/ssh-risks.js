@@ -1,13 +1,5 @@
-/**
- * Which SSH changes get a red confirm button.
- *
- *   port          Safe: the panel opens the new port in the firewall first.
- *   passwordOff   Lockout risk without a key on the server.
- *   rootOff       Lockout risk without another sudo user.
- *   rootPassword  Widens the attack surface on root.
- *
- * Kept out of the component so the classification can be tested.
- */
+// Severe (red confirm): passwordOff and rootOff risk lockout, rootPassword widens root's
+// attack surface. `port` is safe: the panel opens the new port in the firewall first.
 export const SSH_RISKS = ["port", "passwordOff", "rootOff", "rootPassword"];
 
 export const SEVERE_SSH_RISKS = ["passwordOff", "rootOff", "rootPassword"];

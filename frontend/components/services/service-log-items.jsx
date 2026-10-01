@@ -8,13 +8,7 @@ import {
   DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 
-/**
- * This service's logs, as items in the row's actions menu. One source is one
- * item; several (nginx error and access) become a submenu.
- *
- * Nothing renders when `log_keys` is empty: the API only lists sources that
- * exist on the box.
- */
+// Several sources become a submenu. The API only lists sources that exist on the box.
 export function ServiceLogItems({ service }) {
   const t = useTranslations("services");
   const keys = service.log_keys ?? [];

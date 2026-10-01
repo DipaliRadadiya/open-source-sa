@@ -7,11 +7,7 @@ import { installSupervisor } from "@/lib/api/workers";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 
-/**
- * Says supervisord is missing before anyone fills in a worker form (Create
- * would otherwise answer 202 and start the install). Not a blocker: the form
- * still works and triggers the same install.
- */
+// Shown before the form: Create would otherwise answer 202 and start the install. Not a blocker.
 export function SupervisorMissingAlert({ appId, canManage }) {
   const t = useTranslations("applications.workers");
   const router = useRouter();

@@ -46,9 +46,8 @@ const Toaster = ({
         classNames: {
           // Room on the right for the close button.
           toast: "cn-toast !pr-10",
-          // Always visible (touch cannot hover), centred on the right edge,
-          // 28px. Centred with auto margins because Sonner's own `transform`
-          // would compose with a translate.
+          // Always visible (touch cannot hover). Auto margins, since Sonner's own
+          // `transform` would compose with a translate.
           closeButton:
             "!left-auto !right-2.5 !top-0 !bottom-0 !my-auto !size-7 !transform-none !rounded-md !border-0 !bg-transparent !text-foreground/60 hover:!bg-foreground/10 hover:!text-foreground !transition-colors",
           // Per-type tint mixed into the popover colour, not an alpha: a

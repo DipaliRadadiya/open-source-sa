@@ -18,13 +18,7 @@ import {
   FormField,
 } from "@/components/ui/form";
 
-/**
- * How the site's process is started, editable after creation via
- * `PUT /applications/{id}`.
- *
- * Saved here, applied by the next deploy: the deployer rewrites the systemd unit
- * before restarting, and the card says so.
- */
+// Saved here, applied by the next deploy: the deployer rewrites the systemd unit.
 export function RuntimeCard({ application, canManage }) {
   const t = useTranslations("applications.deployment.runtime");
   const { refreshAndWait } = useRefresh();

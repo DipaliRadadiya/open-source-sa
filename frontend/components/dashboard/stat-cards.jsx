@@ -9,11 +9,8 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
   const format = useFormatter();
   const loading = !metrics;
 
-  /*
-   * The level word, from the same thresholds that colour the bar. `fallback`
-   * covers cards with a real state but no percentage (no swap: Off; unreadable
-   * disk: Unknown).
-   */
+  // Same thresholds that colour the bar. `fallback` covers a real state with no
+  // percentage (no swap: Off; unreadable disk: Unknown).
   const statusFor = (percent, fallback = null) => {
     const key = usageStatus(percent) ?? fallback;
     return key ? { key, label: t(`status.${key}`) } : null;
@@ -48,9 +45,7 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
       : null;
 
   return (
-    // 5 cards: 1 → 2 → 5. A 3-col step would strand a single card on its own row.
-    // Deliberately NOT a live region: values change every 3s; connection
-    // changes are announced once by the status above.
+    // 5 cards: 1 → 2 → 5. NOT a live region: values change every 3s.
     <div
       aria-busy={loading}
       className={cn(
@@ -62,10 +57,7 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
       <StatCard
         icon={Cpu}
         label={t("cpu")}
-        /*
-         * A rate needs two samples; until then the API returns 0, so show
-         * "Measuring…" (a dash means "not applicable" on the other cards).
-         */
+        // A rate needs two samples and the API returns 0 until then; a dash means "not applicable".
         value={ratesReady ? percentText(cpu?.percent, 1) : t("measuring")}
         percent={ratesReady ? cpu?.percent : null}
         // No level word until the second sample lands.

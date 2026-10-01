@@ -4,21 +4,13 @@ import { useEffect, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useNavTransition } from "@/components/data-table/nav-transition";
 
-/**
- * Re-run the server component and expose `pending` while it happens, since a
- * bare `router.refresh()` returns immediately. Under a
- * `<NavTransitionProvider>` it shares the list's pending signal.
- *
- * `refreshThen(after)` runs `after` once the refreshed page is on screen: keep
- * the spinner while `pending` and toast/close in `after`, so a dialog never
- * uncovers stale data. It still runs if the refresh unmounts the caller.
- */
+// A bare `router.refresh()` returns immediately. `refreshThen(after)` runs `after` once
+// the refreshed page is on screen, even if the refresh unmounts the caller.
 export function useRefresh() {
   const nav = useNavTransition();
   const router = useRouter();
   const [localPending, startLocal] = useTransition();
-  // Its own transition: leaving the page is not the list's refresh, and under
-  // a NavTransitionProvider `pending` below would never see it.
+  // Its own transition: under a NavTransitionProvider `pending` would never see leaving.
   const [leaving, startLeaving] = useTransition();
 
   const pending = nav ? nav.isPending : localPending;
@@ -39,10 +31,7 @@ export function useRefresh() {
     flush();
   }, [pending, leaving]);
 
-  /*
-   * The refresh can unmount the component that asked for it (e.g. a deleted
-   * row's dialog), so run pending waiters on unmount; the refresh has landed by then.
-   */
+  /* The refresh can unmount the caller (e.g. a deleted row's dialog), so flush waiters on unmount. */
   useEffect(() => () => flush(), []);
 
   return {
@@ -52,27 +41,19 @@ export function useRefresh() {
       wait(fn);
       refresh();
     },
-    // The same, awaitable: `await refreshAndWait()` before the success toast
-    // and the close, so a dialog never uncovers the state it just changed.
+    // Await before the success toast and close, so a dialog never uncovers stale state.
     refreshAndWait: () =>
       new Promise((resolve) => {
         wait(resolve);
         refresh();
       }),
-    /*
-     * Navigate and resolve once the new page is on screen. Keep the dialog and
-     * its spinner up until then (e.g. after deleting the page's own resource);
-     * an unmount is covered by the flush above.
-     */
+    /* Resolves once the new page is on screen; an unmount is covered by the flush above. */
     pushAndWait: (href) =>
       new Promise((resolve) => {
         wait(resolve);
         startLeaving(() => router.push(href));
       }),
-    /*
-     * Same, but lands on a different page of the list, e.g. when the last row
-     * of a page leaves it, avoiding a server redirect.
-     */
+    /* For when the last row of a page leaves it, avoiding a server redirect. */
     navigateThen: (updates, fn) => {
       if (!nav) {
         refresh();

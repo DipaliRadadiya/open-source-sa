@@ -10,10 +10,7 @@ import { canOpenFile } from "@/lib/files/openable";
 import { isWorldWritable, symbolicMode } from "@/lib/files/describe-mode";
 import { FILE_NAME } from "@/lib/files/name-style";
 
-/*
- * `folderSizes` and `sizingPaths` are the same state the desktop table's SizeCell
- * reads, so "Folder size" on a phone has somewhere to show its answer.
- */
+// `folderSizes` and `sizingPaths` are the desktop SizeCell's state, so phones can show folder size.
 export function FilesCards({
   appId,
   data,
@@ -87,9 +84,7 @@ export function FilesCards({
                     ) : null}
                   </span>
                 ) : (
-                  // w-full is needed beside `block`: a <button> sizes to its content even when
-                  // block-level, so `truncate` would not clip at the column.
-                  // Nothing to open: see the note in files-table.
+                  // w-full beside `block`: a <button> sizes to its content, so `truncate` would not clip.
                   !canManage || !canOpenFile(file.name) ? (
                     <span className={cn("block w-full font-medium", FILE_NAME)} title={file.name}>
                       {file.name}

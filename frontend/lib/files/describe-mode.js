@@ -9,21 +9,14 @@ function digitPermissions(digit) {
   return tokens;
 }
 
-/**
- * A mode's permission digits and the optional special-bits digit in front.
- * `find -printf %m` prints four digits when setuid/setgid/sticky is set
- * (e.g. `1777`), so every helper must accept both lengths.
- *
- * Returns null for a non-mode (e.g. an in-progress custom entry).
- */
+// `find -printf %m` prints four digits when setuid/setgid/sticky is set (e.g. `1777`),
+// so every helper must accept both lengths. Null for a non-mode.
 export function modeParts(mode) {
   const match = /^([0-7]?)([0-7]{3})$/.exec(String(mode ?? ""));
   return match ? { special: match[1], permissions: match[2] } : null;
 }
 
-// { owner, group, other } token arrays, or null for anything that isn't a
-// mode (an in-progress custom entry). Special bits do not change what the
-// three audiences may do, so they are not described here.
+// Special bits do not change what the three audiences may do, so they are not described.
 export function describeMode(mode) {
   const parts = modeParts(mode);
   if (!parts) return null;
@@ -38,18 +31,12 @@ export function describeMode(mode) {
 // One octal digit -> its rwx triad, indexed by value.
 const TRIADS = ["---", "--x", "-w-", "-wx", "r--", "r-x", "rw-", "rwx"];
 
-/**
- * Replaces a triad's execute character with the setuid/setgid/sticky marker.
- * Uppercase when execute is not set, as `ls` does.
- */
+// Uppercase when execute is not set, as `ls` does.
 function withSpecialBit(triad, marker) {
   return triad.slice(0, 2) + (triad[2] === "x" ? marker : marker.toUpperCase());
 }
 
-/**
- * A mode as `ls -l` writes it (`drwxr-xr-x` rather than `755`). Accepts
- * 3- and 4-digit modes.
- */
+// As `ls -l` writes it (`drwxr-xr-x` rather than `755`).
 export function symbolicMode(mode, type) {
   if (!/^[0-7]{3,4}$/.test(String(mode ?? ""))) return null;
 

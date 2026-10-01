@@ -2,22 +2,15 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-/**
- * - `handled: true`: a parent already shows a tooltip here; nested controls
- *   stay silent to avoid overlapping bubbles.
- * - `handled: false`: a fallback reason for controls with nothing more specific
- *   (e.g. a permission-gated form).
- */
+// `handled: true`: a parent already shows a tooltip, so nested controls stay silent.
+// `handled: false`: a fallback reason for controls with nothing more specific.
 const DisabledReasonContext = createContext(null);
 
 export function useDisabledReason() {
   return useContext(DisabledReasonContext);
 }
 
-/**
- * Supplies one reason to every disabled control beneath it (usually a missing
- * permission). A control's own `disabledReason` takes precedence.
- */
+/** A control's own `disabledReason` takes precedence over this one. */
 export function DisabledReasonProvider({ reason, children }) {
   return (
     <DisabledReasonContext.Provider
@@ -28,13 +21,8 @@ export function DisabledReasonProvider({ reason, children }) {
   );
 }
 
-/**
- * Wraps a possibly disabled control and explains why it is disabled. The span
- * carries pointer and focus events, which a disabled button does not fire.
- * Pass `reason={null}` when enabled.
- *
- * On touch screens a Popover is used: Radix tooltips never open on touch.
- */
+// The span carries pointer and focus events, which a disabled button does not fire.
+// Popover on touch screens: Radix tooltips never open on touch.
 export function ReasonTooltip({ reason, children, className = "inline-flex" }) {
   const coarse = useCoarsePointer();
 
@@ -72,10 +60,7 @@ export function ReasonTooltip({ reason, children, className = "inline-flex" }) {
   );
 }
 
-/**
- * Whether the primary pointer cannot hover. Resolved after mount to avoid a
- * hydration mismatch; the desktop path renders first.
- */
+/** Resolved after mount to avoid a hydration mismatch; the desktop path renders first. */
 function useCoarsePointer() {
   const [coarse, setCoarse] = useState(false);
 

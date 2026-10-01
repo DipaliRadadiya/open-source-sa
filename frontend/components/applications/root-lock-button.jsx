@@ -11,14 +11,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 
-/**
- * Lock the folder of a site adopted by server sync (sync never changes
- * ownership itself). Asks first: afterwards the site user cannot add, remove or
- * rename anything directly in that folder.
- *
- * A refusal keeps the dialog open with the server's reason (which names the fix,
- * e.g. a `chmod`), rather than a toast that disappears.
- */
+// A refusal keeps the dialog open with the server's reason, which names the fix.
 export function RootLockButton({ applicationId, path, canManage = true }) {
   const t = useTranslations("applications.rootLock");
   const tApp = useTranslations("applications");

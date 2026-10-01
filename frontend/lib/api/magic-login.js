@@ -8,10 +8,7 @@ export async function getWordPressAdministrators(appId) {
   return res.data?.administrators ?? [];
 }
 
-/**
- * Mint a single-use, ~60 second token for one administrator. It is returned
- * exactly once (the site stores only its hash); post it straight to the site.
- */
+// Single-use, ~60s token returned exactly once (the site stores only its hash); post it straight to the site.
 export async function createMagicLogin(appId, wpUserId) {
   const res = await api.post(`/applications/${appId}/magic-login`, {
     wp_user_id: wpUserId,

@@ -1,8 +1,3 @@
-/**
- * The state machine behind the restart curtain, kept pure for testing; the
- * component owns timers and fetches.
- */
-
 export const PHASE = {
   GOING_DOWN: "going_down",
   OFFLINE: "offline",
@@ -36,11 +31,7 @@ export function createRestartState(startedAt) {
   };
 }
 
-/**
- * State for a restart already running when this tab loaded. Past a grace
- * window the down transition is assumed seen; inside it the server may not
- * have gone down yet.
- */
+// Past a grace window the down transition is assumed seen.
 export function resumeRestartState(startedAt, now) {
   const elapsedMs = Math.max(0, now - startedAt);
 
@@ -51,10 +42,7 @@ export function resumeRestartState(startedAt, now) {
   };
 }
 
-/**
- * Folds one probe result into the state. `apiUp` (/api/health) and `panelUp`
- * (this Next server) are separate units; the frontend often lags the API.
- */
+// `apiUp` and `panelUp` are separate units; the frontend often lags the API.
 export function reduceProbe(state, { at, apiUp, panelUp }) {
   if (state.phase === PHASE.BACK || state.phase === PHASE.GAVE_UP) return state;
 
@@ -70,8 +58,7 @@ export function reduceProbe(state, { at, apiUp, panelUp }) {
     return { ...next, sawDown: true, okStreak: 0, phase: PHASE.OFFLINE };
   }
 
-  // `shutdown -r now` takes seconds to kill anything, so early successes come
-  // from the server on its way down and must not count as recovery.
+  // Early successes come from the server on its way down, not recovery.
   if (!next.sawDown) {
     return { ...next, okStreak: 0, phase: PHASE.GOING_DOWN };
   }

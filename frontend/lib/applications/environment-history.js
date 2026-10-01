@@ -1,9 +1,6 @@
 /** How a `.env` history row is read; kept out of the component for testing. */
 
-/**
- * Why a row cannot be restored, or null when it can. A first save (no previous
- * version) differs from one pruned by the retention limit.
- */
+// A first save (no previous version) differs from one pruned by retention.
 export function unrestorableReason(entry) {
   if (entry?.restorable) return null;
   if (!entry?.backup) return "first";
@@ -11,10 +8,7 @@ export function unrestorableReason(entry) {
   return "pruned";
 }
 
-/**
- * The keys a change touched. The backend stores a comma-joined string; "—"
- * means the save changed no keys (unedited, or comments/whitespace only).
- */
+// The backend stores a comma-joined string; "—" means no keys changed.
 export function changedKeys(entry) {
   const raw = (entry?.keys ?? "").trim();
 
@@ -26,10 +20,7 @@ export function changedKeys(entry) {
     .filter(Boolean);
 }
 
-/**
- * Who to credit. `is_system` is checked first; a null user without it is a
- * deleted account, not a system action.
- */
+// `is_system` first; a null user without it is a deleted account.
 export function actorOf(entry) {
   if (entry?.is_system) return { kind: "system" };
   if (entry?.user?.username) return { kind: "user", username: entry.user.username };

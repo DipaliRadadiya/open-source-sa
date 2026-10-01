@@ -38,10 +38,7 @@ const IN_BUCKET = {
   warnings: new Set(["error", "warn"]),
 };
 
-/**
- * Client-side display filter over the loaded buffer only (unlike server-side
- * grep), so it works while tailing and the UI says "of N loaded".
- */
+// Filters only the loaded buffer (unlike server-side grep), so it works while tailing.
 export function matchesSeverity(line, group, filter) {
   const bucket = IN_BUCKET[filter];
   if (!bucket) return true;
@@ -57,10 +54,7 @@ export const LEVEL_CLASS = {
   info: "",
 };
 
-/**
- * Splits a line around every case-insensitive occurrence of `term` so the match
- * can be marked. Returns [{ text, match }] — one entry when there's no term.
- */
+// Returns [{ text, match }]; one entry when there is no term.
 export function splitOnTerm(line, term) {
   const needle = term?.trim();
   if (!needle) return [{ text: line, match: false }];

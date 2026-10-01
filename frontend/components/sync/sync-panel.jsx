@@ -118,13 +118,8 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
     setStarting(true);
     try {
       const { data } = await startSync({
-        /*
-         * A scan always reads the firewall (`ufw status numbered`, read-only);
-         * only ADOPTING it is opt-in. Otherwise no firewall items appear and
-         * the opt-in checkbox, which renders only when they exist, is
-         * unreachable. `apply` passes its own value, and the spread below lets
-         * it win.
-         */
+        // A scan always reads the firewall (read-only); only adopting it is
+        // opt-in, or the opt-in checkbox could never appear.
         includeFirewall: mode === "preview",
         mode,
         ...options,

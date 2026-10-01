@@ -19,10 +19,7 @@ import { CanvasRenderer } from "echarts/renderers";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-/**
- * Register only what the charts use, for tree-shaking. Add here when a chart
- * needs more; never switch to the bare `echarts` import (it registers everything).
- */
+// Register only what the charts use. Never switch to the bare `echarts` import.
 echarts.use([
   LineChart,
   PieChart,
@@ -37,21 +34,14 @@ echarts.use([
   CanvasRenderer,
 ]);
 
-/**
- * Design tokens are read from the CSS cascade rather than duplicated as JS
- * literals, so globals.css stays the single source and theme switches apply.
- */
+// Tokens are read from the CSS cascade, so globals.css stays the source and themes apply.
 const NO_TOKENS = Object.freeze({});
 
 /** One shared 1x1 context for every token on the page. */
 let probe = null;
 const SENTINEL = "#010203";
 
-/**
- * Converts a token to rgb()/rgba(). Tokens resolve as `lab()`, which zrender's
- * colour parser cannot read, so hover emphasis would paint lines with no
- * colour. The browser converts by painting one pixel. Non-colours pass through.
- */
+// Tokens resolve as `lab()`, which zrender cannot parse; convert by painting one pixel.
 function toSrgb(value) {
   if (!value) return value;
 
@@ -116,11 +106,7 @@ export function useChartTokens(names) {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
-/**
- * A chart canvas that owns its ECharts instance (no wrapper library, so the
- * registration list stays under our control). Always pass `dataTable`: a
- * canvas is opaque to screen readers, so the numbers go in an sr-only table.
- */
+// Always pass `dataTable`: a canvas is opaque to screen readers.
 export function EChart({
   option,
   className,

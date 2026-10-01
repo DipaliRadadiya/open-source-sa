@@ -62,9 +62,7 @@ export default async function CreateApplicationPage({ searchParams }) {
 
   if (types.failed) return <LoadFailed description={t("loadFailed")} status={types.status} failure={types.failure} message={types.message} debug={types.debug} />;
 
-  // Availability is marked here so the prefill below reads the same
-  // `available` the grid uses. One pass over every check, so all missing
-  // requirements are reported together.
+  // Mark availability here so the prefill reads the same `available` as the grid.
   const siteTypes = withAvailability(
     types.siteTypes,
     {
@@ -105,10 +103,7 @@ export default async function CreateApplicationPage({ searchParams }) {
     ? sp.type
     : "";
 
-  /*
-   * The account the Git page just connected, checked against the real list.
-   * An unknown id is dropped, since it would seed a picker that cannot submit.
-   */
+  // An unknown account id is dropped: it would seed a picker that cannot submit.
   const prefillGitAccount = (accounts.accounts ?? []).some(
     (account) => String(account.id) === String(sp?.git_account),
   )

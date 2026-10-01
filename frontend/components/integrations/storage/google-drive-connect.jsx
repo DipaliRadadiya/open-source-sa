@@ -8,16 +8,7 @@ import { Button } from "@/components/ui/button";
 import { startDriveConnect } from "@/lib/api/storage";
 import { apiMessage } from "@/lib/api/error-message";
 
-/**
- * The approval step for a user-owned Google Drive: one button that fetches a
- * consent URL and sends the browser there; the callback page finishes.
- *
- * The redirect URI is shown by {@link GoogleDriveRedirectUri} above the
- * credential fields, since it is needed before the OAuth client exists.
- *
- * `compact` renders only the button, for the destination row. Both modes share
- * one start() so they cannot drift.
- */
+// `compact` renders only the button, for the destination row; both modes share one start().
 export function GoogleDriveConnect({ destination, compact = false }) {
   const t = useTranslations("storage.oauth");
   const [state, setState] = useState("idle");
@@ -33,9 +24,7 @@ export function GoogleDriveConnect({ destination, compact = false }) {
     try {
       const { data } = await startDriveConnect(destination.id);
 
-      // A full navigation, not a popup: popups are often blocked, and the
-      // consent screen needs the room. Nothing renders after this line, since
-      // the browser leaves before React commits.
+      // A full navigation, not a popup: popups are often blocked.
       window.location.assign(data.oauth.authorize_url);
     } catch (e) {
       setError(apiMessage(e, t("start_failed")));

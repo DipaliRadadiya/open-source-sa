@@ -2,13 +2,8 @@ import { cache } from "react";
 import { read } from "@/lib/api/read";
 import { settingsResponseSchema } from "@/lib/schemas/settings";
 
-/**
- * GET /api/settings: every available group in one call, cached per request
- * (read by both the settings layout and the open section).
- *
- * A group missing from `data` means the server lacks it (e.g. no Redis), not a
- * failed read. `lastChanged` is keyed by group name.
- */
+// Cached per request (layout and section both read it). A group missing from `data`
+// means the server lacks it (e.g. no Redis), not a failed read.
 export const getSettings = cache(async function getSettings() {
   const result = await read("/settings", settingsResponseSchema);
 

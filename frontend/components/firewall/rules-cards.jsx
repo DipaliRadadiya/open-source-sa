@@ -13,10 +13,7 @@ import {
   protectedReasonFor,
 } from "@/components/firewall/rule-parts";
 
-/**
- * The same rules as cards, for screens too narrow for six columns, so delete
- * stays reachable without sideways scrolling.
- */
+// Cards for screens too narrow for six columns, so delete stays reachable.
 export function RulesCards({
   rules,
   enabled,

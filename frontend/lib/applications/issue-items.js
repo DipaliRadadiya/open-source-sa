@@ -1,7 +1,4 @@
-/**
- * `GET /applications/{id}/issues` as attention-strip rows. The message arrives
- * translated and is shown as sent: it carries numbers this side does not have.
- */
+// The message arrives translated and is shown as sent: it carries numbers this side lacks.
 
 // Where each kind of problem is fixed; unmapped types render the label alone.
 const DESTINATIONS = {
@@ -14,10 +11,7 @@ const DESTINATIONS = {
   disk: () => "/disk-cleaner",
 };
 
-/**
- * `[{ type, severity, message }]` → `[{ key, label, action, href }]`, critical
- * first since the strip has no other ranking.
- */
+/** Critical first, since the strip has no other ranking. */
 export function issueItems(issues, applicationId, actionLabel) {
   const rows = Array.isArray(issues) ? issues : [];
 
@@ -37,10 +31,7 @@ export function issueItems(issues, applicationId, actionLabel) {
     });
 }
 
-/**
- * Locally computed rows that a server issue of the same type supersedes; the
- * server's answer wins.
- */
+/** Local rows that a server issue of the same type supersedes. */
 export function localKeysSupersededBy(issues) {
   const types = new Set((Array.isArray(issues) ? issues : []).map((issue) => issue?.type));
   const superseded = new Set();

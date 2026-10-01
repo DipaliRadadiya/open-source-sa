@@ -7,11 +7,8 @@ import { RecommendedSetup } from "@/components/fail2ban/recommended-setup";
 import { JailsCard } from "@/components/fail2ban/jails-card";
 import { BannedCard } from "@/components/fail2ban/banned-card";
 
-/**
- * The live half of the page, in one component so the jail switches and the
- * ban list cannot disagree. The banned card reads the switches' optimistic
- * state, because fail2ban still reports bans for a while after a jail is off.
- */
+// One component so the jail switches and ban list cannot disagree: fail2ban still
+// reports bans for a while after a jail is off.
 export function ProtectionSection({ jails, settings, banned, ignoreIps, canManage, logHref, serverIp = null }) {
   const yourIp = useBrowserIp();
   // name -> requested enabled value plus the server value it was based on, so

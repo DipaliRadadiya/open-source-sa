@@ -40,11 +40,7 @@ export function WorkerActions({ worker, appId, canManage, onBusyChange, onUpdate
   const actions = BY_STATE[worker.state] ?? ["start"];
   const busy = pending !== null;
 
-  /**
-   * Report the real outcome from the worker's post-action state. A
-   * "successful" start can still come back stopped (e.g. a mistyped command
-   * dies immediately), which must read as a problem.
-   */
+  // A "successful" start can still come back stopped (e.g. a mistyped command), which must read as a problem.
   function reportOutcome(id, action, next) {
     const name = worker.name;
     // No readable state: only report that the request was accepted.

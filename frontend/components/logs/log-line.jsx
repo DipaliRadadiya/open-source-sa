@@ -11,21 +11,15 @@ const LEVEL_PILL = {
   notice: "bg-console-foreground/5 text-console-muted",
 };
 
-/**
- * One log row in three tiers: dimmed timestamp, coloured level, bright message,
- * so uniform INFO lines stay scannable.
- */
+// Three tiers (dim time, coloured level, bright message) keep uniform INFO lines scannable.
 export function LogLine({ index, text, group, term, wrap, onCopy, copyLabel }) {
   const { time, level, levelKey, message } = tokenizeLine(text);
-  // Fall back to whole-line detection (HTTP status, keywords) when the line
-  // carries no explicit level word.
+  // Fall back to whole-line detection (HTTP status, keywords) when no level word is present.
   const severity = levelKey ?? lineLevel(text, group);
 
   return (
     <div className="group flex gap-3 px-3 hover:bg-console-foreground/[0.06]">
-      {/* The gutter doubles as the copy button. Out of the Tab order (one stop
-          per line made the log impassable); the log scrolls by keyboard and
-          the toolbar's "Copy visible lines" covers keyboard copying. */}
+      {/* The gutter is the copy button, kept out of the Tab order (one stop per line); see "Copy visible lines". */}
       <button
         type="button"
         tabIndex={-1}

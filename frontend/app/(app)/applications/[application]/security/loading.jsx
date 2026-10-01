@@ -1,9 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/**
- * Mirrors `SecuritySection`: one card capped at `max-w-4xl` (keep in step, or
- * the page snaps narrower on load). Height is the rendered card's (464px).
- */
+// Mirrors `SecuritySection`: keep `max-w-4xl` in step or the page snaps narrower on load.
 export default function Loading() {
   return (
     <div className="space-y-6">

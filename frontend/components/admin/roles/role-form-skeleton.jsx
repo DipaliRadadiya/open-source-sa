@@ -1,9 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/**
- * Loading shape of the role form, shared by "new" and "edit" so the two
- * `loading.jsx` files cannot drift from the form.
- */
+// Shared by "new" and "edit" so the two `loading.jsx` files cannot drift.
 export function RoleFormSkeleton() {
   return (
     <div className="space-y-6" aria-busy="true">

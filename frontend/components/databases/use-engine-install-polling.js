@@ -11,15 +11,8 @@ const POLL_MS = 5000;
 const SLOW_AFTER_MS = 3 * 60 * 1000;
 const POLL_FAILURE_LIMIT = 3;
 
-/**
- * One polling owner for every database-engine install surface.
- *
- * `markStarted()` writes the queued state immediately, before the first poll,
- * so closing the confirmation dialog never leaves the page looking unchanged.
- * The API remains authoritative after that: a successful install disappears
- * from runtime_installs and comes back as a running engine; a failure stays on
- * the engine row with the backend's reason.
- */
+// `markStarted()` writes the queued state before the first poll, so closing the
+// dialog never leaves the page unchanged; the API is authoritative after that.
 export function useEngineInstallPolling(initialEngines = []) {
   const router = useRouter();
   const [snapshot, setSnapshot] = useState({

@@ -2,11 +2,7 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-/*
- * One edge treatment: a hairline border, no ring or shadow. Elevation is for
- * floating surfaces (popover, dropdown, dialog). Type scale: title 16 semibold,
- * body 14, description 12.
- */
+// A hairline border, no ring or shadow: elevation is for floating surfaces.
 
 function Card({
   className,
@@ -40,10 +36,7 @@ function CardHeader({
   );
 }
 
-/*
- * A <div> by default, since cards also nest inside dialogs and sections.
- * Top-level page sections pass `as="h2"` to give the page a heading outline.
- */
+// A <div> by default, since cards nest inside dialogs; page sections pass `as="h2"`.
 function CardTitle({
   as: Comp = "div",
   className,

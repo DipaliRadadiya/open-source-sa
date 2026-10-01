@@ -1,9 +1,5 @@
-/**
- * A failed install with nothing on disk, where Remove would always 404
- * (`destroy()` requires the version installed); retrying install clears it.
- * `path` marks a row found on disk: a half-failed install can leave files, and
- * Remove stays offered there.
- */
+// Remove would 404 here; retrying install clears it. `path` marks files left on disk,
+// where Remove stays offered.
 export function failedWithNothingInstalled(version) {
   return version?.status === "failed" && !version?.path;
 }

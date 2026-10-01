@@ -17,13 +17,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-/* ---------------------------------------------------------------------------
- * One list of every site, sorted worst-first. No row tinting; the status
- * badge carries the state.
- *
- * Cells are module-level components: flexRender treats a cell function's
- * identity as the component type, so one defined in render remounts every time.
- * ------------------------------------------------------------------------- */
+// Cells are module-level components: flexRender treats a cell function's identity
+// as the component type, so one defined in render remounts every time.
 
 // Failing first, as it needs attention today; unprotected last, since its
 // placeholders keep it legible anywhere in the list.
@@ -121,10 +116,7 @@ function StorageCell({ row }) {
   );
 }
 
-/**
- * When it last ran, how that went, and when it goes again. `last_backup` is
- * the real outcome; `next_run_at_human` comes from the backend, never computed here.
- */
+/** `next_run_at_human` comes from the backend, never computed here. */
 function RunsCell({ row }) {
   const t = useTranslations("backups.coverage");
   const { target, lastBackup } = row.original;

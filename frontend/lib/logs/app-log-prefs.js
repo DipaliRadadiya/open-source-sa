@@ -1,10 +1,6 @@
 import { normalizeLineCount } from "../schemas/log.js";
 
-/**
- * The reader's Live and line-count choices on an application's Logs page,
- * kept in cookies. Live is stored per source: following a quiet error log is
- * not consent to tail the busiest access log.
- */
+// Live is per source: following a quiet error log is not consent to tail the busiest access log.
 export const APP_LOG_FOLLOW_COOKIE = "sv_app_logs_follow";
 export const APP_LOG_LINES_COOKIE = "sv_app_logs_lines";
 

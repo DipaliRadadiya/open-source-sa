@@ -59,10 +59,7 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
   const sizeMb = useWatch({ control: form.control, name: "size_mb" });
   const format = useFormatter();
 
-  /*
-   * Free disk space, to check the swap file fits (the API does not). Read
-   * once; if it cannot be read the form says nothing.
-   */
+  // Checks the swap file fits (the API does not); silent if unreadable.
   const [diskFree, setDiskFree] = useState(null);
   useEffect(() => {
     const controller = new AbortController();

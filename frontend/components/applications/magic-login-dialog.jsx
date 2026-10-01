@@ -8,11 +8,8 @@ import { launchMagicLogin } from "@/components/applications/use-magic-login";
 import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/ui/form-modal";
 
-/**
- * Choose which administrator to sign in as. Only opened when the site has none
- * or several administrators (see `useMagicLogin`). `admins` is fetched fresh on
- * every open, never cached: a stale name would lead to an unexplained refusal.
- */
+// Opened only for none or several admins. `admins` is fetched fresh on every
+// open: a stale name would lead to an unexplained refusal.
 export function MagicLoginDialog({ appId, admins, open, onOpenChange }) {
   const t = useTranslations("applications.magicLogin");
   const [pendingId, setPendingId] = useState(null);

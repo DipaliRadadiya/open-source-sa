@@ -2,10 +2,7 @@ import { cache } from "react";
 import { read } from "@/lib/api/read";
 import { rebootSchedulePresetsSchema } from "@/lib/schemas/settings";
 
-/**
- * Options for the scheduled-restart dropdowns, localised server-side. A
- * failure here does not fail the page; the card reports it.
- */
+// A failure does not fail the page; the card reports it.
 export const getRebootPresets = cache(async function getRebootPresets() {
   const result = await read("/settings/reboot-schedule/presets", rebootSchedulePresetsSchema);
 

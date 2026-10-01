@@ -67,9 +67,7 @@ function StatusCell({ row, table }) {
         {/* A site's own page hides the Site column, which carries this badge otherwise. */}
         {backup.is_safety && !table.options.meta?.showSite ? <SafetyBadge /> : null}
       </div>
-      {/* Bounded to the column before clamping: `truncate` without a real width
-          lets a long reason widen the whole auto-layout table. Full text on
-          hover or focus. */}
+      {/* `truncate` without a bounded width lets a long reason widen the auto-layout table. */}
       {reason ? (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -95,38 +93,24 @@ function TypeCell({ row }) {
   );
 }
 
-/**
- * The first 8 characters of the uid, enough to match an object in a bucket
- * listing. The full value is what gets copied.
- */
+// Enough to match an object in a bucket listing; the full value is what gets copied.
 function uidFragment(uid) {
   const text = String(uid);
   return text.length > 8 ? `${text.slice(0, 8)}…` : text;
 }
 
-/**
- * Where the archive was written: the backup's OWN target, not the site's
- * current one, which may have changed since.
- */
+// The backup's own target, not the site's current one, which may have changed since.
 function DestinationCell({ row }) {
   const t = useTranslations("backups.history");
   const { storage_destination_name: name, uid } = row.original;
   if (!name) return <span className="text-sm text-muted-foreground">—</span>;
-  /*
-   * The column flexes (a fixed width overflowed the container at 1024), so a
-   * long name truncates; `title` is enough because this column only renders on
-   * pointer-sized screens. The uid gets its own line with a visible fragment so
-   * the copy button clearly copies the uid, not the destination name. Never
-   * the full uid: 36 mono characters overflow the table.
-   */
+  // `title` suffices: this column only renders on pointer-sized screens. Never the full uid: 36 mono chars overflow.
   return (
     <span className="flex min-w-0 flex-col gap-0.5">
       <span className="truncate text-sm" title={name}>
         {name}
       </span>
-      {/* Only when an archive exists: the uid is stamped at creation, so a run
-          that failed to upload still has one that matches nothing. Same
-          predicate as the Download button. */}
+      {/* A failed upload still has a uid that matches nothing. Same predicate as Download. */}
       {uid && backupHasArchive(row.original.status) ? (
         <span className="flex min-w-0 items-center gap-0.5">
           <span className="truncate font-mono text-xs text-muted-foreground" title={uid}>
@@ -168,10 +152,7 @@ function SizeCell({ row }) {
   );
 }
 
-/**
- * How far a running upload has got, or null if it has not said yet. Falls back
- * to a bare byte count when the total is unknown, rather than inventing one.
- */
+// Null if not reported yet; a bare byte count when the total is unknown.
 export function uploadProgress(backup, t, format) {
   const done = backup.bytes_transferred;
 
@@ -194,12 +175,8 @@ export function sizeNote(backup, t) {
   return t("sizeUnknown");
 }
 
-/**
- * One action per state, never one that cannot work: a failed backup gets
- * Retry, not Restore. `POST /backups/{id}/retry` dispatches the same
- * `RunBackup` job as "Back up now" and creates a NEW row, so anything waiting
- * on a started run must treat the two identically.
- */
+// Retry dispatches the same job as "Back up now" and creates a NEW row, so anything
+// waiting on a started run must treat the two identically.
 function ActionsCell({ row, table }) {
   const t = useTranslations("backups.history");
   const tr = useTranslations("backups.restore");

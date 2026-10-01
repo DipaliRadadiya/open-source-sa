@@ -1,8 +1,5 @@
-/**
- * File list preferences (hidden files, sort order), remembered across folders
- * and reloads. A cookie, not localStorage, because the hidden flag filters on
- * the server; an explicit `?hidden=` in the URL still wins.
- */
+// A cookie, not localStorage, because the hidden flag filters on the server; an
+// explicit `?hidden=` in the URL still wins.
 export const HIDDEN_COOKIE = "sv_files_hidden";
 export const SORT_COOKIE = "sv_files_sort";
 

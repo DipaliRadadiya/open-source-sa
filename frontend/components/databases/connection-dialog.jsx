@@ -25,30 +25,16 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-/*
- * Default port per engine (MySQL/MariaDB fall back to 3306). The API does not
- * expose `default_port`, so these are the well-known values; a wrong guess is
- * visible and editable.
- */
+// The API does not expose `default_port`; MySQL/MariaDB fall back to 3306.
 const DEFAULT_PORT = { mongodb: 27017, postgresql: 5432 };
 
-/*
- * Socket path placeholder per engine; a MySQL path shown for PostgreSQL would
- * be a wrong example.
- */
 const SOCKET_HINT = {
   mongodb: "/tmp/mongodb-27017.sock",
   postgresql: "/var/run/postgresql/.s.PGSQL.5432",
 };
 const DEFAULT_SOCKET = "/var/run/mysqld/mysqld.sock";
 
-/**
- * How the panel itself signs in to an engine; nothing else in the feature
- * works until this connects.
- *
- * The password is write-only: the API never returns it, so an empty field means
- * "leave the stored one alone" rather than "clear it".
- */
+// The password is write-only: an empty field means "keep the stored one", not "clear it".
 export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
   const t = useTranslations("databases.connection");
   const tc = useTranslations("databases");

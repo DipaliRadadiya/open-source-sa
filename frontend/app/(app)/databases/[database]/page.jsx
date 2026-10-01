@@ -68,10 +68,7 @@ export default async function DatabasePage({ params, searchParams }) {
     // Lets the site picker grey out sites that cannot use this engine.
     // A failure only loses the greying.
     getSiteTypes().catch(() => ({ siteTypes: [] })),
-    /*
-     * For `supports_remote_users`; a failure only loses the narrowing.
-     * Returns `{ engines, failed }`, NOT an array.
-     */
+    // A failure only loses the narrowing. Returns `{ engines, failed }`, NOT an array.
     getEngines().catch(() => ({ engines: [] })),
   ]);
   const { data, failed, status, failure, message } = live;

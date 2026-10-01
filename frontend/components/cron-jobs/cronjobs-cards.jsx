@@ -9,10 +9,7 @@ import {
   CronjobSchedule,
 } from "@/components/cron-jobs/cronjobs-table";
 
-/**
- * Cron jobs on a narrow screen. The command gets the wide line under the
- * name; everything else, including the switch, is a labelled pair.
- */
+// Narrow-screen layout: the command gets the wide line under the name.
 export function CronjobsCards({
   runAs,
   prevPage = null,

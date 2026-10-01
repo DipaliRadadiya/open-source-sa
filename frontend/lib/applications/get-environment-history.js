@@ -1,10 +1,7 @@
 import { read } from "@/lib/api/read";
 import { envHistoryResponseSchema } from "@/lib/schemas/environment";
 
-/**
- * Who changed this application's `.env`, newest first. A failure is returned
- * as such, never as an empty history.
- */
+// A failure is returned as such, never as an empty history.
 export async function getEnvironmentHistory(id) {
   const result = await read(`/applications/${id}/environment/history`, envHistoryResponseSchema);
 

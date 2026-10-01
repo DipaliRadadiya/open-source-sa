@@ -1,10 +1,7 @@
 import { read } from "@/lib/api/read";
 import { servicesResponseSchema } from "@/lib/schemas/service";
 
-/**
- * GET /api/services: installed units with their live systemctl status.
- * A failed request must not read as "no services installed".
- */
+// A failed request must not read as "no services installed".
 export async function getServices() {
   const result = await read("/services", servicesResponseSchema);
 

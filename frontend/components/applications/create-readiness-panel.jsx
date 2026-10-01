@@ -4,11 +4,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-/**
- * The readiness checklist beside (lg+) or under the create form. Uses a
- * container query, not a breakpoint: the card is narrow at wide viewports and
- * wide at narrow ones, so the list flows into columns by its own width.
- */
+// Container query, not a breakpoint: the card is narrow at wide viewports and wide at narrow ones.
 export function CreateReadinessPanel({ items = [], onSelectItem }) {
   const t = useTranslations("applications");
   const done = items.filter((item) => item.ready).length;

@@ -1,10 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-/**
- * KPI stat card for the dashboard. Server-rendered: `icon` is a Lucide component
- * (fine in RSC), `value` should already be formatted.
- */
+// Server-rendered: `value` should already be formatted.
 export function StatCard({ icon: Icon, title, value, hint, className }) {
   return (
     <Card className={cn("gap-0", className)}>

@@ -7,10 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 const WARN_DAYS = 14;
 const URGENT_DAYS = 3;
 
-/**
- * Whether this account's token still works. `unknown` means the provider did
- * not answer and must never be shown as an error.
- */
+// `unknown` means the provider did not answer; never show it as an error.
 export function AccountHealth({ status, loading }) {
   const t = useTranslations("git.health");
 

@@ -1,11 +1,7 @@
 import { z } from "zod";
 import { listMetaSchema } from "./list.js";
 
-/**
- * A site's `.env` in three shapes: `raw` (the file text, the only field with
- * secret values, shown in the editor), parsed `variables` (secrets `null`),
- * and `checks`. The `requires_*` flags let Save name what it will actually do.
- */
+// Only `raw` carries secret values; `variables` has secrets `null`.
 export const envCheckSchema = z
   .object({
     code: z.string(),
@@ -44,11 +40,7 @@ export const environmentResponseSchema = z.object({
   environment: environmentSchema,
 });
 
-/**
- * One change to the file: who, when, which key names, and whether the replaced
- * version is still on disk. Never add a value from the file here: those are
- * secrets, and Zod stripping undeclared fields is the desired safety net.
- */
+// Never add a value from the file here: those are secrets, and Zod's stripping is the safety net.
 export const envHistoryEntrySchema = z
   .object({
     id: z.number(),
@@ -62,8 +54,7 @@ export const envHistoryEntrySchema = z
     created_at: z.string().nullish(),
     created_at_human: z.string().nullish(),
     backup: z.string().nullish(),
-    // Required, not defaulted: a default of false would silently disable every
-    // Restore button.
+    // Required, not defaulted: a default of false would silently disable every Restore button.
     restorable: z.boolean(),
   })
   .passthrough();

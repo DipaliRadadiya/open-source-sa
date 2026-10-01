@@ -1,8 +1,6 @@
 import { z } from "zod";
 
-// ---------------------------------------------------------------------------
-// Read shapes — GET /api/settings
-// ---------------------------------------------------------------------------
+// Read shapes: GET /api/settings
 
 export const generalSettingsSchema = z.object({
   timezone: z.string(),
@@ -26,22 +24,16 @@ export const swapSettingsSchema = z.object({
 
 export const securitySettingsSchema = z.object({
   port: z.number(),
-  // Any string: `sshd -T` can print values the form does not offer, and an enum
-  // would fail the whole /settings response. The old alias maps to its new name.
+  // Any string: `sshd -T` can print values the form lacks, and an enum would fail the whole response.
   permit_root_login: z
     .string()
     .transform((value) => (value === "without-password" ? "prohibit-password" : value)),
   password_authentication: z.boolean(),
-  // PUT /settings/security 422s when password auth is disabled with no key
-  // present; this lets the form warn before the confirm dialog.
+  // PUT 422s when password auth is disabled with no key; lets the form warn before the confirm.
   has_ssh_key: z.boolean().nullable().optional(),
 });
 
-/**
- * One security update the panel was asked to install. `status` and `reason`
- * are codes; this side owns the wording. `output` is null for viewers without
- * `setting,manage`, so a missing log is not evidence of nothing to show.
- */
+// `status` and `reason` are codes. `output` is null without `setting,manage`, so a missing log proves nothing.
 export const securityUpdateRunSchema = z.object({
   id: z.number(),
   // "running" | "succeeded" | "failed"
@@ -67,8 +59,7 @@ export const updateSettingsSchema = z.object({
   security_updates_enabled: z.boolean(),
   auto_reboot: z.boolean(),
   reboot_time: z.string(),
-  // Whether an automatic reboot goes ahead while someone is logged in. The API
-  // treats an omitted field as false, so the form must always send it.
+  // The API treats an omitted field as false, so the form must always send it.
   reboot_with_users: z.boolean().optional().default(false),
   reboot_required: z.boolean().optional().default(false),
   // What is actually waiting, and whether the automation is alive.
@@ -82,22 +73,16 @@ export const updateSettingsSchema = z.object({
   unattended_last_result: z.string().nullable().optional(),
   // The log line that decided "failed", verbatim and untranslated.
   unattended_last_error: z.string().nullable().optional(),
-  // The failed run from both unattended-upgrades' and dpkg's logs. Null on
-  // success, and null for a viewer without `setting,manage`.
+  // Null on success, and for a viewer without `setting,manage`.
   unattended_last_log: z.string().nullable().optional(),
   unattended_last_log_truncated: z.boolean().optional().default(false),
-  // Whether the log could be opened at all; distinct from all fields above
-  // being null (never run).
+  // Whether the log could be opened; distinct from the fields above being null (never run).
   unattended_log_readable: z.boolean().optional().default(true),
   // The panel's own run, so an in-progress run shows before the first poll.
   security_update: securityUpdateRunSchema.nullable().optional(),
 });
 
-/**
- * A restart on a cadence, unlike the `updates` auto-reboot, which fires only
- * when a patch demands one. `timezone` is the SERVER's (cron's clock); shown,
- * never converted.
- */
+// A restart on a cadence. `timezone` is the SERVER's (cron's clock): shown, never converted.
 export const rebootScheduleSchema = z.object({
   enabled: z.boolean().optional().default(false),
   frequency: z.string().nullable().optional(),
@@ -110,19 +95,13 @@ export const rebootScheduleSchema = z.object({
   next_run_human: z.string().nullable().optional(),
 });
 
-/**
- * A pending restart (`GET /settings/reboot`), and what `POST`/`DELETE` return.
- * `at` is server time, "DD-MM-YYYY HH:mm:ss", and null when the systemd record
- * has no USEC; act on `scheduled`, not on a missing `at`.
- */
+// `at` is server time "DD-MM-YYYY HH:mm:ss", null when systemd has no USEC; act on `scheduled`.
 export const rebootStatusSchema = z.object({
   scheduled: z.boolean().default(false),
   at: z.string().nullable().optional(),
-  // Time left, measured on the server. Required so a missing field fails loudly
-  // instead of hiding the countdown; null when systemd has no USEC.
+  // Required so a missing field fails loudly; null when systemd has no USEC.
   seconds_remaining: z.number().int().nullable(),
-  // POST response only: the literal `shutdown` argument and requested delay.
-  // Explain `at`; never used to compute it.
+  // POST only; explains `at`, never used to compute it.
   when: z.string().nullable().optional(),
   delay_minutes: z.number().int().nullable().optional(),
 });
@@ -143,13 +122,10 @@ export const rebootSchedulePresetsSchema = z.object({
 export const redisSettingsSchema = z.object({
   maxmemory: z.string(),
   maxmemory_policy: z.string(),
-  /*
-   * Three states: `null` means the config could not be read, which is NOT "no
-   * password is set". Must stay nullable or the whole settings response fails.
-   */
+  // `null` means the config could not be read, NOT "no password is set".
+  // Must stay nullable or the whole settings response fails.
   has_password: z.boolean().nullable(),
-  // Only sent to a caller with `setting` manage. Null when unset, unreadable or
-  // not allowed; `has_password` tells those apart.
+  // Only for `setting` manage. Null when unset, unreadable or not allowed; `has_password` tells them apart.
   password: z.string().nullable().optional(),
   // False when the panel cannot write its own .env; disable the control.
   password_manageable: z.boolean().optional().default(true),
@@ -159,12 +135,8 @@ export const redisSettingsSchema = z.object({
   memory_used_human: z.string().nullable().optional(),
 });
 
-/**
- * Every group the API can return must be listed here, or Zod strips it and the
- * page shows an empty state with no error. Groups are detect-gated: absent
- * means "not installed", not "no values". tests/settings-schema.test.mjs checks
- * this list against the backend.
- */
+// Every group the API can return must be listed, or Zod strips it silently. Absent means "not installed".
+// tests/settings-schema.test.mjs checks this list against the backend.
 export const settingsSchema = z.object({
   general: generalSettingsSchema.optional(),
   swap: swapSettingsSchema.optional(),
@@ -192,12 +164,9 @@ export const settingsResponseSchema = z.object({
     .optional(),
 });
 
-// ---------------------------------------------------------------------------
-// Write shapes — one per PUT, mirroring the backend FormRequests
-// ---------------------------------------------------------------------------
+// Write shapes: one per PUT, mirroring the backend FormRequests
 
-// Matches the backend hostname regex: letters/digits at both ends, dots and
-// hyphens in between.
+// Matches the backend hostname regex.
 const HOSTNAME_RE = /^[a-zA-Z0-9]([a-zA-Z0-9\-.]{0,251}[a-zA-Z0-9])?$/;
 
 export const generalFormSchema = z.object({

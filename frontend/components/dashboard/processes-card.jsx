@@ -20,11 +20,7 @@ import { ProcessTable } from "@/components/dashboard/process-table";
 
 const PREVIEW_COUNT = 3;
 
-/**
- * The three heaviest processes on the page, the rest behind a button that
- * expands the SAME table in place (inline, since a side sheet was too narrow
- * for the command column).
- */
+// The full list expands in place: a side sheet was too narrow for the command column.
 function ProcessesCardInner({ data, failed, total, canManage }) {
   const t = useTranslations("serverDashboard");
   const [open, setOpen] = useState(false);

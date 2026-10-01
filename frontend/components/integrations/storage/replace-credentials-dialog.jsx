@@ -17,14 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { FormModal } from "@/components/ui/form-modal";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
-/**
- * Rotating the credentials. Fields come from the same provider declaration as
- * the create form (e.g. SFTP key vs. S3 key pair).
- *
- * Unlike the git equivalent, the API does NOT verify these before storing, so
- * the dialog says the old credentials are replaced. The test runs straight
- * after, so a bad rotation is caught in seconds.
- */
+// Unlike git, the API does NOT verify these before storing; the test runs straight after.
 export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
   const t = useTranslations("storage.replace");
   const tf = useTranslations("storage.form");
@@ -48,8 +41,7 @@ export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
 
   async function onSubmit(values) {
     try {
-      // Only what was typed: empty means "not rotating this one" (SFTP rotates
-      // the password or the key, never both).
+      // Only what was typed: empty means "not rotating this one" (SFTP rotates password or key).
       const config = Object.fromEntries(
         Object.entries(values)
           .map(([key, value]) => [key, String(value ?? "").trim()])
@@ -116,8 +108,7 @@ export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
             name={definition.name}
             render={({ field }) => (
               <FormItem>
-                {/* The form's `help.<field>` text, behind a "?" here; `t.has`
-                    skips fields without help. */}
+                {/* The form's `help.<field>` text behind a "?"; `t.has` skips fields without help. */}
                 <FormLabel
                   hint={
                     tf.has(`help.${definition.name}`)

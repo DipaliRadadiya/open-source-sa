@@ -16,10 +16,7 @@ export const DEFAULT_RANGE = 7;
 // The list is small and pre-sorted, so a plain Table rather than DataTable.
 const CATEGORY_LABELS = new Set(["training", "search", "agent", "custom"]);
 
-/**
- * Which AI bots visited, and what the current settings do to each. Placed
- * below the controls, since it is often empty.
- */
+// Which AI bots visited and what the current settings do to each.
 export async function BotTrafficCard({ appId, traffic, failed, days }) {
   const t = await getTranslations("applications.botBlocker.traffic");
   // Formats counts to match the ICU-formatted summary line.

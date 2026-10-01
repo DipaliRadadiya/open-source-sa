@@ -12,12 +12,8 @@ import "./globals.css";
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
-/*
- * Last boundary: an error in the root layout itself, typically a refresh whose
- * response is cut off mid-stream ("Connection closed.").
- * There is no translation provider here; the `errors` keys are loaded for the
- * reader's locale, and the Reload button works on its icon until they arrive.
- */
+// Root-layout errors (e.g. a refresh cut off mid-stream). No translation
+// provider here, so the `errors` keys are loaded for the reader's locale.
 function readerLocale() {
   const cookie = document.cookie.match(/(?:^|;\s*)NEXT_LOCALE=([^;]+)/)?.[1];
   if (locales.includes(cookie)) return cookie;

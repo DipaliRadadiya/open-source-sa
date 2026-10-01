@@ -1,15 +1,5 @@
-/**
- * A value-based fingerprint of one server render of the Sync page.
- *
- * Used as the panel's `key`: the panel seeds `run`, `items` and `ignores` into
- * state once (the poll owns them after), so a genuinely different server render
- * must remount it to show fresh data after `router.refresh()`.
- *
- * Compared by value, never identity: the server builds new objects on every
- * render, which would remount continuously. Items contribute their id plus the
- * fields that can change (`action`, `model_id`), rather than relying on rows
- * being immutable.
- */
+// The panel's `key`: it seeds state once, so a different render must remount it.
+// Compared by value, never identity: every render builds new objects.
 export function serverSnapshot(run, items, ignores) {
   return JSON.stringify([
     run?.id ?? null,

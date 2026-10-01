@@ -3,14 +3,7 @@ import { Database } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { engineLogo } from "@/lib/databases/engine-logo";
 
-/**
- * A database engine's logo, swapping variant with the theme.
- *
- * Both images render and CSS shows one: the theme class is set on `<html>`
- * before paint, so choosing in JS would flash on dark-mode loads. Sized by
- * height because these are wide lockups. No fixed-width slot: the engine name
- * beside it is `sr-only`, so a varying width moves no text.
- */
+// Both images render and CSS shows one: choosing in JS would flash on dark-mode loads.
 export function EngineLogo({ engine, className, size = "h-5 w-auto max-w-20" }) {
   const logo = engineLogo(engine);
 

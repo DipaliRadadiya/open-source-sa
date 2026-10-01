@@ -38,10 +38,7 @@ const CodeEditor = dynamic(
   },
 );
 
-/**
- * View/edit one text file, on the same console surface as the .env and php.ini
- * editors. Content is fetched on every open; the list carries only metadata.
- */
+// Content is fetched on every open; the list carries only metadata.
 export function FileEditorDialog({ appId, file, canManage, open, onOpenChange }) {
   const t = useTranslations("applications.files");
   const tc = useTranslations("common");
@@ -66,13 +63,8 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
 
-  /*
-   * After a restore, re-read the file: the endpoint answers only `{restored: true}`,
-   * and keeping the old text would let the next Save overwrite the restore. The
-   * backup list also changes (the restore makes one).
-   *
-   * If the re-read fails the editor closes, since its text is known to be stale.
-   */
+  // Re-read after a restore (it answers only `{restored: true}`), or the next Save
+  // overwrites it. If the re-read fails the editor closes.
   async function reloadAfterRestore() {
     setLoading(true);
     setSaveError(null);
@@ -126,12 +118,8 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
     return () => {
       active = false;
     };
-    // `appId` is listed because the effect reads it; it never changes while
-    // `file.path` holds today, but if it did, one site's file would load into
-    // another's editor.
-    //
-    // `t`, `onOpenChange` and the setters stay out: they are only read on failure,
-    // and re-running on a new translator identity would abort the in-flight request.
+    // `t`, `onOpenChange` and setters stay out: a new translator identity would abort
+    // the in-flight request.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appId, file.path, tooLarge]);
 
@@ -175,12 +163,8 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      {/* Sized to the viewport; `minmax(0,1fr)` lets the middle row shrink so the editor
-          scrolls internally instead of pushing the footer off screen.
-          
-          Cmd/Ctrl+S is handled on the dialog, not as a CodeMirror keybinding: keydown
-          bubbles out of the editor, so the shortcut works from the footer too.
-          preventDefault even for read-only viewers, or the browser's "save page" opens. */}
+      {/* `minmax(0,1fr)` lets the editor scroll instead of pushing the footer off screen.
+          Cmd/Ctrl+S is on the dialog; preventDefault even read-only, or "save page" opens. */}
       <DialogContent
         className="grid-rows-[auto_minmax(0,1fr)_auto] h-[85vh] sm:max-w-6xl"
         // Focus returns to the file's row without the ring: after typing in the editor

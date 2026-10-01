@@ -10,10 +10,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-/**
- * The entry exactly as the API returned it, nothing selected out or renamed,
- * so any field is still findable. Collapsed by default.
- */
+// The entry exactly as the API returned it, so any field is still findable.
 function RawEntry({ entry }) {
   const t = useTranslations("errorLogs");
   const json = JSON.stringify(entry, null, 2);
@@ -42,20 +39,14 @@ function RawEntry({ entry }) {
   );
 }
 
-/**
- * 503 means the panel refused work because something is already running (a
- * queue, a lock), unlike a 500; colour them differently.
- */
+// 503 means the panel refused work because something is already running, unlike a 500.
 function statusMeta(status) {
   return status === 503
     ? { Icon: TriangleAlert, tint: "text-warning", chip: "bg-warning/10", pill: "warning" }
     : { Icon: CircleX, tint: "text-destructive", chip: "bg-destructive/10", pill: "destructive" };
 }
 
-/**
- * One kind of failure, with every occurrence folded inside. `now` comes from
- * the server render so relative times match on hydration.
- */
+// `now` comes from the server render so relative times match on hydration.
 export function ErrorGroupRow({ group, now }) {
   const t = useTranslations("errorLogs");
   const format = useFormatter();
@@ -148,9 +139,7 @@ export function ErrorGroupRow({ group, now }) {
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {t("everyOccurrence")}
           </p>
-          {/* Capped with its own scroll so one busy group does not push the
-              others off screen. 30rem fits one occurrence with its raw payload
-              open and stays under half a laptop viewport. */}
+          {/* Own scroll so one busy group does not push the others off screen. */}
           <ul className="max-h-[30rem] space-y-1.5 overflow-y-auto pr-1">
             {group.occurrences.map((entry, index) => (
               <li

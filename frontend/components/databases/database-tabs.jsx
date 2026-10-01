@@ -6,13 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollFade } from "@/components/ui/scroll-fade";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-/**
- * One database's sections, as tabs with counts in the labels.
- *
- * The open tab is written to the URL with `replaceState` rather than a route
- * change: the sections are already loaded, and Back should return to the list
- * rather than step through tabs.
- */
+// `replaceState`, not a route change: sections are loaded, and Back should return to the list.
 const VALUES = ["users", "tables", "exports"];
 // Old tab values still appear in saved links.
 const LEGACY = { backups: "exports" };

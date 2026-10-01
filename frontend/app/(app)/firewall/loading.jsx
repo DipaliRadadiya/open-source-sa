@@ -1,10 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableSkeleton } from "@/components/data-table/table-skeleton";
 
-/**
- * Status banner, quick-add row, then the rules table, in the page's order. The
- * banner has a fixed height because it is always present.
- */
+// Status banner, quick-add row, rules table, in the page's order.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

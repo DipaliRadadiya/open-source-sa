@@ -29,11 +29,7 @@ function groupSources(sources) {
     .filter((g) => g.items.length > 0);
 }
 
-/**
- * Source picker. Unreadable sources stay listed but inert, each saying why.
- * Below `lg` the rail becomes a single select so the log is not pushed a
- * screen down on a phone.
- */
+// Unreadable sources stay listed but inert. Below `lg` the rail becomes a select.
 export function LogSourceList({ sources, selected, onSelect, now }) {
   const t = useTranslations("logs");
   const format = useFormatter();
@@ -57,8 +53,7 @@ export function LogSourceList({ sources, selected, onSelect, now }) {
                 <SelectLabel className="text-[12px] font-semibold uppercase tracking-wider text-foreground/75">
                   {t.has(`groups.${group}`) ? t(`groups.${group}`) : group}
                 </SelectLabel>
-                {/* Block-level wrapper, one locked item per row; the reason is
-                    written on the item so it shows without hover or tap. */}
+                {/* The reason is written on the item so it shows without hover or tap. */}
                 {items.map((source) => (
                   <ReasonTooltip
                     key={source.key}
@@ -92,8 +87,7 @@ export function LogSourceList({ sources, selected, onSelect, now }) {
         {groups.map(({ group, items }) => {
           const meta = GROUP_META[group] ?? FALLBACK_GROUP;
           const Icon = meta.icon;
-          // A hairline per group (divide-y on the parent) keeps the quiet
-          // headings findable.
+          // A hairline per group keeps the quiet headings findable.
           return (
             <section key={group} className="space-y-1 py-3 first:pt-0 last:pb-0">
               <h3 className="flex items-center gap-2 px-2.5 text-[12px] font-semibold uppercase tracking-wider text-foreground/75">
@@ -183,8 +177,7 @@ function SourceButton({ source, selected, onSelect, size, modified, active, form
     );
   }
 
-  // A disabled control swallows pointer events, so the tooltip hangs off a
-  // focusable wrapper.
+  // A disabled control swallows pointer events, so the tooltip hangs off a focusable wrapper.
   return (
     <Tooltip>
       <TooltipTrigger asChild>

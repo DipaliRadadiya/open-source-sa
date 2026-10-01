@@ -10,19 +10,14 @@ import { IconTooltip } from "@/components/ui/icon-tooltip";
 const MAX_ITEMS = 50;
 const MAX_LENGTH = 255;
 
-// A term this short matches inside ordinary words (".conf" also blocks
-// confirm.min.js). Warned, not blocked. The bound must cover "conf" itself,
-// the example the warning cites.
+// A term this short matches inside ordinary words (".conf" blocks confirm.min.js).
+// Warned, not blocked. Must cover "conf", the example the warning cites.
 const SHORT_TERM_LENGTH = 6;
 
 // Rows shown before the list becomes its own scroll region.
 const VISIBLE_ROWS = 8;
 
-/**
- * A bounded list of plain words: exceptions to skip, or extra terms to block.
- * One entry per row rather than wrapping chips, so remove buttons line up. The
- * API does a plain substring match, so nothing here is a regex.
- */
+// The API does a plain substring match, so nothing here is a regex.
 export function RuleList({ items, onChange, disabled, placeholder, emptyText, warnShort = false, minLength = 1 }) {
   const t = useTranslations("applications.firewall");
   const [draft, setDraft] = useState("");

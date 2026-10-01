@@ -1,6 +1,4 @@
-// Extensions neither the image preview nor the text editor can render.
-// By extension because the listing only has a filename; the server still
-// refuses non-text files that slip through.
+// By extension (the listing only has a filename); the server still refuses non-text files.
 const UNOPENABLE = new Set([
   // archives (.tar.gz reads as "gz")
   "zip", "tar", "gz", "tgz", "bz2", "tbz", "xz", "zst", "rar", "7z", "lz", "lzma",
@@ -27,10 +25,7 @@ function extensionOf(name) {
   return (i === -1 ? base : base.slice(i + 1)).toLowerCase();
 }
 
-/**
- * Whether the name should be a link. Unopenable files render as plain text;
- * download and extract stay in the row menu.
- */
+// Unopenable files render as plain text; download and extract stay in the row menu.
 export function canOpenFile(name) {
   return !UNOPENABLE.has(extensionOf(name));
 }

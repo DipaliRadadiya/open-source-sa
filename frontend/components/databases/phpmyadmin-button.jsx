@@ -20,35 +20,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-/**
- * Open this database in phpMyAdmin, already logged in.
- *
- * The returned URL's token lives 60 seconds and is single-use, so the browser
- * is sent straight there (see lib/browser/new-tab.js), never rendered as a link.
- *
- * Hidden for engines phpMyAdmin cannot speak (MongoDB, PostgreSQL). The test is
- * the DRIVER, matching the endpoint's own guard, so new engines need no change.
- */
+// The token lives 60s and is single-use, so the browser goes straight there, never a link.
+// Hidden by DRIVER, matching the endpoint's guard, so new engines need no change.
 export function PhpmyadminButton({
   database,
   canManage,
   compact = false,
-  /*
-   * Every active phpMyAdmin site on this server, or null when the lookup failed
-   * (NOT "none", and must not change what the button offers). A list, so the
-   * button can offer a choice before the click.
-   */
+  // Null when the lookup failed (NOT "none"); must not change what the button offers.
   sites = null,
 }) {
   const t = useTranslations("databases.phpmyadmin");
   const [opening, setOpening] = useState(false);
   const installed = sites === null ? null : sites.length > 0;
 
-  /*
-   * The refusals knowable in advance, from the SSO endpoint's guards: no active
-   * phpMyAdmin site, and no user to sign in as. Others surface as the toast.
-   * The pure decision lives in lib/databases/phpmyadmin-state.js.
-   */
+  // Refusals knowable in advance (no site, no user); others surface as the toast.
   const state = phpmyadminState({
     engine: database.engine,
     driver: database.driver,
@@ -86,10 +71,7 @@ export function PhpmyadminButton({
   }
 
   async function open(applicationId) {
-    /*
-     * No tab until the login URL exists, then straight onto it; the button
-     * shows the wait. No fallback toast: see lib/browser/new-tab.js.
-     */
+    // No tab until the login URL exists. No fallback toast: see lib/browser/new-tab.js.
     setOpening(true);
     try {
       const { data } = await phpmyadminSso(database.id, undefined, applicationId);
@@ -116,10 +98,7 @@ export function PhpmyadminButton({
   // database page, and a tooltip needs hover.
   const label = opening ? t("signingShort") : compact ? "phpMyAdmin" : t("open");
 
-  /*
-   * More than one installation: a menu asks which, instead of opening the
-   * lowest id. `onSelect` is the click the new tab rides on.
-   */
+  // Several installations: ask which. `onSelect` is the click the new tab rides on.
   if (sites !== null && sites.length > 1) {
     return (
       <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>

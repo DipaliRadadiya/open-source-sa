@@ -1,11 +1,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { describeMode } from "@/lib/files/describe-mode";
 
-/**
- * "Owner: read and write. Everyone else: read."
- * Shared by the permission picker and the whole-site reset. Returns null for a
- * mode it cannot parse, so callers render nothing rather than a half-sentence.
- */
+// "Owner: read and write. Everyone else: read." Null for an unparseable mode.
 export function useModeSentence() {
   const t = useTranslations("applications.files");
   const locale = useLocale();

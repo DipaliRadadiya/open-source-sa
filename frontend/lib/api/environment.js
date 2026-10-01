@@ -1,9 +1,7 @@
 import { api } from "@/lib/api/client";
 import { envHistoryResponseSchema } from "@/lib/schemas/environment";
 
-// Writes the whole file. `restart` is sent when `requires_restart`. The response
-// carries the refreshed environment plus `applied`/`restarted`; a 422 on
-// errors.raw carries syntax errors verbatim.
+// A 422 on errors.raw carries syntax errors verbatim.
 export async function saveEnvironment(appId, { raw, restart = false }) {
   const res = await api.put(`/applications/${appId}/environment`, {
     raw,

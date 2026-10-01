@@ -29,12 +29,8 @@ function ReportPending() {
   return null;
 }
 
-/**
- * `next/link` that tells the top bar when it is waiting. Most links use
- * `prefetch={false}` (each prefetch is a full server render against the rate
- * budget), so a click waits before `loading.jsx` shows. `useLinkStatus` is only
- * readable inside a Link, hence the reporter.
- */
+// Tells the top bar a click is waiting: without prefetch, it waits before
+// `loading.jsx` shows. `useLinkStatus` is only readable inside a Link.
 export default function AppLink({ children, ...props }) {
   return (
     <NextLink {...props}>

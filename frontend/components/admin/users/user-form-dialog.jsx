@@ -73,9 +73,8 @@ export function UserFormDialog({
         role_ids: (user.roles ?? []).map((r) => r.id),
       });
     }
-    // Keyed on the id, not the `user` object: router.refresh() replaces the list,
-    // which would re-seed the form and discard typing. `form` is stable and
-    // `isEdit` cannot change without the id.
+    // Keyed on the id, not `user`: router.refresh() replaces the list and
+    // would re-seed the form, discarding typing.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, user?.id]);
 

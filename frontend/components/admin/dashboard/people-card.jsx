@@ -3,10 +3,7 @@ import { getTranslations, getFormatter } from "next-intl/server";
 import { ArrowRight, ShieldCheck, UserRoundCog, Users } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
-/**
- * Who can get in, and with what. The administrator count leads, since it is
- * the security-relevant figure; the total user count is context.
- */
+// The administrator count leads: it is the security-relevant figure.
 export async function PeopleCard({ users, roles, impersonation }) {
   const [t, format] = await Promise.all([getTranslations("admin.people"), getFormatter()]);
   const num = (n) => format.number(n ?? 0);

@@ -2,14 +2,7 @@ import { useTranslations } from "next-intl";
 import { ExternalLink } from "lucide-react";
 import { releaseNotesText } from "@/lib/admin/release-notes-text";
 
-/**
- * What changed, in the card's closing band. Not behind a fold: the body is
- * usually one line (`**Full Changelog**: <url>`).
- *
- * Rendered as text, not markdown: there is no sanitizer and the release body is
- * remote content. `break-words` stops the long changelog URL forcing a
- * horizontal scroll on phones.
- */
+// Plain text, not markdown: the release body is remote and there is no sanitizer.
 export function ReleaseNotes({ notes: raw, url }) {
   const t = useTranslations("panelUpdate");
   // Markdown markers stripped, since the body is rendered as plain text.

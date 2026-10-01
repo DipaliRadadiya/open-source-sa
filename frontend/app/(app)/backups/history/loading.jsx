@@ -1,10 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableSkeleton } from "@/components/data-table/table-skeleton";
 
-/**
- * Own skeleton: the section skeleton draws the Overview tab's shape. Heading
- * and tabs are omitted because the layout keeps them on screen.
- */
+// Own skeleton: the section skeleton draws the Overview tab; the layout keeps heading and tabs.
 export default function Loading() {
   return (
     <div className="space-y-4" aria-busy="true">

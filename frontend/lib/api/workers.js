@@ -23,10 +23,7 @@ export function runWorkerAction(appId, workerId, action) {
   return api.post(`/applications/${appId}/workers/${workerId}/${action}`);
 }
 
-/**
- * Install supervisord, which every worker runs under. 202 and queued.
- * `POST /workers` triggers the same install when supervisord is missing.
- */
+// 202, queued. `POST /workers` triggers the same install when supervisord is missing.
 export function installSupervisor(appId) {
   return api.post(`/applications/${appId}/workers/install-supervisor`);
 }

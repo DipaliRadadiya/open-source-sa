@@ -100,9 +100,7 @@ function DialogFooter({
   return (
     <div
       data-slot="dialog-footer"
-      /* min-w-0 + flex-wrap: as a grid item the footer would otherwise grow
-         the dialog to fit long button labels. A right-aligned wrapping row at
-         every width, matching AlertDialogFooter and FormModal. */
+      /* min-w-0 + flex-wrap: as a grid item the footer would grow the dialog to fit long labels. */
       className={cn(
         "-mx-4 -mb-4 flex min-w-0 flex-wrap items-center justify-end gap-2 rounded-b-xl border-t bg-muted/50 p-4",
         className
@@ -125,8 +123,7 @@ function DialogTitle({
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      // min-w-0 + wrap-anywhere: long user-supplied names must not widen the
-      // dialog. Not break-words, which does not reduce min-content width.
+      // wrap-anywhere, not break-words (which keeps min-content width): long names must not widen the dialog.
       className={cn("min-w-0 font-heading text-base leading-none font-medium wrap-anywhere", className)}
       {...props} />
   );

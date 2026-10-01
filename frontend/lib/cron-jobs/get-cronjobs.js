@@ -21,11 +21,7 @@ const failedWith = (result) => ({
   debug: result.debug,
 });
 
-/**
- * GET /api/cronjobs, paginated. Maps the URL's `user`/`active` params onto the
- * backend's `filter[...]` shape. `user` is either a system-user id (numeric) or
- * a bare OS username, which are different filters server-side.
- */
+// `user` is a system-user id (numeric) or a bare OS username: different filters server-side.
 export async function getCronjobs(searchParams = {}) {
   const perPage = PER_PAGE_OPTIONS.includes(Number(searchParams.per_page))
     ? Number(searchParams.per_page)

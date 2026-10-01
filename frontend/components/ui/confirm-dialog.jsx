@@ -12,9 +12,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-// Shared confirmation dialog with the panel's icon-circle header. `tone` sets
-// the chip tint and default confirm variant; `children` is an optional body
-// (e.g. a type-to-confirm input).
 const TONE_CHIP = {
   destructive: "bg-destructive/10 text-destructive",
   warning: "bg-warning/15 text-warning",
@@ -35,10 +32,7 @@ export function ConfirmDialog({
   confirmDisabled = false,
   pending = false,
   onConfirm,
-  /*
-   * Shown inside the dialog. Callers stay open on failure so the user can
-   * retry; without this a failure looks like a stuck dialog.
-   */
+  // Callers stay open on failure so the user can retry; without this it looks stuck.
   error = null,
   className,
   onCloseAutoFocus,
@@ -49,10 +43,7 @@ export function ConfirmDialog({
     onOpenChange?.(next);
   }
 
-  /*
-   * Ignore confirm clicks in the first 400 ms: the second click of a
-   * double-click on the opener can land on the confirm button.
-   */
+  // Ignore confirm clicks in the first 400 ms: the opener's double-click can land on confirm.
   const openedAt = useRef(0);
   useEffect(() => {
     if (open) openedAt.current = Date.now();

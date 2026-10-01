@@ -1,7 +1,4 @@
-/**
- * Password requirements. The server publishes the policy on `GET /basic-info`;
- * these defaults (the shipped policy) apply only when it cannot be read.
- */
+// The shipped policy, used only when `GET /basic-info` cannot be read.
 export const DEFAULT_PASSWORD_POLICY = {
   min_length: 10,
   requires_mixed_case: true,
@@ -11,10 +8,7 @@ export const DEFAULT_PASSWORD_POLICY = {
 
 const SYMBOL = /[^A-Za-z0-9]/;
 
-/**
- * The rules the policy enables, and whether `value` satisfies each. Upper and
- * lower case are one rule.
- */
+// Upper and lower case are one rule.
 export function passwordRules(value, policy = DEFAULT_PASSWORD_POLICY) {
   const password = typeof value === "string" ? value : "";
   const active = { ...DEFAULT_PASSWORD_POLICY, ...(policy ?? {}) };

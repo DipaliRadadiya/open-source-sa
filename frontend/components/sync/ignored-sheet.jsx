@@ -12,11 +12,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-/**
- * Everything previously dismissed, and the way back. An ignore is permanent
- * and silent (the item disappears from every later scan), so this is the only
- * place that state is visible.
- */
+// Ignores are permanent and silent, so this is the only place that state is visible.
 export function IgnoredSheet({ ignores, canManage, pendingKeys = [], onUnignore }) {
   const t = useTranslations("sync");
 

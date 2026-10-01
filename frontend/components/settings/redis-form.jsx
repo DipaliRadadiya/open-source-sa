@@ -35,10 +35,8 @@ import {
 } from "@/components/settings/setting-row";
 
 export function RedisForm({ redis, canManage, changedBy }) {
-  // Changing the password also rewrites the panel's own REDIS_PASSWORD, so an
-  // install that cannot write its .env cannot do this at all.
-  // `has_password === null` means the stored credential does not connect; the
-  // API answers 422 to a password change in that state.
+  // A password change also rewrites the panel's own REDIS_PASSWORD, so it needs a writable .env.
+  // `has_password === null`: the stored credential does not connect, and the API 422s a change.
   const passwordUnreadable = redis?.has_password === null;
   const passwordLocked =
     !canManage || redis?.password_manageable === false || passwordUnreadable;
@@ -48,9 +46,7 @@ export function RedisForm({ redis, canManage, changedBy }) {
   const { refreshAndWait } = useRefresh();
   const [removing, setRemoving] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState(false);
-  // A password change is in flight (HTTP 202). Nothing reports when it lands
-  // (`has_password` is already true), so this says what was submitted and
-  // offers a re-read, never claiming a result.
+  // Nothing reports when a 202 password change lands, so this never claims a result.
   const [applying, setApplying] = useState(false);
   // Swapped in only when replacing the password; normally the row shows the stored credential.
   const [changing, setChanging] = useState(false);
@@ -63,9 +59,7 @@ export function RedisForm({ redis, canManage, changedBy }) {
     return () => clearTimeout(timer);
   }, [applying, router]);
 
-  // Show the stored value unless the reader has asked to replace it. Falls
-  // through to the input when there is nothing stored to show — a server with
-  // no password, or a caller the API will not give it to.
+  // Falls through to the input when there is no stored value or the API withholds it.
   const showStored = Boolean(redis?.password) && !changing;
 
   const defaults = {

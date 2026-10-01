@@ -6,11 +6,7 @@ import { useBranding } from "@/components/branding-provider";
 import { ProviderLogo } from "@/components/integrations/git/provider-logo";
 import { ConnectForm } from "@/components/integrations/git/connect-form";
 
-/**
- * Connects an account in two steps: pick a provider, then fill its form.
- * The form mounts fresh per provider so its generated Zod schema never
- * changes under a half-filled form.
- */
+// The form mounts fresh per provider so its generated Zod schema never changes under a half-filled form.
 export function ConnectDialog({
   providers,
   open,

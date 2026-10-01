@@ -20,10 +20,7 @@ export const fileEntrySchema = z.object({
   link_broken: z.boolean().nullish(),
 });
 
-/**
- * Bytes by file type for one directory. `available: false` (the walk could not
- * finish) is not the same as empty `categories` (no files); render them differently.
- */
+// `available: false` (the walk could not finish) differs from empty `categories`.
 export const breakdownSchema = z.object({
   available: z.boolean(),
   truncated: z.boolean().default(false),
@@ -54,10 +51,8 @@ export const filesResponseSchema = z.object({
   hidden_count: z.number().int(),
 });
 
-// One entry per deleted path, newest first. `batch` is the timestamped folder
-// one delete produced (`YYYYMMDD-HHMMSS`); `path` is where it came from and
-// where it is restored to. `size` is a `du` footprint, nullish because one
-// unmeasurable entry must not blank the rest.
+// `batch` is the delete's folder (`YYYYMMDD-HHMMSS`). `size` is nullish so one
+// unmeasurable entry does not blank the rest.
 export const trashEntrySchema = z.object({
   batch: z.string(),
   path: z.string(),

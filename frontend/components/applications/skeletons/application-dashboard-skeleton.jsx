@@ -1,10 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/**
- * Must match the current dashboard layout to avoid a jump on load: the
- * attention strip, then two equal columns by two rows. Heights are per row
- * because the real grid stretches each row to its tallest card.
- */
+// Must match the dashboard layout. Heights are per row: the real grid stretches each row.
 export function ApplicationDashboardSkeleton() {
   return (
     <div className="space-y-4" aria-busy="true">

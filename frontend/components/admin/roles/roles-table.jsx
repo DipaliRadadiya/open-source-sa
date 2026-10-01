@@ -19,8 +19,7 @@ import { RolesCards } from "@/components/admin/roles/roles-cards";
 import { grantedCount } from "@/lib/roles/granted-count";
 
 /* Cells at module level: flexRender treats a cell function's identity as the
- * component type, and this table re-renders on every search keystroke, which
- * would remount the row actions and their dialogs. */
+ * component type; inline cells would remount row dialogs on every keystroke. */
 
 function NameCell({ row }) {
   const t = useTranslations("roles");

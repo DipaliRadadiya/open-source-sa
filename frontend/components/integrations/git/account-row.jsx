@@ -26,10 +26,7 @@ import {
 import { ProviderLogo } from "@/components/integrations/git/provider-logo";
 import { AccountHealth } from "@/components/integrations/git/account-health";
 
-/**
- * One connected account. The user's label leads (it is how the account appears
- * in the app-create dropdown); the identifier comes from the provider.
- */
+// The user's label leads: it is how the account appears in the app-create dropdown.
 export function AccountRow({
   account,
   status,

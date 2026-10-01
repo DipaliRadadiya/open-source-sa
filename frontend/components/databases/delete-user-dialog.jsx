@@ -7,10 +7,7 @@ import { deleteDatabaseUser } from "@/lib/api/databases";
 import { apiMessage } from "@/lib/api/error-message";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-/**
- * Removing a user breaks whatever connects with it, so the dialog names that.
- * No type-to-confirm: the user can be recreated.
- */
+// No type-to-confirm: the user can be recreated.
 export function DeleteUserDialog({ database, user, open, onOpenChange }) {
   const t = useTranslations("databases.users");
   const tAccess = useTranslations("databases.access");

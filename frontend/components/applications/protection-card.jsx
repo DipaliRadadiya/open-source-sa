@@ -3,14 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { ChevronRight, Shield, ShieldCheck, ShieldOff } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-/**
- * What is guarding this site, from data already in the application payload.
- *
- * Status, not control: most of these cannot be switched on without real
- * choices (credentials, ban windows, the firewall PUT requires `mode` and
- * `categories`), so a toggle here could wipe settings. Each row uses icon, word
- * and colour, never colour alone.
- */
+// Status only, no toggles: enabling most of these needs real choices, and a
+// toggle could wipe settings (the firewall PUT requires `mode` and `categories`).
 export async function ProtectionCard({ application, items }) {
   const t = await getTranslations("applications.protection");
 

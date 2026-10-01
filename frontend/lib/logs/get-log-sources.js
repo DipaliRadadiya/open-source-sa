@@ -1,12 +1,7 @@
 import { read } from "@/lib/api/read";
 import { logSourcesResponseSchema } from "@/lib/schemas/log";
 
-/**
- * GET /api/logs — sources detected on this box.
- *
- * Returns `{ logs, failed }`. A failure must never render as "no logs on this
- * server", nor take down the page; it is shown where the list would be.
- */
+// A failure must never render as "no logs on this server", nor take down the page.
 export async function getLogSources() {
   const result = await read("/logs", logSourcesResponseSchema);
 

@@ -6,12 +6,8 @@ import { cn } from "@/lib/utils";
 import { useRefresh } from "@/hooks/use-refresh";
 import { Button } from "@/components/ui/button";
 
-/**
- * "This part didn't load", for a failed fetch affecting one section of the page.
- * Distinct from EmptyState: a failure must never render as an empty list.
- *
- * `status` and `failure` come from `read()` and select the explanation.
- */
+// Distinct from EmptyState: a failure must never render as an empty list.
+// `status` and `failure` come from `read()` and select the explanation.
 export function LoadFailed({ description, status = null, failure = null, message = null, debug = false }) {
   const t = useTranslations("errors");
   const { refresh, pending } = useRefresh();

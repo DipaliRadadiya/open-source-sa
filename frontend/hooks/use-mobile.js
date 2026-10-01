@@ -28,10 +28,7 @@ export function useIsMobile() {
   return useMediaQuery(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
 }
 
-/**
- * Tablet: too wide for the slide-over nav, too narrow to give 256px to an
- * expanded sidebar.
- */
+// Too wide for the slide-over nav, too narrow for a 256px expanded sidebar.
 export function useIsTablet() {
   return useMediaQuery(
     `(min-width: ${MOBILE_BREAKPOINT}px) and (max-width: ${DESKTOP_BREAKPOINT - 1}px)`,

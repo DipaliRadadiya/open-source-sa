@@ -2,14 +2,8 @@ import { serverFetch } from "@/lib/api/server-fetch";
 import { logReadResponseSchema } from "@/lib/schemas/log";
 import { failedRead } from "@/lib/logs/failed-read";
 
-/**
- * GET /api/logs/{key} — first screen of a source, rendered server-side so the
- * viewer paints with content instead of a spinner.
- *
- * 403 (exists but unreadable by the panel) and 404 (gone since the catalog was
- * built) are expected states returned as a status for the UI to explain.
- * Anything else is `status: "failed"`, shown in place of the console only.
- */
+// 403 (unreadable) and 404 (gone) are expected states for the UI to explain;
+// anything else is `status: "failed"`.
 export async function getLog(key, { lines = 200 } = {}) {
   try {
     const res = await serverFetch(`/logs/${encodeURIComponent(key)}`, {

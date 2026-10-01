@@ -13,13 +13,8 @@ import { formatBytes } from "@/lib/format/bytes";
 const POLL_ACTIVE_MS = 2000;
 const POLL_IDLE_MS = 15000;
 
-/**
- * Shows that an archive is being built: compress/extract are queued (202), and
- * the archive appears minutes later, so without this the button looks broken.
- *
- * `router.refresh()` on completion rather than inserting the row: the listing is
- * server-rendered.
- */
+// Compress/extract are queued (202), so without this the button looks broken.
+// Refreshes on completion: the listing is server-rendered.
 export function ArchiveJobsBanner({ appId }) {
   const t = useTranslations("applications.files.archiveJobs");
   const router = useRouter();

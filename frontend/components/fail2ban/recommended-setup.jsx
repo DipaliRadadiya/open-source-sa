@@ -11,11 +11,8 @@ import { settingsPayload } from "@/lib/fail2ban/settings-payload";
 import { apiMessage } from "@/lib/api/error-message";
 import { useBrowserIpSettled } from "@/components/network/browser-ip";
 
-/**
- * One-click setup: ignores the user's own IP and enables every jail in a single
- * request, so it can never leave jails on with the user still bannable.
- * Shown only while no jail is enabled.
- */
+// Ignores the user's IP and enables every jail in one request, so it can never
+// leave jails on with the user bannable.
 export function RecommendedSetup({ jails, settings, yourIp, ignoreIps = [], canManage }) {
   const t = useTranslations("fail2ban");
   const { refreshAndWait } = useRefresh();

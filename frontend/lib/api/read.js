@@ -5,39 +5,18 @@ import { getApplication } from "@/lib/applications/get-applications";
 // Anything under a site, not the site itself: `/applications/7/domains`.
 const UNDER_APPLICATION = /^\/applications\/(\d+)\/./;
 
-/**
- * Why a read failed:
- *
- * `http` — the API answered with a non-2xx status.
- * `shape` — it answered 200 with a body the schema rejected.
- * `network` — the request never completed.
- */
+// `http`: non-2xx. `shape`: 200 the schema rejected. `network`: never completed.
 export const READ_FAILURES = ["http", "shape", "network"];
 
-/**
- * Log the failure to the frontend service's journal. These reads run in Server
- * Components, so they never appear in the browser's network tab. Includes Zod's
- * message for shape failures.
- */
+// Server Component reads never appear in the browser's network tab.
 function report(path, failure, detail) {
   console.error(`[read] ${path} failed (${failure})${detail ? `: ${detail}` : ""}`);
 }
 
-/**
- * One server-side read: fetch, validate, and report failure honestly.
- *
- * `failed` says whether the answer is usable, `status` is always carried (so a
- * caller can act on 404), and `failure` names the kind (see READ_FAILURES).
- * A schema mismatch counts as `failed`, never as empty data.
- *
- * @returns {Promise<{data: unknown|null, failed: boolean, status: number|null, failure: string|null}>}
- */
+// Resolves `{ data, failed, status, failure }`; `status` is always carried.
+// A schema mismatch counts as `failed`, never as empty data.
 export async function read(path, schema, options) {
-  /*
-   * A site whose system user is missing answers 409 on every route under it.
-   * Next still renders the page under the layout's notice, so skip those reads.
-   * The site record is already in the request cache from the layout.
-   */
+  /* A site with no system user answers 409 on every route under it; the layout shows a notice. */
   const site = UNDER_APPLICATION.exec(path);
   if (site && (await getApplication(site[1])).application?.system_user === null) {
     return { data: null, failed: true, status: 409, failure: "http", message: null, debug: null };
@@ -75,11 +54,7 @@ export async function read(path, schema, options) {
   }
 }
 
-/**
- * `read` that degrades to `fallback` on failure, for independent sections that
- * should not blank each other. A separate function so discarding a failure is
- * visible at the call site.
- */
+// For independent sections that should not blank each other; separate so a discarded failure is visible.
 export async function readOr(path, schema, fallback, options) {
   const { data, failed } = await read(path, schema, options);
   return failed ? fallback : data;

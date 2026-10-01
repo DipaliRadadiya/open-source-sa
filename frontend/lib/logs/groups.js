@@ -1,9 +1,6 @@
 import { Globe, Database, Code2, Server, ShieldCheck, Cog } from "lucide-react";
 
-/**
- * Per-group identity for the source rail: a shape, not a colour. Colour in the
- * rail is reserved for state (active log, selected log).
- */
+// A shape per group, not a colour: colour in the rail is reserved for state.
 export const GROUP_META = {
   web: { icon: Globe },
   database: { icon: Database },

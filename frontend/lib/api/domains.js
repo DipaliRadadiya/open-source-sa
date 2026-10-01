@@ -22,13 +22,8 @@ export async function makePrimaryDomain(appId, domain) {
   return res.data?.domains;
 }
 
-/*
- * Changes what an attached name does (`type`, `redirect_to`, `redirect_status`),
- * not its name. Renaming is delete + add: a renamed name left in the
- * certificate lineage would make certbot fail the whole renewal.
- *
- * The primary is refused with a 422; use the `primary` endpoint instead.
- */
+// Changes `type` and redirect only. Renaming is delete + add (a renamed name breaks
+// certbot renewal). The primary is refused with a 422.
 export async function updateDomain(appId, domain, body) {
   const res = await api.put(`/applications/${appId}/domains/${seg(domain)}`, body);
   return res.data?.domain;

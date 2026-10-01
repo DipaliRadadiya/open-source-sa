@@ -30,13 +30,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 // Same threshold the Backups screen uses before reporting a stalled queue.
 const QUEUE_STALLED_MS = 3 * 60 * 1000;
 
-/**
- * Whether this site could be recovered, plus "Back up now", the one backup
- * action that needs no decisions (the rest live on the Backups screen).
- *
- * States use the Backups screen's vocabulary so the two never disagree. A
- * target that is switched off or manual backs nothing up: that is `paused`.
- */
+// States use the Backups screen's vocabulary; a switched-off or manual target is `paused`.
 export function BackupCard({
   applicationId,
   target,
@@ -53,11 +47,9 @@ export function BackupCard({
   const [queuedAfter, setQueuedAfter] = useState(null);
   const [stalled, setStalled] = useState(false);
 
-  // A run the server is writing now, including scheduled runs or ones started
-  // elsewhere.
+  // A run the server is writing now, including ones started elsewhere.
   const busy = backups.some((backup) => BACKUP_IN_FLIGHT.includes(backup.status));
-  // Before that: the POST answers 202, so the run exists only as a queued job
-  // for the first few seconds.
+  // Before that: the POST answers 202, so the run is only a queued job for a few seconds.
   const queued = isBackupQueued(backups, queuedAfter);
   const inProgress = busy || queued;
 
@@ -87,8 +79,7 @@ export function BackupCard({
     setStalled(false);
     try {
       await runBackupNow(applicationId);
-      // Remember where the list stood, so the queued state ends as soon as the
-      // worker's row appears.
+      // The queued state ends as soon as the worker's row appears.
       setQueuedAfter(newestBackupId(backups));
       await refreshAndWait();
       toast.success(t("started"));
@@ -154,8 +145,7 @@ export function BackupCard({
                 <dd className="text-right text-muted-foreground">{target.next_run_at_human}</dd>
               </div>
             ) : null}
-            {/* States the consequence, not the label; paused is called out because it
-                looks set up. */}
+            {/* States the consequence; paused is called out because it looks set up. */}
             {state !== "protected" ? (
               <div className="px-6 py-2.5 text-xs text-muted-foreground">
                 {state === "paused" ? t("pausedRisk") : t("unprotectedRisk")}
@@ -195,8 +185,7 @@ export function BackupCard({
               {starting || inProgress ? t("starting") : t("backUpNow")}
             </Button>
           ) : null}
-          {/* Primary when there is no target: setting one up is the point of the
-              card. Not offered as such on a failed read. */}
+          {/* Primary when there is no target, except on a failed read. */}
           <Button asChild variant={!failed && !target ? "default" : "outline"} size="sm">
             <Link href={href} prefetch={false}>
               {target || failed ? t("manage") : t("setUp")}

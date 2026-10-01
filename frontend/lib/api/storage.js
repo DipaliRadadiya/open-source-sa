@@ -2,10 +2,7 @@ import { api } from "@/lib/api/client";
 
 const BASE = "/integrations/storage/destinations";
 
-/**
- * The destinations, read from the browser. Lets the backup form refresh its
- * list after a destination is added in another tab, without losing input.
- */
+// Read from the browser so the backup form can refresh after a destination is added elsewhere.
 export function listDestinations() {
   return api.get(BASE);
 }
@@ -15,12 +12,7 @@ export function createDestination(payload) {
   return api.post(BASE, payload);
 }
 
-/**
- * Partial update.
- *
- * IMPORTANT: the backend treats the *presence* of `access_key`/`secret_key` as
- * "rotate these"; omit them to keep the stored credentials.
- */
+// IMPORTANT: the presence of `access_key`/`secret_key` means "rotate these"; omit them to keep the stored ones.
 export function updateDestination(id, payload) {
   return api.patch(`${BASE}/${id}`, payload);
 }
@@ -30,27 +22,17 @@ export function testDestination(id) {
   return api.post(`${BASE}/${id}/test`);
 }
 
-/**
- * Removes the panel's record. The backend does not check for backup targets
- * still pointing at this destination.
- */
+// The backend does not check for backup targets still pointing at this destination.
 export function deleteDestination(id) {
   return api.delete(`${BASE}/${id}`);
 }
 
-/**
- * Returns the Google approval URL and the redirect URI the client must have
- * registered. A URL rather than a 302, which fetch would follow and fail to parse.
- */
+// A URL rather than a 302, which fetch would follow and fail to parse.
 export function startDriveConnect(id) {
   return api.post(`${BASE}/${id}/oauth/start`);
 }
 
-/**
- * Forwards Google's OAuth code to the API from the callback page (Google's
- * redirect carries no auth token). The client secret never reaches the browser.
- * No destination id: it is sealed inside `state`.
- */
+// Google's redirect carries no auth token, so the callback page forwards the code. No id: it is sealed in `state`.
 export function completeDriveConnect({ code, state }) {
   return api.post("/integrations/storage/oauth/callback", { code, state });
 }

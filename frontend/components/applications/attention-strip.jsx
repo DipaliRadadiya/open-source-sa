@@ -25,15 +25,8 @@ function Finding({ label, action }) {
   );
 }
 
-/**
- * Everything not right about this site, in one place at the top, each with a
- * link to the screen that fixes it.
- *
- * Actions navigate rather than act: each fix needs decisions (certificate
- * type, backup destination, protection settings) the strip cannot make.
- * Amber, not red: these are risks, not breakage; red is kept for a site that
- * is actually down.
- */
+// Links rather than actions: each fix needs decisions the strip cannot make.
+// Amber, not red: red is kept for a site that is actually down.
 export async function AttentionStrip({ items }) {
   const t = await getTranslations("applications.attention");
 

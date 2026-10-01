@@ -8,12 +8,7 @@ import {
   setRateLimitedMessage,
 } from "@/lib/api/generic-error";
 
-/**
- * Hands the translated last-resort and rate-limit sentences to the plain module
- * that needs them (see `lib/api/generic-error.js`).
- * Renders nothing. Lives in the shells because every form in the panel calls the
- * reading function.
- */
+// Hands translated fallback sentences to `lib/api/generic-error.js`. Lives in the shells since every form needs them.
 export function ErrorCopy() {
   const t = useTranslations("errors");
 

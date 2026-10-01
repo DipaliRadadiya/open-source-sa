@@ -37,11 +37,7 @@ import {
 import { PermanentDeleteField } from "@/components/applications/files/permanent-delete-field";
 import { useRefresh } from "@/hooks/use-refresh";
 
-/**
- * The dialogs behind the selection bar. All four hand the per-path result back to
- * the panel, which decides what to show; none reports success itself, since a
- * toast cannot carry a list of paths.
- */
+// Each dialog hands the per-path result to the panel; a toast cannot carry a list of paths.
 export function BulkDialogs({ appId, action, paths: selectedPaths, files = [], path, onOpenChange, onResult }) {
   // Fixed at open: the list refreshes before the dialog closes, and after a move
   // the live selection is empty (`dirname(paths[0])` would crash).
@@ -51,26 +47,15 @@ export function BulkDialogs({ appId, action, paths: selectedPaths, files = [], p
   const { pending: refreshing, refreshThen } = useRefresh();
   const [running, setBusy] = useState(false);
   const busy = running || refreshing;
-  /*
-   * Compress defaults to `path` (the archive lands beside the files). Move and copy
-   * start empty with Confirm disabled: the current folder is the one destination
-   * guaranteed to fail, and no other guess is better.
-   */
+  // Move and copy start empty: the current folder is the one destination certain to fail.
   const [target, setTarget] = useState(() =>
     action === "compress" ? compressSuggestion(joinPath(path, "archive"), ".zip", new Set(files.map((f) => f.path))) : "",
   );
-  /*
-   * Seeds from the selection's actual mode, not a constant: forcing 644 onto a
-   * folder strips its execute bit and makes it unopenable. A mixed selection has no
-   * single current value, so none is claimed.
-   */
+  // Seed from the actual mode: forcing 644 onto a folder strips its execute bit.
   const chosen = selectedFiles(files, paths);
   const currentMode = sharedMode(chosen);
-  /*
-   * A mixed selection starts with NOTHING chosen and Save disabled until a mode is
-   * picked; a pre-filled fallback could apply e.g. 644 to a 600 secrets file
-   * without anyone choosing it.
-   */
+  // A mixed selection starts with nothing chosen; a pre-filled mode could apply 644 to a
+  // 600 secrets file without anyone choosing it.
   const mustChooseMode = action === "permissions" && !currentMode;
   // Only for the `d`/`-`/`l` prefix on the symbolic form. A mixed selection gets
   // the plain file prefix rather than calling a folder a file.
@@ -207,10 +192,7 @@ export function BulkDialogs({ appId, action, paths: selectedPaths, files = [], p
       }}
       icon={meta.icon}
       title={t(`bulk.${action}Title`, { count: paths.length })}
-      /*
-       * Describes what the selection is currently set to, or that it has no single
-       * value, like the per-row dialog.
-       */
+      // The current mode, or that the selection has no single value.
       description={
         isPermissions
           ? currentMode

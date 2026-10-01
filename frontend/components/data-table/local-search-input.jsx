@@ -3,10 +3,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 
-/**
- * Controlled search box for in-memory list filtering; the counterpart to
- * {@link SearchInput} (URL-driven). The parent holds `value` and filters.
- */
+// In-memory counterpart to {@link SearchInput} (URL-driven); the parent holds `value` and filters.
 export function LocalSearchInput({ value, onChange, placeholder, className }) {
   const tc = useTranslations("common");
   return (

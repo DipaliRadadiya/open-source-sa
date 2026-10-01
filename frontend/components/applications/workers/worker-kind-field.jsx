@@ -17,10 +17,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-/**
- * The worker's kind as an explicit control (templates also set it). Rendered
- * above the command, which it frames.
- */
+// The worker's kind as an explicit control; templates also set it.
 export function WorkerKindField({ form, presets = [], workers = [], disabled = false }) {
   const t = useTranslations("applications.workers");
 

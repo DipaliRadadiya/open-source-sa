@@ -15,17 +15,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-/**
- * The domain is what must be typed: it is what stops being served.
- *
- * Files and databases are separate choices, ticked by default; when unticked,
- * the dialog says what is left behind.
- *
- * `remove_files` also destroys this site's backup archives in the storage
- * destination, which is why the checkbox names them. Unticked, the backup rows
- * still cascade with the application; the archives survive but the panel can no
- * longer list or delete them. Both facts are stated.
- */
+// The domain is what must be typed: it is what stops being served.
+// `remove_files` also destroys this site's backup archives in storage. Unticked, the backup rows
+// still cascade with the application, leaving archives the panel can no longer list or delete.
 export function DeleteApplicationDialog({ application, open, onOpenChange, afterDelete, redirectTo, closeWhenGone = false }) {
   const t = useTranslations("applications.delete");
   const router = useRouter();
@@ -37,26 +29,17 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
   // Null when the user is gone; absent (undefined) when it was not loaded.
   const orphaned = application?.system_user === null;
   const [removeDatabases, setRemoveDatabases] = useState(true);
-  /*
-   * Only used to name databases on the checkbox. The delete call sends a flag,
-   * not these ids; the API resolves the list itself, so this cannot go stale.
-   */
+  // Only names databases on the checkbox; the API resolves the list itself.
   const [databases, setDatabases] = useState([]);
 
-  /*
-   * Fetched on open, not mount: the dialog is rendered per row. A failure leaves
-   * the list empty, which hides the checkbox.
-   */
+  // Fetched on open, not mount (rendered per row). A failure hides the checkbox.
   useEffect(() => {
     if (!open || !application?.id) return undefined;
 
     const controller = new AbortController();
     getDatabasesForApplication(application.id, { signal: controller.signal })
       .then(({ data }) => {
-        /*
-         * Parse the rows, not the envelope: only names are needed, and requiring
-         * `meta` would hide the checkbox if pagination changes shape.
-         */
+        // Parse the rows, not the envelope: a `meta` change must not hide the checkbox.
         const parsed = z.array(databaseSchema).safeParse(data?.databases);
         setDatabases(parsed.success ? parsed.data : []);
       })
@@ -105,10 +88,7 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
         removeDatabases: databases.length > 0 && removeDatabases,
       });
 
-      /*
-       * A 200 can still carry database failures. The site is gone, so not an error,
-       * but a warning names what is left and links to finish it.
-       */
+      // A 200 can still carry database failures: warn, naming what is left.
       const failed = data?.databases?.failed ?? [];
       const say = () => {
         if (failed.length) {
@@ -123,10 +103,7 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
       if (afterDelete) await afterDelete();
       finish(say);
     } catch (error) {
-      /*
-       * 404: already deleted (another tab or user). Treated as done with an
-       * explanatory message, and the list is refreshed so the row leaves.
-       */
+      // 404: already deleted elsewhere; treat as done and refresh so the row leaves.
       if (error?.response?.status === 404) {
         if (afterDelete) await afterDelete();
         finish(() => toast.info(t("alreadyGone", { name: application.name })));
@@ -175,8 +152,7 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
       onConfirm={onConfirm}
     >
       <div className="space-y-4">
-        {/* No system user means no home directory: the API skips the files, so no
-            choice is offered. */}
+        {/* No system user, no home directory: the API skips files, so no choice is offered. */}
         {orphaned ? (
           <p className="rounded-lg border bg-muted/40 p-3 text-xs leading-5 text-muted-foreground">
             {t("filesKept")}
@@ -225,8 +201,7 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
           </div>
         ) : null}
 
-        {/* The generated Linux account is not removed: the API accepts only
-            `remove_files` and `remove_databases`. Say so rather than stay silent. */}
+        {/* The API cannot remove the Linux account; say so rather than stay silent. */}
         {application?.system_user?.username ? (
           <p className="text-xs leading-5 text-muted-foreground">
             {t("systemUserStays", { username: application.system_user.username })}
@@ -234,8 +209,7 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
         ) : null}
 
         <div className="space-y-2">
-          {/* `Label` is display:flex; `block` keeps the sentence flowing as text. One
-              key so word order can differ by language. */}
+          {/* `block` keeps the sentence flowing (Label is flex); one key so word order can vary. */}
           <div className="flex items-start justify-between gap-2">
             <Label
               htmlFor="delete-app-confirm"

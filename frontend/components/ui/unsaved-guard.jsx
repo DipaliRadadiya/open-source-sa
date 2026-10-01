@@ -14,17 +14,13 @@ import { TriangleAlert } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { trackPush } from "@/lib/browser/navigation-pending";
 
-/**
- * Tracks unsaved edits across independently saving cards. Shell navigation
- * and session actions ask this provider before leaving.
- */
+// Shell navigation and session actions ask this provider before leaving.
 const UnsavedContext = createContext(null);
 
 export function UnsavedProvider({ children }) {
   const router = useRouter();
   const t = useTranslations("common");
-  // A set of ids rather than a boolean: two cards can be dirty at once, and one
-  // of them saving must not clear the warning for the other.
+  // A set, not a boolean: one card saving must not clear another's warning.
   const [dirty, setDirty] = useState(() => new Set());
   // One panel-wide confirmation dialog.
   const [pendingAction, setPendingAction] = useState(null);
@@ -41,10 +37,7 @@ export function UnsavedProvider({ children }) {
 
   const hasUnsaved = dirty.size > 0;
 
-  /**
-   * Hold an action until the reader confirms that unsaved changes can be lost.
-   * Returns true only when the caller must prevent its normal click/select.
-   */
+  /** Returns true only when the caller must prevent its normal click/select. */
   const guardAction = useCallback(
     (action) => {
       if (!hasUnsaved) return false;
@@ -74,8 +67,7 @@ export function UnsavedProvider({ children }) {
     if (!value.hasUnsaved) return;
     const onBeforeUnload = (event) => {
       event.preventDefault();
-      // Chrome ignores the string and shows its own wording, but still needs
-      // returnValue set for the prompt to appear at all.
+      // Chrome ignores the string but still needs returnValue set for the prompt.
       event.returnValue = "";
     };
     window.addEventListener("beforeunload", onBeforeUnload);

@@ -1,12 +1,5 @@
-/**
- * The file manager's storage breakdown donut: which kinds of file use the space.
- *
- * At most six slices: the five categorical tokens in fixed order, then one
- * "Other" in the muted token for the tail. Never generate extra hues.
- *
- * Exact numbers live in the legend: two token hues are under 3:1 contrast on
- * the light surface, and a canvas is opaque to screen readers.
- */
+// At most six slices: five categorical tokens in fixed order, then a muted "Other". Exact numbers
+// live in the legend (two hues are under 3:1 contrast, and a canvas is opaque to screen readers).
 
 /** In fixed order, never cycled. A ninth series is not a ninth colour. */
 export const SERIES_TOKENS = ["chart-1", "chart-2", "chart-3", "chart-4", "chart-5"];
@@ -16,10 +9,7 @@ export const OTHER_TOKEN = "muted-foreground";
 
 export const MAX_SLICES = SERIES_TOKENS.length + 1;
 
-/**
- * Fold a category list down to MAX_SLICES. The tail is also returned
- * separately so the legend can still list every category.
- */
+// The tail is also returned so the legend can still list every category.
 export function foldCategories(categories) {
   const list = Array.isArray(categories) ? categories.filter(Boolean) : [];
 
@@ -44,10 +34,7 @@ export function foldCategories(categories) {
   };
 }
 
-/**
- * The ECharts option. `tokens` come from useChartTokens, already converted to
- * sRGB because ECharts cannot parse `oklch()`.
- */
+// `tokens` come from useChartTokens, already sRGB: ECharts cannot parse `oklch()`.
 export function breakdownOption({ slices, tokens = {}, label }) {
   const muted = tokens[OTHER_TOKEN] ?? "#888";
 

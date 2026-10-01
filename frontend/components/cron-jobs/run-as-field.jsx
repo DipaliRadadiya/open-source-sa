@@ -18,10 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-/**
- * "Runs as" for both dialogs: a panel system user, or any OS account typed by
- * name. Shared so the create and edit forms can't drift apart.
- */
+// Shared so the create and edit forms cannot drift apart.
 export function RunAsField({ form, systemUsers = [], systemUsersFailed = false }) {
   const t = useTranslations("cronJobs");
   // useWatch, not form.watch: the latter returns a fresh function each render,

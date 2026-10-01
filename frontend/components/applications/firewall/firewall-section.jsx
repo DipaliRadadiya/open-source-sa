@@ -40,11 +40,7 @@ function sameList(a, b) {
   return a.length === b.length && a.every((value, index) => value === b[index]);
 }
 
-/**
- * The 8G Firewall for one site. Six independently switchable categories, so
- * fixing one false positive does not mean disabling all protection.
- * Everything saves in one call: the API is a single atomic PUT.
- */
+// Saves everything in one call: the API is a single atomic PUT.
 export function FirewallSection({ appId, application, categories: catalog, modes, canManage, detectCount = 0, detectFailed = false }) {
   const t = useTranslations("applications.firewall");
   const { refreshAndWait } = useRefresh();
@@ -75,16 +71,13 @@ export function FirewallSection({ appId, application, categories: catalog, modes
     !sameList(exceptions, saved.exceptions) ||
     !sameList(blocks, saved.blocks);
 
-  // A sidebar click is a client-side route change; without this the edit
-  // vanishes with no warning. See components/ui/unsaved-guard.jsx.
+  // Without this a sidebar click discards the edit with no warning.
   useWatchUnsaved("app-firewall", isDirty);
 
   const saveReason = !canManage ? t("noPermission") : !isDirty ? t("nothingToSave") : null;
 
-  /*
-   * The badge, tint and hint describe the saved state, not the switch. A local
-   * save is held until the refreshed page agrees, so they do not lag the toast.
-   */
+  // Badge, tint and hint describe the saved state; a local save is held until
+  // the refreshed page agrees, so they do not lag the toast.
   const [justSaved, setJustSaved] = useState(null);
   if (justSaved && justSaved.enabled === saved.enabled && justSaved.mode === saved.mode) setJustSaved(null);
   const live = justSaved ?? saved;
@@ -109,7 +102,6 @@ export function FirewallSection({ appId, application, categories: catalog, modes
         enabled,
         mode,
         // Never an empty array: the backend reads `categories: []` as "all six".
-        // The UI already prevents it; this is the second line of defence.
         categories: active.length > 0 ? active : catalog.map((item) => item.value),
         exceptions,
         custom_rules: blocks,

@@ -7,11 +7,7 @@ import { PasswordReveal } from "@/components/system-users/password-reveal";
 import { AppsCell } from "@/components/system-users/apps-cell";
 import { SystemUserRowActions } from "@/components/system-users/system-user-row-actions";
 
-/**
- * System users on a narrow screen, where the table pushed the sudo and SSH
- * switches off screen. Sudo and SSH lead the facts; the shell picker takes the
- * full width underneath so shell names fit.
- */
+// The shell picker takes the full width underneath so shell names fit.
 export function SystemUsersCards({ users, shells = [], canManage = false, prevPage = null, sshEnforced = null }) {
   const t = useTranslations("systemUsers");
 

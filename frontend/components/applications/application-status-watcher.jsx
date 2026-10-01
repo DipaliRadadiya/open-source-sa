@@ -9,11 +9,7 @@ const POLL_MS = 5000;
 // spend the rate budget.
 const LIMIT_MS = 30 * 60 * 1000;
 
-/**
- * Refreshes the application's pages when its setup or deploy ends. Mounted
- * once in the application layout; polls the status alone rather than
- * refreshing the page every few seconds.
- */
+// Refreshes the application's pages when its setup or deploy ends.
 export function ApplicationStatusWatcher({ id, status }) {
   const router = useRouter();
   const inFlight = status === "pending" || status === "provisioning";

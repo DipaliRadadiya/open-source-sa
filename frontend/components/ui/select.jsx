@@ -51,11 +51,7 @@ function SelectTrigger({
   );
 }
 
-/*
- * Defaults to `popper` (opens below the trigger, like every other dropdown)
- * instead of Radix's `item-aligned`, which covers the trigger. `align="start"`
- * keeps a wide list from hanging off both edges of a narrow trigger.
- */
+// `popper`, not Radix's `item-aligned`, which covers the trigger.
 function SelectContent({
   className,
   children,

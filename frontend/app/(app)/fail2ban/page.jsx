@@ -105,10 +105,7 @@ export default async function Fail2banPage() {
   );
 }
 
-/**
- * Installed but stopped is the dangerous state: jails still read "enabled"
- * while nothing is watching. The service is managed on Services.
- */
+// Installed but stopped: jails still read "enabled" while nothing is watching.
 function StoppedAlert({ t }) {
   return (
     <div

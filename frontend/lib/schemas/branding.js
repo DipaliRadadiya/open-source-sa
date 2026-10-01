@@ -1,8 +1,6 @@
 import { z } from "zod";
 
-// Every field is tolerant: one unusable value must not discard the rest, so
-// `.catch(null)` degrades a single bad field. Usability is decided in
-// lib/branding/get-branding.js, which fills gaps from the defaults.
+// `.catch(null)` per field so one bad value does not discard the rest; gaps are filled in get-branding.js.
 const brandingField = z.string().nullish().catch(null);
 
 export const brandingSchema = z

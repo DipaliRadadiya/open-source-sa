@@ -1,10 +1,5 @@
-/**
- * Database count per site, for the backup form: a "files + database" backup of
- * a site without one succeeds silently with no database in it.
- *
- * `/databases` has no application filter, so this groups the full list by
- * `application_id`.
- */
+// A "files + database" backup of a site without one succeeds silently with no database.
+// `/databases` has no application filter, so the full list is grouped here.
 export function countByApplication(databases = []) {
   const counts = {};
 
@@ -19,22 +14,16 @@ export function countByApplication(databases = []) {
   return counts;
 }
 
-/**
- * Does this site have a database? `null` means unknown; never collapse it into
- * "no", since a wrong warning could argue someone out of a setting they need.
- */
+// `null` means unknown; never collapse it into "no": a wrong warning could argue
+// someone out of a setting they need.
 export function hasNoDatabase(counts, known, applicationId) {
   if (!known || applicationId === null || applicationId === undefined) return null;
 
   return (counts?.[applicationId] ?? 0) === 0;
 }
 
-/**
- * Does this KIND of site need a database? Only types declaring `needs_database`
- * (WordPress, PrestaShop, NodeBB...) are flagged, so static or blank sites do
- * not carry a permanent warning. Unknown types answer false.
- * `needs_database` lives on the site type, not the application.
- */
+// Only site types declaring `needs_database` are flagged, so static sites carry no
+// permanent warning. Unknown types answer false.
 export function siteNeedsDatabase(siteTypes = [], siteType) {
   if (!siteType) return false;
 
@@ -43,10 +32,7 @@ export function siteNeedsDatabase(siteTypes = [], siteType) {
   );
 }
 
-/**
- * Ids of sites that need a database and have none. Empty when counts are
- * unknown: an unread list must never render as "none have a database".
- */
+/** Empty when counts are unknown: an unread list must never read as "none have a database". */
 export function sitesMissingDatabase(applications = [], siteTypes = [], counts = null, known = false) {
   if (!known) return new Set();
 
@@ -61,10 +47,7 @@ export function sitesMissingDatabase(applications = [], siteTypes = [], counts =
   );
 }
 
-/**
- * The site a database belongs to, or null. Compares ids as strings: the API
- * sends numbers, forms send strings.
- */
+/** Compares ids as strings: the API sends numbers, forms send strings. */
 export function applicationById(applications = [], applicationId) {
   if (applicationId === null || applicationId === undefined) return null;
 
@@ -73,13 +56,8 @@ export function applicationById(applications = [], applicationId) {
   ) ?? null;
 }
 
-/**
- * Site options for a "which site is this database for?" picker.
- *
- * A site that already has a database is shown but disabled with the reason.
- * One per site is enforced even though `POST /databases` allows more, because
- * staging and cloning only pick up the first.
- */
+// One database per site, though `POST /databases` allows more: staging and cloning
+// only pick up the first.
 export function applicationOptions(
   applications = [],
   counts = null,

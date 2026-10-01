@@ -1,10 +1,7 @@
 import { read } from "@/lib/api/read";
 import { ionCubeResponseSchema } from "@/lib/schemas/php";
 
-/**
- * The ionCube Loader's state for one PHP version. Only asked for when the
- * version is `ready`; the endpoint 404s otherwise.
- */
+// Only call when the version is `ready`; the endpoint 404s otherwise.
 export async function getIonCube(version) {
   if (!version) return { data: null, failed: false };
 

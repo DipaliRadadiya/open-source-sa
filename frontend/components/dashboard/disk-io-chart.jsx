@@ -10,10 +10,7 @@ import {
   timeSeriesOption,
 } from "@/lib/charts/time-series-option";
 
-/**
- * Read/write throughput, with op counts (IOPS) in the header rather than on a
- * second axis. Its own card so "Disk" is not I/O here and free space above.
- */
+// Op counts (IOPS) sit in the header rather than on a second axis.
 /** Resolved from globals.css at runtime; never restated as literals here. */
 const TOKENS = [
   "chart-1",

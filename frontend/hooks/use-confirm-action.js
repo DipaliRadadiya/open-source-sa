@@ -1,21 +1,7 @@
 import { useCallback, useState } from "react";
 import { apiMessage } from "@/lib/api/error-message";
 
-/**
- * The state a confirmation dialog needs: what it is confirming, whether the
- * write is in flight, and why the last attempt failed. On failure the dialog
- * stays open (keeping retry and context) and shows the error.
- *
- *   const remove = useConfirmAction();
- *   ...
- *   <ConfirmDialog
- *     open={remove.isOpen}
- *     onOpenChange={remove.setOpen}
- *     pending={remove.pending}
- *     error={remove.error}
- *     onConfirm={() => remove.run(() => deleteThing(remove.target.id), { onDone })}
- *   />
- */
+// State for a confirmation dialog. On failure the dialog stays open with the error.
 export function useConfirmAction() {
   const [target, setTarget] = useState(null);
   const [pending, setPending] = useState(false);
@@ -33,11 +19,8 @@ export function useConfirmAction() {
     setError(null);
   }, []);
 
-  /*
-   * Radix calls this for Escape, the backdrop and Cancel alike, so one guard
-   * covers every way out. Refused while the write is in flight: closing then
-   * would leave the request running with nothing on screen owning it.
-   */
+  // Radix calls this for every way out. Refused while the write is in flight, or the
+  // request would run with nothing on screen owning it.
   const setOpen = useCallback(
     (next) => {
       if (pending) return;

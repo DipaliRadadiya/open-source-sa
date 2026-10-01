@@ -10,11 +10,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { FormModal } from "@/components/ui/form-modal";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 
-/**
- * Attach an existing database to this site, from the site's own page (mirror
- * of the dialog on the database side). Only unattached databases are offered,
- * so a database is never silently moved off another site.
- */
+// Only unattached databases are offered, so none is silently moved off another site.
 export function AttachDatabaseDialog({
   applicationId,
   applicationName,

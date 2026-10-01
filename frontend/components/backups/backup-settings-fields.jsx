@@ -46,21 +46,10 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-/**
- * The backup settings form, shared by both entry points. Grouped into steps:
- * which site, what to copy, when, and where it goes.
- */
-
-/**
- * Patterns worth excluding, offered rather than applied: excluding `vendor`
- * automatically breaks apps that need it at runtime.
- */
+// Offered, not applied: excluding `vendor` breaks apps that need it at runtime.
 const SUGGESTED_FILE_EXCLUDES = ["node_modules", ".git", "vendor", "storage/logs", "*.log"];
 
-/**
- * Which half of the archive a type change drops, or null when it drops nothing.
- * `full` → `filesystem` drops databases; `full` → `database` drops files.
- */
+// Which half a type change drops, or null: `full` → `filesystem` drops databases.
 function droppedByNarrowing(current, next) {
   if (!current || !next || current === next) return null;
   if (current === "full" && next === "filesystem") return "narrower";
@@ -139,11 +128,8 @@ export function BackupSettingsFields({
   // (the single-destination case has no picker).
   const chosenDestination =
     onlyDestination ?? destinations.find((d) => String(d.id) === String(destinationId)) ?? null;
-  /*
-   * Two ways a destination won't work: a failed test, or a Google Drive that was
-   * never connected (it is not probed on creation, so `last_test_success` stays
-   * null). `config.connected` is the same flag the storage row reads.
-   */
+  // A never-connected Google Drive is not probed on creation, so
+  // `last_test_success` stays null; `config.connected` catches it.
   const notConnected =
     chosenDestination?.provider === "google_drive_oauth" &&
     chosenDestination?.config?.connected === false;
@@ -171,9 +157,8 @@ export function BackupSettingsFields({
   const knownType = Boolean(chosenType) && (siteTypes ?? []).some((entry) => entry.name === chosenType);
   const filesOnly = noDatabase === true && knownType && !siteNeedsDatabase(siteTypes, chosenType);
 
-  // A database-less site cannot keep "Database only" (the backup would be
-  // empty), so fall back. A new setup for such a site starts on Files only;
-  // once the user picks a type, it is left alone.
+  // A database-less site cannot keep "Database only" (empty backup), but a type
+  // the user picked is left alone.
   const typePicked = Boolean(form.formState.dirtyFields?.type);
   useEffect(() => {
     if (filesOnly && type !== "filesystem") {
@@ -380,13 +365,8 @@ export function BackupSettingsFields({
                       </FormControl>
                     </>
                   )}
-                  {/*
-                    States which clock the time is in; a browser in another
-                    timezone would read a bare "02:00" as local. This is the
-                    project (app) timezone, NOT server time: the backup
-                    scheduler resolves the slot against the app timezone,
-                    unlike Linux cron.
-                  */}
+                  {/* The app timezone, NOT server time: the scheduler resolves
+                      the slot against it, unlike Linux cron. */}
                   {scheduleTimezone ? (
                     <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Clock className="size-3.5 shrink-0" />

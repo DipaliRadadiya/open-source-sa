@@ -10,11 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-/**
- * Restore the .env from one of the recent backups. Restoring first backs up the
- * current file, so the choice is itself undoable. Built on ConfirmDialog to
- * stay consistent with other confirmations.
- */
+// Restoring first backs up the current file, so the choice is itself undoable.
 export function RestoreBackupDialog({
   appId,
   backups = [],
@@ -71,10 +67,8 @@ export function RestoreBackupDialog({
       // Wider than a yes/no confirmation: the body lists backup filenames.
       className="sm:!max-w-lg"
     >
-      {/* A radio group so screen readers announce the selection; saved time
-          leads, file name follows. */}
-      {/* Height-bounded so the buttons stay reachable on phones; the padding
-          keeps focus rings inside the clip. */}
+      {/* A radio group so screen readers announce the selection. */}
+      {/* Height-bounded so the buttons stay reachable on phones; padding keeps focus rings unclipped. */}
       <div
         role="radiogroup"
         aria-label={t("restore.title")}

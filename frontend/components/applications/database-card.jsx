@@ -5,13 +5,8 @@ import { DatabaseCardActions } from "@/components/applications/database-card-act
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-/**
- * The databases this site's backups will contain: the link that backups,
- * staging, cloning and restoring use, not what the site actually connects to
- * (the panel cannot know that).
- *
- * The empty state warns only for site types that declare a database need.
- */
+// The databases backups, staging, cloning and restoring use, not what the site
+// connects to. The empty state warns only for types that declare a database need.
 export async function DatabaseCard({
   application,
   databases = [],

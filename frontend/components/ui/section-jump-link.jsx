@@ -6,11 +6,7 @@ import { Button } from "@/components/ui/button";
 
 const HIGHLIGHT_MS = 1200;
 
-/**
- * A same-page fragment link that briefly highlights its target. Works as a
- * plain link before hydration. `className` renders a bare link instead of a
- * Button, for links that are the whole row.
- */
+// Works as a plain link before hydration. `className` renders a bare link, not a Button.
 export function SectionJumpLink({ href, children, variant = "outline", size = "sm", className }) {
   const highlightTimer = useRef(null);
   const highlightFrame = useRef(null);

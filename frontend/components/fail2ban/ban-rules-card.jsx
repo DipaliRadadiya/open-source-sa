@@ -27,11 +27,8 @@ import {
 } from "@/components/ui/select";
 import { apiMessage } from "@/lib/api/error-message";
 
-/**
- * The three numbers that define a ban. Ban time uses the API's presets (-1
- * means permanent). Every save sends the whole settings object, including the
- * ignore list, since the backend rewrites the file as a unit.
- */
+// Ban time -1 means permanent. Every save sends the whole settings object,
+// since the backend rewrites the file as a unit.
 export function BanRulesCard({ settings, presets, canManage }) {
   const t = useTranslations("fail2ban");
   const { refreshAndWait } = useRefresh();

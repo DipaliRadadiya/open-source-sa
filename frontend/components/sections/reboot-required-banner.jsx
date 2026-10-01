@@ -11,17 +11,8 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useServerRestart } from "@/components/sections/server-restart-overlay";
 
-/**
- * "This server is waiting on a restart", on every page, with the restart action:
- * until the restart, an installed patch is not protecting anything.
- *
- * The button restarts directly with the same confirmation as the settings page;
- * the delay picker stays there ("More options"), since a banner is the wrong
- * place to schedule.
- *
- * `canManage` is `setting:manage`, not `view`: view-only users see the notice
- * without a button.
- */
+// Restarts with the settings page's confirmation; scheduling stays there. `canManage`
+// is `setting:manage`: view-only users see the notice without a button.
 export function RebootRequiredBanner({ canManage }) {
   const t = useTranslations("rebootBanner");
   const { start } = useServerRestart();

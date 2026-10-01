@@ -56,9 +56,8 @@ export default async function ApplicationDeploymentPage({ params }) {
     getWebhookProviders(),
     // A failure here must not hide the Deploy button; the panel renders without history.
     getDeployments(id),
-    // The application payload carries `git_account_id` but no provider name;
-    // needed to narrow the webhook providers. Also fetched when the account is
-    // gone, so re-linking can offer the remaining ones.
+    // The application payload has no provider name. Also fetched when the
+    // account is gone, so re-linking can offer the remaining providers.
     application.git_account_id || application.git_account_missing
       ? getGitAccounts().then((r) => r.accounts ?? []).catch(() => [])
       : Promise.resolve([]),

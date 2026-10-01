@@ -4,11 +4,7 @@ import { Button } from "@/components/ui/button";
 import { IconTooltip } from "@/components/ui/icon-tooltip";
 import { failureReason } from "@/lib/files/bulk-result";
 
-/**
- * What a bulk operation did when it did not do all of it. Not a toast: a partial
- * result is a list of paths to read, needs its own tone, and must not vanish on a
- * timer. Stays until dismissed or replaced by the next action.
- */
+// Not a toast: a partial result is a list to read and must not vanish on a timer.
 export function BulkResultPanel({ result, onDismiss }) {
   const t = useTranslations("applications.files");
   if (!result?.failed?.length) return null;

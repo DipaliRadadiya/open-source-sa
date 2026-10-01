@@ -3,11 +3,7 @@ import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
-/**
- * The control that turns a recoverable delete into a permanent one: a checkbox
- * inside the confirm dialog. It stays reachable rather than behind an admin
- * setting, because the trash keeps using disk space until emptied.
- */
+// Not behind an admin setting: the trash keeps using disk space until emptied.
 export function PermanentDeleteField({ id = "delete-permanent", checked, onChange, disabled }) {
   const t = useTranslations("applications.files.delete");
 

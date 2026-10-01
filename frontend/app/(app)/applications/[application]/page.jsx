@@ -71,9 +71,7 @@ export default async function ApplicationDetailPage({ params }) {
   // `/issues` is gated by `app_dashboard`, not by the `application` permission
   // that opens this page; asking without it is a 403.
   const canSeeChecks = can(appPermissions, "app_dashboard", "view", "application");
-  // Already site-type gated by the API (VisiblePermissions filters by the site's
-  // features), so no `site_type === "wordpress"` check here: a new site type
-  // must not need a frontend change.
+  // The API already gates this by site type; a new type must not need a frontend change.
   const canMagicLogin = can(appPermissions, "app_magic_login", "manage", "application");
   // Filtered here rather than in the menu so permission checks stay on the server.
   const headerShortcuts = [
@@ -87,9 +85,7 @@ export default async function ApplicationDetailPage({ params }) {
   // Only a serving site has domains, a certificate or a running process.
   const settled = isSettled(application);
 
-  // Feeds the repair dialog and the provider name on the source card (the
-  // payload has `git_account_id` but no provider). The read is `cache()`d and
-  // hits no provider API.
+  // The payload has `git_account_id` but no provider. `cache()`d, no provider API call.
   const gitAccounts =
     application.git_account_missing || application.git_account_id
       // The fetcher already unwraps the envelope: `.accounts`, not `.data.git_accounts`.
@@ -111,21 +107,14 @@ export default async function ApplicationDetailPage({ params }) {
     settled && canSeeBackups
       ? getBackupTarget(id)
       : Promise.resolve({ target: null, failed: false }),
-    /*
-     * The target says what is scheduled, not what is running now. One row is
-     * enough: `GET /backups` orders by newest id, so a run in flight is first.
-     */
+    // One row is enough: `GET /backups` orders by newest id, so a run in flight is first.
     settled && canSeeBackups
       ? getBackups({ application: id, per_page: 1 })
       : Promise.resolve({ backups: [] }),
     settled && canSeeDatabases
       ? getApplicationDatabases(id)
       : Promise.resolve({ databases: [], failed: false }),
-    /*
-     * `needs_database` is on the site TYPE, so the missing-database check needs
-     * this list; the facts card also needs it to name a relabel target, hence
-     * `canManage` in the gate.
-     */
+    // `needs_database` is on the site type; the facts card also needs the list to relabel.
     settled && (canSeeDatabases || canManage)
       ? getSiteTypes().catch(() => ({ siteTypes: [] }))
       : Promise.resolve({ siteTypes: [] }),
@@ -148,10 +137,7 @@ export default async function ApplicationDetailPage({ params }) {
   const missingDatabase =
     canSeeDatabases && !siteDatabases.failed && needsDatabase && siteDatabases.databases.length === 0;
 
-  /*
-   * All values come from the application payload. Each row is gated on the
-   * same grant that guards its screen, so no row links to a dead end.
-   */
+  // Each row is gated on the grant that guards its screen, so no row links to a dead end.
   const protectionItems = [
     can(appPermissions, "app_security", "view", "application") && {
       key: "password",
@@ -185,10 +171,7 @@ export default async function ApplicationDetailPage({ params }) {
       state: application.ai_bot_policy_title ?? t("protection.off"),
       href: `/applications/${id}/bot-blocker`,
     },
-    /*
-     * Only a definite answer gets a row: `unknown` (no immutable flag) or a
-     * failed read must not render as "Not locked".
-     */
+    // `unknown` or a failed read must not render as "Not locked".
     (folderStatus === "locked" || folderStatus === "unlocked") && {
       key: "folder",
       label: t("protection.folder"),
@@ -202,11 +185,8 @@ export default async function ApplicationDetailPage({ params }) {
   ].filter(Boolean);
 
 
-  /*
-   * `application.url` is the server's answer (http:// until a certificate is
-   * serving). Do not derive the scheme from the certificate read: a failed read
-   * would downgrade an https-only site. The fallback is for older APIs.
-   */
+  // Use the server's `application.url`; deriving the scheme from a failed certificate
+  // read would downgrade an https-only site. The fallback is for older APIs.
   const secured = certificate.certificate?.status === "active";
   const certificateIssuing = ["pending", "issuing"].includes(certificate.certificate?.status);
   const siteUrl =
@@ -252,11 +232,7 @@ export default async function ApplicationDetailPage({ params }) {
       action: t("attention.setUpBackups"),
       href: `/applications/${id}/backups`,
     },
-    /*
-     * Switched-off protections are deliberately NOT findings: every site starts
-     * with them off and each is a per-site choice. The Security card below
-     * already shows their state.
-     */
+    // Switched-off protections are deliberately not findings: each is a per-site choice.
   ]
     .filter(Boolean)
     // Drop local inferences the server's own findings already cover.
@@ -346,10 +322,7 @@ export default async function ApplicationDetailPage({ params }) {
       {!settled ? (
         <ProvisioningCard application={application} canManage={canManage} />
       ) : (
-        /*
-         * Cards are direct grid children so they share a height per row; DOM
-         * order is the reading order in one column on a phone.
-         */
+        /* Cards are direct grid children so each row shares a height. */
         <div className="grid items-stretch gap-6 lg:grid-cols-2 xl:grid-cols-3">
           <SiteFactsCard
             application={application}

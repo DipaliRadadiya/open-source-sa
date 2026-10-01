@@ -9,10 +9,7 @@ function pick(alphabet, length) {
   return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
 }
 
-/**
- * A random username, so it cannot be guessed from the database name and does
- * not collide (users are unique per server).
- */
+// Random so it cannot be guessed from the database name; users are unique per server.
 export function randomUsername() {
   return `db_${pick(SAFE, 10)}`;
 }

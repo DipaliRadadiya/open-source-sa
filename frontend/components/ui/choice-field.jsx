@@ -3,17 +3,8 @@ import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 
-/**
- * A radio group where each option is a plain sentence with its effect beneath.
- *
- * `options`: [{ value, label, hint, icon, tone, disabledReason }].
- * `tone: "warning"` marks an option that weakens the server. `disabledReason`
- * blocks an option and replaces its hint. `icon` suits options of different
- * kinds, not degrees of one thing.
- *
- * `variant="card"` boxes each option, for a few side-by-side choices; the
- * default has no box so stacked lists do not read as a wall.
- */
+// `options`: [{ value, label, hint, icon, tone, disabledReason }]; `tone: "warning"` marks an option
+// that weakens the server. `variant="card"` boxes each option.
 export function ChoiceField({ value, onChange, options, disabled, name, className, variant }) {
   const id = useId();
   const card = variant === "card";

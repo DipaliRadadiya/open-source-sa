@@ -1,11 +1,7 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 
-/**
- * Tooltip naming what an icon-only button does. When disabled, `reason` takes
- * over via {@link ReasonTooltip} (including its touch Popover). The span
- * carries the hover because a disabled button fires no pointer events.
- */
+// When disabled, `reason` takes over; the span carries the hover since a disabled button fires none.
 export function IconTooltip({ label, reason = null, children, className = "inline-flex" }) {
   if (reason) {
     return (

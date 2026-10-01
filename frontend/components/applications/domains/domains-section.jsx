@@ -55,8 +55,7 @@ import {
 import { AddDomainDialog } from "@/components/applications/domains/add-domain-dialog";
 import { EditDomainDialog } from "@/components/applications/domains/edit-domain-dialog";
 
-// Site types whose installer rewrites the application's own stored address
-// when the primary domain changes (`syncUrl` in the backend installers).
+// Site types whose installer rewrites the stored address on a primary change (backend `syncUrl`).
 const ADDRESS_SYNCED_TYPES = new Set([
   "wordpress", "akaunting", "craftcms", "mautic", "moodle",
   "n8n", "nextcloud", "nodebb", "prestashop", "statamic",
@@ -68,12 +67,8 @@ const TYPE_VARIANT = {
   redirect: "outline",
 };
 
-/**
- * Whether an ACTIVE certificate covers this exact name: `"covered"`,
- * `"uncovered"`, or `"unknown"`. "Unknown" is explicit because callers want
- * opposite defaults: the visit link keeps https, confirm dialogs stay quiet.
- * Reads `domains` first, `missing_domains` as fallback.
- */
+// "covered" | "uncovered" | "unknown" for an ACTIVE certificate. "unknown" is explicit:
+// callers want opposite defaults (visit link keeps https, confirm dialogs stay quiet).
 function certificateCoverage(certificate, domain) {
   if (certificate?.status !== "active") return "unknown";
   // The certificate's own list first: `missing_domains` can be stale.
@@ -93,10 +88,7 @@ function certificateCoverage(certificate, domain) {
   return "unknown";
 }
 
-/**
- * Whether this name is served over HTTPS, for its row. Null while a
- * certificate is issuing or failed; the SSL tab reports that once.
- */
+// Null while a certificate is issuing or failed; the SSL tab reports that once.
 function sslRowState(certificate, coverage) {
   if (!certificate) return { key: "none", tone: "text-muted-foreground", icon: ShieldOff };
   if (certificate.status !== "active") return null;
@@ -120,8 +112,7 @@ export function DomainsSection({
 
   const [addOpen, setAddOpen] = useState(false);
   const [promoteTarget, setPromoteTarget] = useState(null);
-  // Copied onto the target when the dialog opens, since the list changes
-  // while the dialog stays open through the re-read.
+  // Copied onto the target when the dialog opens; the list changes during the re-read.
   const currentPrimary = domains.find((domain) => domain.type === "primary");
   const [editTarget, setEditTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -335,9 +326,7 @@ export function DomainsSection({
                       </p>
                     ) : null}
 
-                    {/* Turn "not verified" into a next step: the A-record target.
-                        Skipped for proxied names (own message above) and test
-                        domains (nip.io resolves itself). */}
+                    {/* The A-record target as a next step. Skipped for proxied names and test domains (nip.io). */}
                     {!domain.dns_verified &&
                     !domain.behind_proxy &&
                     !domain.is_test ? (
@@ -358,9 +347,7 @@ export function DomainsSection({
                   </div>
 
                   <div className="flex shrink-0 items-center gap-1">
-                    {/* Visit link (not for redirects); https only when the
-                        certificate covers this name. The slot is always held
-                        so the buttons after it line up across rows. */}
+                    {/* https only when the certificate covers this name. The slot is always held so buttons align. */}
                     <span className="inline-flex size-8 shrink-0 items-center justify-center">
                       {domain.dns_verified && domain.type !== "redirect" ? (
                         <Tooltip>
@@ -385,8 +372,7 @@ export function DomainsSection({
                         </Tooltip>
                       ) : null}
                     </span>
-                    {/* Not behind `canManage`: the verify route is gated at
-                        view level and changes nothing. */}
+                    {/* Not behind `canManage`: the verify route is view-level and changes nothing. */}
                     <Button
                       variant="ghost"
                       size="sm"
@@ -411,8 +397,7 @@ export function DomainsSection({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="min-w-44">
-                            {/* Not offered on the primary (the server refuses);
-                                this menu is hidden there anyway. */}
+                            {/* Not offered on the primary (the server refuses). */}
                             <DropdownMenuItem onSelect={() => setEditTarget(domain)}>
                               <Pencil className="size-4" />
                               {t("edit.action")}
@@ -500,15 +485,13 @@ export function DomainsSection({
               {t("promote.keepsServing", { domain: promoteTarget.from })}
             </li>
           ) : null}
-          {/* The installer's syncUrl rewrites the stored address for these
-              types (e.g. WordPress siteurl and home). No files are renamed. */}
+          {/* The installer's syncUrl rewrites the stored address (e.g. WordPress siteurl). No files are renamed. */}
           {promoteTarget && ADDRESS_SYNCED_TYPES.has(siteType) ? (
             <li>{t("promote.updatesAddress", { domain: promoteTarget.domain })}</li>
           ) : null}
         </ul>
 
-        {/* The new primary is not on the certificate, so browsers will refuse
-            it over HTTPS. */}
+        {/* Not on the certificate, so browsers will refuse it over HTTPS. */}
         {promoteTarget && coverageOf(promoteTarget.domain) === "uncovered" ? (
           <Caution>
             {t("promote.notOnCertificate", { domain: promoteTarget.domain })}
@@ -528,8 +511,7 @@ export function DomainsSection({
         pending={pending || refreshing}
         onConfirm={confirmDelete}
       >
-        {/* certbot fails the whole renewal if any name in the lineage is
-            unreachable, so removing a covered name breaks renewal for the rest. */}
+        {/* certbot fails the whole renewal if any name is unreachable. */}
         {deleteTarget && coverageOf(deleteTarget.domain) === "covered" ? (
           <Caution>
             {t("removeConfirm.onCertificate", { domain: deleteTarget.domain })}

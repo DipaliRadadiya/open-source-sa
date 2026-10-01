@@ -75,10 +75,7 @@ function DescriptionCell({ row }) {
   return <span>{row.original.description || "—"}</span>;
 }
 
-/**
- * Activity for one scope, fixed by the page. `showUser` adds the "who" column
- * for the server log, which spans all users.
- */
+// `showUser` adds the "who" column for the server log, which spans all users.
 export function MyActivityTable({ data, emptyMessage, hasFilters = false, showUser = false }) {
   const t = useTranslations("activity");
 

@@ -96,9 +96,7 @@ export function AccountTabs({
       <TabsContent value="activity">
         <NavTransitionProvider>
           <div className="space-y-4">
-            {/* extraQuery keeps ?tab=activity: the tab is written with
-                history.replaceState, which the router does not see. Types and
-                actions are narrowed to the account scope. */}
+            {/* extraQuery keeps ?tab=activity: the tab is set via history.replaceState, which the router does not see. */}
             <ActivityToolbar
               types={typesForScope(filters.types, "account")}
               actions={actionsForScope(filters.actions, filters.types, "account")}

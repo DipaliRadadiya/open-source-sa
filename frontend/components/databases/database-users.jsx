@@ -28,10 +28,7 @@ import { UserPasswordDialog } from "@/components/databases/user-password-dialog"
 import { DeleteUserDialog } from "@/components/databases/delete-user-dialog";
 import { MenuItemHint } from "@/components/data-table/menu-item-hint";
 
-/**
- * The panel's own account manages every database; the API refuses to remove
- * it, and the row says so before the click.
- */
+/** The panel's own account; the API refuses to remove it. */
 const PANEL_PREFIX = "panel_";
 
 const ACCESS_TONE = {
@@ -40,10 +37,6 @@ const ACCESS_TONE = {
   anywhere: "destructive",
 };
 
-/**
- * Who can sign in to this database, and how. The empty state prompts to add a
- * user, since nothing can connect without one.
- */
 export function DatabaseUsers({ database, canManage, remoteUsers = true }) {
   const t = useTranslations("databases.users");
   const [adding, setAdding] = useState(false);
@@ -192,10 +185,7 @@ function UserRow({ user, canManage, onEdit, onPassword, onDelete }) {
             />
           </div>
         ) : user.password_known === false ? (
-          /*
-             The API withholds the connection string for users adopted from a
-             migrated server: the engine only keeps a hash.
-          */
+          /* Withheld for users adopted from a migrated server: the engine keeps only a hash. */
           <p className="text-xs text-muted-foreground">{t("passwordUnknown")}</p>
         ) : !canManage && user.password_known ? (
           // Withheld from a role without `database` manage.
@@ -220,9 +210,8 @@ function UserRow({ user, canManage, onEdit, onPassword, onDelete }) {
             <Pencil className="size-4" />
             {t("edit")}
           </DropdownMenuItem>
-          {/* The panel's own account can't be removed. As in the admin and
-              system-user menus, the reason is a tooltip, not the label (which
-              would be clipped). */}
+          {/* The reason is a tooltip, not the label (which would be clipped), as in the
+              admin and system-user menus. */}
           <MenuItemHint hint={isPanel ? t("cannotDeletePanel") : null}>
             <DropdownMenuItem
               variant="destructive"

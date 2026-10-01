@@ -9,12 +9,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-/**
- * Username and connection host, shared by the Add and Edit dialogs.
- *
- * `remoteUsers` defaults true so an older API — which sends no such field —
- * keeps offering the choice rather than hiding a control that works.
- */
+// `remoteUsers` defaults true so an older API (no such field) keeps the choice.
 export function UserFields({ form, access, lockUsername = false, remoteUsers = true }) {
   const t = useTranslations("databases");
 
@@ -58,12 +53,7 @@ export function UserFields({ form, access, lockUsername = false, remoteUsers = t
                     label: t("access.localhost.label"),
                     hint: t("access.localhost.hint"),
                   },
-                  /*
-                   * Omitted where accounts have no host: the API refuses
-                   * `remote` and `anywhere` on PostgreSQL (roles are
-                   * cluster-wide; access is pg_hba.conf). Read from
-                   * `supports_remote_users`, never from the engine name.
-                   */
+                  /* The API refuses `remote`/`anywhere` on PostgreSQL. Read from `supports_remote_users`, never the engine name. */
                   ...(remoteUsers
                     ? [
                         {

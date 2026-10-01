@@ -8,15 +8,10 @@ import { LogLine } from "@/components/logs/log-line";
 import { appended } from "@/lib/logs/appended";
 
 const ROW_HEIGHT = 24;
-// "Already at the bottom" needs slack: fractional scroll positions and the
-// last row's border mean an exact equality check never fires.
+// Fractional scroll positions and the last row's border defeat an exact bottom check.
 const BOTTOM_SLACK = 12;
 
-/**
- * The log surface. Virtualized so a 5 000-line buffer keeps ~30 nodes in the
- * DOM, with smart-sticky auto-scroll: follow only while the reader is already
- * at the bottom, and offer a way back when they're not.
- */
+// Virtualized; auto-scroll follows only while the reader is already at the newest end.
 export function LogViewer({
   lines,
   group,
@@ -28,17 +23,13 @@ export function LogViewer({
   onCopyLine,
   filtered,
   severity,
-  // Set only by the application log panel, whose API reports whether a
-  // filtered read hit the line cap.
+  // The application log API reports whether a filtered read hit the line cap.
   searchCapped = false,
   loadingText = null,
   // The server's reason for a failed read, when it gave one.
   failedMessage = null,
   searchedLines,
-  /*
-   * Newest line at the TOP. Every "stick to the end" behaviour below anchors
-   * on the newest end, chosen from this flag, so live tailing works in both orders.
-   */
+  /* Every "stick to the end" behaviour anchors on the newest end chosen from this flag. */
   newestFirst = false,
 }) {
   const t = useTranslations("logs");
@@ -46,13 +37,11 @@ export function LogViewer({
   const [atBottom, setAtBottom] = useState(true);
   const [scrolled, setScrolled] = useState(false);
   const [unseen, setUnseen] = useState(0);
-  // The previous buffer and its filter, to tell appended lines from a
-  // replaced buffer (another filter, another log).
+  // Tells appended lines from a replaced buffer (another filter, another log).
   const previous = useRef({ lines, key: `${group}|${term}|${severity}` });
 
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual's useVirtualizer is the same known false positive as useReactTable
-  // Reversed for rendering only; `lines` stays chronological so append
-  // counting works.
+  // Reversed for rendering only; `lines` stays chronological so append counting works.
   const rows = useMemo(
     () => (newestFirst ? [...lines].reverse() : lines),
     [lines, newestFirst],
@@ -84,9 +73,7 @@ export function LogViewer({
     if (bottom) setUnseen(0);
   }, [onAtBottomChange, newestFirst]);
 
-  // Appends land after paint; stick to the newest end only if the reader was
-  // already there, otherwise count unseen lines. Counted by what is new, not
-  // by length growth: a full tail window never changes length.
+  // Counted by what is new, not by length growth: a full tail window never changes length.
   useLayoutEffect(() => {
     const key = `${group}|${term}|${severity}`;
     const before = previous.current;
@@ -132,8 +119,7 @@ export function LogViewer({
     return <Notice icon={TriangleAlert} title={t("readFailed.title")} body={failedMessage ?? t("readFailed.body")} />;
   }
   if (!lines.length) {
-    // A search over the whole file proves the text is absent; a capped one
-    // proves nothing about the rest, so the wording differs.
+    // A capped search proves nothing about the rest of the file, so the wording differs.
     const noMatchBody =
       searchCapped && searchedLines
         ? t("noMatches.bodyCapped", { count: searchedLines })
@@ -197,8 +183,7 @@ export function LogViewer({
         </div>
       </div>
 
-      {/* Edge fades. Bottom fade only while scrolled up, so a followed tail
-          is not dimmed at the line being watched. */}
+      {/* Bottom fade only while scrolled up, so a followed tail is not dimmed. */}
       <div
         aria-hidden="true"
         className={cn(

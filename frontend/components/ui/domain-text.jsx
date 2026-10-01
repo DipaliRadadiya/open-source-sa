@@ -1,11 +1,7 @@
 import { cn } from "@/lib/utils";
 import { splitDomain } from "@/lib/format/domain";
 
-/**
- * A domain that truncates the subdomain and keeps the registrable domain
- * visible, e.g. "a-very-long-subdo….example.co.uk". `title` holds the full
- * value; the split is presentational only.
- */
+// Truncates the subdomain, keeping the registrable domain visible; `title` holds the full value.
 export function DomainText({ domain, className }) {
   const value = String(domain ?? "");
   const { head, tail } = splitDomain(value);

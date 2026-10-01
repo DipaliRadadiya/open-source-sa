@@ -1,7 +1,6 @@
 import { z } from "zod";
 
-// Sentinel for "run as an OS account the panel doesn't manage" (root, www-data).
-// The API takes system_user_id XOR username; this decides which one is sent.
+// An OS account the panel doesn't manage; the API takes system_user_id XOR username.
 export const OTHER_USER = "__other__";
 
 const PATH_TOKEN = "{path}";
@@ -12,12 +11,10 @@ const linuxUsername = z
   .trim()
   .regex(/^[a-z_][a-z0-9_-]{0,31}$/, "linuxUsername");
 
-// 5-field cron, or a macro like @daily. The backend owns the real parse.
 // No "@reboot": the backend's parser (dragonmantank/cron-expression) refuses it.
 const CRON_MACROS = ["@yearly", "@annually", "@monthly", "@weekly", "@daily", "@midnight", "@hourly"];
-// What Linux cron itself reads in each field: a number, *, a 3-letter name, a
-// range, a step, comma-separated. The API's parser also takes L, W, ? and #,
-// but cron rejects the line and ignores the whole file.
+// What Linux cron reads per field. The API also takes L, W, ? and #, but cron
+// rejects such a line and ignores the whole file.
 const CRON_TOKEN = /^(\*|\d+|[a-z]{3})(-(\d+|[a-z]{3}))?(\/\d+)?$/i;
 const isMacro = (v) => CRON_MACROS.includes(v.toLowerCase());
 const expressionField = z
@@ -38,14 +35,10 @@ const commandField = z
   .refine((v) => !/[\r\n]/.test(v), "noLineBreaks")
   // Preset commands ship with a {path} placeholder; the API 422s if it survives.
   .refine((v) => !v.includes(PATH_TOKEN), "unresolvedPath")
-  // The panel appends its own logging after the command, so a trailing
-  // `# note` would comment that out.
+  // The panel appends its own logging, which a trailing `# note` would comment out.
   .refine((v) => !hasShellComment(v), "cronTrailingComment");
 
-/**
- * Is there a shell comment in this command: a `#` at the start of a word,
- * outside quotes? `echo "#tag"`, `curl x/#frag` and `$#` are not comments.
- */
+// `echo "#tag"`, `curl x/#frag` and `$#` are not comments.
 export function hasShellComment(command) {
   let quote = null;
   // True at the start and after unescaped whitespace: where a word begins.
@@ -72,11 +65,7 @@ export function hasShellComment(command) {
   return false;
 }
 
-/*
- * Each job is a file in /etc/cron.d named after it, so a name must not land on
- * an existing file. Mirrors the backend's `NotReservedCronFile` list; panel-*
- * names (the panel's own files) are refused too.
- */
+/* Each job is a file in /etc/cron.d. Mirrors the backend's `NotReservedCronFile`; panel-* is refused too. */
 const RESERVED_CRON_FILES = [
   "php", "e2scrub_all", "sysstat", "anacron", "certbot", "mdadm",
   "popularity-contest", "ntpsec", "plocate", "mlocate", "apt-compat",
@@ -145,8 +134,7 @@ export const cronjobSchema = z.object({
   // null for a paused job: an inactive schedule has no next run.
   next_run_at: z.string().nullable().optional(),
   next_run_at_human: z.string().nullable().optional(),
-  // Key into the Logs endpoints for this job's output. Null until saved with
-  // output capture; show "nothing captured yet" instead of an empty viewer.
+  // Null until saved with output capture.
   log_key: z.string().nullable().optional(),
   created_at: z.string().optional(),
   created_at_human: z.string().optional(),

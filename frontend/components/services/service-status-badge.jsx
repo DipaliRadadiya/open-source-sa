@@ -9,9 +9,6 @@ const STATUS_META = {
   failed: { icon: CircleAlert, variant: "destructive" },
 };
 
-/**
- * The status of one service, shared by the desktop table and the mobile cards.
- */
 export function ServiceStatusBadge({ status, state = "installed", busyAction }) {
   const t = useTranslations("services");
 
@@ -25,10 +22,8 @@ export function ServiceStatusBadge({ status, state = "installed", busyAction }) 
     );
   }
 
-  // Still installing: the API reports `inactive` (no unit yet), but "Stopped"
-  // would suggest it can be started, so the transition is shown. A FAILED
-  // install falls through to the `failed` badge; the reason is shown as text
-  // beside the name.
+  // Installing reports `inactive`, but "Stopped" would suggest it can be started.
+  // A FAILED install falls through to the `failed` badge.
   if (state === "installing") {
     return (
       <Badge variant="outline" className="gap-1.5 font-normal text-muted-foreground">

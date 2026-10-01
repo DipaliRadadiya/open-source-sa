@@ -1,7 +1,4 @@
-/**
- * Turns the engine's raw counters into a verdict, using only
- * `/databases/status` and the live process list.
- */
+// A verdict from `/databases/status` and the live process list only.
 
 /** Connections above this share of the ceiling are worth flagging. */
 const CONNECTIONS_HIGH = 75;
@@ -67,12 +64,8 @@ export function isIdle(process) {
   return IDLE_COMMANDS.has((process?.command ?? "").toLowerCase());
 }
 
-/**
- * Server-internal processes (e.g. PostgreSQL's checkpointer, autovacuum) that
- * `pg_stat_activity` lists beside real connections; they must never be
- * offered a "Stop query". Detected by having no database and no statement,
- * not by a missing user (autovacuum runs as `postgres`).
- */
+// Internal processes `pg_stat_activity` lists beside connections; never offer "Stop query".
+// Detected by no db and no statement, not by user (autovacuum runs as `postgres`).
 export function isBackgroundWorker(process) {
   return !process?.db && !process?.query;
 }
@@ -97,10 +90,7 @@ export function recentlyRestarted(status) {
   return Number.isFinite(uptime) && uptime > 0 && uptime < RECENTLY_RESTARTED_SECONDS;
 }
 
-/**
- * The overall verdict plus its reasons. `issues` holds keys and counts, not
- * sentences; the copy lives in the message catalogue.
- */
+// `issues` holds keys and counts; the copy lives in the message catalogue.
 export function assessHealth({ status, processes = [] }) {
   const issues = [];
 

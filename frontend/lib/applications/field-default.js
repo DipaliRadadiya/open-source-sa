@@ -1,8 +1,4 @@
-/**
- * Defaults for backend-declared site-type fields, which arrive in whatever
- * shape PHP encoded (`false`, `"false"`, `0`, `"8"`). Shared by the form-fill
- * effect and each field's Controller so the two never disagree.
- */
+// Backend field defaults arrive in whatever shape PHP encoded (`false`, `"false"`, `0`, `"8"`).
 
 /** A toggle's value as a real boolean (`Boolean("false")` would be `true`). */
 export function toggleValue(value) {
@@ -10,10 +6,7 @@ export function toggleValue(value) {
   return Boolean(value);
 }
 
-/**
- * `undefined` means "no default declared", distinct from `false` or `0`.
- * Never `""`: a `<Select>` given `""` reports a change to `""`.
- */
+// `undefined` means no default. Never `""`: a `<Select>` given `""` reports a change.
 export function declaredDefault(config) {
   if (config.default == null || config.default === "") return undefined;
   if (config.type === "toggle") return toggleValue(config.default);

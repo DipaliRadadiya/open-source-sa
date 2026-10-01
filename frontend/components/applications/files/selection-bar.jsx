@@ -5,12 +5,8 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { BULK_PATH_LIMIT } from "@/lib/api/files";
 import { dirname } from "@/lib/files/path-helpers";
 
-/**
- * One action bar for the selection, shown only once something is selected.
- * Actions that cannot apply are DISABLED WITH A REASON, not hidden. Rename and
- * Edit are absent: they are single-item actions and must not silently apply to
- * the first selected file.
- */
+// Inapplicable actions are disabled with a reason, not hidden. Rename and Edit are
+// absent: they must not silently apply to the first selected file.
 export function SelectionBar({ selected, onClear, onAction, canManage }) {
   const t = useTranslations("applications.files");
   if (selected.length === 0) return null;

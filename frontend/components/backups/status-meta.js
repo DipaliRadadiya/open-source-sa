@@ -10,11 +10,8 @@ import {
   ShieldQuestion,
 } from "lucide-react";
 
-/**
- * Every icon and colour the Backups feature uses for a state, in one place.
- * Backups and restores have different status words (`verified` vs
- * `succeeded`), so each maps onto a shared set of outcomes.
- */
+// Backups and restores use different status words (`verified` vs `succeeded`),
+// so each maps onto these shared outcomes.
 export const OUTCOME = {
   ok: { icon: CircleCheck, variant: "success" },
   failed: { icon: CircleAlert, variant: "destructive" },
@@ -45,11 +42,8 @@ export function outcomeOf(map, status) {
   return OUTCOME[map[status]] ?? OUTCOME.unknown;
 }
 
-/**
- * Whether a site is covered, which is a different question from how its last
- * run went — hence its own map. `paused` is the dangerous middle: configured,
- * but backing nothing up.
- */
+// Coverage, not last-run outcome. `paused` is the dangerous one: configured,
+// but backing nothing up.
 export const COVERAGE_STATE = {
   protected: { icon: ShieldCheck, variant: "success" },
   // A schedule that runs and fails is not protection.

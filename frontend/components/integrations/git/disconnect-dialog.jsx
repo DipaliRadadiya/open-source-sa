@@ -9,11 +9,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { useBranding } from "@/components/branding-provider";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-/**
- * Removing the account deletes only the panel's copy of the token; it stays
- * valid at the provider until revoked there, so the dialog says so and links
- * to the provider page.
- */
+// The token stays valid at the provider until revoked there, so the dialog says so and links to it.
 export function DisconnectDialog({ account, open, onOpenChange }) {
   const t = useTranslations("git.disconnect");
   const { name: brand } = useBranding();

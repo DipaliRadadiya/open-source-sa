@@ -1,15 +1,4 @@
-/**
- * What is actually running behind a rule: an allow rule with nothing bound does
- * nothing, and a public service with no rule is unreachable.
- */
-
-/**
- * The listening entry a rule points at, or null.
- *
- * Only public sockets count; a 127.0.0.1 process is unreachable from outside
- * regardless of the firewall. A range rule matches if anything public is bound
- * inside it.
- */
+// Only public sockets count: a 127.0.0.1 process is unreachable regardless of the firewall.
 export function listenerFor(rule, listening = []) {
   const from = Number(rule?.port_from);
   if (!Number.isFinite(from)) return null;
@@ -28,10 +17,7 @@ export function listenerFor(rule, listening = []) {
   );
 }
 
-/**
- * Public ports with nothing allowing them through — a service running but
- * unreachable. Only meaningful while the firewall is actually enforcing.
- */
+// Only meaningful while the firewall is actually enforcing.
 export function unreachablePorts({ listening = [], rules = [], enabled }) {
   if (!enabled) return [];
 

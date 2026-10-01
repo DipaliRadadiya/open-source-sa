@@ -1,10 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { Info } from "lucide-react";
 
-/**
- * The Node that was already on the machine. A note, not a card: the panel did not
- * install it and will not touch it, and saying so explains why it has no controls.
- */
+// A note, not a card: the panel did not install this Node and will not touch it.
 export async function SystemNodeNote({ system, versions = [] }) {
   if (!system?.version) return null;
   // The server's `node` is often one of the panel's own versions (the installer

@@ -12,24 +12,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-/**
- * Shows an image that lives in the site, via the preview endpoint (the download
- * endpoint sends `application/octet-stream` with `nosniff`, so it cannot render).
- *
- * Previewability is decided from the file's BYTES, not its name; nothing here
- * second-guesses it. SVG (can carry script, would be served inline from the API
- * origin) and oversized files are refused but downloadable, so Download is
- * offered; "not an image" leaves nothing to offer.
- */
+// Via the preview endpoint: download sends octet-stream + nosniff. The API decides previewability
+// from the bytes; SVG and oversized files are refused but still downloadable.
 export function ImagePreviewDialog({ appId, file, open, onOpenChange }) {
   const t = useTranslations("applications.files");
   const [state, setState] = useState({ status: "loading" });
 
-  /*
-   * Back to "loading" when the file changes, synced during render rather than in
-   * the effect: resetting in the effect is a cascading render the lint rule
-   * refuses, and would paint the previous image for a frame.
-   */
+  // Reset during render, not in the effect, so the previous image never paints for a frame.
   const [seenPath, setSeenPath] = useState(file?.path);
   if (seenPath !== file?.path) {
     setSeenPath(file?.path);
@@ -44,8 +33,7 @@ export function ImagePreviewDialog({ appId, file, open, onOpenChange }) {
     fetchFilePreview(appId, file.path, { signal: controller.signal })
       .then((result) => {
         if (controller.signal.aborted) {
-          // Resolved after the dialog closed: revoke now, or it leaks for the life of the
-          // document.
+          // Resolved after the dialog closed: revoke now, or it leaks for the document's life.
           if (result.url) URL.revokeObjectURL(result.url);
           return;
         }
@@ -94,8 +82,7 @@ export function ImagePreviewDialog({ appId, file, open, onOpenChange }) {
 
           {state.status === "error" ? (
             <div className="flex h-56 flex-col items-center justify-center gap-2 px-6 text-center">
-              {/* The API's sentence says which refusal it is (and why, for SVG); our copy is only
-                  for a failure with no message. */}
+              {/* The API's message says which refusal it is; our copy covers a failure with none. */}
               <p className="max-w-sm text-sm text-muted-foreground">
                 {state.message ?? t("imagePreview.loadFailed")}
               </p>

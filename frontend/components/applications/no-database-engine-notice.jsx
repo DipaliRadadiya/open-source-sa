@@ -3,13 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { Database, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-/**
- * Warns before the form is filled in that the server has no database engine;
- * otherwise e.g. WordPress provisions and then fails on a missing driver.
- *
- * Does not block: the API does not say which site types need a database.
- * Amber, since nothing is broken. Renders nothing when an engine is installed.
- */
+// Warns early, or e.g. WordPress provisions and then fails on a missing driver.
+// Does not block: the API does not say which site types need a database.
 export async function NoDatabaseEngineNotice({ installing = false }) {
   const t = await getTranslations("applications.noDatabase");
 

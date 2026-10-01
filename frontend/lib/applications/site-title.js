@@ -1,9 +1,5 @@
-/**
- * The field each site type uses for the site's title, prefilled from the
- * application name. Excluded on purpose: `admin_name` (Joomla, a person) and
- * `short_name` (Moodle, a separate abbreviation). Check what an installer does
- * with a field before adding it.
- */
+// Excluded on purpose: `admin_name` (Joomla, a person) and `short_name` (Moodle, an abbreviation).
+// Check what an installer does with a field before adding it.
 export const TITLE_FIELDS = new Set([
   "site_title", // WordPress, Mautic
   "site_name", // Craft CMS, Joomla, Moodle
@@ -11,11 +7,7 @@ export const TITLE_FIELDS = new Set([
   "company_name", // Akaunting
 ]);
 
-/**
- * A title from a slug-like name ("my-shop" → "My Shop"). Only the first letter
- * of each word is raised (title-case rules are language-specific); existing
- * capitals are kept.
- */
+// Only each word's first letter is raised (title-case rules are language-specific).
 export function siteTitleFrom(name) {
   const value = String(name ?? "").trim();
   if (!value) return "";

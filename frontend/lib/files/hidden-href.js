@@ -1,7 +1,4 @@
-/**
- * Where the "show/hide hidden files" control points. In the URL because the
- * listing is filtered on the server.
- */
+// In the URL because the listing is filtered on the server.
 export function hiddenToggleHref({ appId, path = "", showHidden = true }) {
   const params = new URLSearchParams();
 

@@ -1,11 +1,5 @@
-/**
- * The API's own error `message` from a failed response; the backend makes it
- * safe to show (e.g. 404/405 are rewritten into translated sentences).
- *
- * Laravel's debug extras (`trace`, `file`, `line`, `exception`) are never
- * shown, but their presence is reported as `debug` (APP_DEBUG=true) so the UI
- * can warn about it.
- */
+// The API's `message` is safe to show. Laravel debug extras are never shown, but
+// their presence is reported as `debug` so the UI can warn.
 const MAX = 300;
 
 export async function readErrorBody(res) {

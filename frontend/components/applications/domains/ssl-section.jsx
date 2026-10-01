@@ -45,20 +45,14 @@ import { IssueCertDialog } from "@/components/applications/domains/issue-cert-di
 import { VisitSiteLink } from "@/components/applications/visit-site-link";
 
 const POLL_MS = 3000;
-/*
- * Polling stops after ten minutes so a wedged issuance does not drain the
- * 180/min API budget. Not a failure verdict: the card keeps showing "issuing".
- */
+// Stops after ten minutes to protect the 180/min API budget; not a failure verdict.
 const POLL_LIMIT = (10 * 60 * 1000) / POLL_MS;
 const isPending = (c) =>
   c && (c.status === "pending" || c.status === "issuing");
 // Never retry a rate limit: the wait is a week.
 const NO_RETRY = new Set(["rate_limited"]);
 
-/*
- * Tile styles from `admin/dashboard/status-tile`: colour comes from the chip
- * and a left accent, never a fill (except a faint wash for `destructive`).
- */
+// Tile styles from `admin/dashboard/status-tile`: colour from the chip and accent, never a fill.
 const TONES = {
   success: { chip: "bg-success/10 text-success", accent: "bg-success/45", tint: "", title: "" },
   warning: { chip: "bg-warning/10 text-warning", accent: "bg-warning/50", tint: "", title: "" },
@@ -111,11 +105,8 @@ export function SslSection({
 }) {
   const t = useTranslations("applications.domains");
   const format = useFormatter();
-  /*
-   * Every date on this card goes through here. Use `parseApiDate`, NOT
-   * `new Date`: the API sends `20-11-2026 04:34:36` (day first, no timezone).
-   * Returns null when unparseable; callers hide the line.
-   */
+  // Use `parseApiDate`, NOT `new Date`: the API sends `20-11-2026 04:34:36` (day first, no timezone).
+  // Null when unparseable; callers hide the line.
   const asDate = (value) => {
     const when = parseApiDate(value);
     return when ? format.dateTime(when, { day: "numeric", month: "long", year: "numeric" }) : null;

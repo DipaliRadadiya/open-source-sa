@@ -39,22 +39,14 @@ import { WebRootDialog } from "@/components/applications/web-root-dialog";
 import { MagicLoginDialog } from "@/components/applications/magic-login-dialog";
 import { useMagicLogin } from "@/components/applications/use-magic-login";
 
-/**
- * Shortcut screens, in the order a site is usually worked on. Keyed because the
- * caller is a server component: icons cannot cross that boundary, so the server
- * sends the permitted keys and icons are resolved here.
- */
+// Keyed because icons cannot cross the server-component boundary.
 const SHORTCUT_ICONS = {
   files: FolderTree,
   domains: Globe2,
   backups: Archive,
 };
 
-/**
- * Row menu for one application. Open and Visit are reads (available to
- * view-only users); Retry and Delete need `manage`. Visit is only offered while
- * the site is actually being served.
- */
+// Open and Visit are reads; Retry and Delete need `manage`. Visit only while served.
 export function ApplicationRowActions({
   application,
   canManage = false,
@@ -87,9 +79,8 @@ export function ApplicationRowActions({
     application.site_type === "wordpress" &&
     application.status === "active";
 
-  // Close the menu when the status changes underneath it (e.g. Retry accepted,
-  // or the 4 s list poll lands), so it never offers actions for a stale state.
-  // Render-phase sync: an effect would paint the stale menu once first.
+  // Close the menu when the status changes underneath it. Render-phase sync: an effect
+  // would paint the stale menu once first.
   const [seenStatus, setSeenStatus] = useState(application.status);
   if (seenStatus !== application.status) {
     setSeenStatus(application.status);
@@ -113,9 +104,8 @@ export function ApplicationRowActions({
     setResuming(true);
     try {
       await enableApplication(application.id);
-      // After the refresh lands, so the badge and toast agree. Closes the menu here:
-      // pause/resume change `disabled_at`, not `status`, so the status-change close
-      // does not fire.
+      // After the refresh, so badge and toast agree. Closes the menu here because
+      // pause/resume change `disabled_at`, not `status`.
       refreshThen(() => {
         toast.success(t("pause.resumed", { name: application.name }));
         setResuming(false);

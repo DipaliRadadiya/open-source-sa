@@ -3,13 +3,8 @@ import { read } from "@/lib/api/read";
 import { rolesResponseSchema } from "@/lib/schemas/role";
 import { listQuery, EMPTY_LIST_META } from "@/lib/schemas/list";
 
-/**
- * Every permission role, for the role checkboxes on a user.
- *
- * `/admin/roles` is paginated, so this asks for the API's maximum; otherwise
- * only the first page would be offered. Reports `failed` rather than an empty
- * list, so callers do not claim "no roles exist" or 404 a real role.
- */
+// Asks for the API's maximum page size, or only the first page is offered.
+// Reports `failed`, not an empty list, so callers never claim "no roles exist".
 export async function getRoles() {
   const failure = { roles: [], failed: true };
 
@@ -24,9 +19,6 @@ export async function getRoles() {
   }
 }
 
-/**
- * One page of the roles list, with search and paging done by the API.
- */
 export async function getRolesPage(query = "") {
   const result = await read("/admin/roles", rolesResponseSchema, {
     searchParams: listQuery(query),

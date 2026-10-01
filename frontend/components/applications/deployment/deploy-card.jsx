@@ -66,11 +66,7 @@ function Fact({ icon: Icon, label, children }) {
   );
 }
 
-/**
- * Where the reason for a failed step is. `verify` ran everything and the site
- * still did not answer, so the evidence is the runtime log; every other step's
- * evidence is the build log.
- */
+// `verify` ran everything and the site still did not answer, so its evidence is the runtime log.
 function evidenceFor(step, application) {
   if (step !== "verify") return { kind: "build" };
   return {

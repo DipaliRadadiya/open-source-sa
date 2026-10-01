@@ -28,27 +28,18 @@ import {
   FormField,
 } from "@/components/ui/form";
 
-/**
- * Edits the deploy settings after creation.
- *
- * `deploy_script` comes back filled even when the user wrote nothing (it falls
- * back to the build command). `deploy_script_customised` separates "their script"
- * from the fallback and decides whether Reset is offered.
- */
+// `deploy_script` comes back filled from the build command even when unset;
+// `deploy_script_customised` marks a real one and decides whether Reset is offered.
 export function DeploySettingsCard({ applicationId, application, settings, canManage }) {
   const t = useTranslations("applications.deployment.settings");
   const { refreshAndWait } = useRefresh();
   const [saving, setSaving] = useState(false);
-  // Only resolved outcomes live in state; "loading" and "idle" are derived from
-  // props to avoid a synchronous setState in the effect
+  // Only resolved outcomes live in state; the rest is derived from props
   // (react-hooks/set-state-in-effect).
   const [resolved, setResolved] = useState(null);
 
-  /*
-   * Branch list from the provider via this account. Fetched on the client: most
-   * visits never touch this field, and a dead credential must not fail the whole
-   * page.
-   */
+  // Branches load on the client: most visits never need them, and a dead
+  // credential must not fail the whole page.
   const accountId = application?.git_account_id;
   const repository = application?.repository;
   const linked = Boolean(accountId) && Boolean(repository) && !application?.git_account_missing;
@@ -103,15 +94,10 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
   // deploy about to happen.
   const branchNow = useWatch({ control: form.control, name: "branch" });
 
-  /*
-   * What each token expands to on this site (`{path}` is the document root, not the
-   * site directory). Tokens with no known value still list, without a value.
-   */
+  // `{path}` expands to the document root, not the site directory.
   const scriptRef = useRef(null);
 
-  /*
-   * Inserts a token at the cursor so exact values never need typing.
-   */
+  // Inserts a token at the cursor so exact values never need typing.
   function insertToken(token) {
     const el = scriptRef.current;
     const current = form.getValues("deploy_script") ?? "";
@@ -187,17 +173,13 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
                 <Row
                   wide
                   label={t("branch")}
-                  /*
-                   * `loading`, `empty` and `error` describe a fallback already applied (type the
-                   * name instead), so they are hints. `unlinked` (no working Git account) must be
-                   * fixed and uses Row's destructive `error` slot.
-                   */
+                  /* `unlinked`/`missing` must be fixed, so they use Row's destructive `error`
+                     slot; the other notices describe a fallback already applied. */
                   hint={notice && notice !== "unlinked" && notice !== "missing" ? t(`branchNotice.${notice}`) : t("branchHint")}
                   error={notice === "unlinked" || notice === "missing" ? t(`branchNotice.${notice}`) : undefined}
                 >
-                  {/* The list when it is reliable, free text otherwise (see
-                      lib/applications/branch-picker.js). Never an empty disabled picker, which
-                      reads as "your branch is gone". */}
+                  {/* Picker when the list is reliable, free text otherwise (see branch-picker.js);
+                      never an empty disabled picker, which reads as "your branch is gone". */}
                   {mode === "picker" ? (
                     <Combobox
                       options={branchOptions(branches, field.value)}
@@ -276,11 +258,7 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
   );
 }
 
-/**
- * The tokens a deploy script may use, and what each expands to. Each token is a
- * button that inserts it at the cursor. A token the panel cannot resolve keeps
- * its row with no value.
- */
+// Each token inserts itself at the cursor; one the panel cannot resolve keeps its row.
 function TokenList({ label, tokens, values, onInsert }) {
   return (
     <div className="rounded-lg border bg-muted/30 p-3">

@@ -12,23 +12,10 @@ import { fileIconFor, isImageFile } from "@/lib/files/file-icon";
 import { canOpenFile } from "@/lib/files/openable";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-/*
- * Makes the name the click target for the whole row: the pseudo-element is
- * positioned against the <li>, so it spans the row. The name's `truncate`
- * (overflow:hidden) does not clip it, because its containing block is outside
- * the overflowing element.
- */
+// The name's ::after spans the <li>; its `truncate` does not clip it, as the containing block is outside.
 const STRETCH = "after:absolute after:inset-0 after:rounded-xl";
 
-/**
- * Results for "Search entire site": recursive, so rows can be anywhere on the
- * site. A file opens like in the listing; a folder navigates into it. The
- * containing folder is shown as its own small link.
- *
- * The whole row is the target via a stretched overlay on the name, not by
- * wrapping the row in a link, because the row also holds the folder link (no
- * <a> inside <a>); the folder link is lifted above the overlay.
- */
+// Row target is an overlay on the name, not a wrapping link: the row also holds the folder link (no <a> in <a>).
 export function SiteSearchResults({ appId, query, onAction, canManage = true }) {
   const t = useTranslations("applications.files");
   const [remote, setRemote] = useState({ status: "loading", files: [], message: null });

@@ -15,13 +15,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 
-/**
- * Install or remove the ionCube Loader for one PHP version.
- *
- * Its own card, not an extensions row: it is a vendor `.so` declared as a
- * `zend_extension`, not an apt package. ionCube publishes no loader for PHP
- * 8.0, so `unsupported` is stated instead of letting the button earn a 422.
- */
+// Not an extensions row: a vendor `zend_extension`, not an apt package. No
+// loader exists for PHP 8.0, so `unsupported` is stated instead of a 422.
 export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
   const t = useTranslations("php.ioncube");
   // Reuses existing strings under `php`.
@@ -142,11 +137,7 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
           <div className="shrink-0">
             <ReasonTooltip reason={canManage ? null : tp("noPermission")}>
               {installed ? (
-                /*
-                 * `destructive`, like every other button that removes
-                 * something from the server; the confirmation dialog remains
-                 * the safety net.
-                 */
+                /* `destructive`, like every button that removes something. */
                 <Button
                   variant="destructive"
                   onClick={() => setConfirmOpen(true)}

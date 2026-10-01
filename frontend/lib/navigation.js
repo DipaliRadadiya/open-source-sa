@@ -16,9 +16,8 @@ export function findActiveNavItem(items, pathname) {
     .sort((a, b) => (b.href ?? b.url).length - (a.href ?? a.url).length)[0];
 }
 
-// Application-level catalog `url`s are relative segments (`/domains`, `""` for
-// the dashboard). Unprefixed they 404 or land on the server-wide screen of the
-// same name.
+// Catalog `url`s are relative (`""` is the dashboard); unprefixed they 404 or
+// land on the server-wide screen.
 export function applicationNavHref(applicationId, url) {
   return `/applications/${applicationId}${url ?? ""}`;
 }
@@ -82,9 +81,8 @@ export function isNavBuilt(panel, url) {
 // the `/applications/{id}` prefix, server items are already absolute.
 export function resolveNavItems(items, applicationId) {
   return (items || [])
-    // A null `url` means the permission is not a screen (e.g. Magic Login, a
-    // Dashboard button). `""` is the Dashboard itself, so check for null
-    // specifically, not falsiness.
+    // A null `url` is not a screen (e.g. Magic Login). `""` is the Dashboard, so
+    // check for null, not falsiness.
     .filter((item) => item.url !== null && item.url !== undefined)
     .map((item) =>
       item.level === "application" && applicationId
@@ -93,20 +91,14 @@ export function resolveNavItems(items, applicationId) {
     );
 }
 
-/**
- * The catalog's title, unless the frontend uses a clearer one. "8G" names the
- * upstream ruleset, not the feature; the API keeps its name, only the label
- * changes.
- */
+// "8G" names the upstream ruleset, not the feature; only the label changes.
 export function navTitle(item, t) {
   if (item.name === "app_firewall") return t("navTitles.app_firewall");
   return item.title;
 }
 
-// Groups a flat, already-filtered list of nav items by sub_level for section
-// headers. Returns an array to keep the catalog order; each group carries
-// `sub_level_title` (the display label), with the raw `sub_level` id as a
-// fallback for older catalogs.
+// Returns an array to keep catalog order; raw `sub_level` is the fallback title
+// for older catalogs.
 export function groupBySubLevel(items) {
   const groups = [];
   const byKey = new Map();

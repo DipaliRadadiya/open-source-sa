@@ -12,10 +12,7 @@ export function rememberPath(path) {
   }
 }
 
-/**
- * Where to go after signing in. Cleared on read so a later sign-in (e.g. a
- * different account) does not reuse it.
- */
+// Cleared on read so a later sign-in (e.g. a different account) does not reuse it.
 export function takeRememberedPath() {
   try {
     const value = sessionStorage.getItem(LAST_PATH_KEY);
@@ -26,10 +23,7 @@ export function takeRememberedPath() {
   }
 }
 
-/**
- * Reads without clearing. Deliberate sign-out clears it, so a value here means
- * the session expired.
- */
+// Reads without clearing. Sign-out clears it, so a value here means the session expired.
 export function peekRememberedPath() {
   try {
     return safeNext(sessionStorage.getItem(LAST_PATH_KEY));

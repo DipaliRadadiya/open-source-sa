@@ -44,11 +44,7 @@ const sortByName = withDirsFirst((a, b) => a.name.localeCompare(b.name));
 const sortBySize = withDirsFirst((a, b) => (a.size ?? 0) - (b.size ?? 0));
 const sortByModified = withDirsFirst((a, b) => parseApiDate(a.modified_at) - parseApiDate(b.modified_at));
 
-/**
- * Selection lives in the panel (which runs the bulk calls), keyed by path, not
- * TanStack row index, which would point at the wrong file after a re-sort or
- * refresh.
- */
+// Keyed by path, not row index, which points at the wrong file after a re-sort.
 function SelectCell({ row, table }) {
   const t = useTranslations("applications.files");
   const { selected, onToggle } = table.options.meta;
@@ -135,9 +131,8 @@ function NameCell({ row, table }) {
     );
   }
 
-  // Archives and binaries cannot be opened (editor and preview both refuse), so no
-  // click is offered; download and extract stay in the menu.
-  // Opening needs File Manager manage, so a view-only role gets plain text, not a 403.
+  // Archives and binaries cannot be opened; opening needs manage, so view-only
+  // roles get plain text, not a 403.
   if (!canManage || !canOpenFile(file.name)) {
     return (
       <span className="flex w-full min-w-0 items-center gap-2 font-medium">
@@ -223,10 +218,7 @@ function ModifiedCell({ row }) {
   );
 }
 
-/**
- * User and group, always both (`deploy:www-data`, as `ls -l` shows it), even when
- * equal, so the column means the same thing on every row.
- */
+// Always `user:group`, even when equal, so the column means the same on every row.
 function OwnerCell({ row }) {
   const file = row.original;
 
@@ -256,13 +248,8 @@ function PermissionsCell({ row }) {
   // The picker's plain-language sentence, on hover.
   const sentence = sentenceFor(file.mode);
   return (
-    /*
-     * Both notations stacked, as one value: `drwxr-xr-x` shows which bit is missing,
-     * `755` matches the Permissions dialog and chmod.
-     * Stacked because one line overflowed this column at 1024-1280px with the sidebar.
-     */
-    // One tooltip for the whole cell: the sentence, plus the world-writable warning
-    // when it applies.
+    // Both notations stacked: one line overflowed this column at 1024-1280px.
+    // One tooltip for the whole cell, plus the world-writable warning when it applies.
     <Tooltip>
       <TooltipTrigger asChild>
         <span className="flex flex-col gap-0.5 whitespace-nowrap font-mono text-xs w-fit cursor-help rounded text-muted-foreground">
@@ -318,17 +305,8 @@ export function FilesTable({
 }) {
   const t = useTranslations("applications.files");
 
-  // Percentages summing to 100 with `fixedLayout`, so Name's share is really
-  // bounded (`auto` layout treats widths as hints).
-  //
-  // Name takes a third and wraps to two lines (`FILE_NAME`). Inner cells use the
-  // base `px-4`; the outer edges keep 24px to align with the card. Owner hides
-  // below `xl`, like the applications table.
-  //
-  // The checkbox column is a fixed 48px (as a percentage it spilled into Name at
-  // 1024), so the shares sum to 92-93 to leave room for it on the narrowest table
-  // (704px), both with and without Owner, since a hidden column's share is not
-  // redistributed.
+  // Percentages with `fixedLayout`, so widths are bounded. The checkbox is a fixed
+  // 48px, so shares sum to 92-93; a hidden column's share is not redistributed.
   const columns = [
     {
       id: "select",
@@ -359,9 +337,7 @@ export function FilesTable({
       sortingFn: sortByModified,
     },
     {
-      // Not sortable: the sort would order by `owner` alone while the cell shows
-      // `owner:group`, and dirs-first scatters it further. The search box covers
-      // "what does X own".
+      // Not sortable: sort would use `owner` alone while the cell shows `owner:group`.
       accessorKey: "owner",
       header: t("columns.owner"),
       meta: { className: "hidden w-[14%] px-4 whitespace-normal hyphens-auto xl:table-cell" },

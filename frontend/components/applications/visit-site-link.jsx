@@ -1,16 +1,8 @@
 import { ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/**
- * Open a site in a new tab, from wherever its name is shown.
- *
- * The scheme is never assumed: without a certificate there is no TLS listener,
- * and a certificate covers named hostnames only. Callers pass `secure` from
- * evidence (the app's `url` for the primary name, `certificate.domains` for
- * others).
- *
- * Icon-only beside the domain; the accessible name carries the hostname.
- */
+// The scheme is never assumed: no certificate means no TLS listener, and certificates cover named hosts only.
+// Callers pass `secure` from evidence (the app's `url`, or `certificate.domains`).
 export function VisitSiteLink({ href, domain, secure = false, label, className }) {
   const url = href ?? `${secure ? "https" : "http"}://${domain}`;
 

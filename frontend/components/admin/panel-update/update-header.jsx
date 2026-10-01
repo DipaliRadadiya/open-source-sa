@@ -2,12 +2,7 @@ import { useTranslations, useFormatter } from "next-intl";
 import { ArrowRight, ArrowUpCircle, CircleCheck, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/**
- * The band every resting state of this page opens with, so the three states
- * share one shape: status chip, one-word status, the version, then meta, with
- * the actions closing the same row. The version is 18px so the page heading
- * stays the largest text.
- */
+// Shared band for every resting state. The version is 18px so the page heading stays largest.
 const TONES = {
   update: {
     Icon: ArrowUpCircle,
@@ -49,8 +44,7 @@ export function UpdateHeader({ state, divided = false, actions = null }) {
       : t("published", { date: format.dateTime(date, { dateStyle: "medium" }) });
   })();
 
-  // `branch` is null once updated (a tag checkout is a detached HEAD), so it drops
-  // out rather than printing an empty separator.
+  // `branch` is null on a tag checkout (detached HEAD), so it drops out.
   const source = [installed.commit_short, installed.branch].filter(Boolean).join(" · ");
   const meta = [publishedLabel, source].filter(Boolean);
 
@@ -67,8 +61,7 @@ export function UpdateHeader({ state, divided = false, actions = null }) {
         <Icon className={cn("size-5", tint)} aria-hidden />
       </span>
 
-      {/* Natural width from sm up so the row's slack goes to the actions. min-w-48 makes
-          the column wrap to its own line rather than squeeze to one word per line. */}
+      {/* min-w-48 makes the column wrap to its own line rather than squeeze to one word per line. */}
       <div className="min-w-48 flex-1 basis-0 space-y-1.5 sm:flex-none sm:basis-auto">
         <h2 className={cn("text-xs font-semibold tracking-wider uppercase", tint)}>
           {tone === "update"

@@ -1,10 +1,7 @@
 import { read } from "@/lib/api/read";
 import { webhookProvidersResponseSchema } from "@/lib/schemas/deployment";
 
-/**
- * The connect-form schema for deploy-on-push. A failure is not fatal: only the
- * enable form needs the list.
- */
+// Not fatal: only the enable form needs the list.
 export async function getWebhookProviders() {
   const result = await read("/webhook-providers", webhookProvidersResponseSchema);
 

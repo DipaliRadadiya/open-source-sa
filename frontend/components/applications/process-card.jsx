@@ -15,17 +15,11 @@ import { formatBytes } from "@/lib/format/bytes";
 
 const STATE_VARIANT = { active: "success", failed: "destructive", activating: "warning" };
 
-/**
- * Spelled out, not built as `${action}ed` ("stoped"). Literal keys also stay
- * visible to grep.
- */
+// Spelled out, not `${action}ed` ("stoped"); literal keys stay greppable.
 const DONE_KEY = { start: "started", stop: "stopped", restart: "restarted" };
 
-/**
- * Only for sites that run their own process (`has_process`: a start command is
- * set). A new git site is `active` with a never-started process; that reads as
- * "deploy to start", not a fault, so it is not red.
- */
+// A new git site is `active` with a never-started process: "deploy to start",
+// not a fault, so not red.
 export function ProcessCard({ application, canManage = false, className }) {
   const t = useTranslations("applications.process");
   const tApp = useTranslations("applications");
@@ -33,9 +27,8 @@ export function ProcessCard({ application, canManage = false, className }) {
   const { refreshThen } = useRefresh();
   const [pending, setPending] = useState(null);
   const [confirmStop, setConfirmStop] = useState(false);
-  // What the last button here should have done. systemd records a stopped Node
-  // process as "failed" (it exits on SIGTERM), so after Stop it reads as stopped;
-  // after Start/Restart it reads as starting until the re-read lands.
+    // systemd records a stopped Node process as "failed" (it exits on SIGTERM),
+    // so the expected outcome of the last click decides how it reads.
   const [expected, setExpected] = useState(null);
 
   const process = application.process ?? {};
@@ -155,10 +148,7 @@ export function ProcessCard({ application, canManage = false, className }) {
   );
 }
 
-/**
- * systemd's "Sat 2026-09-26 13:18:19 UTC", in the reader's language. Left as
- * it came when it is not that shape.
- */
+// systemd's "Sat 2026-09-26 13:18:19 UTC", localised; other shapes pass through.
 function formatSince(since, format) {
   const match = typeof since === "string" && since.match(/(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) UTC$/);
   if (!match) return since;

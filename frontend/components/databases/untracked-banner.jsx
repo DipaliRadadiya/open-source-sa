@@ -11,10 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-/**
- * Databases that are on the server but not in the panel. Not an error.
- * Adopting never touches the data; it only starts tracking what already exists.
- */
+// Adopting never touches the data; it only starts tracking what exists.
 export function UntrackedBanner({ untracked = [], canManage }) {
   const t = useTranslations("databases");
   const { refreshAndWait } = useRefresh();

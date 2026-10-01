@@ -9,16 +9,8 @@ import { apiMessage } from "@/lib/api/error-message";
 import { installTarget, rangeLabel } from "@/lib/runtime/version-range";
 import { RequiredServicesPanel } from "@/components/applications/required-services-panel";
 
-/**
- * Install what the chosen application needs, from the create form.
- *
- * Uses the existing install endpoints (`POST /databases/engines/{engine}`,
- * `/php/versions`, `/node/versions`): each is an idempotent 202 on a
- * single-worker queue, so firing them all is safe.
- *
- * No local state machine: each row's state is read from the same live data the
- * page renders from, so it cannot disagree with the rest of the page.
- */
+// Install endpoints are idempotent 202s on a single-worker queue, so firing all is safe.
+// Row state comes from the page's live data, not a local state machine.
 
 const RUNTIME_NAMES = { php: "PHP", node: "Node" };
 
@@ -29,11 +21,7 @@ const ENGINE_LABELS = {
   postgresql: "PostgreSQL",
 };
 
-/**
- * The blockers as rows, each with the exact thing this panel would install.
- * Computed once per chosen application: blockers vanish as they are cleared, so
- * deriving on every render would drop a row the moment it turned green.
- */
+// Computed once per type: blockers vanish as cleared, so a row would drop on turning green.
 function servicesFor(type, { phpInstallable, nodeInstallable }) {
   const blockers = Array.isArray(type?.blockers) ? type.blockers : [];
   const installable = { php: phpInstallable, node: nodeInstallable };
@@ -64,12 +52,8 @@ function servicesFor(type, { phpInstallable, nodeInstallable }) {
           : null;
     if (!runtime) return [];
 
-    /*
-     * Which version to install: the server's `suggest` when a range excluded
-     * everything installed, otherwise the lowest installable version that fits
-     * (matching `runtime-readiness`). Null means nothing installable fits, a
-     * separate state with no button.
-     */
+    // The server's `suggest`, else the lowest installable version that fits
+    // (matches `runtime-readiness`). Null: nothing installable fits.
     const target = blocker.suggest
       ? { version: blocker.suggest, eol: Boolean(blocker.suggestEol) }
       : installTarget(installable[runtime], blocker.range ?? null);
@@ -103,11 +87,7 @@ function liveState(row, { engines, phpVersions, nodeVersions, canInstall, errors
     if (engine?.installed === true && engine?.running === true) return "installed";
     if (engine?.install_status === "installing") return "installing";
     if (engine?.install_status === "failed") return "failed";
-    /*
-     * An engine the panel cannot install here at all (e.g. MongoDB where the
-     * vendor ships no build for this OS): `impossible`, not `missing`, so no
-     * Install button that can only 422.
-     */
+    // Not installable on this OS: no Install button that can only 422.
     if (engine && engine.installable === false && !engine.installed) return "impossible";
     if (!canInstall.database) return "denied";
     return "missing";
@@ -155,10 +135,7 @@ export function RequiredServices({
         return {
           ...row,
           state,
-          /*
-           * The server's own reason when it has one; the generic sentence is about
-           * version ranges and does not fit an unavailable engine.
-           */
+          /* The generic sentence is about version ranges; prefer the server's reason. */
           reason:
             state === "impossible" && row.kind === "database"
               ? ((engines ?? []).find((item) => item?.engine === row.engine)?.unavailable?.reason ??
@@ -171,11 +148,7 @@ export function RequiredServices({
 
   const working = services.some((service) => service.state === "installing");
 
-  /*
-   * Poll only while something is running, by refreshing the page rather than
-   * fetching here: versions, engines and blockers are computed together on the
-   * server, so the card grid above updates too.
-   */
+  // Refresh the page rather than fetch: versions, engines and blockers are computed together.
   useEffect(() => {
     if (!working) return undefined;
     const timer = setInterval(refresh, POLL_MS);

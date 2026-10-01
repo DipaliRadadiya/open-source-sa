@@ -1,9 +1,6 @@
 import { cn } from "@/lib/utils";
 
-/**
- * Shared building blocks for a table's narrow-screen card view. Two per row
- * from `sm` up.
- */
+// Narrow-screen card view for a table; two per row from `sm` up.
 export function CardList({ className, children }) {
   // grid-cols-1 is not redundant: it gives `minmax(0, 1fr)`, so nowrap content
   // cannot widen the list past the viewport.

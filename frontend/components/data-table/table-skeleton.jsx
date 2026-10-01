@@ -3,11 +3,7 @@ import { cn } from "@/lib/utils";
 
 const BAR_WIDTHS = ["w-32", "w-24", "w-16", "w-28", "w-20"];
 
-/**
- * A table-shaped loading skeleton — a header row plus body rows with per-column
- * cells (not a solid block). `withAvatar` renders a circle + bar in the first
- * column; the last column is treated as a narrow actions cell.
- */
+// The last column is a narrow actions cell.
 export function TableSkeleton({ rows = 6, columns = 5, withAvatar = false }) {
   return (
     <div className="overflow-hidden rounded-xl border">

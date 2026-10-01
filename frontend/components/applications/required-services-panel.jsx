@@ -16,27 +16,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 
-/**
- * What this site type needs before it can be created, with one press to
- * install it all. Each missing service is a row with its own state, since the
- * queue runs one job at a time and `queued` must be visible.
- *
- * It does not create the site (domain and admin password come later in the
- * form); it installs services while the form is filled in, and Create unlocks
- * when the last one lands.
- */
+// Installs what the site type needs while the form is filled in; Create unlocks when the last lands.
 
-/*
- * Rows never re-order: sorting by state made rows jump under the cursor as
- * installs finished. The badges carry the change.
- */
+// Rows never re-order: sorting by state made rows jump under the cursor.
 
 const ICONS = { node: Hexagon, php: FileCode2, database: Database };
 
-/*
- * A square glyph per kind (database, runtime), not the vendor's wide lockup,
- * so every row has the same shape; the name says which.
- */
+// A square glyph per kind, not the vendor's wide lockup, so every row has the same shape.
 function ServiceMark({ service }) {
   const Icon = ICONS[service.kind] ?? Database;
   return <Icon className="size-5" aria-hidden />;
@@ -84,15 +70,9 @@ function StateBadge({ service }) {
           </Badge>
         </ReasonTooltip>
       );
-    /*
-     * Nothing this panel can install satisfies the application (e.g. PrestaShop
-     * needs PHP 7.2–8.1 and only 8.3/8.4 are installable). No Install button.
-     */
+    // Nothing installable satisfies the app (e.g. PrestaShop needs PHP 7.2–8.1). No Install button.
     case "impossible":
-      /*
-       * The badge distinguishes "no version fits" (a range) from an engine with no
-       * published versions at all.
-       */
+      // The badge tells "no version fits" (a range) apart from an engine with no published versions.
       return (
         <ReasonTooltip reason={service.reason ?? t("state.impossibleReason")}>
           <Badge variant="destructive" className="font-normal">
@@ -192,18 +172,10 @@ export function RequiredServicesPanel({
                 <span className="block text-xs text-pretty text-muted-foreground">
                   {service.state === "failed" && service.error
                     ? service.error
-                    : /*
-                       * The requirement when stated: the title is the exact
-                       * build to install ("Node 24.12.0"), not what the app
-                       * demands ("24 or newer").
-                       */
+                    : // The title is the exact build to install, not what the app demands.
                       service.requirement
                       ? t(
-                          /*
-                           * A separate sentence when the only versions this
-                           * type runs on are end-of-life, so an unsupported PHP
-                           * is never installed without saying so.
-                           */
+                          // Separate sentence when only end-of-life versions fit, so that is never left unsaid.
                           service.eol ? `needsEol.${service.kind}` : `needs.${service.kind}`,
                           { app: typeTitle, requirement: service.requirement },
                         )

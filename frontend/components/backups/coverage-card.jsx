@@ -26,10 +26,7 @@ import { SetupBackupsDialog } from "@/components/backups/setup-backups-dialog";
 // for the queue to pick the job up, short enough to stop if it never starts.
 const JUST_STARTED_MS = 90_000;
 
-/**
- * Which sites are protected, and which are not. Filtering is client-side: the
- * coverage list is already fully loaded during SSR.
- */
+// Filtering is client-side: the coverage list is fully loaded during SSR.
 export function CoverageCard({
   coverage,
   applications,
@@ -47,10 +44,8 @@ export function CoverageCard({
   const [dialogOpen, setDialogOpen] = useState(false);
   // Runs are queued, so several can start at once; each row keeps its own spinner.
   const starting = usePendingKeys();
-  // Set when "Run backup" is pressed (or the empty state just started a run),
-  // so polling covers the gap before the row shows it. Cleared by a timer, not
-  // a `Date.now()` comparison, to keep render pure. Only an invisible poller
-  // depends on it, so a server/client difference changes no markup.
+  // Covers the gap before the row shows a new run. Cleared by a timer, not
+  // `Date.now()`, to keep render pure.
   const [justStarted, setJustStarted] = useState(() => backupStartedWithin(JUST_STARTED_MS));
 
   const [state, setState] = useState("all");
@@ -116,9 +111,8 @@ export function CoverageCard({
   const scheduleZones = new Set(rows.map((row) => row.target?.timezone).filter(Boolean));
   const scheduleTimezone = scheduleZones.size === 1 ? [...scheduleZones][0] : null;
 
-  // Poll while any newest run is in flight, or just after "Run backup": right
-  // after the API accepts a run the row still shows the previous, finished
-  // backup, so status alone would never start the poller.
+  // Right after a run is accepted the row still shows the previous backup, so
+  // status alone would never start the poller.
   const inFlight = coverage.rows.some((row) => BACKUP_IN_FLIGHT.includes(row.lastBackup?.status));
   const watching = inFlight || justStarted;
 
@@ -222,10 +216,7 @@ export function CoverageCard({
           />
         ) : (
           <>
-            {/*
-              The Schedule column's timezone, stated once for the list. Not in
-              the column header, where it widened the table into horizontal scroll.
-            */}
+            {/* Stated once here: in the column header it forced horizontal scroll. */}
             {scheduleTimezone ? (
               <p className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Clock className="size-3.5 shrink-0" />

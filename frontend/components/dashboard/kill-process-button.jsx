@@ -15,10 +15,7 @@ import {
 } from "@/components/ui/tooltip";
 import { apiMessage } from "@/lib/api/error-message";
 
-/**
- * Stop one process. Always confirms, naming the process and PID: there is no
- * undo. TERM first; KILL is offered only as a follow-up.
- */
+// Always confirms: there is no undo. TERM first; KILL only as a follow-up.
 export function KillProcessButton({ process, canManage }) {
   const t = useTranslations("serverDashboard");
   const { refreshThen } = useRefresh();
@@ -44,8 +41,7 @@ export function KillProcessButton({ process, canManage }) {
       const status = error.response?.status;
 
       if (status === 404) {
-        // Already gone, but NOT a success: PIDs are recycled, so the row may now
-        // be a different process. Say nothing was stopped and reload the list.
+        // NOT a success: PIDs are recycled, so the row may now be a different process.
         refreshThen(() => {
           toast.info(t("kill.alreadyGone"));
           setConfirming(false);
@@ -55,8 +51,7 @@ export function KillProcessButton({ process, canManage }) {
       }
 
       if (status === 422) {
-        // A permanent refusal — PID 1, a kernel thread, the panel's own PHP, a
-        // protected service. Retrying will never work, so don't offer it.
+        // Permanent refusal (PID 1, kernel thread, protected service): never offer a retry.
         toast.error(apiMessage(error, t("kill.refused")));
         setConfirming(false);
         setPending(false);
@@ -92,8 +87,7 @@ export function KillProcessButton({ process, canManage }) {
 
   return (
     <>
-      {/* Not permitted: ReasonTooltip, which also opens on tap and supplies the
-          reason via context, so the Button adds no second tooltip. */}
+      {/* ReasonTooltip also opens on tap and supplies the reason, so the Button adds no second tooltip. */}
       {canManage ? (
         <Tooltip>
           <TooltipTrigger asChild>{stopButton}</TooltipTrigger>
@@ -124,8 +118,7 @@ export function KillProcessButton({ process, canManage }) {
         pending={pending}
         onConfirm={() => run(offerForce ? "KILL" : "TERM")}
       >
-        {/* A database stopped here stays down until restarted from Services, and
-            the API still allows it, so warn. */}
+        {/* The API still allows it, and a database stopped here stays down until restarted. */}
         {engine && !offerForce ? (
           <Caution tone="destructive" size="md">
             {t("kill.databaseWarning", { engine })}
@@ -147,8 +140,7 @@ function databaseEngine(command) {
   return DATABASE_PROCESSES.find(([pattern]) => pattern.test(name))?.[1] ?? null;
 }
 
-// The full command line can be hundreds of characters; a dialog title needs the
-// part that identifies it.
+// The full command line can be hundreds of characters; keep the part that identifies it.
 function shortCommand(command) {
   const first = String(command ?? "").trim().split(/\s+/)[0] || "";
   const name = first.split("/").pop();

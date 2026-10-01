@@ -20,18 +20,11 @@ import { activeQueries, isIdle } from "@/lib/databases/health";
 
 const POLL_MS = 5000;
 
-/**
- * Long-running queries are marked. Two thresholds: ten seconds is worth
- * noticing, a minute is likely the one to kill.
- */
+// Ten seconds is worth noticing; a minute is likely the one to kill.
 const SLOW_SECONDS = 10;
 const STUCK_SECONDS = 60;
 
-/**
- * Rows shown before the list offers to expand, so a busy engine cannot push
- * the 24h chart arbitrarily far down. Matches `PREVIEW_COUNT` on the
- * dashboard's process card.
- */
+// Keeps a busy engine from pushing the 24h chart down. Matches `PREVIEW_COUNT` on the dashboard's process card.
 const VISIBLE_COUNT = 3;
 
 function tone(seconds) {
@@ -40,10 +33,7 @@ function tone(seconds) {
   return "neutral";
 }
 
-/**
- * The accent bar alone marks the row; no tinted background on top of the red
- * time and badge.
- */
+// The accent bar alone marks the row; no tinted background.
 const ROW_ACCENT = {
   destructive: "border-l-destructive",
   warning: "border-l-warning",
@@ -65,9 +55,6 @@ function duration(seconds, t) {
   return t("durationHours", { hours: Math.floor(minutes / 60), minutes: minutes % 60 });
 }
 
-/**
- * One inline `Label: value` pair on the row's meta line.
- */
 function Fact({ label, last, children }) {
   return (
     <span className="inline-flex min-w-0 items-baseline gap-1">
@@ -84,10 +71,7 @@ function Fact({ label, last, children }) {
   );
 }
 
-/**
- * What the engine is doing right now, refreshed every five seconds. Idle
- * connections are counted, not listed, so a stuck query is not buried.
- */
+// Idle connections are counted, not listed, so a stuck query is not buried.
 export function ProcessList({ engine, processes: initial = [], canManage, connections = [] }) {
   const t = useTranslations("databases.monitor");
   const { refreshAndWait } = useRefresh();
@@ -284,9 +268,7 @@ export function ProcessList({ engine, processes: initial = [], canManage, connec
                         </Fact>
                       </p>
 
-                      {/* A code block, wrapped not truncated: a cut-off query
-                          says nothing. `break-words` over `break-all` so it
-                          breaks between tokens where it can. */}
+                      {/* Wrapped, not truncated: a cut-off query says nothing. */}
                       {process.query ? (
                         <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded-md border bg-muted px-3 py-2.5 font-mono text-[13px] leading-relaxed text-foreground dark:bg-muted/60">
                           {process.query}
@@ -294,10 +276,7 @@ export function ProcessList({ engine, processes: initial = [], canManage, connec
                       ) : null}
                     </div>
 
-                    {/* Three separate states: rest is a neutral outline, row
-                        hover turns border/text red, button hover fills. The
-                        outline variant's `bg-muted` hover is overridden. Legible
-                        at rest because touch devices never hover. */}
+                    {/* Legible at rest: touch devices never hover. Overrides the outline variant's `bg-muted` hover. */}
                     <ReasonTooltip
                       reason={
                         !canManage

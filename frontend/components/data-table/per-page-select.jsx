@@ -10,9 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-/**
- * Rows-per-page selector, URL-driven (writes `per_page`, resets to page 1).
- */
+// Writes `per_page` and resets to page 1.
 export function PerPageSelect({ label, value, onValueChange }) {
   // Links the visible "Per page" label so the combobox has a name.
   const labelId = useId();

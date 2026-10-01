@@ -8,14 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CopyButton } from "@/components/ui/copy-button";
 import { PhpmyadminButton } from "@/components/databases/phpmyadmin-button";
 
-/**
- * The five values an application needs, at the top of the page. Rendered only
- * when a user exists to connect with; the Users tab covers the empty case.
- */
-/**
- * Fields that get two grid tracks: a generated name (~31 chars) needs ~275px,
- * more than one track. Host, port and the masked password fit in one.
- */
+// Two grid tracks: a generated name (~31 chars) needs ~275px.
 const WIDE_FIELDS = new Set(["database", "username"]);
 
 export function ConnectionDetails({ database, canManage = false, phpmyadminSites = null }) {
@@ -56,9 +49,7 @@ export function ConnectionDetails({ database, canManage = false, phpmyadminSites
           </div>
         </div>
 
-        {/* The copy button is labelled: it sits alone in the header, and on a
-            phone the masked preview is too wide to show. The connection string
-            and phpMyAdmin sit together as the two ways in. */}
+        {/* Labelled copy button: on a phone the masked preview is too wide to show. */}
         <div className="flex flex-wrap items-center gap-2">
           {user.connection_string ? (
             <CopyButton
@@ -75,9 +66,7 @@ export function ConnectionDetails({ database, canManage = false, phpmyadminSites
         </div>
       </div>
 
-      {/* Even track counts (2 / 4 / 6) so wide fields span two and rows stay
-          whole. At xl, Host + Port + name(2) + Username(2) fill the first row
-          and the masked password moves to the second. */}
+      {/* Even track counts so wide fields span two and rows stay whole. */}
       <CardContent className="grid grid-cols-2 gap-x-4 gap-y-3.5 px-5 py-4 sm:grid-cols-4 xl:grid-cols-6">
         {fields.map((field) => (
           <div

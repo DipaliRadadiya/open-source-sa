@@ -62,12 +62,7 @@ function BannedAtCell({ row }) {
   );
 }
 
-/**
- * Time left on a ban, one of three distinct answers:
- *   - a countdown, when the server sends seconds
- *   - **Permanent**, when the ban is dated but has no expiry
- *   - **Unknown**, when no timing is reported (older fail2ban); never "permanent"
- */
+// No timing reported (older fail2ban) is Unknown, never "permanent"; dated without expiry is Permanent.
 function ExpiryCell({ row, table }) {
   return expiryContent(row.original, table.options.meta.t);
 }

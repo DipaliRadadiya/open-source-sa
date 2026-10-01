@@ -3,13 +3,8 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { CopyButton } from "@/components/ui/copy-button";
 
-/**
- * The callback URL to paste into the Google OAuth client.
- *
- * Shown before anything is connected: it is needed when the OAuth client is
- * created, and a mistake (`redirect_uri_mismatch`) only surfaces after consent.
- * Copyable because Google compares it byte for byte.
- */
+// Shown before connecting: a mistake only surfaces after consent
+// (`redirect_uri_mismatch`), and Google compares it byte for byte.
 export function GoogleDriveRedirectUri({ uri, className }) {
   const t = useTranslations("storage.oauth");
 

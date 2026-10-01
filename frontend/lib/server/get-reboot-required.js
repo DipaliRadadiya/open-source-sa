@@ -4,11 +4,7 @@ import { can } from "@/lib/permissions/can";
 import { getServerFacts } from "@/lib/server/get-server-facts";
 import { getSettings } from "@/lib/settings/get-settings";
 
-/**
- * Whether the server needs a restart to finish applying a patch. Two endpoints
- * report it behind different permissions; this asks whichever the user can read.
- * Never throws: an unreadable answer is `false` (checked on every navigation).
- */
+// Asks whichever of two endpoints the user can read. Never throws: unreadable is `false`.
 export const getRebootRequired = cache(async function getRebootRequired() {
   const permissions = await getPermissions();
 

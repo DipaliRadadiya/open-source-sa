@@ -1,28 +1,15 @@
-/**
- * What, across every site on this server, needs attention. Derived from the
- * applications list the dashboard already fetches; it has no certificate
- * fields, so plain-http live sites stand in for TLS problems.
- *
- * Each finding names the site, the problem, and `href` to the screen that
- * fixes it. Excluded on purpose: paused and provisioning sites, and optional
- * protections that are off. Ordered by severity.
- */
+// Derived from the applications list, which has no certificate fields, so plain-http live sites stand in for TLS problems.
+// Ordered by severity.
 const KINDS = [
   {
     key: "failed",
-    /*
-     * Provisioning only, NOT `failed_step`: that is also set on a running app
-     * whose last deploy failed (covered by `deployFailed`).
-     */
+    // NOT `failed_step`: that is also set on a running app whose last deploy failed.
     matches: (a) => a.status === "failed",
     // Its own page: that is where the failure reason and the retry live.
     href: (a) => `/applications/${a.id}`,
   },
   {
-    /*
-     * The application is up, its last deploy is not. Old code keeps serving,
-     * but every later push inherits the failure until someone looks.
-     */
+    // Old code keeps serving, but every later push inherits the failure.
     key: "deployFailed",
     matches: (a) =>
       a.status === "active" &&
@@ -31,10 +18,7 @@ const KINDS = [
     href: (a) => `/applications/${a.id}/deployment`,
   },
   {
-    /*
-     * A process application whose process is not running: an outage. Same
-     * condition as the row badge; `deployed` guards a site never started.
-     */
+    // Same condition as the row badge; `deployed` guards a site never started.
     key: "processDown",
     matches: (a) =>
       a.status === "active" &&

@@ -1,11 +1,8 @@
 import { serverFetch } from "@/lib/api/server-fetch";
 import { breakdownResponseSchema } from "@/lib/schemas/file";
 
-/**
- * What is using this folder's space, by kind of file. Never blocks the page:
- * large folders can time out. A failure returns `null` ("could not measure"),
- * distinct from an empty folder.
- */
+// Large folders can time out. Failure returns `null` ("could not measure"),
+// distinct from an empty folder.
 export async function getBreakdown(appId, path = "") {
   try {
     const res = await serverFetch(`/applications/${appId}/files/breakdown`, {

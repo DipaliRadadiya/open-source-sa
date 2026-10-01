@@ -1,18 +1,11 @@
-/**
- * Helpers over `GET /backup-targets/options`. The API does not send the
- * spacing between runs, which the retention hint needs, so it is derived here;
- * unknown values get no span and the hint falls back to a backup count.
- */
+// The API does not send the spacing between runs, so it is derived here.
 
 /** The API's entry for one frequency, or null. */
 export function frequencyOption(options, value) {
   return options?.frequencies.find((f) => f.value === value) ?? null;
 }
 
-/**
- * Which picker a frequency needs: "minute", "time", or null (none).
- * Undefined when the options are missing or do not know the value.
- */
+// "minute", "time" or null (none); undefined when the options do not know the value.
 export function timeUsage(options, value) {
   const option = frequencyOption(options, value);
   return option ? option.time : undefined;
@@ -36,10 +29,7 @@ export function hoursBetweenRuns(value) {
   return null;
 }
 
-/**
- * How much history `count` backups cover: `{ unit: "hours" | "days", amount }`,
- * or null when the spacing is unknown. Hours below a day, to avoid "about 0 days".
- */
+// `{ unit: "hours" | "days", amount }`, or null when spacing is unknown. Hours below a day.
 export function historySpan(value, count) {
   const hours = hoursBetweenRuns(value);
   if (!hours || !(count > 0)) return null;
@@ -54,10 +44,7 @@ export function minuteOf(time) {
   return TIME.exec(String(time ?? ""))?.[2] ?? "00";
 }
 
-/**
- * The stored time with only its minute changed. The hour is kept so switching
- * back from `hourly` to daily restores it.
- */
+// The hour is kept so switching back from `hourly` to daily restores it.
 export function withMinute(time, minute) {
   const hour = TIME.exec(String(time ?? ""))?.[1] ?? "00";
   const n = Math.min(Math.max(Number.parseInt(minute, 10) || 0, 0), 59);

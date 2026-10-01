@@ -27,10 +27,7 @@ const ACTION_VARIANTS = {
   found: "outline",
 };
 
-/**
- * Everything one run found, in one table. Per-type sections would each need
- * pagination (type counts are very uneven); the filter chips carry the counts.
- */
+// One table, not per-type sections: type counts are uneven; the chips carry counts.
 export function SyncResults({
   items,
   ignoredKeys,
@@ -147,10 +144,8 @@ export function SyncResults({
               {visible.map((item) => {
                 const key = ignoreKey(item);
                 const ignored = ignoredKeys.has(key);
-                // One line standing for every worker, certificate or PHP
-                // setting of the sites a preview found (unreadable until the
-                // sites exist). Its key is the type itself, so it is neither
-                // shown as a name nor ignorable.
+                // One line standing for every item of a type (unreadable until the
+                // sites exist); its key is the type itself.
                 const wholeType = item.action === "skipped" && item.resource_key === item.resource_type;
                 const isOpen = expanded.has(item.id);
 
@@ -221,9 +216,7 @@ export function SyncResults({
                     <TableCell className="px-1 align-top sm:px-2">
                       {canManage && !wholeType ? (
                         <Tooltip>
-                          {/* The trigger wraps a span: a disabled button
-                              swallows pointer events, hiding the tooltip while
-                              the row is working. */}
+                          {/* A span: a disabled button swallows pointer events, hiding the tooltip. */}
                           <TooltipTrigger asChild>
                             <span className="inline-flex">
                               <Button

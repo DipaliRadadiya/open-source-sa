@@ -8,10 +8,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { parseApiWallClock } from "@/lib/format/api-date";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-// Same shape as the .env editor's restore dialog, scoped to one file. Restoring
-// first backs up the current version, so a wrong pick is undoable.
-// Built on ConfirmDialog (its `children` slot holds the picker) so it stays
-// consistent with other confirmations.
+// Restoring first backs up the current version, so a wrong pick is undoable.
 export function RestoreFileBackupDialog({ appId, path, backups = [], open, onOpenChange, onRestored }) {
   const t = useTranslations("applications.files");
   const format = useFormatter();
@@ -55,8 +52,7 @@ export function RestoreFileBackupDialog({ appId, path, backups = [], open, onOpe
       // Wider than a yes/no confirmation: the body is a list to pick from.
       className="sm:!max-w-lg"
     >
-      {/* A radio group so screen readers know which version is picked. Bounded so a long
-          list keeps the buttons in view. */}
+      {/* Bounded so a long list keeps the buttons in view. */}
       <div
         role="radiogroup"
         aria-label={t("restore.title")}

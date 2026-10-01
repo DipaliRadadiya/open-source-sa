@@ -1,10 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/**
- * The sign-in and sign-up card while their page resolves (both await the session
- * and branding), so the card slot is never empty on a cold start.
- * `fields` is the only difference: sign-in has two, sign-up four.
- */
+// Keeps the card slot filled while the page awaits session and branding. Sign-in has 2 fields, sign-up 4.
 export function AuthCardSkeleton({ fields = 2 }) {
   return (
     <div className="space-y-6 rounded-xl border bg-card p-6 shadow-sm" aria-busy="true">

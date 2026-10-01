@@ -5,17 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-/**
- * Pick-one engine chooser (only the database component has options). Engines
- * the panel cannot install are disabled; installed ones are marked. The chosen
- * option's own `action` endpoint is what gets installed.
- *
- * No spinner: once this component's install starts, the card replaces this
- * block, so a spinner here could only mean another install is running.
- */
-// One SQL engine per server: the choice cannot be undone once installed.
-// PURPOSE says what each engine is for, keyed on the API's option value;
-// unknown engines fall back to their state.
+// The chosen option's `action` endpoint is installed; once it starts the card replaces
+// this block, so no spinner. One SQL engine per server: the choice is permanent.
 const SQL_ENGINES = ["mysql", "mariadb"];
 
 const PURPOSE = {

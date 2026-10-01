@@ -140,9 +140,7 @@ function Sidebar({
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
 
-  // Peek: hovering the collapsed rail widens it over the page. Done by clearing
-  // `data-collapsible` so descendants show labels; the layout gap stays pinned
-  // narrow below so the page does not reflow.
+  // Peek clears `data-collapsible` so labels show; the gap stays narrow so the page does not reflow.
   const { hovered: peeking, handlers: peekHandlers } = useHoverIntent({
     enabled: collapsible === "icon" && state === "collapsed",
   });

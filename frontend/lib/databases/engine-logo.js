@@ -1,20 +1,10 @@
-/**
- * Database engine logos, keyed on the API's engine identifier, with light and
- * dark variants (the wordmarks are near-black and vanish on dark cards).
- * Unknown engines resolve to null so callers show the generic glyph.
- *
- * `wordmark` says whether the file spells the engine's name; callers print the
- * name only when it does not.
- * `darkSize` is for a dark variant with a different lockup from the light one.
- */
+// Dark variants because the wordmarks vanish on dark cards; unknown engines → null.
+// `wordmark`: the file spells the name. `darkSize`: the dark lockup differs.
 const ENGINE_LOGOS = {
   mysql: { light: "mysql.svg", dark: "mysql-white.svg", wordmark: true },
   mariadb: { light: "mariadb.svg", dark: "mariadb-white.png", wordmark: true },
   mongodb: { light: "mongodb.png", dark: "mongodb-white.png", wordmark: true },
-  /*
-   * Same file on both themes on purpose: the mid-blue mark reads on both.
-   * `size` because it is square where the others are wide.
-   */
+  // Same file on both themes on purpose; `size` because it is square.
   postgresql: {
     light: "postgresql.svg",
     dark: "postgresql.svg",

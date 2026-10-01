@@ -5,10 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
-/*
- * Measured-and-fine is green; nothing-to-measure is a hollow grey outline, so
- * "no swap" never reads like "healthy swap".
- */
+// Nothing-to-measure is a hollow outline, so "no swap" never reads as healthy.
 const STATUS_VARIANT = {
   normal: "success",
   watch: "warning",
@@ -17,10 +14,7 @@ const STATUS_VARIANT = {
   unknown: "outline",
 };
 
-/*
- * Only the icon chip and the bar carry the status colour; the value stays
- * foreground. The inset ring gives the low-alpha chip a visible edge.
- */
+// Only the chip and bar carry status colour. The inset ring gives the low-alpha chip an edge.
 const TONE_STYLES = {
   primary: { chip: "bg-primary/15 text-primary ring-primary/25", bar: "bg-primary" },
   warning: { chip: "bg-warning/20 text-warning ring-warning/30", bar: "bg-warning" },
@@ -33,10 +27,7 @@ const TONE_STYLES = {
 /* One brand-tinted track for every tone, so bars in a row look like one component. */
 const TRACK = "bg-primary/8";
 
-/**
- * One measured number with a usage bar, shared by the dashboard and Disk Cleaner.
- * `status` is opt-in: `{ key, label }`, already translated by the caller.
- */
+// `status` is opt-in: `{ key, label }`, already translated by the caller.
 export function StatCard({
   icon: Icon,
   label,
@@ -54,10 +45,7 @@ export function StatCard({
   return (
     // py-0 cancels Card's own padding. PANEL_CARD: see lib/theme/card-chrome.js.
     <Card className={cn("gap-0 overflow-hidden bg-gradient-to-t from-primary/5 to-card py-0", PANEL_CARD)}>
-      {/*
-       * Container query, not flex-wrap: value + hint need up to ~209px, and
-       * equal-width cards then all stack on the same tick and stay aligned.
-       */}
+      {/* Container query, not flex-wrap, so equal-width cards stack on the same tick. */}
       <CardContent className="@container/stat px-4 py-3.5">
         {/* The label gets the whole row; the status badge lives in the bottom row
             because sharing this one clipped labels in most locales. */}

@@ -33,11 +33,7 @@ import {
 
 const FREQUENCIES = ["hourly", "daily", "weekly", "monthly"];
 
-/**
- * Unattended cleanup: a summary on the page, the settings in a dialog (an
- * inline expansion distorted the two-column row). Only `safe` categories are
- * offered; the backend enforces the same.
- */
+// Only `safe` categories are offered; the backend enforces the same.
 export function ScheduleCard({ schedule, categories, canManage }) {
   const t = useTranslations("diskCleaner");
   // The hour uses the reader's clock convention (AM/PM vs 24h) but never their
@@ -69,11 +65,8 @@ export function ScheduleCard({ schedule, categories, canManage }) {
     if (thresholdInvalid) return;
     setPending(true);
     try {
-      /*
-       * Turning it off with nothing ticked DELETES the schedule: the API
-       * requires at least one category on every save, including a disabled one.
-       * With categories ticked, the profile is kept and merely paused.
-       */
+      // Off with nothing ticked DELETES the schedule: the API requires a category on
+      // every save. With categories ticked it is only paused.
       if (!enabled && picked.size === 0) {
         await deleteCleanerSchedule();
         await refreshAndWait();
@@ -119,11 +112,7 @@ export function ScheduleCard({ schedule, categories, canManage }) {
       ? t("schedule.overThreshold", { percent: schedule.threshold_percent })
       : t("schedule.everyTime");
 
-  /*
-   * When the next clean lands. Only the API knows the hour (the cron expression
-   * lives on the backend). The zone is named because the hour is in the
-   * project's `timezone`, not the reader's.
-   */
+  // Only the API knows the hour; the zone is named because it is the project's, not the reader's.
   const nextClockTime = clockTimeOf(schedule?.next_run_at);
   const nextRunLine =
     schedule?.enabled && schedule?.next_run_at_human

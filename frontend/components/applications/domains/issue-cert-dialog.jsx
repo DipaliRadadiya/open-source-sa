@@ -34,10 +34,7 @@ const FALLBACK_TYPES = [
   { type: "custom", available: true },
 ];
 
-/**
- * Issues a certificate. The server decides what is possible: `available` gates
- * each method and `recommended` picks the default; never guess from the domain.
- */
+// The server decides: `available` gates each method, `recommended` picks the default; never guess from the domain.
 export function IssueCertDialog({
   appId,
   availableTypes = [],
