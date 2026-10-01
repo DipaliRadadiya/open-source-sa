@@ -245,4 +245,5 @@ return [
     'docker_database.deleted' => 'Deleted the :engine database :name',
     'docker_database.credentials_viewed' => 'Viewed the credentials for the :engine database :name',
     'application.credentials_acknowledged' => 'Confirmed saving the generated credentials for :name',
+
 ];

@@ -227,4 +227,5 @@ return [
     'docker_database.deleted' => 'Excluiu o banco de dados :engine :name',
     'docker_database.credentials_viewed' => 'Consultou as credenciais do banco de dados :engine :name',
     'application.credentials_acknowledged' => 'Confirmou ter salvo as credenciais geradas de :name',
+
 ];

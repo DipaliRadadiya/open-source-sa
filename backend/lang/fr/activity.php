@@ -227,4 +227,5 @@ return [
     'docker_database.deleted' => 'Base de données :engine :name supprimée',
     'docker_database.credentials_viewed' => 'Identifiants de la base de données :engine :name consultés',
     'application.credentials_acknowledged' => 'A confirmé avoir enregistré les identifiants générés de :name',
+
 ];

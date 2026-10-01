@@ -227,4 +227,5 @@ return [
     'docker_database.deleted' => ':engine-Datenbank :name gelöscht',
     'docker_database.credentials_viewed' => 'Zugangsdaten der :engine-Datenbank :name angesehen',
     'application.credentials_acknowledged' => 'Speichern der generierten Zugangsdaten für :name bestätigt',
+
 ];
