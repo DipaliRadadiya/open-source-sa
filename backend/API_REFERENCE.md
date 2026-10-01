@@ -1463,9 +1463,13 @@ Newest first.
   "default_deploy_script": "cd {path}\nif [ -f composer.json ]; then\n    composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader\nfi\n",
   "auto_deploy": false, "webhook_enabled": false,
   "last_commit": "a1b2c3d", "last_deployed_at": "28-07-2026 11:01:30",
-  "placeholders": ["{path}", "{branch}", "{domain}", "{php}", "{PHP84}", "{PHP83}"]
+  "placeholders": ["{path}", "{branch}", "{domain}", "{php}", "{PHP84}", "{PHP83}"],
+  "placeholder_values": {"{path}": "/home/user/shop/public_html", "{branch}": "main", "{domain}": "shop.example.com",
+    "{php}": "/usr/bin/php8.4", "{PHP84}": "/usr/bin/php8.4", "{PHP83}": "/usr/bin/php8.3"}
 }}
 ```
+
+**`placeholder_values`** (since 2026-10-01) is what each placeholder becomes for this site, computed by the same code the deploy substitutes with — show it beside each name rather than working values out in the client. `{path}` is the code root the script runs in (not the web root), and `{php}` the site's real interpreter path.
 
 **`{PHPxx}` — v7's variables, since 2026-10-01.** One per **installed** PHP version, named like v7: `{PHP84}` is PHP 8.4's interpreter (`/usr/bin/php8.4` on nginx/Apache, `/usr/local/lsws/lsphp84/bin/php` on OpenLiteSpeed), so a script copied from v7 runs unchanged. `placeholders` lists the ones this server has. A script using a `{PHPxx}` whose version is not installed is refused on save (`PUT …/deployment-settings` and site creation, `422` on `deploy_script`, `deployment.script_php_missing` naming the variable and version) and, if the version was removed afterwards, the deploy stops before anything runs with `failed_reason: script_php_missing`. Prefer `{php}` (the site's own version) for new scripts.
 

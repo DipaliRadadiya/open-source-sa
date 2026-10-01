@@ -178,6 +178,10 @@ class DeploymentController extends Controller
             // the frontend, the same way the cron command presets are.
             // Plus v7's `{PHP84}`-style variable for every installed version.
             'placeholders' => ['{path}', '{branch}', '{domain}', '{php}', ...array_keys(app(DeployScriptPhp::class)->aliases())],
+            // What each one becomes for this site, from the code that does the
+            // substituting — the screen showed computed guesses, and none at
+            // all for the {PHPxx} variables.
+            'placeholder_values' => app(GitDeployer::class)->placeholderValues($application),
         ];
     }
 
