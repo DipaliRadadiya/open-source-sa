@@ -343,6 +343,29 @@ describe('v7 {PHPxx} variables', function () {
             ->and(validator(['deploy_script' => '{PHP83} artisan migrate'], ['deploy_script' => $rules['deploy_script']])->fails())->toBeFalse();
     });
 
+    it('sends what each variable becomes, the values the deploy substitutes', function () {
+        $settings = $this->actingAs($this->admin)
+            ->getJson("/api/applications/{$this->application->id}/deployments")
+            ->json('settings');
+
+        expect($settings['placeholder_values'])->toMatchArray([
+            '{path}' => $this->application->codePath(),
+            '{branch}' => 'develop',
+            '{domain}' => 'app.example.com',
+            '{php}' => '/usr/bin/php8.4',
+            '{PHP83}' => '/usr/bin/php8.3',
+            '{PHP84}' => '/usr/bin/php8.4',
+        ])
+            // Every variable listed has a value to show.
+            ->and(array_keys($settings['placeholder_values']))->toEqualCanonicalizing($settings['placeholders']);
+
+        // And they are the values a deploy really uses.
+        $this->application->update(['deploy_script' => 'echo {path} {php} {PHP83}']);
+        deployNow();
+
+        expect(scriptCommand())->toContain('echo '.$settings['placeholder_values']['{path}'].' /usr/bin/php8.4 /usr/bin/php8.3');
+    });
+
     it('leaves a script without them exactly as it was', function () {
         $this->application->update(['deploy_script' => 'php artisan migrate --force']);
 

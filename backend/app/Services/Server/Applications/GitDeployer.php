@@ -734,7 +734,28 @@ class GitDeployer
      */
     private function expand(string $script, Application $application, string $documentRoot): string
     {
-        return strtr($script, app(DeployScriptPhp::class)->aliases() + [
+        return strtr($script, $this->variables($application, $documentRoot));
+    }
+
+    /**
+     * What each placeholder becomes in this site's deploy, as the Deployment
+     * screen shows it — computed here, by the code that substitutes them, so
+     * the screen cannot describe a different value from the one that runs.
+     *
+     * @return array<string, string>
+     */
+    public function placeholderValues(Application $application): array
+    {
+        // The same path DeployApplication hands deploy().
+        return $this->variables($application, $application->codePath());
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function variables(Application $application, string $documentRoot): array
+    {
+        return [
             // The site's own interpreter, spelled out. `php` on PATH already
             // resolves to it, but a script written before that was true may
             // name a version explicitly, and this is the way to do so without
@@ -743,7 +764,7 @@ class GitDeployer
             '{path}' => $documentRoot,
             '{branch}' => $application->branch ?: 'main',
             '{domain}' => (string) $application->domain,
-        ]);
+        ] + app(DeployScriptPhp::class)->aliases();
     }
 
     /**

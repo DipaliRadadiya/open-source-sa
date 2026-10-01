@@ -12,6 +12,7 @@ moved and why it matters**, so nobody has to diff the reference to find out.
 - `settings.placeholders` now also lists one `{PHPxx}` per installed PHP version (e.g. `{PHP84}`, `{PHP83}`), the variables v7 used. Show them with the others; nothing else to build.
 - Saving a script with a `{PHPxx}` for a version that isn't installed returns 422 on `deploy_script` with a translated message naming the variable and version. Show it under the editor.
 - New failure reason `script_php_missing` (in `failed_reason_title`, translated) if the version was removed after saving.
+- **Show `settings.placeholder_values[token]` next to each variable** (new): the exact value the deploy substitutes, including every `{PHPxx}` (which show no value today). Replace the client-side `placeholderValues` in `deploy-settings-card.jsx`, which guesses: it shows `document_root` for `{path}` (the deploy uses the code root, which differs for sites with a web-root subfolder) and "PHP 8.4"/"php" for `{php}` instead of the real interpreter path.
 
 ### 0. File manager: folder sizes without a click (new endpoint)
 - `GET /api/applications/{id}/files/sizes?path=<dir>` returns the size of **every folder in that directory** at once (see API_REFERENCE). Call it right after the listing loads, without waiting on it, and fill the size column by folder name. Hidden folders are included; a name missing from `sizes` means "not measured", so show "—".
