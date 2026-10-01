@@ -8,6 +8,7 @@ import {
   getConnections,
 } from "@/lib/databases/get-databases";
 import { getExports } from "@/lib/databases/get-exports";
+import { getDockerDatabases } from "@/lib/docker/get-docker";
 import {
   getAllApplications,
   getPhpmyadminSite,
@@ -24,6 +25,7 @@ import { EngineState } from "@/components/databases/engine-state";
 import { UntrackedBanner } from "@/components/databases/untracked-banner";
 import { UnlinkedBanner } from "@/components/databases/unlinked-banner";
 import { DatabasesTable } from "@/components/databases/databases-table";
+import { DockerDatabasesPanel } from "@/components/docker/docker-databases-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { Database } from "lucide-react";
@@ -44,9 +46,11 @@ export default async function DatabasesPage({ searchParams }) {
   const query = new URLSearchParams(
     Object.entries(sp ?? {}).filter(([, v]) => typeof v === "string"),
   ).toString();
-  const [permissions, t, format, live] = await Promise.all([
+  const [permissions, t, tDocker, format, live] = await Promise.all([
     getPermissions(),
     getTranslations("databases"),
+    // The containerised-database copy, so this screen and the panel agree.
+    getTranslations("docker.databases"),
     getFormatter(),
     getEngines(),
   ]);
@@ -56,12 +60,33 @@ export default async function DatabasesPage({ searchParams }) {
     return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "database", "manage");
 
-  // A 409 is the honest answer on a Docker box, not a failure to report: an
-  // application that wants a database there brings one as a container, and the
-  // panel manages no engine. The sidebar already stops offering this screen, so
-  // this is reached by a bookmark or a tab left open across a stack change — both
-  // of which deserve a sentence rather than a red error card.
+  /*
+   * A 409 means the panel manages no HOST engine — which on a Docker box is the
+   * honest answer, because an application that wants a database there brings one as
+   * a container. It is not the end of the screen, though: the panel runs engines as
+   * containers now, and this is where they are listed.
+   *
+   * So the branch asks the containerised side instead of giving up. A server that
+   * has neither answers the empty state it always did, and is reached only by a
+   * bookmark or a tab left open across a stack change.
+   */
   if (failed && status === 409) {
+    const containers = can(permissions, "docker", "view")
+      ? await getDockerDatabases()
+      : { databases: [], failed: true };
+
+    if (!containers.failed) {
+      return (
+        <div className="space-y-6">
+          <PageHeader title={t("title")} subtitle={tDocker("hint")} />
+          <DockerDatabasesPanel
+            databases={containers.databases}
+            canManage={can(permissions, "docker", "manage")}
+          />
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-6">
         <PageHeader title={t("title")} />

@@ -291,7 +291,19 @@ function blockerFixes(type) {
  * that teaches what Statamic is, and an unavailable type shown greyed WITH its
  * reason and the link that clears it, rather than hidden.
  */
-export function SiteTypePicker({ types = [], value, onChange }) {
+export function SiteTypePicker({
+  types = [],
+  value,
+  onChange,
+  /*
+   * Clicked a database card instead of an application.
+   *
+   * A second callback rather than a magic value through `onChange`: these are not
+   * site types and must never be set as one. The picker branches on the card
+   * carrying an `engine`, which no real site type has.
+   */
+  onChooseDatabase,
+}) {
   const t = useTranslations("applications");
   const tg = useTranslations("applications.guided");
   const tc = useTranslations("common");
@@ -534,7 +546,13 @@ export function SiteTypePicker({ types = [], value, onChange }) {
              */
             const Card = choosable ? "button" : "div";
             const cardProps = choosable
-              ? { type: "button", onClick: () => onChange(type.name) }
+              ? {
+                  type: "button",
+                  onClick: () =>
+                    type.engine
+                      ? onChooseDatabase?.(type.engine)
+                      : onChange(type.name),
+                }
               : {};
 
             return (

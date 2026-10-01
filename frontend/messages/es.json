@@ -3646,6 +3646,7 @@
       "blockedNode": "Necesita Node",
       "blockedPhp": "Necesita PHP",
       "categoryAll": "Todos",
+      "categoryDatabase": "Bases de datos",
       "categoryCms": "CMS",
       "categoryDevelopment": "Desarrollo",
       "categoryTools": "Herramientas",
@@ -6935,7 +6936,9 @@
       "hint": "Ejecute un motor de base de datos como contenedor para que sus sitios se conecten. Cada uno recibe su volumen, su puerto de loopback y credenciales generadas. No son sitios — una base de datos no tiene dominio ni dirección web — así que viven aquí, junto a las redes y los volúmenes.",
       "createPageHint": "No es una aplicación: una base de datos no tiene dominio ni dirección web, por eso no está en la lista de arriba. Inicie una aquí y sus sitios se conectarán a ella.",
       "newest": "más reciente {version}",
-      "empty": "Todavía no hay bases de datos. Elija un motor arriba para iniciar una.",
+      "tagline": "Contenedor · más reciente {version}",
+      "empty": "Todavía no hay bases de datos.",
+      "emptyLink": "Cree una desde la página de aplicaciones.",
       "columns": {
         "name": "Nombre",
         "engine": "Motor",

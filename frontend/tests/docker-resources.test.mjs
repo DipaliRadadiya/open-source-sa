@@ -790,67 +790,107 @@ test("every size string exists in every locale", () => {
 });
 
 /*
- * Containerised database engines, on the Docker page.
+ * Containerised database engines, created from the application grid.
  *
- * "still i didnt see MySQL, MariaDB, MongoDB and PostgreSQL as one click option into
- * docker stack" — they had been API-only since the day they were built, which means
- * they were not shipped.
+ * "I already told you to add as one click options into application create… Remove
+ * that databases from docker page." Third report that they were not where he looked,
+ * so they are cards in the site-type grid itself now, and the Docker page has none.
  *
- * **They are deliberately NOT in the one-click application grid**, and that is
- * structural rather than a preference: every application here is an HTTP site, so
- * `domain` is required and provisioning always writes a vhost. A database speaks its
- * own wire protocol — as a "site" it would hold a domain nobody types, be issued a
- * certificate no browser can use, and answer 502 for ever. These tests pin the
- * placement and the two things that make it one click rather than a form.
+ * They are still not site types and never become any — `domain` is required for
+ * every application and provisioning always writes a vhost, so a database as a
+ * "site" would carry a certificate no browser can use. The cards carry an `engine`,
+ * which no real site type has, and the picker branches on that.
  */
 
 const databasesPanel = read("components/docker/docker-databases-panel.jsx");
 const databaseTiles = read("components/docker/docker-database-tiles.jsx");
-const createPage = read("app/(app)/applications/create/page.jsx");
+const typePicker = read("components/applications/site-type-picker.jsx");
+const databaseCards = read("lib/applications/database-type-cards.js");
+const databasesPage = read("app/(app)/databases/page.jsx");
 
-test("every engine the server can run is its own control", () => {
-  // Not one "add database" form with an engine dropdown: that hides the answer to
-  // "what can this server run", which is the question somebody arrives with.
-  assert.match(databaseTiles, /engines\.map\(\(engine\) =>/);
-  assert.match(databaseTiles, /setCreating\(\{/);
-  // And the list comes from the server's own catalog rather than a copy kept in
-  // step by hand.
-  assert.match(dockerPage, /getDockerDatabases\(\)/);
+test("the engines are cards in the application type grid", () => {
+  // Reported three times as missing from this grid. Merged into the same list the
+  // applications come from, so search and the category chips work on them for free.
+  assert.match(createForm, /databaseTypeCards\(databaseEngines, tDatabase\)/);
+  assert.match(createForm, /\[\.\.\.siteTypes, \.\.\.databaseTypeCards/);
   assert.match(
-    read("lib/docker/get-docker.js"),
-    /dockerDatabasesResponseSchema/,
+    read("app/(app)/applications/create/page.jsx"),
+    /databaseEngines=\{/,
   );
 });
 
-test("the dialog opens with every answer the panel can guess already filled", () => {
-  // What makes it a click. The newest version and a free name are pre-chosen; the
-  // only required answer is the one the panel cannot know.
-  assert.match(databaseTiles, /version: engine\.versions\[0\] \?\? ""/);
-  assert.match(databaseTiles, /name: suggestName\(engine\.name, databases\)/);
-  // And the suggested name is checked against what exists, because the API refuses
-  // a duplicate — offering a name that will be rejected is worse than offering none.
-  assert.match(databaseTiles, /const taken = new Set\(databases\.map/);
+test("a database card is never mistaken for a site type", () => {
+  // Namespaced name, so a stray `?type=` cannot select one as an application, and an
+  // `engine` marker no real type carries.
+  assert.match(databaseCards, /name: `database:\$\{engine\.name\}`/);
+  assert.match(databaseCards, /engine,/);
+  // The picker branches on the marker and calls a different callback — never
+  // `onChange`, which would set it as `site_type`.
+  assert.match(
+    typePicker,
+    /type\.engine\s*\n?\s*\? onChooseDatabase\?\.\(type\.engine\)/,
+  );
+});
+
+test("choosing a database opens its dialog outside the application form", () => {
+  // Creating a database is a different request to a different endpoint, so a submit
+  // inside the <form> would try to create an application.
+  assert.match(createForm, /<DockerDatabaseDialog/);
+  assert.match(
+    createForm,
+    /const \[databaseEngine, setDatabaseEngine\] = useState\(null\)/,
+  );
+});
+
+test("the database cards are not flagged popular", () => {
+  // `popular` orders the grid and opens it, so these would be the first thing
+  // somebody creating a WordPress site sees.
+  assert.match(databaseCards, /popular: false/);
+});
+
+test("the Docker page no longer lists databases", () => {
+  // Asked for directly. They are on the Databases page, which this stack used to
+  // hide because the panel managed no HOST engine.
+  const dockerPageSrc = read("app/(app)/docker/page.jsx");
+  assert.doesNotMatch(dockerPageSrc, /DockerDatabasesPanel/);
+  assert.doesNotMatch(dockerPageSrc, /getDockerDatabases/);
+  // And the attach-site wiring it sits beside is untouched — removing the databases
+  // block took this with it once.
+  assert.match(dockerPageSrc, /can\(permissions, "application", "manage"\)/);
+  assert.match(dockerPageSrc, /getAllApplications\(\)/);
+});
+
+test("the Databases page shows the containerised ones when there is no host engine", () => {
+  // A 409 means the panel manages no host engine — true on a Docker box, and not the
+  // end of the screen now that it runs engines as containers.
+  assert.match(databasesPage, /failed && status === 409/);
+  assert.match(databasesPage, /await getDockerDatabases\(\)/);
+  assert.match(databasesPage, /<DockerDatabasesPanel/);
+  // A server with neither still gets the empty state it always had.
+  assert.match(databasesPage, /unavailable\.title/);
+});
+
+test("the panel lists and manages, and does not create", () => {
+  // One creation surface. Two would be two sets of defaults to keep in step.
+  assert.doesNotMatch(databasesPanel, /createDockerDatabase/);
+  assert.match(databaseTiles, /createDockerDatabase/);
+  // And its empty state links to where creating happens, rather than being a dead
+  // end on a screen with no control.
+  assert.match(databasesPanel, /applications\/create/);
 });
 
 test("both addresses are shown, because they are different", () => {
   // From another container the host is the database's NAME; from the server it is
-  // 127.0.0.1 and the published port. That is the single most confusing thing about
-  // a containerised database, so the table answers both.
+  // 127.0.0.1 and the published port. The alias only when it can resolve: with no
+  // shared network a container's name reaches nothing.
   assert.match(databasesPanel, /database\.internal_host/);
   assert.match(databasesPanel, /127\.0\.0\.1:\{database\.host_port\}/);
-  // The alias only when it can actually resolve: with no shared network a
-  // container's name reaches nothing, so printing it would be a dead address.
   assert.match(databasesPanel, /database\.network \?/);
 });
 
 test("the password comes from its own endpoint, on request", () => {
-  // Absent from the listing rather than masked — a mask is a length disclosure —
-  // so it is not in every page load, cache and proxy log on the way.
+  // Absent from the listing rather than masked — a mask is a length disclosure.
   assert.match(databasesPanel, /getDockerDatabaseCredentials\(database\.id\)/);
-  // The listing schema carries `has_root_password` — a flag — and no password
-  // field of its own. Matched on a word boundary, because the first version of
-  // this assertion caught `has_root_password` and failed on the thing it was
-  // meant to allow.
   const schema = read("lib/schemas/docker.js");
   assert.match(schema, /has_root_password: z\.boolean\(\)/);
   assert.doesNotMatch(schema, /^\s{2}password: z/m);
@@ -858,9 +898,7 @@ test("the password comes from its own endpoint, on request", () => {
 });
 
 test("deleting the data is a separate opt-in, off by default", () => {
-  // Removing the container is recoverable and removing the volume is not, so the
-  // two cannot be the same click.
-  assert.match(databasesPanel, /useState\(false\);/);
+  // Removing the container is recoverable; removing the volume is not.
   assert.match(
     databasesPanel,
     /deleteDockerDatabase\(confirm\.id, \{ removeData \}\)/,
@@ -868,25 +906,17 @@ test("deleting the data is a separate opt-in, off by default", () => {
   assert.match(databasesPanel, /setRemoveData\(false\);/);
 });
 
-test("a failed read is not rendered as an empty list", () => {
-  // "This server has no databases" is a claim about the machine. Making it without
-  // having heard from the machine would have somebody create a second Postgres they
-  // already had, on a port they already use.
-  assert.match(
-    read("lib/docker/get-docker.js"),
-    /failed: result\.failed,[\s\S]{0,200}dockerLimits|databases: result\.data\?\.databases \?\? \[\]/,
-  );
-  assert.match(dockerPage, /databases\.failed \?/);
-  assert.match(dockerPage, /<LoadFailed/);
+test("the dialog opens with every answer the panel can guess already filled", () => {
+  assert.match(databaseTiles, /version: engine\.versions\[0\] \?\? ""/);
+  assert.match(databaseTiles, /name: suggestName\(engine\.name, databases\)/);
+  assert.match(databaseTiles, /const taken = new Set\(databases\.map/);
 });
 
 test("creating refreshes the server-rendered listing", () => {
-  assert.match(databasesPanel, /router\.refresh\(\)/);
+  assert.match(databaseTiles, /router\.refresh\(\)/);
 });
 
 test("the create copy says the password cannot be changed later", () => {
-  // It cannot: the engine keeps its own copy, so rotating one would leave the two
-  // disagreeing. Said before the click rather than discovered after it.
   assert.match(
     messages.en.docker.databases.createWarning,
     /cannot be changed from the panel/,
@@ -913,33 +943,11 @@ test("every databases string exists in every locale", () => {
   }
 });
 
-test("the create page offers the engines too, where people go to create things", () => {
-  // Reported three times as missing. A database cannot be a site type — `domain` is
-  // required for every application and a vhost is always written — but "create a
-  // database" is something people come to THIS page to do, so the control is here as
-  // well as on the Docker page, from one shared component rather than two copies.
-  assert.match(createPage, /DockerDatabaseTiles/);
-  assert.match(createPage, /getDockerDatabases\(\)/);
-  // Gated on what the create endpoint actually requires: a card offered to anyone
-  // else is a card whose only outcome is a 403.
-  assert.match(createPage, /can\(permissions, "docker", "manage"\)/);
-  // And silent on a server that hosts no containers, rather than explaining the
-  // absence of a thing on the longest form in the panel.
-  assert.match(createPage, /dockerDatabases\.engines\.length > 0/);
-});
-
-test("the create-page copy says why databases are not in the list above", () => {
-  // The question the card has to answer on sight, because somebody has just
-  // finished scanning eighteen application cards for MySQL.
-  const hint = messages.en.docker.databases.createPageHint;
-  assert.match(hint, /Not an application/);
-  assert.match(hint, /no domain/);
-});
-
-test("the tiles are one component, not two copies", () => {
-  // Both pages render the same control, so a change to the create flow cannot
-  // reach one page and miss the other.
-  assert.match(databasesPanel, /DockerDatabaseTiles/);
-  assert.doesNotMatch(databasesPanel, /createDockerDatabase/);
-  assert.match(databaseTiles, /createDockerDatabase/);
+test("the Databases category chip is labelled in every locale", () => {
+  for (const locale of LOCALES) {
+    assert.ok(
+      messages[locale].applications.form.categoryDatabase,
+      `${locale} has no categoryDatabase label`,
+    );
+  }
 });

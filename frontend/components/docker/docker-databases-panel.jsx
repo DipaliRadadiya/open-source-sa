@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DockerDatabaseTiles } from "@/components/docker/docker-database-tiles";
+import Link from "next/link";
 import { Label } from "@/components/ui/label";
 import {
   Table,
@@ -28,19 +28,17 @@ import {
 } from "@/components/ui/table";
 
 /**
- * Database engines, as containers, in one click each.
+ * The containerised database engines on this server, listed and managed.
  *
- * **Why they are here and not in the one-click application grid.** Every
- * application in this panel is an HTTP site: `domain` is required, provisioning
- * always writes a vhost, and a container site's vhost is `proxy_pass
- * http://127.0.0.1:<port>`. A database speaks its own wire protocol — as a "site"
- * it would hold a domain nobody types, be issued a certificate no browser can use,
- * and answer 502 for ever. So they are server-level objects beside networks and
- * volumes, which is what they are: something sites connect to.
+ * **Listing only — creating happens in the application create grid.** A database
+ * is not an application (every application here has a required domain and a vhost,
+ * and a database has neither) but "create a database" is something people go to the
+ * create page to do, so that is the one place that starts one. Two creation
+ * surfaces would be two sets of defaults to keep in step.
  *
- * That is an argument about where, not about how much work it takes. Picking an
- * engine here is one click: the name and the newest version are filled in, and the
- * only required answer is the one the panel cannot guess.
+ * This screen is the Databases page, which this stack used to hide: a Docker server
+ * manages no HOST engine, so the tab was pointless and its endpoints answered 409.
+ * It manages these, so the tab is back and this is what it shows.
  *
  * **The two addresses are the whole reason this table has four columns.** From
  * another container on the same network the host is the database's NAME; from the
@@ -50,7 +48,6 @@ import {
  */
 export function DockerDatabasesPanel({
   databases = [],
-  engines = [],
   networks = [],
   canManage = false,
 }) {
@@ -106,20 +103,18 @@ export function DockerDatabasesPanel({
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">{t("hint")}</p>
 
-          {/* The engines, as one control each. Shared with the application create
-              page, which is where people go to create things — being right about
-              the model is not a reason to be wrong about where the control is. */}
-          {canManage ? (
-            <DockerDatabaseTiles
-              engines={engines}
-              networks={networks}
-              databases={databases}
-            />
-          ) : null}
-
           {databases.length === 0 ? (
             <p className="rounded-lg border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
-              {t("empty")}
+              {t("empty")}{" "}
+              {/* Named, with a link. "No databases yet" on a screen with no way to
+                  make one is a dead end — creating happens in the application grid,
+                  which is not a place somebody would guess from here. */}
+              <Link
+                href="/applications/create"
+                className="font-medium text-primary underline"
+              >
+                {t("emptyLink")}
+              </Link>
             </p>
           ) : (
             <Table>

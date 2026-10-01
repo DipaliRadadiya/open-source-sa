@@ -12,9 +12,6 @@ import { getDockerDatabases, getDockerResources } from "@/lib/docker/get-docker"
 import { engineInstalling, noDatabaseEngine } from "@/lib/applications/database-readiness";
 import { withAvailability } from "@/lib/applications/blockers";
 import { NoDatabaseEngineNotice } from "@/components/applications/no-database-engine-notice";
-import { DockerDatabaseTiles } from "@/components/docker/docker-database-tiles";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Database } from "lucide-react";
 import { CreateApplicationForm } from "@/components/applications/create-application-form";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PageHeader } from "@/components/ui/page-header";
@@ -29,15 +26,12 @@ export async function generateMetadata() {
 
 export default async function CreateApplicationPage({ searchParams }) {
   const sp = await searchParams;
-  const [permissions, t, tEngines, tDocker, format, types, systemUsers, accounts, php, node, capabilities, timezones, engines] = await Promise.all([
+  const [permissions, t, tEngines, format, types, systemUsers, accounts, php, node, capabilities, timezones, engines] = await Promise.all([
     getPermissions(),
     getTranslations("applications"),
     // The engine labels the databases pages already use, rather than a second
     // set that can drift from them.
     getTranslations("databases.engines"),
-    // The containerised-database strings, so this card and the Docker page's own
-    // say the same things rather than keeping two copies that drift.
-    getTranslations("docker.databases"),
     getFormatter(),
     getSiteTypes(),
     getSystemUserOptions(),
@@ -190,6 +184,12 @@ export default async function CreateApplicationPage({ searchParams }) {
         initialGitAccountId={prefillGitAccount}
         gitAccounts={accounts.accounts}
         gitAccountsFailed={accounts.failed}
+        // Shown as cards in the same grid as the applications, because that is the
+        // grid people look in. Empty without `docker` manage or on a server that
+        // hosts no containers, in which case no card appears at all.
+        databaseEngines={showDatabases ? dockerDatabases.engines : []}
+        dockerNetworks={dockerResources.networks}
+        dockerDatabases={dockerDatabases.databases}
         phpVersions={phpVersions}
         phpDefaultVersion={php.data?.default ?? null}
         phpVersionsFailed={php.failed}
@@ -214,29 +214,6 @@ export default async function CreateApplicationPage({ searchParams }) {
           database: can(permissions, "database", "manage"),
         }}
       />
-
-      {/* After the form, not before it: this page is mainly for creating an
-          application, and a database is the other thing you might have come for.
-          A link to the Docker page would have been cheaper and would have left the
-          click somewhere else again. */}
-      {showDatabases ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Database className="size-4" />
-              {tDocker("title")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">{tDocker("createPageHint")}</p>
-            <DockerDatabaseTiles
-              engines={dockerDatabases.engines}
-              networks={dockerResources.networks}
-              databases={dockerDatabases.databases}
-            />
-          </CardContent>
-        </Card>
-      ) : null}
 
     </div>
   );

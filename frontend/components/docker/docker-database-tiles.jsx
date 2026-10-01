@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -40,9 +40,7 @@ export function DockerDatabaseTiles({
   className,
 }) {
   const t = useTranslations("docker.databases");
-  const router = useRouter();
-  const [creating, setCreating] = useState(null);
-  const [pending, setPending] = useState(false);
+  const [engine, setEngine] = useState(null);
 
   if (engines.length === 0) return null;
 
@@ -53,19 +51,7 @@ export function DockerDatabaseTiles({
           <button
             key={engine.name}
             type="button"
-            onClick={() =>
-              setCreating({
-                engine: engine.name,
-                label: engine.label,
-                // The newest the catalog offers. A version nobody chose beats an
-                // empty select somebody has to answer before they can see what
-                // this does.
-                version: engine.versions[0] ?? "",
-                versions: engine.versions,
-                name: suggestName(engine.name, databases),
-                network: "",
-              })
-            }
+            onClick={() => setEngine(engine)}
             className="flex items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2.5 text-left transition-colors hover:bg-muted/60"
           >
             <span className="min-w-0">
@@ -81,111 +67,156 @@ export function DockerDatabaseTiles({
         ))}
       </div>
 
-      <ConfirmDialog
-        open={creating !== null}
-        onOpenChange={(open) => !open && setCreating(null)}
-        icon={Database}
-        title={creating ? t("createTitle", { engine: creating.label }) : ""}
-        description={t("createBody")}
-        confirmLabel={t("create")}
-        confirmDisabled={!creating?.name?.trim() || !creating?.version}
-        pending={pending}
-        onConfirm={async () => {
-          if (!creating) return;
-          setPending(true);
-          try {
-            await createDockerDatabase({
-              name: creating.name.trim(),
-              engine: creating.engine,
-              version: creating.version,
-              docker_network: creating.network || null,
-            });
-            toast.success(t("created", { name: creating.name.trim() }));
-            setCreating(null);
-            // Both callers render their list on the server, so without this the new
-            // row only appears on the next navigation.
-            router.refresh();
-          } catch (error) {
-            toast.error(apiMessage(error, t("failed")));
-          } finally {
-            setPending(false);
-          }
-        }}
-      >
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="docker-db-name">{t("nameLabel")}</Label>
-            <Input
-              id="docker-db-name"
-              value={creating?.name ?? ""}
-              onChange={(event) =>
-                setCreating((current) => ({
-                  ...current,
-                  name: event.target.value,
-                }))
-              }
-            />
-            <p className="text-xs text-muted-foreground">{t("nameHint")}</p>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="docker-db-version">{t("versionLabel")}</Label>
-            <Select
-              value={creating?.version ?? ""}
-              onValueChange={(version) =>
-                setCreating((current) => ({ ...current, version }))
-              }
-            >
-              <SelectTrigger id="docker-db-version">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(creating?.versions ?? []).map((version) => (
-                  <SelectItem key={version} value={version}>
-                    {version}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Optional, and the copy says what skipping it costs. A database with no
-              network is reachable from the server only — a real answer, and the
-              wrong one if a container site needs it. */}
-          <div className="space-y-1.5">
-            <Label htmlFor="docker-db-network">{t("networkLabel")}</Label>
-            <Select
-              value={creating?.network || NO_NETWORK}
-              onValueChange={(network) =>
-                setCreating((current) => ({
-                  ...current,
-                  network: network === NO_NETWORK ? "" : network,
-                }))
-              }
-            >
-              <SelectTrigger id="docker-db-network">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NO_NETWORK}>
-                  {t("noNetworkOption")}
-                </SelectItem>
-                {networks.map((network) => (
-                  <SelectItem key={network.name} value={network.name}>
-                    {network.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">{t("networkHint")}</p>
-          </div>
-
-          <Caution size="md">
-            <p>{t("createWarning")}</p>
-          </Caution>
-        </div>
-      </ConfirmDialog>
+      <DockerDatabaseDialog
+        engine={engine}
+        databases={databases}
+        networks={networks}
+        open={engine !== null}
+        onOpenChange={(open) => !open && setEngine(null)}
+      />
     </div>
+  );
+}
+
+/**
+ * The create dialog on its own, driven by whoever opened it.
+ *
+ * Separate from the tiles because the application create page opens it from a card
+ * in the site-type grid — the one grid people actually look in — while the Docker
+ * page opens it from a tile. One dialog either way, so a change to what creating a
+ * database asks for cannot reach one caller and miss the other.
+ */
+export function DockerDatabaseDialog({
+  engine,
+  databases = [],
+  networks = [],
+  open,
+  onOpenChange,
+}) {
+  const t = useTranslations("docker.databases");
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const [form, setForm] = useState(null);
+
+  // Seeded when the dialog opens, not on every render: the user edits these, so
+  // deriving them would overwrite what they typed on the next keystroke.
+  useEffect(() => {
+    if (!open || !engine) {
+      setForm(null);
+      return;
+    }
+    setForm({
+      // The newest the catalog offers. A version nobody chose beats an empty
+      // select somebody has to answer before they can see what this does.
+      version: engine.versions[0] ?? "",
+      name: suggestName(engine.name, databases),
+      network: "",
+    });
+    // `databases` is a fresh array every render on a server component's props, so
+    // depending on it would reseed the form mid-edit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, engine?.name]);
+
+  return (
+    <ConfirmDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      icon={Database}
+      title={engine ? t("createTitle", { engine: engine.label }) : ""}
+      description={t("createBody")}
+      confirmLabel={t("create")}
+      confirmDisabled={!form?.name?.trim() || !form?.version}
+      pending={pending}
+      onConfirm={async () => {
+        if (!engine || !form) return;
+        setPending(true);
+        try {
+          await createDockerDatabase({
+            name: form.name.trim(),
+            engine: engine.name,
+            version: form.version,
+            docker_network: form.network || null,
+          });
+          toast.success(t("created", { name: form.name.trim() }));
+          onOpenChange?.(false);
+          // Every caller renders its list on the server, so without this the new
+          // row only appears on the next navigation.
+          router.refresh();
+        } catch (error) {
+          toast.error(apiMessage(error, t("failed")));
+        } finally {
+          setPending(false);
+        }
+      }}
+    >
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="docker-db-name">{t("nameLabel")}</Label>
+          <Input
+            id="docker-db-name"
+            value={form?.name ?? ""}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, name: event.target.value }))
+            }
+          />
+          <p className="text-xs text-muted-foreground">{t("nameHint")}</p>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="docker-db-version">{t("versionLabel")}</Label>
+          <Select
+            value={form?.version ?? ""}
+            onValueChange={(version) =>
+              setForm((current) => ({ ...current, version }))
+            }
+          >
+            <SelectTrigger id="docker-db-version">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(engine?.versions ?? []).map((version) => (
+                <SelectItem key={version} value={version}>
+                  {version}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Optional, and the copy says what skipping it costs. A database with no
+            network is reachable from the server only — a real answer, and the
+            wrong one if a container site needs it. */}
+        <div className="space-y-1.5">
+          <Label htmlFor="docker-db-network">{t("networkLabel")}</Label>
+          <Select
+            value={form?.network || NO_NETWORK}
+            onValueChange={(network) =>
+              setForm((current) => ({
+                ...current,
+                network: network === NO_NETWORK ? "" : network,
+              }))
+            }
+          >
+            <SelectTrigger id="docker-db-network">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_NETWORK}>{t("noNetworkOption")}</SelectItem>
+              {networks.map((network) => (
+                <SelectItem key={network.name} value={network.name}>
+                  {network.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">{t("networkHint")}</p>
+        </div>
+
+        <Caution size="md">
+          <p>{t("createWarning")}</p>
+        </Caution>
+      </div>
+    </ConfirmDialog>
   );
 }
 

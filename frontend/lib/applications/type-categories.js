@@ -13,12 +13,32 @@
  * splitting, this file is the only place that changes.
  */
 export const CATEGORY_GROUPS = [
+  /*
+   * Databases, which are NOT applications and are in this grid anyway.
+   *
+   * A database has no domain and no web address, so it cannot be a site type —
+   * `domain` is required for every application and provisioning always writes a
+   * vhost. But "create a database" is something people come to the create page to
+   * do, and they looked for MySQL in this grid three times before it was here.
+   * Where the control lives is not a consequence of how the model is shaped.
+   *
+   * First in the row rather than last: the cards are the only ones here that do
+   * not make a website, so burying them under "others" would repeat the original
+   * problem in a smaller font.
+   */
+  { key: "database", categories: ["database"] },
   { key: "cms", categories: ["cms", "ecommerce"] },
   { key: "development", categories: ["developer"] },
   { key: "tools", categories: ["utility", "automation", "monitoring"] },
   {
     key: "productivity",
-    categories: ["productivity", "business", "education", "marketing", "community"],
+    categories: [
+      "productivity",
+      "business",
+      "education",
+      "marketing",
+      "community",
+    ],
   },
 ];
 
@@ -49,6 +69,7 @@ export function groupsWithTypes(types = []) {
     count: counts.get(g.key),
   }));
 
-  if (counts.has("others")) groups.push({ key: "others", count: counts.get("others") });
+  if (counts.has("others"))
+    groups.push({ key: "others", count: counts.get("others") });
   return groups;
 }

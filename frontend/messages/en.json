@@ -3646,6 +3646,7 @@
       "blockedNode": "Needs Node",
       "blockedPhp": "Needs PHP",
       "categoryAll": "All",
+      "categoryDatabase": "Databases",
       "categoryCms": "CMS",
       "categoryDevelopment": "Development",
       "categoryTools": "Tools",
@@ -6935,7 +6936,9 @@
       "hint": "Run a database engine as a container for your sites to connect to. Each one gets its own volume, its own loopback port and generated credentials. They are not sites — a database has no domain and no web address — so they live here beside the networks and volumes.",
       "createPageHint": "Not an application — a database has no domain and no web address, so it is not in the list above. Start one here and your sites connect to it.",
       "newest": "newest {version}",
-      "empty": "No databases yet. Pick an engine above to start one.",
+      "tagline": "Container · newest {version}",
+      "empty": "No databases yet.",
+      "emptyLink": "Create one from the application page.",
       "columns": {
         "name": "Name",
         "engine": "Engine",
