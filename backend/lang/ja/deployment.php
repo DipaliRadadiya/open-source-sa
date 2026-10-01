@@ -19,4 +19,6 @@ return [
         'initial' => '初回デプロイ',
     ],
 
+    'script_php_missing' => 'デプロイスクリプトで :variables を使っていますが、このサーバーには PHP :versions がインストールされていません。PHP 画面でインストールするか、サイト自身のバージョンには {php} を使ってください。',
+
 ];

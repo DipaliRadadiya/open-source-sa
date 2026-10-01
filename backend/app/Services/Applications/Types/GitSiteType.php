@@ -3,6 +3,7 @@
 namespace App\Services\Applications\Types;
 
 use App\Rules\AvailablePort;
+use App\Rules\DeployScriptPhpInstalled;
 use App\Rules\SafeProviderHost;
 use App\Rules\StartCommand;
 use Illuminate\Validation\Rule;
@@ -191,7 +192,7 @@ class GitSiteType extends AbstractSiteType
             // wrote to run as their own site user, and refusing characters
             // would be theatre. The control that matters is the privilege
             // drop, not a denylist.
-            'deploy_script' => ['nullable', 'string', 'max:65535'],
+            'deploy_script' => ['nullable', 'string', 'max:65535', new DeployScriptPhpInstalled],
 
             // Required for a Node app (it has to install dependencies
             // somehow), refused otherwise — a PHP or static site has no

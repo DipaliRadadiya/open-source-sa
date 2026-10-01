@@ -19,4 +19,6 @@ return [
         'initial' => 'Primer despliegue',
     ],
 
+    'script_php_missing' => 'Tu script de despliegue usa :variables, pero PHP :versions no está instalado en este servidor. Instálalo en la pantalla de PHP o usa {php} para la versión del propio sitio.',
+
 ];

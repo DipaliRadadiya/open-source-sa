@@ -556,12 +556,26 @@ class GitDeployer
         // and the deploy reports success on a half-updated site. Putting it
         // after the `cd` would leave the one command whose failure matters most
         // unguarded: running the rest of a deploy script in the wrong directory.
+        $body = $script ?? (string) $this->script($application);
+
+        // Before anything runs: a `{PHP81}` with no PHP 8.1 behind it would
+        // otherwise reach the shell as text and fail halfway through.
+        if (($missing = app(DeployScriptPhp::class)->missing($body)) !== []) {
+            $reference = (string) Str::uuid();
+            Log::channel('server-ops')->warning('deploy.script_php_missing', [
+                'feature' => 'application', 'op' => 'git.script', 'application' => $application->id,
+                'variables' => $missing, 'reference' => $reference,
+            ]);
+
+            throw new ProvisioningFailedException('script', $reference, 'script_php_missing');
+        }
+
         $script = implode("\n", [
             'set -e',
             $this->nodePath($application),
             $this->phpPath($application),
             'cd '.escapeshellarg($documentRoot),
-            $this->expand($script ?? (string) $this->script($application), $application, $documentRoot),
+            $this->expand($body, $application, $documentRoot),
         ]);
 
         $result = $this->serverOps->run(
@@ -720,7 +734,7 @@ class GitDeployer
      */
     private function expand(string $script, Application $application, string $documentRoot): string
     {
-        return strtr($script, [
+        return strtr($script, app(DeployScriptPhp::class)->aliases() + [
             // The site's own interpreter, spelled out. `php` on PATH already
             // resolves to it, but a script written before that was true may
             // name a version explicitly, and this is the way to do so without

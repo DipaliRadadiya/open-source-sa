@@ -265,6 +265,7 @@ return [
         'registry_credentials_rejected' => 'The registry refused the credential this site pulls with. The token has most likely expired or been revoked — rotate it on the Docker page and deploy again. The image reference itself is fine; the registry answered, it just would not accept this username and token.',
         'container_restarting' => 'The container starts and then stops again, over and over, so the site cannot serve. Its own log is the place to look — usually a command or entrypoint that exits immediately, a missing environment variable, or a configuration file the image could not read.',
         'script_git_auth' => 'Your deploy script runs a git command (usually git pull) that needs to log in to the repository, and the script has no login, so it fails on a private repository. You do not need it: the panel already downloads the latest code with the connected account before your script runs. Remove that line from the deploy script and deploy again.',
+        'script_php_missing' => 'Your deploy script uses a {PHPxx} variable for a PHP version that is not installed on this server. Install that version on the PHP screen, or use {php} for the site\'s own version, then deploy again.',
         'composer_dependencies_missing' => 'This project requires Composer dependencies and none were installed, so the application has no vendor/autoload.php and every request to it will fail. Add a build step that runs composer install to the deployment script, then deploy again.',
     ],
 
