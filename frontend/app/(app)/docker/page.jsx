@@ -2,9 +2,13 @@ import { getTranslations } from "next-intl/server";
 import { Container } from "lucide-react";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
-import { getDockerResources } from "@/lib/docker/get-docker";
+import {
+  getDockerDatabases,
+  getDockerResources,
+} from "@/lib/docker/get-docker";
 import { getAllApplications } from "@/lib/applications/get-applications";
 import { DockerResourcesPanel } from "@/components/docker/docker-resources-panel";
+import { DockerDatabasesPanel } from "@/components/docker/docker-databases-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -29,6 +33,17 @@ export default async function DockerPage() {
 
   const { networks, volumes, failed, status, failure, message } =
     await getDockerResources();
+
+  // The containerised database engines. Asked for alongside the networks and
+  // volumes because they are the same kind of thing — a server-level object a site
+  // connects to — and because a database wants a network, which is the card above.
+  //
+  // Only once the resources read succeeded: on a server that hosts no containers
+  // the whole page is a 409 empty state, and a second request to be told the same
+  // thing is a shell-out for nothing.
+  const databases = failed
+    ? { databases: [], engines: [] }
+    : await getDockerDatabases();
 
   // The container sites, for attaching one from this page. Only sites that are
   // actually serving: the endpoint applies the change by rewriting the compose
@@ -82,13 +97,33 @@ export default async function DockerPage() {
            storage destinations — a credential held somewhere else is not one of
            Docker's own objects, and burying it under two tables it had nothing to
            do with is what made it undiscoverable. */
-        <DockerResourcesPanel
-          initialNetworks={networks}
-          initialVolumes={volumes}
-          sites={sites}
-          canManage={canManage}
-          canManageSites={canManageSites}
-        />
+        <>
+          <DockerResourcesPanel
+            initialNetworks={networks}
+            initialVolumes={volumes}
+            sites={sites}
+            canManage={canManage}
+            canManageSites={canManageSites}
+          />
+
+          {/* Below the networks and volumes deliberately: a database usually wants
+              a network, and the card that makes one is above it. */}
+          {databases.failed ? (
+            <LoadFailed
+              description={t("databases.loadFailed")}
+              status={databases.status}
+              failure={databases.failure}
+              message={databases.message}
+            />
+          ) : (
+            <DockerDatabasesPanel
+              databases={databases.databases}
+              engines={databases.engines}
+              networks={networks}
+              canManage={canManage}
+            />
+          )}
+        </>
       )}
     </div>
   );

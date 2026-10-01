@@ -170,6 +170,58 @@ export const dockerVolumesResponseSchema = z.object({
  * different and the form has to be able to say which: an empty memory field
  * means the configured default, and an empty CPU field means no limit at all.
  */
+/**
+ * One containerised database engine, as the listing reports it.
+ *
+ * `internal_host` and `host_port` are both here because they are the single most
+ * confusing thing about a containerised database: from another container the host
+ * is the database's NAME, and from the server itself it is 127.0.0.1 and the
+ * published port. The API answers both rather than leaving the UI to explain it.
+ */
+export const dockerDatabaseSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  engine: z.string(),
+  engine_label: z.string().nullish(),
+  version: z.string(),
+  image: z.string().nullish(),
+  internal_host: z.string(),
+  internal_port: z.number(),
+  host_port: z.number(),
+  network: z.string().nullish(),
+  cpu_limit: z.string().nullish(),
+  memory_limit: z.string().nullish(),
+  default_memory_limit: z.string().nullish(),
+  // Named without their values, so the UI renders the fields the engine actually
+  // has — Redis has no user and no database — without a password going near a
+  // listing response.
+  credential_keys: z
+    .array(z.string())
+    .nullish()
+    .transform((k) => k ?? []),
+  username: z.string().nullish(),
+  database: z.string().nullish(),
+  has_root_password: z.boolean().nullish(),
+  // Asked of Docker, not read from the row: a database stopped by a reboot or an
+  // OOM must not read as healthy.
+  running: z.boolean().nullish(),
+  created_at: z.string().nullish(),
+  created_at_human: z.string().nullish(),
+});
+
+/** An engine the panel can actually render, with the versions it will accept. */
+export const dockerDatabaseEngineSchema = z.object({
+  name: z.string(),
+  label: z.string(),
+  port: z.number(),
+  versions: z.array(z.string()),
+});
+
+export const dockerDatabasesResponseSchema = z.object({
+  databases: z.array(dockerDatabaseSchema),
+  engines: z.array(dockerDatabaseEngineSchema),
+});
+
 export const dockerLimitsResponseSchema = z.object({
   limits: z.object({
     cpus: z.number().int().min(1),

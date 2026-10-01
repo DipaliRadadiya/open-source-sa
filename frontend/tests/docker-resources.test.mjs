@@ -788,3 +788,125 @@ test("every size string exists in every locale", () => {
     );
   }
 });
+
+/*
+ * Containerised database engines, on the Docker page.
+ *
+ * "still i didnt see MySQL, MariaDB, MongoDB and PostgreSQL as one click option into
+ * docker stack" — they had been API-only since the day they were built, which means
+ * they were not shipped.
+ *
+ * **They are deliberately NOT in the one-click application grid**, and that is
+ * structural rather than a preference: every application here is an HTTP site, so
+ * `domain` is required and provisioning always writes a vhost. A database speaks its
+ * own wire protocol — as a "site" it would hold a domain nobody types, be issued a
+ * certificate no browser can use, and answer 502 for ever. These tests pin the
+ * placement and the two things that make it one click rather than a form.
+ */
+
+const databasesPanel = read("components/docker/docker-databases-panel.jsx");
+
+test("every engine the server can run is its own control", () => {
+  // Not one "add database" form with an engine dropdown: that hides the answer to
+  // "what can this server run", which is the question somebody arrives with.
+  assert.match(databasesPanel, /engines\.map\(\(engine\) =>/);
+  assert.match(databasesPanel, /setCreating\(\{/);
+  // And the list comes from the server's own catalog rather than a copy kept in
+  // step by hand.
+  assert.match(dockerPage, /getDockerDatabases\(\)/);
+  assert.match(
+    read("lib/docker/get-docker.js"),
+    /dockerDatabasesResponseSchema/,
+  );
+});
+
+test("the dialog opens with every answer the panel can guess already filled", () => {
+  // What makes it a click. The newest version and a free name are pre-chosen; the
+  // only required answer is the one the panel cannot know.
+  assert.match(databasesPanel, /version: engine\.versions\[0\] \?\? ""/);
+  assert.match(databasesPanel, /name: suggestName\(engine\.name, databases\)/);
+  // And the suggested name is checked against what exists, because the API refuses
+  // a duplicate — offering a name that will be rejected is worse than offering none.
+  assert.match(databasesPanel, /const taken = new Set\(databases\.map/);
+});
+
+test("both addresses are shown, because they are different", () => {
+  // From another container the host is the database's NAME; from the server it is
+  // 127.0.0.1 and the published port. That is the single most confusing thing about
+  // a containerised database, so the table answers both.
+  assert.match(databasesPanel, /database\.internal_host/);
+  assert.match(databasesPanel, /127\.0\.0\.1:\{database\.host_port\}/);
+  // The alias only when it can actually resolve: with no shared network a
+  // container's name reaches nothing, so printing it would be a dead address.
+  assert.match(databasesPanel, /database\.network \?/);
+});
+
+test("the password comes from its own endpoint, on request", () => {
+  // Absent from the listing rather than masked — a mask is a length disclosure —
+  // so it is not in every page load, cache and proxy log on the way.
+  assert.match(databasesPanel, /getDockerDatabaseCredentials\(database\.id\)/);
+  // The listing schema carries `has_root_password` — a flag — and no password
+  // field of its own. Matched on a word boundary, because the first version of
+  // this assertion caught `has_root_password` and failed on the thing it was
+  // meant to allow.
+  const schema = read("lib/schemas/docker.js");
+  assert.match(schema, /has_root_password: z\.boolean\(\)/);
+  assert.doesNotMatch(schema, /^\s{2}password: z/m);
+  assert.doesNotMatch(schema, /^\s{2}root_password: z/m);
+});
+
+test("deleting the data is a separate opt-in, off by default", () => {
+  // Removing the container is recoverable and removing the volume is not, so the
+  // two cannot be the same click.
+  assert.match(databasesPanel, /useState\(false\);/);
+  assert.match(
+    databasesPanel,
+    /deleteDockerDatabase\(confirm\.id, \{ removeData \}\)/,
+  );
+  assert.match(databasesPanel, /setRemoveData\(false\);/);
+});
+
+test("a failed read is not rendered as an empty list", () => {
+  // "This server has no databases" is a claim about the machine. Making it without
+  // having heard from the machine would have somebody create a second Postgres they
+  // already had, on a port they already use.
+  assert.match(
+    read("lib/docker/get-docker.js"),
+    /failed: result\.failed,[\s\S]{0,200}dockerLimits|databases: result\.data\?\.databases \?\? \[\]/,
+  );
+  assert.match(dockerPage, /databases\.failed \?/);
+  assert.match(dockerPage, /<LoadFailed/);
+});
+
+test("creating refreshes the server-rendered listing", () => {
+  assert.match(databasesPanel, /router\.refresh\(\)/);
+});
+
+test("the create copy says the password cannot be changed later", () => {
+  // It cannot: the engine keeps its own copy, so rotating one would leave the two
+  // disagreeing. Said before the click rather than discovered after it.
+  assert.match(
+    messages.en.docker.databases.createWarning,
+    /cannot be changed from the panel/,
+  );
+});
+
+test("every databases string exists in every locale", () => {
+  const flat = (o, p = "", out = {}) => {
+    for (const [k, v] of Object.entries(o)) {
+      const key = p ? `${p}.${k}` : k;
+      if (v && typeof v === "object") flat(v, key, out);
+      else out[key] = v;
+    }
+    return out;
+  };
+  const reference = Object.keys(flat(messages.en.docker.databases));
+  for (const locale of LOCALES) {
+    const keys = Object.keys(flat(messages[locale].docker?.databases ?? {}));
+    assert.deepEqual(
+      keys.slice().sort(),
+      reference.slice().sort(),
+      `${locale} disagrees with en on docker.databases`,
+    );
+  }
+});

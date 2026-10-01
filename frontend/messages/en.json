@@ -6929,6 +6929,45 @@
       "subtitle": "Credentials this server uses to pull private container images.",
       "unavailableTitle": "This server hosts no containers",
       "unavailableBody": "Registry credentials are for pulling container images. This server runs none, so there is nothing for a credential to pull for."
+    },
+    "databases": {
+      "title": "Databases",
+      "hint": "Run a database engine as a container for your sites to connect to. Each one gets its own volume, its own loopback port and generated credentials. They are not sites — a database has no domain and no web address — so they live here beside the networks and volumes.",
+      "newest": "newest {version}",
+      "empty": "No databases yet. Pick an engine above to start one.",
+      "columns": {
+        "name": "Name",
+        "engine": "Engine",
+        "fromContainer": "From a container",
+        "fromServer": "From this server",
+        "state": "State"
+      },
+      "noNetwork": "needs a network",
+      "running": "Running",
+      "stopped": "Stopped",
+      "reveal": "Show the connection details",
+      "revealFailed": "Couldn't load the credentials.",
+      "credentialsFor": "Connection details for {name}",
+      "createTitle": "Start a {engine} container",
+      "createBody": "The panel picks a free port, creates a volume for the data and generates the credentials. It takes up to a minute — the engine has to finish initialising before it will accept a connection.",
+      "create": "Create",
+      "created": "{name} is ready.",
+      "nameLabel": "Name",
+      "nameHint": "Also the hostname other containers reach it by. Letters, numbers, dots, dashes and underscores.",
+      "versionLabel": "Version",
+      "networkLabel": "Network",
+      "noNetworkOption": "None — reachable from this server only",
+      "networkHint": "Join a network and your container sites can reach this database by name. Without one it is reachable only from the server itself, over 127.0.0.1.",
+      "createWarning": "The password is generated once and stored encrypted. It cannot be changed from the panel afterwards — the engine keeps its own copy, so changing one would leave the two disagreeing.",
+      "removeTitle": "Delete {name}?",
+      "removeBody": "The container is removed and the port is released.",
+      "removeConfirm": "Delete",
+      "removed": "{name} was deleted.",
+      "removeData": "Also delete the data",
+      "removeDataOn": "The volume and everything in it will be deleted. This cannot be undone.",
+      "removeDataOff": "The volume is kept, so the data survives. A new database of the same name will not pick it up.",
+      "failed": "Couldn't do that.",
+      "loadFailed": "Couldn't load the databases."
     }
   }
 }
