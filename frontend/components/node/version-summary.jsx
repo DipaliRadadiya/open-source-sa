@@ -18,6 +18,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { InstallOutput } from "@/components/runtime/install-output";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Card,
@@ -49,7 +50,10 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
    */
   const [running, setRunning] = useState(null);
   const pending = running !== null;
-  const [npm, setNpm] = useState(version.npm_version ?? null);
+  // From the page, not local state: the card re-reads after an update, and a
+  // copy seeded once from props kept the old "update available" beside the
+  // new number ("npm 12.1.0 → 12.1.0", button still lit).
+  const npm = version.npm_version ?? null;
   /*
    * What npm this Node version can actually run, and whether that beats what
    * is installed.
@@ -162,12 +166,12 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
   async function upgradeNpm() {
     setRunning("npm");
     try {
-      // The response carries the new number, so the row updates without
-      // re-fetching the whole page for one string.
       const before = npm;
       const { data } = await updateNodeNpm(version.version);
       const after = data?.npm_version ?? null;
-      if (after) setNpm(after);
+      // Re-read, not patch one field: "is an update still available" is the
+      // server's semver answer, and it changes with the number.
+      await refreshAndWait();
       /*
        * "npm updated to 12.0.2" under a button that still reads
        * "Update npm (12.0.2)" is the panel claiming it did something it did
@@ -310,6 +314,13 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
               }`
             : null}
         </CardDescription>
+
+        {/* The installer's own output, as on the PHP card. Without it a failed
+            install said only "quote the reference to support", even when the
+            reason was one line away in fnm's output. */}
+        {installState && version.output ? (
+          <InstallOutput text={version.output.trimEnd()} />
+        ) : null}
 
         {/* Tags, not prose: each name is one scannable unit. The API sends at
             most five and tells us how many it held back. */}

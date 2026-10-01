@@ -35,6 +35,9 @@ export const nodeVersionSchema = z.object({
   started_at: z.string().nullable().optional(),
   started_at_human: z.string().nullable().optional(),
   current_step: z.string().nullable().optional(),
+  // fnm's own output — "Can't download the requested binary: …". Stripped
+  // here, so the Node card could never show why an install stopped.
+  output: z.string().nullable().optional(),
   // How many sites pin this version, and up to five by name — "3 sites" doesn't
   // tell you whether removing it breaks staging or the shop.
   in_use_by: z.number().nullable().optional(),

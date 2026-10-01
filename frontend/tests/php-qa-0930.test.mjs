@@ -48,9 +48,11 @@ test("a change that got no answer never claims it failed", async () => {
 });
 
 test("a failed install shows apt's last line, where apt says why", () => {
+  assert.match(read("components/runtime/install-output.jsx"), /ref\.current\.scrollTop = ref\.current\.scrollHeight/);
   const src = read("components/php/version-summary.jsx");
-  assert.match(src, /ref\.current\.scrollTop = ref\.current\.scrollHeight/);
-  assert.match(src, /<AptOutput text=\{version\.output\.trimEnd\(\)\} \/>/);
+  // Node shows it too.
+  assert.match(read("components/node/version-summary.jsx"), /<InstallOutput text=\{version\.output\.trimEnd\(\)\} \/>/);
+  assert.match(src, /<InstallOutput text=\{version\.output\.trimEnd\(\)\} \/>/);
 });
 
 test("a failed removal says why on the card, not only in a hover title", () => {
@@ -67,4 +69,8 @@ test("the incomplete note states what is missing, not a guessed cause", () => {
 test("console muted text and dark success badges clear 4.5:1", () => {
   assert.match(read("app/globals.css"), /--console-muted: oklch\(0\.62 /);
   assert.match(read("components/ui/badge.jsx"), /dark:text-\[color-mix\(in_oklch,var\(--success\)_85%,var\(--foreground\)\)\]/);
+});
+
+test("the Node schema keeps fnm's output, so the card can show it", () => {
+  assert.match(read("lib/schemas/node.js"), /\n {2}output: z\.string\(\)\.nullable\(\)\.optional\(\),/);
 });

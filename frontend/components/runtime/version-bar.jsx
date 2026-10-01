@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "@/components/ui/app-link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -36,6 +37,15 @@ export function VersionBar({
   // installing ahead of the installed ones, so without this the chips swapped
   // places under the pointer the moment an install finished.
   const ordered = [...versions].sort((a, b) => compareVersions(b.version, a.version));
+  const navRef = useRef(null);
+
+  // On a phone the strip scrolls, and the version you are looking at could sit
+  // half off the edge — 22.23.3 read as "Node.js 22" with the rest under the fade.
+  useEffect(() => {
+    navRef.current
+      ?.querySelector('[aria-current="page"]')
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [selected]);
 
   return (
     <div className="space-y-2">
@@ -44,7 +54,7 @@ export function VersionBar({
       <p className="text-sm font-medium">{t("versions.switchLabel")}</p>
 
       <ScrollFade className="-mx-1 px-1 pb-1">
-        <nav aria-label={t("versions.pickerLabel")} className="flex w-fit items-center gap-2">
+        <nav ref={navRef} aria-label={t("versions.pickerLabel")} className="flex w-fit items-center gap-2">
           {ordered.map((version) => {
             const active = version.version === selected;
             const params = new URLSearchParams(searchParams);

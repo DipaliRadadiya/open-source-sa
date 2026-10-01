@@ -1,12 +1,13 @@
 "use client";
 
 import { removeFailed, versionState } from "@/components/runtime/version-status";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Loader2, Trash2 } from "lucide-react";
 import { LifecycleBadge } from "@/components/runtime/lifecycle-badge";
+import { InstallOutput } from "@/components/runtime/install-output";
 import { setDefaultPhpVersion, removePhpVersion, installPhpVersion } from "@/lib/api/php";
 import { failedWithNothingInstalled } from "@/lib/runtime/failed-install";
 import { Badge } from "@/components/ui/badge";
@@ -33,33 +34,6 @@ import { apiMessage } from "@/lib/api/error-message";
  * `children` carries the php.ini button, owned by the page (a Server
  * Component). Install lives beside the version picker, not here.
  */
-/**
- * apt's output, held at its last line. apt says why it stopped at the END —
- * "E: Held packages were changed…" — and the box opened at the top, on
- * "Reading package lists…", so a failed install showed everything except the
- * reason.
- */
-function AptOutput({ text }) {
-  const ref = useRef(null);
-
-  useEffect(() => {
-    if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
-  }, [text]);
-
-  return (
-    <pre
-      ref={ref}
-      className="mt-2 max-h-40 overflow-auto rounded-md bg-muted p-2 font-mono text-xs leading-relaxed text-muted-foreground"
-      // Announced politely: this updates every poll while an install
-      // runs, and an assertive region would interrupt a screen reader
-      // several times a minute for output nobody asked to hear.
-      aria-live="polite"
-    >
-      {text}
-    </pre>
-  );
-}
-
 export function VersionSummary({
   version,
   canManage,
@@ -416,7 +390,7 @@ export function VersionSummary({
             Kept after the failure too, deliberately: the moment someone wants
             to read the output is the moment it went wrong. */}
         {installState && version.output ? (
-          <AptOutput text={version.output.trimEnd()} />
+          <InstallOutput text={version.output.trimEnd()} />
         ) : null}
 
         {/* Tags, not prose: each name is one scannable unit, so the near-
