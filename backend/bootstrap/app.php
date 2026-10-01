@@ -9,6 +9,7 @@ use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -169,5 +170,23 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             return response()->json(['message' => __('errors/http.forbidden')], 403);
+        });
+
+        // Laravel's throttle answers "Too Many Attempts." in English whatever
+        // the user's language (found on the login form, 2026-10-01), and says
+        // nothing about when to try again. Same status, same Retry-After and
+        // rate-limit headers; only the sentence is ours.
+        $exceptions->render(function (ThrottleRequestsException $e, Request $request): ?JsonResponse {
+            if (! $request->is('api/*')) {
+                return null;
+            }
+
+            $seconds = max(1, (int) ($e->getHeaders()['Retry-After'] ?? 60));
+
+            return response()->json(
+                ['message' => trans_choice('errors/http.too_many_requests', $seconds, ['seconds' => $seconds])],
+                429,
+                $e->getHeaders(),
+            );
         });
     })->create();

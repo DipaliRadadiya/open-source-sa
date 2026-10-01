@@ -16,6 +16,7 @@ return [
     'not_found' => 'That item could not be found. It may have been deleted, or the link may be out of date.',
     'method_not_allowed' => 'That action is not available on this address.',
     'forbidden' => 'Your role does not allow this action.',
+    'too_many_requests' => '{1} Too many attempts. Try again in :seconds second.|[2,*] Too many attempts. Try again in :seconds seconds.',
     'permission_missing' => 'Your role does not include :ability for :feature.',
     'ability_view' => 'view access',
     'ability_manage' => 'management',
