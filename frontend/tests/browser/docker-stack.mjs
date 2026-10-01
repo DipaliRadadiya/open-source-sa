@@ -36,8 +36,18 @@ const page = await browser.newPage({ ignoreHTTPSErrors: true, viewport: { width:
 // Collected rather than asserted inline: a page that renders but throws in an effect
 // is a page that looks fine in a screenshot and is broken for the user.
 const errors = [];
-page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
-page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
+// The URL matters: a bare "status of 409" names neither the screen nor the endpoint,
+// and the first version of this check reported the gating refusals that step 12 asks
+// for as if they were defects.
+page.on("console", (m) => {
+  if (m.type() !== "error") return;
+  // `m.text()` for a failed fetch is just "the server responded with a status of 409" --
+  // the endpoint is only in `m.location().url`, and without it there is no way to tell a
+  // refusal the test asked for from one it did not.
+  const where = page.url().replace(/^https?:\/\/[^/]+/, "");
+  errors.push(`[${where}] ${m.text()} ${m.location()?.url ?? ""}`.trim());
+});
+page.on("pageerror", (e) => errors.push(`[${page.url().replace(/^https?:\/\/[^/]+/, "")}] pageerror: ${e.message}`));
 
 /** Wait for a table row naming this thing to exist, or report what the table holds. */
 async function rowAppears(name, label, timeout = 30000) {
@@ -217,24 +227,46 @@ try {
 
   // ---- 10. and the compose file the panel wrote for it
   await goto(`/applications/${siteId}/compose`);
-  const compose = await page.locator("main").innerText();
+  // The compose file is a <textarea value={...}>, and a textarea's value is not
+  // part of innerText -- it has to be read as an input value.
+  const compose = await page.locator("main textarea").first().inputValue();
   has("compose file shows the memory ceiling", compose, "mem_limit: 192m");
   has("compose file shows the cpu quota", compose, "cpus: 0.5");
   has("compose file publishes to loopback only", compose, "127.0.0.1:");
 
   // ---- 11. delete it through the dialog, including its Docker resources
-  await goto(`/applications/${siteId}`);
-  await page.locator("button:has-text('Delete')").first().click();
+  // Delete is not on the site's own screen -- it lives in the row's actions menu on
+  // the applications list. The first version of this clicked a button that does not
+  // exist on `/applications/${siteId}` and reported it as a bare 30s timeout.
+  await goto("/applications");
+  const appRow = page.locator("tr", { hasText: siteName }).first();
+  await appRow.getByRole("button", { name: "Actions" }).click();
+  await page.getByRole("menuitem", { name: "Delete" }).click();
   await page.waitForTimeout(1500);
   const del = page.locator("[role=alertdialog], [role=dialog]").first();
   has("the delete dialog names the site", await del.innerText(), siteName);
-  const confirmBtn = del.locator("button:has-text('Delete')").last();
+  // The site's volume and network, offered as one box. Checking it is the whole point
+  // of deleting through the dialog rather than the API -- it is what proves the panel
+  // cleans up after a container site.
+  // Offered only when the site actually has named volumes or a network of its own. A
+  // site created through this form has neither -- its compose project network is torn
+  // down with the project -- so its ABSENCE here is correct, and the e2e API script
+  // covers the case where resources exist because it creates the site with a network.
+  const dockerBox = del.locator("#delete-app-docker");
+  if (await dockerBox.count()) {
+    await dockerBox.check();
+    ok("the dialog offers to remove the Docker resources");
+  }
+  // Confirmation is the DOMAIN, not the name, and the confirm button stays disabled
+  // until it matches.
+  await del.locator("input").last().fill(derived);
+  const confirmBtn = del.getByRole("button", { name: /^Delete/ }).last();
+  is("confirm is enabled once the domain is typed", await confirmBtn.isEnabled(), true);
   await confirmBtn.click();
   await page.waitForURL(/\/applications(\?|$)/, { timeout: 120000 }).catch(() => {});
-  await page.waitForTimeout(4000);
-  (await page.locator("body").innerText()).includes(siteName)
-    ? bad("site gone from the list", "still listed")
-    : ok("site gone from the list");
+  // Read the TABLE, not the body: the body still carries the "deleted" toast naming the
+  // site, so a body-text search reports a successful delete as a failure.
+  await rowDisappears(siteName, "site gone from the list", 60000);
 
   // ---- 12. the stack's own gating, as rendered
   await goto("/databases");
@@ -249,7 +281,12 @@ try {
     : bad("PHP screen refused", php.slice(0, 120));
 
   // ---- 9. nothing threw while all that rendered
-  const real = errors.filter((e) => !/favicon|ERR_ABORTED|Download the React DevTools/i.test(e));
+  // A 409 on /databases, /php or /node is what step 12 just asserted SHOULD happen --
+  // the box manages no databases and hosts no PHP. The browser logs every refused fetch
+  // as a console error, so those three have to come out or this check contradicts the
+  // two assertions above it.
+  const real = errors.filter((e) => !/favicon|ERR_ABORTED|Download the React DevTools/i.test(e))
+    .filter((e) => !(/status of 409/.test(e) && /\/(databases|php|node)\b/.test(e)));
   real.length === 0 ? ok("no console or page errors across every screen") : bad("console errors", real.slice(0, 3).join(" | "));
 } catch (e) {
   bad("harness", `${e.name}: ${String(e.message).split("\n")[0]}`);
@@ -261,11 +298,17 @@ try {
       await goto("/applications");
       const srow = page.locator("tr", { hasText: `${TAG}site` });
       if (await srow.count()) {
-        await srow.first().locator("a").first().click();
-        await page.waitForURL(/\/applications\/\d+/, { timeout: 30000 });
-        await page.locator("button:has-text('Delete')").first().click();
+        // Through the row's actions menu, like step 11 -- the site's own screen has no
+        // Delete button, so the earlier version of this sweep silently never ran.
+        await srow.first().getByRole("button", { name: "Actions" }).click();
+        await page.getByRole("menuitem", { name: "Delete" }).click();
         await page.waitForTimeout(1500);
-        await page.locator("[role=alertdialog], [role=dialog]").first().locator("button:has-text('Delete')").last().click();
+        const d = page.locator("[role=alertdialog], [role=dialog]").first();
+        const box = d.locator("#delete-app-docker");
+        if (await box.count()) await box.check();
+        // Confirmation is the domain.
+        await d.locator("input").last().fill(`${TAG}site.${new URL(PANEL).hostname.replace(/^panel\./, "")}`);
+        await d.getByRole("button", { name: /^Delete/ }).last().click();
         await page.waitForTimeout(20000);
       }
     } catch { /* reported above */ }
