@@ -103,30 +103,11 @@ it('hides it from the unfiltered menu too, not only from level=server', function
         ->toBeFalse();
 });
 
-it('keeps the Databases tab on a Docker server, because it now has databases', function () {
-    // **Reversed on purpose, and the original reasoning is worth keeping.** This
-    // tab was hidden here because an application that wants a database brings one
-    // as a container, so the panel managed no engine and `/api/databases` answered
-    // 409 — a tab that was visibly broken rather than merely pointless.
-    //
-    // Then the panel learned to run engines AS containers, and this screen is where
-    // they are listed and managed. A sidebar item that says "Databases" and is
-    // absent on the one stack whose databases the panel owns is the gating being
-    // right about a rule and wrong about the product.
-    //
-    // The host-engine endpoints still answer 409 — that has not changed and is
-    // asserted in `DockerStackScopeTest`. The page branches on the capability
-    // rather than calling them.
+it('hides the Databases tab on a Docker server', function () {
+    // An application that wants a database there brings one as a container, so the
+    // panel manages no engine — and these endpoints already answered 409, which
+    // made this the one tab that was visibly broken rather than merely pointless.
     dockerStackAs('docker', ['docker']);
-
-    expect(serverTabs())->toContain('database');
-});
-
-it('still hides the Databases tab where there is no kind of database at all', function () {
-    // A static-only server manages no engine and runs no containers, so there is
-    // nothing for the screen to show. The condition is "neither", not "no host
-    // engine" — which is what made it disappear from the Docker box.
-    dockerStackAs('static', ['static']);
 
     expect(serverTabs())->not->toContain('database');
 });

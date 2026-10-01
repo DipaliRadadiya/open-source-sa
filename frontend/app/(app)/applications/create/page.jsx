@@ -8,7 +8,6 @@ import { getPhp } from "@/lib/php/get-php";
 import { getNode } from "@/lib/node/get-node";
 import { getTimezones } from "@/lib/settings/get-timezones";
 import { getEngines } from "@/lib/databases/get-databases";
-import { getDockerDatabases, getDockerResources } from "@/lib/docker/get-docker";
 import { engineInstalling, noDatabaseEngine } from "@/lib/applications/database-readiness";
 import { withAvailability } from "@/lib/applications/blockers";
 import { NoDatabaseEngineNotice } from "@/components/applications/no-database-engine-notice";
@@ -133,31 +132,6 @@ export default async function CreateApplicationPage({ searchParams }) {
     ? String(sp.git_account)
     : "";
 
-  /*
-   * Containerised database engines, on the page where people create things.
-   *
-   * They are NOT site types and cannot be — `domain` is required for every
-   * application here and a vhost is always written, so a database as a "site"
-   * would hold a domain nobody types and a certificate no browser can use. But
-   * "create a database" is something people come to this page to do, and being
-   * right about the model is not a reason to be wrong about where the control is.
-   * Reported three times as missing before it was put here.
-   *
-   * Gated on `docker` manage, which is what the create endpoint requires: a card
-   * offered to anyone else is a card whose only outcome is a 403. Fetched only
-   * then, so a LEMP box makes no request for it.
-   */
-  const canManageDocker = can(permissions, "docker", "manage");
-  const [dockerDatabases, dockerResources] = canManageDocker
-    ? await Promise.all([getDockerDatabases(), getDockerResources()])
-    : [{ databases: [], engines: [], failed: true }, { networks: [] }];
-
-  // Silent when the server hosts no containers. The endpoints answer 409 there,
-  // and a card explaining why a thing is absent is noise on a page that is already
-  // the longest form in the panel.
-  const showDatabases =
-    canManageDocker && !dockerDatabases.failed && dockerDatabases.engines.length > 0;
-
   return (
     <div className="space-y-6">
       <PageHeader title={t("createTitle")} subtitle={t("createSubtitle")} />
@@ -184,12 +158,6 @@ export default async function CreateApplicationPage({ searchParams }) {
         initialGitAccountId={prefillGitAccount}
         gitAccounts={accounts.accounts}
         gitAccountsFailed={accounts.failed}
-        // Shown as cards in the same grid as the applications, because that is the
-        // grid people look in. Empty without `docker` manage or on a server that
-        // hosts no containers, in which case no card appears at all.
-        databaseEngines={showDatabases ? dockerDatabases.engines : []}
-        dockerNetworks={dockerResources.networks}
-        dockerDatabases={dockerDatabases.databases}
         phpVersions={phpVersions}
         phpDefaultVersion={php.data?.default ?? null}
         phpVersionsFailed={php.failed}
@@ -214,7 +182,6 @@ export default async function CreateApplicationPage({ searchParams }) {
           database: can(permissions, "database", "manage"),
         }}
       />
-
     </div>
   );
 }

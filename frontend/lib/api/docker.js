@@ -113,36 +113,3 @@ export function getContainerSecrets(id) {
 export function acknowledgeContainerSecrets(id) {
   return api.post(`/applications/${id}/container/secrets/acknowledge`);
 }
-
-/*
- * Containerised database engines.
- *
- * Server-level objects, not sites, and the reason is structural rather than a
- * preference: every application in this panel is an HTTP site — `domain` is
- * required, provisioning always writes a vhost, and a container site's vhost is
- * `proxy_pass http://127.0.0.1:<port>`. A database speaks its own wire protocol,
- * so as a "site" it would hold a domain, be issued a certificate no browser can
- * use, and answer 502 for ever. They live beside networks and volumes, which is
- * what they are: something sites connect to.
- */
-
-export function createDockerDatabase(payload) {
-  return api.post("/docker/databases", payload);
-}
-
-export function deleteDockerDatabase(id, { removeData = false } = {}) {
-  return api.delete(`/docker/databases/${id}`, {
-    data: { remove_data: removeData },
-  });
-}
-
-/**
- * The password, from its own endpoint.
- *
- * Absent from the listing deliberately — not masked, which would be a length
- * disclosure — so it is not in every page load, every cache and every proxy log
- * between here and the browser. The server records each read.
- */
-export function getDockerDatabaseCredentials(id) {
-  return api.get(`/docker/databases/${id}/credentials`);
-}

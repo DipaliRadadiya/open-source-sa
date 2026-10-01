@@ -89,15 +89,7 @@ class VisiblePermissions
                 // `hosts('node')` would take the screen away from every LEMP box
                 // whose sites build their assets with npm.
                 'node' => ! $capabilities->runsHostApplications(),
-                // Hidden only when there is NO kind of database to manage. A
-                // Docker box manages no host engine, so this used to be hidden
-                // there — and then the panel learned to run engines as containers,
-                // which are listed and managed on exactly this screen. A sidebar
-                // item that says "Databases" and is absent on the stack that has
-                // databases is the gating being right about a rule and wrong about
-                // the product.
-                'database' => ! $capabilities->managesDatabases()
-                    && ! $capabilities->hosts('docker'),
+                'database' => ! $capabilities->managesDatabases(),
                 // The mirror of the three above: a credential for pulling container
                 // images is nothing on a box that runs no containers. Its endpoints
                 // are gated on the same capability, so the tab and the routes agree.

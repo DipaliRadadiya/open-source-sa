@@ -82,10 +82,6 @@ export default async function DockerPage() {
            storage destinations — a credential held somewhere else is not one of
            Docker's own objects, and burying it under two tables it had nothing to
            do with is what made it undiscoverable. */
-        /* Networks and volumes only. Registry credentials live under Integrations,
-           and the containerised databases now live on the Databases page — the
-           sidebar item that already says the word, and which this stack used to hide
-           because the panel managed no engine. It manages these. */
         <DockerResourcesPanel
           initialNetworks={networks}
           initialVolumes={volumes}

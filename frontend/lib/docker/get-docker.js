@@ -1,6 +1,5 @@
 import { read } from "@/lib/api/read";
 import {
-  dockerDatabasesResponseSchema,
   dockerLimitsResponseSchema,
   dockerNetworksResponseSchema,
   dockerVolumesResponseSchema,
@@ -97,30 +96,6 @@ export async function getDockerVolumes() {
   const volumes = await read("/docker/volumes", dockerVolumesResponseSchema);
 
   return volumes.failed ? [] : (volumes.data?.volumes ?? []);
-}
-
-/**
- * The containerised databases, and the engines this panel can render.
- *
- * Must NOT degrade to an empty list, for the reason `getDockerResources()` gives:
- * "this server has no databases" is a claim about the machine, and making it
- * without having heard from the machine is a lie that reads as data — somebody
- * would create a second Postgres they already had, on a port they already use.
- *
- * The engine catalog comes with them so the create control offers what the server
- * will actually accept rather than a list the frontend keeps in step by hand.
- */
-export async function getDockerDatabases() {
-  const result = await read("/docker/databases", dockerDatabasesResponseSchema);
-
-  return {
-    databases: result.data?.databases ?? [],
-    engines: result.data?.engines ?? [],
-    failed: result.failed,
-    status: result.status,
-    failure: result.failure,
-    message: result.message,
-  };
 }
 
 /**

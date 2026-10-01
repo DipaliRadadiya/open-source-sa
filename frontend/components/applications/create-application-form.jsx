@@ -88,8 +88,6 @@ import {
 } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import { SiteTypePicker } from "@/components/applications/site-type-picker";
-import { DockerDatabaseDialog } from "@/components/docker/docker-database-tiles";
-import { databaseTypeCards } from "@/lib/applications/database-type-cards";
 import { RequiredServices } from "@/components/applications/required-services";
 import { RuntimeRefresh } from "@/components/applications/runtime-refresh";
 import {
@@ -789,20 +787,8 @@ export function CreateApplicationForm({
   phpInstallable = [],
   nodeInstallable = [],
   canInstall = {},
-  /*
-   * Containerised database engines, shown as cards in this same grid.
-   *
-   * They are not site types and never become any — a database has no domain, so it
-   * cannot be an application here. Choosing one opens the database dialog instead
-   * of selecting a type. Empty on a server that hosts no containers, or for
-   * somebody without `docker` manage, in which case no card appears.
-   */
-  databaseEngines = [],
-  dockerNetworks = [],
-  dockerDatabases = [],
 }) {
   const t = useTranslations("applications");
-  const tDatabase = useTranslations("docker.databases");
   // Both refresh actions show the same one-word label; only their accessible
   // names differ, so the shared string comes from `common`.
   const tCommon = useTranslations("common");
@@ -810,10 +796,6 @@ export function CreateApplicationForm({
   const router = useRouter();
   const [accountsRefreshing, startAccountsRefresh] = useTransition();
   const [gitSource, setGitSource] = useState("account");
-  // The engine whose dialog is open, or null. Not part of the form: creating a
-  // database is a different request to a different endpoint, and putting it in
-  // `site_type` would make the submit button mean two things.
-  const [databaseEngine, setDatabaseEngine] = useState(null);
   const [repositories, setRepositories] = useState([]);
   const [branches, setBranches] = useState([]);
   // "loading" from the start when an account is already chosen: the fetch
@@ -994,13 +976,6 @@ export function CreateApplicationForm({
     [nodeVersions, selected],
   );
   const isGit = selected?.method === "git" || selected?.name === "git";
-  // Applications and database engines in one grid, which is the only grid people
-  // look in. The database cards carry an `engine`; nothing else does, so the picker
-  // can tell them apart without knowing what a database is.
-  const pickerTypes = useMemo(
-    () => [...siteTypes, ...databaseTypeCards(databaseEngines, tDatabase)],
-    [siteTypes, databaseEngines, tDatabase],
-  );
   const typeFields = (selected?.fields ?? []).filter(
     (config) =>
       !COMMON_FIELD_NAMES.has(config.name),
@@ -1734,10 +1709,9 @@ export function CreateApplicationForm({
                         got a chance because nothing above it was constrained. */}
                     <div className="min-w-0">
                       <SiteTypePicker
-                        types={pickerTypes}
+                        types={siteTypes}
                         value={field.value}
                         onChange={field.onChange}
-                        onChooseDatabase={setDatabaseEngine}
                       />
                     </div>
                     {/* Only once something is chosen: "Nextcloud needs two
@@ -2529,17 +2503,6 @@ export function CreateApplicationForm({
           setSubmitted(true);
           router.push("/applications");
         }}
-      />
-
-      {/* Opened by a card in the grid above. Outside the form on purpose: creating
-          a database is a different request to a different endpoint, and a submit
-          inside this <form> would try to create an application. */}
-      <DockerDatabaseDialog
-        engine={databaseEngine}
-        databases={dockerDatabases}
-        networks={dockerNetworks}
-        open={databaseEngine !== null}
-        onOpenChange={(open) => !open && setDatabaseEngine(null)}
       />
     </Form>
   );
