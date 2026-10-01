@@ -71,7 +71,9 @@ it('lets an admin delete a role and detaches it from users', function () {
     $admin = User::factory()->admin()->create();
     $target = User::factory()->create();
     $role = Role::create(['name' => 'Support Staff', 'slug' => 'support-staff']);
-    $target->roles()->attach($role);
+    $other = Role::create(['name' => 'Ops', 'slug' => 'ops']);
+    // Another role too: losing this one still leaves them one.
+    $target->roles()->attach([$role->id, $other->id]);
     $token = $admin->createToken('test')->plainTextToken;
 
     $this->withHeader('Authorization', "Bearer {$token}")
@@ -134,4 +136,41 @@ it('protects the Administrator system role from deletion', function () {
         ->assertUnprocessable();
 
     expect(Role::find($adminRole->id))->not->toBeNull();
+});
+
+it('refuses to delete the only role a user has, naming them', function () {
+    $admin = User::factory()->admin()->create();
+    $role = Role::create(['name' => 'Support Staff', 'slug' => 'support-staff']);
+    $other = Role::create(['name' => 'Ops', 'slug' => 'ops']);
+    $only = User::factory()->create(['username' => 'only-this-role']);
+    $both = User::factory()->create(['username' => 'has-two-roles']);
+    $only->roles()->attach($role);
+    $both->roles()->attach([$role->id, $other->id]);
+
+    // Every user has at least one role; deleting this one would have left
+    // `only-this-role` logged in with no permission at all.
+    $this->actingAs($admin)
+        ->deleteJson("/api/admin/roles/{$role->id}")
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['role' => __('role.last_role_of_users', ['name' => 'Support Staff', 'users' => 'only-this-role'])]);
+
+    expect(Role::find($role->id))->not->toBeNull()
+        ->and($only->fresh()->roles()->count())->toBe(1)
+        ->and($both->fresh()->roles()->count())->toBe(2);
+});
+
+it('deletes the role once that user has another one', function () {
+    $admin = User::factory()->admin()->create();
+    $role = Role::create(['name' => 'Support Staff', 'slug' => 'support-staff']);
+    $other = Role::create(['name' => 'Ops', 'slug' => 'ops']);
+    $user = User::factory()->create();
+    $user->roles()->attach($role);
+
+    $this->actingAs($admin)->deleteJson("/api/admin/roles/{$role->id}")->assertStatus(422);
+
+    $user->roles()->attach($other);
+
+    $this->actingAs($admin)->deleteJson("/api/admin/roles/{$role->id}")->assertNoContent();
+
+    expect($user->fresh()->roles()->pluck('slug')->all())->toBe(['ops']);
 });

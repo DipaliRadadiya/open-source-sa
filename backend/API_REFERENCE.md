@@ -83,9 +83,9 @@ Auth-gated. Returns the current user + `impersonated_by` if an admin is currentl
 ---
 
 ### PUT `/auth/profile`
-Auth-gated. Update own username.
+Auth-gated. Update own name and username.
 
-**Request:** `{"username": "newusername"}`
+**Request:** `{"name": "New Name", "username": "newusername"}` — both required.
 
 **Response `200`:** `{"user": {...updated...}}`
 
@@ -96,14 +96,14 @@ Auth-gated. Change own password.
 
 **Request:** `{"current_password": "…", "password": "…", "password_confirmation": "…"}`
 
-**Response `204`.** `422` when the password contains a line break or other control character — `chpasswd` reads one account per line.
+**Response `200`:** `{"token": "…"}` — a fresh API token. Every other token of this user is revoked, so a bearer client must switch to this one (the session cookie stays valid).
 
 ---
 
 ### POST `/auth/stop-impersonating`
 Auth-gated. Exit impersonation mode (admin feature).
 
-**Response `200`:** `{"user": {…}}`
+**Response `204`:** empty. `422` when not impersonating. Read `GET /auth/me` for the admin's own user.
 
 ---
 
@@ -169,7 +169,7 @@ Each item needs `level` **and** `name` — the same `name` can exist at two leve
 
 **Response `204`:** `null`
 
-`422` if the role is `is_system: true` or has assigned users.
+`422` if the role is `is_system: true`, or if it is the **only** role of any user (the message names them; every user keeps at least one role). Users who also hold another role simply lose this one.
 
 ---
 
@@ -191,7 +191,7 @@ Paginated. `?search=` case-insensitively matches name and username; `?filter[is_
 
 **Request:**
 ```json
-{"username": "dev", "password": "…", "role_ids": [2]}
+{"name": "Dev", "username": "dev", "password": "…", "password_confirmation": "…", "is_admin": false, "role_ids": [2]}
 ```
 
 **Response `201`:** `{"user": {...}}`
@@ -201,7 +201,7 @@ Paginated. `?search=` case-insensitively matches name and username; `?filter[is_
 ### PUT `/admin/users/{user}`
 **Permission:** `access-admin` (manage)
 
-**Request:** `{"username": "senior-dev", "role_ids": [2, 3]}`
+**Request:** `{"name": "Senior Dev", "username": "senior-dev", "is_admin": false, "role_ids": [2, 3]}` — `name`, `username` and `is_admin` are required. Removing `is_admin` from the last admin is a `422`.
 
 **Response `200`:** `{"user": {...}}`
 
@@ -241,7 +241,7 @@ Cannot delete yourself (422).
 
 Become this user for the session (admin feature). Cannot impersonate yourself or another admin.
 
-**Response `200`:** `{"user": {…}, "impersonated_by": {"id": 1, "username": "admin"}}`
+**Response `201`:** `{"user": {…}, "impersonated_by": {"id": 1, "username": "admin"}}`
 
 ---
 
@@ -4144,6 +4144,8 @@ Everything but `username` is optional. `shell` defaults to `/bin/bash`; `sudo` a
 
 **Response `200`:** `{"message": "Password updated."}`
 
+`422` when the password contains a line break or other control character — `chpasswd` reads one account per line.
+
 ---
 
 ### PUT `/system-users/{systemUser}/sudo`
@@ -5964,7 +5966,7 @@ Activity entries are written for every mutation. `type` and `action` are separat
 | type | action |
 |------|--------|
 | `user` | registered, logged_in, password_changed, impersonation_started, impersonation_stopped |
-| `role` | created, updated, permissions_updated, deleted |
+| `role` | created, updated, deleted |
 | `system_user` | created, deleted, sudo_toggled, shell_changed, ssh_access_changed, ssh_key_added, ssh_key_removed |
 | `application` | created, updated, deleted, provisioned, provision_failed, deployed, deploy_failed, disabled, enabled, domain_added, domain_removed, certificate_issued, certificate_uploaded, certificate_deleted, file_edited, file_deleted, directory_created, permissions_fixed, php_isolated, php_unisolated, php_settings_updated, environment_updated, environment_restored, worker_created, worker_updated, worker_deleted, worker_started, worker_stopped, worker_restarted, deploy_script_updated, deploy_settings_updated, staging_created, staging_pushed |
 | `database` | created, deleted, user_created, user_updated, user_deleted, export_queued, export_completed, export_failed, export_deleted, imported |
