@@ -3,6 +3,7 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -76,6 +77,7 @@ const FILES = [
 export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filterTemplate, canManage }) {
   const t = useTranslations("applications.fail2ban");
   const router = useRouter();
+  const { refreshAndWait } = useRefresh();
 
   /*
    * What the last create or remove did, until the refreshed props agree:
@@ -174,8 +176,8 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
       if (!config) {
         setOverride({ jail_name: null, jail_content: draft.jail, filter_content: draft.filter });
       }
+      await refreshAndWait();
       toast.success(t("saved"));
-      router.refresh();
     } catch (error) {
       // A config the daemon refuses comes back as a body, not a status worth
       // reading: the backend answers 500 for what is really a validation

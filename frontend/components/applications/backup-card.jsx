@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "@/components/ui/app-link";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import {
@@ -54,7 +54,7 @@ export function BackupCard({
   href,
 }) {
   const t = useTranslations("applications.backups");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [starting, setStarting] = useState(false);
   // The newest backup id at the moment a run was started here, or null.
   const [queuedAfter, setQueuedAfter] = useState(null);
@@ -97,11 +97,11 @@ export function BackupCard({
     setStalled(false);
     try {
       await runBackupNow(applicationId);
-      toast.success(t("started"));
       // Remember where the list stood, so the queued state ends itself the
       // moment the worker's row appears.
       setQueuedAfter(newestBackupId(backups));
-      router.refresh();
+      await refreshAndWait();
+      toast.success(t("started"));
     } catch (error) {
       toast.error(apiMessage(error, t("startFailed")));
     } finally {

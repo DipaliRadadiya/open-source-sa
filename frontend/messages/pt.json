@@ -2430,7 +2430,7 @@
       "already": "Node.js {version} já estava instalado.",
       "failed": "Não foi possível instalar essa versão.",
       "eolWarning": "Node.js {version} não recebe mais correções de segurança. Instale apenas se alguma aplicação precisar.",
-      "noneAvailable": "Nenhuma versão nova disponível para instalar no momento.",
+      "noneAvailable": "Não foi possível obter a lista de versões do Node.js. Verifique se o servidor consegue acessar nodejs.org e recarregue a página.",
       "installedTag": "Instalada",
       "allInstalled": "Todas as versões oferecidas por este servidor já estão instaladas."
     },
@@ -3059,7 +3059,8 @@
       "chartDescription": "Consultas por segundo, conexões e threads em execução, amostrados a cada 5 minutos.",
       "zoomHint": "Arraste as alças abaixo do gráfico, ou role sobre ele, para ampliar um intervalo de tempo.",
       "cannotStopOwn": "Esta é a própria conexão do painel com o banco de dados. Interrompê-la cortaria esta página.",
-      "loadFailed": "Não foi possível verificar os motores de banco de dados."
+      "loadFailed": "Não foi possível verificar os motores de banco de dados.",
+      "backToList": "Voltar para bancos de dados"
     },
     "tables": {
       "title": "Tabelas",
@@ -3128,7 +3129,8 @@
       "cancel": "Cancelar",
       "confirm": "Reiniciar e continuar",
       "description": "O servidor de banco de dados precisa reiniciar para aceitar conexões de outros endereços. As aplicações que o usam perdem a conexão por um instante."
-    }
+    },
+    "backToList": "Voltar para bancos de dados"
   },
   "git": {
     "title": "Git",

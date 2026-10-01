@@ -5,7 +5,7 @@ import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { CardSaveFooter } from "@/components/ui/card-save-footer";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
@@ -44,7 +44,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "
 export function SecuritySection({ appId, application, domain, canManage }) {
   const t = useTranslations("applications.security");
   const { name: brand } = useBranding();
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   // The password the API just accepted, shown once for copying — it is never
   // sent back on any read, so this is the only chance to grab it again.
   const [justSaved, setJustSaved] = useState(null);
@@ -84,11 +84,11 @@ export function SecuritySection({ appId, application, domain, canManage }) {
         ? { enabled: true, username: values.username.trim(), password: values.password }
         : { enabled: false };
       await updateApplicationSecurity(appId, payload);
-      toast.success(values.enabled ? t("enabledToast") : t("disabledToast"));
       setSavedProtected(values.enabled);
       setJustSaved(values.enabled ? { username: values.username.trim(), password: values.password } : null);
       form.reset({ enabled: values.enabled, username: values.enabled ? values.username.trim() : "", password: "" });
-      router.refresh();
+      await refreshAndWait();
+      toast.success(values.enabled ? t("enabledToast") : t("disabledToast"));
     } catch (error) {
       handleValidationError(error, form);
     }

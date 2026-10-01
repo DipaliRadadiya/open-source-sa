@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import {
@@ -481,7 +482,7 @@ function RunSecurityUpdates({ run, canManage }) {
 function UpdatesSection({ updates, canManage }) {
   const t = useTranslations("settings.maintenance");
   const tv = useTranslations("settings.validation");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
 
   const defaults = {
     security_updates_enabled: updates?.security_updates_enabled ?? false,
@@ -505,9 +506,9 @@ function UpdatesSection({ updates, canManage }) {
   async function onSubmit(values) {
     try {
       await updateUpdateSettings(values);
-      toast.success(t("updates.saved"));
       form.reset(values);
-      router.refresh();
+      await refreshAndWait();
+      toast.success(t("updates.saved"));
     } catch (error) {
       handleValidationError(error, form);
     }
@@ -636,7 +637,7 @@ function UpdatesSection({ updates, canManage }) {
 
 function ScheduleSection({ schedule, presets, presetsFailed, canManage }) {
   const t = useTranslations("settings.maintenance");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
 
   const defaults = {
     enabled: schedule?.enabled ?? false,
@@ -662,11 +663,11 @@ function ScheduleSection({ schedule, presets, presetsFailed, canManage }) {
       // Off removes the cron file; sending a cadence alongside would describe a
       // schedule that is about to stop existing.
       await updateRebootSchedule(values.enabled ? values : { enabled: false });
+      form.reset(values);
+      await refreshAndWait();
       toast.success(
         values.enabled ? t("schedule.saved") : t("schedule.turnedOff"),
       );
-      form.reset(values);
-      router.refresh();
     } catch (error) {
       handleValidationError(error, form);
     }
@@ -865,7 +866,7 @@ function ManualSection({
   pendingRebootFailed,
 }) {
   const t = useTranslations("settings.maintenance");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const { start } = useServerRestart();
   const [delay, setDelay] = useState("0");
   const [confirming, setConfirming] = useState(false);
@@ -876,8 +877,8 @@ function ManualSection({
     setCancelling(true);
     try {
       await cancelReboot();
+      await refreshAndWait();
       toast.success(t("reboot.cancelled"));
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("reboot.cancelFailed")));
     } finally {
@@ -903,12 +904,12 @@ function ManualSection({
         // is wrong by whatever the two have drifted — on the one value where
         // wrong means expecting a restart at the wrong hour.
         const at = data?.reboot?.at;
+        await refreshAndWait();
         toast.success(
           at
             ? t("reboot.scheduledAt", { at })
             : t("reboot.scheduled", { minutes }),
         );
-        router.refresh();
       }
     } catch (error) {
       toast.error(apiMessage(error, t("reboot.failed")));

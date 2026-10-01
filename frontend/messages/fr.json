@@ -2430,7 +2430,7 @@
       "already": "Node.js {version} était déjà installé.",
       "failed": "Cette version n'a pas pu être installée.",
       "eolWarning": "Node.js {version} ne reçoit plus de correctifs de sécurité. Installez-la uniquement si une application en a besoin.",
-      "noneAvailable": "Aucune nouvelle version n'est disponible à l'installation pour le moment.",
+      "noneAvailable": "La liste des versions de Node.js n'a pas pu être récupérée. Vérifiez que le serveur peut joindre nodejs.org, puis rechargez la page.",
       "installedTag": "Installée",
       "allInstalled": "Toutes les versions proposées par ce serveur sont déjà installées."
     },
@@ -3059,7 +3059,8 @@
       "chartDescription": "Requêtes par seconde, connexions et threads actifs, échantillonnés toutes les 5 minutes.",
       "zoomHint": "Faites glisser les poignées sous le graphique, ou utilisez la molette, pour zoomer sur une plage de temps.",
       "cannotStopOwn": "C'est la connexion du panel lui-même à la base de données. L'arrêter couperait cette page.",
-      "loadFailed": "Impossible de vérifier les moteurs de base de données."
+      "loadFailed": "Impossible de vérifier les moteurs de base de données.",
+      "backToList": "Retour aux bases de données"
     },
     "tables": {
       "title": "Tables",
@@ -3128,7 +3129,8 @@
       "cancel": "Annuler",
       "confirm": "Redémarrer et continuer",
       "description": "Le serveur de bases de données doit redémarrer pour accepter des connexions depuis d'autres adresses. Les applications qui l'utilisent perdent leur connexion un instant."
-    }
+    },
+    "backToList": "Retour aux bases de données"
   },
   "git": {
     "title": "Git",

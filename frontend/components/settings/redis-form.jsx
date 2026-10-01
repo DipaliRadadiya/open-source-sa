@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
@@ -46,6 +47,7 @@ export function RedisForm({ redis, canManage, changedBy }) {
   const t = useTranslations("settings.performance");
   const tv = useTranslations("settings.validation");
   const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [removing, setRemoving] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState(false);
   // A password change is in flight (HTTP 202). There is no endpoint that
@@ -94,9 +96,9 @@ export function RedisForm({ redis, canManage, changedBy }) {
         maxmemory_policy: redis?.maxmemory_policy ?? "noeviction",
         remove_password: true,
       });
+      await refreshAndWait();
       toast.success(t("redis.removed"));
       setRemoving(false);
-      router.refresh();
     } catch (error) {
       // The fallback is what a reader sees when the API sends no message of
       // its own, so it has to be the failure — this said "Redis settings
@@ -128,10 +130,10 @@ export function RedisForm({ redis, canManage, changedBy }) {
         return;
       }
 
-      toast.success(t("redis.saved"));
       form.reset({ ...values, password: "" });
+      await refreshAndWait();
+      toast.success(t("redis.saved"));
       setChanging(false);
-      router.refresh();
     } catch (error) {
       handleValidationError(error, form);
     }

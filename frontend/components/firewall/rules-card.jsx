@@ -2,7 +2,7 @@
 
 import { useBrowserIp } from "@/components/network/browser-ip";
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -136,7 +136,6 @@ export function RulesCard({
   const t = useTranslations("firewall");
   // The reader's address as the browser sees it — see components/network/browser-ip.jsx.
   const yourIp = useBrowserIp();
-  const router = useRouter();
   const { refreshAndWait } = useRefresh();
   const searchParams = useSearchParams();
   const tc = useTranslations("common");
@@ -200,8 +199,8 @@ export function RulesCard({
     setAsked((current) => ({ ...current, [rule.id]: { value: next, from: rule.enabled !== false } }));
     try {
       await updateFirewallRule(rule.id, { enabled: next });
+      await refreshAndWait();
       toast.success(next ? t("rules.enabled") : t("rules.disabled"));
-      router.refresh();
     } catch (error) {
       // Put it back: a switch must not sit showing a state the server refused.
       setAsked((current) => {

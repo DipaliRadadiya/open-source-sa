@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { CardSaveFooter } from "@/components/ui/card-save-footer";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
@@ -345,7 +345,7 @@ export function BotBlockerSection({
   canManage,
 }) {
   const t = useTranslations("applications.botBlocker");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const policies = dedupedPolicies(sentPolicies);
   /*
    * What the last successful save wrote, until the refreshed props agree. The
@@ -452,8 +452,8 @@ export function BotBlockerSection({
     try {
       await updateApplicationBotBlocker(appId, { policy, blocked, allowed });
       setJustSaved({ policy, blocked, allowed });
+      await refreshAndWait();
       toast.success(t("saved"));
-      router.refresh();
     } catch (error) {
       const errors = error.response?.status === 422 ? error.response.data?.errors ?? {} : {};
       const next = { blocked: {}, allowed: {} };

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useFormatter, useTranslations } from "next-intl";
 import {
@@ -208,6 +209,7 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
   const probing = detecting || refreshing;
   const [relabelTo, setRelabelTo] = useState(null);
   const router = useRouter();
+  const { refreshAndWait } = useRefresh();
 
   /*
    * Read the site's own directory and say what is in it.
@@ -383,8 +385,8 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
        * The failure path has always had a toast; the success path had none,
        * which is the one asymmetry that makes a working control look broken.
        */
+      await refreshAndWait();
       toast.success(t("size.measured"));
-      router.refresh();
     } catch (error) {
       // Throttled, and it refuses outright for a site with no directory on
       // disk — both are real answers worth passing on verbatim.

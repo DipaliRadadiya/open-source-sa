@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useImperativeHandle, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { CircleAlert, CircleCheck, GitCommitHorizontal, History, Loader2, RotateCw, Rocket } from "lucide-react";
@@ -58,7 +58,7 @@ const TONE = {
  */
 export function DeployHistoryCard({ ref, applicationId, deployments, canManage }) {
   const t = useTranslations("applications.deployment.history");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [open, setOpen] = useState(null);
   const [loading, setLoading] = useState(false);
   // A log that failed to load is not a deploy that printed nothing.
@@ -124,8 +124,8 @@ export function DeployHistoryCard({ ref, applicationId, deployments, canManage }
     setBusyId(deployment.id);
     try {
       await redeployDeployment(applicationId, deployment.id);
+      await refreshAndWait();
       toast.success(t("redeployStarted"));
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("redeployFailed")));
     } finally {

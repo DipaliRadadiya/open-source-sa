@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, TriangleAlert } from "lucide-react";
@@ -47,6 +48,7 @@ function seedMatrix(role) {
 export function RoleForm({ mode = "create", role, catalog }) {
   const t = useTranslations("roles");
   const router = useRouter();
+  const { pushAndWait } = useRefresh();
   const isEdit = mode === "edit";
 
   const [matrix, setMatrix] = useState(() => seedMatrix(role));
@@ -102,16 +104,13 @@ export function RoleForm({ mode = "create", role, catalog }) {
     };
 
     try {
-      if (isEdit) {
-        await updateRole(role.id, payload);
-        toast.success(t("toast.updated"));
-      } else {
-        await createRole(payload);
-        toast.success(t("toast.created"));
-      }
+      if (isEdit) await updateRole(role.id, payload);
+      else await createRole(payload);
       setJustSubmitted(true);
-      router.push("/admin/roles");
-      router.refresh();
+      // The list first, then the toast: pushing and toasting together left
+      // this form up, saying "saved", for the length of the server render.
+      await pushAndWait("/admin/roles");
+      toast.success(isEdit ? t("toast.updated") : t("toast.created"));
     } catch (error) {
       handleValidationError(error, form);
     }

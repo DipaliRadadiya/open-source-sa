@@ -28,6 +28,7 @@ import { PermissionDenied } from "@/components/sections/permission-denied";
 import Link from "@/components/ui/app-link";
 import { Button } from "@/components/ui/button";
 import { Caution } from "@/components/ui/caution";
+import { BackLink } from "@/components/ui/back-link";
 
 export const dynamic = "force-dynamic";
 
@@ -108,6 +109,7 @@ export default async function DatabasePage({ params, searchParams }) {
       <PageCrumb mono>{data.name}</PageCrumb>
 
       <div className="space-y-3">
+        <BackLink href="/databases">{t("backToList")}</BackLink>
         <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="min-w-0 font-mono text-2xl font-semibold tracking-tight break-words">

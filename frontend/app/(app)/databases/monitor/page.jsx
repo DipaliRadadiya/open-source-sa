@@ -19,6 +19,7 @@ import { LoadFailed } from "@/components/data-table/load-failed";
 import { Activity } from "lucide-react";
 import { PageCrumb } from "@/components/sections/page-crumb";
 import { PageHeader } from "@/components/ui/page-header";
+import { BackLink } from "@/components/ui/back-link";
 import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
@@ -138,6 +139,9 @@ export default async function DatabaseMonitorPage({ searchParams }) {
  */
 function Header({ t }) {
   return (
-    <PageHeader title={t("title")} subtitle={t("subtitle")} />
+    <div className="space-y-3">
+      <BackLink href="/databases">{t("backToList")}</BackLink>
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+    </div>
   );
 }

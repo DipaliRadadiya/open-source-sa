@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePendingKeys } from "@/hooks/use-pending-keys";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Clock, SearchX, ShieldAlert, ShieldCheck } from "lucide-react";
@@ -46,7 +46,7 @@ export function CoverageCard({
 }) {
   const t = useTranslations("backups.coverage");
   const tc = useTranslations("common");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [setupFor, setSetupFor] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   // Several applications can be started at once — the runs are queued — so
@@ -98,12 +98,12 @@ export function CoverageCard({
     starting.start(applicationId);
     try {
       await runBackupNow(applicationId);
-      toast.success(t("started", { name }));
       // Before the refresh, not after. The run is queued, so the row the
       // server is about to send still carries the PREVIOUS backup's finished
       // status — see `watching` below.
       setJustStarted(true);
-      router.refresh();
+      await refreshAndWait();
+      toast.success(t("started", { name }));
     } catch (error) {
       toast.error(apiMessage(error, t("startFailed")));
     } finally {

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { CardSaveFooter } from "@/components/ui/card-save-footer";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
@@ -59,7 +59,7 @@ function sameList(a, b) {
  */
 export function FirewallSection({ appId, application, categories: catalog, modes, canManage, detectCount = 0, detectFailed = false }) {
   const t = useTranslations("applications.firewall");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
 
   const saved = {
     enabled: application.waf_enabled ?? false,
@@ -134,9 +134,9 @@ export function FirewallSection({ appId, application, categories: catalog, modes
         exceptions,
         custom_rules: blocks,
       });
-      toast.success(t("saved"));
       setJustSaved({ enabled, mode });
-      router.refresh();
+      await refreshAndWait();
+      toast.success(t("saved"));
     } catch (error) {
       toast.error(apiMessage(error, t("saveFailed")));
     } finally {

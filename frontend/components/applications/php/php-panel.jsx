@@ -5,6 +5,7 @@ import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
@@ -133,7 +134,7 @@ const TAB_FIELDS = {
  */
 export function PhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", applicationPath = "", timezones = [], canManage }) {
   const t = useTranslations("applications.php");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -142,8 +143,8 @@ export function PhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", appl
     setBusy(true);
     try {
       await isolateApplicationPhp(appId);
+      await refreshAndWait();
       toast.success(t("isolation.isolated"));
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("isolation.failed")));
     } finally {
@@ -206,7 +207,7 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, b
   const t = useTranslations("applications.php");
   const tShared = useTranslations("applications.php.shared");
   const tIsolation = useTranslations("applications.php.isolation");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const settings = php.settings;
 
   // The version is the one thing a pool-less site CAN still change: it lives in
@@ -236,8 +237,8 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, b
       // Only the version. Sending the settings alongside it earns a 422 for the
       // whole request — they need a pool file and there isn't one.
       await updateApplicationPhp(php.application_id, { php_version: version });
+      await refreshAndWait();
       toast.success(t("saved"));
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("saveFailed")));
     } finally {
@@ -379,6 +380,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
   const t = useTranslations("applications.php");
   const tCommon = useTranslations("common");
   const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [tab, setTab] = useState("basic");
   // The server's own sentence when it refuses the whole save (`errors.settings`):
   // PHP-FPM rejected the config, or the pool has gone. Null the rest of the time.
@@ -493,10 +495,10 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
         Object.entries(values).filter(([key]) => key === "php_version" || dirtyFields[key]),
       );
       await updateApplicationPhp(appId, payload);
-      toast.success(t("saved"));
       form.reset(values);
       setResetKey((key) => key + 1);
-      router.refresh();
+      await refreshAndWait();
+      toast.success(t("saved"));
     } catch (error) {
       const refused = error.response?.data?.errors;
       /*

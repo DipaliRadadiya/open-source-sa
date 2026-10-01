@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePendingKeys } from "@/hooks/use-pending-keys";
 import Link from "@/components/ui/app-link";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { ArrowRight, GitBranch, Plus, RefreshCw } from "lucide-react";
@@ -33,7 +33,7 @@ import { DisconnectDialog } from "@/components/integrations/git/disconnect-dialo
 export function AccountsCard({ accounts = [], providers = [], canManage, providersFailed }) {
   const t = useTranslations("git");
   const { name: brand } = useBranding();
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [statuses, setStatuses] = useState(null);
   // Only the manual re-check spins the button. The first load is silent — the
   // rows carry their own "checking" state, and two spinners for one request
@@ -97,10 +97,10 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
     testing.start(account.id);
     try {
       await testAccount(account.id);
-      toast.success(t("actions.checked", { label: account.label }));
       // Refreshes identifier, scopes and last-verified on the row, then the
       // badge from the same live source as the rest.
-      router.refresh();
+      await refreshAndWait();
+      toast.success(t("actions.checked", { label: account.label }));
       await load();
     } catch (error) {
       toast.error(apiMessage(error, t("actions.checkFailed")));

@@ -101,13 +101,13 @@ export function BackupsHistory({
     setStalled(false);
     try {
       await retryBackup(backup.id);
-      toast.success(t("retryStarted", { name: backup.application_name ?? "" }));
       const app = backup.application_id;
       if (app) {
         const mine = backups.filter((row) => row.application_id === app);
         setStarted((s) => ({ ...s, [app]: newestBackupId(mine) }));
       }
-      router.refresh();
+      await refreshAndWait();
+      toast.success(t("retryStarted", { name: backup.application_name ?? "" }));
     } catch (error) {
       toast.error(apiMessage(error, t("retryFailed")));
     } finally {

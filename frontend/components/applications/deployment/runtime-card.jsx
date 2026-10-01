@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Play } from "lucide-react";
@@ -33,7 +33,7 @@ import {
  */
 export function RuntimeCard({ application, canManage }) {
   const t = useTranslations("applications.deployment.runtime");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [saving, setSaving] = useState(false);
 
   const defaults = {
@@ -58,9 +58,9 @@ export function RuntimeCard({ application, canManage }) {
         start_command: values.start_command.trim(),
         app_port: values.app_port ? Number(values.app_port) : null,
       });
-      toast.success(t("saved"));
       form.reset(values);
-      router.refresh();
+      await refreshAndWait();
+      toast.success(t("saved"));
     } catch (error) {
       if (error.response?.data?.errors) handleValidationError(error, form);
       else toast.error(apiMessage(error, t("saveFailed")));

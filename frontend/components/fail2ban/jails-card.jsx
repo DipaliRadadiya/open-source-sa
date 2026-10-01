@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { jailLabel } from "@/lib/fail2ban/jail-label";
 import { toast } from "sonner";
@@ -52,7 +52,7 @@ import { apiMessage } from "@/lib/api/error-message";
  */
 export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, asked, onAskedChange }) {
   const t = useTranslations("fail2ban");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [pending, setPending] = useState(null);
   // What the user asked for, held until the server catches up. Stored WITH the
   // value it was based on, so once the server moves off that value the answer
@@ -106,11 +106,11 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
         ...(addIp && !ignoreIps.includes(addIp) ? { ignore_ips: [...ignoreIps, addIp] } : null),
         ...(acknowledged ? { acknowledged: true } : null),
       });
+      await refreshAndWait();
       toast.success(
         enabled ? t("jails.enabled", { name: jailLabel(t, jail) }) : t("jails.disabled", { name: jailLabel(t, jail) }),
       );
       setGuarding(null);
-      router.refresh();
     } catch (error) {
       const data = error.response?.data;
       // Put the switch back where it was: it must not sit showing a state the

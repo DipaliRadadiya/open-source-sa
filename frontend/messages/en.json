@@ -2430,7 +2430,7 @@
       "already": "Node.js {version} was already installed.",
       "failed": "That version could not be installed.",
       "eolWarning": "Node.js {version} no longer gets security fixes. Install it only if an application needs it.",
-      "noneAvailable": "No new versions are available to install right now.",
+      "noneAvailable": "The list of Node.js versions could not be fetched. Check that the server can reach nodejs.org, then reload the page.",
       "installedTag": "Installed",
       "allInstalled": "Every version this server offers is already installed."
     },
@@ -3059,7 +3059,8 @@
       "chartDescription": "Queries per second, connections, and running threads, sampled every 5 minutes.",
       "zoomHint": "Drag the handles below the chart, or scroll on it, to zoom into a time range.",
       "cannotStopOwn": "This is the panel's own connection to the database. Stopping it would cut off this page.",
-      "loadFailed": "We couldn't check the database engines."
+      "loadFailed": "We couldn't check the database engines.",
+      "backToList": "Back to databases"
     },
     "tables": {
       "title": "Tables",
@@ -3128,7 +3129,8 @@
       "cancel": "Cancel",
       "confirm": "Restart and continue",
       "description": "The database server has to restart to accept connections from other addresses. Applications using it lose their connection for a moment."
-    }
+    },
+    "backToList": "Back to databases"
   },
   "git": {
     "title": "Git",

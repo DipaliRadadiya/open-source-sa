@@ -5,6 +5,7 @@ import Link from "@/components/ui/app-link";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import {
   ArrowRight,
@@ -794,6 +795,7 @@ export function CreateApplicationForm({
   const tCommon = useTranslations("common");
   const { name: brand } = useBranding();
   const router = useRouter();
+  const { pushAndWait } = useRefresh();
   const [accountsRefreshing, startAccountsRefresh] = useTransition();
   const [gitSource, setGitSource] = useState("account");
   const [repositories, setRepositories] = useState([]);
@@ -1624,13 +1626,14 @@ export function CreateApplicationForm({
     try {
       const { data } = await createApplication(payload);
       setSubmitted(true);
-      toast.success(t("created"));
-      router.push(
+      // Its page first, then the toast — the form sat on screen under
+      // "created" for the length of the server render.
+      await pushAndWait(
         data?.application?.id
           ? `/applications/${data.application.id}`
           : "/applications",
       );
-      router.refresh();
+      toast.success(t("created"));
     } catch (error) {
       if (newUser?.id) {
         const removed = await deleteSystemUser(newUser.id).then(() => true, () => false);

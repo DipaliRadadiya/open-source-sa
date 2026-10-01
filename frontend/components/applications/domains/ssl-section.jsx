@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useFormatter, useTranslations } from "next-intl";
 import { parseApiDate } from "@/lib/format/api-date";
 import { toast } from "sonner";
@@ -154,6 +155,7 @@ export function SslSection({
     return when ? format.dateTime(when, { day: "numeric", month: "long", year: "numeric" }) : null;
   };
   const router = useRouter();
+  const { refreshAndWait } = useRefresh();
 
   const [cert, setCert] = useState(initialCertificate);
   // Taken over again whenever the page re-reads it. Only the first read was
@@ -183,10 +185,10 @@ export function SslSection({
     setReloading(true);
     try {
       await runServiceAction(webServer, "reload");
-      toast.success(t("ssl.reloaded"));
       // The served certificate is re-read server-side, so the banner only
       // clears once the server agrees — not because we asked it to.
-      router.refresh();
+      await refreshAndWait();
+      toast.success(t("ssl.reloaded"));
     } catch (error) {
       toast.error(apiMessage(error, t("ssl.reloadFailed")));
     } finally {
@@ -248,10 +250,10 @@ export function SslSection({
       // Every other action on this screen says what it did. This one dropped
       // the application back to plain HTTP in silence — the single most
       // consequential thing the card can do.
-      toast.success(t("ssl.removed"));
       setCert(null);
+      await refreshAndWait();
+      toast.success(t("ssl.removed"));
       setDeleteOpen(false);
-      router.refresh();
     } catch (error) {
       // Already gone. The certificate is not there, which is what was asked
       // for; a red toast over a closed dialog invites a retry that cannot work.

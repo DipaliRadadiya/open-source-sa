@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { ExternalLink, Info, KeyRound, Loader2, TriangleAlert } from "lucide-react";
@@ -150,7 +150,7 @@ export function ConnectForm({
 }) {
   const t = useTranslations("git.connect");
   const { name: brand } = useBranding();
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   // Errors the API returns about the whole submission — a rejected token, most
   // often. Shown in the form, because that is where the thing to fix is.
   const [failure, setFailure] = useState(null);
@@ -177,8 +177,10 @@ export function ConnectForm({
 
     try {
       const { data } = await connectAccount(payload);
+      // The list first: toasting before it landed showed "connected" over a
+      // list that did not have the account yet.
+      await refreshAndWait();
       toast.success(t("connected", { label: values.label }));
-      router.refresh();
       /*
        * The next action belongs on the refreshed account list, where it stays
        * readable and actionable, rather than in a modal that closes on a timer.

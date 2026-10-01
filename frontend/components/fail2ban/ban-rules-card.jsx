@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
@@ -43,7 +43,7 @@ import { apiMessage } from "@/lib/api/error-message";
  */
 export function BanRulesCard({ settings, presets, canManage }) {
   const t = useTranslations("fail2ban");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
 
   const [bantime, setBantime] = useState(String(settings.bantime));
   const [findtime, setFindtime] = useState(String(settings.findtime));
@@ -53,8 +53,7 @@ export function BanRulesCard({ settings, presets, canManage }) {
   // before the card shows what was saved. A transition keeps one pending signal
   // across both, so the spinner stops when the screen is actually right rather
   // than when the request happens to return.
-  const [refreshing, startRefresh] = useTransition();
-  const pending = saving || refreshing;
+  const pending = saving;
 
   const isPermanent = Number(bantime) === PERMANENT_BANTIME;
 
@@ -82,8 +81,8 @@ export function BanRulesCard({ settings, presets, canManage }) {
         maxretry: Number(maxretry),
         ignore_ips: settings.ignore_ips ?? [],
       });
+      await refreshAndWait();
       toast.success(t("settings.saved"));
-      startRefresh(() => router.refresh());
     } catch (error) {
       toast.error(
         apiMessage(error, t("settings.failed")),

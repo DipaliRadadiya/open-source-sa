@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { TriangleAlert, Lock } from "lucide-react";
@@ -25,7 +25,7 @@ import { apiMessage } from "@/lib/api/error-message";
  */
 export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
   const t = useTranslations("services");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
   // The value we asked for, until the server agrees with it.
@@ -47,8 +47,8 @@ export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
     onBusyChange?.(action);
     try {
       await runServiceAction(service.key, action);
+      await refreshAndWait();
       toast.success(t(`toast.${action}`, { name: service.label }));
-      router.refresh();
     } catch (error) {
       // Put the knob back where it was: the change did not happen.
       setAsked(null);

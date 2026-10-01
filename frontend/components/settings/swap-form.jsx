@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useFormatter, useTranslations } from "next-intl";
 import { getLiveMetrics } from "@/lib/api/server-metrics";
@@ -34,7 +34,7 @@ const CUSTOM = "custom";
 export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
   const t = useTranslations("settings.performance");
   const tv = useTranslations("settings.validation");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [pendingValues, setPendingValues] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -95,10 +95,10 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
     setSaving(true);
     try {
       await updateSwapSettings({ size_mb: Number(values.size_mb) });
-      toast.success(t("swap.saved"));
       form.reset({ size_mb: String(values.size_mb) });
+      await refreshAndWait();
+      toast.success(t("swap.saved"));
       setPendingValues(null);
-      router.refresh();
     } catch (error) {
       setPendingValues(null);
       handleValidationError(error, form);

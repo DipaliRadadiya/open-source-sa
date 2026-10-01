@@ -1,8 +1,8 @@
 "use client";
 
 import { useBrowserIp } from "@/components/network/browser-ip";
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
@@ -42,7 +42,7 @@ const MAX_IGNORE_IPS = 100;
 export function IgnoreListCard({ settings, canManage }) {
   const yourIp = useBrowserIp();
   const t = useTranslations("fail2ban");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
 
   const saved = settings.ignore_ips ?? [];
   // Follows the server until edited here. A copy taken at mount went stale when
@@ -59,8 +59,7 @@ export function IgnoreListCard({ settings, canManage }) {
   const [saving, setSaving] = useState(false);
   // Same shape as the ban rules card: the wait is the write plus the re-read,
   // and one signal has to cover both or the spinner lies about being finished.
-  const [refreshing, startRefresh] = useTransition();
-  const pending = saving || refreshing;
+  const pending = saving;
   // Taking your own address OFF this list is the same mistake the lockout
   // dialog exists to prevent, just approached from the other side.
   const [confirmRemoveSelf, setConfirmRemoveSelf] = useState(false);
@@ -111,8 +110,8 @@ export function IgnoreListCard({ settings, canManage }) {
         maxretry: settings.maxretry,
         ignore_ips: ips,
       });
+      await refreshAndWait();
       toast.success(t("settings.ignoreSaved"));
-      startRefresh(() => router.refresh());
     } catch (error) {
       toast.error(
         apiMessage(error, t("settings.failed")),

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
@@ -32,7 +32,7 @@ import {
 export function ProfileForm({ user, onDirtyChange }) {
   const t = useTranslations("account");
   const tc = useTranslations("common");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
 
   const form = useForm({
     resolver: zodResolver(updateProfileSchema),
@@ -43,9 +43,9 @@ export function ProfileForm({ user, onDirtyChange }) {
   async function onSubmit(values) {
     try {
       const updated = await updateProfile(values);
-      toast.success(t("profile.success"));
       form.reset({ name: updated?.name, username: updated?.username });
-      router.refresh();
+      await refreshAndWait();
+      toast.success(t("profile.success"));
     } catch (error) {
       handleValidationError(error, form);
     }

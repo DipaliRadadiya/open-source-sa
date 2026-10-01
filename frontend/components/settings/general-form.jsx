@@ -2,7 +2,7 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
@@ -26,7 +26,7 @@ import { TimezoneField } from "@/components/settings/timezone-field";
 export function GeneralForm({ general, canManage, timezones = [], changedBy }) {
   const t = useTranslations("settings.server");
   const tv = useTranslations("settings.validation");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
 
   const defaults = {
     hostname: general?.hostname ?? "",
@@ -43,9 +43,9 @@ export function GeneralForm({ general, canManage, timezones = [], changedBy }) {
   async function onSubmit(values) {
     try {
       await updateGeneralSettings(values);
-      toast.success(t("saved"));
       form.reset(values);
-      router.refresh();
+      await refreshAndWait();
+      toast.success(t("saved"));
     } catch (error) {
       handleValidationError(error, form);
     }

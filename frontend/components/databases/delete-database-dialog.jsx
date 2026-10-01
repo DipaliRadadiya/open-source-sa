@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
@@ -27,8 +26,7 @@ import { Caution } from "@/components/ui/caution";
  */
 export function DeleteDatabaseDialog({ database, application = null, open, onOpenChange, redirectTo }) {
   const t = useTranslations("databases");
-  const router = useRouter();
-  const { refreshAndWait } = useRefresh();
+  const { refreshAndWait, pushAndWait } = useRefresh();
   const [pending, setPending] = useState(false);
   const [confirm, setConfirm] = useState("");
 
@@ -52,12 +50,12 @@ export function DeleteDatabaseDialog({ database, application = null, open, onOpe
     setPending(true);
     try {
       await deleteDatabase(database.id);
-      // Deleted from its own detail page: that page no longer exists.
+      // Deleted from its own detail page: that page no longer exists. Stay on
+      // "Deleting…" until the list is on screen, so nothing on the dead page
+      // can be clicked in between.
       if (redirectTo) {
+        await pushAndWait(redirectTo);
         toast.success(t("delete.deleted", { name }));
-        handleOpenChange(false);
-        router.push(redirectTo);
-        router.refresh();
         return;
       }
       await refreshAndWait();

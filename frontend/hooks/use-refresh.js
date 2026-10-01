@@ -34,6 +34,9 @@ export function useRefresh() {
   const nav = useNavTransition();
   const router = useRouter();
   const [localPending, startLocal] = useTransition();
+  // Its own transition: leaving the page is not the list's refresh, and under
+  // a NavTransitionProvider `pending` below would never see it.
+  const [leaving, startLeaving] = useTransition();
 
   const pending = nav ? nav.isPending : localPending;
   const refresh = nav ? nav.refresh : () => startLocal(() => router.refresh());
@@ -50,9 +53,9 @@ export function useRefresh() {
   };
 
   useEffect(() => {
-    if (pending || after.current.length === 0) return;
+    if (pending || leaving || after.current.length === 0) return;
     flush();
-  }, [pending]);
+  }, [pending, leaving]);
 
   /*
    * The refresh can remove the very component that asked for it: a deleted
@@ -75,6 +78,19 @@ export function useRefresh() {
       new Promise((resolve) => {
         wait(resolve);
         refresh();
+      }),
+    /*
+     * Go to another page and resolve once it is on screen. Deleting a
+     * database from its own page toasted, closed the dialog and then pushed —
+     * so the deleted database's page sat there, live, for the length of the
+     * server render, and anything clicked on it answered with an error. Keep
+     * the dialog (and its spinner) up until this resolves; the caller usually
+     * unmounts as it does, which the unmount flush above covers.
+     */
+    pushAndWait: (href) =>
+      new Promise((resolve) => {
+        wait(resolve);
+        startLeaving(() => router.push(href));
       }),
     /*
      * Same, but lands on a different page of the list. For the last row of a

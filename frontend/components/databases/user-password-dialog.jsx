@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { KeyRound, Loader2, Sparkles } from "lucide-react";
@@ -29,7 +29,7 @@ import {
  */
 export function UserPasswordDialog({ database, user, open, onOpenChange }) {
   const t = useTranslations("databases.users");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   // The new connection string, shown once the change lands — otherwise the
   // user is left to reassemble it by hand from a password they just typed.
   const [result, setResult] = useState(null);
@@ -51,10 +51,10 @@ export function UserPasswordDialog({ database, user, open, onOpenChange }) {
         user.id,
         values.password,
       );
-      toast.success(t("passwordChanged", { username: user.username }));
       setResult(data?.user?.connection_string ?? null);
       form.reset({ password: "" });
-      router.refresh();
+      await refreshAndWait();
+      toast.success(t("passwordChanged", { username: user.username }));
     } catch (error) {
       handleValidationError(error, form);
     }

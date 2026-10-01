@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
@@ -42,7 +42,7 @@ import {
  */
 export function DeploySettingsCard({ applicationId, application, settings, canManage }) {
   const t = useTranslations("applications.deployment.settings");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [saving, setSaving] = useState(false);
   // Only the resolved outcomes live in state. "loading" and "idle" are facts
   // about the props, so deriving them keeps the effect free of the synchronous
@@ -165,9 +165,9 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
     setSaving(true);
     try {
       await updateDeploySettings(applicationId, values);
-      toast.success(t("saved"));
       form.reset(values);
-      router.refresh();
+      await refreshAndWait();
+      toast.success(t("saved"));
     } catch (error) {
       if (error.response?.data?.errors) handleValidationError(error, form);
       else toast.error(apiMessage(error, t("saveFailed")));

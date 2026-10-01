@@ -179,8 +179,8 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
       const { data } = await createExport(database.id);
       const created = exportSchema.safeParse(data?.export);
       if (created.success) setPolled((current) => [created.data, ...(current ?? initial)]);
+      await refreshAndWait();
       toast.success(t("started"));
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("startFailed")));
     } finally {

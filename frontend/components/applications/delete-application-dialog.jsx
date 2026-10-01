@@ -38,7 +38,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 export function DeleteApplicationDialog({ application, open, onOpenChange, afterDelete, redirectTo, closeWhenGone = false }) {
   const t = useTranslations("applications.delete");
   const router = useRouter();
-  const { refreshThen } = useRefresh();
+  const { refreshThen, pushAndWait } = useRefresh();
   const [pending, setPending] = useState(false);
   const [awaitingPage, setAwaitingPage] = useState(false);
   const [confirm, setConfirm] = useState("");
@@ -192,8 +192,10 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
       return;
     }
     if (redirectTo) {
-      router.push(redirectTo);
-      done();
+      // The list first, then the toast and the close: pushing and closing
+      // together left the deleted application's page up and clickable for the
+      // length of the server render.
+      pushAndWait(redirectTo).then(done);
     } else {
       refreshThen(done);
     }

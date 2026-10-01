@@ -2430,7 +2430,7 @@
       "already": "Node.js {version} war bereits installiert.",
       "failed": "Diese Version konnte nicht installiert werden.",
       "eolWarning": "Node.js {version} erhält keine Sicherheitsupdates mehr. Nur installieren, wenn eine Anwendung es benötigt.",
-      "noneAvailable": "Derzeit sind keine neuen Versionen zur Installation verfügbar.",
+      "noneAvailable": "Die Liste der Node.js-Versionen konnte nicht abgerufen werden. Prüfen Sie, ob der Server nodejs.org erreicht, und laden Sie die Seite neu.",
       "installedTag": "Installiert",
       "allInstalled": "Alle von diesem Server angebotenen Versionen sind bereits installiert."
     },
@@ -3059,7 +3059,8 @@
       "chartDescription": "Abfragen pro Sekunde, Verbindungen und laufende Threads, alle 5 Minuten gemessen.",
       "zoomHint": "Ziehen Sie die Griffe unter dem Diagramm oder scrollen Sie darauf, um in einen Zeitraum zu zoomen.",
       "cannotStopOwn": "Das ist die eigene Verbindung des Panels zur Datenbank. Sie zu stoppen würde diese Seite abschneiden.",
-      "loadFailed": "Die Datenbank-Engines konnten nicht geprüft werden."
+      "loadFailed": "Die Datenbank-Engines konnten nicht geprüft werden.",
+      "backToList": "Zurück zu Datenbanken"
     },
     "tables": {
       "title": "Tabellen",
@@ -3128,7 +3129,8 @@
       "cancel": "Abbrechen",
       "confirm": "Neu starten und fortfahren",
       "description": "Der Datenbankserver muss neu starten, um Verbindungen von anderen Adressen anzunehmen. Anwendungen, die ihn nutzen, verlieren kurz die Verbindung."
-    }
+    },
+    "backToList": "Zurück zu Datenbanken"
   },
   "git": {
     "title": "Git",

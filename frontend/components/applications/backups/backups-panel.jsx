@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "@/components/ui/app-link";
 import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -86,6 +87,7 @@ export function BackupsPanel({
 }) {
   const t = useTranslations("backups.application");
   const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [running, setRunning] = useState(false);
   const [retryingId, setRetryingId] = useState(null);
   const [clearing, setClearing] = useState(null);
@@ -156,9 +158,9 @@ export function BackupsPanel({
     setStalled(false);
     try {
       await retryBackup(backup.id);
-      toast.success(t("retryStarted"));
       setQueuedAfter(newestId);
-      router.refresh();
+      await refreshAndWait();
+      toast.success(t("retryStarted"));
     } catch (error) {
       toast.error(apiMessage(error, t("retryFailed")));
     } finally {
@@ -173,9 +175,9 @@ export function BackupsPanel({
     setRetryingId(backup.id);
     try {
       await clearStuckBackup(backup.id);
+      await refreshAndWait();
       toast.success(t("clear.done"));
       setClearing(null);
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("clear.failed")));
     } finally {
@@ -188,11 +190,11 @@ export function BackupsPanel({
     setStalled(false);
     try {
       await runBackupNow(application.id);
-      toast.success(t("started"));
       // Remember where the list stood, so the queued state can end itself the
       // moment the worker's row shows up.
       setQueuedAfter(newestId);
-      router.refresh();
+      await refreshAndWait();
+      toast.success(t("started"));
     } catch (error) {
       toast.error(apiMessage(error, t("startFailed")));
     } finally {

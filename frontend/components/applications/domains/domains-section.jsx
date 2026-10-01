@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -152,8 +151,7 @@ export function DomainsSection({
   certificate = null,
 }) {
   const t = useTranslations("applications.domains");
-  const router = useRouter();
-  const { pending: refreshing, refreshThen } = useRefresh();
+  const { pending: refreshing, refreshThen, refreshAndWait } = useRefresh();
 
   const [addOpen, setAddOpen] = useState(false);
   const [promoteTarget, setPromoteTarget] = useState(null);
@@ -185,12 +183,12 @@ export function DomainsSection({
       // Confirm the outcome — a re-check that leaves the row unchanged (DNS
       // hasn't propagated) otherwise looks like nothing happened.
       const result = await verifyDomain(appId, domain.domain);
+      await refreshAndWait();
       if (result?.dns_verified) {
         toast.success(t("toast.verified", { domain: domain.domain }));
       } else {
         toast.info(t("toast.notPointing", { domain: domain.domain }));
       }
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("toast.verifyFailed")));
     } finally {
