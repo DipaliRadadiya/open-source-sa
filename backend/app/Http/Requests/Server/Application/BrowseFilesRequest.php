@@ -31,6 +31,9 @@ class BrowseFilesRequest extends FormRequest
             // and ignore it, which is cheaper than a fourth request class for
             // one optional flag.
             'hidden' => ['sometimes', 'in:0,1'],
+            // Folder sizes only: measure now instead of answering from the
+            // five-minute memory.
+            'refresh' => ['sometimes', 'in:0,1'],
         ];
     }
 
@@ -51,6 +54,11 @@ class BrowseFilesRequest extends FormRequest
      * Not named `path()` — that method already exists on the base Request
      * and returns the request's URI path, not this input.
      */
+    public function refresh(): bool
+    {
+        return (string) $this->validated('refresh', '0') === '1';
+    }
+
     public function targetPath(): string
     {
         return (string) $this->validated('path', '');

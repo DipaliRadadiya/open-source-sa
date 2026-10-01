@@ -1918,6 +1918,28 @@ Folder size on disk.
 
 ---
 
+### GET `/applications/{application}/files/sizes`
+**Permission:** `app_file` (view) | **Throttle:** 60/min
+
+The size of **every folder directly inside** `path`, from one `du` — for the size column, so folders show a size without a click each (since 2026-10-01). Fetch it after the listing; the listing itself never waits for it.
+
+**Query:** `?path=wp-content` (empty = site root), optional `refresh=1` to measure now.
+
+**Response `200`:**
+```json
+{"path": "wp-content",
+ "sizes": {"plugins": {"size": 9579803, "size_human": "9.1 MB"}, "uploads": {"size": 52428800, "size_human": "50 MB"}},
+ "total": {"size": 62012699, "size_human": "59 MB"},
+ "complete": true, "measured_at": "01-10-2026 11:50:00"}
+```
+
+- `sizes` is keyed by folder **name** (the listing's `name`); hidden folders included. A folder missing from `sizes` was not measured — show the dash, not 0.
+- Answers are **kept five minutes** per folder. Anything changed through the panel (upload, delete, extract, new folder, rename/move, restore) forgets them at once; a change made outside the panel (WordPress, SSH) shows after five minutes or with `refresh=1`. Show `measured_at` and a refresh button.
+- A tree too large to measure in 60 seconds answers like any timed-out file operation (an error, not partial sizes). `complete: false` means `du` named folders but not the total; `sizes` is still right for what it names, and it is not kept.
+- Runs as the site user at the lowest CPU/disk priority and does not cross into other mounted filesystems.
+
+---
+
 ### GET `/applications/{application}/files/content`
 **Permission:** `app_file` (**manage**) — **manage**, not view, since 2026-09-29: a file's contents (`wp-config.php`, `.env`) are exactly the secrets the rest of the API withholds from view-only roles. `view` is browse, search, sizes and the trash list; hide open/download/preview for it. | **Throttle:** 60/min
 

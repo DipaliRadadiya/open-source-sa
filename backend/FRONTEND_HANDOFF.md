@@ -8,6 +8,13 @@ moved and why it matters**, so nobody has to diff the reference to find out.
 
 ## 2026-10-01
 
+### 0. File manager: folder sizes without a click (new endpoint)
+- `GET /api/applications/{id}/files/sizes?path=<dir>` returns the size of **every folder in that directory** at once (see API_REFERENCE). Call it right after the listing loads, without waiting on it, and fill the size column by folder name. Hidden folders are included; a name missing from `sizes` means "not measured", so show "—".
+- Show `measured_at` (e.g. "measured 3 min ago") and a **refresh** button that calls it with `refresh=1`. Answers are kept 5 minutes; panel changes clear them immediately.
+- A folder too big to measure in 60 seconds gives the usual timed-out error; keep the dashes and offer refresh.
+- With sizes in hand, the size column can be **sortable** (biggest first). A share bar per folder is `size / total.size`.
+- The old per-folder "Calculate" (`/files/size`) still works; it can go once this is in.
+
 ### 1. PHP settings → "Additional directives": hint text is now wrong (commit 3c3fe7f9)
 - `frontend/messages/*.json` key `hints.directives` (en ~line 5034) says: "One per line, in PHP-FPM pool form: php_admin_value[name] = value. **Anything here wins over the fields above.**"
 - Now: one PHP setting per line, `name = value` or `php_[admin_]value|flag[name] = value`.

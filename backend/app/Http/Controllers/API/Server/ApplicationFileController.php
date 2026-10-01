@@ -93,6 +93,14 @@ class ApplicationFileController extends Controller
         ]);
     }
 
+    public function folderSizes(BrowseFilesRequest $request, Application $application, FileBrowser $files): JsonResponse
+    {
+        return response()->json([
+            'path' => $request->targetPath(),
+            ...$files->folderSizes($application, $request->targetPath(), $request->refresh()),
+        ]);
+    }
+
     public function show(BrowseFilesRequest $request, Application $application, FileBrowser $files): JsonResponse
     {
         $file = $files->read($application, $request->targetPath());
