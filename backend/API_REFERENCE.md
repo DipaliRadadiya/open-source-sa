@@ -357,11 +357,13 @@ Paginated (**`per_page` defaults to 10**, not 20). Filters: `filter[user_id]`, `
 
 ```json
 {"dashboard": {
-  "total_users": 3, "total_applications": 7, "total_databases": 4,
-  "server_uptime": "15 days", "server_uptime_seconds": 1296000,
-  "recent_activity": [{"type": "application", "action": "created", "description": "Application created", "user": {"id": 1, "username": "admin"}, "created_at": "…"}]
+  "users": {"total": 3, "admins": 1, "non_admins": 2},
+  "roles": {"total": 4},
+  "activity": {"today": 12, "total": 380}
 }}
 ```
+
+Counts only — the account half of the panel. `users` leaves out the panel's internal system accounts (`is_system`); `activity.today` is in the app timezone. Server figures (uptime, load) come from `GET /server/facts` and `GET /server/metrics/live`, not here.
 
 ---
 
