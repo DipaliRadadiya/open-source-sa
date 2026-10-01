@@ -22,12 +22,10 @@ export default async function AdminActivityLogPage({ searchParams }) {
   const hasFilters = Boolean(sp.search || sp.type || sp.action);
 
 
-  // Read-only, so a delete cannot strand anyone here — but a typed or
-  // bookmarked ?page=99 still would, and it must not read as an empty log.
+  // A typed or bookmarked ?page=99 must not read as an empty log.
   if (failed) {
-    // status + failure let the panel name the cause — a 403 is the reader's
-    // situation, a 500 is ours. The description is the fallback for the
-    // failures it has no specific words for.
+    // status + failure let the panel name the cause (403 vs 500); the description
+    // is the fallback for failures without specific wording.
     return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
   }
 
@@ -39,9 +37,7 @@ export default async function AdminActivityLogPage({ searchParams }) {
       <NavTransitionProvider>
         <ActivityToolbar types={filters.types} actions={filters.actions} />
         <ActivityTable data={entries} hasFilters={hasFilters} />
-        {/* Not behind a row count: the selector hides itself when the list is too
-            short to paginate, and gating it on the current page as well is how it
-            used to vanish on the very page you needed it. */}
+        {/* Not gated on row count: the selector hides itself when the list is too short. */}
         <DataTablePagination meta={meta} />
       </NavTransitionProvider>
     </div>

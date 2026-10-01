@@ -11,11 +11,9 @@ const TABS = ["domains", "ssl"];
 // !h-auto overrides shadcn TabsList's hard-coded height so the py padding lands.
 const TRIGGER = "!h-auto gap-2 px-4 py-2";
 
-// The SSL tab's own icon carries the security posture, so "is my site secured?"
-// is answerable without opening the tab.
+// The SSL tab icon shows the security status without opening the tab.
 function SslIcon({ status, label }) {
-  // The certificate read failed. A padlock-with-a-slash here is the tab
-  // asserting the site is not secured, on no evidence at all.
+  // Certificate read failed: show "unknown", never "not secured".
   if (status === "unknown")
     return <ShieldQuestion className="size-4 text-muted-foreground" aria-label={label} />;
   if (status === "active") return <Lock className="size-4 text-success" aria-label={label} />;
@@ -26,16 +24,8 @@ function SslIcon({ status, label }) {
   return <ShieldOff className="size-4 text-muted-foreground" aria-label={label} />;
 }
 
-/**
- * Domains and SSL are two jobs, so they get two tabs — the panel norm for a
- * one-cert-per-site model (RunCloud/CloudPanel/cPanel all give SSL its own
- * screen). This keeps each list full width and stops a long domain list from
- * ever pushing the certificate below the fold.
- *
- * Both panels stay mounted (`forceMount`, hidden by state) so an in-flight cert
- * issue keeps polling and nothing is lost switching tabs. The active tab is
- * mirrored to `?tab=` so a refresh or shared link reopens the same screen.
- */
+// Both panels stay mounted (`forceMount`) so an in-flight certificate issue
+// keeps polling across tab switches.
 export function DomainsSslTabs({ domains, ssl, sslStatus = "none" }) {
   const t = useTranslations("applications.domains");
   const searchParams = useSearchParams();
@@ -58,9 +48,7 @@ export function DomainsSslTabs({ domains, ssl, sslStatus = "none" }) {
 
   return (
     <Tabs value={tab} onValueChange={onChange} className="gap-4">
-      {/* Scrolls rather than wraps, same as the Settings tab bar: a bar that
-          reflows to two rows stops reading as one control. ScrollFade is what
-          says there is more to the side. */}
+      {/* Scrolls rather than wraps, like the Settings tab bar. */}
       <ScrollFade className="-mx-1 px-1 pb-1">
         <TabsList className="!h-auto w-fit gap-1 p-1">
           <TabsTrigger value="domains" className={TRIGGER}>

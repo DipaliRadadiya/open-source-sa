@@ -1,5 +1,4 @@
-// Small pure helpers shared by the Rename/Copy/Compress/Extract dialogs — all
-// of them need to compute a sensible default target from a relative path.
+// Pure path helpers for the Rename/Copy/Compress/Extract dialogs.
 
 export function dirname(path) {
   const i = path.lastIndexOf("/");
@@ -15,25 +14,22 @@ export function joinPath(base, name) {
   return base ? `${base}/${name}` : name;
 }
 
-// A bare name typed where a path is expected stays in `folder` — the folder
-// the reader is looking at. A path with a slash is counted from the top of the
-// application folder, and a leading slash means the top itself.
+// A bare name stays in `folder`; a path with a slash is relative to the
+// application root, and a leading slash means the root itself.
 export function inFolder(value, folder) {
   if (!value) return value;
   if (value.startsWith("/")) return value.replace(/^\/+/, "");
   return value.includes("/") ? value : joinPath(folder, value);
 }
 
-// What a target dialog's field means. The pre-filled default is already a full
-// path, so it is taken as written: Extract's default for `wp-content/a.zip` is
-// `wp-content`, which has no slash and was otherwise placed inside itself.
+// The pre-filled default is already a full path and is taken as written
+// (a slash-less default would otherwise be nested inside itself).
 export function placeTarget(typed, itemPath, defaultTarget) {
   if (typed === defaultTarget) return typed;
   return inFolder(typed, dirname(itemPath));
 }
 
-// "photo.jpg" -> ["photo", ".jpg"]; "archive.tar.gz" -> ["archive", ".tar.gz"]
-// (the two extensions this feature ever cares about compressing/extracting);
+// "photo.jpg" -> ["photo", ".jpg"]; "archive.tar.gz" -> ["archive", ".tar.gz"];
 // "README" -> ["README", ""].
 function splitExtension(name) {
   const lower = name.toLowerCase();
@@ -42,8 +38,7 @@ function splitExtension(name) {
   return i <= 0 ? [name, ""] : [name.slice(0, i), name.slice(i)];
 }
 
-// The first of `candidate(1)`, `candidate(2)`, … not already taken. A second
-// Copy used to suggest the same "-copy" name as the first and be refused.
+// The first of `candidate(1)`, `candidate(2)`, … not already taken.
 function firstFree(candidate, taken) {
   for (let n = 1; n < 100; n += 1) {
     const path = candidate(n);
@@ -59,9 +54,7 @@ export function copySuggestion(path, taken = new Set()) {
   return firstFree((n) => joinPath(dir, `${stem}-copy${n > 1 ? `-${n}` : ""}${ext}`), taken);
 }
 
-// The formats the API can write. `.tgz` is only ever read: it is the same
-// container as `.tar.gz`, so offering both as choices would be two buttons for
-// one thing.
+// Formats the API can write. `.tgz` is read-only here (same as `.tar.gz`).
 export const ARCHIVE_FORMATS = [".zip", ".tar.gz"];
 const READABLE_ARCHIVE_EXTENSIONS = [...ARCHIVE_FORMATS, ".tgz"];
 
@@ -70,8 +63,7 @@ export function archiveFormatOf(path) {
   return READABLE_ARCHIVE_EXTENSIONS.find((ext) => lower.endsWith(ext)) ?? null;
 }
 
-// Swaps the archive extension while leaving the rest of the path alone, so
-// picking a format cannot move the archive out of the folder you chose.
+// Swaps only the archive extension, keeping the rest of the path.
 export function withArchiveFormat(path, format) {
   const current = archiveFormatOf(path);
   const stem = current ? path.slice(0, -current.length) : path;

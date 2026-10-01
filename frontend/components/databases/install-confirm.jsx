@@ -6,20 +6,8 @@ import { installEngine } from "@/lib/api/databases";
 import { apiMessage } from "@/lib/api/error-message";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-/**
- * Confirms installing ONE engine, already chosen.
- *
- * It never asks which. Every caller reaches this from a control that names the
- * engine — a row, a menu item, a radio in the setup wizard — so asking again
- * was the panel forgetting the click that opened it. It used to: clicking
- * Install on the MySQL row threw the choice away and opened a "choose a SQL
- * engine" step. Every panel worth copying (aaPanel, Coolify) treats the click
- * that names an engine as the click that starts it.
- *
- * What it does keep is the consequence. One SQL engine per server, no
- * migration afterwards, so MySQL-or-MariaDB is a decision worth stating at the
- * moment it commits.
- */
+// The engine is already chosen by the opener. States the consequence: one SQL
+// engine per server, no migration afterwards.
 export function InstallConfirm({ engine, open, onOpenChange, onSuccess }) {
   const t = useTranslations("databases");
   const [pending, setPending] = useState(false);
@@ -31,9 +19,7 @@ export function InstallConfirm({ engine, open, onOpenChange, onSuccess }) {
     setPending(true);
     try {
       const { data } = await installEngine(engine.engine);
-      // Named, for the same reason the dialog above it names the engine: this
-      // toast is the only thing on screen for the second or two before the
-      // progress card appears, and "Installing." is not an answer to "which?"
+      // Named: this toast is all that shows before the progress card appears.
       const name = t(`engines.${engine.engine}`);
 
       toast.success(

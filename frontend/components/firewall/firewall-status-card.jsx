@@ -22,36 +22,20 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Card, CardContent } from "@/components/ui/card";
 import { apiMessage } from "@/lib/api/error-message";
 
-/**
- * On or off, and what that actually means.
- *
- * Both directions get confirmed, for opposite reasons:
- *
- *   - **Turning it ON** changes the default for everything not listed to
- *     "blocked". The API seeds SSH and the panel's own ports first so the person
- *     clicking cannot lock themselves out, but they should be told that before
- *     they click, not discover it afterwards.
- *   - **Turning it OFF** stops enforcing every rule on the page. People expect
- *     "off" to also mean "lost my rules", so the dialog says they're kept —
- *     otherwise the safe action feels destructive and gets avoided.
- */
+// Both directions are confirmed: ON blocks anything unlisted (the API seeds SSH and
+// panel ports first); OFF stops every rule but keeps them.
 export function FirewallStatusCard({ enabled, reference = null, policy, ruleCount, canManage }) {
   const t = useTranslations("firewall");
   const { refreshAndWait } = useRefresh();
   const [confirming, setConfirming] = useState(null);
   const [pending, setPending] = useState(false);
 
-  // off | on | exposed — see lib/firewall/state.js for why there are three.
+  // off | on | exposed; see lib/firewall/state.js.
   const state = firewallState(enabled, policy);
   const safeLooking = state === "on";
 
-  /*
-   * `secure` re-runs the same enable path rather than needing an endpoint of
-   * its own. ToggleFirewall::execute(true) seeds the SSH and panel-port allow
-   * rules and then runs `ufw default deny incoming` + `allow outgoing` +
-   * `ufw --force enable`; the last is a no-op on an already-enabled firewall,
-   * so the posture is repaired with no window where the box is unprotected.
-   */
+  // `secure` re-runs the enable path, which seeds SSH and panel rules before changing
+  // the policy, so there is no unprotected window.
   async function apply(next, { secured = false } = {}) {
     setPending(true);
     try {
@@ -74,10 +58,8 @@ export function FirewallStatusCard({ enabled, reference = null, policy, ruleCoun
     <>
       <Card
         className={
-          // Neither off nor exposed is a neutral state on this page — in one the
-          // rules below are inert, in the other they are the only thing being
-          // enforced while everything else walks in. The card says so in colour
-          // before anyone reads a word of it.
+          // Both off and exposed are warning states: rules are inert, or everything
+          // unlisted gets in.
           safeLooking ? "border-success/30 bg-success/5" : "border-warning/40 bg-warning/5"
         }
       >
@@ -88,8 +70,7 @@ export function FirewallStatusCard({ enabled, reference = null, policy, ruleCoun
                 safeLooking ? "bg-success/15 text-success" : "bg-warning/15 text-warning"
               }`}
             >
-              {/* Not the same icon as "off": this firewall IS running, and a
-                  shield with a line through it would say it is not. */}
+              {/* Not the "off" icon: this firewall IS running. */}
               {state === "unknown" ? (
                 <ShieldQuestion className="size-5" />
               ) : state === "on" ? (
@@ -112,11 +93,8 @@ export function FirewallStatusCard({ enabled, reference = null, policy, ruleCoun
               {state === "unknown" && reference ? (
                 <p className="font-mono text-xs text-muted-foreground">{t("status.reference", { reference })}</p>
               ) : null}
-              {/* Labelled once rather than twice. Both pills used to end in "by
-                  default", which pushed the one word that differs — blocked vs
-                  allowed — into the middle of a sentence set in 12px. The label
-                  carries "by default" for the pair, so each pill is left with a
-                  direction and an answer. */}
+              {/* "by default" is carried by the label, so each pill shows only direction and
+                  value. */}
               {enabled && policy?.incoming ? (
                 <div className="flex flex-wrap items-center gap-2 pt-1.5">
                   <span className="text-xs text-muted-foreground">
@@ -140,10 +118,7 @@ export function FirewallStatusCard({ enabled, reference = null, policy, ruleCoun
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* The repair, and it leads: an exposed firewall has one thing worth
-                doing. The off switch stays beside it rather than being replaced
-                — being in a bad state is not a reason to take away the control
-                for leaving it. */}
+            {/* The repair leads; the off switch stays beside it. */}
             {state === "exposed" ? (
               <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
                 <Button
@@ -158,12 +133,8 @@ export function FirewallStatusCard({ enabled, reference = null, policy, ruleCoun
 
             {state === "unknown" ? null : (
             <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
-              {/* Destructive when it is the off switch: this stops enforcing
-                  every rule on the page and puts the server back on the open
-                  internet. As a plain outline button it was indistinguishable
-                  from "Add rule" — and its own confirm dialog already opens
-                  warning-toned, so the button was the only step in the flow
-                  saying nothing. */}
+              {/* Destructive when it is the off switch: it stops enforcing every rule, and the
+                  confirm dialog is warning-toned too. */}
               <Button
                 variant={enabled ? "destructive" : "default"}
                 disabled={!canManage || pending}
@@ -190,11 +161,7 @@ export function FirewallStatusCard({ enabled, reference = null, policy, ruleCoun
         onConfirm={() => apply(true)}
       />
 
-      {/* Confirmed like the others, because it changes what reaches the box:
-          traffic that was getting in stops. The description names the one thing
-          somebody would be afraid of — losing their own way in — and can say it
-          truthfully, since the same call seeds the SSH and panel-port rules
-          before it changes the policy. */}
+      {/* The same call seeds SSH and panel rules first, so the copy can promise access is kept. */}
       <ConfirmDialog
         open={confirming === "secure"}
         onOpenChange={(open) => !pending && setConfirming(open ? "secure" : null)}
@@ -224,13 +191,7 @@ export function FirewallStatusCard({ enabled, reference = null, policy, ruleCoun
   );
 }
 
-/**
- * One direction and its default, coloured by what that default actually means.
- *
- * The words are in the text colour, the tint and icon carry the tone: in
- * the badge's own colour "Incoming" read 2.64:1 and "Blocked" 4.21:1 on the
- * green tint.
- */
+// Text stays in the text colour (badge colours fail contrast on the tint).
 function PolicyBadge({ icon: Icon, label, value, tone }) {
   return (
     <Badge variant={tone} className="gap-1.5 font-normal">
@@ -241,32 +202,21 @@ function PolicyBadge({ icon: Icon, label, value, tone }) {
   );
 }
 
-/**
- * Blocking by default is the whole point of switching a firewall on — and
- * allowing by default is the one value on this card that contradicts the two
- * sentences above it. The card claims "your server is protected" on the
- * strength of the firewall being enabled, which an enabled-but-open firewall
- * satisfies; this badge is currently the only thing that can say otherwise.
- */
+// Allow-by-default is not flagged anywhere else, so this badge must flag it.
 function incomingTone(value) {
   if (value === "deny") return "success";
   if (value === "allow") return "warning";
   return "muted";
 }
 
-/**
- * Outgoing-allow is what every ordinary server does, so it is stated in the
- * same confident green rather than hedged in grey. Outgoing-deny is a
- * deliberate hardening choice — unusual, but not a fault, so it is neither
- * praised nor flagged.
- */
+// Outgoing-deny is deliberate hardening: neither praised nor flagged.
 function outgoingTone(value) {
   if (value === "allow") return "success";
   return "muted";
 }
 
-// "deny"/"allow" are UFW's words, not everyone's. Anything unexpected is shown
-// verbatim rather than mistranslated into a promise the firewall isn't making.
+// "deny"/"allow" are UFW's words. Unknown values are shown verbatim rather than
+// mistranslated.
 function policyWord(t, value) {
   if (value === "deny") return t("status.policyDeny");
   if (value === "allow") return t("status.policyAllow");

@@ -3,9 +3,7 @@ import { workersResponseSchema } from "@/lib/schemas/worker";
 
 const EMPTY = { workers: [], presets: [], checks: [] };
 
-// WHICH failure, not just that there was one: a shared FAILED constant made
-// every outcome identical, so the error box could not tell a refusal from a
-// crash and printed the same unfalsifiable sentence for both.
+// Returns the failure details so the error box can tell a refusal from a crash.
 export async function getWorkers(appId) {
   const result = await read(`/applications/${appId}/workers`, workersResponseSchema);
 

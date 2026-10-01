@@ -1,5 +1,5 @@
 import { phpVersionShown } from "@/lib/applications/php-version-shown";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useFormatter, useTranslations } from "next-intl";
 import { ChevronRight } from "lucide-react";
 import { formatBytes } from "@/lib/format/bytes";
@@ -12,22 +12,7 @@ import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { TlsMark, isServedOverTls } from "@/components/applications/tls-mark";
 import { gitProviderFor } from "@/lib/applications/git-provider";
 
-/**
- * The sites list on a narrow screen.
- *
- * The table is six columns wide, so on a phone it showed the name and nothing
- * else — no status, no type, and the row menu was off the right edge with
- * nothing hinting at a swipe. The one thing you open this page to do was the
- * one thing you could not reach.
- *
- * Two lines of identity, one line of facts. The status badge shares the facts
- * line rather than taking a band of its own — the services card puts its badge
- * top-right instead, but a service is called "nginx" and a site is called
- * "Company Blog (Staging)": at 320 a badge up there leaves the name about six
- * characters. The name wins the wide line; the badge is legible either way.
- * The globe icon is dropped here for the same reason — it is identical on every
- * row, so it spends 44px saying nothing.
- */
+// Narrow-screen sites list; the badge shares the facts line so the name fits at 320px.
 export function ApplicationsCards({
   applications = [],
   canManage = false,
@@ -42,8 +27,6 @@ export function ApplicationsCards({
       {applications.map((application) => (
         <CardListItem key={application.id}>
           <div className="flex items-start justify-between gap-2">
-            {/* The logo the table now shows, so the narrow layout identifies a
-                site the same way the wide one does rather than by name alone. */}
             <SiteTypeLogo
               name={application.site_type}
               provider={gitProviderFor(application, gitProviders)}
@@ -59,17 +42,15 @@ export function ApplicationsCards({
                   <span className="truncate" title={application.name}>{application.name}</span>
                   <ChevronRight className="size-3.5 shrink-0" />
                 </Link>
-                {/* A copy and the site it copies sit next to each other under
-                    near-identical names — same reason as the table. */}
+                {/* A copy and its source have near-identical names. */}
                 {application.is_staging ? (
                   <Badge variant="warning" className="shrink-0 font-normal">
                     {t("stagingBadge")}
                   </Badge>
                 ) : null}
               </div>
-              {/* Same padlock in the same place as the table's. The card still
-                  prints the type as text below, so the logo stays unlabelled
-                  here — see SiteTypeLogo. */}
+              {/* The type is printed as text below, so the logo stays unlabelled; see
+                  SiteTypeLogo. */}
               <div className="flex min-w-0 items-center gap-1">
                 <TlsMark
                   application={application}
@@ -81,36 +62,28 @@ export function ApplicationsCards({
                 />
               </div>
             </div>
-            {/* shrink-0 so the menu keeps its place however long the name is —
-                it is the reason this card exists. */}
+            {/* shrink-0 keeps the menu in place however long the name is. */}
             <div className="-me-2 -mt-1 shrink-0">
               <ApplicationRowActions application={application} canManage={canManage} canMagicLogin={canMagicLogin} />
             </div>
           </div>
 
-          {/* Spacing separates the facts, not middots: the line wraps at 320 and
-              a separator left stranded at the end of a wrapped line reads as a
-              missing value. */}
+          {/* Gaps, not middots: a separator stranded at a wrap reads as a missing value. */}
           <p className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t pt-3 text-xs text-muted-foreground">
             <ApplicationStatusBadge application={application} />
             <span className="truncate text-foreground">
               {application.site_type_title ?? application.site_type}
             </span>
-            {/* OMITTED when the API has no version, not dashed — the same rule
-                the size fact below follows, and for the same reason: a dash in
-                a wrapped list of facts reads as a value, where in a table
-                column it reads as an empty cell. Node and static sites simply
-                have nothing to say here. */}
+            {/* Omitted, not dashed, when the API has no version: in a wrapped list a dash
+                reads as a value. Node and static sites have none. */}
             {phpVersionShown(application) ? (
               <span className="whitespace-nowrap tabular-nums">
                 {t("phpFact", { version: phpVersionShown(application) })}
               </span>
             ) : null}
             <span className="truncate font-mono">{application.system_user?.username ?? "—"}</span>
-            {/* Same fact as the table's Size column — the cards are this list
-                below lg, not a different list. Without the measurement date
-                there is no room to qualify it, so an unmeasured site is left
-                out rather than shown as a dash that reads like zero bytes. */}
+            {/* Same as the table's Size column; an unmeasured site is left out rather than
+                shown as a dash that reads like zero bytes. */}
             {formatBytes(application.directory_size_bytes, format) ? (
               <span className="whitespace-nowrap tabular-nums">
                 {formatBytes(application.directory_size_bytes, format)}

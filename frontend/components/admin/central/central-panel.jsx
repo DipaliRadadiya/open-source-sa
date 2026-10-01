@@ -16,16 +16,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 
-/**
- * Connect this server to a central panel, and the two ways to undo it.
- *
- * Three states on one page: not connected, the key shown once, connected.
- *
- * The sharp edge is that "connect" and "regenerate" are the SAME endpoint.
- * Pressing it while a connection is live rotates the token and the old one
- * stops working on the next request — so the second press is a breaking change
- * and is the only one put behind a confirmation.
- */
+// Connect and regenerate share one endpoint; pressing it while connected
+// rotates the token and breaks the old one, so only that press is confirmed.
 export function CentralPanel({ status }) {
   const t = useTranslations("central");
   const router = useRouter();
@@ -45,9 +37,8 @@ export function CentralPanel({ status }) {
       const parsed = centralEnableResponseSchema.safeParse(data);
       if (!parsed.success) throw new Error("shape");
 
-      // Held in state and nowhere else: never a URL, never storage, never a
-      // log line. When this component unmounts the value is gone for good,
-      // which is exactly what the backend promises.
+      // Held only in state: never in a URL, storage or logs. It is gone once
+      // this component unmounts, as the backend promises.
       setToken(parsed.data.central_token);
       setAcknowledged(false);
       setConfirming(null);
@@ -79,8 +70,7 @@ export function CentralPanel({ status }) {
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-48 space-y-1">
-            {/* Not `title` — that is the page heading directly above, and the
-                two stacked read as the same sentence printed twice. */}
+            {/* Not `title`: that duplicates the page heading directly above. */}
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
               {t("cardTitle")}
               {connected ? (
@@ -95,19 +85,15 @@ export function CentralPanel({ status }) {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* What the key actually grants, stated before it exists. It is not
-            scoped and cannot be: CentralUser is created with is_admin and the
-            Administrator role, so the token is an administrator on every
-            endpoint. Stripe is the only surveyed product that says this
-            plainly about its own keys, and it is the single most important
-            sentence on the page. */}
+        {/* The token is not scoped: CentralUser is created with is_admin and
+            the Administrator role, so it grants admin on every endpoint. */}
         <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
           <ShieldAlert className="mt-0.5 size-5 shrink-0 text-destructive" aria-hidden />
           <div className="min-w-0 space-y-1">
             <p className="text-sm font-medium text-destructive">{t("power.title")}</p>
             <p className="text-sm text-muted-foreground">{t("power.body")}</p>
-            {/* The reassuring half, and true: actions arrive under a separate
-                machine account, so the log can tell the vendor apart from you. */}
+            {/* Actions arrive under a separate machine account, so the log can
+                tell them apart from the user's. */}
             <p className="text-sm text-muted-foreground">{t("power.attribution")}</p>
           </div>
         </div>
@@ -121,10 +107,6 @@ export function CentralPanel({ status }) {
               <div className="rounded-lg border bg-muted/40 px-3 py-2">
                 <code className="font-mono text-xs break-all">{status.token}</code>
               </div>
-              {/* Closes the loop the shown-once rule opens. Once the reveal is
-                  dismissed this mask is all anyone ever sees again, and the
-                  obvious next question — "what if I lost it?" — has an answer
-                  with a consequence attached. */}
               <p className="text-xs text-muted-foreground">{t("current.lost")}</p>
             </div>
 
@@ -143,9 +125,8 @@ export function CentralPanel({ status }) {
                 {t("actions.regenerate")}
               </Button>
               <Button
-                variant="outline"
+                variant="destructive"
                 size="sm"
-                className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
                 disabled={pending !== null}
                 onClick={() => setConfirming("disconnect")}
               >
@@ -160,8 +141,7 @@ export function CentralPanel({ status }) {
               <PlugZap className="size-4" aria-hidden />
               {t("actions.generate")}
             </Button>
-            {/* Said before the press, not only after it. Nobody should meet the
-                shown-once rule for the first time while looking at the secret. */}
+            {/* States the shown-once rule before the key is generated. */}
             <p className="text-xs text-muted-foreground">{t("actions.generateHint")}</p>
           </div>
         )}
@@ -200,10 +180,8 @@ export function CentralPanel({ status }) {
         </div>
       </ConfirmDialog>
 
-      {/* Regenerating is the destructive one, and the damage is on a screen the
-          reader cannot see: the old token dies on the next request, so Central
-          breaks the instant this is confirmed and stays broken until the new
-          key is pasted there. */}
+      {/* Regenerating breaks Central immediately: the old token dies on the
+          next request until the new key is pasted there. */}
       <ConfirmDialog
         open={confirming === "regenerate"}
         onOpenChange={(next) => !next && pending === null && setConfirming(null)}

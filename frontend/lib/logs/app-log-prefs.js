@@ -1,14 +1,6 @@
 import { normalizeLineCount } from "../schemas/log.js";
 
-/**
- * What the reader chose on an application's Logs page, remembered.
- *
- * Both reset on every reload: Live went back to the tab's default and the line
- * count to 200, while the server Logs page already remembered its Live choice.
- * Live is kept per source, not once: switching it on for a quiet error log is
- * not consent to tail the busiest access log, which is why the defaults differ
- * per tab in the first place.
- */
+// Live is per source: following a quiet error log is not consent to tail the busiest access log.
 export const APP_LOG_FOLLOW_COOKIE = "sv_app_logs_follow";
 export const APP_LOG_LINES_COOKIE = "sv_app_logs_lines";
 

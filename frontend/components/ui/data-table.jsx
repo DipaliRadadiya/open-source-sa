@@ -39,75 +39,35 @@ function SortableHeader({ header, label }) {
   );
 }
 
-/**
- * Generic presentational data grid (TanStack Table v8 + shadcn Table).
- * Server-driven by default: it receives already-fetched `data` and renders it —
- * pagination/filtering/sorting are manual (handled by URL controls).
- *
- * `sortable` opts a fully-client-side dataset into in-table sorting, and
- * `stickyHeader` pins the header row for tables inside a scroll container.
- * Both default off so server-driven callers are unaffected.
- * `rowClassName(row)` styles rows by their data (e.g. de-emphasising a paused
- * record) — it receives the original row object.
- * `fixedLayout` switches to `table-layout: fixed` so each column's
- * `meta.className` width (e.g. `w-[35%]`) is actually respected, instead of
- * the browser's default `auto` layout treating it as a soft hint and still
- * dumping any leftover width into whichever column lacks an explicit one.
- * The table stays full width either way — this only changes how that width
- * is divided, not whether the table fills its container. Off by default so
- * every existing table's column sizing is unaffected.
- * `contextMenu(row)` opts a row into right-click support — return the menu's
- * `<ContextMenuItem>`s (or a falsy value to skip that row). Undefined by
- * default, so every other table's rows behave exactly as before.
- */
+// Server-driven by default: pagination, filtering and sorting come from URL controls.
+// `fixedLayout` makes `meta.className` widths binding rather than hints.
 export function DataTable({
   columns,
   data,
-  // Defaulted below rather than here: a literal default is invisible to the
-  // i18n gate, which only reads t() calls — so twenty of the thirty tables in
-  // the panel printed English "No results." to Spanish and Hindi readers while
-  // every check stayed green. A caller with something better to say still
-  // passes its own.
+  // Defaults to a translated t() string below, never an English literal here.
   emptyMessage,
   sortable = false,
   stickyHeader = false,
   defaultSorting = [],
-  // Told about each client-side sort change, e.g. to remember it.
   onSortingChange,
   rowClassName,
   fixedLayout = false,
   contextMenu,
-  // Opt-in: lets a row collapse a run of columns into one spanning cell.
-  // `{ columns: [id, …], render: (rowOriginal) => node | null }` — when
-  // `render` returns null the row is drawn normally, so this costs nothing for
-  // every other table. Exists because a row whose columns all say "not set up"
-  // reads as one statement, and repeating it four times per row turns ten rows
-  // into a wall of grey.
+  // `{ columns: [id, …], render: (rowOriginal) => node | null }`; null renders normally.
   spanCells,
-  // Drops this component's own border and rounding, for callers that already
-  // sit inside a Card. Nested, the two read as a box drawn twice.
+  // Drops the border and rounding, for tables already inside a Card.
   bare = false,
-  // Passed straight to TanStack and readable from any cell as
-  // `table.options.meta`. It's how a cell gets per-table context without
-  // closing over it — a closure would change identity every render, and
-  // flexRender treats a new cell function as a new component type, remounting
-  // the cell and destroying whatever state it held.
+  // Readable from any cell as `table.options.meta`. Use this instead of a
+  // closure: a new cell function each render remounts the cell and loses its state.
   meta,
-  // Opt-in row selection. The state is owned by the caller, not by this
-  // component: the thing that acts on a selection — a toolbar, a delete
-  // dialog — lives outside the table, and a selection the table kept to
-  // itself would be invisible to it. `rowId` maps a row to a stable key so
-  // the selection survives the data being refetched; without it TanStack
-  // keys by array index and a list that reorders selects different rows than
-  // the ones that were ticked.
+  // Caller-owned selection; `rowId` keeps it stable across refetch or reorder.
   rowSelection,
   onRowSelectionChange,
   rowId,
 }) {
   const tc = useTranslations("common");
   const pending = useNavPending();
-  // Read once here rather than per header cell: `useSearchParams` in a loop
-  // subscribes the same component repeatedly to the same value.
+  // Read once here rather than per header cell.
   const sortParam = useSearchParams().get("sort");
   const [sorting, setSorting] = useState(defaultSorting);
   const selectable = rowSelection !== undefined && onRowSelectionChange !== undefined;
@@ -120,7 +80,6 @@ export function DataTable({
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     manualFiltering: true,
-    // Off unless opted in, so server-driven tables render plain headers.
     enableSorting: sortable,
     manualSorting: !sortable,
     ...(sortable
@@ -141,10 +100,8 @@ export function DataTable({
           enableRowSelection: true,
         }
       : null),
-    // Rows keyed by the record, not its position. Keyed by index, a row that
-    // left the list (a job switched out of the "Paused" filter) handed its
-    // cell state — a switch's pending value, an open menu — to whichever row
-    // moved up into its place.
+    // Key rows by record, not index, so cell state does not pass to another
+    // row when the list changes.
     ...(rowId || idsUnique ? { getRowId: rowId ?? ((row) => String(row.id)) } : null),
   });
 
@@ -152,13 +109,10 @@ export function DataTable({
     <div
       className={cn(
         "transition-opacity",
-        // The last row's own rule would otherwise sit a pixel above the
-        // enclosing card's edge — two lines where the eye expects one.
+        // Avoids a double line against the enclosing card's edge.
         bare ? "[&_tbody_tr:last-child]:border-0" : "rounded-xl border",
-        // A wide table must scroll rather than silently clip columns. Skipped
-        // when stickyHeader is on: the caller already supplies the scroll
-        // container, and overflow-x:auto here would compute overflow-y to auto
-        // too, nesting a second scroller and killing the sticky header.
+        // Scroll rather than clip wide tables. Skipped with stickyHeader:
+        // overflow-x:auto would nest a second scroller and break sticky.
         !stickyHeader && "overflow-x-auto",
         pending && "pointer-events-none opacity-60",
       )}
@@ -173,24 +127,13 @@ export function DataTable({
                 return (
                   <TableHead
                     key={header.id}
-                    // Sticky rows are transparent by default — the body would
-                    // scroll through them without an opaque background.
-                    // `meta.className` lets a caller constrain a column's width;
-                    // without it the first column eats the table and the rest
-                    // bunch up against it.
+                    // Sticky headers need an opaque background.
+                    // `meta.className` lets a caller constrain a column's width.
                     className={cn(
                       stickyHeader && "bg-muted",
                       header.column.columnDef.meta?.className,
                     )}
-                    /*
-                     * Two kinds of sortable column, and only one of them used
-                     * to say so. `canSort` is TanStack sorting its own rows;
-                     * a server-driven column sorts through the URL instead, so
-                     * TanStack reports it as unsortable and the header was
-                     * announced as an ordinary one — the table could be sorted
-                     * by Size descending with nothing exposing that at all.
-                     * `meta.sortKey` is the column's key in `?sort=`.
-                     */
+                    /* Server-driven columns sort via the URL; `meta.sortKey` supplies aria-sort. */
                     aria-sort={
                       canSort
                         ? { asc: "ascending", desc: "descending" }[direction] ?? "none"
@@ -221,8 +164,7 @@ export function DataTable({
                 <TableRow className={rowClassName?.(row.original)}>
                   {row.getVisibleCells().map((cell) => {
                     if (span && spanCells.columns.includes(cell.column.id)) {
-                      // Only the first of the run draws; the rest are absorbed
-                      // by its colSpan.
+                      // Only the first of the run draws; colSpan covers the rest.
                       if (cell.column.id !== spanCells.columns[0]) return null;
                       return (
                         <TableCell key={cell.id} colSpan={spanCells.columns.length}>

@@ -37,7 +37,7 @@ test("a status explanation wraps; only the support reference truncates", () => {
   assert.match(src, /max-w-52 truncate font-mono text-xs text-destructive/);
   assert.match(
     read("components/applications/application-status-badge.jsx"),
-    /A partial\s+\* reference is still recognisable|partial\s+reference is still recognisable/,
+    /partial\s+(\*\s+)?(reference|UUID) is still\s+recognisable/,
     "the deliberate truncation must keep its justification",
   );
 });

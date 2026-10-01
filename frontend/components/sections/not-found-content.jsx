@@ -1,22 +1,13 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ArrowLeft, ArrowRight, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NavIcon } from "@/components/nav-icon";
 
-/**
- * Shared 404 body. Two entry points render it: the root `not-found` (an unknown
- * URL, which Next always resolves outside the panel layout, so there's no
- * sidebar to lean on) and the panel's own, where the shell survives.
- *
- * Two columns: the message on the left, somewhere to actually go on the right.
- * A dead end's job is to end — the list is the difference between a page that
- * reports a problem and one that resolves it. `links` is already permission-
- * filtered by the caller, so nothing here offers a door the user can't open.
- */
+// Shared by the root `not-found` and the panel's own. `links` is already permission-filtered.
 export function NotFoundContent({ links = [] }) {
   const t = useTranslations("errors.notFound");
   const router = useRouter();
@@ -24,9 +15,7 @@ export function NotFoundContent({ links = [] }) {
   return (
     <div className="grid w-full max-w-5xl gap-12 lg:grid-cols-2 lg:gap-16">
       <div>
-        {/* Big, plain, foreground. Every attempt to decorate this number —
-            gradient, watermark, badge — made it look like a defect. At this
-            size it just reads as a title. */}
+        {/* Plain foreground; decoration made the number look like a defect. */}
         <p aria-hidden="true" className="text-7xl font-bold leading-none tracking-tight">
           404
         </p>
@@ -43,9 +32,7 @@ export function NotFoundContent({ links = [] }) {
               {t("dashboard")}
             </Link>
           </Button>
-          {/* Back is the more likely intent — a mistyped URL is usually one step
-              from somewhere real — but it can't be the primary action, because
-              history isn't guaranteed to hold anything. */}
+          {/* Back is the likelier intent, but cannot be primary since history may be empty. */}
           <Button variant="ghost" onClick={() => router.back()}>
             <ArrowLeft className="size-4" />
             {t("back")}
@@ -53,8 +40,7 @@ export function NotFoundContent({ links = [] }) {
         </div>
       </div>
 
-      {/* Omitted entirely when signed out or unpermissioned: an empty heading
-          over nothing is worse than no column at all. */}
+      {/* Omitted when signed out or with no permitted links. */}
       {links.length > 0 ? (
         <nav aria-label={t("linksLabel")}>
           <h2 className="text-sm font-semibold">{t("linksLabel")}</h2>

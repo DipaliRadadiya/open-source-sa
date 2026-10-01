@@ -297,3 +297,36 @@ it('still prefers npm\'s own error to a guess when it printed one', function () 
 
     expect(ProvisioningFailedException::fromResult('install_app', $result)->reason)->toBeNull();
 });
+
+it('names a deploy script that tried to log in to the repository', function (string $stderr) {
+    Process::fake();
+
+    // git's own wording, measured on GitHub 2026-10-01 with the `git pull`
+    // the default deploy script used to carry.
+    $result = new ServerOpsResult(
+        ok: false,
+        reference: 'ref-126',
+        result: Process::result(output: '', errorOutput: $stderr, exitCode: 128),
+    );
+
+    expect(ProvisioningFailedException::fromResult('script', $result)->reason)->toBe('script_git_auth')
+        // Only the user's script lacks the credential; the panel's own fetch
+        // failing like this is a different problem with a different fix.
+        ->and(ProvisioningFailedException::fromResult('fetch', $result)->reason)->toBeNull()
+        ->and(__('application.failure_reason.script_git_auth'))->toContain('git pull');
+})->with([
+    "fatal: could not read Username for 'https://github.com': No such device or address",
+    "fatal: could not read Password for 'https://user@gitlab.com': terminal prompts disabled",
+]);
+
+it('leaves a script failure that only mentions git alone', function () {
+    Process::fake();
+
+    $result = new ServerOpsResult(
+        ok: false,
+        reference: 'ref-127',
+        result: Process::result(output: '', errorOutput: "error: Your local changes to the following files would be overwritten by merge:\n\tREADME.md", exitCode: 1),
+    );
+
+    expect(ProvisioningFailedException::fromResult('script', $result)->reason)->toBeNull();
+});

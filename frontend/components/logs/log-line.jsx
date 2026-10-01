@@ -3,8 +3,7 @@ import { cn } from "@/lib/utils";
 import { LEVEL_CLASS, lineLevel, splitOnTerm } from "@/lib/logs/severity";
 import { tokenizeLine } from "@/lib/logs/tokenize";
 
-// Level pills: colour + the word itself, so severity never depends on colour
-// alone (and still reads for anyone colour-blind).
+// Level pills: colour plus the word, so severity never depends on colour alone.
 const LEVEL_PILL = {
   error: "bg-console-error/15 text-console-error",
   warn: "bg-console-warning/15 text-console-warning",
@@ -12,25 +11,15 @@ const LEVEL_PILL = {
   notice: "bg-console-foreground/5 text-console-muted",
 };
 
-/**
- * One log row in three tiers: dimmed timestamp, coloured level, bright message.
- * A file of uniform INFO lines is a grey wall without this — the structure is
- * what makes it scannable, not the severity colour (which most lines lack).
- */
+// Three tiers (dim time, coloured level, bright message) keep uniform INFO lines scannable.
 export function LogLine({ index, text, group, term, wrap, onCopy, copyLabel }) {
   const { time, level, levelKey, message } = tokenizeLine(text);
-  // Fall back to whole-line detection (HTTP status, keywords) when the line
-  // carries no explicit level word.
+  // Fall back to whole-line detection (HTTP status, keywords) when no level word is present.
   const severity = levelKey ?? lineLevel(text, group);
 
   return (
     <div className="group flex gap-3 px-3 hover:bg-console-foreground/[0.06]">
-      {/* The gutter is the copy affordance: 48px of otherwise-dead space that
-          already belongs to this row. A button per line would be chrome
-          fighting the content, and a 24px row has no space for one. */}
-      {/* Out of the Tab order: every rendered line had one, so getting past
-          the log took ~55 presses. The log itself is focusable and scrolls by
-          keyboard, and "Copy visible lines" in the toolbar copies by keyboard. */}
+      {/* The gutter is the copy button, kept out of the Tab order (one stop per line); see "Copy visible lines". */}
       <button
         type="button"
         tabIndex={-1}
@@ -68,8 +57,7 @@ export function LogLine({ index, text, group, term, wrap, onCopy, copyLabel }) {
         <span
           className={cn(
             "text-console-foreground",
-            // Only tint the message when the severity came from content rather
-            // than an explicit level pill — otherwise the pill already says it.
+            // Tint the message only when no level pill already states severity.
             !level && severity ? LEVEL_CLASS[severity] : "",
           )}
         >

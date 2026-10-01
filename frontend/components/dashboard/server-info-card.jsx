@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { getTranslations } from "next-intl/server";
 import { Server, Network, Cpu, Terminal, CircleCheck, CircleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -12,18 +12,13 @@ import { EngineLogo } from "@/components/databases/engine-logo";
 import { engineLogo } from "@/lib/databases/engine-logo";
 import { shortVersion } from "@/lib/databases/short-version";
 
-/*
- * Database engines are listed from `/databases/engines` below, with their
- * logos. `/server/facts` now reports mariadb, mongodb and postgresql among its
- * runtimes too, so each one appeared twice in the row.
- */
+// Listed from `/databases/engines` instead, so filtered out of `/server/facts` runtimes.
 const DATABASE_ENGINES = new Set(["mysql", "mariadb", "mongodb", "postgresql"]);
 
 function Field({ icon: Icon, label, value, mono, copyLabel, className }) {
   return (
-    // min-w-0: a grid item keeps min-width:auto, so without it this tile grows
-    // to the widest word it contains and `truncate` below never fires — the
-    // value just runs past the card edge, unclipped and with no ellipsis.
+    // min-w-0: a grid item keeps min-width:auto, so without it the tile grows to
+    // its widest word and `truncate` below never fires.
     <div
       className={cn(
         "flex min-w-0 items-center gap-2.5 rounded-lg border bg-muted/30 px-3.5 py-3",
@@ -33,10 +28,7 @@ function Field({ icon: Icon, label, value, mono, copyLabel, className }) {
       <Icon className="size-4 shrink-0 text-muted-foreground" />
       <div className="min-w-0 flex-1 space-y-0.5">
         <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-        {/* Mono stays on the type scale and buys its width back with tighter
-            tracking. It was text-[13px] — an off-scale size invented to stop
-            the kernel string truncating, which is a layout problem being paid
-            for in typography. */}
+        {/* Mono at a scale size, with tighter tracking to fit long values. */}
         {value ? (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -55,22 +47,13 @@ function Field({ icon: Icon, label, value, mono, copyLabel, className }) {
           </p>
         )}
       </div>
-      {/* Always visible, not hover-revealed: this is the value people came to
-          the card to take away, and a control you have to discover isn't one. */}
+      {/* Always visible, not hover-revealed. */}
       {copyLabel ? <CopyButton value={value} label={copyLabel} /> : null}
     </div>
   );
 }
 
-/**
- * A full-width band under the page title, not a card in the metrics grid.
- *
- * This is reference data — which machine am I on, what is its address, what is
- * installed — read once on arrival and then ignored. In a half-width column it
- * was as tall as a chart and forced the facts into a cramped 2×2; across the
- * page they fit on one line and the band costs a third of the height, which is
- * what lets the four charts below sit in an even 2×2 grid.
- */
+// A band, not a grid card, so the facts fit one line and the charts below form a 2×2.
 export async function ServerInfoCard({
   facts,
   health,
@@ -80,22 +63,12 @@ export async function ServerInfoCard({
 }) {
   const t = await getTranslations("serverDashboard");
   const tDatabases = await getTranslations("databases");
-  /*
-   * `mysql` is dropped, not renamed.
-   *
-   * `/server/facts` builds that entry by running `mysql --version`, which on a
-   * MariaDB box prints "mysql  Ver 15.1 Distrib 10.11.14-MariaDB" — so the row
-   * showed the CLIENT tool's version under the wrong engine's name, and never
-   * mentioned MongoDB or PostgreSQL because nothing asked about them. The
-   * engines below answer the same question from the databases API, which knows
-   * the real answer. Filed for the backend to remove the key; until it does,
-   * reading it would put two contradicting versions in one row.
-   */
+  // `mysql` is dropped: `/server/facts` builds it from `mysql --version`, which on
+  // MariaDB reports the client under the wrong name.
   const runtimes = Object.entries(facts?.runtimes ?? {}).filter(
     ([name, version]) => version && !DATABASE_ENGINES.has(name),
   );
-  // Installed, not running: this row says what is on the machine. Whether it is
-  // up is the services badge's question, three chips to the right.
+  // Installed, not running; whether services are up is the services badge's job.
   const installedEngines = engines.filter((engine) => engine.installed);
   const down = health?.down ?? [];
 
@@ -116,19 +89,11 @@ export async function ServerInfoCard({
     // Same chrome as every other card on this page.
     <Card className={cn("[--card-spacing:--spacing(5)]", PANEL_CARD)}>
       <CardContent className="space-y-4">
-        {/* Identity takes two columns of five — the hostname is the heading of
-            this page, so it gets the width the other facts don't need. Three
-            fields, not four: at a quarter of the row every value truncated. */}
+        {/* Identity spans two of five columns; the hostname needs the width. */}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          {/* One step above its neighbours in size, weight and tint — which is
-              three levers where the research says pick one. It earns them: this
-              is the only tile that answers "which machine is this", and at the
-              same 14px as the IP beside it the row read as four equal facts. */}
+          {/* Emphasised over its neighbours: the only tile that answers "which machine is this". */}
           <div className="flex min-w-0 items-center gap-3 rounded-lg border border-primary/25 bg-primary/[0.07] px-3.5 py-3 shadow-e1 ring-1 ring-inset ring-background/60 sm:col-span-2">
-            {/* Solid, not tinted. A 10%-alpha chip is the same treatment the
-                three secondary tiles' icons get, so identity was being marked
-                as important with the same ink as everything around it. This is
-                the one place on the page that gets the filled brand colour. */}
+            {/* The one filled brand-colour chip on the page. */}
             <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-e1">
               <Server className="size-5" />
             </span>
@@ -155,15 +120,11 @@ export async function ServerInfoCard({
                   "—"}
               </p>
             </div>
-            {/* No reboot badge here: the app shell already banners it across
-                the top of every page, and a duplicate only cost the hostname
-                the width it needs to be readable. */}
+            {/* No reboot badge: the app shell already shows it on every page. */}
           </div>
 
-          {/* public_ip first: `ip` is whatever the machine sees on its own
-              interfaces, which on a cloud host is a private address nobody can
-              point DNS at — and pointing DNS at it is what this field is
-              copied for. Falls back when the server could not determine one. */}
+          {/* public_ip first: `ip` is the interface address, often private on
+              cloud hosts and useless for DNS. Falls back when unknown. */}
           <Field
             icon={Network}
             label={t("info.ip")}
@@ -172,12 +133,8 @@ export async function ServerInfoCard({
             copyLabel={t("info.copyIp")}
           />
           <Field icon={Cpu} label={t("info.cpuModel")} value={facts.cpu?.model} />
-          {/* Architecture rides along with the kernel rather than taking a
-              tile of its own — it is one short token nobody looks up alone. */}
-          {/* Full width at the two-column step. Five tiles in a 2-col grid with
-              identity spanning two leaves this one alone on the last row with a
-              hole beside it — measured at 768px, where it was the only ragged
-              edge on the page. */}
+          {/* Architecture rides along with the kernel. Full width at the
+              two-column step so it is not alone beside a gap. */}
           <Field
             icon={Terminal}
             label={t("info.kernel")}
@@ -203,34 +160,11 @@ export async function ServerInfoCard({
         ) : null}
       </CardContent>
 
-      {/*
-       * "What is installed" and "is it running" are one question, so they share
-       * one footer — and it is a real CardFooter now, not a bordered div at the
-       * bottom of the content.
-       *
-       * The difference is not cosmetic. As a plain row the runtimes sat in the
-       * card's own padding with nothing but a hairline above them, so on a
-       * server whose services list comes back empty the right half vanished and
-       * the badges read as a line someone forgot to finish. A footer is a
-       * region: it keeps its shape whatever is in it.
-       */}
-      {/*
-       * gap-y-4 between the two groups, gap-2 inside each.
-       *
-       * This was gap-y-2, chosen when the status badges only dropped below on a
-       * narrow screen and the point was to keep them attached to the runtimes.
-       * With the database engines in the row it wraps at every width, so that
-       * 8px is now what separates two different kinds of thing — versions above,
-       * verdicts below — using the same gap that separates chips from their own
-       * neighbours. Reported as the badges looking stuck to the row above, and
-       * they were: nothing in the spacing said the line had changed subject.
-       */}
+      {/* Runtimes and service status share one footer, which keeps its shape when the
+          services list is empty. */}
       <CardFooter className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          {/* mr-1 and a full gap-2 between chips: at gap-1.5 the label sat as
-              close to the first badge as the badges sat to each other, so
-              "RUNTIMES" read as one more chip in the row rather than as its
-              heading. */}
+          {/* mr-1 plus gap-2 so the label reads as a heading, not another chip. */}
           <span className="mr-1 text-xs uppercase tracking-wide text-muted-foreground">
             {t("info.runtimes")}
           </span>
@@ -243,10 +177,7 @@ export async function ServerInfoCard({
                 </Badge>
               ))}
 
-              {/* Wearing the logos, so the engines read as one group inside the
-                  row rather than three more words in a list of runtime names —
-                  and as the same objects the databases page shows, which is
-                  where someone goes next after reading them. */}
+              {/* With logos, matching the databases page. */}
               {installedEngines.map((engine) => {
                 const name = tDatabases(`engines.${engine.engine}`);
                 return (
@@ -259,9 +190,8 @@ export async function ServerInfoCard({
                     className="gap-1.5 bg-card py-1 font-normal"
                   >
                     <EngineLogo engine={engine.engine} className="!h-4 w-auto max-w-16" />
-                    {/* The images are aria-hidden, so a wordmark chip has no
-                        name at all without this — and printing it beside a logo
-                        that already says it read "PostgreSQL PostgreSQL". */}
+                    {/* The logos are aria-hidden; a wordmark logo already shows
+                        the name, so it is screen-reader only there. */}
                     {engineLogo(engine.engine)?.wordmark ? (
                       <span className="sr-only">{name}</span>
                     ) : (
@@ -276,10 +206,8 @@ export async function ServerInfoCard({
                 );
               })}
 
-              {/* Said, not omitted. A row that quietly drops its database
-                  chips is the dashboard disagreeing with the databases page
-                  again — the failure this card was rebuilt to stop. Muted,
-                  because nothing is broken on the server. */}
+              {/* Stated, not omitted, so the row never contradicts the databases
+                  page. Muted: nothing is broken on the server. */}
               {enginesFailed ? (
                 <Badge
                   variant="outline"
@@ -295,10 +223,7 @@ export async function ServerInfoCard({
           )}
         </div>
 
-        {/* Two chips, one question. "Is the machine running" and "are the sites
-            on it healthy" belong on the same line — and putting site health
-            here rather than in a block of its own costs the dashboard no height
-            at all, which is the whole reason it is here. */}
+        {/* Site health and service health share one line. */}
         <div className="flex flex-wrap items-center gap-2">
           <SiteAttention findings={siteAttention} />
           <ServiceHealthLine health={health} down={down} t={t} />
@@ -308,29 +233,11 @@ export async function ServerInfoCard({
   );
 }
 
-/**
- * Whether the machine's services are running — in every case, including the
- * ones that used to render nothing.
- *
- * The old condition was `health?.total && !down.length`, which is silent on
- * three different situations that mean three different things: no permission to
- * read services, a server that reports none at all, and a server with something
- * down. Only the first of those deserves silence — we genuinely cannot say
- * anything. The other two were reported as the summary having disappeared.
- */
 function ServiceHealthLine({ health, down, t }) {
-  // No permission, or the request failed. Claiming anything here would be
-  // inventing a verdict out of a missing answer.
+  // No permission, or the request failed: there is no verdict to give.
   if (!health) return null;
 
-  /*
-   * A badge, not a sentence in the corner.
-   *
-   * As loose text on the far right it read as a caption that had drifted away
-   * from the runtimes beside it — two different kinds of thing sharing a row.
-   * Wearing the same pill shape as the runtime badges makes the footer one
-   * group of status chips, which is what it always was.
-   */
+  // A badge, matching the runtime chips beside it.
   if (down.length) {
     return (
       <Badge variant="destructive" className="gap-1.5 py-1 font-medium">
@@ -340,9 +247,7 @@ function ServiceHealthLine({ health, down, t }) {
     );
   }
 
-  // "All 0 services running" is not a reassurance — it is a sentence about
-  // nothing. Say what is actually true: the server reported none. Neutral, not
-  // red: nothing is broken, there is simply nothing to report.
+  // The server reported no services: say so, neutrally, not "All 0 running".
   if (!health.total) {
     return (
       <Badge variant="secondary" className="py-1 font-normal text-muted-foreground">

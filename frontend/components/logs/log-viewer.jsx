@@ -8,15 +8,10 @@ import { LogLine } from "@/components/logs/log-line";
 import { appended } from "@/lib/logs/appended";
 
 const ROW_HEIGHT = 24;
-// "Already at the bottom" needs slack: fractional scroll positions and the
-// last row's border mean an exact equality check never fires.
+// Fractional scroll positions and the last row's border defeat an exact bottom check.
 const BOTTOM_SLACK = 12;
 
-/**
- * The log surface. Virtualized so a 5 000-line buffer keeps ~30 nodes in the
- * DOM, with smart-sticky auto-scroll: follow only while the reader is already
- * at the bottom, and offer a way back when they're not.
- */
+// Virtualized; auto-scroll follows only while the reader is already at the newest end.
 export function LogViewer({
   lines,
   group,
@@ -28,27 +23,13 @@ export function LogViewer({
   onCopyLine,
   filtered,
   severity,
-  // Set only by the application log panel: its API says whether a filtered
-  // read reached the line cap. The server log endpoint has no equivalent, so
-  // this is undefined there and the wording stays as it was.
+  // The application log API reports whether a filtered read hit the line cap.
   searchCapped = false,
   loadingText = null,
   // The server's reason for a failed read, when it gave one.
   failedMessage = null,
   searchedLines,
-  /*
-   * Newest line at the TOP rather than the bottom.
-   *
-   * A console reads oldest-first because that is how a terminal appends, and
-   * that is still the default. But most visits to this screen are "what just
-   * happened", and answering that by scrolling to the far end of a 5000-line
-   * file is a strange way to lead with the answer.
-   *
-   * Reversing the list is not enough on its own: every "stick to the end"
-   * behaviour below anchors on the bottom, and with the newest line at the top
-   * the end to stick to is the top. So the anchor is chosen from this rather
-   * than hardcoded, and live tailing keeps working in both orders.
-   */
+  /* Every "stick to the end" behaviour anchors on the newest end chosen from this flag. */
   newestFirst = false,
 }) {
   const t = useTranslations("logs");
@@ -56,14 +37,11 @@ export function LogViewer({
   const [atBottom, setAtBottom] = useState(true);
   const [scrolled, setScrolled] = useState(false);
   const [unseen, setUnseen] = useState(0);
-  // The previous buffer and what it was filtered by, to tell new lines from a
-  // buffer that was simply replaced (another filter, another log).
+  // Tells appended lines from a replaced buffer (another filter, another log).
   const previous = useRef({ lines, key: `${group}|${term}|${severity}` });
 
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual's useVirtualizer is the same known false positive as useReactTable
-  // Reversed for rendering only. `lines` stays chronological everywhere else —
-  // the unseen counter, the follow logic and the parent all count appends, and
-  // an array that flipped underneath them would count them at the wrong end.
+  // Reversed for rendering only; `lines` stays chronological so append counting works.
   const rows = useMemo(
     () => (newestFirst ? [...lines].reverse() : lines),
     [lines, newestFirst],
@@ -95,13 +73,7 @@ export function LogViewer({
     if (bottom) setUnseen(0);
   }, [onAtBottomChange, newestFirst]);
 
-  // Appends land after paint; stick to the bottom only if the reader was
-  // already there, otherwise count what they haven't seen.
-  //
-  // Counted by what is new, not by how much longer the buffer got. The tail
-  // re-reads the last N lines, so once a busy log fills the window its length
-  // never changes again: the counter stuck at the first handful, and the lines
-  // slid up under a reader who had scrolled up to read them.
+  // Counted by what is new, not by length growth: a full tail window never changes length.
   useLayoutEffect(() => {
     const key = `${group}|${term}|${severity}`;
     const before = previous.current;
@@ -114,9 +86,7 @@ export function LogViewer({
       return;
     }
     setUnseen((n) => n + added);
-    // Keep the reader on the line they were reading. Oldest-first, the lines
-    // that fell off the top pulled everything up; newest-first, the new ones
-    // pushed everything down.
+    // Keep the reader on the line they were reading.
     const el = scrollRef.current;
     if (!el) return;
     if (newestFirst) el.scrollTop += added * ROW_HEIGHT;
@@ -129,8 +99,7 @@ export function LogViewer({
     setAtBottom(true);
   }, [group, term, severity, newestFirst, scrollToNewest]);
 
-  // A tab just switched to: its lines are on their way, and the previous
-  // tab's must not stand in for them.
+  // A tab just switched to: never show the previous tab's lines meanwhile.
   if (status === "loading") {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center gap-2 bg-console text-sm text-console-muted" role="status">
@@ -145,17 +114,12 @@ export function LogViewer({
   if (status === "missing") {
     return <Notice icon={FileWarning} title={t("missing.title")} body={t("missing.body")} />;
   }
-  // The read failed — say so rather than showing an empty console, which reads
-  // as "this file has nothing in it".
+  // A failed read must not look like an empty file.
   if (status === "failed") {
     return <Notice icon={TriangleAlert} title={t("readFailed.title")} body={failedMessage ?? t("readFailed.body")} />;
   }
   if (!lines.length) {
-    // "No matches" is two different answers and they were rendered as one. A
-    // search that read the whole file proves the text is not there; one that
-    // read the last few thousand lines proves nothing about the rest, and
-    // saying so is the difference between trusting the result and being
-    // misled by it.
+    // A capped search proves nothing about the rest of the file, so the wording differs.
     const noMatchBody =
       searchCapped && searchedLines
         ? t("noMatches.bodyCapped", { count: searchedLines })
@@ -175,8 +139,7 @@ export function LogViewer({
       <div
         ref={scrollRef}
         onScroll={onScroll}
-        // role=log + polite announcements only while following, so a screen
-        // reader isn't narrating a file the user is quietly scrolling.
+        // Announce politely only while following, not while the user scrolls.
         role="log"
         aria-live={following ? "polite" : "off"}
         aria-label={t("viewerLabel")}
@@ -203,10 +166,7 @@ export function LogViewer({
                 transform: `translateY(${item.start}px)`,
               }}
             >
-              {/* The line's place in the FILE, not its place on the screen.
-                  Reversed, row 0 holds the last line, and numbering it 1 says
-                  the newest line is the first line of the file — which is the
-                  one thing the gutter exists to tell you. */}
+              {/* The line's place in the file, not on screen. */}
               <LogLine
                 index={newestFirst ? rows.length - item.index : item.index + 1}
                 text={rows[item.index]}
@@ -223,10 +183,7 @@ export function LogViewer({
         </div>
       </div>
 
-      {/* Edge fades: content that continues past the viewport otherwise just
-          stops mid-line. Top fade whenever there's history above; bottom fade
-          only while scrolled up, so a followed tail isn't dimmed at the very
-          line you're watching. */}
+      {/* Bottom fade only while scrolled up, so a followed tail is not dimmed. */}
       <div
         aria-hidden="true"
         className={cn(

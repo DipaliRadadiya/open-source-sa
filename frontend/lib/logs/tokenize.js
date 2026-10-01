@@ -1,10 +1,5 @@
-// Splits a raw line into the three parts almost every log format shares:
-// when it happened, how bad it is, and what happened. Colouring those
-// separately is what turns a wall of identical text into something scannable —
-// without it, a file of pure INFO lines reads as one grey block.
-//
-// Conservative by design: if a part isn't confidently matched it stays in the
-// message, so nothing is ever mislabelled.
+// Splits a raw line into timestamp, level and message so each can be coloured.
+// Conservative: anything not confidently matched stays in the message.
 
 // 2026-07-29 04:16:22,301 | 2026-07-29T04:16:22 | Jul 29 04:37:16 | [29/Jul/2026:04:38:03 +0000]
 const TIMESTAMP = new RegExp(
@@ -34,9 +29,7 @@ const LEVEL_TO_KEY = {
   info: "info",
 };
 
-/**
- * @returns {{ time: string|null, level: string|null, levelKey: string|null, message: string }}
- */
+/** @returns {{ time: string|null, level: string|null, levelKey: string|null, message: string }} */
 export function tokenizeLine(line) {
   if (!line) return { time: null, level: null, levelKey: null, message: line ?? "" };
 

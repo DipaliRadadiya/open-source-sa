@@ -1,36 +1,14 @@
 import { useCallback, useState } from "react";
 import { apiMessage } from "@/lib/api/error-message";
 
-/**
- * The state a confirmation dialog needs: what it is confirming, whether the
- * write is in flight, and why the last attempt failed.
- *
- * Written because ~30 dialogs hand-rolled the first two and skipped the third.
- * Each one closed itself inside the `try` and only toasted in the `catch`, so a
- * failure left the same box on screen with no reason in it — a toast four
- * seconds from disappearing was the entire account of what went wrong. The
- * reports for this all say "the modal does not close".
- *
- * Staying open on failure is right: it keeps the retry and the context. What
- * was missing is the dialog admitting that is what it is doing.
- *
- *   const remove = useConfirmAction();
- *   ...
- *   <ConfirmDialog
- *     open={remove.isOpen}
- *     onOpenChange={remove.setOpen}
- *     pending={remove.pending}
- *     error={remove.error}
- *     onConfirm={() => remove.run(() => deleteThing(remove.target.id), { onDone })}
- *   />
- */
+// State for a confirmation dialog. On failure the dialog stays open with the error.
 export function useConfirmAction() {
   const [target, setTarget] = useState(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(null);
 
-  // Opening, closing and re-targeting all clear the last failure. A stale
-  // error under a different row's name is worse than none.
+  // Opening, closing and re-targeting all clear the last failure, so an error
+  // never shows under a different row's name.
   const open = useCallback((next) => {
     setTarget(next);
     setError(null);
@@ -41,11 +19,8 @@ export function useConfirmAction() {
     setError(null);
   }, []);
 
-  /*
-   * Radix calls this for Escape, the backdrop and Cancel alike, so one guard
-   * covers every way out. Refused while the write is in flight: closing then
-   * would leave the request running with nothing on screen owning it.
-   */
+  // Radix calls this for every way out. Refused while the write is in flight, or the
+  // request would run with nothing on screen owning it.
   const setOpen = useCallback(
     (next) => {
       if (pending) return;
@@ -60,14 +35,13 @@ export function useConfirmAction() {
       setError(null);
       try {
         const result = await fn();
-        // onDone before the close: it is where a caller re-reads the page, and
-        // closing first uncovered the row that had just been deleted.
+        // onDone (where callers re-read the page) before closing, so the dialog
+        // never uncovers stale state.
         await onDone?.(result);
         close();
         return true;
       } catch (cause) {
-        // Into the dialog, not a toast: it is the answer to a question the
-        // reader asked one second ago, and it belongs where they asked it.
+        // Shown in the dialog, not a toast.
         setError(apiMessage(cause, fallback));
         return false;
       } finally {

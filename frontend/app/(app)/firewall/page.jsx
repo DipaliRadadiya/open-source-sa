@@ -30,9 +30,8 @@ export default async function FirewallPage({ searchParams }) {
   if (!can(permissions, "firewall", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "firewall", "manage");
 
-  // Presets are only needed for the add form; a failure there must not take the
-  // page down, so they're fetched independently and default to an empty list.
-  // `cache()`d, so this is free here — the layout already fetched it.
+  // Presets are fetched independently and default to an empty list, so a failure
+  // cannot take the page down. `cache()`d: the layout already fetched it.
   const historyForEveryone = can(permissions, "activity_log", "view");
 
   const [
@@ -46,23 +45,19 @@ export default async function FirewallPage({ searchParams }) {
   ]);
 
 
-  // Before anything renders: a page past the end sends the reader to the
-  // last real page instead of painting an error for it.
+  // A page past the end redirects to the last real page instead of erroring.
   redirectOutOfRange("/firewall", sp, meta, rulesFailed);
   return (
     <div className="space-y-6">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
-      {/* "We couldn't ask" must never be drawn as "nothing is protecting this
-          server" — the same rule as fail2ban. */}
+      {/* A failed read must never render as "nothing is protecting this server". */}
       {failed || !data ? (
         <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />
       ) : (
         <NavTransitionProvider>
           <div className="space-y-4">
-            {/* Status leads, because every rule below it is inert while the
-                firewall is off, and a tidy list of allow-rules reads as
-                protection whether or not anything is enforcing them. */}
+            {/* Status first: every rule below is inert while the firewall is off. */}
             <FirewallStatusCard
               enabled={data.enabled}
               reference={data.status_reference ?? null}
@@ -71,8 +66,7 @@ export default async function FirewallPage({ searchParams }) {
               canManage={canManage}
             />
 
-            {/* One click per common rule, above the list: most rules have no
-                parameters, so most of the time the form should never open. */}
+            {/* One-click common rules above the list; most need no parameters. */}
             {canManage ? (
               <QuickAddCard
                 presets={presets}

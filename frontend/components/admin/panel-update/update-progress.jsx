@@ -19,13 +19,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-// Renders one run: a live progress bar while it works, then a success or
-// failure card. The parent owns polling and passes `reconnecting` when the
-// panel is mid-restart (503 / refused) — which is normal progress, not an error.
-//
-// All three states are the same card the resting page uses: a chip-and-headline
-// band, and where there is an action, its own footer strip. The button used to
-// hang off an `ml-14` that guessed the chip's width.
+// `reconnecting` (503 / refused while the panel restarts) is normal progress, not an error.
 function UpdateOutput({ run, defaultOpen = false }) {
   const t = useTranslations("panelUpdate");
 
@@ -140,8 +134,7 @@ export function UpdateProgress({ run, reconnecting = false, slow = false, dryRun
         {run.reason_title ? (
           <p className="text-sm text-muted-foreground">{run.reason_title}</p>
         ) : null}
-        {/* Whether the panel is still the thing you were using a minute ago is
-            the only question being asked here, so it is not muted. */}
+        {/* The key question on this screen, so it is not muted. */}
         <p className="text-sm">
           {run.reason === "target_not_newer"
             ? t("notChanged")
@@ -159,7 +152,6 @@ export function UpdateProgress({ run, reconnecting = false, slow = false, dryRun
     );
   }
 
-  // Running / pending.
   return (
     <Card className="gap-0 overflow-hidden py-0 shadow-sm">
       <CardContent className="space-y-3 px-5 py-4">
@@ -184,7 +176,6 @@ export function UpdateProgress({ run, reconnecting = false, slow = false, dryRun
           {reconnecting ? <WifiOff className="mt-0.5 size-3 shrink-0" /> : null}
           <span>{reconnecting ? t("reconnecting") : slow ? t("slow") : t("downtimeNote")}</span>
         </p>
-        {/* The panel goes dark for minutes — reassure that walking away is fine. */}
         <p className="text-xs text-muted-foreground">{t("safeToLeave")}</p>
         <UpdateOutput run={run} />
       </CardContent>

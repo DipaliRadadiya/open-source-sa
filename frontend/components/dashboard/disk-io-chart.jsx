@@ -10,17 +10,7 @@ import {
   timeSeriesOption,
 } from "@/lib/charts/time-series-option";
 
-/**
- * Read/write throughput, with the op counts in the header rather than on the
- * plot. They answer different questions — throughput says "saturated", IOPS
- * says "thrashing", and a disk can be pinned at 100% busy while moving very
- * few megabytes — but they are different units and would need a second axis
- * nobody reads correctly.
- *
- * Deliberately its own card, not a footnote under the network chart: while it
- * lived there, "Disk" meant I/O in one place and free space in the stat card
- * above, which is two meanings for one word on one screen.
- */
+// Op counts (IOPS) sit in the header rather than on a second axis.
 /** Resolved from globals.css at runtime; never restated as literals here. */
 const TOKENS = [
   "chart-1",
@@ -41,8 +31,7 @@ export function DiskIoChart({ series: chartSeries, metrics, timeZone, stale }) {
   const ops = (value) => format.number(Number(value ?? 0));
   const tokens = useChartTokens(TOKENS);
 
-  // Same colours as the network card — down is chart-2, up is chart-1 — so the
-  // two I/O charts can be read with one set of eyes.
+  // Same colours as the network card: down is chart-2, up is chart-1.
   const series = [
     { key: "disk_read", label: t("charts.disk.read"), token: "chart-2", kind: "area" },
     { key: "disk_write", label: t("charts.disk.write"), token: "chart-1", kind: "area" },
@@ -79,9 +68,7 @@ export function DiskIoChart({ series: chartSeries, metrics, timeZone, stale }) {
       stale={stale}
       badges={
         <>
-          {/* The op count rides along as `note` — same slot, same size as the
-              rest of the pill. It was text-[10px] at 80% opacity, which is an
-              off-scale size dimmed again on top of an already-tinted colour. */}
+          {/* The op count rides along as the pill's `note`. */}
           <ChartPill
             dotClassName="bg-chart-2"
             label={t("charts.disk.read")}

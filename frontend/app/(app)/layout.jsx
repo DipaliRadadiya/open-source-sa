@@ -30,15 +30,7 @@ import { ErrorCopy } from "@/components/sections/error-copy";
 
 export const dynamic = "force-dynamic";
 
-/**
- * This layout sits above every error.jsx in the panel, so a throw here escapes
- * to Next's own unstyled error page — which is exactly what a rate-limited
- * session looked like. Caught by identity and answered with a screen that says
- * so; anything else still reaches the boundary.
- *
- * The session must be resolved before the redirect, but the other three are
- * independent of each other, so they go together rather than in a waterfall.
- */
+// A throw here reaches Next's unstyled error page; rate-limit errors get their own screen.
 export default async function AppLayout({ children }) {
   let user;
   try {
@@ -70,12 +62,9 @@ export default async function AppLayout({ children }) {
       <TooltipProvider delayDuration={300}>
       <ErrorCopy />
       <RememberPath />
-        {/* Panel-wide, not settings-only. Any screen with its own Save can
-            lose an edit to a sidebar click, and every one of them did. */}
+        {/* Panel-wide: any screen with a Save can lose an edit to a sidebar click. */}
         <UnsavedProvider>
-        {/* Above the shell, not inside a page: a restart takes the sidebar and
-            header down with everything else, so the curtain has to cover them
-            too. */}
+        {/* Above the shell so the restart curtain covers sidebar and header too. */}
         <ServerRestartProvider>
         <PanelFocus />
         <PageCrumbProvider>
@@ -83,15 +72,11 @@ export default async function AppLayout({ children }) {
             <SidebarProvider style={{ "--sidebar-width-icon": "3.5rem" }}>
               <SidebarAutoCollapse />
               <AppSidebar items={permissions} />
-              {/* min-w-0: without it this flex child keeps min-width:auto and wide
-              content (tables/charts) pushes the page into horizontal overflow. */}
+              {/* min-w-0: otherwise wide tables/charts push the page into horizontal overflow. */}
               <SidebarInset className="min-w-0">
-                {/* Banner + header ride together as one sticky cluster, so while
-                impersonating the indicator and its escape never scroll away. */}
+                {/* One sticky cluster so the impersonation banner never scrolls away. */}
                 <div className="sticky top-0 z-20">
-                  {/* Publishes this cluster's measured height as `--app-chrome`
-                      so anything else that sticks can clear it. Its height is
-                      conditional — see the component. */}
+                  {/* Publishes this cluster's height as `--app-chrome` for other sticky elements. */}
                   <AppChromeHeight />
                   {impersonatedBy ? (
                     <ImpersonationBanner
@@ -105,17 +90,7 @@ export default async function AppLayout({ children }) {
                     />
                   ) : null}
                   <AppHeader impersonating={!!impersonatedBy} />
-                  {/* Its own band under the header rather than a line of text
-                      above the h1: the trail is chrome, and sharing the page's
-                      background made it read as a stray first line of the
-                      heading. Full-bleed so the rule actually divides, with the
-                      crumb held to the content column so it still lines up.
-
-                      Inside the sticky cluster, not `top-16` in <main>: the
-                      banners above it are conditional, so any fixed offset is
-                      wrong the moment someone is impersonating. Frosted rather
-                      than a flat tint because a translucent band would show the
-                      page scrolling through it. */}
+                  {/* Inside the sticky cluster, not `top-16`: the banners above are conditional. */}
                   <div className="border-b bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/70">
                     <div className="mx-auto w-full max-w-screen-xl px-4 py-2.5 sm:px-6 lg:px-8">
                       <AppBreadcrumb items={permissions} />

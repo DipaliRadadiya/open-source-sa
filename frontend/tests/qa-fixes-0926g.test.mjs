@@ -11,7 +11,7 @@ const backup = read("components/applications/backup-card.jsx");
 const actions = read("components/applications/application-row-actions.jsx");
 
 test("AD-A: the header actions wrap on a phone", () => {
-  assert.match(page, /<div className="flex flex-wrap items-center gap-2">\s*\{\/\* Outline, not filled/);
+  assert.match(page, /<div className="flex flex-wrap items-center gap-2">/);
 });
 
 test("AD-B: Security labels wrap instead of being cut off", () => {

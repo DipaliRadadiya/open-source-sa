@@ -1,9 +1,10 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { getTranslations } from "next-intl/server";
 import { CircleCheck, CircleAlert } from "lucide-react";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getFail2ban } from "@/lib/fail2ban/get-fail2ban";
+import { getServerCapabilities } from "@/lib/applications/get-applications";
 import { InstallPrompt } from "@/components/fail2ban/install-prompt";
 import { ProtectionSection } from "@/components/fail2ban/protection-section";
 import { BanRulesCard } from "@/components/fail2ban/ban-rules-card";
@@ -32,50 +33,44 @@ export default async function Fail2banPage() {
 
   if (!can(permissions, "fail2ban", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "fail2ban", "manage");
-  // One fail2ban log for all jails, per the API docs — so this is a link to the
-  // log, not to a filtered view of one ban. Hidden entirely without the Logs
-  // permission: a link that lands on a redirect is worse than no link.
+  // fail2ban has one log for all jails. Hidden without Logs permission, since
+  // the link would only redirect.
   const logHref = can(permissions, "logs", "view") ? "/logs?source=fail2ban" : null;
 
-  const { data, failed, status, failure, message } = await getFail2ban();
+  // The server's own address: a ban on it is refused, as it would lock out the panel.
+  const [{ data, failed, status, failure, message }, { serverIp }] = await Promise.all([
+    getFail2ban(),
+    getServerCapabilities(),
+  ]);
 
   return (
     <div className="space-y-6">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
-      {/* "We couldn't ask" must never render as "you have no protection". */}
+      {/* A failed read must never render as "no protection". */}
       {failed || !data ? (
         <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />
       ) : !data.installed ? (
         <>
-          {/* Only while the server says an install is running. apt gets ten
-              minutes, so the page has to keep asking — and `/fail2ban` is on
-              the API's polling allowance, so this costs nothing. */}
+          {/* Polls while installing (apt can take minutes); `/fail2ban` is on the
+              API's polling allowance. */}
           {data.install?.status === "installing" ? <AutoRefresh intervalMs={4000} /> : null}
           <InstallPrompt canManage={canManage} install={data.install ?? null} />
         </>
       ) : (
         <div className="space-y-4">
-          {/* Bans expire on their own and new ones arrive without us asking,
-              so a page rendered once is wrong within the minute. */}
+          {/* Bans expire and arrive on their own, so keep the page fresh. */}
           <AutoRefresh intervalMs={10000} />
 
-          {/* Stopped is an interruption and gets the full width. Running is a
-              reassurance and rides beside the tabs. */}
           {!data.running ? <StoppedAlert t={t} /> : null}
 
-          {/* Two tabs, because this page answers two unrelated questions: what
-              is happening to my server right now, and what did I configure.
-              Both at once was five blocks of equal weight and nowhere to look
-              first. */}
           <BrowserIpProvider source="fail2ban">
           <Fail2banTabs
             status={data.running ? <RunningBadge data={data} t={t} /> : null}
             ignoreIps={data.settings?.ignore_ips ?? []}
             live={
-              // One client component for the setup card, the switches and the
-              // ban list: the ban list's visibility follows the switches, so
-              // they have to share the state that says what you just asked for.
+              // One client component: the ban list's visibility follows the switches, so
+              // they share state.
               <ProtectionSection
                 jails={data.jails}
                 settings={data.settings}
@@ -83,13 +78,12 @@ export default async function Fail2banPage() {
                 ignoreIps={data.settings?.ignore_ips ?? []}
                 canManage={canManage}
                 logHref={logHref}
+                serverIp={serverIp}
               />
             }
             settings={
               data.settings ? (
-                // No items-start: letting the grid stretch both cards to the
-                // taller one is what actually squares the columns. Chasing
-                // equal content heights never converges.
+                // No items-start: stretching both cards to the taller one squares the columns.
                 <div className="grid gap-4 lg:grid-cols-2">
                   <BanRulesCard
                     settings={data.settings}
@@ -111,11 +105,7 @@ export default async function Fail2banPage() {
   );
 }
 
-/**
- * Installed but stopped is the dangerous state: the jails still say "enabled",
- * so the page would otherwise read as protected while nothing is watching. It
- * gets said loudly, with the way to fix it — the service lives on Services.
- */
+// Installed but stopped: jails still read "enabled" while nothing is watching.
 function StoppedAlert({ t }) {
   return (
     <div

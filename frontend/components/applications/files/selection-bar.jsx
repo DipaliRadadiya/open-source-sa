@@ -5,24 +5,15 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { BULK_PATH_LIMIT } from "@/lib/api/files";
 import { dirname } from "@/lib/files/path-helpers";
 
-/**
- * One action bar for whatever is selected, shown only once something is.
- *
- * Every action that cannot apply is DISABLED WITH A REASON rather than hidden —
- * a control that disappears teaches nothing, while "Compress needs everything
- * in one folder" teaches the rule the first time you hit it. Rename and Edit
- * are absent entirely: they are single-item actions, and cPanel's habit of
- * silently applying them to the first file in a selection is a trap, not a
- * feature.
- */
+// Inapplicable actions are disabled with a reason, not hidden. Rename and Edit are
+// absent: they must not silently apply to the first selected file.
 export function SelectionBar({ selected, onClear, onAction, canManage }) {
   const t = useTranslations("applications.files");
   if (selected.length === 0) return null;
 
   const overLimit = selected.length > BULK_PATH_LIMIT;
-  // `zip` runs from the sources' folder, so a selection spanning folders has no
-  // folder to run from. Checked here so the button says why before it is
-  // clicked, rather than the server answering 422 afterwards.
+  // `zip` runs from the sources' folder, so a selection spanning folders cannot be
+  // compressed; checked here so the button explains before the server returns 422.
   const spansFolders = new Set(selected.map((path) => dirname(path))).size > 1;
 
   const blocked = !canManage

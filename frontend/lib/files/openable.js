@@ -1,14 +1,6 @@
-// Extensions the panel has nothing to show for. Images open in the preview
-// dialog and everything else goes to the text editor, so this list is only
-// the files neither can render: archives, media, compiled output and the
-// office/PDF formats that are containers rather than text.
-//
-// Blocking by extension rather than trying to detect text: the listing only
-// ever has a filename, and the editor's server-side "not text" refusal is
-// still there for the unknown ones. This just stops the round-trip for the
-// cases nobody needs to make.
+// By extension (the listing only has a filename); the server still refuses non-text files.
 const UNOPENABLE = new Set([
-  // archives — .tar.gz reads as "gz", which is why plain "tar" is here too
+  // archives (.tar.gz reads as "gz")
   "zip", "tar", "gz", "tgz", "bz2", "tbz", "xz", "zst", "rar", "7z", "lz", "lzma",
   // documents that are containers, not text
   "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "odt", "ods", "odp",
@@ -33,17 +25,11 @@ function extensionOf(name) {
   return (i === -1 ? base : base.slice(i + 1)).toLowerCase();
 }
 
-/**
- * Whether clicking this name leads anywhere. A file the panel cannot open is
- * rendered as plain text instead of a link — offering the click and then
- * answering "this file isn't text" is a worse answer than not offering it.
- * Downloading and extracting are still on the row's menu.
- */
+// Unopenable files render as plain text; download and extract stay in the row menu.
 export function canOpenFile(name) {
   return !UNOPENABLE.has(extensionOf(name));
 }
 
-// The editor's ceiling, the same number as the backend's FileBrowser::MAX_BYTES.
-// Known from the listing, so a file past it goes straight to the Download
-// screen instead of asking the server to refuse it.
+// Keep in step with the backend's FileBrowser::MAX_BYTES; larger files go
+// straight to the Download screen.
 export const EDITOR_MAX_BYTES = 5 * 1024 * 1024;

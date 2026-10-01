@@ -142,8 +142,8 @@ test("no tab opens until the phpMyAdmin URL exists (Krishna, 2026-09-29)", () =>
   // Straight onto phpMyAdmin — an empty tab navigated later still showed about:blank.
   assert.doesNotMatch(button, /openBlankTab|paintPlaceholder|location\.replace/);
   assert.ok(firstAwait !== -1 && openTab > firstAwait, "the tab must open only once the URL is known");
-  // Refused → a click the browser will honour, never a silent failure.
-  assert.match(body, /toast\(t\("linkReady"\), \{[\s\S]{0,120}label: t\("openAnyway"\)/);
+  // No fallback toast with a second click (Krishna, 2026-09-30).
+  assert.doesNotMatch(body, /linkReady|openAnyway/);
   // The button says what it is waiting for.
   assert.match(button, /const label = opening \? t\("signingShort"\)/);
 });

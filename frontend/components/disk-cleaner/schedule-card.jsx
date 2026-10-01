@@ -33,22 +33,11 @@ import {
 
 const FREQUENCIES = ["hourly", "daily", "weekly", "monthly"];
 
-/**
- * Unattended cleanup: a summary on the page, the settings in a dialog.
- *
- * It expanded inline at first, which meant the card grew inside a two-column
- * row and left a tall hole beside it — and any fix for that (stretching the
- * neighbour, moving it to its own row) traded one empty area for another. A
- * dialog can't distort the page it opens from, and the settings get more room
- * than a half-width column ever had.
- *
- * Only `safe` categories are offered. The backend enforces that too, but a
- * control that exists to be rejected is worse than no control.
- */
+// Only `safe` categories are offered; the backend enforces the same.
 export function ScheduleCard({ schedule, categories, canManage }) {
   const t = useTranslations("diskCleaner");
-  // The hour is rendered in the reader's clock convention (AM/PM vs 24h) but
-  // never their timezone — same rule as a backup's schedule time.
+  // The hour uses the reader's clock convention (AM/PM vs 24h) but never their
+  // timezone, same as a backup's schedule time.
   const format = useFormatter();
   const { refreshAndWait } = useRefresh();
   const [open, setOpen] = useState(false);
@@ -62,8 +51,7 @@ export function ScheduleCard({ schedule, categories, canManage }) {
     schedule?.threshold_percent != null ? String(schedule.threshold_percent) : "",
   );
 
-  // Reopening after a cancel should show what is actually saved, not whatever
-  // was half-typed last time.
+  // Reopening after a cancel shows what is saved, not the last half-typed state.
   function reset() {
     setEnabled(Boolean(schedule?.enabled));
     setFrequency(schedule?.frequency ?? "weekly");
@@ -77,22 +65,8 @@ export function ScheduleCard({ schedule, categories, canManage }) {
     if (thresholdInvalid) return;
     setPending(true);
     try {
-      /*
-       * Turning it off with nothing ticked DELETES the schedule instead of
-       * saving an empty one.
-       *
-       * The API requires at least one category on every save — deliberately, so
-       * that an enabled schedule can never be a cron entry that runs on time and
-       * cleans nothing. But that rule applies to the `enabled: false` save too,
-       * so switching automatic cleanup off while no boxes were ticked sent
-       * `categories: []` and came back 422: the panel refusing to let someone
-       * turn off a feature they had turned on.
-       *
-       * DELETE is the endpoint for exactly this and has existed all along — it
-       * just had no caller. With categories still ticked the profile is kept and
-       * merely paused, which is worth preserving, so only the empty case removes
-       * it.
-       */
+      // Off with nothing ticked DELETES the schedule: the API requires a category on
+      // every save. With categories ticked it is only paused.
       if (!enabled && picked.size === 0) {
         await deleteCleanerSchedule();
         await refreshAndWait();
@@ -105,12 +79,10 @@ export function ScheduleCard({ schedule, categories, canManage }) {
         enabled,
         frequency,
         categories: [...picked],
-        // Empty means "always", which the API expresses as null — an empty
-        // string would fail validation for something the user never typed.
+        // Empty means "always", which the API expresses as null.
         threshold_percent: threshold === "" ? null : Number(threshold),
-        // Confirmed with the backend team (2026-08-01): `notify` is an unused
-        // column. Nothing reads it, so it gets no control — sent back as stored
-        // purely so this form never rewrites a field it does not own.
+        // `notify` is an unused column; sent back as stored so this form never
+        // rewrites a field it does not own.
         notify: schedule?.notify ?? false,
       });
       await refreshAndWait();
@@ -130,9 +102,7 @@ export function ScheduleCard({ schedule, categories, canManage }) {
       })
     : t("schedule.summaryOff");
 
-  // Names, not a count: "1 item" tells you nothing about whether the right
-  // thing is scheduled. The threshold joins it because "over 80%" is the other
-  // half of when this fires.
+  // Names, not a count; the threshold is the other half of when this fires.
   const scheduledLabels = (schedule?.categories ?? [])
     .map((key) => categories.find((c) => c.key === key)?.label)
     .filter(Boolean);
@@ -142,18 +112,7 @@ export function ScheduleCard({ schedule, categories, canManage }) {
       ? t("schedule.overThreshold", { percent: schedule.threshold_percent })
       : t("schedule.everyTime");
 
-  /*
-   * When the next clean lands, at what hour, on whose clock.
-   *
-   * "Runs every week" was the whole promise this card made, and it hides an
-   * hour the form never asks for. The API is the only source for it — the
-   * frequency's cron expression lives on the backend and a copy here would
-   * drift the first time it moves.
-   *
-   * The zone is named because the hour is not converted: 03:00 is 03:00 in
-   * `timezone`, which is the project's clock and not the reader's. Without the
-   * label a bare 3:00 AM reads as local to everyone who is not on it.
-   */
+  // Only the API knows the hour; the zone is named because it is the project's, not the reader's.
   const nextClockTime = clockTimeOf(schedule?.next_run_at);
   const nextRunLine =
     schedule?.enabled && schedule?.next_run_at_human
@@ -188,9 +147,7 @@ export function ScheduleCard({ schedule, categories, canManage }) {
             <p className="text-lg font-semibold leading-none tracking-tight">{summary}</p>
           </div>
 
-          {/* One badge per item. Run together in a sentence the names blurred
-              into each other — "Temporary files, Service logs" reads as one
-              thing at 12px. */}
+          {/* One badge per item; names in a sentence blur together at 12px. */}
           {schedule?.enabled ? (
             <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
               {scheduledLabels.length ? (
@@ -210,16 +167,14 @@ export function ScheduleCard({ schedule, categories, canManage }) {
 
           <div className="mt-2 flex items-center justify-between gap-3">
             <div className="min-w-0">
-              {/* "Has it ever actually run" is the question that catches a
-                  schedule which looks on but never fires. */}
+              {/* Shows whether a schedule that looks on has ever fired. */}
               <p className="truncate text-xs text-muted-foreground">
                 {schedule?.last_run_at_human
                   ? t("schedule.lastRun", { when: schedule.last_run_at_human })
                   : t("schedule.neverRun")}
               </p>
-              {/* Null while the cleaner is off, because the API declines to
-                  name a run that will not happen — the card must not invent
-                  one either. */}
+              {/* Null while the cleaner is off: the API names no run that will
+                  not happen, and the card must not invent one. */}
               {nextRunLine ? (
                 <p className="truncate text-xs text-muted-foreground">{nextRunLine}</p>
               ) : null}
@@ -257,10 +212,8 @@ export function ScheduleCard({ schedule, categories, canManage }) {
             <ReasonTooltip
               reason={enabled && picked.size === 0 ? t("schedule.pickSomething") : null}
             >
-              {/* Disabled is not feedback: the dialog stays open while the
-                  write happens, so a button that only greys out reads as a
-                  click that did not land. Same spinner-and-label as every
-                  other save in the panel. */}
+              {/* Spinner and label while saving: the dialog stays open, so a
+                  greyed-out button alone reads as a missed click. */}
               <Button onClick={save} disabled={pending || (enabled && picked.size === 0) || thresholdInvalid}>
                 {pending ? <Loader2 className="size-4 animate-spin" /> : null}
                 {pending ? t("schedule.saving") : t("schedule.save")}
@@ -277,12 +230,8 @@ export function ScheduleCard({ schedule, categories, canManage }) {
             <Switch id="cleaner-enabled" checked={enabled} onCheckedChange={setEnabled} />
           </div>
 
-          {/* Said out loud, not only on hover.
-              Every control below this switch is disabled while it is off, and
-              the reason lived in a tooltip — so the dialog looked broken: you
-              click the frequency, the checkboxes, nothing responds, and nothing
-              on screen says why. Radix tooltips never open on touch either, so
-              on a phone that explanation could not be reached at all. */}
+          {/* Stated inline, not only in a tooltip: the controls below are
+              disabled while off, and Radix tooltips never open on touch. */}
           {!enabled ? (
             <p className="-mt-3 text-xs text-muted-foreground">
               {t("schedule.turnOnFirst")}
@@ -321,17 +270,13 @@ export function ScheduleCard({ schedule, categories, canManage }) {
                   value={threshold}
                   disabled={!enabled}
                   disabledReason={t("schedule.turnOnFirst")}
-                  // An example of the number to type, not a word. The old
-                  // placeholder read "Always", which argued with the label
-                  // directly above it — "run when usage is above Always".
+                  // An example number, not a word: it reads under the label.
                   placeholder={t("schedule.thresholdPlaceholder")}
                   onChange={(e) => setThreshold(clampPercent(e.target.value))}
                   aria-invalid={thresholdInvalid || undefined}
                   aria-describedby={thresholdInvalid ? "cleaner-threshold-error" : undefined}
                 />
-                {/* Always rendered, not only once something is typed. The unit
-                    is the one thing an empty box has to communicate, and it
-                    used to appear after the moment it was needed. */}
+                {/* Always rendered: the unit is what an empty box must show. */}
                 <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted-foreground">
                   %
                 </span>
@@ -349,9 +294,7 @@ export function ScheduleCard({ schedule, categories, canManage }) {
           <div className={cn("space-y-2", !enabled && "opacity-50")}>
             <Label className="flex flex-wrap items-center justify-between gap-2">
               <span>{t("schedule.whatToClean")}</span>
-              {/* The other hover-only reason. Save is disabled until something
-                  is ticked, and a disabled button with its explanation behind a
-                  tooltip reads as a form silently refusing to submit. */}
+              {/* Inline, not in a tooltip: Save stays disabled until something is ticked. */}
               {enabled && picked.size === 0 ? (
                 <span className="font-normal text-warning">{t("schedule.pickSomething")}</span>
               ) : null}

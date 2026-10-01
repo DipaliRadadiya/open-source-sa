@@ -15,8 +15,7 @@ export async function generateMetadata() {
   return { title: t("title") };
 }
 
-// Needs-attention first: failures, then warnings, then the passing checks —
-// so the eye lands on what to fix, mirroring the setup checklist.
+// Failures, then warnings, then passing checks, mirroring the setup checklist.
 const RANK = { fail: 0, warn: 1, pass: 2 };
 
 export default async function AdminDoctorPage() {
@@ -25,15 +24,14 @@ export default async function AdminDoctorPage() {
 
   const statusLabels = { pass: t("statusPass"), warn: t("statusWarn"), fail: t("statusFail") };
 
-  // Ordered once, reused for both the rendered list and the copyable report.
   const sorted = doctor
     ? [...doctor.checks].sort((a, b) => (RANK[a.status] ?? 1) - (RANK[b.status] ?? 1))
     : [];
   const attention = sorted.filter((c) => c.status !== "pass");
   const passed = sorted.filter((c) => c.status === "pass");
 
-  // Plain-text report for pasting to support: summary, then every check with its
-  // evidence and (when not passing) its fix.
+  // Plain-text report for support: summary, then each check with evidence and,
+  // when not passing, its fix.
   const report = doctor
     ? [
         `${t("title")} — ${doctor.healthy ? t("healthy") : t("unhealthy", { count: doctor.failed })}`,
@@ -56,9 +54,8 @@ export default async function AdminDoctorPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <PageHeader title={t("title")} subtitle={t("subtitle")} />
         {doctor ? (
-          // flex-wrap, not shrink-0: both labels are verbs and grow in other
-          // locales ("रिपोर्ट कॉपी करें" / "फिर से जाँचें"), and a group that
-          // can neither shrink nor wrap pushed 20px off a 320px screen.
+          // flex-wrap, not shrink-0: both labels grow in other locales and
+          // would overflow a 320px screen.
           <div className="flex flex-wrap gap-2">
             <CopyReportButton text={report} />
             <RecheckButton />
@@ -74,9 +71,7 @@ export default async function AdminDoctorPage() {
         />
       ) : (
         <>
-          {/* Summary: a NEUTRAL overview surface so it reads as the header of
-              the list, not as another (tinted) check card. Status is carried by
-              the coloured icon, not by tinting the whole card. */}
+          {/* Neutral surface so it reads as the list header; status is carried by the icon. */}
           <div className="flex flex-wrap items-center gap-4 rounded-2xl border bg-muted/40 p-4">
             <span
               className={cn(
@@ -105,8 +100,6 @@ export default async function AdminDoctorPage() {
                   failed: doctor.failed,
                 })}
               </p>
-              {/* Say plainly what the two states mean — a failure blocks the
-                  panel, a warning doesn't. */}
               {!doctor.healthy ? (
                 <p className="mt-1 text-sm text-muted-foreground">{t("blockingNote")}</p>
               ) : null}
@@ -117,8 +110,6 @@ export default async function AdminDoctorPage() {
             {attention.map((check) => (
               <CheckRow key={check.key} check={check} labels={statusLabels} />
             ))}
-            {/* Passing checks sink under a quiet divider so failures and
-                warnings own the top of the list. */}
             {passed.length && attention.length ? (
               <div className="flex items-center gap-3 pt-2">
                 <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">

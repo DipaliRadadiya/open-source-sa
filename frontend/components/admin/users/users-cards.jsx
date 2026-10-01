@@ -5,16 +5,7 @@ import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-t
 import { UserRowActions } from "@/components/admin/users/user-row-actions";
 import { initials } from "@/lib/format/initials";
 
-/**
- * Panel users on a narrow screen.
- *
- * Six columns, and the two that matter — whether the account is an admin and
- * which roles it holds — were the ones off the right edge, along with the menu
- * to change either.
- *
- * Roles are not capped here the way they are in the table: a card wraps, so
- * "+2" would hide names for no gain.
- */
+// Roles are not capped here: a card wraps, so "+2" would only hide names.
 export function UsersCards({ users, roles = [], currentUserId }) {
   const t = useTranslations("users");
 

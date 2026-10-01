@@ -1,15 +1,7 @@
 import { parseApiWallClock } from "../format/api-date.js";
 
-/*
- * Mirrors `StaleBackupReaper::isStale`, the rule `POST /backups/{id}/clear`
- * enforces. Offering Clear before this point only earns a 422 ("may still be
- * running") — it was shown one second into a healthy run.
- *
- * The two windows are the backend's config defaults
- * (`no_heartbeat_stale_seconds`, and `upload_stall_seconds` plus the job's
- * unique-lock grace). Timestamps are UTC wall clock — `config/app.php` pins the
- * app timezone — so they are read as UTC, not in the browser's zone.
- */
+// Keep in step with `StaleBackupReaper::isStale` (`POST /backups/{id}/clear` enforces it).
+// Windows are the backend defaults; timestamps are UTC wall clock.
 const NO_HEARTBEAT_STALE_MS = 3900 * 1000;
 const HEARTBEAT_GRACE_MS = (1200 + 300) * 1000;
 

@@ -113,7 +113,7 @@ test("one administrator signs straight in; none or several still pick", () => {
    */
   assert.match(hook, /if \(admins\.length === 1\)/);
   assert.match(hook, /createMagicLogin\(appId, admins\[0\]\.id\)/);
-  assert.match(hook, /launchMagicLogin\(session, t\)/);
+  assert.match(hook, /launchMagicLogin\(session\)/);
   assert.match(dialog, /admins\.length === 0 \?/);
 });
 
@@ -132,11 +132,11 @@ test("no tab opens until the login link exists (Krishna, 2026-09-29)", () => {
   for (const [name, source] of [["hook", hook], ["dialog", dialog]]) {
     const body = code(source);
     assert.doesNotMatch(body, /openBlankTab|paintPlaceholder|discardTab/, `${name} still opens a blank tab`);
-    assert.ok(body.lastIndexOf("launchMagicLogin(session, t)") > body.indexOf("await createMagicLogin"), `${name} opens before the link is ready`);
+    assert.ok(body.lastIndexOf("launchMagicLogin(session)") > body.indexOf("await createMagicLogin"), `${name} opens before the link is ready`);
   }
-  // When the browser no longer counts the click as permission, a button that
-  // is a fresh click — never a silent failure.
-  assert.match(hook, /if \(openMagicLogin\(session\)\) return;[\s\S]{0,200}action: \{\s*label: t\("openAdmin"\)/);
+  // No fallback toast with a second "Open" button (Krishna, 2026-09-30).
+  assert.doesNotMatch(hook, /openAdmin|linkReady/);
+  assert.doesNotMatch(newTab, /canOpenTab|userActivation/);
   // Krishna 2026-09-29 (second report): not even an empty tab filled in later —
   // the form posts straight into a new tab.
   assert.match(newTab, /form\.target = "_blank"/);
@@ -159,7 +159,7 @@ test("every string exists in every locale", () => {
     // "loading" is gone: the dialog no longer waits for the list — it arrives
     // already fetched, and the spinner moved to the button that fetched it.
     "action", "title", "subtitle", "signIn", "cancel", "none",
-    "listFailed", "failed", "popupBlocked", "redirecting", "auditNote", "linkReady", "openAdmin", "fetchingUsers",
+    "listFailed", "failed", "redirecting", "auditNote", "fetchingUsers",
   ];
 
   for (const locale of locales) {

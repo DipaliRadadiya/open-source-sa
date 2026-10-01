@@ -44,17 +44,15 @@ for (const { label, file } of PAGES) {
   });
 }
 
-test("the state that made this a bug is still held in the Node card", () => {
+test("the Node card still holds per-version state, so the key still matters", () => {
   /*
-   * If npm stops being local state — derived from props instead — the key is
-   * no longer load-bearing for that field and this suite is over-claiming.
-   * Better to be told than to keep asserting something that has quietly become
-   * decorative.
+   * npm used to be local state seeded from props; it is derived now (30 Sep:
+   * the seeded copy showed "npm 12.1.0 → 12.1.0" after an update). The key is
+   * still load-bearing for what IS local — an open Remove confirm or a running
+   * action must not follow you to another version.
    */
   const source = fs.readFileSync(path.join(root, "components/node/version-summary.jsx"), "utf8");
-  assert.match(
-    source,
-    /useState\(version\.npm_version/,
-    "node version-summary no longer seeds npm from props — re-check whether the key on the page is still needed",
-  );
+  assert.match(source, /const npm = version\.npm_version \?\? null;/);
+  assert.match(source, /const \[confirming, setConfirming\] = useState\(false\);/);
+  assert.match(source, /const \[running, setRunning\] = useState\(null\);/);
 });

@@ -40,61 +40,33 @@ export default async function DashboardPage() {
     ? setupResult.setup.components.filter((c) => c.recommended && c.state !== "installed").length
     : 0;
 
-  // Dashboard is permission-gated; without `view` the page stays empty rather
-  // than redirecting (it's the panel's landing route — a redirect would loop).
+  // Without `view` the page stays empty rather than redirecting: it is the
+  // landing route, so a redirect would loop.
   const allowed = can(permissions, "dashboard", "view");
-  // Stopping a process is a write, so it needs `manage`, not `view`.
   const canManage = can(permissions, "dashboard", "manage");
-  // The landing route is the one screen a first-time user is guaranteed to
-  // see, and until now it was the same monitoring page whether the server had
-  // fifty sites or none. Asking how many there are is what lets it lead with
-  // the thing they came for instead of an idle machine's vital signs.
+  // Needed to lead with the "create an application" invitation on an empty server.
   const canViewApplications = can(permissions, "application", "view");
-  /*
-   * The database engines come from the databases API, not from `/server/facts`.
-   *
-   * `facts.runtimes` answers "which databases" by running `mysql --version`,
-   * which on a MariaDB box prints "mysql Ver 15.1 Distrib 10.11.14-MariaDB" —
-   * so the dashboard labelled the engine `mysql` and gave it 15.1, the version
-   * of the client tool. MongoDB and PostgreSQL were never asked about at all.
-   * Reported as the dashboard disagreeing with the databases page, which it
-   * did: that page reads `/databases/engines`, and so does this now. The bad
-   * `mysql` key is filed for the backend to drop.
-   */
+  // Engines from `/databases/engines`, not `/server/facts`: facts misreport
+  // MariaDB and miss MongoDB and PostgreSQL.
   const canViewDatabases = can(permissions, "database", "view");
-  // Load and resource usage are the last 24 hours, from the five-minute
-  // `server:sample-metrics` collector. Fetched here, once per render — polling
-  // a table that gains a row every five minutes would be pointless.
+  // History is the last 24 hours at five-minute samples, so fetched once per
+  // render rather than polled.
   const [facts, processResult, health, history, appResult, engineResult] = allowed
     ? await Promise.all([
         getServerFacts(),
         getServerProcesses(),
-        // Null when the user cannot read services — the card then says nothing
-        // rather than claiming everything is fine.
+        // Null when services cannot be read; the card then shows no verdict.
         getServiceHealth(),
         getServerHistory(),
-        // Not fetched for a reader who could be shown neither the card nor the
-        // health chip.
-        //
-        // The whole list, not a page of it: `getApplications("")` stops at ten,
-        // which answers "are there none" but would scan only the first page for
-        // problems — a broken site on page two would never be mentioned. Capped
-        // at the API's own maximum of 100, so a server past that loses the tail
-        // here; the honest fix at that point is a server-wide issues endpoint
-        // rather than a bigger number.
+        // The whole list (up to the API maximum of 100), not one page, so
+        // problems beyond the first page are still found.
         canViewApplications ? getAllApplications() : Promise.resolve(null),
-        // A reader who cannot open the databases page is not told what runs on
-        // it either. The chips simply do not appear — the rest of the row is
-        // unaffected, the same way a missing services read leaves the health
-        // badge off rather than inventing a verdict.
+        // Without database `view` the engine chips are simply omitted.
         canViewDatabases ? getEngines() : Promise.resolve({ engines: [] }),
       ])
     : [null, { data: [], failed: false }, null, [], null, { engines: [] }];
 
-  // Both of these are claims about the server, and a failed read is not
-  // evidence for either. "You have no sites" told to somebody with fifty, or
-  // "everything is fine" told over an unanswered request, are the two ways this
-  // could lie, and `failed` is what stops both.
+  // A failed read must never become "no sites" or "everything is fine".
   const known = Boolean(appResult && !appResult.failed);
   const applications = known ? appResult.applications : [];
   const firstRun = known && applications.length === 0;
@@ -108,28 +80,19 @@ export default async function DashboardPage() {
 
       {allowed ? (
         <>
-          {/* Above the server's own content on a server that has none of the
-              user's yet: the invitation is the only thing on this page they can
-              act on, and the compact layout keeps the live numbers in view
-              rather than pushing them past the fold. */}
+          {/* Compact, so the live numbers stay above the fold. */}
           {firstRun ? (
             <ApplicationEmptyState
               canManage={can(permissions, "application", "manage")}
               compact
             />
           ) : null}
-          {/* Identity first — "which machine am I on" is read once, on
-              arrival — then the live numbers, then four even charts: the last
-              day for load and usage, then the live throughput pair. */}
           <ServerInfoCard
             facts={facts}
             health={health}
             siteAttention={attention}
             engines={engineResult?.engines ?? []}
-            /* Not the same as "this server has no databases". Without it the
-               chips simply vanish and the dashboard disagrees with the
-               databases page — which is the bug this whole card was just
-               fixed for. */
+            /* A failed read, distinct from "no databases". */
             enginesFailed={Boolean(engineResult?.failed)}
           />
           <LiveMetricsSection
@@ -139,17 +102,14 @@ export default async function DashboardPage() {
           <ProcessesCard
             data={processResult.data}
             failed={processResult.failed}
-            /* How many the server is running, not how many rows came back.
-               Null on an API that predates `meta.total`. */
+            /* Server-wide count, not rows returned. Null on APIs without `meta.total`. */
             total={processResult.total}
             canManage={canManage}
           />
         </>
       ) : (
-        /* The same refusal every other screen gives, so the panel has one
-           voice about access. The dashboard cannot use <PermissionDenied />
-           itself — it is the one page that must render its own header first,
-           since it is also the fallback landing route. */
+        /* Same copy as <PermissionDenied />, which cannot be used here because
+           this landing route renders its own header first. */
         <EmptyState
           icon={ShieldOff}
           title={tDenied("title", { feature: t("title") })}

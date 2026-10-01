@@ -1,11 +1,4 @@
-/**
- * Turning the engine's raw counters into a verdict.
- *
- * The page is called "health" but only ever showed numbers — `42`, `17`, `3d`
- * — and left the reader to know which of those is bad. Every rule here is
- * derived from what `/databases/status` already returns plus the live process
- * list; nothing new is asked of the API.
- */
+// A verdict from `/databases/status` and the live process list only.
 
 /** Connections above this share of the ceiling are worth flagging. */
 const CONNECTIONS_HIGH = 75;
@@ -44,16 +37,10 @@ export function connectionsTone(status) {
   return "normal";
 }
 
-/**
- * Slow queries is a counter that only grows, so the raw number says nothing
- * without knowing how long it has been growing. Against uptime it becomes a
- * rate, which is a thing you can actually judge.
- */
+/** Slow queries per hour of uptime: the raw counter only ever grows. */
 export function slowQueryRate(status) {
-  // `null` means the engine does not measure this — PostgreSQL has no such
-  // counter without `pg_stat_statements`, which the panel does not install.
-  // `Number(null)` is 0 and 0 is finite, so without this the rate came out as
-  // zero and the tone as "normal": "we never looked" rendered as good news.
+  // `null` means not measured (PostgreSQL without `pg_stat_statements`).
+  // Must not become 0, which would read as healthy.
   if (status?.slow_queries == null) return null;
 
   const slow = Number(status.slow_queries);
@@ -70,38 +57,15 @@ export function slowQueriesTone(status) {
   return "normal";
 }
 
-/*
- * A connection that is holding still.
- *
- * `Sleep` is MySQL's word and was the only one here, so on PostgreSQL — which
- * says `idle` — every parked connection counted as work. The page then showed
- * "8 running" under a caption promising idle ones were counted and not listed,
- * on a server where the true number of running queries was zero.
- */
+/* Idle connection commands: MySQL says `Sleep`, PostgreSQL says `idle`. */
 const IDLE_COMMANDS = new Set(["sleep", "idle"]);
 
 export function isIdle(process) {
   return IDLE_COMMANDS.has((process?.command ?? "").toLowerCase());
 }
 
-/**
- * PostgreSQL's own background workers — checkpointer, walwriter, autovacuum
- * launcher and friends.
- *
- * `pg_stat_activity` lists them beside real connections, and they arrive with
- * no database and no statement: five rows of nothing, each offering a "Stop
- * query" button for a query that does not exist and a process the panel must
- * not kill. They are the server itself, not something anyone connected.
- *
- * NOT keyed on a missing user. The autovacuum launcher runs as `postgres` and
- * is every bit as internal as the anonymous ones — that assumption cost this
- * function its first version. A connection is made TO a database, so having
- * neither a database nor a statement is what actually marks one as the
- * server's own.
- *
- * Recognised by what it lacks rather than by engine, so MySQL's system threads
- * would fall out the same way if they ever appeared.
- */
+// Internal processes `pg_stat_activity` lists beside connections; never offer "Stop query".
+// Detected by no db and no statement, not by user (autovacuum runs as `postgres`).
 export function isBackgroundWorker(process) {
   return !process?.db && !process?.query;
 }
@@ -113,11 +77,7 @@ export function activeQueries(processes = []) {
     .sort((a, b) => (b?.time ?? 0) - (a?.time ?? 0));
 }
 
-/**
- * How concerning the concurrent work is. A count of running threads is not
- * alarming on its own — a count of running threads where one has been going
- * for two minutes is.
- */
+/** Rated by the longest-running active query, not the count. */
 export function activityTone(processes = []) {
   const longest = activeQueries(processes)[0]?.time ?? 0;
   if (longest >= STUCK_SECONDS) return "review";
@@ -130,12 +90,7 @@ export function recentlyRestarted(status) {
   return Number.isFinite(uptime) && uptime > 0 && uptime < RECENTLY_RESTARTED_SECONDS;
 }
 
-/**
- * The whole verdict, plus the specific reasons behind it.
- *
- * `issues` is deliberately a list of keys and counts rather than sentences —
- * the copy lives in the message catalogue like every other user-facing string.
- */
+// `issues` holds keys and counts; the copy lives in the message catalogue.
 export function assessHealth({ status, processes = [] }) {
   const issues = [];
 
@@ -168,8 +123,7 @@ export function assessHealth({ status, processes = [] }) {
   return {
     tone: worstTone(issues.map((issue) => issue.tone)),
     issues,
-    // Not an issue — context. A five-minute-old engine has small counters and
-    // an empty history for a reason, and saying so prevents a false alarm.
+    // Context, not an issue: explains small counters after a restart.
     recentlyRestarted: recentlyRestarted(status),
   };
 }

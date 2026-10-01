@@ -1,11 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableSkeleton } from "@/components/data-table/table-skeleton";
 
-/**
- * Sync compares what the panel believes against what is on the server, so the
- * page cannot render until four calls come back — the longest wait in the
- * panel and, until now, the one with nothing on screen.
- */
+/** Sync waits on four calls before rendering, so it gets a full skeleton. */
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

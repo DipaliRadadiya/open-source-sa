@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { getBasicInfo } from "@/lib/basic-info/get-basic-info";
 import { PanelUnavailableCard } from "@/components/sections/panel-unavailable";
@@ -31,9 +31,7 @@ export default async function RegisterPage() {
       getTranslations("auth"),
     ]);
   } catch (error) {
-    // 429 too: the login page is the easiest place in the panel to hit the
-    // rate limit (a reload loop while the API is unhappy), and it was the one
-    // screen that still answered it with a digest.
+    // Handled here, not in error.jsx, which only receives a digest in production.
     if (isRateLimited(error)) return <RateLimitedCard />;
     if (isPanelUnavailable(error)) return <PanelUnavailableCard />;
     if (isRequestFailed(error)) return <RequestFailedCard {...requestFailureProps(error)} />;

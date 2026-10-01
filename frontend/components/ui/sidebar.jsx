@@ -134,21 +134,13 @@ function Sidebar({
   className,
   children,
   dir,
-  // The translated name of this navigation, for screen readers: the desktop
-  // rail is announced as a navigation landmark, the phone drawer as a dialog.
+  // Translated accessible name for the desktop landmark and the phone drawer.
   label,
   ...props
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
 
-  // Cloudflare-style peek: when the rail is collapsed, hovering it widens the
-  // panel *over* the page instead of pushing it.
-  //
-  // "Peeking" is expressed by clearing `data-collapsible` rather than by adding
-  // width overrides. Every descendant already keys off `collapsible=icon` to
-  // hide its label, so pretending to be expanded makes all of them correct at
-  // once — and the only thing that must NOT follow is the layout gap, which is
-  // pinned narrow below. That is what keeps the page from reflowing.
+  // Peek clears `data-collapsible` so labels show; the gap stays narrow so the page does not reflow.
   const { hovered: peeking, handlers: peekHandlers } = useHoverIntent({
     enabled: collapsible === "icon" && state === "collapsed",
   });
@@ -210,9 +202,7 @@ function Sidebar({
         className={cn(
           "relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear motion-reduce:transition-none",
           "group-data-[collapsible=offcanvas]:w-0",
-          // Held at rail width while peeking. Without this the gap widens with
-          // the panel and the whole page slides sideways on hover — which is
-          // the opposite of the effect, and nauseating over a table.
+          // Held at rail width while peeking so the page does not shift.
           variant === "floating" || variant === "inset"
             ? "group-data-[peek=true]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
             : "group-data-[peek=true]:w-(--sidebar-width-icon)",
@@ -230,10 +220,8 @@ function Sidebar({
           variant === "floating" || variant === "inset"
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
-          // Lifted above the page while peeking. Two reasons, both visual: the
-          // panel now overlaps content, so it needs a shadow to read as a layer
-          // rather than a glitch — and z-10 sits *below* the sticky page header
-          // in this app, which would clip the top of it.
+          // While peeking: shadow because it overlaps content, and z-30 because
+          // z-10 sits below the sticky page header.
           "group-data-[peek=true]:z-30 group-data-[peek=true]:shadow-xl",
           className
         )}
@@ -249,16 +237,7 @@ function Sidebar({
   );
 }
 
-/*
- * Both controls name themselves in the reader's language.
- *
- * This is a shadcn primitive and it shipped with "Toggle Sidebar" written into
- * it, so a screen reader announced English in all eight locales — and on the
- * rail the same string is a `title`, which is a visible tooltip. The strings
- * already existed as `common.expandSidebar` / `common.collapseSidebar`; only
- * the wrapper in `sidebar-toggle.jsx` was using them, and a tooltip beside an
- * sr-only span does not become the accessible name, it competes with it.
- */
+/* Translated accessible names for the toggle and rail (shadcn hard-codes English). */
 function useToggleLabel() {
   const t = useTranslations("common");
   const { state } = useSidebar();
@@ -324,8 +303,7 @@ function SidebarInset({
   className,
   ...props
 }) {
-  // A div: each layout puts its own <main id="main-content"> inside, and two
-  // nested main landmarks leave a screen reader with no single "main".
+  // A div, not <main>: each layout renders its own <main id="main-content">.
   return (
     <div
       data-slot="sidebar-inset"

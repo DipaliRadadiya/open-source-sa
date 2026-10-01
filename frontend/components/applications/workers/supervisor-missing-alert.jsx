@@ -7,23 +7,7 @@ import { installSupervisor } from "@/lib/api/workers";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 
-/**
- * Says supervisord is missing BEFORE someone fills in a worker form.
- *
- * Without this the page looked entirely normal on a server that cannot run a
- * worker at all: the empty state, the presets and the Create button were all
- * there, and the only way to discover the problem was to complete the form and
- * press Create — at which point `POST /workers` answers 202 and quietly starts
- * an apt install instead of creating anything.
- *
- * The create dialog handles that 202 correctly and always did, so this is not a
- * correctness fix; it moves the discovery to the top of the screen, where it
- * costs nothing to read.
- *
- * Deliberately NOT a blocker. The form still works — pressing Create on a box
- * without supervisord starts the same install — so this adds a door rather than
- * closing one.
- */
+// Shown before the form: Create would otherwise answer 202 and start the install. Not a blocker.
 export function SupervisorMissingAlert({ appId, canManage }) {
   const t = useTranslations("applications.workers");
   const router = useRouter();
@@ -35,10 +19,8 @@ export function SupervisorMissingAlert({ appId, canManage }) {
     try {
       await installSupervisor(appId);
       toast.info(t("supervisor.installing"));
-      // The banner stays, saying the install is running. It can only be
-      // cleared by the services list agreeing supervisord is there, which is a
-      // refresh away and minutes off — replacing it with a success message
-      // would claim a finished install nobody has witnessed.
+      // The banner stays (now "installing") until a refresh shows supervisord
+      // present; never claim success here.
       setQueued(true);
       router.refresh();
     } catch (error) {

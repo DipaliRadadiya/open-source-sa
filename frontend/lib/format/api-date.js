@@ -1,12 +1,7 @@
 // The API sends "DD-MM-YYYY HH:mm:ss" (not ISO), in the server's timezone.
 const STAMP = /^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/;
 
-/**
- * One of the API's timestamps as a Date, or null if it is not one.
- *
- * `new Date("01-08-2026 09:00:00")` is a parse error in every engine that does
- * not silently read it as a US date, so nothing may hand these to Date directly.
- */
+/** Never pass these to `new Date()` directly: the format is not reliably parseable. */
 export function parseApiDate(value) {
   const m = String(value ?? "").match(STAMP);
   if (!m) return null;
@@ -15,15 +10,8 @@ export function parseApiDate(value) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-/**
- * How long something took, as "45s" / "2m 14s" / "1h 03m", or null when either
- * end is missing or the pair makes no sense.
- *
- * Both timestamps come from the same clock in the same format, so the
- * difference is meaningful even though neither carries a timezone. The unit
- * letters stay untranslated — the same convention the panel uses for other
- * technical tokens, and h/m/s read the same in every locale we ship.
- */
+// "45s" / "2m 14s" / "1h 03m", or null when either end is missing or the pair makes no
+// sense. Both stamps share one clock, so no timezone is needed.
 export function apiDuration(start, end) {
   const from = parseApiDate(start);
   const to = parseApiDate(end);
@@ -43,14 +31,8 @@ export function apiDuration(start, end) {
   return `${hours}h ${String(minutes % 60).padStart(2, "0")}m`;
 }
 
-/**
- * The stamp as a Date to format with `timeZone: "UTC"`.
- *
- * The stamp is a wall-clock time with no zone. `parseApiDate` reads it in the
- * browser's zone while the formatter writes in the panel's, so the hour moved
- * by the difference. Read and written as UTC it comes back exactly as the
- * server wrote it.
- */
+// Format with `timeZone: "UTC"`: the stamp is a zone-less wall-clock time, and reading
+// and writing it as UTC returns exactly what the server wrote.
 export function parseApiWallClock(value) {
   const m = String(value ?? "").match(STAMP);
   if (!m) return null;

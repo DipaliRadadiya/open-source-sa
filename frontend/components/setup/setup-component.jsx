@@ -9,11 +9,9 @@ import { DatabaseInstallProgress } from "@/components/databases/database-install
 import { DatabaseOptions } from "@/components/setup/database-options";
 import { componentMeta } from "@/components/setup/component-meta";
 
-// PHP and Node install per-version, right here on the setup checklist.
 const RUNTIME_KEYS = new Set(["php", "node"]);
 
-// Setup marks the database component installing immediately after the 202. The
-// first poll will replace this honest queued placeholder with backend detail.
+// Shown right after the 202 until the first poll returns backend detail.
 const QUEUED_DATABASE_PROGRESS = {
   status: "installing",
   current_step: "queued",
@@ -29,9 +27,6 @@ function VersionInstall({ versions, action, disabled, disabledReason, onInstall 
     versions.find((v) => v.lifecycle?.status === "lts")?.version ?? options[0]?.value ?? "";
   const [version, setVersion] = useState(defaultVersion);
 
-  // A note, not body copy. At `text-sm` this sat at the same weight as the
-  // component's own description and the card read as two paragraphs about
-  // nothing.
   if (!options.length) {
     return <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{t("noVersions")}</p>;
   }
@@ -47,9 +42,7 @@ function VersionInstall({ versions, action, disabled, disabledReason, onInstall 
           searchPlaceholder={t("chooseVersion")}
         />
       </div>
-      {/* Like the database chooser: this picker is gone the moment its own
-          install starts, so a spinner here can only ever have meant "something
-          else is installing". Off with a reason instead. */}
+      {/* No spinner: this picker unmounts once its own install starts, so one could only mean another install. */}
       <Button
         className="shrink-0"
         disabled={!version || disabled}
@@ -63,7 +56,7 @@ function VersionInstall({ versions, action, disabled, disabledReason, onInstall 
   );
 }
 
-// Identity chip: what the component IS. State is carried by the pill, not here.
+// Identity chip: what the component is. State is carried by the pill.
 function IconChip({ meta, small = false }) {
   const { Icon, tint, chip } = meta;
   return (
@@ -73,15 +66,10 @@ function IconChip({ meta, small = false }) {
   );
 }
 
-// One pill that states where this component stands, in words (never colour
-// alone).
+// States where the component stands, in words (never colour alone).
 function StatusPill({ state, recommended, detail }) {
   const t = useTranslations("setup");
-  // The detail sits BESIDE the badge, not inside it. A badge is `shrink-0` and
-  // does not wrap, so "Installed · in use for the panel cache" was a fixed-width
-  // block that pushed 41px off a 320px screen in Hindi. It is also a sentence,
-  // and a status token should be one word — kept apart, the token stays short
-  // and the explanation wraps like the prose it is.
+  // Beside the badge, not inside: a shrink-0 badge would overflow narrow screens.
   if (state === "installed") {
     return (
       <>
@@ -108,18 +96,13 @@ function StatusPill({ state, recommended, detail }) {
   if (state === "failed") {
     return <Badge variant="destructive" className="font-normal">{t("pillFailed")}</Badge>;
   }
-  // Not-recommended, not-installed components carry no badge — an "Optional"
-  // tag reads as "you can skip this", which is wrong for pieces the panel needs.
+  // No "Optional" badge: it would read as "you can skip this".
   return recommended ? (
     <Badge variant="warning" className="font-normal">{t("recommended")}</Badge>
   ) : null;
 }
 
-/**
- * One setup component, rendered from its API state. Identity is the icon, state
- * is the pill, and the next action is the button — three separate reads so the
- * row is scannable. Failure UI is gated strictly on `state === "failed"`.
- */
+// Failure UI is gated strictly on `state === "failed"`.
 export function SetupComponent({ component, versions = [], busy = false, locked = false, denied = false, tier = "secondary", note = null, onInstall }) {
   const t = useTranslations("setup");
   const { state, action, options } = component;
@@ -132,33 +115,17 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
   const installed = state === "installed";
   const failed = state === "failed";
   const installing = state === "installing" || busy;
-  // Two different things, kept apart on purpose. `installing` is this
-  // component's own progress and owns the spinner; `blocked` is apt's
-  // one-at-a-time lock held by a *different* component and owns nothing but a
-  // disabled state and a sentence. Folding them into one flag is what put a
-  // spinner on "Install MariaDB" while fail2ban was the thing installing.
+  // `installing` is this component's own progress (spinner); `blocked` is apt's lock
+  // held elsewhere or no permission (disabled + reason only).
   const blocked = busy || locked || denied;
   const blockedReason = denied ? t("installNotPermitted") : locked ? t("lockedByOtherInstall") : null;
-  // Nothing to install and nothing to choose: a runtime the server reported no
-  // versions for. That is a neutral fact, not a fault, so the card sits back
-  // like a finished one rather than staying at full weight in the to-do list
-  // with an empty right-hand side where its action should be.
+  // A neutral fact, so the card sits back like a finished one.
   const unavailable = isRuntime && runtimeVersions.length === 0 && !installed && !installing;
-  // A card whose whole body is a title and a sentence, with one button: the
-  // button belongs beside them, not pinned to the top of a two-line block.
+  // Title, sentence and one button: the button sits beside them.
   const simple = !hasOptions && !isRuntime;
   const meta = componentMeta(component.key);
 
-  /**
-   * A finished component, as a line rather than a card.
-   *
-   * Everything a full card carries — a 40px chip, a description, room for an
-   * action — exists to help you decide something. There is nothing left to
-   * decide here, and rendering five equal boxes of which two were already done
-   * made the page a wall with no centre of gravity. Same information, a third
-   * of the height, so the things still waiting on you are the heaviest thing
-   * on screen.
-   */
+  /** A finished component is a compact line, so what still needs a decision carries the weight. */
   const primary = tier === "primary";
 
   if (tier === "compact") {
@@ -174,20 +141,13 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
         </span>
         <div className="min-w-0 flex-1 space-y-0.5">
           <p className="text-sm font-medium">{component.title}</p>
-          {/* Still says what the thing is for. "Redis · Installed" answers
-              whether it is there, never why anyone wanted it — and on a setup
-              page the second question is the one a first-time reader has.
-              Wraps rather than clamps: cut at one line, Redis lost the half
-              of its sentence that says why it matters. */}
+          {/* Keeps the description (why it matters); wraps rather than clamps. */}
           {component.description ? (
             <p className="text-xs text-muted-foreground">{component.description}</p>
           ) : null}
           {note ? <p className="text-xs">{note}</p> : null}
         </div>
-        {/* Status and version share one right-hand column across every row, so
-            the eye reads a single edge down the list instead of hunting for the
-            badge somewhere after each name. It wraps rather than shrink-0 —
-            `detail` is a free-text sentence on Redis, not a version number. */}
+        {/* Wraps, since `detail` can be a sentence. */}
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-1">
           <StatusPill state="installed" detail={component.detail} />
         </div>
@@ -198,27 +158,11 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
   return (
     <div
       aria-busy={installing}
-      // One card, two weights: waiting (plain) and done/unavailable (sunk).
-      //
-      // Failure is NOT a third weight. It is said by the badge and by the red
-      // message box inside the card, and outlining the whole card in red on top
-      // of those made one recoverable install the loudest thing on the page.
-      //
-      // The recommended tint is gone. A primary-tinted border is how this panel
-      // says "selected" everywhere else, and here it meant "recommended" — which
-      // the badge beside the title already says, in words. Two signals for one
-      // fact, one of them borrowed from a different vocabulary.
-      //
-      // Failure keeps the outline but loses the wash. The card carries its own
-      // bordered reason box below the title; tinting the whole card as well made
-      // "you can try again" the loudest thing on the page.
+      // Failure shows in the badge and reason box, not a red card. No tint for
+      // recommended: a primary border means "selected" elsewhere.
       className={cn(
         "rounded-2xl border transition-colors",
-        // Primary carries the page: a real surface, and its identity row banded
-        // off from its controls (below) so the card has an anatomy rather than
-        // being a box with things in it. Secondary is the same anatomy at a
-        // lower voice — flatter, no shadow — so "this needs a decision" and
-        // "this can wait" are told apart before either is read.
+        // Primary: a surface with a banded header; secondary: same anatomy, flatter.
         primary ? "overflow-hidden bg-card shadow-sm" : "bg-card/50 p-4",
         !primary && installed && "bg-muted/30 shadow-none",
         !primary && unavailable && "bg-muted/20 shadow-none",
@@ -228,16 +172,13 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
         className={cn(
           "flex gap-4",
           simple ? "items-center" : "items-start",
-          // The header band: same row, given its own tinted strip and a rule
-          // against the body beneath it.
           primary && "border-b bg-muted/30 px-5 py-4",
         )}
       >
         <IconChip meta={meta} small={!primary} />
 
         <div className="min-w-0 flex-1">
-          {/* Title + description stay a tight unit; the interactive blocks below
-              are deliberately outside this group so `space-y` can't squeeze them. */}
+          {/* The interactive blocks stay outside this group so `space-y` cannot squeeze them. */}
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <p className={cn("font-medium leading-tight", primary && "text-base")}>
@@ -250,8 +191,7 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
             ) : null}
           </div>
 
-          {/* On a primary card the reason and the controls belong to the body
-              below the band, not to the identity row. Rendered there instead. */}
+          {/* On a primary card the body renders below the band instead. */}
           {primary ? null : (
             <Body
               t={t}
@@ -271,8 +211,7 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
           )}
         </div>
 
-        {/* Right-side action for the simple states (the others render inline
-            above). */}
+        {/* Simple states only; the others render inline above. */}
         <div className="shrink-0">
           {installed || installing || isRuntime || hasOptions ? null : failed ? (
             action && component.retryable ? (
@@ -327,14 +266,7 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
   );
 }
 
-/**
- * The part of a component that asks something of you: why it failed, which
- * engine to install, which version to pick.
- *
- * Split out because a primary card puts it under a header band while a
- * secondary card keeps it inline beside the icon — same content, two places,
- * and duplicating it was how the two tiers would drift apart.
- */
+// Shared so the primary and secondary placements cannot drift.
 function Body({
   t,
   component,
@@ -386,7 +318,6 @@ function Body({
             </p>
           ) : null}
 
-      {/* Database pick-one, shown while it still needs installing. */}
       {hasOptions && !installed && !installing ? (
         <div className={cn(failed ? "mt-4" : flush ? "" : "mt-3")}>
               <DatabaseOptions
@@ -399,7 +330,6 @@ function Body({
             </div>
           ) : null}
 
-          {/* Inline version picker for PHP/Node. */}
           {isRuntime && !installed && !installing ? (
             <VersionInstall
               versions={runtimeVersions}

@@ -28,11 +28,7 @@ export function useIsMobile() {
   return useMediaQuery(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
 }
 
-/**
- * Tablet: too wide for the slide-over nav, too narrow to give 256px of it away.
- * At 768px an expanded sidebar leaves 512px of page, which is not enough for a
- * toolbar and a table — they pushed the page sideways instead of fitting.
- */
+// Too wide for the slide-over nav, too narrow for a 256px expanded sidebar.
 export function useIsTablet() {
   return useMediaQuery(
     `(min-width: ${MOBILE_BREAKPOINT}px) and (max-width: ${DESKTOP_BREAKPOINT - 1}px)`,

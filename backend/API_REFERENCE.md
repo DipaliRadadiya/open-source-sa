@@ -83,9 +83,9 @@ Auth-gated. Returns the current user + `impersonated_by` if an admin is currentl
 ---
 
 ### PUT `/auth/profile`
-Auth-gated. Update own username.
+Auth-gated. Update own name and username.
 
-**Request:** `{"username": "newusername"}`
+**Request:** `{"name": "New Name", "username": "newusername"}` — both required.
 
 **Response `200`:** `{"user": {...updated...}}`
 
@@ -96,14 +96,14 @@ Auth-gated. Change own password.
 
 **Request:** `{"current_password": "…", "password": "…", "password_confirmation": "…"}`
 
-**Response `204`.** `422` when the password contains a line break or other control character — `chpasswd` reads one account per line.
+**Response `200`:** `{"token": "…"}` — a fresh API token. Every other token of this user is revoked, so a bearer client must switch to this one (the session cookie stays valid).
 
 ---
 
 ### POST `/auth/stop-impersonating`
 Auth-gated. Exit impersonation mode (admin feature).
 
-**Response `200`:** `{"user": {…}}`
+**Response `204`:** empty. `422` when not impersonating. Read `GET /auth/me` for the admin's own user.
 
 ---
 
@@ -169,7 +169,7 @@ Each item needs `level` **and** `name` — the same `name` can exist at two leve
 
 **Response `204`:** `null`
 
-`422` if the role is `is_system: true` or has assigned users.
+`422` if the role is `is_system: true`, or if it is the **only** role of any user (the message names them; every user keeps at least one role). Users who also hold another role simply lose this one.
 
 ---
 
@@ -191,7 +191,7 @@ Paginated. `?search=` case-insensitively matches name and username; `?filter[is_
 
 **Request:**
 ```json
-{"username": "dev", "password": "…", "role_ids": [2]}
+{"name": "Dev", "username": "dev", "password": "…", "password_confirmation": "…", "is_admin": false, "role_ids": [2]}
 ```
 
 **Response `201`:** `{"user": {...}}`
@@ -201,7 +201,7 @@ Paginated. `?search=` case-insensitively matches name and username; `?filter[is_
 ### PUT `/admin/users/{user}`
 **Permission:** `access-admin` (manage)
 
-**Request:** `{"username": "senior-dev", "role_ids": [2, 3]}`
+**Request:** `{"name": "Senior Dev", "username": "senior-dev", "is_admin": false, "role_ids": [2, 3]}` — `name`, `username` and `is_admin` are required. Removing `is_admin` from the last admin is a `422`.
 
 **Response `200`:** `{"user": {...}}`
 
@@ -241,7 +241,7 @@ Cannot delete yourself (422).
 
 Become this user for the session (admin feature). Cannot impersonate yourself or another admin.
 
-**Response `200`:** `{"user": {…}, "impersonated_by": {"id": 1, "username": "admin"}}`
+**Response `201`:** `{"user": {…}, "impersonated_by": {"id": 1, "username": "admin"}}`
 
 ---
 
@@ -357,11 +357,13 @@ Paginated (**`per_page` defaults to 10**, not 20). Filters: `filter[user_id]`, `
 
 ```json
 {"dashboard": {
-  "total_users": 3, "total_applications": 7, "total_databases": 4,
-  "server_uptime": "15 days", "server_uptime_seconds": 1296000,
-  "recent_activity": [{"type": "application", "action": "created", "description": "Application created", "user": {"id": 1, "username": "admin"}, "created_at": "…"}]
+  "users": {"total": 3, "admins": 1, "non_admins": 2},
+  "roles": {"total": 4},
+  "activity": {"today": 12, "total": 380}
 }}
 ```
+
+Counts only — the account half of the panel. `users` leaves out the panel's internal system accounts (`is_system`); `activity.today` is in the app timezone. Server figures (uptime, load) come from `GET /server/facts` and `GET /server/metrics/live`, not here.
 
 ---
 
@@ -840,6 +842,7 @@ and fall back to `failed_step` + `reference` when it is `null`.
 | `serving_error` | The application started, but answers every request with a 5xx. Usually assets that did not build completely. |
 | `not_answering` | The application started but never answered a request at all. |
 | `composer_platform` | Composer refused to install the dependencies under the PHP version the site is set to — the version, or an extension, does not meet what the project requires. |
+| `script_git_auth` | The deploy script ran a git command (usually `git pull`) that needed a login; the script has none, so it fails on a private repository. The panel already fetches the branch before the script runs — remove the line. Only on the `script` step (since 2026-10-01). |
 | `composer_dependencies_missing` | The project requires Composer packages and none were installed, so there is no `vendor/autoload.php` and every request to the site would fail. Raised at the new `dependencies` step, **before** the site is curled. |
 
 The last two come from the `verify_serving` step, which is the final step of
@@ -1454,9 +1457,9 @@ Newest first.
   "created_at": "28-07-2026 11:00:00", "created_at_human": "3 days ago"
 }], "settings": {
   "branch": "main", "repository": "https://github.com/user/shop",
-  "deploy_script": "cd {path}\ngit pull origin {branch}\nnpm install\nnpm run build",
+  "deploy_script": "cd {path}\nnpm install\nnpm run build",
   "deploy_script_customised": true,
-  "default_deploy_script": "cd {path}\ngit pull origin {branch}\ncomposer install --no-dev",
+  "default_deploy_script": "cd {path}\nif [ -f composer.json ]; then\n    composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader\nfi\n",
   "auto_deploy": false, "webhook_enabled": false,
   "last_commit": "a1b2c3d", "last_deployed_at": "28-07-2026 11:01:30",
   "placeholders": ["{path}", "{branch}", "{domain}", "{php}"]
@@ -1494,6 +1497,25 @@ repository's `composer.json` requires real packages and `vendor/autoload.php`
 is not there, the deploy fails as `composer_dependencies_missing` rather than
 as an unexplained `500` from the verify. A manifest with only `require-dev`, or
 only platform entries (`php`, `ext-*`), is left alone.
+
+**With no deploy script and no build command written**, the deploy now runs
+`composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader`
+as the site user (logged as the `script` step) when — and only when — that same
+check would have failed: `composer.json` requires real packages. Since
+2026-10-01; before, nothing ran, so every new Composer project failed its first
+deploy. A site with its own script or build command runs only that. The PHP
+`default_deploy_script` now ends with the same install, guarded by
+`if [ -f composer.json ]`.
+
+**No default script runs `git pull`** (since 2026-10-01). The panel has fetched
+and checked out the branch with the connected account before the script runs;
+the script itself has no credential, so a pull there failed on every private
+repository (`script_git_auth`) and did nothing on a public one. Scripts users
+already saved are not changed.
+
+`deploy_script_customised` is `false` for a saved script that is the default
+apart from line endings and trailing whitespace. `steps` lists each stage once
+(`init` used to appear twice: it is two commands).
 
 `duration` is whole seconds, and null until the deploy has both started and finished.
 
@@ -1543,7 +1565,7 @@ Update branch, deploy script, auto-deploy toggle.
 
 **Request:**
 ```json
-{"branch": "develop", "deploy_script": "cd {path}\ngit pull origin {branch}\nnpm install\nnpm run build", "auto_deploy": true}
+{"branch": "develop", "deploy_script": "cd {path}\nnpm install\nnpm run build", "auto_deploy": true}
 ```
 
 **Response `200`:** `{"settings": {...updated...}}`
@@ -1893,6 +1915,28 @@ Folder size on disk.
 **Query:** `?path=wp-content`
 
 **Response `200`:** `{"path": "wp-content", "size": 52428800, "size_human": "50 MB"}`
+
+---
+
+### GET `/applications/{application}/files/sizes`
+**Permission:** `app_file` (view) | **Throttle:** 60/min
+
+The size of **every folder directly inside** `path`, from one `du` — for the size column, so folders show a size without a click each (since 2026-10-01). Fetch it after the listing; the listing itself never waits for it.
+
+**Query:** `?path=wp-content` (empty = site root), optional `refresh=1` to measure now.
+
+**Response `200`:**
+```json
+{"path": "wp-content",
+ "sizes": {"plugins": {"size": 9579803, "size_human": "9.1 MB"}, "uploads": {"size": 52428800, "size_human": "50 MB"}},
+ "total": {"size": 62012699, "size_human": "59 MB"},
+ "complete": true, "measured_at": "01-10-2026 11:50:00"}
+```
+
+- `sizes` is keyed by folder **name** (the listing's `name`); hidden folders included. A folder missing from `sizes` was not measured — show the dash, not 0.
+- Answers are **kept five minutes** per folder. Anything changed through the panel (upload, delete, extract, new folder, rename/move, restore) forgets them at once; a change made outside the panel (WordPress, SSH) shows after five minutes or with `refresh=1`. Show `measured_at` and a refresh button.
+- A tree too large to measure in 60 seconds answers like any timed-out file operation (an error, not partial sizes). `complete: false` means `du` named folders but not the total; `sizes` is still right for what it names, and it is not kept.
+- Runs as the site user at the lowest CPU/disk priority and does not cross into other mounted filesystems.
 
 ---
 
@@ -2354,12 +2398,12 @@ The shared `www-data` pool is **no longer a choice**: asking for it answers `405
 
 **`managed: null` means the panel could not check** (the pool file could not be probed or read). Say "could not verify the pool file" — do not treat it as `true` (a save may overwrite hand edits) or as `false` (there may be none).
 
-**`open_basedir` has three answers on purpose, and they are all different questions.** `additional_directives` is appended to the pool config raw, so a directive a user writes there lands *after* the panel's and wins.
+**`open_basedir` has three answers on purpose, and they are all different questions.** `additional_directives` accepts **PHP settings only**, one per line — `name = value` or the FPM form `php_[admin_]value|flag[name] = value`; `;`/`#` comments and blank lines are allowed. Any other line is a 422 naming it (`php_settings.errors.directive_invalid`). Also a 422 (since 2026-10-01): a setting the panel writes itself (`directive_managed` — `memory_limit`, `upload_max_filesize`, `post_max_size`, `max_execution_time`, `max_input_time`, `max_input_vars`, `allow_url_fopen`, `session.save_path`, `session.gc_maxlifetime`, `error_log`, `log_errors`, `date.timezone`, `auto_prepend_file`, `open_basedir`, `disable_functions`; any case; use its own field), and `extension`/`zend_extension` (`directive_extension`; use the PHP Extensions screen). In a PHP-FPM pool each line is written as `php_admin_value[...]`/`php_admin_flag[...]` (an FPM-form line keeps its own directive); on OpenLiteSpeed it goes into the site's php.ini as `name = value`. It can never set a setting of the pool itself. ⚠️ Lines saved **before** 2026-10-01 are still written as they were, and for those **which value wins differs by stack** (measured 2026-09-30): PHP-FPM applies the **first** of a repeated key, so on nginx/Apache a panel-managed key there has **no effect**; on OpenLiteSpeed the php.ini is read top to bottom and it **does** override. Re-saving the screen with such a line in it is a 422 — remove it or move the value to its field.
 
 | field | question it answers |
 |---|---|
 | `open_basedir_effective` | what the panel would write from the stored settings |
-| `open_basedir_live` | what the pool file on disk actually says right now — null when the site has no pool, or its pool sets nothing. Differs from `effective` after a hand edit or an override via `additional_directives` |
+| `open_basedir_live` | what the pool file on disk actually says right now — null when the site has no pool, or its pool sets nothing. Resolved as FPM does: the first `php_admin_value` line, else the first `php_value` (since 2026-10-01; it read the last line before). Differs from `effective` after a hand edit, or an `open_basedir` saved in `additional_directives` before 2026-10-01 on OpenLiteSpeed |
 | `open_basedir_recommended` | what switching it on with no additions would give — the value to offer when it is off, so the screen proposes a path list instead of asking the user to invent one |
 
 Paths the user adds are **appended** to a base of the application root plus that site's own session directory plus `/tmp`. A server-wide session directory (`/var/lib/php/sessions`, which a migrated commercial panel leaves behind) is deliberately never included: it would let every site read every other site's sessions.
@@ -2425,7 +2469,7 @@ are different requests.
 
 On a **migrated server**, the first time the panel takes ownership of a site's pool (`POST .../php/isolate` or `php artisan php:isolate-all`) it adopts whatever `open_basedir` was already there: the old panel's paths are kept as `open_basedir_paths` and the setting is switched on. A server-wide session directory (`/var/lib/php/sessions` and friends) is deliberately **not** carried over — importing it would let that site read every other site's sessions, and the site's own session directory is in the base paths already. The command prints what it kept and what it dropped, per site.
 
-`live` differs from `effective` when someone hand-edited the pool file, or set their own `open_basedir` through `additional_directives` (which is appended raw and wins, since FPM takes the last of a repeated key). When they differ, show `live` — that is what PHP is enforcing — and `managed` will also be `false`.
+`live` differs from `effective` when someone hand-edited the pool file, or (OpenLiteSpeed only) set their own `open_basedir` through `additional_directives` before that was refused (2026-10-01) — on PHP-FPM the panel's own line comes first and FPM keeps the first. When they differ, show `live` — that is what PHP is enforcing — and `managed` will also be `false`.
 
 `open_basedir_paths` holds **additional** directories, one per line (`:` and `,` also accepted). The app root, the site's own session directory and `/tmp` are always included and cannot be removed — without them the site cannot read its own code or keep anyone logged in. Read `open_basedir_effective` from `GET .../php` to show the exact value the pool file will contain.
 
@@ -4124,6 +4168,8 @@ Everything but `username` is optional. `shell` defaults to `/bin/bash`; `sudo` a
 
 **Response `200`:** `{"message": "Password updated."}`
 
+`422` when the password contains a line break or other control character — `chpasswd` reads one account per line.
+
 ---
 
 ### PUT `/system-users/{systemUser}/sudo`
@@ -5320,7 +5366,7 @@ though they have no package.
 
 **Response `200`:** `{"php": {"default": "8.3", …}}`
 
-Only the **CLI** default moves. Sites keep whatever version their pool or handler runs — this must never migrate a running site.
+The **CLI** default moves, and (since 2026-10-01) it is also the version **new** sites start on: the create form preselects it and a PHP site created without `php_version` gets it — unless it is outside that site type's PHP range, in which case the newest installed version in range is used. `server.default_php_version` (install.sh's value) is only the fallback for when the server has no default the panel recognises. Existing sites keep whatever version they store — this never migrates a running site.
 
 What runs depends on the stack, because the two register alternatives differently:
 
@@ -5944,7 +5990,7 @@ Activity entries are written for every mutation. `type` and `action` are separat
 | type | action |
 |------|--------|
 | `user` | registered, logged_in, password_changed, impersonation_started, impersonation_stopped |
-| `role` | created, updated, permissions_updated, deleted |
+| `role` | created, updated, deleted |
 | `system_user` | created, deleted, sudo_toggled, shell_changed, ssh_access_changed, ssh_key_added, ssh_key_removed |
 | `application` | created, updated, deleted, provisioned, provision_failed, deployed, deploy_failed, disabled, enabled, domain_added, domain_removed, certificate_issued, certificate_uploaded, certificate_deleted, file_edited, file_deleted, directory_created, permissions_fixed, php_isolated, php_unisolated, php_settings_updated, environment_updated, environment_restored, worker_created, worker_updated, worker_deleted, worker_started, worker_stopped, worker_restarted, deploy_script_updated, deploy_settings_updated, staging_created, staging_pushed |
 | `database` | created, deleted, user_created, user_updated, user_deleted, export_queued, export_completed, export_failed, export_deleted, imported |

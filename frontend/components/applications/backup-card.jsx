@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/components/ui/app-link";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import {
@@ -27,23 +27,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-// The same three minutes the Backups screen waits before admitting the worker
-// has not taken the job.
+// Same threshold the Backups screen uses before reporting a stalled queue.
 const QUEUE_STALLED_MS = 3 * 60 * 1000;
 
-/**
- * Whether this site could be recovered, and the one action worth having here.
- *
- * The three states are the Backups screen's own vocabulary, deliberately —
- * "protected", "paused" and "not protected" have to mean the same thing in both
- * places or the panel contradicts itself. A target that exists but is switched
- * off, or set to manual, backs nothing up: that is `paused`, and it is the state
- * worth naming because it looks configured and is not.
- *
- * "Back up now" is here because it is the only backup action that needs no
- * decisions — one call, no form. Setting a schedule, choosing a destination or
- * restoring all involve choices, and those live on the Backups screen.
- */
+// States use the Backups screen's vocabulary; a switched-off or manual target is `paused`.
 export function BackupCard({
   applicationId,
   target,
@@ -54,23 +41,19 @@ export function BackupCard({
   href,
 }) {
   const t = useTranslations("applications.backups");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [starting, setStarting] = useState(false);
   // The newest backup id at the moment a run was started here, or null.
   const [queuedAfter, setQueuedAfter] = useState(null);
   const [stalled, setStalled] = useState(false);
 
-  // A row the server is writing right now. This is the half that also catches a
-  // scheduled run, or one somebody else started — neither of which this card
-  // could see before, because it only ever knew about its own click.
+  // A run the server is writing now, including ones started elsewhere.
   const busy = backups.some((backup) => BACKUP_IN_FLIGHT.includes(backup.status));
-  // And the half before that: the POST answers 202 with the target, so for the
-  // first few seconds the run exists as a queued job and nothing else.
+  // Before that: the POST answers 202, so the run is only a queued job for a few seconds.
   const queued = isBackupQueued(backups, queuedAfter);
   const inProgress = busy || queued;
 
-  // Say so rather than spin forever — a worker that never picks the job up
-  // otherwise looks identical to one that is about to.
+  // Report a stall instead of spinning forever when the worker never picks it up.
   useEffect(() => {
     if (!queued || stalled) return undefined;
     const id = setTimeout(() => setStalled(true), QUEUE_STALLED_MS);
@@ -86,8 +69,7 @@ export function BackupCard({
   const meta = {
     protected: { icon: ShieldCheck, variant: "success" },
     paused: { icon: PauseCircle, variant: "warning" },
-    // Red, not the quiet `secondary`: nothing to restore is the worst state
-    // this card can report, and it read as plain text under the title.
+    // Destructive: nothing to restore is the worst state this card can report.
     unprotected: { icon: ShieldOff, variant: "destructive" },
   }[state];
   const Icon = meta.icon;
@@ -97,11 +79,10 @@ export function BackupCard({
     setStalled(false);
     try {
       await runBackupNow(applicationId);
-      toast.success(t("started"));
-      // Remember where the list stood, so the queued state ends itself the
-      // moment the worker's row appears.
+      // The queued state ends as soon as the worker's row appears.
       setQueuedAfter(newestBackupId(backups));
-      router.refresh();
+      await refreshAndWait();
+      toast.success(t("started"));
     } catch (error) {
       toast.error(apiMessage(error, t("startFailed")));
     } finally {
@@ -111,8 +92,7 @@ export function BackupCard({
 
   return (
     <Card>
-      {/* Only while something is actually happening — a dashboard nobody is
-          waiting on should not be polling. Gives up after ten minutes. */}
+      {/* Polls only while something is in progress; gives up after ten minutes. */}
       {inProgress ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
 
       <CardHeader className="gap-1.5">
@@ -123,9 +103,7 @@ export function BackupCard({
           </CardTitle>
           <CardDescription>{t("description")}</CardDescription>
         </div>
-        {/* A run in flight outranks the standing state: "Protected · last
-            backup 18 hours ago" is stale the second one starts, and it is the
-            only thing on this card that changes while somebody watches it. */}
+        {/* A run in flight outranks the standing state, which is stale once it starts. */}
         {failed ? null : inProgress ? (
           <Badge variant="muted" className="w-fit gap-1.5 font-normal">
             <Loader2 className="size-3 animate-spin" />
@@ -139,13 +117,8 @@ export function BackupCard({
         )}
       </CardHeader>
 
-      {/* Rows under a rule, like the Security, Domains and Database cards
-          beside it. The facts were a label at one edge and its value at the
-          other with nothing between, so "Last backup … Never" read as two
-          unrelated words. */}
       <CardContent className="flex flex-1 flex-col p-0">
-        {/* A failed read is not "no backups configured" — that would tell
-            somebody their site is unprotected on the evidence of one request. */}
+        {/* A failed read must not read as "no backups configured". */}
         {failed ? (
           <p className="px-(--card-spacing) text-sm text-muted-foreground">{t("loadFailed")}</p>
         ) : (
@@ -160,8 +133,7 @@ export function BackupCard({
             <div className="flex items-center gap-3 px-6 py-3">
               <History className="size-4 shrink-0 text-muted-foreground" />
               <dt className="flex-1 font-medium">{t("lastRun")}</dt>
-              {/* Never blank: an empty cell reads as a rendering fault, and
-                  "never" is a real and important answer here. */}
+              {/* Never blank: "never" is a real answer. */}
               <dd className="text-right text-muted-foreground">
                 {!target?.last_run_at_human ? t("never") : noneKept ? t("noneKept") : target.last_run_at_human}
               </dd>
@@ -173,10 +145,7 @@ export function BackupCard({
                 <dd className="text-right text-muted-foreground">{target.next_run_at_human}</dd>
               </div>
             ) : null}
-            {/* The consequence, not the label. "Not protected" is a status; what
-                it means is that if this site is lost there is nothing to put
-                back. Paused gets its own line because it is the deceptive one
-                — it looks set up, and the last copy is ageing. */}
+            {/* States the consequence; paused is called out because it looks set up. */}
             {state !== "protected" ? (
               <div className="px-6 py-2.5 text-xs text-muted-foreground">
                 {state === "paused" ? t("pausedRisk") : t("unprotectedRisk")}
@@ -185,9 +154,7 @@ export function BackupCard({
           </dl>
         )}
 
-        {/* The gap the toast could not cover. Between the click and the first
-            row appearing, the card was byte-identical to the one the person was
-            looking at before they pressed the button. */}
+        {/* Covers the gap between the click and the first row appearing. */}
         {inProgress ? (
           <p
             role="status"
@@ -218,10 +185,7 @@ export function BackupCard({
               {starting || inProgress ? t("starting") : t("backUpNow")}
             </Button>
           ) : null}
-          {/* Setting one up is the point of the card when there is no target;
-              a ghost link for the only thing worth doing here buries it. */}
-          {/* A failed read is not "nothing set up" — offering Set up then was
-              a claim the card could not make. */}
+          {/* Primary when there is no target, except on a failed read. */}
           <Button asChild variant={!failed && !target ? "default" : "outline"} size="sm">
             <Link href={href} prefetch={false}>
               {target || failed ? t("manage") : t("setUp")}

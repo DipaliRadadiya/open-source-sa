@@ -2,16 +2,8 @@ import { z } from "zod";
 import { serverFetch } from "@/lib/api/server-fetch";
 import { processSchema } from "@/lib/schemas/server";
 
-/*
- * Returns { data, failed, total } so the UI can tell "no processes" from "fetch
- * broke" — and how many the row count is a slice OF.
- *
- * `meta.total` is the whole box; the rows are the top `meta.limit` by CPU. The
- * card had no number but its own length, so it always said 25 no matter what
- * the server was running, and stopping a process never moved it. `total` is
- * null on an API that predates the field, which the card reads as "say nothing"
- * rather than inventing a figure.
- */
+// Rows are the top `meta.limit` by CPU; `total` is null on older APIs, and the card
+// then shows no count.
 export async function getServerProcesses() {
   const res = await serverFetch("/server/processes");
   if (!res.ok) return { data: [], failed: true, total: null };

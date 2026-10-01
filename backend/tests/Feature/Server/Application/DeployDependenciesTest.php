@@ -10,6 +10,7 @@ use App\Services\Server\Applications\DeploymentRecorder;
 use App\Services\Server\Applications\GitDeployer;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
+use PHPUnit\Framework\AssertionFailedError;
 
 /*
 | A composer project must have its dependencies on disk before anything is
@@ -142,4 +143,84 @@ it('leaves a manifest that only pins dev tooling alone', function (string $manif
     // Unparseable is not evidence that anything is missing, and this check's
     // licence to fail a deploy rests on being certain.
     'malformed' => '{"require": broken',
+]);
+
+/** The `composer install` the deploy ran through the site user's shell, or null. */
+function composerInstallCommand(): ?array
+{
+    $found = null;
+
+    try {
+        Process::assertRan(function ($process) use (&$found) {
+            if (in_array('runuser', $process->command, true)
+                && str_contains((string) end($process->command), 'composer install')) {
+                $found = $process->command;
+
+                return true;
+            }
+
+            return false;
+        });
+    } catch (AssertionFailedError) {
+        // Nothing matched.
+    }
+
+    return $found;
+}
+
+function ranComposerInstall(): bool
+{
+    return composerInstallCommand() !== null;
+}
+
+describe('with no deploy script written', function () {
+    it('installs the packages a composer project needs, as the site user', function () {
+        // Until 2026-10-01 nothing ran here, so every new Composer project
+        // failed its first deploy with composer_dependencies_missing.
+        fakeComposerCheckout('{"require":{"laravel/framework":"^13.0"}}', vendorExists: true);
+
+        runDependencyDeploy();
+
+        $command = composerInstallCommand();
+
+        expect($command)->toContain('depsuser')
+            ->and(end($command))->toContain('composer install --no-dev --no-interaction')
+            ->and(end($command))->toStartWith('set -e')
+            ->and($this->application->fresh()->failed_reason)->toBeNull();
+    });
+
+    it('installs nothing where the dependency check would not have failed', function (?string $manifest) {
+        // So no site that deploys successfully today runs anything new.
+        fakeComposerCheckout($manifest, vendorExists: false);
+
+        runDependencyDeploy();
+
+        expect(ranComposerInstall())->toBeFalse();
+    })->with([
+        'no composer.json' => [null],
+        'dev only' => ['{"require-dev":{"laravel/pint":"^1.0"}}'],
+        'platform only' => ['{"require":{"php":"^8.2","ext-mbstring":"*"}}'],
+        'unparseable' => ['{not json'],
+    ]);
+
+    it('still names the reason when the install leaves no autoloader', function () {
+        fakeComposerCheckout('{"require":{"laravel/framework":"^13.0"}}', vendorExists: false);
+
+        runDependencyDeploy();
+
+        expect(ranComposerInstall())->toBeTrue()
+            ->and($this->application->fresh()->failed_reason)->toBe('composer_dependencies_missing');
+    });
+});
+
+it('runs only what the user wrote, never the automatic install too', function (array $attributes) {
+    $this->application->update($attributes);
+    fakeComposerCheckout('{"require":{"laravel/framework":"^13.0"}}', vendorExists: true);
+
+    runDependencyDeploy();
+
+    expect(ranComposerInstall())->toBeFalse();
+})->with([
+    'deploy script' => [['deploy_script' => 'php artisan migrate --force']],
+    'old build command' => [['build_command' => 'make build']],
 ]);

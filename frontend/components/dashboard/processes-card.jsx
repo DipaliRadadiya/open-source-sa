@@ -20,24 +20,7 @@ import { ProcessTable } from "@/components/dashboard/process-table";
 
 const PREVIEW_COUNT = 3;
 
-/**
- * The three heaviest processes on the page, the rest behind a button.
- *
- * The full table was the tallest block on the dashboard — 548px, more than a
- * third of the page — for the thing people need least often. It also put a
- * destructive action (stop a process) on the landing route, where a misclick
- * is cheapest to make.
- *
- * Three rows answer the dashboard's actual question — "what is using this
- * server?"; the full table expands in place when you ask for it. Both states
- * render the SAME table with the same columns, so expanding adds rows instead
- * of swapping one layout for another.
- *
- * It lived in a side sheet first. That was wrong twice over: the sheet caps at
- * 384px, so the command column — the one that says what a process actually is —
- * was pushed off-screen, and a five-column table wants the page width it can
- * only get inline.
- */
+// The full list expands in place: a side sheet was too narrow for the command column.
 function ProcessesCardInner({ data, failed, total, canManage }) {
   const t = useTranslations("serverDashboard");
   const [open, setOpen] = useState(false);
@@ -57,8 +40,7 @@ function ProcessesCardInner({ data, failed, total, canManage }) {
           <CardDescription>{t("processes.topDescription")}</CardDescription>
         </div>
         <div className="flex items-center gap-2">
-          {/* The search box only exists once the table does — filtering a list
-              of three is a control looking for a job. */}
+          {/* Search only in the expanded view; three rows need no filter. */}
           {open ? (
             <>
               <div className="w-full sm:w-56">
@@ -71,9 +53,7 @@ function ProcessesCardInner({ data, failed, total, canManage }) {
               <RefreshButton />
             </>
           ) : null}
-          {/* Default size, not sm: it sits beside the search box and the
-              refresh button, which are both h-9, and every other toolbar in
-              the panel pairs RefreshButton with a default-size Button. */}
+          {/* Default size, not sm, to match the h-9 search and refresh controls. */}
           <Button
             variant="outline"
             onClick={() => setOpen((prev) => !prev)}
@@ -90,11 +70,7 @@ function ProcessesCardInner({ data, failed, total, canManage }) {
       </CardHeader>
 
       <CardContent>
-        {/* The failed case used to short-circuit into a bare grey sentence
-            here, which meant ProcessTable's own failed branch was unreachable
-            and the two states looked nothing alike — one a framed empty state,
-            the other a line of text. One path now, and the table decides which
-            of the two it is. */}
+        {/* ProcessTable handles the failed state itself. */}
         <ProcessTable
           data={data}
           query={query}

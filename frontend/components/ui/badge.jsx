@@ -6,17 +6,7 @@ import { Slot } from "radix-ui"
 
 import { cn } from "@/lib/utils"
 
-/*
- * A pill is a claim that something has a STATE. Of 167 badges in the panel,
- * only 57 carried one — the other 110 were labels wearing a status costume, so
- * the real ones (a stopped service, an expiring certificate) had to compete
- * with a row of decorative capsules for the same attention.
- *
- * `success` / `warning` / `destructive` keep the tinted pill. `outline`,
- * `secondary` and `default` become quiet: no fill, no capsule, just a typed
- * label. Nothing is hidden and no call site changes — they simply stop
- * shouting.
- */
+// Tinted pills (`success`/`warning`/`destructive`/`muted`) mean a state; the rest are quiet labels.
 const badgeVariants = cva(
   "group/badge inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3!",
   {
@@ -27,16 +17,12 @@ const badgeVariants = cva(
         secondary: "rounded-md px-1 text-muted-foreground [a]:hover:text-foreground",
         destructive:
           "bg-destructive/10 text-destructive focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:focus-visible:ring-destructive/40 [a]:hover:bg-destructive/20",
-        // Text mixed towards the foreground in light mode: on a tinted card
-        // the plain token fell to 4.4:1 (dashboard, 30 Sep).
+        // Text mixed towards the foreground for contrast on tinted cards.
         success:
-          "bg-success/10 text-[color-mix(in_oklch,var(--success)_80%,var(--foreground))] dark:bg-success/20 dark:text-success",
+          "bg-success/10 text-[color-mix(in_oklch,var(--success)_80%,var(--foreground))] dark:bg-success/20 dark:text-[color-mix(in_oklch,var(--success)_85%,var(--foreground))]",
         warning:
           "bg-warning/15 text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:bg-warning/20 dark:text-warning",
-        // A status that is filled like its siblings but carries no alarm.
-        // `secondary` is a quiet LABEL — no fill at all — so a Pending
-        // application sat in a column of coloured pills with nothing around it
-        // and read as a missing badge rather than a state.
+        // A neutral status pill (e.g. Pending); `secondary` is a label, not a state.
         muted:
           "bg-muted text-muted-foreground dark:bg-muted/60",
         outline:

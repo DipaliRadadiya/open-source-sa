@@ -3,14 +3,7 @@ import { filesResponseSchema } from "@/lib/schemas/file";
 
 const FAILED = { path: "", files: [], hiddenCount: 0, failed: true, notFound: false };
 
-/**
- * One directory listing.
- *
- * `showHidden` is sent to the API rather than applied here. The backend filters
- * from the same `find` that produced the list, so the count of what was held
- * back cannot disagree with the rows — which it could if the browser filtered a
- * listing the server had already moved on from.
- */
+// `showHidden` is filtered by the API so the hidden count agrees with the rows.
 export async function getFiles(appId, path = "", showHidden = true) {
   try {
     const res = await serverFetch(`/applications/${appId}/files`, {

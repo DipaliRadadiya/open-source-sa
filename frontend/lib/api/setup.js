@@ -7,11 +7,7 @@ function toClientPath(endpoint) {
   return endpoint.replace(/^\/api/, "");
 }
 
-/**
- * Runs a component/option install action. `action` is the `{method, endpoint}`
- * object straight from the setup payload — the same endpoints PHP/Node/database
- * already use, so there is no second install path to drift.
- */
+// `action` is the `{method, endpoint}` object from the setup payload.
 export function runSetupAction(action, body) {
   return api.request({
     method: action.method ?? "POST",
@@ -20,9 +16,7 @@ export function runSetupAction(action, body) {
   });
 }
 
-/**
- * Client-side poll of the setup state while something is installing.
- */
+/** Client-side poll of the setup state while something is installing. */
 export async function fetchSetup() {
   const { data } = await api.get("/setup");
   const parsed = setupResponseSchema.safeParse(data);

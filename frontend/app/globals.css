@@ -125,7 +125,7 @@
        colors are lifted for contrast on this dark surface. */
     --console: oklch(0.19 0.012 264);
     --console-foreground: oklch(0.92 0.008 264);
-    --console-muted: oklch(0.58 0.012 264);
+    --console-muted: oklch(0.62 0.012 264);
     --console-border: oklch(0.28 0.014 264);
     --console-error: oklch(0.72 0.17 25);
     --console-warning: oklch(0.82 0.13 75);
@@ -289,7 +289,28 @@
   100% { transform: translateX(350%); }
 }
 
+/*
+ * The page-change bar: creeps towards 90% and stops there, because it cannot
+ * know how long the server will take. It disappears when the page arrives.
+ */
+@keyframes nav-progress {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(0.9); }
+}
+
 @layer utilities {
+  .animate-nav-progress {
+    transform-origin: left;
+    animation: nav-progress 8s cubic-bezier(0.1, 0.6, 0.3, 1) forwards;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-nav-progress {
+      animation: none;
+      transform: none;
+    }
+  }
+
   .animate-progress-sweep {
     animation: progress-sweep 1.4s ease-in-out infinite;
   }

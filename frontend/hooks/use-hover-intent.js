@@ -1,23 +1,7 @@
 import * as React from "react";
 
-/**
- * Hover, but only when the pointer means it.
- *
- * A bare `onMouseEnter` on a 48px rail that sits along the whole left edge of
- * the screen fires constantly: every trip from the page to the browser's back
- * button crosses it, and each crossing would throw a 256px panel open and shut.
- * The delay is what separates "I am going to the sidebar" from "I passed over
- * the sidebar".
- *
- * The two delays are deliberately different. Opening waits long enough to
- * ignore a pass-through; closing waits longer still, because the pointer
- * routinely leaves for a moment on its way between two items — and a panel that
- * snaps shut mid-reach is worse than one that lingers.
- *
- * ⚠️ Touch has no hover. A touch "hover" fires on tap and then sticks until the
- * next tap elsewhere, so on a tablet the panel would open on the first tap and
- * swallow the one the user actually meant. Gated on a real pointer.
- */
+// A delay filters out pointers crossing the rail; closing waits longer so moving between items does not snap shut.
+// Gated on a fine pointer: on touch a tap "hovers" and sticks.
 export function useHoverIntent({ enterDelay = 120, leaveDelay = 260, enabled = true } = {}) {
   const [hovered, setHovered] = React.useState(false);
   const timer = React.useRef(null);
@@ -32,14 +16,8 @@ export function useHoverIntent({ enterDelay = 120, leaveDelay = 260, enabled = t
 
   const active = enabled && canHover;
 
-  // Dropping out of the enabled state — the user opened the sidebar with the
-  // toggle, or switched to a touch device — must also drop the hover.
-  //
-  // Adjusted during render rather than in an effect. Not style: an effect would
-  // leave `hovered` true for the frame in between, and more importantly it
-  // would still be true the next time the rail collapsed — so the panel would
-  // spring open on its own, with no pointer anywhere near it. React documents
-  // this pattern for exactly this case.
+  // Leaving the enabled state drops the hover, during render so a stale `hovered`
+  // cannot reopen the panel the next time the rail collapses.
   const [wasActive, setWasActive] = React.useState(active);
 
   if (wasActive !== active) {
@@ -50,9 +28,7 @@ export function useHoverIntent({ enterDelay = 120, leaveDelay = 260, enabled = t
     if (!active) setHovered(false);
   }
 
-  // Cancel a pending open/close when the hook goes inactive, and again on
-  // unmount, so a timer cannot land on a sidebar that is already open or a
-  // tree that is already gone.
+  // Cancel pending timers when inactive and on unmount, so none lands on an open sidebar or a gone tree.
   React.useEffect(() => {
     if (!active) clear();
 
@@ -74,9 +50,8 @@ export function useHoverIntent({ enterDelay = 120, leaveDelay = 260, enabled = t
   const handlers = React.useMemo(
     () => ({
       onPointerEnter: (event) => {
-        // `pointerenter` reports its own kind, which is more reliable than the
-        // media query alone for hybrid machines: a touchscreen laptop matches
-        // `pointer: fine` and still sends touch events.
+        // `pointerType` is more reliable than the media query on hybrid
+        // machines: a touchscreen laptop matches `pointer: fine` but sends touch.
         if (event.pointerType === "touch") return;
         schedule(true, enterDelay);
       },
@@ -84,9 +59,7 @@ export function useHoverIntent({ enterDelay = 120, leaveDelay = 260, enabled = t
         if (event.pointerType === "touch") return;
         schedule(false, leaveDelay);
       },
-      // Keyboard users never fire pointer events, so tabbing into the rail
-      // would leave them reading a column of unlabelled icons. Focus opens it
-      // immediately — there is no ambiguity to wait out.
+      // Keyboard users fire no pointer events, so focus opens it immediately.
       onFocusCapture: () => {
         if (!active) return;
         clear();
@@ -107,13 +80,7 @@ export function useHoverIntent({ enterDelay = 120, leaveDelay = 260, enabled = t
   return { hovered: active && hovered, handlers };
 }
 
-/**
- * Whether this machine has a pointer that can hover at all.
- *
- * Matches the media query rather than sniffing the user agent, so a tablet with
- * a trackpad attached gets the behaviour and the same tablet without one does
- * not.
- */
+/** Whether this machine has a pointer that can hover, via media query, not UA sniffing. */
 function useHasFinePointer() {
   const [fine, setFine] = React.useState(false);
 

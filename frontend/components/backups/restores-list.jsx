@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { RotateCcw, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -23,28 +23,7 @@ import { ClearFiltersButton } from "@/components/data-table/clear-filters-button
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { RESTORE_OUTCOME, outcomeOf } from "@/components/backups/status-meta";
 
-/**
- * Every restore this server has run.
- *
- * Restoring is the only thing in the panel that destroys data, and until now
- * it left no trace: `/restores` was read once to drive the live progress
- * banner and then thrown away. So "was this site restored, when, by which
- * backup, and did it work?" had no answer anywhere — the activity log cannot
- * cover it either, since that endpoint only ever shows your own actions.
- *
- * Read-only on purpose. The way to undo a restore is the safety copy it took,
- * which is a backup like any other and belongs in the flow that already
- * guards restores rather than in a second, shorter path from a table row.
- */
-/**
- * What to call this restore's status.
- *
- * `t()` THROWS on a key it does not have, and this key is built from an API
- * value — so a status we have not translated took the whole page down with
- * "Something went wrong" rather than showing one odd-looking badge. The backup
- * badge beside it has always guarded with `t.has()`; this list never did.
- * Falls back to the raw status, which is at least true.
- */
+// The key comes from the API and `t()` throws on a miss, so fall back to the raw status.
 function statusLabel(restore, t) {
   if (restore.status_title) return restore.status_title;
   const key = `statuses.${restore.status}`;
@@ -68,10 +47,7 @@ export function RestoresList({ restores, applications = [], hasFilters = false }
     <div className="space-y-4">
       {running ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
 
-      {/* The same four filters, in the same order and widths, as the backup
-          history tab: this is the same question asked of the other half of the
-          data, and two different filter rows for it would be two things to
-          learn. All URL-driven, so a filtered view is a link. */}
+      {/* Same filters, order and widths as the backup history tab; URL-driven, so a view is a link. */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <FacetSelect
           paramKey="application"
@@ -113,8 +89,7 @@ export function RestoresList({ restores, applications = [], hasFilters = false }
           icon={RotateCcw}
           title={hasFilters ? t("emptyFiltered.title") : t("empty.title")}
           description={hasFilters ? t("emptyFiltered.description") : t("empty.description")}
-          // Only when filters are what emptied it. On a genuinely empty list
-          // the button would clear nothing and imply the rows are hiding.
+          // Only when filters emptied the list.
           action={hasFilters ? <ClearFiltersButton keys={["application", "status", "period", "type", "search"]} /> : null}
         />
       ) : (
@@ -164,9 +139,7 @@ function StatusCell({ row }) {
         <Icon className={cn("size-3", meta.spin && "animate-spin")} />
         {statusLabel(restore, t)}
       </Badge>
-      {/* A restore that failed part-way is the most alarming row anyone will
-          ever read here, so it says which step gave out rather than leaving
-          them to guess how far it got. */}
+      {/* A failed restore names the step that failed. */}
       {restore.status === "failed" ? (
         <p className="truncate text-xs text-muted-foreground">
           {reasonText(restore.reason_title, t("unknownReason"))}
@@ -189,9 +162,7 @@ function WhenCell({ row }) {
 
   return (
     <div className="min-w-0">
-      {/* A queued restore has no start time at all, and an empty cell beside
-          five filled ones reads as a rendering fault rather than as "it has
-          not begun". */}
+      {/* A queued restore has no start time; say "not started" rather than leave it blank. */}
       <p className="truncate text-sm tabular-nums">
         {restore.started_at_human ?? restore.started_at ?? (
           <span className="text-muted-foreground">{t("notStarted")}</span>
@@ -204,13 +175,7 @@ function WhenCell({ row }) {
   );
 }
 
-/**
- * Whether the site can still be put back the way it was before this restore.
- *
- * The safety copy is taken automatically before the overwrite and is exempt
- * from retention, so it does not quietly age out — which makes "yes, still"
- * a true statement rather than a hopeful one.
- */
+// The safety copy is exempt from retention, so it does not age out.
 function UndoCell({ row }) {
   const t = useTranslations("backups.restores");
   const restore = row.original;

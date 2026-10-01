@@ -37,85 +37,38 @@ import {
 import { PermanentDeleteField } from "@/components/applications/files/permanent-delete-field";
 import { useRefresh } from "@/hooks/use-refresh";
 
-/**
- * The dialogs behind the selection bar. One component because all four share
- * the same ending: run the call, hand the per-path result back to the panel,
- * and let the panel decide what to show. None of them reports success itself
- * when something failed — a toast cannot carry a list of paths.
- */
+// Each dialog hands the per-path result to the panel; a toast cannot carry a list of paths.
 export function BulkDialogs({ appId, action, paths: selectedPaths, files = [], path, onOpenChange, onResult }) {
-  // Fixed at open. The list refreshes before the dialog closes, and after a
-  // move the selection is no longer on screen — the live value went empty and
-  // `dirname(paths[0])` took the whole page down.
+  // Fixed at open: the list refreshes before the dialog closes, and after a move
+  // the live selection is empty (`dirname(paths[0])` would crash).
   const [paths] = useState(selectedPaths);
   const t = useTranslations("applications.files");
   const tc = useTranslations("common");
   const { pending: refreshing, refreshThen } = useRefresh();
   const [running, setBusy] = useState(false);
   const busy = running || refreshing;
-  /*
-   * Compress gets a useful default; move and copy get none.
-   *
-   * All three used to start at `path` — the folder the selected files are
-   * already in. For compress that is right: the archive lands beside them. For
-   * move and copy it is the one destination guaranteed to fail, because every
-   * file is already there. Select twelve files, press Move, press Confirm, and
-   * every single one comes back "something is already at the destination".
-   *
-   * There is no better guess to make — the parent folder is no likelier than
-   * any other — so the field starts empty behind its placeholder and Confirm
-   * stays disabled until a destination is actually given. An empty box asking
-   * a question is better than a filled one answering it wrongly.
-   */
+  // Move and copy start empty: the current folder is the one destination certain to fail.
   const [target, setTarget] = useState(() =>
     action === "compress" ? compressSuggestion(joinPath(path, "archive"), ".zip", new Set(files.map((f) => f.path))) : "",
   );
-  /*
-   * Starts at what the selection actually has, not at a constant.
-   *
-   * This was `useState("644")`. Selecting one folder — 755 — and opening this
-   * offered 644 with "Read-only, the usual choice for files" pre-selected, on
-   * something that is not a file. Saving strips the execute bit, and a
-   * directory without execute cannot be opened: picking `wp-admin` and
-   * pressing Save took the WordPress admin down. The per-row dialog has always
-   * seeded from the file; only this one guessed.
-   *
-   * A mixed selection has no single current value, so nothing is claimed — the
-   * checkboxes start from the safe fallback and the description says they
-   * differ, rather than presenting one file's mode as if it were all of them.
-   */
+  // Seed from the actual mode: forcing 644 onto a folder strips its execute bit.
   const chosen = selectedFiles(files, paths);
   const currentMode = sharedMode(chosen);
-  /*
-   * A mixed selection starts with NOTHING chosen, and Save stays disabled
-   * until someone picks a mode.
-   *
-   * Seeding the fallback here was the same fault as the old constant, one
-   * level over: it no longer CLAIMED to be current, but it was still
-   * pre-filled and one click from being applied. Selecting a 644 file and a
-   * 600 one and pressing Save without touching anything sent 644 for both —
-   * turning a secrets file readable by every account on the box, on a value
-   * nobody chose.
-   *
-   * Move and Copy in this same component already answer it this way, and the
-   * reasoning above them applies verbatim: an empty box asking a question
-   * beats a filled one answering it wrongly.
-   */
+  // A mixed selection starts with nothing chosen; a pre-filled mode could apply 644 to a
+  // 600 secrets file without anyone choosing it.
   const mustChooseMode = action === "permissions" && !currentMode;
-  // Only for the `d`/`-`/`l` prefix on the symbolic form. A mixed selection
-  // gets the plain file prefix rather than calling a folder a file.
+  // Only for the `d`/`-`/`l` prefix on the symbolic form. A mixed selection gets
+  // the plain file prefix rather than calling a folder a file.
   const sharedType = chosen.every((file) => file.type === chosen[0]?.type)
     ? chosen[0]?.type
     : null;
-  // Empty, never a hardcoded default, when the selection has no shared current
-  // value — see `mustChooseMode`. The field renders no preset as chosen for "".
-  // This used to seed "644", which on a 755 folder was one click from removing
-  // its execute bit and breaking the directory.
+  // Empty, never a hardcoded default, when there is no shared current value (see
+  // `mustChooseMode`); the field shows no preset as chosen for "".
   const [mode, setMode] = useState(() => currentMode ?? "");
   const [error, setError] = useState(null);
   const archiveFormat = useArchiveFormat();
-  // On every time the dialog mounts (Krishna, 2026-09-29). BulkDialogs is
-  // mounted per action by the panel, so no value carries between two deletes.
+  // Defaults on each mount; BulkDialogs is mounted per action, so no value carries
+  // between two deletes.
   const [permanent, setPermanent] = useState(true);
 
   async function run(call) {
@@ -130,9 +83,8 @@ export function BulkDialogs({ appId, action, paths: selectedPaths, files = [], p
         onOpenChange(false);
       });
     } catch (err) {
-      // A 422 here is the whole request refused — a bad target, a selection
-      // spanning folders, a count that no longer matches. It belongs in the
-      // dialog next to the field that caused it, not in a toast.
+      // A 422 refuses the whole request (bad target, selection spanning folders, stale
+      // count), so it is shown in the dialog next to the field, not in a toast.
       const field =
         err.response?.data?.errors?.target?.[0] ??
         err.response?.data?.errors?.target_directory?.[0] ??
@@ -172,9 +124,8 @@ export function BulkDialogs({ appId, action, paths: selectedPaths, files = [], p
         pending={busy}
         onConfirm={() => run(() => deleteFiles(appId, paths, { permanent }))}
       >
-        {/* Named, not counted. "Delete 12 items?" is not something anyone can
-            check; a list is. Bounded and scrolling so 250 of them cannot push
-            the buttons off the screen. */}
+        {/* Named, not counted, so the user can check what is deleted. Bounded and
+            scrolling so a long list cannot push the buttons off screen. */}
         <ul className="max-h-56 space-y-1 overflow-y-auto rounded-lg border p-2">
           {paths.map((entry) => (
             <li key={entry} className="font-mono text-xs break-all">
@@ -209,8 +160,8 @@ export function BulkDialogs({ appId, action, paths: selectedPaths, files = [], p
     },
     compress: {
       icon: FileArchive,
-      // A bare name lands beside the selection, as the hint says — it went to
-      // the site's top folder, which on WordPress is the public web root.
+      // A bare name lands beside the selection, as the hint says (not at the site's
+      // top folder, which may be the public web root).
       submit: () => compressFiles(appId, paths, archiveFormat.complete(inFolder(target.trim(), dirname(paths[0])))),
       label: t("bulk.archiveName"),
       placeholder: t("bulk.archiveNamePlaceholder"),
@@ -241,13 +192,7 @@ export function BulkDialogs({ appId, action, paths: selectedPaths, files = [], p
       }}
       icon={meta.icon}
       title={t(`bulk.${action}Title`, { count: paths.length })}
-      /*
-       * Permissions says what the selection is currently set to, the way the
-       * per-row dialog does — or that it has no single answer. "The same mode
-       * is applied to everything selected" described what Save would do and
-       * never what was already there, which is how a hardcoded 644 passed for
-       * a folder's current value.
-       */
+      // The current mode, or that the selection has no single value.
       description={
         isPermissions
           ? currentMode
@@ -268,9 +213,8 @@ export function BulkDialogs({ appId, action, paths: selectedPaths, files = [], p
           >
             {t("cancel")}
           </Button>
-          {/* Disabled with a reason, never hidden — and for a mixed selection
-              the reason names what is missing rather than the generic "enter a
-              value", since there is no box to fill: a mode has to be chosen. */}
+          {/* Disabled with a reason, never hidden; for a mixed selection the reason says a
+              mode must be chosen. */}
           <ReasonTooltip
             reason={
               busy
@@ -287,8 +231,7 @@ export function BulkDialogs({ appId, action, paths: selectedPaths, files = [], p
             disabled={busy || (isPermissions ? !mode : !target.trim())}
           >
             {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-            {/* "Permissions" is the name of the job, not something you can do —
-                the single-file dialog says Save here, and so does this one. */}
+            {/* "Save", as in the single-file dialog; "Permissions" names the job, not the action. */}
             {isPermissions ? t("permissionsDialog.submit") : t(`bulk.${action}`)}
           </Button>
           </ReasonTooltip>
@@ -296,11 +239,8 @@ export function BulkDialogs({ appId, action, paths: selectedPaths, files = [], p
       }
     >
       {isPermissions ? (
-        // The same control as a single file's Permissions dialog. This was a row
-        // of raw octal buttons and a number box — asking people to know the
-        // 4/2/1 mask for exactly the job the single-file dialog had already
-        // decided they should not have to. No label above it: the picker names
-        // its own rows and columns, and the dialog is titled "Permissions".
+        // Same control as the single-file Permissions dialog, so no octal is needed. No
+        // label: the picker names its own rows and columns.
         <PermissionModeField mode={mode} onChange={setMode} invalid={Boolean(error)} />
       ) : (
         <div className="space-y-2">

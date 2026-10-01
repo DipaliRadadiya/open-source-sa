@@ -9,8 +9,7 @@ export async function getApplicationDomains(id) {
 
 export async function getApplicationCertificate(id) {
   const result = await read(`/applications/${id}/certificate`, certificateResponseSchema);
-  // `failed` and "no certificate" are different answers and must stay that way:
-  // one means we could not ask, the other means the site is on plain HTTP.
+  // Keep `failed` distinct from "no certificate": a failed read is not plain HTTP.
   return {
     certificate: result.data?.certificate ?? null,
     availableTypes: result.data?.available_types ?? [],

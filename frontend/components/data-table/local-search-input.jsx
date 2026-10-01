@@ -3,12 +3,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 
-/**
- * Controlled search box for in-memory (client-side) list filtering — the
- * counterpart to {@link SearchInput}, which drives the URL for server-paginated
- * lists. Owns no state: the parent holds `value` and filters its own data.
- * Renders the search icon and a clear (×) button when non-empty.
- */
+// In-memory counterpart to {@link SearchInput} (URL-driven); the parent holds `value` and filters.
 export function LocalSearchInput({ value, onChange, placeholder, className }) {
   const tc = useTranslations("common");
   return (

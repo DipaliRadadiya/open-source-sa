@@ -1,10 +1,4 @@
-/**
- * Seconds → the words a person would use.
- *
- * The API talks in seconds and the config file stores seconds, so the input
- * has to stay a number. But "600" tells you nothing at a glance and "1 day"
- * tells you everything, so every raw number on this page is echoed in words.
- */
+/** Seconds → words ("1 day"), echoed beside raw-seconds inputs. */
 export function humanDuration(t, seconds) {
   const n = Number(seconds);
   if (!Number.isFinite(n) || n <= 0) return null;

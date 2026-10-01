@@ -17,17 +17,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-/**
- * The worker's kind, as a control rather than a side effect.
- *
- * It was only ever set by picking a template, so a worker created as Custom
- * could not become a Queue worker without being deleted and made again — while
- * the API had accepted the change all along. Worse, the one way to change it
- * was invisible: choosing a template rewrote the command AND the kind, and
- * nothing on screen said the second thing had happened.
- *
- * Above the command, because it frames what the command is meant to be.
- */
+// The worker's kind as an explicit control; templates also set it.
 export function WorkerKindField({ form, presets = [], workers = [], disabled = false }) {
   const t = useTranslations("applications.workers");
 
@@ -46,29 +36,13 @@ export function WorkerKindField({ form, presets = [], workers = [], disabled = f
             </FormControl>
             <SelectContent>
               {workerKinds(presets, field.value).map((kind) => {
-                /*
-                 * The same refusal the template menu already shows, on the
-                 * other control that sets this field — otherwise the menu
-                 * greys Horizon out and the select next to it offers it.
-                 *
-                 * Never the value already selected, though. Server Sync can
-                 * adopt a pair the API would have refused, and disabling the
-                 * setting a worker already HAS turns "leave this alone" into
-                 * the one thing the form will not let you do.
-                 */
+                // Same conflict rule as the template menu, but never for the
+                // current value (Server Sync can adopt a pair the API would refuse).
                 const conflict = kind === field.value ? null : conflictingKind(kind, workers);
                 const disabledReason = conflict ? t(`form.conflict.${conflict}`) : null;
 
-                /*
-                 * The reason is IN the row, not in a tooltip on it.
-                 *
-                 * A disabled SelectItem carries `data-disabled:pointer-events-none`,
-                 * so a tooltip wrapped around it never fires — hover, focus and
-                 * touch all pass straight through. Driving it proved that: the
-                 * reason was present, the lint gate was satisfied, and no user
-                 * could ever have read it. Rendering it beneath the label costs
-                 * a line and needs no pointer at all.
-                 */
+                // Reason shown in the row: a disabled SelectItem has
+                // `pointer-events-none`, so a tooltip on it never opens.
                 return (
                   <SelectItem key={kind} value={kind} disabled={Boolean(disabledReason)}>
                     <span className="flex flex-col items-start gap-0.5">

@@ -8,11 +8,7 @@ import { describeCron, nextRuns, parseCron, wallClockNow } from "@/lib/cron-jobs
 // them into the reader's own zone; the times are the server's.
 const UTC = { timeZone: "UTC" };
 
-/**
- * The schedule in words, when it can be said in a sentence, and always the
- * next three run times — those are exact even when the sentence is not
- * possible, and they are what settles "when will this actually run?".
- */
+// Words when the schedule can be said in a sentence; the next three run times always.
 export function useScheduleText(expression, timezone) {
   const t = useTranslations("cronJobs.preview");
   const format = useFormatter();
@@ -35,8 +31,7 @@ export function useScheduleText(expression, timezone) {
     const timeText = {
       everyMinute: () => t("everyMinute"),
       everyMinutes: () => t("everyMinutes", { n: d.time.n }),
-      // Example times, not "on the hour" / "past the hour": idioms that had to
-      // be decoded, where 12:00 AM, 1:00 AM, 2:00 AM cannot be misread.
+      // Example times rather than idioms like "on the hour".
       hourly: () => t("hourly", { examples: [0, 1, 2].map((h) => time([h, d.time.minute])).join(", ") }),
       everyHours: () =>
         t("everyHours", { n: d.time.n, examples: [0, 1, 2].map((i) => time([i * d.time.n, d.time.minute])).join(", ") }),

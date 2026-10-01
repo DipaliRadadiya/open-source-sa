@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Loader2, Trash2 } from "lucide-react";
 import { LifecycleBadge } from "@/components/runtime/lifecycle-badge";
+import { InstallOutput } from "@/components/runtime/install-output";
 import { setDefaultPhpVersion, removePhpVersion, installPhpVersion } from "@/lib/api/php";
 import { failedWithNothingInstalled } from "@/lib/runtime/failed-install";
 import { Badge } from "@/components/ui/badge";
@@ -21,18 +22,7 @@ import {
 } from "@/components/ui/card";
 import { apiMessage } from "@/lib/api/error-message";
 
-/**
- * What the selected version is, and everything you can do from here.
- *
- * One card rather than a card per action: the facts you need to decide
- * ("is anything using this?") and the buttons that act on them belong in the
- * same glance. `makeDefault` and `remove` appear only when they are genuinely
- * available — on a one-version server neither exists, because you cannot remove
- * the only version and it is already the default.
- *
- * `children` carries the php.ini button, owned by the page (a Server
- * Component). Install lives beside the version picker, not here.
- */
+// `children` carries the php.ini button, owned by the page (a Server Component).
 export function VersionSummary({
   version,
   canManage,
@@ -42,8 +32,7 @@ export function VersionSummary({
   const t = useTranslations("php");
   const { refreshAndWait } = useRefresh();
   const [confirming, setConfirming] = useState(false);
-  // WHICH action is running. A single boolean made Remove spin the
-  // Make default button — same fault the Node card had. They still disable
+  // WHICH action is running, so only that button spins. They still disable
   // together, because both act on one version.
   const [running, setRunning] = useState(null);
   const pending = running !== null;
@@ -54,31 +43,18 @@ export function VersionSummary({
   // The API omits `status` on older responses; absent means ready.
   const installState = versionState(version);
 
-  /*
-   * Present, but not a version this panel set up.
-   *
-   * `openlitespeed` pulls in `lsphp83` as its own dependency, so the list
-   * carries an interpreter with none of the base extensions — no curl,
-   * sqlite3, redis, intl or pgsql. It ran, it was offered for new
-   * applications, and it read exactly like the healthy 8.4 beside it. The API
-   * has reported this all along; the schema was dropping the field.
-   *
-   * Only while nothing else is happening: mid-install the list is legitimately
-   * incomplete, and saying so there would be describing the install.
-   */
+  // Present but not set up by the panel (e.g. `lsphp83` from OpenLiteSpeed).
+  // Hidden mid-install, when the list is legitimately incomplete.
   const missingPackages = version.missing_packages ?? [];
   const incomplete = missingPackages.length > 0 && !installState;
 
   // Nothing is on disk, so anything that reads or writes this install fails.
-  // Removing is the exception — clearing up a failed install is exactly what
-  // you would want to do next.
+  // Removing is the exception: clearing a failed install is the next step.
   const notReadyReason = installState
     ? installState === "installing"
       ? t("versions.stillInstalling")
-      : // Removing is in-flight like installing, so everything that reads or
-        // writes this version has to be refused while it runs — including
-        // Remove itself, which used to be pressable a second time and
-        // answered 404 once apt had finished.
+      : // Removing is in flight too, so reads and writes are refused,
+        // including a second Remove.
         installState === "removing"
         ? t("versions.stillRemoving")
         : t("versions.installFailedShort")
@@ -86,16 +62,11 @@ export function VersionSummary({
 
   const removeReason = !canManage
     ? t("noPermission")
-    : // Already going. Pressing Remove again used to send a second DELETE,
-      // which answered 404 the moment apt had finished the first — the error
-      // that made this look broken when it had actually worked.
+    : // Already removing: a second DELETE answers 404 once apt finishes.
       installState === "removing"
       ? t("versions.stillRemoving")
-      : // And while apt is still PUTTING it there. Removing a half-installed
-        // version races the install that is writing it, and the reason has to
-        // be said: a Remove that simply does nothing reads as broken. A FAILED
-        // install stays removable — clearing that up is the next thing anyone
-        // wants to do, which is why this is not folded into `notReadyReason`.
+      : // Not while apt is installing it (it would race the install). A FAILED
+        // install stays removable, so this is not folded into `notReadyReason`.
         installState === "installing"
         ? t("versions.stillInstalling")
         : version.in_use_by_panel
@@ -150,60 +121,47 @@ export function VersionSummary({
     try {
       await removePhpVersion(version.version);
       await refreshAndWait();
-      // "Removing", not "removed": this is a 202 now, and apt has minutes of
-      // work ahead of it. Saying it was done was the reason a version still
-      // sitting there looked like a bug rather than a purge in progress.
+      // "Removing", not "removed": a 202, apt has minutes of work ahead.
       toast.success(t("versions.removing", { version: version.version }));
       setConfirming(false);
     } catch (error) {
-      // The API names the sites in its message, which is more useful than
-      // anything this page could compose.
+      // The API names the blocking sites in its message.
       toast.error(apiMessage(error, t("versions.removeFailed")));
     } finally {
       setRunning(null);
     }
   }
 
-  // Each action appears only when it genuinely applies: the default version
-  // cannot be made default again, and the panel`s own version cannot go.
+  // Each action appears only when it applies: the default cannot be made
+  // default again, and the panel's own version cannot be removed.
   const showMakeDefault = !version.is_default;
-  /*
-   * A failed install put nothing on disk, and `destroy()` refuses a version
-   * that is not installed — so Remove there could only ever answer 404. The
-   * action that clears the row is installing again, which is what is offered
-   * in its place.
-   */
+  // `destroy()` refuses a version not installed, so a failed install offers reinstall.
   const nothingToRemove = failedWithNothingInstalled(version);
   const showRemove = !version.in_use_by_panel && !nothingToRemove;
 
   return (
     <Card>
       <CardHeader>
-        {/* php.ini sits with the version it edits, on the title line. It was in
-            the footer next to Install, where the two most-used controls on the
-            page were a pair of unrelated actions sharing a bar. */}
+        {/* php.ini sits with the version it edits, on the title line. */}
         <div className="flex flex-wrap items-start justify-between gap-3">
         <CardTitle className="flex flex-wrap items-center gap-2 text-base font-semibold">
           {t("versions.name", { version: version.version })}
-          {/* Filled, not outlined: "Default" is a state this version is in, and
-              it should not read like the outline tags used for plain labels. */}
+          {/* Filled, not outlined: "Default" is a state, not a plain label. */}
           {version.is_default ? (
             <Badge variant="muted" className="font-normal">
               {t("versions.default")}
             </Badge>
           ) : null}
           {/* Not folded into the status chain below: a version can be both
-              incomplete AND end-of-life, and those are two different things to
-              know before picking it. */}
+              incomplete AND end-of-life. */}
           {incomplete ? (
             <Badge variant="warning" className="font-normal">
               {t("versions.incomplete")}
             </Badge>
           ) : null}
-          {/* Said out loud. A version whose install failed used to look exactly
-              like a healthy one — same title, same "no sites use this yet". */}
+          {/* A failed install must not look like a healthy one. */}
           {removeFailed(version) ? (
-            <Badge variant="destructive" className="font-normal" title={version.message ?? undefined}>
+            <Badge variant="destructive" className="font-normal">
               {t("versions.statusRemoveFailed")}
             </Badge>
           ) : installState === "failed" ? (
@@ -211,10 +169,8 @@ export function VersionSummary({
               {t("versions.statusFailed")}
             </Badge>
           ) : installState === "removing" ? (
-            // Its own state rather than hiding the card the moment the button
-            // is pressed: the purge takes minutes, and a card that vanished
-            // immediately would leave nothing to look at while it happened —
-            // and nothing to show if it failed.
+            // A badge rather than hiding the card: the purge takes minutes and
+            // may fail.
             <Badge variant="warning" className="font-normal">
               <Loader2 className="size-3 animate-spin" />
               {t("versions.statusRemoving")}
@@ -222,11 +178,8 @@ export function VersionSummary({
           ) : installState === "installing" ? (
             <Badge variant="warning" className="font-normal">
               <Loader2 className="size-3 animate-spin" />
-              {/* The phase apt reported, not a percentage. There is no honest
-                  percentage available: the install is one apt call and its
-                  total is unknown until it finishes, so a number would be
-                  invented. A named phase is something the server actually
-                  said. */}
+              {/* The apt phase, not a percentage: the total is unknown until
+                  apt finishes. */}
               {version.current_step
                 ? t(`versions.steps.${version.current_step}`)
                 : t("versions.statusInstalling")}
@@ -240,26 +193,11 @@ export function VersionSummary({
           )}
         </CardTitle>
 
-          {/* Every action for this version on one line, with the version it
-              acts on. A footer bar underneath repeated the card's own subject
-              and split the controls across two places for no reason. */}
-          {/* Not shrink-0. A shrink-0 flex item takes its max-content width —
-              all three buttons on one line — and refuses to give any of it
-              back, so its own flex-wrap never gets the chance to wrap and the
-              row runs past the card instead. Longer locales hit this first:
-              "Hacer predeterminada" is half again the width of "Make
-              default". */}
+          {/* Not shrink-0: it keeps max-content width, so flex-wrap never wraps. */}
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             {children}
 
-            {/* An incomplete version cannot become the server default.
-             *
-             * `php` would then resolve to an interpreter with no curl, redis
-             * or pgsql for everything that does not pin its own version —
-             * cron jobs, composer, anything run by hand over SSH. The API
-             * allows it; that is not a reason to offer it, and a greyed
-             * control with a stated reason beats one that quietly makes the
-             * server worse. */}
+            {/* The API allows an incomplete version as default; the UI does not. */}
             {!showMakeDefault ? null : (
               <ReasonTooltip
                 reason={
@@ -280,17 +218,7 @@ export function VersionSummary({
               </ReasonTooltip>
             )}
 
-            {/* The repair.
-             *
-             * `installPhpVersion` IS the repair — `PhpController::store` only
-             * short-circuits when the version is installed AND complete, so
-             * for this one it falls through to apt, which is idempotent.
-             *
-             * It has to live here rather than in the install dialog: that
-             * picker greys out anything already installed
-             * (`disabled={option.installed}`), which is every version that can
-             * be in this state. Wiring it there would produce a control that
-             * cannot be clicked. */}
+            {/* `PhpController::store` falls through to an idempotent apt install when incomplete. */}
             {!incomplete ? null : (
               <ReasonTooltip reason={canManage ? null : t("noPermission")}>
                 <Button
@@ -319,8 +247,7 @@ export function VersionSummary({
               </ReasonTooltip>
             )}
 
-            {/* Hidden entirely on the panel's own version — the API refuses it,
-                but a button that exists to be refused is still a trap. */}
+            {/* Hidden on the panel's own version, which the API refuses. */}
             {!showRemove ? null : (
               <ReasonTooltip reason={removeReason}>
                 <Button
@@ -337,23 +264,29 @@ export function VersionSummary({
           </div>
         </div>
 
-        {/* The count answers "can I remove this?"; the names answer "what
-            breaks if I do?". Run together as one sentence, ten site names —
-            several of them near-identical, like "Blog" and "Blog (Staging)" —
-            became a grey paragraph nobody reads, and the count was buried at
-            the end of it. */}
+        {/* The count answers "can I remove this?"; the site tags below answer
+            "what breaks?". */}
         <CardDescription>
-          {/* Named, not counted. "5 packages missing" tells nobody whether
-              their application will run; "curl, sqlite3, redis" tells them
-              immediately. */}
+          {/* Why the removal stopped, as visible text (a `title` is not shown
+              on touch or keyboard). */}
+          {removeFailed(version) ? (
+            <span className="block text-destructive">
+              {/* The job records no message for this, so ours stands in. */}
+              {version.message ?? t("versions.removeFailed")}
+              {version.reference ? (
+                <span className="ml-1.5 font-mono whitespace-nowrap text-muted-foreground">
+                  {version.reference}
+                </span>
+              ) : null}
+            </span>
+          ) : null}
           {incomplete ? (
             <span className="block text-warning">
               {t("versions.incompleteDetail", { packages: missingPackages.join(", ") })}
             </span>
           ) : null}
           {usedBy > 0 ? t("versions.usedByCount", { count: usedBy }) : t("versions.usedByNone")}
-          {/* Only when the date is news. On a supported version the green badge
-              already says what you need, and a 2028 date is trivia. */}
+          {/* Only when the date is news; supported versions show just the badge. */}
           {lifecycleAvailable &&
           version.lifecycle?.eol_date &&
           version.lifecycle.status !== "active"
@@ -365,29 +298,14 @@ export function VersionSummary({
             : null}
         </CardDescription>
 
-        {/* apt's own output, while it is installing and after it has failed.
-            The badge says which phase it reached; only this says why it
-            stopped there — "unable to locate package" and "could not get
-            lock" are the same failed install without it, and both have
-            different answers.
-
-            Kept after the failure too, deliberately: the moment someone wants
-            to read the output is the moment it went wrong. */}
+        {/* apt's output while installing and after a failure: the badge gives
+            the phase, only this says why it stopped. */}
         {installState && version.output ? (
-          <pre
-            className="mt-2 max-h-40 overflow-auto rounded-md bg-muted p-2 font-mono text-xs leading-relaxed text-muted-foreground"
-            // Announced politely: this updates every poll while an install
-            // runs, and an assertive region would interrupt a screen reader
-            // several times a minute for output nobody asked to hear.
-            aria-live="polite"
-          >
-            {version.output.trimEnd()}
-          </pre>
+          <InstallOutput text={version.output.trimEnd()} />
         ) : null}
 
-        {/* Tags, not prose: each name is one scannable unit, so the near-
-            duplicates stop reading as one long string. The API sends at most
-            five and tells us how many it held back. */}
+        {/* Tags, so near-duplicate names stay distinct. The API sends at most
+            five and reports how many it held back. */}
         {sites.length > 0 ? (
           <ul className="flex flex-wrap gap-1.5 pt-1">
             {sites.map((site) => (
@@ -406,9 +324,7 @@ export function VersionSummary({
           </ul>
         ) : null}
 
-        {/* "Default" reads as "every site now uses this", which it isn't. Said
-            plainly and only where the badge is, rather than left to be found
-            out by changing it. */}
+        {/* "Default" does not mean every site uses this version; said here. */}
         {version.is_default ? (
           <p className="text-xs text-muted-foreground">{t("versions.defaultHint")}</p>
         ) : null}

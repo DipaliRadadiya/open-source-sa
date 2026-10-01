@@ -1,8 +1,6 @@
 import { api } from "@/lib/api/client";
 
-// Client-side user mutations (admin). Each hits the configured Axios instance
-// (cookie + XSRF) and returns the response; callers refresh the server
-// component with router.refresh() after success.
+// Client-side user mutations (admin); callers router.refresh() after success.
 export function createUser(values) {
   return api.post("/admin/users", values);
 }
@@ -24,9 +22,8 @@ export function resetUserPassword(id, values) {
   return api.put(`/admin/users/${id}/reset-password`, values);
 }
 
-// Session-based "login as" — swaps the cookie session to the target user (no
-// token). Backend blocks self and admin→admin with 422. After success the
-// caller must do a FULL-PAGE navigation so SSR re-reads the new session.
+// Swaps the cookie session; 422 for self and admin→admin. After success the
+// caller MUST do a full-page navigation so SSR re-reads the session.
 export function impersonateUser(id) {
   return api.post(`/admin/users/${id}/impersonate`);
 }

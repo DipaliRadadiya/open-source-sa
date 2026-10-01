@@ -1,26 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { ArrowRight, Link2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AttachDatabaseDialog } from "@/components/applications/attach-database-dialog";
 import { CreateDatabaseDialog } from "@/components/databases/create-database-dialog";
 
-/**
- * What the Database card lets you actually DO, from the site's own page.
- *
- * Every one of these used to be a link to `/databases` — a list of every
- * database on the server, from which the reader had to find their way back to
- * the thing they were already looking at. Three different states all pointing
- * at one page that answered none of them.
- *
- * Now each state does its own job where it stands:
- *   has one          → open THAT database
- *   none, spares     → attach one here, in a dialog
- *   none, no spares  → create one for this site, in a dialog
- */
+// Opens the attached database; otherwise attaches a spare or creates one, in a dialog.
 export function DatabaseCardActions({
   application,
   databases = [],
@@ -34,7 +22,6 @@ export function DatabaseCardActions({
 
   const first = databases[0] ?? null;
 
-  // Attached already: the useful destination is that database, not the list.
   if (first) {
     return (
       <Button asChild variant="outline" size="sm">
@@ -46,8 +33,7 @@ export function DatabaseCardActions({
     );
   }
 
-  // Nothing to attach: offering "Attach" would open a picker with no options,
-  // which is a dead end wearing a button. Creating one is the real next step.
+  // Nothing to attach, so offer creating one instead of an empty picker.
   if (unattached.length === 0) {
     return (
       <>

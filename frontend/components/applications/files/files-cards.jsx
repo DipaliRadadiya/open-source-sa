@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { Folder, Link2, Loader2, Unlink } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
@@ -10,13 +10,7 @@ import { canOpenFile } from "@/lib/files/openable";
 import { isWorldWritable, symbolicMode } from "@/lib/files/describe-mode";
 import { FILE_NAME } from "@/lib/files/name-style";
 
-/*
- * `folderSizes` and `sizingPaths` are the same two pieces of state the desktop
- * table's SizeCell reads. Without them the ⋯ → "Folder size" action on a phone
- * ran, measured, stored the answer — and had nowhere to show it, so the menu
- * closed and nothing ever happened. The action was only ever wired into the
- * table.
- */
+// `folderSizes` and `sizingPaths` are the desktop SizeCell's state, so phones can show folder size.
 export function FilesCards({
   appId,
   data,
@@ -30,8 +24,7 @@ export function FilesCards({
   sizingPaths = [],
 }) {
   const t = useTranslations("applications.files");
-  // "Measuring…" already exists one namespace up, shared with the dashboard.
-  // Adding a files-scoped copy would be a second string for one sentence.
+  // "Measuring…" lives one namespace up, shared with the dashboard.
   const tSize = useTranslations("applications.size");
   return (
     <ul className="space-y-2">
@@ -48,9 +41,7 @@ export function FilesCards({
             )}
           >
             <div className="flex min-w-0 items-center gap-2.5">
-              {/* Same selection on a phone as on a desktop. Bulk work is exactly
-                  what you reach for on the small screen, where doing it one row
-                  at a time is most painful. */}
+              {/* Selection works on phones too. */}
               <Checkbox
                 className="shrink-0"
                 checked={selected.includes(file.path)}
@@ -83,8 +74,8 @@ export function FilesCards({
                       "block truncate font-medium",
                       file.link_broken ? "text-destructive" : "text-muted-foreground",
                     )}
-                    // Inline on the card would push the name out of a narrow
-                    // row, so the target lives in the native tooltip here.
+                    // Inline would push the name out of a narrow row, so the target is in the native
+                    // tooltip.
                     title={file.link_target ?? undefined}
                   >
                     {file.name}
@@ -93,12 +84,7 @@ export function FilesCards({
                     ) : null}
                   </span>
                 ) : (
-                  // w-full is not redundant next to `block`. A <button> is a form
-                  // control and sizes to its own content even when block-level,
-                  // so `truncate` was clipping at the button's width — which was
-                  // already wider than the column — and the name spilled across
-                  // the row's action icons instead of ellipsing.
-                  // Nothing to open — see the note in files-table.
+                  // w-full beside `block`: a <button> sizes to its content, so `truncate` would not clip.
                   !canManage || !canOpenFile(file.name) ? (
                     <span className={cn("block w-full font-medium", FILE_NAME)} title={file.name}>
                       {file.name}
@@ -114,13 +100,8 @@ export function FilesCards({
                     </button>
                   )
                 )}
-                {/* Two lines, not one run. The card is the phone view of the
-                    same row, so it keeps every fact the table has — owner and
-                    mode included, since a file owned by the wrong account is
-                    exactly what people come here to check. But as one
-                    `·`-joined line it wrapped wherever it ran out, which split
-                    `-rw-r--r--` itself in half. Now: what it is (size, age),
-                    then who may touch it, each token unbreakable. */}
+                {/* Two lines: size and age, then owner and mode, each token unbreakable (one
+                    `·`-joined line split `-rw-r--r--` when wrapping). */}
                 <p className="text-xs leading-relaxed text-muted-foreground">
                   {measuring ? (
                     tSize("measuring")
@@ -144,9 +125,7 @@ export function FilesCards({
                     </>
                   ) : null}
                 </p>
-                {/* Spaced, not `·`-joined: when the two do not fit on one
-                    line the second wraps whole, and a dot left at the start
-                    of the new line read as a stray mark. */}
+                {/* Spaced, not `·`-joined, so a wrapped second item has no stray leading dot. */}
                 {file.owner || file.mode ? (
                   <p className="flex flex-wrap gap-x-2 font-mono text-xs leading-relaxed text-muted-foreground/80">
                     {file.owner ? (

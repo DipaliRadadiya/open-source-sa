@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { getBasicInfo } from "@/lib/basic-info/get-basic-info";
 import { PanelUnavailableCard } from "@/components/sections/panel-unavailable";
@@ -24,13 +24,8 @@ import {
 } from "@/components/ui/card";
 
 export default async function LoginPage() {
-  /*
-   * The 503 has to be answered HERE, not in error.jsx: a production build
-   * hands the boundary a digest and nothing else, so by then "the panel is
-   * updating" and "the panel crashed" are the same event. This is the screen
-   * people actually meet it on — the panel updates itself, and the session
-   * check is the first thing this page does.
-   */
+  // 503/429/request failures are handled HERE, not in error.jsx: production
+  // boundaries only receive a digest and cannot tell them from a crash.
   let user, basicInfo, t;
   try {
     [user, basicInfo, t] = await Promise.all([
@@ -39,9 +34,6 @@ export default async function LoginPage() {
       getTranslations("auth"),
     ]);
   } catch (error) {
-    // 429 too: the login page is the easiest place in the panel to hit the
-    // rate limit (a reload loop while the API is unhappy), and it was the one
-    // screen that still answered it with a digest.
     if (isRateLimited(error)) return <RateLimitedCard />;
     if (isPanelUnavailable(error)) return <PanelUnavailableCard />;
     if (isRequestFailed(error)) return <RequestFailedCard {...requestFailureProps(error)} />;

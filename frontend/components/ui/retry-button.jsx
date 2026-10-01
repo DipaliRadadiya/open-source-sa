@@ -6,20 +6,7 @@ import { useTranslations } from "next-intl";
 import { Loader2, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-/**
- * The retry control for an error boundary.
- *
- * `reset()` on its own does nothing when the error came from server rendering:
- * it re-renders the boundary's children from the RSC payload the client
- * already has, which is the failed one, so the boundary throws again in the
- * same tick and not a single request goes out. Measured — a click produced
- * zero network activity.
- *
- * `router.refresh()` is what actually re-requests the server component;
- * `reset()` then clears the boundary so the fresh payload can render. Both
- * inside one transition, so `pending` covers the whole round trip rather than
- * leaving the button looking inert while the server is being asked again.
- */
+// `reset()` alone re-renders the cached failed payload; `router.refresh()` refetches.
 export function RetryButton({ reset }) {
   const t = useTranslations("errors");
   const router = useRouter();

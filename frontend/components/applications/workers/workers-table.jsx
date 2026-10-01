@@ -8,15 +8,12 @@ import { WorkerStatusBadge } from "@/components/applications/workers/worker-stat
 import { WorkerActions } from "@/components/applications/workers/worker-actions";
 import { WorkerRowActions } from "@/components/applications/workers/worker-row-actions";
 
-// Cells are module-level so flexRender's identity stays stable across the busy
-// map's re-renders — an inline cell function gets a fresh type every render and
-// React remounts the whole cell, closing any open menu inside it.
+// Cells are module-level: an inline cell function is a new component type each
+// render, so React would remount the cell and close any open menu.
 
 function NameCell({ row }) {
   const t = useTranslations("applications.workers");
   const worker = row.original;
-  // One quiet metadata line instead of a badge + a separate line — kind and
-  // added-time are both static descriptive facts, not states worth a pill.
   const meta = worker.created_at_human
     ? `${worker.kind_title} · ${t("addedAgo", { time: worker.created_at_human })}`
     : worker.kind_title;
@@ -63,9 +60,7 @@ function CommandCell({ row }) {
         </Tooltip>
         <CopyButton value={worker.command} label={t("form.command")} className="size-6" />
       </div>
-      {/* Directory defaults to the site's document root — only worth a line
-          when it's been pointed somewhere else, which is otherwise invisible
-          outside Edit. */}
+      {/* Shown only when set away from the default document root. */}
       {worker.directory ? (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -82,11 +77,8 @@ function CommandCell({ row }) {
           </TooltipContent>
         </Tooltip>
       ) : null}
-      {/* Only when it is not the site's own user. A worker running as somebody
-          else is the first thing anyone checks when it cannot read the site's
-          files, and it was invisible outside Edit — `effective_user` resolves
-          what `user` left unset, so this says what it will actually run as
-          rather than what was typed. */}
+      {/* Shown only for a non-default user; `effective_user` is what it
+          actually runs as. */}
       {worker.user && worker.effective_user ? (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -171,8 +163,7 @@ export function WorkersTable({ data, appId, presets = [], canManage = false, can
       emptyMessage={t("empty.title")}
       rowClassName={(worker) =>
         cn(
-          // Rows carry 2-3 lines per cell now (name+meta, command+directory) —
-          // py-2 was sized for a single line and reads cramped against that.
+          // Taller rows: cells hold two or three lines.
           "[&_td]:py-3",
           worker.state === "degraded" && "bg-warning/5 hover:bg-warning/10",
         )

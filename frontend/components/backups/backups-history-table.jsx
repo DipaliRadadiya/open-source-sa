@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useFormatter, useTranslations } from "next-intl";
 import { CopyButton } from "@/components/ui/copy-button";
 import { CircleAlert, History, RotateCw, Trash2 } from "lucide-react";
@@ -20,14 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ActionIcon } from "@/components/ui/action-icon";
 import { restoreBlocker } from "@/components/backups/restore-dialog";
 
-/* ---------------------------------------------------------------------------
- * Every backup that has run, as the same table the overview uses.
- *
- * These were hand-built <li> rows with their own spacing, so one feature had
- * two list rhythms. Columns also fix the alignment complaint on their own:
- * time, size and actions line up because they are columns, not because each
- * row remembered to right-align them.
- * ------------------------------------------------------------------------- */
+/* Every backup that has run, as the same table the overview uses. */
 
 function SiteCell({ row }) {
   const t = useTranslations("backups.history");
@@ -35,7 +28,7 @@ function SiteCell({ row }) {
 
   return (
     <div className="min-w-0">
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
         {backup.application_id ? (
           <Link
             href={`/applications/${backup.application_id}/backups`}
@@ -63,25 +56,18 @@ function StatusCell({ row, table }) {
       ? reasonText(backup.reason_title, t("unknownReason"))
       : null;
 
-  // Narrower on a site's own page, where the table carries Destination from xl:
-  // at 1280 the German, French and Russian action labels pushed Restore 40px
-  // past the card. The badges wrap and the reason is clamped either way.
-  const width = table.options.meta?.showSite ? "w-52 max-w-52" : "w-40 max-w-40";
+  // One width on every list; badges wrap and the reason is clamped to two
+  // lines, with the full text on hover/focus.
+  const width = "w-32 max-w-32";
 
   return (
     <div className={cn(width, "min-w-0 space-y-1")}>
       <div className="flex flex-wrap items-center gap-1.5">
         <BackupStatusBadge backup={backup} />
-        {/* The Site column carries this badge, and a site's own page hides that
-            column — so the pre-restore copy, the row someone hunts for after a
-            bad restore, looked like any other backup there. */}
+        {/* A site's own page hides the Site column, which carries this badge otherwise. */}
         {backup.is_safety && !table.options.meta?.showSite ? <SafetyBadge /> : null}
       </div>
-      {/* Bound the copy to the column before clamping it. `truncate` without a
-          real width let this no-wrap sentence participate in auto table layout,
-          so one detailed failure widened the whole table. Two lines keep the
-          reason useful in the row; the complete text remains reachable on
-          hover or keyboard focus. */}
+      {/* `truncate` without a bounded width lets a long reason widen the auto-layout table. */}
       {reason ? (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -107,74 +93,24 @@ function TypeCell({ row }) {
   );
 }
 
-/**
- * Enough of the uid to recognise it in a bucket listing, and no more.
- *
- * Eight characters is the git-short-hash convention and it is plenty here: the
- * uid exists to be matched against object names in a bucket, and the first
- * block of a v4 UUID does that. The full value is what gets copied.
- */
+// Enough to match an object in a bucket listing; the full value is what gets copied.
 function uidFragment(uid) {
   const text = String(uid);
   return text.length > 8 ? `${text.slice(0, 8)}…` : text;
 }
 
-/**
- * Where the archive was written.
- *
- * Read from the backup's OWN target, not the site's current one — the setting
- * is editable, so an archive from last month may well sit somewhere the site
- * no longer points at. Naming today's destination against an old row would
- * send someone to the wrong bucket at exactly the wrong moment.
- */
+// The backup's own target, not the site's current one, which may have changed since.
 function DestinationCell({ row }) {
   const t = useTranslations("backups.history");
   const { storage_destination_name: name, uid } = row.original;
   if (!name) return <span className="text-sm text-muted-foreground">—</span>;
-  /*
-   * The column flexes rather than holding a fixed width — pinning it gave the
-   * table a 1244px floor and overflowed its container by 270px at 1024 — so a
-   * long destination name is truncated on a laptop and full on a wide screen.
-   * `title` rather than a Tooltip: this column only renders from xl up, which
-   * is a pointer, and a native title needs no provider around a table cell.
-   */
-  /*
-   * The destination says WHICH bucket; `uid` says which object in it. They
-   * belong together — on their own, "Cloudflare" and a list of UUIDs in a
-   * bucket cannot be matched up, which is the whole reason the backend started
-   * sending it.
-   *
-   * The uid gets its OWN line, and a visible fragment of itself, because the
-   * copy button used to sit inline right after "Cloudflare" with nothing to
-   * show what it would copy. Reported as "copy for destination is not
-   * working": it works — the clipboard does receive the uid and the tick does
-   * appear — but positioned next to the bucket name it reads as "copy
-   * Cloudflare", so what lands in your paste buffer is a 36-character UUID you
-   * did not ask for. That is indistinguishable from broken. The aria-label
-   * already said "archive's file name"; a label you only get by hovering does
-   * not fix a button whose position makes a different promise.
-   *
-   * A FRAGMENT, not the whole uid: this column has no fixed width, and 36 mono
-   * characters is what gave the table a 1244px floor and overflowed its
-   * container by 270px at 1024 the last time something long went in here. The
-   * full value stays on the clipboard and in `title`.
-   */
+  // `title` suffices: this column only renders on pointer-sized screens. Never the full uid: 36 mono chars overflow.
   return (
     <span className="flex min-w-0 flex-col gap-0.5">
       <span className="truncate text-sm" title={name}>
         {name}
       </span>
-      {/* Only when there is something in the bucket to name. The uid is
-          stamped in `Backup::booted()` at creation — long before any upload is
-          attempted — so a run that failed to upload still carries one, and the
-          button offered to copy the name of an object that was never written.
-          On the row reported it sat next to "No archive" and a failure saying
-          the upload did not happen: a 36-character UUID that matches nothing in
-          the destination, which reads as the panel handing out a random string.
-
-          Same predicate the Download button uses, for the same reason — both
-          answer "is there an archive?", and two literals asking that question
-          separately is how they came to disagree once already. */}
+      {/* A failed upload still has a uid that matches nothing. Same predicate as Download. */}
       {uid && backupHasArchive(row.original.status) ? (
         <span className="flex min-w-0 items-center gap-0.5">
           <span className="truncate font-mono text-xs text-muted-foreground" title={uid}>
@@ -206,11 +142,7 @@ function SizeCell({ row }) {
   const format = useFormatter();
   const { size_bytes: size } = row.original;
 
-  // A finished backup has a size; a running one has progress. Before this the
-  // column said "Not yet" for the entire upload — three and a half hours, on
-  // the run that prompted it — which is true and useless: it reads the same at
-  // 2% as at 98%, and identically to an upload whose connection has died. The
-  // number is the whole difference between "wait" and "something is wrong".
+  // A finished backup has a size; a running one has upload progress.
   const progress = uploadProgress(row.original, t, format);
 
   return (
@@ -220,14 +152,7 @@ function SizeCell({ row }) {
   );
 }
 
-/**
- * How far a running upload has got, or null if it has not said yet.
- *
- * Falls back to a bare byte count when the total is unknown. A step that
- * cannot know its own denominator should not get one invented for it — a
- * progress bar derived from a guessed total is a confident lie, and the raw
- * "1.4 GB uploaded" is both honest and enough to see movement between refreshes.
- */
+// Null if not reported yet; a bare byte count when the total is unknown.
 export function uploadProgress(backup, t, format) {
   const done = backup.bytes_transferred;
 
@@ -243,31 +168,15 @@ export function uploadProgress(backup, t, format) {
   });
 }
 
-/**
- * Why there is no size, rather than one flat "Unknown".
- *
- * A run still in flight has not written an archive yet; a failed one never
- * will. Both are knowable, and saying "Unknown" about them makes the reader
- * guess whether it means zero, missing, or broken.
- */
+/** Why there is no size: still in flight, or failed with no archive. */
 export function sizeNote(backup, t) {
   if (BACKUP_IN_FLIGHT.includes(backup.status)) return t("sizePending");
   if (backup.status === "failed") return t("sizeNone");
   return t("sizeUnknown");
 }
 
-/**
- * One action per state, and never one that cannot work.
- *
- * A failed backup has nothing to restore FROM, so it does not get a Restore
- * button at all — it gets Retry.
- *
- * Retry is a label, not a different operation: `POST /backups/{id}/retry`
- * checks the row is failed and then dispatches the same `RunBackup` job that
- * "Back up now" does, against the same target. It creates a new row rather than
- * reviving this one, so anything that waits on a started run has to treat the
- * two identically.
- */
+// Retry dispatches the same job as "Back up now" and creates a NEW row, so anything
+// waiting on a started run must treat the two identically.
 function ActionsCell({ row, table }) {
   const t = useTranslations("backups.history");
   const tr = useTranslations("backups.restore");
@@ -284,9 +193,8 @@ function ActionsCell({ row, table }) {
   } = table.options.meta;
   const backup = row.original;
 
-  // Download rides alongside whichever action the state earns, including on a
-  // failed run: it needs the same trust as restore (`backup,manage`) because
-  // the archive is every file plus a database dump.
+  // Download is offered in every state that has an archive. It needs
+  // `backup,manage` like restore: the archive holds every file and a database dump.
   const download = <DownloadBackupButton backup={backup} canDownload={canRestore} />;
   const retryBlocked = retryBlockedFor?.(backup) ?? null;
 
@@ -318,9 +226,7 @@ function ActionsCell({ row, table }) {
           <Button
             size="sm"
             variant="outline"
-            // Same width as Restore, so the download icon beside it lands on
-            // one vertical line down the column instead of shuffling with
-            // whichever label the row's state earned.
+            // Same width as Restore, so the download icons line up down the column.
             className="min-w-28"
             disabled={busyId === backup.id || Boolean(retryBlocked)}
             disabledReason={retryBlocked}
@@ -341,10 +247,7 @@ function ActionsCell({ row, table }) {
   return (
     <div className="flex items-center justify-end gap-2">
       {download}
-      {/* The reason lives in the tooltip, not beside the button. As inline
-          text it pushed that row's buttons left and the column stopped lining
-          up — and since `ReasonTooltip` now opens on tap as well as hover, the
-          reason is no less reachable for being tucked away. */}
+      {/* Reason in the tooltip (opens on tap too), so the buttons stay aligned. */}
       <ReasonTooltip reason={blocker}>
         <Button
           size="sm"
@@ -395,20 +298,16 @@ export function BackupsHistoryTable({
   onRetry,
   onClear,
   busyId,
-  // `(backup) => reason | null`. Per row rather than one flag, because this
-  // table also renders a list spanning every site: a run under way for one site
-  // must not disable Retry on another's rows.
+  // `(backup) => reason | null`. Per row because the server-wide list spans
+  // every site: one site's run must not disable Retry on another's rows.
   retryBlockedFor = null,
-  // On a site's own page every row belongs to that site, so naming it ten
-  // times says nothing. The rest of the table is identical, which is the
-  // point: a backup should describe itself the same way on both screens.
+  // Hides the Site column on a site's own page.
   showSite = true,
   emptyMessage,
   // Set when the caller already wraps this in a Card.
   bare = false,
-  // Deleting destroys the archive in object storage as well as the record, so
-  // it is gated on the same permission as restore rather than on whoever can
-  // configure a schedule.
+  // Deleting also removes the archive from object storage, so it needs the
+  // restore permission, not the schedule one.
   canDelete = false,
   canClear = false,
   onDeleted,
@@ -416,14 +315,11 @@ export function BackupsHistoryTable({
   const t = useTranslations("backups.history");
   const [selection, setSelection] = useState({});
 
-  // Keyed by backup id rather than row index, so a selection survives the list
-  // refetching — by index, a list that reordered would delete different rows
-  // than the ones that were ticked.
+  // Keyed by backup id, not row index, so a refetch that reorders the list
+  // cannot change which rows get deleted.
   const selected = backups.filter((backup) => selection[String(backup.id)]);
   const [confirming, setConfirming] = useState(false);
-  // One row carrying it is enough: the API either loads the relation for the
-  // whole page or for none of it, and a row whose destination is genuinely
-  // null still deserves the column that explains the dash.
+  // The API loads the destination relation for the whole page or none of it.
   const showDestination = backups.some(
     (backup) => backup.storage_destination_name !== undefined,
   );
@@ -441,52 +337,40 @@ export function BackupsHistoryTable({
       ? {
           accessorKey: "application_name",
           header: t("columns.site"),
-          meta: { className: "min-w-52" },
+          meta: { className: "min-w-48" },
           cell: SiteCell,
         }
       : null,
-    { accessorKey: "status", header: t("columns.status"), meta: { className: showSite ? "w-52" : "w-40" }, cell: StatusCell },
-    // No floor on a site's own page: a fixed 176px here is what left no room
-    // for the Hindi action labels at 1280. "Files and database" wraps instead.
-    { id: "type", header: t("columns.type"), meta: { className: showSite ? "w-44" : undefined }, cell: TypeCell },
-    // Only when the API actually sends it. The field is absent rather than null
-    // on a backend that predates it — the backend distinguishes the two on
-    // purpose — and an always-empty column reads as data we failed to load
-    // rather than a version we are not talking to.
+    // Sized to the badge, not reserved, to leave room for the actions column.
+    { accessorKey: "status", header: t("columns.status"), meta: { className: "w-32" }, cell: StatusCell },
+    // No fixed width, so long labels and the header wrap instead of crowding
+    // the actions column.
+    { id: "type", header: t("columns.type"), meta: { className: "w-32 whitespace-normal" }, cell: TypeCell },
+    // Only when the API sends it: the field is absent (not null) on older
+    // backends, and an always-empty column would look like a load failure.
     showDestination
       ? {
           id: "destination",
           header: t("columns.destination"),
-          /*
-           * Hidden below xl only on the server-wide list, and the breakpoint
-           * is measured rather than chosen.
-           *
-           * That list carries a Site column; adding this one overflows its
-           * container by 156px at 1024 and 28px at 1152, which is sideways
-           * scrolling to reach Restore. A site's own Backups page has no Site
-           * column and 156px more to spend: measured at zero overflow from
-           * 1024 up, so hiding it there was hiding it for nothing — and it is
-           * the page where "where did this go?" is actually asked.
-           */
-          meta: { className: cn("max-w-40", showSite && "hidden xl:table-cell") },
+          // Hidden below 2xl on the server-wide list only: with the Site column
+          // it overflows the card at common laptop widths.
+          meta: { className: cn("max-w-40", showSite && "hidden 2xl:table-cell") },
           cell: DestinationCell,
         }
       : null,
-    { id: "when", header: t("columns.when"), meta: { className: "w-36" }, cell: WhenCell },
+    { id: "when", header: t("columns.when"), meta: { className: "w-28" }, cell: WhenCell },
     {
       id: "size",
       header: () => <span className="block text-right">{t("columns.size")}</span>,
-      // The "No archive" note may wrap on a site's own page: in Hindi it was
-      // the widest thing in the column, and the column was what pushed Restore
-      // off the card at 1280.
-      meta: { className: showSite ? "w-28 text-right" : "w-24 text-right whitespace-normal" },
+      // The "No archive" note may wrap so it does not widen the column.
+      meta: { className: "w-20 text-right whitespace-normal" },
       cell: SizeCell,
     },
     {
       id: "actions",
       header: () => <span className="sr-only">{t("columns.actions")}</span>,
       // Fits the download button beside the state action; the blocked reason
-      // moved into a tooltip, so no text shares this column any more.
+      // lives in a tooltip, so no text shares this column.
       meta: { className: "w-48 text-right" },
       cell: ActionsCell,
     },
@@ -494,17 +378,13 @@ export function BackupsHistoryTable({
 
   return (
     <>
-      {/* Only once something is ticked. A bar that is always there, greyed,
-          spends a row of the screen saying "you have selected nothing". */}
+      {/* Only once something is selected. */}
       {canDelete && selected.length > 0 ? (
         <div
           className={cn(
             "flex flex-wrap items-center justify-between gap-3 bg-muted/40",
-            // `bare` means this table lives in a CardContent with no padding, so
-            // a rounded chip with an outline lands corner-to-corner against the
-            // card's own straight edges and reads as a strip that failed to
-            // render. Full-bleed with a single rule under it, matching the
-            // queued-run strip that appears in the same slot on that card.
+            // `bare`: the table sits in an unpadded CardContent, so the bar is
+            // full-bleed with a bottom rule, matching the queued-run strip.
             bare
               ? "border-b px-5 py-3"
               : "mb-3 rounded-lg border px-4 py-2.5",
@@ -554,9 +434,7 @@ export function BackupsHistoryTable({
         onOpenChange={setConfirming}
         backups={selected}
         onDeleted={(ids, failedIds = []) => {
-          // Keep the refusals selected. Clearing everything threw away the one
-          // part of the selection still worth acting on, so a partial failure
-          // meant finding those rows again by hand.
+          // Keep the refusals selected so a partial failure can be acted on again.
           setSelection(Object.fromEntries(failedIds.map((id) => [String(id), true])));
           onDeleted?.(ids);
         }}

@@ -5,7 +5,7 @@ import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { CardSaveFooter } from "@/components/ui/card-save-footer";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
@@ -28,25 +28,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 
-/**
- * Whole-site Basic Auth — one shared credential, not a directory/user table
- * (cPanel/Plesk's model doesn't match this API; CloudPanel/GridPane's
- * single-toggle shape does). The API always takes username+password together
- * whenever `enabled` is true — there is no "just change the password" call —
- * so re-saving a password means re-typing the username too, even unchanged.
- *
- * Purpose-built layout rather than the shared settings Section/Row grid:
- * that grid is right for a list of compact toggles/selects, but a text-heavy
- * on/off-plus-credentials card reads as sparse and cramped inside it. This is
- * the only screen of its kind so far — worth its own markup instead of
- * bending a pattern built for something else.
- */
+// When `enabled` is true the API requires username and password together.
 export function SecuritySection({ appId, application, domain, canManage }) {
   const t = useTranslations("applications.security");
   const { name: brand } = useBranding();
-  const router = useRouter();
-  // The password the API just accepted, shown once for copying — it is never
-  // sent back on any read, so this is the only chance to grab it again.
+  const { refreshAndWait } = useRefresh();
+  // Shown once for copying: the API never returns the password on reads.
   const [justSaved, setJustSaved] = useState(null);
 
   const defaults = {
@@ -64,11 +51,8 @@ export function SecuritySection({ appId, application, domain, canManage }) {
   const enabled = useWatch({ control: form.control, name: "enabled" });
   const passwordValue = useWatch({ control: form.control, name: "password" });
 
-  // Any edit after a save invalidates the "here's what you just set" panel —
-  // it must not go on showing a password that no longer matches what's saved.
-  // Only a real user edit counts: a successful save calls form.reset() itself,
-  // which also notifies watchers, and clearing on that would wipe the panel in
-  // the same tick it was set — losing the one and only copy of the password.
+  // A user edit after a save hides the saved-credentials panel. Only
+  // type "change" counts: the save's own form.reset() also notifies watchers.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/incompatible-library -- react-hook-form's watch() is a known false positive for the React Compiler lint
     const subscription = form.watch((_values, { type }) => {
@@ -84,11 +68,11 @@ export function SecuritySection({ appId, application, domain, canManage }) {
         ? { enabled: true, username: values.username.trim(), password: values.password }
         : { enabled: false };
       await updateApplicationSecurity(appId, payload);
-      toast.success(values.enabled ? t("enabledToast") : t("disabledToast"));
       setSavedProtected(values.enabled);
       setJustSaved(values.enabled ? { username: values.username.trim(), password: values.password } : null);
       form.reset({ enabled: values.enabled, username: values.enabled ? values.username.trim() : "", password: "" });
-      router.refresh();
+      await refreshAndWait();
+      toast.success(values.enabled ? t("enabledToast") : t("disabledToast"));
     } catch (error) {
       handleValidationError(error, form);
     }
@@ -101,22 +85,12 @@ export function SecuritySection({ appId, application, domain, canManage }) {
 
   const submitting = form.formState.isSubmitting;
   const isDirty = form.formState.isDirty;
-  // A sidebar click is a client-side route change; without this the edit
-  // vanishes with no warning. See components/ui/unsaved-guard.jsx.
   useWatchUnsaved("app-security", isDirty);
 
-  // Some applications sign in with the Authorization header, and HTTP carries
-  // only one of those per request -- Basic Auth would consume it and make the
-  // application unreachable rather than merely double-protected. The API
-  // refuses the combination, so the control is disabled here rather than
-  // letting the user fill in a form that cannot be saved.
-  //
-  // Turning protection OFF stays available: an application protected before
-  // this was known must not be stuck that way.
+  // Apps that use the Authorization header cannot take Basic Auth (one header
+  // per request); the API refuses it. Turning protection off stays available.
   const conflicts = application.basic_auth_supported === false;
-  // The saved state, as of our own last save until the refreshed page agrees —
-  // otherwise the badge kept the old answer for the second or two the re-read
-  // takes, beside a toast saying the opposite.
+  // Our last save's state until the refreshed server value agrees.
   const serverProtected = application.basic_auth_enabled ?? false;
   const [savedProtected, setSavedProtected] = useState(null);
   if (savedProtected !== null && savedProtected === serverProtected) setSavedProtected(null);
@@ -132,19 +106,12 @@ export function SecuritySection({ appId, application, domain, canManage }) {
         <form noValidate method="post" onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())} className="max-w-4xl">
           <Card className="gap-0 overflow-hidden py-0 shadow-sm">
             <CardContent className="space-y-5 p-5">
-              {/* The toggle IS the feature — it gets a full-width tinted row of
-                  its own, with the status badge right on it, instead of being
-                  one bare line lost in a mostly-empty card. */}
               <FormField
                 control={form.control}
                 name="enabled"
                 render={({ field }) => (
                   <FormItem className="!mt-0">
-                    {/* A real <label>, not a styled <div> — clicking anywhere in
-                        the row (icon, text, badge) activates the nested Switch
-                        exactly once via native label-forwarding, no click
-                        handler or double-toggle logic needed. Precision-pointing
-                        at the small switch itself stops being the only way in. */}
+                    {/* A real <label>: clicking anywhere in the row toggles the Switch once. */}
                     <label
                       className={cn(
                         "flex flex-col gap-3 rounded-xl border p-4 transition-colors sm:flex-row sm:items-center sm:justify-between sm:gap-4",
@@ -164,10 +131,7 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-medium">{t("enable")}</span>
-                            {/* What the site IS, from the last save — not the
-                                switch. Flicking it used to turn this green
-                                "Protected" while the site was still public; the
-                                footer's "Not saved yet" says what is pending. */}
+                            {/* The saved state, not the switch position. */}
                             <Badge variant={alreadyProtected ? "success" : "muted"}>
                               {alreadyProtected ? t("statusProtected") : t("statusNotProtected")}
                             </Badge>
@@ -192,16 +156,13 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                         </FormControl>
                       </div>
                     </label>
-                    {/* A 422 on `enabled` (the Authorization-header rule) was
-                        filed against a field with no message slot, so the save
-                        failed without a word. */}
+                    {/* Shows a 422 on `enabled` (the Authorization-header rule). */}
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              {/* Protected before the conflict was known: the switch stays
-                  usable so it can be turned off, and this says why it should. */}
+              {/* Already protected despite the conflict: explains why to turn it off. */}
               {conflicts && alreadyProtected ? (
                 <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
                   <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
@@ -209,8 +170,6 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                 </div>
               ) : null}
   
-              {/* Framed as guidance, not just a warning — answers "should I turn
-                  this on" before anyone has to guess from the toggle alone. */}
               <Collapsible open={!enabled}>
                 <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
                   <Note icon={Lightbulb} title={t("whenToUseTitle")}>
@@ -220,14 +179,8 @@ export function SecuritySection({ appId, application, domain, canManage }) {
               </Collapsible>
   
               <Collapsible open={enabled}>
-                {/* `overflow-hidden` here is what makes the height animation
-                    work, but it also clips anything that visually bleeds past
-                    the edge — an invalid field's ring included, right where
-                    the username/password inputs sit flush against this
-                    boundary. `-m-1 p-1` gives the ring 4px to bleed into on
-                    each side while netting zero actual layout shift — the
-                    bottom too, where the inputs are the last thing in it and
-                    a focused field lost the lower edge of its ring. */}
+                {/* overflow-hidden (needed for the animation) clips focus rings;
+                    negative margin plus padding gives them room without shifting layout. */}
                 <CollapsibleContent className="-mx-1 -mb-1 overflow-hidden px-1 pb-1 data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
                   <div className="space-y-4 border-t pt-5">
                     <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
@@ -235,16 +188,9 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                       <p>{t("warning")}</p>
                     </div>
   
-                    {/* What these fields actually are, before anyone fills them
-                        in — without this, "Username" reads as if it might be
-                        the visitor's ServerAvatar login, and the plain browser
-                        popup it produces can look like the feature is broken. */}
+                    {/* Clarifies these are new credentials, not a panel login. */}
                     <p className="text-sm text-muted-foreground">{t("credentialsNote", { brand })}</p>
   
-                    {/* Side by side, same column width each — username alone at
-                        full width next to a half-width password (squeezed by its
-                        Generate button) read as an unintentional size mismatch
-                        rather than a deliberate layout. */}
                     <div className="grid gap-4 sm:grid-cols-2">
                       <FormField
                         control={form.control}
@@ -270,12 +216,8 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                         control={form.control}
                         name="password"
                         render={({ field }) => (
-                          // Generate sits visually top-right next to the label,
-                          // but comes AFTER the password input in the actual
-                          // markup (positioned, not reordered) — so Tab reaches
-                          // the field itself first and the auxiliary action
-                          // second, instead of a keyboard user hitting "Generate"
-                          // before they've even reached the field it fills.
+                          // Generate is positioned top-right but comes after the
+                          // input in markup, so Tab reaches the field first.
                           <FormItem className="relative">
                             <FormLabel required hint={t("passwordHint")}>{t("password")}</FormLabel>
                             <FormControl>
@@ -286,10 +228,7 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                                 {...field}
                               />
                             </FormControl>
-                            {/* The API takes both fields together and the saved
-                                password is never sent back, so changing only
-                                the username meets "Enter a password." with no
-                                reason given. */}
+                            {/* The API needs both fields together and never returns the password. */}
                             {alreadyProtected && isDirty && !passwordValue ? (
                               <p className="text-xs text-muted-foreground">{t("passwordAgainHint")}</p>
                             ) : null}
@@ -315,28 +254,15 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                       />
                     </div>
   
-                    {/* Explains both fields together — it belongs under the pair,
-                        not tucked under just one of them. */}
-  
                     {justSaved ? (
                       <div className="space-y-2 rounded-lg border bg-muted/40 p-3">
                         <p className="text-xs font-medium text-muted-foreground">{t("savedCredentials")}</p>
-                        {/* Each value is named. Two bare code blocks stacked
-                            together are ambiguous — a generated password looks
-                            random, but so can a username, so "which one is
-                            which" was left to guesswork at exactly the moment
-                            the password is shown for the only time.
-                            Side by side because they are one credential read
-                            together, and neither is long enough to want a full
-                            row; stacked below `sm`, where two columns would
-                            leave each value narrower than the value itself. */}
                         <div className="grid gap-2 sm:grid-cols-2">
                           <SavedValue label={t("username")} value={justSaved.username} />
                           <SavedValue label={t("password")} value={justSaved.password} secret />
                         </div>
                         <Button asChild variant="outline" size="sm">
-                          {/* See application-row-actions: the API's own `url`,
-                              which is http:// until a certificate is servable. */}
+                          {/* The API's `url` is http:// until a certificate is servable. */}
                           <a
                             href={application?.url ?? `https://${domain}`}
                             target="_blank"
@@ -353,10 +279,7 @@ export function SecuritySection({ appId, application, domain, canManage }) {
               </Collapsible>
             </CardContent>
   
-            {/* Directly under the content it saves — no gap wide enough to
-                read as a separate, unrelated strip. `submit` because this card
-                is a real react-hook-form, unlike the other two that save from
-                local state. */}
+            {/* `submit`: this card is a react-hook-form, unlike siblings that save local state. */}
             <CardSaveFooter
               submit
               saving={submitting}
@@ -372,16 +295,7 @@ export function SecuritySection({ appId, application, domain, canManage }) {
   );
 }
 
-/**
- * One saved credential value: named, copyable, and hidden if it is the password.
- *
- * Hidden by default because this panel appears on a page someone may well be
- * sharing a screen on, and the password is the only thing here worth hiding —
- * the username is on the site's login prompt anyway.
- *
- * Copy works while it is still masked, which is the point: the common case is
- * "put this in my password manager", and that never needs the value on screen.
- */
+// Masked if secret; copy works while masked.
 function SavedValue({ label, value, secret = false }) {
   const t = useTranslations("applications.security");
   const [revealed, setRevealed] = useState(false);
@@ -394,8 +308,7 @@ function SavedValue({ label, value, secret = false }) {
         <code
           className={cn(
             "min-w-0 flex-1 truncate font-mono text-xs",
-            // `select-none` on the mask so a drag-select cannot lift the dots
-            // and paste them somewhere as if they were the password.
+            // select-none so the mask dots cannot be copied as if they were the password.
             hidden && "select-none tracking-[0.2em] text-muted-foreground",
           )}
         >
@@ -406,9 +319,7 @@ function SavedValue({ label, value, secret = false }) {
             type="button"
             variant="ghost"
             size="icon-sm"
-            // 28px, matching CopyButton beside it. `icon-sm` is 32, which made
-            // the password box 4px taller than the username box and knocked the
-            // two values out of line with each other.
+            // 28px to match CopyButton; `icon-sm` is 32px.
             className="size-7"
             onClick={() => setRevealed((shown) => !shown)}
             aria-pressed={revealed}

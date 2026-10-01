@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { MoreHorizontal, Pencil, ScrollText, SquareArrowOutUpRight, Trash2 } from "lucide-react";
@@ -31,9 +31,7 @@ export function WorkerRowActions({ worker, appId, presets, workers = [], canMana
         <DropdownMenuContent align="end" className="w-44" onCloseAutoFocus={(e) => e.preventDefault()}>
           {worker.log_identifier && canViewLogs ? (
             <DropdownMenuItem asChild>
-              {/* New tab, not in-place — this leaves the server-wide Logs
-                  page, not another spot in this app, so navigating there
-                  would lose the Workers list and the Application sidebar. */}
+              {/* New tab: the server-wide Logs page is outside this application. */}
               <Link
                 href={`/logs?source=${encodeURIComponent(worker.log_identifier)}`}
                 target="_blank"
@@ -45,8 +43,7 @@ export function WorkerRowActions({ worker, appId, presets, workers = [], canMana
               </Link>
             </DropdownMenuItem>
           ) : worker.log_identifier ? (
-            // The log lives on the server-wide Logs page, which is its own
-            // grant. Offered as a link it opened a tab saying "no access".
+            // The Logs page needs its own grant; explain instead of linking.
             <MenuItemHint hint={t("actions.viewLogsNoPermission")}>
               <DropdownMenuItem disabled>
                 <ScrollText className="size-4" />

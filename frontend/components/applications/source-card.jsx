@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { isDeployIncomplete, liveCommit } from "@/lib/applications/code-on-disk";
 import { provisionStepLabel } from "@/lib/applications/provision-steps";
@@ -16,26 +16,9 @@ import { Button } from "@/components/ui/button";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-/**
- * Git sites only — a one-click install has no repository to pull from.
- *
- * "Deploy" is the one action people come to this page for, so it sits here
- * rather than behind the ⋯ menu. A failed redeploy leaves the old code serving,
- * so the card reports the last successful deploy, not "broken".
- */
+// A failed redeploy leaves the old code serving, so the card reports the last successful deploy.
 export function SourceCard({ application, gitAccounts = [], canDeploy = false, canSeeDeployment = true, deployInFlight = false, className }) {
-  /*
-   * Which provider this site deploys from.
-   *
-   * The application payload carries `git_account_id` and nothing else, so the
-   * card could only say "From Git Repo" — true of GitHub, GitLab and Bitbucket
-   * alike, and therefore of no use to anyone looking at it. The account knows,
-   * and the accounts list is a cached DB read.
-   *
-   * Nothing is shown when the account is gone: `git_account_missing` already
-   * has its own banner below, and a provider badge over it would be naming a
-   * connection that no longer exists.
-   */
+  // Hidden when the account is gone: `git_account_missing` has its own banner.
   const account = gitAccounts.find((a) => a.id === application.git_account_id) ?? null;
   const providerTitle = application.git_account_missing ? null : account?.provider_title;
   const t = useTranslations("applications.source");
@@ -48,8 +31,7 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
   const incomplete = isDeployIncomplete(application);
   const repository = application.repository ?? application.repository_url;
   const pushToDeploy = application.webhook?.enabled;
-  // The site is active, so the OLD code is still serving — this is a deploy
-  // warning, not an outage. Saying so is the whole point of the card.
+  // The old code is still serving, so this is a deploy warning, not an outage.
   const deployFailed =
     application.status === "active" && (Boolean(application.failed_step) || incomplete);
 
@@ -58,9 +40,8 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
     try {
       await deployApplication(application.id);
       toast.info(t("started"));
-      // Stay busy until the refreshed page reports the deploy in flight; until
-      // then the button was an enabled "Deploy now" for ~2 s, one click from a
-      // second deploy.
+      // Stay busy until the refreshed page reports the deploy in flight, to prevent
+      // a second deploy.
       refreshThen(() => setDeploying(false));
     } catch (error) {
       toast.error(apiMessage(error, t("failed")));
@@ -70,19 +51,14 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
 
   return (
     <Card className={className}>
-      {/* Stacks on a phone. Side by side, the buttons are shrink-0 and take
-          ~300px of a 358px line, leaving the title about 40px — which does not
-          wrap, it collapses to one word per line, and the buttons overflow the
-          card anyway. min-w-48 rather than min-w-0 on the text: min-w-0 lets it
-          shrink to nothing, which is what allowed the squeeze in the first
-          place. */}
+      {/* Stacks on a phone. min-w-48, not min-w-0, on the text: beside shrink-0
+          buttons min-w-0 lets the title collapse to one word per line. */}
       <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-48 flex-1 space-y-1.5">
           <CardTitle as="h2" className="flex items-center gap-2 text-lg font-semibold">
             <GitBranch className="size-4 text-primary" />
             {t("title")}
-            {/* The provider, where it is known. "From Git Repo" is equally true
-                of GitHub, GitLab and Bitbucket, so it answered nothing. */}
+            {/* The provider, where known. */}
             {providerTitle ? (
               <Badge variant="outline" className="font-normal">
                 {providerTitle}
@@ -90,9 +66,7 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
             ) : null}
           </CardTitle>
           <CardDescription>{t("description")}</CardDescription>
-          {/* Under the subtitle, with the other cards' badges. It states a fact
-              about the card, not an action you can take — grouping it with the
-              buttons implied it was one of them. */}
+          {/* A fact, not an action, so it sits with the badges, not the buttons. */}
           {pushToDeploy ? (
             <Badge variant="muted" className="w-fit gap-1.5 font-normal">
               <Webhook className="size-3" />
@@ -100,10 +74,7 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
             </Badge>
           ) : null}
         </div>
-        {/* Actions in the header, not under the facts. This card is a
-            full-width band, so buttons at the foot sat alone on a 1200px line
-            with the whole row empty beside them. In the header they land where
-            the eye already is after the title. */}
+        {/* Actions in the header: the card is a full-width band. */}
         <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
           {canDeploy ? (
             <Button
@@ -116,8 +87,7 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
               {deploying || deployInFlight ? t("deploying") : deployFailed ? t("redeploy") : t("deploy")}
             </Button>
           ) : null}
-          {/* Only for someone who can open it — for anyone else it was a link
-              to a no-access page. */}
+          {/* Only for users who can open it. */}
           {canSeeDeployment ? (
             <Button variant="outline" size="sm" asChild>
               <Link href={`/applications/${application.id}/deployment`}>
@@ -128,12 +98,8 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
           ) : null}
         </div>
       </CardHeader>
-      {/* gap rather than space-y: space-y sets margin-top on children via a
-          compound selector that would outrank any margin set here. flex-1 lets
-          the card fill its stretched row, and the leftover collects as padding
-          under the last line — not as a gap above a button floated to the card
-          foot, which read as a rendering fault on any site with little to
-          report. */}
+      {/* gap, not space-y: space-y's compound selector would outrank margins set
+          here. flex-1 fills the stretched row, with leftover space at the bottom. */}
       <CardContent className="flex flex-1 flex-col gap-3">
         {/* Re-reads the page while a deploy runs, so the button comes back and
             "Last deployed" moves on without a reload. */}
@@ -144,10 +110,8 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
             {t("inFlightNote")}
           </p>
         ) : null}
-        {/* The account this site deployed with was deleted. It keeps its
-            repository and branch and has no credential, so it looks like a
-            public-repository site right up until the next deploy fails. Said
-            here, with the repair beside it. */}
+        {/* The deploy account was deleted: the site keeps its repo and branch but
+            has no credential, so the next deploy will fail. Offer the repair here. */}
         {application.git_account_missing ? (
           <div
             role="alert"
@@ -172,8 +136,8 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
           >
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />
             <div className="space-y-0.5">
-              {/* Only a deploy that failed before its checkout leaves the old
-                  version serving; after it, the new commit is live. */}
+              {/* Only a deploy that failed before its checkout leaves the old version
+                  serving; after it, the new commit is live. */}
               {incomplete ? (
                 <>
                   {application.failed_step ? (

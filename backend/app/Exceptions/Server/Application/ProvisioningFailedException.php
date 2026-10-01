@@ -44,7 +44,7 @@ class ProvisioningFailedException extends Exception
      */
     public static function fromResult(string $step, ServerOpsResult $result): self
     {
-        return new self($step, $result->reference, self::classify($result));
+        return new self($step, $result->reference, self::classify($step, $result));
     }
 
     /**
@@ -52,8 +52,19 @@ class ProvisioningFailedException extends Exception
      * already in the log under this reference, and the user is better served
      * by it than by a category invented here.
      */
-    private static function classify(ServerOpsResult $result): ?string
+    private static function classify(string $step, ServerOpsResult $result): ?string
     {
+        // The user's deploy script ran a git command against the remote —
+        // nearly always the `git pull` the default script carried until
+        // 2026-10-01 — and the remote asked for a login. The panel's own fetch
+        // has the account's credential; the script never does, so on a private
+        // repository it can only fail. Measured on GitHub 2026-10-01:
+        //   fatal: could not read Username for 'https://github.com': No such device or address
+        // That is git's own wording, the same for every host.
+        if ($step === 'script' && preg_match("/could not read (Username|Password) for 'https?:/", $result->output()."\n".$result->errorOutput()) === 1) {
+            return 'script_git_auth';
+        }
+
         // A native addon needed compiling and this server has no compiler.
         //
         // Checked before the exit status because npm exits 1, which says

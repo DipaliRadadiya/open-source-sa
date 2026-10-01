@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -56,8 +55,7 @@ import {
 import { AddDomainDialog } from "@/components/applications/domains/add-domain-dialog";
 import { EditDomainDialog } from "@/components/applications/domains/edit-domain-dialog";
 
-// Site types whose installer rewrites the application's own stored address
-// when the primary domain changes (`syncUrl` in the backend installers).
+// Site types whose installer rewrites the stored address on a primary change (backend `syncUrl`).
 const ADDRESS_SYNCED_TYPES = new Set([
   "wordpress", "akaunting", "craftcms", "mautic", "moodle",
   "n8n", "nextcloud", "nodebb", "prestashop", "statamic",
@@ -69,38 +67,11 @@ const TYPE_VARIANT = {
   redirect: "outline",
 };
 
-/**
- * Whether an ACTIVE certificate covers this exact name: `"covered"`,
- * `"uncovered"`, or `"unknown"`.
- *
- * Three values, because there were briefly two functions here answering this
- * one question with opposite defaults — one reading `missing_domains` and
- * treating an empty list as covered, one reading `domains` and treating an
- * empty list as not. Both defaults were right for their own caller and neither
- * said so, which is how two predicates that agree today stop agreeing.
- *
- * So "we could not tell" is a value rather than a default, and each caller
- * spells out what it does with it. They genuinely want opposite things:
- *
- *   - The visit link keeps https when unknown. Guessing the other way
- *     downgrades a whole panel of working links to http.
- *   - The confirm dialogs stay quiet when unknown. Guessing the other way puts
- *     a scary warning on every dialog the moment a field goes missing.
- *
- * `domains` (the names on the certificate) is read first; `missing_domains`
- * is the fallback for a payload that carries only that list.
- *
- * Only an active certificate counts. A pending or failed one secures nothing,
- * so its coverage is not a fact about what visitors get.
- */
+// "covered" | "uncovered" | "unknown" for an ACTIVE certificate. "unknown" is explicit:
+// callers want opposite defaults (visit link keeps https, confirm dialogs stay quiet).
 function certificateCoverage(certificate, domain) {
   if (certificate?.status !== "active") return "unknown";
-  /*
-   * The certificate's own list first. `missing_domains` is only as fresh as
-   * the last time it was worked out, and a name added since was in neither
-   * list — so it read "Secured" until the next reissue. The names on the
-   * certificate cannot be stale about what the certificate covers.
-   */
+  // The certificate's own list first: `missing_domains` can be stale.
   if (certificate.domains?.length) {
     const name = String(domain ?? "").toLowerCase();
     const covered = certificate.domains.some((entry) => {
@@ -117,19 +88,7 @@ function certificateCoverage(certificate, domain) {
   return "unknown";
 }
 
-/**
- * Whether THIS name is served over HTTPS — answered on the row that asks it.
- *
- * The question "which of my domains actually have SSL?" was only answerable by
- * switching to the other tab and reading a list there. Vercel puts the
- * certificate state on the domain row for exactly this reason; it is the same
- * fact, and the row is where someone is standing when they wonder.
- *
- * Returns null when the honest answer is "ask the SSL tab": a certificate that
- * is issuing or has failed secures nothing yet but is not absent either, and
- * repeating "failed" on every row would say once per domain what the other tab
- * says once.
- */
+// Null while a certificate is issuing or failed; the SSL tab reports that once.
 function sslRowState(certificate, coverage) {
   if (!certificate) return { key: "none", tone: "text-muted-foreground", icon: ShieldOff };
   if (certificate.status !== "active") return null;
@@ -145,33 +104,24 @@ export function DomainsSection({
   serverIp = null,
   secured = false,
   siteType = null,
-  // What is securing this site right now, or null. Passed through to the Add
-  // dialog rather than reduced to a boolean here: the advice for an uploaded
-  // certificate is the opposite of the advice for a Let's Encrypt one, and
-  // `secured` cannot tell them apart.
+  // The current certificate, or null; the Add dialog's advice depends on its type.
   certificate = null,
 }) {
   const t = useTranslations("applications.domains");
-  const router = useRouter();
-  const { pending: refreshing, refreshThen } = useRefresh();
+  const { pending: refreshing, refreshThen, refreshAndWait } = useRefresh();
 
   const [addOpen, setAddOpen] = useState(false);
   const [promoteTarget, setPromoteTarget] = useState(null);
-  // Read from the list rather than carried on the menu item: promoting is the
-  // one action whose consequence is about the name being replaced, not the one
-  // being clicked. Copied onto the target when the dialog opens, because the
-  // dialog now stays open through the re-read that changes the list.
+  // Copied onto the target when the dialog opens; the list changes during the re-read.
   const currentPrimary = domains.find((domain) => domain.type === "primary");
   const [editTarget, setEditTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [pending, setPending] = useState(false);
-  // Per-row spinner for the inline verify action.
   const [verifying, setVerifying] = useState({});
 
   const coverageOf = (domain) => certificateCoverage(certificate, domain);
 
-  // Same plain button in the header and the empty-state, exactly like the
-  // databases list — one definition so they can't drift.
+  // Shared by the header and the empty state.
   const addButton = canManage ? (
     <Button onClick={() => setAddOpen(true)}>
       <Plus className="size-4" />
@@ -182,15 +132,14 @@ export function DomainsSection({
   async function onVerify(domain) {
     setVerifying((v) => ({ ...v, [domain.domain]: true }));
     try {
-      // Confirm the outcome — a re-check that leaves the row unchanged (DNS
-      // hasn't propagated) otherwise looks like nothing happened.
+      // Report the outcome: an unchanged row would look like nothing happened.
       const result = await verifyDomain(appId, domain.domain);
+      await refreshAndWait();
       if (result?.dns_verified) {
         toast.success(t("toast.verified", { domain: domain.domain }));
       } else {
         toast.info(t("toast.notPointing", { domain: domain.domain }));
       }
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("toast.verifyFailed")));
     } finally {
@@ -206,8 +155,7 @@ export function DomainsSection({
     setPending(true);
     try {
       await makePrimaryDomain(appId, promoteTarget.domain);
-      // Closed once the list has re-read: closing first left the old primary
-      // on screen for seconds under a toast saying it had changed.
+      // Closes after the list re-reads, so the new primary is already shown.
       refreshThen(() => {
         toast.success(t("toast.promoted", { domain: promoteTarget.domain }));
         setPromoteTarget(null);
@@ -229,12 +177,7 @@ export function DomainsSection({
         setDeleteTarget(null);
       });
     } catch (error) {
-      /*
-       * Already gone — another tab, another person, or a click that landed
-       * after all. The reader wanted this name off the application and it is
-       * off; reporting a failure leaves the dialog open over a row about to
-       * disappear and invites a retry that can only ever 404.
-       */
+      // Already removed elsewhere: treat as success.
       if (error?.response?.status === 404) {
         refreshThen(() => {
           toast.info(t("toast.removedAlready", { domain: target }));
@@ -272,18 +215,14 @@ export function DomainsSection({
             action={addButton}
           />
         ) : (
-          /* No border here. The rows already sit inside a Card, and a second
-             frame around them drew the same edge twice — the coloured frames
-             on the SSL card mean something, this one meant nothing. */
+          /* No border: the rows already sit inside a Card. */
           <div className="-mx-(--card-spacing) -mb-(--card-spacing) divide-y overflow-hidden border-t">
             {domains.map((domain) => {
               const isPrimary = domain.type === "primary";
               const isVerifying = Boolean(verifying[domain.domain]);
               return (
                 <div key={domain.id} className="flex flex-wrap items-start gap-3 p-4">
-                  {/* A tinted chip, not a bare glyph — the same mark the SSL
-                      tab puts on every tile. A 16px grey icon floating beside
-                      the name is what made the two tabs read as two products. */}
+                  {/* Tinted chip, matching the SSL tab's tiles. */}
                   <span
                     className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground"
                     aria-hidden
@@ -293,11 +232,7 @@ export function DomainsSection({
 
                   <div className="min-w-40 flex-1 space-y-1.5">
                     <div className="flex flex-wrap items-center gap-2">
-                      {/* Name and its copy button are one unit. Loose in the
-                          wrapping row they separated at phone width — the icon
-                          dropped to the next line under a name it no longer
-                          looked attached to, and inconsistently, because it
-                          depended on the length of each name. */}
+                      {/* Name and copy button wrap as one unit. */}
                       <span className="flex min-w-0 items-center gap-2">
                         <span className="truncate font-mono text-sm">
                           {domain.domain}
@@ -333,7 +268,6 @@ export function DomainsSection({
                       ) : null}
                     </div>
 
-                    {/* Redirect target. */}
                     {domain.type === "redirect" && domain.redirect_to ? (
                       <p className="flex items-center gap-1 text-xs text-muted-foreground">
                         <ArrowRight className="size-3" />
@@ -346,7 +280,6 @@ export function DomainsSection({
                       </p>
                     ) : null}
 
-                    {/* DNS status. */}
                     <p
                       className={cn(
                         "flex items-center gap-1.5 text-xs",
@@ -372,9 +305,7 @@ export function DomainsSection({
                       </span>
                     </p>
 
-                    {/* HTTPS for THIS name, beside the DNS line it belongs
-                        with — the two facts that decide whether a visitor
-                        reaches this address safely. */}
+                    {/* HTTPS status for this name. */}
                     {(() => {
                       const ssl = sslRowState(certificate, coverageOf(domain.domain));
                       if (!ssl) return null;
@@ -387,7 +318,7 @@ export function DomainsSection({
                       );
                     })()}
 
-                    {/* Behind Cloudflare — its own message, the #1 support question. */}
+                    {/* Behind Cloudflare: a common support question. */}
                     {domain.behind_proxy ? (
                       <p className="flex items-start gap-1.5 text-xs text-warning">
                         <ShieldAlert className="mt-0.5 size-3.5 shrink-0" />
@@ -395,9 +326,7 @@ export function DomainsSection({
                       </p>
                     ) : null}
 
-                    {/* Turn "not verified" into a next step: the A-record target.
-                        Skipped for proxied names (own message above) and test
-                        domains (nip.io resolves itself). */}
+                    {/* The A-record target as a next step. Skipped for proxied names and test domains (nip.io). */}
                     {!domain.dns_verified &&
                     !domain.behind_proxy &&
                     !domain.is_test ? (
@@ -418,29 +347,7 @@ export function DomainsSection({
                   </div>
 
                   <div className="flex shrink-0 items-center gap-1">
-                    {/*
-                      * Open the live site. Shown to everyone; redirects serve
-                      * nothing.
-                      *
-                      * https only when the certificate covers THIS name, not
-                      * merely when the site has one. `secured` is the site's
-                      * overall SSL status, so a domain added after the
-                      * certificate was issued got an https link straight into a
-                      * browser warning — the SSL card immediately below already
-                      * names that domain as uncovered.
-                      *
-                      * Keyed off `missing_domains` rather than the positive
-                      * `domains` list on purpose: if the backend has not
-                      * computed coverage, an empty `missing_domains` leaves
-                      * every link exactly as it is today, whereas an empty
-                      * `domains` would downgrade every site to http. It also
-                      * avoids re-implementing wildcard matching here.
-                      */}
-                    {/* The slot is held whether or not the link renders.
-                        Dropped entirely, every button after it shifted left,
-                        so "Verify DNS" sat at a different x on each row and
-                        the column read as ragged — a redirect row and a
-                        verified row never lined up. */}
+                    {/* https only when the certificate covers this name. The slot is always held so buttons align. */}
                     <span className="inline-flex size-8 shrink-0 items-center justify-center">
                       {domain.dns_verified && domain.type !== "redirect" ? (
                         <Tooltip>
@@ -465,14 +372,7 @@ export function DomainsSection({
                         </Tooltip>
                       ) : null}
                     </span>
-                    {/*
-                      * Not behind `canManage`. Re-checking DNS changes nothing
-                      * on the server — the route is gated by `app_domain` at
-                      * VIEW level, same as reading this page — and "is my DNS
-                      * pointing here yet?" is the question a read-only holder
-                      * most often has. It was the one control on the row that
-                      * they could have used and could not see.
-                      */}
+                    {/* Not behind `canManage`: the verify route is view-level and changes nothing. */}
                     <Button
                       variant="ghost"
                       size="sm"
@@ -497,11 +397,7 @@ export function DomainsSection({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="min-w-44">
-                            {/* Change what the name DOES. Only offered off the
-                                primary, which the server refuses: the primary
-                                names the vhost file and both log files, so
-                                "make this one primary" is the endpoint for
-                                that — and this menu is already hidden on it. */}
+                            {/* Not offered on the primary (the server refuses). */}
                             <DropdownMenuItem onSelect={() => setEditTarget(domain)}>
                               <Pencil className="size-4" />
                               {t("edit.action")}
@@ -543,8 +439,7 @@ export function DomainsSection({
             serverIp={serverIp}
             certificate={certificate}
           />
-          {/* One instance for the whole list, keyed on the row it was opened
-              from — it re-seeds itself from `editTarget` on every open. */}
+          {/* One instance for the list; re-seeds from `editTarget` on each open. */}
           <EditDomainDialog
             appId={appId}
             domain={editTarget}
@@ -565,10 +460,7 @@ export function DomainsSection({
         pending={pending || refreshing}
         onConfirm={confirmPromote}
       >
-        {/* The swap is the fact worth seeing first, and the name being replaced
-            is the one thing the title cannot show. Contrast alone separates the
-            two — the outgoing name is muted, the incoming one is not — rather
-            than stacking size, weight and colour on the same line. */}
+        {/* Shows the swap; the title cannot show the name being replaced. */}
         {promoteTarget?.from ? (
           <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-4 gap-y-1.5 rounded-lg border p-3">
             <dt className="text-xs text-muted-foreground">
@@ -586,31 +478,20 @@ export function DomainsSection({
           </dl>
         ) : null}
 
-        {/* One line per consequence. These were a single sentence joined by
-            semicolons, which is exactly the shape nobody reads before clicking
-            a confirm button. */}
+        {/* One line per consequence. */}
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
           {promoteTarget?.from ? (
             <li>
               {t("promote.keepsServing", { domain: promoteTarget.from })}
             </li>
           ) : null}
-          {/* The installer's syncUrl rewrites the stored address for these
-              types (WordPress's siteurl and home, checked with wp-cli). The
-              dialog used to warn it would NOT, and that files get renamed —
-              the vhost and logs are named after the application, so nothing
-              is. Both lines described something that does not happen. */}
+          {/* The installer's syncUrl rewrites the stored address (e.g. WordPress siteurl). No files are renamed. */}
           {promoteTarget && ADDRESS_SYNCED_TYPES.has(siteType) ? (
             <li>{t("promote.updatesAddress", { domain: promoteTarget.domain })}</li>
           ) : null}
         </ul>
 
-        {/* The name about to become the application's canonical address is not
-            on the certificate, so from the moment this is confirmed the
-            address people are sent to answers on 443 with a certificate issued
-            for somebody else — a browser refusal, not a downgrade. The SSL
-            card says a name is uncovered; it cannot know it is about to become
-            the main one. */}
+        {/* Not on the certificate, so browsers will refuse it over HTTPS. */}
         {promoteTarget && coverageOf(promoteTarget.domain) === "uncovered" ? (
           <Caution>
             {t("promote.notOnCertificate", { domain: promoteTarget.domain })}
@@ -630,14 +511,7 @@ export function DomainsSection({
         pending={pending || refreshing}
         onConfirm={confirmDelete}
       >
-        {/* The consequence nothing on this screen mentioned.
-            certbot validates every name in a certificate's lineage and fails
-            the WHOLE renewal if any one of them cannot be reached — so
-            removing a covered name quietly stops the certificate renewing for
-            the names that are still fine. Nothing goes wrong until it expires,
-            which is the worst possible moment to find out. The SSL card
-            reports it afterwards as a stale domain; this says it beforehand,
-            when it is still a choice. */}
+        {/* certbot fails the whole renewal if any name is unreachable. */}
         {deleteTarget && coverageOf(deleteTarget.domain) === "covered" ? (
           <Caution>
             {t("removeConfirm.onCertificate", { domain: deleteTarget.domain })}

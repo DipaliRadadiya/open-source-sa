@@ -1,9 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Mirrors the real layout — back link, name, facts line, connection card, tab
-// strip, section, delete card — so the page fills in place instead of jumping
-// when the data lands. Keep this in step with page.jsx: every card added there
-// and not here is a jump.
+// Mirrors the real layout so the page fills in without jumping.
+// Keep in step with page.jsx.
 export default function Loading() {
   return (
     <div className="space-y-6">

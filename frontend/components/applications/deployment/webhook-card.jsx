@@ -54,7 +54,7 @@ function ReadOnlyField({ label, value, hint, secret = false }) {
         {label}
       </Label>
       <div className="flex items-center gap-1.5">
-        {/* Reveal toggle sits inside the field, matching PasswordInput. */}
+        {/* Reveal toggle inside the field, matching PasswordInput. */}
         <div className="relative flex-1">
           <Input
             readOnly
@@ -96,46 +96,17 @@ function Instructions({ label, text, placeholder }) {
   );
 }
 
-/**
- * Deploy on push. First-time setup needs the provider (stored, never sniffed
- * from the request) and — for GitLab — a signing token, so it's a deliberate
- * form. Once configured, the header Switch governs on/off: disabling keeps the
- * URL and secret, so flipping it back on is instant and never invalidates what
- * the user pasted at the provider.
- */
+// Disabling keeps the URL and secret, so re-enabling never invalidates what was pasted at the provider.
 export function WebhookCard({ application, providers, canManage, onChange }) {
   const t = useTranslations("applications.deployment");
   const tc = useTranslations("common");
   const webhook = application.webhook ?? { enabled: false };
   const enabled = Boolean(webhook.enabled);
-  /*
-   * The PROVIDER is what makes a hook configured, not the URL.
-   *
-   * Disabling from the switch retains URL, secret and provider, so a hook that
-   * has ever been set up still reads as configured — that case is unchanged.
-   *
-   * Relinking the site's Git account is the case this fixes. The backend
-   * deliberately keeps `webhook_identifier` (it is the public half of the
-   * delivery address, and minting a new one would gain nothing) while clearing
-   * the provider and the secret. `webhook.url` is derived from that identifier,
-   * so it survived — and `url ||` made the card believe the hook was still set
-   * up. It rendered the on/off switch instead of the setup form, and flipping
-   * it posted `{ enabled: true, provider: null }`, which the API rejects with
-   * `required_if`. Error toast, every time, with no route back to the form.
-   *
-   * A URL is an address. It is not configuration.
-   */
+  // The provider, not the URL, marks a hook configured: relinking the Git account keeps the URL
+  // but clears the provider, and enabling with `provider: null` is rejected by the API.
   const configured = Boolean(webhook.provider);
 
-  /*
-   * Preselected when there is nothing to choose.
-   *
-   * The page narrows this list to the provider the site's Git account belongs
-   * to, so it is usually one entry — and a one-item picker asking which
-   * provider you use is a question with a single possible answer. It still
-   * falls back to the stored value first, which matters when a hook was set up
-   * before the account moved.
-   */
+  // The stored provider wins, in case the hook was set up before the account moved.
   const [providerName, setProviderName] = useState(
     webhook.provider ?? (providers.length === 1 ? providers[0].name : ""),
   );
@@ -143,20 +114,15 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [rotateOpen, setRotateOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  /*
-   * Why the panel could not add the hook to the repository itself, from the
-   * last save. Only a save's response carries it; after a reload the card
-   * still knows from `webhook.registered` that the hook must be pasted, it
-   * just no longer knows why.
-   */
+  // Only a save's response carries the reason; after a reload it is gone.
   const [manualReason, setManualReason] = useState(null);
 
   const selectedProvider = providers.find((p) => p.name === providerName) ?? null;
   const activeProvider = providers.find((p) => p.name === webhook.provider) ?? null;
   const wantsToken = selectedProvider?.secret_source === "either";
   const verifiedBySignature = webhook.verification === "signature";
-  // The API refuses a secret under 16 characters; said before sending, beside
-  // the field, rather than as a toast after the round trip.
+  // The API refuses a secret under 16 characters; validated beside the field
+  // before sending.
   const typedToken = gitlabToken.trim();
   const tokenTooShort = typedToken.length > 0 && typedToken.length < TOKEN_MIN;
 
@@ -210,10 +176,7 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
   }
 
   async function rotate() {
-    // The endpoint validates the whole webhook, not just the change: `enabled`
-    // is required on every call and `provider` whenever it is true. Sending
-    // only `{ rotate: true }` came back 422 "The enabled field is required."
-    // Rotating is only offered on a live webhook, so both are known here.
+    // `{ rotate: true }` alone returns 422: `enabled` is always required, and `provider` when enabled.
     const ok = await save(
       { enabled: true, provider: webhook.provider, rotate: true },
       { successKey: "webhook.rotated", failKey: "webhook.rotateFailed" },
@@ -236,9 +199,7 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
   return (
     <Card className={PANEL_CARD}>
       <CardHeader>
-        {/* The same mark every other card on this page wears. It was an inline
-            icon beside the text here and a tinted square everywhere else, which
-            is the "three of five styled differently" tell. */}
+        {/* Same tinted icon mark as every other card on this page. */}
         <CardTitle className="flex items-center gap-2.5">
           <span className="flex shrink-0 items-center justify-center text-muted-foreground">
             <Webhook className="size-4" />
@@ -269,18 +230,6 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
             )}
           </CardAction>
         ) : canManage && providers.length ? (
-          /*
-           * The same slot, configured or not.
-           *
-           * Once a hook exists the on/off control is the switch up here; before
-           * it exists, Enable was down in the body — so the one control that
-           * turns this feature on moved across the card depending on a state
-           * the reader cannot see. Top-right in both cases, like Deploy now on
-           * the card above.
-           *
-           * Still disabled with a reason when a provider genuinely has to be
-           * chosen first; that picker stays in the body where the choice is.
-           */
           <CardAction>
             <ReasonTooltip
               reason={
@@ -374,9 +323,8 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
               </div>
             ) : null}
 
-            {/* Added to the repository by the panel: nothing to paste, so
-                the URL, secret and paste steps would only be instructions for
-                a job already done. */}
+            {/* Added to the repository by the panel: nothing to paste, so the paste steps
+                are skipped. */}
             {webhook.registered ? (
               <div className="flex items-start gap-2.5 rounded-lg border border-success/30 bg-success/5 p-3 text-sm">
                 <CircleCheck className="mt-0.5 size-4 shrink-0 text-success" />
@@ -420,8 +368,7 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
                     secret
                   />
                 ) : !canManage ? (
-                  // Only sent to someone who may deploy: with it and the URL,
-                  // anyone can sign a push.
+                  // Only shown to someone who may deploy: with it and the URL, anyone can sign a push.
                   <p className="text-xs text-muted-foreground">{t("webhook.secretWithheld")}</p>
                 ) : null}
                 <p className="text-xs text-muted-foreground">
@@ -466,20 +413,6 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
             {t("webhook.disabledBody")}
           </p>
         ) : providers.length ? (
-          /*
-           * One sentence and one button.
-           *
-           * This was a two-column wall: the subtitle said "automatically deploy
-           * whenever you push to main", the body underneath said the same thing
-           * again in longer words, a labelled field stated a provider nobody
-           * had been asked to choose, and half the card was setup steps reading
-           * "paste the URL below, paste the secret into Secret" — while no URL
-           * and no secret existed yet, because neither is created until this
-           * button is pressed.
-           *
-           * The steps are not removed, they are MOVED: they belong to the
-           * configured state, next to the URL and secret they refer to.
-           */
           <div className="space-y-4">
             <div className="space-y-3">
               <p className="max-w-prose text-sm text-muted-foreground">
@@ -487,19 +420,7 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
                   ? t("webhook.disabledBodyNamed", { provider: providers[0].title })
                   : t("webhook.disabledBody")}
               </p>
-              {/*
-               * One provider: state it, do not ask it.
-               *
-               * The page resolves the provider from the linked account, and
-               * failing that from the repository URL — so for a site on
-               * github.com, gitlab.com or bitbucket.org this list has exactly
-               * one entry. A dropdown with one option is a question with a
-               * single possible answer, and it read as though the panel had
-               * not worked something out that it plainly had.
-               *
-               * The picker stays for the case that is genuinely open: a
-               * self-hosted host the URL cannot identify.
-               */}
+              {/* The picker is only for self-hosted hosts the URL cannot identify. */}
               {providers.length === 1 ? null : (
                 <div className="space-y-1.5">
                   <Label className="text-sm" hint={t("webhook.providerHint")}>{t("webhook.provider")}</Label>

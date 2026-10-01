@@ -1,19 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/**
- * Mirrors the Backups section shell: title, tabs, and the coverage card.
- *
- * There was none here, so `/backups` fell through to the `(app)` skeleton
- * while a force-dynamic page waited on two API calls — and since the layout
- * itself fetches restores before rendering anything, that wait is the whole
- * page, not just its contents.
- *
- * The tab strip is drawn because it is layout, not data: it is identical
- * whichever tab you land on, so showing it is honest. The restore banner is
- * not, for the opposite reason — it appears only while a restore is running,
- * and a skeleton that reserves space for it would promise a state the page is
- * almost never in.
- */
+// The restore banner is not reserved: it appears only while a restore runs.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

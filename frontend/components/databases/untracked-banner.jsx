@@ -11,23 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-/**
- * Databases that are on the server but not in the panel.
- *
- * Without this the list quietly misrepresents the box: a server migrated in
- * with six databases shows an empty page and an invitation to create one. The
- * banner is deliberately not an error — nothing is wrong, there is just more
- * here than the panel knows about.
- *
- * Adopting never touches the data; it only starts tracking what already exists.
- */
+// Adopting never touches the data; it only starts tracking what exists.
 export function UntrackedBanner({ untracked = [], canManage }) {
   const t = useTranslations("databases");
   const { refreshAndWait } = useRefresh();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
-  // Everything ticked to begin with — the usual answer is "all of them", and
-  // the list is still there to untick.
+  // Everything ticked to begin with; the usual answer is "all of them".
   const [chosen, setChosen] = useState(() => untracked.map((item) => item.name));
 
   if (untracked.length === 0) return null;
@@ -45,8 +35,7 @@ export function UntrackedBanner({ untracked = [], canManage }) {
   async function onConfirm() {
     setPending(true);
     try {
-      // Adopt is scoped per engine, so one request per engine represented in
-      // the selection.
+  // Adopt is scoped per engine: one request per engine in the selection.
       const byEngine = new Map();
       for (const item of untracked) {
         if (!chosen.includes(item.name)) continue;
@@ -97,9 +86,8 @@ export function UntrackedBanner({ untracked = [], canManage }) {
       <ConfirmDialog
         open={open}
         onOpenChange={setOpen}
-        // Wider than a yes/no confirmation because this one asks you to read a
-        // list, and a generated name like `wordpress_139_59_88_213_nip_io_4fguku`
-        // does not fit 384px. `!` is required — see restore-dialog.jsx.
+        // Wider than a yes/no confirmation: generated names do not fit 384px.
+        // `!` is required — see restore-dialog.jsx.
         className="w-full sm:!max-w-lg"
         icon={PackageSearch}
         title={t("adopt.confirmTitle")}
@@ -111,9 +99,7 @@ export function UntrackedBanner({ untracked = [], canManage }) {
         onConfirm={onConfirm}
       >
         <div className="space-y-2">
-          {/* Everything starts ticked, so the count is the only thing that says
-              what you are about to take — and the toggle is how you get back to
-              "all of them" after unticking one by mistake. */}
+          {/* The count shows what will be adopted; the toggle restores "all". */}
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground tabular-nums">
               {t("adopt.selectedCount", {
@@ -135,9 +121,7 @@ export function UntrackedBanner({ untracked = [], canManage }) {
             </Button>
           </div>
 
-          {/* Bounded with its own scroll: a server migrated in can carry fifty
-              of these, and a dialog that grows with the list pushes Adopt off
-              the bottom of the screen. */}
+          {/* Scrolls on its own so a long list cannot push Adopt off screen. */}
           <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border p-1">
             {untracked.map((item) => (
               <label
@@ -150,10 +134,8 @@ export function UntrackedBanner({ untracked = [], canManage }) {
                   disabled={pending}
                   onCheckedChange={() => toggle(item.name)}
                 />
-                {/* Wrapped, never truncated. These names are generated and
-                    differ only in the last few characters, so an ellipsis at
-                    the end turns `..._9ulk1c` and `..._irlezq` into the same
-                    row — on a phone you would be ticking boxes blind. */}
+                {/* Wrapped, never truncated: generated names differ only in
+                    their last characters. */}
                 <span className="min-w-0 flex-1 font-mono text-sm break-all">
                   {item.name}
                 </span>

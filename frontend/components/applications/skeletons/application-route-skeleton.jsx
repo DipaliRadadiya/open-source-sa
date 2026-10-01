@@ -34,14 +34,7 @@ const BY_SECTION = {
   "workers": WorkersSkeleton,
 };
 
-/**
- * The skeleton for the application page in the URL, whichever boundary is
- * showing it. Next shows the NEAREST loading file above whatever is still
- * rendering, and for an application page that is often not the page's own:
- * the list's while the application layout loads, the Dashboard's while a
- * prefetched link waits for the page. Each drew its own shape first and was
- * then replaced by the right one.
- */
+// Next shows the NEAREST loading file (often a parent's), so the skeleton is picked from the URL.
 export function ApplicationRouteSkeleton({ fallback = null }) {
   const pathname = usePathname() ?? "";
   const match = pathname.match(/^\/applications\/(\d+)(?:\/([^/]+))?/);

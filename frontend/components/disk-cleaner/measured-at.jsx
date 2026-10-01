@@ -3,15 +3,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { RotateCw } from "lucide-react";
 
-/**
- * How old these sizes are, and a way to re-measure.
- *
- * The list is a snapshot taken when the page rendered. Left open it silently
- * ages, and you can press "Clean up 291 MB" against a number measured an hour
- * ago. Saying the age out loud is cheaper and more honest than polling — the
- * scan walks the filesystem, so re-running it every few seconds on an idle tab
- * would cost real work for nobody's benefit.
- */
+// A re-measure button instead of polling, because the scan walks the filesystem.
 export function MeasuredAt({ at }) {
   const t = useTranslations("diskCleaner");
   const router = useRouter();

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { CircleCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -7,27 +7,8 @@ import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { FormModal } from "@/components/ui/form-modal";
 
-/**
- * What was just created, and how to connect to it.
- *
- * This step exists because "Database created ✓" answers a question nobody
- * asked. People create a database in order to point something at it, so the
- * connection string is the actual result — and the moment it is on screen is
- * the one moment the user is definitely looking.
- *
- * Not a one-time secret reveal, which is what the first version looked like.
- * `DatabaseUserResource` returns the password on every read and the database's
- * own page shows all five values permanently, so urging someone to save them
- * now was pressure over nothing. The dialog says where they live instead.
- *
- * Two tiers, because the five values are not equally useful. The connection
- * string is one line that replaces all of them and is what most people paste
- * into a config file, so it leads; the parts follow for the clients that ask
- * for host and port separately. Before this they were six identical boxes, so
- * the port — which is always 3306 — carried the same weight as the password.
- */
-// `forUser`: shown after adding a user on the database's own page, where
-// "the database is ready" and "Open database" described the wrong event.
+// Not a one-time secret: `DatabaseUserResource` returns the password on every read.
+// `forUser`: shown after adding a user on the database's own page.
 export function CreatedCredentials({ database, open, onOpenChange, forUser = false }) {
   const t = useTranslations("databases");
   const user = database?.users?.[0] ?? null;
@@ -39,21 +20,11 @@ export function CreatedCredentials({ database, open, onOpenChange, forUser = fal
     { key: "port", value: port },
     { key: "database", value: database?.name },
     { key: "username", value: user?.username },
-    // Shown in full, unlike the detail page's masked field. The rule is
-    // visible at creation, masked at rest: you just deliberately made this
-    // credential, and hiding it behind a reveal adds a click at the one moment
-    // the value is wanted. Masking it here would also be theatre while the
-    // connection string above prints the same password in clear.
+    // In full: the connection string above already prints it in clear.
     { key: "password", value: user?.password },
   ].filter((field) => field.value);
 
-  // Whether the string carries an escaped copy of the password rather than the
-  // literal one — `+` arrives as `%2B`, which reads as a different password
-  // from the one in the field below and is worth one sentence.
-  //
-  // Tested against the two real strings rather than re-deriving PHP's
-  // rawurlencode here: this is exactly true whenever the two differ on screen,
-  // and never fires when they match.
+  // Compared on the two real strings rather than re-deriving PHP's rawurlencode.
   const escapedPassword = Boolean(
     user?.password &&
       user?.connection_string &&
@@ -64,13 +35,10 @@ export function CreatedCredentials({ database, open, onOpenChange, forUser = fal
     <FormModal
       open={open}
       onOpenChange={onOpenChange}
-      // One size up from the form it replaces. At max-w-lg the connection
-      // string broke mid-address ("…@23.45.67.8 / 9:3306/test_db"), which reads
-      // as a typo rather than a wrap.
+      // At max-w-lg the connection string broke mid-address.
       className="sm:max-w-xl"
       icon={CircleCheck}
-      // Green, not the panel's default blue: this dialog reports a finished
-      // action rather than asking for one.
+      // Success tone: this reports a finished action.
       iconTone="success"
       title={
         forUser
@@ -85,10 +53,7 @@ export function CreatedCredentials({ database, open, onOpenChange, forUser = fal
           <Button type="button" variant="outline" onClick={close}>
             {t("created.done")}
           </Button>
-          {/* The dialog used to end in a single "Done" — closing it dropped you
-              back on the list with nothing done. The database's own page is
-              where these values live from now on, so it is the honest next
-              step and the answer to "where do I find this again". */}
+          {/* The database page is where these values live from now on. */}
           {database?.id && !forUser ? (
             <Button asChild onClick={close}>
               <Link href={`/databases/${database.id}`}>{t("created.open")}</Link>
@@ -97,12 +62,7 @@ export function CreatedCredentials({ database, open, onOpenChange, forUser = fal
         </>
       }
     >
-      {/* One bordered block with a divider, not a tinted card followed by a
-          loose grid under a floating grey caption. Two containers made the
-          parts look like a separate, lesser thing that had been left over; the
-          rule says they are the same thing said twice. It is also the shape of
-          the connection card on the detail page — the next screen these values
-          appear on. */}
+      {/* Matches the detail page's connection card. */}
       {user?.connection_string || fields.length ? (
         <div className="overflow-hidden rounded-lg border">
           {user?.connection_string ? (
@@ -111,9 +71,7 @@ export function CreatedCredentials({ database, open, onOpenChange, forUser = fal
                 <p className="text-sm font-medium">
                   {t("created.connectionString")}
                 </p>
-                {/* Labelled and out of the value's way. Inline, the icon ate
-                    ~30px of the line it sits on, which is the width this
-                    string most needs. */}
+                {/* Labelled and out of the value's line, which needs the width. */}
                 <CopyButton
                   value={user.connection_string}
                   label={t("created.copyString")}
@@ -130,21 +88,10 @@ export function CreatedCredentials({ database, open, onOpenChange, forUser = fal
           ) : null}
 
           {fields.length ? (
-            /* Two columns, not the detail card's three. Measured in a real
-               render at this dialog's width, not by reasoning about it:
-
-                 3 cols  175px cell  551px tall  name AND password wrap
-                 2 cols  239px cell  589px tall  only the name wraps
-
-               Three is denser and 38px shorter, but it breaks the password
-               after 19 characters and leaves its last character alone on a
-               line — and a password is the one value here read character by
-               character. Neither height scrolls, so the wrap is what matters. */
+            /* Two columns: at this width three would wrap the password. */
             <div className="grid grid-cols-2 gap-x-4 gap-y-3.5 px-4 py-3.5">
               {fields.map((field) => (
-                // The name takes both tracks, same rule as the detail page's
-                // card: it is the one long value here, and in a single track it
-                // was the only cell that wrapped.
+                // The name takes both tracks, as on the detail page's card.
                 <div
                   key={field.key}
                   className={cn(
@@ -152,15 +99,7 @@ export function CreatedCredentials({ database, open, onOpenChange, forUser = fal
                     field.key === "database" && "col-span-2",
                   )}
                 >
-                  {/* The copy button rides with the LABEL, not the value.
-                      Inline beside the value it took 26px off every wrapped
-                      line, and in a 147px phone cell that pushed the last
-                      character of a generated name onto a line of its own —
-                      "…215236_xurxc" then "c".
-
-                      Beside the label rather than pushed to the cell's far
-                      edge: right-aligned it sat a clear inch from both the word
-                      it belongs to and the value it copies. */}
+                  {/* Beside the label, not the value, so it does not narrow wrapped values. */}
                   <div className="flex items-center gap-0.5">
                     <p className="min-w-0 truncate text-xs text-muted-foreground">
                       {t(`created.${field.key}`)}
@@ -173,15 +112,11 @@ export function CreatedCredentials({ database, open, onOpenChange, forUser = fal
                       className="size-6"
                     />
                   </div>
-                  {/* Wraps rather than truncating: a name cut short still looks
-                      like a name, which is worse than two lines. */}
+                  {/* Wraps rather than truncating: a cut-off name still looks valid. */}
                   <p className="font-mono text-sm break-all">{field.value}</p>
                 </div>
               ))}
-              {/* A footnote across the whole block, not a note inside the
-                  password's cell. In a 154px column it wrapped to four lines,
-                  stretched that grid row to match and left a hole beside it —
-                  a caption taller than every value it sits among. */}
+              {/* A footnote across the block, not inside the narrow password cell. */}
               {escapedPassword ? (
                 <p className="col-span-2 text-xs leading-relaxed text-muted-foreground">
                   {t("created.passwordEscaped")}
@@ -193,8 +128,7 @@ export function CreatedCredentials({ database, open, onOpenChange, forUser = fal
       ) : null}
 
       {user ? null : (
-        // A database nobody can sign in to is not finished, and saying so here
-        // is cheaper than letting them discover it from a failing app.
+        // A database nobody can sign in to is not finished.
         <p className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs leading-relaxed">
           {t("created.noUserWarning")}
         </p>

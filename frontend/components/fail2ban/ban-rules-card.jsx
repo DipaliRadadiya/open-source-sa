@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
@@ -27,43 +27,24 @@ import {
 } from "@/components/ui/select";
 import { apiMessage } from "@/lib/api/error-message";
 
-/**
- * The three numbers that define a ban, on their own.
- *
- * Split from the ignore list because they answer different questions — "how
- * strict is this?" versus "who is exempt?" — and one long settings card made
- * both harder to find.
- *
- * Ban time comes from the presets the API supplies: "1 hour" is a decision,
- * "3600" is arithmetic. A preset of -1 means permanent.
- *
- * Every save sends the whole settings object, including the ignore list, since
- * the backend rewrites the file as a unit — a partial payload would wipe what
- * the other card owns.
- */
+// Ban time -1 means permanent. Every save sends the whole settings object,
+// since the backend rewrites the file as a unit.
 export function BanRulesCard({ settings, presets, canManage }) {
   const t = useTranslations("fail2ban");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
 
   const [bantime, setBantime] = useState(String(settings.bantime));
   const [findtime, setFindtime] = useState(String(settings.findtime));
   const [maxretry, setMaxretry] = useState(String(settings.maxretry));
   const [saving, setSaving] = useState(false);
-  // The write is only half the wait: the page still has to re-read fail2ban
-  // before the card shows what was saved. A transition keeps one pending signal
-  // across both, so the spinner stops when the screen is actually right rather
-  // than when the request happens to return.
-  const [refreshing, startRefresh] = useTransition();
-  const pending = saving || refreshing;
+  const pending = saving;
 
   const isPermanent = Number(bantime) === PERMANENT_BANTIME;
 
   // A preset list without the current value would silently change it on save.
   const hasCurrent = presets.some((p) => String(p.seconds) === String(settings.bantime));
 
-  // The API's bounds (UpdateFail2banRequest), checked here so an out-of-range
-  // number is explained on the field instead of coming back as the API's
-  // English 422 in a toast.
+  // Mirrors UpdateFail2banRequest's bounds so errors show on the field.
   const inRange = (value, min, max) => /^\d+$/.test(value) && Number(value) >= min && Number(value) <= max;
   const maxretryError = inRange(maxretry, 2, 100) ? null : t("settings.maxretryRange");
   const findtimeError = inRange(findtime, 30, 86400) ? null : t("settings.findtimeRange");
@@ -82,8 +63,8 @@ export function BanRulesCard({ settings, presets, canManage }) {
         maxretry: Number(maxretry),
         ignore_ips: settings.ignore_ips ?? [],
       });
+      await refreshAndWait();
       toast.success(t("settings.saved"));
-      startRefresh(() => router.refresh());
     } catch (error) {
       toast.error(
         apiMessage(error, t("settings.failed")),
@@ -113,16 +94,9 @@ export function BanRulesCard({ settings, presets, canManage }) {
           <CardDescription>{t("settings.description")}</CardDescription>
         </CardHeader>
   
-        {/* One per row. In half a page three fields across would each be too
-            narrow for the hint under them, and stacked this card comes out about
-            the height of the ignore list beside it — which is what lets the two
-            sit together at all. They still read in order as a sentence: N
-            failures, within M seconds, costs you X. */}
+        {/* One field per row: three across is too narrow for their hints. */}
         <CardContent className="space-y-4">
-          {/* Three separate numbers are three separate facts; the thing anyone
-              actually wants to know is what they add up to. This says it as a
-              sentence, from the values in the form — so it also previews an edit
-              before you commit it. */}
+          {/* The rules as one sentence, from the form values, so it previews edits. */}
           <p className="rounded-lg bg-muted/60 px-3 py-2.5 text-sm leading-relaxed">
             {t.rich(isPermanent ? "settings.summaryPermanent" : "settings.summary", {
               retries: maxretry || "—",
@@ -138,16 +112,14 @@ export function BanRulesCard({ settings, presets, canManage }) {
               id="f2b-maxretry"
               placeholder="5"
               type="number"
-              // The API's own bounds. Without the ceiling the stepper walked
-              // straight past what it accepts, and the only sign was a 422.
+              // The API's bounds.
               min={2}
               max={100}
               value={maxretry}
               aria-invalid={maxretryError ? true : undefined}
               aria-describedby={maxretryError ? "f2b-maxretry-error" : undefined}
               onChange={(e) => setMaxretry(e.target.value)}
-              // Locked mid-save: the refresh that follows would overwrite an
-              // edit made while the request was in the air, without saying so.
+              // Locked mid-save: the following refresh would overwrite an edit.
               disabled={!canManage || pending}
             />
             {maxretryError ? (
@@ -169,8 +141,7 @@ export function BanRulesCard({ settings, presets, canManage }) {
               onChange={(e) => setFindtime(e.target.value)}
               disabled={!canManage || pending}
             />
-            {/* The field must stay in seconds — that is what the file stores —
-                so the words go beside it rather than replacing it. */}
+            {/* The field stays in seconds (what the file stores); words go beside it. */}
             {findtimeError ? (
               <p id="f2b-findtime-error" className="text-xs text-destructive">{findtimeError}</p>
             ) : null}
@@ -202,11 +173,6 @@ export function BanRulesCard({ settings, presets, canManage }) {
           </div>
         </CardContent>
   
-        {/* The shared footer, like every other settings card in the panel. This
-            one used to hand-roll its own, which is how it ended up the only
-            save on the page with no spinner and no "Saving…" — a fail2ban
-            reload takes seconds, so a button that only greys out reads as a
-            hang. */}
         <div className="mt-auto">
           <CardSaveFooter
             saving={pending}

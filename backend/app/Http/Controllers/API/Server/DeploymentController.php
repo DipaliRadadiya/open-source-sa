@@ -159,7 +159,10 @@ class DeploymentController extends Controller
             'deploy_script' => app(GitDeployer::class)->script($application),
             // Whether they have written one, so the screen can offer the
             // default rather than presenting the fallback as their own text.
-            'deploy_script_customised' => filled($application->deploy_script),
+            // A saved copy of the default, line endings and trailing space
+            // aside, is not one: it still says "default" after saving.
+            'deploy_script_customised' => filled($application->deploy_script)
+                && $this->normalised($application->deploy_script) !== $this->normalised($this->defaultScript($application)),
             'default_deploy_script' => $this->defaultScript($application),
 
             'auto_deploy' => (bool) $application->webhook_enabled,
@@ -176,6 +179,11 @@ class DeploymentController extends Controller
         ];
     }
 
+    private function normalised(string $script): string
+    {
+        return implode("\n", array_map('rtrim', preg_split('/\r\n|\r|\n/', trim($script)) ?: []));
+    }
+
     private function defaultScript(Application $application): string
     {
         // A Node application with a recorded package manager gets that
@@ -185,7 +193,7 @@ class DeploymentController extends Controller
             $perManager = (array) config('server.deployments.package_manager_scripts', []);
 
             if (isset($perManager[$application->package_manager])) {
-                return "cd {path}\ngit pull origin {branch}\n".$perManager[$application->package_manager];
+                return "cd {path}\n".$perManager[$application->package_manager];
             }
         }
 

@@ -29,27 +29,19 @@ import { PreflightList } from "./preflight-list";
 import { UpdateProgress } from "./update-progress";
 
 const POLL_MS = 2500;
-// Updates take a few minutes; past this we say "taking longer" but keep polling
-// — the final status is reconstructed from the runner's state file regardless.
+// Past this, say "taking longer" but keep polling; the final status is rebuilt
+// from the runner's state file regardless.
 const SLOW_AFTER_MS = 8 * 60 * 1000;
 
 const isActive = (run) => Boolean(run) && (run.status === "pending" || run.status === "running");
 
-/**
- * Owns the whole screen, heading included, because "Check again" belongs beside
- * the title (as Re-check does on System health) and it drives the same state
- * the card below reads.
- */
 export function PanelUpdatePanel({ initialState, title, subtitle }) {
   const t = useTranslations("panelUpdate");
   const router = useRouter();
 
   const [state, setState] = useState(initialState);
-  // Seed with the latest run regardless of whether it is still active: a real
-  // update takes minutes and its own copy says it's safe to leave, so the
-  // common case is loading this page well after a run has already settled.
-  // Without this, a finished run is invisible — no success card, no failure
-  // card — until the tab that watched it live is the one still open.
+  // Seed with the latest run even if settled: the update copy says it's safe to
+  // leave, so the page is usually loaded after a run finished.
   const [run, setRun] = useState(initialState.latest_run ?? null);
   const [dryRun, setDryRun] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -66,9 +58,8 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
   const activeRunId = isActive(run) ? run.id : null;
   const visibleRun = run?.status === "succeeded" && !successReady ? null : run;
 
-  // A successful run remains the backend's latest_run after the browser has
-  // reloaded into the new code. Remember the run we reloaded for and hide that
-  // one on the next mount, otherwise it starts a fresh countdown forever.
+  // A successful run remains latest_run after reloading into the new code; hide
+  // the run already reloaded for, or it starts a fresh countdown forever.
   useEffect(() => {
     if (run?.status !== "succeeded") return undefined;
 
@@ -86,10 +77,7 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
     };
   }, [run?.id, run?.status]);
 
-  // Poll only while a run is active. Same id + still active → no re-subscribe;
-  // terminal → the effect re-runs and tears the interval down. Mid-update the
-  // panel restarts (503 / refused) — that's normal, so errors just flag
-  // "reconnecting" and polling continues.
+  // Poll only while a run is active. The panel restarts mid-update, so errors only flag "reconnecting".
   useEffect(() => {
     if (!activeRunId) return undefined;
     const startedAt = Date.now();
@@ -135,11 +123,8 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
       setRun(started);
       setConfirmOpen(false);
     } catch (error) {
-      // A failed reply does not prove the update failed to start. The request
-      // can create the run and then lose its response while the panel begins
-      // restarting; a client schema mismatch can also reject an otherwise
-      // valid 202. Ask the source of truth before telling the user nothing
-      // happened. If a run exists, the progress screen is the answer.
+      // A failed reply does not prove the update failed (lost on restart, or schema mismatch
+      // on a valid 202); ask the source of truth.
       let recovered = false;
 
       try {
@@ -156,9 +141,8 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
           recovered = true;
         }
       } catch {
-        // The panel may be in the brief service-restart window. Preserve the
-        // original error below; the recovery probe must never hide it unless
-        // it can prove a run exists.
+        // Possibly the restart window. Keep the original error unless the probe proves
+        // a run exists.
       }
 
       if (!recovered) toast.error(apiMessage(error, t("startFailed")));
@@ -168,11 +152,8 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
   }
 
   function onFinish() {
-    // A hard reload is only warranted when the code actually changed under
-    // this client. A dry run never touches anything, and a failed real run
-    // has already been rolled back by the script's own ERR trap — in both
-    // cases the running code is exactly what it was before, so reloading
-    // would just replay the same page pointlessly.
+    // Reload only when the code changed: a dry run touches nothing, and a failed real
+    // run was rolled back by the script's ERR trap.
     if (!dryRun && run?.status === "succeeded") {
       acknowledgePanelUpdate(window.sessionStorage, run.id);
       window.location.reload();
@@ -184,18 +165,14 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
     router.refresh();
   }
 
-  // What is standing in the way of the primary button, or null once it is live.
-  // Printed beside the button as well as read out on it: on a screen you visit
-  // once a month, "why is Update grey" should not need a hover to answer.
+  // Shown beside the button as well as in its label, so a disabled Update needs
+  // no hover to explain.
   const blockedReason = !state.preflight.ready ? t("notReady") : null;
 
-  // Both actions plus the reason the primary one is off, as one block that the
-  // header band closes its row with. Printed as well as read out on hover: on a
-  // screen you visit once a month, "why is Update grey" should not need a hover.
+  // Both actions plus the disabled reason, as one block closing the header row.
   const updateActions = (
-    // A column, sized by whichever of its two rows is wider. That is what keeps
-    // the reason on one line: given a fixed width it wrapped, and given the
-    // whole row it sat beside the buttons instead of under them.
+    // A column sized by its wider row, which keeps the reason on one line under the
+    // buttons.
     <div className="flex w-full flex-col items-end gap-1.5 sm:ml-auto sm:w-auto">
       <div className="flex flex-wrap items-center justify-end gap-2">
         <Button variant="outline" onClick={() => begin(true)} disabled={starting}>
@@ -209,8 +186,7 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
           </Button>
         </ReasonTooltip>
       </div>
-      {/* Capped so the long dry-run hint wraps rather than pushing the version
-          off its own row; every locale's blocked reason fits inside it. */}
+      {/* Capped so the long dry-run hint wraps; every locale's blocked reason fits. */}
       <p className="max-w-md text-xs text-muted-foreground sm:text-right">
         {blockedReason ?? t("dryRunHint")}
       </p>
@@ -221,8 +197,7 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <PageHeader title={title} subtitle={subtitle} />
-        {/* Not shrink-0: "Check again" is a verb phrase and grows in other
-            locales, so it wraps under the heading rather than overflowing. */}
+        {/* Not shrink-0: the label grows in other locales and wraps under the heading. */}
         <Button variant="outline" onClick={checkAgain} disabled={checking}>
           <RefreshCw className={checking ? "size-4 animate-spin" : "size-4"} />
           {t("checkAgain")}

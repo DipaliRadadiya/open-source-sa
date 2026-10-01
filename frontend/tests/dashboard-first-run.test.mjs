@@ -68,7 +68,7 @@ test("every site is scanned, not just the first page", () => {
 test("the card is fetched alongside the rest, not after it", () => {
   // Serial awaits would add a round trip to the slowest screen in the panel.
   const block = dashboard.slice(dashboard.indexOf("await Promise.all(["), dashboard.indexOf("firstRun"));
-  assert.match(block, /getApplications/);
+  assert.match(block, /getAllApplications\(\)/);
 });
 
 test("creating is gated on manage, viewing the card on view", () => {

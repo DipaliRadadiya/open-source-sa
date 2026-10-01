@@ -30,9 +30,7 @@ export default async function LogsPage({ searchParams }) {
     cookies(),
   ]);
 
-  // Read here rather than in the client: the panel would otherwise start the
-  // tail, then stop it once it read the preference, which is the flicker this
-  // is meant to remove.
+  // Read on the server so the tail does not start and then stop on hydration.
   const followPreference = cookieStore.get(FOLLOW_COOKIE)?.value ?? null;
   const lines = parseLinesPref(cookieStore.get(LINES_COOKIE)?.value, DEFAULT_LINES);
 
@@ -41,8 +39,7 @@ export default async function LogsPage({ searchParams }) {
   const canManage = can(permissions, "logs", "manage");
 
   const { logs: sources, failed, status, failure, message } = await getLogSources();
-  // Default to the first source the panel can actually open, so a box where
-  // most logs need elevated access still lands on something useful.
+  // Default to the first readable source.
   const selected =
     sources.find((s) => s.key === sp.source)?.key ??
     sources.find((s) => s.readable)?.key ??
@@ -54,7 +51,7 @@ export default async function LogsPage({ searchParams }) {
     : { status: "ok", log: null };
 
   const lockedCount = sources.filter((s) => !s.readable).length;
-  // The clock the source list's "written just now" dots were drawn with.
+  // The clock the source list's "written just now" dots are drawn against.
   const renderedAt = new Date().getTime();
 
   return (
@@ -68,8 +65,7 @@ export default async function LogsPage({ searchParams }) {
         }
       />
 
-      {/* "We couldn't ask" before "there are none": an unanswered request must
-          never render as a claim about what's on the server. */}
+      {/* A failed request must never render as "there are no logs". */}
       {failed ? (
         <LoadFailed description={t("loadFailedSources")} status={status} failure={failure} message={message} />
       ) : sources.length === 0 ? (

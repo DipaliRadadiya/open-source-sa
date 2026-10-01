@@ -32,17 +32,11 @@ import {
 
 const POLL_MS = 3000;
 
-/**
- * Below this a dump is not worth a question — it finishes in seconds and the
- * disk will not notice. Above it, the file lands on the same disk as the
- * database and can take minutes.
- */
+// Above this a dump can take minutes and lands on the database's own disk, so it is confirmed first.
 const CONFIRM_ABOVE_BYTES = 512 * 1024 * 1024;
 const IN_FLIGHT = ["queued", "running"];
 
-// Past this a dump is worth commenting on. Well under the server's own
-// abandonment window, so the hint appears while there is still something to
-// wait for rather than moments before the row fails anyway.
+// Past this a dump is flagged as slow; well under the server's abandonment window.
 const SLOW_AFTER_MS = 120_000;
 
 const TONE = {
@@ -52,27 +46,14 @@ const TONE = {
   queued: "muted",
 };
 
-/**
- * Dumps of this database.
- *
- * The work is queued, so a row appears the instant the button is pressed and
- * fills in as it goes — the alternative is a button that looks broken for the
- * minute a real dump takes. Polling stops as soon as nothing is in flight.
- */
+// Polling stops as soon as nothing is in flight.
 export function DatabaseExports({ database, exports: initial = [], canManage, read = null }) {
   const t = useTranslations("databases.exports");
   const router = useRouter();
   const { refreshAndWait } = useRefresh();
   const [polled, setPolled] = useState(null);
-  // The polled rows override the server render — and have to stand down the
-  // moment the server render is newer than they are. Keeping them forever was
-  // the other half of the bug this pair fixes: dropping them on the last poll
-  // reverted a finished export to "Waiting", and keeping them meant a deleted
-  // export never left the list, because `router.refresh()` updated `initial`
-  // and nothing was reading it any more.
-  //
-  // Same derived-state shape the backups delete dialog uses for `open`: notice
-  // the prop changed, react to it during render rather than in an effect.
+  // Polled rows override the server render until it changes (e.g. after `router.refresh()`).
+  // Reacts to the prop change during render, not in an effect.
   const [seenInitial, setSeenInitial] = useState(initial);
   if (seenInitial !== initial) {
     setSeenInitial(initial);
@@ -81,13 +62,10 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
   const [starting, setStarting] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(false);
-  // Only asked for when the dump is big enough to matter, and only then is the
-  // free-space figure fetched — the page should not pay for it otherwise.
+  // Asked only for large dumps; free space is fetched only then.
   const [confirming, setConfirming] = useState(false);
-  // A dump that has run past this is not necessarily broken — a large database
-  // legitimately takes minutes — but a bare spinner cannot say either. The row
-  // is closed out server-side once its queue lock has provably expired; until
-  // then this is the difference between "working" and "nothing is coming".
+  // Past SLOW_AFTER_MS a hint shows. The server closes the row once its queue
+  // lock has expired; until then a large dump may legitimately still run.
   const [slow, setSlow] = useState(false);
   const [freeBytes, setFreeBytes] = useState(null);
   const format = useFormatter();
@@ -98,8 +76,8 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
   const rows = all.filter((row) => row.database_id === database.id);
   const inFlight = rows.some((row) => IN_FLIGHT.includes(row.status));
 
-  // Only files that are still on disk: a failed run wrote nothing, and a row
-  // whose file was deleted by hand is `available: false` and costs no space.
+  // Only files still on disk: failed runs wrote nothing, and hand-deleted files
+  // are `available: false`.
   const kept = rows.reduce(
     (total, row) =>
       row.status === "completed" && row.available
@@ -123,18 +101,7 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
         const still = parsed.data.exports.some(
           (row) => row.database_id === database.id && IN_FLIGHT.includes(row.status),
         );
-        // Kept either way, finished or not. This used to drop back to the
-        // server render on the last poll — `setPolled(null)` — on the reasoning
-        // that the final size and download link should come from one place.
-        // The effect was the opposite: `initial` is the snapshot taken when the
-        // page loaded, where the row was still queued, so a completed export
-        // reverted to "Waiting" the moment it succeeded. That also put the row
-        // back in flight, so the poll restarted, saw it finished, discarded it
-        // again, and the result could never appear at all.
-        //
-        // The polled rows carry the size, availability and download URL
-        // already, so there is nothing the server render adds here. It is still
-        // refreshed, so a later navigation reads the same thing this does.
+        // Kept even when finished: falling back to `initial` reverted a completed export to "Waiting".
         setPolled(parsed.data.exports);
 
         if (!still) {
@@ -161,8 +128,7 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
       const metrics = await getLiveMetrics();
       setFreeBytes(metrics?.disk?.free ?? null);
     } catch {
-      // Without it the dialog simply omits the free-space line rather than
-      // guessing or blocking.
+      // The dialog omits the free-space line rather than guessing or blocking.
     }
   }
 
@@ -170,17 +136,13 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
     setConfirming(false);
     setStarting(true);
     try {
-      // The 202 carries the queued row itself — it is created before the job is
-      // dispatched. Showing it straight away is the difference between "a dump
-      // is running" and a screen that looks like the click did nothing: the
-      // POST returns in milliseconds, `starting` goes false with it, and the
-      // refresh that would have brought the row takes a server round trip to
-      // land. In that gap the button was idle again and the list unchanged.
+      // The 202 carries the queued row; show it immediately rather than waiting
+      // for the refresh round trip.
       const { data } = await createExport(database.id);
       const created = exportSchema.safeParse(data?.export);
       if (created.success) setPolled((current) => [created.data, ...(current ?? initial)]);
+      await refreshAndWait();
       toast.success(t("started"));
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("startFailed")));
     } finally {
@@ -205,10 +167,8 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
   return (
     <>
       <Card className="gap-0 overflow-hidden py-0">
-        {/* flex-wrap + a real minimum on the text: without them the
-            heading block shrank to make room for the button and the sentence
-            squeezed to three words a line. The button drops to its own row
-            instead. */}
+        {/* flex-wrap plus a minimum width on the text, so the button drops to
+            its own row instead of squeezing the sentence. */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
           <div className="flex min-w-40 flex-1 items-center gap-2.5">
             <span className="flex shrink-0 items-center justify-center text-muted-foreground">
@@ -229,10 +189,7 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
                 !canManage ? t("noPermission") : inFlight ? t("alreadyRunning") : null
               }
             >
-              {/* The button says what is happening rather than just going grey.
-                  A dump runs for minutes and the only other sign of it was a
-                  small badge at the bottom of the card, which is not where
-                  anyone is looking after pressing this. */}
+              {/* The button shows progress itself, since that is where the user looks. */}
               <Button
                 disabled={!canManage || inFlight || starting}
                 onClick={big ? ask : start}
@@ -278,15 +235,9 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
           )}
         </CardContent>
 
-        {/* Said plainly, because "export" still sounds like safety to most
-            people and this one cannot give it on its own: the dump sits on the
-            same disk as the database it came from. */}
+        {/* Exports sit on the same disk as the database, so they are not a backup. */}
         <div className="border-t bg-muted/30 px-5 py-3">
-          {/* How much of that disk these files are actually using, and that
-              they are nobody else's job. Nothing prunes exports — no age
-              limit, no count cap, no scheduled sweep — so ten dumps of a 2GB
-              database is 20GB gone quietly. Only shown once files exist:
-              before that there is nothing to warn about. */}
+          {/* Nothing prunes exports, so the disk usage is shown once files exist. */}
           {kept.count > 0 ? (
             <p className="mb-1 text-xs font-medium">
               {t("diskUsed", {
@@ -343,8 +294,7 @@ function ExportRow({ row, canManage, onDelete, slow = false }) {
   const running = IN_FLIGHT.includes(row.status);
 
   return (
-    // Same reason as the user rows: wrapping dropped the row actions onto a
-    // line of their own on a phone, orphaned from the row they belong to.
+    // No wrap: on a phone the actions would drop onto their own line.
     <div className="flex items-start justify-between gap-3 py-3.5">
       <div className="min-w-0 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
@@ -352,9 +302,7 @@ function ExportRow({ row, canManage, onDelete, slow = false }) {
             {running ? <Loader2 className="size-3 animate-spin" /> : null}
             {t(`status.${row.status}`)}
           </Badge>
-          {/* Relative time reads well but cannot be compared. Picking the
-              right dump out of several needs the actual date, so it hangs off
-              the hover rather than crowding the row. */}
+          {/* Exact date on hover; relative time cannot be compared. */}
           <Tooltip>
             <TooltipTrigger asChild>
               <span className="cursor-help text-sm text-muted-foreground underline decoration-dotted underline-offset-4">
@@ -370,17 +318,12 @@ function ExportRow({ row, canManage, onDelete, slow = false }) {
           ) : null}
         </div>
 
-        {/* Said only once it has been a while: a dump legitimately takes
-            minutes on a large database, and saying so immediately would make
-            every export look troubled. The server closes the row out once its
-            queue lock has provably expired, so this covers the gap between
-            "slow" and "already failed and nobody has noticed yet". */}
+        {/* Only after SLOW_AFTER_MS, so normal large dumps do not look troubled. */}
         {running && slow ? (
           <p className="text-xs text-muted-foreground">{t("takingLonger")}</p>
         ) : null}
 
-        {/* The server's own wording for a failure, plus the id support asks
-            for. Ours would be a guess about something we did not witness. */}
+        {/* The server's failure wording plus the id support asks for. */}
         {row.status === "failed" ? (
           <p className="text-xs leading-relaxed text-destructive">
             {row.message ?? t("failedFallback")}
@@ -392,22 +335,19 @@ function ExportRow({ row, canManage, onDelete, slow = false }) {
           </p>
         ) : null}
 
-        {/* The row survives the file being deleted from disk by hand — saying
-            so beats a download link that 404s. */}
+        {/* The row survives a hand-deleted file; say so instead of a 404 link. */}
         {row.status === "completed" && !row.available ? (
           <p className="text-xs text-muted-foreground">{t("fileGone")}</p>
         ) : null}
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
-        {/* Manage only: the download route is behind `database,manage`, and a
-            viewer's click ended on a 403 page. */}
+        {/* Manage only: the download route requires `database,manage`. */}
         {canManage && row.download_url && row.available ? (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button asChild variant="ghost" size="icon" className="size-8">
-                {/* A plain anchor, not a router link: this is a file stream
-                    from the API, not a page in the app. */}
+                {/* A plain anchor: this is a file stream from the API, not an app page. */}
                 <a href={row.download_url} download aria-label={t("download")}>
                   <Download className="size-4" />
                 </a>

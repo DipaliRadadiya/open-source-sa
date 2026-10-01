@@ -13,18 +13,9 @@ import { Label } from "@/components/ui/label";
 import { FormModal } from "@/components/ui/form-modal";
 import { useRefresh } from "@/hooks/use-refresh";
 
-/**
- * The shared shape behind Rename, Copy, Compress and Extract: one "target
- * path" field, pre-filled with a sensible default instead of a blank input —
- * the API takes exactly `{path, target}` for all four, only the default and
- * the copy differ.
- *
- * `selectFrom`/`selectTo` pre-select part of the pre-filled value on open
- * (Rename selects just the filename, so typing replaces the name without
- * touching the directory — the same trick OS file pickers use for "rename").
- */
-// Refusals about what was typed, so they belong under the field. A 403, a
-// rate limit or a server fault is not about the path and stays a toast.
+/** Shared by Rename, Copy, Compress and Extract; the API takes `{path, target}` for all four. */
+// Refusals about what was typed belong under the field; 403, rate limits and
+// server faults are not about the path and stay toasts.
 const REFUSED_HERE = new Set([404, 409, 422]);
 
 export function TargetPathDialog({
@@ -44,64 +35,41 @@ export function TargetPathDialog({
   successMessage,
   failureMessage,
   warning,
-  // Called with the final target path right after the API confirms success —
-  // lets the panel flash the row once it reappears post-refresh, so "did that
-  // work, and where did it go" has an answer without hunting the list.
+  // Called with the final target path after success, so the panel can flash the
+  // row once it reappears.
   onSuccess,
-  // Extract-at-root is the one legitimate case where the target IS the
-  // site's own root, which this app represents as an empty path everywhere
-  // else (the listing's own `path=` convention) — every other use of this
-  // dialog genuinely requires a non-empty target.
+  // Extract-at-root is the one case where the target is the site root, which this
+  // app represents as an empty path; every other use requires a non-empty target.
   allowEmpty = false,
-  // Extract's value is the folder itself; everywhere else the folder is the
-  // value minus its last part.
+  // Extract's value is the folder itself; elsewhere the folder is the value minus
+  // its last segment.
   targetIsFolder = false,
   emptyPlaceholder,
-  // Rendered above the path field, and handed the field's own state — Compress
-  // uses it for the format choice, which has to rewrite the extension in the
-  // path rather than live beside it as a second source of truth.
+  // Rendered above the path field with the field's state; Compress uses it for the
+  // format choice, which rewrites the extension in the path.
   renderExtra,
-  // Checked before the request goes out, so a wrong extension is an inline
-  // message under the field instead of a toast after a round trip.
+  // Checked before sending, so errors show inline under the field.
   validate,
-  // Finishes what was typed before it is checked or sent — Compress adds the
-  // chosen extension to a bare name.
+  // Completes the typed value before checking/sending (Compress adds the extension
+  // to a bare name).
   normalize = (value) => value,
-  /*
-   * The "where does this land" line under the field. Null hides it.
-   *
-   * A label rather than a boolean because the two dialogs that want it say
-   * different things — Extract pours files INTO the path, Compress writes one
-   * file AT it — and `destinationOf` is what makes that work: Extract's whole
-   * value is the folder, Compress's folder is the value minus the filename.
-   *
-   * Rename has neither: its field is a new NAME, and echoing it back underneath
-   * says nothing the field does not already show.
-   */
+  // The "where does this land" line; null hides it. Extract pours files INTO the
+  // path, Compress writes one file AT it (`destinationOf` resolves the folder).
   destinationLabel = null,
   destinationOf = (value) => value,
 }) {
   const t = useTranslations("applications.files");
   const tc = useTranslations("common");
   const { pending: refreshing, refreshThen } = useRefresh();
-  // Mounted fresh per file (see files-panel.jsx), so the pre-filled default
-  // is the initial state directly rather than something an effect resets.
+  // Mounted fresh per file (see files-panel.jsx), so the default is the initial state.
   const [value, setValue] = useState(defaultTarget);
   const [error, setError] = useState(null);
   const [submitting, setBusy] = useState(false);
   const busy = submitting || refreshing;
   const inputRef = useRef(null);
 
-  /*
-   * The typed path as the breadcrumb would say it, and as a value to paste.
-   *
-   * Empty means the site's own root — the listing's `path=` convention
-   * everywhere else in this feature — so it gets the same words the breadcrumb
-   * uses rather than rendering as nothing at all.
-   */
-  // A bare name stays in the item's own folder (Rename, Copy, Compress,
-  // Extract alike) — typed on its own it used to land in the application's
-  // top folder, which on WordPress is the public web root.
+  // A bare name stays in the item's own folder (not the app's top folder, which on
+  // WordPress is the public web root). Empty means the site root.
   const place = (typed) => placeTarget(typed, file.path, defaultTarget);
   const trimmedTarget = destinationOf(place(value.trim())).replace(/^\/+|\/+$/g, "");
   const destinationValue = trimmedTarget;
@@ -110,9 +78,7 @@ export function TargetPathDialog({
     : t("root");
 
   useEffect(() => {
-    // Runs after the value's committed to the DOM so the selection sticks.
-    // Focus/selection is a DOM side effect, not React state — nothing here
-    // calls a setState setter.
+    // After the value is committed to the DOM, so the selection sticks.
     const id = requestAnimationFrame(() => {
       inputRef.current?.focus();
       if (selectFrom !== undefined) {
@@ -155,9 +121,8 @@ export function TargetPathDialog({
       } else if (await destinationMissing(appId, err, targetIsFolder ? trimmed : dirname(trimmed))) {
         setError(t("targetDialog.folderMissing", { folder: targetIsFolder ? trimmed : dirname(trimmed) }));
       } else if (REFUSED_HERE.has(err.response?.status)) {
-        // "Something already exists at that path", "could not be found": the
-        // API sends these with no field key, and a toast fading out beside a
-        // dialog that stays open looked like nothing had been said.
+        // The API sends "already exists" / "not found" with no field key; shown in the
+        // dialog since it stays open.
         setError(apiMessage(err, failureMessage));
       } else {
         toast.error(apiMessage(err, failureMessage));
@@ -209,24 +174,8 @@ export function TargetPathDialog({
         />
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-        {/*
-         * Where this actually lands, spelled out and updated as you type.
-         *
-         * The field is relative to the top of the site's folder, and nothing on
-         * screen said so — at the site root it renders as an EMPTY box behind a
-         * "Site root" placeholder, which reads as an unanswered question rather
-         * than as the answer it is. Someone extracting an archive could not
-         * tell what they were about to overwrite or where.
-         *
-         * Deliberately NOT an absolute path. The file browser is rooted at
-         * `publicHtmlPath()` — the code root — and no field the API sends is
-         * reliably equal to it: `document_root` is deeper whenever a web root
-         * is set, and `path` (codePath) diverges for a non-git site with a
-         * custom web root. Printing either would be a confident guess at a
-         * location, which is worse than naming no location at all. Same
-         * vocabulary as the breadcrumb above the listing instead, so the two
-         * describe one place the same way.
-         */}
+        {/* Deliberately NOT an absolute path: no API field reliably equals the browser's
+            root (`publicHtmlPath()`), so it uses the breadcrumb's vocabulary. */}
         {destinationLabel ? (
           <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
             <span className="shrink-0">{destinationLabel}</span>
@@ -234,9 +183,7 @@ export function TargetPathDialog({
               <Folder className="size-3 shrink-0" aria-hidden />
               <span className="truncate">{destinationText}</span>
             </span>
-            {/* Nothing to copy at the site root — the path IS empty there,
-                and a button that puts an empty string on the clipboard is a
-                control that cannot do anything. */}
+            {/* Nothing to copy at the site root: the path is empty there. */}
             {destinationValue ? (
               <CopyButton
                 value={destinationValue}

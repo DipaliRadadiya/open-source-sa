@@ -4,14 +4,7 @@ import { activityResponseSchema } from "@/lib/schemas/activity";
 const PER_PAGE_OPTIONS = [10, 20, 50, 100];
 const EMPTY_META = { current_page: 1, per_page: 10, total: 0, last_page: 1 };
 
-/**
- * One page of the server-wide activity log.
- *
- * Same correction as getUsers: this returned an empty list on every failure, so
- * an unreachable API rendered as "nothing has happened here". On an audit log
- * that reading is worse than useless — the screen exists to answer "what was
- * done to this server", and silence is the one answer it must never invent.
- */
+// Reports failures rather than an empty list, which would read as "nothing happened".
 export async function getActivityLog(searchParams = {}) {
   const perPage = PER_PAGE_OPTIONS.includes(Number(searchParams.per_page))
     ? Number(searchParams.per_page)

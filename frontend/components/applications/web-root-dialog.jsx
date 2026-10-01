@@ -22,18 +22,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-/**
- * Which directory the web server actually serves.
- *
- * Set at creation and then fixed forever, though the API has always allowed
- * changing it — a Laravel repo cloned into the wrong shape meant recreating
- * the site.
- *
- * The rules mirror `UpdateWebRootRequest` so nobody meets them as a 422: the
- * same character set, and no `..` segment. The warning is not decoration —
- * saving rewrites the vhost and reloads the web server, so a wrong value takes
- * the site down until it is corrected.
- */
+// Mirrors `UpdateWebRootRequest`. A wrong value takes the site down until fixed.
 const schema = z.object({
   web_root: z
     .string()
@@ -56,8 +45,7 @@ export function WebRootDialog({ application, open, onOpenChange }) {
 
   const typed = useWatch({ control: form.control, name: "web_root" }) ?? "";
   const relative = String(typed).trim().replace(/^\/+|\/+$/g, "");
-  // `path` is the folder web_root is relative to — /etc here meant
-  // public_html/etc, which surprised the one person who typed it.
+  // web_root is relative to `path` (e.g. /etc means public_html/etc).
   const base = String(application.path ?? "").replace(/\/+$/, "");
   const resolved = base ? (relative ? `${base}/${relative}` : base) : null;
 
@@ -66,12 +54,8 @@ export function WebRootDialog({ application, open, onOpenChange }) {
     try {
       const folder = String(values.web_root ?? "").trim().replace(/^\/+|\/+$/g, "");
       if (folder) {
-        /*
-         * The API saves a folder that does not exist and the site answers 403
-         * at once. The file list says whether it is there; only a clear "no"
-         * stops the save — a role without file access gets 403 here, which
-         * says nothing about the folder.
-         */
+        /* The API saves a missing folder and the site then answers 403. Only a clear "no"
+         * blocks: a 403 from the file list says nothing about the folder. */
         const missing = await listFiles(application.id, folder).then(
           () => false,
           (error) => [404, 422].includes(error.response?.status),

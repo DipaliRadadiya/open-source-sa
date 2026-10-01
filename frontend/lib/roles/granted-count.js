@@ -1,7 +1,7 @@
 import { ACCESS_NONE, accessFromGrant } from "@/lib/schemas/role";
 
-// Counts on `access`, not on the boolean pair: the API now sends the level and
-// may omit the pair entirely, which would have made every role read as zero.
+// Counts on `access`, not the boolean pair: the API sends the level and may
+// omit the pair.
 export function grantedCount(role) {
   return (role.permissions ?? []).filter(
     (entry) =>

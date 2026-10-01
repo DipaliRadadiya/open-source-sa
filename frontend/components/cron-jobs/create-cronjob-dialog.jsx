@@ -59,10 +59,8 @@ export function CreateCronjobDialog({
 
   useEffect(() => {
     if (open) form.reset({ ...DEFAULTS, ...initialValues });
-    // `initialValues` is safe to depend on despite being an object: the parent
-    // holds it in state (cronjobs-panel.jsx) rather than building it inline, so
-    // its identity changes only when a different quick-start is chosen — which
-    // is exactly when this should re-seed.
+    // `initialValues` is held in state by the parent (cronjobs-panel.jsx), so
+    // its identity changes only when a different quick-start is chosen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialValues]);
 
@@ -161,10 +159,7 @@ export function CreateCronjobDialog({
             <FormItem className="flex items-center justify-between rounded-lg border px-3 py-2.5">
               <div className="space-y-0.5">
                 <FormLabel hint={t("form.activeHint")}>{t("form.active")}</FormLabel>
-                {/* The only field here without one. `active` is registered and
-                    always sent, so a 422 on it would be set inline and render
-                    nowhere — silent, exactly like the firewall and system-user
-                    cases. Not reachable today; the slot costs nothing. */}
+                {/* `active` is always sent, so a 422 on it needs a place to render. */}
                 <FormMessage />
               </div>
               <FormControl>

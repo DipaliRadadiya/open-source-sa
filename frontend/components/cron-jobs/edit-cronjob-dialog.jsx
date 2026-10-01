@@ -49,10 +49,7 @@ export function EditCronjobDialog({
   commandPresets = [],
   applications = [],
   placeholder,
-  // Passed by the row actions all along, just never accepted here — so Create
-  // said "Runs in server time (Asia/Kolkata)" and Edit said nothing, over the
-  // same field. A schedule with no clock named is the misreading this note
-  // exists to prevent.
+  // Shown under the schedule so the clock it runs on is stated, as in Create.
   timezone,
 }) {
   const t = useTranslations("cronJobs");
@@ -68,10 +65,8 @@ export function EditCronjobDialog({
   // doesn't reopen holding pre-edit values.
   useEffect(() => {
     if (open) form.reset(valuesOf(job));
-    // Depends on the job's own fields, not just the id, so a reopened form
-    // holds what was saved. The list does re-read when a job falls due, but
-    // that moves only `next_run_at`, which is not listed here — an edit in
-    // progress is not reset under the reader.
+    // Depends on the job's own fields, so a reopened form holds what was saved.
+    // `next_run_at` is excluded so the due-time re-read does not reset an edit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, job.id, job.name, job.command, job.expression, job.active, job.username, job.system_user?.id]);
 
@@ -110,8 +105,7 @@ export function EditCronjobDialog({
   }
 
   const isSubmitting = form.formState.isSubmitting;
-  // Nothing changed means nothing to save — a live button that fires a
-  // no-op write reads as if it did something.
+  // Nothing changed means nothing to save.
   const isDirty = form.formState.isDirty;
 
   return (
@@ -174,7 +168,7 @@ export function EditCronjobDialog({
             <FormItem className="flex items-center justify-between rounded-lg border px-3 py-2.5">
               <div className="space-y-0.5">
                 <FormLabel hint={t("form.activeHint")}>{t("form.active")}</FormLabel>
-                {/* Same missing slot as the create dialog. */}
+                {/* `active` is always sent, so a 422 on it needs a place to render. */}
                 <FormMessage />
               </div>
               <FormControl>

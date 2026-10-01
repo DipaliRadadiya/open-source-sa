@@ -1,9 +1,10 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
+import { useLinkStatus } from "next/link";
 import { usePathname, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { cn } from "@/lib/utils";
 import {
@@ -34,16 +35,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
-/**
- * Closes the mobile sidebar sheet after a nav link click — and stops the click
- * when the page behind it has edits nobody saved.
- *
- * Every nav item funnels through here, which is the only reason this is one
- * change rather than one per screen. `beforeunload` covers reload and close,
- * but a sidebar click is a client-side route change the browser never hears
- * about: flipping a switch on 8G Firewall and clicking "Files" threw the edit
- * away with no warning at all.
- */
+// Every nav item funnels through here: a sidebar click is a client-side route change
+// that `beforeunload` never sees, so unsaved edits are held here.
 function MobileNavLink({ item, built, active, children, className }) {
   const { isMobile, setOpenMobile } = useSidebar()
   const t = useTranslations("common")
@@ -67,8 +60,8 @@ function MobileNavLink({ item, built, active, children, className }) {
   }
 
   const handleClick = (event) => {
-    // `asChild` merges this onto the anchor itself, so preventing the click is
-    // enough to hold the route while the provider asks about dirty work.
+    // `asChild` merges this onto the anchor, so preventing the click holds the route
+    // while the provider asks about unsaved work.
     if (
       !active &&
       item.href &&
@@ -93,6 +86,13 @@ function MobileNavLink({ item, built, active, children, className }) {
   )
 }
 
+// Shows the wait at the click point as well as in the top bar.
+function PendingNavIcon({ name }) {
+  const { pending } = useLinkStatus();
+
+  return pending ? <Loader2 className="size-4 animate-spin" /> : <NavIcon name={name} />;
+}
+
 export function AppSidebar({ items }) {
   const pathname = usePathname();
   const params = useParams();
@@ -103,20 +103,16 @@ export function AppSidebar({ items }) {
   const applicationId = params?.application;
   const iconOnly = state === "collapsed" && !isMobile;
 
-  // Inside an application, prefer the catalog its layout fetched: only that one
-  // is filtered by what this site type supports. Until it arrives, the shared
-  // catalog renders the same items minus that filter.
+  // Inside an application, prefer its layout's catalog (filtered by site type);
+  // until it arrives the shared catalog renders the same items unfiltered.
   const { items: applicationItems, resolved, application, gitProvider } = useApplicationNav();
-  // Once the layout has answered and the answer is "no menu", this site does not
-  // exist. Fall back to the SERVER panel rather than rendering the shared
-  // catalog against a dead id — that produced a full site menu whose every link
-  // 404s, on a page telling you the site could not be found.
+  // Once the layout answers "no menu", the site does not exist: fall back to the
+  // SERVER panel rather than a site menu whose links all 404.
   const insideApplication = Boolean(applicationId) && (applicationItems !== null || !resolved);
   const currentPanel = insideApplication ? "application" : "server";
   const source = insideApplication ? (applicationItems ?? items) : items;
 
-  // Every application screen the catalog advertises is shown, so the sidebar is
-  // the site's full feature map. The ones whose route hasn't shipped yet render
+  // Every application screen in the catalog is shown; routes not yet built render
   // as non-clickable "Soon" rows rather than being hidden or 404ing.
   const visible = resolveNavItems(source, applicationId)
     .filter((item) => item?.permissions?.view)
@@ -125,8 +121,7 @@ export function AppSidebar({ items }) {
   const groups = groupBySubLevel(visible);
 
   // Longest match wins: the application Dashboard's href (`/applications/{id}`)
-  // is a prefix of every sub-page, so a per-item prefix check lights it up
-  // everywhere. Pick the single deepest-matching item instead.
+  // prefixes every sub-page, so pick the single deepest match.
   const activeItem = findActiveNavItem(visible, pathname);
 
   return (
@@ -166,15 +161,7 @@ export function AppSidebar({ items }) {
                 item={{ href: `/applications/${application.id}`, title: application.name }}
                 built
                 active={false}
-                /*
-                  Tinted and edged, so the card reads as the subject the nav
-                  below belongs to rather than as another nav item.
-
-                  It used to be `bg-sidebar-accent/40` — a slightly darker grey
-                  on a grey rail, which gave it no edge at all. Reported as
-                  "everything looks same to sidebar", and that was the fault:
-                  not the card's internals, but that it had no boundary.
-                */
+                /* Tinted so the card reads as the subject of the nav below, not another item. */
                 className="h-auto min-h-20 items-start rounded-xl border border-primary/25 bg-primary/5 p-3 hover:bg-primary/10 group-data-[collapsible=icon]:min-h-8! group-data-[collapsible=icon]:p-2!"
               >
                 <Link
@@ -183,16 +170,12 @@ export function AppSidebar({ items }) {
                   className="min-w-0 flex-col items-stretch gap-0"
                 >
                   <span className="flex w-full min-w-0 items-center gap-2.5">
-                    {/* On its own white tile: the mark is the one piece of
-                        brand colour here and it needs a surface to sit on,
-                        or it reads as a stray glyph against the tint. */}
+                    {/* On its own tile so the brand mark has a surface against the tint. */}
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-background shadow-xs group-data-[collapsible=icon]:size-5! group-data-[collapsible=icon]:border-0! group-data-[collapsible=icon]:bg-transparent! group-data-[collapsible=icon]:shadow-none!">
                       <SiteTypeLogo name={application.site_type} provider={gitProvider} size="h-5 w-5" />
                     </span>
-                    {/* Hidden explicitly when the rail collapses to icons. The
-                        sidebar's own rule only hides a button's LAST span,
-                        which here is the domain line — leaving the name and
-                        status to overflow a 32px square by 14px, measured. */}
+                    {/* Hidden explicitly when the rail collapses to icons: the sidebar only hides a
+                        button's LAST span (the domain line), and the rest would overflow. */}
                     <span className="min-w-0 flex-1 leading-tight group-data-[collapsible=icon]:hidden">
                       <span className="block truncate text-sm font-semibold" title={application.name}>
                         {application.name}
@@ -200,20 +183,15 @@ export function AppSidebar({ items }) {
                       <ApplicationStatusDot application={application} className="mt-1" />
                     </span>
                   </span>
-                  {/* Its own full-width line, in a box: at 240px the domain is
-                      the longest string on the card, and sharing the name's
-                      column truncated it mid-host. The box is what stops a
-                      second grey line reading as more of the same. */}
+                  {/* Its own full-width line, in a box: the domain is often the longest string and
+                      would truncate mid-host beside the name. */}
                   <span className="mt-2.5 block w-full truncate rounded-md bg-background/80 px-2 py-1 font-mono text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
                     {application.domain}
                   </span>
                 </Link>
               </MobileNavLink>
-              {/* Sibling, not child: the card is already a link into the panel
-                  and nesting anchors is invalid. Only while the site is
-                  actually being served — a link to a site still provisioning
-                  lands on a connection error. Hidden when the rail is collapsed
-                  to icons, where the card is a 32px square. */}
+              {/* Sibling, not child: anchors cannot nest. Only while the site is served
+                  (a provisioning site would show a connection error). */}
               {application.status === "active" && application.url ? (
                 <VisitSiteLink
                   href={application.url}
@@ -226,9 +204,8 @@ export function AppSidebar({ items }) {
         </SidebarGroup>
       ) : null}
       <SidebarContent className="gap-0 py-2">
-        {/* Keyed on the level AND the application id: moving from one site
-            straight to another is also a level change to the person doing it,
-            even though `currentPanel` stays "application" throughout. */}
+        {/* Keyed on level AND application id: switching sites is also a level change,
+            though `currentPanel` stays "application". */}
         <SidebarLevelTransition level={insideApplication ? `application:${applicationId}` : "server"}>
         {groups.map((group) => (
           <SidebarGroup key={group.key} className="py-1">
@@ -256,15 +233,10 @@ export function AppSidebar({ items }) {
                 return (
                   <SidebarMenuItem key={`${item.name}-${item.href}`}>
                     <MobileNavLink item={item} built active={active}>
-                      {/* Every one of these routes is dynamic and cookie-gated,
-                          so a prefetch is a full server render against the API
-                          — and the whole menu is on screen at all times. Left
-                          on, opening one page fired ~16 background renders and
-                          burned most of the API's per-minute budget before the
-                          user clicked anything. Intent (hover/touch) still
-                          prefetches; `loading.jsx` covers the rest. */}
+                      {/* No prefetch: each one is a full server render against the API's rate
+                          limit, and the whole menu is always on screen. */}
                       <Link href={item.href} prefetch={false}>
-                        <NavIcon name={item.icon} />
+                        <PendingNavIcon name={item.icon} />
                         <span>{navTitle(item, t)}</span>
                       </Link>
                     </MobileNavLink>

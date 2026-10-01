@@ -2,8 +2,7 @@ import { CircleCheck, TriangleAlert, CircleX, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
-// Status → how the row reads: icon (identity of the outcome), pill label, and
-// card tint. Colour always carries meaning here, never decoration.
+// Status → icon, pill label and card tint. Colour always carries meaning.
 const META = {
   pass: { Icon: CircleCheck, tint: "text-success", chip: "bg-success/10", pill: "success", card: "" },
   warn: {
@@ -42,15 +41,13 @@ export function CheckRow({ check, labels }) {
             </Badge>
           </div>
 
-          {/* Raw evidence for an operator — a version, path or unit name.
-              Untranslated by design, so it's shown monospace and muted. */}
+          {/* Raw evidence (version, path, unit name); untranslated by design. */}
           {check.detail ? (
             <p className="mt-1.5 break-words font-mono text-xs leading-5 text-muted-foreground">
               {check.detail}
             </p>
           ) : null}
 
-          {/* Remediation, only when the check needs attention. */}
           {needsAttention && check.fix ? (
             <p className="mt-2 flex items-start gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm">
               <Wrench className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />

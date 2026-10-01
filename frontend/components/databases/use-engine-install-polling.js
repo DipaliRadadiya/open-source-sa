@@ -11,15 +11,8 @@ const POLL_MS = 5000;
 const SLOW_AFTER_MS = 3 * 60 * 1000;
 const POLL_FAILURE_LIMIT = 3;
 
-/**
- * One polling owner for every database-engine install surface.
- *
- * `markStarted()` writes the queued state immediately, before the first poll,
- * so closing the confirmation dialog never leaves the page looking unchanged.
- * The API remains authoritative after that: a successful install disappears
- * from runtime_installs and comes back as a running engine; a failure stays on
- * the engine row with the backend's reason.
- */
+// `markStarted()` writes the queued state before the first poll, so closing the
+// dialog never leaves the page unchanged; the API is authoritative after that.
 export function useEngineInstallPolling(initialEngines = []) {
   const router = useRouter();
   const [snapshot, setSnapshot] = useState({
@@ -29,9 +22,8 @@ export function useEngineInstallPolling(initialEngines = []) {
   const [slowEngine, setSlowEngine] = useState(null);
   const [pollIssueEngine, setPollIssueEngine] = useState(null);
 
-  // A refreshed Server Component is newer than any client-side snapshot. React
-  // permits this guarded render-time adjustment and re-renders immediately;
-  // using an effect would show the stale rows for one committed frame.
+  // A refreshed Server Component is newer than any client snapshot. Adjusted
+  // during render (not in an effect) to avoid a frame of stale rows.
   if (snapshot.initial !== initialEngines) {
     setSnapshot({ initial: initialEngines, polled: null });
   }
@@ -128,10 +120,8 @@ export function useEngineInstallPolling(initialEngines = []) {
     });
   }
 
-  // Guarded on `installingEngine` because both sides are null when nothing is
-  // installing, and `null === null` is true — so a server with no install
-  // running rendered "we temporarily lost progress updates" permanently, about
-  // an install that did not exist. Neither flag means anything without one.
+  // Guarded on `installingEngine`: with no install both sides are null, and
+  // `null === null` would show a permanent "lost progress updates" warning.
   const installing = Boolean(installingEngine);
 
   return {

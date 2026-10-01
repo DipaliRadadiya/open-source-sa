@@ -3,13 +3,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { passwordRules } from "@/lib/auth/password-rules";
 
-/**
- * The live requirement checklist under a new-password field.
- *
- * Shown from the start rather than after a failed submit: the rules are the
- * thing you need while you are inventing the password, not after it has been
- * rejected.
- */
+/** The live requirement checklist under a new-password field, shown from the start. */
 export function PasswordRules({ value, policy, className }) {
   const t = useTranslations("common.passwordRules");
 

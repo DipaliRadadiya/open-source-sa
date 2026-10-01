@@ -2,18 +2,8 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
-/**
- * How long this version is still getting fixes.
- *
- * Shared by PHP and Node, which use different words for the same three states —
- * PHP has `active | security | eol`, Node has `current | lts | maintenance |
- * eol` — so the tone is mapped here and the wording comes from the caller's
- * own namespace.
- *
- * Absent data shows nothing rather than "unknown": a self-hosted box behind a
- * firewall never reaches the upstream schedule, and a badge saying unknown
- * makes a perfectly current version look suspect.
- */
+// Shared by PHP and Node: tone is mapped here, wording comes from the caller.
+// Absent data shows nothing: firewalled servers never reach the upstream schedule.
 const TONE = {
   active: "success",
   current: "success",
@@ -32,8 +22,7 @@ export function LifecycleBadge({ lifecycle, namespace, available = true, classNa
 
   return (
     <Badge variant={TONE[key] ?? "muted"} className={cn("font-normal", className)}>
-      {/* Node names its LTS lines ("Iron", "Jod"), and that name is how people
-          refer to them in release notes. Only shown when the API sends one. */}
+      {/* Node's LTS codename ("Iron", "Jod"), when the API sends one. */}
       {key === "lts" && lifecycle.lts_name
         ? t("ltsNamed", { name: lifecycle.lts_name })
         : t(key)}

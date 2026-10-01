@@ -4,18 +4,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-/**
- * The readiness checklist beside (or under) the create form.
- *
- * It is a 20rem column at `lg` and up, and the full width of the page below
- * that — where a single stack of short lines left most of the card empty. The
- * list flows into columns once the card is wide enough to hold them, so it fills
- * whatever width it is given.
- *
- * A container query, not a breakpoint: this card is narrow at wide viewports
- * (it is the sidebar) and wide at narrow ones (it is stacked). The viewport says
- * nothing useful about it.
- */
+// Container query, not a breakpoint: the card is narrow at wide viewports and wide at narrow ones.
 export function CreateReadinessPanel({ items = [], onSelectItem }) {
   const t = useTranslations("applications");
   const done = items.filter((item) => item.ready).length;
@@ -33,10 +22,7 @@ export function CreateReadinessPanel({ items = [], onSelectItem }) {
         <CardDescription>
           {complete ? t("readiness.readyHint") : t("readiness.incompleteHint")}
         </CardDescription>
-        {/* A bar, because "Complete these items to continue" says there is
-            work left and nothing about how much. Three of nine and eight of
-            nine are the same sentence and very different feelings, and this
-            list is the only place the form counts itself. */}
+        {/* A progress bar shows how much is left, which the sentence alone does not. */}
         {items.length ? (
           <div className="space-y-1.5 pt-1">
             <div className="h-1.5 overflow-hidden rounded-full bg-primary/10">

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useFormatter, useTranslations } from "next-intl";
 import { getLiveMetrics } from "@/lib/api/server-metrics";
@@ -34,7 +34,7 @@ const CUSTOM = "custom";
 export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
   const t = useTranslations("settings.performance");
   const tv = useTranslations("settings.validation");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [pendingValues, setPendingValues] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -42,11 +42,8 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
   const currentMb = Math.round((swap?.size ?? 0) / MB);
   const defaults = { size_mb: String(currentMb) };
 
-  // Swap is a safety net, not a second bank of RAM: 1–2 GB covers the spike
-  // that would otherwise get a process killed, and more just costs disk. The
-  // earlier "closest preset to total RAM" rule recommended 4 GB on a 15 GB box
-  // while the hint said "about the same as your memory" — advice that argued
-  // with itself. Only offered when we were allowed to read the memory size.
+  // Swap is a safety net, not extra RAM: 1–2 GB covers a spike, more just
+  // costs disk. Only offered when the memory size could be read.
   const recommendedMb = memoryTotal
     ? memoryTotal.bytes / MB < 2048
       ? 1024
@@ -62,11 +59,7 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
   const sizeMb = useWatch({ control: form.control, name: "size_mb" });
   const format = useFormatter();
 
-  /*
-   * Free disk space, for the one question the API does not ask: does this
-   * swap file fit? 64 GB was accepted on a disk with 80 GB free and took most
-   * of it. Read once; if it cannot be read the form says nothing, as before.
-   */
+  // Checks the swap file fits (the API does not); silent if unreadable.
   const [diskFree, setDiskFree] = useState(null);
   useEffect(() => {
     const controller = new AbortController();
@@ -82,8 +75,7 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
   // Only the growth needs new space: the current file is replaced.
   const growth = Math.max(0, Number(sizeMb) * MB - (swap?.size ?? 0));
   const left = diskFree === null ? null : diskFree - growth;
-  // Refused past half the free space, not only when it cannot fit: 64 GB on a
-  // disk with 80 GB free "fit", and left the server 6 GB for everything else.
+  // Refused past half the free space, not only when it cannot fit.
   const noRoom = diskFree !== null && growth > 0 && growth > diskFree * 0.5;
   const tight = diskFree !== null && growth > 0 && !noRoom && (left < 10 * 1024 * MB || left < diskFree * 0.6);
   const matchesPreset = PRESETS.includes(Number(sizeMb));
@@ -95,10 +87,10 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
     setSaving(true);
     try {
       await updateSwapSettings({ size_mb: Number(values.size_mb) });
-      toast.success(t("swap.saved"));
       form.reset({ size_mb: String(values.size_mb) });
+      await refreshAndWait();
+      toast.success(t("swap.saved"));
       setPendingValues(null);
-      router.refresh();
     } catch (error) {
       setPendingValues(null);
       handleValidationError(error, form);
@@ -216,19 +208,14 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
                     </ToggleGroupItem>
                   </ToggleGroup>
   
-                  {/* The number field only exists once "Custom" is chosen. Showing
-                      it beside the presets made two controls for one value, and
-                      left people wondering which one counted. */}
+                  {/* Only once "Custom" is chosen, so there is one control per value. */}
                   {custom ? (
                     <div className="flex items-center gap-2 pt-1 sm:w-fit">
                       <FormControl>
                         <Input
                           placeholder="2048"
-                          // 14rem — the width of the control column every other
-                          // field in Settings sits in. This row is `wide` (the
-                          // presets need the full width), so it has no column to
-                          // inherit from and was left at 112px, half the size of
-                          // every control above and below it.
+                          // 14rem, the Settings control-column width; this `wide`
+                          // row has no column to inherit it from.
                           className="w-full font-mono sm:w-56"
                           inputMode="numeric"
                           autoComplete="off"

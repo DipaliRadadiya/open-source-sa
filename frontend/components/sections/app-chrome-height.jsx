@@ -2,19 +2,8 @@
 
 import { useEffect, useRef } from "react";
 
-/**
- * Publishes the height of the sticky chrome as `--app-chrome` on <html>.
- *
- * The cluster at the top of the shell — header, breadcrumb band, and the
- * impersonation and reboot-required banners — is sticky and its height is not
- * fixed: the banners are conditional and either can wrap to two lines on a
- * narrow screen. Anything else that sticks has to clear it, and every hardcoded
- * offset was wrong for somebody. The Create application summary sat at `top-20`
- * and slid under the breadcrumb the moment a banner appeared.
- *
- * Rendered inside the cluster and measures its own parent, so it cannot drift
- * out of step with what it is describing.
- */
+// Publishes the sticky chrome's height as `--app-chrome`. Its banners are conditional and
+// wrap, so anything else that sticks must offset by this, never a hardcoded value.
 export function AppChromeHeight() {
   const ref = useRef(null);
 

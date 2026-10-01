@@ -590,10 +590,13 @@ test("Caution with an action: text uses the whole row (Krishna, 30 Sep)", () => 
   assert.match(read("components/ui/caution.jsx"), /action \? "min-w-48" : "min-w-0 \[&>p\]:max-w-prose"/);
 });
 
-test("Secondary buttons are a brand tint; icon-only ones and the language switcher stay neutral (Krishna, 30 Sep)", () => {
+test("Secondary buttons are tinted only inside cards and notices; elsewhere neutral (Krishna, 30 Sep)", () => {
   const src = read("components/ui/button.jsx");
-  assert.match(src, /const TINT =\s*"bg-\[color-mix\(in_oklch,var\(--primary\)_9%,var\(--background\)\)\] text-\[color-mix\(in_oklch,var\(--primary\)_80%,var\(--foreground\)\)\]/);
-  assert.match(src, /\{ variant: "outline", size: \["default", "xs", "sm", "lg"\], className: TINT \}/);
+  assert.match(src, /const TINT_IN_CARDS =\s*"in-\[\.bg-card\]:border-transparent in-\[\.bg-card\]:bg-\[color-mix/);
+  assert.match(src, /in-data-\[slot=caution\]:bg-\[color-mix/);
+  assert.match(src, /in-data-\[slot=notice\]:bg-\[color-mix/);
+  assert.match(src, /\{ variant: "outline", size: \["default", "xs", "sm", "lg"\], className: `\$\{NEUTRAL\} \$\{TINT_IN_CARDS\}` \}/);
   assert.match(src, /\{ variant: "outline", size: \["icon", "icon-xs", "icon-sm", "icon-lg"\], className: NEUTRAL \}/);
+  assert.match(read("components/ui/caution.jsx"), /data-slot="caution"/);
   assert.match(read("components/sections/locale-switcher.jsx"), /<Button\s+variant="neutral"/);
 });

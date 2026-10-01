@@ -1,21 +1,5 @@
-/**
- * Where a single 422 field error should be shown.
- *
- * Pure, and its own module, because getting this wrong is silent: the message
- * is written into form state, nothing renders it, and the user presses Save
- * over and over against a form that never explains itself. Three real bugs
- * came from the three answers below.
- *
- * `fields` is the form's own value object, `sent` is the submitted body.
- *
- * `unrendered` is the fourth answer, and the one the other three cannot reach:
- * a field that is in the form's values AND in the body AND still has no control
- * on screen. A worker's `kind` is set by picking a preset rather than by an
- * input, so "you can't run Horizon and a queue worker on the same app" passed
- * both tests above and landed on nothing — Save did nothing, silently, every
- * time. A form that holds a value it never renders has to say so; there is no
- * way to detect it from here.
- */
+// Where a 422 field error shows, or null when no control on screen renders it.
+// `unrendered`: fields in form values with no control (e.g. a preset's `kind`).
 export function errorTarget(field, fields = {}, sent = {}, unrendered = []) {
   // Nested keys arrive dotted (`settings.token`); the root is what was sent.
   const parts = field.split(".");
@@ -26,24 +10,12 @@ export function errorTarget(field, fields = {}, sent = {}, unrendered = []) {
   const rendered = Object.prototype.hasOwnProperty.call(fields, root);
   const wasSent = Object.prototype.hasOwnProperty.call(sent, root);
 
-  // BOTH tests, because each catches a different disappearance.
-  //
-  // Sent but not in the form: the firewall dialog sends `port_from` while its
-  // input is called `ports`, so setError wrote to a name nothing renders.
-  //
-  // In the form but not sent: the cron dialog sends `system_user_id` and the
-  // API answers on `username` — a real field, on the branch the user is not
-  // looking at.
+  // Both checks: a sent key may have a differently named input, and a form
+  // value may belong to a branch that was not sent.
   if (!rendered || !wasSent) return null;
 
-  // An error on ONE ITEM of a list arrives as `file_excludes.3`. Setting it
-  // there stores it nested, so `errors.file_excludes` becomes `{ 3: {...} }`
-  // and the <FormMessage> bound to the list reads `.message` off an object,
-  // gets undefined, and renders nothing. The control is the list, so that is
-  // where the message belongs.
-  //
-  // Only a NUMERIC last segment folds up: `settings.token` is a real nested
-  // field with its own input and keeps its own error.
+  // `file_excludes.3` folds up to the list; only a numeric last segment folds,
+  // so `settings.token` keeps its own error.
   if (parts.length > 1 && /^\d+$/.test(parts.at(-1))) {
     return parts.slice(0, -1).join(".");
   }

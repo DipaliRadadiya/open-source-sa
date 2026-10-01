@@ -1,12 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/**
- * Mirrors `SecuritySection`: one card, capped at `max-w-4xl` like the panel.
- *
- * The cap is the point. Without it the placeholder filled the content column
- * (1120px) and the real card arrived 224px narrower, so the page visibly
- * snapped inwards on load. Height is the rendered card's own (464px).
- */
+// Mirrors `SecuritySection`: keep `max-w-4xl` in step or the page snaps narrower on load.
 export default function Loading() {
   return (
     <div className="space-y-6">

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useRef, useState } from "react";
 import { MoreHorizontal, Pencil, Copy, Trash2, ScrollText, SquareArrowOutUpRight } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -52,11 +52,7 @@ export function CronjobRowActions({
             e.preventDefault();
           }}
         >
-          {/* What the job actually did, first. There's deliberately no
-              "last run" field — cron keeps no such record — so the captured
-              output, with its `exit=` status line, is the only honest answer to
-              "did it work?". Null until the job is next saved with capture on,
-              so the item says so rather than opening an empty viewer. */}
+          {/* Cron keeps no "last run" record; captured output is the only answer to "did it work?". */}
           {!canViewLogs ? (
             <MenuItemHint hint={t("actions.noLogsPermission")}>
               <DropdownMenuItem disabled>
@@ -66,9 +62,7 @@ export function CronjobRowActions({
             </MenuItemHint>
           ) : job.log_key ? (
             <DropdownMenuItem asChild>
-              {/* New tab — this leaves the server-wide Logs page, not another
-                  spot in Cron Jobs, so navigating in place would lose the job
-                  list. */}
+              {/* New tab: this leaves Cron Jobs for the server-wide Logs page. */}
               <Link
                 href={`/logs?source=${encodeURIComponent(job.log_key)}`}
                 target="_blank"

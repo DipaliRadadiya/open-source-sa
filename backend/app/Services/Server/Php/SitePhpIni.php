@@ -314,7 +314,7 @@ class SitePhpIni
             $lines[] = '';
             $lines[] = '; Set by the site owner, appended verbatim — so a directive here';
             $lines[] = '; wins over everything above it.';
-            $lines[] = trim((string) $effective['additional_directives']);
+            $lines[] = app(AdditionalDirectives::class)->forIni((string) $effective['additional_directives']);
         }
 
         return implode("\n", $lines)."\n";

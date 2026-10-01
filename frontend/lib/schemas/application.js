@@ -17,10 +17,7 @@ const textField = z.object({
   source: z.string().nullish(),
   depends_on: z.string().nullish(),
   generate: z.boolean().default(false),
-  // package_manager → the install+build command it fills in. Stripped by this
-  // schema until 2026-09-29, so the form never filled build_command and every
-  // Node git app deployed without installing its dependencies (HTTP 502).
-  // PHP sends an empty map as [].
+  // package_manager → install+build command. PHP sends an empty map as [].
   build_templates: z
     .preprocess((v) => (Array.isArray(v) ? {} : v), z.record(z.string(), z.string()))
     .optional(),
@@ -46,23 +43,14 @@ export const siteTypeSchema = z.object({
   needs_database: z.boolean().default(false),
   available: z.boolean().default(true),
   unavailable_reason: z.string().nullish(),
-  // The sentence above is for reading; this is the thing to branch on:
-  // 'runtime' | 'database' | 'web_server', null when available. The picker
-  // used to infer the database case from `needs_database` plus a null runtime,
-  // which reads a web-server refusal as a missing database.
+  // Branch on this, not on `unavailable_reason` (display text):
+  // 'runtime' | 'database' | 'web_server', null when available.
   unavailable_code: z.string().nullish(),
-  // Engines this type can be installed on: ["mysql", "mariadb"] for WordPress,
-  // ["mongodb", "postgresql"] for NodeBB. Sent, and read — the create grid
-  // names them on a blocked card, and `acceptedEngines` in
-  // lib/applications/database-readiness.js decides what that card may offer.
-  // `[]` is a real answer and not an omission: a type with no installer has no
-  // list to be held to.
+  // Read by `acceptedEngines` (database-readiness.js). `[]` is a real answer: no installer, no list.
   accepted_engines: z.array(z.string()).nullish(),
   installable_runtime: z.string().nullish(),
   has_installer: z.boolean().default(false),
-  // The runtime versions this type runs on, both ends inclusive and either
-  // end nullable. Stripped until now, which is why the version pickers offered
-  // Node 20 for a NodeBB that needs 22.
+  // Supported runtime versions, both ends inclusive and either end nullable.
   php_version_range: versionRange,
   node_version_range: versionRange,
   fields: z.array(textField).default([]),
@@ -81,24 +69,18 @@ export const systemUserOptionSchema = z
 
 export const systemUsersResponseSchema = z.object({
   system_users: z.array(systemUserOptionSchema).default([]),
-  // `ssh_access_enforced`: whether the SSH switch keeps anyone out yet. Null
-  // when sshd could not be asked, which is not the same as "no".
-  meta: listMetaSchema.extend({
-    ssh_access_enforced: z.boolean().nullable().optional(),
-  }),
+  // Null when sshd could not be asked, which is not the same as "no".
+  meta: listMetaSchema.extend({ ssh_access_enforced: z.boolean().nullable().optional() }),
 });
 
-// Read live from systemd on every request, so it is never stale — and absent
-// entirely unless `has_process`.
-const processSchema = z
-  .object({
-    state: z.string().nullish(),
-    sub_state: z.string().nullish(),
-    since: z.string().nullish(),
-    memory: z.union([z.number(), z.string()]).nullish(),
-    restarts: z.number().nullish(),
-  })
-  .passthrough();
+// Read live from systemd on every request; absent unless `has_process`.
+const processSchema = z.object({
+  state: z.string().nullish(),
+  sub_state: z.string().nullish(),
+  since: z.string().nullish(),
+  memory: z.union([z.number(), z.string()]).nullish(),
+  restarts: z.number().nullish(),
+}).passthrough();
 
 const webhookSchema = z.object({
   enabled: z.boolean().default(false),
@@ -106,20 +88,13 @@ const webhookSchema = z.object({
   url: z.string().nullish(),
   secret: z.string().nullish(),
   verification: z.string().nullish(),
-  // True when the panel added the webhook to the repository itself; false
-  // means the URL and secret have to be pasted in by hand.
+  // False means the URL and secret must be pasted in by hand.
   registered: z.boolean().default(false),
   last_delivered_at: z.string().nullish(),
   last_delivered_at_human: z.string().nullish(),
 }).passthrough();
 
-/**
- * One thing the server thinks is wrong with a site.
- *
- * `message` arrives translated and is shown as sent — it carries numbers this
- * side does not have (days remaining, percent used), and re-wording it here is
- * how two screens start disagreeing about the same fact.
- */
+// `message` arrives translated and is shown as sent; re-wording it would make screens disagree.
 export const applicationIssueSchema = z.object({
   type: z.string(),
   severity: z.enum(["warning", "critical"]).catch("warning"),
@@ -135,43 +110,13 @@ export const applicationIssuesResponseSchema = z.object({
 export const applicationSchema = z.object({
   id: z.number(),
   name: z.string(),
-  // `applications.domain` is nullable — it became so when domains moved to
-  // their own table — and `ApplicationResource` passes it straight through.
-  // One site without one would have rejected the entire applications list.
+  // Nullable since domains moved to their own table; required would reject the whole list.
   domain: z.string().nullish(),
-  /*
-   * The address to actually open, decided by the server — `http://` until the
-   * site has a servable certificate, which every site lacks for the first few
-   * minutes of its life.
-   *
-   * Undeclared until now, so Zod stripped it and every reader silently fell
-   * back to assembling `https://{domain}` themselves — which is a connection
-   * refused on a site with no TLS listener. The ⋯ menu has carried that
-   * fallback since it was written and it has been the only branch ever taken.
-   * Same class as `disk_io`: the API sends it, the schema drops it, nothing
-   * errors.
-   */
+  // Decided by the server (`http://` until a certificate is servable). Never assemble `https://{domain}`.
   url: z.string().nullish(),
   site_type: z.string(),
   site_type_title: z.string().nullish(),
-  /*
-   * What the panel found when it last read the disk, and whether it has a
-   * relabel to offer.
-   *
-   * Undeclared until now, so Zod stripped it from every application response
-   * and the whole feature was invisible on this side — the same class as `url`
-   * and `disk_io`. The API has been sending it all along.
-   *
-   * All nullish: nothing is populated until somebody presses Detect, which is
-   * deliberate on the backend's part (a site's files arrive *after* it is
-   * created, so probing on page-open would cache "nothing found" at the one
-   * moment that answer is guaranteed wrong).
-   *
-   * `matched` is the file the verdict rests on — `wp-config.php`, not a score —
-   * and it exists so the note can say WHY. `suggested` is pre-validated
-   * against every refusal the apply endpoint would make, so a suggestion the
-   * user accepts cannot come back a 422.
-   */
+  // Populated only once Detect is pressed. `suggested` is pre-validated, so accepting it cannot 422.
   site_type_detection: z
     .object({
       detected: z.string().nullish(),
@@ -218,17 +163,9 @@ export const applicationSchema = z.object({
   node_version: z.string().nullish(),
   app_port: z.number().nullish(),
   web_root: z.string().nullish(),
-  // The directory the web server actually serves. `path` below is declared and
-  // this was not, so Zod stripped it — which is why `{path}` in the deploy
-  // script had no value beside it while `{branch}` and `{domain}` did. The
-  // token expands to THIS, not to `path`: GitDeployer's `expand()` substitutes
-  // the document root.
+  // The served directory; the deploy script's `{path}` expands to this, not to `path`.
   document_root: z.string().nullish(),
-  // Where the site's code lives — the document root for most types, its parent
-  // for the ones with a fixed web root (Laravel's `public`). That is exactly
-  // what a cron command needs: `{path}/artisan` and `{path}/wp-cron.php` both
-  // resolve correctly from it. Undeclared here it would be stripped, which is
-  // the `disk_io` bug for the fourth time in this file.
+  // The code's directory (parent of a fixed web root like Laravel's `public`); cron resolves from it.
   path: z.string().nullish(),
   build_command: z.string().nullish(),
   start_command: z.string().nullish(),
@@ -236,59 +173,31 @@ export const applicationSchema = z.object({
   repository: z.string().nullish(),
   repository_url: z.string().nullish(),
   branch: z.string().nullish(),
-  // PHP serializes an EMPTY associative array as `[]`, not `{}` — so `settings`
-  // arrives as an array when a site has no type-specific answers. Coerce that
-  // back to an object, or the whole list fails to parse the moment a real app
-  // with empty settings exists.
+  // PHP serializes an empty map as `[]`; coerce it, or the whole list fails to parse.
   settings: z.preprocess(
     (value) => (Array.isArray(value) ? {} : value),
     z.record(z.string(), z.unknown()).default({}),
   ),
-  // Declared, or Zod strips them and the dashboard renders blanks for fields
-  // the API is sending — the `disk_io` bug again.
+  // Must be declared: this object does not passthrough, so Zod strips them.
   has_process: z.boolean().default(false),
   process: processSchema.nullish(),
   webhook: webhookSchema.nullish(),
   basic_auth_enabled: z.boolean().default(false),
   basic_auth_username: z.string().nullish(),
-  // False when the app's own client signs in with the Authorization header,
-  // which Basic Auth would consume. Defaults true so a backend that predates
-  // the flag keeps the control enabled rather than hiding a working feature.
+  // False when the app uses the Authorization header, which Basic Auth would consume.
   basic_auth_supported: z.boolean().default(true),
-  /*
-   * Whether the Web Firewall can run on this server at all.
-   *
-   * OpenLiteSpeed has no equivalent of the nginx rule set the WAF is built
-   * from, so the screen was offering a protection that server can never apply.
-   * Undeclared until now, which is why it was offered anyway.
-   */
+  // OpenLiteSpeed has no equivalent of the nginx WAF rule set.
   waf_supported: z.boolean().default(true),
-  /*
-   * When the CURRENT provisioning run started — not `created_at`, which is
-   * wrong after a retry and would have shown "42 minutes elapsed" for a job
-   * that restarted twenty seconds ago. Asked for on 2026-08-11 and shipped
-   * since; until it existed the card could only say "usually a few minutes".
-   */
+  // When the CURRENT provisioning run started; `created_at` is wrong after a retry.
   provisioning_started_at: z.string().nullish(),
   provisioning_started_at_human: z.string().nullish(),
   is_disabled: z.boolean().default(false),
   disabled_at: z.string().nullish(),
-  // "This site has a jail configured" — NOT "fail2ban is protecting this site".
-  // Derived by the API from the same jail column its sibling endpoint reports,
-  // since 2026-08-22: before that it came from a stored boolean whose only
-  // writer was unreachable code, so it read false for every site on the server
-  // including ones with a jail actively running, and the dashboard card
-  // disagreed with the site's own fail2ban screen.
-  //
-  // Whether the fail2ban SERVICE is up is a server-wide fact this field cannot
-  // answer — `GET /services` does. Live jail state (bans, counters) needs a
-  // fail2ban-client call and has its own endpoint.
+  // "A jail is configured", not "fail2ban is protecting this site"; service state is server-wide.
   fail2ban_enabled: z.boolean().default(false),
   ai_bot_policy: z.string().nullish(),
   ai_bot_policy_title: z.string().nullish(),
-  // Per-bot overrides on top of the policy. `whenLoaded('botRules')` on the
-  // backend, so today they only come back from the bot-blocker PUT — declared
-  // here so they survive the moment a read endpoint exists.
+  // Per-bot overrides; `whenLoaded`, so currently only returned by the bot-blocker PUT.
   bot_blocked: z.array(z.string()).default([]),
   bot_allowed: z.array(z.string()).default([]),
   // npm | yarn | pnpm | bun, for the ssr/csr rendering types.
@@ -297,14 +206,7 @@ export const applicationSchema = z.object({
   production_application_id: z.number().nullish(),
   has_staging: z.boolean().default(false),
   cloned_from_application_id: z.number().nullish(),
-  // The 8G Firewall. `waf_exceptions`/`waf_custom_rules` are `whenLoaded` on the
-  // backend — they come back from GET /applications/{id}/waf and from nowhere
-  // else, so a page that needs them cannot reuse the plain application read.
-  //
-  // Deliberately NOT defaulted to []: absent means "not loaded", and defaulting
-  // would render that as "this site has no exceptions" — a wrong answer that
-  // looks like a real one. Callers that have loaded them coalesce at the point
-  // of use; anywhere else `undefined` is the honest value.
+  // `waf_exceptions`/`waf_custom_rules` come only from GET .../waf. NOT defaulted: absent means "not loaded".
   waf_enabled: z.boolean().default(false),
   waf_mode: z.string().nullish(),
   waf_mode_title: z.string().nullish(),
@@ -312,10 +214,8 @@ export const applicationSchema = z.object({
   waf_exceptions: z.array(z.string()).optional(),
   waf_custom_rules: z.array(z.string()).optional(),
   last_commit: z.union([z.string(), z.record(z.string(), z.unknown())]).nullish(),
-  // What is actually on disk. Deploys are in place, so one that fails after
-  // its checkout leaves the NEW commit live while `last_commit` (written on
-  // success only) still names the old one. Sent on a single application, not
-  // in the list.
+  // What is on disk: a deploy failing after checkout leaves the new commit live while `last_commit`
+  // names the old one. Single application only.
   code_on_disk: z
     .object({
       commit: z.string().nullish(),
@@ -327,51 +227,21 @@ export const applicationSchema = z.object({
   last_deployed_at_human: z.string().nullish(),
   steps: z.array(z.string()).default([]),
   failed_step: z.string().nullish(),
-  // Set only where the cause is genuinely identified — usually null, and the
-  // doc is explicit that this is not an omission: for most failures the step
-  // plus the reference say more than an invented category would. Render the
-  // title when present (already localized by the server), fall back to the
-  // step otherwise.
-  // True when a git site's account was deleted: the FK is nullOnDelete, so the
-  // site keeps a repository and a branch and loses its credential. Nothing said
-  // so — it looked exactly like a public-repository site until the next deploy
-  // ran `git remote add origin ""` and failed.
+  // The git account was deleted: no credential, so the next deploy fails.
   git_account_missing: z.boolean().nullish(),
   failed_reason: z.string().nullish(),
+  // Set only when the cause is identified, already localized; fall back to the step otherwise.
   failed_reason_title: z.string().nullish(),
   reference: z.string().nullish(),
-  /*
-   * 🔴 The container fields, and the fourth time this file has lost data by omission.
-   *
-   * `image`, `container_port`, `memory_limit`, `cpu_limit` and `registry_id` were all
-   * being sent by the API and all being stripped here. The Container screen showed
-   * "No image recorded", "None — pull anonymously", port 80 (its own fallback) and two
-   * empty limit fields, for a site whose row held `nginx:1.27-alpine`, port 80, `192m`
-   * and `0.5`.
-   *
-   * **And saving that form wrote the blanks back.** Measured in a browser against a
-   * real site: opening Container and pressing Save with nothing meaningfully changed
-   * took `memory_limit` from `192m` to NULL and `cpu_limit` from `0.5` to NULL. The
-   * container then ran on the server default with no CPU quota, and nothing on screen
-   * said so. A form that cannot read a value must not be able to save one.
-   *
-   * No source-level test could see it: they assert the card is handed
-   * `application.memory_limit`, which it is. The value dies one layer earlier.
-   */
-  // The hostname other containers reach a container site by — the compose file's
-  // network alias. The note telling people which name to use rendered it blank,
-  // because the API was not sending it either.
+  // The container fields. Undeclared fields are stripped by this non-passthrough
+  // object, and the Container screen then saves the blanks back over real values.
   slug: z.string().nullish(),
   image: z.string().nullish(),
   container_port: z.number().nullish(),
   memory_limit: z.string().nullish(),
   cpu_limit: z.string().nullish(),
   registry_id: z.number().nullish(),
-  // The sites list shows these, so they have to be declared — this object does
-  // not passthrough, and an undeclared field the API is sending is dropped
-  // here in silence. The Size column read "Not measured" on every row of a
-  // server whose sizes were all measured and stored, because the number never
-  // survived parsing. Third time in this file: see `disk_io` above.
+  // Shown in the sites list; must be declared or Zod strips them.
   directory_size_bytes: z.number().nullish(),
   // The volumes' share of the total. Nullish is meaningful: absent means the site
   // has no volumes to measure, and the dashboard says nothing about them.
@@ -401,11 +271,7 @@ export const portCheckResponseSchema = z.object({
   }),
 });
 
-// The catalog behind the AI Bot Blocker screen. Titles, descriptions, counts and
-// the bot names themselves all come from here — `config/ai_bots.php` on the
-// backend feeds both this endpoint and the vhost that does the blocking, so
-// rendering from the response is what keeps the screen honest about what is
-// actually enforced.
+// `config/ai_bots.php` feeds both this endpoint and the vhost; render from the response.
 export const aiBotPolicySchema = z.object({
   title: z.string(),
   description: z.string(),
@@ -417,10 +283,7 @@ export const aiBotPoliciesResponseSchema = z.object({
   ai_bot_policies: z.record(z.string(), aiBotPolicySchema).default({}),
 });
 
-// Which AI bots actually hit this site, read from its access log.
-// `status` carries the distinction that matters: `unavailable` (the log could
-// not be read) is NOT the same claim as `empty` (it was read, nothing came),
-// and showing "no bots visit you" for the first would be a confident lie.
+// `unavailable` (log unreadable) is NOT `empty`; never show it as "no bots".
 export const botTrafficBotSchema = z.object({
   bot: z.string(),
   hits: z.number().default(0),
@@ -449,10 +312,7 @@ export const botTrafficResponseSchema = z.object({
   }),
 });
 
-// The six rule categories and the two modes, for the Firewall screen's labels.
-// Titles only today — the backend has no description per category, so the
-// screen's own plain-language hints live in the message files (and a matching
-// `description` field is an open request).
+// Titles only: per-category hints live in the message files.
 export const wafOptionSchema = z.object({
   value: z.string(),
   title: z.string(),
@@ -463,14 +323,8 @@ export const wafOptionsResponseSchema = z.object({
   waf_modes: z.array(wafOptionSchema).default([]),
 });
 
-// `web_server` gates the firewall screen — the 8G ruleset has no OpenLiteSpeed
-// implementation, and a screen that silently saves settings the server will
-// never apply is worse than one that says so.
-//
-// `server_ip` and `temporary_domain_suffixes` are the server's own answer to
-// "what address do sites point at, and which wildcard-DNS host resolves it".
-// Both were being guessed on the client: the address came from a second call to
-// /server/facts, and the suffix was a hardcoded "nip.io" constant.
+// `web_server` gates the firewall screen (no OpenLiteSpeed 8G ruleset). `server_ip` and
+// `temporary_domain_suffixes`: where sites point, and which wildcard-DNS host resolves it.
 export const serverCapabilitiesResponseSchema = z.object({
   capabilities: z.object({
     stack: z.string().nullish(),
@@ -480,9 +334,7 @@ export const serverCapabilitiesResponseSchema = z.object({
   }),
 });
 
-// The API takes username+password together whenever `enabled` is true — there
-// is no "just change the password" call — so both are required only in that
-// branch, never when turning protection off.
+// The API takes username and password together when `enabled`, so both are required only then.
 export const securityFormSchema = z
   .object({
     enabled: z.boolean(),
@@ -491,8 +343,7 @@ export const securityFormSchema = z
   })
   .superRefine((data, ctx) => {
     if (!data.enabled) return;
-    // Mirrors UpdateBasicAuthRequest (`regex:/^[^:\s]+$/`, `max:255`). A space
-    // used to pass here and come back from the server in English.
+    // Mirrors UpdateBasicAuthRequest (`regex:/^[^:\s]+$/`, `max:255`).
     const username = data.username.trim();
     if (!username) {
       ctx.addIssue({ path: ["username"], code: "custom", message: "required_username" });
@@ -503,8 +354,7 @@ export const securityFormSchema = z
     } else if (username.length > 255) {
       ctx.addIssue({ path: ["username"], code: "custom", message: "max255" });
     } else if (!/^[A-Za-z0-9._@-]+$/.test(username)) {
-      // Browsers send a non-ASCII name in different encodings (UTF-8 or
-      // Latin-1), so ünïcode could be saved and then never sign in.
+      // Browsers encode a non-ASCII name differently, so it could be saved and never sign in.
       ctx.addIssue({ path: ["username"], code: "custom", message: "securityUsernameAscii" });
     }
     if (!data.password) {
@@ -537,17 +387,12 @@ export function isValidApplicationDomain(value) {
     return false;
 
   const labels = domain.split(".");
-  // An all-digit last label is an IP address, never a name: 127.0.0.1 and the
-  // server's own IP passed the label rule and were added as domains.
+  // An all-digit last label is an IP address, never a name.
   if (/^\d+$/.test(labels[labels.length - 1])) return false;
   return labels.length >= 2 && labels.every((label) => applicationDomainLabel.test(label));
 }
 
-/**
- * Turn a pasted URL into a hostname the form can offer back to the user.
- * This never mutates their input silently — the UI renders an explicit “Use …”
- * action when the candidate is valid and differs from what they entered.
- */
+// Never mutates input silently: the UI renders an explicit "Use …" action.
 export function suggestApplicationDomain(value) {
   const entered = String(value ?? "").trim();
   if (!entered) return null;
@@ -567,7 +412,7 @@ export function suggestApplicationDomain(value) {
 
 export const createApplicationSchema = z.object({
   site_type: z.string().min(1, "applicationTypeRequired"),
-  // 240, the API's limit (StoreApplicationRequest); 255 let 241–255 through to a 422.
+  // 240 matches StoreApplicationRequest.
   name: z.string().trim().min(1, "applicationNameRequired").max(240, "max240"),
   domain: z
     .string()
@@ -575,13 +420,9 @@ export const createApplicationSchema = z.object({
     .min(1, "applicationDomainRequired")
     .max(255, "tooLong")
     .refine(isValidApplicationDomain, "hostnameInvalid"),
-  // Default true: a dedicated account per site is the right answer often
-  // enough to be the one the form starts on. Turned off for anyone who cannot
-  // create system users — see the form, which cannot offer what the API refuses.
+  // Turned off for users who cannot create system users (the API refuses).
   generate_system_user: z.boolean().default(true),
-  // Required only when the caller is picking one. `superRefine` rather than a
-  // conditional field, because the message has to land on `system_user_id` —
-  // that is where the control is and where the form scrolls to.
+  // Required only when picking an existing user; `superRefine` puts the message on the control.
   system_user_id: z.union([z.coerce.number().int().positive(), z.literal("")]).optional(),
   // The new user's details, only read while generating one.
   system_user_username: z.string().optional(),
@@ -608,11 +449,7 @@ export const createApplicationSchema = z.object({
   }
 });
 
-/**
- * `GET|POST /applications/{id}/root-lock`: whether the site folder is locked
- * against its own user. `unknown` is "could not check" (a filesystem with no
- * immutable flag), never "unlocked" — the two must not render the same.
- */
+// `unknown` is "could not check" (no immutable flag), never "unlocked"; render them differently.
 export const rootLockResponseSchema = z.object({
   root_lock: z.object({
     status: z.enum(["locked", "unlocked", "unknown"]).catch("unknown"),

@@ -43,7 +43,6 @@ export function ResetPasswordDialog({ user, open, onOpenChange }) {
 
   const isSubmitting = form.formState.isSubmitting;
 
-  // Clear values + validation errors when the modal closes.
   function handleOpenChange(next) {
     if (!next) form.reset();
     onOpenChange?.(next);

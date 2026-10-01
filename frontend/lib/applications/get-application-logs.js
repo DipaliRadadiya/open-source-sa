@@ -5,8 +5,7 @@ import {
 } from "@/lib/schemas/application-log";
 import { failedRead } from "@/lib/logs/failed-read";
 
-// Status and the server's reason carried out with the failure: the page reads
-// them for its error box, and without them it could only say "couldn't load".
+// Carries the status and server reason with a failure for the page's error box.
 export async function getApplicationLogs(id) {
   try {
     const res = await serverFetch(`/applications/${id}/logs`);
@@ -23,10 +22,7 @@ export async function getApplicationLogs(id) {
   }
 }
 
-/**
- * First screen of one source, rendered server-side so the console paints with
- * content. 403/404 are states the UI explains, not failures.
- */
+/** Rendered server-side so the console paints with content. 403/404 are states, not failures. */
 export async function getApplicationLog(id, key, { lines = 200 } = {}) {
   try {
     const res = await serverFetch(

@@ -60,8 +60,7 @@ export default async function ApplicationDetailPage({ params }) {
   ]);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("title")} />;
-  // The site is gone. Land on the list — the only place left to go — and say
-  // why on arrival, rather than parking on a dead end that offers one link.
+  // The site is gone: land on the list and explain why on arrival.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
@@ -71,17 +70,11 @@ export default async function ApplicationDetailPage({ params }) {
   const canSeeDeployment = can(appPermissions, "app_deployment", "view", "application");
   const canSeeDomains = can(appPermissions, "app_domain", "view", "application");
   // `/issues` is gated by `app_dashboard`, not by the `application` permission
-  // that opens this page. Asking without it is a 403, which read as "health
-  // checks could not be run" on every application for that role.
+  // that opens this page; asking without it is a 403.
   const canSeeChecks = can(appPermissions, "app_dashboard", "view", "application");
-  // Already site-type gated by the API: `app_magic_login` exists only in
-  // WordPressSiteType::features(), and VisiblePermissions filters the
-  // catalog by the site's features. A `site_type === "wordpress"` check
-  // here as well would put the decision in the one place the backend says
-  // not to — "so a new site type costs one class and no frontend change".
+  // The API already gates this by site type; a new type must not need a frontend change.
   const canMagicLogin = can(appPermissions, "app_magic_login", "manage", "application");
-  // The screens people come back to; the sidebar carries the rest. Filtered
-  // here rather than in the menu so permission checks stay on the server.
+  // Filtered here rather than in the menu so permission checks stay on the server.
   const headerShortcuts = [
     can(appPermissions, "app_file", "view", "application") && "files",
     canSeeDomains && "domains",
@@ -90,44 +83,26 @@ export default async function ApplicationDetailPage({ params }) {
   const canSeeBackups = can(appPermissions, "app_backup", "view", "application");
   const canRunBackup = can(appPermissions, "app_backup", "manage", "application");
   const isGit = Boolean(application.repository || application.repository_url);
-  // Only a serving site has domains, a certificate or a running process. While
-  // it is still being built, saying anything about them would be invention.
+  // Only a serving site has domains, a certificate or a running process.
   const settled = isSettled(application);
 
-  /*
-   * The generated credentials, until somebody says they have saved them.
-   *
-   * Gated on `app_container` manage, the same permission the values themselves are
-   * behind — the card fetches them, so offering it to anyone else would be a card
-   * whose only outcome is a 403.
-   *
-   * `credentials_acknowledged` is a fact about a PERSON, not about the data: a site
-   * whose credentials were rendered and never confirmed still shows the card, which
-   * is the whole point. These cannot be rotated from the panel.
-   */
+  // The generated credentials, until somebody says they have saved them. Gated on
+  // `app_container` manage -- the same permission the values are behind.
   const showFirstRunCredentials =
     !application.credentials_acknowledged &&
     (application.container_secret_keys ?? []).length > 0 &&
     can(appPermissions, "app_container", "manage", "application");
 
-  // For any git-linked site, not only a broken one. It feeds two things: the
-  // repair dialog's list, and the provider name on the source card — the
-  // application payload carries `git_account_id` and no provider, so this is
-  // the only way to say "GitHub" rather than "From Git Repo". It stays off
-  // non-git sites, and the read is `cache()`d and hits no provider API.
+  // The payload has `git_account_id` but no provider. `cache()`d, no provider API call.
   const gitAccounts =
     application.git_account_missing || application.git_account_id
-      // `.accounts`, not `.data.git_accounts`: the fetcher already unwraps the
-      // envelope, so the old path was always undefined and this list was
-      // always empty — the relink dialog has never had an account to offer.
+      // The fetcher already unwraps the envelope: `.accounts`, not `.data.git_accounts`.
       ? await getGitAccounts().then((r) => r.accounts ?? []).catch(() => [])
       : [];
 
-  // Databases are a SERVER-level permission: a site-level reader may hold none,
-  // and asking would be a 403 on a page that otherwise works.
+  // Databases are a SERVER-level permission; a site-level reader may hold none.
   const canSeeDatabases = can(permissions, "database", "view");
-  // Attaching and creating both need manage, so a viewer gets the card without
-  // buttons that would only earn a 403.
+  // Attaching and creating need manage; viewers get the card without buttons.
   const canManageDatabases = can(permissions, "database", "manage");
 
   const [domainList, certificate, backup, backupRuns, siteDatabases, siteTypes, spareDatabases, engineList, rootLock, latestDeploy] = await Promise.all([
@@ -140,45 +115,25 @@ export default async function ApplicationDetailPage({ params }) {
     settled && canSeeBackups
       ? getBackupTarget(id)
       : Promise.resolve({ target: null, failed: false }),
-    /*
-     * The target says what is scheduled; it says nothing about what is running
-     * right now. Without this the card goes on claiming "Protected · last
-     * backup 18 hours ago" throughout a run — including a scheduled one, or one
-     * a colleague started, which no amount of local click-state would catch.
-     *
-     * One row is enough: `GET /backups` orders by newest id, so a run in flight
-     * is always the first row back.
-     */
+    // One row is enough: `GET /backups` orders by newest id, so a run in flight is first.
     settled && canSeeBackups
       ? getBackups({ application: id, per_page: 1 })
       : Promise.resolve({ backups: [] }),
     settled && canSeeDatabases
       ? getApplicationDatabases(id)
       : Promise.resolve({ databases: [], failed: false }),
-    /*
-     * Two readers now, hence the wider gate.
-     *
-     * `needs_database` is on the site TYPE, never on the application, so the
-     * "is a missing database a problem here?" question needs this list. The
-     * facts card also needs it to NAME a relabel target, and someone who can
-     * manage this site but not see its databases is a real combination — on
-     * the old `canSeeDatabases` gate they got an empty catalog and silently
-     * lost the ability to change the type back.
-     */
+    // `needs_database` is on the site type; the facts card also needs the list to relabel.
     settled && (canSeeDatabases || canManage)
       ? getSiteTypes().catch(() => ({ siteTypes: [] }))
       : Promise.resolve({ siteTypes: [] }),
-    // What the card's Attach picker can offer, and what its Create dialog
-    // needs to know about engines. Only for someone who can manage databases.
+    // For the database card's Attach picker and Create dialog.
     settled && canManageDatabases
       ? getUnattachedDatabases()
       : Promise.resolve({ databases: [] }),
     settled && canManageDatabases ? getEngines() : Promise.resolve({ engines: [] }),
-    // Whether the site folder is locked against its own user. Only a site
-    // server sync adopted is normally unlocked; see the Security card row.
+    // Whether the site folder is locked against its own user.
     settled ? getRootLock(id) : Promise.resolve({ rootLock: null, failed: false }),
-    // Whether a deploy is running now. Without it Deploy now stayed live for
-    // the whole run and a second click queued a second deploy.
+    // Whether a deploy is running, so Deploy now cannot queue a second one.
     settled && isGit && canSeeDeployment
       ? getLatestDeployment(id)
       : Promise.resolve({ latest: null, failed: false }),
@@ -186,18 +141,11 @@ export default async function ApplicationDetailPage({ params }) {
   const folderStatus = rootLock.rootLock?.status ?? null;
 
   const needsDatabase = siteNeedsDatabase(siteTypes.siteTypes, application.site_type);
-  // Only when we actually looked and found none, and only for a type that
-  // wanted one. Anything less certain stays quiet.
+  // Only when the list was read and empty, for a type that wants a database.
   const missingDatabase =
     canSeeDatabases && !siteDatabases.failed && needsDatabase && siteDatabases.databases.length === 0;
 
-  /*
-   * Every value here is already on the application payload, so the card costs
-   * no request. Each row is gated on the same application-level grant that
-   * guards its screen — a row linking somewhere the reader cannot open is a
-   * dead end, and the sidebar has already filtered those out for this site
-   * type (a static site has no PHP screen to protect).
-   */
+  // Each row is gated on the grant that guards its screen, so no row links to a dead end.
   const protectionItems = [
     can(appPermissions, "app_security", "view", "application") && {
       key: "password",
@@ -210,8 +158,7 @@ export default async function ApplicationDetailPage({ params }) {
       key: "firewall",
       label: t("protection.firewall"),
       on: application.waf_enabled,
-      // The mode matters: "watch, don't block" is on but not blocking, and
-      // calling that simply "On" would overstate what it does.
+      // "Watch, don't block" is on but not blocking; show the mode, not just "On".
       state: application.waf_enabled
         ? (application.waf_mode_title ?? t("protection.on"))
         : t("protection.off"),
@@ -227,17 +174,12 @@ export default async function ApplicationDetailPage({ params }) {
     can(appPermissions, "app_bot_blocker", "view", "application") && {
       key: "bots",
       label: t("protection.bots"),
-      // A policy, not a switch. "on" here means it blocks something at all,
-      // which is what the icon is claiming.
+      // A policy, not a switch: "on" means it blocks something at all.
       on: Boolean(application.ai_bot_policy) && application.ai_bot_policy !== "allow_all",
       state: application.ai_bot_policy_title ?? t("protection.off"),
       href: `/applications/${id}/bot-blocker`,
     },
-    /*
-     * Only a definite answer gets a row. `unknown` is "could not check" (no
-     * immutable flag on this disk) and a failed read is no answer at all;
-     * either one rendered as "Not locked" would be a claim nothing backs.
-     */
+    // `unknown` or a failed read must not render as "Not locked".
     (folderStatus === "locked" || folderStatus === "unlocked") && {
       key: "folder",
       label: t("protection.folder"),
@@ -251,41 +193,16 @@ export default async function ApplicationDetailPage({ params }) {
   ].filter(Boolean);
 
 
-  /*
-   * `application.url` is the server's own answer to "what address opens this
-   * site" — http:// until a certificate is actually serving. The list and the
-   * ⋯ menu both use it.
-   *
-   * This page was deciding the scheme itself from the certificate read, so a
-   * failed `GET /applications/{id}/certificate` silently downgraded the link
-   * to http:// on an https-only site. Assembling it by hand is also how the
-   * whole `url` field came to be: every reader guessed, and the guesses
-   * disagreed. The fallback stays for an API that predates the field.
-   */
+  // Use the server's `application.url`; deriving the scheme from a failed certificate
+  // read would downgrade an https-only site. The fallback is for older APIs.
   const secured = certificate.certificate?.status === "active";
   const certificateIssuing = ["pending", "issuing"].includes(certificate.certificate?.status);
   const siteUrl =
     application.url ?? `${secured ? "https" : "http"}://${application.domain}`;
 
-  /*
-   * The risks worth interrupting for, in the order a site is usually lost: no
-   * way back (no backup), then traffic in the clear (no certificate).
-   *
-   * Each is only claimed when we actually know it. A failed backup read or a
-   * missing domain permission says nothing here rather than accusing a site of
-   * being unprotected on the strength of a request that did not come back.
-   */
 
-  /*
-   * The server's own findings, ahead of the ones this page works out.
-   *
-   * It checks six things — an expiring certificate, DNS not pointing here, a
-   * worker that has stopped, a PHP version past end of life, the disk filling
-   * up, and a failed deploy. Four of those are invisible to this page, which
-   * can only reason about what it happened to fetch.
-   */
-  // Live checks, so not cached with the rest: a certificate's remaining days
-  // and the disk's percentage both move without anything on this page acting.
+  // The server's own findings come first; it checks things this page cannot see.
+  // Not cached: certificate days and disk usage change on their own.
   const issues = settled && canSeeChecks
     ? await getApplicationIssues(id).catch(() => ({ issues: [], healthy: true, failed: true }))
     : { issues: [], healthy: true, failed: false };
@@ -293,33 +210,25 @@ export default async function ApplicationDetailPage({ params }) {
 
   const attentionItems = [
     ...issueItems(issues.issues, id, (type) => t(`attention.issueAction.${type}`)),
-    // The server's six checks did not come back. Saying nothing here let the
-    // strip read "Nothing needs attention" on the strength of a failed request.
+    // The checks did not come back; never read that as "Nothing needs attention".
     issues.failed && { key: "checks", label: t("attention.checksFailed") },
-    // Not while the automatic certificate is on its way — see DomainsCard.
+    // Not while the automatic certificate is on its way; see DomainsCard.
     canSeeDomains && !domainList.failed && !certificate.failed && !secured && !certificateIssuing && {
       key: "ssl",
       label: t("attention.noCertificate"),
       action: t("attention.issueCertificate"),
-      // ?tab=ssl, not the bare screen. The Domains page opens on its Domains
-      // tab, so a button saying "Issue SSL" was landing people on a domain list
-      // and asking them to find the second tab themselves.
+      // ?tab=ssl: the Domains page opens on its Domains tab.
       href: `/applications/${id}/domains?tab=ssl`,
     },
-    // Above the backup item deliberately: setting up backups on a site whose
-    // database is not attached produces backups without the database, which is
-    // the outcome this whole feature exists to prevent.
+    // Above the backup item: backups without an attached database miss the data.
     missingDatabase && {
       key: "database",
       label: t("attention.noDatabase"),
       action: t("attention.attachDatabase"),
       href: "/databases",
     },
-    // Unlike the protections below, this one is a risk and not a choice: the
-    // site user can swap the folder for one they control. Points at the row
-    // that fixes it rather than acting from the strip.
-    // Only someone who can lock it is sent to the button; for anyone else the
-    // row is still worth knowing, so it stays as a plain line.
+    // A risk, not a choice: the site user can swap the folder. Only managers get
+    // the link to the lock button; others see a plain line.
     folderStatus === "unlocked" && {
       key: "folder",
       label: t("attention.folderUnlocked"),
@@ -331,57 +240,18 @@ export default async function ApplicationDetailPage({ params }) {
       action: t("attention.setUpBackups"),
       href: `/applications/${id}/backups`,
     },
-    /*
-     * NOT a finding: a protection that is switched off.
-     *
-     * It used to be one — counted, so "3 protections off" fired rather than
-     * only the all-four case. The count was the right call for a warning; the
-     * warning was the wrong thing.
-     *
-     * Every application starts with all four off, and for most of them that is
-     * correct: password protection on a public blog would lock out its
-     * readers, and the WAF, fail2ban and the bot policy are each a decision
-     * about that specific site. So this fired on every application, forever,
-     * about settings nobody had got wrong — while the strip's own rule is that
-     * these are risks to attend to, and the dashboard's is that alerting on
-     * something somebody chose teaches them to ignore the chip.
-     *
-     * `backups` above stays, because "nothing is being backed up" is a gap
-     * rather than a preference, and so does `ssl`.
-     *
-     * Nothing is lost by removing it: the Security card sits immediately below
-     * this strip, reads "0 of 4 on", names each protection with its state, and
-     * routes each row to its own screen. It answers the same question without
-     * calling a default a problem.
-     */
+    // Switched-off protections are deliberately not findings: each is a per-site choice.
   ]
     .filter(Boolean)
-    // The server can see the certificate; this page is inferring from what a
-    // fetch happened to return. Two rows about one certificate makes the strip
-    // argue with itself.
+    // Drop local inferences the server's own findings already cover.
     .filter((item) => !superseded.has(item.key));
 
   return (
-    // 4, not 6, between the header, the strip and the grid. Those three are one
-    // masthead — name, then what is wrong, then the detail — and 24px gaps read
-    // as three unrelated blocks with the page's first card pushed 178px down.
-    // The grid keeps gap-6, so cards still breathe; only the run-in tightens.
+    // space-y-4: header, strip and grid read as one masthead; the grid keeps gap-6.
     <div className="space-y-4">
-      {/*
-        An identity card, not a heading on white.
-
-        Forge, Plesk and MaxPlane all open a site page the same way: the app's
-        mark, its name, its state, its hostname and the quick actions, together
-        on one surface (see memory/research-application-dashboard.md). Ours was
-        four text nodes floating above the cards, which is why it did not read
-        as the subject of the page.
-      */}
       <div className="rounded-xl border bg-muted/30 p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">
-            {/* The component existed and this page never used it — the one
-                screen about a single site was the only place not showing what
-                kind of site it is. */}
             <span className="flex size-11 shrink-0 items-center justify-center rounded-lg border bg-background">
               <SiteTypeLogo
                 name={application.site_type}
@@ -396,10 +266,7 @@ export default async function ApplicationDetailPage({ params }) {
               <Badge variant="secondary" className="font-normal">
                 {application.site_type_title ?? application.site_type}
               </Badge>
-              {/* A staging copy is otherwise indistinguishable from the site
-                  it copies, and the two are usually one letter apart in the
-                  switcher. Editing the wrong one is the exact mistake staging
-                  exists to prevent, so the copy says so where the name is. */}
+              {/* Staging copies look like the site they copy; mark them where the name is. */}
               {application.is_staging ? (
                 <Badge variant="warning" className="font-normal">
                   {t("stagingBadge")}
@@ -426,15 +293,9 @@ export default async function ApplicationDetailPage({ params }) {
           </div>
           </div>
 
-          {/* Wraps: on a phone Visit, Magic Login and ⋯ did not fit on one line
-              and ⋯ was pushed off the screen. */}
+          {/* Wraps so ⋯ is not pushed off screen on a phone. */}
           <div className="flex flex-wrap items-center gap-2">
-            {/* Outline, not filled. Four solid buttons on one page means none of
-                them leads — and this was the least consequential of the four,
-                sitting at the top in the same weight as "this site has no
-                backups". The domain directly beneath it is already a link to
-                the same place, so nothing is lost. Filled blue is reserved for
-                what a card is asking you to DO. */}
+            {/* Outline: filled is reserved for what a card asks you to do. */}
             {application.status === "active" ? (
               <Button asChild variant="outline" size="sm">
                 <a href={siteUrl} target="_blank" rel="noreferrer">
@@ -443,10 +304,7 @@ export default async function ApplicationDetailPage({ params }) {
                 </a>
               </Button>
             ) : null}
-            {/* Beside Visit site because they are the same act with
-                different credentials: one opens the site as a visitor, the
-                other as its administrator. Outline for the same reason Visit
-                is — filled is reserved for what a card is asking you to do. */}
+            {/* Beside Visit: the same act as the site's administrator. */}
             {canMagicLogin && application.status === "active" ? (
               <MagicLoginLauncher appId={id} />
             ) : null}
@@ -461,49 +319,21 @@ export default async function ApplicationDetailPage({ params }) {
         </div>
       </div>
 
-      {/* Padding, not margin: a bottom margin here collapses against the grid's
-          own top margin from `space-y-4` and the strip ends up CLOSER to the
-          cards, not further. Padding never collapses, so this reliably adds to
-          the 16px — the strip belongs to the header above it, and the cards
-          below are a separate block. */}
+      {/* Padding, not margin: a bottom margin would collapse with `space-y-4`. */}
       {settled ? (
         <div className="pb-2">
           <AttentionStrip items={attentionItems} />
         </div>
       ) : null}
 
-      {/* Until it is serving, the provisioning card IS the page: cards about a
-          web root, a certificate and a process that do not exist yet are worse
-          than nothing. */}
+      {/* Until it is serving, the provisioning card is the whole page. */}
       {!settled ? (
         <ProvisioningCard application={application} canManage={canManage} />
       ) : (
-        /*
-         * Three across on a wide screen, not a 2x2 of equal cards.
-         *
-         * Four identical cards in a two-by-two IS the "identical feature card
-         * grid" anti-pattern by name — it reads as boilerplate and it forced a
-         * second row that a 1440px screen had to scroll to reach. Security,
-         * Domains and Backups are the same KIND of thing (what state is this
-         * site in), so they belong on one line; Source and Process are a
-         * different kind and get the line below.
-         *
-         * Cards are direct grid children so they fall into real rows and share
-         * a height per row. Reading order is DOM order, so it survives the drop
-         * to one column on a phone.
-         */
+        /* Cards are direct grid children so each row shares a height. */
         <div className="grid items-stretch gap-6 lg:grid-cols-2 xl:grid-cols-3">
-          {/* Above the facts, once, and full width.
-
-              A one-click container app generates its own admin password, and the
-              only route to it was a Reveal button on the Container screen — two
-              clicks in, on a screen nobody visits the day they install something.
-              A password generated and never read is an account nobody can sign
-              into, and these cannot be rotated from the panel.
-
-              First, because it is the one thing on this page with a deadline. It
-              disappears for good once somebody says they have saved them, so it
-              cannot earn a permanent place lower down. */}
+          {/* Above the facts, once, full width. It disappears for good once somebody
+              says they have saved them, and these cannot be rotated from the panel. */}
           {showFirstRunCredentials ? (
             <FirstRunCredentials
               application={application}
@@ -511,24 +341,16 @@ export default async function ApplicationDetailPage({ params }) {
             />
           ) : null}
 
-          {/* Full width, like the server dashboard identity band. Eight short
-              facts stacked two-up in a half-width card was a tall narrow column
-              of "8.4" and "/" — the same content across the row is one glance
-              instead of four. */}
           <SiteFactsCard
             application={application}
             canManage={canManage}
-            // For naming a relabel target. Type titles are not in our messages
-            // at all — they arrive translated on the catalog — so without this
-            // the card can offer a change it cannot label.
+            // Type titles arrive translated on the catalog, not from the message files.
             siteTypes={siteTypes.siteTypes}
             className="lg:col-span-2 xl:col-span-3"
           />
           <ProtectionCard application={application} items={protectionItems} />
 
-          {/* Row 2. Domains stays above Source deliberately: a certificate is
-              the thing people come to a site's page worried about, and the
-              deploy log is not. */}
+          {/* Domains stays above Source: certificates are what people come to check. */}
           {canSeeDomains ? (
             <DomainsCard
               application={application}
@@ -552,13 +374,8 @@ export default async function ApplicationDetailPage({ params }) {
             />
           ) : null}
 
-          {/* Always, for anyone who can see databases.
-              It used to be hidden unless the site type declared it needed a
-              database — which left a blank PHP or git-deployed site, the two
-              kinds most likely to use one the panel cannot detect, with no
-              route to attach anything from their own page at all. The card
-              handles the difference itself: a warning for a type that says it
-              needs one, a neutral line for a type that says nothing. */}
+          {/* Shown for every site type; the card itself distinguishes types
+              that need a database from those that do not declare it. */}
           {canSeeDatabases ? (
             <DatabaseCard
               application={application}
@@ -571,10 +388,7 @@ export default async function ApplicationDetailPage({ params }) {
             />
           ) : null}
 
-          {/* Full width when it is the only card on its line — a card
-              spanning two of three columns leaves an empty third that reads as
-              a missing card. It gives up one column when a Process card is
-              there to fill the gap. */}
+          {/* Full width when alone on its line; shares it with a Process card. */}
           {isGit ? (
             <SourceCard
               application={application}
@@ -589,8 +403,7 @@ export default async function ApplicationDetailPage({ params }) {
               }
             />
           ) : null}
-          {/* Same rule as Source: a lone card on the last line spans it. With
-              a Git site the two share the line and neither needs to grow. */}
+          {/* Same rule as Source: a lone card on the last line spans it. */}
           {application.has_process ? (
             <ProcessCard
               application={application}

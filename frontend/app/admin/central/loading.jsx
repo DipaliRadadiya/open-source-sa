@@ -1,10 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/**
- * Central is a stack of settings cards, so it borrows that shape rather than a
- * table's. Width is capped to match the panel's settings column — a full-bleed
- * skeleton would reflow the moment the real cards arrive.
- */
+/** Settings-card skeleton, width-capped like the real cards to avoid reflow. */
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

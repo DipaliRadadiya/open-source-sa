@@ -21,31 +21,21 @@ import { ErrorCopy } from "@/components/sections/error-copy";
 
 export const dynamic = "force-dynamic";
 
-// The Admin Panel: a self-contained shell (own sidebar + header) at /admin,
-// gated purely on is_admin. Separate from the server (user) panel.
-// Real enforcement is the Laravel Policies/Gates — this is the UX guard.
+// Admin Panel shell at /admin, gated on is_admin. This is the UX guard; real
+// enforcement is Laravel Policies/Gates.
 export default async function AdminLayout({ children }) {
   let user;
   try {
     user = await getCurrentUser();
   } catch (error) {
-    // Same reason as the server panel: a throw in a layout escapes every
-    // error.jsx below it.
+    // A throw in a layout escapes every error.jsx below it.
     if (isRateLimited(error)) return <RateLimited />;
     if (isPanelUnavailable(error)) return <PanelUnavailable />;
     if (isRequestFailed(error)) return <RequestFailed {...requestFailureProps(error)} />;
     throw error;
   }
   if (!user) redirect(await signedOutPath());
-  /*
-   * Home, not /dashboard.
-   *
-   * The other 34 gates now refuse in place and name the screen that was
-   * refused. These two cannot: a layout IS the shell, so there is no shell
-   * left to render the refusal inside. A redirect is right here — it just has
-   * to go somewhere the caller can actually open, which /dashboard is not for
-   * every role. `app/page.js` picks that from their own permissions.
-   */
+  // Home, not /dashboard: /dashboard is not open to every role.
   if (!user.is_admin) redirect("/");
 
   return (
@@ -59,8 +49,7 @@ export default async function AdminLayout({ children }) {
           <SidebarAutoCollapse />
           <AdminSidebar />
           <SidebarInset className="min-w-0">
-            {/* Header + trail ride together as one sticky cluster, same as the
-                server panel — the two shells stay identical. */}
+            {/* Header + trail form one sticky cluster, identical to the server panel. */}
             <div className="sticky top-0 z-20">
               <AdminHeader />
               <div className="border-b bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/70">

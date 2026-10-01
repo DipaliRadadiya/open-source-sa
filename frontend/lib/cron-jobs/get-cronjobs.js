@@ -2,18 +2,16 @@ import { read } from "@/lib/api/read";
 import { cronjobsResponseSchema } from "@/lib/schemas/cronjob";
 
 const PER_PAGE_OPTIONS = [10, 20, 50, 100];
-// Exactly what the Status dropdown writes. Anything else is not a filter.
+// Exactly what the Status dropdown writes; anything else is not a filter.
 const ACTIVE_VALUES = ["true", "false"];
-// `failed` separates "you have no cron jobs" from "we couldn't ask" — rendered
-// the same, the empty state would tell the user their jobs are gone.
+// `failed` separates "no cron jobs" from "couldn't ask"; otherwise the empty state
+// would claim the jobs are gone.
 const EMPTY = {
   cronjobs: [],
   meta: { current_page: 1, per_page: 10, total: 0, last_page: 1 },
 };
 
-// WHICH failure, not just that there was one. A shared `FAILED` constant made
-// every outcome identical, so the error box could not tell a refusal from a
-// crash and printed the same unfalsifiable sentence for both.
+// Keeps status and kind so the error box can tell a refusal from a crash.
 const failedWith = (result) => ({
   ...EMPTY,
   failed: true,
@@ -23,11 +21,7 @@ const failedWith = (result) => ({
   debug: result.debug,
 });
 
-/**
- * GET /api/cronjobs — paginated. Maps the URL's `user`/`active` params onto the
- * backend's `filter[...]` shape. `user` holds either a system-user id (numeric)
- * or a bare OS username, which are different filters server-side.
- */
+// `user` is a system-user id (numeric) or a bare OS username: different filters server-side.
 export async function getCronjobs(searchParams = {}) {
   const perPage = PER_PAGE_OPTIONS.includes(Number(searchParams.per_page))
     ? Number(searchParams.per_page)
@@ -37,12 +31,8 @@ export async function getCronjobs(searchParams = {}) {
   const user = searchParams.user?.trim();
   const isSystemUser = user && /^\d+$/.test(user);
 
-  // Only a value the toolbar can offer back. The URL is editable and shared,
-  // so `?active=bogus` is reachable — and PHP read it as false, quietly
-  // filtering the list to paused jobs. Forwarded, the control and the list
-  // disagree whatever the dropdown then shows: either it renders blank, or it
-  // says "All statuses" over a list that is filtered. Dropping it here makes
-  // both true.
+  // Only values the toolbar can show. The backend reads `?active=bogus` as false,
+  // which would filter to paused jobs while the dropdown shows "All statuses".
   const active = ACTIVE_VALUES.includes(searchParams.active)
     ? searchParams.active
     : undefined;

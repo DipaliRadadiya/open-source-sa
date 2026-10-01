@@ -7,9 +7,11 @@ use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Applications\Types\GitSiteType;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Php\AdditionalDirectives;
 use App\Services\Server\Php\PhpVersionManager;
 use App\Services\Server\Php\PoolIsolator;
 use App\Services\Server\Php\PoolManager;
+use App\Services\Server\Php\SitePhpIni;
 use App\Services\Server\ServerOpsResult;
 use App\Services\Server\WebServers\WebServerManager;
 use Database\Seeders\PermissionSeeder;
@@ -386,6 +388,194 @@ describe('settings', function () {
             ->putJson(phpUrl(), ['additional_directives' => "[another]\nuser = root"])
             ->assertStatus(422)
             ->assertJsonValidationErrors('additional_directives');
+    });
+
+    it('refuses a line that is not a PHP setting, and names it', function (string $text) {
+        fakePhpServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['additional_directives' => "display_errors = Off\n{$text}"])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('additional_directives');
+    })->with(['no equals sign here', 'php_admin_value[a] = [b]', 'weird key! = 1']);
+
+    it('refuses a setting the panel writes itself, and says where to set it', function (string $line) {
+        fakePhpServer();
+
+        // On nginx/Apache PHP-FPM kept the panel's line and ignored this one;
+        // on OpenLiteSpeed this one won. Refused on every stack instead.
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['additional_directives' => "display_errors = Off\n{$line}"])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['additional_directives' => __('php_settings.errors.directive_managed', [
+                'line' => $line,
+                'name' => preg_replace('/^php_(?:admin_)?(?:value|flag)\[([^\]]+)\].*$|^(\S+?)\s*=.*$/', '$1$2', $line),
+            ])]);
+    })->with([
+        'plain' => ['memory_limit = 512M'],
+        'FPM form' => ['php_admin_value[upload_max_filesize] = 1G'],
+        'php_value' => ['php_value[open_basedir] = /'],
+        'flag' => ['php_admin_flag[allow_url_fopen] = on'],
+        'other case' => ['Memory_Limit = 512M'],
+    ]);
+
+    it('refuses loading an extension, pointing at the extensions screen', function (string $line) {
+        fakePhpServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['additional_directives' => $line])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['additional_directives' => __('php_settings.errors.directive_extension', [
+                'line' => $line,
+                'name' => strtok($line, ' ='),
+            ])]);
+    })->with(['extension = redis.so', 'zend_extension = /opt/x/loader.so']);
+
+    it('saves PHP settings the panel does not manage', function () {
+        fakePhpServer();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['additional_directives' => "display_errors = Off\nphp_value[max_input_nesting_level] = 128"])
+            ->assertOk();
+
+        expect(poolFile())->toContain('php_admin_flag[display_errors] = Off')
+            ->toContain('php_value[max_input_nesting_level] = 128');
+    });
+
+    it('knows every setting the panel writes, on both stacks', function () {
+        $settings = new ApplicationPhpSettings([
+            'application_id' => $this->application->id,
+            'open_basedir_enabled' => true,
+            'disable_functions' => 'exec',
+            'php_timezone' => 'UTC',
+            'auto_prepend_file' => '/home/siteowner/shop/prepend.php',
+        ]);
+        $application = $this->application->load('systemUser');
+        $names = function (string $file): array {
+            preg_match_all('/^(?:php_(?:admin_)?(?:value|flag)\[([^\]]+)\]|([a-z_.]+))\s*=/m', $file, $m);
+
+            return collect($m[1])->zip($m[2])->map(fn ($p) => $p[0] ?: $p[1])->all();
+        };
+
+        $pool = $names(app(PoolManager::class)->render($application, $settings));
+        $ini = $names(app(SitePhpIni::class)->render($application, $settings));
+        $phpSettings = array_values(array_diff(array_unique([...$pool, ...$ini]), [
+            // The pool's own settings: not PHP settings, and the parser writes
+            // every additional line as php_admin_*, so it can never set them.
+            'user', 'group', 'listen', 'listen.owner', 'listen.group', 'listen.mode',
+            'pm', 'pm.max_children', 'pm.start_servers', 'pm.min_spare_servers',
+            'pm.max_spare_servers', 'pm.max_requests', 'pm.process_idle_timeout',
+        ]));
+
+        expect($phpSettings)->toEqualCanonicalizing(AdditionalDirectives::PANEL_MANAGED);
+    });
+
+    it('writes additional directives into an OpenLiteSpeed site php.ini as settings only', function () {
+        $settings = new ApplicationPhpSettings([
+            'application_id' => $this->application->id,
+            'additional_directives' => "php_admin_value[memory_limit] = 300M\nthis is not a setting\n",
+        ]);
+
+        $ini = app(SitePhpIni::class)->render($this->application->load('systemUser'), $settings);
+
+        expect($ini)->toContain("\nmemory_limit = 300M")
+            ->not->toContain('php_admin_value[')
+            ->not->toContain('this is not a setting');
+    });
+
+    it('writes additional directives into the pool as PHP settings only', function () {
+        $settings = new ApplicationPhpSettings([
+            'application_id' => $this->application->id,
+            'additional_directives' => "memory_limit = 300M\ndisplay_errors = Off\nphp_value[max_input_nesting_level] = 128\n; a comment\nlisten = /tmp/other.sock\n",
+        ]);
+
+        $pool = app(PoolManager::class)->render($this->application->load('systemUser'), $settings);
+        $section = substr($pool, strpos($pool, '---- Additional directives'));
+
+        expect($section)
+            ->toContain('php_admin_value[memory_limit] = 300M')
+            ->toContain('php_admin_flag[display_errors] = Off')
+            ->toContain('php_value[max_input_nesting_level] = 128')
+            // A pool setting's name is only ever a PHP setting name here.
+            ->toContain('php_admin_value[listen] = /tmp/other.sock')
+            ->not->toMatch('/^listen\s*=/m')
+            ->not->toContain('; a comment');
+    });
+
+    it('rewrites a pool still carrying a line saved before only PHP settings were accepted', function () {
+        fakePhpServer();
+
+        $settings = ApplicationPhpSettings::forceCreate([
+            'application_id' => $this->application->id,
+            'additional_directives' => "memory_limit = 300M\nlisten = /tmp/other.sock",
+        ]);
+        $path = app(PoolManager::class)->poolPath($this->application);
+        PoolFake::$files[$path] = "[shop]\nlisten = /tmp/other.sock\n";
+
+        $this->artisan('sites:resync')
+            ->expectsOutputToContain('PHP pools rewritten with additional directives as PHP settings only: 1.')
+            ->assertSuccessful();
+
+        expect(PoolFake::$files[$path])
+            ->toBe(app(PoolManager::class)->render($this->application->load('systemUser'), $settings))
+            ->not->toMatch('/^listen = \/tmp\/other\.sock/m');
+
+        // The saved text is unchanged, so only the file can say it is done:
+        // a second run must not rewrite and reload the pool again.
+        PoolFake::$ran = [];
+        app()->forgetInstance(PoolManager::class);
+
+        $this->artisan('sites:resync')
+            ->doesntExpectOutputToContain('PHP pools rewritten')
+            ->assertSuccessful();
+
+        expect(collect(PoolFake::$ran)->filter(fn ($c) => str_starts_with($c, 'systemctl reload php'))->all())->toBe([]);
+    });
+
+    it('leaves a hand-edited pool alone when it holds nothing the old writer produced', function () {
+        fakePhpServer();
+
+        ApplicationPhpSettings::forceCreate([
+            'application_id' => $this->application->id,
+            'additional_directives' => 'memory_limit = 300M',
+        ]);
+        $path = app(PoolManager::class)->poolPath($this->application);
+        PoolFake::$files[$path] = "[shop]\n; edited by hand\n";
+
+        $this->artisan('sites:resync')
+            ->doesntExpectOutputToContain('PHP pools rewritten')
+            ->assertSuccessful();
+
+        expect(PoolFake::$files[$path])->toBe("[shop]\n; edited by hand\n");
+    });
+
+    it('names a saved line that is not a PHP setting at all', function () {
+        fakePhpServer();
+
+        ApplicationPhpSettings::forceCreate([
+            'application_id' => $this->application->id,
+            'additional_directives' => "memory_limit = 300M\nnot a setting",
+        ]);
+
+        $this->artisan('sites:resync')
+            ->expectsOutputToContain('"not a setting" is not a PHP setting and is no longer applied')
+            ->assertSuccessful();
+    });
+
+    it('writes no pool for a site that has none', function () {
+        fakePhpServer();
+
+        ApplicationPhpSettings::forceCreate([
+            'application_id' => $this->application->id,
+            'additional_directives' => 'memory_limit = 300M',
+        ]);
+
+        $this->artisan('sites:resync')
+            ->doesntExpectOutputToContain('PHP pools rewritten')
+            ->assertSuccessful();
+
+        expect(poolFile())->toBeNull();
     });
 
     it('refuses anything that is not a function list', function () {
@@ -991,14 +1181,14 @@ describe('open_basedir, as reported', function () {
             ->putJson(phpUrl(), ['open_basedir_enabled' => true])
             ->assertOk();
 
-        // Someone hand-edits the pool, or slips their own directive into the
-        // additional-directives box — where it lands after ours and wins,
-        // because FPM takes the last of a repeated key.
-        foreach (PoolFake::$files as $path => $contents) {
-            if (str_contains($path, 'pool.d/')) {
-                PoolFake::$files[$path] = $contents."\nphp_admin_value[open_basedir] = /srv/somewhere-else\n";
-            }
-        }
+        // Someone hand-edits the pool and puts their own line above ours —
+        // which wins, because FPM keeps the first of a repeated key.
+        editPools(fn (string $pool): string => preg_replace(
+            '/^php_admin_value\[open_basedir\]/m',
+            "php_admin_value[open_basedir] = /srv/somewhere-else\n$0",
+            $pool,
+            1,
+        ));
 
         $php = $this->actingAs($this->admin)->getJson(phpUrl())->json('php');
 
@@ -1008,6 +1198,44 @@ describe('open_basedir, as reported', function () {
             ->and($php['open_basedir_live'])->not->toBe($php['open_basedir_effective'])
             // And the existing drift flag says the file is no longer ours.
             ->and($php['managed'])->toBeFalse();
+    });
+
+    it('reports the first of a repeated line, the one FPM applies, not the last', function () {
+        fakePhpServer();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['open_basedir_enabled' => true])
+            ->assertOk();
+
+        // Below ours, as an additional directive saved before 2026-10-01
+        // lands: FPM ignores it, so the screen must too.
+        editPools(fn (string $pool): string => $pool."\nphp_admin_value[open_basedir] = /srv/somewhere-else\n");
+
+        $php = $this->actingAs($this->admin)->getJson(phpUrl())->json('php');
+
+        expect($php['open_basedir_live'])->toBe($php['open_basedir_effective'])
+            ->and($php['open_basedir_live'])->not->toBe('/srv/somewhere-else');
+    });
+
+    it('reports php_admin_value over a php_value written before it', function () {
+        fakePhpServer();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['open_basedir_enabled' => true])
+            ->assertOk();
+
+        // FPM applies the admin list after the other, so php_value never
+        // overrides it, wherever it sits.
+        editPools(fn (string $pool): string => preg_replace(
+            '/^php_admin_value\[open_basedir\]/m',
+            "php_value[open_basedir] = /srv/somewhere-else\n$0",
+            $pool,
+            1,
+        ));
+
+        $php = $this->actingAs($this->admin)->getJson(phpUrl())->json('php');
+
+        expect($php['open_basedir_live'])->toBe($php['open_basedir_effective']);
     });
 
     it('reports nothing live for a site with no pool of its own', function () {
@@ -1172,3 +1400,15 @@ describe('a site that does not serve PHP', function () {
         expect($this->application->fresh()->isolated_at)->not->toBeNull();
     });
 });
+
+/**
+ * Rewrite every pool file the fake server holds.
+ */
+function editPools(Closure $edit): void
+{
+    foreach (PoolFake::$files as $path => $contents) {
+        if (str_contains($path, 'pool.d/')) {
+            PoolFake::$files[$path] = $edit($contents);
+        }
+    }
+}

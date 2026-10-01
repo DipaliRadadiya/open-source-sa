@@ -14,17 +14,11 @@ export function CronjobActiveSwitch({ job, canManage = true, prevPage = null }) 
   const { refresh, refreshThen, navigateThen } = useRefresh();
   const statusFilter = useSearchParams().get("active");
   const [busy, setBusy] = useState(false);
-  // The value we asked for, until the server agrees with it.
+  // The requested value, until the server agrees with it.
   const [asked, setAsked] = useState(null);
 
-  // This used to sit on `job.active` alone, and that only changes when
-  // `router.refresh()` lands — so the knob stayed where it was for the whole
-  // round trip while the switch sat disabled. Faded and unmoved is what a
-  // click that did nothing looks like.
-  //
-  // Derived, not cleared in an effect: once the server catches up `asked`
-  // equals `job.active` and stops mattering by itself, so a change made
-  // elsewhere shows through instead of being masked by a stale override.
+  // Show the requested value during the round trip. Derived rather than
+  // cleared in an effect, so once the server agrees, changes made elsewhere show through.
   const shown = asked !== null && asked !== job.active ? asked : job.active;
 
   async function onToggle(next) {
@@ -32,8 +26,7 @@ export function CronjobActiveSwitch({ job, canManage = true, prevPage = null }) 
     setAsked(next);
     try {
       await setCronjobActive(job.id, next);
-      // Said once the row shows it: the Paused badge and the next run change
-      // with the refresh, and a toast ahead of them read as a claim not yet true.
+      // Toast once the row has refreshed to show the change.
       const after = () => {
         toast.success(next ? t("toast.resumed") : t("toast.paused"));
         setBusy(false);
@@ -61,11 +54,10 @@ export function CronjobActiveSwitch({ job, canManage = true, prevPage = null }) 
       checked={shown}
       pending={busy}
       disabled={!canManage}
-      // Only when the permission is what stops them. While busy the switch is
-      // mid-request, and "your role does not include…" would be a lie.
+      // Only for missing permission; while busy the switch is mid-request.
       disabledReason={canManage ? undefined : t("noPermission")}
       onCheckedChange={canManage ? onToggle : undefined}
-      // Every row's switch was just "Active": a screen reader could not say whose.
+      // Names the job so screen readers can tell the switches apart.
       aria-label={t("activeFor", { name: job.name })}
     />
   );

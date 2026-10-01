@@ -3,10 +3,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-/**
- * Build a windowed page list with first/last anchors and ellipses, e.g.
- * 1 … 4 5 6 … 10. Small ranges (≤ 7) render every page.
- */
+// e.g. 1 … 4 5 6 … 10; seven or fewer pages render every page.
 export function pageList(current, last) {
   if (last <= 7) {
     return Array.from({ length: last }, (_, i) => i + 1);
@@ -21,13 +18,7 @@ export function pageList(current, last) {
   return pages;
 }
 
-/**
- * The page numbers themselves, with no opinion on where the page number lives.
- *
- * Server-driven tables keep it in the URL; a list that is already fully loaded
- * in the browser (PHP extensions) keeps it in component state. Both should look
- * and behave identically, so the buttons live here and the caller owns the state.
- */
+// The caller owns the page state.
 export function Pager({ page, lastPage, total, onPageChange, pending = false }) {
   const t = useTranslations("pagination");
   const pages = pageList(page, lastPage);

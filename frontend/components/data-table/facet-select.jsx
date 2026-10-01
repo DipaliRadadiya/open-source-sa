@@ -2,23 +2,13 @@ import { useSearchParams } from "next/navigation";
 import { useSetQuery } from "@/hooks/use-set-query";
 import { FilterSelect } from "@/components/data-table/filter-select";
 
-/**
- * URL-driven filter select. Writes `paramKey` (or clears it on the "all"
- * option) and resets to page 1. `options` is [{ value, label }].
- *
- * The control itself is `FilterSelect`; this only supplies where the value
- * lives. Screens that filter a list already in memory use `FilterSelect`
- * directly — same dropdown, no navigation per keystroke.
- */
+// URL-driven filter: writes `paramKey` (cleared on "all") and resets to page 1.
 export function FacetSelect({ paramKey, allLabel, options, className, label }) {
   const searchParams = useSearchParams();
   const setQuery = useSetQuery();
 
-  // Only a value this control actually offers. The URL is editable and shared,
-  // so `?active=bogus` is reachable — and the raw value used to go straight to
-  // Radix, which matched no item and rendered the trigger BLANK. The filter
-  // was still applied server-side, so the list showed a subset with nothing on
-  // screen saying why and no option selected to clear.
+  // Only a value this control offers: Radix renders a blank trigger for an
+  // unknown value (e.g. a hand-edited `?active=bogus`).
   const raw = searchParams.get(paramKey);
   const value = options.some((option) => option.value === raw) ? raw : "all";
 

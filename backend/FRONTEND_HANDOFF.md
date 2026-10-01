@@ -6,6 +6,41 @@ moved and why it matters**, so nobody has to diff the reference to find out.
 
 ---
 
+## 2026-10-01
+
+### 0. File manager: folder sizes without a click (new endpoint)
+- `GET /api/applications/{id}/files/sizes?path=<dir>` returns the size of **every folder in that directory** at once (see API_REFERENCE). Call it right after the listing loads, without waiting on it, and fill the size column by folder name. Hidden folders are included; a name missing from `sizes` means "not measured", so show "—".
+- Show `measured_at` (e.g. "measured 3 min ago") and a **refresh** button that calls it with `refresh=1`. Answers are kept 5 minutes; panel changes clear them immediately.
+- A folder too big to measure in 60 seconds gives the usual timed-out error; keep the dashes and offer refresh.
+- With sizes in hand, the size column can be **sortable** (biggest first). A share bar per folder is `size / total.size`.
+- The old per-folder "Calculate" (`/files/size`) still works; it can go once this is in.
+
+### 1. PHP settings → "Additional directives": hint text is now wrong (commit 3c3fe7f9)
+- `frontend/messages/*.json` key `hints.directives` (en ~line 5034) says: "One per line, in PHP-FPM pool form: php_admin_value[name] = value. **Anything here wins over the fields above.**"
+- Now: one PHP setting per line, `name = value` or `php_[admin_]value|flag[name] = value`.
+  - Settings that have their own field are **refused with a 422**: memory_limit, upload_max_filesize, post_max_size, max_execution_time, max_input_time, max_input_vars, allow_url_fopen, session.save_path, session.gc_maxlifetime, error_log, log_errors, date.timezone, auto_prepend_file, open_basedir, disable_functions.
+  - `extension =` and `zend_extension =` lines are also refused.
+- Suggested hint: "One PHP setting per line, e.g. display_errors = Off. Settings with their own field above, and extensions, are set there instead."
+- The 422 comes back on field `additional_directives` with a translated message that names the line (keys directive_invalid / directive_managed / directive_extension). Show the API's message under the textarea.
+- A site that already has such a line saved gets this 422 on its next save until the line is removed.
+
+### 2. Admin → Roles → Delete role: show the API's refusal (commit 00a1e52e)
+- `DELETE /api/admin/roles/{id}` now returns 422 when the role is some user's **only** role:
+  `{"errors": {"role": ["Support Staff is the only role of alice, bob. Give them another role first, then delete it."]}}` (8 locales).
+- `components/admin/roles/delete-role-dialog.jsx` always shows `t("toast.deleteFailed")` ("Could not delete this role."), so the user never sees why. Use the API message instead, e.g. `apiMessage(error, t("toast.deleteFailed"))` as other dialogs do.
+- The dialog text "Users assigned this role will be unassigned" is still correct for users who have another role.
+
+### 3. Deployment — FYI, probably no change needed (commits 7782b496, 18f16dd4)
+- `settings.default_deploy_script` no longer contains `git pull origin {branch}`: it failed on private repos, and the panel already fetches the code before the script runs. The PHP default is now:
+  `cd {path}` followed by `if [ -f composer.json ]; then composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader; fi`
+- `settings.deploy_script_customised` is now false when the saved script equals the default (ignoring line endings and trailing spaces).
+- New failure reason `script_git_auth` (in `failed_reason` / `failed_reason_title`, translated). It appears when a saved script's `git pull` can't log in, and the title is ready to show as-is.
+
+### 4. Rate limit (commit 66b09416)
+- API 429 responses now carry a translated message with the wait, e.g. "Too many attempts. Try again in 59 seconds." If any screen shows its own fixed rate-limit text, the API's message is better.
+
+---
+
 ## 2026-09-30
 
 ### AI Bot Blocker — show the robots.txt lines

@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\DeploymentTrigger;
 use App\Jobs\DeployApplication;
 use App\Models\Application;
 use App\Models\SystemUser;
@@ -195,9 +196,28 @@ it('offers a starting script suited to the runtime', function () {
 
     // A starting point, not a policy — it is the user's file the moment they
     // open the screen.
-    expect($response->json('settings.default_deploy_script'))->toContain('git pull')
+    expect($response->json('settings.default_deploy_script'))->toStartWith('cd {path}')
         ->and($response->json('settings.deploy_script_customised'))->toBeFalse();
 });
+
+it('offers no starting script that pulls from git itself', function (array $attributes) {
+    $this->application->update($attributes);
+
+    // The panel has fetched the branch with the account's credential before
+    // the script runs. A pull inside the script has no credential and failed
+    // on every private repository (measured 2026-10-01).
+    $default = $this->actingAs($this->admin)
+        ->getJson("/api/applications/{$this->application->id}/deployments")
+        ->json('settings.default_deploy_script');
+
+    expect($default)->not->toContain('git ');
+})->with([
+    'php' => [['serving_profile' => 'php']],
+    'node' => [['serving_profile' => 'node']],
+    'node with a package manager' => [['serving_profile' => 'node', 'package_manager' => 'pnpm']],
+    'static' => [['serving_profile' => 'static']],
+    'proxy' => [['serving_profile' => 'proxy']],
+]);
 
 it('needs manage to change the script', function () {
     $viewer = User::factory()->create();
@@ -208,4 +228,52 @@ it('needs manage to change the script', function () {
             'deploy_script' => 'rm -rf /',
         ])
         ->assertForbidden();
+});
+
+it('still reports the default as the default after it is saved unchanged', function () {
+    $default = $this->actingAs($this->admin)
+        ->getJson("/api/applications/{$this->application->id}/deployments")
+        ->json('settings.default_deploy_script');
+
+    // As the editor sends it back: Windows line endings, a trailing blank line.
+    $response = $this->actingAs($this->admin)
+        ->putJson("/api/applications/{$this->application->id}/deployment-settings", [
+            'deploy_script' => str_replace("\n", "\r\n", $default)."\r\n",
+        ])
+        ->assertOk();
+
+    expect($response->json('settings.deploy_script_customised'))->toBeFalse();
+
+    // One real change and it is the user's own script.
+    $response = $this->actingAs($this->admin)
+        ->putJson("/api/applications/{$this->application->id}/deployment-settings", [
+            'deploy_script' => $default."php artisan migrate --force\n",
+        ])
+        ->assertOk();
+
+    expect($response->json('settings.deploy_script_customised'))->toBeTrue();
+});
+
+it('offers a PHP starting script that installs composer packages only when there are any', function () {
+    $default = $this->actingAs($this->admin)
+        ->getJson("/api/applications/{$this->application->id}/deployments")
+        ->json('settings.default_deploy_script');
+
+    // Guarded, so the same script deploys a PHP repository with no
+    // composer.json instead of failing on "Composer could not find a
+    // composer.json file".
+    expect($default)->toContain("if [ -f composer.json ]; then\n    composer install --no-dev");
+});
+
+it('lists each deploy stage once, however many commands it took', function () {
+    $deployment = app(DeploymentRecorder::class)->open($this->application, DeploymentTrigger::Manual, $this->admin->id);
+    $recorder = app(DeploymentRecorder::class);
+    $recorder->resume($deployment);
+
+    // `init` is git init and then setting the remote.
+    foreach (['init', 'init', 'fetch', 'checkout'] as $step) {
+        $recorder->step($step);
+    }
+
+    expect($deployment->fresh()->steps)->toBe(['init', 'fetch', 'checkout']);
 });

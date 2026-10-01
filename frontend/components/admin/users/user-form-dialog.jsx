@@ -60,12 +60,10 @@ export function UserFormDialog({
         },
   });
 
-  // Reset the "first focus" guard each time the modal opens.
   useEffect(() => {
     if (open) didAutoFocus.current = false;
   }, [open]);
 
-  // Re-seed the edit form whenever it opens for a (possibly different) user.
   useEffect(() => {
     if (open && isEdit && user) {
       form.reset({
@@ -75,11 +73,8 @@ export function UserFormDialog({
         role_ids: (user.roles ?? []).map((r) => r.id),
       });
     }
-    // Keyed on the id, not the `user` object: the list this row comes from is
-    // replaced wholesale by router.refresh(), so depending on the object would
-    // re-seed the form — and discard what was being typed — on every refresh.
-    // `form` and `isEdit` are excluded because `form` is stable and `isEdit`
-    // cannot change without the id changing too.
+    // Keyed on the id, not `user`: router.refresh() replaces the list and
+    // would re-seed the form, discarding typing.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, user?.id]);
 
@@ -108,7 +103,6 @@ export function UserFormDialog({
 
   const isSubmitting = form.formState.isSubmitting;
 
-  // Clear values + validation errors when the modal closes.
   function handleOpenChange(next) {
     if (!next) form.reset();
     onOpenChange?.(next);
@@ -148,7 +142,6 @@ export function UserFormDialog({
         }
       >
         <div className="grid gap-5">
-          {/* Identity */}
               <div className="grid items-start gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
@@ -162,11 +155,8 @@ export function UserFormDialog({
                           autoComplete="off"
                           {...field}
                           onFocus={(e) => {
-                            // On the modal's auto-focus, the browser selects the
-                            // pre-filled value. Collapse it to the end, once, so
-                            // later clicks/tabs behave normally. (The dropdown's
-                            // focus-restore is prevented separately, or it would
-                            // re-select after this.)
+                            // The browser selects the pre-filled value on auto-focus; move the caret to
+                            // the end once. (The dropdown's focus-restore is prevented separately.)
                             if (didAutoFocus.current) return;
                             didAutoFocus.current = true;
                             const el = e.currentTarget;
@@ -175,9 +165,7 @@ export function UserFormDialog({
                                 const len = el.value.length;
                                 el.setSelectionRange(len, len);
                               } catch {
-                                // Input types that reject setSelectionRange
-                                // (email, number). Cursor placement is a
-                                // nicety, so there is nothing to recover.
+                                // Some input types (email, number) reject setSelectionRange; safe to ignore.
                               }
                             });
                           }}
@@ -278,10 +266,8 @@ export function UserFormDialog({
                     <div className="space-y-1">
                       <FormLabel hint={t("form.isAdminHint")}>{t("form.isAdmin")}</FormLabel>
                     </div>
-                    {/* Your own admin access stays on: the API accepts
-                        removing it (even from the last admin), and the
-                        role save that follows then fails as non-admin —
-                        leaving a panel nobody can administer. */}
+                    {/* Your own admin access stays on: the API allows removing it (even from
+                        the last admin), and the following role save then fails as non-admin. */}
                     <label className={cn("flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors", isEdit && isSelf ? "cursor-not-allowed opacity-70" : "cursor-pointer hover:bg-muted/50")}>
                       <FormControl>
                         <ReasonTooltip reason={isEdit && isSelf ? t("form.ownAdminLocked") : null}>

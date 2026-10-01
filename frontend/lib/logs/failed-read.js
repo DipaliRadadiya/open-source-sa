@@ -1,10 +1,6 @@
 import { apiMessage } from "../api/error-message.js";
 
-/**
- * A log read the server refused, with the server's own reason (and reference)
- * when it gave one. Dropping it left the page saying "the server did not
- * answer" about a server that had answered and said why.
- */
+// Keeps the server's own reason and reference when it gave one.
 export async function failedRead(res) {
   let data = null;
   try {

@@ -1,16 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/**
- * Mirrors `ClonePanel`.
- *
- * There was no `loading.jsx` here, so this route fell through to the one at
- * `applications/[application]/` — the site dashboard, a two-column grid with
- * a 20rem rail. Clone is also two columns, but a 12-column split (7 / 5) with
- * a full-width band underneath, so the inherited placeholder was the wrong
- * shape in both halves.
- *
- * Sized from the rendered page: 360px for each column, 137px for the band.
- */
+/** Mirrors `ClonePanel`: a 7/5 two-column grid with a full-width band below. */
 export default function Loading() {
   return (
     <div className="space-y-6">

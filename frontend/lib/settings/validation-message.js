@@ -1,7 +1,5 @@
-// The settings schemas emit key tokens instead of English so the same rule can
-// be worded in every locale (same convention as the firewall add-rule form).
-// Anything unrecognised is a message the API sent, already localized — it is
-// shown as-is rather than swallowed.
+// Settings schemas emit key tokens, translated here. Anything unrecognised is
+// an already localised API message and is shown as-is.
 const KEYS = [
   "required",
   "tooLong",

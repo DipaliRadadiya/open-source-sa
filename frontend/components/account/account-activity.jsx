@@ -8,9 +8,8 @@ import {
 } from "@/components/ui/tooltip";
 import { typeLabel } from "@/lib/activity-log/labels";
 
-// Backend timestamps may be ISO or MySQL-style ("YYYY-MM-DD HH:mm:ss"); parse
-// both, return null if neither is valid so we skip the tooltip instead of
-// rendering "Invalid Date".
+// Backend timestamps may be ISO or MySQL-style ("YYYY-MM-DD HH:mm:ss"); null
+// when neither parses, so the tooltip is skipped instead of "Invalid Date".
 function toDate(value) {
   if (!value) return null;
   let d = new Date(value);

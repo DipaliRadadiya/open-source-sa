@@ -19,30 +19,22 @@ import { ConnectDestinationDialog } from "@/components/integrations/storage/conn
 import { EditDestinationDialog } from "@/components/integrations/storage/edit-dialog";
 import { ReplaceCredentialsDialog } from "@/components/integrations/storage/replace-credentials-dialog";
 
-// Named in the empty state so "S3-compatible" stops being jargon. Same keys as
-// the form's provider hints, minus "other" — which tells a newcomer nothing.
+// Named in the empty state so "S3-compatible" is concrete; "other" is omitted.
 const EMPTY_STATE_PROVIDERS = ["aws", "r2", "b2", "wasabi", "spaces"];
 
-/**
- * Where backups are sent.
- *
- * A short, bounded list — a plain card of rows rather than a DataTable: nobody
- * has forty of these, and sorting or paginating three buckets is chrome for
- * its own sake.
- */
+// A plain card of rows rather than a DataTable: the list is always short.
 export function DestinationsCard({ destinations = [], canManage, oauthRedirectUri = null }) {
   const t = useTranslations("storage");
   const { refreshAndWait } = useRefresh();
   const [connecting, setConnecting] = useState(false);
   const [editing, setEditing] = useState(null);
   const [replacing, setReplacing] = useState(null);
-  // A refused delete keeps the dialog AND says why in it — the backend
-  // refuses when a backup target still points here, and that sentence is
-  // the whole answer.
+  // A refused delete keeps the dialog open with the reason: the backend refuses
+  // while a backup target still points here.
   const removal = useConfirmAction();
   // Tests can run side by side, one spinner each.
   const testing = usePendingKeys();
-  // Keyed by id, cleared on a fresh test. Never persisted — see DestinationRow.
+  // Keyed by id, cleared on a fresh test; the stored verdict is in DestinationRow.
   const [results, setResults] = useState({});
 
   async function test(destination) {
@@ -65,9 +57,7 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
     });
   }
 
-  // Defined once and used in both the header and the empty state, the way the
-  // Git card does it — two copies is how one of them ends up a different size
-  // from the other, which is exactly what happened here first time round.
+  // Shared by the header and the empty state so the two cannot differ.
   const addButton = (
     <ReasonTooltip reason={canManage ? null : t("noPermission")}>
       <Button type="button" disabled={!canManage} onClick={() => setConnecting(true)}>
@@ -79,10 +69,8 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
 
   return (
     <Card className="gap-0 overflow-hidden py-0">
-      {/* Same header shape as the Git integration card next door: tinted icon
-          chip, title, subtitle — and the add button only once there is a list
-          to add to, since the empty state already carries that call to
-          action and two of them is the same offer twice. */}
+      {/* Same header shape as the Git integration card. The add button only
+          shows once there is a list; the empty state carries its own. */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/20 px-5 py-3">
         <div className="flex items-center gap-2.5">
           <span className="flex shrink-0 items-center justify-center text-muted-foreground">
@@ -91,10 +79,8 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
           <div>
             <div className="flex items-center gap-1.5">
               <p className="text-sm font-medium">{t("card.title")}</p>
-              {/* What "Test" actually does, available without failing first —
-                  it writes a small file, reads it back and deletes it, which
-                  is why a read-only key never passes. A popover, not a
-                  tooltip, so it opens on a phone too. */}
+              {/* Test writes, reads back and deletes a file, so a read-only key never
+                  passes. Popover, not tooltip, so it works on touch. */}
               <InfoHint label={t("card.whatTestDoes")}>
                 <p className="text-xs leading-relaxed">{t("card.testExplained")}</p>
               </InfoHint>
@@ -107,14 +93,8 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
 
       <CardContent className="px-5 py-0">
         {destinations.length === 0 ? (
-          // Explains, shows what one is for, and offers the one action —
-          // rather than an empty rule with nothing to do about it.
-          // Structurally the same empty state as the Git integration card:
-          // chip, title, description, a line of reassurance about what the
-          // credential is used for, the providers that qualify, then the three
-          // steps — and only then the action. The first version here had just
-          // the chip and a button, which looked like the same screen but gave
-          // a first-time user none of the same help.
+          // Same empty-state structure as the Git integration card: chip,
+          // title, description, reassurance, qualifying providers, steps, action.
           <div className="mx-auto flex max-w-lg flex-col items-center gap-5 py-10 text-center sm:py-12">
             <span className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
               <HardDrive className="size-6" aria-hidden />
@@ -122,17 +102,13 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
             <div className="space-y-2">
               <p className="text-base font-semibold tracking-tight">{t("empty.title")}</p>
               <p className="max-w-md text-sm leading-6 text-muted-foreground">{t("empty.body")}</p>
-              {/* Git says "we only read, never push" here. The equivalent truth
-                  for storage: the keys are encrypted at rest and only ever used
-                  for this server's own backups. */}
+              {/* Keys are encrypted at rest and only used for this server's backups. */}
               <p className="max-w-md text-xs leading-5 text-muted-foreground">
                 {t("empty.reassurance")}
               </p>
             </div>
 
-            {/* Which providers qualify — the same job Git's logo chips do.
-                Text only, because we have no logos for these and inventing
-                them is not worth a round of licence checking. */}
+              {/* Qualifying providers, as text (no logos for these). */}
             <div className="flex flex-wrap justify-center gap-2">
               {EMPTY_STATE_PROVIDERS.map((provider) => (
                 <span
@@ -214,9 +190,8 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
         error={removal.error}
         onConfirm={remove}
       >
-        {/* The API refuses while any application backs up here or any backup
-            is still stored here, and names them in its answer (shown in the
-            dialog as the error). */}
+        {/* The API refuses while anything backs up or is stored here, and names it in
+            the error. */}
         <p className="text-sm text-muted-foreground">{t("delete.warning")}</p>
       </ConfirmDialog>
     </Card>

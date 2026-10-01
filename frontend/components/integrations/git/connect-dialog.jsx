@@ -6,15 +6,7 @@ import { useBranding } from "@/components/branding-provider";
 import { ProviderLogo } from "@/components/integrations/git/provider-logo";
 import { ConnectForm } from "@/components/integrations/git/connect-form";
 
-/**
- * Connecting an account, in two steps.
- *
- * Split rather than one long form because the fields genuinely differ per
- * provider — showing all of them at once would mean explaining which ones to
- * ignore. It also lets the form mount fresh per provider, so the generated Zod
- * schema is fixed for its lifetime instead of swapping under a half-filled
- * form.
- */
+// The form mounts fresh per provider so its generated Zod schema never changes under a half-filled form.
 export function ConnectDialog({
   providers,
   open,
@@ -26,8 +18,7 @@ export function ConnectDialog({
   const [chosen, setChosen] = useState(null);
 
   function handleOpenChange(next) {
-    // Back to step one on close, so reopening never lands mid-flow in a form
-    // for a provider the user has forgotten choosing.
+    // Reset to step one on close.
     if (!next) setChosen(null);
     onOpenChange?.(next);
   }
@@ -66,8 +57,7 @@ export function ConnectDialog({
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-medium">{provider.title}</span>
-              {/* A provider the backend adds before we have copy for it still
-                  renders — it just gets no one-liner. */}
+              {/* Providers without a translated hint still render, without one. */}
               {t.has(`hints.${provider.name}`) ? (
                 <span className="block text-xs text-muted-foreground">
                   {t(`hints.${provider.name}`)}
@@ -79,8 +69,6 @@ export function ConnectDialog({
         ))}
       </div>
 
-      {/* The objection this answers is the one nobody says out loud: what is
-          this panel going to do with my credential. */}
       <p className="text-xs leading-relaxed text-muted-foreground">
         {t("readOnly", { brand })}
       </p>

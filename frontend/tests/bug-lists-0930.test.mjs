@@ -78,7 +78,7 @@ test("delete database names the application; connection card keeps the oldest us
   assert.match(read("lib/databases/connection-parts.js"), /\.sort\(\(a, b\) => a\.id - b\.id\)/);
 });
 
-test("secondary text buttons are tinted, icon-only stay neutral", () => {
+test("icon-only outline buttons stay neutral", () => {
   const src = read("components/ui/button.jsx");
   assert.match(src, /size: \["icon", "icon-xs", "icon-sm", "icon-lg"\], className: NEUTRAL/);
 });

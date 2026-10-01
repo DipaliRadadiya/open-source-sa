@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ADMIN_NAV, isAdminNavActive } from "@/lib/admin-nav";
@@ -14,13 +14,6 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 
-/**
- * The admin panel's trail, lifted out of the header bar.
- *
- * It was inline in `AdminHeader`; it now sits at the top of the page content
- * like the server panel's does, so the two panels read the same way — including
- * a root that is a link rather than a label.
- */
 export function AdminBreadcrumb() {
   const pathname = usePathname();
   const t = useTranslations("admin");

@@ -1,7 +1,5 @@
-// "Back up now" in the setup dialog can be pressed on the empty state, whose
-// refresh replaces it with the overview. The overview has to know a run was
-// just accepted — its rows still show the previous backup — and that fact has
-// no other way across the swap.
+// Tells the overview that a run was just accepted from the empty state's setup
+// dialog; the refresh replaces that component, so sessionStorage carries it.
 const KEY = "sv:backup-started";
 
 export function markBackupStarted() {
@@ -12,8 +10,7 @@ export function markBackupStarted() {
   }
 }
 
-// Read, not consumed: it is called from a state initializer, which React may
-// run twice. The window is what ends it.
+// Read, not consumed: React may run state initialisers twice. The window ends it.
 export function backupStartedWithin(windowMs) {
   if (typeof window === "undefined") return false;
   try {

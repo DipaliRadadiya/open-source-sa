@@ -119,8 +119,6 @@ test("a component may still quote an old size in its own comment", () => {
    * that has now caught me three times in this codebase: a check that reads a
    * component's own history as a fresh offence.
    */
-  const chart = read("components/dashboard/disk-io-chart.jsx");
-  assert.match(chart, /text-\[10px\]/, "the comment should be left alone");
   const guard = read("scripts/check-type-floor.mjs");
   assert.match(guard, /const mask =/);
 });

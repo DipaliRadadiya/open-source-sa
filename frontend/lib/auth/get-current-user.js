@@ -7,29 +7,19 @@ import { PanelUnavailableError } from "@/lib/api/unavailable";
 import { RequestFailedError } from "@/lib/api/request-failed";
 import { readErrorBody } from "@/lib/api/error-body";
 
-// Single cached `/auth/me` fetch per request. Returns the full payload:
-// `{ user, impersonatedBy }`. `getCurrentUser` / `getImpersonator` derive from
-// it so they share one request (deduped via React `cache`).
+// One cached `/auth/me` per request; `getCurrentUser`/`getImpersonator` derive from it.
 export const getMe = cache(async () => {
   // Read cookies OUTSIDE any try/catch: cookies() throws Next's internal
-  // DynamicServerError to opt the route into dynamic rendering, and that
-  // signal must be allowed to propagate — swallowing it makes Next
-  // statically prerender the page as logged-out.
+  // DynamicServerError, and swallowing it prerenders the page as logged-out.
   const cookieStore = await cookies();
   const locale = await serverLocale();
 
-  // Deliberately NOT wrapped in try/catch. "Signed out" and "we couldn't ask"
-  // are different answers: only 401/419 mean the session is gone. Any other
-  // failure must reach the error boundary, because swallowing it logs the user
-  // out on a transient API hiccup.
-  // Retried once on a 5xx: this runs on every page, so a single backend hiccup
-  // would otherwise replace the whole app with an error card.
+  // Only 401/419 mean signed out; other failures reach the error boundary rather
+  // than log the user out. Retried once on a 5xx.
   const url = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`;
 
-  // The transport error is caught HERE rather than left to the boundary: a
-  // refused connection or a dead DNS name produces no response at all, so
-  // without this the reader gets a digest for the one failure they could most
-  // easily have fixed.
+  // Transport errors (refused connection, DNS) are wrapped so the boundary can
+  // explain them rather than show only a digest.
   let res;
   try {
     res = await fetchWithRetry(() =>
@@ -55,20 +45,14 @@ export const getMe = cache(async () => {
     return { user: null, impersonatedBy: null };
   }
 
-  // Still rate-limited after the backoffs in fetchWithRetry. Thrown as its own
-  // type so the layout can say "too many requests" instead of "went wrong".
+  // Still rate-limited after fetchWithRetry's backoffs; own type for its own message.
   if (res.status === 429) throw new RateLimitedError("auth/me");
 
-  // Maintenance mode — the panel is mid-update, or an update stopped after
-  // `artisan down`. Its own type so the login page can say which, instead of
-  // showing a digest for a server that is working exactly as instructed.
+  // Maintenance mode (mid-update, or an update stopped after `artisan down`).
   if (res.status === 503) throw new PanelUnavailableError("auth/me");
 
-  // Everything else carries the status and the URL, because SSR means there is
-  // no Network tab row for the reader to open.
+  // Carries status and URL: SSR failures have no Network tab entry.
   if (!res.ok) {
-    // The API's own explanation, when it gave one. It is the reason; ours is
-    // only the category.
     const { message, debug } = await readErrorBody(res);
     throw new RequestFailedError({ url, status: res.status, serverMessage: message, debug });
   }

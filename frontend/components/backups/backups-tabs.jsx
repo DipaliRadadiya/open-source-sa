@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { History, RotateCcw, ShieldCheck } from "lucide-react";
@@ -13,9 +13,8 @@ const SECTIONS = [
   { key: "restores", href: "/backups/restores", icon: RotateCcw },
 ];
 
-// Same tab bar as Settings, and real links for the same reasons: back works, a
-// tab can be pasted to someone, and opening coverage does not also load a
-// paginated history of every run the server has ever made.
+// Same tab bar as Settings, as real links: back works, tabs are shareable, and
+// opening coverage does not also load the paginated history.
 const TAB =
   "relative inline-flex h-auto min-w-0 flex-none items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-2 text-sm font-medium whitespace-nowrap text-muted-foreground transition-all hover:bg-background/60 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none sm:gap-2 sm:px-4 [&_svg]:size-4 [&_svg]:shrink-0";
 const TAB_ACTIVE =

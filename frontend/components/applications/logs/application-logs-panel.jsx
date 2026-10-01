@@ -29,17 +29,7 @@ import { cleanLines } from "@/lib/logs/clean-lines";
 const POLL_MS = 3000;
 const TAIL_FAILURES_BEFORE_PAUSE = 3;
 
-/*
- * Which lines carry an HTTP status (colour and severity by 2xx/3xx/4xx/5xx)
- * rather than a level word.
- *
- * `waf_detect` belongs here too. It is written by the web server in `combined`
- * — byte for byte the same shape as the access log, as parse-detect-log.js says
- * in as many words — but it was falling into "system", so `lineLevel` skipped
- * the status parsing and looked for words like "error" that a combined line
- * never contains. Every line came back with no level, so Errors and Warnings
- * filtered the whole tab down to nothing and the severity tint never appeared.
- */
+// Sources whose lines carry an HTTP status; `waf_detect` uses `combined` format.
 const WEB_FORMAT_KEYS = new Set(["access", "waf_detect"]);
 const groupFor = (key) => (WEB_FORMAT_KEYS.has(key) ? "web" : "system");
 
@@ -56,14 +46,8 @@ export function ApplicationLogsPanel({
   const t = useTranslations("logs");
   const tApp = useTranslations("applications.logs");
 
-  /*
-   * The tab on screen. Switched here rather than by navigating: a navigation
-   * re-rendered the whole page on the server — about eight requests, the log
-   * read twice (once for a first paint this component then ignored) — and on a
-   * slow answer the old tab stayed selected for seconds with nothing to say a
-   * click had landed. The URL is still updated, so a reload or a shared link
-   * opens the same tab.
-   */
+  // Tabs switch client-side (a navigation re-rendered the whole page on the
+  // server); the URL is still updated so a reload or link opens the same tab.
   const [current, setCurrent] = useState(selected);
   // A real navigation to a different `?source=` (Back, a link) still wins.
   const [selectedProp, setSelectedProp] = useState(selected);
@@ -72,15 +56,8 @@ export function ApplicationLogsPanel({
     setCurrent(selected);
   }
   const source = sources.find((s) => s.key === current) ?? null;
-  // An "application" source only exists on a site that runs a process; when it
-  // does, access/error describe the reverse proxy, not the app.
-  //
-  // Keyed on the source key, not its kind: these used to be the only journal
-  // sources, so `kind === "journal"` was a workable stand-in until the unit
-  // started writing to files in the site's own directory — at which point the
-  // test silently stopped matching anything and the hint explaining that
-  // access/error are the *proxy's* logs stopped appearing on exactly the sites
-  // that need it.
+  // With an app process, access/error describe the reverse proxy. Keyed on the
+  // source key, not `kind`: the unit can write to files too.
   const hasAppOutput = sources.some((s) => s.key.startsWith("application"));
 
   const [lines, setLines] = useState(() => cleanLines(initial?.log?.lines));
@@ -94,7 +71,7 @@ export function ApplicationLogsPanel({
   }, [status]);
   const [truncated, setTruncated] = useState(Boolean(initial?.log?.truncated));
   // Only meaningful while filtering: the API sets it when the search covered
-  // just the tail of the file, which is what makes an empty result honest.
+  // just the tail of the file.
   const [searchCapped, setSearchCapped] = useState(
     Boolean(initial?.log?.search_window_capped),
   );
@@ -103,26 +80,15 @@ export function ApplicationLogsPanel({
   const [debouncedTerm, setDebouncedTerm] = useState("");
   const [severity, setSeverity] = useState("all");
   const [wrap, setWrap] = useState(false);
-  /*
-   * Which end the newest line sits at. Oldest-first by default, because that is
-   * how a console reads and how a live tail appends — the same default the
-   * server Logs panel uses.
-   *
-   * This was missing entirely. The toolbar renders the control from its own
-   * props and the panel passed neither, so `onNewestFirstChange` arrived as
-   * undefined and clicking "Newest first" threw `is not a function`. Nothing
-   * caught it: a missing prop is not a build error in plain JS, and the server
-   * Logs page — which does wire it — works, so the control looked proven.
-   */
+  // Oldest-first by default, like a console and the server Logs panel. The
+  // toolbar requires `onNewestFirstChange`; omitting it throws on click.
   const [newestFirst, setNewestFirst] = useState(false);
   const [prefs, setPrefs] = useState(followPrefs);
   const [follow, setFollow] = useState(() => followPrefFor(current, followPrefs));
   const [busy, setBusy] = useState(false);
   const [tailState, setTailState] = useState("idle");
-  // Each tab opens with its own default. Switching tabs keeps this component
-  // (only the URL changes), so `follow` used to carry over: Access → Error never
-  // started tailing, and Error → Access kept polling the busiest log there is.
-  // Adjusted during render, not in an effect, so no frame polls the wrong one.
+  // Each tab opens with its own follow default. The component survives tab
+  // switches, so reset during render (not in an effect) to avoid polling the wrong tab.
   const [followFor, setFollowFor] = useState(current);
   if (followFor !== current) {
     setFollowFor(current);
@@ -168,9 +134,8 @@ export function ApplicationLogsPanel({
         if (code === 403) setStatus("locked");
         else if (code === 404) setStatus("missing");
         else {
-          // A tab whose first read failed has nothing to show but the failure,
-          // in the server's words; a reload of lines already on screen keeps
-          // them and says so.
+          // A failed first read shows the server's message; a failed reload
+          // keeps the lines on screen and toasts.
           if (statusRef.current === "loading") {
             setStatus("failed");
             setFailedMessage(apiMessage(error, null) || null);
@@ -195,8 +160,7 @@ export function ApplicationLogsPanel({
   }, [load]);
 
   // Live tail: no cursor, so re-read the last N (with the same grep) and replace
-  // the buffer. grep and tailing compose here because every poll re-filters the
-  // whole file — no need to pause following while a filter is active.
+  // the buffer. Every poll re-filters the whole file, so a filter needs no pause.
   useEffect(() => {
     if (!follow || disabled) return undefined;
     let active = true;
@@ -248,8 +212,7 @@ export function ApplicationLogsPanel({
           : "live"
         : "idle";
 
-  // The reader's choices, remembered — not the automatic pause after failures,
-  // which is the panel's decision rather than theirs.
+  // Only the reader's choices are remembered, not the automatic pause after failures.
   function chooseFollow(next) {
     setFollow(next);
     const updated = { ...prefs, [current]: next };
@@ -281,15 +244,7 @@ export function ApplicationLogsPanel({
     return () => document.removeEventListener("keydown", onKey);
   }, []);
 
-  /**
-   * Empty the selected log.
-   *
-   * The server truncates rather than deletes, so the source still exists and
-   * the viewer is simply emptied — no navigation, no refetch. The lines are
-   * cleared from state directly rather than re-reading: a re-read of a
-   * just-truncated busy access log can come back with the handful of requests
-   * that arrived in between, which reads as the clear having failed.
-   */
+  // Cleared locally, not re-read: a busy log may already have new lines.
   const clearLog = useCallback(async () => {
     setClearing(true);
     try {
@@ -322,8 +277,7 @@ export function ApplicationLogsPanel({
     (key) => {
       if (key === current) return;
       setCurrent(key);
-      // The old tab's lines must not sit under the new tab's name while its
-      // own are on their way.
+      // Clear the old tab's lines while the new tab's load.
       setLines([]);
       setTruncated(false);
       setSearchCapped(false);
@@ -346,11 +300,8 @@ export function ApplicationLogsPanel({
       onValueChange={selectSource}
       className="gap-4"
     >
-      {/* Source picker as tabs: a site has only 2–3 sources, so a full-height
-          rail would leave dead space and the console loses width. */}
-      {/* Scrolls rather than wraps, same as the Settings tab bar: a bar that
-          reflows to two rows stops reading as one control. ScrollFade is what
-          says there is more to the side. */}
+      {/* Tabs, not a rail: a site has only 2–3 sources. Scrolls rather than
+          wraps; ScrollFade signals more to the side. */}
       <ScrollFade className="-mx-1 px-1 pb-1">
         <TabsList className="!h-auto w-fit gap-1 p-1">
           {sources.map((s) => (
@@ -370,9 +321,7 @@ export function ApplicationLogsPanel({
         </TabsList>
       </ScrollFade>
 
-      {/* The panel the source tabs control: without it every tab's
-          aria-controls pointed at nothing. Its own text size and flex are
-          reset so the console below looks exactly as it did. */}
+      {/* Target of the tabs' aria-controls; text size and flex reset so the console is unchanged. */}
       <TabsContent value={current ?? ""} className="flex-none text-[length:inherit]">
       <section className="flex h-[calc(100svh-16rem)] min-h-[34rem] flex-col overflow-hidden rounded-xl border bg-card shadow-sm lg:min-h-[24rem]">
         <LogToolbar
@@ -455,10 +404,7 @@ export function ApplicationLogsPanel({
       </section>
       </TabsContent>
 
-      {/* Names the log, because "Clear log?" beside a tab strip is ambiguous
-          about which one — and this cannot be undone. `destructive` for the
-          same reason the restart dialog is: the confirm button should look
-          like what it does. */}
+      {/* Names the log being cleared; this cannot be undone. */}
       <ConfirmDialog
         open={confirmClear}
         onOpenChange={setConfirmClear}

@@ -4,21 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 
-/**
- * What watching mode caught — read here rather than sending someone to the file
- * browser to find a log file themselves.
- *
- * Deliberately does NOT offer "allow requests like this". An exception is a
- * literal substring tested against the URL, the query string AND the
- * user-agent, and one match skips all six checks — so a one-click exception
- * built from a log row would switch the firewall off across a whole slice of
- * the site while reading like a small, local fix. Until the log records which
- * check matched and an exception can be scoped to it, the safe affordance is to
- * show the evidence and let someone write the exception deliberately.
- *
- * Same shape as the bot-blocker traffic card: this is the other "here is what
- * actually hit your site" panel and they should read as one family.
- */
+// Deliberately no "allow requests like this": an exception skips all six checks for any URL, query
+// or user agent containing it, so one click could silently disable the firewall.
 export async function DetectLogCard({ rows = [], failed = false }) {
   const t = await getTranslations("applications.firewall.detect");
   const format = await getFormatter();
@@ -44,9 +31,7 @@ export async function DetectLogCard({ rows = [], failed = false }) {
       </div>
 
       <CardContent className="p-3 sm:p-5">
-        {/* Both of these are ordinary states. A quiet icon and centred text says
-            "nothing to report", not "something broke" — and an empty file is
-            the NORMAL state here, because it is created by the first match. */}
+        {/* Both are ordinary states; an empty log is normal (it is created by the first match). */}
         {failed || rows.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-6 text-center">
             <span className="flex size-9 items-center justify-center rounded-full bg-muted-foreground/10 text-muted-foreground">
@@ -64,9 +49,7 @@ export async function DetectLogCard({ rows = [], failed = false }) {
                   <Badge variant="outline" className="shrink-0 font-mono text-xs font-normal">
                     {row.method}
                   </Badge>
-                  {/* break-all, not truncate: a caught request is usually a long
-                      injection attempt, and cutting it hides the part that
-                      shows why it looked like one. */}
+                  {/* break-all, not truncate: the tail of an injection attempt shows why it matched. */}
                   <span className="min-w-48 flex-1 break-all font-mono text-xs">{row.target}</span>
                 </div>
                 <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">

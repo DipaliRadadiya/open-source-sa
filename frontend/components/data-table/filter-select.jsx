@@ -6,19 +6,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-/**
- * A filter dropdown, with the "everything" option built in.
- *
- * The presentation half of `FacetSelect`, split out so a screen that filters
- * in memory gets the identical control without the URL wiring. Two screens in
- * one feature were hand-assembling the same Select and only one of them
- * remembered the all-option's shape.
- *
- * `value` is "all" when nothing is selected — the same sentinel `FacetSelect`
- * uses, so the two cannot disagree about what "no filter" means.
- */
-// `label` names the control for screen readers: the trigger only shows the
-// current choice ("Any state"), which says nothing about what it filters.
+// Presentation half of `FacetSelect` for in-memory filters; `value` is "all" when unset.
+// `label` names the control for screen readers; the trigger shows only the choice.
 export function FilterSelect({ value, onChange, allLabel, options, className, label }) {
   return (
     <Select value={value} onValueChange={onChange}>

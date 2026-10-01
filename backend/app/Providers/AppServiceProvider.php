@@ -13,6 +13,7 @@ use App\Services\Server\Backups\Storage\GoogleOauthTokens;
 use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Firewall\UfwFirewall;
 use App\Services\Server\Php\PhpStackManager;
+use App\Services\Server\Php\ServerDefaultPhp;
 use App\Services\Server\Setup\Components\BuildToolsComponent;
 use App\Services\Server\Setup\Components\DatabaseComponent;
 use App\Services\Server\Setup\Components\Fail2banComponent;
@@ -86,6 +87,9 @@ class AppServiceProvider extends ServiceProvider
         // on a box with no record yet the first read shells out to detect —
         // a fresh instance per consumer turns that into one detection each.
         $this->app->scoped(ServerCapabilities::class);
+
+        // Asked once per type by the site-type catalog; one answer per request.
+        $this->app->scoped(ServerDefaultPhp::class);
 
         // One progress recorder per job, shared by the provisioner and the
         // installer it calls — they are recording steps of the same run, and

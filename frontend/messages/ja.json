@@ -68,7 +68,8 @@
       "title": "{feature} にアクセスする権限がありません",
       "description": "このロールにはこれを表示する権限が含まれていません。管理者に権限の付与を依頼してください。"
     },
-    "serverNavigation": "サーバーメニュー"
+    "serverNavigation": "サーバーメニュー",
+    "loadingPage": "ページを読み込んでいます…"
   },
   "systemUsers": {
     "title": "システムユーザー",
@@ -850,7 +851,8 @@
     "noManagedWorkerKeys": "user、command、directory とログファイルはパネルが設定します。ここではなく上の項目で変更してください。",
     "insideApplication": "このアプリケーションのフォルダー内のパスを指定してください。",
     "securityUsernameAscii": "半角英字、数字、. _ - @ のみ使用してください。それ以外の文字はブラウザによって送信方法が異なります。",
-    "excludeInsideSite": "storage/logs のように、アプリケーションのフォルダー内のパスを指定してください（/ や .. は使えません）"
+    "excludeInsideSite": "storage/logs のように、アプリケーションのフォルダー内のパスを指定してください（/ や .. は使えません）",
+    "cronTrailingComment": "# のメモを削除してください。cron は # 以降をすべてコメントとして扱うため、ジョブのログを書き込む部分も無効になります。"
   },
   "serverDashboard": {
     "title": "ダッシュボード",
@@ -1212,7 +1214,8 @@
         "next": "多くの場合、パネルと API のバージョンが異なるか、途中で何かがリクエストを書き換えています。両方を同じリリースに更新してください。"
       }
     },
-    "whatToDo": "対処方法"
+    "whatToDo": "対処方法",
+    "noAnswer": "サーバーから応答がありません。実行されたかどうかは不明です。ページを再読み込みして現在の状態を確認してください。"
   },
   "logs": {
     "title": "システムログ",
@@ -1342,6 +1345,10 @@
       "disable": {
         "title": "{name} の自動起動を停止しますか？",
         "description": "今は動作していますが、次回の再起動後は自動的に開始されません。"
+      },
+      "restart": {
+        "title": "{name} を再起動しますか？",
+        "description": "いったん停止してから再び開始します。接続しているものは一時的に切断されます。"
       }
     },
     "toast": {
@@ -1365,7 +1372,8 @@
       "restart": "{name} を再起動できませんでした — 状態は変更されていません。",
       "reload": "{name} をリロードできませんでした — 状態は変更されていません。",
       "enable": "{name} の自動起動を設定できませんでした — 何も変更されていません。",
-      "disable": "{name} の自動起動を停止できませんでした — 何も変更されていません。"
+      "disable": "{name} の自動起動を停止できませんでした — 何も変更されていません。",
+      "noAnswer": "{name} についてサーバーから応答がありません。実行されたかどうかは不明です。数秒後に一覧に実際の状態が表示されます。"
     },
     "undoStop": "再度開始",
     "retry": "再試行",
@@ -1402,7 +1410,10 @@
       "blockedNoChanges": "保存する内容がありません — ファイルは変更されていません。",
       "blockedAcknowledge": "まずリスクを理解した旨を確認してください。",
       "pathUnknown": "読み込み中…",
-      "shortAction": "php.ini を編集"
+      "shortAction": "php.ini を編集",
+      "viewAction": "php.ini を表示",
+      "readOnlyDescription": "PHP が読み込むファイル全体です。",
+      "close": "閉じる"
     },
     "notMeasured": "未計測",
     "phpSettings": "PHP 設定",
@@ -1420,7 +1431,8 @@
       "attention": "{count, plural, =1 {1 件のサービスに対応が必要です} other {# 件のサービスに対応が必要です}}",
       "running": "{count, plural, =1 {1 件実行中} other {# 件実行中}}",
       "installing": "{count, plural, =1 {1 件インストール中} other {# 件インストール中}}",
-      "allRunning": "{count, plural, =0 {サービスは検出されませんでした} =1 {1 件のサービスが実行中です} other {すべての # 件のサービスが実行中です}}"
+      "allRunning": "{count, plural, =0 {サービスは検出されませんでした} =1 {1 件のサービスが実行中です} other {すべての # 件のサービスが実行中です}}",
+      "stopped": "{count, plural, =1 {1 件停止中} other {# 件停止中}}"
     },
     "sections": {
       "attention": {
@@ -1428,7 +1440,7 @@
         "hint": "これらは実行されていません。それぞれ理由と対応方法が表示されています。"
       },
       "running": {
-        "title": "実行中のサービス",
+        "title": "インストール済みのサービス",
         "hint": "メモリ、プロセッサ使用率、サーバー起動時に開始されるかどうか。"
       },
       "installing": {
@@ -1442,7 +1454,8 @@
       "openDatabases": "データベースを開く",
       "openPhp": "PHP を開く",
       "openFail2ban": "Fail2ban を開く",
-      "openDocker": "Docker を開く"
+      "openDocker": "Docker を開く",
+      "unitFailedNoLog": "インストール済みですが停止しています。起動してみてください。再び停止する場合、エラーはサーバーのシステムジャーナルに記録されています。"
     },
     "moreActions": "{name} のその他の操作"
   },
@@ -1551,7 +1564,8 @@
       "invalidIp": "有効な IP アドレスではありません。範囲指定はできません。",
       "selfWarning": "これはあなた自身のアドレスです。サーバーはこれを禁止しません。ロックアウトされてしまうためです。",
       "ipLabelHint": "ブロックするアドレスです。保存する前に、ご自分の接続ではないことを確認してください。",
-      "jailLabelHint": "どのルールセットの元でアドレスをブロックするかです。各jailはSSHやWebサーバーなど、1つのサービスを監視します。"
+      "jailLabelHint": "どのルールセットの元でアドレスをブロックするかです。各jailはSSHやWebサーバーなど、1つのサービスを監視します。",
+      "ownServer": "これはこのサーバー自身のアドレスです。禁止すると、誰もパネルにアクセスできなくなります。"
     },
     "settings": {
       "title": "ブロックルール",
@@ -1734,7 +1748,8 @@
         "portOrder": "範囲の終端は開始より小さくできません。",
         "invalidSource": "有効な IP アドレスまたは範囲ではありません。",
         "portShape": "443 のようなポート、または 8000-8090 のような範囲で指定してください。",
-        "nameTooLong": "名前は 255 文字以内にしてください。"
+        "nameTooLong": "名前は 255 文字以内にしてください。",
+        "rangeNeedsProtocol": "ポート範囲には TCP か UDP のどちらかを選んでください。両方必要な場合は、もう 1 つルールを追加してください。"
       },
       "anywhere": "すべての場所",
       "summary": "概要",
@@ -2149,7 +2164,7 @@
       "retry": "再試行",
       "retrying": "PHP {version} を再度インストールしています…",
       "incomplete": "不完全",
-      "incompleteDetail": "{packages} がありません。パネルではなく別のパッケージによってインストールされたためです。",
+      "incompleteDetail": "{packages} がありません。インストールを完了すると追加されます。",
       "completeInstall": "インストールを完了する",
       "completing": "PHP {version} を完了しています…",
       "incompleteDefault": "先にインストールを完了してください。デフォルトの PHP は、バージョンが指定されていないすべての処理で使われます。",
@@ -2424,7 +2439,7 @@
       "already": "Node.js {version} はすでにインストール済みです。",
       "failed": "そのバージョンをインストールできませんでした。",
       "eolWarning": "Node.js {version} はセキュリティ修正の提供が終了しています。アプリケーションが必要とする場合にのみインストールしてください。",
-      "noneAvailable": "現在インストール可能な新しいバージョンはありません。",
+      "noneAvailable": "Node.js のバージョン一覧を取得できませんでした。サーバーが nodejs.org に接続できるか確認してから、ページを再読み込みしてください。",
       "installedTag": "インストール済み",
       "allInstalled": "このサーバーが提供するすべてのバージョンはすでにインストールされています。"
     },
@@ -3057,7 +3072,8 @@
       "chartDescription": "1秒あたりのクエリ数、接続数、実行中のスレッド数を5分ごとに計測しています。",
       "zoomHint": "チャート下のハンドルをドラッグするか、チャート上をスクロールすると時間範囲を拡大できます。",
       "cannotStopOwn": "これはパネルのデータベースへの接続です。停止するとこのページが切断されます。",
-      "loadFailed": "データベースエンジンを確認できませんでした。"
+      "loadFailed": "データベースエンジンを確認できませんでした。",
+      "backToList": "データベース一覧に戻る"
     },
     "tables": {
       "title": "テーブル",
@@ -3083,12 +3099,10 @@
       "failed": "phpMyAdmin を開けませんでした。",
       "noPermission": "現在のロールには、データベースの管理権限が含まれていません。管理者に付与を依頼してください。",
       "blocked": "ブラウザが新しいタブをブロックしました。",
-      "openAnyway": "phpMyAdmin を開く",
       "install": "phpMyAdmin をインストール",
       "needsUser": "先にデータベースユーザーを追加してください — phpMyAdmin はそのユーザーでサインインします。",
       "choose": "どちらの phpMyAdmin を使用しますか？",
-      "signingShort": "ログインしています…",
-      "linkReady": "phpMyAdmin のログインリンクの準備ができました。"
+      "signingShort": "ログインしています…"
     },
     "usedBy": {
       "title": "使用箇所",
@@ -3132,7 +3146,8 @@
     "unavailable": {
       "title": "このサーバーではデータベースを管理しません",
       "body": "このサーバーはコンテナをホストしています。データベースが必要なアプリケーションは自前のコンテナとして持ち込むため、パネルはここでエンジンを管理しません。パネル自身のデータはいずれにせよ SQLite です。"
-    }
+    },
+    "backToList": "データベース一覧に戻る"
   },
   "git": {
     "title": "Git",
@@ -3957,11 +3972,8 @@
       "none": "このアプリケーションには管理者アカウントがありません。",
       "listFailed": "このアプリケーションの管理者を読み取れませんでした。",
       "failed": "ログインリンクを作成できませんでした。",
-      "popupBlocked": "ブラウザーが新しいタブをブロックしました。このパネルのポップアップを許可して、もう一度お試しください。",
       "redirecting": "ログインしています…",
       "auditNote": "このリンクは一度だけ有効で、1 分で期限切れになります。どの管理者としてログインしたかは操作履歴に記録されます。",
-      "linkReady": "WordPress のログインリンクの準備ができました。",
-      "openAdmin": "WordPress 管理画面を開く",
       "fetchingUsers": "ユーザーを取得しています…"
     },
     "markers": {

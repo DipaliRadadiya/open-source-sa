@@ -25,13 +25,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-/**
- * Pick what to clean, see what it will do, then do it.
- *
- * Nothing is selected on arrival. A cleaner that arrives pre-ticked turns a
- * deliberate action into a dare, and the one thing every panel's bug tracker
- * agrees on is that people click the big button without reading.
- */
+// Nothing is pre-selected: a destructive action must be deliberate.
 export function CleanupPanel({ categories, canManage, measuredAt }) {
   const t = useTranslations("diskCleaner");
   const { refreshAndWait } = useRefresh();
@@ -42,26 +36,19 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
   const [showPaths, setShowPaths] = useState(false);
   const [error, setError] = useState(null);
 
-  // Something with nothing to reclaim can still be listed — it just can't be
-  // selected, because ticking it would promise space that isn't there.
+  // Rows with nothing to reclaim are listed but cannot be selected.
   const cleanable = useMemo(
     () => categories.filter((c) => c.available && c.reclaimable > 0),
     [categories],
   );
 
-  // The API groups categories under `package`, `logs` and `temp`. This list
-  // used to be ordered by that grouping — packages first as the biggest and
-  // safest win — but a fixed order is only a guess at what is worth reclaiming
-  // on a given server, and the measured size is not. Sorted by what is actually
-  // there instead; the group keys are recorded here because nothing else in
-  // this file names them.
+  // By measured size, not the API's category grouping.
   const ordered = useMemo(
     () =>
       categories
-        // `filter` returns a new array, so the sort below cannot reach the prop.
+        // `filter` returns a new array, so the sort below cannot mutate the prop.
         .filter((category) => category.available)
-        // Descending by size, with the already-clean rows last: they can't be
-        // acted on, so they belong out of the way rather than interleaved.
+        // Descending by size, so already-clean rows end up last.
         .sort((a, b) => b.reclaimable - a.reclaimable),
     [categories],
   );
@@ -82,8 +69,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
 
   const allSelected = cleanable.length > 0 && chosen.length === cleanable.length;
 
-  // One control, both directions — a "select all" with no way back makes you
-  // untick six rows by hand.
+  // One control, both directions.
   function toggleAll() {
     setSelected(allSelected ? new Set() : new Set(cleanable.map((c) => c.key)));
     setResult(null);
@@ -95,19 +81,13 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
     try {
       const response = await cleanDisk(chosen.map((c) => c.key));
       const parsed = cleanResultSchema.safeParse(response.data);
-      // Report what the disk actually gave back, not what we predicted — the
-      // gap between the two is the complaint every other panel collects.
-      // Sizes re-read before the result shows, so "freed 2 GB" never sits
-      // beside categories still showing the old sizes.
+      // What the disk actually freed; sizes are re-read first so the result never sits beside stale ones.
       await refreshAndWait();
       if (parsed.success) setResult(parsed.data);
       setConfirming(false);
       setSelected(new Set());
     } catch (err) {
-      // Kept in the dialog rather than only in a toast: the dialog stays open
-      // on failure so the selection isn't lost, and a toast that has already
-      // faded leaves an open dialog with no explanation for why nothing
-      // happened. The reference id goes with it — that is what support needs.
+      // Also kept in the dialog, which stays open on failure and needs the support reference.
       const reference = err.response?.data?.reference;
       setError([apiMessage(err, t("clean.failed")), reference].filter(Boolean).join(" · "));
       toast.error(apiMessage(err, t("clean.failed")));
@@ -121,8 +101,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
   return (
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
       <>
-        {/* pb-0 so the footer band reaches the card edge — Card's own bottom
-            padding was showing as a white strip under the tinted band. */}
+        {/* pb-0 so the footer band reaches the card edge. */}
         <Card className="overflow-hidden pb-0">
           <CardHeader>
             <CardTitle className="text-base font-semibold">{t("list.title")}</CardTitle>
@@ -134,10 +113,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
                   })
                 : t("list.subtitle")}
             </CardDescription>
-            {/* Freshness and the folder toggle share one row: both are about how
-                you are viewing the list, neither is an action on it. Sitting
-                opposite the title they squeezed "What can be cleaned" onto two
-                lines on a phone. */}
+            {/* Both about the view, neither an action. */}
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
               {measuredAt ? <MeasuredAt at={measuredAt} /> : <span />}
   
@@ -165,8 +141,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
                       percent: result.disk?.percent ?? 0,
                     })}
                   </p>
-                  {/* Per category, because "freed 0 B" on one of five is the thing
-                      someone needs to see to understand the total. */}
+                  {/* Per category, so a "0 B" on one is visible behind the total. */}
                   <p className="text-xs text-muted-foreground">
                     {result.cleaned
                       .map((c) => `${labelFor(categories, c.key)} ${c.freed_human ?? "0 B"}`)
@@ -214,9 +189,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
                               />
                             </ReasonTooltip>
   
-                            {/* The whole block is the label, so the name, the
-                                description and the row's empty space all toggle
-                                the row — not just the 16px box. */}
+                            {/* The whole block is the label, so the entire row toggles. */}
                             <label
                               htmlFor={`clean-${category.key}`}
                               className={cn(
@@ -225,9 +198,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
                               )}
                             >
                               <div className="flex flex-wrap items-center gap-2">
-                                {/* Name and its ⓘ stay welded together — left as
-                                    separate flex items the icon wrapped onto a
-                                    line of its own, pointing at nothing. */}
+                                {/* Keeps the ⓘ from wrapping onto its own line. */}
                                 <span className="inline-flex items-center gap-1.5">
                                   <span className="text-sm font-medium">{category.label}</span>
                                   {category.note ? (
@@ -243,9 +214,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
                                   </Badge>
                                 ) : null}
   
-                                {/* The API decides what is safe to remove
-                                    unattended; anything else gets said out loud
-                                    rather than left to the size column. */}
+                                {/* The API decides what is safe to remove unattended. */}
                                 {!category.safe && !empty ? (
                                   <Badge variant="warning" className="font-normal">
                                     {t("list.checkFirst")}
@@ -265,9 +234,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
                                 </p>
                               ) : null}
   
-                              {/* Plain monospace, one path per line. Joined on a
-                                  single line they read as a row of links, and the
-                                  last one always got cut off. */}
+                              {/* One path per line, monospace. */}
                               {showPaths && category.paths?.length ? (
                                 <PathList
                                   paths={category.paths}
@@ -299,8 +266,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
                 </button>
   
                 <div className="flex items-center gap-2">
-                  {/* No separate Clear: the footer link already unselects
-                      everything, and two controls for one job is one too many. */}
+                  {/* No separate Clear: the footer link already unselects everything. */}
                   <ReasonTooltip
                     reason={
                       !canManage
@@ -313,15 +279,12 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
                     <Button
                       disabled={!canManage || chosen.length === 0}
                       onClick={() => {
-                        // The dialog's own onOpenChange clears this, but opening
-                        // from here never calls it — so a failure from a previous
-                        // attempt sat there describing a request nobody made.
+                        // Opening from here skips onOpenChange, so clear a stale error explicitly.
                         setError(null);
                         setConfirming(true);
                       }}
                     >
-                      {/* The button states the outcome, so the amount is on the
-                          control you press rather than only in the summary line. */}
+                      {/* The button states the amount it will free. */}
                       {chosen.length > 0
                         ? t("action.cleanSized", { size: humanBytes(chosenBytes) })
                         : t("action.clean")}
@@ -340,8 +303,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
             if (open) setError(null);
             setConfirming(open);
           }}
-          // The base width lives on a data-attribute variant, so a plain
-          // sm:max-w-* never wins — it has to be overridden in the same form.
+          // The base width is a data-attribute variant; a plain sm:max-w-* never wins.
           className="data-[size=default]:max-w-[calc(100vw-2rem)] data-[size=default]:sm:max-w-xl"
           icon={Trash2}
           tone="destructive"
@@ -352,8 +314,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
           pending={pending}
           onConfirm={clean}
         >
-          {/* The review step: exactly what was picked, what it frees, and the real
-              folders it touches — seen before anything is deleted, not after. */}
+          {/* Review before anything is deleted. */}
           <div className="overflow-hidden rounded-lg border">
             <ul className="max-h-72 divide-y overflow-auto">
               {chosen.map((category) => (
@@ -364,8 +325,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
                       {category.reclaimable_human}
                     </span>
                   </div>
-                  {/* One path per line, wrapping. A truncated path is worse than
-                      no path — it reads as if that were the whole folder. */}
+                  {/* One path per line, wrapping: a truncated path misleads. */}
                   {category.paths?.length ? (
                     <ul className="space-y-0.5">
                       {category.paths.map((path) => (
@@ -386,8 +346,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
             </div>
           </div>
   
-          {/* Named, not counted: "1 item needs care" makes you go back and hunt
-              for which one. */}
+          {/* Named, not counted. */}
           {riskyChosen.length ? (
             <p className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/5 p-3 text-xs text-warning">
               <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
@@ -416,10 +375,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
   );
 }
 
-// Plain monospace, one path per line. Capped at five because one category here
-// has fifteen, which pushed every other row off the screen — but the rest are a
-// click away rather than cut off, since a hidden path is what "show exact
-// folders" was turned on to avoid.
+// Paths shown per category before "more"; the rest stay one click away.
 const PATH_PREVIEW = 5;
 
 function PathList({ paths, moreLabel }) {
@@ -441,8 +397,7 @@ function PathList({ paths, moreLabel }) {
           type="button"
           className="mt-0.5 text-xs text-muted-foreground underline-offset-4 hover:underline"
           onClick={(e) => {
-            // Inside the row's <label>, so without this the click also toggles
-            // the checkbox.
+            // Inside the row's <label>: without this the click also toggles the checkbox.
             e.preventDefault();
             setExpanded((v) => !v);
           }}
@@ -458,8 +413,7 @@ function labelFor(categories, key) {
   return categories.find((c) => c.key === key)?.label ?? key;
 }
 
-// Only used for the live selection total; every other size on this page is the
-// string the API already formatted.
+// Only for the live selection total; other sizes are API-formatted strings.
 function humanBytes(bytes) {
   if (!bytes) return "0 B";
   const units = ["B", "KB", "MB", "GB", "TB"];

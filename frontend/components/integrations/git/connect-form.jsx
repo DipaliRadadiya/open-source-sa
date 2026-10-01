@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { ExternalLink, Info, KeyRound, Loader2, TriangleAlert } from "lucide-react";
@@ -27,60 +27,29 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-/** A pasted URL is never a token, and saying so beats a round-trip to GitHub. */
+/** A pasted URL is never a token; caught before a round-trip. */
 const LOOKS_LIKE_URL = /^https?:\/\//i;
 
 function isSecret(field) {
   return field.type === "password" || field.name === "token";
 }
 
-/**
- * The credential last, after the fields that describe where it comes from.
- *
- * GitLab sent `token` then `host`, and the "Create a token" link is BUILT from
- * `host` — so a self-hosted user clicked a link to gitlab.com, the wrong
- * server, because the field it depends on was below it. Ordering here rather
- * than asking the backend to reorder: this is a property of the form's
- * reading order, not of the provider.
- */
+// Credential last: its "Create a token" link is built from fields like `host`.
 function credentialLast(fields) {
   return [...fields].sort((a, b) => Number(isSecret(a)) - Number(isSecret(b)));
 }
 
-// Placeholders per provider field. The API sends name/label/required/type and
-// no example, so the copy lives here — keyed to the field names the provider
-// config actually defines. An unknown field gets no placeholder rather than a
-// missing-key crash.
+// Fields with a local placeholder (the API sends none); others get no placeholder.
 const PLACEHOLDER_FIELDS = new Set(["host", "workspace"]);
 
-/**
- * Our explanation for a field the API describes with a placeholder alone.
- *
- * Keyed by provider and field because the same name means different things:
- * GitLab's `host` is an optional self-hosted address, and nothing on screen
- * said that leaving it blank is the normal answer.
- *
- * Returns undefined for anything unlisted, so a field the backend adds later
- * renders exactly as it does today rather than with an invented sentence.
- */
+// Local help for fields the API sends without `help`.
 function fieldHelp(t, providerName, fieldName) {
   const key = `fieldHelp.${providerName}_${fieldName}`;
   return t.has(key) ? t(key) : undefined;
 }
 const TOKEN_PROVIDERS = new Set(["github", "gitlab", "bitbucket"]);
 
-/**
- * One line telling you which boxes to tick, scopes as code.
- *
- * This replaces a stack of three to four grey paragraphs under a single input
- * — the backend's prose description of the scopes, a provider caveat, and a
- * reassurance about what the panel does — all the same size and colour, so
- * nothing was scannable and the one instruction sat third. Reported as
- * congested, and it was: Bitbucket carried five separate blocks.
- *
- * Falls back to the backend's own sentence for a provider we have no copy for,
- * so a fourth one still explains itself.
- */
+// Falls back to the backend's sentence for providers without local copy.
 function ScopeHint({ provider, fallback }) {
   const t = useTranslations("git.connect");
   const key = `scopeHint_${provider.name}`;
@@ -89,16 +58,13 @@ function ScopeHint({ provider, fallback }) {
     return fallback ? <FormDescription>{fallback}</FormDescription> : null;
   }
 
-  // A permission that asks for more than it sounds like gets its reason
-  // written next to it, not behind a tooltip: GitLab's `api` is full access.
+  // Explains scopes broader than they sound (GitLab's `api` is full access).
   const noteKey = `scopeNote_${provider.name}`;
 
   return (
     <>
     <FormDescription>
       {t.rich(key, {
-        // The scope is a literal string to find in a list of checkboxes, so it
-        // is set as code — prose describing it is what people had to decode.
         scope: (chunks) => (
           <code className="rounded bg-muted px-1 py-0.5 font-mono text-foreground">{chunks}</code>
         ),
@@ -131,15 +97,7 @@ function fieldPlaceholder(t, providerName, fieldName) {
   return PLACEHOLDER_FIELDS.has(fieldName) ? t(`placeholders.${fieldName}`) : undefined;
 }
 
-/**
- * The connect form for one provider.
- *
- * Mounted fresh per provider (keyed by the caller) so the Zod schema, which is
- * generated from that provider's field list, is fixed for the life of the form.
- * The fields themselves are rendered from the backend's description of them —
- * one renderer, not three hardcoded forms, so a fourth provider is a backend
- * change only.
- */
+// Keyed per provider by the caller, so the generated Zod schema is fixed for the form's life.
 
 export function ConnectForm({
   provider,
@@ -150,9 +108,8 @@ export function ConnectForm({
 }) {
   const t = useTranslations("git.connect");
   const { name: brand } = useBranding();
-  const router = useRouter();
-  // Errors the API returns about the whole submission — a rejected token, most
-  // often. Shown in the form, because that is where the thing to fix is.
+  const { refreshAndWait } = useRefresh();
+  // Submission-level API errors (usually a rejected token), shown in the form.
   const [failure, setFailure] = useState(null);
 
   const defaults = { label: "" };
@@ -160,8 +117,6 @@ export function ConnectForm({
 
   const form = useForm({
     resolver: zodResolver(connectFormSchema(provider)),
-    // Blur-time errors on a half-filled new form read as being told off for
-    // moving to the next field.
     mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues: defaults,
@@ -177,21 +132,11 @@ export function ConnectForm({
 
     try {
       const { data } = await connectAccount(payload);
+      // Refresh before the toast so the account is already listed.
+      await refreshAndWait();
       toast.success(t("connected", { label: values.label }));
-      router.refresh();
-      /*
-       * The next action belongs on the refreshed account list, where it stays
-       * readable and actionable, rather than in a modal that closes on a timer.
-       *
-       * Reported for EVERY connect, not only the first. It used to be gated on
-       * the list being empty, so somebody adding a second account — the case
-       * where naming which one matters most — got nothing at all.
-       *
-       * The account itself is handed over, not a boolean: the prompt names it,
-       * and the link carries its id so the create form opens with it chosen.
-       * `id` comes from the response rather than the form, because only the
-       * server knows it.
-       */
+      // Reported for every connect; the list's next-step prompt names the
+      // account and links with its id (from the response).
       onAccountConnected?.({
         id: data?.git_account?.id ?? null,
         label: values.label,
@@ -209,13 +154,10 @@ export function ConnectForm({
 
   const submitting = form.formState.isSubmitting;
   const busy = submitting;
-  // useWatch, not form.watch(): the latter returns a fresh function each
-  // render, which opts this whole component out of the React compiler.
+  // useWatch, not form.watch(), which opts the component out of the React compiler.
   const host = useWatch({ control: form.control, name: "host" });
   const tokenUrl = createTokenUrl(provider.name, host, brand);
-  // The header chip is the TASK, not the provider: the band below carries the
-  // provider at 44px, and the same logo twice in a 512px dialog reads as a
-  // rendering mistake rather than as emphasis.
+  // The header shows the task; the band below shows the provider.
   const HeaderIcon = KeyRound;
 
   return (
@@ -229,19 +171,9 @@ export function ConnectForm({
         title={t("title", { provider: provider.title })}
         description={t("subtitle", { brand })}
         footer={
-          /*
-            One action in the footer.
-
-            "Back" used to sit here doing exactly what "Change" in the band now
-            does, so the dialog offered the same escape twice and gave the
-            weaker of the two equal footing with the only thing you came to
-            press. The band's version is better placed anyway — it is beside
-            the provider it would change.
-          */
+          /* One action; "Change" in the band replaces a Back button. */
           <div className="flex w-full justify-end">
-            {/* Named, not a spinner: the API verifies the credential against
-                the provider before storing it, so this genuinely waits on
-                GitHub, and a silent four seconds reads as broken. */}
+            {/* Labelled while busy: the API verifies the token with the provider. */}
             <Button type="submit" disabled={busy}>
               {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
               {submitting
@@ -251,16 +183,7 @@ export function ConnectForm({
           </div>
         }
       >
-        {/*
-          The account being connected, as a band at the top of the body.
-
-          The form had no focal point: three label-and-input pairs on a white
-          sheet, and the only sign of which provider you were on was a 36px
-          chip up in the dialog chrome. This is the same device the dashboard
-          uses for the server's identity — one tinted, elevated tile for the
-          thing the screen is actually about — and it gives "Change" a second,
-          findable home beside the provider it would change.
-        */}
+        {/* The provider being connected, with "Change". */}
         <div className="flex items-center gap-3 rounded-xl border border-primary/25 bg-primary/[0.06] p-3 shadow-e1 ring-1 ring-inset ring-background/60">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-card shadow-e1">
             <ProviderLogo provider={provider.name} className="size-6" />
@@ -285,8 +208,7 @@ export function ConnectForm({
           </div>
         ) : null}
 
-        {/* Ours, not the API's: the name is how this account is identified
-            everywhere else, including the app-create dropdown later. */}
+        {/* Local field: the label identifies the account across the panel. */}
         <FormField
           control={form.control}
           name="label"
@@ -314,14 +236,7 @@ export function ConnectForm({
             name={spec.name}
             render={({ field }) => (
               <FormItem>
-                {/*
-                  The action sits on the label row, not in the stack below.
-                  "Create a token on GitHub" was the third of four grey
-                  paragraphs under the input — the one thing on the field you
-                  can actually click, dressed identically to the prose around
-                  it. On the label row it is the second thing read, next to the
-                  field it fills.
-                */}
+                {/* The "Create a token" link sits on the label row. */}
                 <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                   <FormLabel required={spec.required}>
                     {spec.label}
@@ -350,9 +265,7 @@ export function ConnectForm({
                       spellCheck={false}
                       placeholder={fieldPlaceholder(t, provider.name, spec.name)}
                       {...field}
-                      // Tokens are pasted, and a copied line often carries a
-                      // trailing newline the provider then rejects for no
-                      // reason the user can see.
+                      // Trims pasted whitespace, which the provider would reject.
                       onChange={(event) => field.onChange(event.target.value.trim())}
                     />
                   ) : (
@@ -371,14 +284,7 @@ export function ConnectForm({
                     provider={provider}
                   />
                 ) : spec.help ?? fieldHelp(t, provider.name, spec.name) ? (
-                  /*
-                   * The backend's own words where it has them, ours where it
-                   * does not. The API sends `help` for tokens only, so the
-                   * remaining fields arrived with a placeholder and nothing
-                   * else — and a self-hosted URL box with an example in grey
-                   * does not say that leaving it empty is what most people
-                   * should do.
-                   */
+                  /* The API sends `help` for tokens only; local help covers the rest. */
                   <FormDescription>
                     {spec.help ?? fieldHelp(t, provider.name, spec.name)}
                   </FormDescription>
@@ -389,45 +295,18 @@ export function ConnectForm({
           />
         ))}
 
-        {/*
-          The Bitbucket note that used to sit here — "a repository-scoped token
-          will show only that repository" — is now the second half of that
-          provider's scope hint. It was saying the same thing as the backend's
-          own `token_help`, two blocks apart, in the same grey.
-        */}
       </FormModal>
     </Form>
   );
 }
 
-/**
- * Everything under the token input: one hint, and a warning only when earned.
- *
- * It used to be four stacked paragraphs — the backend's scope prose, the
- * create-token link, a provider caveat, and "we only read, never push". All
- * `FormDescription`, so all the same size and colour, so the one instruction
- * that mattered was third of four and nothing could be scanned.
- *
- * Where the three went: the link is on the label row; the caveats are folded
- * into each provider's single hint line, with the scopes as code; and "we only
- * read" is the dialog's subtitle, because it describes the panel rather than
- * this field.
- *
- * The scope names each provider needs are still spelled out exactly — GitHub's
- * link pre-ticks them, but Atlassian's page is a searchable list of 45
- * checkboxes with nothing marked, and GitLab's newer fine-grained tokens do
- * not offer the two the backend's help names at all. Both facts were learned
- * the hard way and neither is guessable from the provider's own UI.
- */
+// Scope names are spelled out: Bitbucket's and GitLab's token pages do not preselect them.
 function TokenHelp({ fallback, value, provider }) {
   const t = useTranslations("git.connect");
   const pastedUrl = LOOKS_LIKE_URL.test(value ?? "");
 
   return (
     <div className="space-y-1">
-      {/* Earned, not permanent: it appears only once the value already looks
-          wrong, so it is the only thing under the field that ever competes
-          with the hint. */}
       {pastedUrl ? <p className="text-xs text-warning">{t("looksLikeUrl")}</p> : null}
       <ScopeHint provider={provider} fallback={fallback} />
     </div>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useImperativeHandle, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { CircleAlert, CircleCheck, GitCommitHorizontal, History, Loader2, RotateCw, Rocket } from "lucide-react";
@@ -26,11 +26,9 @@ import {
 
 const LOG_POLL_MS = 3000;
 
-// `duration` is a count of seconds. Printed raw it read as a stray "60" in a
-// row of words, which looks like an id rather than how long the deploy took.
+// `duration` is seconds; raw it reads like an id.
 function humanDuration(seconds) {
-  // Null until the deploy finishes — and `Number(null)` is 0, not NaN, so a
-  // running deploy printed a confident "0s".
+  // Null until the deploy finishes; `Number(null)` is 0, which would print "0s".
   if (seconds === null || seconds === undefined || seconds === "") return null;
   const total = Number(seconds);
   if (!Number.isFinite(total) || total < 0) return null;
@@ -47,26 +45,17 @@ const TONE = {
   queued: { icon: Loader2, badge: "muted", dot: "text-muted-foreground", spin: true },
 };
 
-/**
- * Every deploy this site has run.
- *
- * The screen had a Deploy button and nothing else: no way to tell whether the
- * last one worked, what it built, or why it failed. The build output is the
- * thing people actually come for, and the API sends it only on the detail call
- * — so a row opens it rather than the list carrying fifty build logs nobody
- * asked for.
- */
+// Build output is only on the detail call, so a row opens it.
 export function DeployHistoryCard({ ref, applicationId, deployments, canManage }) {
   const t = useTranslations("applications.deployment.history");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [open, setOpen] = useState(null);
   const [loading, setLoading] = useState(false);
   // A log that failed to load is not a deploy that printed nothing.
   const [logFailed, setLogFailed] = useState(false);
   const [busyId, setBusyId] = useState(null);
 
-  // The API decides what still counts as running, so this does not need its own
-  // copy of which statuses are terminal.
+  // The API decides what counts as running; no local list of terminal statuses.
   const running = deployments.some((deployment) => deployment.in_flight);
 
   const show = useCallback(
@@ -88,8 +77,8 @@ export function DeployHistoryCard({ ref, applicationId, deployments, canManage }
     [applicationId, t],
   );
 
-  // The backend adds each step's output as the step ends, so a log opened on a
-  // running deploy keeps growing. Re-read it until the deploy stops.
+  // The backend appends each step's output as it ends, so re-read an open log until
+  // the deploy stops.
   const openId = open?.id ?? null;
   const openRunning = Boolean(open?.in_flight);
   useEffect(() => {
@@ -110,13 +99,7 @@ export function DeployHistoryCard({ ref, applicationId, deployments, canManage }
     };
   }, [applicationId, openId, openRunning]);
 
-  // The failure banner up on the Deploy card opens a build log from here: the
-  // evidence for "the setup script failed" lives in this dialog, and making
-  // someone scroll down and guess which row to click is the gap this closes.
-  //
-  // Imperative rather than an `openId` prop because the trigger is a click, not
-  // a render — routing it through state would mean opening a dialog from an
-  // effect, which is both a lint error and a lie about what happened.
+  // Lets the Deploy card's failure banner open a build log here without an effect.
   useImperativeHandle(ref, () => ({ show }), [show]);
 
   async function redeploy(deployment) {
@@ -124,8 +107,8 @@ export function DeployHistoryCard({ ref, applicationId, deployments, canManage }
     setBusyId(deployment.id);
     try {
       await redeployDeployment(applicationId, deployment.id);
+      await refreshAndWait();
       toast.success(t("redeployStarted"));
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("redeployFailed")));
     } finally {
@@ -139,8 +122,7 @@ export function DeployHistoryCard({ ref, applicationId, deployments, canManage }
 
   return (
     <Card className={cn("gap-0 overflow-hidden py-0", PANEL_CARD)}>
-      {/* A deploy takes a minute or two. Without this the row says "Running"
-          until someone reloads, which reads as stuck. */}
+      {/* Without this the row says "Running" until a reload. */}
       {running ? <AutoRefresh intervalMs={5000} stopAfterMs={900000} /> : null}
 
       <div className="flex items-center justify-between gap-3 border-b px-5 py-4">
@@ -190,8 +172,7 @@ export function DeployHistoryCard({ ref, applicationId, deployments, canManage }
                     ) : null}
                     {deployment.branch ? <span className="font-mono">{deployment.branch}</span> : null}
                     <span>{deployment.trigger_title ?? deployment.trigger}</span>
-                    {/* Null for a push — nobody pressed anything, so naming an
-                        actor would be an invention. */}
+                    {/* Null for a push: no one pressed anything, so no actor is named. */}
                     <span>{deployment.user?.username ?? t("system")}</span>
                     {deployment.created_at_human ? <span>{deployment.created_at_human}</span> : null}
                     {humanDuration(deployment.duration) ? (
@@ -200,10 +181,8 @@ export function DeployHistoryCard({ ref, applicationId, deployments, canManage }
                   </span>
                 </button>
 
-                {/* One deploy at a time: while any Redeploy is starting, or a
-                    deploy is running, every row waits and says why. Only the
-                    clicked row used to lock, so a second click took its
-                    spinner and raced the first on the server. */}
+                {/* One deploy at a time: while any redeploy is starting or a deploy is running,
+                    every row is disabled with the reason, so a second click cannot race the first. */}
                 <ReasonTooltip
                   reason={
                     !canManage

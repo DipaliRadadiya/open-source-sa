@@ -7,9 +7,7 @@ const EMPTY = {
   meta: { current_page: 1, per_page: 10, total: 0, last_page: 1 },
 };
 
-// WHICH failure, not just that there was one. A shared FAILED constant made a
-// refusal, a crash and an unreachable API render the same sentence, so the box
-// could not be wrong — it never said anything specific enough to be.
+// Carries which failure (refusal, crash, unreachable) so the page can name it.
 const failedWith = (result) => ({
   ...EMPTY,
   failed: true,
@@ -19,23 +17,19 @@ const failedWith = (result) => ({
   debug: result.debug,
 });
 
-/**
- * The current user's own activity history (GET /activity-log). Returns a safe
- * empty result on failure.
- */
+// Returns a safe empty result on failure.
 export async function getMyActivity(searchParams = {}, scope) {
   const perPage = PER_PAGE_OPTIONS.includes(Number(searchParams.per_page))
     ? Number(searchParams.per_page)
     : 10;
   const page = Math.max(1, Number(searchParams.page) || 1);
 
-  // No filter[user_id] here — the endpoint is always scoped to the caller, and
-  // `search` matches type + action only (there's one actor, so no names).
+  // No filter[user_id]: the endpoint is always scoped to the caller, and
+  // `search` matches type + action only.
   const result = await read("/activity-log", myActivityResponseSchema, {
     searchParams: {
       search: searchParams.search?.trim() || undefined,
-      // Fixed by the page, not the URL: the server page is server rows and the
-      // account tab is account rows. Nothing in the query string can widen it.
+      // Fixed by the page, not the URL, so the query string cannot widen it.
       "filter[scope]": scope || undefined,
       "filter[type]": searchParams.type || undefined,
       "filter[action]": searchParams.action || undefined,
@@ -44,10 +38,8 @@ export async function getMyActivity(searchParams = {}, scope) {
     },
   });
 
-  // A failed request must not degrade to an empty list: "nothing happened yet"
-  // and "we couldn't load your history" look identical to the user, and with
-  // filters applied it reads as "no matches" — a wrong answer, not an error.
-  // It's flagged rather than thrown: the rest of the account page is fine.
+  // A failure is flagged, not returned as an empty list (which would read as
+  // "no activity" or "no matches"), and not thrown: the rest of the page works.
   if (result.failed) return failedWith(result);
 
   return { ...result.data, failed: false, status: result.status, failure: null, message: null, debug: false };

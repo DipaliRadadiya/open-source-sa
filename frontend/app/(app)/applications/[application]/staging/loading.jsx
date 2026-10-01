@@ -1,12 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/**
- * Mirrors `StagingPanel`, capped at `max-w-4xl` like the panel.
- *
- * 153px is the card for a site that already has a copy — the shorter of the
- * two states, so the placeholder never leaves a gap larger than the content
- * that replaces it.
- */
+// 153px matches the shorter staging state, so the placeholder never exceeds the content.
 export default function Loading() {
   return (
     <div className="space-y-6">

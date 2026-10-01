@@ -40,25 +40,22 @@ export default async function ApplicationLogsPage({ params, searchParams }) {
     getApplication(id),
     cookies(),
   ]);
-  // The reader's own choices from last time — see lib/logs/app-log-prefs.js.
+  // See lib/logs/app-log-prefs.js.
   const followPrefs = parseFollowPrefs(safeDecode(cookieStore.get(APP_LOG_FOLLOW_COOKIE)?.value));
   const lines = parseLinesPref(cookieStore.get(APP_LOG_LINES_COOKIE)?.value, DEFAULT_LINES);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
-  // The site is gone. Land on the list — the only place left to go — and say
-  // why on arrival, rather than parking on a dead end that offers one link.
+  // Site deleted: back to the list, which explains why on arrival.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application)
     return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   const application = result.application;
-  // app_log is its own grant — a site's access log and the machine's auth.log
-  // are different things to be trusted with.
+  // app_log is its own grant, separate from server logs.
   if (!can(appPermissions, "app_log", "view", "application")) {
     return <PermissionDenied title={t("pageTitle")} />;
   }
 
-  // Emptying a log is a different trust from reading one.
   const canManage = can(appPermissions, "app_log", "manage", "application");
   const settled = isSettled(application);
 
@@ -66,8 +63,7 @@ export default async function ApplicationLogsPage({ params, searchParams }) {
     ? await getApplicationLogs(id)
     : { logs: [], failed: false, status: null, failure: null };
 
-  // Land on a source that has data if one exists, so a fresh site doesn't open
-  // to an empty access log when its error log has something.
+  // Prefer a source that has data, so a new site does not open on an empty log.
   const selected =
     sources.find((s) => s.key === sp?.source)?.key ??
     sources.find((s) => s.exists)?.key ??

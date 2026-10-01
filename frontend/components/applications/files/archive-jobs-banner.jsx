@@ -8,43 +8,27 @@ import { ARCHIVE_IN_FLIGHT, archiveJobsResponseSchema } from "@/lib/schemas/file
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatBytes } from "@/lib/format/bytes";
 
-// Two rates, because this polls even when nothing is happening — it has to,
-// or a job started on another tab or before this page loaded would never
-// appear. At one fixed fast rate that is 30 requests a minute, forever, for a
-// page someone left open on a folder listing.
+// Two rates: this must poll even when idle (jobs started in another tab or before
+// page load), so the idle rate is kept slow.
 const POLL_ACTIVE_MS = 2000;
 const POLL_IDLE_MS = 15000;
 
-/**
- * Says that an archive is being built, because nothing else can.
- *
- * Compress and extract moved to the queue: the request now returns 202 and the
- * archive appears some minutes later. Without this the button looks broken —
- * it closes its dialog, nothing changes in the listing, and the file shows up
- * later with no explanation. That is worse than the timeout it replaced,
- * because at least the timeout said something eventually.
- *
- * `router.refresh()` on completion rather than inserting the row here: the
- * listing is server-rendered, so a client-side write that does not refresh
- * leaves the sibling card showing page-load state forever.
- */
+// Compress/extract are queued (202), so without this the button looks broken.
+// Refreshes on completion: the listing is server-rendered.
 export function ArchiveJobsBanner({ appId }) {
   const t = useTranslations("applications.files.archiveJobs");
   const router = useRouter();
   const format = useFormatter();
   const [jobs, setJobs] = useState([]);
-  // Which finished jobs have already been announced. Without it the toast
-  // fires on every poll for the five minutes a completed row stays visible.
+  // Finished jobs already announced; completed rows stay in the response for five
+  // minutes.
   const announced = useRef(new Set());
-  // The API returns recent completions too, so the first answer on every page
-  // load held jobs that finished before this visit: each one toasted again,
-  // five at once on a real server. Only a job that lands while this page is
-  // open is news.
+  // The API also returns recent completions, so the first response on each page
+  // load is not news; only jobs that finish while the page is open are announced.
   const primed = useRef(false);
 
-  // Drives the interval below. Held in state rather than derived from `jobs`
-  // so the effect re-runs — and so the switch back to idle happens on the
-  // poll that sees the last job land, not one tick later.
+  // In state rather than derived from `jobs`, so the effect re-runs and the switch
+  // back to idle happens on the poll that sees the last job land.
   const [rate, setRate] = useState(POLL_IDLE_MS);
 
   useEffect(() => {
@@ -80,19 +64,15 @@ export function ArchiveJobsBanner({ appId }) {
             landed = true;
             toast.success(t(`done.${job.operation}`, { target: job.target }));
           } else {
-            // The reference is what support asks for; the message is already
-            // in this viewer's locale because the reason is stored as a code.
+            // The reason is stored as a code, so the message is already in the viewer's locale.
             toast.error(job.message ?? t("failed"));
           }
         }
 
-        // Only when something actually finished. Refreshing on every poll
-        // would re-render the whole listing every two seconds.
+        // Refresh only when something finished, not on every poll.
         if (landed) router.refresh();
       } catch {
-        // A failed poll is not worth a message of its own — the next one is
-        // two seconds away, and a toast per failure would bury the screen if
-        // the panel goes briefly unreachable.
+        // A failed poll is silent; the next one is two seconds away.
       }
     }
 

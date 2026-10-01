@@ -6,32 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { IconTooltip } from "@/components/ui/icon-tooltip";
 
-// The API bounds both lists at 50 entries of 1–255 characters. Enforced here
-// too, so the limit is visible while typing instead of arriving as a 422.
+// The API bounds both lists at 50 entries of 1–255 characters; mirrored here.
 const MAX_ITEMS = 50;
 const MAX_LENGTH = 255;
 
-// A term this short matches inside ordinary words — the documented case is a
-// rule guarding ".conf" that also blocked confirm.min.js and confused.jpg.
-// Worth saying, not worth blocking: a deliberate short term is still valid.
-// The bound has to cover "conf" itself, or the warning cites an example it
-// would not actually have warned about.
+// A term this short matches inside ordinary words (".conf" blocks confirm.min.js).
+// Warned, not blocked. Must cover "conf", the example the warning cites.
 const SHORT_TERM_LENGTH = 6;
 
 // Rows shown before the list becomes its own scroll region.
 const VISIBLE_ROWS = 8;
 
-/**
- * A bounded list of plain words — exceptions to skip, or extra terms to block.
- *
- * One entry per row rather than wrapping chips: these are request fragments of
- * wildly different lengths, and reflowed chips leave the remove buttons landing
- * wherever the text happens to end. Same shape as the fail2ban ignore list,
- * which solved this already.
- *
- * Nothing here is a regex — the API takes plain strings and does a substring
- * match, so the input stays a plain input with no syntax to get wrong.
- */
+// The API does a plain substring match, so nothing here is a regex.
 export function RuleList({ items, onChange, disabled, placeholder, emptyText, warnShort = false, minLength = 1 }) {
   const t = useTranslations("applications.firewall");
   const [draft, setDraft] = useState("");
@@ -52,8 +38,7 @@ export function RuleList({ items, onChange, disabled, placeholder, emptyText, wa
       return;
     }
     setError(null);
-    // A duplicate is not an error worth a message — the entry the user wanted
-    // is already there, so clearing the box is the whole correct response.
+    // A duplicate just clears the box; the entry is already there.
     if (!items.includes(value)) onChange([...items, value]);
     setDraft("");
   }
@@ -61,9 +46,7 @@ export function RuleList({ items, onChange, disabled, placeholder, emptyText, wa
   return (
     <div className="space-y-2">
       {items.length > 0 ? (
-        // The API allows 50 entries, and 50 rows rendered straight out turn the
-        // whole page into one long list with the controls that manage it pushed
-        // off screen. Past a screenful it scrolls in place instead.
+        // Scrolls in place past a screenful so the controls stay reachable.
         <ul
           className={cn(
             "space-y-1.5",
@@ -103,10 +86,7 @@ export function RuleList({ items, onChange, disabled, placeholder, emptyText, wa
             setDraft(event.target.value);
             if (error) setError(null);
           }}
-          // Enter adds the entry. This list is not inside a <form>, so there is
-          // no submit to accidentally trigger — but the key still has to work,
-          // because typing then reaching for the mouse is not how anyone
-          // fills in a list.
+          // Enter adds the entry (not inside a <form>, so nothing else submits).
           onKeyDown={(event) => {
             if (event.key !== "Enter") return;
             event.preventDefault();
@@ -115,10 +95,8 @@ export function RuleList({ items, onChange, disabled, placeholder, emptyText, wa
           placeholder={placeholder}
           spellCheck={false}
           autoComplete="off"
-          // Deliberately no `maxLength`: it caps a paste silently at 255 with
-          // no explanation, and it also made the length check below permanently
-          // unreachable. Letting the value through and saying why it was
-          // rejected is the honest half of that trade.
+          // Deliberately no `maxLength`: it would silently truncate a paste and
+          // make the length check above unreachable.
           disabled={disabled || full}
           aria-label={placeholder}
         />

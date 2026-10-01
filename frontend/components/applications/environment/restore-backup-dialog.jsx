@@ -10,15 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-/**
- * Restore the .env from one of the recent backups. Restoring first backs up the
- * current file, so picking the wrong one is itself undoable — said in the copy
- * so it doesn't feel like a one-way door.
- *
- * On ConfirmDialog rather than raw Dialog parts: a confirmation with a picker
- * and an opt-in checkbox is still a confirmation, and the shared dialog's body
- * slot takes both. Rebuilding the shell here let it drift from every other one.
- */
+// Restoring first backs up the current file, so the choice is itself undoable.
 export function RestoreBackupDialog({
   appId,
   backups = [],
@@ -75,12 +67,8 @@ export function RestoreBackupDialog({
       // Wider than a yes/no confirmation: the body lists backup filenames.
       className="sm:!max-w-lg"
     >
-      {/* A choice of one, so a radio group: a row of plain buttons told a
-          screen reader nothing about which copy was picked. The saved time
-          leads — it is what people choose by — and the file name follows for
-          anyone matching it against the server. */}
-      {/* Bounded: twenty backups pushed Restore and Cancel a screen below
-          the list on a phone. The padding keeps focus rings inside the clip. */}
+      {/* A radio group so screen readers announce the selection. */}
+      {/* Height-bounded so the buttons stay reachable on phones; padding keeps focus rings unclipped. */}
       <div
         role="radiogroup"
         aria-label={t("restore.title")}

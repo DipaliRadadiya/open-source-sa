@@ -30,8 +30,8 @@ export default async function DiskCleanerPage() {
   if (!can(permissions, "disk_cleaner", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "disk_cleaner", "manage");
 
-  // The schedule and history are secondary: if either fails the page is still
-  // useful, so they degrade to null/empty rather than taking the page down.
+  // Schedule and history are secondary: on failure they degrade to null/empty
+  // rather than taking the page down.
   const [{ data, failed, status, failure, message }, schedule, { runs }] = await Promise.all([
     getDiskCleaner(),
     getCleanerSchedule(),
@@ -49,10 +49,7 @@ export default async function DiskCleanerPage() {
     <div className="space-y-6">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
-      {/* Status across the top, the thing you act on underneath.
-          A side column held only two short cards against a long list, so the
-          page ended in a tall empty strip; side by side they fill one band and
-          the list gets the full width it actually needs. */}
+      {/* Status cards side by side across the top; the list gets full width below. */}
       <div className="max-w-5xl space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
           <DiskSummary
@@ -74,8 +71,7 @@ export default async function DiskCleanerPage() {
   );
 }
 
-// The API formats every per-category size; only this page-level total is ours
-// to format, because it is a sum the API never sends.
+// Only this page-level total is formatted locally: the API never sends the sum.
 function humanBytes(bytes) {
   if (!bytes) return "0 B";
   const units = ["B", "KB", "MB", "GB", "TB"];

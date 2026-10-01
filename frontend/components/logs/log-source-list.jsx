@@ -29,14 +29,7 @@ function groupSources(sources) {
     .filter((g) => g.items.length > 0);
 }
 
-/**
- * Source picker. Unreadable sources stay listed — knowing a log exists on the
- * box is useful even when the panel can't open it yet — but they're clearly
- * inert, and each says why rather than just refusing to react.
- *
- * Below `lg` the rail becomes a single select: stacked above the console it
- * would push the actual log a full screen down on a phone.
- */
+// Unreadable sources stay listed but inert. Below `lg` the rail becomes a select.
 export function LogSourceList({ sources, selected, onSelect, now }) {
   const t = useTranslations("logs");
   const format = useFormatter();
@@ -56,13 +49,11 @@ export function LogSourceList({ sources, selected, onSelect, now }) {
           <SelectContent position="popper">
             {groups.map(({ group, items }) => (
               <SelectGroup key={group}>
-                {/* Same micro-label as the desktop rail — one list, one style. */}
+                {/* Same micro-label as the desktop rail. */}
                 <SelectLabel className="text-[12px] font-semibold uppercase tracking-wider text-foreground/75">
                   {t.has(`groups.${group}`) ? t(`groups.${group}`) : group}
                 </SelectLabel>
-                {/* Block-level wrapper: the default inline one put two locked
-                    logs side by side on one row. The short reason is written on
-                    the item too, so it is there before anyone hovers or taps. */}
+                {/* The reason is written on the item so it shows without hover or tap. */}
                 {items.map((source) => (
                   <ReasonTooltip
                     key={source.key}
@@ -96,9 +87,7 @@ export function LogSourceList({ sources, selected, onSelect, now }) {
         {groups.map(({ group, items }) => {
           const meta = GROUP_META[group] ?? FALLBACK_GROUP;
           const Icon = meta.icon;
-          // A hairline per group (divide-y on the parent). With the headings
-          // deliberately quiet, the separator is what makes the groups
-          // findable — otherwise the rail reads as one undifferentiated column.
+          // A hairline per group keeps the quiet headings findable.
           return (
             <section key={group} className="space-y-1 py-3 first:pt-0 last:pb-0">
               <h3 className="flex items-center gap-2 px-2.5 text-[12px] font-semibold uppercase tracking-wider text-foreground/75">
@@ -126,8 +115,7 @@ export function LogSourceList({ sources, selected, onSelect, now }) {
         })}
         </div>
 
-        {/* The empty half of a full-height card is dead space; this is the one
-            fact the page opens with, kept where the eye lands last. */}
+        {/* Summary footer in the otherwise empty bottom of the card. */}
         <div className="border-t px-4 py-2.5 text-xs text-muted-foreground">
           {lockedCount > 0
             ? t("railSummaryLocked", { total: sources.length, locked: lockedCount })
@@ -152,8 +140,7 @@ function SourceButton({ source, selected, onSelect, size, modified, active, form
       className={cn(
         "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-        // The file name is what you're scanning for, so it carries the weight —
-        // the group heading above it stays quiet.
+        // The file name carries the weight; the group heading stays quiet.
         source.readable
           ? "font-medium text-foreground hover:bg-muted"
           : "cursor-not-allowed text-muted-foreground",
@@ -161,9 +148,7 @@ function SourceButton({ source, selected, onSelect, size, modified, active, form
           "bg-primary/10 font-medium text-primary shadow-[inset_2px_0_0_0_var(--color-primary)] hover:bg-primary/15",
       )}
     >
-      {/* Written to in the last few minutes. A dot answers "is this log live?"
-          at a glance, where a relative timestamp would eat a quarter of the
-          row to answer it worse. */}
+      {/* Written to in the last few minutes: a dot answers "is this live?". */}
       {active ? (
         <span className="relative flex size-1.5 shrink-0" aria-hidden="true">
           <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-75 motion-reduce:hidden" />
@@ -171,15 +156,11 @@ function SourceButton({ source, selected, onSelect, size, modified, active, form
         </span>
       ) : null}
       <span className="min-w-0 flex-1 truncate">{source.label}</span>
-      {/* Size shows for locked sources too: "syslog is 10 MB" is useful even
-          when you can't open it, and dropping it made those rows look like
-          they held less information rather than less access. */}
+      {/* Size shows for locked sources too; it is useful without access. */}
       {size ? (
         <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{size}</span>
       ) : null}
-      {/* The slot is always there, empty when the log is readable: sized in
-          tabular-nums to read as a column, the numbers can't be allowed to
-          shift by a lock's width from one row to the next. */}
+      {/* The lock slot is always reserved so sizes stay aligned as a column. */}
       <span className="flex size-3.5 shrink-0 items-center justify-center">
         {!source.readable ? <Lock className="size-3.5 text-muted-foreground/70" /> : null}
       </span>
@@ -196,9 +177,7 @@ function SourceButton({ source, selected, onSelect, size, modified, active, form
     );
   }
 
-  // A disabled control swallows pointer events, so the tooltip needs a wrapper
-  // to hang off — otherwise the one item that most needs an explanation is the
-  // one that can't show it.
+  // A disabled control swallows pointer events, so the tooltip hangs off a focusable wrapper.
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -209,8 +188,7 @@ function SourceButton({ source, selected, onSelect, size, modified, active, form
           {button}
         </span>
       </TooltipTrigger>
-      {/* Above the item, over the light rail rather than the dark console —
-          kept short and narrow so the box stays close to its row. */}
+      {/* Above the item, short and narrow so it stays close to its row. */}
       <TooltipContent
         side="top"
         sideOffset={6}

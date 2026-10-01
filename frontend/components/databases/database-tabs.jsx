@@ -6,26 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollFade } from "@/components/ui/scroll-fade";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-/**
- * One database's sections, one at a time.
- *
- * They used to be four stacked cards. That reads fine with two users and two
- * exports, and falls apart the moment a database has twenty of either — tables
- * and exports end up below the fold, and someone who has not scrolled concludes
- * they do not exist. Tabs keep every section one click from the top of the
- * page regardless of how long any one of them gets.
- *
- * The counts live in the labels so you can see what is in each section without
- * opening it — the main thing a tab strip otherwise costs you.
- *
- * The open tab is written to the URL, so refreshing after an export keeps you
- * on Exports and a link to it opens where it was sent from. `replaceState`
- * rather than a route change: the sections are already on the page, so there is
- * nothing to re-fetch, and Back should return to the list rather than step
- * through tabs.
- */
+// `replaceState`, not a route change: sections are loaded, and Back should return to the list.
 const VALUES = ["users", "tables", "exports"];
-// The tab value is in the URL, so a link made before the rename still exists.
+// Old tab values still appear in saved links.
 const LEGACY = { backups: "exports" };
 
 export function DatabaseTabs({ users, tables, exports: exportsNode, counts, initial }) {
@@ -51,9 +34,8 @@ export function DatabaseTabs({ users, tables, exports: exportsNode, counts, init
   return (
     <div className="space-y-4">
       <Tabs value={tab} onValueChange={select} className="gap-4">
-        {/* Scrolls rather than wraps, same as the Settings tab bar: a bar that
-            reflows to two rows stops reading as one control. ScrollFade is what
-            says there is more to the side. */}
+        {/* Scrolls rather than wraps, like the Settings tab bar; ScrollFade
+            signals more content to the side. */}
         <ScrollFade className="-mx-1 px-1 pb-1">
           <TabsList className="!h-auto w-fit gap-1 p-1">
             {sections.map((section) => (
@@ -63,8 +45,7 @@ export function DatabaseTabs({ users, tables, exports: exportsNode, counts, init
                 className="!h-auto gap-2 px-4 py-2"
               >
                 {section.label}
-                {/* Zero is worth showing too: "Users 0" is the fact that nothing
-                    can connect, which is exactly what someone needs to see. */}
+                {/* Zero is shown too: "Users 0" means nothing can connect. */}
                 {section.count === null ? null : (
                   <Badge variant="secondary" className="ml-1.5 font-normal tabular-nums">
                     {section.count}
@@ -75,10 +56,8 @@ export function DatabaseTabs({ users, tables, exports: exportsNode, counts, init
           </TabsList>
         </ScrollFade>
 
-        {/* Inside real tab panels: rendered beside the tabs, each tab's
-            aria-controls pointed at a panel that did not exist, so a screen
-            reader could not get from a tab to its content. Only the active
-            panel mounts, as before — the data is already on the page. */}
+        {/* Inside real tab panels so each tab's aria-controls resolves. Only
+            the active panel mounts. */}
         {sections.map((section) => (
           <TabsContent key={section.value} value={section.value}>
             {section.node}

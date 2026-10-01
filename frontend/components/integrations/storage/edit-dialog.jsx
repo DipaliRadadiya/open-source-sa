@@ -17,21 +17,7 @@ import { DestinationFormFields } from "@/components/integrations/storage/destina
 import { GoogleDriveConnect } from "@/components/integrations/storage/google-drive-connect";
 import { GoogleDriveSetup } from "@/components/integrations/storage/google-drive-setup";
 
-/**
- * Editing where a destination points — deliberately without the credentials,
- * and deliberately without the provider.
- *
- * The API reads the *presence* of a credential as "rotate this", so a form
- * that posted everything it knew about would overwrite the stored secrets with
- * whatever happened to be in its state. Rotation is its own dialog; this one
- * cannot touch them by construction.
- *
- * The provider is immutable server-side — the config blob's shape is defined
- * by it, so changing it would reinterpret a bucket and a secret key as a
- * hostname and a password. There is no picker here because a control whose
- * only possible outcome is a 422 is not a control; the copy says to delete and
- * recreate instead.
- */
+// No credentials (the API reads their presence as "rotate") and no provider (immutable).
 export function EditDestinationDialog({ destination, open, onOpenChange, oauthRedirectUri }) {
   const t = useTranslations("storage.edit");
   const { refreshAndWait } = useRefresh();
@@ -41,8 +27,7 @@ export function EditDestinationDialog({ destination, open, onOpenChange, oauthRe
 
   const schema = useMemo(() => editStorageDestinationSchema(destination), [destination]);
 
-  // The non-secret config as the API reports it. Secrets are absent from the
-  // response entirely, so there is nothing to accidentally round-trip.
+  // The non-secret config from the API; secrets are never in the response.
   const values = useMemo(() => {
     const config = {};
 
@@ -69,9 +54,8 @@ export function EditDestinationDialog({ destination, open, onOpenChange, oauthRe
     try {
       await updateDestination(destination.id, {
         name: formValues.name.trim(),
-        // Sent as an empty string rather than omitted: the backend treats an
-        // absent key as "keep what is stored", so clearing a field has to be
-        // explicit or it silently does nothing.
+        // Empty string, not omitted: the backend treats an absent key as "keep
+        // what is stored", so clearing must be explicit.
         prefix: formValues.prefix?.trim() ?? "",
         config: submittableConfig(provider, formValues.config),
       });
@@ -119,27 +103,17 @@ export function EditDestinationDialog({ destination, open, onOpenChange, oauthRe
           hideSecrets
           existing
         />
-        {/* Approval lives here rather than in the create dialog because the
-            connection needs a destination that already exists — the sealed
-            `state` is issued against its id, and the refresh token is written
-            onto its row. So: save the client id and secret first, then connect.
-
-            No completion handler: Connect navigates the whole browser to
-            Google, so this dialog is gone by the time anything is approved.
-            The operator comes back to the callback page, not to here. */}
+        {/* Here, not in create: the OAuth `state` is issued against an existing id. */}
         {provider === "google_drive_oauth" ? (
           <>
-            {/* Collapsed here: this reader already has a client and wants the
-                Connect button. It stays available because reconnecting is also
-                when somebody discovers their client was registered with the
-                wrong redirect URL, and that is the value they need. */}
+            {/* Collapsed; still available because reconnecting is when a wrong
+                redirect URL is usually discovered. */}
             <GoogleDriveSetup redirectUri={oauthRedirectUri} />
             <GoogleDriveConnect destination={destination} />
           </>
         ) : null}
         <p className="text-xs text-muted-foreground">{t("credentialsUntouched")}</p>
-        {/* Why there is no provider control, rather than leaving its absence
-            to be discovered. */}
+        {/* Explains why there is no provider control. */}
         <p className="text-xs text-muted-foreground">
           {t("providerLocked", { provider: destination?.provider_title ?? provider })}
         </p>
@@ -148,12 +122,8 @@ export function EditDestinationDialog({ destination, open, onOpenChange, oauthRe
   );
 }
 
-/**
- * Only the non-secret fields, always sent — including the empty ones.
- *
- * A credential key must never appear here: its presence is what the API reads
- * as "rotate", so including an empty `password` would clear a working one.
- */
+// Non-secret fields only, empty ones included. A credential key must never appear:
+// an empty `password` would clear a working one.
 function submittableConfig(provider, config = {}) {
   const entries = fieldsFor(provider)
     .filter((f) => f.kind !== "secret" && f.kind !== "textarea")

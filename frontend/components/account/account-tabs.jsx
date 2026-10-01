@@ -54,8 +54,8 @@ export function AccountTabs({
 
   const onChange = useCallback(
     (next) => {
-      // Confirm before leaving Profile with unsaved edits (our dialog, not the
-      // browser's — a beforeunload prompt can't be styled).
+      // Confirm before leaving Profile with unsaved edits (a styled dialog,
+      // not beforeunload).
       if (tab === "profile" && next !== "profile" && profileDirty) {
         setPendingTab(next);
         return;
@@ -67,9 +67,7 @@ export function AccountTabs({
 
   return (
     <Tabs value={tab} onValueChange={onChange} className="gap-6">
-      {/* Scrolls rather than wraps, same as the Settings tab bar: a bar that
-          reflows to two rows stops reading as one control. ScrollFade is what
-          says there is more to the side. */}
+      {/* Scrolls rather than wraps, like the Settings tab bar; ScrollFade hints at overflow. */}
       <ScrollFade className="-mx-1 px-1 pb-1">
         <TabsList className="!h-auto w-fit gap-1 p-1">
           <TabsTrigger value="profile" className={TRIGGER}>
@@ -98,19 +96,13 @@ export function AccountTabs({
       <TabsContent value="activity">
         <NavTransitionProvider>
           <div className="space-y-4">
-            {/* extraQuery keeps ?tab=activity on the URL: the tab is written
-                with history.replaceState, which the router doesn't see, so a
-                filter navigation would otherwise drop it. */}
-            {/* This tab is account rows only, but the filters endpoint spans
-                both scopes — unfiltered it would offer "Firewall" here. */}
+            {/* extraQuery keeps ?tab=activity: the tab is set via history.replaceState, which the router does not see. */}
             <ActivityToolbar
               types={typesForScope(filters.types, "account")}
               actions={actionsForScope(filters.actions, filters.types, "account")}
               extraQuery={{ tab: "activity" }}
             />
-            {/* Checked before "no entries": with filters applied a failure
-                would otherwise read as "no matches", which is a wrong answer
-                rather than an error. */}
+            {/* Checked before "no entries", so a failure never reads as "no matches". */}
             {activityFailed ? (
               <LoadFailed status={activityStatus} failure={activityFailure} message={activityMessage} />
             ) : entries.length ? (

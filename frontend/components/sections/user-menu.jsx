@@ -19,10 +19,6 @@ import { apiMessage } from "@/lib/api/error-message";
 import { initials } from "@/lib/format/initials";
 import { useUnsaved } from "@/components/ui/unsaved-guard";
 
-/**
- * Avatar dropdown shared by both panels' headers. `extraItems` slots panel-
- * specific actions (e.g. the Admin Panel / Exit switch) above Log out.
- */
 export function UserMenu({ extraItems, impersonating = false }) {
   const router = useRouter();
   const user = useUser();
@@ -37,9 +33,8 @@ export function UserMenu({ extraItems, impersonating = false }) {
     try {
       await logout();
     } catch (error) {
-      // Still signed in: going to /login would bounce straight back to "/" and
-      // read as "log out does nothing". A 401/419 means the session is already
-      // gone, which is the outcome asked for.
+      // Still signed in: /login would bounce back to "/". A 401/419 means the session is
+      // already gone, which is the requested outcome.
       const status = error?.response?.status;
       if (status !== 401 && status !== 419) {
         toast.error(apiMessage(error, t("logOutFailed")));
@@ -47,17 +42,10 @@ export function UserMenu({ extraItems, impersonating = false }) {
         return;
       }
     }
-    /*
-     * Leaving on purpose is not the same as being thrown out, so the screen
-     * you were on stops being somewhere to return to. Left in place, the
-     * next person to sign in on this browser would land on the last one's
-     * page — refused by the permission check if it is not theirs, which is
-     * a confusing first screen and tells them where their colleague was.
-     */
+    // A deliberate logout forgets the last page, so the next user does not land on the previous user's page.
     forgetRememberedPath();
-    // Deliberately not cleared: the menu should keep saying "signing out"
-    // right up until the login page replaces it, rather than flicking back
-    // to "Log out" for the length of the navigation.
+    // Deliberately not cleared, so the menu keeps saying "signing out" until the login
+    // page replaces it.
     router.push("/login");
     router.refresh();
   }
@@ -70,7 +58,7 @@ export function UserMenu({ extraItems, impersonating = false }) {
     setLeaving(true);
     try {
       await stopImpersonating();
-      // Session identity changed — hard nav so SSR re-reads the admin session.
+      // Session identity changed: hard nav so SSR re-reads the admin session.
       window.location.href = "/admin/users";
     } catch (error) {
       toast.error(apiMessage(error, tImp("banner.failed")));
@@ -99,7 +87,6 @@ export function UserMenu({ extraItems, impersonating = false }) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56 p-0">
-        {/* Identity header */}
         <div className="flex items-center gap-2.5 p-2.5">
           <Avatar className="size-9">
             <AvatarFallback className="bg-primary/10 text-xs font-medium text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))]">
@@ -122,9 +109,7 @@ export function UserMenu({ extraItems, impersonating = false }) {
               <DropdownMenuItem
                 disabled={leaving || signingOut}
                 onSelect={(event) => {
-                  // Held open: Radix closes on select, and a menu that vanishes
-                  // for the length of the request is why this never looked like
-                  // it was doing anything.
+                  // Held open: Radix closes on select, which would hide the pending state.
                   event.preventDefault();
                   onBackToAccount();
                 }}
@@ -149,8 +134,7 @@ export function UserMenu({ extraItems, impersonating = false }) {
             variant="destructive"
             disabled={signingOut || leaving}
             onSelect={(event) => {
-              // Same reason as above: without this the menu disappears and the
-              // page sits unchanged until the login screen arrives.
+              // Same: otherwise the menu disappears and nothing shows until the login screen.
               event.preventDefault();
               onLogout();
             }}

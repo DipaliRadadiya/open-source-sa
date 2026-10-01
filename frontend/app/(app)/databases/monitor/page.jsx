@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
@@ -19,6 +19,7 @@ import { LoadFailed } from "@/components/data-table/load-failed";
 import { Activity } from "lucide-react";
 import { PageCrumb } from "@/components/sections/page-crumb";
 import { PageHeader } from "@/components/ui/page-header";
+import { BackLink } from "@/components/ui/back-link";
 import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
@@ -41,8 +42,7 @@ export default async function DatabaseMonitorPage({ searchParams }) {
   if (!can(permissions, "database", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "database", "manage");
 
-  // Only a reachable engine has anything to report. With two running, the
-  // `?engine=` param picks; otherwise there is nothing to choose.
+  // Only a running engine has data; `?engine=` picks when more than one runs.
   const running = engines.filter((engine) => engine.running);
   const selected =
     running.find((engine) => engine.engine === sp?.engine) ?? running[0] ?? null;
@@ -52,13 +52,7 @@ export default async function DatabaseMonitorPage({ searchParams }) {
       <div className="space-y-6">
         <PageCrumb>{t("crumb")}</PageCrumb>
         <Header t={t} />
-        {/*
-          "No database engine is running" is a claim about the server, and an
-          unanswered request is not evidence for it — this screen was telling
-          people their database was down when it had failed to ask. The
-          databases page destructures `failed` from this same call and has
-          always done this correctly; this one dropped it.
-        */}
+        {/* A failed request is not evidence that no engine is running. */}
         {enginesFailed ? (
           <LoadFailed description={t("loadFailed")} status={enginesStatus} failure={enginesFailure} message={enginesMessage} />
         ) : (
@@ -77,8 +71,7 @@ export default async function DatabaseMonitorPage({ searchParams }) {
     getDatabaseMetrics(selected.engine),
     getProcesses(selected.engine),
     getServerFacts(),
-    // Only to recognise the panel's own connection in the process list, so a
-    // failure here must not take the page down with it.
+    // Only used to recognise the panel's own connection; must not fail the page.
     getConnections().catch(() => []),
   ]);
 
@@ -88,9 +81,7 @@ export default async function DatabaseMonitorPage({ searchParams }) {
       <Header t={t} engine={selected} />
 
       <div className="max-w-5xl space-y-4">
-        {/* Only when there is a choice to make. A switch with one option reads
-            as a step you have to take — with one engine its identity rides in
-            the page title instead. */}
+        {/* Only with a real choice; with one engine its name is in the title. */}
         {running.length > 1 ? (
           <div className="flex items-center gap-2">
             {running.map((engine) => (
@@ -115,10 +106,7 @@ export default async function DatabaseMonitorPage({ searchParams }) {
 
         <EngineStatusCards status={status} processes={processes} />
 
-        {/* Queries before the chart. Someone opens this page because something
-            is slow *now*; the 24h history is what you consult after seeing
-            what is running. With the chart first, the query rows — including
-            the one that has been going for two minutes — sat below the fold. */}
+        {/* Queries before the chart: running queries are what the reader came to see. */}
         <ProcessList
           engine={selected.engine}
           processes={processes}
@@ -131,13 +119,12 @@ export default async function DatabaseMonitorPage({ searchParams }) {
   );
 }
 
-/**
- * Plain title. The engine, its version, whether it is up and for how long all
- * live in the health summary below — repeating them here would be the same
- * fact twice, a few pixels apart.
- */
+/** Plain title; engine, version and uptime live in the health summary below. */
 function Header({ t }) {
   return (
-    <PageHeader title={t("title")} subtitle={t("subtitle")} />
+    <div className="space-y-3">
+      <BackLink href="/databases">{t("backToList")}</BackLink>
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+    </div>
   );
 }

@@ -4,10 +4,8 @@ import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
 import { codeLanguageFor } from "@/lib/files/code-lang";
 
-// Built from the app's own --console-* tokens (see app/globals.css) rather
-// than a canned CodeMirror theme, so this matches the console surface used
-// elsewhere (logs, .env/php.ini editors) instead of introducing a second
-// "code editor" look with its own palette.
+// Built from the app's --console-* tokens (app/globals.css) rather than a canned
+// CodeMirror theme, matching the other console surfaces.
 const consoleTheme = EditorView.theme(
   {
     "&": {
@@ -43,10 +41,8 @@ const consoleTheme = EditorView.theme(
       backgroundColor: "color-mix(in oklch, var(--console-foreground) 15%, transparent)",
     },
     "&.cm-editor.cm-focused": { outline: "none" },
-    // The scroller (not the editor root) is what actually overflows — same
-    // thin, console-tinted scrollbar as the rest of the console surfaces
-    // (see .console-scroll in globals.css), reimplemented here because that
-    // class can't reach into CodeMirror's own internal scroll element.
+    // The scroller, not the editor root, overflows. Mirrors .console-scroll in
+    // globals.css, which cannot reach CodeMirror's internal scroll element.
     ".cm-scroller": { scrollbarWidth: "thin", scrollbarColor: "var(--console-border) transparent" },
     ".cm-scroller::-webkit-scrollbar": { width: "10px", height: "10px" },
     ".cm-scroller::-webkit-scrollbar-track": { background: "transparent" },
@@ -71,13 +67,7 @@ const consoleHighlight = HighlightStyle.define([
   { tag: tags.invalid, color: "var(--console-error)" },
 ]);
 
-/**
- * The Files editor's actual editing surface — line numbers, bracket
- * matching, folding and language-aware highlighting via CodeMirror, themed
- * to the app's console tokens. Language is picked from the file's own
- * extension (`codeLanguageFor`); unrecognised extensions fall back to plain
- * text rather than guessing.
- */
+// Language comes from the file extension; unknown ones fall back to plain text.
 export function CodeEditor({ filename, value, onChange, readOnly = false, className }) {
   const language = useMemo(() => codeLanguageFor(filename), [filename]);
   const extensions = useMemo(

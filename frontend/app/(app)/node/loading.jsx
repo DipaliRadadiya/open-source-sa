@@ -1,7 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Same shape as the real page: heading, one version card with a footer of
-// buttons, and the system-Node note underneath.
+// Same shape as the real page so it fills in place.
 export default function Loading() {
   return (
     <div className="space-y-6">

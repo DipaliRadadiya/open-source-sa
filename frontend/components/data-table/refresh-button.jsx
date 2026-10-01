@@ -7,11 +7,7 @@ import { useRefresh } from "@/hooks/use-refresh";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-/**
- * Re-fetches the current list without a full page reload by re-running the
- * server component. Under a <NavTransitionProvider> it shares the list's
- * pending signal (so the table dims); otherwise it uses a local transition.
- */
+// Under a <NavTransitionProvider> it shares the list's pending signal; otherwise local.
 export function RefreshButton({ className }) {
   const t = useTranslations("common");
   const { pending, refresh } = useRefresh();
@@ -19,16 +15,12 @@ export function RefreshButton({ className }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        {/* Busy, not disabled: a disabled button drops focus, so pressing it
-            from the keyboard sent the reader back to the top of the page. The
-            click is ignored instead while the spinner turns. */}
+        {/* aria-disabled, not disabled: a disabled button drops keyboard focus. */}
         <Button
           type="button"
           variant="outline"
           size="icon"
-          // 36px by default, matching the card-header clusters it usually
-          // sits in. A toolbar of `sm` buttons passes size-8 so the row keeps
-          // one height — the same mismatch that made these read as bolted on.
+          // 36px matches card-header clusters; toolbars of `sm` buttons pass size-8.
           className={cn("size-9 shrink-0", pending && "cursor-progress", className)}
           onClick={pending ? undefined : refresh}
           aria-disabled={pending}

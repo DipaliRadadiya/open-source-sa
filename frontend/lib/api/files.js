@@ -5,19 +5,12 @@ export function listFiles(appId, path = "", { signal } = {}) {
   return api.get(`/applications/${appId}/files`, { params: { path }, signal });
 }
 
-// Recursive, unlike the listing above — `path` optionally scopes it to a
-// subtree, default is the whole site.
+// Recursive; `path` optionally scopes it to a subtree (default: whole site).
 export function searchFiles(appId, q, { path, signal } = {}) {
   return api.get(`/applications/${appId}/files/search`, { params: { q, path }, signal });
 }
 
-/**
- * How big a folder is, on demand.
- *
- * Not in the listing: the backend walks the tree to answer, so it is a
- * question you ask about one folder rather than a column the list fills in
- * for every row.
- */
+/** A folder's size, on demand: the backend walks the tree, so it is not in the listing. */
 export function folderSize(appId, path) {
   return api.get(`/applications/${appId}/files/size`, { params: { path } });
 }
@@ -34,50 +27,21 @@ export function restoreFileContent(appId, path, backup) {
   return api.post(`/applications/${appId}/files/content/restore`, { path, backup });
 }
 
-// A plain, cookie-authenticated `<a href download>` — same pattern the
-// database export download already uses — rather than a JS blob fetch. The
-// endpoint always answers `application/octet-stream`, so the browser's normal
-// download flow is exactly right here.
+// Used as a cookie-authenticated `<a href download>`; the endpoint always
+// answers `application/octet-stream`.
 export function fileDownloadUrl(appId, path) {
   const base = process.env.NEXT_PUBLIC_API_URL;
   return `${base}/api/applications/${appId}/files/download?path=${encodeURIComponent(path)}`;
 }
 
-/*
- * `preview` as a plain `<img src>`, for list thumbnails.
- *
- * Not `download`: that answers octet-stream + `nosniff` + attachment, which an
- * <img> will not draw for SVG at all, and it is throttled at 20/min because it
- * is meant for a few large transfers. The route file says in as many words
- * that thumbnails belong on `preview` (60/min, real image content type). A
- * thumbnail that is refused just falls back to the file icon, so the reason
- * `fetchFilePreview` below goes to the trouble of reading does not matter here.
- */
+// Not `download`: that is octet-stream + `nosniff` (SVG will not draw) and throttled at 20/min.
 export function fileThumbnailUrl(appId, path) {
   const base = process.env.NEXT_PUBLIC_API_URL;
   return `${base}/api/applications/${appId}/files/preview?path=${encodeURIComponent(path)}`;
 }
 
-/**
- * Fetch an image for display, as a blob URL.
- *
- * `download` above is deliberately unrenderable — `application/octet-stream`
- * plus `Content-Disposition: attachment` and `nosniff`, which is right for
- * handing a file over and useless for showing one. `preview` is the only
- * response in the API a browser is meant to interpret.
- *
- * Fetched rather than pointed at with `<img src>`, even though the cookie
- * would ride along today: a refusal is a 422 with a written reason, and an
- * `<img>` onError handler cannot see a status code, let alone a body. The
- * reader would get "could not be loaded" for three different problems, two of
- * which they can act on. This also survives the panel being deployed on a
- * domain unrelated to the API, where the `<img>` approach silently stops
- * sending the session.
- *
- * Returns `{ url }` on success — the CALLER OWNS IT and must
- * `URL.revokeObjectURL` it, or the image stays in memory for the life of the
- * document. Returns `{ error }` carrying the API's own sentence otherwise.
- */
+// Fetched rather than `<img src>` so a 422's reason can be shown and cross-domain APIs work.
+// The CALLER OWNS the returned `url` and must `URL.revokeObjectURL` it.
 export async function fetchFilePreview(appId, path, { signal } = {}) {
   const base = process.env.NEXT_PUBLIC_API_URL;
   const url = `${base}/api/applications/${appId}/files/preview?path=${encodeURIComponent(path)}`;
@@ -90,9 +54,8 @@ export async function fetchFilePreview(appId, path, { signal } = {}) {
 
   if (response.ok) return { url: URL.createObjectURL(await response.blob()) };
 
-  // Every refusal is a 422 with a translated `message`. Anything else (403,
-  // 404, a gateway error) has no body worth reading, so the caller's own copy
-  // is better than whatever HTML a proxy returned.
+  // Refusals are 422 with a translated `message`; other statuses fall back to
+  // the caller's own copy.
   let message = null;
   try {
     const body = await response.json();
@@ -103,7 +66,7 @@ export async function fetchFilePreview(appId, path, { signal } = {}) {
   return { error: { status: response.status, message } };
 }
 
-// `onProgress(fraction)` — undefined is fine, axios just skips the callback.
+// `onProgress(fraction)` is optional.
 export function uploadFile(appId, path, file, { onProgress, signal } = {}) {
   const form = new FormData();
   form.append("path", path);
@@ -116,56 +79,31 @@ export function uploadFile(appId, path, file, { onProgress, signal } = {}) {
   });
 }
 
-// Imported rather than re-exported straight through: `export ... from` does
-// not bind the names locally, and this module uses both below.
+// Imported then re-exported because this module also uses them locally.
 export { CHUNK_THRESHOLD_BYTES, MAX_CHUNK_BYTES, chunkSizeFor };
 
 const CHUNK_RETRIES = 3;
 
-/**
- * Resumable upload of a file of any size.
- *
- * Chunks go up sequentially, not in parallel: the panel's FPM pool is
- * `ondemand` with 10 workers, shared with every other panel request, and
- * saturating it with one user's upload would make the panel unresponsive
- * exactly while someone is watching it. Sequential also means the server can
- * treat the part file's size as the resume offset, with no per-chunk
- * bookkeeping.
- *
- * The server is the authority on how much it actually has — after any failure
- * we ask, rather than assuming our own count survived the interruption.
- */
-/**
- * What the server's disk can still take, in bytes.
- *
- * `usable` already has the safety floor subtracted, so it is the number to
- * compare a file against — `available` is only there to show the user how
- * much room actually exists. Advisory: the server re-checks on every write,
- * because other sites share this disk and are writing the whole time.
- */
+// Compare files against `usable` (safety floor subtracted); `available` is for display. Advisory only.
 export async function uploadSpace(appId, { signal } = {}) {
   const { data } = await api.get(`/applications/${appId}/files/uploads/space`, { signal });
   return data;
 }
 
+// Sequential chunks so one upload cannot saturate the small FPM pool, and the part file's size is the resume offset.
+// After any failure the server's received count is the authority.
 export async function uploadFileChunked(appId, path, file, { onProgress, signal } = {}) {
   const { data } = await api.post(
     `/applications/${appId}/files/uploads`,
-    // Declared up front so the server can reject an impossible upload before
-    // a single byte moves, rather than at whichever chunk fills the disk.
+    // Declared up front so the server can reject an impossible upload early.
     { path, size: file.size },
     { signal },
   );
   const uploadId = data.upload_id;
   const base = `/applications/${appId}/files/uploads/${uploadId}`;
 
-  // Chosen once, from the size declared to the server above — not per chunk,
-  // so a resumed upload keeps the boundaries the first attempt used.
-  //
-  // Clamped to what the server said it will take. Only it knows its own
-  // post_max_size, and a chunk over that is refused by middleware with "The
-  // POST data is too large" before any upload code runs — a 6 GB file picking
-  // 32 MB chunks against a stock 8M limit failed on the very first one.
+  // Chosen once so a resumed upload keeps the same boundaries, and clamped to
+  // the server's `max_chunk` (its post_max_size, which rejects larger bodies).
   const chunkSize = Math.min(chunkSizeFor(file.size), data.max_chunk || Infinity);
 
   try {
@@ -181,14 +119,12 @@ export async function uploadFileChunked(appId, path, file, { onProgress, signal 
             signal,
             headers: { "Content-Type": "application/octet-stream" },
           });
-          // Trust the server's total over our own arithmetic: if a retried
-          // chunk landed twice, or partially, this is what catches it.
+          // Trust the server's total; catches a chunk that landed twice or partially.
           offset = res.data.received;
           break;
         } catch (error) {
           if (signal?.aborted || ++attempt > CHUNK_RETRIES) throw error;
-          // Resync to what actually arrived before retrying — a chunk that
-          // timed out client-side may well have been written in full.
+          // Resync before retrying: a chunk that timed out may have been written.
           const { data: status } = await api.get(base, { signal });
           offset = status.received;
           if (offset >= end) break;
@@ -200,19 +136,13 @@ export async function uploadFileChunked(appId, path, file, { onProgress, signal 
 
     return await api.post(`${base}/finalize`, { path }, { signal });
   } catch (error) {
-    // Abandoned part files are reaped server-side, but only after a day —
-    // with no size limit that is a lot of disk to leave lying around on a
-    // shared box when we know right now that it is dead.
+    // The server only reaps abandoned part files after a day; free the disk now.
     api.delete(base).catch(() => {});
     throw error;
   }
 }
 
-/**
- * Picks the cheaper path per file. Small files keep the single-request
- * endpoint: three extra round trips to move a 2 KB file is worse than the
- * thing chunking is there to avoid.
- */
+/** Small files use the single-request endpoint; larger ones are chunked. */
 export function uploadAnySize(appId, path, file, options = {}) {
   return file.size > CHUNK_THRESHOLD_BYTES
     ? uploadFileChunked(appId, path, file, options)
@@ -243,27 +173,18 @@ export function setFilePermissions(appId, path, mode) {
   return api.put(`/applications/${appId}/files/permissions`, { path, mode });
 }
 
-// `permanent` destroys instead of moving to the trash. Omitting it means
-// recoverable, which is what the API defaults to — the flag is only ever sent
-// because someone deliberately ticked a box.
+// `permanent` destroys instead of moving to the trash; only sent when explicitly chosen.
 export function deleteFile(appId, path, { permanent = false } = {}) {
   return api.delete(`/applications/${appId}/files`, {
     data: { path, confirm: true, ...(permanent ? { permanent: true } : null) },
   });
 }
 
-/**
- * More than this in one request is a 422 — an argument vector has a kernel
- * limit, and crossing it would fail with some paths already handled. Enforced
- * in the UI so nobody assembles a selection they cannot act on.
- */
+/** The API 422s above this many paths per request; the UI enforces it too. */
 export const BULK_PATH_LIMIT = 250;
 
-/* Bulk forms of the five write operations. They are NOT the single-path calls
- * in a loop: the server answers with per-path `succeeded[]` / `failed[]`, so a
- * batch that half-works reports as such instead of throwing on the first
- * missing file. A missing path is a `failed` entry here, where the single-path
- * form would 404. */
+/* Bulk write operations. The server answers with per-path `succeeded[]` /
+ * `failed[]`; a missing path is a `failed` entry, not a 404. */
 
 export function moveFiles(appId, paths, targetDirectory) {
   return api.put(`/applications/${appId}/files/rename`, {
@@ -279,8 +200,7 @@ export function copyFiles(appId, paths, targetDirectory) {
   });
 }
 
-// Every source must sit in the same folder — `zip` runs from that folder so the
-// archive holds bare names. The caller checks before offering the action.
+// Every source must sit in the same folder (`zip` runs from it); the caller checks.
 export function compressFiles(appId, paths, target) {
   return api.post(`/applications/${appId}/files/compress`, { paths, target });
 }
@@ -289,9 +209,8 @@ export function setFilesPermissions(appId, paths, mode) {
   return api.put(`/applications/${appId}/files/permissions`, { paths, mode });
 }
 
-// `count` must equal paths.length or the server refuses: `confirm` is true
-// either way, so it cannot catch the realistic accident, which is acting on a
-// selection that changed under you. Always send the real length.
+// `count` must equal paths.length or the server refuses; it guards against a
+// selection that changed underneath. Always send the real length.
 export function deleteFiles(appId, paths, { permanent = false } = {}) {
   return api.delete(`/applications/${appId}/files`, {
     data: {
@@ -303,12 +222,9 @@ export function deleteFiles(appId, paths, { permanent = false } = {}) {
   });
 }
 
-/* The trash. Restore and empty both answer with the refreshed list, so neither
- * needs a follow-up GET. */
+/* Trash. Restore and empty both answer with the refreshed list. */
 
-// One path per call: the API takes a single {batch, path} and has no bulk form,
-// which is why there is no "restore everything" in the UI — twelve restores
-// would be twelve requests against a 30/min throttle. See memory/backend-asks.md.
+// One path per call: there is no bulk restore endpoint (throttled 30/min).
 export function restoreTrashed(appId, batch, path) {
   return api.post(`/applications/${appId}/files/trash/restore`, { batch, path });
 }
@@ -324,14 +240,7 @@ export function fixApplicationPermissions(appId) {
   return api.post(`/applications/${appId}/fix-permissions`);
 }
 
-/**
- * Archive operations that are running, plus any that finished in the last few
- * minutes.
- *
- * Recent completions come back on purpose: a poll that returned only in-flight
- * rows would have a job vanish between two polls, and the panel could never
- * tell "it finished" from "the page reloaded".
- */
+// Includes recently finished jobs so a poll can tell finished from vanished.
 export function getArchiveJobs(appId, { signal } = {}) {
   return api.get(`/applications/${appId}/files/archive-jobs`, { signal });
 }

@@ -13,13 +13,7 @@ export function useNavPending() {
   return useContext(NavContext)?.isPending ?? false;
 }
 
-/**
- * Wraps a list's URL-driven controls in a single useTransition so search /
- * filter / pagination share one `isPending` signal — used to show a spinner in
- * the search box, disable pagination, and dim the table while the server
- * re-fetches. Any control using `useSetQuery` under this provider routes
- * through the shared transition automatically.
- */
+// One transition shared by search, filters and pagination; `useSetQuery` routes through it automatically.
 export function NavTransitionProvider({ children }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -38,19 +32,7 @@ export function NavTransitionProvider({ children }) {
       }
       if (resetPage) params.delete("page");
       const qs = params.toString();
-      /*
-       * `push` the FIRST time the URL gains a query, `replace` after that.
-       *
-       * Replacing on every keystroke is right — "moodle x" would otherwise
-       * leave eight history entries and Back would walk the reader letter by
-       * letter out of their own search. But replacing on the first one too
-       * means the UNFILTERED list never enters history at all, so Back from a
-       * filtered table left the screen entirely: /applications -> type -> Back
-       * landed on /dashboard.
-       *
-       * One push at the empty -> set boundary gives Back exactly one job:
-       * clear the filters and stay. Every later keystroke still replaces.
-       */
+      // `push` the first time the URL gains a query, `replace` after, so Back clears filters in one step.
       const hadQuery = searchParams.toString() !== "";
       const navigate = hadQuery || !qs ? router.replace : router.push;
       startTransition(() =>
@@ -60,8 +42,7 @@ export function NavTransitionProvider({ children }) {
     [router, pathname, searchParams],
   );
 
-  // Re-run the server component (re-fetch) without a full page reload, sharing
-  // the same pending signal so the table dims like any other update.
+  // Re-fetch via the server component, sharing the same pending signal.
   const refresh = useCallback(
     () => startTransition(() => router.refresh()),
     [router],

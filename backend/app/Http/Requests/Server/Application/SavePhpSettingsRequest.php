@@ -8,6 +8,7 @@ use App\Models\ApplicationPhpSettings;
 use App\Rules\SupportedPhpVersion;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Runtime\InstallTracker;
+use App\Services\Server\Php\AdditionalDirectives;
 use App\Services\Server\Php\PhpVersionManager;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
@@ -128,7 +129,20 @@ class SavePhpSettingsRequest extends FormRequest
             // The escape hatch, and the only free-text field. Newlines are
             // allowed because it is ini; a `[section]` header is not, because
             // that would silently start a second pool inside this file.
-            'additional_directives' => ['sometimes', 'nullable', 'string', 'max:4000', 'not_regex:/^\s*\[/m'],
+            'additional_directives' => ['sometimes', 'nullable', 'string', 'max:4000', 'not_regex:/^\s*\[/m',
+                // PHP settings the panel does not set itself, one per line —
+                // see AdditionalDirectives.
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    $refusal = app(AdditionalDirectives::class)->refusal((string) $value);
+
+                    if ($refusal !== null) {
+                        $fail(__('php_settings.errors.'.$refusal['reason'], [
+                            'line' => mb_strimwidth($refusal['line'], 0, 80, '…'),
+                            'name' => $refusal['name'],
+                        ]));
+                    }
+                },
+            ],
         ];
     }
 

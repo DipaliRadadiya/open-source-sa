@@ -1,8 +1,5 @@
-// Reads a 5-field cron expression the way the backend's parser does
-// (dragonmantank/cron-expression): lists, ranges, steps, month and weekday
-// names, 7 as Sunday, and day-of-month OR day-of-week when both are set.
-// Returns null for anything it cannot read — the preview then says nothing
-// rather than guessing, and the form's own validation takes over.
+// Mirrors the backend's parser (dragonmantank/cron-expression), incl. 7 as Sunday
+// and day-of-month OR day-of-week. Null for anything unreadable; validation takes over.
 
 const MACROS = {
   "@yearly": "0 0 1 1 *",
@@ -61,10 +58,7 @@ function parseField(text, field) {
   return values;
 }
 
-/**
- * Parses an expression (or macro) into the set of allowed values per field.
- * Weekday 7 is folded into 0.
- */
+// Weekday 7 is folded into 0.
 export function parseCron(expression) {
   if (typeof expression !== "string") return null;
   const trimmed = expression.trim();
@@ -122,11 +116,8 @@ export function wallClockNow(timeZone, now = new Date()) {
   );
 }
 
-/**
- * The next `count` run times after `from`, as wall-clock Dates (UTC fields =
- * the server's local time). Walks forward skipping whole months, days and
- * hours that cannot match, so even a yearly job is found quickly.
- */
+// Wall-clock Dates: the UTC fields are the server's local time. Skips whole
+// months, days and hours that cannot match, so even a yearly job is found quickly.
 export function nextRuns(cron, from, count = 3) {
   const runs = [];
   if (!cron) return runs;
@@ -173,11 +164,7 @@ function contiguous(values) {
   return values.length > 1 && values.every((v, i) => i === 0 || v === values[i - 1] + 1);
 }
 
-/**
- * What an expression means, as pieces a translated sentence can be built from.
- * `time` is null when the pattern is too irregular to say in a sentence; the
- * next run times still describe it exactly.
- */
+// `time` is null when the pattern is too irregular for a sentence.
 export function describeCron(cron) {
   if (!cron) return null;
   const minutes = sorted(cron.minutes);
@@ -212,10 +199,8 @@ export function describeCron(cron) {
   };
 }
 
-/**
- * The instant a server wall-clock time ("28-09-2026 05:01:00", as the API
- * sends `next_run_at`) refers to in `timeZone`. Null if it cannot be read.
- */
+// `next_run_at` ("28-09-2026 05:01:00", server wall clock) as an instant in
+// `timeZone`, or null.
 export function serverTimeToEpoch(text, timeZone) {
   const m = /^(\d{2})-(\d{2})-(\d{4}) (\d{2}):(\d{2}):(\d{2})$/.exec(text ?? "");
   if (!m) return null;

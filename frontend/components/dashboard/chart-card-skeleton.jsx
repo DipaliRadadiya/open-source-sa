@@ -1,16 +1,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
-/**
- * Stands in for one of the four dashboard charts while Recharts loads.
- *
- * The charting library is around 400 KB and the dashboard is where login
- * lands, so the four charts are dynamically imported and this holds their
- * place. It mirrors `LiveChartCard` exactly — same header shape, same `h-72`
- * plot area — because a placeholder of a different height moves the stat cards
- * above it when the real chart arrives, and a jumping page reads as a broken
- * one.
- */
+// Mirrors `LiveChartCard` (header and `h-72` plot) so the page does not jump while Recharts loads.
 export function ChartCardSkeleton() {
   return (
     <Card className="h-full">

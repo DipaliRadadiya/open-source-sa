@@ -100,28 +100,7 @@ function DialogFooter({
   return (
     <div
       data-slot="dialog-footer"
-      /* `min-w-0` and `flex-wrap` together stop a long pair of buttons from
-         widening the whole dialog.
-
-         DialogContent is a grid, and a grid item defaults to `min-width: auto`
-         — it refuses to shrink below its min-content width. A footer with two
-         verbose labels ("Turn it on anyway" / "Add this address and turn it
-         on") measures wider than the `sm:max-w-sm` track, so the track grew to
-         fit it, every stretched sibling grew with it, and the input and footer
-         painted outside the dialog's own background while the description —
-         being text, which can wrap — stayed inside.
-
-         `min-w-0` lets the item shrink to the track; `flex-wrap` gives the
-         buttons somewhere to go when it does. Neither has any effect on a
-         footer that already fits.
-
-         A right-aligned wrapping row at EVERY width, matching AlertDialogFooter
-         and FormModal. It used to be flex-col-reverse below sm, and stacking is
-         what exposed a second bug: a button wrapped in ReasonTooltip is a span
-         in the flex flow, so the span stretched to full width while the button
-         inside stayed content-sized — "Save and reload" came out 139px sitting
-         above a 326px Cancel. Sizing every button to its own label removes the
-         mismatch rather than chasing it. */
+      /* min-w-0 + flex-wrap: as a grid item the footer would grow the dialog to fit long labels. */
       className={cn(
         "-mx-4 -mb-4 flex min-w-0 flex-wrap items-center justify-end gap-2 rounded-b-xl border-t bg-muted/50 p-4",
         className
@@ -144,13 +123,7 @@ function DialogTitle({
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      // min-w-0 + wrap-anywhere, because dialog titles carry user-supplied names
-      // ("Delete nextcloud_1395988213_nip_wbixj3"). A flex/grid item defaults to
-      // min-width:auto, so one unbreakable token sets the whole dialog's
-      // min-content width and pushes its buttons off the side of a phone.
-      // wrap-anywhere rather than break-words: only "anywhere" is counted when
-      // the browser computes min-content, and min-content is the number doing
-      // the damage. break-words breaks the line but leaves the box just as wide.
+      // wrap-anywhere, not break-words (which keeps min-content width): long names must not widen the dialog.
       className={cn("min-w-0 font-heading text-base leading-none font-medium wrap-anywhere", className)}
       {...props} />
   );

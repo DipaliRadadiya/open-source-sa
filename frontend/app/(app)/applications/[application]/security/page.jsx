@@ -30,8 +30,7 @@ export default async function ApplicationSecurityPage({ params }) {
   ]);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
-  // The site is gone. Land on the list — the only place left to go — and say
-  // why on arrival, rather than parking on a dead end that offers one link.
+  // The site is gone: back to the list, which explains the redirect.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 

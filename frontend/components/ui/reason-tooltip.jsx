@@ -2,31 +2,15 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-/**
- * Two different things a parent can say about why its children are disabled:
- *
- * - `handled: true`  — "I am already showing a tooltip over this area", so a
- *   nested control must stay silent or the reader gets two overlapping bubbles.
- * - `handled: false` — "here is the reason; use it as your own if you have
- *   nothing more specific". This is what a whole permission-gated form sets, so
- *   its controls explain themselves without every one of them repeating the
- *   prop.
- */
+// `handled: true`: a parent already shows a tooltip, so nested controls stay silent.
+// `handled: false`: a fallback reason for controls with nothing more specific.
 const DisabledReasonContext = createContext(null);
 
 export function useDisabledReason() {
   return useContext(DisabledReasonContext);
 }
 
-/**
- * Supplies one reason to every disabled control beneath it.
- *
- * For the common case where a whole card or form is switched off by a single
- * condition — usually a missing permission. Without it each control falls back
- * to a generic line that says nothing, and with it they all say the same true
- * thing. A control that knows better still wins: `disabledReason` takes
- * precedence over whatever is inherited.
- */
+/** A control's own `disabledReason` takes precedence over this one. */
 export function DisabledReasonProvider({ reason, children }) {
   return (
     <DisabledReasonContext.Provider
@@ -37,22 +21,8 @@ export function DisabledReasonProvider({ reason, children }) {
   );
 }
 
-/**
- * Wraps a control that may be disabled, and says why when it is.
- *
- * A disabled button with no explanation is a dead end — the user can see what
- * they want and not what is in the way. The span carries the pointer and focus
- * events because a disabled button fires neither, which is also why it only
- * becomes focusable while there is something to read.
- *
- * Pass `reason={null}` when the control is enabled: no wrapper behaviour, no
- * tooltip.
- *
- * On a touch screen this renders a Popover instead. A Radix tooltip opens on
- * hover and focus, and a finger produces neither — so on a phone every
- * disabled control in the panel was mute, which is the exact dead end this
- * component exists to prevent. Same wrapper, same reason text, opened by tap.
- */
+// The span carries pointer and focus events, which a disabled button does not fire.
+// Popover on touch screens: Radix tooltips never open on touch.
 export function ReasonTooltip({ reason, children, className = "inline-flex" }) {
   const coarse = useCoarsePointer();
 
@@ -70,15 +40,7 @@ export function ReasonTooltip({ reason, children, className = "inline-flex" }) {
       </PopoverContent>
     </Popover>
   ) : (
-    /*
-     * Immediate, against the shell's 300ms.
-     *
-     * The delay exists so that sweeping the pointer across a toolbar does not
-     * flash a tooltip off every icon. This one is not a label — it is the
-     * answer to "why can't I press this", and the reader is already pointing at
-     * the control because it did not work. Making them hold still for it is
-     * charging for the explanation.
-     */
+    /* No delay (the shell default is 300ms): this answers "why can't I press this". */
     <Tooltip delayDuration={0}>
       <TooltipTrigger asChild>
         <span tabIndex={0} className={className}>
@@ -98,14 +60,7 @@ export function ReasonTooltip({ reason, children, className = "inline-flex" }) {
   );
 }
 
-/**
- * Whether the primary pointer cannot hover.
- *
- * Resolved after mount, never during render: the server has no pointer, and
- * branching on one before hydration would mismatch. Starting false means the
- * desktop path is what renders first, which is the common case and the one
- * that was already correct.
- */
+/** Resolved after mount to avoid a hydration mismatch; the desktop path renders first. */
 function useCoarsePointer() {
   const [coarse, setCoarse] = useState(false);
 

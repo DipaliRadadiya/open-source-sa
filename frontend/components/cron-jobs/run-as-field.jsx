@@ -18,10 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-/**
- * "Runs as" for both dialogs: a panel system user, or any OS account typed by
- * name. Shared so the create and edit forms can't drift apart.
- */
+// Shared so the create and edit forms cannot drift apart.
 export function RunAsField({ form, systemUsers = [], systemUsersFailed = false }) {
   const t = useTranslations("cronJobs");
   // useWatch, not form.watch: the latter returns a fresh function each render,
@@ -51,11 +48,8 @@ export function RunAsField({ form, systemUsers = [], systemUsersFailed = false }
                 <SelectItem value={OTHER_USER}>{t("form.otherUser")}</SelectItem>
               </SelectContent>
             </Select>
-            {/* A picker holding nothing but "Other OS user…" is what you get
-                when this list fails — and it needs the `system_user`
-                permission, which has nothing to do with cronjob, so a 403 is
-                ordinary. Unsaid, it reads as "this server has no accounts"
-                and leaves you to guess that a username can be typed. */}
+            {/* The list needs the separate `system_user` permission, so a 403 is
+                ordinary; say so instead of implying the server has no accounts. */}
             {systemUsersFailed ? (
               <FormDescription>{t("form.runAsUnavailable")}</FormDescription>
             ) : null}

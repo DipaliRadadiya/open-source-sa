@@ -41,6 +41,11 @@ Route::get('/applications/{application}/files/breakdown', [ApplicationFileContro
 Route::get('/applications/{application}/files/size', [ApplicationFileController::class, 'folderSize'])
     ->middleware(['permission:app_file', 'throttle:20,1']);
 
+// Every folder in a directory at once, for the size column. Remembered for
+// five minutes, so the limit is for `refresh=1`, not for browsing.
+Route::get('/applications/{application}/files/sizes', [ApplicationFileController::class, 'folderSizes'])
+    ->middleware(['permission:app_file', 'throttle:60,1']);
+
 // Reading a file's contents — open, download, preview — needs manage.
 // Operator decision 2026-09-29 (option A): `view` is browse, search and sizes.
 // With `view` reading contents, a view-only role opened wp-config.php or .env

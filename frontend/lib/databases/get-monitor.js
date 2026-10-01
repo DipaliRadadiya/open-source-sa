@@ -8,12 +8,7 @@ import {
 } from "@/lib/schemas/database";
 
 
-/**
- * Health, history and live processes for one engine.
- *
- * Each falls back on its own rather than failing the page together: an engine
- * that answers `status` but has no history yet should still show its status.
- */
+// Each part fails independently.
 export const getEngineStatus = cache(async function getEngineStatus(engine) {
   const data = await readOr(
     `/databases/status/${encodeURIComponent(engine)}`,
@@ -41,9 +36,8 @@ export const getProcesses = cache(async function getProcesses(engine) {
   return data.processes;
 });
 
-/** Tables inside one database, biggest first — the reason to look is size. */
-// A failed read is carried, not flattened to []: "No tables yet" over an
-// engine that simply did not answer is a false fact.
+/** Tables inside one database, biggest first. */
+// `failed` is kept so a failed read never shows as "No tables yet".
 export const getTables = cache(async function getTables(databaseId) {
   const result = await read(`/databases/${databaseId}/tables`, dbTablesResponseSchema);
   const tables = result.failed ? [] : [...(result.data?.tables ?? [])];

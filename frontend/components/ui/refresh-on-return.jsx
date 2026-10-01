@@ -3,13 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
-/**
- * Re-read the page when the reader comes back to this tab after a while.
- *
- * For lists that change from elsewhere — an application created in another
- * tab never appeared in an Applications list left open, however long it
- * waited. Not a poll: nothing is fetched while the tab is in use or hidden.
- */
+// Not a poll: refreshes only on returning to the tab after `afterMs`.
 export function RefreshOnReturn({ afterMs = 10000 }) {
   const router = useRouter();
   const hiddenAt = useRef(null);

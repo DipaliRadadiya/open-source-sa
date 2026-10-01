@@ -4,14 +4,8 @@ import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 
-/**
- * Keyboard entry into the panel's content and orientation after route changes.
- *
- * The first render keeps the browser's normal focus. Subsequent pathname
- * changes focus the new h1 without scrolling it away from Next's chosen
- * position. Hash-only jumps do not change the pathname, so in-page targets
- * such as Application Security keep their own focus behavior.
- */
+// Route changes focus the new h1 without scrolling; the first render and hash-only
+// jumps keep the browser's own focus.
 export function PanelFocus() {
   const pathname = usePathname();
   const t = useTranslations("common");

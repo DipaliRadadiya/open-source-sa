@@ -1,7 +1,6 @@
 import { api } from "@/lib/api/client";
 
-// A domain hostname goes in the URL path; encode it so a value with dots (or an
-// unexpected character the backend will still 422) can't break the request.
+// A hostname goes in the URL path; encode it so an odd value cannot break the request.
 const seg = (domain) => encodeURIComponent(domain);
 
 // ---- Domains ----------------------------------------------------------------
@@ -23,21 +22,8 @@ export async function makePrimaryDomain(appId, domain) {
   return res.data?.domains;
 }
 
-/*
- * Changes what an attached name DOES — `type`, `redirect_to`,
- * `redirect_status`. Not what it is called.
- *
- * The name is deliberately not editable server-side: a rename leaves the old
- * name in the certificate's lineage, and certbot re-validates every name in a
- * lineage and fails the WHOLE renewal when one cannot be validated. So it
- * would silently stop the certificate covering the site's remaining, perfectly
- * good names from renewing, and the first anyone hears of it is a browser
- * warning up to ninety days later. Renaming stays delete + add, which is
- * visibly two decisions.
- *
- * The primary is refused with a 422 — it names the vhost file and both log
- * files, so changing it is what the `primary` endpoint above is for.
- */
+// Changes `type` and redirect only. Renaming is delete + add (a renamed name breaks
+// certbot renewal). The primary is refused with a 422.
 export async function updateDomain(appId, domain, body) {
   const res = await api.put(`/applications/${appId}/domains/${seg(domain)}`, body);
   return res.data?.domain;
@@ -55,17 +41,14 @@ export async function issueCertificate(appId, body) {
   return res.data?.certificate;
 }
 
-// Rehearse the issuance: the panel's reachability check, then a real
-// `certbot --dry-run` against Let's Encrypt's staging server. Queued and 202
-// for the same reason issuing is — the second half is a round trip to the CA.
-// Nothing is stored and no certificate is created either way.
+// Rehearse issuance: reachability check, then `certbot --dry-run` against
+// Let's Encrypt staging. Queued (202); nothing is stored or issued.
 export async function startCertificateDryRun(appId) {
   const res = await api.post(`/applications/${appId}/certificate/dry-run`);
   return res.data?.dry_run ?? null;
 }
 
-// Poll target while a dry run is running. `null` when this site has never had
-// one — not an error, just a question nobody has asked yet.
+// Poll target while a dry run is running. `null` when none has ever run.
 export async function fetchCertificateDryRun(appId) {
   const res = await api.get(`/applications/${appId}/certificate/dry-run`);
   return res.data?.dry_run ?? null;

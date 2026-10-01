@@ -1,10 +1,4 @@
-/**
- * Watching for deploys this page did not start — a push, or someone else.
- *
- * The history is a server render, so the page only learns of a new run by
- * asking. `GET /deployments/latest` is the cheap question; these decide whether
- * its answer is news and how soon to ask again.
- */
+// Polls for deploys this page did not start (a push or another user).
 
 export const WATCH_MS = 5000;
 export const WATCH_BUSY_MS = 2500;

@@ -25,34 +25,16 @@ import {
 } from "@/components/ui/select";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
-/**
- * The fields that describe *where* the data goes — shared by create and edit,
- * because they are the same question in both.
- *
- * Every provider's inputs come from one declaration (`lib/storage/providers`)
- * and are rendered by one loop. The alternative — a form per provider, or one
- * union form with everything nullable — produces a screen that asks for a
- * bucket and a hostname at the same time and leaves the user to work out which
- * half applies to them.
- *
- * The provider picker is now a REAL field: it is submitted, the backend stores
- * it, and it decides what the rest of this form asks for. It used to be a
- * client-only hint that changed an example line, because the API had no
- * provider concept and inferred one from the endpoint hostname.
- */
+// Shared by create and edit; every provider's inputs come from `lib/storage/providers`.
 export function DestinationFormFields({
-  // True on a destination that already exists, where changing the folder has
-  // consequences for archives already in it.
+  // True when editing, where changing the folder affects existing archives.
   existing = false,
   form,
   preset,
   onPresetChange,
   disabled,
-  // Editing never touches credentials: the API reads the *presence* of one as
-  // "rotate this", so a form that rendered them would post whatever was in its
-  // state and overwrite the stored secret. Rotation is its own dialog, and
-  // this is enforced by not drawing the inputs rather than by remembering not
-  // to submit them.
+  // Never render credentials when editing: the API reads their presence as "rotate"
+  // and would overwrite the stored secret.
   hideSecrets = false,
 }) {
   const t = useTranslations("storage.form");
@@ -101,18 +83,7 @@ export function DestinationFormFields({
         )}
       />
 
-      {/*
-        * A constraint stated BEFORE the credentials are entered, as prose,
-        * not as a tooltip.
-        *
-        * Google Drive: a service account has no storage quota of its own, so
-        * a personal-Drive folder is refused outright. pCloud: the vendor's own
-        * documentation says its WebDAV is for small files and may be
-        * interrupted, which matters when the file is a site archive. Neither
-        * is discoverable by trying, and finding out afterwards means having
-        * filled in a form for a destination that was never going to do the
-        * job.
-        */}
+      {/* Provider constraints, stated before credentials are entered. */}
       {warning ? (
         <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs leading-relaxed">
           <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-warning" />
@@ -152,18 +123,7 @@ export function DestinationFormFields({
             <p className="text-xs text-muted-foreground">
               {provider === "s3" ? t("prefixHint") : t("prefixHintRemote")}
             </p>
-            {/*
-              * On S3 the folder is the disk's ROOT and a backup's stored key is
-              * relative to it, so changing it does not move anything — it
-              * repoints the panel at a different place and every archive
-              * already written stops being found. On FTP/SFTP it is appended
-              * to the connection root, with the same consequence. Said where
-              * the change is made, because afterwards the only symptom is a
-              * download that reports the file missing.
-              *
-              * Only when editing: on a destination that does not exist yet
-              * there is nothing to strand, and a warning there is just noise.
-              */}
+            {/* Stored keys are relative to the folder, so changing it strands every archive. */}
             {existing ? (
               <p className="flex items-start gap-1.5 text-xs text-warning">
                 <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
@@ -178,24 +138,16 @@ export function DestinationFormFields({
   );
 }
 
-/**
- * One config input, drawn according to its declared kind.
- *
- * Help text and labels are looked up by field name, so adding a provider field
- * means adding a dictionary key — there is no per-provider branch here to
- * forget to update.
- */
+// Labels and help text are looked up by field name; no per-provider branch.
 function ConfigField({ definition, form, preset, disabled, endpointHint, existing = false, t }) {
   const { name, kind, mono, placeholder, warnWhenOff, hintsEndpoint } = definition;
-  // An existing S3 destination is edited without knowing which service it is,
-  // so its endpoint and region follow the shared rule (one or the other) in
-  // `editStorageDestinationSchema` rather than any one preset's.
+  // The S3 service of an existing destination is unknown, so endpoint and region follow
+  // `editStorageDestinationSchema`, not a preset.
   const sharedS3Rule = existing && providerForPreset(preset) === "s3" && (name === "endpoint" || name === "region");
   const required = !sharedS3Rule && isRequired(definition, preset);
   const help = t.has(`help.${name}`) ? t(`help.${name}`) : null;
-  // A translated placeholder when the field has one, falling back to the
-  // literal on the definition (the port defaults, which are numbers and the
-  // same in every language).
+  // A translated placeholder when one exists, else the definition's literal
+  // (numeric port defaults).
   const hint = t.has(`placeholders.${name}`) ? t(`placeholders.${name}`) : placeholder;
 
   return (
@@ -204,9 +156,8 @@ function ConfigField({ definition, form, preset, disabled, endpointHint, existin
       name={`config.${name}`}
       render={({ field }) => {
         if (kind === TOGGLE) {
-          // `field.value` can be undefined on first paint; the declaration's
-          // default is applied when the form is reset, so coercing here only
-          // guards the gap rather than deciding policy.
+          // `field.value` can be undefined on first paint, before reset applies
+          // the declared default.
           const on = field.value !== false;
 
           return (
@@ -214,12 +165,7 @@ function ConfigField({ definition, form, preset, disabled, endpointHint, existin
               <div className="space-y-1">
                 <FormLabel>{t(`fields.${name}`)}</FormLabel>
                 {help ? <p className="text-xs text-muted-foreground">{help}</p> : null}
-                {/*
-                  * Shown only when the toggle is off, and worded as a
-                  * consequence rather than a setting: "TLS is off" tells
-                  * somebody nothing they did not just do, while naming what
-                  * travels unencrypted is the reason to reconsider.
-                  */}
+                {/* Shown only when off, naming what travels unencrypted. */}
                 {warnWhenOff && !on ? (
                   <p className="flex items-start gap-1.5 text-xs text-warning">
                     <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />

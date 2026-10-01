@@ -1,34 +1,17 @@
-/**
- * The panel account manages every database on the server. It is not the
- * credential an application should be pointed at.
- */
+// The panel account manages every database; never point an application at it.
 const PANEL_PREFIX = "panel_";
 
-/**
- * The user whose credentials a connection card should show.
- *
- * The one someone created for their application, not the panel's own — which
- * is usually first in the list and would otherwise be the one copied into a
- * `wp-config.php`.
- */
+/** The application's database user for a connection card, never the panel's own. */
 export function primaryUser(database) {
   const users = database?.users ?? [];
-  // The oldest, not the first in the response: the API does not order the
-  // list, and adding a second user swapped the card over to it. On PostgreSQL
-  // the first user is the owner — the only one with rights on existing tables.
+  // The oldest (the API list is unordered): on PostgreSQL that is the owner of existing tables.
   const own = users
     .filter((user) => !user.username.startsWith(PANEL_PREFIX))
     .sort((a, b) => a.id - b.id);
   return own[0] ?? users[0] ?? null;
 }
 
-/**
- * Host and port for a user, taken from the connection string.
- *
- * Only these two: the name, username and password are returned as their own
- * fields and are authoritative, while the address the engine answers on appears
- * nowhere else in the response.
- */
+// Host and port only; the other parts have their own authoritative fields.
 export function connectionAddress(user) {
   if (!user?.connection_string) return {};
   try {

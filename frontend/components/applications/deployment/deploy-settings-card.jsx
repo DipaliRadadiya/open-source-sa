@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
@@ -28,37 +28,18 @@ import {
   FormField,
 } from "@/components/ui/form";
 
-/**
- * What a deploy actually does — and, until now, the part of it nobody could
- * change after the site was created.
- *
- * The create form accepts a deploy script; there was no screen to edit one
- * afterwards, so a script that turned out wrong meant recreating the site.
- *
- * `deploy_script` comes back filled even when the user has written nothing —
- * it falls back to the old build command. `deploy_script_customised` is what
- * separates "their script" from "the fallback", and it is the difference
- * between offering Reset and pretending someone else's text is theirs.
- */
+// `deploy_script` comes back filled from the build command even when unset;
+// `deploy_script_customised` marks a real one and decides whether Reset is offered.
 export function DeploySettingsCard({ applicationId, application, settings, canManage }) {
   const t = useTranslations("applications.deployment.settings");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [saving, setSaving] = useState(false);
-  // Only the resolved outcomes live in state. "loading" and "idle" are facts
-  // about the props, so deriving them keeps the effect free of the synchronous
-  // setState that would otherwise run on every render for a site with no
-  // account — see the react-hooks/set-state-in-effect rule.
+  // Only resolved outcomes live in state; the rest is derived from props
+  // (react-hooks/set-state-in-effect).
   const [resolved, setResolved] = useState(null);
 
-  /*
-   * Typing a branch name is guessing. The provider knows them, this account can
-   * list them, and the create form has asked for exactly this list since the
-   * day it was written — the edit screen simply never caught up.
-   *
-   * Fetched here rather than on the server: the deployment page renders for
-   * every git site, and most visits never touch this field. One request that a
-   * dead credential can fail is not worth putting in front of the whole screen.
-   */
+  // Branches load on the client: most visits never need them, and a dead
+  // credential must not fail the whole page.
   const accountId = application?.git_account_id;
   const repository = application?.repository;
   const linked = Boolean(accountId) && Boolean(repository) && !application?.git_account_missing;
@@ -103,36 +84,20 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
     },
   });
 
-  // Without this a sidebar click throws the edit away silently.
+  // Without this a sidebar click silently discards the edit.
   useWatchUnsaved("app-deploy-settings", form.formState.isDirty);
 
   const script = useWatch({ control: form.control, name: "deploy_script" });
   const isDefault = script === (settings.default_deploy_script ?? "");
 
-  // The branch as typed, not as saved: the placeholder list is read while
-  // writing the script, and naming the old branch there is worse than naming
-  // none — it describes a deploy that is about to stop being true.
+  // The branch as typed, not as saved: the placeholder list should describe the
+  // deploy about to happen.
   const branchNow = useWatch({ control: form.control, name: "branch" });
 
-  /*
-   * What each token expands to on THIS site.
-   *
-   * The list of tokens alone answered "what may I write" and left "what will
-   * it become" to be guessed — and `{path}` is the one people get wrong,
-   * because a site's document root is not its directory.
-   *
-   * Only tokens whose value is actually known get one. A token the backend
-   * adds later still lists, without an invented value beside it.
-   */
+  // `{path}` expands to the document root, not the site directory.
   const scriptRef = useRef(null);
 
-  /*
-   * Drop a token where the cursor is.
-   *
-   * They were a read-only list, so using one meant reading `{path}` off the
-   * screen and typing it out by hand — a chance to mistype the one thing on
-   * this card that has to be exact.
-   */
+  // Inserts a token at the cursor so exact values never need typing.
   function insertToken(token) {
     const el = scriptRef.current;
     const current = form.getValues("deploy_script") ?? "";
@@ -144,7 +109,7 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
     const end = el.selectionEnd ?? start;
     const next = `${current.slice(0, start)}${token}${current.slice(end)}`;
     form.setValue("deploy_script", next, { shouldDirty: true });
-    // Put the caret after what was just inserted, so typing continues there.
+    // Place the caret after the inserted token.
     requestAnimationFrame(() => {
       el.focus();
       el.setSelectionRange(start + token.length, start + token.length);
@@ -155,9 +120,8 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
     "{path}": application?.document_root,
     "{branch}": branchNow || "main",
     "{domain}": application?.domain,
-    // What the deploy substitutes: the bare `php` command on a site without a
-    // version, otherwise that version's binary, whose path depends on the web
-    // server — so it is named rather than guessed.
+    // The bare `php` command without a version; otherwise that version's binary,
+    // whose path depends on the web server, so it is named rather than guessed.
     "{php}": application?.php_version ? `PHP ${application.php_version}` : "php",
   };
 
@@ -165,9 +129,9 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
     setSaving(true);
     try {
       await updateDeploySettings(applicationId, values);
-      toast.success(t("saved"));
       form.reset(values);
-      router.refresh();
+      await refreshAndWait();
+      toast.success(t("saved"));
     } catch (error) {
       if (error.response?.data?.errors) handleValidationError(error, form);
       else toast.error(apiMessage(error, t("saveFailed")));
@@ -180,18 +144,8 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
       <Form {...form}>
         <form noValidate onSubmit={form.handleSubmit(save)}>
-          {/*
-           * The panel's settings card, not a hand-rolled one.
-           *
-           * `Section`/`Row` is the locked convention five settings forms
-           * already use: header band with a tinted mark, rows whose label and
-           * hint sit LEFT of a fixed control column, and an action band that
-           * puts the Save inside the same box as the rows it saves. This card
-           * had ignored all of it and stacked label-over-control down the full
-           * width of the page — which is why a four-character branch name got
-           * an input elevenhundred pixels wide, and why the card read as a
-           * flat form rather than as settings.
-           */}
+          {/* Uses the shared settings `Section`/`Row` layout: label and hint left of a
+              fixed control column, Save inside the card's action band. */}
           <Section
             icon={FileCode2}
             title={t("title")}
@@ -219,27 +173,13 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
                 <Row
                   wide
                   label={t("branch")}
-                  /*
-                   * Two different things wearing two different tones.
-                   *
-                   * `loading`, `empty` and `error` describe a fallback the card
-                   * has already applied — the field still works, you just type
-                   * the name. As red text they read as though the save had
-                   * failed. They are hints.
-                   *
-                   * `unlinked` is the one the reader must go and fix: no
-                   * working Git account, so nothing here will deploy. That
-                   * belongs in Row's `error` slot, which is the destructive
-                   * one. Rewriting this card onto Row dropped the distinction
-                   * entirely and made all four muted.
-                   */
+                  /* `unlinked`/`missing` must be fixed, so they use Row's destructive `error`
+                     slot; the other notices describe a fallback already applied. */
                   hint={notice && notice !== "unlinked" && notice !== "missing" ? t(`branchNotice.${notice}`) : t("branchHint")}
                   error={notice === "unlinked" || notice === "missing" ? t(`branchNotice.${notice}`) : undefined}
                 >
-                  {/* The list when we can be sure of it, free text when we
-                      cannot — see lib/applications/branch-picker.js. The one
-                      thing never rendered is an empty disabled picker, which
-                      reads as "your branch is gone". */}
+                  {/* Picker when the list is reliable, free text otherwise (see branch-picker.js);
+                      never an empty disabled picker, which reads as "your branch is gone". */}
                   {mode === "picker" ? (
                     <Combobox
                       options={branchOptions(branches, field.value)}
@@ -261,8 +201,7 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
               )}
             />
 
-            {/* `wide`: a deploy script is many lines of code and has no business
-                in the 14rem control column a branch name belongs in. */}
+            {/* `wide`: a multi-line script does not fit the 14rem control column. */}
             <FormField
               control={form.control}
               name="deploy_script"
@@ -319,19 +258,7 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
   );
 }
 
-/**
- * The tokens a deploy script may use, and what each expands to.
- *
- * This was four rows of mono text inside the field's FormDescription — a
- * reference table wearing a caption's clothes, which is why it read as debug
- * output left on the page. It is a small surface of its own now, and the
- * tokens are buttons: clicking one drops it at the cursor, so the one string
- * on this card that has to be exact never has to be typed.
- *
- * A token the panel cannot resolve keeps its row and simply has no value
- * beside it. In the old stacked layout that left a dangling arrow pointing at
- * nothing.
- */
+// Each token inserts itself at the cursor; one the panel cannot resolve keeps its row.
 function TokenList({ label, tokens, values, onInsert }) {
   return (
     <div className="rounded-lg border bg-muted/30 p-3">
@@ -355,8 +282,7 @@ function TokenList({ label, tokens, values, onInsert }) {
                 </code>
               )}
             </dt>
-            {/* break-all: a document root is long and unbroken, and letting it
-                push the card wide is worse than letting it wrap. */}
+            {/* break-all: a long document root must wrap rather than widen the card. */}
             <dd className="min-w-0 self-center font-mono text-xs break-all text-muted-foreground">
               {values[token] ?? ""}
             </dd>

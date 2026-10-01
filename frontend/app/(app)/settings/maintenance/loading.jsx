@@ -1,7 +1,7 @@
 import { SettingsCardSkeleton } from "@/components/settings/settings-skeleton";
 
-// Shown when switching tabs: the layout (title, tabs) is preserved across
-// navigations within this segment, so only the card area needs to stand in.
+// The layout (title, tabs) persists across tab navigations, so only the card
+// area needs a placeholder.
 export default function Loading() {
   return (
     <div className="space-y-4">

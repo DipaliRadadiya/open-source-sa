@@ -10,16 +10,7 @@ function Table({
   ...props
 }) {
   return (
-    /*
-     * ScrollFade rather than a bare overflow-x-auto div: a table that is wider
-     * than its card scrolls, but nothing said so, and on a phone the last
-     * column — which on the dashboard is "Stop this process" — sat 400px off
-     * screen with no hint it existed.
-     *
-     * A no-op wherever a table already fits: ScrollFade only paints a mask on
-     * an edge it can still scroll towards, so a table with nothing to scroll to
-     * renders exactly the container this replaced.
-     */
+    /* ScrollFade so wide tables show they scroll; it paints nothing when the table fits. */
     <ScrollFade data-slot="table-container" className="relative w-full">
       <table
         data-slot="table"

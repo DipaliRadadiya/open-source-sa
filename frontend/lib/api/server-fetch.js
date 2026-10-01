@@ -1,20 +1,8 @@
 import { cookies } from "next/headers";
 import { serverLocale } from "@/lib/i18n/server-locale";
 
-/**
- * Server-side GET against the Laravel API, forwarding the Sanctum session
- * cookie plus Referer/Origin (required for stateful-domain auth). Mirrors the
- * pattern used by get-current-user / get-permissions.
- *
- * IMPORTANT: cookies() is awaited by the CALLER-facing path here (top of the
- * function, outside any try/catch) so Next's DynamicServerError propagates and
- * the route is correctly treated as dynamic — swallowing it caused the earlier
- * auth redirect loop.
- *
- * @param {string} path  API path beginning with "/" (relative to `${API}/api`)
- * @param {{ searchParams?: Record<string, string | number | undefined> }} [opts]
- * @returns {Promise<Response>} the raw fetch Response (caller inspects .ok/.status)
- */
+// IMPORTANT: cookies() is awaited outside any try/catch, so Next's
+// DynamicServerError propagates and the route stays dynamic.
 export async function serverFetch(path, { searchParams } = {}) {
   const cookieStore = await cookies();
   const locale = await serverLocale();

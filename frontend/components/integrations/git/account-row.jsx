@@ -26,15 +26,7 @@ import {
 import { ProviderLogo } from "@/components/integrations/git/provider-logo";
 import { AccountHealth } from "@/components/integrations/git/account-health";
 
-/**
- * One connected account.
- *
- * The label leads, not the provider: it is the name the user chose, and it is
- * how this account will appear in the app-create dropdown later. The provider
- * is a badge and the identifier is the proof it is the right account — that one
- * comes back from the provider during verification, so it is the only field
- * here nobody typed.
- */
+// The user's label leads: it is how the account appears in the app-create dropdown.
 export function AccountRow({
   account,
   status,
@@ -59,8 +51,7 @@ export function AccountRow({
       const result = repositoriesResponseSchema.safeParse(data);
       if (!result.success) throw new Error("Invalid repository response");
 
-      // The endpoint intentionally returns a single lightweight page rather
-      // than a provider-wide total. Say only what this check proves.
+      // The endpoint returns one page, not a total; claim only what it proves.
       setRepositoryAccess(
         result.data.repositories.length > 0 ? "available" : "empty",
       );
@@ -90,7 +81,7 @@ export function AccountRow({
                   {account.identifier}
                 </span>
               ) : null}
-              {/* Self-hosted only. On gitlab.com the host is noise. */}
+              {/* Self-hosted only. */}
               {account.host ? (
                 <span className="truncate font-mono text-xs text-muted-foreground">
                   {account.host}
@@ -164,9 +155,7 @@ export function AccountRow({
                 </p>
               ) : null}
   
-              {/* The fix, next to the problem. A broken token is the one state on
-                  this page where there is something to do, so it does not hide in
-                  the menu. */}
+              {/* A broken token gets its fix inline, not hidden in the menu. */}
               {broken && canManage ? (
                 <Button variant="outline" size="sm" onClick={onReplace}>
                   <KeyRound className="size-3.5" />
@@ -194,8 +183,7 @@ export function AccountRow({
               <Pencil className="size-4" />
               {t("actions.edit")}
             </DropdownMenuItem>
-            {/* Separate from Edit on purpose: renaming is instant and safe,
-                swapping a credential is a verified round-trip that can fail. */}
+            {/* Separate from Edit: replacing a token is a verified round-trip. */}
             <DropdownMenuItem onClick={onReplace}>
               <KeyRound className="size-4" />
               {t("actions.replace")}
@@ -211,13 +199,7 @@ export function AccountRow({
   );
 }
 
-/**
- * Scopes, and when this was last checked.
- *
- * Off the row deliberately: scopes matter exactly once — when someone asks why
- * their organisation's repositories are missing — so they belong one tap away
- * rather than in every row forever.
- */
+/** Scopes and when the account was last checked, kept off the row. */
 function AccountDetails({ account }) {
   const t = useTranslations("git.details");
   const scopes = account.scopes ?? [];

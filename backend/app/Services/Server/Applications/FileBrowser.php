@@ -16,6 +16,7 @@ use App\Services\Server\ServerOpsResult;
 use App\Support\Bytes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * List, view, edit and download a site's own files.
@@ -335,6 +336,96 @@ class FileBrowser
     }
 
     /**
+     * The size of every folder directly inside `$path`, from one `du`.
+     *
+     * For the file manager's size column, which showed a folder's size only
+     * after a click per folder (operator, 2026-10-01: show them). Measured on
+     * the nginx test server at a site's root: 0.3 s for 45–60k files, 1.5 s
+     * for n8n's 292k (8 s with a cold disk cache) — so it runs at the lowest
+     * CPU and disk priority, stays on the site's own filesystem (`-x`), and
+     * the answer is kept for five minutes. Anything that changes the site
+     * through the panel forgets it ({@see forgetFolderSizes()}); a change made
+     * outside the panel shows within those five minutes, or on `refresh`.
+     *
+     * A run that hits the 60-second ceiling is the same timed-out error as any
+     * file operation (ServerOps keeps no output from a killed process).
+     * `complete` is false only when `du` printed folders but not the total —
+     * an answer that is true for what it names, and so not remembered.
+     *
+     * @return array{sizes: array<string, array{size: int, size_human: string}>, total: ?array{size: int, size_human: string}, complete: bool, measured_at: string}
+     */
+    public function folderSizes(Application $application, string $path, bool $refresh = false): array
+    {
+        $this->assertRootExists($application);
+        $target = rtrim($this->resolve($application, $path), '/');
+        $this->assertType($application, $target, 'd');
+
+        $key = 'file-sizes:'.$application->id.':'.$this->sizesGeneration($application).':'.sha1($target);
+
+        if (! $refresh && ($cached = Cache::get($key)) !== null) {
+            return $cached;
+        }
+
+        $result = $this->serverOps->run(
+            $this->asUser($application, ['nice', '-n', '19', 'ionice', '-c', '3', 'du', '-bx0', '--max-depth=1', $target]),
+            ['feature' => 'application', 'op' => 'file_folder_sizes', 'application' => $application->id],
+            timeout: 60,
+        );
+
+        $sizes = [];
+        $total = null;
+
+        // `-0`: NUL-separated, so a folder name holding a newline is still one entry.
+        foreach (array_filter(explode("\0", $result->output())) as $line) {
+            [$bytes, $entry] = array_pad(explode("\t", $line, 2), 2, '');
+            $entry = rtrim($entry, '/');
+            $size = ['size' => (int) $bytes, 'size_human' => Bytes::human((int) $bytes)];
+
+            if ($entry === $target) {
+                $total = $size;
+            } elseif (dirname($entry) === $target) {
+                $sizes[basename($entry)] = $size;
+            }
+        }
+
+        // `du` exits 1 over a few unreadable files and still prints the rest
+        // (see measure()); only an answer with nothing in it is a failure.
+        if ($result->failed() && $sizes === [] && $total === null) {
+            throw new FileOperationException($result->reference, busy: $result->busy, staleLock: $result->staleLock, denied: $result->denied, timedOut: $result->timedOut);
+        }
+
+        $answer = [
+            'sizes' => $sizes,
+            'total' => $total,
+            'complete' => ! $result->timedOut && $total !== null,
+            'measured_at' => now()->format('d-m-Y H:i:s'),
+        ];
+
+        if ($answer['complete']) {
+            Cache::put($key, $answer, now()->addSeconds(self::FOLDER_SIZES_TTL));
+        }
+
+        return $answer;
+    }
+
+    /** How long `folderSizes()` answers are kept. */
+    public const FOLDER_SIZES_TTL = 300;
+
+    /**
+     * Drop every remembered folder size for this site at once — one counter in
+     * the cache key, rather than a list of every path ever measured.
+     */
+    public function forgetFolderSizes(Application $application): void
+    {
+        Cache::forever('file-sizes-gen:'.$application->id, $this->sizesGeneration($application) + 1);
+    }
+
+    private function sizesGeneration(Application $application): int
+    {
+        return (int) Cache::get('file-sizes-gen:'.$application->id, 0);
+    }
+
+    /**
      * Measure the whole application directory now, and remember when.
      *
      * @return array{size: int, size_human: string, measured_at: string}
@@ -415,6 +506,8 @@ class FileBrowser
      */
     private function sizeChanged(Application $application): void
     {
+        $this->forgetFolderSizes($application);
+
         MeasureApplicationSize::dispatch($application->id)
             ->delay(now()->addSeconds(MeasureApplicationSize::DEBOUNCE_SECONDS));
     }
@@ -966,6 +1059,7 @@ class FileBrowser
         }
 
         $this->run($application, ['mkdir', $target], 'mkdir');
+        $this->forgetFolderSizes($application);
     }
 
     /**
@@ -989,6 +1083,8 @@ class FileBrowser
         $this->assertType($application, dirname($target), 'd');
 
         $this->run($application, ['mv', $source, $target], 'rename');
+        // Nothing added or removed, but a move changes which folder holds it.
+        $this->forgetFolderSizes($application);
     }
 
     /**

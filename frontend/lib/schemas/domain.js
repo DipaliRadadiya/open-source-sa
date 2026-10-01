@@ -1,11 +1,7 @@
 import { z } from "zod";
 import { isValidApplicationDomain } from "./application.js";
 
-/**
- * A site is not one hostname: every name it answers to is a row, and `type`
- * says what that name does — canonical, a second name for the same content, or
- * a redirect that serves nothing.
- */
+// Every name a site answers to is a row; `type` says what that name does.
 export const domainSchema = z.object({
   id: z.number(),
   domain: z.string(),
@@ -33,13 +29,8 @@ export const certificateSchema = z.object({
   status: z.string().nullish(),
   domains: z.array(z.string()).default([]),
   missing_domains: z.array(z.string()).default([]),
-  /*
-   * Names ON the certificate that the site no longer has — the mirror of
-   * `missing_domains`, and the more dangerous one. certbot fails a whole
-   * renewal if any single name in the lineage cannot be validated, so a
-   * certificate carrying a domain that has gone away has silently stopped
-   * renewing for every other name on it too.
-   */
+  // Names on the certificate the site no longer has. certbot fails the whole
+  // renewal if any name cannot be validated, so these stop renewal for all names.
   stale_domains: z.array(z.string()).default([]),
   force_https: z.boolean().default(false),
   auto_renew: z.boolean().default(false),
@@ -47,16 +38,8 @@ export const certificateSchema = z.object({
   issued_at: z.string().nullish(),
   expires_at: z.string().nullish(),
   expires_at_human: z.string().nullish(),
-  /*
-   * What the web server is actually PRESENTING, as against what is on disk.
-   * They agree on a healthy site; when they do not, the file renewed and the
-   * running server never picked it up, so the countdown above is reassuring
-   * while every visitor gets a browser warning.
-   *
-   * `serving_stale` is deliberately nullable and NOT defaulted to false: null
-   * means nobody managed to complete a handshake to look, which is not the
-   * same as agreement and must never render as a tick.
-   */
+  // What the web server presents versus what is on disk. NOT defaulted:
+  // null means no handshake completed, never "all good".
   serving_stale: z.boolean().nullish(),
   served_expires_at: z.string().nullish(),
   served_checked_at: z.string().nullish(),
@@ -68,14 +51,7 @@ export const certificateSchema = z.object({
   reference: z.string().nullish(),
 }).passthrough();
 
-/**
- * What this site can actually be issued, decided server-side.
- *
- * `available` is the only thing that gates a choice. `reason` explains it
- * either way: on an unavailable type it says what to fix, on an available one
- * it is informational (self-signed works everywhere, browsers warn) — so
- * branching on the presence of a reason would refuse a type that works.
- */
+// Only `available` gates a choice; `reason` may be informational, so never branch on its presence.
 export const certificateTypeSchema = z.object({
   type: z.string(),
   label: z.string(),
@@ -85,10 +61,8 @@ export const certificateTypeSchema = z.object({
   reason: z.string().nullish(),
 });
 
-// `null` is a normal answer — "this site has no certificate" is a state to
-// render, not an error. `available_types` sits beside it, not inside it: it
-// describes what the site COULD have, which is exactly the question when there
-// is no certificate yet.
+// `null` certificate is a normal state, not an error. `available_types` sits
+// beside it because it describes what the site could have.
 export const certificateResponseSchema = z.object({
   certificate: certificateSchema.nullable(),
   available_types: z.array(certificateTypeSchema).default([]),
@@ -97,66 +71,29 @@ export const certificateResponseSchema = z.object({
 // Redirect targets used by the add-domain form.
 export const REDIRECT_STATUSES = [301, 302, 307, 308];
 
-// Add-domain form. Messages are `validation`-namespace keys (FormMessage
-// translates them); the backend does the authoritative hostname/uniqueness
-// check and its 422 is mapped onto the field. `primary` is intentionally not an
-// option — promoting a name is a separate endpoint.
+// The backend's 422 is mapped onto the field. `primary` is not an option: promoting is a separate endpoint.
 export const addDomainFormSchema = z
   .object({
-    /*
-     * Lowercased before it is checked, not rejected for being typed in caps.
-     *
-     * Hostnames are case-insensitive, and the backend already does
-     * `strtolower(trim(...))` on this field before validating it — so
-     * `Example.com` was always going to be accepted and stored as
-     * `example.com`. Only this regex refused it, with "Enter a valid
-     * hostname", which is both wrong and unactionable: the name IS valid.
-     *
-     * Normalising here rather than loosening the regex to /i means the value
-     * the form submits is the value the server will store, so the row that
-     * comes back is not a surprise.
-     */
+    // Lowercased rather than rejected: the backend stores `strtolower(trim(...))`
+    // anyway, so the submitted value matches what comes back.
     domain: z
       .string()
       .trim()
       .toLowerCase()
       .min(1, "domainRequired")
-      // The backend's own ceiling (`max:253`). Without it a long name was
-      // accepted here and refused by the server, which puts a field problem in
-      // a toast and leaves the box looking fine.
+      // The backend's own ceiling (`max:253`).
       .max(253, "hostnameTooLong")
-      // Each part between dots is capped at 63 — the backend refuses a longer
-      // one with Laravel's bare "The domain field format is invalid."
+      // Each label is capped at 63, as on the backend.
       .refine((value) => value.split(".").every((label) => label.length <= 63), "hostnameLabelTooLong")
       .refine(isValidApplicationDomain, "hostnameInvalid"),
     type: z.enum(["alias", "redirect"]).default("alias"),
-    /*
-     * A full URL, checked here as well as server-side.
-     *
-     * The backend rule is Laravel's `url`, which requires a scheme — so
-     * `example.com`, the most natural thing to type into a box labelled
-     * "Redirect to", was accepted by this form and refused by the server with
-     * "The redirect to field must be a valid URL." A field problem answered by
-     * a round trip, and the message never says what is missing.
-     *
-     * http/https only, deliberately narrower than `URL` alone: `javascript:`
-     * and `data:` both parse as URLs, and this value is written into the web
-     * server's redirect directive.
-     */
+    // http/https only: `javascript:` and `data:` parse as URLs, and this goes into the redirect directive.
     redirect_to: z.string().trim().optional().default(""),
     redirect_status: z.coerce.number().refine((n) => REDIRECT_STATUSES.includes(n)).default(301),
   })
   .superRefine(redirectRules);
 
-/**
- * Edit form for a name that is already attached: what it DOES, never what it
- * is called.
- *
- * `PUT …/domains/{domain}` accepts exactly these three fields, and the same
- * two redirect rules apply — so they are shared rather than written twice.
- * A second copy is how the add form and the edit form start disagreeing about
- * what a redirect needs.
- */
+// `PUT …/domains/{domain}` accepts exactly these fields.
 export const editDomainFormSchema = z
   .object({
     type: z.enum(["alias", "redirect"]).default("alias"),

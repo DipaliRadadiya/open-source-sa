@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
@@ -21,8 +21,7 @@ const SECTIONS = [
 ];
 
 // Looks like the Account tab bar, but every tab is a real link to its own
-// route: back works, a section can be pasted to someone, and opening the
-// timezone form doesn't also load the SSH one.
+// route: back works, a section can be shared, and each form loads separately.
 const TAB =
   "relative inline-flex h-auto flex-none items-center justify-center gap-2 rounded-md border border-transparent px-4 py-2 text-sm font-medium whitespace-nowrap text-muted-foreground transition-all hover:bg-background/60 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none [&_svg]:size-4 [&_svg]:shrink-0";
 const TAB_ACTIVE =
@@ -34,9 +33,7 @@ export function SettingsTabs({ badges = {} }) {
   const { guardNavigation } = useUnsaved();
 
   return (
-    // Scrolls rather than wraps on a narrow phone — a tab bar that reflows to
-    // two rows stops reading as one control. The fade is the only thing saying
-    // so: without it the last two sections simply look absent on a 390px screen.
+    // Scrolls rather than wraps on a narrow phone; the fade signals more tabs.
     <ScrollFade className="-mx-1 px-1 pb-1">
       <nav
         aria-label={t("tabs.label")}

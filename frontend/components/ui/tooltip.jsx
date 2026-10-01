@@ -18,9 +18,7 @@ function Tooltip({
   return (
     <TooltipPrimitive.Root
       data-slot="tooltip"
-      // Prevent the tooltip from stealing focus when a Dialog (modal) opens
-      // and auto-focuses its first focusable child. The tooltip should only
-      // open on hover, not on focus.
+      // Stops a Dialog's auto-focus from opening the tooltip; hover only.
       onOpenAutoFocus={(e) => e.preventDefault()}
       {...props}
     />

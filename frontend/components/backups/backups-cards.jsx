@@ -15,14 +15,7 @@ import { restoreBlocker } from "@/components/backups/restore-dialog";
 import { sizeNote } from "@/components/backups/backups-history-table";
 import { DeleteBackupsDialog } from "@/components/backups/delete-backups-dialog";
 
-/**
- * Backup rows on a phone, where a five-column table cannot go.
- *
- * Shared by the History screen and the application page — the same component
- * the desktop table pairs with, so a backup describes itself identically
- * wherever you meet it. `showSite` is the only difference: on a site's own
- * page, naming the site in every row is noise.
- */
+// `showSite` is off on a site's own page.
 export function BackupsCards({
   backups,
   canRestore,
@@ -35,9 +28,7 @@ export function BackupsCards({
   canClear = false,
   showSite = true,
   restoreInFlight = false,
-  // The desktop table deletes through row selection, which a card has no room
-  // for — so phones had no way to delete a backup at all. One button per card
-  // opens the same dialog with that one backup.
+  // A card has no room for row selection, so each card gets its own delete button.
   canDelete = false,
   onDeleted,
 }) {
@@ -68,8 +59,7 @@ export function BackupsCards({
                   </p>
                 </div>
               ) : (
-                // Wraps rather than truncating: "Dateien und Datenbank" lost its
-                // last word at 390px, and the type is the card's title.
+                // Wraps rather than truncating: the type is the card's title.
                 <p className="min-w-0 break-words font-medium">
                   {backup.type_title ?? backup.type}
                 </p>
@@ -96,9 +86,7 @@ export function BackupsCards({
                 label={t("columns.size")}
                 value={backup.size_bytes ? formatBytes(backup.size_bytes, format) : sizeNote(backup, t)}
               />
-              {/* Only when the API sends it — absent means a backend that does
-                  not report it yet, and an empty fact reads as a failure to
-                  load rather than a version difference. */}
+              {/* Only when the API sends it; absent means an older backend. */}
               {backup.storage_destination_name !== undefined ? (
                 <CardFact
                   label={t("columns.destination")}
@@ -113,18 +101,13 @@ export function BackupsCards({
               </p>
             ) : null}
 
-            {/* mt-auto pins the buttons to the bottom edge when a neighbouring
-                card in the same grid row is taller. The blocker gets its own
-                line above them: inline, it pushed the last button onto a second
-                row by itself, which reads as a layout fault rather than a
-                wrapped sentence. */}
+            {/* mt-auto pins the buttons to the bottom; the blocker gets its own line. */}
             <div className="mt-auto flex flex-col items-end gap-2">
               {blocker && backup.status !== "failed" ? (
                 <span className="text-xs text-muted-foreground">{blocker}</span>
               ) : null}
               <div className="flex flex-wrap items-center justify-end gap-2">
-                {/* Labelled here rather than an icon: on a phone there is room
-                    for the word, and no hover to explain a lone glyph. */}
+                {/* Labelled rather than icon-only: no hover on a phone. */}
                 {canDelete && !BACKUP_IN_FLIGHT.includes(backup.status) ? (
                   <Button
                     size="icon-sm"

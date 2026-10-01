@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { TriangleAlert, Lock } from "lucide-react";
@@ -15,29 +15,21 @@ import {
 } from "@/components/ui/tooltip";
 import { apiMessage } from "@/lib/api/error-message";
 
-/**
- * "Start on boot" — enable/disable, driven by the service's own `actions` so a
- * protected unit (the panel's own web server) can't be switched off.
- *
- * Turning it ON runs immediately; turning it OFF asks first. The asymmetry is
- * deliberate: the cost is asymmetric. Forgetting you disabled a database is
- * something you discover at the next reboot, which is the worst time to find it.
- */
+// Driven by the service's `actions`, so a protected unit cannot be switched off.
+// OFF asks first: a disabled service is only noticed at the next reboot.
 export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
   const t = useTranslations("services");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  // The value we asked for, until the server agrees with it.
+  // The requested value, until the server agrees with it.
   const [asked, setAsked] = useState(null);
 
   const allowed = service.actions ?? [];
   const canToggle =
     canManage && allowed.includes(service.enabled ? "disable" : "enable");
 
-  // Same reason as the cron and system-user switches: `service.enabled` only
-  // changes when `router.refresh()` lands, and enabling a unit is not instant,
-  // so the knob sat in its old position for the whole call.
+  // Optimistic: `service.enabled` only changes once `router.refresh()` lands.
   const shown =
     asked !== null && asked !== service.enabled ? asked : service.enabled;
 
@@ -47,15 +39,20 @@ export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
     onBusyChange?.(action);
     try {
       await runServiceAction(service.key, action);
+      await refreshAndWait();
       toast.success(t(`toast.${action}`, { name: service.label }));
-      router.refresh();
     } catch (error) {
-      // Put the knob back where it was: the change did not happen.
+  // Revert: the change did not happen.
       setAsked(null);
       const data = error.response?.data;
       showActionError({
-        title: t(`error.${action}`, { name: service.label }),
-        message: apiMessage(error, undefined, { reference: false }),
+        // No answer at all (connection dropped) is not "left as it was": the
+        // server may have done it. The list re-reads every 3 s and shows which.
+        title: error.response
+          ? t(`error.${action}`, { name: service.label })
+          : t("error.noAnswer", { name: service.label }),
+        // The title already says there was no answer.
+        message: error.response ? apiMessage(error, undefined, { reference: false }) : undefined,
         reference: data?.reference,
         copyLabel: t('copyReference'),
         copiedLabel: t('copiedReference'),
@@ -69,24 +66,21 @@ export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
     }
   }
 
-  // Nothing to enable: an installing or failed-to-install row has no unit yet,
-  // so `actions` is empty and the switch would render permanently disabled —
-  // the pale half-lit control this component already refuses to draw below. A
-  // dash, matching the empty usage figures on the same row.
+  // Installing or failed-install rows have no unit yet (`actions` is empty),
+  // so a dash is shown, matching the empty usage figures on the row.
   if (service.state && service.state !== "installed") {
     return <span className="text-muted-foreground">—</span>;
   }
 
-  // A service that can never be switched off shouldn't be represented by a
-  // switch. Disabled-and-on renders as a pale half-lit control that reads as a
-  // glitch — "is that on? loading?" — so the fact is stated in words instead.
+  // A service that can never be switched off is stated in words; a
+  // disabled-and-on switch reads as a glitch.
   if (service.protected) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
           <span
             tabIndex={0}
-            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded text-sm text-muted-foreground"
+            className="inline-flex items-center gap-1.5 rounded text-sm whitespace-normal text-muted-foreground"
           >
             <Lock className="size-3.5" />
             {t("alwaysOn")}
@@ -109,8 +103,7 @@ export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
 
   return (
     <>
-      {/* A locked switch with no explanation reads as a bug. ReasonTooltip,
-          not Tooltip: a plain tooltip never opens on a tap. */}
+      {/* ReasonTooltip, not Tooltip: a plain tooltip never opens on a tap. */}
       <ReasonTooltip reason={canToggle ? null : t("noPermission")}>{control}</ReasonTooltip>
 
       <ConfirmDialog

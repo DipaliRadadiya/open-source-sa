@@ -14,14 +14,7 @@ import {
 
 const RESET_MS = 1500;
 
-/**
- * Copy-to-clipboard control for a single value.
- *
- * The tick is the real feedback — it's next to the thing you copied, where you
- * are already looking. The toast only carries the failure case, because a
- * clipboard write can be refused (insecure context, denied permission) and a
- * button that silently does nothing is the worst outcome here.
- */
+// Only failure toasts: a clipboard write can be refused (insecure context, denied permission).
 export function CopyButton({ value, label, className, text = false }) {
   const t = useTranslations("common");
   const [copied, setCopied] = useState(false);
@@ -45,17 +38,7 @@ export function CopyButton({ value, label, className, text = false }) {
 
   const title = label ?? t("copy");
 
-  /* Labelled form, for when the icon has nothing beside it to explain what it
-   * would copy. A bare icon works next to the value it belongs to and nowhere
-   * else.
-   *
-   * The real Button, not a hand-rolled one. This used to copy the shape by
-   * hand at `h-8 … text-xs`, so it sat beside `size="sm"` buttons — "Copy
-   * connection string" next to "Install phpMyAdmin" — a visible step smaller
-   * than its neighbour. The cva's own `sm` comment records that exact bug
-   * being reported three times before the token was fixed; this call site
-   * carried a private copy of the old value and kept it alive. Matching by
-   * variant means it cannot drift again. */
+  /* For when the value is not beside the button. */
   if (text) {
     return (
       <Button

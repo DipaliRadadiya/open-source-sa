@@ -1,17 +1,13 @@
 import { z } from "zod";
 
-/**
- * A site's own logs. Unlike the server logs these carry no byte cursor (so no
- * incremental tail — the client re-reads the last N lines) and no group, size
- * or readable flag. `kind` is file | journal; a `journal` "application" source
- * only appears for a site that runs a process.
- */
+// No byte cursor (the client re-reads the last N lines) and no group, size or readable flag.
+// `kind` is file | journal.
 export const applicationLogSourceSchema = z
   .object({
     key: z.string(),
     label: z.string(),
     kind: z.string().nullish(),
-    // false is normal — a site nobody has visited has no access log yet.
+    // false is normal: a site nobody has visited has no access log yet.
     exists: z.boolean().default(false),
   })
   .passthrough();
@@ -28,9 +24,8 @@ export const applicationLogSchema = z
     exists: z.boolean().default(false),
     lines: z.array(z.string()).default([]),
     truncated: z.boolean().default(false),
-    // Whether a FILTERED read hit the line cap. Distinct from `truncated`, and
-    // the distinction is the whole point: it is the difference between "this
-    // is not in your log" and "I only looked at the end of it".
+    // Whether a FILTERED read hit the line cap: distinguishes "not in your log"
+    // from "only the end was searched". Distinct from `truncated`.
     search_window_capped: z.boolean().default(false),
   })
   .passthrough();

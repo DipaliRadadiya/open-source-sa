@@ -9,14 +9,7 @@ export const LINE_OPTIONS = [100, 200, 500, 1000, 5000];
 export const MIN_LINES = 1;
 export const MAX_LINES = 5000;
 
-/**
- * A typed line count, or null when it is not a number this API will take.
- *
- * The presets cover the common windows; this is for the person who wants the
- * last 37 lines, or 2500. Clamped rather than rejected at the ends — someone
- * typing 9000 means "as much as I can have", and the server clamps to the same
- * ceiling anyway, so refusing would only make them guess it.
- */
+// Null when not a number; clamped at the ends rather than rejected, as the server does.
 export function normalizeLineCount(value) {
   const n = Number.parseInt(String(value ?? "").trim(), 10);
   if (!Number.isFinite(n)) return null;
@@ -30,29 +23,16 @@ export const logSourceSchema = z.object({
   size: z.number().nullable().optional(),
   modified: z.string().nullable().optional(),
   readable: z.boolean(),
-  // Whether the panel will empty this one. **Named here or it is lost**: Zod
-  // strips unknown keys, so leaving it out meant the Clear action appeared on
-  // the server render and then vanished the moment the source poll replaced the
-  // catalog — a button that disappears while you look at it.
-  //
-  // Defaults to false rather than true: a server too old to send the field is
-  // one whose DELETE route does not exist either, and offering the action there
-  // would fail at the click.
+  // Whether the panel will empty this one. Must be declared or Zod strips it.
+  // Defaults to false: a server too old to send it has no DELETE route either.
   clearable: z.boolean().optional().default(false),
-  // Clearable, but it is the machine's own record — auth.log, ufw.log,
-  // fail2ban.log, syslog, kern.log, mail.log, the Let's Encrypt log. Drives a
-  // confirmation that names what is being destroyed rather than the sentence
-  // used for an access log.
-  //
-  // Read from the API, never inferred from the key: the registry decides which
-  // sources these are, and a list kept here would drift from it.
+  // Clearable, but a system record (auth.log, ufw.log, syslog…): the confirm
+  // names what is destroyed. Read from the API, never inferred from the key.
   clear_sensitive: z.boolean().optional().default(false),
-  // Only plain files have byte offsets. The journal and anything read through
-  // the system cannot answer `?after=`: they return the whole window again, and
-  // appending that re-added the same lines on every tick.
+  // Only plain files have byte offsets; the journal and privileged reads cannot
+  // answer `?after=` and return the whole window again.
   follow: z.boolean().optional().default(true),
-  // `/download` refuses the same sources with a 422, which a plain link opens
-  // as a page of raw JSON.
+  // `/download` refuses the same sources with a 422.
   downloadable: z.boolean().optional().default(true),
 });
 

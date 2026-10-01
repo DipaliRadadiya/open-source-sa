@@ -1,17 +1,6 @@
 import { z } from "zod";
 
-/**
- * The paging envelope every list endpoint now returns.
- *
- * Five lists grew this at once when the backend stopped returning whole tables,
- * and the frontend read every one of them as an unpaged array — so each showed
- * its first ten rows and searched only those. Kept in one place so the next
- * list to be paginated is three lines rather than a rediscovery.
- *
- * Deliberately NOT optional. A tolerant schema would have let exactly that
- * silence continue; a missing `meta` should fail loudly as a shape error, which
- * `read()` reports to the service journal by name.
- */
+// Deliberately NOT optional: a missing `meta` must fail loudly, not pass page one off as the whole list.
 export const listMetaSchema = z.object({
   current_page: z.number(),
   per_page: z.number(),
@@ -19,23 +8,12 @@ export const listMetaSchema = z.object({
   last_page: z.number(),
 });
 
-// The page sizes the API accepts. Anything else is a 422 rather than a clamp,
-// so a stale URL is corrected here rather than sent.
+// The page sizes the API accepts (others are a 422, not a clamp).
 export const LIST_PER_PAGE_OPTIONS = [10, 20, 50, 100];
 
 export const EMPTY_LIST_META = { current_page: 1, per_page: 10, total: 0, last_page: 1 };
 
-/**
- * Turn a page's own query string into the API's query shape.
- *
- * Takes the serialised string rather than the searchParams object so callers
- * can pass it through React's `cache` — an object literal is a fresh identity
- * every call and defeats the dedupe entirely.
- *
- * `filters` maps our URL key to the API's `filter[…]` key, because the two
- * differ on purpose: `?status=failed` reads better in a shared link than
- * `?filter%5Bstatus%5D=failed`.
- */
+// Takes the serialised string so `cache` can dedupe. `filters` maps page URL keys to `filter[…]` keys.
 export function listQuery(query = "", { filters = {}, sort = true } = {}) {
   const params = new URLSearchParams(query);
   const perPage = LIST_PER_PAGE_OPTIONS.includes(Number(params.get("per_page")))

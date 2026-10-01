@@ -12,16 +12,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-/**
- * Everything previously dismissed, and the way back.
- *
- * Of the products surveyed for this screen, not one lets you see what you
- * excluded from a discovery run or undo it — Zabbix buries exclusions in a
- * rule, PRTG in a template. Ours is worth surfacing because an ignore here is
- * permanent and silent: an ignored thing stops appearing in every later scan,
- * so a mis-click removes a site from the panel's view for good with nothing on
- * screen to say why. This is the only place that state is visible.
- */
+// Ignores are permanent and silent, so this is the only place that state is visible.
 export function IgnoredSheet({ ignores, canManage, pendingKeys = [], onUnignore }) {
   const t = useTranslations("sync");
 
@@ -57,9 +48,8 @@ export function IgnoredSheet({ ignores, canManage, pendingKeys = [], onUnignore 
                   </div>
                   {canManage ? (
                     <Tooltip>
-                      {/* Wrapped, because a disabled button stops receiving
-                          pointer events — and this one is disabled exactly
-                          while someone is waiting to know it is working. */}
+                      {/* Wrapped: a disabled button stops receiving pointer
+                          events, and it is disabled while pending. */}
                       <TooltipTrigger asChild>
                         <span className="inline-flex shrink-0">
                           <Button
@@ -71,9 +61,7 @@ export function IgnoredSheet({ ignores, canManage, pendingKeys = [], onUnignore 
                             aria-label={t("ignored.restore", { name: ignore.resource_key })}
                             onClick={() => onUnignore(ignore)}
                           >
-                            {/* Same gap as the results table: disabling on its
-                                own is not feedback, because nothing on screen
-                                changes. */}
+                            {/* A spinner, since disabling alone is not feedback. */}
                             {pendingKeys.includes(ignoreKey(ignore)) ? (
                               <Loader2 className="size-4 animate-spin" aria-hidden />
                             ) : (

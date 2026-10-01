@@ -15,15 +15,11 @@ import { CronjobsToolbar } from "@/components/cron-jobs/cronjobs-toolbar";
 import { CronjobsTable } from "@/components/cron-jobs/cronjobs-table";
 import { CreateCronjobDialog } from "@/components/cron-jobs/create-cronjob-dialog";
 
-// A first job is easier to copy than to compose — offer the two most common
-// ones straight from the API's own templates.
+// Starter templates offered on the empty state, from the API's own templates.
 const STARTER_KEYS = ["laravel", "wordpress"];
 
-/**
- * Owns the create-dialog state for the whole page so the empty state, the
- * quick starters and the row-level Duplicate can all open the same dialog with
- * different seed values.
- */
+// Owns the create dialog so the empty state, quick starters and Duplicate can
+// open it with different seed values.
 export function CronjobsPanel({
   cronjobs,
   meta,
@@ -42,9 +38,8 @@ export function CronjobsPanel({
   const setQuery = useSetQuery();
   const router = useRouter();
 
-  // Re-read the list just after the soonest job is due, so its next run moves
-  // on instead of counting down to a time that has already passed. One timer
-  // for the page, not a poll: nothing is fetched between runs.
+  // Re-read the list just after the soonest job is due so its next run moves
+  // on. One timer for the page, not a poll.
   useEffect(() => {
     const due = cronjobs
       .map((job) => (job.active ? serverTimeToEpoch(job.next_run_at, job.timezone) : null))
@@ -80,8 +75,7 @@ export function CronjobsPanel({
     commandPresets.find((p) => p.key === key && p.command),
   ).filter(Boolean);
 
-  // Shown but disabled without permission, not hidden. A page with no buttons
-  // reads as broken; a disabled one that says why reads as "not yours".
+  // Disabled with a reason rather than hidden when permission is missing.
   const addButton = (
     <ReasonTooltip reason={canManage ? null : t("noPermission")}>
       <Button disabled={!canManage} onClick={() => openCreate()}>
@@ -169,9 +163,8 @@ export function CronjobsPanel({
         />
       )}
 
-      {/* Not behind a row count: the selector hides itself when the list is too
-          short to paginate, and gating it on the current page as well is how it
-          used to vanish on the very page you needed it. */}
+      {/* Not gated on row count: the selector hides itself when the list is
+          too short to paginate. */}
       <DataTablePagination meta={meta} />
 
       {canManage ? (

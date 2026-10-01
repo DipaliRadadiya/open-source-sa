@@ -68,7 +68,8 @@
       "title": "Vous n'avez pas accès à {feature}",
       "description": "Votre rôle n'inclut pas l'autorisation de voir ceci. Demandez-la à un administrateur."
     },
-    "serverNavigation": "Menu du serveur"
+    "serverNavigation": "Menu du serveur",
+    "loadingPage": "Chargement de la page…"
   },
   "systemUsers": {
     "title": "Utilisateurs système",
@@ -850,7 +851,8 @@
     "noManagedWorkerKeys": "user, command, directory et les fichiers de journal sont définis par le panneau. Modifiez-les dans les champs ci-dessus, pas ici.",
     "insideApplication": "Utilisez un chemin situé dans le dossier de cette application.",
     "securityUsernameAscii": "Utilisez uniquement des lettres anglaises, des chiffres et . _ - @ : les navigateurs n'envoient pas les autres lettres de la même façon.",
-    "excludeInsideSite": "Utilisez un chemin situé dans le dossier de l'application, comme storage/logs, sans / ni .."
+    "excludeInsideSite": "Utilisez un chemin situé dans le dossier de l'application, comme storage/logs, sans / ni ..",
+    "cronTrailingComment": "Supprimez la note avec #. Cron traite tout ce qui suit # comme un commentaire, y compris la partie qui écrit le journal de la tâche."
   },
   "serverDashboard": {
     "title": "Tableau de bord",
@@ -1212,7 +1214,8 @@
         "next": "En général le panneau et l'API sont dans des versions différentes, ou quelque chose entre les deux réécrit les requêtes. Mettez les deux à la même version."
       }
     },
-    "whatToDo": "Que faire"
+    "whatToDo": "Que faire",
+    "noAnswer": "Aucune réponse du serveur. L'action a pu être effectuée ou non : rechargez la page pour voir où elle en est."
   },
   "logs": {
     "title": "Journaux système",
@@ -1342,6 +1345,10 @@
       "disable": {
         "title": "Empêcher {name} de démarrer au boot ?",
         "description": "Il continue de tourner maintenant, mais ne reviendra pas après le prochain redémarrage."
+      },
+      "restart": {
+        "title": "Redémarrer {name} ?",
+        "description": "Le service s'arrête puis redémarre. Tout ce qui y est connecté est coupé un instant."
       }
     },
     "toast": {
@@ -1365,7 +1372,8 @@
       "restart": "Impossible de redémarrer {name} — il est resté tel quel.",
       "reload": "Impossible de recharger {name} — il est resté tel quel.",
       "enable": "Impossible de faire démarrer {name} au boot — rien n'a changé.",
-      "disable": "Impossible d'empêcher {name} de démarrer au boot — rien n'a changé."
+      "disable": "Impossible d'empêcher {name} de démarrer au boot — rien n'a changé.",
+      "noAnswer": "Aucune réponse du serveur pour {name}. L'action a pu être effectuée ou non : la liste affichera son état réel dans quelques secondes."
     },
     "undoStop": "Redémarrer",
     "retry": "Réessayer",
@@ -1402,7 +1410,10 @@
       "blockedNoChanges": "Rien à enregistrer — le fichier n'a pas été modifié.",
       "blockedAcknowledge": "Confirmez d'abord que vous comprenez le risque.",
       "pathUnknown": "Chargement…",
-      "shortAction": "Modifier php.ini"
+      "shortAction": "Modifier php.ini",
+      "viewAction": "Voir php.ini",
+      "readOnlyDescription": "Le fichier complet, tel que PHP le lit.",
+      "close": "Fermer"
     },
     "notMeasured": "Non mesuré",
     "phpSettings": "Paramètres PHP",
@@ -1420,7 +1431,8 @@
       "attention": "{count, plural, =1 {1 service à vérifier} other {# services à vérifier}}",
       "running": "{count, plural, =1 {1 en exécution} other {# en exécution}}",
       "installing": "{count, plural, =1 {1 en cours d'installation} other {# en cours d'installation}}",
-      "allRunning": "{count, plural, =0 {Aucun service détecté} =1 {L'unique service est en exécution} other {Les # services sont tous en exécution}}"
+      "allRunning": "{count, plural, =0 {Aucun service détecté} =1 {L'unique service est en exécution} other {Les # services sont tous en exécution}}",
+      "stopped": "{count, plural, =1 {1 arrêté} other {# arrêtés}}"
     },
     "sections": {
       "attention": {
@@ -1428,7 +1440,7 @@
         "hint": "Ils ne tournent pas. Chacun indique pourquoi et ce qu'il faut faire."
       },
       "running": {
-        "title": "Services en exécution",
+        "title": "Services installés",
         "hint": "Mémoire, utilisation du processeur et démarrage automatique de chacun."
       },
       "installing": {
@@ -1442,7 +1454,8 @@
       "openDatabases": "Ouvrir les bases de données",
       "openPhp": "Ouvrir PHP",
       "openFail2ban": "Ouvrir Fail2ban",
-      "openDocker": "Ouvrir Docker"
+      "openDocker": "Ouvrir Docker",
+      "unitFailedNoLog": "Installé mais arrêté. Essayez de le démarrer ; s'il s'arrête à nouveau, l'erreur se trouve dans le journal système du serveur."
     },
     "moreActions": "Plus d’actions pour {name}"
   },
@@ -1551,7 +1564,8 @@
       "invalidIp": "Ce n'est pas une adresse IP valide. Les plages ne sont pas autorisées ici.",
       "selfWarning": "C'est votre propre adresse. Le serveur ne la bannira pas — vous vous bloqueriez l'accès.",
       "ipLabelHint": "L'adresse à bloquer. Vérifiez qu'il ne s'agit pas de votre propre connexion avant d'enregistrer.",
-      "jailLabelHint": "Le jeu de règles sous lequel bloquer l'adresse. Chaque jail surveille un service, comme SSH ou le serveur web."
+      "jailLabelHint": "Le jeu de règles sous lequel bloquer l'adresse. Chaque jail surveille un service, comme SSH ou le serveur web.",
+      "ownServer": "C'est l'adresse de ce serveur. La bannir bloquerait l'accès au panneau pour tout le monde."
     },
     "settings": {
       "title": "Règles de bannissement",
@@ -1734,7 +1748,8 @@
         "portOrder": "La fin de la plage ne peut pas être inférieure au début.",
         "invalidSource": "Ce n'est pas une adresse IP ou une plage valide.",
         "portShape": "Utilisez un port comme 443, ou une plage comme 8000-8090.",
-        "nameTooLong": "Le nom doit contenir moins de 255 caractères."
+        "nameTooLong": "Le nom doit contenir moins de 255 caractères.",
+        "rangeNeedsProtocol": "Pour une plage de ports, choisissez TCP ou UDP. Ajoutez une deuxième règle si vous avez besoin des deux."
       },
       "anywhere": "n'importe où",
       "summary": "Résumé",
@@ -2149,7 +2164,7 @@
       "retry": "Réessayer",
       "retrying": "Réinstallation de PHP {version}…",
       "incomplete": "Incomplète",
-      "incompleteDetail": "Il manque {packages} — elle a été installée par un autre paquet, pas par le panneau.",
+      "incompleteDetail": "Il manque {packages}. Complétez l'installation pour les ajouter.",
       "completeInstall": "Compléter l'installation",
       "completing": "Finalisation de PHP {version}…",
       "incompleteDefault": "Complétez d'abord l'installation — le PHP par défaut est celui qui s'exécute quand rien ne fixe de version.",
@@ -2424,7 +2439,7 @@
       "already": "Node.js {version} était déjà installé.",
       "failed": "Cette version n'a pas pu être installée.",
       "eolWarning": "Node.js {version} ne reçoit plus de correctifs de sécurité. Installez-la uniquement si une application en a besoin.",
-      "noneAvailable": "Aucune nouvelle version n'est disponible à l'installation pour le moment.",
+      "noneAvailable": "La liste des versions de Node.js n'a pas pu être récupérée. Vérifiez que le serveur peut joindre nodejs.org, puis rechargez la page.",
       "installedTag": "Installée",
       "allInstalled": "Toutes les versions proposées par ce serveur sont déjà installées."
     },
@@ -3057,7 +3072,8 @@
       "chartDescription": "Requêtes par seconde, connexions et threads actifs, échantillonnés toutes les 5 minutes.",
       "zoomHint": "Faites glisser les poignées sous le graphique, ou utilisez la molette, pour zoomer sur une plage de temps.",
       "cannotStopOwn": "C'est la connexion du panel lui-même à la base de données. L'arrêter couperait cette page.",
-      "loadFailed": "Impossible de vérifier les moteurs de base de données."
+      "loadFailed": "Impossible de vérifier les moteurs de base de données.",
+      "backToList": "Retour aux bases de données"
     },
     "tables": {
       "title": "Tables",
@@ -3083,12 +3099,10 @@
       "failed": "phpMyAdmin n'a pas pu être ouvert.",
       "noPermission": "Votre rôle n'inclut pas Bases de données avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
       "blocked": "Votre navigateur a bloqué le nouvel onglet.",
-      "openAnyway": "Ouvrir phpMyAdmin",
       "install": "Installer phpMyAdmin",
       "needsUser": "Ajoutez d'abord un utilisateur de base de données — phpMyAdmin se connecte en tant qu'utilisateur.",
       "choose": "Quel phpMyAdmin ?",
-      "signingShort": "Connexion en cours…",
-      "linkReady": "Votre lien de connexion phpMyAdmin est prêt."
+      "signingShort": "Connexion en cours…"
     },
     "usedBy": {
       "title": "Utilisé par",
@@ -3132,7 +3146,8 @@
     "unavailable": {
       "title": "Les bases de données ne sont pas gérées sur ce serveur",
       "body": "Ce serveur héberge des conteneurs. Une application qui a besoin d’une base de données en apporte une sous forme de conteneur, le panneau ne gère donc aucun moteur ici — et ses propres données sont en SQLite de toute façon."
-    }
+    },
+    "backToList": "Retour aux bases de données"
   },
   "git": {
     "title": "Git",
@@ -3957,11 +3972,8 @@
       "none": "Cette application n'a aucun compte administrateur.",
       "listFailed": "Impossible de lire les administrateurs de cette application.",
       "failed": "Impossible de créer le lien de connexion.",
-      "popupBlocked": "Votre navigateur a bloqué le nouvel onglet. Autorisez les fenêtres pop-up pour ce panneau et réessayez.",
       "redirecting": "Connexion en cours…",
       "auditNote": "Le lien ne fonctionne qu'une fois et expire au bout d'une minute. Le compte sous lequel vous vous connectez est inscrit au journal d'activité.",
-      "linkReady": "Votre lien de connexion WordPress est prêt.",
-      "openAdmin": "Ouvrir l'administration WordPress",
       "fetchingUsers": "Récupération des utilisateurs…"
     },
     "markers": {

@@ -1,22 +1,12 @@
 import { z } from "zod";
 import { isRedeploying } from "../applications/settled.js";
 
-/**
- * The domain rule, copied from `CreateCloneRequest` deliberately.
- *
- * Same expression the backend validates with, so someone who types a bad
- * domain hears it from the field they are still standing in rather than from
- * a 422 after the request goes out. If the backend's rule ever changes this
- * has to change with it — a laxer client rule is worse than none, because it
- * promises an acceptance the server will refuse.
- */
+// From `CreateCloneRequest`; keep in step with the backend.
 export const CLONE_DOMAIN_PATTERN = /^[a-z0-9.-]+\.[a-z]{2,}$/;
 
 export const cloneFormSchema = z.object({
-  // Optional on the API: omitted, the backend names the copy "{source}
-  // (Clone)". Offered here because `name` has no unique constraint, so two
-  // clones of one site are otherwise identically named and tellable apart
-  // only by domain.
+  // Optional: omitted, the backend names the copy "{source} (Clone)". `name`
+  // is not unique, so this lets clones of one site be told apart.
   name: z.string().trim().max(255, "max255").optional(),
   domain: z
     .string()
@@ -33,11 +23,9 @@ export const cloneSchema = z
     id: z.number(),
     source_application_id: z.number().nullish(),
     source_application_name: z.string().nullish(),
-    // Null until the job finishes — this is what the copy's own page hangs off.
+    // Null until the job finishes.
     target_application_id: z.number().nullish(),
-    // The copy's own deploy-on-push endpoint, when the source had one. Zod
-    // strips unknown keys, so a field the API sends and the schema omits is a
-    // field the screen can never show.
+    // The copy's own deploy-on-push endpoint, when the source had one.
     target_webhook: z
       .object({
         url: z.string(),
@@ -51,9 +39,7 @@ export const cloneSchema = z
     status_title: z.string().nullish(),
     current_step: z.string().nullish(),
     current_step_title: z.string().nullish(),
-    // Position in the sequence, so a bar can be drawn without the frontend
-    // keeping its own copy of the step list — that list is backend config and
-    // would drift the first time it changed.
+    // Position in the sequence, so a bar needs no frontend copy of the step list.
     step_number: z.number().nullish(),
     total_steps: z.number().nullish(),
     reason: z.string().nullish(),
@@ -71,27 +57,12 @@ export const cloneResponseSchema = z.object({ clone: cloneSchema });
 /** Still working. Polling continues while the status is one of these. */
 export const CLONE_IN_FLIGHT = ["pending", "running"];
 
-/**
- * Site types that have a `CloneStrategy` on the backend.
- *
- * A type that needs a database and has no strategy is refused inside
- * `CloneManager` — it will not produce a clone whose config still points at
- * the source's own database. Knowing the list here is what lets the screen say
- * so before anyone types a domain, rather than after.
- *
- * Types with NO database never touch the strategy hook and always clone.
- */
+// Types with a backend `CloneStrategy`; `CloneManager` refuses a database-backed type without one.
 const CLONE_STRATEGY_SITE_TYPES = ["wordpress"];
 
-/**
- * Why this site cannot be cloned, or null when it can.
- *
- * Ordered by what the person can do about it: a site still being built will
- * be cloneable in a minute; a site type with no recipe will not be today.
- */
+// Ordered by what the person can do about it.
 export function cloneBlockedReason(application, siteType) {
-  // A site that never finished building is not "still being set up" — saying
-  // so would leave someone waiting for a state that is not coming.
+  // A failed build is not "still being set up"; that state is not coming.
   if (application?.status === "failed") return "sourceFailed";
   // A live site mid-deploy has code, but half of it may be the new commit.
   if (isRedeploying(application)) return "deploying";
@@ -103,24 +74,11 @@ export function cloneBlockedReason(application, siteType) {
   return null;
 }
 
-/**
- * What a clone does and does not inherit.
- *
- * Read off `CloneManager`'s create array and the per-application tables, not
- * guessed. Every panel that ships cloning documents this list somewhere;
- * putting it on the screen instead of in a doc is the whole point of this
- * feature's design — a password-protected site cloning to a public one is a
- * security surprise, not a convenience.
- */
+// Read off `CloneManager`'s create array and the per-application tables.
 export const CLONE_CARRIES = ["files", "phpVersion", "webRoot", "buildCommand", "repository"];
 
 export const CLONE_DROPS = ["ssl", "backups", "cronJobs", "workers", "passwordProtection", "deploys"];
 
-/**
- * What this site's copy inherits: the database line only for types that have
- * one, and build/repository only for a site that has a repository — a
- * WordPress copy was told it would inherit a git account it never had.
- */
 export function cloneCarries(siteType, application = null) {
   const git = Boolean(application?.repository);
   return [
@@ -137,12 +95,7 @@ export function cloneDrops(application = null) {
   return application?.repository ? CLONE_DROPS : CLONE_DROPS.filter((key) => key !== "deploys");
 }
 
-/**
- * The name the backend will give a copy left unnamed: `{source} (Clone)`,
- * then `(Clone) 2`, `(Clone) 3`… — `Application::uniqueName()`. Shown as-is
- * (untranslated, like the backend writes it) so the dialog names the site
- * that will actually appear, not "my-blog (Clone)" for a "my-blog (Clone) 3".
- */
+// Mirrors `Application::uniqueName()`: `{source} (Clone)`, then `(Clone) 2`… Untranslated, as stored.
 export function defaultCloneName(sourceName, takenNames = []) {
   const taken = new Set(takenNames.map((value) => String(value)));
   const base = `${sourceName} (Clone)`;
@@ -153,12 +106,7 @@ export function defaultCloneName(sourceName, takenNames = []) {
   return base;
 }
 
-/**
- * A failure reason worth showing. The backend stores raw exception text in
- * `reason` and echoes it as `reason_title`, so a real failure read
- * "clone.cloning_errors." or a raw SQL statement with the database's path in
- * it. Anything shaped like that is replaced by the generic sentence.
- */
+// The backend may echo raw exception text in `reason_title`; that falls back to the generic sentence.
 export function cloneFailureTitle(clone) {
   const title = clone?.reason_title;
   if (!title) return null;
@@ -166,17 +114,7 @@ export function cloneFailureTitle(clone) {
   return title;
 }
 
-/**
- * A domain to offer for the copy, derived from the source's own.
- *
- * `blog.example.com` → `copy.blog.example.com`. An empty field is the single
- * biggest piece of friction on this screen — WP Toolkit pre-fills both the
- * target and the database name — and a suggestion beats a placeholder because
- * it can be accepted rather than retyped.
- *
- * Falls back to `copy-2.`, `copy-3.` … when the obvious one is already taken,
- * so the offer is never a domain the API is about to reject.
- */
+// `blog.example.com` → `copy.blog.example.com`, then `copy-2.`… so the offer is never one the API rejects.
 export function suggestCloneDomain(sourceDomain, takenDomains = []) {
   if (!sourceDomain) return "";
   const taken = new Set(takenDomains.map((value) => String(value).toLowerCase()));

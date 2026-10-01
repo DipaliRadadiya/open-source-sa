@@ -30,14 +30,13 @@ import { apiMessage } from "@/lib/api/error-message";
 import { genericErrorMessage } from "@/lib/api/generic-error";
 import { useRefresh } from "@/hooks/use-refresh";
 
-// `canManage` false = read-only: the list, without Add or Remove. Listing keys
-// only needs view, and a viewer had no way to see them at all.
+// `canManage` false = read-only: the list without Add or Remove (listing only
+// needs view).
 export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
   const t = useTranslations("systemUsers");
   const [keys, setKeys] = useState(null); // null = loading
-  // Distinct from an empty list on purpose. "This account has no keys" and "we
-  // could not ask" are opposite claims about who can reach the server, and the
-  // dialog used to render the first when it meant the second.
+  // Distinct from an empty list: "no keys" and "could not ask" are opposite claims
+  // about who can reach the server.
   const [loadFailed, setLoadFailed] = useState(false);
   const [removing, setRemoving] = useState(null);
   const [pending, setPending] = useState(false);
@@ -58,7 +57,7 @@ export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
     onOpenChange?.(next);
   }
 
-  // The account was deleted somewhere else: nothing here can be done to it.
+  // Deleted elsewhere: nothing can be done to the account here.
   function gone() {
     toast.info(t("toast.alreadyGone", { username: user.username }));
     handleOpenChange(false);
@@ -104,9 +103,8 @@ export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
     return () => {
       active = false;
     };
-    // The id, not the `user` object — the object is a new reference after every
-    // refresh of the list behind this dialog, and refetching the keys on each
-    // one would flicker the list for no new data.
+    // The id, not the `user` object: the object is a new reference after every list
+    // refresh, and refetching would flicker the keys for no new data.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, user?.id]);
 
@@ -114,9 +112,8 @@ export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
     try {
       await addSystemUserSshKey(user.id, values);
       toast.success(t("toast.keyAdded"));
-      // Stays open for the next key. Closing made adding a second one a trip
-      // back through the menu; the new key appearing in the list above, and
-      // the form emptying under the cursor, is what says it went through.
+      // Stays open for the next key; the key appearing above and the form emptying
+      // confirm it went through.
       form.reset();
       await load();
       document.querySelector("[data-ssh-key-name]")?.focus();
@@ -126,8 +123,7 @@ export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
     }
   }
 
-  // One click (Krishna, 2026-09-29): the second "Remove / Cancel" step inside
-  // this dialog read as asking twice. The row shows the removal while it runs.
+  // One click, no second confirm step; the row shows the removal while it runs.
   async function onRemove(id) {
     setRemoving(id);
     setPending(true);
@@ -137,9 +133,8 @@ export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
       setRemoving(null);
       await load();
     } catch (error) {
-      // Removed elsewhere — the key, or the whole account. Either way the key
-      // is not there any more, which is what was asked for; the reload says
-      // which (an account that is gone closes the dialog).
+      // Removed elsewhere (the key or the account): the goal is met. The reload tells
+      // which; a deleted account closes the dialog.
       if (error?.response?.status === 404) {
         setRemoving(null);
         if (await load()) toast.success(t("toast.keyRemoved"));
@@ -186,7 +181,6 @@ export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
           </>
         }
       >
-        {/* Existing keys */}
               {keys === null ? (
                 <ul className="divide-y rounded-lg border">
                   {[0, 1].map((i) => (
@@ -252,7 +246,6 @@ export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
                 </ul>
               )}
 
-              {/* Add a key */}
               {canManage ? (
                 <div className="space-y-3 rounded-lg border p-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -285,8 +278,7 @@ export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
                         <FormControl>
                           <Textarea
                             rows={2}
-                            // Same size as every other field — see the note in
-                            // create-system-user-dialog.
+                            // Same size as every other field; see the note in create-system-user-dialog.
                             placeholder={t("sshForm.publicKeyPlaceholder")}
                             className="font-mono"
                             {...field}

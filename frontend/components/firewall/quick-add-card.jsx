@@ -36,23 +36,13 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { apiMessage } from "@/lib/api/error-message";
 
-// The ports a server actually needs opened, in the order people need them.
+// The ports a server most often needs opened, in order.
 const QUICK_KEYS = ["http", "https", "ssh", "mysql"];
-// One click, three rules — the set a web server needs to be useful at all.
+// One click, three rules: the set a web server needs.
 const STACK_KEYS = ["http", "https", "ssh"];
 
-/**
- * One click, one rule. No form.
- *
- * The overwhelming majority of firewall rules are "let HTTPS in" — a decision
- * with no parameters. Making that pass through a dialog with eight controls was
- * the actual usability problem; no amount of restyling the dialog fixes it.
- *
- * A tile that already exists as a rule says so and undoes it on the next click,
- * so this can't quietly produce duplicates or a 422 the user has to interpret —
- * and the tile that opened the port is also the one that closes it, rather than
- * sending you to hunt for the row it created in the list below.
- */
+// A tile whose rule exists removes it on the next click, so it cannot create
+// duplicates (422).
 export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, riskyPorts = [] }) {
   const t = useTranslations("firewall");
   const { refreshAndWait } = useRefresh();
@@ -60,9 +50,8 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
   const [confirming, setConfirming] = useState(null);
   const [opening, setOpening] = useState(null);
 
-  // SSH follows the port Settings configured, not the preset's 22. Hardcoding it
-  // would open a port nobody listens on and report success, then lock the user
-  // out of the port they actually use.
+  // SSH follows the port set in Settings, not the preset's 22; otherwise it would
+  // open an unused port and the user could be locked out.
   const withRealPorts = presets
     .filter((p) => p.port != null)
     .map((p) => (p.key === "ssh" && sshPort ? { ...p, port: sshPort } : p));
@@ -84,9 +73,8 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
       for (const preset of items) {
         const existing = match(preset);
         if (existing) {
-          // The rule is there; the only thing wrong is that it is off. Creating
-          // a second one would 422, and deleting it to re-add would throw away
-          // whatever else the rule carries.
+          // The rule exists but is off: enable it. A second one would 422, and deleting to
+          // re-add would lose its other settings.
           if (existing.enabled === false) {
             await updateFirewallRule(existing.id, { enabled: true });
             switchedOn.push(preset.label);
@@ -104,24 +92,20 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
           });
           created.push(preset.label);
         } catch (error) {
-          // A duplicate the local check missed is not a failure worth shouting
-          // about; anything else is.
+          // A duplicate the local check missed is not worth reporting; anything else is.
           if (error.response?.status === 422) already.push(preset.label);
           else throw error;
         }
       }
     } catch (error) {
-      // The tile opens several ports and there is no bulk endpoint, so it can
-      // stop halfway. This used to rethrow past the toasts AND past
-      // `router.refresh()` — the ports it HAD opened stayed invisible until
-      // the page was reloaded by hand, and the only message was a flat "that
-      // rule could not be added", which reads as "nothing happened".
+      // No bulk endpoint, so this can stop halfway; record the failure and continue to
+      // the refresh and toasts so the ports already opened are shown.
       failed = apiMessage(error, t("quick.failed"));
     } finally {
-      // Always: rules were created even on the failing path. Before the toasts,
-      // so "Added" never sits over a tile that still offers the add.
+      // Always: rules may have been created even on failure. Before the toasts, so
+      // "Added" never sits over a tile still offering the add.
       await refreshAndWait();
-      // Say which of the things happened — including when only some did.
+      // Report each outcome, including partial success.
       if (created.length) {
         toast.success(t("quick.added", { names: created.join(", ") }));
       }
@@ -169,17 +153,14 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
         <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {quick.map((preset) => {
             const rule = match(preset);
-            // Three states, not two: missing, present-and-open, present-but-off.
-            // Collapsing the last two into "Added" is what let this tile claim a
-            // port was open while the table under it showed the rule switched
-            // off and the warning above listed that port as blocked.
+            // Three states: missing, present-and-open, present-but-off. A disabled rule must
+            // not show as "Added".
             const off = Boolean(rule) && rule.enabled === false;
             const done = Boolean(rule) && !off;
             // A database open to the whole internet is not a one-click decision.
             const risky = riskyExposure({ port: preset.port, riskyPorts });
-            // The same lockout guard the rules list applies: SSH and the panel's
-            // own ports stay put while the firewall is on. The tile says why
-            // rather than offering a click the API would refuse.
+            // Same lockout guard as the rules list: SSH and the panel's own ports stay while
+            // the firewall is on, and the tile says why.
             const locked = done && Boolean(rule.protected) && enabled;
             const reason = !canManage
               ? t("disabled.noPermission")
@@ -192,13 +173,10 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
                 icon={risky ? Database : Globe}
                 risky={Boolean(risky) && !done}
                 title={t("quick.tileTitle", { name: preset.label, port: preset.port })}
-                // The subtitle always says what the rule DOES. Replacing it with
-                // "Already allowed" threw away the only explanation on the tile,
-                // exactly when someone new is trying to work out what it means.
+                // The subtitle always says what the rule does.
                 subtitle={
                   off
-                    ? // Not "Allows incoming TCP on port 80" — it allows nothing
-                      // at all while it is off, which is the whole bug.
+                    ? // Off: the rule allows nothing while disabled.
                       t("quick.tileOffBody", { port: preset.port })
                     : risky && !done
                       ? t("quick.tileRisky", { name: risky })
@@ -238,10 +216,8 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
               title={t("quick.stackTitle")}
               subtitle={t("quick.stackBody", { names: stack.map((p) => p.label).join(" + ") })}
               doneLabel={t("quick.tileDone")}
-              // Every port actually open, not merely every rule present: with
-              // `exists` this tile went green and disabled itself while HTTP and
-              // HTTPS were switched off, so the one control that could reopen
-              // them refused to be clicked.
+              // Every port actually open, not merely present; otherwise the tile disables
+              // itself while HTTP/HTTPS are switched off.
               done={stack.every(isOn)}
               addHint={!stack.every(isOn) && canManage ? t("quick.stackAddHint") : null}
               disabled={!canManage || stack.every(isOn) || pending !== null}
@@ -251,9 +227,8 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
           ) : null}
         </CardContent>
   
-        {/* The same confirmation the rules list uses, for the same reason: this
-            closes a port that is open right now, and a tile is very easy to click
-            by accident. */}
+        {/* Same confirmation as the rules list: this closes an open port, and tiles are
+            easy to mis-click. */}
         <ConfirmDialog
           open={confirming !== null}
           onOpenChange={(open) => !pending && setConfirming(open ? confirming : null)}
@@ -276,8 +251,7 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
           onConfirm={remove}
         />
 
-        {/* A database open to everyone was one click on a tile whose own text
-            says not to do it. */}
+        {/* Confirms opening a database port to everyone. */}
         <ConfirmDialog
           open={opening !== null}
           onOpenChange={(open) => !pending && setOpening(open ? opening : null)}
@@ -314,9 +288,8 @@ function Tile({
   onClick,
 }) {
   return (
-    // "flex" on the wrapper and w-full on the tile: a locked tile's tooltip
-    // wrapper was inline-flex, so it shrank to its text while the unlocked
-    // tiles filled the column — three widths in one grid on a phone.
+    // "flex" wrapper + w-full tile: an inline-flex tooltip wrapper made locked tiles
+    // narrower than the rest.
     <ReasonTooltip reason={reason} className="flex">
       <button
         type="button"
@@ -326,14 +299,12 @@ function Tile({
           "group flex w-full items-start gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors",
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
           done
-            ? // Green at rest, red under the cursor — the tile that added the
-              // rule removes it, and it has to look like it before the click.
+            ? // Green at rest, red on hover: clicking removes the rule.
               removable
               ? "border-success/30 bg-success/5 hover:border-destructive/40 hover:bg-destructive/5"
               : "cursor-default border-success/30 bg-success/5"
             : off
-              ? // Muted, not green and not red: the rule is there but shut, and
-                // the click reopens it.
+              ? // Muted: the rule exists but is off; clicking reopens it.
                 "border-muted-foreground/25 bg-muted/40 hover:border-primary/40 hover:bg-accent"
               : disabled
                 ? "opacity-60"
@@ -392,11 +363,7 @@ function Tile({
           >
             {subtitle}
           </span>
-          {/* Said, not left to hover: on a touch screen there is no hover state
-              to discover the trash icon in. Both directions get a line — an
-              added tile explained that clicking removes the rule while an empty
-              one explained nothing, so the tile only looked clickable once it
-              had already been clicked. */}
+          {/* Stated, not left to hover (touch has none): both states explain the click. */}
           {removable ? (
             <span className="block text-xs text-muted-foreground group-hover:text-destructive">
               {removeHint}

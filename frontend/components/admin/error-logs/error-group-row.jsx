@@ -10,15 +10,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-/**
- * The entry exactly as the API returned it.
- *
- * The row above is a reading of the payload — shortened class name, relative
- * time, the two fields worth a headline. When that reading is not enough, this
- * is the payload itself, with nothing selected out and nothing renamed, so a
- * field the panel has no opinion about is still findable. Collapsed by default:
- * it answers a question most readers are not asking yet.
- */
+// The entry exactly as the API returned it, so any field is still findable.
 function RawEntry({ entry }) {
   const t = useTranslations("errorLogs");
   const json = JSON.stringify(entry, null, 2);
@@ -33,16 +25,12 @@ function RawEntry({ entry }) {
             <ChevronDown className="size-3.5 transition-transform group-data-[state=open]/raw:rotate-180" />
           </Button>
         </CollapsibleTrigger>
-        {/* Outside the trigger: nesting it would make copying toggle the
-            panel, and the usual reason to copy this is to paste it to someone
-            who needs it. */}
+        {/* Outside the trigger, so copying does not toggle the panel. */}
         <CopyButton value={json} label={t("rawCopy")} />
       </div>
       <CollapsibleContent className="pt-1.5">
-        {/* No cap of its own. The occurrence list above already scrolls, and a
-            scroll area nested inside one is a trap — the wheel fights over
-            which box it belongs to. Lines wrap, so there is no sideways
-            overflow to catch either. */}
+        {/* No max height: the occurrence list already scrolls, and nested
+            scroll areas fight over the wheel. */}
         <pre className="whitespace-pre-wrap break-words rounded-md border bg-zinc-950 p-3 font-mono text-xs leading-4 text-zinc-100">
           {json}
         </pre>
@@ -51,24 +39,14 @@ function RawEntry({ entry }) {
   );
 }
 
-/**
- * 503 is the panel refusing work because something is already running — a
- * queue, a lock, a busy server. That is a different kind of event from a 500
- * (something genuinely broke) and colouring them alike would hide it.
- */
+// 503 means the panel refused work because something is already running, unlike a 500.
 function statusMeta(status) {
   return status === 503
     ? { Icon: TriangleAlert, tint: "text-warning", chip: "bg-warning/10", pill: "warning" }
     : { Icon: CircleX, tint: "text-destructive", chip: "bg-destructive/10", pill: "destructive" };
 }
 
-/**
- * One kind of failure, with every occurrence of it folded inside.
- *
- * `now` is passed down from the server render rather than read from the
- * browser clock: relative times computed at hydration disagree with the ones
- * rendered on the server, and React replaces the whole subtree over it.
- */
+// `now` comes from the server render so relative times match on hydration.
 export function ErrorGroupRow({ group, now }) {
   const t = useTranslations("errorLogs");
   const format = useFormatter();
@@ -104,17 +82,13 @@ export function ErrorGroupRow({ group, now }) {
                 {group.status}
               </Badge>
             ) : null}
-            {/* An exit code is the operation's equivalent of a status: it is
-                what distinguishes "apt could not get the lock" from "the
-                package does not exist", and both otherwise render as the same
-                sentence. */}
+            {/* The exit code distinguishes operations whose sentence is otherwise identical. */}
             {isOperation && group.exitCode != null ? (
               <Badge variant={meta.pill} className="font-normal tabular-nums">
                 {t("exitCode", { code: group.exitCode })}
               </Badge>
             ) : null}
-            {/* The count is the reason this screen groups at all — one fault hit
-                200 times and one hit once need to look different at a glance. */}
+            {/* The count is why this screen groups: frequent faults must stand out. */}
             {group.count > 1 ? (
               <Badge variant="secondary" className="font-normal tabular-nums">
                 {t("occurrences", { count: group.count })}
@@ -122,12 +96,8 @@ export function ErrorGroupRow({ group, now }) {
             ) : null}
           </div>
 
-          {/* Where it happened. For an API failure that is a route pattern; for
-              an operation it is the feature that ran the command. Both are the
-              backend's own identifiers, so both are mono and neither is
-              translated — `feature`/`op` are free-form strings with hundreds of
-              combinations, and a lookup table for them would be wrong the day
-              a new one is added. */}
+          {/* Where it happened: a route pattern for API failures, the feature
+              for operations. Backend identifiers, so mono and untranslated. */}
           <p className="flex min-w-0 flex-wrap items-center gap-x-2 font-mono text-xs text-muted-foreground">
             {isOperation ? (
               <span className="break-all">
@@ -144,8 +114,7 @@ export function ErrorGroupRow({ group, now }) {
             )}
           </p>
 
-          {/* Full class name, kept but demoted — the namespace is the same on
-              nearly every row and would crowd out the part that differs. */}
+          {/* Full class name, demoted: the namespace repeats on nearly every row. */}
           {group.exception && group.exception !== group.exceptionShort ? (
             <p className="break-all font-mono text-xs leading-4 text-muted-foreground/70">
               {group.exception}
@@ -170,16 +139,7 @@ export function ErrorGroupRow({ group, now }) {
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {t("everyOccurrence")}
           </p>
-          {/* Capped with its own scroll. One fault can account for every entry
-              on the page — expanding it unbounded pushed the four other groups
-              a screen and a half down, so opening the busiest one hid the rest
-              of the answer.
-
-              30rem, not the original 18: one occurrence with its raw payload
-              open measures 369px, so the old cap showed the response through a
-              288px letterbox and hid the last 81px of it. This fits that, plus
-              room for the fields the backend does not send yet, and is still
-              under half a laptop viewport — the reason for the cap survives. */}
+          {/* Own scroll so one busy group does not push the others off screen. */}
           <ul className="max-h-[30rem] space-y-1.5 overflow-y-auto pr-1">
             {group.occurrences.map((entry, index) => (
               <li
@@ -191,49 +151,35 @@ export function ErrorGroupRow({ group, now }) {
                     {exact(entry.at) ?? t("unknownTime")}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {/* A bare id is all the log carries — no name, no username —
-                        so it is labelled as an id rather than dressed up as a
-                        person we cannot actually identify. */}
+                    {/* The log carries only an id, so it is labelled as one. */}
                     {entry.user_id == null
                       ? t("signedOut")
                       : t("userId", { id: entry.user_id })}
                   </span>
                 </div>
 
-                {/* The exception's own message. Was a fixed string until
-                    2026-08-31, which is why this screen used to lead with the
-                    class name; older entries still carry the constant, so it
-                    is shown when present rather than assumed. */}
+                {/* The exception's own message; older entries carry a fixed
+                    constant, so it is shown when present rather than assumed. */}
                 {entry.message ? (
                   <p className="text-sm leading-5">{entry.message}</p>
                 ) : null}
 
-                {/* The command line that failed. For an operation this is the
-                    answer — "log / exists / exit 1" says nothing on its own. */}
+                {/* The command line that failed. */}
                 {entry.command ? (
                   <pre className="overflow-x-auto rounded-md border bg-zinc-950 p-2 font-mono text-xs leading-4 text-zinc-100">
                     {entry.command}
                   </pre>
                 ) : null}
 
-                {/* The command's own stderr, already redacted and truncated to
-                    1000 characters by the backend. This is the only field that
-                    says what broke — everything else says where. Kept as
-                    pre-wrapped mono because it is command output, and
-                    reflowing it destroys the alignment that makes it
-                    readable. */}
+                {/* Redacted, truncated stderr: the only field that says what
+                    broke. Pre-wrapped mono to keep command-output alignment. */}
                 {entry.error ? (
                   <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted/60 p-2 font-mono text-xs leading-4 text-muted-foreground">
                     {entry.error}
                   </pre>
                 ) : null}
 
-                {/* Shown only for operations. On an API exception the
-                    reference is a uuid minted at log time that never reached
-                    anyone, so offering it for a lookup would be inviting a
-                    search that cannot succeed. */}
-                {/* Where it threw, then the frames. Vendor frames are already
-                    dropped by the backend, so every line here is our code. */}
+                {/* Where it threw, then the frames (vendor frames already dropped). */}
                 {entry.file ? (
                   <p className="font-mono text-xs break-all text-muted-foreground">
                     {entry.file}
@@ -250,8 +196,7 @@ export function ErrorGroupRow({ group, now }) {
                   </ul>
                 ) : null}
 
-                {/* Three attempts over twelve seconds is a lock; one failure in
-                    40ms is not. The timestamps cannot tell those apart. */}
+                {/* Attempts and duration tell a lock retried for seconds from a single fast failure. */}
                 {entry.attempts != null || entry.duration_ms != null ? (
                   <p className="text-xs tabular-nums text-muted-foreground/70">
                     {[
@@ -263,6 +208,8 @@ export function ErrorGroupRow({ group, now }) {
                   </p>
                 ) : null}
 
+                {/* Operations only: an API exception's reference is never sent
+                    to the client, so a lookup cannot succeed. */}
                 {isOperation && entry.reference ? (
                   <p className="font-mono text-xs text-muted-foreground/70">
                     {t("reference", { reference: entry.reference })}

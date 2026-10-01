@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ConfigTestDialog, useConfigTest } from "@/components/services/config-test";
 import { ServiceLogItems } from "@/components/services/service-log-items";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,12 +38,7 @@ import {
 } from "@/components/ui/tooltip";
 import { apiMessage } from "@/lib/api/error-message";
 
-// Ordered by how much they disturb the service: reload re-reads config without
-// dropping a connection, restart drops everything for a moment, stop ends it.
-// Colour follows that escalation. It used to be load-bearing, because reload
-// and restart were mirrored circular arrows sitting side by side and colour was
-// the only thing telling them apart. Both carry their own word now, so the
-// colour is reinforcement rather than the whole signal.
+// Ordered by disruption (reload keeps connections, restart drops them, stop ends it); colour follows.
 const ACTION_META = {
   start: { icon: Play, tone: "text-success hover:bg-success/10 hover:text-success" },
   reload: { icon: RefreshCcw, tone: "text-primary hover:bg-primary/10 hover:text-primary" },
@@ -54,9 +49,7 @@ const ACTION_META = {
   },
 };
 
-// Which verbs apply to the state the service is actually in. A stopped unit
-// showing Stop, or a running one showing Start, is noise the reader has to
-// filter out on every row.
+// Which verbs apply to the service's current state.
 const BY_STATUS = {
   active: ["reload", "restart", "stop"],
   inactive: ["start"],
@@ -64,33 +57,11 @@ const BY_STATUS = {
 };
 
 // The one action the row leads with, by state. Everything else is in the menu.
-//
-// `failed` leads with start rather than restart: recovery from failed is
-// "bring it up", and restart is a click away for the case where it is not.
+// `failed` leads with start: recovery means bringing it up.
 const PRIMARY = { active: "restart", inactive: "start", failed: "start" };
 
-/**
- * Per-row controls: one labelled button for the action you actually want, and a
- * menu for the rest.
- *
- * **This was six icon-only buttons per row** — logs, config test, PHP settings,
- * then start/reload, restart, stop — and it defended itself with "no overflow
- * menu, with at most three actions a menu hides half of them". That counted the
- * three state verbs and ignored the three links beside them. Six grey glyphs of
- * the same size, no text, and reload and restart adjacent as near-identical
- * circular arrows: a row you had to hover through to read, and on a touch
- * screen could not read at all.
- *
- * So: the verb that matches the state gets a word and sits on the row, and
- * everything else is a named item behind `…` — the same shape FileRowActions
- * uses, which is the panel's own convention for this.
- *
- * **Stop is in the menu.** It already asked for confirmation, so it was never
- * one click; what it gains is not being one pixel from Restart.
- *
- * Stop asks first: it takes something offline now, and undo can't give back the
- * seconds it was down. The rest just run.
- */
+// Stop asks first (undo can't give back the downtime); restarting a running unit asks too
+// (it drops every connection). Start and reload just run.
 export function ServiceActions({ service, canManage, phpVersion, onBusyChange }) {
   const t = useTranslations("services");
   const { refreshAndWait } = useRefresh();
@@ -98,25 +69,20 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
   const [confirming, setConfirming] = useState(null);
   const configTest = useConfigTest(service);
 
-  // Reported upward so the status cell can say "Restarting…" too. A spinner on
-  // one icon while the badge still reads "Running" leaves the row ambiguous
-  // about whether anything is actually happening.
+  // Reported upward so the status cell can say "Restarting…" too.
   function setBusyAction(action) {
     setPending(action);
     onBusyChange?.(action);
   }
 
   const allowed = service.actions ?? [];
-  // Intersected with what the API permits for THIS service, so a protected unit
-  // never shows Stop no matter what state it's in.
+  // Intersected with what the API permits, so a protected unit never shows Stop.
   const actions = (BY_STATUS[service.status] ?? ["restart"]).filter((a) =>
     allowed.includes(a),
   );
   const busy = pending !== null;
 
-  // The row's one button, and everything else. A state whose primary is not
-  // permitted for this unit — a protected service that may only be reloaded —
-  // falls back to whatever it does allow rather than showing nothing.
+  // If the primary is not permitted (e.g. a reload-only protected unit), use whatever is allowed.
   const primary = actions.includes(PRIMARY[service.status])
     ? PRIMARY[service.status]
     : (actions[0] ?? null);
@@ -130,24 +96,24 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
     setBusyAction(action);
     try {
       await runServiceAction(service.key, action);
-      // The row re-read before the toast: after Stop it still said "active"
-      // under "stopped" for the length of the refresh.
+      // Re-read before the toast, so the row's state matches it.
       await refreshAndWait();
       showActionSuccess({
         title: t(`toast.${action}`, { name: service.label }),
-        // Stop is the one action here you might regret the instant it lands.
-        // Undo beats hunting for the row and picking the right icon again.
+        // Undo for Stop, the action most likely to be regretted.
         undoLabel: action === 'stop' ? t('undoStop') : undefined,
         onUndo: action === 'stop' ? () => run('start') : undefined,
       });
     } catch (error) {
       const data = error.response?.data;
-      // Name the service and the action, and say the state is unchanged — the
-      // server's own "the operation failed" says none of that, and the first
-      // question after a failed restart is "so is it still up?".
+      // Name the service and action and say the state is unchanged; the API message alone does not.
       showActionError({
-        title: t(`error.${action}`, { name: service.label }),
-        message: apiMessage(error, undefined, { reference: false }),
+        // No answer at all is not "left as it was": the server may have done it.
+        title: error.response
+          ? t(`error.${action}`, { name: service.label })
+          : t("error.noAnswer", { name: service.label }),
+        // The title already says there was no answer.
+        message: error.response ? apiMessage(error, undefined, { reference: false }) : undefined,
         reference: data?.reference,
         copyLabel: t('copyReference'),
         copiedLabel: t('copiedReference'),
@@ -161,23 +127,28 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
   }
 
   function trigger(action) {
-    if (DISRUPTIVE_ACTIONS.includes(action)) setConfirming(action);
+    // Restarting a running unit drops every connection; a failed unit has nothing to drop.
+    const disruptive =
+      DISRUPTIVE_ACTIONS.includes(action) ||
+      (action === "restart" && service.status === "active");
+
+    if (disruptive) setConfirming(action);
     else run(action);
   }
 
+  const confirmIsRestart = confirming === "restart";
+
   return (
     <div className="flex items-center justify-end gap-1.5">
-      {/* One button, with the verb on it. Which verb depends on the state, so
-          the thing you came to do is the thing under the cursor: Restart a
-          running unit, Start a stopped or failed one. */}
+      {/* The state's verb on one button: Restart when running, Start otherwise. */}
       {primary ? (
         <Tooltip>
           <TooltipTrigger asChild>
-            {/* Wrapped: a disabled button swallows pointer events, and the
-                no-permission case is exactly when the tooltip matters. */}
+            {/* Wrapped: a disabled button swallows pointer events, and that is when the tooltip matters. */}
             <span tabIndex={!canManage || busy ? 0 : -1} className="inline-flex">
               <Button
-                variant="outline"
+                // Neutral, not outline: inside a card outline turns blue and overrides the verb's colour.
+                variant="neutral"
                 size="sm"
                 className={cn(ACTION_META[primary].tone)}
                 disabled={!canManage || busy}
@@ -220,9 +191,7 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
           </Tooltip>
 
           <DropdownMenuContent align="end" className="w-52">
-            {/* The remaining state verbs, each with its word. Reload and
-                restart can finally sit near each other: one says "Reload", the
-                other says "Restart". */}
+            {/* The remaining state verbs, each labelled. */}
             {secondary.map((action) => {
               const Icon = ACTION_META[action].icon;
 
@@ -239,9 +208,7 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
               );
             })}
 
-            {/* Reading before writing: the log and the config check are what
-                you do BEFORE touching a running service, so they sit below the
-                verbs with a rule between. */}
+            {/* Read-only checks (logs, config test) below the verbs, after a rule. */}
             {secondary.length > 0 && (hasLogs || service.testable || phpVersion) ? (
               <DropdownMenuSeparator />
             ) : null}
@@ -250,9 +217,9 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
 
             {service.testable ? (
               <DropdownMenuItem
-                disabled={!canManage || configTest.pending}
-                // Closing the menu is what we want — the dialog is rendered
-                // below, outside it, so it survives.
+                // A read (`nginx -t` / `php-fpm -t`); the API allows it with view access.
+                disabled={configTest.pending}
+                // Closing the menu is fine: the dialog is rendered outside it.
                 onSelect={() => configTest.run()}
               >
                 {configTest.pending ? (
@@ -264,10 +231,7 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
               </DropdownMenuItem>
             ) : null}
 
-            {/* Settings for a PHP version live on the PHP page now — one place
-                for the version, its extensions and its ini. Starting and
-                stopping the FPM unit stays here, because that is the same job
-                as for nginx. */}
+            {/* PHP version settings live on the PHP page; FPM start/stop stays here. */}
             {phpVersion ? (
               <DropdownMenuItem asChild>
                 <Link href={`/php?version=${encodeURIComponent(phpVersion)}`}>
@@ -289,13 +253,16 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
       <ConfirmDialog
         open={confirming !== null}
         onOpenChange={(open) => !open && setConfirming(null)}
-        icon={TriangleAlert}
-        tone="destructive"
+        // Restart brings the service back by itself, so it warns rather than alarms.
+        icon={confirmIsRestart ? RotateCw : TriangleAlert}
+        tone={confirmIsRestart ? "warning" : "destructive"}
         title={confirming ? t(`confirm.${confirming}.title`, { name: service.label }) : ""}
-        description={confirming ? t(`confirm.${confirming}.description`) : ""}
+        description={
+          confirming ? t(`confirm.${confirming}.description`, { name: service.label }) : ""
+        }
         cancelLabel={t("confirm.cancel")}
         confirmLabel={confirming ? t(`actions.${confirming}`) : ""}
-        confirmVariant="destructive"
+        confirmVariant={confirmIsRestart ? "default" : "destructive"}
         pending={busy}
         onConfirm={() => run(confirming)}
       />

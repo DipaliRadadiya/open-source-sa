@@ -31,8 +31,7 @@ export default async function ApplicationPhpPage({ params }) {
   ]);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
-  // The site is gone. Land on the list — the only place left to go — and say
-  // why on arrival, rather than parking on a dead end that offers one link.
+  // The site is gone: back to the list, which explains the redirect.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
@@ -44,34 +43,24 @@ export default async function ApplicationPhpPage({ params }) {
   const canManage = can(appPermissions, "app_php", "manage", "application");
   const settled = isSettled(application);
 
-  // The whole screen is rendered from this response — versions, isolation and
-  // the memory budget all come from it — so a failure is a load failure, not
-  // an empty form. The timezone list is a nicety by comparison: it fills one
-  // Advanced picker, and losing it must not take the page down with it.
+  // The PHP settings drive the whole screen, so their failure is a load
+  // failure. Timezones and site types are optional and degrade quietly.
   const [phpResult, timezones, catalogue] = settled
     ? await Promise.all([
         getApplicationPhp(id),
         getTimezones().catch(() => []),
-        // Only for the range below. `cache`d, and a failure costs the warning
-        // rather than the page — the same weight as the timezone list.
+        // Only for the version range below.
         getSiteTypes().catch(() => ({ siteTypes: [] })),
       ])
     : [null, [], { siteTypes: [] }];
 
-  /*
-   * The PHP versions this site's application actually runs on.
-   *
-   * The create form refuses an unsupported version; this screen never did, and
-   * neither does the API — `SavePhpSettingsRequest` only checks the version is
-   * installed. So a PrestaShop site created correctly on 8.0 could be moved to
-   * 8.4 here, and the first sign would be the site failing.
-   */
+  // PHP versions the site's application supports; the API only checks that a
+  // version is installed, not that the application runs on it.
   const phpRange =
     (catalogue.siteTypes ?? []).find((type) => type.name === application.site_type)
       ?.php_version_range ?? null;
 
-  // The permission middleware answers 404 for a site type that does not serve
-  // PHP. That is an answer, not a fault: this screen should not exist there.
+  // 404 means the site type does not serve PHP, so this screen does not apply.
   if (phpResult?.status === 404) notFound();
 
   return (
@@ -93,8 +82,7 @@ export default async function ApplicationPhpPage({ params }) {
           php={phpResult.php}
           phpRange={phpRange}
           siteTypeTitle={application.site_type_title ?? application.site_type ?? ""}
-          // The application's own folder, one above the public_html that
-          // `path` names — a prepend file kept outside the web root is normal.
+          // The folder above public_html, where prepend files often live.
           applicationPath={(application.path ?? "").replace(/\/public_html\/?$/, "")}
           timezones={timezones}
           canManage={canManage}

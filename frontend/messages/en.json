@@ -68,7 +68,8 @@
       "title": "You don't have access to {feature}",
       "description": "Your role doesn't include permission to view this. Ask an administrator to grant it."
     },
-    "serverNavigation": "Server menu"
+    "serverNavigation": "Server menu",
+    "loadingPage": "Loading page…"
   },
   "systemUsers": {
     "title": "System Users",
@@ -850,7 +851,8 @@
     "noManagedWorkerKeys": "user, command, directory and the log files are set by the panel. Change them in the fields above, not here.",
     "insideApplication": "Use a path inside this application's folder.",
     "securityUsernameAscii": "Use only English letters, numbers and . _ - @ — browsers don't send other letters the same way.",
-    "excludeInsideSite": "Use a path inside the application's folder, like storage/logs — not / or .."
+    "excludeInsideSite": "Use a path inside the application's folder, like storage/logs — not / or ..",
+    "cronTrailingComment": "Remove the # note. Cron treats everything after # as a comment, including the part that writes the job's log."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -1212,7 +1214,8 @@
         "next": "Usually the panel and the API are different versions, or something between them is rewriting requests. Update both to the same release."
       }
     },
-    "whatToDo": "What to do"
+    "whatToDo": "What to do",
+    "noAnswer": "No answer from the server. It may or may not have happened — reload the page to see where it stands."
   },
   "logs": {
     "title": "System Logs",
@@ -1342,6 +1345,10 @@
       "disable": {
         "title": "Stop {name} starting on boot?",
         "description": "It keeps running now, but it will not come back after the next reboot."
+      },
+      "restart": {
+        "title": "Restart {name}?",
+        "description": "It stops and starts again. Anything connected to it is cut off for a moment."
       }
     },
     "toast": {
@@ -1365,7 +1372,8 @@
       "restart": "Could not restart {name} — it was left as it was.",
       "reload": "Could not reload {name} — it was left as it was.",
       "enable": "Could not set {name} to start on boot — nothing changed.",
-      "disable": "Could not stop {name} starting on boot — nothing changed."
+      "disable": "Could not stop {name} starting on boot — nothing changed.",
+      "noAnswer": "No answer from the server about {name}. It may or may not have happened — the list shows its real state in a few seconds."
     },
     "undoStop": "Start again",
     "retry": "Try again",
@@ -1402,7 +1410,10 @@
       "blockedNoChanges": "Nothing to save — the file has not been changed.",
       "blockedAcknowledge": "Confirm you understand the risk first.",
       "pathUnknown": "Loading…",
-      "shortAction": "Edit php.ini"
+      "shortAction": "Edit php.ini",
+      "viewAction": "View php.ini",
+      "readOnlyDescription": "The whole file, as PHP reads it.",
+      "close": "Close"
     },
     "notMeasured": "Not measured",
     "phpSettings": "PHP settings",
@@ -1420,7 +1431,8 @@
       "attention": "{count, plural, =1 {1 service needs attention} other {# services need attention}}",
       "running": "{count, plural, =1 {1 running} other {# running}}",
       "installing": "{count, plural, =1 {1 installing} other {# installing}}",
-      "allRunning": "{count, plural, =0 {No services detected} =1 {The one service is running} other {All # services are running}}"
+      "allRunning": "{count, plural, =0 {No services detected} =1 {The one service is running} other {All # services are running}}",
+      "stopped": "{count, plural, =1 {1 stopped} other {# stopped}}"
     },
     "sections": {
       "attention": {
@@ -1428,7 +1440,7 @@
         "hint": "These are not running. Each one says why, and what to do about it."
       },
       "running": {
-        "title": "Running services",
+        "title": "Installed services",
         "hint": "Memory, processor use and whether each one starts with the server."
       },
       "installing": {
@@ -1442,7 +1454,8 @@
       "openDatabases": "Open databases",
       "openPhp": "Open PHP",
       "openFail2ban": "Open Fail2ban",
-      "openDocker": "Open Docker"
+      "openDocker": "Open Docker",
+      "unitFailedNoLog": "Installed but not running. Try starting it; if it stops again, its error is in the server's system journal."
     },
     "moreActions": "More actions for {name}"
   },
@@ -1551,7 +1564,8 @@
       "invalidIp": "That is not a valid IP address. Ranges are not allowed here.",
       "selfWarning": "This is your own address. The server won't ban it — it would lock you out.",
       "ipLabelHint": "The address to block. Check it is not your own connection before you save.",
-      "jailLabelHint": "Which set of rules to ban the address under. Each jail watches one service, such as SSH or the web server."
+      "jailLabelHint": "Which set of rules to ban the address under. Each jail watches one service, such as SSH or the web server.",
+      "ownServer": "That is this server's own address. Banning it would lock everyone out of the panel."
     },
     "settings": {
       "title": "Ban rules",
@@ -1734,7 +1748,8 @@
         "portOrder": "The end of the range cannot be lower than the start.",
         "invalidSource": "That is not a valid IP address or range.",
         "portShape": "Use a port like 443, or a range like 8000-8090.",
-        "nameTooLong": "Keep the name under 255 characters."
+        "nameTooLong": "Keep the name under 255 characters.",
+        "rangeNeedsProtocol": "For a range of ports, choose TCP or UDP. Add a second rule if you need both."
       },
       "anywhere": "anywhere",
       "summary": "Summary",
@@ -2149,7 +2164,7 @@
       "retry": "Try again",
       "retrying": "Installing PHP {version} again…",
       "incomplete": "Incomplete",
-      "incompleteDetail": "Missing {packages} — it was installed by another package, not by the panel.",
+      "incompleteDetail": "Missing {packages}. Complete the install to add them.",
       "completeInstall": "Complete install",
       "completing": "Completing PHP {version}…",
       "incompleteDefault": "Complete the install first — the default PHP is what runs when nothing pins a version.",
@@ -2424,7 +2439,7 @@
       "already": "Node.js {version} was already installed.",
       "failed": "That version could not be installed.",
       "eolWarning": "Node.js {version} no longer gets security fixes. Install it only if an application needs it.",
-      "noneAvailable": "No new versions are available to install right now.",
+      "noneAvailable": "The list of Node.js versions could not be fetched. Check that the server can reach nodejs.org, then reload the page.",
       "installedTag": "Installed",
       "allInstalled": "Every version this server offers is already installed."
     },
@@ -3057,7 +3072,8 @@
       "chartDescription": "Queries per second, connections, and running threads, sampled every 5 minutes.",
       "zoomHint": "Drag the handles below the chart, or scroll on it, to zoom into a time range.",
       "cannotStopOwn": "This is the panel's own connection to the database. Stopping it would cut off this page.",
-      "loadFailed": "We couldn't check the database engines."
+      "loadFailed": "We couldn't check the database engines.",
+      "backToList": "Back to databases"
     },
     "tables": {
       "title": "Tables",
@@ -3083,12 +3099,10 @@
       "failed": "phpMyAdmin could not be opened.",
       "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it.",
       "blocked": "Your browser blocked the new tab.",
-      "openAnyway": "Open phpMyAdmin",
       "install": "Install phpMyAdmin",
       "needsUser": "Add a database user first — phpMyAdmin signs in as one.",
       "choose": "Which phpMyAdmin?",
-      "signingShort": "Signing you in…",
-      "linkReady": "Your phpMyAdmin login link is ready."
+      "signingShort": "Signing you in…"
     },
     "usedBy": {
       "title": "Used by",
@@ -3132,7 +3146,8 @@
     "unavailable": {
       "title": "Databases are not managed on this server",
       "body": "This server hosts containers. An application that needs a database brings one as a container of its own, so the panel manages no engine here — and its own data is SQLite regardless."
-    }
+    },
+    "backToList": "Back to databases"
   },
   "git": {
     "title": "Git",
@@ -3957,11 +3972,8 @@
       "none": "This application has no administrator accounts.",
       "listFailed": "Couldn't read this application's administrators.",
       "failed": "Couldn't create the login link.",
-      "popupBlocked": "Your browser blocked the new tab. Allow pop-ups for this panel and try again.",
       "redirecting": "Signing you in…",
       "auditNote": "The link works once and expires in a minute. Whoever you sign in as is recorded in the activity log.",
-      "linkReady": "Your WordPress login link is ready.",
-      "openAdmin": "Open WordPress admin",
       "fetchingUsers": "Fetching users…"
     },
     "markers": {

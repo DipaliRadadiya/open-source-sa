@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 
 import { useFormatter, useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
@@ -8,14 +8,6 @@ import { ServiceBootSwitch } from "@/components/services/service-boot-switch";
 import { ServiceStatusBadge } from "@/components/services/service-status-badge";
 import { CardList, CardListItem } from "@/components/data-table/card-list";
 
-/**
- * The same services as cards, for screens too narrow for six columns.
- *
- * The table does work sideways on a phone, but the action buttons sit off the
- * right edge with nothing to suggest a swipe — so the one thing you came to do
- * at 2am is the one thing you can't see. A card puts every part of a service in
- * one column: what it is, how it's doing, and what you can do about it.
- */
 export function ServicesCards({ data, phpVersions = [], canManage, busy, setRowBusy }) {
   const t = useTranslations("services");
   const format = useFormatter();
@@ -30,8 +22,7 @@ export function ServicesCards({ data, phpVersions = [], canManage, busy, setRowB
         return (
           <CardListItem
             key={service.key}
-            // Same signal as the table's tinted row: a failed unit is why you
-            // opened the page.
+            // Same signal as the table's tinted row for a failed unit.
             className={cn(
               service.status === "failed" &&
                 service.state === "installed" &&
@@ -41,10 +32,8 @@ export function ServicesCards({ data, phpVersions = [], canManage, busy, setRowB
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate font-medium">{service.label}</p>
-                {/* Same rule as the table's first column, and said here too so
-                    the two layouts cannot describe one state differently:
-                    installing or failed-to-install means there is no unit to
-                    name, so the reason takes its place. */}
+                {/* Same rule as the table's first column: with no unit to name
+                    (installing or failed install), the reason takes its place. */}
                 {service.state !== "installed" ? (
                   (service.install_reason && service.install_reason !== "unknown") ||
                   service.retryable ? (
@@ -78,8 +67,7 @@ export function ServicesCards({ data, phpVersions = [], canManage, busy, setRowB
               />
             </div>
 
-            {/* Both figures on one line: on a narrow card they're a pair to
-                glance at, not a column to scan. */}
+            {/* Both figures on one line. */}
             <div className="mt-3 flex items-center gap-4 border-t pt-3 text-xs">
               <Figure
                 label={t("memoryShort")}
@@ -101,15 +89,10 @@ export function ServicesCards({ data, phpVersions = [], canManage, busy, setRowB
               />
             </div>
 
-            {/* Boot control and actions on separate lines, always — not
-                "whenever they don't fit". Letting them share a line when there
-                was room meant the layout changed per service: cards with fewer
-                icons sat inline, crowded ones wrapped, and the wrapped ones
-                didn't line up with anything. Same shape on every card beats one
-                saved line on some of them. */}
+            {/* Boot control and actions always on separate lines, so every
+                card has the same shape. */}
             <div className="mt-3 space-y-3 border-t pt-3">
-              {/* The switch needs its label here — there's no column header on a
-                  card to say what it does. */}
+              {/* Labelled here: cards have no column header. */}
               <div className="flex items-center gap-2">
                 <span className="whitespace-nowrap text-xs text-muted-foreground">
                   {t("columns.boot")}
@@ -142,8 +125,7 @@ function Figure({ label, value, emptyLabel }) {
         {label}
       </span>
       {value == null || value === "" ? (
-        // Spelled out rather than an em dash: a card has room for the words, and
-        // "not measured" is a different fact from zero.
+        // Words, not a dash: "not measured" differs from zero.
         <span className="text-muted-foreground">{emptyLabel}</span>
       ) : (
         <span className="font-medium tabular-nums">{value}</span>

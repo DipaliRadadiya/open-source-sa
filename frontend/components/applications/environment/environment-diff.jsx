@@ -6,16 +6,7 @@ import { getEnvironmentDiff } from "@/lib/api/environment";
 import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
 
-/**
- * The old and new value of every variable one change touched, loaded when the
- * row is opened rather than with the history list: it reads one or two backup
- * files off the server, and most rows are never expanded. The values come from
- * those files, not from the activity log — see `EnvironmentDiff` on the
- * backend for why that distinction matters.
- *
- * Fetched once per row and kept. Reopening a row should not re-read files off
- * the server, and the answer cannot change: it describes a past state.
- */
+// Values come from backup files, so they load when the row opens and are kept: a past state cannot change.
 export function useEnvironmentDiff(appId, entry) {
   const t = useTranslations("applications.environment.history");
   const [open, setOpen] = useState(false);
@@ -66,15 +57,12 @@ export function EnvironmentDiff({ state }) {
       ) : error ? (
         <p className="p-3 text-xs text-muted-foreground">{error}</p>
       ) : !data?.available ? (
-        // Not the same as "nothing changed": the file holding the previous
-        // version has been deleted, so this change cannot be described.
+        // Not "nothing changed": the previous version's backup was deleted.
         <p className="p-3 text-xs text-muted-foreground">{t("diffUnavailable")}</p>
       ) : data.changes.length === 0 ? (
         <p className="p-3 text-xs text-muted-foreground">{t("noKeysNote")}</p>
       ) : (
-        // A table where there is room for three columns, stacked rows where
-        // there is not: squeezed, the names broke mid-word, and scrolled, the
-        // After column — the answer — sat off-screen.
+        // Table when the container fits three columns, stacked rows otherwise.
         <div className="@container">
           <table className="hidden w-full text-xs @md:table">
             <thead className="bg-muted/50 text-muted-foreground">
@@ -137,13 +125,7 @@ function KeyName({ change }) {
   );
 }
 
-/**
- * One side of a change.
- *
- * Wraps anywhere because these are keys and URLs with no spaces to wrap on. An
- * absent side is an em dash rather than an empty cell — a blank reads as a
- * value that is blank, which is a thing a `.env` can genuinely hold.
- */
+// An absent side is an em dash, since an empty string is a real `.env` value.
 function Value({ value, tone }) {
   const t = useTranslations("applications.environment.history");
 

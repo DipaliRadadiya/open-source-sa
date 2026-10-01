@@ -24,9 +24,8 @@ import {
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { RestoreFileBackupDialog } from "@/components/applications/files/restore-file-backup-dialog";
 
-// CodeMirror + its language packages are a meaningful chunk of JS that only
-// this dialog needs — dynamic-imported so the rest of the Files feature
-// doesn't pay for it until a file is actually opened.
+// CodeMirror and its language packages are only needed here, so they load on
+// first open.
 const CodeEditor = dynamic(
   () => import("@/components/applications/files/code-editor").then((m) => m.CodeEditor),
   {
@@ -39,11 +38,7 @@ const CodeEditor = dynamic(
   },
 );
 
-/**
- * View/edit one text file. Same console surface as the .env and php.ini
- * editors — a machine's own file, not a form field. Loaded fresh every time
- * it opens: the list only ever gave us name/size/modified, never content.
- */
+// Content is fetched on every open; the list carries only metadata.
 export function FileEditorDialog({ appId, file, canManage, open, onOpenChange }) {
   const t = useTranslations("applications.files");
   const tc = useTranslations("common");
@@ -52,36 +47,24 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
   // The row that opened the editor, captured before focus moves into it.
   const [opener] = useState(() => (typeof document === "undefined" ? null : document.activeElement));
   const saved = useRef(false);
-  // Mounted fresh per file (see files-panel.jsx), so these start at the
-  // "about to load" state directly rather than being reset by an effect.
+  // Mounted fresh per file (see files-panel.jsx), so state starts at "about to
+  // load" rather than being reset by an effect.
   const tooLarge = file.size > EDITOR_MAX_BYTES;
   const [loading, setLoading] = useState(!tooLarge);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(null); // { path, content, backups }
   const [contents, setContents] = useState("");
-  // Set when the file can't be opened here at all — too big or looks binary.
-  // Download is the honest way out.
+  // Set when the file can't be opened here at all (too large or binary); Download
+  // is the way out.
   const [blocked, setBlocked] = useState(() => (tooLarge ? t("editor.tooLarge") : null));
-  // Why the last save was refused. The API rejects a file for reasons the
-  // editor cannot anticipate — permissions, disk full, a path that moved —
-  // and those belong beside the text they are about, not in a toast that
-  // clears itself while the reader is still looking at their unsaved work.
+  // Why the last save was refused, shown beside the unsaved text rather than in a
+  // toast that clears itself.
   const [saveError, setSaveError] = useState(null);
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
 
-  /*
-   * After a restore, read the file again rather than trusting the reply.
-   *
-   * The restore endpoint answers `{restored: true}` and nothing else, and this
-   * used to wait for a `file.content` that never came — so the editor kept the
-   * pre-restore text on screen, and the next Save wrote it straight back over
-   * the version the reader had just chosen to restore. The backup list changes
-   * too (the restore itself makes one), which only a re-read picks up.
-   *
-   * If the re-read fails the editor closes: the text in it is known to be
-   * stale, and leaving it open with a Save button is how the restore is lost.
-   */
+  // Re-read after a restore (it answers only `{restored: true}`), or the next Save
+  // overwrites it. If the re-read fails the editor closes.
   async function reloadAfterRestore() {
     setLoading(true);
     setSaveError(null);
@@ -92,8 +75,7 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
       setLoaded(parsed.data);
       setContents(parsed.data.content);
     } catch (error) {
-      // Our sentence leads, the server's reason follows: "Could not read the
-      // file." on its own, next to "Restored.", reads as "did it work?".
+      // Our sentence leads, the server's reason follows.
       toast.error(t("restore.reloadFailed"), { description: apiMessage(error, null) ?? undefined });
       onOpenChange?.(false);
     } finally {
@@ -114,13 +96,12 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
       })
       .catch((error) => {
         if (!active) return;
-        // Both refusals are a bare 422 with a message and no field — the
-        // server names no reason a client can branch on. A 422 that does
-        // name a field is a bad path, which is a real failure.
+        // Both refusals are a bare 422 with a message and no field. A 422 that names a
+        // field is a bad path, which is a real failure.
         const response = error.response;
         if (response?.status === 422 && !response.data?.errors?.path) {
-          // A shortcut opens a file with no listing size; the server's own
-          // sentence says which refusal it was.
+          // A shortcut opens a file with no listing size; the server's sentence says which
+          // refusal it was.
           setBlocked(
             file.size == null
               ? apiMessage(error, t("editor.notText"), { reference: false })
@@ -137,15 +118,8 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
     return () => {
       active = false;
     };
-    // `appId` is in the list because the effect reads it — it is a plain scalar
-    // prop, so it cannot loop. Today it never changes while `file.path` holds:
-    // this dialog only ever opens inside one application's Files page. That is
-    // an assumption about the parent, enforced nowhere, and the cost of it
-    // being wrong is loading one site's file into another's editor.
-    //
-    // `t`, `onOpenChange` and the setters stay out: they are read only on the
-    // failure path, and re-running on a new translator identity would abort the
-    // in-flight request through the cleanup below.
+    // `t`, `onOpenChange` and setters stay out: a new translator identity would abort
+    // the in-flight request.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appId, file.path, tooLarge]);
 
@@ -163,17 +137,16 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
       saved.current = true;
       onOpenChange?.(false);
     } catch (error) {
-      // Shown in the dialog, not as a toast. The dialog stays open holding
-      // work that is not on disk yet, so the reason has to stay on screen for
-      // as long as the decision does.
+      // Shown in the dialog, not as a toast: the unsaved work stays open, so the reason
+      // must too.
       setSaveError(apiMessage(error, t("editor.saveFailed")));
     } finally {
       setSaving(false);
     }
   }
 
-  // Escape, the backdrop and Cancel all funnel through here (Radix calls
-  // onOpenChange(false) for all three) — one guard covers every way to close.
+  // Radix calls onOpenChange(false) for Escape, the backdrop and Cancel, so one
+  // guard covers every way to close.
   function handleOpenChange(next) {
     if (saving) return;
     if (!next && dirty) {
@@ -190,26 +163,12 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      {/* Sized to the viewport, not to a number. Editing a file is the whole
-          task while this is open — a fixed 320px window over someone's
-          wp-config or nginx conf shows about fifteen lines, so every read means
-          scrolling a peephole. The three rows are header / editor / footer, and
-          `minmax(0,1fr)` is what lets the middle one actually shrink so the
-          editor scrolls internally instead of pushing the footer off-screen. */}
-      {/* Cmd+S on macOS, Ctrl+S elsewhere. One handler on the dialog rather
-          than a CodeMirror keybinding: keydown bubbles out of the editor (it
-          binds nothing to Mod-S, so it neither handles nor stops the event),
-          which means the same shortcut works with the caret in the file and
-          with focus on the footer. Same shape as the .env editor's.
-
-          preventDefault regardless of permission — otherwise a read-only viewer
-          pressing Ctrl+S gets the browser's "save page" dialog over the panel,
-          which is the thing this is displacing. */}
+      {/* `minmax(0,1fr)` lets the editor scroll instead of pushing the footer off screen.
+          Cmd/Ctrl+S is on the dialog; preventDefault even read-only, or "save page" opens. */}
       <DialogContent
         className="grid-rows-[auto_minmax(0,1fr)_auto] h-[85vh] sm:max-w-6xl"
-        // After a save, focus still goes back to the file's row but without the
-        // ring: typing in the editor makes the browser treat the returned focus
-        // as keyboard focus, and the row looked selected.
+        // Focus returns to the file's row without the ring: after typing in the editor
+        // the browser treats the returned focus as keyboard focus.
         onCloseAutoFocus={(event) => {
           if (!saved.current) return;
           event.preventDefault();
@@ -229,9 +188,8 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
             </span>
             <DialogTitle className="truncate font-mono text-base">{file?.path}</DialogTitle>
           </div>
-          {/* A file that cannot be opened has nothing to save, so the line
-              about backups before each save would be wrong. Screen readers
-              get the reason instead. */}
+          {/* A blocked file has nothing to save, so the backups line would be wrong; screen
+              readers get the reason instead. */}
           <DialogDescription className={blocked ? "sr-only" : "pt-1"}>
             {blocked ?? (canEdit ? t("editor.subtitle") : t("editor.readOnly"))}
           </DialogDescription>
@@ -279,8 +237,7 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
                 filename={file?.name}
                 value={contents}
                 onChange={(next) => {
-                  // Editing is the retry: a message about the previous attempt
-                  // stops describing what is on screen the moment it changes.
+                  // Editing is the retry; the previous error no longer describes what is on screen.
                   if (saveError) setSaveError(null);
                   setContents(next);
                 }}
@@ -291,8 +248,7 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
           </div>
         )}
 
-        {/* Between the editor and the buttons — the last thing read before
-            pressing Save again. */}
+        {/* Between the editor and the buttons: the last thing read before Save. */}
         {saveError ? (
           <div
             role="alert"
@@ -312,10 +268,8 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
             <Button onClick={save} disabled={!dirty || saving || loading}>
               {saving ? <Loader2 className="size-4 animate-spin" /> : null}
               {t("editor.save")}
-              {/* Inside the button, not beside it: this is the shortcut FOR
-                  this action, and a chip floating in the footer would read as
-                  belonging to the footer. Dropped while saving so it does not
-                  invite a second press mid-write. */}
+              {/* Inside the button, as this action's shortcut. Hidden while saving so it does
+                  not invite a second press. */}
               {saving ? null : (
                 <ShortcutHint letter="S" className="ms-1 border-primary-foreground/25 bg-primary-foreground/15 text-primary-foreground/80" />
               )}

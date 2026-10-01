@@ -4,41 +4,18 @@ import { useEffect, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useNavTransition } from "@/components/data-table/nav-transition";
 
-/**
- * Re-run the server component, and know while it is happening.
- *
- * Five buttons across the panel called `router.refresh()` straight from an
- * onClick. That works — but a bare call returns immediately and the render
- * happens later, so the button did nothing visible for the whole round trip.
- * On the Sync page, where a scan can take seconds, it read as broken: you
- * pressed refresh and the screen sat there.
- *
- * The logic is shared rather than the markup. Those five buttons are a ghost
- * one with a label, an outline one, a small one, a full-width one, and one
- * with no icon at all — folding them into a single component would take five
- * props to describe differences that are all deliberate. What they actually
- * had in common was this, and only this.
- *
- * Under a `<NavTransitionProvider>` it borrows the list's pending signal, so
- * the table dims with the same transition rather than running a second one
- * beside it; elsewhere it keeps its own.
- *
- * `refreshThen(after)` runs `after` once the refreshed page is on screen. A
- * dialog that closed on the API's answer and refreshed behind it left the old
- * list up for 1.5–4 s on a real server, under a toast saying it was done — a
- * renamed file still wearing its old name. Keep the spinner while `pending`
- * and do the toast and the close in `after`. It still runs if the refresh
- * unmounts the caller.
- */
+// A bare `router.refresh()` returns immediately. `refreshThen(after)` runs `after` once
+// the refreshed page is on screen, even if the refresh unmounts the caller.
 export function useRefresh() {
   const nav = useNavTransition();
   const router = useRouter();
   const [localPending, startLocal] = useTransition();
+  // Its own transition: under a NavTransitionProvider `pending` would never see leaving.
+  const [leaving, startLeaving] = useTransition();
 
   const pending = nav ? nav.isPending : localPending;
   const refresh = nav ? nav.refresh : () => startLocal(() => router.refresh());
-  // A queue, not a slot: two rows deleted back to back share one hook, and a
-  // second waiter overwriting the first left the first button spinning.
+  // A queue, not a slot: two waiters on one hook must both run.
   const after = useRef([]);
   const wait = (fn) => {
     after.current.push(fn);
@@ -50,16 +27,11 @@ export function useRefresh() {
   };
 
   useEffect(() => {
-    if (pending || after.current.length === 0) return;
+    if (pending || leaving || after.current.length === 0) return;
     flush();
-  }, [pending]);
+  }, [pending, leaving]);
 
-  /*
-   * The refresh can remove the very component that asked for it: a deleted
-   * worker's row takes its own delete dialog with it. The effect above then
-   * never sees `pending` fall, and "Worker deleted." was never shown. Run the
-   * waiting step on the way out instead — by then the refresh has landed.
-   */
+  /* The refresh can unmount the caller (e.g. a deleted row's dialog), so flush waiters on unmount. */
   useEffect(() => () => flush(), []);
 
   return {
@@ -69,19 +41,19 @@ export function useRefresh() {
       wait(fn);
       refresh();
     },
-    // The same, awaitable: `await refreshAndWait()` before the success toast
-    // and the close, so a dialog never uncovers the state it just changed.
+    // Await before the success toast and close, so a dialog never uncovers stale state.
     refreshAndWait: () =>
       new Promise((resolve) => {
         wait(resolve);
         refresh();
       }),
-    /*
-     * Same, but lands on a different page of the list. For the last row of a
-     * page leaving it: a refresh re-renders the now-empty page, the server
-     * redirects to the previous one, and the reader watched the loading
-     * screen in between. Going straight there has nothing to redirect.
-     */
+    /* Resolves once the new page is on screen; an unmount is covered by the flush above. */
+    pushAndWait: (href) =>
+      new Promise((resolve) => {
+        wait(resolve);
+        startLeaving(() => router.push(href));
+      }),
+    /* For when the last row of a page leaves it, avoiding a server redirect. */
     navigateThen: (updates, fn) => {
       if (!nav) {
         refresh();

@@ -1,19 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/**
- * Mirrors `BackupsPanel`.
- *
- * There was no `loading.jsx` here at all, so this route fell through to the
- * one at `applications/[application]/`, which draws the site DASHBOARD: a
- * two-column grid with a 20rem rail. Backups has no rail — it is two stacked
- * cards, full width — so the placeholder invented a column and then collapsed
- * it when the real page arrived.
- *
- * Heights are taken from the rendered cards (245px and 280px) rather than
- * guessed. The active-restore banner is deliberately absent: it appears only
- * while a restore is running, and a skeleton that shows it would promise a
- * state the page is usually not in.
- */
+// Mirrors `BackupsPanel`; without this file the route inherits the dashboard skeleton.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

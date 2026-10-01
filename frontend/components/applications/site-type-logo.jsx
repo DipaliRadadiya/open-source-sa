@@ -4,60 +4,8 @@ import { cn } from "@/lib/utils";
 import { siteTypeLogo } from "@/lib/applications/site-type-logo";
 import { ProviderLogo } from "@/components/integrations/git/provider-logo";
 
-/**
- * The application's logo, wherever an application is shown.
- *
- * One component for the list, the cards, the sidebar and the create picker,
- * because the alternative is four copies of "is there a logo for this, and
- * what do I draw when there is not" — and the fourth copy is the one that
- * forgets the fallback and renders a broken image.
- *
- * Keyed on the site type's `name`, which is what both payloads carry: the
- * picker has it on the type, the list has it on the application as
- * `site_type`.
- *
- * No tile behind it. The logos bring their own colour and shape, and a tinted
- * square around each one turns a list of logos into a list of boxes — see the
- * same decision in the picker. The fallback keeps the tile, because a lone
- * grey glyph floating in a row has nothing to hold it.
- */
-/*
- * A FIXED-WIDTH SLOT, with the logo fitted inside it.
- *
- * Constrained by height alone — `h-7 w-auto` — every logo takes the width its
- * own aspect ratio asks for: Craft's square is 28px wide, Moodle's 80×21
- * wordmark is 48. In a list that is a ragged text column, because the name
- * beside each logo starts wherever that logo happened to end. Twenty pixels of
- * disagreement row to row is small enough to look like a rendering fault and
- * large enough to see.
- *
- * So the slot is a constant `h-7 w-12` and the image is fitted into it with
- * `max-h-full max-w-full object-contain`: the tall-and-square and the
- * wide-and-short both keep their proportions, neither is cropped, and the text
- * column starts at the same x on every row. Centred rather than flush left,
- * because a 28px mark pushed against the left edge of a 48px slot puts its
- * whitespace all on one side and reads as misaligned in the other direction.
- *
- * Sizing by height inside the slot stays right for the original reason: a
- * square box would make Akaunting and Craft fill it and set the row's floor
- * while Moodle used a quarter of it and read as a smudge.
- */
-/**
- * `label` names the type, for the one caller where the mark is the ONLY thing
- * saying what this site is.
- *
- * Off by default, and that is not an oversight. Everywhere else the type is
- * already written next to the logo — the mobile cards print it, the detail
- * header prints it, the picker prints it — so naming the image there would
- * make a screen reader say "WordPress WordPress", and a `title` would pop a
- * tooltip over text you can already read. The applications TABLE is the
- * exception: its Type column is gone, so the mark carries the fact alone and
- * has to be readable and hoverable.
- *
- * Most of these marks do not spell their own name — the WordPress W, Craft's
- * C, Joomla's and Nextcloud's glyphs — so an unlabelled one is genuinely
- * anonymous rather than merely redundant.
- */
+// Fixed `h-7 w-12` slot so text beside the logo starts at the same x on every row.
+// `label` only where the mark is the sole indication; most marks do not spell their name.
 export function SiteTypeLogo({ name, provider, className, size = "h-7 w-12", label = null }) {
   const logo = siteTypeLogo(name);
 
@@ -65,34 +13,22 @@ export function SiteTypeLogo({ name, provider, className, size = "h-7 w-12", lab
     <span
       className={cn("flex shrink-0 items-center justify-center", size, className)}
       title={label ?? undefined}
-      // The name goes on the WRAPPER, not on the <img>. Two of the three
-      // branches below are not images at all — a Lucide provider mark and the
-      // Globe2 fallback — and an `alt` would have named only the middle one,
-      // leaving a git row and a type with no logo file anonymous. The image
-      // stays aria-hidden either way so nothing is announced twice.
+      // The name goes on the wrapper, not the <img>: two of the three branches below
+      // are not images. The image stays aria-hidden so nothing is announced twice.
       role={label ? "img" : undefined}
       aria-label={label ?? undefined}
     >
-      {/* A git site shows the service it came from, where that is known: every
-          one of them is "From Git repo" with the same mark otherwise, and which
-          service it is is the one thing that distinguishes them. GitHub's own
-          logo is a black cat-octopus and GitLab's an orange fox — these are
-          drawn in `currentColor` instead — `mono` — because they sit in a list of
-          full-colour brand marks and three more would make the column louder
-          than the names beside it. Unknown provider falls through to the
-          generic git mark, which is what every git row used to show. */}
+      {/* A git site shows its provider's mark when known (drawn `mono` so it does
+          not outshout the names); otherwise the generic git mark. */}
       {provider ? (
         <ProviderLogo provider={provider} className="size-5" mono />
       ) : logo ? (
-        // A local file a few KB in size, usually SVG — next/image cannot
-        // optimise those without `dangerouslyAllowSVG`, and there is nothing
-        // here for it to optimise.
+        // Small local files, usually SVG; next/image cannot optimise SVG without
+        // `dangerouslyAllowSVG`, and there is nothing to optimise.
         // eslint-disable-next-line @next/next/no-img-element
         <img src={logo} alt="" aria-hidden className="max-h-full max-w-full object-contain" />
       ) : (
-        // The fallback keeps its tile — a lone grey glyph floating in a row has
-        // nothing to hold it — and takes the slot's height as a square, so it
-        // occupies the same column as a logo instead of its own.
+        // Square tile at the slot's height, so it aligns with the logos.
         <span className="flex aspect-square h-full items-center justify-center rounded-md bg-primary/10 text-primary">
           <Globe2 className="size-4" />
         </span>

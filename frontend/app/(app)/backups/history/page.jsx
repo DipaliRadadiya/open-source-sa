@@ -25,14 +25,12 @@ export default async function BackupsHistoryPage({ searchParams }) {
 
   const counts = backupCounts(meta);
 
-  // Restore is `backup,manage` — a separate decision from configuring a
-  // schedule, because overwriting a live site is not the same trust.
+  // Restore overwrites a live site, so it needs `backup,manage`.
   const canRestore = can(permissions, "backup", "manage");
   // Re-running a failed backup is an app_backup action, not a restore.
   const canRun = can(appPermissions, "app_backup", "manage", "application");
   const hasFilters = Boolean(sp.application || sp.status || sp.type || sp.period);
-  // Before anything renders: a page past the end sends the reader to the
-  // last real page instead of painting an error for it.
+  // A page past the end redirects to the last real page instead of erroring.
   redirectOutOfRange("/backups/history", sp, meta, failed);
   return (
     <NavTransitionProvider>
@@ -45,10 +43,8 @@ export default async function BackupsHistoryPage({ searchParams }) {
           canRun={canRun}
           hasFilters={hasFilters}
         />
-        {/* Not behind a row count. The selector hides itself when the list is
-            too short to paginate, and gating it on the current page as well is
-            how it used to vanish on the very page you needed it — see the note
-            in data-table-pagination.jsx. */}
+        {/* Not gated on row count: the selector hides itself when the list is
+            too short to paginate (see data-table-pagination.jsx). */}
         <DataTablePagination meta={meta} />
       </div>
     </NavTransitionProvider>

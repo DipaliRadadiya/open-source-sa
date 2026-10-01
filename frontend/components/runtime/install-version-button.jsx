@@ -22,18 +22,11 @@ import { FormModal } from "@/components/ui/form-modal";
 import { apiMessage } from "@/lib/api/error-message";
 import { allInstalled, installOptions, resolveVersion } from "@/lib/runtime/install-options";
 
-// The page is a Server Component, so it can't hand us a function — it names
-// the runtime and we pick. Two runtimes, one dialog.
+// The page is a Server Component and cannot pass a function, so it names the
+// runtime and the installer is picked here.
 const INSTALL = { php: installPhpVersion, node: installNodeVersion };
 
-/**
- * Install a version the server can actually get.
- *
- * The list comes from the package index, so it is what THIS server can install
- * rather than every version that exists. The request is queued (202) because
- * apt takes minutes and holds a lock — so the message says it is running, not
- * that it is done.
- */
+// Queued (202): apt takes minutes and holds a lock, so the message says running, not done.
 export function InstallVersionButton({
   runtime,
   installable = [],
@@ -47,9 +40,8 @@ export function InstallVersionButton({
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
 
-  // The two runtimes disagreed about whether an installed version belongs in
-  // this list, so the answer is settled here instead of taken from whichever
-  // page opened the dialog. See lib/runtime/install-options.js.
+  // Whether installed versions belong in this list is settled here, not by the
+  // page. See lib/runtime/install-options.js.
   const options = installOptions(installable, installed);
   const everythingInstalled = allInstalled(options);
   // The raw choice; `version` below is that choice reconciled against what is
@@ -57,20 +49,15 @@ export function InstallVersionButton({
   const [chosen, setChosen] = useState(null);
   const version = resolveVersion(chosen, options);
 
-  // Never hidden. An empty list means the package index offers nothing new
-  // right now, which is a fact worth stating — a button that disappears reads
-  // as a missing feature, and "where is Install?" is the question it creates.
-  //
-  // "Nothing on offer" and "you already have all of it" are different facts,
-  // and the second one used to be reported as the first.
+  // Never hidden: an empty list is stated. "Nothing on offer" and "all
+  // installed" are reported as different facts.
   const unavailable = everythingInstalled
     ? t("install.allInstalled")
     : options.length === 0
       ? t("install.noneAvailable")
       : null;
 
-  // Warn before, not after: a dead version installs perfectly well and gets no
-  // security fixes, and that is not something to find out later.
+  // Warn before installing: an end-of-life version gets no security fixes.
   const selected = options.find((option) => option.version === version);
   const dead = lifecycleAvailable && selected?.lifecycle?.status === "eol";
 
@@ -84,13 +71,8 @@ export function InstallVersionButton({
           : t("install.started", { version }),
       );
       setOpen(false);
-      // Land on the version that was just asked for, rather than leaving the
-      // operator on whichever tab they happened to be on and expecting them to
-      // go find it. The install takes minutes and now reports its progress on
-      // that tab, so this is where the answer to "is it working?" lives.
-      //
-      // `replace`, not `push`: Back should return to whatever they were
-      // looking at before, not step through each version they installed.
+      // Land on the requested version's tab, where install progress shows.
+      // `replace`, not `push`, so Back does not step through installed versions.
       router.replace(`${pathname}?version=${encodeURIComponent(version)}`);
       router.refresh();
     } catch (error) {
@@ -156,9 +138,8 @@ export function InstallVersionButton({
                 >
                   <span className="flex items-center gap-2">
                     {t("versions.name", { version: option.version })}
-                    {/* Says which of the two reasons this row cannot be picked.
-                        Greying it out alone would read as "unavailable", which
-                        is the opposite of the truth — you have it. */}
+                    {/* Says why the row cannot be picked: already installed,
+                        not unavailable. */}
                     {option.installed ? (
                       <span className="rounded bg-muted-foreground/15 px-1.5 py-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         {t("install.installedTag")}

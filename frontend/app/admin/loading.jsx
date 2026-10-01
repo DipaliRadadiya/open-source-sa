@@ -1,9 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableSkeleton } from "@/components/data-table/table-skeleton";
 
-/**
- * The admin landing page: heading, then the people card with its table.
- */
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">

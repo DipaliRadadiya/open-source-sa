@@ -1,13 +1,7 @@
 import { FIREWALL_RESOURCE_TYPE, SYNC_RESOURCE_TYPES } from "@/lib/schemas/sync";
 
-/**
- * The identity of a discovered thing, as the ignore list sees it.
- *
- * The backend's unique index is (resource_type, resource_key) — an ignore is
- * not tied to the run that produced it, which is the whole point: it has to
- * outlive the run and suppress the same thing next time. Item ids must never
- * be used here; they change every run.
- */
+// (resource_type, resource_key), matching the backend's unique index. Never item ids:
+// they change every run.
 export function ignoreKey(item) {
   return `${item.resource_type} ${item.resource_key}`;
 }
@@ -16,24 +10,8 @@ export function ignoreKeySet(ignores) {
   return new Set((ignores ?? []).map(ignoreKey));
 }
 
-/**
- * What pressing Adopt would actually do.
- *
- * This exists because the API has no per-item selection: `only` takes resource
- * TYPES, never ids, so the set of things about to be written is implied by
- * three separate rules rather than by anything the user ticked. Working it out
- * in the user's head before pressing an irreversible button is not a reasonable
- * thing to ask, so it is computed here and stated on the button.
- *
- * The rules, in the order the backend applies them:
- * 1. a type not in `selectedTypes` is not run at all;
- * 2. firewall rules are excluded unless `includeFirewall` — adopting a rule set
- *    is the one step that can lock someone out of the box;
- * 3. an ignored (type, key) is dropped before adoption.
- *
- * Only `found` rows count. A row from a previous apply is already adopted, and
- * counting it again would inflate the number on the button.
- */
+// Follows the backend (`only` takes types, not ids): skip unselected types, firewall rules
+// unless `includeFirewall` (lockout risk) and ignored keys; `found` rows only.
 export function adoptionPlan({ items, ignoredKeys, selectedTypes, includeFirewall }) {
   const selected = new Set(selectedTypes ?? []);
   const ignored = ignoredKeys ?? new Set();
@@ -61,19 +39,7 @@ export function adoptionPlan({ items, ignoredKeys, selectedTypes, includeFirewal
   return { total, ignoredCount, perType, typeCount: perType.size };
 }
 
-/**
- * Types that will be skipped wholesale because a type they depend on was not
- * selected.
- *
- * ServerSync skips a type whose parent did not run and records the reason
- * (`requires_system_user`), so unticking system users while websites are ticked
- * is not a narrower run — it is a run where every website fails. Saying so
- * before the button is pressed is the difference between a choice and a trap.
- */
-/* Read off each discoverer's dependsOn(), not inferred from the run order —
-   `database_user` looks like it should need one and does not (databases have
-   their own adopt endpoint, so it depends on nothing and simply finds nothing
-   to do), and guessing would have warned about a skip that never happens. */
+/* Mirrors each discoverer's dependsOn(); `database_user` has no dependency. */
 const DEPENDS_ON = {
   ssh_key: "system_user",
   application: "system_user",
@@ -83,6 +49,7 @@ const DEPENDS_ON = {
   cronjob: "system_user",
 };
 
+/** Selected types ServerSync skips because the type they depend on was not selected. */
 export function unmetDependencies(selectedTypes) {
   const selected = new Set(selectedTypes ?? []);
   return SYNC_RESOURCE_TYPES.filter(
@@ -96,13 +63,8 @@ export function typesPresent(items) {
   return SYNC_RESOURCE_TYPES.filter((type) => present.has(type));
 }
 
-/**
- * The four counts, summed across types.
- *
- * `totals` arrives keyed by resource type ({application: {found, adopted, …}}),
- * not flat as API_REFERENCE.md shows it. Summing here rather than in the view
- * keeps that shape in one place.
- */
+// `totals` arrives keyed by resource type ({application: {found, adopted, …}}), not
+// flat as API_REFERENCE.md shows.
 export function runTotals(totals) {
   const sum = { found: 0, adopted: 0, skipped: 0, failed: 0 };
   for (const perType of Object.values(totals ?? {})) {

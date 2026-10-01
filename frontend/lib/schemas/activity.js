@@ -10,10 +10,7 @@ export const activityEntrySchema = z.object({
     .object({ id: z.number(), username: z.string() })
     .nullable()
     .optional(),
-  // The API has always sent this and this schema never declared it, so Zod
-  // stripped it — which left the log unable to tell "a person did this" from
-  // "the panel did it on a timer", the one distinction that matters when you
-  // are reading it to find out who changed something.
+  // Distinguishes "a person did this" from "the panel did it on a timer".
   is_system: z.boolean().default(false),
   created_at: z.string().nullable().optional(),
   created_at_human: z.string().nullable().optional(),
@@ -31,13 +28,12 @@ export const activityResponseSchema = z.object({
   meta: activityMetaSchema,
 });
 
-// actions is now keyed by type (`all` = every verb; `<type>` = that type's
-// verbs) so the action dropdown can depend on the selected type.
+// `actions` is keyed by type (`all` = every verb; `<type>` = that type's verbs)
+// so the action dropdown can depend on the selected type.
 export const activityFiltersSchema = z.object({
   types: z.array(z.string()).default([]),
   actions: z.record(z.string(), z.array(z.string())).default({}),
-  // Only the scopes the caller actually has rows in. `label` is localized by
-  // the API — never hardcode Account/Server on this side.
+  // Only scopes the caller has rows in; `label` is localized by the API.
   scopes: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .nullable()

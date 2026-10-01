@@ -20,9 +20,8 @@ export const BRANDING_ASSET_FIELDS = [
 
 const toOklch = converter("oklch");
 
-// An asset is either an absolute http(s) URL or a root-relative path served by
-// the panel itself. Anything else — a bare word, a data:/javascript: scheme, a
-// protocol-relative //host — never reaches a <link href> or an <img src>.
+// Only absolute http(s) URLs or root-relative paths are allowed; data:,
+// javascript: and protocol-relative //host never reach an href or src.
 export function usableAsset(value) {
   const trimmed = typeof value === "string" ? value.trim() : "";
   if (!trimmed) return false;
@@ -37,16 +36,14 @@ export function usableAsset(value) {
   }
 }
 
-// generatePalette returns null for a colour it cannot read, which would drop the
-// theme entirely. Checking here means an unreadable colour falls back to the
-// default brand colour rather than to no brand colour at all.
+// generatePalette returns null for an unreadable colour, which would drop the
+// theme; checking here falls back to the default colour instead.
 export function usableColor(value) {
   const trimmed = typeof value === "string" ? value.trim() : "";
   return Boolean(trimmed) && Boolean(toOklch(trimmed));
 }
 
-// Branding wins wherever it carries a usable value; the defaults only fill the
-// gaps, field by field. One unusable field must never discard the others.
+// Merged field by field: one unusable field must never discard the others.
 export function mergeBranding(branding) {
   const merged = { ...DEFAULT_BRANDING };
   if (!branding || typeof branding !== "object") return merged;

@@ -7,17 +7,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-/**
- * The sidebar toggle with a dynamic tooltip (Expand / Collapse) so it clearly
- * reads as a control, not a breadcrumb icon. The span wrapper forwards the
- * hover to the tooltip (SidebarTrigger doesn't forward a ref).
- *
- * The tooltip also names the shortcut. Cmd/Ctrl+B has toggled this since the
- * sidebar was added and nothing anywhere said so — which is worth nothing to
- * everyone who has not tried it, the same reason the file editors grew a hint
- * beside their Save buttons. The key shown follows the platform: ⌘ on a Mac,
- * Ctrl everywhere else.
- */
+// The span forwards hover to the tooltip: SidebarTrigger does not forward a ref.
 export function SidebarToggle() {
   const t = useTranslations("common");
   const { state } = useSidebar();

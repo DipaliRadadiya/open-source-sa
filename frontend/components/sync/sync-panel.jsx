@@ -24,13 +24,11 @@ import { useRefresh } from "@/hooks/use-refresh";
 import { Button } from "@/components/ui/button";
 
 /* One page of items per call, matching the backend's limit. A full page means
-   there is certainly more behind it, so the next poll goes out immediately
-   instead of waiting — otherwise draining a box with 1,200 rows would take
-   forty seconds of deliberate idling. */
+   more is waiting, so the next poll goes out immediately. */
 const PAGE_SIZE = 500;
 const POLL_MS = 2000;
-/* A scan walks the disk; ten minutes is generous for the largest box and
-   still short enough that a dead worker is noticed the same session. */
+/* A scan walks the disk; ten minutes is generous for the largest server and
+   still short enough that a dead worker is noticed in the same session. */
 const SCAN_STOP_MS = 10 * 60 * 1000;
 
 export function SyncPanel({ run: initialRun, items: initialItems, ignores: initialIgnores, canManage }) {
@@ -47,18 +45,15 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
   // Set when the poll gives up: the run never reported finishing.
   const [stalled, setStalled] = useState(false);
 
-  /* The cursor is a ref, not state: the poll loop reads it between renders and
-     a stale closure over a state value would re-request from the same id
-     forever, appending the same rows on every tick. */
+  /* A ref, not state: the poll loop reads it between renders, and a stale
+     closure would re-request the same rows forever. */
   const cursor = useRef(initialItems?.length ? initialItems[initialItems.length - 1].id : 0);
 
   const runId = run?.id ?? null;
   const ignoredKeys = ignoreKeySet(ignores);
 
-  /* Keyed on the run id alone, deliberately. Depending on `finished` too would
-     tear the loop down the moment the run completed — and a run that finishes
-     holding a full page still has rows this screen has never seen. The loop
-     decides when it is done, not the dependency array. */
+  /* Keyed on the run id alone: depending on `finished` would stop the loop
+     while a full final page is still unread. The loop decides when it is done. */
   useEffect(() => {
     if (!runId) return undefined;
 
@@ -70,19 +65,13 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
       });
 
     (async () => {
-      // When this loop started, so it can stop. It had no stopping point at
-      // all: a run whose worker died never sets `finished`, so the page asked
-      // again every two seconds for as long as the tab stayed open — and said
-      // nothing, because the catch below swallows a failure and tries again.
-      // A 404 on a deleted run polled forever against an endpoint that could
-      // never succeed.
+      // When this loop started, so it can stop: a run whose worker died never
+      // sets `finished`, and a deleted run 404s forever.
       const startedAt = Date.now();
 
       while (!cancelled) {
         if (Date.now() - startedAt > SCAN_STOP_MS) {
-          // Say so rather than going quiet, the same as the restore screen and
-          // the shared auto-refresh: a progress bar that has silently stopped
-          // advancing still claims work is happening.
+          // Say so rather than leaving a progress bar that silently stopped.
           if (!cancelled) setStalled(true);
           return;
         }
@@ -100,10 +89,8 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
 
             if (batch.length) {
               cursor.current = batch[batch.length - 1].id;
-              /* Append. The feed is cursor-based precisely so a poll carries
-                 only what is new; replacing the list would throw away
-                 everything before the cursor and the table would shrink as the
-                 run went on. */
+              /* Append: the feed is cursor-based, so each poll carries only
+                 new rows. */
               setItems((current) => [...current, ...batch]);
             }
 
@@ -113,8 +100,7 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
             if (next.finished && batch.length < PAGE_SIZE) return;
           }
         } catch {
-          // A dropped poll is not a failed run. Wait and ask again rather than
-          // tearing the screen down over one bad response.
+          // A dropped poll is not a failed run; wait and ask again.
         }
 
         // A full page means more is certainly waiting, so don't idle for it.
@@ -132,24 +118,8 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
     setStarting(true);
     try {
       const { data } = await startSync({
-        /*
-         * A scan always looks at the firewall; only ADOPTING it is opt-in.
-         *
-         * Without this the feature was unreachable. The scan did not ask for
-         * firewall rules, so `FirewallRuleDiscoverer` returned nothing, so no
-         * firewall items were in the results — and the checkbox that opts into
-         * adopting them only renders when firewall items are in the results.
-         * A loop with no way in: the rules could never be adopted through the
-         * panel at all.
-         *
-         * Scanning is read-only — it runs `ufw status numbered` and records
-         * what it sees. The risk the opt-in exists for is a half-imported rule
-         * list becoming the screen you later edit the firewall from, and that
-         * happens at adopt time, where the checkbox stays, unticked.
-         *
-         * `apply` passes its own value from that checkbox, and the spread
-         * below is what lets it win.
-         */
+        // A scan always reads the firewall (read-only); only adopting it is
+        // opt-in, or the opt-in checkbox could never appear.
         includeFirewall: mode === "preview",
         mode,
         ...options,
@@ -163,9 +133,7 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
       setRun(parsed.data.sync);
       setAdoptOpen(false);
     } catch (error) {
-      // A second run while one is live is a 422 carrying the backend's own
-      // sentence — showing ours instead would say "something went wrong" over
-      // a message that already explains exactly what happened.
+      // A second live run is a 422 whose message explains it; show it as is.
       toast.error(apiMessage(error, t("errors.startFailed")));
     } finally {
       setStarting(false);
@@ -252,8 +220,7 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
         ) : null}
       </div>
 
-      {/* The scan stopped reporting. Above the summary, because the summary's
-          counts are the thing that stopped being true. */}
+      {/* Above the summary, whose counts are what stopped being true. */}
       {stalled ? (
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2.5 text-sm text-warning">
           {t("stalled")}
@@ -274,8 +241,7 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
       {run ? (
         <SyncSummary
           run={run}
-          // Dismissed rows stay in the list (marked, with Undo), but "Found 8
-          // things" kept counting them, so a Dismiss changed nothing up here.
+          // Dismissed rows stay in the list (with Undo) but are not counted.
           loaded={running ? items.length : items.filter((item) => !ignoredKeys.has(ignoreKey(item))).length}
           running={running}
         />
@@ -304,10 +270,7 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
         />
       )}
 
-      {/* Keyed on the run so a second scan gets a dialog with fresh type
-          checkboxes. Mounted once, its selection would still describe the
-          previous run's types — and this dialog's whole job is to state
-          accurately what is about to be written. */}
+      {/* Keyed on the run so a new scan gets fresh type checkboxes. */}
       <AdoptDialog
         key={run?.id ?? "none"}
         open={adoptOpen}

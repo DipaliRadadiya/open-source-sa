@@ -1,23 +1,7 @@
 import { serverFetch } from "@/lib/api/server-fetch";
 import { activityResponseSchema } from "@/lib/schemas/activity";
 
-/**
- * How often an administrator has signed in as somebody else, and when it last
- * happened.
- *
- * Its own request rather than a slice of the dashboard feed, because the feed
- * is dominated by logins — the last hundred entries on a live panel were 99
- * `logged_in` and one sync, so an impersonation from last week is nowhere in
- * the window. Asking the API for exactly this action is one call and cannot be
- * diluted.
- *
- * Only `impersonation_started` is counted: every session has a start, and
- * stops are the same event seen from the other end.
- *
- * `meta.total` is the all-time count for that filter, which is the honest
- * number here — "twice, ever" and "twice this week" are different facts and the
- * endpoint can only answer the first.
- */
+// Its own request because logins dominate the feed. `meta.total` is the all-time count.
 const EMPTY = { total: 0, last: null, failed: false };
 
 export async function getImpersonation() {

@@ -1,5 +1,5 @@
-// Mirrors SystemUsernameGenerator + StoreSystemUserRequest::RESERVED on the
-// backend, so the name the form suggests is the one the API would have picked.
+// Mirrors the backend's SystemUsernameGenerator and
+// StoreSystemUserRequest::RESERVED; keep in step.
 const RESERVED = new Set([
   "root", "daemon", "bin", "sys", "sync", "games", "man", "lp", "mail",
   "news", "uucp", "proxy", "www-data", "backup", "list", "irc", "gnats",
@@ -21,17 +21,14 @@ function base(name) {
   return RESERVED.has(slug) ? `app-${slug}`.slice(0, MAX) : slug;
 }
 
-/**
- * A system user name for an application called `name`, avoiding `taken`.
- * Empty when the name has nothing usable in it; see fallbackSystemUsername.
- */
+// Empty when the name has nothing usable; see fallbackSystemUsername.
 export function suggestSystemUsername(name, taken = []) {
   const first = base(name);
   if (!first) return "";
   const used = new Set(taken);
   if (!used.has(first)) return first;
-  // A counter, not the backend's random suffix: this also renders on the
-  // server, and a random default would differ once the browser hydrates.
+  // A counter, not the backend's random suffix: a random value would cause a
+  // hydration mismatch.
   for (let n = 2; ; n += 1) {
     const suffix = `-${n}`;
     const candidate = `${first.slice(0, MAX - suffix.length).replace(/-+$/, "")}${suffix}`;
@@ -39,11 +36,7 @@ export function suggestSystemUsername(name, taken = []) {
   }
 }
 
-/**
- * What the backend names an account when the application name has nothing
- * usable in it: `app-` and four random characters. Called after mount only —
- * a random value rendered on the server would not match the browser's.
- */
+// Call after mount only, to avoid a hydration mismatch.
 export function fallbackSystemUsername(taken = []) {
   const used = new Set(taken);
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";

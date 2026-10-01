@@ -9,18 +9,7 @@ import {
   CronjobSchedule,
 } from "@/components/cron-jobs/cronjobs-table";
 
-/**
- * Cron jobs on a narrow screen.
- *
- * Seven columns fit a phone even worse than six: the table showed the name and
- * half a schedule, so you could not tell whether a job was paused, when it next
- * runs, or reach the menu to fix either.
- *
- * The command gets the wide line under the name — it is what the job actually
- * *is*, and it is the one value long enough to need the room. Everything else
- * is a labelled pair, including the on/off switch: a lone switch on a card has
- * no column header left to say what it toggles.
- */
+// Narrow-screen layout: the command gets the wide line under the name.
 export function CronjobsCards({
   runAs,
   prevPage = null,
@@ -43,12 +32,8 @@ export function CronjobsCards({
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <CronjobName job={job} />
-              {/* Wraps, not truncates. At 390px "/usr/bin/php /home/demoweb/ver…"
-                  is the whole card telling you nothing: a command cut short
-                  still looks like a command, so you cannot tell what the job
-                  runs or whether it is the one you came to check. Two lines
-                  cost less than that. Capped so one very long command cannot
-                  push the card's actions off the screen. */}
+              {/* Wraps rather than truncating so the command is identifiable;
+                  capped so a long one cannot push the actions off screen. */}
               <p className="line-clamp-3 font-mono text-xs break-all text-muted-foreground">
                 {job.command}
               </p>
@@ -74,16 +59,14 @@ export function CronjobsCards({
             <CardFact label={t("columns.schedule")}>
               <CronjobSchedule job={job} presets={schedulePresets} />
             </CardFact>
-            {/* The cards are this table on a phone, so the label carries the
-                zone for the same reason the column header does. */}
+            {/* The label carries the timezone, like the table's column header. */}
             <CardFact
               label={timezone ? t("columns.nextRunIn", { timezone }) : t("columns.nextRun")}
             >
               <CronjobNextRun job={job} />
             </CardFact>
             <CardFact label={t("columns.runAs")}>
-              {/* The value is a flex row, which text-align cannot move — it needs
-                  pushing to the card's right edge itself. */}
+              {/* The value is a flex row, which text-align cannot move. */}
               <div className="flex justify-end">
                 <CronjobRunAs job={job} />
               </div>

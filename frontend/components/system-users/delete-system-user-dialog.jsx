@@ -30,8 +30,7 @@ export function DeleteSystemUserDialog({ user, open, onOpenChange, prevPage = nu
   async function onConfirm() {
     if (!matches) return;
     setPending(true);
-    // Said once the row has gone: the toast used to arrive ~1.5 s ahead of the
-    // list, over a row it said no longer existed.
+    // Toasted once the row has gone from the list.
     const done = (say) => {
       const after = () => {
         removed.current = true;
@@ -39,8 +38,8 @@ export function DeleteSystemUserDialog({ user, open, onOpenChange, prevPage = nu
         handleOpenChange(false);
         setPending(false);
       };
-      // The last row on its page: go straight to the page before, rather than
-      // re-render an empty one and be redirected from it.
+      // The last row on its page: go straight to the previous page rather than render
+      // an empty one and redirect.
       if (prevPage) navigateThen({ page: prevPage > 1 ? prevPage : undefined }, after);
       else refreshThen(after);
     };
@@ -48,7 +47,7 @@ export function DeleteSystemUserDialog({ user, open, onOpenChange, prevPage = nu
       await deleteSystemUser(user.id);
       done(() => toast.success(t("toast.deleted")));
     } catch (error) {
-      // Deleted somewhere else: what was asked for is already true.
+      // Deleted elsewhere: what was asked for is already true.
       if (error?.response?.status === 404) {
         done(() => toast.info(t("toast.alreadyGone", { username })));
         return;
@@ -80,10 +79,8 @@ export function DeleteSystemUserDialog({ user, open, onOpenChange, prevPage = nu
       }}
     >
       <div className="space-y-2">
-        {/* Copy, because the name has to be typed exactly and a Linux username
-            is the kind of string that gets mistyped — and it is sitting right
-            there on screen. Matches the delete-application dialog, which is
-            the same guard over the same shape of value. */}
+        {/* Copy button, because the name must be typed exactly; matches the
+            delete-application dialog. */}
         <div className="flex items-start justify-between gap-2">
           <Label htmlFor="delete-su-confirm" className="text-sm">
             {t("delete.confirmLabel", { username })}

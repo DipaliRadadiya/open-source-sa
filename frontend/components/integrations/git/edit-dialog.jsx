@@ -27,14 +27,7 @@ const schema = z.object({
   workspace: z.string().trim().optional(),
 });
 
-/**
- * Renaming, and the two settings that are not secrets.
- *
- * The token is deliberately absent: swapping a credential is a verified
- * round-trip that can fail and leave you needing to know which token is live,
- * while renaming is instant and cannot break anything. Same endpoint, different
- * risk, so different dialogs.
- */
+// The token is deliberately absent: replacing it is a verified round-trip in its own dialog.
 export function EditDialog({ account, open, onOpenChange }) {
   const t = useTranslations("git.edit");
   const { refreshAndWait } = useRefresh();
@@ -138,11 +131,6 @@ export function EditDialog({ account, open, onOpenChange }) {
             name="host"
             render={({ field }) => (
               <FormItem>
-                {/* One explanation, and it is the accurate one. The ⓘ used to
-                    carry a second: "your self-hosted GitLab or Gitea — leave it
-                    as it is for github.com", on a field that only ever renders
-                    for a GitLab account. Neither product it named can reach
-                    this box. */}
                 <FormLabel hint={t("hostHelp")}>{t("hostLabel")}</FormLabel>
                 <FormControl>
                   <Input

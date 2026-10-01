@@ -1,13 +1,6 @@
 import { z } from "zod";
 
-/**
- * Disk cleaner preview, clean result, schedule and run history.
- *
- * Sizes arrive twice: raw bytes for arithmetic (selection totals, share bars)
- * and a `*_human` string the API has already formatted. We display the human
- * one and compute with the bytes — formatting them ourselves would drift from
- * every other size the panel shows.
- */
+// Display the API's `*_human` sizes; use raw bytes only for arithmetic.
 export const diskSchema = z.object({
   path: z.string(),
   total: z.number(),
@@ -23,12 +16,10 @@ export const cleanerCategorySchema = z.object({
   key: z.string(),
   label: z.string(),
   description: z.string().nullable().optional(),
-  // Plain-language line saying what happens AND what is kept. Localized by the
-  // API, so it is shown verbatim rather than reworded here.
+  // What happens and what is kept; localized by the API, shown verbatim.
   note: z.string().nullable().optional(),
   group: z.string().nullable().optional(),
-  // delete | truncate | command — how the space comes back. Only surfaced in
-  // the details disclosure; on its own it means nothing to most people.
+  // delete | truncate | command: how the space comes back. Details disclosure only.
   method: z.string().nullable().optional(),
   paths: z.array(z.string()).nullable().optional().default([]),
   safe: z.boolean().optional().default(true),
@@ -45,8 +36,7 @@ export const cleanerPreviewSchema = z.object({
 
 export const cleanResultSchema = z.object({
   disk: diskSchema,
-  // What was ACTUALLY freed, per category — the page reports this, never the
-  // estimate it showed beforehand.
+  // What was actually freed, per category; reported instead of the estimate.
   cleaned: z
     .array(
       z.object({
@@ -69,18 +59,7 @@ export const cleanerScheduleSchema = z.object({
   notify: z.boolean().optional().default(false),
   last_run_at: z.string().nullable().optional(),
   last_run_at_human: z.string().nullable().optional(),
-  /*
-   * When the next clean happens, and which clock that is in. Sent since
-   * 2026-09-17; before that this screen could only say "weekly" and left the
-   * hour (03:00, kept an hour clear of the backups) to be discovered by
-   * watching for it.
-   *
-   * Null while the cleaner is off — the API declines to name a run that will
-   * not happen, so the card must not invent one either.
-   *
-   * `timezone` is the panel's clock, matching the backup target and
-   * deliberately NOT a cron job's. See backup.js for why the two differ.
-   */
+  // Null while the cleaner is off. `timezone` is the panel's clock, deliberately NOT a cron job's (see backup.js).
   next_run_at: z.string().nullable().optional(),
   next_run_at_human: z.string().nullable().optional(),
   timezone: z.string().nullable().optional(),

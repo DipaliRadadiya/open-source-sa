@@ -1,13 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
-/**
- * Size and age, on one line under the name.
- *
- * This was a two-by-two card taking 90px at the top of the page, and then a
- * four-item line. Charset and collation have since moved into the Tables tab —
- * they describe the storage, they are read once at most, and they were sitting
- * above the connection details people actually came for.
- */
+// Charset and collation live in the Tables tab.
 export async function DatabaseFacts({ database, hideSize = false }) {
   const t = await getTranslations("databases.detail");
 

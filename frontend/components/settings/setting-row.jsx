@@ -7,14 +7,7 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 
-/**
- * One settings row: name and helper text on the left, the control on the right.
- *
- * The control column is a FIXED width and its contents are left-aligned, so a
- * switch, a time input and a select all begin on the same vertical line. Right-
- * aligning them instead lines up their trailing edges, which for controls of
- * different widths is no alignment you can actually see.
- */
+// A fixed-width control column with left-aligned contents, so controls start on one vertical line.
 const ROW =
   "grid gap-x-8 gap-y-2 py-3.5 sm:grid-cols-[minmax(0,1fr)_14rem] sm:items-center";
 
@@ -55,13 +48,7 @@ export function InfoRow({ label, hint, children, className }) {
   );
 }
 
-/**
- * One settings group as its own card: header band, rows, action band.
- *
- * A card each rather than three sections in one, because each group commits on
- * its own — the card boundary is what makes "this button saves these rows"
- * true at a glance rather than something you have to work out from spacing.
- */
+// Each group saves on its own, so the card boundary shows what a Save covers.
 export function Section({
   icon: Icon,
   title,
@@ -77,9 +64,8 @@ export function Section({
 
   return (
     <Card className="gap-0 overflow-hidden py-0 shadow-sm">
-      {/* Skipped entirely (not just emptied) when there's no title — a page
-          with exactly one card already names it in the page's own h1, and an
-          empty header band would just be dead space with a stray border. */}
+      {/* Skipped entirely when there's no title: a single-card page is already
+          named by its h1. */}
       {title ? (
         <div className="flex items-center gap-2.5 border-b px-5 py-3.5">
           {Icon ? (
@@ -124,8 +110,7 @@ export function Section({
           box as the rows it saves. */}
       {actions ? (
         <div className="flex flex-wrap items-center justify-end gap-2 border-t px-5 py-2.5">
-          {/* Opposite the Save button, because it answers the question that
-              button raises on a shared server: who changed this last. */}
+          {/* Opposite Save: who changed this last, on a shared server. */}
           {changedBy ? (
             <p className="mr-auto text-xs text-muted-foreground">{changedBy}</p>
           ) : null}
@@ -165,8 +150,7 @@ export function SectionActions({
         </Button>
       ) : null}
 
-      {/* Disabled and explained, rather than restyled. A button that quietly
-          swaps variant says it is in some other state but never which, or why. */}
+      {/* Disabled and explained, rather than restyled. */}
       <ReasonTooltip reason={reason}>
         <Button type="submit" disabled={Boolean(reason) || pending}>
           {pending && <Loader2 className="size-4 animate-spin" />}

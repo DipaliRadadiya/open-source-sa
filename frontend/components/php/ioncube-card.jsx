@@ -15,22 +15,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 
-/**
- * Install or remove the ionCube Loader for one PHP version.
- *
- * Its own card rather than a row in the extensions list. Every row there is an
- * apt package toggled with phpenmod; this is a closed-source `.so` fetched
- * from the vendor and declared as a `zend_extension` at an absolute path. One
- * row whose Install means something entirely different from every other row's
- * is worse than a card that admits it is a different kind of thing.
- *
- * Six states, and `unsupported` is the one worth spelling out: ionCube
- * publishes no loader for PHP 8.0 and this panel still offers 8.0, so the card
- * says so instead of letting the button earn a 422.
- */
+// Not an extensions row: a vendor `zend_extension`, not an apt package. No
+// loader exists for PHP 8.0, so `unsupported` is stated instead of a 422.
 export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
   const t = useTranslations("php.ioncube");
-  // Reused rather than re-worded: these three already exist under `php`.
+  // Reuses existing strings under `php`.
   const tp = useTranslations("php");
   const { refreshAndWait } = useRefresh();
   const [busy, setBusy] = useState(false);
@@ -49,7 +38,7 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
   const installing = isInFlight(ioncube.status);
   const installFailed = ioncube.status === "failed";
   const { supported, installed } = ioncube;
-  // Installed outside the panel. Both buttons would earn a 422, so neither is
+  // Installed outside the panel: both buttons would earn a 422, so neither is
   // offered.
   const external = installed && ioncube.source === "external";
   const canAct = !external && (supported || installed);
@@ -59,8 +48,7 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
     try {
       await installIonCube(version);
       await refreshAndWait();
-      // Always 202: the archive is ~29 MB, so the message says it has started
-      // rather than that it is done.
+      // Always 202 (the archive is ~29 MB), so the message says it has started.
       toast.success(t("installStarted", { version }));
     } catch (error) {
       toast.error(apiMessage(error, t("installFailed")));
@@ -92,8 +80,7 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
               <ShieldCheck className="size-4" />
             </span>
             <span className="font-medium">{t("title")}</span>
-            {/* The state, said once. Installing wins over installed: during a
-                reinstall both are true and "Installing" is the newer fact. */}
+            {/* Installing wins over installed: during a reinstall both are true. */}
             {installing ? (
               <Badge variant="warning" className="font-normal">
                 {tp("versions.statusInstalling")}
@@ -107,7 +94,7 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
                 {t("notInstalled")}
               </Badge>
             ) : null}
-            {/* Read out of PHP itself, so it is the loader actually running. */}
+            {/* Read from PHP itself, so it is the loader actually running. */}
             {installed && ioncube.loader_version ? (
               <span className="font-mono text-xs text-muted-foreground">
                 {t("loaderVersion", { version: ioncube.loader_version })}
@@ -130,9 +117,8 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
           ) : installing ? (
             <p className="text-xs leading-relaxed text-muted-foreground">{t("installing")}</p>
           ) : installFailed ? (
-            /* The server's own sentence: it names what went wrong — a checksum
-               that did not match, a download that failed — and ours could only
-               say that something did. `reason` is a code, not this. */
+            /* The server's sentence names the cause (checksum, download);
+               `reason` is a code. */
             <p className="flex items-start gap-1.5 text-xs leading-relaxed text-destructive">
               <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
               <span>
@@ -151,20 +137,7 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
           <div className="shrink-0">
             <ReasonTooltip reason={canManage ? null : tp("noPermission")}>
               {installed ? (
-                /*
-                 * `destructive`, like every other button that takes something
-                 * off the server — "Remove certificate" one screen over, and 39
-                 * other places in the panel.
-                 *
-                 * This was `outline`, so an uninstall looked exactly like a
-                 * neutral action. Reported as "not even looks like remove
-                 * button", which is precisely the failure: the only thing
-                 * saying it was destructive was the word, and the word is the
-                 * part people skim.
-                 *
-                 * The confirmation dialog behind it is unchanged — the styling
-                 * is not the safety net, it is the warning before the net.
-                 */
+                /* `destructive`, like every button that removes something. */
                 <Button
                   variant="destructive"
                   onClick={() => setConfirmOpen(true)}

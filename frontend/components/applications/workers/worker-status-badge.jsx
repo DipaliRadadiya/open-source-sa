@@ -2,8 +2,7 @@ import { useTranslations } from "next-intl";
 import { CircleCheck, TriangleAlert, CircleMinus, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-// `degraded` is its own state on purpose — "3 of 4 processes" is real, easy to
-// miss, and a plain green dot would hide it. Warning colour, not success.
+// `degraded` (some processes down) is deliberately a warning, not success.
 const STATE_META = {
   running: { icon: CircleCheck, variant: "success" },
   degraded: { icon: TriangleAlert, variant: "warning" },
@@ -24,9 +23,7 @@ export function WorkerStatusBadge({ worker, busyAction }) {
 
   const meta = STATE_META[worker.state] ?? STATE_META.stopped;
   const Icon = meta.icon;
-  // Both running and degraded show real process counts — "4/4" costs nothing
-  // and confirms it's fully up without opening Edit. Skipped for single-process
-  // workers (the common case), where a "1/1" would just be noise.
+  // Process counts for running/degraded, skipped for single-process workers.
   const showCount = worker.processes > 1 && (worker.state === "running" || worker.state === "degraded");
 
   return (
@@ -45,9 +42,7 @@ export function WorkerStatusBadge({ worker, busyAction }) {
           {t("disabledTag")}
         </Badge>
       ) : null}
-      {/* These two only show when OFF — the recommended default is on for both,
-          so the risk case (silently running old code, or staying down after a
-          crash) is what's worth flagging, not the expected state. */}
+      {/* Flagged only when OFF, the risky non-default. */}
       {!worker.restart_on_deploy ? (
         <Badge variant="warning" className="font-normal">
           {t("noRestartOnDeployTag")}

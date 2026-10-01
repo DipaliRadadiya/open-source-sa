@@ -1,7 +1,5 @@
-// Static admin-panel navigation. Unlike the server panel (permission-driven),
-// the admin panel is gated purely on role === "admin", so its nav is a fixed
-// list. `key` maps to the `admin.nav.<key>` i18n message; `icon` is a
-// kebab-case Lucide name (rendered via <NavIcon />).
+// Gated purely on role === "admin", so a fixed list. `key` → `admin.nav.<key>`; `icon`
+// is a kebab-case Lucide name.
 export const ADMIN_NAV = [
   { key: "dashboard", url: "/admin", icon: "layout-dashboard" },
   { key: "users", url: "/admin/users", icon: "users" },

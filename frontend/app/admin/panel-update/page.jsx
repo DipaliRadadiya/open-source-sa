@@ -22,9 +22,8 @@ export default async function AdminPanelUpdatePage() {
   const state = update.state;
   const subtitle = t("subtitle", { brand: branding.name });
 
-  // The heading travels with the panel because "Check again" sits beside it and
-  // shares its state; only the load-failure branch, which has no button to
-  // offer, renders a heading of its own.
+  // The panel renders its own heading because "Check again" shares its state;
+  // only the load-failure branch renders one here.
   if (!state) {
     return (
       <div className="max-w-3xl space-y-6">
@@ -38,9 +37,7 @@ export default async function AdminPanelUpdatePage() {
     );
   }
 
-  // Not keyed by locale on purpose: the panel resumes an in-flight update via
-  // polling, and a re-mount would drop that. The only localized backend text
-  // here (step/reason titles) appears mid-run, when nobody is switching
-  // languages.
+  // Not keyed by locale on purpose: a remount would drop the polling that
+  // resumes an in-flight update.
   return <PanelUpdatePanel initialState={state} title={t("title")} subtitle={subtitle} />;
 }

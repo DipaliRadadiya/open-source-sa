@@ -3,24 +3,11 @@ import { CircleAlert, CircleCheck, CircleHelp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
-/**
- * Warn while there is still time to act, and stay quiet before that.
- *
- * The API sends a number of days; a number alone does not tell anyone when to
- * care. Two weeks is enough notice to make a new token without it becoming
- * background noise on every visit.
- */
+/** Days before token expiry at which to warn, and to warn urgently. */
 const WARN_DAYS = 14;
 const URGENT_DAYS = 3;
 
-/**
- * Whether this account's token still works, right now.
- *
- * Three states, three treatments — and the third one is the whole reason this
- * component is careful. `unknown` means the provider did not answer, which is
- * not the user's problem and must not be dressed as one: rendering it in red
- * would accuse a perfectly good token every time GitHub has a wobble.
- */
+// `unknown` means the provider did not answer; never show it as an error.
 export function AccountHealth({ status, loading }) {
   const t = useTranslations("git.health");
 
@@ -33,8 +20,7 @@ export function AccountHealth({ status, loading }) {
     );
   }
 
-  // No row came back for this account at all — same class of non-answer as
-  // `unknown`, and treated the same way.
+  // No row for this account: treated like `unknown`.
   if (!status) return <StatusText>{t("notChecked")}</StatusText>;
 
   if (status.status === "invalid") {
@@ -72,8 +58,7 @@ export function AccountHealth({ status, loading }) {
   }
 
   const days = status.expires_in_days;
-  // Bitbucket tokens have no expiry: null means there is none, never that the
-  // lookup failed. Nothing is shown, and nothing is implied.
+  // Bitbucket tokens have no expiry: null means none, not a failed lookup.
   const expiring = typeof days === "number" && days <= WARN_DAYS;
 
   return (
@@ -97,10 +82,7 @@ function Line({ children }) {
   return <div className="flex flex-wrap items-center gap-x-2 gap-y-1">{children}</div>;
 }
 
-// Renamed off `Note` when the shared note box arrived under that name. This
-// is a different thing entirely — a line of tiny coloured status text, not a
-// bordered callout — and two components called Note is how the next person
-// imports the wrong one.
+// Small coloured status text; distinct from the shared `Note` callout.
 function StatusText({ children, tone }) {
   if (!children) return null;
 

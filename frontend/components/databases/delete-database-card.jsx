@@ -8,14 +8,7 @@ import { Card } from "@/components/ui/card";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { DeleteDatabaseDialog } from "@/components/databases/delete-database-dialog";
 
-/**
- * Deleting the database you are looking at.
- *
- * It was only possible from the list, which meant opening a database to check
- * what was in it and then navigating away to get rid of it. Its own card at the
- * bottom rather than a button in the header: destructive actions live at the
- * end of a page, past everything that might change your mind.
- */
+// Its own card at the bottom: destructive actions live at the end of a page.
 export function DeleteDatabaseCard({ database, application = null, canManage }) {
   const t = useTranslations("databases.delete");
   const [open, setOpen] = useState(false);
@@ -30,9 +23,8 @@ export function DeleteDatabaseCard({ database, application = null, canManage }) 
 
         <ReasonTooltip reason={canManage ? null : t("noPermission")}>
           <Button
-            variant="outline"
+            variant="destructive"
             disabled={!canManage}
-            className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={() => setOpen(true)}
           >
             <Trash2 className="size-4" />
@@ -47,7 +39,6 @@ export function DeleteDatabaseCard({ database, application = null, canManage }) 
           application={application}
           open={open}
           onOpenChange={(next) => !next && setOpen(false)}
-          // Nothing to come back to once it's gone.
           redirectTo="/databases"
         />
       ) : null}

@@ -1,8 +1,6 @@
 import { z } from "zod";
 
-// A single update run — returned by POST (202), the poll endpoint, and as
-// `latest_run` on the state. Drive the progress bar from step_number/total_steps
-// (never hardcode the step list); show the localized *_title fields as labels.
+// Drive the progress bar from step_number/total_steps; never hardcode the step list.
 export const panelUpdateRunSchema = z
   .object({
     id: z.union([z.string(), z.number()]).transform(String),
@@ -20,18 +18,8 @@ export const panelUpdateRunSchema = z
     // the localized explanation. rolled_back means the previous version was restored.
     reason: z.string().nullish(),
     reason_title: z.string().nullish(),
-    // `.nullish()` then coalesce, NOT `.default(false)`. Zod's default only
-    // fills `undefined`; the API sends `null` here, because the column is
-    // nullable until a run either rolls back or does not. So `.default(false)`
-    // threw on every fresh run.
-    //
-    // That single mismatch caused both halves of the worst bug in this
-    // feature. `startPanelUpdate` parses the 202 with this schema, so a
-    // successful start threw a ZodError -- which carries no `response.data`,
-    // so apiMessage fell back to "Couldn't start the update" while the update
-    // was already running. And `fetchPanelUpdateRun` parses every poll with it
-    // too, so the progress bar never advanced: the user was told it failed,
-    // then shown nothing, while the panel updated perfectly behind them.
+    // NOT `.default(false)`: the API sends `null` until a run finishes, and a throw here
+    // breaks the start response and every poll.
     rolled_back: z.boolean().nullish().transform((value) => value ?? false),
     reference: z.string().nullish(),
     // Sanitized, bounded tail of the detached runner log. The backend never
@@ -50,7 +38,7 @@ const installedSchema = z
     version: z.string().nullish(),
     commit_hash: z.string().nullish(),
     commit_short: z.string().nullish(),
-    // null on an updated panel (checked out at a tag = detached HEAD) — expected.
+    // null on an updated panel (checked out at a tag = detached HEAD): expected.
     branch: z.string().nullish(),
     source: z.string().nullish(),
     is_git_checkout: z.boolean().default(false),
@@ -64,7 +52,7 @@ const availableSchema = z
     published_at: z.string().nullish(),
     notes: z.string().nullish(),
     url: z.string().nullish(),
-    // false means the release host could not be reached — informational, NOT an error.
+    // false means the release host could not be reached: informational, NOT an error.
     checked: z.boolean().default(false),
   })
   .passthrough();
@@ -84,7 +72,7 @@ export const panelUpdateStateSchema = z
   .object({
     installed: installedSchema.default({}),
     available: availableSchema.default({}),
-    // false whenever either version is unknown — never prompt on a guess.
+    // false whenever either version is unknown: never prompt on a guess.
     update_available: z.boolean().default(false),
     preflight: z
       .object({

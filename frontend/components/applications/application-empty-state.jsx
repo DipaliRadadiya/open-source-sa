@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { CheckCircle2, CircleDot, Globe2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,20 +11,7 @@ import { useBranding } from "@/components/branding-provider";
 const STEP_ICONS = [CircleDot, CheckCircle2, Globe2];
 const STEPS = ["choose", "configure", "provision"];
 
-/**
- * The same invitation at two sizes.
- *
- * `compact` is for the dashboard, where this card is a guest above the server's
- * own content: at full height it pushed all five live stat cards below the fold
- * on a 1280 laptop. Identical copy and identical keys either way, so the two
- * surfaces cannot drift and no new strings are needed — only the arrangement
- * changes.
- *
- * `"use client"` is load-bearing. Both hooks here are client-only, and this
- * file got away without it while its one caller was the client applications
- * table. The dashboard is a Server Component, and importing this into it
- * without the directive builds clean and fails at render.
- */
+// `"use client"` is required: the dashboard is a Server Component and this fails at render without it.
 export function ApplicationEmptyState({ canManage = false, compact = false }) {
   const t = useTranslations("applications");
   const { name: brand } = useBranding();
@@ -32,13 +19,11 @@ export function ApplicationEmptyState({ canManage = false, compact = false }) {
   if (compact) {
     return (
       <Card className="overflow-hidden border-dashed bg-gradient-to-br from-primary/[0.07] via-background to-background shadow-none">
-        {/* Horizontal only. Card already pads itself vertically from
-            `--card-spacing`, so a `py-*` here does not replace that value — it
-            stacks on it, which is where 36px of top and bottom came from. */}
+        {/* Horizontal padding only: Card already pads vertically, and a `py-*` here
+            would stack on top of it. */}
         <CardContent className="px-5 sm:px-6">
-          {/* The ask and its action on one line. `min-w-48` rather than
-              `min-w-0`: flex-1 gives this a basis of 0, so beside a shrink-0
-              button it keeps shrinking instead of letting the button wrap. */}
+          {/* `min-w-48`, not `min-w-0`: flex-1 has a 0 basis, so beside a shrink-0
+              button it would keep shrinking instead of letting the button wrap. */}
           <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
               <Globe2 className="size-5" />
@@ -57,10 +42,7 @@ export function ApplicationEmptyState({ canManage = false, compact = false }) {
             ) : null}
           </div>
 
-          {/* The three steps across rather than down. The stack was most of the
-              card's height, and standing alone it read as a checklist to work
-              through when it is really a preview of what the next screen asks
-              for — which is also why it needs no heading here. */}
+          {/* A preview of what the next screen asks for, so no heading. */}
           <ol className="mt-4 grid gap-x-6 gap-y-3 border-t pt-4 sm:grid-cols-3">
             {STEPS.map((step, index) => {
               const Icon = STEP_ICONS[index];

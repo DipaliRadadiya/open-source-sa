@@ -4,14 +4,7 @@ import { useTranslations } from "next-intl";
 import { FailurePanel } from "@/components/ui/failure-panel";
 import { RetryButton } from "@/components/ui/retry-button";
 
-/**
- * Segment boundary for the admin panel, matching the one the server panel has.
- *
- * Without it an SSR throw inside `/admin` escaped to the root boundary, which
- * renders full-screen — so the sidebar, the header and the way back all
- * disappeared along with the page that failed. An admin looking at a broken
- * user list would have had to retype a URL to get anywhere else.
- */
+// Keeps the admin shell on an SSR throw instead of the full-screen root boundary.
 export default function AdminError({ error, reset }) {
   const t = useTranslations("errors");
 

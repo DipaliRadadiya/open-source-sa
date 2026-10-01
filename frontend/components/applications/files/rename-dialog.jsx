@@ -4,10 +4,8 @@ import { renameFile } from "@/lib/api/files";
 import { dirname } from "@/lib/files/path-helpers";
 import { TargetPathDialog } from "@/components/applications/files/target-path-dialog";
 
-// Pre-filled with the item's own current path, with just the filename part
-// selected — editing the selected text renames in place; editing the
-// directory prefix moves it. One field, one endpoint, reads as "rename" for
-// the common case.
+// Pre-filled with the item's path, filename selected: editing the name renames in
+// place, editing the directory moves it. One field, one endpoint.
 export function RenameDialog({ appId, file, open, onOpenChange, onSuccess }) {
   const t = useTranslations("applications.files");
   if (!file) return null;

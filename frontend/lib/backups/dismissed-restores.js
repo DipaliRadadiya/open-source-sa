@@ -1,8 +1,5 @@
-/*
- * Finished restores the reader has dismissed, remembered in a cookie so the
- * server can leave them out of the page — a banner the client hid after
- * hydration would flash on every reload.
- */
+// A cookie so the server can leave dismissed restores out; hiding them after
+// hydration would flash the banner on every reload.
 export const DISMISSED_RESTORES_COOKIE = "sv_dismissed_restores";
 
 const KEEP = 20;

@@ -26,9 +26,8 @@ export function NewFolderDialog({ appId, path, existingNames = [], open, onOpenC
   });
 
   async function onSubmit(values) {
-    // The API answers 200 for a folder that already exists (mkdir -p), so a
-    // taken name "succeeded" and nothing was made. Checked against the list
-    // on screen before sending.
+    // The API answers 200 for an existing folder (mkdir -p), so a taken name is
+    // checked against the visible list before sending.
     if (existingNames.includes(values.name.trim())) {
       form.setError("name", { message: t("newFolder.taken", { name: values.name.trim() }) });
       return;
@@ -43,15 +42,13 @@ export function NewFolderDialog({ appId, path, existingNames = [], open, onOpenC
         form.reset({ name: "" });
       });
     } catch (error) {
-      // The API validates a "path" field (the folder name joined onto the
-      // current directory) — this form only exposes "name", so the error has
-      // to be remapped onto it rather than going through the generic handler.
+      // The API validates "path" (name joined onto the current directory); this form
+      // only has "name", so the error is remapped onto it.
       const pathError = error.response?.data?.errors?.path?.[0];
       if (pathError) {
         form.setError("name", { message: pathError });
       } else if ([404, 409, 422].includes(error.response?.status)) {
-        // A refusal with no field key (a name that is taken) still belongs
-        // on the field, not in a toast beside a dialog that stays open.
+        // A refusal with no field key (a taken name) still belongs on the field.
         form.setError("name", { message: apiMessage(error, t("newFolder.failed")) });
       } else {
         toast.error(apiMessage(error, t("newFolder.failed")));

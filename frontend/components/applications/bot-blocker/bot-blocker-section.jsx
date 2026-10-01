@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { CardSaveFooter } from "@/components/ui/card-save-footer";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
@@ -25,15 +25,11 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-// The order the three choices are read in — least restrictive first, so the
-// list runs from "changes nothing" to "blocks the most". Only keys the API
-// actually returned are rendered, and anything new the backend adds later
-// still appears (after these) rather than being silently dropped.
+// Least restrictive first. Only keys the API returned render; unknown new
+// keys appear after these.
 const ORDER = ["allow_all", "block_training", "block_agents", "block_all"];
 
-// An icon per policy so the three read as distinct choices at a glance rather
-// than three paragraphs. Anything the backend adds later falls back to the
-// generic bot mark instead of rendering nothing.
+// Unknown policies fall back to the generic bot icon.
 const ICONS = {
   allow_all: Globe,
   block_training: ShieldCheck,
@@ -41,36 +37,25 @@ const ICONS = {
   block_all: ShieldBan,
 };
 
-// Blocking every AI bot also blocks the ones that send real visitors — a real
-// cost, so that option is tinted as one rather than presented as simply "more
-// secure".
+// Blocking every AI bot also blocks ones that send visitors, so it is tinted.
 const TONES = { block_all: "warning" };
 
-// Policies we have a plain-language group name for in the expanded bot list.
+// Policies with a translated group name in the expanded bot list.
 const GROUP_LABELS = new Set(["block_training", "block_agents", "block_all"]);
 
-/** Order-independent, case-insensitive: these are compared that way everywhere else. */
+/** Order-independent, case-insensitive list comparison. */
 function sameList(a, b) {
   if (a.length !== b.length) return false;
   const key = (list) => list.map((v) => String(v).toLowerCase()).sort().join("|");
   return key(a) === key(b);
 }
 
-/*
- * robots.txt product tokens, not crawlers: Google and Apple train with
- * Googlebot and Applebot and never send these names, so a user-agent rule on
- * them blocks nothing. They stay visible — the policy lists them — but marked,
- * and not counted as blocked.
- */
+// robots.txt product tokens, not crawlers: no request carries them, so they are not counted as blocked.
 const ROBOTS_TXT_ONLY = new Set(["google-extended", "applebot-extended"]);
 const isRobotsTxtOnly = (bot) => ROBOTS_TXT_ONLY.has(String(bot).toLowerCase());
 const enforceableCount = (bots) => bots.filter((bot) => !isRobotsTxtOnly(bot)).length;
 
-/*
- * The config lists `Meta-ExternalAgent` and `meta-externalagent`, which the
- * vhost matches case-insensitively as one bot. Counted as sent, the badge said
- * 23, the button 22 and the list showed 23 chips for the same choice.
- */
+// The vhost matches bot names case-insensitively, so case variants are one bot.
 function dedupedPolicies(policies) {
   return Object.fromEntries(
     Object.entries(policies).map(([key, option]) => {
@@ -86,11 +71,8 @@ function orderedKeys(policies) {
   return [...known, ...rest];
 }
 
-// What each option blocks *on top of* the one before it — the difference is
-// the whole decision this screen asks for, and it is derived from the lists
-// the API returned rather than kept as a second copy here. Written against the
-// ordering rather than against named policies, so the backend adding a fourth
-// choice (it did: `block_agents`) needs no change on this side.
+// What each option blocks on top of the previous one, derived from the API's
+// lists by order, so new policies need no change here.
 function additionsByPolicy(keys, policies) {
   const additions = {};
   let previous = null;
@@ -105,9 +87,8 @@ function additionsByPolicy(keys, policies) {
   return additions;
 }
 
-// The expanded list, split by the policy that first blocks each bot — training
-// scrapers, then assistants, then search crawlers. Same derivation, so the
-// groups can never disagree with the counts on the cards.
+// Bots grouped by the policy that first blocks them; same derivation as the
+// card counts, so they always agree.
 function botGroups(keys, policies, selected) {
   const seen = new Set();
   const groups = [];
@@ -120,19 +101,7 @@ function botGroups(keys, policies, selected) {
   return groups;
 }
 
-/*
- * Sorted, because this is a reference list — you come to it asking "is my
- * crawler in here?".
- *
- * The API sends them in its own order (GPTBot, ClaudeBot, Google-Extended,
- * CCBot, Bytespider…), so answering that question meant reading all 27 rather
- * than jumping to a letter. `localeCompare` with `sensitivity: "base"` so
- * `Meta-ExternalAgent` and `meta-externalagent` land next to each other
- * instead of in separate A–Z and a–z runs.
- *
- * Display order only. `botGroups` above still walks the policies in its own
- * order to dedupe, so what appears in which group is unchanged.
- */
+// Sorted alphabetically (case-insensitive); display order only.
 function BotList({ bots }) {
   const t = useTranslations("applications.botBlocker");
   const sorted = [...bots].sort((a, b) =>
@@ -157,10 +126,7 @@ function BotList({ bots }) {
             <Badge
               key={bot}
               variant="outline"
-              /* Accent-tinted rather than white-on-grey: outline-only chips on the
-                 panel's own tint had almost no edge, so 23 names read as one wash.
-                 These are reference data, not a status — the tint gives them a
-                 surface without claiming anything about each bot. */
+              /* Accent tint for visible edges; reference data, not a status. */
               className="h-auto max-w-full border-primary/20 bg-primary/5 font-mono font-normal break-all whitespace-normal text-primary"
             >
               {bot}
@@ -175,16 +141,7 @@ function BotList({ bots }) {
   );
 }
 
-/**
- * One of the two exception lists.
- *
- * The name is checked against the same rules the backend enforces before it is
- * added, rather than after a save comes back 422 — and the two interesting
- * refusals are not about safety: `bot` matches `Googlebot`, and blocking
- * `googlebot` outright is never what "block AI bots" meant. Hearing that while
- * still standing in the field is the difference between a typo and a site
- * quietly falling out of search.
- */
+// Names are checked against the backend's rules before adding (`bot` would match Googlebot).
 function RuleEditor({ kind, icon: Icon, bots, refused = {}, disabled, onAdd, onRemove }) {
   const t = useTranslations("applications.botBlocker.exceptions");
   const [draft, setDraft] = useState("");
@@ -192,7 +149,7 @@ function RuleEditor({ kind, icon: Icon, bots, refused = {}, disabled, onAdd, onR
   const listRef = useRef(null);
   const inputRef = useRef(null);
 
-  // The removed chip's button is gone, so focus would fall to the page.
+  // The removed chip's button is gone, so focus is moved explicitly.
   function remove(bot, index) {
     onRemove(bot);
     requestAnimationFrame(() => {
@@ -253,8 +210,7 @@ function RuleEditor({ kind, icon: Icon, bots, refused = {}, disabled, onAdd, onR
         <p className="pt-0.5 text-xs text-muted-foreground">{t("none")}</p>
       )}
 
-      {/* The server names the entry by its index; said here, next to the chip,
-          because a toast could not tell which of several it meant. */}
+      {/* Server refusals, shown next to the entry they name. */}
       {Object.entries(refused).map(([bot, message]) => (
         <p key={bot} className="text-xs break-all text-destructive">
           {bot}: {message}
@@ -271,8 +227,7 @@ function RuleEditor({ kind, icon: Icon, bots, refused = {}, disabled, onAdd, onR
           }}
           onKeyDown={(event) => {
             if (event.key !== "Enter") return;
-            // There is no form around this, but a stray submit elsewhere on the
-            // page is not worth risking for one keystroke.
+            // Guards against a stray submit.
             event.preventDefault();
             add();
           }}
@@ -283,11 +238,7 @@ function RuleEditor({ kind, icon: Icon, bots, refused = {}, disabled, onAdd, onR
           aria-invalid={Boolean(error)}
           className="h-8 font-mono text-xs"
         />
-        {/* `!draft.trim()`, matching the firewall's identical control.
-            `add()` already returns silently on an empty value, so the button
-            was enabled, clickable, and did nothing at all — no entry, no error,
-            not even focus back in the box. A control that responds to a click
-            by doing nothing is worse than one that is visibly unavailable. */}
+        {/* Disabled when empty, matching the firewall's control. */}
         <Button
           type="button"
           variant="outline"
@@ -308,11 +259,7 @@ function RuleEditor({ kind, icon: Icon, bots, refused = {}, disabled, onAdd, onR
 function BotGroup({ label, bots }) {
   return (
     <div className="space-y-2">
-      {/* The heading has to win against 27 chips below it. As `text-xs
-          font-medium text-muted-foreground` it was lighter than the things it
-          was labelling, so three groups read as one wall — reported as not
-          being scannable. Foreground weight plus the count, which also answers
-          "how many are in this one" without counting pills. */}
+      {/* Strong heading with a count so groups stand out from the chips. */}
       <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-foreground">
         {label}
         <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
@@ -324,18 +271,7 @@ function BotGroup({ label, bots }) {
   );
 }
 
-/**
- * Whole-site AI crawler control. Three policies, not an on/off switch:
- * blocking a scraper that trains a model on your content and blocking an AI
- * search crawler that sends you visitors are different decisions, and a single
- * toggle would do both at once. (Cloudflare splits them for the same reason;
- * ServerAvatar's commercial panel and xCloud ship a binary switch, which is
- * what this improves on.)
- *
- * Every label, description, count and bot name comes from GET /ai-bot-policies —
- * the backend reads the same config file to build the vhost, so rendering from
- * the response is what keeps this screen honest about what is really enforced.
- */
+// Labels, counts and bot names all come from GET /ai-bot-policies.
 export function BotBlockerSection({
   appId,
   policies: sentPolicies,
@@ -345,14 +281,10 @@ export function BotBlockerSection({
   canManage,
 }) {
   const t = useTranslations("applications.botBlocker");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const policies = dedupedPolicies(sentPolicies);
-  /*
-   * What the last successful save wrote, until the refreshed props agree. The
-   * toast arrives before `router.refresh()` does, and for those seconds the
-   * card said "Not saved yet" about a saved choice with Save enabled — a click
-   * there sent the same PUT again.
-   */
+  // What the last save wrote, held until the refreshed props agree, so the
+  // card is not "unsaved" in between.
   const [justSaved, setJustSaved] = useState(null);
   if (
     justSaved &&
@@ -364,8 +296,7 @@ export function BotBlockerSection({
   }
   const base = justSaved ?? { policy: currentPolicy, blocked: currentBlocked, allowed: currentAllowed };
   const [refused, setRefused] = useState({ blocked: {}, allowed: {} });
-  // Remounts both editors on Discard: a half-typed name and its error live in
-  // the editor, and survived a Discard that reset everything else.
+  // Remounts both editors on Discard to clear half-typed names and errors.
   const [editorKey, setEditorKey] = useState(0);
   const [policy, setPolicy] = useState(currentPolicy);
   const [blocked, setBlocked] = useState(currentBlocked);
@@ -381,11 +312,9 @@ export function BotBlockerSection({
     !sameList(blocked, base.blocked) ||
     !sameList(allowed, base.allowed);
   const additions = additionsByPolicy(keys, policies);
-  // Otherwise 31 bare user-agent names with nothing to tell them apart.
   const groups = botGroups(keys, policies, policy);
 
-  // What the vhost will actually enforce once this is saved. The policy's own
-  // count stopped being the answer the moment a site could add its own rules.
+  // What the vhost will enforce once saved, including this site's own rules.
   const effective = effectiveBlockedBots(selected?.blocked_bots ?? [], blocked, allowed);
   const savedEffective = effectiveBlockedBots(
     savedPolicy?.blocked_bots ?? [],
@@ -393,9 +322,8 @@ export function BotBlockerSection({
     base.allowed,
   );
 
-  // The expanded list has to agree with the number on the button above it, so
-  // exemptions come out of the policy's own groups and this site's additions
-  // get a group of their own.
+  // Must agree with the count on the button: exemptions are removed from the
+  // policy groups and site additions get their own group.
   const shownGroups = [
     ...groups
       .map((group) => ({ ...group, bots: group.bots.filter((bot) => !hasBot(allowed, bot)) }))
@@ -405,23 +333,19 @@ export function BotBlockerSection({
       : []),
   ];
 
-  // An allow only means something if something would otherwise block it.
+  // Allows that nothing would block anyway.
   const idleAllows = allowed.filter(
     (bot) => !hasBot(selected?.blocked_bots ?? [], bot) && !hasBot(blocked, bot),
   );
 
-  // Nothing blocked is not a protected state — it is the default for every new
-  // site, so it must not be dressed in the same green as one that blocks.
+  // Nothing blocked is the default, not a protected state.
   const isProtected = savedEffective.length > 0;
-  // A sidebar click is a client-side route change; without this the edit
-  // vanishes with no warning. See components/ui/unsaved-guard.jsx.
+  // Warns before a client-side navigation drops the edit (components/ui/unsaved-guard.jsx).
   useWatchUnsaved("app-bot-blocker", isDirty);
 
   const saveReason = !canManage ? t("noPermission") : !isDirty ? t("nothingToSave") : null;
 
-  // One list at a time: a bot named in both would be resolved by the backend in
-  // favour of the allow, so letting both hold it would show a block that is
-  // not a block.
+  // A bot lives in one list only: the backend lets an allow win over a block.
   function addRule(kind, value) {
     const [list, setList, other, setOther] =
       kind === "blocked" ? [blocked, setBlocked, allowed, setAllowed] : [allowed, setAllowed, blocked, setBlocked];
@@ -452,8 +376,8 @@ export function BotBlockerSection({
     try {
       await updateApplicationBotBlocker(appId, { policy, blocked, allowed });
       setJustSaved({ policy, blocked, allowed });
+      await refreshAndWait();
       toast.success(t("saved"));
-      router.refresh();
     } catch (error) {
       const errors = error.response?.status === 422 ? error.response.data?.errors ?? {} : {};
       const next = { blocked: {}, allowed: {} };
@@ -472,20 +396,12 @@ export function BotBlockerSection({
   return (
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
       <div className="max-w-4xl space-y-4">
-        {/* One line, not a paragraph: "AI bot" still needs a definition before
-            the three options mean anything, but the options themselves carry the
-            detail — repeating it up here turned the screen into a document. */}
         <Note icon={Bot}>{t("explainer")}</Note>
   
         <Card className="gap-0 overflow-hidden py-0 shadow-sm">
           <CardContent className="space-y-5 p-5">
-            {/* Selectable cards rather than a bare radio list: three options
-                each carrying a sentence of consequence and a count read as a
-                wall of text when they are only rows. A card each gives the icon,
-                the claim and the number their own place, and makes the chosen
-                one obvious from across the screen — while still being a real
-                RadioGroup underneath, so keyboard and screen readers get the
-                standard one-of-three semantics. */}
+            {/* Selectable cards over a real RadioGroup, keeping keyboard and
+                screen-reader semantics. */}
             <div className="space-y-3">
               <p className="text-sm font-medium">{t("chooseLabel")}</p>
               <RadioGroup
@@ -512,10 +428,7 @@ export function BotBlockerSection({
                         !checked && "hover:bg-muted/40",
                       )}
                     >
-                      {/* Radio and icon share one `items-center` row so they
-                          stay centred on each other whatever their sizes are —
-                          a 16px control next to a 36px circle, each with its own
-                          margin, left the radio 8px high. */}
+                      {/* One `items-center` row keeps radio and icon aligned. */}
                       <span className="flex shrink-0 items-center gap-3">
                         <RadioGroupItem value={key} id={`ai-bot-${key}`} />
                         <span
@@ -531,20 +444,15 @@ export function BotBlockerSection({
                       </span>
                       <span className="min-w-0 flex-1 space-y-1">
                         <span className="flex flex-wrap items-center gap-2">
-                          {/* Straight from the API — never a local copy. */}
+                          {/* From the API, never a local copy. */}
                           <span className={cn("text-sm", checked ? "font-semibold" : "font-medium")}>
                             {option.title}
                           </span>
-                          {/* The count sits on every option, not just the
-                              selected one, so the three can be compared without
-                              clicking through them. */}
+                          {/* Count on every option so they can be compared. */}
                           <Badge variant={option.blocked_count ? (warn ? "warning" : "muted") : "outline"}>
                             {t("blockedCount", { count: option.blocked_count })}
                           </Badge>
-                          {/* Which option is really in force, and which one you
-                              have merely clicked, said on the options themselves —
-                              a separate "currently active" row above repeated the
-                              selected card's own title and count word for word. */}
+                          {/* Marks the option currently in force. */}
                           {key === base.policy ? (
                             <Badge variant={isProtected ? "success" : "muted"}>
                               {t("activeNow")}
@@ -557,9 +465,7 @@ export function BotBlockerSection({
                         <span className="block text-xs leading-relaxed text-muted-foreground">
                           {option.description}
                         </span>
-                        {/* "Also blocks the crawlers that send you visitors" is
-                            abstract until they have names. These are exactly the
-                            bots this option adds over the one above it. */}
+                        {/* Names the bots this option adds over the previous one. */}
                         {additions[key]?.length > 0 ? (
                           <span
                             className={cn(
@@ -577,11 +483,8 @@ export function BotBlockerSection({
               </RadioGroup>
             </div>
   
-            {/* The preset is a starting point, not the whole answer: a site can
-                name a crawler the preset has never heard of, or let one through
-                that it blocks. Same card and same Save as the policy, because
-                the backend resolves the three against each other in one
-                request. */}
+            {/* Per-site exceptions share the policy's Save: the backend resolves
+                all three in one request. */}
             <div className="space-y-3 border-t pt-5">
               <div>
                 <p className="text-sm font-medium">{t("exceptions.title")}</p>
@@ -611,9 +514,7 @@ export function BotBlockerSection({
                 />
               </div>
   
-              {/* Allowing something nothing blocks is not protection, and a chip
-                  sitting there implying otherwise is the kind of quiet lie this
-                  screen exists to avoid. */}
+              {/* Flags allows that have no effect. */}
               {idleAllows.length > 0 ? (
                 <p className="text-xs text-muted-foreground">
                   {t("exceptions.noEffect", { bots: idleAllows.join(", ") })}
@@ -621,9 +522,7 @@ export function BotBlockerSection({
               ) : null}
             </div>
   
-            {/* The choice stops being a black box: how many bots it blocks, and
-                which ones, on demand. 30 names unprompted is noise, so the list
-                is collapsed by default. */}
+            {/* The blocked bots, collapsed by default. */}
             {effective.length > 0 ? (
               <Collapsible open={showBots} onOpenChange={setShowBots}>
                 <CollapsibleTrigger asChild>
@@ -643,9 +542,7 @@ export function BotBlockerSection({
                       shownGroups.map((group) => (
                         <BotGroup
                           key={group.key}
-                          // Named per policy, falling back to that policy's own
-                          // title if the backend introduces one we have no word
-                          // for yet.
+                          // Falls back to the policy's own title for unknown keys.
                           label={
                             group.key === "custom" || GROUP_LABELS.has(group.key)
                               ? t(`groupLabels.${group.key}`)
@@ -662,14 +559,12 @@ export function BotBlockerSection({
               </Collapsible>
             ) : null}
   
-            {/* People assume this writes robots.txt. It does not, and the
-                difference matters: robots.txt is a request, this is enforced. */}
+            {/* Clarifies this is enforced by the server, not a robots.txt request. */}
             <p className="text-xs text-muted-foreground">{t("howItWorks")}</p>
           </CardContent>
   
-          {/* The unsaved marker lives on the chosen card here, not in the
-              footer — the footer's own is suppressed by passing `dirty` only
-              for the buttons it gates. */}
+          {/* The unsaved marker is on the chosen card; `dirty` here only gates
+              the buttons. */}
           <CardSaveFooter
             saving={saving}
             dirty={isDirty}

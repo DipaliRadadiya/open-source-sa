@@ -32,7 +32,7 @@ export function UserRowActions({ user, roles = [], rolesFailed = false, currentU
   const [impersonateOpen, setImpersonateOpen] = useState(false);
   const [impersonating, setImpersonating] = useState(false);
   const isSelf = user.id === currentUserId;
-  // Backend blocks self and admin→admin (422) — mirror that in the UI.
+  // Mirrors the backend: no impersonating yourself or another admin (422).
   const canImpersonate = !isSelf && !user.is_admin;
   const impersonateHint = isSelf
     ? t("actions.impersonateSelfHint")
@@ -44,10 +44,8 @@ export function UserRowActions({ user, roles = [], rolesFailed = false, currentU
     setImpersonating(true);
     try {
       await impersonateUser(user.id);
-      // Session identity changed — hard-navigate so SSR re-reads the new
-      // cookie (router.refresh would leave stale server-rendered chrome).
-      // "/", not "/dashboard": the front door sends each role to the first
-      // page it may open, and a role without Dashboard landed on a refusal.
+      // Hard navigation so SSR re-reads the new session cookie. "/" lets the front
+      // door route each role to the first page it may open.
       window.location.href = "/";
     } catch (error) {
       toast.error(apiMessage(error, t("actions.impersonateFailed")));

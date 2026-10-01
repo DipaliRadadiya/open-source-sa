@@ -1,11 +1,7 @@
 import { useTranslations } from "next-intl";
 import { Checkbox } from "@/components/ui/checkbox";
 
-/**
- * Multi-select for a user's permission roles. `roles` is the catalog
- * ([{ id, name, description? }]); `value` is an array of selected role ids.
- * Every user needs ≥1 role (enforced by the form schema).
- */
+// `value` is an array of role ids; at least one is required (form schema).
 export function RolesField({ roles, value = [], onChange, failed = false }) {
   const t = useTranslations("users");
 
@@ -13,9 +9,7 @@ export function RolesField({ roles, value = [], onChange, failed = false }) {
     onChange(checked ? [...value, id] : value.filter((v) => v !== id));
   }
 
-  // "None exist" and "we could not ask" are different, and the old copy said
-  // the first for both: "No roles exist yet. Create a role first" sent an
-  // administrator off to create something that was already there.
+  // A failed load must not read as "no roles exist".
   if (failed) {
     return (
       <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-center text-sm text-destructive">

@@ -30,8 +30,7 @@ export default async function ApplicationFail2banPage({ params }) {
   ]);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
-  // The site is gone. Land on the list — the only place left to go — and say
-  // why on arrival, rather than parking on a dead end that offers one link.
+  // Site deleted: redirect to the list, which explains why on arrival.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
@@ -57,7 +56,7 @@ export default async function ApplicationFail2banPage({ params }) {
           {t("provisioning")}
         </div>
       ) : status.failed ? (
-        // "We could not ask" must never render as "nothing is protecting you".
+        // A failed read must never render as "not protected".
         <LoadFailed description={t("loadFailed")} status={status.status} failure={status.failure} message={status.message} debug={status.debug} />
       ) : (
         <Fail2banPanel

@@ -12,21 +12,7 @@ import { apiMessage } from "@/lib/api/error-message";
 
 const STORAGE_PAGE = "/integrations/storage";
 
-/**
- * The card this page is, in each of its three states.
- *
- * Presentational and exported so all three can be rendered — the connected
- * state is otherwise unreachable without a live single-use Google code, which
- * is exactly the state worth looking at.
- *
- * A centred card rather than the panel's page shell, like the 404: this screen
- * has one job, one outcome and one way out. As a normal page it carried a
- * `PageHeader` reading "Connecting Google Drive" above a box announcing
- * "Connected to Google Drive" — the heading was written for the working state
- * and never changed, so the page said two different things at once, and on a
- * failure "Finishing the approval you just gave Google" was simply untrue. The
- * heading belongs to the state, so the state owns it.
- */
+// Exported so every state can be rendered; the connected state otherwise needs a live single-use Google code.
 export function CallbackCard({ status, message }) {
   const t = useTranslations("storage.oauth");
 
@@ -42,9 +28,7 @@ export function CallbackCard({ status, message }) {
       icon: CheckCircle2,
       tone: "bg-success/10 text-success",
       title: t("connected"),
-      // The reassurance is the body here rather than fine print: this is the
-      // end of a five-step setup, and "what can it actually see" is the
-      // question somebody finishes that setup holding.
+      // The scope reassurance is the body at the end of setup.
       body: t("scopeNote"),
     },
     failed: {
@@ -73,16 +57,14 @@ export function CallbackCard({ status, message }) {
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{view.body}</p>
       ) : null}
 
-      {/* No way out while the exchange is in flight — there is nothing to
-          decide yet, and a button here would invite leaving mid-request. */}
+      {/* No way out while the exchange is in flight. */}
       {status !== "working" ? (
         <Button
           asChild
           variant={status === "connected" ? "default" : "outline"}
           className="mt-6 w-full"
         >
-          {/* A link, not a click handler: middle-click and "open in new tab"
-              both work, and it is the browser's own navigation. */}
+          {/* A plain link, so middle-click and new-tab work. */}
           <a href={STORAGE_PAGE}>{t("backToStorage")}</a>
         </Button>
       ) : null}
@@ -90,33 +72,15 @@ export function CallbackCard({ status, message }) {
   );
 }
 
-/**
- * Turns Google's redirect into an authenticated request, once.
- *
- * **Once is the whole difficulty.** The authorization code is single-use and
- * the sealed `state` behind it is burned on first use, so a second exchange
- * fails by design — and React runs effects twice in development's strict mode.
- * A naive effect would therefore succeed, immediately re-fire, and paint a
- * failure over a connection that actually worked. The ref guards that, and it
- * is set before the await rather than after, because two effect runs in the
- * same tick would both pass a check that only flips on completion.
- */
+// The code and `state` are single-use and strict mode runs effects twice; the ref is set
+// before the await so a second exchange cannot paint a failure over a success.
 export function GoogleDriveCallback({ code, state, deniedError }) {
   const t = useTranslations("storage.oauth");
   const router = useRouter();
   const [result, setResult] = useState(null);
   const started = useRef(false);
 
-  /*
-   * Derived during render, not set from the effect. Both of these are pure
-   * functions of the props — there is nothing to synchronise with, and writing
-   * them through setState would be a cascading render that React Compiler's
-   * lint rule rejects outright. Only the exchange below is genuinely an effect,
-   * because only it talks to something outside React.
-   *
-   * Google says no by sending `error`, not by withholding `code`. Naming that
-   * case apart is the difference between "you cancelled" and "we broke".
-   */
+  // Derived during render: setState from the effect is a cascading render the lint rule rejects.
   const blocked = deniedError
     ? deniedError === "access_denied"
       ? t("denied")
@@ -132,8 +96,8 @@ export function GoogleDriveCallback({ code, state, deniedError }) {
     completeDriveConnect({ code, state })
       .then(({ data }) => {
         if (data.oauth.status === "connected") {
-          // The destinations list is server-rendered, so without this the row
-          // behind this page keeps showing "not connected" until a hard reload.
+          // The destinations list is server-rendered; refresh so the row shows
+          // the new connection without a hard reload.
           router.refresh();
           setResult({ status: "connected", message: null });
           return;

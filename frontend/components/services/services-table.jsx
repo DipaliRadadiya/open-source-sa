@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 
 import { useFormatter, useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
@@ -8,19 +8,8 @@ import { ServiceBootSwitch } from "@/components/services/service-boot-switch";
 import { ServiceStatusBadge } from "@/components/services/service-status-badge";
 import { installHome } from "@/lib/services/install-home";
 
-/* ---------------------------------------------------------------------------
- * Cells are module-level components on purpose.
- *
- * flexRender calls `createElement(cellFn)`, so the cell function's identity IS
- * the component type. Defining them inside the render — the obvious way — gave
- * every cell a fresh type on every render, and React responded by unmounting
- * and remounting the whole cell. With the 3s usage poll driving renders, that
- * wiped local state every three seconds: the config-test dialog closed itself,
- * and an action fired just before a poll lost its pending state.
- *
- * Anything a cell needs from the table comes through `table.options.meta`,
- * which can change freely without touching these identities.
- * ------------------------------------------------------------------------- */
+// Cells are module-level on purpose: flexRender uses the function as the
+// component type, so inline cells would remount on every poll and lose state.
 
 function ServiceCell({ row }) {
   const t = useTranslations("services");
@@ -36,25 +25,15 @@ function ServiceCell({ row }) {
   const home = installHome(key);
   const installed = state === "installed";
 
-  // Only what the badge does not already say. "Installing…" is the badge's job,
-  // and the generic failure sentence is both a repeat of "Failed" and an
-  // instruction to quote a reference this screen does not show — so on those
-  // rows the retry link below is the whole useful content.
+  // Only what the badge does not already say; the generic `unknown` sentence
+  // adds nothing, so the retry link is the useful content there.
   const note = installReason && installReason !== "unknown" ? installMessage : null;
 
-  // While a service is installing, or has failed to install, there is no unit
-  // yet — printing one would name a file that does not exist. The reason takes
-  // its place, since the row is otherwise inert (no actions, no usage, no logs)
-  // and would sit there explaining nothing.
-  //
-  // `whitespace-normal` is load-bearing: TableCell sets `whitespace-nowrap`,
-  // which is inherited, so this sentence rendered on one line and painted
-  // straight across the Status, Memory and CPU columns. Fixed column widths do
-  // not stop that on their own — a table cell does not clip its overflow.
+  // `whitespace-normal` is load-bearing: the inherited `whitespace-nowrap`
+  // would paint the reason across the other columns.
   let secondLine = null;
   if (installed) {
-    // The unit name is what you'd type into systemctl, so it belongs here — but
-    // quietly, under the name people actually recognise.
+  // The unit name (what systemctl takes), quietly under the friendly name.
     secondLine = <p className="truncate font-mono text-xs text-muted-foreground">{unit}</p>;
   } else if (note || retryable) {
     secondLine = (
@@ -63,10 +42,8 @@ function ServiceCell({ row }) {
         {retryable ? (
           <>
             {note ? " " : null}
-            {/* A link, not a button: the retry belongs on the screen that
-                owns this install, and two doors to the same install is how you
-                end up running two at once. Which screen that is depends on the
-                service — see lib/services/install-home.js. */}
+            {/* The retry belongs on the screen that owns this install, so two
+                installs cannot run at once. */}
             <Link
               href={home.href}
               className="font-medium whitespace-nowrap text-foreground underline underline-offset-2"
@@ -145,8 +122,7 @@ function ActionsCell({ row, table }) {
   );
 }
 
-// `busy` is owned by the panel, not here: the card layout needs the same map,
-// and a service is either working or it isn't — both layouts have to agree.
+// `busy` is owned by the panel so the table and card layouts agree.
 export function ServicesTable({ data, phpVersions = [], canManage = false, busy, setRowBusy }) {
   const t = useTranslations("services");
 
@@ -155,8 +131,7 @@ export function ServicesTable({ data, phpVersions = [], canManage = false, busy,
       accessorKey: "label",
       header: t("columns.service"),
       meta: { className: "w-[34%]" },
-      // No lock icon here: the "Always on" cell already carries one, with the
-      // explanation attached. Two locks in one row is the same fact twice.
+      // No lock icon here: the "Always on" cell already carries one.
       cell: ServiceCell,
     },
     {
@@ -165,9 +140,7 @@ export function ServicesTable({ data, phpVersions = [], canManage = false, busy,
       meta: { className: "w-[13%]" },
       cell: StatusCell,
     },
-    // Two plain columns instead of one stacked block. The inline "RAM"/"CPU"
-    // labels were repeating what a table header already says, and stacking two
-    // labelled figures per cell built a small table inside the table.
+      // Two plain columns; the header labels them.
     {
       id: "memory",
       header: () => <span className="block text-right">{t("memoryShort")}</span>,
@@ -176,16 +149,16 @@ export function ServicesTable({ data, phpVersions = [], canManage = false, busy,
     },
     {
       id: "cpu",
-      // The padding lives only on the column class, which applies to the header
-      // cell AND the body cells. Repeating it on the header's own span indented
-      // the label twice and knocked it out of line with its own numbers.
+      // Padding lives on the column class, which covers header and body cells;
+      // repeating it here would misalign the label.
       header: () => <span className="block text-right">{t("cpuShort")}</span>,
       meta: { className: "w-[10%] pr-8 text-right" },
       cell: CpuCell,
     },
     {
       id: "boot",
-      header: t("columns.boot"),
+      // Wraps: "Beim Systemstart starten" is twice the column's width.
+      header: () => <span className="block whitespace-normal leading-tight">{t("columns.boot")}</span>,
       meta: { className: "w-[15%]" },
       cell: BootCell,
     },
@@ -201,29 +174,16 @@ export function ServicesTable({ data, phpVersions = [], canManage = false, busy,
     <DataTable
       columns={columns}
       data={data}
-      // Fixed layout, so the column widths above are obeyed rather than treated
-      // as hints. With the browser's default `auto`, a failed install's
-      // explanation — a whole sentence — set the first column's width from its
-      // longest line, pushed the table past its container and left Actions off
-      // the right-hand edge behind a horizontal scrollbar. Fixed makes the
-      // sentence wrap inside its column instead, so a row grows downwards when
-      // there is something to say and the table never grows sideways.
+      // With `auto`, a failed install's sentence pushed Actions off screen.
       fixedLayout
       meta={{ busy, setRowBusy, canManage, phpVersions }}
       emptyMessage={t("empty.title")}
-      // A failed unit is why you opened this page — tint the row so it's found
-      // without reading every status badge.
-      //
-      // Tighter cells than the default: six rows of one-line values in
-      // full-height cells left the table looking loose and made comparing two
-      // services a longer eye-journey than it needs to be.
+      // Failed units get a tinted row; cells are tighter than the default.
       rowClassName={(service) =>
         cn(
           "[&_td]:py-2",
-          // Only a real unit that failed. An install that failed also reports
-          // `status: failed`, but tinting its row says "this broke" about
-          // something that never started — and it already explains itself in
-          // words beside the name.
+          // Only a real unit that failed. A failed install also reports
+          // `status: failed` but already explains itself beside the name.
           service.status === "failed" &&
             service.state === "installed" &&
             "bg-destructive/5 hover:bg-destructive/10",
@@ -233,15 +193,7 @@ export function ServicesTable({ data, phpVersions = [], canManage = false, busy,
   );
 }
 
-/**
- * One usage figure. Right-aligned and tabular so the digits line up down the
- * column — these numbers exist to be compared between services, and comparison
- * is a vertical scan.
- *
- * A null renders as an em dash and never 0: "systemd didn't measure it" and
- * "used none" are different facts, and a stopped service showing 0% would read
- * as a running one that happens to be idle.
- */
+// Null renders as an em dash, never 0: "not measured" and "used none" differ.
 function Measure({ value }) {
   if (value == null || value === "") {
     return <span className="text-sm text-muted-foreground">—</span>;

@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import {
   ArrowRight,
@@ -110,21 +111,14 @@ const COMMON_FIELD_NAMES = new Set([
   "branch",
 ]);
 
-/**
- * Joomla refuses a table prefix that does not start with a letter and end with
- * an underscore, and the install then stops at "install_app" with no reason.
- */
+// Joomla's install fails silently on a prefix not starting with a letter and ending with "_".
 const FIELD_PATTERNS = {
   joomla: {
     table_prefix: { pattern: /^[A-Za-z][A-Za-z0-9]*_$/, message: "form.tablePrefixInvalid" },
   },
 };
 
-// The API is meant to send a display-ready `label`, but for some one-click app
-// fields it returns the untranslated key itself (`application.fields.shop_name`)
-// when the backend has no translation for it. Never show a raw key to a user —
-// humanise the field name instead (shop_name -> "Shop name"). A real label with
-// spaces is left untouched.
+// The API sometimes sends a raw key as the label; humanise the field name instead.
 function fieldLabel(config) {
   const label = config.label;
   const looksLikeKey = !label || /^[a-z0-9_]+(\.[a-z0-9_]+)+$/i.test(label);
@@ -134,20 +128,7 @@ function fieldLabel(config) {
   return words ? words.charAt(0).toUpperCase() + words.slice(1) : label;
 }
 
-/**
- * A step marked by what it is FOR, and by whether it is finished.
- *
- * It was a number, which is the one thing a reader can already see — the
- * sections are in order down the page, so "2" told them nothing the position
- * had not. An icon says which of the three this is at a glance: the grid you
- * pick from, the globe for the site's own name and address, the sliders for
- * its settings.
- *
- * The tick still wins over the icon when a section has nothing outstanding.
- * Progress is the more useful thing to know, and it comes from the same
- * checklist the Create button trusts — so the badge and the button cannot
- * disagree about whether you are done.
- */
+// Progress comes from the Create button's checklist, so the two cannot disagree.
 function SectionHeading({ icon: Icon, title, description, headingId, done = false }) {
   return (
     <div className="flex items-start gap-3">
@@ -183,9 +164,7 @@ function PickerStatus({ state, messages }) {
   return null;
 }
 
-// The app_port is the one field a user can get wrong in a way that only shows up
-// when provisioning fails. The API answers three ways — free, a registered name
-// (a warning, not a block), or taken — so we ask as they type instead of after.
+// Checked as the user types: the API answers free, registered (a warning) or taken.
 function PortField({ field, config, placeholder }) {
   const t = useTranslations("applications");
   const [check, setCheck] = useState(null); // { state, message, suggested }
@@ -196,7 +175,7 @@ function PortField({ field, config, placeholder }) {
     const valid =
       Boolean(raw) && Number.isInteger(port) && port >= 1024 && port <= 65535;
     let cancelled = false;
-    // Every state write lives in the deferred callback, never synchronously in
+    // All state writes happen in the deferred callback, never synchronously in
     // the effect body (react-hooks/set-state-in-effect).
     const id = setTimeout(
       () => {
@@ -283,8 +262,8 @@ function PortField({ field, config, placeholder }) {
   );
 }
 
-// The start command is executed directly, not through a shell — the backend
-// refuses package managers and shell syntax with a 422. Say so as they type.
+// The start command runs directly, not through a shell; the backend rejects
+// package managers and shell syntax with a 422.
 function startCommandProblem(value) {
   const v = String(value ?? "").trim();
   if (!v) return null;
@@ -293,13 +272,7 @@ function startCommandProblem(value) {
   return null;
 }
 
-/**
- * One line for the review panel.
- *
- * Multi-line values (a deploy script) get their first line plus a count of what
- * follows — collapsing them into a single run of text looks like the newlines
- * were eaten, which is exactly the bug this field used to have.
- */
+// Multi-line values show their first line plus a count.
 function summariseValue(value, t) {
   const lines = value.split("\n").filter((line) => line.trim());
   if (lines.length <= 1) return value;
@@ -328,24 +301,18 @@ function ConfigField({
   phpVersionsFailed,
   nodeVersions,
   nodeVersionsFailed,
-  // What the CHOSEN APPLICATION supports, so the field can say why the list is
-  // shorter than the server's. Not "the server default must be X": the
-  // installer runs on the site's own version (AbstractPhpInstaller::phpCommand
-  // reads `$application->php_version` and only falls back to the default when
-  // a site names none), so a note about the default would describe a rule this
-  // panel does not have.
+  // What the chosen application supports, so the field can explain a shortened
+  // list. The installer uses the site's own PHP version, not the server default.
   phpRange,
   nodeRange,
   timezones,
-  // A FIELD_PATTERNS rule for this field, said while typing: the review panel
-  // holds Create back on it, and a disabled button with no reason on screen
-  // reads as broken.
+  // A FIELD_PATTERNS rule shown while typing: the review panel blocks Create on
+  // it, and a disabled button needs a visible reason.
   patternRule = null,
 }) {
   const t = useTranslations("applications");
   const isAccount = config.source === "git_accounts";
-  // Memoised because the `[]` branch is a fresh array every render, which would
-  // re-run everything downstream that depends on it.
+  // Memoised: the `[]` fallback is a new array every render.
   const runtimeVersions = useMemo(
     () =>
       config.source === "php_versions"
@@ -364,20 +331,7 @@ function ConfigField({
   const isRuntime =
     config.source === "php_versions" || config.source === "node_versions";
 
-  /*
-   * What this application supports, said out loud.
-   *
-   * The dropdown is already filtered to versions in range, which is correct and
-   * completely silent: on a server with PHP 8.1 and 8.3, an app needing 8.2+
-   * simply shows one option and never explains where the other went. Asked for
-   * as a note about the *server default* PHP — but nothing here depends on the
-   * default (the installer runs the site's own version), so the true statement
-   * is the application's own requirement.
-   *
-   * Only when there is a real bound. `rangeLabel` returns "" for a range with
-   * neither end, which is an app that runs on anything, and "PHP: any version"
-   * is noise on every other form.
-   */
+  // `rangeLabel` returns "" for an app that runs on any version.
   const runtimeRange =
     config.source === "php_versions"
       ? phpRange
@@ -385,19 +339,8 @@ function ConfigField({
         ? nodeRange
         : null;
   const runtimeRequirement = isRuntime ? rangeLabel(runtimeRange) : "";
-  /*
-   * The version they have actually chosen, and whether it is a real install.
-   *
-   * This is where the damage happens. An interpreter that arrived as another
-   * package's dependency — `openlitespeed` pulls in `lsphp83` — has no curl,
-   * sqlite3, redis, intl or pgsql, and the picker offered it indistinguishably
-   * from the version the panel set up. The application is created, and the
-   * missing extension surfaces days later inside somebody's site.
-   *
-   * Read off the SELECTED value rather than marking every option: a dropdown
-   * that is closed most of the time cannot warn anyone, and the moment worth
-   * interrupting is the one where the choice is already made.
-   */
+  // A dependency-installed interpreter (`openlitespeed` brings `lsphp83`) lacks
+  // common extensions; warn on the selected value.
   const chosenVersion = useWatch({ control: form.control, name: config.name });
   const chosenIncomplete = useMemo(() => {
     if (!isRuntime || !chosenVersion) return null;
@@ -417,46 +360,27 @@ function ConfigField({
   const isStartCommand = config.name === "start_command";
   const isDatabaseEngine = config.name === "database_engine";
   const isToggle = config.type === "toggle";
-  /**
-   * Declared by the API for anything multi-line.
-   *
-   * Without this branch the field fell through to a single-line `<input>`, and
-   * a shell script pasted into one loses every newline — silently, so the site
-   * deploys with one mangled line.
-   *
-   * It also takes the full row of the two-column grid: a script in half the
-   * width soft-wraps every real command, so half the lines you read are not
-   * lines you wrote.
-   */
-  // build_command too: the API declares it `text`, but the package-manager
-  // templates that fill it are two lines ("npm ci\nnpm run build"), which an
-  // <input> showed as "npm cinpm run build".
+  // An input would silently drop newlines. build_command is declared `text`, but its
+  // templates are two lines ("npm ci\nnpm run build").
   const isTextarea = config.type === "textarea" || config.name === "build_command";
-  // `GitDeployer::script()` runs the deploy script when there is one and falls
-  // back to build_command otherwise. Both fields sit in the same Advanced
-  // section, so filling both is easy and the loser goes quiet — the API's own
-  // hint says so, but it lives under the OTHER field, which nobody re-reads.
+  // `GitDeployer::script()` ignores build_command when a deploy script is present.
   const deployScript = useWatch({ control: form.control, name: "deploy_script" });
   const supersededByDeployScript =
     config.name === "build_command" && String(deployScript ?? "").trim() !== "";
-  // A field the backend declares as a choice — render a chooser even before its
-  // options arrive, so it never silently degrades to a free-text box.
+  // A declared choice field renders a chooser even before its options arrive,
+  // so it never degrades to free text.
   const isChoice = ["select", "enum", "dropdown"].includes(config.type);
   const [reveal, setReveal] = useState(false);
-  // Unique by value, always. Two options sharing a value make Radix's trigger
-  // render BOTH items' text — "8.4" twice reads as "8.48.4" — and they collide
-  // on the React key as well. Cheap to guarantee here rather than trusting
-  // every caller and every API list to be clean.
+  // Unique by value: duplicate values make Radix's trigger render both items'
+  // text ("8.48.4") and collide on the React key.
   const options = useMemo(() => {
     const raw = config.options?.length
       ? config.options
       : runtimeVersions.map((version) => ({
           value: version.version,
           label: version.version,
-          // Carried through, or `runtimeDefault` below finds nothing and falls
-          // back to the first entry — which is the NEWEST version, not the
-          // server's default. On a box defaulting to Node 24 that preselected
-          // an end-of-life Node 25 for every new site.
+          // Required by `runtimeDefault` below; without it the newest version (not the
+          // server default) would be preselected.
           is_default: version.is_default,
         }));
     const seen = new Set();
@@ -468,15 +392,14 @@ function ConfigField({
     });
   }, [config.options, runtimeVersions]);
   const runtimeDefault = isRuntime ? preselectOption(options) : declaredDefault(config);
-  // Timezones: flatten the grouped API response into a flat option list.
   const timezoneChoices = useMemo(
     () => (isTimezone ? timezoneOptions(timezones) : []),
     [isTimezone, timezones],
   );
   const isChooser =
     options.length > 0 || isRuntime || isChoice || isTimezone;
-  // Long enumerations (countries ~250, timezones ~400, languages) get a
-  // searchable Combobox per the house rule; short lists stay a plain Select.
+  // Long lists (countries, timezones, languages) get a searchable Combobox;
+  // short ones stay a plain Select.
   const useCombobox = (isTimezone ? timezoneChoices.length : options.length) > 10;
   const label = fieldLabel(config);
   const placeholder =
@@ -492,18 +415,11 @@ function ConfigField({
           data-field-name={config.name}
           className={cn("min-w-0 self-start", isTextarea && "@2xl:col-span-2")}
         >
-          {/* Every label row in this form is exactly h-7, whether or not it
-              carries an action — that fixed height is what keeps the two
-              inputs in a grid row starting at the same Y. The label truncates
-              and the action never shrinks, so the row cannot overflow even if
-              the column is narrower than the container query expected. */}
+          {/* Label rows share a fixed height so inputs in a grid row align. The label
+              truncates and the action never shrinks, so the row cannot overflow. */}
           <div className="flex min-h-7 items-center justify-between gap-2">
-            {/* These fields are declared by the BACKEND, so there is no i18n
-                key per field to hang an explanation on — the label itself
-                arrives already translated. The explanation is therefore looked
-                up by field NAME, and only when we have written one: most of
-                these (admin_email, company_name, shop_name) explain themselves
-                and a "?" on them would be noise. */}
+            {/* Backend-declared fields arrive with a translated label but no i18n key, so
+                help text is looked up by field name, and only where one was written. */}
             <FormLabel
               className="min-w-0"
               required={config.required}
@@ -513,9 +429,8 @@ function ConfigField({
             </FormLabel>
             {isPassword && (config.generate || field.value) ? (
               <div className="flex shrink-0 items-center gap-2">
-                {/* Fields the schema marks generatable (WordPress admin
-                    password, DB passwords) get a one-click strong value,
-                    revealed so it can be copied before it is submitted. */}
+                {/* Generatable fields (admin and DB passwords) get a one-click strong value,
+                    revealed so it can be copied before submitting. */}
                 {config.generate ? (
                   <button
                     type="button"
@@ -532,18 +447,13 @@ function ConfigField({
                     {t("form.generate")}
                   </button>
                 ) : null}
-                {/* A generated password is shown once and never again — a copy
-                    control beside it means it can be saved without
-                    hand-selecting the field. */}
                 {field.value ? (
                   <CopyButton value={String(field.value)} className="size-6" />
                 ) : null}
               </div>
             ) : null}
-            {/* PHP and Node both: the version is installed on another screen,
-                and coming back to a stale list is the same problem either way.
-                `runtimeVersions` is the whole installed list, not the subset
-                this site type can use — the diff is about what the server has. */}
+            {/* PHP and Node: versions are installed on another screen. `runtimeVersions`
+                is the full installed list, not just what this site type can use. */}
             {isRuntime ? (
               <RuntimeRefresh
                 runtime={config.source === "php_versions" ? "PHP" : "Node.js"}
@@ -680,9 +590,7 @@ function ConfigField({
                 rows={6}
                 spellCheck={false}
                 placeholder={placeholder}
-                // Mono: every textarea field the API declares today is a
-                // command or a script, where alignment and a literal space
-                // carry meaning.
+                // Mono: textarea fields are commands or scripts, where spacing matters.
                 className="font-mono text-xs"
                 {...field}
                 value={field.value ?? ""}
@@ -719,24 +627,13 @@ function ConfigField({
               {t("form.buildCommandSuperseded")}
             </FormDescription>
           ) : isDatabaseEngine ? (
-            /*
-             * The one choice on this form that cannot be revised. No operation
-             * moves a site from one engine to another — it would be delete and
-             * start again — and the field itself gives no sign of that. It only
-             * appears when the server genuinely has two of the engines this
-             * type accepts, so it is a real decision every time it is shown.
-             *
-             * Keyed on the field NAME, which the API defines, not on an engine
-             * name. There is no capability that says "irreversible", and the
-             * sentence is ours rather than the server's.
-             */
+            /* Irreversible: no operation moves a site to another engine. The API has no capability flag, so keyed on the field name. */
             <FormDescription className="flex items-start gap-1.5 text-warning">
               <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
               {t("form.databaseEnginePermanent")}
             </FormDescription>
           ) : chosenIncomplete ? (
-            /* Outranks the range hint: the range says what this application
-               needs, and this says the version in the box cannot deliver it. */
+            /* Outranks the range hint: the chosen version cannot meet the app's needs. */
             <FormDescription className="flex items-start gap-1.5 text-warning">
               <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
               {t("form.runtimeIncomplete", {
@@ -789,31 +686,27 @@ export function CreateApplicationForm({
   canInstall = {},
 }) {
   const t = useTranslations("applications");
-  // Both refresh actions show the same one-word label; only their accessible
-  // names differ, so the shared string comes from `common`.
+  // Both refresh actions share one visible label from `common`; only their
+  // accessible names differ.
   const tCommon = useTranslations("common");
   const { name: brand } = useBranding();
   const router = useRouter();
+  const { pushAndWait } = useRefresh();
   const [accountsRefreshing, startAccountsRefresh] = useTransition();
   const [gitSource, setGitSource] = useState("account");
   const [repositories, setRepositories] = useState([]);
   const [branches, setBranches] = useState([]);
-  // "loading" from the start when an account is already chosen: the fetch
-  // effect fires on a non-empty id, but only the change handler sets this, so
-  // a preselected account left the repository picker reading as idle while its
-  // request was in flight.
+  // Starts "loading" when an account is preselected: the fetch runs on mount but
+  // only the change handler would set this.
   const [repositoriesState, setRepositoriesState] = useState(() =>
     gitAccounts.length === 1 ? "loading" : "idle",
   );
   const [branchesState, setBranchesState] = useState("idle");
-  // The site type the declared defaults were last applied for, so a change of
-  // type can be told apart from the first render. Holds the type itself, not
-  // just its name: clearing the previous type's answers needs the fields it
-  // declared, and by the time we notice the change `selected` is the new one.
+  // The site type the declared defaults were last applied for. Holds the type
+  // object, since clearing the previous type's answers needs its fields.
   const lastType = useRef(null);
-  // Bumped to re-ask the provider for the same account's repositories. A token
-  // added in the other tab does not change `git_account_id`, so without this the
-  // fetch effect has no reason to run again and the picker stays stale.
+  // Bumped to re-fetch the same account's repositories (e.g. a token added in
+  // another tab does not change `git_account_id`).
   const [repositoriesNonce, setRepositoriesNonce] = useState(0);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
@@ -827,45 +720,27 @@ export function CreateApplicationForm({
   const usernameEdited = useRef(false);
   // Used until the name gives a usable one, so the field is never blank.
   const fallbackUsername = useRef("");
-  // A second click lands before React has disabled the button, and would
+  // Guards a second click that lands before the button is disabled, which would
   // create the same system user twice.
   const submitting = useRef(false);
 
-  /*
-   * The only connected account, preselected.
-   *
-   * With one account the Git step opened with an empty picker, and the
-   * repository list below it stayed idle until you opened a menu and chose the
-   * single entry — a question with one possible answer standing between you
-   * and the field you actually came to fill in.
-   *
-   * Still a picker. The moment a second account exists the choice is real.
-   */
+  // With exactly one connected account, preselect it.
   const soleGitAccountId = gitAccounts.length === 1 ? String(gitAccounts[0].id) : "";
-  /*
-   * An account named in the URL wins over the sole-account shortcut.
-   *
-   * The Git page sends you here straight after connecting one, and with two or
-   * more accounts the picker would otherwise open empty — asking you to find
-   * the account you made ten seconds ago. Already validated against the real
-   * list by the page, so an unknown id arrives as "".
-   */
+  // An account named in the URL (e.g. just connected on the Git page) wins.
+  // The page validates it, so an unknown id arrives as "".
   const startingGitAccountId = initialGitAccountId || soleGitAccountId;
   const form = useForm({
     resolver: zodResolver(createApplicationSchema),
     mode: "onBlur",
     reValidateMode: "onChange",
     defaultValues: {
-      // Seeded from the URL when something sent you here for a particular
-      // type — the databases page's "Install phpMyAdmin", for one. Empty
-      // otherwise, which is every other way in.
+      // Seeded from the URL when a caller links to a specific type (e.g. "Install
+      // phpMyAdmin").
       site_type: initialType,
       name: initialName,
       domain: "",
-      // On by default, because a dedicated account per site is the right
-      // answer often enough to be where the form starts. Off for anyone who
-      // cannot create system users: the API refuses to generate for them, and
-      // a form that defaults to a refusal is a form that is wrong on open.
+      // On by default; off for users who cannot create system users, since the API
+      // refuses to generate for them.
       generate_system_user: canCreateSystemUser,
       system_user_id: "",
       system_user_username: suggestSystemUsername(initialName, systemUsers.map((user) => user.username)),
@@ -892,8 +767,8 @@ export function CreateApplicationForm({
   });
   const name = useWatch({ control: form.control, name: "name" });
   const newUsername = useWatch({ control: form.control, name: "system_user_username" });
-  // After mount: a random value rendered on the server would never match the
-  // one the browser draws.
+  // After mount: a random value rendered on the server would cause a hydration
+  // mismatch.
   useEffect(() => {
     form.setValue("system_user_password", generatePassword());
   }, [form]);
@@ -916,14 +791,7 @@ export function CreateApplicationForm({
   const isDirty = form.formState.isDirty && !submitted;
   useWatchUnsaved("application-create", isDirty);
 
-  /**
-   * Somewhere to put a site that has no domain yet.
-   *
-   * Offered only when the server reported an address — the wildcard-DNS host
-   * needs one to point at, and an option that cannot produce a domain is worse
-   * than no option. `own` stays the default, so anyone who has a domain sees
-   * exactly what they saw before.
-   */
+  // Temporary domain only when the server reported an IP for wildcard DNS.
   const canUseTemporary = Boolean(ipToLabel(serverIp));
   const [domainMode, setDomainMode] = useState(() =>
     initialDomainMode({ serverIp }),
@@ -933,8 +801,8 @@ export function CreateApplicationForm({
     ? temporaryDomain(name, serverIp, { suffixes: temporaryDomainSuffixes })
     : null;
 
-  // The generated value IS the field: written through so validation, the
-  // summary panel and the submitted payload all read one source.
+  // The generated value is written into the field so validation, summary and
+  // payload share one source.
   useEffect(() => {
     if (!temporary) return;
     const next = generated ?? "";
@@ -951,11 +819,8 @@ export function CreateApplicationForm({
     name: "system_user_id",
   });
   const branch = useWatch({ control: form.control, name: "branch" });
-  // Held deliberately, not overlooked. Nothing reads these two, but they are
-  // `useWatch` subscriptions rather than plain variables — deleting them stops
-  // the form re-rendering when those fields change. The rendered output would
-  // be identical and the re-renders strictly fewer, which is why it is a
-  // separate decision from clearing unused imports rather than part of it.
+  // Unused, but kept on purpose: these `useWatch` subscriptions re-render the
+  // form when the fields change. Removing them is a separate decision.
   // eslint-disable-next-line no-unused-vars -- pending a decision; see above
   const phpVersion = useWatch({ control: form.control, name: "php_version" });
   // eslint-disable-next-line no-unused-vars -- pending a decision; see above
@@ -964,9 +829,8 @@ export function CreateApplicationForm({
     () => siteTypes.find((type) => type.name === selectedName),
     [siteTypes, selectedName],
   );
-  // Only the versions this type runs on. Filtered here rather than in the
-  // field so the pickers, the preselect and the type-change reset below all
-  // read one list and cannot disagree about what is offerable.
+  // Versions this type runs on, filtered once so the pickers, the preselect and
+  // the type-change reset share one list.
   const typePhpVersions = useMemo(
     () => versionsInRange(phpVersions, selected?.php_version_range),
     [phpVersions, selected],
@@ -1006,13 +870,8 @@ export function CreateApplicationForm({
         (config.depends_on !== "node_rendering" ||
           ["ssr", "csr"].includes(renderingType)),
     )
-    // GitSiteType::rules() requires `start_command` exactly when rendering_type
-    // is "ssr", and the filter above means that is the only time the field is on
-    // screen — so whenever it renders it is required, unconditionally. The field
-    // schema does not say so, which left the one field an SSR site cannot start
-    // without unmarked and, worse, un-gated: an empty value passed the form and
-    // came back as a 422. Keyed on the name rather than `depends_on`, because
-    // `app_port` shares that dependency and is genuinely optional.
+    // The API requires start_command when rendering_type is "ssr" but the schema
+    // does not say so. Keyed on the name: `app_port` shares the dependency and is optional.
     .map((config) =>
       config.name === "start_command" ? { ...config, required: true } : config,
     );
@@ -1023,8 +882,8 @@ export function CreateApplicationForm({
     (config) => form.formState.errors[config.name],
   ).length;
   const availableSystemUsers = systemUsers;
-  // A deploy script makes the build command dead weight, so the last thing
-  // read before pressing Create must not list it as set and ready.
+  // A deploy script supersedes the build command, so the summary must not list
+  // it as set.
   const hasDeployScript = String(values?.deploy_script ?? "").trim() !== "";
   const configurationSummaryItems = visibleFields
     .filter(
@@ -1041,9 +900,7 @@ export function CreateApplicationForm({
         key: `configuration-${config.name}`,
         target: config.name,
         label: fieldLabel(config),
-        // Passwords, tokens and keys are presence-only in a review. Rendering
-        // their actual value in a sticky card leaks it to shoulder-surfers and
-        // screen recordings.
+        // Sensitive values are presence-only in the review card.
         value: isSensitiveConfig(config)
           ? t("readiness.configured")
           : config.type === "toggle"
@@ -1099,8 +956,7 @@ export function CreateApplicationForm({
       key: "user",
       target: generateSystemUser ? "system_user_username" : "system_user_id",
       label: t("systemUser"),
-      // Generating is a complete answer, so the row reads as ready rather than
-      // as a blank waiting to be filled — the name itself does not exist yet.
+      // Generating is a complete answer, so the row reads as ready.
       value: generateSystemUser
         ? newUsername
           ? t("form.systemUserNew", { username: newUsername })
@@ -1136,16 +992,7 @@ export function CreateApplicationForm({
   ];
   const missingReadinessItems = readinessItems.filter((item) => !item.ready);
 
-  /*
-   * Which numbered section each outstanding item belongs to.
-   *
-   * Derived from the checklist rather than re-deciding it: two answers to
-   * "is this section finished" would eventually disagree, and the checklist is
-   * the one the submit button already trusts. Section 3 owns everything that
-   * is not the type or the three details — which is exactly what it renders —
-   * and it cannot be finished before a type is chosen, because until then it
-   * has no fields to be finished WITH.
-   */
+  // Derived from the submit button's checklist, so the two cannot disagree.
   const DETAIL_TARGETS = ["name", "domain", "system_user_id", "system_user_username"];
   const sectionDone = {
     1: Boolean(selected),
@@ -1157,15 +1004,7 @@ export function CreateApplicationForm({
       ),
   };
 
-  /*
-   * A blocked application can be CHOSEN now, so submit has to stop it.
-   *
-   * The grid used to refuse the click, which was the whole problem — you could
-   * not reach the screen that installs what it needs. Choosing is allowed;
-   * creating is not, until the server says the blockers are gone. Without this
-   * the form would post and the API would refuse it after everything was
-   * filled in, which is exactly the shape of failure this work removes.
-   */
+  // A blocked type can be chosen (to install its requirements) but not created.
   const outstandingServices = Array.isArray(selected?.blockers) ? selected.blockers.length : 0;
 
   const submitReason = !selected
@@ -1189,26 +1028,12 @@ export function CreateApplicationForm({
     setBranchesState("idle");
   }
 
-  /**
-   * Pick up an account connected since this form was opened.
-   *
-   * "Connect Git" opens the integrations page in a new tab, so this form is
-   * still mounted when the user comes back — and the accounts list arrived as a
-   * server prop, which nothing client-side can re-read. `router.refresh()`
-   * re-runs the server component; it is a soft refresh, so everything already
-   * typed into the form survives.
-   */
+  // Accounts are a server prop; `router.refresh()` re-reads them and keeps typed values.
   function refreshGitAccounts() {
     startAccountsRefresh(() => router.refresh());
   }
 
-  /**
-   * Re-ask the provider for the selected account's repositories.
-   *
-   * Separate from the accounts refresh on purpose: these are two different
-   * lists, fetched from two different places, and a label that says "Refresh"
-   * beside a field should refresh that field.
-   */
+  /** Re-fetch the selected account's repositories (separate from the accounts list). */
   function refreshRepositories() {
     if (gitAccountId) setRepositoriesState("loading");
     setRepositoriesNonce((nonce) => nonce + 1);
@@ -1240,29 +1065,24 @@ export function CreateApplicationForm({
       (field) => field.source === "node_versions",
     );
 
-    // Read BEFORE the two blocks below, because both fill a field only when it
-    // is empty — and emptying an unsupported version is exactly what makes
-    // them refill it with a supported one on this same pass.
+    // Must run before the two blocks below: they fill only empty fields, so
+    // clearing an unsupported version lets them refill it in this same pass.
     const previous = lastType.current;
     const typeChanged = previous !== null && previous.name !== selected.name;
     lastType.current = selected;
 
     if (typeChanged) {
-      // Dropped, not blanked: `unregister` takes the value, the error and the
-      // edited flag together. Blanking would leave the field dirty, which
-      // keeps the whole form "unsaved" over a type the user walked away from.
+      // Unregistered, not blanked: blanking would leave the field dirty and the
+      // form "unsaved" over a type the user left.
       const orphans = orphanFieldNames(previous.fields, selected.fields, COMMON_FIELD_NAMES);
       if (orphans.length > 0) form.unregister(orphans);
 
-      // Value kept, error cleared. These errors only ever come back from the
-      // server, generated from the old type's rules, so under the new type
-      // they describe a validation that no longer exists.
+      // Value kept, error cleared: server errors came from the old type's rules.
       const shared = sharedFieldNames(previous.fields, selected.fields, COMMON_FIELD_NAMES);
       if (shared.length > 0) form.clearErrors(shared);
 
-      // A runtime version is shared by name but not by meaning: Node 20 is a
-      // valid answer for n8n and not for NodeBB. Clearing it here is what
-      // stops a switch leaving a version the new type will refuse.
+      // Runtime versions are shared by name but not by meaning (Node 20 suits n8n,
+      // not NodeBB), so clear any the new type would refuse.
       for (const [field, range] of [
         [phpField, selected.php_version_range],
         [nodeField, selected.node_version_range],
@@ -1290,22 +1110,8 @@ export function CreateApplicationForm({
           shouldValidate: true,
         });
     }
-    // Pre-fill declared defaults (web_root "/web", admin_username "admin", …) so
-    // a required field that has a default isn't shown empty with a "Defaults to
-    // …" hint the user then has to retype. Passwords and the runtime selects are
-    // handled elsewhere; common fields are separate inputs.
-    //
-    // On a TYPE CHANGE the defaults are re-applied, which they were not before:
-    // the loop only filled empty fields, so picking Craft (web_root "/web") and
-    // then switching to a type that serves from "/public" kept "/web" and
-    // submitted it. The site provisioned pointing at a directory that does not
-    // exist and 404'd while looking correctly configured. Every field the two
-    // types share had the same problem; web_root is only the one that fails
-    // silently rather than loudly.
-    //
-    // A value the user typed is never overwritten — `shouldDirty: false` below
-    // is what makes that distinction possible, so a prefilled value stays clean
-    // and an edited one does not.
+    // Re-apply declared defaults on a type change, or a shared field keeps the old
+    // type's value. `shouldDirty: false` keeps user-typed values distinguishable.
     for (const field of selected.fields ?? []) {
       if (
         COMMON_FIELD_NAMES.has(field.name) ||
@@ -1318,12 +1124,10 @@ export function CreateApplicationForm({
         continue;
       const filled = Boolean(form.getValues(field.name));
       const edited = form.getFieldState(field.name).isDirty;
-      // Fill when empty; re-default when the type changed and this value came
-      // from the old type rather than from the person filling the form.
+      // Fill when empty; re-default when the type changed and the value came from
+      // the old type rather than the user.
       if (filled && !(typeChanged && !edited)) continue;
-      // Same helper the field's Controller uses for its first render — two
-      // copies of this coercion is how they start disagreeing about whether a
-      // default is `8` or `"8"`.
+      // Same helper the field's Controller uses, so they agree on `8` vs `"8"`.
       const value = declaredDefault(field);
       form.setValue(field.name, value, {
         shouldDirty: false,
@@ -1339,38 +1143,11 @@ export function CreateApplicationForm({
     typePhpVersions,
   ]);
 
-  /*
-   * Site title, tracking the name until the user has an opinion about it.
-   *
-   * It cannot ride the defaults loop above: that one fills from `field.default`
-   * and `site_title` declares none, because the value is not a constant — it is
-   * derived from another answer on this same form. So it is required, empty,
-   * and asks for something already typed two fields higher up.
-   *
-   * Ownership is tracked here rather than read off `isDirty`, which does not
-   * survive contact with a field that has no declared default. Writing the
-   * first value moves it from `undefined` to a string, and RHF calls a field
-   * that differs from its default dirty whatever `shouldDirty` said — so the
-   * effect marked the field as user-edited on its own opening write and never
-   * ran again. Comparing against the last value WE wrote asks the question we
-   * actually mean: is what is in the box still ours?
-   *
-   * Empty counts as ours. That is what lets the suggestion come back after the
-   * field is unregistered and re-registered by a type switch, and it costs
-   * nothing: `site_title` is `required`, so a deliberately emptied title is a
-   * state the form will not submit anyway.
-   */
+  // Site title tracks the name until edited. Ownership compares with the last value
+  // written, not `isDirty`: RHF marks an undeclared-default field dirty on first write.
   const suggestedTitle = useRef("");
   useEffect(() => {
-    // Keyed on the field, not the site type — seven types ask "what is this
-    // site called" and no two of them agree on what to call the field. Keying
-    // on `wordpress` would have left the other six with an empty required box
-    // asking for something already typed two fields higher up.
-    //
-    // Two name-ish fields are deliberately NOT here. Joomla's `admin_name` is
-    // a PERSON, and already defaults to "Administrator"; Moodle's `short_name`
-    // is a separate abbreviation, and filling it with the same words as the
-    // title is a guess dressed up as a convenience.
+    // Joomla's `admin_name` (a person) and Moodle's `short_name` are deliberately excluded.
     const field = selected?.fields?.find((f) => TITLE_FIELDS.has(f.name));
     if (!field) return;
     const key = field.name;
@@ -1383,25 +1160,20 @@ export function CreateApplicationForm({
     suggestedTitle.current = next;
     form.setValue(key, next, {
       shouldDirty: false,
-      // Only ever when there is something to validate, so an empty Name cannot
-      // raise "Site title is required" against a box nobody has touched.
+      // Only when there is a value, so an empty Name does not flag an untouched field.
       shouldValidate: Boolean(next),
     });
   }, [form, name, selected]);
 
-  // A starting point, not a policy: switching package manager fills in the
-  // matching install+build commands, but only while build_command is still
-  // untouched — the moment the user edits it themselves, their text wins and
-  // changing the dropdown again must not clobber it out from under them.
+  // Switching package manager fills in matching install+build commands, but only
+  // while build_command is untouched; the user's own text always wins.
   useEffect(() => {
     if (!packageManager) return;
     const field = selected?.fields?.find(
       (item) => item.name === "package_manager",
     );
     const templates = field?.build_templates ?? {};
-    // "Untouched" means empty OR still exactly one of the templates — the one we
-    // filled in ourselves. Checking only for empty kept npm's commands after
-    // switching to Yarn.
+    // "Untouched" means empty or still exactly one of the templates.
     const current = form.getValues("build_command") ?? "";
     if (current && !Object.values(templates).includes(current)) return;
     const template = templates[packageManager];
@@ -1466,16 +1238,7 @@ export function CreateApplicationForm({
     };
   }, [form, gitAccountId, gitSource, isGit, repository, repositories]);
 
-  /**
-   * Bring a failed submit into view — including when it failed inside the
-   * collapsed Advanced section.
-   *
-   * A rejected `table_prefix` under a closed disclosure is the worst possible
-   * feedback: the button appears to do nothing and there is nothing on screen
-   * to read. So open the section first, and only scroll once React has
-   * actually mounted those fields (Radix unmounts collapsed content, so
-   * scrolling in the same tick finds nothing).
-   */
+  // Opens Advanced first when needed; scrolls after mount (Radix unmounts collapsed content).
   function revealErrors(names = []) {
     if (names.some((name) => advancedFieldNames.has(name))) setAdvancedOpen(true);
     setScrollRequest((count) => count + 1);
@@ -1498,9 +1261,8 @@ export function CreateApplicationForm({
         (item) => item.dataset.fieldName === focusRequest,
       );
       container?.scrollIntoView({ behavior: "smooth", block: "center" });
-      // One selector at a time: as a list, querySelector returns whichever
-      // comes first in the DOM, and a password's Generate button sits in the
-      // label row above its input.
+      // One selector at a time: as a list, querySelector returns the first in DOM
+      // order, and a password's Generate button sits above its input.
       const control = [
         '[data-slot="form-control"]',
         "input:not([type=hidden])",
@@ -1551,8 +1313,8 @@ export function CreateApplicationForm({
       revealErrors([...missingFields, ...missingGitFields].map((field) => field.name));
       return;
     }
-    // Rules the API does not check yet but the installer does, so a value that
-    // passes here is one the install will not fail on half way through.
+    // Rules the installer enforces but the API does not check yet, so the install
+    // cannot fail half way through on them.
     const badPatterns = visibleFields.filter((config) => {
       const rule = FIELD_PATTERNS[values.site_type]?.[config.name];
       const value = String(values[config.name] ?? "").trim();
@@ -1574,20 +1336,12 @@ export function CreateApplicationForm({
       domain: values.domain.trim(),
       system_user_id: Number(values.system_user_id),
     };
-    // Every field the chosen type declares is validated at the TOP LEVEL on
-    // create — the backend generates the rules from that same schema, so a
-    // WordPress admin_email or a Node-RED admin_username is a top-level key.
-    // `settings` is only a merge bag on the UPDATE endpoint; nesting create
-    // fields there made required ones read as missing ("field is required").
-    //
-    // Iterate VISIBLE fields, not every declared field: a start_command typed
-    // while rendering_type was "ssr" must not be sent once it's switched to
-    // "php" — the field is hidden and would create a unit nothing routes to.
+    // Type fields go top-level on create; `settings` is only for update.
+    // Only visible fields are sent.
     for (const config of visibleFields) {
       const value = values[config.name];
-      // A toggle always goes, including when off: the backend validates it as
-      // "true or false", so omitting it reads as missing, and sending the
-      // string "false" is a 422.
+      // A toggle is always sent as a boolean: the backend requires "true or false",
+      // and the string "false" is a 422.
       if (config.type === "toggle") {
         payload[config.name] = toggleValue(value);
         continue;
@@ -1601,25 +1355,14 @@ export function CreateApplicationForm({
         payload.git_account_id = Number(values.git_account_id);
         payload.repository = values.repository;
       } else {
-        /*
-         * Bitbucket's Clone button gives `https://you@bitbucket.org/team/repo.git`
-         * and the API refuses any URL carrying a user component — rightly, since
-         * this string ends up in `git clone`. Reported as a valid Bitbucket URL
-         * being rejected with wording about a "self-hosted instance", which is
-         * the GitLab host field's message and explains nothing here.
-         *
-         * For a public repository the username prefix means nothing, so it is
-         * removed rather than refused. The field shows that it happened.
-         */
+        /* The API rejects a username in the clone URL (Bitbucket adds one); strip it. */
         payload.repository_url = normalizeRepositoryUrl(values.repository_url).url;
       }
       if (values.branch?.trim()) payload.branch = values.branch.trim();
     }
 
-    // A generated user is created first, with the name and password shown on
-    // the form — `generate_system_user` would pick its own name and set no
-    // password. Removed again if the application is refused, so a failed
-    // attempt leaves no account behind.
+    // Create the generated user first (`generate_system_user` sets no password);
+    // it is removed if the application is refused.
     let newUser = null;
     if (values.generate_system_user) {
       try {
@@ -1643,26 +1386,25 @@ export function CreateApplicationForm({
     try {
       const { data } = await createApplication(payload);
       setSubmitted(true);
-      toast.success(t("created"));
-      router.push(
+      // Navigate first, then toast, so the form is not left up saying "created".
+      await pushAndWait(
         data?.application?.id
           ? `/applications/${data.application.id}`
           : "/applications",
       );
-      router.refresh();
+      toast.success(t("created"));
     } catch (error) {
       if (newUser?.id) {
         const removed = await deleteSystemUser(newUser.id).then(() => true, () => false);
-        // Left behind, so a retry would be told the name is taken. Say so, and
-        // re-read the page so it is offered under "Use an existing system user".
+        // Left behind: a retry would find the name taken, so warn and refresh so it is
+        // offered under "Use an existing system user".
         if (!removed) {
           toast.warning(t("form.systemUserLeftBehind", { username: newUser.username }), { duration: 15000 });
           router.refresh();
         }
       }
       handleValidationError(error, form);
-      // The backend rejects fields too, and its errors landed silently: nothing
-      // scrolled, and an advanced field's message stayed behind the disclosure.
+      // Surface backend field errors too, including inside the Advanced section.
       revealErrors(Object.keys(error.response?.data?.errors ?? {}));
     }
   }
@@ -1678,12 +1420,7 @@ export function CreateApplicationForm({
         className="mx-auto max-w-6xl"
       >
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-          {/* @container, not a viewport breakpoint. How much room these fields
-              actually have depends on the sidebar, the summary panel beside
-              them and the reader.'s zoom — never on the window width. At 120%
-              zoom this column is ~450px at any window size, so a viewport rule
-              kept promising two columns that could not fit. The threshold is in
-              rem, so it grows with the text it has to hold. */}
+          {/* @container, not a viewport breakpoint: width depends on sidebar, summary and zoom. */}
           <div className="@container min-w-0 space-y-6">
             <section
               className="space-y-3 rounded-xl bg-card p-4 shadow-sm ring-1 ring-foreground/10 sm:p-5"
@@ -1701,12 +1438,8 @@ export function CreateApplicationForm({
                 name="site_type"
                 render={({ field }) => (
                   <FormItem data-field-name="site_type" className="min-w-0">
-                    {/* min-w-0 on both: this is a grid item, and a grid item
-                        keeps min-width:auto, so it grows to its content's
-                        min-content width instead of its track. The trigger
-                        carries a long tagline, which pushed the whole page into
-                        horizontal scroll on a phone — the truncate inside never
-                        got a chance because nothing above it was constrained. */}
+                    {/* min-w-0: a grid item defaults to min-width:auto, so the trigger's long
+                        tagline would widen the page instead of truncating. */}
                     <div className="min-w-0">
                       <SiteTypePicker
                         types={siteTypes}
@@ -1714,14 +1447,10 @@ export function CreateApplicationForm({
                         onChange={field.onChange}
                       />
                     </div>
-                    {/* Only once something is chosen: "Nextcloud needs two
-                        more services" above an empty picker answers a question
-                        nobody has asked yet. What an application needs belongs
-                        to the application. */}
+                    {/* Only once an application is chosen. */}
                     {field.value ? (
                       <RequiredServices
-                        // Remounts on a different application, so a finished
-                        // run cannot follow you to the next choice.
+                        // Remounts per application, so a finished run does not carry over.
                         key={field.value}
                         type={siteTypes.find((item) => item.name === field.value)}
                         engines={engines}
@@ -1755,9 +1484,7 @@ export function CreateApplicationForm({
                   name="name"
                   render={({ field }) => (
                     <FormItem data-field-name="name" className="min-w-0">
-                      {/* Empty right side, same h-7 as Domain, which carries a
-                          control: two cells side by side only line up if their
-                          heads are the same height. */}
+                      {/* Same min-h-7 label row as Domain, so the two cells line up. */}
                       <div className="flex min-h-7 items-center">
                         <FormLabel className="min-w-0" required>
                           {t("name")}
@@ -1770,11 +1497,6 @@ export function CreateApplicationForm({
                           {...field}
                         />
                       </FormControl>
-                      {/* Answers the question the two fields raise together —
-                          why a name AND a domain — and gives this cell the
-                          same height as Domain's, which has a hint of its
-                          own. Balance alone would not justify the line; the
-                          answer does. */}
                       <FormDescription>{t("form.nameHint")}</FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -1784,9 +1506,8 @@ export function CreateApplicationForm({
                   control={form.control}
                   name="domain"
                   render={({ field }) => (
-                    // min-w-0: a grid item keeps min-width:auto, so without this
-                    // its contents set the column's floor and the widest of them
-                    // hangs over the card's edge at larger text sizes.
+                    // min-w-0: a grid item defaults to min-width:auto, so its contents would set
+                    // the column's floor and overflow the card at larger text sizes.
                     <FormItem data-field-name="domain" className="min-w-0">
                       <div className="flex min-h-7 items-center justify-between gap-2">
                         <FormLabel className="min-w-0" required>
@@ -1826,9 +1547,8 @@ export function CreateApplicationForm({
                           spellCheck={false}
                           placeholder={t("form.domainPlaceholder")}
                           {...field}
-                          // Read-only, not disabled: a disabled field is
-                          // skipped by the keyboard and reads as broken, and
-                          // this value is real — it is just not yours to type.
+                          // Read-only, not disabled: disabled fields are skipped by the keyboard and
+                          // read as broken.
                           readOnly={temporary}
                           className={cn(temporary && "bg-muted/50 font-mono")}
                           value={temporary ? (generated ?? "") : field.value}
@@ -1903,10 +1623,8 @@ export function CreateApplicationForm({
                         </FormLabel>
                       </div>
 
-                      {/* Only offered to someone who may actually create an
-                          account. Without the permission there is one way to
-                          answer this question, and a disabled radio pair would
-                          be two controls saying so. */}
+                      {/* Only offered to users who may create an account; otherwise there is only
+                          one answer. */}
                       {canCreateSystemUser ? (
                         <div className="grid gap-4 @md:grid-cols-2">
                           {[
@@ -1924,9 +1642,7 @@ export function CreateApplicationForm({
                                     shouldDirty: true,
                                     shouldValidate: true,
                                   });
-                                  // Clearing on the way *into* generate mode,
-                                  // so a stale id cannot be submitted beside
-                                  // the flag — the API refuses that payload.
+                                  // Clear the id when switching to generate: the API refuses both together.
                                   if (choice.generate) {
                                     form.setValue("system_user_id", "", { shouldValidate: true });
                                   }
@@ -2058,11 +1774,8 @@ export function CreateApplicationForm({
                 icon={SlidersHorizontal}
                 done={sectionDone[3]}
                 title={t("guided.stageConfigure")}
-                /* One sentence, not the same one twice. Before a type is
-                   chosen this said "Choose an application type to reveal its
-                   configuration fields" — and so did the dashed box directly
-                   under it, word for word, forty pixels apart. The heading
-                   describes the section either way; the box does the asking. */
+                /* Before a type is chosen, the box below does the asking; the heading only
+                   describes the section. */
                 description={t("guided.configureHint")}
                 headingId="application-configure-heading"
               />
@@ -2076,14 +1789,8 @@ export function CreateApplicationForm({
                           {t("form.repositoryHint")}
                         </p>
                       </div>
-                      {/* Cards, like the System user choice two sections up,
-                          and for the same reason: these are two different ways
-                          of working rather than a setting with an on and an
-                          off. Two bare radio dots gave the pair no weight on a
-                          form where every other decision is a box you press,
-                          and neither label said what it would COST — one wants
-                          a connected account, the other wants nothing at all.
-                          The hint is where that goes. */}
+                      {/* Cards, like the System user choice: two ways of working, with the hint
+                          saying what each needs. */}
                       <ChoiceField
                         variant="card"
                         className="grid gap-4 @md:grid-cols-2"
@@ -2109,15 +1816,13 @@ export function CreateApplicationForm({
                             name="git_account_id"
                             render={({ field }) => (
                               <FormItem data-field-name="git_account_id" className="min-w-0">
-                                {/* Same min-h-7 label row as Repository beside
-                                    it, so both comboboxes share one baseline. */}
+                                {/* Same min-h-7 label row as Repository, so both comboboxes align. */}
                                 <div className="flex min-h-7 items-center justify-between gap-2">
                                   <FormLabel className="min-w-0" hint={t("gitAccountHint")}>
                                     {t("gitAccount")}
                                   </FormLabel>
-                                  {/* "Connect Git" below opens another tab; this
-                                      is how the account added there gets here
-                                      without reloading the form. */}
+                                  {/* Picks up an account added via "Connect Git" in another tab without
+                                      reloading the form. */}
                                   <button
                                     type="button"
                                     onClick={refreshGitAccounts}
@@ -2157,12 +1862,7 @@ export function CreateApplicationForm({
                                     {t("loadFailed")}
                                   </FormDescription>
                                 ) : !gitAccounts.length && !gitAccountsFailed ? (
-                                  /* A state, not a stray link. The select above
-                                     is disabled and a lone blue "Connect Git"
-                                     under it read as a footnote rather than as
-                                     the reason nothing can be chosen — so this
-                                     says what is missing and offers the way out
-                                     on the same line. */
+                                  /* Explains why nothing can be chosen and offers the way out on one line. */
                                   <div className="flex items-center gap-2 rounded-lg border border-dashed px-2.5 py-2 text-xs text-muted-foreground">
                                     <GitBranch className="size-3.5 shrink-0" aria-hidden />
                                     <span className="min-w-0 flex-1">{t("form.noGitAccount")}</span>
@@ -2186,16 +1886,12 @@ export function CreateApplicationForm({
                             name="repository"
                             render={({ field }) => (
                               <FormItem data-field-name="repository" className="min-w-0">
-                                {/* Action on the label row, matching the System
-                                    user field — keeping it out of the control row
-                                    leaves every input's right edge aligned with
-                                    the Branch field below. */}
+                                {/* Action on the label row, so input right edges align with Branch below. */}
                                 <div className="flex min-h-7 items-center justify-between gap-2">
                                   <FormLabel className="min-w-0" hint={t("repositoryHint")}>
                                     {t("repository")}
                                   </FormLabel>
-                                  {/* Both actions read "Refresh"; the accessible
-                                      name is what tells them apart. */}
+                                  {/* Both actions read "Refresh"; the accessible name tells them apart. */}
                                   <button
                                     type="button"
                                     onClick={refreshRepositories}
@@ -2321,9 +2017,7 @@ export function CreateApplicationForm({
                                     {...field}
                                   />
                                 </FormControl>
-                                {/* Said while the field is in front of you, not
-                                    as a 422 afterwards in the GitLab host
-                                    field's wording. */}
+                                {/* Explains the stripped credentials up front rather than via a 422. */}
                                 {normalizeRepositoryUrl(repositoryUrl).strippedCredentials ? (
                                   <p className="text-xs text-muted-foreground">
                                     {t("publicRepositoryUsernameDropped")}
@@ -2388,9 +2082,8 @@ export function CreateApplicationForm({
                           <span className="flex items-center gap-2">
                             <Sparkles className="size-4 text-primary" />
                             {t("advanced")}
-                            {/* Says so on the closed row as well: the section
-                                reopens on submit, but nothing should be able to
-                                hide a rejected field behind a tidy summary. */}
+                            {/* Shown on the closed row too, so a rejected field is never hidden behind
+                                the summary. */}
                             {advancedErrorCount ? (
                               <Badge variant="destructive" className="font-normal">
                                 {t("form.advancedErrors", {
@@ -2439,12 +2132,8 @@ export function CreateApplicationForm({
               </div>
             ) : null}
 
-            {/* Sticky, because this form is a screen and a half on a phone and
-                Create was at the bottom of it — the button you are working
-                towards should not be the one you have to go and find. It sits
-                in the flow rather than fixed to the viewport, so it never
-                covers the last field, and the blur keeps the fields readable
-                as they pass underneath. */}
+            {/* Sticky in the flow (not fixed), so Create stays reachable on a long form
+                without covering the last field. */}
             <div className="sticky bottom-0 z-10 -mx-1 flex flex-col gap-3 rounded-xl bg-background/85 px-4 py-3 shadow-sm ring-1 ring-foreground/10 backdrop-blur-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">
                 {selected ? t("guided.reviewHint", { brand }) : t("form.chooseTypeHint")}
@@ -2476,9 +2165,7 @@ export function CreateApplicationForm({
               </div>
             </div>
           </div>
-          {/* Clears the shell's sticky chrome, whatever it currently is — a
-              fixed offset slid this panel under the breadcrumb as soon as a
-              banner appeared above the header. */}
+          {/* Offset by the shell's measured sticky chrome, not a fixed value. */}
           <aside className="hidden lg:sticky lg:top-[calc(var(--app-chrome,7rem)_+_1.5rem)] lg:block">
             {selected ? (
               <CreateReadinessPanel

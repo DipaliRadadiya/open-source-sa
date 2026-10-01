@@ -19,9 +19,8 @@ export default async function GitIntegrationsPage() {
     getPermissions(),
     getTranslations("git"),
     getGitAccounts(),
-    // Fetched alongside rather than on demand: the connect dialog opens
-    // instantly, and a failure here disables the button with a reason instead
-    // of opening an empty form.
+    // Fetched up front so the connect dialog opens instantly, and a failure
+    // disables the button with a reason instead of opening an empty form.
     getGitProviders(),
   ]);
 

@@ -1,9 +1,7 @@
 import { z } from "zod";
 
-// Same rule the backend applies (App\Rules\SafeRelativePath): relative only, no
-// leading slash, no `.`/`..` segments. Client-side this only has to catch
-// obvious mistakes before a round-trip — the backend is the real boundary,
-// since every file operation runs as the site's own Linux user regardless.
+// Same rule as App\Rules\SafeRelativePath: relative only, no `.`/`..`
+// segments. Catches obvious mistakes; the backend is the real boundary.
 const SAFE_PATH = /^(?!\/)(?!.*(^|\/)\.\.?(\/|$))[^\0]+$/;
 
 export const fileEntrySchema = z.object({
@@ -13,25 +11,16 @@ export const fileEntrySchema = z.object({
   size_human: z.string().nullish(),
   modified_at: z.string().nullish(),
   modified_at_human: z.string().nullish(),
-  // Newer, optional fields — nullish so a listing from before these existed
-  // (or a backend that hasn't shipped them yet) parses exactly as it always
-  // has, and the UI falls back to today's behavior wherever one is absent.
+  // Nullish so older listings without these fields still parse.
   mode: z.string().nullish(),
   owner: z.string().nullish(),
   group: z.string().nullish(),
-  // Symlinks only. Without them the table could neither say where a link
-  // points nor mark a dangling one — Zod drops what it isn't told about.
+  // Symlinks only: where a link points and whether it dangles.
   link_target: z.string().nullish(),
   link_broken: z.boolean().nullish(),
 });
 
-/**
- * Bytes by file type for one directory.
- *
- * `available` is not the same as an empty `categories`: the first says the walk
- * could not finish, the second says the folder holds no files. Rendering them
- * alike would be a confident claim about a disk nobody measured.
- */
+// `available: false` (the walk could not finish) differs from empty `categories`.
 export const breakdownSchema = z.object({
   available: z.boolean(),
   truncated: z.boolean().default(false),
@@ -58,21 +47,12 @@ export const filesResponseSchema = z.object({
   path: z.string().default(""),
   files: z.array(fileEntrySchema).default([]),
   // How many dotfiles this directory holds, whether or not they were returned.
-  // Required, not defaulted: Zod strips what it is not told about, so an
-  // optional field that stopped arriving would silently read as "none hidden"
-  // — and the toolbar would then claim a filtered folder was showing
-  // everything. The same shape of bug the settings groups had.
+  // Required so a missing field fails loudly instead of reading as "none hidden".
   hidden_count: z.number().int(),
 });
 
-// One entry per deleted path, newest first. `batch` is the timestamped folder
-// one delete produced (`YYYYMMDD-HHMMSS`), shared by everything removed in that
-// action; `path` is where it came from, which is also where it goes back to.
-// Size and retention ARE reported — the backend added both after this shape was
-// first written, and the stale note here saying otherwise meant Zod silently
-// stripped them for as long as it stood. `size` is a real `du` footprint (so a
-// directory's figure is meaningful, not its inode size), and it is nullish
-// because one unmeasurable entry must not blank the rest.
+// `batch` is the delete's folder (`YYYYMMDD-HHMMSS`). `size` is nullish so one
+// unmeasurable entry does not blank the rest.
 export const trashEntrySchema = z.object({
   batch: z.string(),
   path: z.string(),
@@ -83,19 +63,14 @@ export const trashEntrySchema = z.object({
 
 export const trashResponseSchema = z.object({
   trash: z.array(trashEntrySchema).default([]),
-  // Null when any single entry could not be measured: a total that quietly
-  // omits one directory is worse than no total, because it reads as complete.
+  // Null when any entry could not be measured; a partial total reads as complete.
   total_size: z.number().nullish(),
   total_size_human: z.string().nullish(),
-  // Configurable per install (SERVER_TRASH_RETENTION_DAYS), so it is read from
-  // the response and never hardcoded — a screen promising "7 days" on a server
-  // set to 30 is worse than one that says nothing.
+  // Configurable per install (SERVER_TRASH_RETENTION_DAYS); never hardcode it.
   retention_days: z.number().nullish(),
 });
 
-// Sitewide search results span multiple folders, so each entry carries its
-// own full relative `path` — everything else is the same shape the listing
-// endpoint already returns.
+// Sitewide search spans folders, so each entry carries its full relative `path`.
 export const searchFileEntrySchema = fileEntrySchema.extend({
   path: z.string(),
 });
@@ -117,8 +92,7 @@ export const fileContentSchema = z.object({
   backups: z.array(fileBackupSchema).default([]),
 });
 
-// Every write op below mirrors the request body the API actually takes — no
-// field invents anything it doesn't send.
+// Write schemas below mirror the request bodies the API takes.
 
 export const newFolderSchema = z.object({
   name: z
@@ -140,8 +114,7 @@ export const newFileSchema = z.object({
     .refine((v) => !v.includes("/"), "noSlashes"),
 });
 
-// Rename and move are the same endpoint (`target` must not already exist) —
-// the dialog just decides how much of the pre-filled path it selects.
+// Rename and move are the same endpoint (`target` must not already exist).
 export const renameSchema = z.object({
   target: z.string().trim().min(1, "required_target").regex(SAFE_PATH, "invalidPath"),
 });
@@ -156,9 +129,7 @@ export const compressSchema = z.object({
     .trim()
     .min(1, "required_target")
     .regex(SAFE_PATH, "invalidPath")
-    // zip and tar.gz both, because the API writes both — and tar is the one
-    // that keeps Unix modes, so it is the right pick for "copy this before I
-    // touch it". `.tgz` is accepted as the alias it is.
+    // zip and tar.gz (tar keeps Unix modes); `.tgz` is accepted as an alias.
     .refine((v) => /\.(zip|tar\.gz|tgz)$/i.test(v), "mustBeArchive"),
 });
 

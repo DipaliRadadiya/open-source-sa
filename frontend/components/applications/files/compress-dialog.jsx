@@ -30,16 +30,7 @@ export function CompressDialog({ appId, file, existingPaths, open, onOpenChange,
       successMessage={() => t("compressDialog.done", { name: file.name })}
       failureMessage={t("compressDialog.failed")}
       onSuccess={onSuccess}
-      /*
-       * The archive does not have to land beside what it contains.
-       *
-       * It never did — the backend resolves the whole relative path and writes
-       * there — but the field reads as a filename box, so the folder half of
-       * the suggestion looked like decoration and nobody tried changing it.
-       * Naming the folder underneath, live, is what makes the capability
-       * visible. `dirname` because the file NAME is already on screen in the
-       * field; repeating it here would say nothing.
-       */
+      /* The backend resolves the whole relative path, so show the destination folder. */
       destinationLabel={t("compressDialog.savesTo")}
       destinationOf={dirname}
       warning={t("compressDialog.folderMustExist")}

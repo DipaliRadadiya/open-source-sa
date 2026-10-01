@@ -19,8 +19,7 @@ export default async function AccountPage({ searchParams }) {
   ]);
 
 
-  // Read-only, so a delete cannot strand anyone here — but a typed or
-  // bookmarked ?page=99 still would, and it must not read as an empty log.
+  // A typed or bookmarked ?page=99 must not read as an empty log.
   redirectOutOfRange("/account", sp, meta, failed);
   return (
     <div className="space-y-6">
@@ -32,7 +31,7 @@ export default async function AccountPage({ searchParams }) {
         user={user}
         entries={entries}
         meta={meta}
-        // Only the history failed — the profile half of this page is fine.
+        // Only the history failed; the profile half of this page is fine.
         activityFailed={failed}
         activityStatus={status}
         activityFailure={failure}

@@ -1,8 +1,8 @@
 "use client";
 
 import { useBrowserIp } from "@/components/network/browser-ip";
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
@@ -27,28 +27,16 @@ import { apiMessage } from "@/lib/api/error-message";
 // Matches `ignore_ips => array|max:100` in UpdateFail2banRequest.
 const MAX_IGNORE_IPS = 100;
 
-/**
- * Addresses that are never banned — and the one control that prevents the worst
- * outcome on this page: adding your own.
- *
- * A vertical list, not wrapping chips. In a sidebar column chips reflow into a
- * ragged block where nothing lines up and the remove buttons land wherever;
- * one address per row stays readable at any width and gives each entry a
- * predictable place to click.
- *
- * Saves the whole settings object because the backend rewrites the file as a
- * unit — sending only the list would drop the numbers the other card owns.
- */
+// Saves the whole settings object: the backend rewrites the file as a unit, so
+// sending only the list would drop the ban rules.
 export function IgnoreListCard({ settings, canManage }) {
   const yourIp = useBrowserIp();
   const t = useTranslations("fail2ban");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
 
   const saved = settings.ignore_ips ?? [];
-  // Follows the server until edited here. A copy taken at mount went stale when
-  // the Protection tab added an address, and Save then wrote the old list back
-  // over it — un-ignoring the address that had just been protected.
-  // An edit holds only while the server still has the list it was based on.
+  // Follows the server until edited; an edit holds only while the server still
+  // has the list it was based on, so a stale copy never overwrites a newer one.
   const [edited, setEdited] = useState(null);
   const sameList = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const live = edited && sameList(edited.base, saved) ? edited.ips : null;
@@ -57,12 +45,8 @@ export function IgnoreListCard({ settings, canManage }) {
   const [draft, setDraft] = useState("");
   const [draftError, setDraftError] = useState(null);
   const [saving, setSaving] = useState(false);
-  // Same shape as the ban rules card: the wait is the write plus the re-read,
-  // and one signal has to cover both or the spinner lies about being finished.
-  const [refreshing, startRefresh] = useTransition();
-  const pending = saving || refreshing;
-  // Taking your own address OFF this list is the same mistake the lockout
-  // dialog exists to prevent, just approached from the other side.
+  const pending = saving;
+  // Removing your own address needs confirmation (lockout risk).
   const [confirmRemoveSelf, setConfirmRemoveSelf] = useState(false);
 
   const dirty = JSON.stringify(saved) !== JSON.stringify(ips);
@@ -71,8 +55,7 @@ export function IgnoreListCard({ settings, canManage }) {
   function add(value) {
     const ip = value.trim();
     if (!ip) return;
-    // These lines go into the firewall config verbatim. A typo here doesn't
-    // fail loudly, it just protects nobody, so it gets caught in the field.
+    // Written to the config verbatim; a typo would silently protect nobody.
     if (!isIpOrCidr(ip)) {
       setDraftError(t("settings.invalidIp"));
       return;
@@ -82,9 +65,7 @@ export function IgnoreListCard({ settings, canManage }) {
       setDraft("");
       return;
     }
-    // The API caps this list at 100. Without the same cap here the 101st entry
-    // looked accepted — it appeared in the list, the card went dirty — and
-    // only died on Save, taking the whole settings write with it.
+    // Mirrors the API cap so the 101st entry fails here, not on Save.
     if (ips.length >= MAX_IGNORE_IPS) {
       setDraftError(t("settings.ignoreLimit", { max: MAX_IGNORE_IPS }));
       return;
@@ -111,8 +92,8 @@ export function IgnoreListCard({ settings, canManage }) {
         maxretry: settings.maxretry,
         ignore_ips: ips,
       });
+      await refreshAndWait();
       toast.success(t("settings.ignoreSaved"));
-      startRefresh(() => router.refresh());
     } catch (error) {
       toast.error(
         apiMessage(error, t("settings.failed")),
@@ -137,9 +118,7 @@ export function IgnoreListCard({ settings, canManage }) {
         </CardHeader>
   
         <CardContent className="space-y-3">
-          {/* The safety prompt sits above the list, not beside the input: if your
-              own address isn't here, that is the most important fact on the page
-              and it should read as advice rather than a form control. */}
+          {/* Above the list: a missing own IP is the most important fact here. */}
           {yourIp && !ipIgnored ? (
             <div className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/5 p-3">
               <ShieldCheck className="mt-0.5 size-4 shrink-0 text-warning" />
@@ -179,8 +158,7 @@ export function IgnoreListCard({ settings, canManage }) {
                       <button
                         type="button"
                         onClick={() => remove(ip)}
-                        // A removal made mid-save is silently undone by the
-                        // refresh that follows it.
+                        // A removal mid-save would be undone by the following refresh.
                         disabled={pending}
                         aria-label={t("settings.removeIp", { ip })}
                         className="rounded p-1 text-muted-foreground hover:text-destructive disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -258,9 +236,6 @@ export function IgnoreListCard({ settings, canManage }) {
           />
         </div>
   
-        {/* The mirror image of the lockout dialog: that one stops you switching
-            on a jail that could ban you, this one stops you removing the reason
-            it cannot. Same outcome, opposite direction. */}
         <ConfirmDialog
           open={confirmRemoveSelf}
           onOpenChange={setConfirmRemoveSelf}

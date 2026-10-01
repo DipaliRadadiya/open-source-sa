@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { FolderSearch, FolderX } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { redirect } from "next/navigation";
@@ -22,9 +22,7 @@ import { isSettled } from "@/lib/applications/settled";
 
 export const dynamic = "force-dynamic";
 
-// Same rule the backend applies (App\Rules\SafeRelativePath) — catches a
-// mangled ?path= before it round-trips, same spirit as the client-side check
-// on write operations.
+// Mirrors App\Rules\SafeRelativePath to reject a mangled ?path= early.
 function isSafePath(path) {
   if (!path) return true;
   if (path.startsWith("/")) return false;
@@ -45,13 +43,9 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
   const { path: rawPath, trash: rawTrash, hidden: rawHidden, open: rawOpen } = await searchParams;
   const path = typeof rawPath === "string" ? rawPath : "";
   const openName = typeof rawOpen === "string" ? rawOpen : null;
-  // The trash is a view of this same screen, not a route of its own — see
-  // memory/research-file-trash.md. Every panel that has one reaches it from the
-  // file manager's toolbar.
+  // The trash is a view of this screen, not its own route.
   const showTrash = rawTrash === "1";
-  // Server-side, because the listing is fetched here: an explicit ?hidden= in
-  // the URL wins (a shared link shows what its sender saw), otherwise the
-  // reader's remembered choice — see lib/files/view-prefs.js.
+  // An explicit ?hidden= wins over the remembered cookie (lib/files/view-prefs.js).
   const cookieStore = await cookies();
   const showHidden = resolveShowHidden(rawHidden, cookieStore.get(HIDDEN_COOKIE)?.value);
   const initialSort = parseSort(cookieStore.get(SORT_COOKIE)?.value);
@@ -64,8 +58,7 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
   ]);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
-  // The site is gone. Land on the list — the only place left to go — and say
-  // why on arrival, rather than parking on a dead end that offers one link.
+  // Site deleted: redirect to the list, which explains why on arrival.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
@@ -78,26 +71,17 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
 
   if (!isSafePath(path)) redirect(`/applications/${id}/files`);
 
-  // Together, not in sequence: the breakdown walks the directory while the
-  // listing reads one level of it, and running them one after the other would
-  // add the slower one's time to a page that already waits on a shell-out.
   const [filesResult, breakdown] = await Promise.all([
     settled && !showTrash
       ? getFiles(id, path, showHidden)
       : Promise.resolve({ path: "", files: [], failed: false, notFound: false }),
-    // Never blocks: a folder too large to walk returns null and the card says
-    // so, rather than the file manager waiting on a chart.
+    // Never blocks: a folder too large to walk returns null.
     settled && !showTrash ? getBreakdown(id, path) : Promise.resolve(null),
   ]);
   const trashResult = settled && showTrash ? await getTrash(id) : null;
 
-  /*
-   * A link to a FILE — a path copied from the row, a bookmark — used to land
-   * on "This folder is gone": the listing endpoint answers 404 for anything
-   * that is not a folder, the same as for something deleted. Look in the
-   * parent before saying so, and if the name is a file there, open that
-   * folder with the file already open.
-   */
+  // The listing answers 404 for files too: if the path is a file in its
+  // parent, open the parent with that file open.
   if (filesResult.notFound && path) {
     const parent = dirname(path);
     const name = basename(path);
@@ -132,17 +116,14 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
           backHref={`/applications/${id}/files`}
         />
       ) : filesResult.notFound && !path ? (
-        // Root 404 means nothing was ever provisioned here — a different
-        // situation from a subfolder vanishing, and "deleted since you last
-        // viewed it" would be a false claim for a path never seen before.
+        // Root 404: nothing was ever provisioned here.
         <EmptyState
           icon={FolderSearch}
           title={t("notProvisioned.title")}
           description={t("notProvisioned.description")}
         />
       ) : filesResult.notFound ? (
-        // The path itself is gone (deleted from under us, or a stale link) —
-        // not a load failure, so it gets its own message and a way back to root.
+        // The path is gone (deleted or stale link): not a load failure.
         <EmptyState
           icon={FolderX}
           title={t("pathNotFound.title")}
@@ -156,38 +137,8 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
       ) : filesResult.failed ? (
         <LoadFailed description={t("loadFailed")} status={filesResult.status} failure={filesResult.failure} message={filesResult.message} debug={filesResult.debug} />
       ) : (
-        // No rail. The breakdown was a 340px column beside the listing, held
-        // back to 2xl because below that the listing's seven columns were
-        // narrower than their own content — and compensating with a width
-        // floor put Download and Copy behind a horizontal scroll, the two
-        // controls people reach for most.
-        //
-        // 2xl only moved that cost to the widest screens rather than removing
-        // it: a listing is what this page is for, and it was still giving up
-        // 340px of it to context. The breakdown is now a sheet off the
-        // toolbar, so the listing gets the whole row at every size.
-        /*
-         * Keyed on the path, so changing folder starts the panel fresh.
-         *
-         * Reported twice as "clicking a search result does nothing". It DID
-         * something — the URL and the breadcrumb both moved — but navigating
-         * here is a client-side transition into the same component instance,
-         * so every piece of the panel's state survived it. `siteSearch` was
-         * still true, so the screen kept rendering the search results you had
-         * just clicked out of: a new breadcrumb above an unchanged list, which
-         * is indistinguishable from a dead link.
-         *
-         * `selected` had the same fault and a worse consequence — a selection
-         * made in one folder stayed live in the next, with the previous
-         * folder's paths, so a bulk action would have run against files that
-         * were no longer on screen.
-         *
-         * A key rather than an effect per field: everything this panel holds —
-         * the query, the selection, the flash highlight, an open dialog — is
-         * about the folder you are looking at, and all of it should end when
-         * you leave. `showHidden` deliberately does NOT remount: it is the
-         * same folder, so a selection survives toggling hidden files.
-         */
+        /* Keyed on path so a folder change drops the old folder's selection and dialogs.
+           `showHidden` deliberately does not remount, so a selection survives the toggle. */
         <FilesPanel
             key={filesResult.path}
             appId={id}

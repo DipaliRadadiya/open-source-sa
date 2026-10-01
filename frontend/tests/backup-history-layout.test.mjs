@@ -20,9 +20,10 @@ function functionSource(name, nextName) {
 test("backup failure reasons cannot widen the history table", () => {
   const statusCell = functionSource("StatusCell", "TypeCell");
 
-  // Bounded on both screens: 208px with a Site column, 160px on a site's own
-  // page (measured: 0 overflow at 1280 in all eight locales).
-  assert.match(statusCell, /"w-52 max-w-52" : "w-40 max-w-40"/);
+  // One bound for both screens (1 Oct: 208px on the server-wide list pushed
+  // Restore off the card at 1280–1366 in six locales; 0 overflow now in all
+  // eight at 1280, 1366 and 1536).
+  assert.match(statusCell, /const width = "w-32 max-w-32";/);
   assert.match(statusCell, /cn\(width, "min-w-0 space-y-1"\)/);
   assert.match(statusCell, /line-clamp-2 whitespace-normal break-words/);
   assert.match(statusCell, /<Tooltip>/);

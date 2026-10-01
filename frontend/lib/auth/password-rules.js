@@ -1,16 +1,4 @@
-/**
- * The password requirements, as the reader sees them.
- *
- * The server publishes the policy on `GET /basic-info`, so the rules shown are
- * the rules enforced. They were hardcoded here first, which held only for as
- * long as nobody changed the policy — the day `requires_symbol` is switched on,
- * a hardcoded checklist tells someone their password is fine while the server
- * rejects it.
- *
- * The defaults below are the shipped policy, used when the endpoint could not
- * be read. Being slightly out of date is recoverable; showing no rules at all
- * on a field that has them is not.
- */
+// The shipped policy, used only when `GET /basic-info` cannot be read.
 export const DEFAULT_PASSWORD_POLICY = {
   min_length: 10,
   requires_mixed_case: true,
@@ -20,14 +8,7 @@ export const DEFAULT_PASSWORD_POLICY = {
 
 const SYMBOL = /[^A-Za-z0-9]/;
 
-/**
- * Which rules apply, and whether this value satisfies each.
- *
- * Only the rules the policy actually asks for are returned — a checklist line
- * that can never fail is noise, and one the server does not enforce is a lie.
- * Upper and lower case stay one line: they fail together in practice, and
- * splitting them makes the list read as busywork.
- */
+// Upper and lower case are one rule.
 export function passwordRules(value, policy = DEFAULT_PASSWORD_POLICY) {
   const password = typeof value === "string" ? value : "";
   const active = { ...DEFAULT_PASSWORD_POLICY, ...(policy ?? {}) };

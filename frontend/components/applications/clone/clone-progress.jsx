@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ArrowRight, Check, CircleAlert, CircleCheck, Clock3, Copy, Loader2 } from "lucide-react";
@@ -20,27 +20,10 @@ const POLL_MS = 2000;
 /** Give up after 20 minutes — a job that has not moved by then is stuck. */
 const POLL_LIMIT_MS = 20 * 60 * 1000;
 
-/**
- * Still `pending` after this long, it may never start: a second clone of the
- * same site is accepted and then dropped by the queue (backend CL-B1), and
- * this page was the only way back to the form — for twenty minutes.
- */
+/** Still `pending` after this, it may never start: the queue can drop a duplicate clone. */
 const NOT_STARTING_MS = 2 * 60 * 1000;
 
-/**
- * A clone, while it runs and after it lands.
- *
- * The backend queues the work now and reports named steps, so this shows the
- * real four — creating the site, copying files, cloning the database,
- * starting the application — rather than the indeterminate bar the first cut
- * needed when the whole thing happened inside one long request. Watching
- * "Copying files" actually tick over is the difference between waiting and
- * wondering.
- *
- * Not a modal any more, for the same reason: leaving the page no longer
- * abandons anything, so blocking the screen would be taking something away
- * for nothing.
- */
+/** Not a modal: leaving the page does not abandon the job. */
 export function CloneProgress({ clone: initial, sourceApplication, onDone, onAgain, onRetry }) {
   const t = useTranslations("applications.clone.progress");
   const { refresh, pending: refreshing } = useRefresh();
@@ -68,8 +51,7 @@ export function CloneProgress({ clone: initial, sourceApplication, onDone, onAga
           onDone?.(next);
         }
       } catch {
-        // A blip is not worth alarming anyone about — the next tick picks it
-        // up, and the queue is working regardless of this page.
+        // Transient poll errors are ignored; the next tick retries.
       }
     }
 
@@ -98,17 +80,14 @@ export function CloneProgress({ clone: initial, sourceApplication, onDone, onAga
   const step = clone.step_number ?? 0;
   const percent = total > 0 ? Math.round((step / total) * 100) : 0;
 
-  // Nothing has been picked up off the queue yet: no step is running, so a
-  // list of four dim rows with no spinner is indistinguishable from a job that
-  // died. Say which it is.
+  // Nothing picked up off the queue yet: say so, rather than show dim rows
+  // indistinguishable from a dead job.
   const queued = clone.status === "pending";
   const neverStarted = queued && notStarting && !stalled;
   const giveUp = stalled || neverStarted;
 
-  // The step names live here because every row needs a label, not just the one
-  // the API is currently reporting. If the backend ever adds a fifth, that
-  // list is wrong — so it is only drawn while the counts agree, and otherwise
-  // the bar plus the API's own title for the current step carries it.
+  // Step labels are local. Draw the list only while the counts match the API;
+  // otherwise the bar and the API's current step title carry it.
   const stepsMatch = total === STEP_KEYS.length;
 
   return (
@@ -124,8 +103,6 @@ export function CloneProgress({ clone: initial, sourceApplication, onDone, onAga
           <p className="text-sm text-muted-foreground">
             {stalled ? t("stalledBody") : neverStarted ? t("notStartingBody") : t("target", { domain: clone.domain })}
           </p>
-          {/* How long this has been going, which is the number someone reaches
-              for before deciding whether to worry. */}
           {!stalled && clone.started_at_human ? (
             <p className="text-xs text-muted-foreground">
               {t("started", { when: clone.started_at_human })}
@@ -137,9 +114,7 @@ export function CloneProgress({ clone: initial, sourceApplication, onDone, onAga
       <CardContent className="space-y-4 px-5 py-4">
         <Progress value={percent} className="h-1.5" />
 
-        {/* The four stages, with the ones already done kept on screen. A bar
-            alone says how far; the list says what is happening and what is
-            still to come. */}
+        {/* The four stages, with the completed ones kept on screen. */}
         {stepsMatch ? (
         <ol className="space-y-2.5">
           {STEP_KEYS.map((key, index) => {
@@ -177,9 +152,6 @@ export function CloneProgress({ clone: initial, sourceApplication, onDone, onAga
           </p>
         )}
 
-        {/* True now that the work is queued, and worth saying — it is the
-            difference between someone sitting here and getting on with
-            something else. */}
         {giveUp ? (
           <div className="flex flex-col gap-2 sm:flex-row">
             {stalled ? (
@@ -189,14 +161,12 @@ export function CloneProgress({ clone: initial, sourceApplication, onDone, onAga
                 disabled={refreshing}
                 className="w-full sm:w-auto"
               >
-                {/* No icon at rest — this button never had one. The spinner is the
-                    only thing added, and only while it is actually working. */}
+                {/* Spinner only while working; no icon at rest. */}
                 {refreshing ? <Loader2 className="size-4 animate-spin" /> : null}
                 {t("checkAgain")}
               </Button>
             ) : null}
-            {/* The way back to the form. Forgets only this browser's pointer —
-                the job, if it ever runs, carries on regardless. */}
+            {/* Back to the form. Forgets only this browser's pointer; the job carries on. */}
             <Button variant="outline" onClick={onAgain} className="w-full sm:w-auto">
               {t("stopWatching")}
             </Button>
@@ -209,13 +179,7 @@ export function CloneProgress({ clone: initial, sourceApplication, onDone, onAga
   );
 }
 
-/**
- * The stages the backend reports, in order.
- *
- * Mirrors `CloneResource`'s own list so the numbering matches `step_number`.
- * Titles come from our messages rather than the API's `current_step_title`
- * because every step needs a label, not just the one currently running.
- */
+/** Mirrors `CloneResource`'s order so numbering matches `step_number`. */
 const STEP_KEYS = ["provisioning", "copying_files", "cloning_database", "starting_process"];
 
 function Completed({ clone, sourceApplication, onAgain }) {
@@ -336,10 +300,7 @@ function Failed({ clone, onAgain }) {
           </span>
           <div className="min-w-0 space-y-1">
             <p className="font-medium">{t("failedTitle")}</p>
-            {/* A translated key naming what went wrong — never raw stderr,
-                which the backend deliberately does not send. Carries more
-                weight than the reassurance below it: what happened is the
-                answer being looked for, not the fact that nothing broke. */}
+            {/* A translated failure key, never raw stderr (the backend does not send it). */}
             <p className="text-sm">{cloneFailureTitle(clone) ?? t("failedUnknown")}</p>
             <p className="text-sm text-muted-foreground">{t("failedSafe")}</p>
             {clone.reference ? (
@@ -368,8 +329,7 @@ export function CloneNextSteps({ applicationId, sourceProtected, sourceHasReposi
     ...(sourceProtected ? [{ key: "password", href: `/applications/${applicationId}/security` }] : []),
     { key: "ssl", href: `/applications/${applicationId}/domains` },
     { key: "backups", href: `/applications/${applicationId}/backups` },
-    // Only a copy with a repository and no webhook of its own: it showed on
-    // WordPress copies, and under the new webhook it claimed was missing.
+    // Only a copy with a repository and no webhook of its own.
     ...(sourceHasRepository && !webhook?.url
       ? [{ key: "deploys", href: `/applications/${applicationId}/deployment` }]
       : []),
@@ -382,12 +342,8 @@ export function CloneNextSteps({ applicationId, sourceProtected, sourceHasReposi
         <p className="text-sm text-muted-foreground">{t("subtitle", { count: steps.length + (webhook?.url ? 1 : 0) })}</p>
       </div>
       <CardContent className="min-h-0 flex-1 p-0">
-        {/* The one step nothing here can do for you.
-            A webhook lives in the repository's settings, and one repository
-            webhook posts to one URL — so the copy's URL has to be added by
-            hand. The panel has already generated it; this is the moment the
-            user learns it exists, rather than whenever they next happen to
-            open the Deployment screen. */}
+        {/* A repository webhook posts to one URL, so the copy's generated URL
+            must be added to the repository by hand. */}
         {webhook?.url ? (
           <div className="space-y-2 border-b bg-warning/5 px-5 py-4">
             <p className="text-sm font-medium text-warning">{t("webhook.title")}</p>

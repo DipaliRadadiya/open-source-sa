@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { IconTooltip } from "@/components/ui/icon-tooltip";
 
-// Shows the stored OS password masked, with reveal + copy. The backend stores
-// it plaintext (operator decision) so an admin can copy it for server login.
+// Shows the stored OS password masked, with reveal + copy. The backend stores it
+// in plaintext so an admin can copy it for server login.
 export function PasswordReveal({ password, className }) {
   const t = useTranslations("systemUsers.detail");
   const [shown, setShown] = useState(false);
@@ -27,9 +27,8 @@ export function PasswordReveal({ password, className }) {
 
   return (
     <div className={cn("flex w-full items-center gap-1", className)}>
-      {/* Wraps once revealed rather than truncating: the whole point of
-          showing it is reading all of it, and a generated one is 20
-          characters — more than the narrow table column holds. */}
+      {/* Wraps once revealed rather than truncating: a generated password is wider than
+          the narrow column, and the point is to read all of it. */}
       <code
         className={cn(
           "min-w-0 flex-1 rounded bg-muted px-2 py-1.5 font-mono text-sm",

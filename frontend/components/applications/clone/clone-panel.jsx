@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -67,29 +67,6 @@ import {
   CloneNextSteps,
 } from "@/components/applications/clone/clone-progress";
 
-/**
- * Duplicate this site to a new domain.
- *
- * An action screen, not a guide. What a clone is gets stated in facts — one
- * copied/not-copied list and a short pre-flight list — because the reader came
- * here to make one, not to learn about them.
- *
- * The form is the page: it sits in its own column with the source→target
- * summary and the button in one band, so the thing being decided and the
- * control that commits it are never more than a glance apart. The earlier cut
- * stacked four full-width strips down a 1180px page, which left the form
- * looking like one more paragraph of a document.
- *
- * The omissions still get their own column: a list of what carries across with
- * no matching list of what does not reads as "everything", and one of the
- * omissions — password protection — is a security surprise.
- *
- * Every card wears the panel's chrome and carries an icon, and only the form
- * gets a FILLED mark. Four cards of identical weight is what made this screen
- * read as flat: there was nowhere for the eye to land, which is the one thing
- * `ui-visual-design-principles-research.md [263–285]` says to fix with
- * isolation rather than with more decoration.
- */
 export function CloneApplicationPanel({
   application,
   siteType,
@@ -114,9 +91,8 @@ export function CloneApplicationPanel({
 
   const form = useForm({
     resolver: zodResolver(cloneFormSchema),
-    // onTouched, not onSubmit: the submit stays disabled until the domain is
-    // valid, so a message that only appeared on submit never appeared at all —
-    // "bad" just greyed the button out with no reason given.
+    // onTouched, not onSubmit: submit stays disabled until the domain is valid,
+    // so an on-submit message would never appear.
     mode: "onTouched",
     reValidateMode: "onChange",
     defaultValues: { name: "", domain: "" },
@@ -125,27 +101,20 @@ export function CloneApplicationPanel({
   const domain = useWatch({ control: form.control, name: "domain" });
   const name = useWatch({ control: form.control, name: "name" });
 
-  // Checked as they type against sites already on this server. The API would
-  // refuse it anyway, but finding out before you commit beats finding out
-  // after — and the list is already loaded for the copies section below.
+  // Checked as they type against this server's sites; the API would refuse it anyway.
   const domainTaken =
     domain &&
     takenDomains.some(
       (value) => String(value).toLowerCase() === domain.trim().toLowerCase(),
     );
 
-  // The submit stays disabled until the domain would actually pass, judged by
-  // the same rule the API uses rather than by "is there any text here" —
-  // offering a button that is going to come back 422 is a worse answer than
-  // withholding it.
+  // Uses the same rule as the API, so the button is never offered for a 422.
   const domainValid = cloneFormSchema.shape.domain.safeParse(
     domain ?? "",
   ).success;
   const ready = domainValid && !domainTaken;
 
-  // Only a domain that could actually be created is shown as the destination:
-  // echoing back one this server has already refused would be the screen
-  // agreeing with a plan it is about to reject.
+  // Only a domain that could actually be created is shown as the destination.
   const target = ready ? domain.trim().toLowerCase() : "";
 
   // Pick a running clone back up after a reload or a navigation away.
@@ -156,9 +125,7 @@ export function CloneApplicationPanel({
     fetchClone(remembered)
       .then((response) => {
         const found = response.data?.clone;
-        // A finished clone is still shown once — whoever started it may never
-        // have seen it land — and forgotten immediately, so the next visit to
-        // this page is a fresh form rather than yesterday's result.
+        // A finished clone is shown once, then forgotten so the next visit is a fresh form.
         if (!found || !CLONE_IN_FLIGHT.includes(found.status))
           forgetClone(application.id);
         if (live && found) setClone(found);
@@ -203,8 +170,7 @@ export function CloneApplicationPanel({
     form.reset({ name: "", domain: "" });
   }
 
-  // After a failure the same domain is what they want to try again with; an
-  // empty form made them type it a second time.
+  // Keep the failed domain so it can be retried without retyping.
   function retry(failed) {
     setClone(null);
     setFinished(null);
@@ -278,22 +244,11 @@ export function CloneApplicationPanel({
   return (
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
       <div className="space-y-6">
-        {/*
-         * Two columns, and the pre-flight list lives UNDER the form rather
-         * than in a full-width band below both.
-         *
-         * The copied/not-copied list is a dozen rows and the form is four
-         * controls, so stretching them to each other left ~120px of nothing
-         * between the last field and the button. Giving the left column its
-         * second card makes the two sides roughly equal by having something
-         * to say, which is the only way that ever works.
-         */}
+        {/* Pre-flight list sits under the form so both columns are roughly equal height. */}
         <div className="grid gap-6 lg:grid-cols-12 lg:items-stretch">
           <div className="min-w-0 space-y-6 lg:col-span-7">
             <PanelCard>
-              {/* The one filled mark on the page. Same rule as the Deployments
-                hero: this card is not a peer of the others, and saying so with
-                the mark costs no extra space. */}
+              {/* The one filled mark on the page, as on the Deployments hero. */}
               <CardHeader>
                 <CardTitle className="flex items-center gap-2.5 text-base font-semibold">
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-e1">
@@ -331,9 +286,7 @@ export function CloneApplicationPanel({
                             />
                           </FormControl>
 
-                          {/* A chip, not a sentence: it is a value to take, and one
-                            tap is the whole interaction. Skips domains already in
-                            use, so it never offers a rejection. */}
+                          {/* Suggestion chip; skips domains already in use. */}
                           {canManage && suggestion && !field.value ? (
                             <button
                               type="button"
@@ -342,7 +295,7 @@ export function CloneApplicationPanel({
                                   shouldDirty: true,
                                 });
                                 // The chip unmounts once the field has a value,
-                                // which dropped keyboard focus on the page.
+                                // which would drop keyboard focus.
                                 form.setFocus("domain");
                               }}
                               className="inline-flex w-fit items-center gap-1.5 rounded-full border bg-muted/60 px-2.5 py-1 font-mono text-xs transition-colors hover:bg-muted"
@@ -382,11 +335,8 @@ export function CloneApplicationPanel({
                     />
                   </CardContent>
 
-                  {/* What is about to happen, in the same band as the control that
-                    does it: source on the left, the copy's domain filling in as
-                    it is typed. The one genuinely interesting thing on this
-                    screen, so it gets two real chips rather than a line of 14px
-                    text nobody reads. */}
+                  {/* Source → target summary beside the submit button; the
+                    target domain fills in as it is typed. */}
                   <CardFooter className="flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between">
                     {canManage ? (
                       <div className="flex min-w-0 items-center gap-2.5">
@@ -446,9 +396,7 @@ export function CloneApplicationPanel({
 
         {copies.length ? <ExistingCopies copies={copies} /> : null}
 
-        {/* Asked once, at the moment of commitment, carrying the three facts that
-            decide it: which site is being copied, what the copy will answer to,
-            and that the original is untouched. */}
+        {/* Confirms the source, the copy's domain, and that the original is untouched. */}
         <ConfirmDialog
           open={confirming}
           onOpenChange={setConfirming}
@@ -472,8 +420,7 @@ export function CloneApplicationPanel({
             </div>
             <div className="flex items-baseline justify-between gap-3">
               <dt className="text-muted-foreground">{t("confirm.domain")}</dt>
-              {/* Wraps: this is the one value being confirmed, and it was
-                  cut off at every width. */}
+              {/* Wraps: the one value being confirmed must never be cut off. */}
               <dd className="min-w-0 font-mono font-medium break-all">
                 {target}
               </dd>
@@ -491,13 +438,7 @@ export function CloneApplicationPanel({
   );
 }
 
-/**
- * Every card on this page, wearing the panel's chrome.
- *
- * They hand-rolled `py-0` plus their own bordered header divs, which is how
- * three of the four ended up with no icon and a label-sized heading while the
- * dashboard's cards had both. One shell, so a fourth card cannot disagree.
- */
+/** Shared card shell for every card on this page, so they cannot drift apart. */
 function PanelCard({ className, children }) {
   return (
     <Card
@@ -524,12 +465,7 @@ function CardMark({ icon: Icon, tone = "primary" }) {
   );
 }
 
-/**
- * A site as a chip: the name people recognise over the domain it answers to.
- *
- * Two of these with an arrow between them IS the feature, so they get to look
- * like it. The target one is tinted because it is the thing being created.
- */
+/** A site as a chip: name over domain. The target one is tinted. */
 function SiteChip({ name, domain, highlight = false }) {
   return (
     <span
@@ -548,12 +484,7 @@ function SiteChip({ name, domain, highlight = false }) {
   );
 }
 
-/**
- * Shown for the moment it takes to look up a clone this browser remembers.
- *
- * Rendering the empty form here instead would invite someone to start a second
- * clone of a site that is already being copied.
- */
+// The empty form here would invite a second clone of a site already being copied.
 function Resuming() {
   const t = useTranslations("applications.clone.progress");
 
@@ -570,18 +501,7 @@ function Resuming() {
   );
 }
 
-/**
- * Will copy / Will not copy.
- *
- * One row per item with its own mark, rather than two grids of bare words. The
- * grid needed `truncate` to fit two columns, which cut "Repository, branch &
- * git account" mid-word — a list that abbreviates the thing it is there to
- * state.
- *
- * The not-copied half is in foreground text, not muted. Every one of those six
- * lines is a fact about what you are about to get; as grey they read as
- * disabled options, which buried the only real surprise on the page.
- */
+// No `truncate` (it cut labels mid-word). Not-copied items use foreground text so they don't read as disabled.
 function ImpactCard({ siteType, application, sourceProtected, className }) {
   const t = useTranslations("applications.clone.what");
 
@@ -608,9 +528,7 @@ function ImpactCard({ siteType, application, sourceProtected, className }) {
             key,
             label: t(`dropsItems.${key}`),
           }))}
-          // Only when the source actually has it on: otherwise "password
-          // protection is not copied" is a fact about nothing, and warning tone
-          // on a non-event is how a page teaches people to ignore its warnings.
+          // Warn only when the source actually has protection on.
           warn={sourceProtected ? "passwordProtection" : null}
         />
       </CardContent>
@@ -620,8 +538,6 @@ function ImpactCard({ siteType, application, sourceProtected, className }) {
 
 function ImpactList({ ok = false, title, items, warn = null }) {
   return (
-    // Twelve rows at 6px apart read as a wall of text; the card is tall enough
-    // to give each line its own line.
     <div className="py-(--card-spacing)">
       <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
         {title}
@@ -653,18 +569,6 @@ function ImpactList({ ok = false, title, items, warn = null }) {
   );
 }
 
-/**
- * The pre-flight list.
- *
- * One card rather than a stack of amber banners: two full-width warning bars
- * shouted equally loudly and the second one stopped being read. The tone lives
- * in the mark, and the list only carries things that change what someone does
- * next — DNS before a certificate, protection that does not come across, and
- * how long this takes.
- *
- * Sits across the foot of the page as columns, which is what lets the form and
- * the copied/not-copied card above it be the same height.
- */
 function BeforeCard({ sourceProtected }) {
   const t = useTranslations("applications.clone");
 
@@ -685,8 +589,7 @@ function BeforeCard({ sourceProtected }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="border-t pt-(--card-spacing)">
-        {/* One per line. In a 620px column three of these squeeze to ~190px
-            each and every sentence wraps three times. */}
+        {/* One per line: as columns each sentence wrapped three times. */}
         <ul className="space-y-4">
           {items.map(({ key, icon: Icon, tone }) => (
             <li key={key} className="flex items-start gap-3 text-sm">
@@ -709,12 +612,7 @@ function BeforeCard({ sourceProtected }) {
   );
 }
 
-/**
- * Why the form is not here.
- *
- * Shown instead of it, never as a disabled submit: being told after typing a
- * domain that this site was never cloneable is the worst order to learn it in.
- */
+/** Why the site can't be cloned; replaces the form rather than disabling submit. */
 function Blocked({ reason, siteType }) {
   const t = useTranslations("applications.clone");
 
@@ -756,16 +654,7 @@ export function CloneTypeNotSupported({ typeTitle }) {
   );
 }
 
-/**
- * Copies already made from this site.
- *
- * No endpoint needed — every application carries
- * `cloned_from_application_id`, so the answer is already in the applications
- * list. Without this the page had no memory: you could clone the same site
- * twice over and the screen would look identical both times.
- *
- * The date earns its place because names are not unique.
- */
+// From each application's `cloned_from_application_id`. Dated because names are not unique.
 function ExistingCopies({ copies }) {
   const t = useTranslations("applications.clone.copies");
 

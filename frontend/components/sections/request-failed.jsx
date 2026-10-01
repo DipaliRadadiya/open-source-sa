@@ -3,31 +3,8 @@ import { TriangleAlert } from "lucide-react";
 import { RetryButton } from "@/components/ui/retry-button";
 import { FailureScreen, FailureFooterLabel } from "@/components/sections/failure-screen";
 
-/**
- * Krishna: "not like this showing api and all. i want to see proper error
- * message why this error is getting."
- *
- * The card leads with the cause in plain words. Each `kind` gets a real
- * explanation instead of a shared "try again":
- *
- *   network    nothing answered at all — stopped service, or a blocked port
- *   server     the API answered with an error; the reason is in ITS log
- *   forbidden  the API refused this account
- *   notFound   the endpoint is missing, which usually means the panel and the
- *              API are different versions
- *
- * The request line is real evidence — the fetch happens during SSR, so it
- * leaves no Network tab row and this is the only record that will ever exist —
- * but it is a support artefact, so it sits in a closed `<details>` under the
- * advice. Native `<details>`, not state: this renders inside a failure, and a
- * screen that has already lost one thing should not need hydration to open.
- *
- * The server's own `message` IS shown, and leads the footer — Krishna: "why we
- * cannot see actual message instead of showing just Your server returned an
- * error". It is the reason; our sentence is only the category. `trace`, `file`
- * and `line` are still never carried; their PRESENCE is reported instead, as a
- * warning that the server is in debug mode on a page anyone can reach.
- */
+// The request line sits in a native `<details>`: no hydration on a failure screen.
+// `trace`/`file`/`line` are never carried; only their presence is reported (debug mode).
 export function RequestFailedCard({ kind, method, path, host, status, serverMessage = null, debug = false }) {
   const t = useTranslations("errors");
   const values = { host: host ?? "", status: status ?? "", path };
@@ -40,9 +17,7 @@ export function RequestFailedCard({ kind, method, path, host, status, serverMess
       action={<RetryButton />}
       footer={
         <>
-          {/* The server's OWN words come first, above our category. It knows
-              why; we only know what kind of thing happened. Quoted and
-              attributed so nobody mistakes it for the panel talking. */}
+          {/* Quoted and attributed so they are not mistaken for the panel's. */}
           {serverMessage ? (
             <div className="mb-5">
               <FailureFooterLabel>{t("request.serverSaid")}</FailureFooterLabel>

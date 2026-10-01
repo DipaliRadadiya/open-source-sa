@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useFormatter, useTranslations } from "next-intl";
 import { scheduleWhen } from "@/lib/backups/schedule-time";
 import { History, PlayCircle, Settings2, ShieldCheck } from "lucide-react";
@@ -12,23 +12,14 @@ import { DomainText } from "@/components/ui/domain-text";
 import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-table/card-list";
 import { COVERAGE_STATE } from "@/components/backups/status-meta";
 
-/**
- * The same list on a phone.
- *
- * A table would scroll sideways here and put the one button you came for
- * off-screen with nothing hinting at a swipe — the same reason Services keeps
- * a card layout below `lg`.
- */
+// Phone layout: a table would scroll sideways and hide the action button.
 
 export function CoverageCards({ rows, options = null, canManage, onSetUp, onBackUpNow, busyIds = [] }) {
   const t = useTranslations("backups.coverage");
   const tc = useTranslations("common");
   const format = useFormatter();
 
-  // "Daily · 2:00 AM · keeps 7", dropping the hour a manual target does not
-  // have rather than leaving a stray separator behind it. The zone is named
-  // on the site's own backups page; repeating it on every card would bury the
-  // three facts this row exists to show.
+  // "Daily · 2:00 AM · keeps 7"; the timezone is named on the site's backups page instead.
   const scheduleFact = (target) => {
     const when = scheduleWhen(target, options, format);
     return [
@@ -80,9 +71,7 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
               </Badge>
             </div>
 
-            {/* An unconfigured site shows the same four facts as a configured
-                one, each saying it is not set rather than being omitted — so the
-                card never looks half-rendered. */}
+            {/* An unconfigured site shows the same four facts, each saying "not set". */}
             <CardFacts>
               <CardFact
                 label={t("columns.type")}
@@ -92,9 +81,7 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
               <CardFact
                 label={t("columns.schedule")}
                 className={cn(!target && "text-muted-foreground")}
-                /* The hour too, same as the table — a fact row has the width
-                   for it, and the phone layout falling behind the desktop one
-                   is how this column went a month without it. */
+                /* Includes the hour, same as the table. */
                 value={target ? scheduleFact(target) : t("placeholders.schedule")}
               />
               <CardFact
@@ -107,9 +94,7 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
                 className={cn(!target && "text-muted-foreground")}
               >
                 <span className="block truncate">
-                  {/* Same fallback as the table: a run that crashed leaves
-                      last_run_at unset, and "Never" over a site that failed
-                      minutes ago is the wrong answer. */}
+                  {/* Same fallback as the table: a crashed run leaves last_run_at unset, so not "Never". */}
                   {target
                     ? (target.last_run_at_human ?? lastBackup?.created_at_human ?? t("neverRunShort"))
                     : t("placeholders.lastRun")}
@@ -120,11 +105,7 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
               </CardFact>
             </CardFacts>
 
-            {/* Was `canManage || !target`, which hid the whole row from a
-                view-only reader whenever a target existed — while the desktop
-                table went on offering them View backups and Manage. Now only
-                the one genuinely empty case is skipped: an unprotected app has
-                nothing but Set up, and that needs the permission. */}
+            {/* Skipped for an unprotected site without manage permission: only Set up would remain. */}
             {state !== "unprotected" || canManage ? (
               <div className="mt-auto flex flex-wrap justify-end gap-2">
                 {state === "unprotected" ? (
@@ -153,7 +134,7 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
                         {t("viewBackups")}
                       </Link>
                     </Button>
-                    {/* The table's row menu has had this all along. */}
+                    {/* Matches the table's row menu. */}
                     <Button size="sm" variant="ghost" asChild>
                       <Link href={`/applications/${application.id}/backups`} prefetch={false}>
                         <Settings2 className="size-4" />

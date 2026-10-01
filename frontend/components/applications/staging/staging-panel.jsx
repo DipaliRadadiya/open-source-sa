@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { ArrowUpFromLine, ExternalLink, FlaskConical, Trash2, TriangleAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -12,19 +12,8 @@ import { PushStagingDialog } from "@/components/applications/staging/push-stagin
 import { DeleteApplicationDialog } from "@/components/applications/delete-application-dialog";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 
-/**
- * One site's staging copy.
- *
- * Two states and one dangerous action. The staging site is an ordinary
- * application, so it links to its own pages rather than being managed here —
- * this screen exists for the two things that only make sense as a pair:
- * making the copy, and pushing it back over production.
- *
- * Push is the reason the screen is careful. It takes production offline and
- * rsyncs with `--delete`; `files` mode keeps no safety copy at all. So it is
- * a two-step, typed-confirmation action rather than a button, and the mode
- * picker states what each choice destroys instead of offering a default.
- */
+// Push takes production offline and rsyncs with `--delete` (`files` mode keeps no
+// safety copy), so it needs typed confirmation and has no default mode.
 export function StagingPanel({ appId, production, staging, canManage, canDelete = false }) {
   const t = useTranslations("applications.staging");
   const tApp = useTranslations("applications");
@@ -33,10 +22,8 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
   const [removing, setRemoving] = useState(false);
   const ready = staging?.status === "active";
 
-  // The create and remove dialogs close by being swapped out with the view
-  // they belong to, so their flags were never cleared: after a create, the
-  // next delete brought the page back to "no copy" with Create already open
-  // (and the reverse). Clear all three whenever the copy appears or goes.
+  // The dialogs close by being unmounted with their view, so clear their
+  // flags whenever the copy appears or goes.
   const hasCopy = Boolean(staging);
   const [seenCopy, setSeenCopy] = useState(hasCopy);
   if (seenCopy !== hasCopy) {
@@ -46,9 +33,7 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
     setPushing(false);
   }
 
-  // This site IS the copy. Offering to stage it would make a staging site of
-  // a staging site — the API would allow it, and nothing about it is useful.
-  // What the reader actually wants from here is the way back to the original.
+  // This site is a staging copy: link back to production instead.
   if (production?.is_staging) {
     return (
       <div className="max-w-4xl">
@@ -96,9 +81,7 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
           </CardContent>
         </Card>
 
-        {/* Remounted on each open so a domain typed once is not still in the
-            field the next time — the dialog never sees `onOpenChange` on the
-            way in to clear it for itself. */}
+        {/* Remounted on each open to reset the field. */}
         <CreateStagingDialog
           key={String(creating)}
           appId={appId}
@@ -126,8 +109,7 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
             </p>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
               <a
-                // See application-row-actions: link to the URL the API
-                // reports, which is http:// until a certificate is servable.
+                // The API's URL is http:// until a certificate is servable.
                 href={staging.url ?? `https://${staging.domain}`}
                 target="_blank"
                 rel="noreferrer"
@@ -136,19 +118,14 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
                 {staging.domain}
                 <ExternalLink className="size-3.5" />
               </a>
-              {/* How old the copy is, because that is the question before a
-                  push: a three-week-old copy pushed over production takes
-                  three weeks of production with it. No "·" before it: on a
-                  phone the age wraps and the dot was left hanging at the end
-                  of the domain line. */}
+              {/* The copy's age matters before a push. No "·" separator: it
+                  dangles when the line wraps. */}
               {staging.created_at_human ? (
                 <span>{t("copyAge", { age: staging.created_at_human })}</span>
               ) : null}
             </div>
           </div>
-          {/* The copy is a site like any other — everything except the push
-              is done on its own pages, so this points there rather than
-              growing a second, smaller version of them here. */}
+          {/* The copy is managed on its own application pages. */}
           <Button asChild variant="outline">
             <Link href={`/applications/${staging.id}`}>{t("manageAction")}</Link>
           </Button>
@@ -160,9 +137,7 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
             <p className="text-sm text-muted-foreground">
               {t("push.body", { domain: production.domain })}
             </p>
-            {/* A copy that never finished (the backend can leave one behind
-                when creating fails) has nothing to push — offering the most
-                destructive action in the panel on it was the wrong default. */}
+            {/* An unfinished copy (left by a failed create) cannot be pushed. */}
             {!ready ? (
               <p className="flex items-start gap-2 pt-1 text-sm text-warning">
                 <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
@@ -181,8 +156,7 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
         </div>
       </Card>
 
-      {/* Its own card, away from Push: both are red, and the two must never
-          be one misclick apart. */}
+      {/* Kept apart from Push so the two are never one misclick apart. */}
       <Card className="gap-0 overflow-hidden py-0 shadow-sm">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
           <div className="min-w-60 flex-1 space-y-1">
@@ -202,8 +176,8 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
 
       <DeleteApplicationDialog application={staging} open={removing} onOpenChange={setRemoving} closeWhenGone />
 
-      {/* Same contract, and it matters more here: the typed domain is the
-          safeguard, so it must never be pre-filled from a previous visit. */}
+      {/* Remounted on open: the typed domain is the safeguard and must never
+          be pre-filled. */}
       <PushStagingDialog
         key={String(pushing)}
         appId={appId}

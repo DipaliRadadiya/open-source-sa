@@ -2,13 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Copy, Check, RotateCw } from "lucide-react";
 
-/**
- * Toasts for a service action, shared by the row buttons and the boot switch.
- *
- * Everything interactive lives inside the toast body rather than Sonner's
- * `action` slot: that slot sits beside the text and won't shrink, so a
- * two-line message pushed the button clean outside the toast.
- */
+// Interactive parts live in the body, not Sonner's `action` slot: it won't shrink on two-line messages.
 
 const COPIED_RESET_MS = 2000;
 
@@ -36,9 +30,7 @@ function ToastBody({ message, reference, copyLabel, copiedLabel, actionLabel, on
 
       {reference ? (
         <span className="flex w-full min-w-0 items-center gap-1.5">
-          {/* min-w-0 + flex-1: the reference is the only part that may be cut
-              short. Without it the confirmation label gets squeezed and breaks
-              mid-word ("Copie / d"). */}
+          {/* Only the reference may be truncated. */}
           <span className="min-w-0 flex-1 truncate font-mono text-xs">{reference}</span>
           <button
             type="button"
@@ -46,10 +38,7 @@ function ToastBody({ message, reference, copyLabel, copiedLabel, actionLabel, on
             onClick={copy}
             className="shrink-0 rounded p-0.5 opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            {/* The icon swap IS the confirmation. A word alongside it kept
-                breaking the row — the toast is too narrow to hold a UUID and a
-                label — and the tick carries the same meaning in no space at
-                all. The state is announced through aria-label instead. */}
+            {/* The icon swap is the confirmation; the state is announced through aria-label. */}
             {copied ? (
               <Check className="size-3.5 text-success" />
             ) : (
@@ -82,15 +71,7 @@ export function showActionError({
   retryLabel,
   onRetry,
 }) {
-  // Both the sentence and the reference, now. This used to drop the server's
-  // sentence whenever a reference existed, which was reasonable while every
-  // failure produced the same generic "the operation failed": an id was strictly
-  // more useful than a sentence saying nothing.
-  //
-  // The backend now names the step that actually failed — "the log file could
-  // not be handed to that account" — so the sentence carries the cause and the
-  // reference only identifies the incident. Dropping the cause to show an id
-  // would be exactly backwards.
+  // The backend names the failed step; the reference identifies the incident.
   toast.error(title, {
     description: (
       <ToastBody
@@ -102,8 +83,7 @@ export function showActionError({
         onAction={onRetry}
       />
     ),
-    // A reference code has to outlive the glance that spots it — you can't quote
-    // a UUID that vanished while you were reading it.
+  // A toast with a reference stays until dismissed, so the code can be quoted.
     duration: reference ? Infinity : 10000,
     closeButton: true,
   });

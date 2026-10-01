@@ -1,20 +1,9 @@
-/**
- * Whether an application has ever had code deployed to it.
- *
- * A redeploy puts a live site back into `provisioning` (and `deployed` false)
- * for its duration, while the old code keeps serving. `last_deployed_at` is
- * written on success only and survives every later deploy, so it tells a
- * first build from a site that is already live.
- */
+// A redeploy sets status back to `provisioning`; `last_deployed_at` survives it.
 export function hasBeenDeployed(application) {
   return Boolean(application?.last_deployed_at || application?.code_on_disk?.commit);
 }
 
-/**
- * Whether the pages about a live site (files, domains, environment…) have
- * anything to show. Judged on `status` alone, every redeploy swapped them all
- * for "still being set up" mid-flight.
- */
+// Not judged on `status` alone, which flips during every redeploy.
 export function isSettled(application) {
   return application?.status === "active" || hasBeenDeployed(application);
 }

@@ -32,40 +32,24 @@ export default async function ApplicationWorkersPage({ params }) {
   ]);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
-  // The site is gone. Land on the list — the only place left to go — and say
-  // why on arrival, rather than parking on a dead end that offers one link.
+  // The site is gone: back to the list, which explains why.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application)
     return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   const application = result.application;
-  // Granted only for site types that keep something to supervise (git, Node,
-  // Craft, Statamic, blank PHP) — a missing grant here means the screen
-  // shouldn't exist for this site, the same contract as Environment/Deployment.
+  // Granted only for site types with something to supervise; same contract
+  // as Environment/Deployment.
   if (!can(appPermissions, "app_worker", "view", "application")) {
-    // A site type with nothing to supervise answers 404, a missing grant 403 —
-    // the same split as Environment, and for the same reason.
+    // 404: site type has nothing to supervise; 403: missing grant.
     if ((await getWorkers(id)).status === 404) notFound();
     return <PermissionDenied title={t("pageTitle")} />;
   }
   const canManage = can(appPermissions, "app_worker", "manage", "application");
   const settled = isSettled(application);
 
-  /*
-   * Whether supervisord is on the box, read from the services list.
-   *
-   * A service nobody has ever installed is absent from that list entirely —
-   * ServiceManager returns null for it — so "no supervisor entry" is a reliable
-   * "not installed", and it needs no new endpoint.
-   *
-   * Without this the page looked completely normal on a server with no
-   * supervisord, and the only way to find out was to fill in the whole worker
-   * form and submit it: `POST /workers` answers 202 and starts an apt install
-   * instead of creating anything.
-   *
-   * A failure here is not an error on this page — it just means we cannot say,
-   * and the create dialog still handles the 202 the way it always did.
-   */
+  // supervisord absent from services means not installed; `POST /workers` would then
+  // start an apt install. A failed read means unknown.
   const [workersResult, services] = settled
     ? await Promise.all([getWorkers(id), getServices().catch(() => ({ services: [], failed: true }))])
     : [{ workers: [], presets: [], checks: [], failed: false }, { services: [], failed: true }];

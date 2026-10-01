@@ -25,47 +25,22 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-/*
- * Where each engine listens, for the field's starting value.
- *
- * MySQL and MariaDB share 3306, which is the fallback. The others are here
- * because a blank or wrong port is the difference between this dialog fixing a
- * server and appearing to do nothing.
- *
- * The API does not publish `default_port` — it is in the backend's engine
- * config and reaches no response — so these are the well-known ones. A wrong
- * guess is visible and editable; the alternative is an empty field.
- */
+// The API does not expose `default_port`; MySQL/MariaDB fall back to 3306.
 const DEFAULT_PORT = { mongodb: 27017, postgresql: 5432 };
 
-/*
- * And where each keeps its unix socket. Only a placeholder — the value is the
- * user's — but a MySQL path shown to someone connecting PostgreSQL is a wrong
- * example, which is worse than none.
- */
 const SOCKET_HINT = {
   mongodb: "/tmp/mongodb-27017.sock",
   postgresql: "/var/run/postgresql/.s.PGSQL.5432",
 };
 const DEFAULT_SOCKET = "/var/run/mysqld/mysqld.sock";
 
-/**
- * How the panel itself signs in to an engine.
- *
- * This is the screen that unsticks a server where the engine is installed and
- * running but every page says "not reachable" — nothing else in the feature can
- * work until this connects, and until now there was no way to see or change it.
- *
- * The password is write-only: the API never returns it, so an empty field means
- * "leave the stored one alone" rather than "clear it".
- */
+// The password is write-only: an empty field means "keep the stored one", not "clear it".
 export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
   const t = useTranslations("databases.connection");
   const tc = useTranslations("databases");
   const { refreshAndWait } = useRefresh();
   const [testing, setTesting] = useState(false);
-  // What the last test said, so the answer stays on screen instead of vanishing
-  // with a toast the moment you look away.
+  // The last test result, kept on screen rather than in a toast.
   const [result, setResult] = useState(null);
 
   const defaults = {
@@ -97,17 +72,14 @@ export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
     } else {
       payload.socket = submitted.socket;
     }
-    // Empty means "keep the stored password" — the API only touches it when a
-    // value is sent.
+  // Empty keeps the stored password; the API only changes it when a value is sent.
     if (submitted.password) payload.password = submitted.password;
 
     try {
       const { data } = await updateConnection(engine.engine, payload);
       const saved = data?.[engine.engine];
       await refreshAndWait();
-      // Saved and reachable are different outcomes, and saying only "Saved"
-      // when the panel still can't connect is the failure this screen exists
-      // to end.
+      // Saved and reachable are different outcomes; report both.
       if (saved?.reachable) {
         toast.success(t("savedConnected"));
         onOpenChange?.(false);
@@ -157,8 +129,7 @@ export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
         description={t("subtitle")}
         footer={
           <>
-            {/* Tests what is STORED, so it cannot honestly report on unsaved
-                edits. Disabled while the form is dirty, with the reason. */}
+            {/* Tests what is STORED, so it is disabled while the form is dirty. */}
             <ReasonTooltip reason={isDirty ? t("saveFirst") : null}>
               <Button
                 type="button"
@@ -260,10 +231,7 @@ export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
                       className="font-mono"
                       inputMode="numeric"
                       autoComplete="off"
-                      // The engine's own port, not MySQL's. `DEFAULT_PORT`
-                      // already holds it for the field's value; the placeholder
-                      // was the one place still suggesting 3306 to a PostgreSQL
-                      // connection whose field had been cleared.
+                      // The engine's own port, not MySQL's.
                       placeholder={String(DEFAULT_PORT[engine?.engine] ?? 3306)}
                       {...field}
                     />

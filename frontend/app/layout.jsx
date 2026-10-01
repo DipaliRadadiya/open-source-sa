@@ -4,6 +4,7 @@ import { IntlProvider } from "@/components/intl-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { BrandingProvider } from "@/components/branding-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { NavigationProgress } from "@/components/sections/navigation-progress";
 import { getBranding } from "@/lib/branding/get-branding";
 import { generatePalette } from "@/lib/theme/generate-palette";
 import { buildThemeStyles } from "@/lib/theme/apply-theme";
@@ -49,6 +50,7 @@ export default async function RootLayout({ children }) {
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             <BrandingProvider branding={branding}>
               {children}
+              <NavigationProgress />
               <Toaster />
             </BrandingProvider>
           </ThemeProvider>

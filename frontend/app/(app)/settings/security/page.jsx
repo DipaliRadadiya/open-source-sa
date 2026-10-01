@@ -21,17 +21,14 @@ export default async function SettingsSecurityPage() {
   if (failed || !data?.security)
     return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
 
-  // The rule holding the CURRENT SSH port open. Move the port and it is left
-  // guarding a port nothing listens on, so the confirm dialog offers to switch
-  // it off. Only looked up when the user can see the firewall; without that
-  // permission the dialog says nothing rather than guessing.
+  // The rule holding the current SSH port open; after a port change the confirm
+  // dialog offers to switch it off. Needs firewall view permission.
 
   const firewall = can(permissions, "firewall", "view")
     ? await getFirewall()
     : null;
-  // Deliberately NOT gated on the firewall being switched on right now: the
-  // rule survives, and starts being enforced the moment someone enables the
-  // firewall — at which point the old port opens again on its own.
+  // Not gated on the firewall being enabled: the rule survives and is enforced
+  // again as soon as the firewall is switched on.
   const oldPortRule = firewall?.data?.rules.find(
     (rule) =>
       rule.port_from === data?.security?.port &&

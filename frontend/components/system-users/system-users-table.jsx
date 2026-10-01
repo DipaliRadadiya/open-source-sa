@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { SearchX, Server, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
@@ -24,34 +24,22 @@ import { SystemUserRowActions } from "@/components/system-users/system-user-row-
 import { CreateSystemUserDialog } from "@/components/system-users/create-system-user-dialog";
 import { SystemUsersCards } from "@/components/system-users/system-users-cards";
 
-/* ---------------------------------------------------------------------------
- * Cells are module-level components on purpose.
- *
- * flexRender calls `createElement(cellFn)`, so a cell function's identity IS the
- * component type. Defined inline they get a new identity on every render — and
- * the search box lives in this same component, so every keystroke was
- * unmounting and remounting every cell in the table.
- *
- * `canManage` reaches them through `table.options.meta`.
- * ------------------------------------------------------------------------- */
+// Cells are module-level on purpose: an inline cell gets a new identity each
+// render, so every keystroke would remount every cell.
 
-// Headers may wrap: in French and Russian a one-line "NOM D'UTILISATEUR" was
-// what pushed the row menu off the edge.
+// Headers may wrap: in French and Russian a one-line "NOM D'UTILISATEUR" pushed
+// the row menu off the edge.
 function Head({ children }) {
   return <span className="block whitespace-normal">{children}</span>;
 }
 
 function UsernameCell({ row, table }) {
   const t = useTranslations("systemUsers");
-  // The badge and the password column answer the same question. A manager has
-  // the column, which says "Not set" in the place they are already looking, so
-  // the badge would only repeat it. A viewer has no column, and this is then
-  // the only thing telling them the account cannot be logged into.
+  // Managers see "Not set" in the password column; viewers have no column, so the
+  // badge is their only signal that the account cannot be logged into.
   const showBadge = !table.options.meta.canManage && !(row.original.password_known ?? row.original.password);
 
-  // Home under the name, not in a column of its own: the column cost ~160 px
-  // of a table that did not fit at 1280, for a value that is read alongside
-  // the name and never on its own.
+  // Home sits under the name rather than in its own column, to save width.
   return (
     <div className="min-w-0 max-w-56 space-y-0.5 whitespace-normal">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -69,10 +57,8 @@ function UsernameCell({ row, table }) {
   );
 }
 
-// Managers only — a viewer's row carries a redacted placeholder rather than the
-// password, so the same control would offer to reveal something that is not
-// there. Masked until asked for: the point is copying it when you need it, not
-// having every account's password on screen while you scroll past.
+// Managers only: a viewer's row carries a redacted placeholder, not the password.
+// Masked until asked for.
 function PasswordCell({ row }) {
   return (
     <div className="w-44">
@@ -83,9 +69,8 @@ function PasswordCell({ row }) {
 
 function ShellCell({ row, table }) {
   return (
-    // Fixed width, wrapping onto a second line when the title is long: sized
-    // to its text, "Полный доступ к оболочке (bash)" alone pushed the Russian
-    // table 60 px past the edge; cut at a fixed width, it lost its end.
+    // Fixed width, wrapping long titles: sized to its text, the Russian title pushed
+    // the table past the edge; truncated, it lost its end.
     <ShellSelect
       user={row.original}
       shells={table.options.meta.shells}
@@ -144,8 +129,7 @@ function SystemUsersList({ data, meta, shells = [], canManage = false, canOpenSe
   const setQuery = useSetQuery();
   const [createOpen, setCreateOpen] = useState(false);
 
-  // Filtered and paged by the API — filtering here would only ever search the
-  // ten rows this page happens to hold.
+  // Filtered and paged by the API; filtering here would only search this page.
   const filtered = data;
 
   const columns = [
@@ -154,41 +138,20 @@ function SystemUsersList({ data, meta, shells = [], canManage = false, canOpenSe
       ? [{ id: "password", header: () => <Head>{t("columns.password")}</Head>, cell: PasswordCell }]
       : []),
     { accessorKey: "shell", header: () => <Head>{t("columns.shell")}</Head>, cell: ShellCell },
-    // Tighter padding on the narrow control columns buys the room German and
-    // Russian need at 1280 without touching a readable column.
+    // Tighter padding on the narrow control columns gives German and Russian the room
+    // they need at 1280.
     { id: "sudo", header: () => <Head>{t("sudo")}</Head>, meta: { className: "px-3" }, cell: SudoCell },
     { id: "ssh", header: () => <Head>{t("ssh")}</Head>, meta: { className: "px-3" }, cell: SshCell },
     { id: "applications", header: () => <Head>{t("columns.applications")}</Head>, cell: ApplicationsCell },
-    /*
-     * Held back until 2xl, because this table does not fit and something has
-     * to give.
-     *
-     * Measured at 1440: nine columns want 1222px in a 1118px box, so Created
-     * was cut and Actions — the row menu, the only column that DOES anything —
-     * sat entirely off the right edge. You could still reach it by scrolling,
-     * but a table whose controls are past the horizon is a table people think
-     * is broken. Dropping Created brings it to 1106 and everything fits from
-     * 1440 up.
-     *
-     * Created is the one to drop, for the same reason the applications table
-     * drops it first: it is not actionable, it never changes, and nothing is
-     * decided by it. Every other column here either identifies the account
-     * (Username, Home) or is a control (Password, Shell, Sudo, SSH).
-     *
-     * Home stays, under the username rather than in its own column:
-     * `home_path` is read from /etc/passwd by SystemUserDiscoverer during
-     * Server Sync, so an adopted server's accounts can live anywhere, and those
-     * are precisely the users who need to see it.
-     *
-     * Below 1280 the list is cards, so the table only has to fit from there.
-     */
+    // Hidden below 2xl, where nine columns push Actions off screen. Home stays:
+    // adopted accounts can live anywhere.
     {
       accessorKey: "created_at_human",
       header: () => <Head>{t("columns.created")}</Head>,
       meta: { className: "hidden 2xl:table-cell" },
       cell: CreatedCell,
     },
-    // For viewers too — the menu is how SSH keys are reached.
+    // For viewers too: the menu is how SSH keys are reached.
     {
       id: "actions",
       header: () => <span className="sr-only">{t("actions.label")}</span>,
@@ -218,15 +181,10 @@ function SystemUsersList({ data, meta, shells = [], canManage = false, canOpenSe
         </div>
       </div>
 
-      {/*
-        * Said above the rows, beside the switches it is about. Until Settings →
-        * Access & security is saved, sshd has no AllowGroups line, so "SSH
-        * login: off" keeps nobody out — a switch that looks like a control and
-        * is not one. Only `false`: `null` means sshd could not be asked, and a
-        * failed read is not a fact.
-        */}
-      {/* Managers only: the fix it points to is theirs, and a viewer could
-          neither change the switches nor save the setting. */}
+      {/* Until Access & security is saved, sshd has no AllowGroups line, so "SSH
+          login: off" keeps nobody out. Only `false`: `null` means sshd was not asked. */}
+      {/* Managers only: the fix is theirs; a viewer can neither change the switches nor
+          save the setting. */}
       {canManage && sshEnforced === false && data.length ? (
         <Caution
           size="md"
@@ -254,8 +212,7 @@ function SystemUsersList({ data, meta, shells = [], canManage = false, canOpenSe
                 variant="outline"
                 onClick={() => {
                   setQuery({ search: undefined }, { resetPage: true });
-                  // This button goes away with the empty state; the box is
-                  // where the reader is going next anyway.
+                  // The button disappears with the empty state; focus the search box instead.
                   document.querySelector("[data-search-input]")?.focus();
                 }}
               >
@@ -269,9 +226,7 @@ function SystemUsersList({ data, meta, shells = [], canManage = false, canOpenSe
             title={t("empty.title")}
             description={t("empty.desc")}
             action={
-              // Even on the empty state: "no users yet" plus a disabled button
-              // explains why you can't fix it. An empty page with no action at
-              // all just looks unfinished.
+              // Even on the empty state: a disabled button explains why the user can't act.
               <ReasonTooltip reason={canManage ? null : t("noPermission")}>
                 <Button disabled={!canManage} onClick={() => setCreateOpen(true)}>
                   <Plus className="size-4" />
@@ -283,9 +238,8 @@ function SystemUsersList({ data, meta, shells = [], canManage = false, canOpenSe
         )
       ) : (
         <>
-          {/* Cards below xl (1280), the table from there up — the same break
-              as Cron Jobs. Seven columns need ~950 px, which a laptop at 1280
-              has once the sidebar is open and a 1024 one does not. */}
+          {/* Cards below xl (1280), the table from there up, as in Cron Jobs: seven columns
+              need ~950px, available at 1280 with the sidebar open. */}
           <div className="xl:hidden">
             <SystemUsersCards
               users={filtered}

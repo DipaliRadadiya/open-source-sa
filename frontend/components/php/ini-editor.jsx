@@ -22,21 +22,13 @@ import {
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { apiMessage } from "@/lib/api/error-message";
 
-/**
- * Edit a PHP version's FPM php.ini.
- *
- * This is the most dangerous control on the page: a bad ini can stop FPM
- * starting, which takes down every site on that version with no obvious cause.
- * The API requires an explicit `acknowledged` flag for exactly that reason, so
- * the checkbox here isn't decoration — it's the thing the API is asking for.
- *
- * What makes it survivable is the backend's sequence: back up → write →
- * `php-fpm -t` → reload, restoring the previous file if PHP refuses it. That
- * fact is the most reassuring thing we can tell someone about to edit this
- * file, so it's stated up front rather than buried in an error.
- */
+// A bad ini can stop FPM for every site on the version, so the API requires
+// `acknowledged`. The backend restores the old file if `php-fpm -t` refuses.
 export function IniEditor({ version, canManage, unavailableReason = null }) {
   const t = useTranslations("services");
+  const tPhp = useTranslations("php");
+  // Reading only needs view access (GET …/ini is `permission:php`).
+  const readOnly = !canManage;
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -72,9 +64,7 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
       toast.success(t("phpIni.saved", { version }));
       setOpen(false);
     } catch (error) {
-      // A 422 is PHP refusing the file (the old one is already back) or the
-      // form itself: shown beside the editor, not in a toast that vanishes
-      // while they are still looking for the mistake.
+      // A 422 is PHP refusing the file (old one already restored) or a form error.
       if (error.response?.status === 422) {
         setPhpError(apiMessage(error, t("phpIni.saveFailed")));
       } else {
@@ -87,8 +77,7 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
 
   const dirty = file !== null && contents !== file.contents;
 
-  // "Nothing changed" first: if there's nothing to save, ticking the box won't
-  // help, so naming the checkbox would send the reader to the wrong control.
+  // "Nothing changed" first: ticking the box would not help then.
   const blockedReason = !dirty
     ? t("phpIni.blockedNoChanges")
     : !acknowledged
@@ -97,50 +86,43 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
 
   return (
     <>
-      {/* A button, not a card. Hand-editing the file is the rare expert route;
-          it sits with the version's other actions instead of taking a section
-          of its own alongside the things people actually came for. */}
       {/* There is no file to edit until the install finishes. */}
-      <ReasonTooltip reason={unavailableReason ?? (canManage ? null : t("noPermission"))}>
+      <ReasonTooltip reason={unavailableReason}>
+        {/* Not disabled while loading: a disabled button drops focus, so closing would not return it. */}
         <Button
           variant="outline"
-          disabled={!canManage || loading || Boolean(unavailableReason)}
+          disabled={Boolean(unavailableReason)}
           onClick={load}
         >
           {loading ? <Loader2 className="size-4 animate-spin" /> : <FileCode2 className="size-4" />}
-          {t("phpIni.shortAction")}
+          {readOnly ? t("phpIni.viewAction") : t("phpIni.shortAction")}
         </Button>
       </ReasonTooltip>
 
       <Dialog open={open} onOpenChange={(next) => !saving && setOpen(next)}>
-        {/* Three rows — header, body, footer — with only the middle one
-            scrolling, matching the file editor, which is the same kind of
-            dialog. It used to scroll as a whole on `max-h-[90vh]
-            overflow-y-auto`, so on a short screen Save and Cancel scrolled off
-            the bottom of a dialog whose whole point is deciding whether to
-            save. A fixed height is what pins the footer; max-height cannot,
-            because the footer's position then depends on how long the file is. */}
+        {/* Fixed height, not max-height, keeps Save and Cancel pinned regardless of file length. */}
         <DialogContent className="grid-rows-[auto_minmax(0,1fr)_auto] h-[85vh] sm:max-w-5xl">
           <DialogHeader>
             <div className="flex min-w-0 items-center gap-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-warning/15 text-warning">
-                <TriangleAlert className="size-5" />
+              <span
+                className={
+                  readOnly
+                    ? "flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"
+                    : "flex size-10 shrink-0 items-center justify-center rounded-full bg-warning/15 text-warning"
+                }
+              >
+                {readOnly ? <FileCode2 className="size-5" /> : <TriangleAlert className="size-5" />}
               </span>
               <DialogTitle>{t("phpIni.title", { version })}</DialogTitle>
             </div>
-            <DialogDescription className="pt-1">{t("phpIni.description")}</DialogDescription>
+            <DialogDescription className="pt-1">
+              {readOnly ? t("phpIni.readOnlyDescription") : t("phpIni.description")}
+            </DialogDescription>
           </DialogHeader>
 
-        {/* The only part that scrolls. It scrolls rather than merely clipping
-            because the acknowledgement below the editor is not optional — on a
-            short screen it has to stay reachable, and the editor keeps a floor
-            so it can never be squeezed away to nothing. */}
+        {/* The only scrolling part, so the acknowledgement stays reachable. */}
         <div className="flex min-h-0 flex-col gap-4 overflow-y-auto">
-          {/* Console surface, like the log viewer and the config-test output.
-              It's the same category of thing — a machine's own file — and the
-              panel already has one visual language for that. A light form field
-              would also frame it as "an input", when it's really a file you're
-              being trusted with. */}
+          {/* Console surface, matching the log viewer and config-test output. */}
           <div className="flex min-h-48 flex-1 flex-col overflow-hidden rounded-lg border border-console-border bg-console">
             <div className="flex shrink-0 items-center justify-between gap-2 border-b border-console-border px-3 py-1.5">
               <span className="truncate font-mono text-xs text-console-muted">
@@ -152,8 +134,7 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
                 className="text-console-muted hover:bg-console-foreground/10 hover:text-console-foreground"
               />
             </div>
-            {/* h-full, not a vh fraction: the editor fills whatever the dialog
-                gives it, so the footer's position never depends on the file. */}
+            {/* h-full, not a vh fraction, so the footer's position never depends on the file. */}
             {loading ? (
               <div className="flex min-h-0 flex-1 items-center justify-center">
                 <Loader2 className="size-5 animate-spin text-console-muted" />
@@ -163,9 +144,9 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
                 placeholder={t("iniPlaceholder")}
                 value={contents}
                 onChange={(e) => setContents(e.target.value)}
+                readOnly={readOnly}
                 spellCheck={false}
-                // The whole file, edited as a file. A code-editor dependency for
-                // one textarea would be a lot of bundle for syntax colouring.
+                // A plain textarea: a code-editor dependency is not worth the bundle here.
                 className="console-scroll h-full min-h-0 flex-1 resize-none rounded-none border-0 bg-console font-mono text-xs leading-6 text-console-foreground caret-console-foreground shadow-none selection:bg-console-foreground/20 focus-visible:ring-0 dark:bg-console"
                 aria-label={t("phpIni.title", { version })}
               />
@@ -182,6 +163,9 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
             </p>
           ) : null}
 
+            {readOnly ? (
+              <p className="shrink-0 text-sm text-muted-foreground">{tPhp("noPermission")}</p>
+            ) : (
             <div className="flex shrink-0 items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/5 p-3">
               <Checkbox
                 id={`ack-${version}`}
@@ -196,22 +180,22 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
                 {t("phpIni.acknowledge", { version })}
               </Label>
             </div>
+            )}
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>
-              {t("phpIni.cancel")}
+              {readOnly ? t("phpIni.close") : t("phpIni.cancel")}
             </Button>
-            {/* Three gates, and each is a different question: did anything
-                change, is it ticked, and are we mid-save. The button says which
-                one is holding it — a disabled control that won't explain itself
-                is a dead end, and this is the last step of a risky edit. */}
+            {/* The button says which gate is blocking. */}
+            {readOnly ? null : (
             <ReasonTooltip reason={blockedReason}>
               <Button onClick={save} disabled={Boolean(blockedReason) || saving || loading}>
                 {saving ? <Loader2 className="size-4 animate-spin" /> : null}
                 {t("phpIni.save")}
               </Button>
             </ReasonTooltip>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

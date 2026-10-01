@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
@@ -12,31 +11,16 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Caution } from "@/components/ui/caution";
 
-/**
- * Dropping a database is the least reversible thing on this page.
- *
- * So it asks for the name to be typed, the way the system-user delete does —
- * and it says what else goes with it. The engine cascades the database's users,
- * which is the part people don't expect: the credential their app uses stops
- * existing at the same moment the data does.
- */
-/**
- * `application` is the site this database is attached to, when the caller knows
- * it. The users line was the only consequence the dialog named, and the one
- * that matters more — a live site losing its database — went unsaid.
- */
+// The engine also drops the database's users, so the app's credential stops working.
 export function DeleteDatabaseDialog({ database, application = null, open, onOpenChange, redirectTo }) {
   const t = useTranslations("databases");
-  const router = useRouter();
-  const { refreshAndWait } = useRefresh();
+  const { refreshAndWait, pushAndWait } = useRefresh();
   const [pending, setPending] = useState(false);
   const [confirm, setConfirm] = useState("");
 
   const name = database?.name ?? "";
   const matches = confirm.trim() === name;
   // The list sends users_count; the detail page sends the users themselves.
-  // Reading only one of them made the warning say "and its 0 users" on the
-  // page that actually knows how many there are.
   const users = database?.users?.length ?? database?.users_count ?? 0;
   const attached = database?.application_id !== null && database?.application_id !== undefined;
 
@@ -52,12 +36,11 @@ export function DeleteDatabaseDialog({ database, application = null, open, onOpe
     setPending(true);
     try {
       await deleteDatabase(database.id);
-      // Deleted from its own detail page: that page no longer exists.
+      // Deleted from its own detail page: stay on "Deleting…" until the list is
+      // on screen, so nothing on the dead page can be clicked.
       if (redirectTo) {
+        await pushAndWait(redirectTo);
         toast.success(t("delete.deleted", { name }));
-        handleOpenChange(false);
-        router.push(redirectTo);
-        router.refresh();
         return;
       }
       await refreshAndWait();
@@ -96,7 +79,6 @@ export function DeleteDatabaseDialog({ database, application = null, open, onOpe
         </Caution>
       ) : null}
       <div className="space-y-2">
-        {/* Same guard, same help: the database name must be typed exactly. */}
         <div className="flex items-start justify-between gap-2">
           <Label htmlFor="delete-db-confirm" className="text-sm">
             {t("delete.confirmLabel", { name })}

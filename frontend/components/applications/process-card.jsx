@@ -15,22 +15,11 @@ import { formatBytes } from "@/lib/format/bytes";
 
 const STATE_VARIANT = { active: "success", failed: "destructive", activating: "warning" };
 
-/**
- * Spelled out rather than built as `${action}ed`, which produced `stoped` for
- * stop and printed the raw key path in the toast. Only stop was affected, so it
- * survived every reading of the code; a key assembled from a template literal is
- * also invisible to grep, so nothing flagged it as missing.
- */
+// Spelled out, not `${action}ed` ("stoped"); literal keys stay greppable.
 const DONE_KEY = { start: "started", stop: "stopped", restart: "restarted" };
 
-/**
- * Only for sites that run their own process (`has_process` — true exactly when
- * a start command is set). PHP and static sites have nothing to supervise.
- *
- * A freshly created git site is `active` with a process that has never started,
- * because the code has not arrived yet. That reads as "deploy to start", not as
- * a fault, so it is not painted red.
- */
+// A new git site is `active` with a never-started process: "deploy to start",
+// not a fault, so not red.
 export function ProcessCard({ application, canManage = false, className }) {
   const t = useTranslations("applications.process");
   const tApp = useTranslations("applications");
@@ -38,11 +27,8 @@ export function ProcessCard({ application, canManage = false, className }) {
   const { refreshThen } = useRefresh();
   const [pending, setPending] = useState(null);
   const [confirmStop, setConfirmStop] = useState(false);
-  // What the last button here should have done. systemd records a stopped
-  // Node process as "failed" (it exits on SIGTERM), so after Stop that reads
-  // as stopped for this visit. After Start/Restart the old state is still on
-  // the page until the re-read lands; it showed "Process failed" under a
-  // success toast, so it reads as starting until then.
+    // systemd records a stopped Node process as "failed" (it exits on SIGTERM),
+    // so the expected outcome of the last click decides how it reads.
   const [expected, setExpected] = useState(null);
 
   const process = application.process ?? {};
@@ -90,8 +76,7 @@ export function ProcessCard({ application, canManage = false, className }) {
 
   const facts = [
     { label: t("state"), value: stateLabel },
-    // `since` is when the process last started; on a stopped one it read as
-    // "Running since" a time it no longer is.
+    // `since` is the last start time, meaningless on a stopped process.
     { label: t("since"), value: state === "active" ? formatSince(process.since, format) : null },
     { label: t("memory"), value: memory },
     { label: t("restarts"), value: process.restarts },
@@ -122,8 +107,7 @@ export function ProcessCard({ application, canManage = false, className }) {
         {canManage ? (
           <div className="flex flex-wrap gap-2">
             {[
-              // Start only when it is not running; Restart and Stop only when
-              // it is — each disabled one says why.
+              // Each disabled action says why.
               { action: "start", icon: Play, reason: state === "active" ? t("alreadyRunning") : null },
               { action: "restart", icon: RotateCw, reason: state === "active" ? null : t("notRunning") },
               { action: "stop", icon: Square, reason: state === "active" ? null : t("notRunning") },
@@ -164,10 +148,7 @@ export function ProcessCard({ application, canManage = false, className }) {
   );
 }
 
-/**
- * systemd's "Sat 2026-09-26 13:18:19 UTC", in the reader's language. Left as
- * it came when it is not that shape.
- */
+// systemd's "Sat 2026-09-26 13:18:19 UTC", localised; other shapes pass through.
 function formatSince(since, format) {
   const match = typeof since === "string" && since.match(/(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) UTC$/);
   if (!match) return since;

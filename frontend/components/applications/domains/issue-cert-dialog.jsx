@@ -23,15 +23,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Only used when the server sends no catalog at all — an older backend. The
-// server decides what a site can have; this is the last-resort shape, not a
-// preference.
-// Same cadence as the SSL card polls an issuance. The first stage answers in
-// seconds; the certbot stage is a round trip to the CA and takes a good deal
-// longer, which is why the stage is named while it runs.
+// Same cadence as the SSL card's issuance polling.
 const DRY_RUN_POLL_MS = 3000;
-// The same ten minutes the SSL card allows an issuance. A run still going
-// after that has lost its worker, and polling on costs 20 requests a minute.
+// Ten minutes, as for an issuance; a run still going after that lost its worker.
 const DRY_RUN_POLL_LIMIT = (10 * 60 * 1000) / DRY_RUN_POLL_MS;
 
 const FALLBACK_TYPES = [
@@ -40,27 +34,16 @@ const FALLBACK_TYPES = [
   { type: "custom", available: true },
 ];
 
-/**
- * The method to secure this site with, offered as the server sees it.
- *
- * Nothing here decides what is possible: `available` gates each option and
- * `recommended` picks the default. A site on a nip.io or internal name cannot
- * have Let's Encrypt but can absolutely have a self-signed certificate, and
- * guessing that from the domain name is how such a site ends up being told it
- * cannot have SSL at all.
- */
+// The server decides: `available` gates each method, `recommended` picks the default; never guess from the domain.
 export function IssueCertDialog({
   appId,
   availableTypes = [],
-  // What the site has right now, so the dialog can tell "secure this site" from
-  // "replace what is already securing it" — two very different acts behind one
-  // button. Null when there is no certificate.
+  // The current certificate, or null; distinguishes "secure" from "replace".
   current = null,
   open,
   onOpenChange,
   onIssued,
-  // The last Let's Encrypt attempt hit its rate limit. The other methods do
-  // not go near Let's Encrypt, so only that one is closed.
+  // Let's Encrypt hit its rate limit; only that method is closed.
   rateLimited = false,
 }) {
   const t = useTranslations("applications.domains");
@@ -69,52 +52,36 @@ export function IssueCertDialog({
       ? { ...entry, available: false, reason: t("ssl.rateLimitedMethod") }
       : entry,
   );
-  // The server's recommendation, else the first thing that actually works —
-  // never a fixed default, which is how the dialog came to open on Let's
-  // Encrypt for sites Let's Encrypt refuses.
+  // The server's recommendation, else the first available method; never fixed.
   const defaultType =
     types.find((entry) => entry.recommended && entry.available)?.type ??
     types.find((entry) => entry.available)?.type ??
     types[0]?.type;
 
   const [chosen, setType] = useState(defaultType);
-  // A choice that has since become unavailable (Let's Encrypt after a rate
-  // limit) falls back to the default rather than staying selected and dead.
+  // A choice that became unavailable falls back to the default.
   const type = types.some((entry) => entry.type === chosen && entry.available !== false)
     ? chosen
     : defaultType;
-  // This dialog holds its own state rather than react-hook-form, so it gets none
-  // of FormItem's label wiring for free. Without an id every label here was
-  // decorative: clicking it did nothing and a screen reader announced an
-  // unlabelled control.
+  // Not react-hook-form, so labels need explicit ids.
   const fieldId = useId();
   const [pem, setPem] = useState({ certificate: "", private_key: "", chain: "" });
-  /*
-   * Per-field errors from the API, so a message about the key appears at the
-   * key rather than as a toast that names neither box.
-   *
-   * The backend attaches `starts_with` ("this is not PEM") to whichever field
-   * is malformed, and — importantly — attaches the certificate/key MISMATCH to
-   * `private_key`. That is the one error where being told which box is wrong is
-   * the whole of the help: two valid-looking PEM blocks that simply are not a
-   * pair look identical to a transient failure otherwise.
-   */
+  // Per-field API errors shown at their field. The backend attaches the
+  // certificate/key mismatch to `private_key`.
   const [pemErrors, setPemErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
-  // Per-domain reachability refusals (422 errors.domain). Their presence is what
-  // unlocks the "issue anyway" (force) path — never offered up front.
+  // Per-domain reachability refusals (422 errors.domain); they unlock the
+  // "issue anyway" (force) path, never offered up front.
   const [refusals, setRefusals] = useState([]);
-  // The rehearsal: reachability, then certbot against Let's Encrypt staging.
-  // Null until asked for — a site that has never been checked is a normal
-  // state, not a pending one.
+  // Dry run: reachability, then certbot against Let's Encrypt staging. Null
+  // until requested.
   const [dryRun, setDryRun] = useState(null);
   const [starting, setStarting] = useState(false);
   const [stalled, setStalled] = useState(false);
 
   const selected = types.find((entry) => entry.type === type);
   const dryRunning = starting || (dryRun?.status === "running" && !stalled);
-  // A pass needs only one name to pass. The rest are issued without, so the
-  // headline has to say which names the certificate will not cover.
+  // A pass needs only one passing name; list the names left off.
   const leftOff = dryRun?.status === "passed" ? (dryRun.domains ?? []).filter((entry) => !entry.ok) : [];
 
   function reset() {
@@ -133,12 +100,8 @@ export function IssueCertDialog({
     onOpenChange?.(next);
   }
 
-  // Poll only while something is actually running. The dry run's own state is
-  // the stop condition, so a job that dies still ends the spinner — the
-  // backend writes a verdict from the job's `failed()` hook precisely so this
-  // loop can never spin forever. Closing the dialog tears the effect down,
-  // `open` being a dependency, and the `live` flag drops a reply that lands
-  // after that.
+  // Poll only while running; the backend's `failed()` hook always writes a
+  // verdict, so this ends. `live` drops replies landing after close.
   useEffect(() => {
     if (!open || dryRun?.status !== "running" || stalled) return undefined;
     let live = true;
@@ -165,8 +128,7 @@ export function IssueCertDialog({
   async function runDryRun() {
     setStarting(true);
     setStalled(false);
-    // Last run's verdict is cleared first. Leaving it on screen beside a fresh
-    // spinner shows a stale answer next to the question that supersedes it.
+    // Clear the previous verdict so it never sits beside a new run.
     setDryRun(null);
     setRefusals([]);
     try {
@@ -204,9 +166,7 @@ export function IssueCertDialog({
       if (Array.isArray(domainErrors) && domainErrors.length) {
         setRefusals(domainErrors);
       } else if (Object.keys(fieldErrors).length) {
-        // Shown at the fields, not as a toast — a toast that says "the key does
-        // not match the certificate" while pointing at neither box leaves you
-        // rereading both.
+        // Shown at the fields, not as a toast.
         setPemErrors(fieldErrors);
       } else {
         toast.error(apiMessage(error, t("ssl.issueFailed")));
@@ -216,36 +176,22 @@ export function IssueCertDialog({
     }
   }
 
-  /*
-   * Why Issue cannot run yet, or null.
-   *
-   * An uploaded certificate needs both PEM blocks. Issue was enabled with both
-   * boxes empty, so pressing it spent a round trip to be told what the form
-   * already knew — and the answer arrived as a toast naming neither field.
-   * Same ReasonTooltip + disabled pattern the webhook card uses.
-   */
+  // Why Issue cannot run yet, or null (an upload needs both PEM blocks).
   const issueReason =
     type === "custom" && !(pem.certificate.trim() && pem.private_key.trim())
       ? t("ssl.uploadNeedsBoth")
       : null;
 
-  // Force skips the reachability check, so it is offered exactly when that
-  // check is what said no — whether the user found out by trying to issue or
-  // by rehearsing first. A dry run that got as far as the CA is not a
-  // reachability problem, and forcing past it would fix nothing.
+  // Force skips only the reachability check, so it is offered only when that
+  // check failed (on issue or in a dry run), not for CA-stage failures.
   const dryRunBlockedOnReach =
     dryRun?.status === "failed" && dryRun?.stage === "reachability";
   const canForce =
     type === "letsencrypt" && (refusals.length > 0 || dryRunBlockedOnReach);
 
-  // Reached from "Reissue" on a site that is already served over HTTPS. The
-  // dialog said "Issue a certificate — secure this site over HTTPS" either way,
-  // which describes the wrong job: you came here to cover a name the current
-  // certificate misses, not to turn HTTPS on.
+  // Opened via "Reissue" on a site already served over HTTPS.
   const replacing = Boolean(current);
-  // Picking a different method throws the current certificate away. That is
-  // fine for a self-signed one and a real loss for an uploaded one, which
-  // cannot be re-issued from here — so it is said out loud before the button.
+  // A different method discards the current certificate; warn before issuing.
   const swapsMethod = replacing && current.type && current.type !== type;
 
   return (
@@ -279,16 +225,11 @@ export function IssueCertDialog({
         </>
       }
     >
-      {/* `grid gap-2`, not `space-y-1.5`: that is what FormItem uses, and this
-          dialog sits one click away from Add domain, which is built on it. Two
-          modals in the same flow were spacing their labels 6px and 8px apart. */}
+      {/* `grid gap-2` to match FormItem's label spacing. */}
       <div className="grid gap-2">
         <Label htmlFor={`${fieldId}-method`}>{t("ssl.method")}</Label>
         <Select value={type} onValueChange={(v) => { setType(v); setRefusals([]); setDryRun(null); }}>
-          {/* shadcn's SelectTrigger is `w-fit` by default, so a form field
-              without this shrinks to its current option — and the control
-              visibly changes width when the selection does. Every other form
-              select in the panel is w-full; these two were the misses. */}
+          {/* w-full: SelectTrigger defaults to w-fit. */}
           <SelectTrigger id={`${fieldId}-method`} className="w-full">
             <SelectValue />
           </SelectTrigger>
@@ -307,9 +248,7 @@ export function IssueCertDialog({
         </Select>
       </div>
 
-      {/* Said before the button, not after the fact: an uploaded certificate
-          cannot be re-issued from this panel, so swapping method throws away
-          something the user may not be able to get back. */}
+      {/* An uploaded certificate cannot be re-issued here, so swapping is lossy. */}
       {swapsMethod ? (
         <Caution size="md">
           {t("ssl.replacesCurrent", {
@@ -318,10 +257,8 @@ export function IssueCertDialog({
         </Caution>
       ) : null}
 
-      {/* The server's own words about the selected method. On an available type
-          this is information — self-signed works everywhere and browsers warn
-          about it — so it is toned by `available`, never by having a reason at
-          all. Branching on the reason would refuse a method that works. */}
+      {/* Toned by `available`, not by the presence of a reason: an available
+          method can still carry an informational reason. */}
       {selected?.reason ? (
         <Caution size="md" tone={selected.available ? "warning" : "destructive"}>
           {selected.reason}
@@ -330,10 +267,7 @@ export function IssueCertDialog({
         <p className="text-xs text-muted-foreground">{t(`ssl.methodHint_${type}`)}</p>
       )}
 
-      {/* The rehearsal. Sits under the method hint rather than in the footer:
-          it belongs to Let's Encrypt specifically, it is not an alternative to
-          Issue, and a fourth button beside Cancel / Issue anyway / Issue would
-          have made the primary action one of four equals. */}
+      {/* Let's Encrypt dry run, kept out of the footer. */}
       {type === "letsencrypt" ? (
         <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -357,9 +291,7 @@ export function IssueCertDialog({
             </Button>
           </div>
 
-          {/* Named while it runs, because the two stages cost very different
-              amounts of time and a user watching a spinner for forty seconds
-              deserves to know it is waiting on the CA rather than stuck. */}
+          {/* Names the running stage; the CA stage is much slower. */}
           {dryRunning ? (
             <p className="text-sm text-muted-foreground">
               {t(`ssl.dryRunStage_${dryRun?.stage ?? "reachability"}`)}
@@ -399,9 +331,7 @@ export function IssueCertDialog({
                     : t("ssl.dryRunPassed")}
               </p>
 
-              {/* Every name, passing ones included. "Two of your three domains
-                  are ready" is the useful sentence, and a list of only the
-                  failures cannot say it. */}
+              {/* Every name, passing ones included. */}
               {dryRun.domains?.length ? (
                 <ul className="space-y-1.5">
                   {dryRun.domains.map((entry) => (
@@ -411,10 +341,7 @@ export function IssueCertDialog({
                       ) : (
                         <TriangleAlert className={cn("mt-0.5 size-4 shrink-0", leftOff.length ? "text-warning" : "text-destructive")} />
                       )}
-                      {/* The icon carries the verdict; the sentence stays
-                          readable. A failure message is the instruction for
-                          fixing it, and a paragraph of red reads as alarm
-                          rather than as the thing to go and do. */}
+                      {/* The icon carries the verdict; the text stays neutral. */}
                       <span className={entry.ok ? "text-muted-foreground" : undefined}>
                         {entry.message}
                       </span>
@@ -423,9 +350,7 @@ export function IssueCertDialog({
                 </ul>
               ) : null}
 
-              {/* Only ever set when the CA stage is what failed. The list above
-                  already explains a reachability failure, and repeating a
-                  summary over it would say "something is wrong" twice. */}
+              {/* Set only when the CA stage failed. */}
               {dryRun.message ? <p className="text-sm">{dryRun.message}</p> : null}
               {dryRun.reference ? (
                 <p className="font-mono text-xs text-muted-foreground">
@@ -433,11 +358,8 @@ export function IssueCertDialog({
                 </p>
               ) : null}
 
-              {/* The one case where a failed check is not the last word: a
-                  NAT'd box cannot reach its own public address, so the token
-                  fetch fails while the real challenge, arriving from outside,
-                  would succeed. "Issue anyway" appears in the footer, so it is
-                  explained here. */}
+              {/* Explains "Issue anyway": a NAT'd server cannot reach its own
+                  public address, though the real challenge may still succeed. */}
               {dryRunBlockedOnReach ? (
                 <p className="text-xs text-muted-foreground">{t("ssl.forceHint")}</p>
               ) : null}
@@ -511,10 +433,7 @@ export function IssueCertDialog({
       {refusals.length ? (
         <Caution size="md" tone="destructive">
           <p className="font-medium">{t("ssl.refusedTitle")}</p>
-          {/* The refusals themselves are ordinary text, not red. They are the
-              instructions — one distinct fix per domain — and a list rendered
-              entirely in `text-destructive` reads as alarm rather than as the
-              thing you are supposed to go and do. */}
+          {/* Plain text, not red: each refusal is the fix to apply. */}
           <ul className="list-disc space-y-1 pl-4">
             {refusals.map((msg, i) => (
               <li key={i}>{msg}</li>

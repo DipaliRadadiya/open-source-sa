@@ -6,38 +6,18 @@ const POLL_MS = 3000;
 const SLOW_POLL_MS = 15000;
 // Back off only once the failures look like an outage, not a blip.
 const FAILURES_BEFORE_BACKOFF = 3;
-// 100 points x 3s = a five-minute window. Forty points was two minutes, which
-// is too short to read a trend off — you saw noise, not a shape.
+// 100 points x 3s = a five-minute window, long enough to read a trend.
 const MAX_POINTS = 100;
 
-/**
- * Polls GET /server/metrics/live and keeps one rolling window that feeds every
- * chart on the dashboard — load, resource usage and both I/O pairs. One poll,
- * one series, four charts: the alternative was four components each keeping
- * their own history of the same response.
- *
- * Pauses while the tab is hidden and aborts the in-flight request on unmount so
- * a backgrounded tab costs nothing. Timestamps stay raw — formatting is the
- * caller's job, via next-intl.
- */
+// One rolling window feeds every dashboard chart. Pauses while the tab is hidden; timestamps stay raw.
 export function useLiveMetrics(initial = null) {
   const [metrics, setMetrics] = useState(initial);
   const [series, setSeries] = useState([]);
   const [failed, setFailed] = useState(false);
-  /*
-   * The API's own sentence for WHY the poll is failing.
-   *
-   * `failed` alone renders "Live metrics unavailable", which is the category,
-   * not the reason — and the server sends a real one ("Metrics collector is
-   * not running."). Keeping only the boolean meant the panel knew why and
-   * showed a shrug, which is the same fault as reporting a failed read as a
-   * fact.
-   */
+  // The API's own reason the poll is failing (e.g. "Metrics collector is not running.").
   const [reason, setReason] = useState(null);
-  // `cpu.percent`, `network` and `disk_io` are rates measured against the
-  // PREVIOUS poll, so the first sample after any gap comes back as 0 — there is
-  // nothing to measure against yet. That 0 is "not measured", not "idle", and
-  // rendering it as a number would draw a quiet server that isn't there.
+  // `cpu.percent`, `network` and `disk_io` are rates against the PREVIOUS poll,
+  // so the first sample after any gap is 0, meaning "not measured", not "idle".
   const [ratesReady, setRatesReady] = useState(false);
   const [updatedAt, setUpdatedAt] = useState(null);
   const controllerRef = useRef(null);
@@ -47,8 +27,8 @@ export function useLiveMetrics(initial = null) {
     let active = true;
     let failures = 0;
     let intervalMs = POLL_MS;
-    // Every gap needs a fresh baseline: mount, a hidden tab coming back, and a
-    // recovered outage all leave the server with nothing to compare against.
+  // Every gap needs a fresh baseline: mount, a hidden tab coming back, and a
+  // recovered outage all leave the server with nothing to compare against.
     let needsBaseline = true;
 
     function schedule() {
@@ -67,8 +47,8 @@ export function useLiveMetrics(initial = null) {
     }
 
     async function tick() {
-      // A hidden tab stops polling, so the next sample spans the whole time it
-      // was away — that reading is not a rate for the interval anyone watched.
+      // A hidden tab stops polling; the next sample spans the absence, so it
+      // needs a new baseline.
       if (document.hidden) {
         needsBaseline = true;
         return;
@@ -87,16 +67,12 @@ export function useLiveMetrics(initial = null) {
         applyBackoff(failures);
 
         if (needsBaseline) {
-          // This sample only establishes the baseline. Absolute readings
-          // (memory, disk, load) are real and shown; the rates are not, and the
-          // chart gets no point rather than a false zero.
+          // Baseline sample: absolute readings (memory, disk, load) are shown;
+          // rates are not, so the chart gets no point rather than a false zero.
           needsBaseline = false;
           setRatesReady(false);
-          // A baseline is only ever needed after a gap — a hidden tab, an
-          // outage, a fresh mount. Push a valueless point so the line BREAKS
-          // there. Without it, coming back from 45s on another tab drew a
-          // straight segment across the whole absence, which reads as "traffic
-          // was steady" when the truth is "nobody was looking".
+          // A valueless point makes the line break across the gap instead of
+          // drawing a straight segment over time nobody observed.
           setSeries((prev) =>
             prev.length ? [...prev, { t: Date.now() }].slice(-MAX_POINTS) : prev,
           );

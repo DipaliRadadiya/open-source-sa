@@ -1,13 +1,5 @@
-/**
- * The detect log is nginx/Apache `combined` — the same line format an access
- * log uses, written only for requests the firewall *would* have refused:
- *
- *   1.2.3.4 - - [13/Aug/2026:05:12:33 +0000] "GET /path?a=b HTTP/1.1" 200 512 "ref" "ua"
- *
- * Note what is NOT in it: **which check matched**. Combined format has no field
- * for it, so the panel can show which requests were caught and must not claim
- * to know why.
- */
+// nginx/Apache `combined` lines for requests the firewall *would* have refused. No field says
+// which check matched, so the panel must not claim to know why.
 const LINE =
   /^(\S+) \S+ \S+ \[([^\]]+)\] "(\S+) ([^"]*?) (\S+)" (\d{3}) (\S+) "([^"]*)" "([^"]*)"/;
 
@@ -26,11 +18,7 @@ function parseStamp(value) {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-/**
- * @param {string[]|string} lines raw log lines, newest last (as the file reads)
- * @returns {{ip:string,at:string|null,method:string,target:string,status:number,userAgent:string}[]}
- *          newest first, unparseable lines dropped
- */
+// Input is newest last (file order); output newest first, unparseable lines dropped.
 export function parseDetectLog(lines) {
   const list = Array.isArray(lines) ? lines : String(lines ?? "").split("\n");
   const out = [];

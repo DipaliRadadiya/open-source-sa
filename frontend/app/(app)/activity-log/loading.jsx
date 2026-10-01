@@ -1,8 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableSkeleton } from "@/components/data-table/table-skeleton";
 
-// Heading, the search + filter row, the four-column table and the pagination
-// row — the shape the real page settles into.
+// Mirrors the real page layout so content fills in without jumping.
 export default function Loading() {
   return (
     <div className="space-y-6">

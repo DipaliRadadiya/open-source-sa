@@ -39,9 +39,7 @@ function valuesFrom(worker) {
     processes: worker.processes,
     directory: worker.directory ?? "",
     stop_wait_seconds: worker.stop_wait_seconds ?? 30,
-    // `user`, not `effective_user`: the form edits what was ASKED for, and
-    // showing the resolved fallback here would save the site's own username as
-    // if it had been chosen deliberately.
+    // `user`, not `effective_user`: never save the resolved fallback as a choice.
     user: worker.user ?? "",
     log_file: worker.log_file ?? "",
     log_level: worker.log_level ?? "",
@@ -63,12 +61,8 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
     defaultValues: valuesFrom(worker),
   });
 
-  // Keyed on the id, like every other edit dialog in the panel — NOT on the
-  // `worker` object. The list this row comes from is polled, so that object is
-  // replaced on every tick, and depending on it re-ran this reset every few
-  // seconds: it silently threw away whatever was being typed, and because
-  // reset() also clears `isSubmitting` it killed the Save spinner mid-request
-  // and re-enabled the button while the write was still in the air.
+  // Keyed on the id, NOT the `worker` object: the list is polled, so the object
+  // changes every tick and a reset would wipe typing and clear `isSubmitting`.
   useEffect(() => {
     if (open) form.reset(valuesFrom(worker));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -76,8 +70,7 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
 
   function onPickPreset(preset) {
     form.setValue("kind", preset.kind, { shouldValidate: true });
-    // Custom command ships with an empty command on purpose (type your own) —
-    // validating it immediately would flag "required" before anyone's typed.
+    // The custom preset has an empty command; do not flag "required" before typing.
     if (preset.command) {
       form.setValue("command", preset.command, { shouldValidate: true });
     } else {
@@ -87,20 +80,16 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
   }
 
   async function onSubmit(values) {
-    // Last attempt's refusal, cleared before this one. It belongs to no field,
-    // so nothing else clears it, and a stale conflict sitting above a worker
-    // you have since changed is worse than no message.
+    // A root error belongs to no field, so nothing else clears it.
     form.clearErrors("root.server");
     const payload = {
       ...values,
       name: values.name.trim(),
       command: values.command.trim(),
       directory: values.directory?.trim() || undefined,
-      // Never sent: the worker runs as the application's own user, and an
-      // absent key leaves an existing worker's account as it is.
+      // Never sent: the worker runs as the application's own user.
       user: undefined,
-      // Blank means "no opinion", and the API treats an absent key that way —
-      // sending "" would ask it to store an empty log path.
+      // Blank is omitted; "" would store an empty log path.
       log_file: values.log_file?.trim() || undefined,
       log_level: values.log_level || undefined,
       extra_config: values.extra_config?.trim() || undefined,
@@ -115,31 +104,22 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
         onOpenChange?.(false);
       });
     } catch (error) {
-      // Unlike creating, nothing is rolled back: the API saves the new settings
-      // first, and when the worker cannot start with them it is left stopped.
-      // "Could not be applied" read as "nothing changed" over a row still
-      // showing Running. Says what happened, and re-reads the list behind.
+      // Not rolled back: the API saves the settings first and leaves a worker
+      // that cannot start stopped. Say so and re-read the list.
       if (!error.response?.data?.errors && (error.response?.status ?? 0) >= 500) {
         form.setError("root.server", { message: t("edit.failedStopped") });
         refresh();
         scrollToFirstError();
         return;
       }
-      /*
-       * `kind` is sent and is in the form's values, but has no control — it is
-       * set by picking a preset. So the API's "you can't run Horizon and a
-       * queue worker on the same app" was stored against an input that does not
-       * exist, and Save failed in total silence. Naming it here puts the
-       * refusal on the form, where it stays put while the dialog does.
-       */
+      // `kind` errors (e.g. a Horizon conflict) are shown at form level.
       handleValidationError(error, form, { formError: true, unrendered: ["kind"] });
       // The dialog scrolls; the reason can land above or below what is on screen.
       scrollToFirstError();
     }
   }
 
-  // Stays busy through the list's re-read, so the button cannot be pressed
-  // twice while the dialog is still open over a saved worker.
+  // Busy through the list refresh so the button cannot be pressed twice.
   const isSubmitting = form.formState.isSubmitting || refreshing;
   const serverError = form.formState.errors.root?.server?.message;
   const others = workers.filter((w) => w.id !== worker.id);
@@ -224,9 +204,7 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
           />
         </div>
 
-        {/* Both controls set `kind`, and both must exclude this worker from the
-            conflict check — changing a site's only queue worker into a Horizon
-            one is the edit that is always safe. */}
+        {/* Both controls set `kind` and must exclude this worker from the conflict check. */}
         <WorkerKindField form={form} presets={presets} workers={others} />
 
         <WorkerCommandField

@@ -13,13 +13,7 @@ import {
   protectedReasonFor,
 } from "@/components/firewall/rule-parts";
 
-/**
- * The same rules as cards, for screens too narrow for six columns.
- *
- * The table scrolls sideways on a phone and puts delete off the right edge with
- * nothing hinting at a swipe. Here the name leads, the facts sit in one line
- * beneath it, and delete is reachable.
- */
+// Cards for screens too narrow for six columns, so delete stays reachable.
 export function RulesCards({
   rules,
   enabled,
@@ -44,12 +38,11 @@ export function RulesCards({
                 <ProtocolText rule={rule} labels={labels} />
               </div>
             </div>
-            {/* This card only exists on phones, and its controls are the
-                compact desktop sizes (a 38x28 icon button). A 44px minimum box
-                on each keeps the look and makes them reliably tappable. */}
+            {/* Phone-only card with compact desktop-size controls; a 44px minimum box keeps
+                them tappable. */}
             <div className="flex shrink-0 items-center gap-1 max-sm:[&_button:not([role=switch])]:min-h-11 max-sm:[&_button:not([role=switch])]:min-w-11">
-              {/* Same directional guard as the table: a protected rule can
-                  always be switched back ON, never OFF. */}
+              {/* Same directional guard as the table: a protected rule can always be switched
+                  back ON, never OFF. */}
               <ReasonTooltip
                 reason={protectedReasonFor({
                   rule,

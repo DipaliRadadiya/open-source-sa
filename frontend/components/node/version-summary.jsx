@@ -18,6 +18,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { InstallOutput } from "@/components/runtime/install-output";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Card,
@@ -26,49 +27,19 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-/**
- * The selected Node version and everything you can do from here.
- *
- * Same card as PHP's, minus the panel-version rule (the panel doesn't run on
- * Node) and plus npm, which belongs to the version rather than the machine.
- * Install lives beside the version picker, not here.
- */
+// Same card as PHP's, minus the panel-version rule and plus npm.
 export function VersionSummary({ version, canManage, lifecycleAvailable = false }) {
   const t = useTranslations("node");
   const { refreshAndWait } = useRefresh();
   const [confirming, setConfirming] = useState(false);
-  /*
-   * WHICH action is running, not merely that one is.
-   *
-   * A single boolean drove the spinner on all three buttons at once, so
-   * pressing Update npm span Make default and Remove too — three things
-   * appearing to happen when one was. The buttons still all DISABLE
-   * together (they act on one version, and letting a second start mid-write
-   * is how you get a remove racing an update), but only the pressed one
-   * says it is working.
-   */
+  // All buttons disable together (one version, no racing); only the pressed one spins.
   const [running, setRunning] = useState(null);
   const pending = running !== null;
-  const [npm, setNpm] = useState(version.npm_version ?? null);
-  /*
-   * What npm this Node version can actually run, and whether that beats what
-   * is installed.
-   *
-   * `npm_latest` is per Node version, not the registry's `latest`: npm 12
-   * requires Node ^22.22.2 || ^24.15.0 || >=26, so publishing one global
-   * number would leave the button lit forever on every line that can never
-   * reach it.
-   *
-   * The comparison is the API's, deliberately. Done here it would be a string
-   * compare, and '9.8.1' sorts after '10.2.4' as text — the panel would report
-   * an upgrade as a downgrade and hide a real one.
-   *
-   * But `npm_update_available` is ALSO false when the catalog is empty — a box
-   * with no egress, or one whose daily refresh has not run yet. Trusting the
-   * boolean alone would disable the button permanently there, so nothing could
-   * ever update npm again. "Already current" is claimed only when a latest is
-   * actually known; without one the button stays offered and says nothing.
-   */
+  // Read from props: the card re-reads after an update, and a local copy would go
+  // stale.
+  const npm = version.npm_version ?? null;
+  // `npm_latest` is per Node version, compared by the API (strings misorder versions).
+  // `npm_update_available` is also false with an empty catalog, so "current" needs a known latest.
   const npmLatest = version.npm_latest ?? null;
   const npmKnown = Boolean(npm && npmLatest);
   const npmBehind = !npmKnown
@@ -83,16 +54,12 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
   const usedBy = version.in_use_by ?? 0;
   const sites = version.sites ?? [];
 
-  // This card had no notion of install state at all: a version mid-install
-  // rendered exactly like a healthy one, with working buttons that acted on
-  // something not yet on disk. PHP has handled these four states for a while;
-  // now both read the same helper.
+  // Shares the install-state helper with PHP, so a version mid-install does not
+  // render like a healthy one.
   const installState = versionState(version);
 
-  // Nothing is on disk while it installs or purges, so anything that reads or
-  // writes this version fails. Removing is not an exception for Node the way it
-  // is for a failed PHP install: pressing Remove twice sent a second request
-  // that answered 404 the moment the first finished.
+  // Nothing is on disk while it installs or purges, so every action fails; Remove
+  // included (a second request would 404 once the first finished).
   const notReadyReason =
     installState === "installing"
       ? t("versions.stillInstalling")
@@ -102,9 +69,8 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
           ? t("versions.installFailedShort")
           : null;
 
-  // Same as PHP: a failed install left nothing on disk, and the remove
-  // endpoint refuses a version that is not installed. Offering it there is
-  // offering a 404.
+  // Same as PHP: a failed install left nothing on disk, and the remove endpoint
+  // refuses a version that is not installed.
   const nothingToRemove = failedWithNothingInstalled(version);
 
   const removeReason = !canManage
@@ -151,8 +117,7 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
       toast.success(t("versions.removed", { version: version.version }));
       setConfirming(false);
     } catch (error) {
-      // The API names every site pinning it, which is more useful than
-      // anything this page could compose.
+      // The API names every site pinning it.
       toast.error(apiMessage(error, t("versions.removeFailed")));
     } finally {
       setRunning(null);
@@ -162,20 +127,12 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
   async function upgradeNpm() {
     setRunning("npm");
     try {
-      // The response carries the new number, so the row updates without
-      // re-fetching the whole page for one string.
       const before = npm;
       const { data } = await updateNodeNpm(version.version);
       const after = data?.npm_version ?? null;
-      if (after) setNpm(after);
-      /*
-       * "npm updated to 12.0.2" under a button that still reads
-       * "Update npm (12.0.2)" is the panel claiming it did something it did
-       * not. The API reports the version AFTER the attempt and there is no
-       * "latest npm" field anywhere, so an unchanged number is the only signal
-       * available that it was already current — and it is enough to stop the
-       * message being wrong.
-       */
+      // Re-read: "update still available" is the server's semver answer.
+      await refreshAndWait();
+      // The API reports the version after the attempt; unchanged means it was already current.
       toast.success(
         after && before && after === before
           ? t("npm.alreadyLatest", { version: after })
@@ -191,9 +148,7 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
   return (
     <Card>
       <CardHeader>
-        {/* Every action for this version on one line, with the version it acts
-            on. A footer bar underneath repeated the card's own subject and
-            split the controls across two places for no reason. */}
+        {/* Every action for this version on one line, with the version it acts on. */}
         <div className="flex flex-wrap items-start justify-between gap-3">
           <CardTitle className="flex flex-wrap items-center gap-2 text-base font-semibold">
             {t("versions.name", { version: version.version })}
@@ -208,11 +163,8 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
               namespace="node"
               available={lifecycleAvailable}
             />
-            {/* The installed npm belongs here, beside the other facts about
-                this version — it was inside the button's label, which read as
-                the version the button would GIVE you rather than the one you
-                already have. So an update that changed nothing, because npm
-                was already current, looked like an update that failed. */}
+            {/* The installed npm version is a fact about this version, shown here rather than
+                in the button label (which read as the version it would install). */}
             {npm ? (
               <Badge variant="outline" className="font-normal">
                 {npmBehind
@@ -222,14 +174,11 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
             ) : null}
           </CardTitle>
 
-          {/* Not shrink-0 — same fault the PHP card had. A shrink-0 flex item
-              takes its max-content width, all three buttons on one line, and
-              refuses to give any back, so its own flex-wrap never gets a chance
-              to fire and Remove ends up under the card's edge. */}
+          {/* Not shrink-0: a shrink-0 flex item keeps its max-content width, so its
+              flex-wrap never fires and buttons overflow the card. */}
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            {/* npm ships inside Node and is updated separately. Null means it
-                couldn't be read — no number is better than a wrong one, so the
-                control goes away rather than claiming to update nothing. */}
+            {/* npm ships inside Node and updates separately. Null means unreadable: hide the
+                control rather than show a wrong number. */}
             {npm ? (
               <ReasonTooltip
                 reason={
@@ -292,13 +241,11 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
           </div>
         </div>
 
-        {/* The count answers "can I remove this?"; the names answer "what
-            breaks if I do?". See the PHP card — run together as one sentence
-            they became a grey paragraph with the count buried at the end. */}
+        {/* The count answers "can I remove this?"; the names answer "what breaks?". Kept
+            separate, as on the PHP card. */}
         <CardDescription>
           {usedBy > 0 ? t("versions.usedByCount", { count: usedBy }) : t("versions.usedByNone")}
-          {/* Only when the date is news — on a supported line the green badge
-              already says what you need. */}
+          {/* Only when the date is news; on a supported line the green badge says enough. */}
           {lifecycleAvailable &&
           version.lifecycle?.eol_date &&
           version.lifecycle.status !== "current" &&
@@ -311,8 +258,13 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
             : null}
         </CardDescription>
 
-        {/* Tags, not prose: each name is one scannable unit. The API sends at
-            most five and tells us how many it held back. */}
+        {/* The installer's own output, as on the PHP card. */}
+        {installState && version.output ? (
+          <InstallOutput text={version.output.trimEnd()} />
+        ) : null}
+
+        {/* Tags: each name is one scannable unit. The API sends at most five and reports
+            how many it held back. */}
         {sites.length > 0 ? (
           <ul className="flex flex-wrap gap-1.5 pt-1">
             {sites.map((site) => (
