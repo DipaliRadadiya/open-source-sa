@@ -118,6 +118,37 @@ class DockerDatabase extends Model
         return is_string($image) ? $image : null;
     }
 
+    /**
+     * Where this image keeps its data, which is not always the engine's default.
+     *
+     * 🔴 Postgres 18 moved `PGDATA` to `/var/lib/postgresql/18/docker` and declares
+     * its volume at `/var/lib/postgresql`; 16 and 17 both use
+     * `/var/lib/postgresql/data`. Mounting the old path at 18 does not merely put
+     * the data somewhere unexpected — the container **refuses to start** and prints
+     * the correct configuration in its own log.
+     *
+     * A per-version override on the engine rather than a second engine entry,
+     * because it is the same engine and splitting it would show the versions list
+     * twice in the UI.
+     */
+    public function dataPath(): string
+    {
+        $engine = (array) $this->engineConfig();
+        $overrides = (array) ($engine['data_path_overrides'] ?? []);
+
+        // Keyed by the version string, and read with a cast because PHP turns a
+        // numeric array key into an int — `'18' => …` keys as 18, so a lookup with
+        // the string '18' misses unless both sides agree. The same trap the engine
+        // catalog hit when it returned 18 as a number and '8.4' as a string.
+        foreach ($overrides as $version => $path) {
+            if ((string) $version === (string) $this->version) {
+                return (string) $path;
+            }
+        }
+
+        return (string) ($engine['data_path'] ?? '');
+    }
+
     /** The port the engine listens on INSIDE its container. */
     public function enginePort(): ?int
     {

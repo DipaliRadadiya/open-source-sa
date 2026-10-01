@@ -1738,6 +1738,33 @@ return [
                 'label' => 'PostgreSQL',
                 'port' => 5432,
                 'data_path' => '/var/lib/postgresql/data',
+                /*
+                | 🔴 **Postgres 18 moved its data directory, and mounting the old
+                | path makes the container REFUSE TO START.** It says so itself:
+                |
+                |   The suggested container configuration for 18+ is to place a
+                |   single mount at /var/lib/postgresql which will then place
+                |   PostgreSQL data in a subdirectory, allowing usage of
+                |   "pg_upgrade --link" without mount point boundary issues.
+                |
+                | `PGDATA` is `/var/lib/postgresql/18/docker` in that image and the
+                | declared `VOLUME` is `/var/lib/postgresql`; 16 and 17 still use
+                | `/var/lib/postgresql/data` for both. Verified on the box with
+                | `docker inspect` on all three.
+                |
+                | Found because 18 is the NEWEST version, so it is what the new
+                | one-click control offers by default — the first database anybody
+                | starts from that screen was the one that could not start. The
+                | panel rolled it back correctly ("no row, no container and no port
+                | held"), so the only symptom was a create that failed.
+                |
+                | A per-version override rather than a second engine entry: it is
+                | the same engine, and splitting it would double the versions list
+                | in the UI.
+                */
+                'data_path_overrides' => [
+                    '18' => '/var/lib/postgresql',
+                ],
                 'template' => 'server.docker.databases.postgres',
                 // The default user and database the image creates on an empty
                 // data directory. Both are init-only: changing them afterwards

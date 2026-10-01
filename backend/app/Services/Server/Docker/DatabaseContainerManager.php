@@ -198,7 +198,9 @@ class DatabaseContainerManager
             'name' => $database->name,
             'port' => $database->port,
             'enginePort' => (int) $engine['port'],
-            'dataPath' => (string) $engine['data_path'],
+            // Asked of the ROW, not the engine: Postgres 18 keeps its data
+            // somewhere else and will not start if mounted at the engine default.
+            'dataPath' => $database->dataPath(),
             'volume' => $database->volume(),
             'network' => $database->docker_network,
             'credentials' => [

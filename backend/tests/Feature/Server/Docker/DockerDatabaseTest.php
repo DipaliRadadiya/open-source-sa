@@ -592,3 +592,63 @@ it('answers the size it was given, and what an empty field would have meant', fu
         ->and($row['cpu_limit'])->toBeNull()
         ->and($row['default_memory_limit'])->toBe((string) config('server.docker.default_db_memory_limit'));
 });
+
+/*
+ * Where an image keeps its data, which is not always the engine's default.
+ *
+ * 🔴 Found on the box by using the new one-click control: Postgres **18** is the
+ * newest version the catalog offers, so it is what that control starts by default —
+ * and it was the one version that could not start at all. The container says why
+ * itself:
+ *
+ *   The suggested container configuration for 18+ is to place a single mount at
+ *   /var/lib/postgresql which will then place PostgreSQL data in a subdirectory,
+ *   allowing usage of "pg_upgrade --link" without mount point boundary issues.
+ *
+ * Verified with `docker inspect` on all three images: 16 and 17 have
+ * `PGDATA=/var/lib/postgresql/data` and declare their volume there; 18 has
+ * `PGDATA=/var/lib/postgresql/18/docker` and declares `/var/lib/postgresql`.
+ *
+ * The panel handled the failure correctly — `CreateDockerDatabase` rolled the row,
+ * the container and the port back — so the only symptom was a create that failed,
+ * with nothing left to inspect. Which is why this is a test and not a comment.
+ */
+
+it('mounts Postgres 18 where Postgres 18 keeps its data', function () {
+    [, $id] = createDb(['name' => 'pg18', 'engine' => 'postgres', 'version' => '18']);
+
+    $parsed = Yaml::parse(app(DatabaseContainerManager::class)->contents(DockerDatabase::find($id)));
+
+    expect($parsed['services']['db']['volumes'][0])->toEndWith(':/var/lib/postgresql')
+        // And NOT the path that makes it refuse to start.
+        ->and($parsed['services']['db']['volumes'][0])->not->toEndWith(':/var/lib/postgresql/data');
+});
+
+it('leaves the older Postgres versions where they were', function () {
+    // The override is per version, so 16 and 17 must be untouched — moving them
+    // would be an existing database whose data directory the panel stopped mounting.
+    foreach (['17', '16'] as $version) {
+        [, $id] = createDb(['name' => 'pg'.$version, 'engine' => 'postgres', 'version' => $version]);
+
+        $parsed = Yaml::parse(app(DatabaseContainerManager::class)->contents(DockerDatabase::find($id)));
+
+        expect($parsed['services']['db']['volumes'][0])
+            ->toEndWith(':/var/lib/postgresql/data', "postgres {$version} moved");
+    }
+});
+
+it('matches a data path override by version string, not by PHP array key', function () {
+    // `'18' => …` keys as the INT 18 in PHP, so a lookup with the string '18'
+    // misses unless both sides are cast. The engine catalog hit exactly this and
+    // returned 18 as a number while '8.4' stayed a string.
+    $database = DockerDatabase::find(createDb(['name' => 'pgcast', 'engine' => 'postgres', 'version' => '18'])[1]);
+
+    expect($database->dataPath())->toBe('/var/lib/postgresql')
+        ->and($database->version)->toBeString();
+});
+
+it('falls back to the engine default for an engine with no overrides', function () {
+    [, $id] = createDb(['name' => 'mysqlpath', 'engine' => 'mysql', 'version' => '8.4']);
+
+    expect(DockerDatabase::find($id)->dataPath())->toBe('/var/lib/mysql');
+});
