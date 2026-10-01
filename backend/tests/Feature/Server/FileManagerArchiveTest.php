@@ -8,6 +8,7 @@ use App\Models\FileArchiveJob;
 use App\Models\SystemUser;
 use App\Services\Server\Applications\FileBrowser;
 use App\Services\Server\Applications\PanelDirectory;
+use App\Services\Server\Docker\VolumeSizes;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -128,7 +129,12 @@ function archiveOps(array &$seen, array $handlers = []): ServerOps
 
 function archiveBrowser(ServerOps $ops): FileBrowser
 {
-    return new FileBrowser($ops, app(PanelDirectory::class));
+    // `VolumeSizes` is resolved from the container rather than faked: nothing here
+    // measures a container site, so it is never called — but it is a required
+    // dependency, and leaving it out broke this helper the moment the constructor
+    // gained it (three archive tests failing on `ArgumentCountError`, which reads
+    // like an archive bug and is not).
+    return new FileBrowser($ops, app(PanelDirectory::class), app(VolumeSizes::class));
 }
 
 /** The recorded entry for one op, or null. */
