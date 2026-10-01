@@ -805,12 +805,14 @@ test("every size string exists in every locale", () => {
  */
 
 const databasesPanel = read("components/docker/docker-databases-panel.jsx");
+const databaseTiles = read("components/docker/docker-database-tiles.jsx");
+const createPage = read("app/(app)/applications/create/page.jsx");
 
 test("every engine the server can run is its own control", () => {
   // Not one "add database" form with an engine dropdown: that hides the answer to
   // "what can this server run", which is the question somebody arrives with.
-  assert.match(databasesPanel, /engines\.map\(\(engine\) =>/);
-  assert.match(databasesPanel, /setCreating\(\{/);
+  assert.match(databaseTiles, /engines\.map\(\(engine\) =>/);
+  assert.match(databaseTiles, /setCreating\(\{/);
   // And the list comes from the server's own catalog rather than a copy kept in
   // step by hand.
   assert.match(dockerPage, /getDockerDatabases\(\)/);
@@ -823,11 +825,11 @@ test("every engine the server can run is its own control", () => {
 test("the dialog opens with every answer the panel can guess already filled", () => {
   // What makes it a click. The newest version and a free name are pre-chosen; the
   // only required answer is the one the panel cannot know.
-  assert.match(databasesPanel, /version: engine\.versions\[0\] \?\? ""/);
-  assert.match(databasesPanel, /name: suggestName\(engine\.name, databases\)/);
+  assert.match(databaseTiles, /version: engine\.versions\[0\] \?\? ""/);
+  assert.match(databaseTiles, /name: suggestName\(engine\.name, databases\)/);
   // And the suggested name is checked against what exists, because the API refuses
   // a duplicate — offering a name that will be rejected is worse than offering none.
-  assert.match(databasesPanel, /const taken = new Set\(databases\.map/);
+  assert.match(databaseTiles, /const taken = new Set\(databases\.map/);
 });
 
 test("both addresses are shown, because they are different", () => {
@@ -909,4 +911,35 @@ test("every databases string exists in every locale", () => {
       `${locale} disagrees with en on docker.databases`,
     );
   }
+});
+
+test("the create page offers the engines too, where people go to create things", () => {
+  // Reported three times as missing. A database cannot be a site type — `domain` is
+  // required for every application and a vhost is always written — but "create a
+  // database" is something people come to THIS page to do, so the control is here as
+  // well as on the Docker page, from one shared component rather than two copies.
+  assert.match(createPage, /DockerDatabaseTiles/);
+  assert.match(createPage, /getDockerDatabases\(\)/);
+  // Gated on what the create endpoint actually requires: a card offered to anyone
+  // else is a card whose only outcome is a 403.
+  assert.match(createPage, /can\(permissions, "docker", "manage"\)/);
+  // And silent on a server that hosts no containers, rather than explaining the
+  // absence of a thing on the longest form in the panel.
+  assert.match(createPage, /dockerDatabases\.engines\.length > 0/);
+});
+
+test("the create-page copy says why databases are not in the list above", () => {
+  // The question the card has to answer on sight, because somebody has just
+  // finished scanning eighteen application cards for MySQL.
+  const hint = messages.en.docker.databases.createPageHint;
+  assert.match(hint, /Not an application/);
+  assert.match(hint, /no domain/);
+});
+
+test("the tiles are one component, not two copies", () => {
+  // Both pages render the same control, so a change to the create flow cannot
+  // reach one page and miss the other.
+  assert.match(databasesPanel, /DockerDatabaseTiles/);
+  assert.doesNotMatch(databasesPanel, /createDockerDatabase/);
+  assert.match(databaseTiles, /createDockerDatabase/);
 });

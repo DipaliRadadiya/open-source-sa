@@ -6933,6 +6933,7 @@
     "databases": {
       "title": "Datenbanken",
       "hint": "Betreiben Sie eine Datenbank als Container, mit der sich Ihre Websites verbinden. Jede erhält ein eigenes Volume, einen eigenen Loopback-Port und generierte Zugangsdaten. Es sind keine Websites — eine Datenbank hat keine Domain und keine Webadresse — daher stehen sie hier neben den Netzwerken und Volumes.",
+      "createPageHint": "Keine Anwendung — eine Datenbank hat keine Domain und keine Webadresse, deshalb steht sie nicht in der Liste oben. Starten Sie hier eine, und Ihre Websites verbinden sich damit.",
       "newest": "neueste {version}",
       "empty": "Noch keine Datenbanken. Wählen Sie oben eine Engine, um eine zu starten.",
       "columns": {

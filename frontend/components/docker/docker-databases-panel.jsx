@@ -4,9 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Database, Plus, Trash2, Eye, Loader2 } from "lucide-react";
+import { Database, Trash2, Eye, Loader2 } from "lucide-react";
 import {
-  createDockerDatabase,
   deleteDockerDatabase,
   getDockerDatabaseCredentials,
 } from "@/lib/api/docker";
@@ -16,17 +15,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CopyButton } from "@/components/ui/copy-button";
-import { Caution } from "@/components/ui/caution";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
+import { DockerDatabaseTiles } from "@/components/docker/docker-database-tiles";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -66,7 +57,6 @@ export function DockerDatabasesPanel({
   const t = useTranslations("docker.databases");
   const router = useRouter();
 
-  const [creating, setCreating] = useState(null);
   const [pending, setPending] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [removeData, setRemoveData] = useState(false);
@@ -116,44 +106,15 @@ export function DockerDatabasesPanel({
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">{t("hint")}</p>
 
-          {/* The engines, as one control each. A single "add database" form with
-              an engine dropdown hides the answer to "what can this server run",
-              which is the question somebody arrives with. */}
-          {canManage && engines.length ? (
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {engines.map((engine) => (
-                <button
-                  key={engine.name}
-                  type="button"
-                  onClick={() =>
-                    setCreating({
-                      engine: engine.name,
-                      label: engine.label,
-                      // The newest the catalog offers. The list is ordered newest
-                      // first by the config, and a version nobody chose is better
-                      // than an empty select somebody has to answer before they
-                      // can see what this does.
-                      version: engine.versions[0] ?? "",
-                      versions: engine.versions,
-                      port: engine.port,
-                      name: suggestName(engine.name, databases),
-                      network: "",
-                    })
-                  }
-                  className="flex items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2.5 text-left transition-colors hover:bg-muted/60"
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium">
-                      {engine.label}
-                    </span>
-                    <span className="block truncate font-mono text-xs text-muted-foreground">
-                      {t("newest", { version: engine.versions[0] ?? "—" })}
-                    </span>
-                  </span>
-                  <Plus className="size-4 shrink-0 text-muted-foreground" />
-                </button>
-              ))}
-            </div>
+          {/* The engines, as one control each. Shared with the application create
+              page, which is where people go to create things — being right about
+              the model is not a reason to be wrong about where the control is. */}
+          {canManage ? (
+            <DockerDatabaseTiles
+              engines={engines}
+              networks={networks}
+              databases={databases}
+            />
           ) : null}
 
           {databases.length === 0 ? (
@@ -287,107 +248,6 @@ export function DockerDatabasesPanel({
         </CardContent>
       </Card>
 
-      {/* Create. One required answer — the name — with everything else already
-          chosen, which is what makes this a click rather than a form. */}
-      <ConfirmDialog
-        open={creating !== null}
-        onOpenChange={(open) => !open && setCreating(null)}
-        icon={Database}
-        title={creating ? t("createTitle", { engine: creating.label }) : ""}
-        description={t("createBody")}
-        confirmLabel={t("create")}
-        confirmDisabled={!creating?.name?.trim() || !creating?.version}
-        pending={pending === "create"}
-        onConfirm={async () => {
-          if (!creating) return;
-          const ok = await run(
-            "create",
-            () =>
-              createDockerDatabase({
-                name: creating.name.trim(),
-                engine: creating.engine,
-                version: creating.version,
-                docker_network: creating.network || null,
-              }),
-            t("created", { name: creating.name.trim() }),
-          );
-          if (ok) setCreating(null);
-        }}
-      >
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="docker-db-name">{t("nameLabel")}</Label>
-            <Input
-              id="docker-db-name"
-              value={creating?.name ?? ""}
-              onChange={(event) =>
-                setCreating((current) => ({
-                  ...current,
-                  name: event.target.value,
-                }))
-              }
-            />
-            <p className="text-xs text-muted-foreground">{t("nameHint")}</p>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="docker-db-version">{t("versionLabel")}</Label>
-            <Select
-              value={creating?.version ?? ""}
-              onValueChange={(version) =>
-                setCreating((current) => ({ ...current, version }))
-              }
-            >
-              <SelectTrigger id="docker-db-version">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(creating?.versions ?? []).map((version) => (
-                  <SelectItem key={version} value={version}>
-                    {version}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Optional, and the copy says what skipping it costs. A database with
-              no network is reachable from the server only — which is a real
-              answer, and the wrong one if a container site needs it. */}
-          <div className="space-y-1.5">
-            <Label htmlFor="docker-db-network">{t("networkLabel")}</Label>
-            <Select
-              value={creating?.network || NO_NETWORK}
-              onValueChange={(network) =>
-                setCreating((current) => ({
-                  ...current,
-                  network: network === NO_NETWORK ? "" : network,
-                }))
-              }
-            >
-              <SelectTrigger id="docker-db-network">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NO_NETWORK}>
-                  {t("noNetworkOption")}
-                </SelectItem>
-                {networks.map((network) => (
-                  <SelectItem key={network.name} value={network.name}>
-                    {network.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">{t("networkHint")}</p>
-          </div>
-
-          <Caution size="md">
-            <p>{t("createWarning")}</p>
-          </Caution>
-        </div>
-      </ConfirmDialog>
-
       <ConfirmDialog
         open={confirm !== null}
         onOpenChange={(open) => !open && setConfirm(null)}
@@ -433,25 +293,6 @@ export function DockerDatabasesPanel({
       </ConfirmDialog>
     </div>
   );
-}
-
-/** Radix reserves `""` for "nothing selected", so "no network" needs a value. */
-const NO_NETWORK = "__none__";
-
-/**
- * A name that is free, so the dialog opens with one answer already filled.
- *
- * The engine's own name first — `postgres` — then `postgres-2` and upward. Checked
- * against what exists because the API refuses a duplicate, and offering a name that
- * will be rejected is worse than offering none.
- */
-function suggestName(engine, databases) {
-  const taken = new Set(databases.map((database) => database.name));
-  if (!taken.has(engine)) return engine;
-  for (let n = 2; n < 100; n += 1) {
-    if (!taken.has(`${engine}-${n}`)) return `${engine}-${n}`;
-  }
-  return "";
 }
 
 /**

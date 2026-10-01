@@ -6933,6 +6933,7 @@
     "databases": {
       "title": "Bancos de dados",
       "hint": "Execute um banco de dados como contêiner para os seus sites se conectarem. Cada um recebe o seu volume, a sua porta de loopback e credenciais geradas. Não são sites — um banco de dados não tem domínio nem endereço web — por isso ficam aqui, ao lado das redes e dos volumes.",
+      "createPageHint": "Não é uma aplicação: um banco de dados não tem domínio nem endereço web, por isso não está na lista acima. Inicie um aqui e os seus sites vão se conectar a ele.",
       "newest": "mais recente {version}",
       "empty": "Ainda não há bancos de dados. Escolha um motor acima para iniciar um.",
       "columns": {

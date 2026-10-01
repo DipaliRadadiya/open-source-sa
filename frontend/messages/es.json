@@ -6933,6 +6933,7 @@
     "databases": {
       "title": "Bases de datos",
       "hint": "Ejecute un motor de base de datos como contenedor para que sus sitios se conecten. Cada uno recibe su volumen, su puerto de loopback y credenciales generadas. No son sitios — una base de datos no tiene dominio ni dirección web — así que viven aquí, junto a las redes y los volúmenes.",
+      "createPageHint": "No es una aplicación: una base de datos no tiene dominio ni dirección web, por eso no está en la lista de arriba. Inicie una aquí y sus sitios se conectarán a ella.",
       "newest": "más reciente {version}",
       "empty": "Todavía no hay bases de datos. Elija un motor arriba para iniciar una.",
       "columns": {

@@ -8,9 +8,13 @@ import { getPhp } from "@/lib/php/get-php";
 import { getNode } from "@/lib/node/get-node";
 import { getTimezones } from "@/lib/settings/get-timezones";
 import { getEngines } from "@/lib/databases/get-databases";
+import { getDockerDatabases, getDockerResources } from "@/lib/docker/get-docker";
 import { engineInstalling, noDatabaseEngine } from "@/lib/applications/database-readiness";
 import { withAvailability } from "@/lib/applications/blockers";
 import { NoDatabaseEngineNotice } from "@/components/applications/no-database-engine-notice";
+import { DockerDatabaseTiles } from "@/components/docker/docker-database-tiles";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Database } from "lucide-react";
 import { CreateApplicationForm } from "@/components/applications/create-application-form";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PageHeader } from "@/components/ui/page-header";
@@ -25,12 +29,15 @@ export async function generateMetadata() {
 
 export default async function CreateApplicationPage({ searchParams }) {
   const sp = await searchParams;
-  const [permissions, t, tEngines, format, types, systemUsers, accounts, php, node, capabilities, timezones, engines] = await Promise.all([
+  const [permissions, t, tEngines, tDocker, format, types, systemUsers, accounts, php, node, capabilities, timezones, engines] = await Promise.all([
     getPermissions(),
     getTranslations("applications"),
     // The engine labels the databases pages already use, rather than a second
     // set that can drift from them.
     getTranslations("databases.engines"),
+    // The containerised-database strings, so this card and the Docker page's own
+    // say the same things rather than keeping two copies that drift.
+    getTranslations("docker.databases"),
     getFormatter(),
     getSiteTypes(),
     getSystemUserOptions(),
@@ -132,6 +139,31 @@ export default async function CreateApplicationPage({ searchParams }) {
     ? String(sp.git_account)
     : "";
 
+  /*
+   * Containerised database engines, on the page where people create things.
+   *
+   * They are NOT site types and cannot be — `domain` is required for every
+   * application here and a vhost is always written, so a database as a "site"
+   * would hold a domain nobody types and a certificate no browser can use. But
+   * "create a database" is something people come to this page to do, and being
+   * right about the model is not a reason to be wrong about where the control is.
+   * Reported three times as missing before it was put here.
+   *
+   * Gated on `docker` manage, which is what the create endpoint requires: a card
+   * offered to anyone else is a card whose only outcome is a 403. Fetched only
+   * then, so a LEMP box makes no request for it.
+   */
+  const canManageDocker = can(permissions, "docker", "manage");
+  const [dockerDatabases, dockerResources] = canManageDocker
+    ? await Promise.all([getDockerDatabases(), getDockerResources()])
+    : [{ databases: [], engines: [], failed: true }, { networks: [] }];
+
+  // Silent when the server hosts no containers. The endpoints answer 409 there,
+  // and a card explaining why a thing is absent is noise on a page that is already
+  // the longest form in the panel.
+  const showDatabases =
+    canManageDocker && !dockerDatabases.failed && dockerDatabases.engines.length > 0;
+
   return (
     <div className="space-y-6">
       <PageHeader title={t("createTitle")} subtitle={t("createSubtitle")} />
@@ -182,6 +214,30 @@ export default async function CreateApplicationPage({ searchParams }) {
           database: can(permissions, "database", "manage"),
         }}
       />
+
+      {/* After the form, not before it: this page is mainly for creating an
+          application, and a database is the other thing you might have come for.
+          A link to the Docker page would have been cheaper and would have left the
+          click somewhere else again. */}
+      {showDatabases ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="size-4" />
+              {tDocker("title")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">{tDocker("createPageHint")}</p>
+            <DockerDatabaseTiles
+              engines={dockerDatabases.engines}
+              networks={dockerResources.networks}
+              databases={dockerDatabases.databases}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
+
     </div>
   );
 }
