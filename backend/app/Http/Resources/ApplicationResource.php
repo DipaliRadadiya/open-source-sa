@@ -21,6 +21,20 @@ class ApplicationResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            /*
+             * 🔴 Never sent, and the Container screen needed it.
+             *
+             * The slug IS the hostname other containers reach a container site by —
+             * `ContainerSupervisor` writes it into the compose file as the network
+             * alias precisely because every generated file names its service `app`,
+             * so `app` resolves to an arbitrary one of them. The panel's note telling
+             * people which name to use read "Use the hostname" and then named nothing,
+             * because this field did not exist in the payload.
+             *
+             * Found by a browser test asserting that every `application.<field>` a
+             * container screen reads is actually sent and declared.
+             */
+            'slug' => $this->slug,
             'domain' => $this->domain,
             // Built here, not by the client. Three frontend components each
             // assembled `https://${domain}` themselves, which is a broken link

@@ -340,6 +340,33 @@ export const applicationSchema = z.object({
   failed_reason: z.string().nullish(),
   failed_reason_title: z.string().nullish(),
   reference: z.string().nullish(),
+  /*
+   * 🔴 The container fields, and the fourth time this file has lost data by omission.
+   *
+   * `image`, `container_port`, `memory_limit`, `cpu_limit` and `registry_id` were all
+   * being sent by the API and all being stripped here. The Container screen showed
+   * "No image recorded", "None — pull anonymously", port 80 (its own fallback) and two
+   * empty limit fields, for a site whose row held `nginx:1.27-alpine`, port 80, `192m`
+   * and `0.5`.
+   *
+   * **And saving that form wrote the blanks back.** Measured in a browser against a
+   * real site: opening Container and pressing Save with nothing meaningfully changed
+   * took `memory_limit` from `192m` to NULL and `cpu_limit` from `0.5` to NULL. The
+   * container then ran on the server default with no CPU quota, and nothing on screen
+   * said so. A form that cannot read a value must not be able to save one.
+   *
+   * No source-level test could see it: they assert the card is handed
+   * `application.memory_limit`, which it is. The value dies one layer earlier.
+   */
+  // The hostname other containers reach a container site by — the compose file's
+  // network alias. The note telling people which name to use rendered it blank,
+  // because the API was not sending it either.
+  slug: z.string().nullish(),
+  image: z.string().nullish(),
+  container_port: z.number().nullish(),
+  memory_limit: z.string().nullish(),
+  cpu_limit: z.string().nullish(),
+  registry_id: z.number().nullish(),
   // The sites list shows these, so they have to be declared — this object does
   // not passthrough, and an undeclared field the API is sending is dropped
   // here in silence. The Size column read "Not measured" on every row of a

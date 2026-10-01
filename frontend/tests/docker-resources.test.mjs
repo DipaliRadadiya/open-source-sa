@@ -788,3 +788,72 @@ test("every size string exists in every locale", () => {
     );
   }
 });
+
+/*
+ * 🔴 Every `application.<field>` a container screen reads must be declared in the
+ * schema, or Zod strips it and the screen renders its own fallback.
+ *
+ * Found in a browser, not here: the Container screen showed "No image recorded",
+ * "None — pull anonymously", port 80 and two empty limit fields for a site whose row
+ * held `nginx:1.27-alpine`, port 80, `192m` and `0.5`. `image`, `container_port`,
+ * `memory_limit`, `cpu_limit` and `registry_id` were all being sent by the API and all
+ * being dropped by `applicationSchema`, which does not passthrough.
+ *
+ * **And the form saved the blanks back.** Pressing Save with nothing meaningfully
+ * changed took `memory_limit` from `192m` to NULL and `cpu_limit` from `0.5` to NULL.
+ *
+ * The existing tests could not see it: they assert the card is handed
+ * `application.memory_limit` — which it is. The value dies a layer earlier. This test
+ * closes that layer by reading the fields out of the component and checking each one
+ * against the schema, so the next field added to a container screen cannot repeat it.
+ */
+
+test("the schema declares every application field the container screens read", () => {
+  const schema = read("lib/schemas/application.js");
+  const start = schema.indexOf("export const applicationSchema = z.object({");
+  const end = schema.indexOf("\n});", start);
+  const block = schema.slice(start, end);
+  const declared = new Set(
+    [...block.matchAll(/^ {2}([a-z_][a-z0-9_]*)\s*:/gm)].map((m) => m[1]),
+  );
+
+  const sources = [
+    "components/applications/container-card.jsx",
+    "components/applications/container-volumes.jsx",
+    "components/applications/container-credentials.jsx",
+    "components/applications/compose-editor.jsx",
+  ];
+
+  const missing = new Set();
+  for (const file of sources) {
+    for (const m of read(file).matchAll(/\bapplication\.([a-z_][a-z0-9_]*)/g)) {
+      // `id` and `slug` are declared; anything genuinely absent is the bug.
+      if (!declared.has(m[1])) missing.add(`${file.split("/").pop()}:${m[1]}`);
+    }
+  }
+
+  assert.deepEqual(
+    [...missing],
+    [],
+    "undeclared fields are stripped by Zod before the screen sees them",
+  );
+});
+
+test("the container fields are declared, by name", () => {
+  // Spelled out as well as derived: the sweep above only protects fields something
+  // currently reads, and these five are the ones that were lost.
+  const schema = read("lib/schemas/application.js");
+  for (const field of [
+    "image",
+    "container_port",
+    "memory_limit",
+    "cpu_limit",
+    "registry_id",
+  ]) {
+    assert.match(
+      schema,
+      new RegExp(`^ {2}${field}: z\\.`, "m"),
+      `${field} is not declared`,
+    );
+  }
+});
