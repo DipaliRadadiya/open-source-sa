@@ -847,7 +847,7 @@
     "passwordSameAsCurrent": "現在とは別のパスワードを設定してください。",
     "cronNameReserved": "この名前はサーバーまたはパネルのファイルで既に使われています。別の名前を選んでください。",
     "cronRootRefused": "ジョブを root として実行することはできません。システムユーザーを選んでください。",
-    "directivesPhpOnly": "PHP の設定のみを 1 行に 1 つずつ入力してください（例: php_admin_value[short_open_tag] = On）。user = や listen = などのプール設定は使えません。",
+    "directivesPhpOnly": "PHP の設定のみを 1 行に 1 つずつ入力してください（例: display_errors = Off）。",
     "noManagedWorkerKeys": "user、command、directory とログファイルはパネルが設定します。ここではなく上の項目で変更してください。",
     "insideApplication": "このアプリケーションのフォルダー内のパスを指定してください。",
     "securityUsernameAscii": "半角英字、数字、. _ - @ のみ使用してください。それ以外の文字はブラウザによって送信方法が異なります。",
@@ -4158,8 +4158,7 @@
         "compress": "圧縮",
         "extract": "展開",
         "permissions": "権限",
-        "delete": "削除",
-        "folderSize": "フォルダサイズ"
+        "delete": "削除"
       },
       "empty": {
         "title": "このフォルダは空です",
@@ -4396,10 +4395,6 @@
         "permissionsDescriptionMixed": "選択した項目の権限は同一ではありません。保存すると、すべてに同じモードが適用されます。",
         "permissionsChooseMode": "適用する権限を選択してください。"
       },
-      "size": {
-        "failed": "そのフォルダーのサイズを計測できませんでした。",
-        "calculate": "計算"
-      },
       "archiveFormat": {
         "legend": "アーカイブ形式",
         "mustBeArchive": "ファイル名は .zip または .tar.gz で終わる必要があります。",
@@ -4498,6 +4493,17 @@
           "extract": "「{target}」に展開しました。"
         },
         "failed": "処理は完了しませんでした。"
+      },
+      "sizes": {
+        "measuring": "フォルダーのサイズを計測中…",
+        "measured": "フォルダーのサイズを{ago}に計測",
+        "measuredNoTime": "フォルダーのサイズを計測済み",
+        "partial": "一部のフォルダーは計測に時間がかかりすぎました",
+        "failed": "フォルダーのサイズを計測できませんでした。",
+        "tooBig": "これらのフォルダーは大きすぎて時間内に計測できません。",
+        "measureAgain": "再計測",
+        "tryAgain": "再試行",
+        "notMeasured": "未計測"
       }
     },
     "workers": {
@@ -5026,7 +5032,7 @@
         "timezonePlaceholder": "サーバーに合わせる",
         "autoPrepend": "各ページの前に実行するファイル",
         "directives": "追加ディレクティブ",
-        "directivesPlaceholder": "php_admin_value[opcache.enable] = 1"
+        "directivesPlaceholder": "display_errors = Off"
       },
       "hints": {
         "postTooSmall": "アップロード上限より小さいため、そのサイズのアップロードは失敗します。",
@@ -5037,7 +5043,7 @@
         "sessionLifetime": "セッションデータがクリーンアップされるまで保持される秒数です。",
         "timezone": "PHP が出力する日付にのみ影響し、サーバー時刻には影響しません。",
         "autoPrepend": "アプリケーション内のパスを指定してください。特に指示がない場合は空欄にしてください。",
-        "directives": "PHP-FPM プールの形式で 1 行ずつ記述します: php_admin_value[名前] = 値。ここの内容は上記のフィールドより優先されます。",
+        "directives": "PHP の設定を 1 行に 1 つずつ記述します（例: display_errors = Off）。この画面に専用のフィールドがある設定と拡張機能は、ここでは設定できません。",
         "openBasedir": "PHP がアプリケーションフォルダ外のファイルを読み書きするのを防ぎます。",
         "allowUrlFopen": "PHP がリモート URL を取得できるようにします。マルウェアがよく利用する経路のため、無効化を推奨します。",
         "upload": "Web サーバー自体のアップロード上限も上がります。PHP が処理する前に大きなアップロードを拒否するのは Web サーバー側の役割です。以前に作成されたアプリケーションでは、最初に保存したときからこの値が適用されます。",

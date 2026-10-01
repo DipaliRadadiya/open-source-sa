@@ -91,11 +91,12 @@ test("an upload in progress can be stopped", () => {
 test("a folder never shows the size of its own directory entry", () => {
   /*
    * The listing's `size_human` for a directory is the 4 KB of the entry itself.
-   * Every folder read "4.0 KB" while the Storage panel put the same tree at
-   * 100 MB. A folder shows a measured size or a dash.
+   * A folder shows a measured size from /files/sizes, or a dash.
    */
-  assert.match(tableSrc, /const shown = file\.type === "dir" \? folderSizes\[file\.path\] : file\.size_human;/);
-  assert.match(cards, /file\.type === "dir" \? folderSizes\[file\.path\] : file\.size_human/);
+  const sizeCell = tableSrc.slice(tableSrc.indexOf("function SizeCell"), tableSrc.indexOf("function ModifiedCell"));
+  assert.match(sizeCell, /if \(file\.type !== "dir"\) \{\s*return <span[^>]*>\{file\.size_human \?\? "—"\}/);
+  assert.doesNotMatch(sizeCell, /file\.size_human[^}]*dir/);
+  assert.match(cards, /measuredSize\(file, folderSizes\)/);
 });
 
 test("a name can reach its second line inside a nowrap table cell", () => {
@@ -159,11 +160,16 @@ test("permissions say who can do what on hover, not in a separate panel", () => 
   assert.doesNotMatch(panel, /FileDetailsSheet|"details"/);
 });
 
-test("a folder's size is asked for where the answer appears", () => {
+test("folder sizes load with the listing, no click per folder", () => {
+  // One /files/sizes call per folder opened replaces the per-row Calculate.
+  assert.match(panel, /useFolderSizes\(appId, path, initialFiles, hasFolders\)/);
+  assert.doesNotMatch(tableSrc + cards + panel, /size\.calculate|onAction\?*\.?\("size"/);
+  assert.doesNotMatch(read("components/applications/files/file-actions-menu.jsx"), /folderSize/);
+  assert.doesNotMatch(read("lib/api/files.js"), /files\/size`/);
   const sizeCell = tableSrc.slice(tableSrc.indexOf("function SizeCell"), tableSrc.indexOf("function ModifiedCell"));
-  assert.match(sizeCell, /onAction\?\.\("size", file\)/);
-  assert.match(sizeCell, /t\("size\.calculate"\)/);
-  assert.match(cards, /onClick=\{\(\) => onAction\("size", file\)\}/);
+  // Unmeasured is a dash, never 0; while loading, a placeholder.
+  assert.match(sizeCell, /folderSizes\?\.loading \? \(\s*<Skeleton/);
+  assert.match(sizeCell, /t\("sizes\.notMeasured"\)\}>—</);
 });
 
 test("an empty folder explains itself and offers the way in, without a second blue button", () => {
@@ -303,12 +309,13 @@ test("the chart library loads when Storage opens, not with every folder", () => 
   assert.match(read("components/applications/files/size-breakdown-donut.jsx"), /from "@\/components\/ui\/echart"/);
 });
 
-test("two folders measured at once each keep their own spinner", () => {
-  // One `sizingPath` slot: a second Calculate took the spinner off the first,
-  // and whichever finished first cleared the other's too.
-  assert.match(panel, /const \[sizingPaths, setSizingPaths\] = useState\(\[\]\);/);
-  assert.match(panel, /setSizingPaths\(\(current\) => current\.filter\(\(entry\) => entry !== file\.path\)\)/);
-  assert.match(tableSrc, /sizingPaths\.includes\(file\.path\)/);
-  assert.match(cards, /sizingPaths\.includes\(file\.path\)/);
-  assert.doesNotMatch(panel + tableSrc + cards, /\bsizingPath\b/);
+test("an answer for another folder is never shown", () => {
+  // Opening a folder while the last one is still measuring: the old request is
+  // aborted, and sizes are only read when they belong to the folder on screen.
+  const hook = read("components/applications/files/use-folder-sizes.js");
+  assert.match(hook, /controller\.current\?\.abort\(\);/);
+  assert.match(hook, /const samePath = state\.path === path;/);
+  assert.match(hook, /data: samePath \? state\.data : null/);
+  // A new listing (the refresh after a change) asks again.
+  assert.match(hook, /\}, \[appId, path, listing, hasFolders\]\);/);
 });

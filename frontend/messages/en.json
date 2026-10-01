@@ -847,7 +847,7 @@
     "passwordSameAsCurrent": "Choose a password different from your current one.",
     "cronNameReserved": "That name is taken by a file the server or the panel already uses. Choose another.",
     "cronRootRefused": "Jobs can't run as root. Choose a system user.",
-    "directivesPhpOnly": "Only PHP settings, one per line, like php_admin_value[short_open_tag] = On. Pool lines such as user = or listen = aren't allowed here.",
+    "directivesPhpOnly": "Only PHP settings, one per line, like display_errors = Off.",
     "noManagedWorkerKeys": "user, command, directory and the log files are set by the panel. Change them in the fields above, not here.",
     "insideApplication": "Use a path inside this application's folder.",
     "securityUsernameAscii": "Use only English letters, numbers and . _ - @ — browsers don't send other letters the same way.",
@@ -4158,8 +4158,7 @@
         "compress": "Compress",
         "extract": "Extract",
         "permissions": "Permissions",
-        "delete": "Delete",
-        "folderSize": "Folder size"
+        "delete": "Delete"
       },
       "empty": {
         "title": "This folder is empty",
@@ -4396,10 +4395,6 @@
         "permissionsDescriptionMixed": "The selected items do not all have the same permissions. Saving applies one mode to every one of them.",
         "permissionsChooseMode": "Choose the permissions to apply."
       },
-      "size": {
-        "failed": "That folder could not be measured.",
-        "calculate": "Calculate"
-      },
       "archiveFormat": {
         "legend": "Archive format",
         "mustBeArchive": "The name has to end in .zip or .tar.gz.",
@@ -4498,6 +4493,17 @@
           "extract": "Extracted into \"{target}\"."
         },
         "failed": "The archive didn't finish."
+      },
+      "sizes": {
+        "measuring": "Measuring folder sizes…",
+        "measured": "Folder sizes measured {ago}",
+        "measuredNoTime": "Folder sizes measured",
+        "partial": "Some folders took too long to measure",
+        "failed": "Couldn't measure folder sizes.",
+        "tooBig": "These folders are too large to measure in time.",
+        "measureAgain": "Measure again",
+        "tryAgain": "Try again",
+        "notMeasured": "Not measured"
       }
     },
     "workers": {
@@ -5026,7 +5032,7 @@
         "timezonePlaceholder": "Use the server's",
         "autoPrepend": "File to run before every page",
         "directives": "Extra directives",
-        "directivesPlaceholder": "php_admin_value[opcache.enable] = 1"
+        "directivesPlaceholder": "display_errors = Off"
       },
       "hints": {
         "postTooSmall": "This is smaller than the upload limit, so uploads that size will still fail.",
@@ -5037,7 +5043,7 @@
         "sessionLifetime": "Seconds a session file is kept before it can be cleaned up.",
         "timezone": "Only affects dates PHP produces, not the server clock.",
         "autoPrepend": "A path inside this application. Leave empty unless you were told otherwise.",
-        "directives": "One per line, in PHP-FPM pool form: php_admin_value[name] = value. Anything here wins over the fields above.",
+        "directives": "One PHP setting per line, like display_errors = Off. Settings with a field on this screen, and extensions, can't be set here.",
         "openBasedir": "Stops PHP reading or writing files outside this application's folder.",
         "allowUrlFopen": "Lets PHP fetch remote URLs. Turning it off blocks a common way malware phones home.",
         "upload": "Also raises the web server's own limit, which refuses large uploads before PHP sees them. An application set up earlier picks this up the first time you save.",

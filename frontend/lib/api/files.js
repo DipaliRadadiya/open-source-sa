@@ -10,9 +10,9 @@ export function searchFiles(appId, q, { path, signal } = {}) {
   return api.get(`/applications/${appId}/files/search`, { params: { q, path }, signal });
 }
 
-/** A folder's size, on demand: the backend walks the tree, so it is not in the listing. */
-export function folderSize(appId, path) {
-  return api.get(`/applications/${appId}/files/size`, { params: { path } });
+// Every folder directly inside `path`, from one walk; cached server-side for five minutes.
+export function folderSizes(appId, path, { refresh = false, signal } = {}) {
+  return api.get(`/applications/${appId}/files/sizes`, { params: { path, ...(refresh ? { refresh: 1 } : {}) }, signal });
 }
 
 export function getFileContent(appId, path) {

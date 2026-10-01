@@ -117,10 +117,12 @@ test("PHP-C/D/F/H: function names checked, refusal shown by Save, read-only lock
   }
 });
 
-test("PHP-E: the extra-directives example is one the pool accepts", () => {
+test("PHP-E: the extra-directives example is one the server accepts", () => {
+  // The backend now takes `name = value` (2026-10-01); the example and hint show that form,
+  // and the example is not a setting the panel manages (those 422).
   for (const l of LOCALES) {
-    assert.match(at(messages[l], "applications.php.fields.directivesPlaceholder"), /^php_admin_value\[/, l);
-    assert.match(at(messages[l], "applications.php.hints.directives"), /php_admin_value\[/, l);
+    assert.equal(at(messages[l], "applications.php.fields.directivesPlaceholder"), "display_errors = Off", l);
+    assert.match(at(messages[l], "applications.php.hints.directives"), /display_errors = Off/, l);
   }
 });
 

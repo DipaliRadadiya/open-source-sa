@@ -116,13 +116,10 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
     });
   }
 
+  // The server's own substitutions; only `{branch}` follows the unsaved field.
   const placeholderValues = {
-    "{path}": application?.document_root,
-    "{branch}": branchNow || "main",
-    "{domain}": application?.domain,
-    // The bare `php` command without a version; otherwise that version's binary,
-    // whose path depends on the web server, so it is named rather than guessed.
-    "{php}": application?.php_version ? `PHP ${application.php_version}` : "php",
+    ...settings.placeholder_values,
+    "{branch}": branchNow || settings.placeholder_values?.["{branch}"] || "main",
   };
 
   async function save(values) {

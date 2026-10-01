@@ -42,7 +42,7 @@ test("sort and hidden files are remembered", () => {
   assert.equal(resolveShowHidden(undefined, undefined), true);
   const page = read("app/(app)/applications/[application]/files/page.jsx");
   assert.match(page, /resolveShowHidden\(rawHidden, cookieStore\.get\(HIDDEN_COOKIE\)\?\.value\)/);
-  assert.match(read("components/applications/files/files-table.jsx"), /onSortingChange=\{\(sorting\) => writePref\(SORT_COOKIE, serializeSort\(sorting\)\)\}/);
+  assert.match(read("components/applications/files/files-table.jsx"), /writePref\(SORT_COOKIE, serializeSort\(next\)\)/);
 });
 
 test("dialogs close after the list has refreshed, not before", () => {

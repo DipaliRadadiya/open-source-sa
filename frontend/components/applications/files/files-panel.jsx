@@ -13,6 +13,8 @@ import { LocalSearchInput } from "@/components/data-table/local-search-input";
 import { FileBreadcrumb } from "@/components/applications/files/file-breadcrumb";
 import { FilesTable } from "@/components/applications/files/files-table";
 import { SizeBreakdownSheet } from "@/components/applications/files/size-breakdown-sheet";
+import { FolderSizesStatus } from "@/components/applications/files/folder-sizes-status";
+import { useFolderSizes } from "@/components/applications/files/use-folder-sizes";
 import { FilesCards } from "@/components/applications/files/files-cards";
 import { SiteSearchResults } from "@/components/applications/files/site-search-results";
 import { NewFolderDialog } from "@/components/applications/files/new-folder-dialog";
@@ -38,8 +40,6 @@ import { canOpenFile } from "@/lib/files/openable";
 import { isImageFile } from "@/lib/files/file-icon";
 import { hiddenToggleHref } from "@/lib/files/hidden-href";
 import { HIDDEN_COOKIE, writePref } from "@/lib/files/view-prefs";
-import { folderSize } from "@/lib/api/files";
-import { apiMessage } from "@/lib/api/error-message";
 
 export function FilesPanel({
   appId,
@@ -164,32 +164,12 @@ export function FilesPanel({
   // Remembered for the next folder too, not only this URL.
   const rememberHidden = () => writePref(HIDDEN_COOKIE, showHidden ? "hide" : null);
 
-  // Folder sizes are computed on request and cached while the listing is shown;
-  // each request makes the backend walk the tree.
-  const [folderSizes, setFolderSizes] = useState({});
-  // Tracks every folder being measured, so concurrent Calculates keep their own
-  // spinners.
-  const [sizingPaths, setSizingPaths] = useState([]);
-
-  async function measure(file) {
-    if (sizingPaths.includes(file.path)) return;
-    setSizingPaths((current) => [...current, file.path]);
-    try {
-      const { data } = await folderSize(appId, file.path);
-      setFolderSizes((current) => ({ ...current, [file.path]: data?.size_human ?? null }));
-    } catch (error) {
-      toast.error(apiMessage(error, t("size.failed")));
-    } finally {
-      setSizingPaths((current) => current.filter((entry) => entry !== file.path));
-    }
-  }
+  // Hidden folders are measured too, so only a folder with no subfolders skips the walk.
+  const hasFolders = files.some((f) => f.type === "dir");
+  const sizes = useFolderSizes(appId, path, initialFiles, hasFolders);
+  const folderSizes = { ...sizes.data, loading: sizes.loading };
 
   function onAction(type, file) {
-    // Answered in place: one number about one row, which already has a column for it.
-    if (type === "size") {
-      measure(file);
-      return;
-    }
     setAction({ type, file });
   }
 
@@ -297,11 +277,14 @@ export function FilesPanel({
         <FileBreadcrumb appId={appId} path={path} />
         {/* Site search spans every folder, so a local "X of Y" count would be wrong. */}
         {files.length && !siteSearch ? (
-          <span className="shrink-0 text-xs text-muted-foreground">
-            {query.trim()
-              ? t("itemCountFiltered", { shown: filtered.length, total: files.length })
-              : t("itemCount", { count: files.length })}
-          </span>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            {hasFolders ? <FolderSizesStatus sizes={sizes} /> : null}
+            <span className="shrink-0">
+              {query.trim()
+                ? t("itemCountFiltered", { shown: filtered.length, total: files.length })
+                : t("itemCount", { count: files.length })}
+            </span>
+          </div>
         ) : null}
       </div>
 
@@ -336,7 +319,8 @@ export function FilesPanel({
             <Button asChild variant="outline" size="sm">
               <Link
                 href={hiddenHref}
-                aria-pressed={!showHidden}
+                // The same page with every server fetch; never rendered speculatively.
+                prefetch={false}
                 scroll={false}
                 onClick={rememberHidden}
               >
@@ -375,7 +359,7 @@ export function FilesPanel({
           description={t("empty.hiddenOnlyDescription")}
           action={
             <Button asChild variant="outline" size="sm">
-              <Link href={hiddenHref} scroll={false} onClick={rememberHidden}>
+              <Link href={hiddenHref} prefetch={false} scroll={false} onClick={rememberHidden}>
                 <Eye className="size-3.5" />
                 {t("hidden.show")}
               </Link>
@@ -429,9 +413,7 @@ export function FilesPanel({
               highlightPath={highlightPath}
               selected={shownSelection}
               onToggle={toggleSelected}
-              // Same state the table gets, so "Folder size" in the card menu can show its answer.
               folderSizes={folderSizes}
-              sizingPaths={sizingPaths}
             />
           </div>
           <div className="hidden lg:block">
@@ -446,7 +428,6 @@ export function FilesPanel({
               onToggle={toggleSelected}
               onToggleAll={toggleAll}
               folderSizes={folderSizes}
-              sizingPaths={sizingPaths}
               initialSort={initialSort}
             />
           </div>

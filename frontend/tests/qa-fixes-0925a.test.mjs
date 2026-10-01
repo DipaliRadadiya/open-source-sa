@@ -76,5 +76,6 @@ test("the runtime card shows its own error, not the generic one", () => {
 });
 
 test("{php} shows what the deploy substitutes", () => {
-  assert.match(read("components/applications/deployment/deploy-settings-card.jsx"), /"\{php\}": application\?\.php_version \? `PHP \$\{application\.php_version\}` : "php"/);
+  // The server's interpreter path (settings.placeholder_values), not a guessed label.
+  assert.match(read("components/applications/deployment/deploy-settings-card.jsx"), /\.\.\.settings\.placeholder_values,/);
 });

@@ -43,6 +43,18 @@ export const breakdownResponseSchema = z.object({
   breakdown: breakdownSchema,
 });
 
+const measuredSize = z.object({ size: z.number(), size_human: z.string() });
+
+// `GET …/files/sizes`. PHP sends an empty `sizes` as `[]`, not `{}`. A folder missing
+// from `sizes` was not measured; `total` is null when `complete` is false.
+export const folderSizesResponseSchema = z.object({
+  path: z.string().default(""),
+  sizes: z.preprocess((v) => (Array.isArray(v) ? {} : v), z.record(z.string(), measuredSize)).default({}),
+  total: measuredSize.nullish(),
+  complete: z.boolean().default(false),
+  measured_at: z.string().nullish(),
+});
+
 export const filesResponseSchema = z.object({
   path: z.string().default(""),
   files: z.array(fileEntrySchema).default([]),

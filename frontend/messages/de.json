@@ -847,7 +847,7 @@
     "passwordSameAsCurrent": "Wählen Sie ein anderes Passwort als das aktuelle.",
     "cronNameReserved": "Dieser Name gehört zu einer Datei, die der Server oder das Panel bereits nutzt. Wählen Sie einen anderen.",
     "cronRootRefused": "Aufgaben können nicht als root laufen. Wählen Sie einen Systembenutzer.",
-    "directivesPhpOnly": "Nur PHP-Einstellungen, eine pro Zeile, etwa php_admin_value[short_open_tag] = On. Pool-Zeilen wie user = oder listen = sind hier nicht erlaubt.",
+    "directivesPhpOnly": "Nur PHP-Einstellungen, eine pro Zeile, etwa display_errors = Off.",
     "noManagedWorkerKeys": "user, command, directory und die Logdateien setzt das Panel. Ändern Sie sie in den Feldern oben, nicht hier.",
     "insideApplication": "Einen Pfad im Ordner dieser Anwendung verwenden.",
     "securityUsernameAscii": "Nur englische Buchstaben, Ziffern und . _ - @ verwenden — Browser senden andere Buchstaben unterschiedlich.",
@@ -4158,8 +4158,7 @@
         "compress": "Komprimieren",
         "extract": "Entpacken",
         "permissions": "Berechtigungen",
-        "delete": "Löschen",
-        "folderSize": "Ordnergröße"
+        "delete": "Löschen"
       },
       "empty": {
         "title": "Dieser Ordner ist leer",
@@ -4396,10 +4395,6 @@
         "permissionsDescriptionMixed": "Die ausgewählten Einträge haben nicht alle dieselben Berechtigungen. Beim Speichern wird ein Modus auf alle angewendet.",
         "permissionsChooseMode": "Wählen Sie die anzuwendenden Berechtigungen."
       },
-      "size": {
-        "failed": "Dieser Ordner konnte nicht gemessen werden.",
-        "calculate": "Berechnen"
-      },
       "archiveFormat": {
         "legend": "Archivformat",
         "mustBeArchive": "Der Name muss auf .zip oder .tar.gz enden.",
@@ -4498,6 +4493,17 @@
           "extract": "Nach „{target}“ entpackt."
         },
         "failed": "Der Vorgang wurde nicht abgeschlossen."
+      },
+      "sizes": {
+        "measuring": "Ordnergrößen werden gemessen…",
+        "measured": "Ordnergrößen {ago} gemessen",
+        "measuredNoTime": "Ordnergrößen gemessen",
+        "partial": "Einige Ordner brauchten zu lange zum Messen",
+        "failed": "Die Ordnergrößen konnten nicht gemessen werden.",
+        "tooBig": "Diese Ordner sind zu groß, um sie rechtzeitig zu messen.",
+        "measureAgain": "Erneut messen",
+        "tryAgain": "Erneut versuchen",
+        "notMeasured": "Nicht gemessen"
       }
     },
     "workers": {
@@ -5026,7 +5032,7 @@
         "timezonePlaceholder": "Die des Servers verwenden",
         "autoPrepend": "Datei, die vor jeder Seite läuft",
         "directives": "Zusätzliche Direktiven",
-        "directivesPlaceholder": "php_admin_value[opcache.enable] = 1"
+        "directivesPlaceholder": "display_errors = Off"
       },
       "hints": {
         "postTooSmall": "Das ist kleiner als das Upload-Limit, Uploads dieser Größe scheitern also trotzdem.",
@@ -5037,7 +5043,7 @@
         "sessionLifetime": "Sekunden, die eine Sitzungsdatei behalten wird, bevor sie aufgeräumt werden darf.",
         "timezone": "Betrifft nur Datumsangaben, die PHP erzeugt, nicht die Serveruhr.",
         "autoPrepend": "Ein Pfad innerhalb dieser Anwendung. Leer lassen, sofern Ihnen nichts anderes gesagt wurde.",
-        "directives": "Eine pro Zeile, im Format eines PHP-FPM-Pools: php_admin_value[name] = wert. Was hier steht, gewinnt gegen die Felder oben.",
+        "directives": "Eine PHP-Einstellung pro Zeile, etwa display_errors = Off. Einstellungen mit eigenem Feld auf dieser Seite und Erweiterungen lassen sich hier nicht setzen.",
         "openBasedir": "Verhindert, dass PHP Dateien außerhalb des Ordners dieser Anwendung liest oder schreibt.",
         "allowUrlFopen": "Erlaubt PHP, entfernte URLs abzurufen. Ausschalten blockiert einen verbreiteten Weg, auf dem Malware nach Hause telefoniert.",
         "upload": "Hebt auch das eigene Limit des Webservers an, der große Uploads ablehnt, bevor PHP sie sieht. Eine früher eingerichtete Anwendung übernimmt das beim ersten Speichern.",

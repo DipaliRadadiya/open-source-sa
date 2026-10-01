@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import Link from "@/components/ui/app-link";
 import { Folder, Link2, Loader2, TriangleAlert, Unlink } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { parseApiWallClock } from "@/lib/format/api-date";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -16,6 +18,7 @@ import { FILE_NAME } from "@/lib/files/name-style";
 import { useModeSentence } from "@/components/applications/files/use-mode-sentence";
 import { isWorldWritable, symbolicMode } from "@/lib/files/describe-mode";
 import { SORT_COOKIE, serializeSort, writePref } from "@/lib/files/view-prefs";
+import { measuredSize, sizeShare, sizeSortKey } from "@/lib/files/folder-sizes";
 
 // Cells are module-level so flexRender's identity stays stable across re-renders
 // (see workers-table.jsx).
@@ -30,19 +33,19 @@ function parseApiDate(value) {
 }
 
 // Folders always sort above files regardless of column or direction; each column
-// supplies its own tiebreaker.
-function withDirsFirst(compare) {
+// supplies its own tiebreaker. TanStack negates the result for a descending sort,
+// so the folder/file order is pre-negated to survive it.
+function withDirsFirst(compare, desc = false) {
   return (rowA, rowB) => {
     const aDir = rowA.original.type === "dir";
     const bDir = rowB.original.type === "dir";
-    if (aDir !== bDir) return aDir ? -1 : 1;
+    if (aDir !== bDir) return (aDir ? -1 : 1) * (desc ? -1 : 1);
     return compare(rowA.original, rowB.original);
   };
 }
 
-const sortByName = withDirsFirst((a, b) => a.name.localeCompare(b.name));
-const sortBySize = withDirsFirst((a, b) => (a.size ?? 0) - (b.size ?? 0));
-const sortByModified = withDirsFirst((a, b) => parseApiDate(a.modified_at) - parseApiDate(b.modified_at));
+const byName = (a, b) => a.name.localeCompare(b.name);
+const byModified = (a, b) => parseApiDate(a.modified_at) - parseApiDate(b.modified_at);
 
 // Keyed by path, not row index, which points at the wrong file after a re-sort.
 function SelectCell({ row, table }) {
@@ -86,6 +89,7 @@ function NameCell({ row, table }) {
     return (
       <Link
         href={href}
+        prefetch={false}
         className="flex min-w-0 items-center gap-2 rounded font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <Folder className="size-4 shrink-0 text-primary" />
@@ -118,7 +122,7 @@ function NameCell({ row, table }) {
             {/* Shown inline: a link's name says nothing about what it is, and a dangling one
                 looks like a working one. */}
             {file.link_target ? (
-              <span className="truncate font-mono text-xs text-muted-foreground/70">
+              <span className="truncate font-mono text-xs text-muted-foreground">
                 → {file.link_target}
               </span>
             ) : null}
@@ -160,35 +164,37 @@ function NameCell({ row, table }) {
   );
 }
 
+export function SizeShareBar({ share, className }) {
+  if (share === null) return null;
+  return (
+    <span aria-hidden className={cn("block h-1 w-16 overflow-hidden rounded-full bg-muted", className)}>
+      {/* A non-empty folder keeps a visible sliver. */}
+      <span className="block h-full rounded-full bg-primary/60" style={{ width: `${share > 0 ? Math.max(share * 100, 3) : 0}%` }} />
+    </span>
+  );
+}
+
 function SizeCell({ row, table }) {
   const file = row.original;
   const t = useTranslations("applications.files");
-  const { folderSizes = {}, sizingPaths = [], onAction } = table.options.meta;
+  const { folderSizes } = table.options.meta;
 
-  // A folder has no size until requested (the backend walks the tree), so the dash
-  // is accurate.
-  if (sizingPaths.includes(file.path)) {
-    return <Loader2 className="ml-auto size-3.5 animate-spin text-muted-foreground" />;
+  if (file.type !== "dir") {
+    return <span className="tabular-nums text-muted-foreground">{file.size_human ?? "—"}</span>;
   }
-
-  // A folder shows only a MEASURED size: the listing's `size_human` for a directory
-  // is the 4 KB directory entry itself.
-  const shown = file.type === "dir" ? folderSizes[file.path] : file.size_human;
-  // Offered in the size column, where the answer appears.
-  if (file.type === "dir" && !shown) {
-    return (
-      <button
-        type="button"
-        onClick={() => onAction?.("size", file)}
-        className="text-xs text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-      >
-        {t("size.calculate")}
-      </button>
+  const measured = measuredSize(file, folderSizes);
+  if (!measured) {
+    return folderSizes?.loading ? (
+      <Skeleton className="ml-auto h-3.5 w-12" />
+    ) : (
+      // Not measured is not zero.
+      <span className="text-muted-foreground" title={t("sizes.notMeasured")}>—</span>
     );
   }
   return (
-    <span className="tabular-nums text-muted-foreground">
-      {shown ?? "—"}
+    <span className="inline-flex flex-col items-end gap-1">
+      <span className="tabular-nums text-muted-foreground">{measured.size_human}</span>
+      <SizeShareBar share={sizeShare(measured, folderSizes)} />
     </span>
   );
 }
@@ -233,7 +239,7 @@ function OwnerCell({ row }) {
       title={file.group ? `${file.owner}:${file.group}` : file.owner}
     >
       <span className="min-w-0 truncate">{file.owner}</span>
-      {file.group ? <span className="min-w-0 truncate text-muted-foreground/70">{file.group}</span> : null}
+      {file.group ? <span className="min-w-0 truncate">{file.group}</span> : null}
     </span>
   );
 }
@@ -260,7 +266,7 @@ function PermissionsCell({ row }) {
             {worldWritable ? <TriangleAlert className="size-3.5 shrink-0 text-destructive" aria-hidden /> : null}
           </span>
           {/* Omitted when the mode has no symbolic form; the line above is already octal. */}
-          {symbolic ? <span className="text-muted-foreground/70">{file.mode}</span> : null}
+          {symbolic ? <span>{file.mode}</span> : null}
           {/* The tooltip's sentence for screen readers, since the cell is not a tab stop
               (see ModifiedCell). */}
           {sentence ? <span className="sr-only">{sentence}</span> : null}
@@ -299,11 +305,13 @@ export function FilesTable({
   selected = [],
   onToggle,
   onToggleAll,
-  folderSizes = {},
-  sizingPaths = [],
+  folderSizes = null,
   initialSort = [{ id: "name", desc: false }],
 }) {
   const t = useTranslations("applications.files");
+  // Mirrors the table's sort so each comparator knows its direction.
+  const [sorting, setSorting] = useState(initialSort);
+  const isDesc = (id) => sorting.some((s) => s.id === id && s.desc);
 
   // Percentages with `fixedLayout`, so widths are bounded. The checkbox is a fixed
   // 48px, so shares sum to 92-93; a hidden column's share is not redistributed.
@@ -320,21 +328,22 @@ export function FilesTable({
       header: t("columns.name"),
       meta: { className: "w-[32%] px-4 xl:w-[29%]" },
       cell: NameCell,
-      sortingFn: sortByName,
+      sortingFn: withDirsFirst(byName, isDesc("name")),
     },
     {
       accessorKey: "size",
       header: () => <span className="block text-right">{t("columns.size")}</span>,
       meta: { className: "text-right w-[14%] whitespace-nowrap px-3 xl:w-[10%]" },
       cell: SizeCell,
-      sortingFn: sortBySize,
+      sortingFn: withDirsFirst((a, b) => sizeSortKey(a, folderSizes) - sizeSortKey(b, folderSizes), isDesc("size")),
+      sortDescFirst: true,
     },
     {
       accessorKey: "modified_at",
       header: t("columns.modified"),
       meta: { className: "w-[16%] px-4 xl:w-[13%]" },
       cell: ModifiedCell,
-      sortingFn: sortByModified,
+      sortingFn: withDirsFirst(byModified, isDesc("modified_at")),
     },
     {
       // Not sortable: sort would use `owner` alone while the cell shows `owner:group`.
@@ -374,7 +383,6 @@ export function FilesTable({
         onToggle,
         onToggleAll,
         folderSizes,
-        sizingPaths,
       }}
       emptyMessage={t("empty.title")}
       rowClassName={(file) =>
@@ -386,7 +394,10 @@ export function FilesTable({
       }
       sortable
       defaultSorting={initialSort}
-      onSortingChange={(sorting) => writePref(SORT_COOKIE, serializeSort(sorting))}
+      onSortingChange={(next) => {
+        setSorting(next);
+        writePref(SORT_COOKIE, serializeSort(next));
+      }}
       fixedLayout
       contextMenu={(file) => (
         <FileActionItems

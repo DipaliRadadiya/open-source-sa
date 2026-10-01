@@ -847,7 +847,7 @@
     "passwordSameAsCurrent": "Escolha uma senha diferente da atual.",
     "cronNameReserved": "Esse nome já é usado por um arquivo do servidor ou do painel. Escolha outro.",
     "cronRootRefused": "As tarefas não podem ser executadas como root. Escolha um usuário do sistema.",
-    "directivesPhpOnly": "Somente configurações do PHP, uma por linha, como php_admin_value[short_open_tag] = On. Linhas do pool como user = ou listen = não são permitidas aqui.",
+    "directivesPhpOnly": "Somente configurações do PHP, uma por linha, como display_errors = Off.",
     "noManagedWorkerKeys": "user, command, directory e os arquivos de log são definidos pelo painel. Altere-os nos campos acima, não aqui.",
     "insideApplication": "Use um caminho dentro da pasta desta aplicação.",
     "securityUsernameAscii": "Use apenas letras em inglês, números e . _ - @ — os navegadores não enviam outras letras da mesma forma.",
@@ -4158,8 +4158,7 @@
         "compress": "Comprimir",
         "extract": "Extrair",
         "permissions": "Permissões",
-        "delete": "Excluir",
-        "folderSize": "Tamanho da pasta"
+        "delete": "Excluir"
       },
       "empty": {
         "title": "Esta pasta está vazia",
@@ -4396,10 +4395,6 @@
         "permissionsDescriptionMixed": "Os itens selecionados não têm todos as mesmas permissões. Salvar aplica um único modo a todos.",
         "permissionsChooseMode": "Escolha as permissões a aplicar."
       },
-      "size": {
-        "failed": "Não foi possível medir essa pasta.",
-        "calculate": "Calcular"
-      },
       "archiveFormat": {
         "legend": "Formato do arquivo",
         "mustBeArchive": "O nome deve terminar em .zip ou .tar.gz.",
@@ -4498,6 +4493,17 @@
           "extract": "Extraído para \"{target}\"."
         },
         "failed": "O processo não foi concluído."
+      },
+      "sizes": {
+        "measuring": "Medindo o tamanho das pastas…",
+        "measured": "Tamanho das pastas medido {ago}",
+        "measuredNoTime": "Tamanho das pastas medido",
+        "partial": "Algumas pastas demoraram demais para medir",
+        "failed": "Não foi possível medir o tamanho das pastas.",
+        "tooBig": "Estas pastas são grandes demais para medir a tempo.",
+        "measureAgain": "Medir novamente",
+        "tryAgain": "Tentar novamente",
+        "notMeasured": "Não medido"
       }
     },
     "workers": {
@@ -5026,7 +5032,7 @@
         "timezonePlaceholder": "Usar o do servidor",
         "autoPrepend": "Arquivo a executar antes de cada página",
         "directives": "Diretivas extras",
-        "directivesPlaceholder": "php_admin_value[opcache.enable] = 1"
+        "directivesPlaceholder": "display_errors = Off"
       },
       "hints": {
         "postTooSmall": "Isso é menor que o limite de upload, então uploads desse tamanho ainda falharão.",
@@ -5037,7 +5043,7 @@
         "sessionLifetime": "Segundos que um arquivo de sessão é mantido antes de poder ser limpo.",
         "timezone": "Afeta apenas datas que o PHP produz, não o relógio do servidor.",
         "autoPrepend": "Um caminho dentro desta aplicação. Deixe vazio a menos que tenha sido instruído contrário.",
-        "directives": "Uma por linha, no formato de pool do PHP-FPM: php_admin_value[nome] = valor. Qualquer coisa aqui se sobrepõe aos campos acima.",
+        "directives": "Uma configuração do PHP por linha, como display_errors = Off. Configurações que têm um campo nesta tela, e extensões, não podem ser definidas aqui.",
         "openBasedir": "Impede o PHP de ler ou escrever arquivos fora da pasta desta aplicação.",
         "allowUrlFopen": "Permite que o PHP busque URLs remotas. Desativar bloqueia uma forma comum de malware se comunicar.",
         "upload": "Também aumenta o próprio limite do servidor web, que recusa uploads grandes antes do PHP vê-los. Uma aplicação configurada antes pega isso na primeira vez que você salva.",

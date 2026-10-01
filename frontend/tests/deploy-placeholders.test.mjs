@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { applicationSchema } from "../lib/schemas/application.js";
+import { deploySettingsSchema } from "../lib/schemas/deploy-history.js";
 
 test("the deploy script's {path} has a value to show", () => {
   /*
@@ -19,13 +20,18 @@ test("the deploy script's {path} has a value to show", () => {
   assert.equal(parsed.path, "/home/deploy/site/public_html");
 });
 
-test("{path} maps to the document root, matching the backend", () => {
-  // GitDeployer::expand() substitutes the document root for `{path}` — not
-  // `path`, which is its parent for a fixed-web-root type. Showing one and
-  // running the other would be worse than showing nothing.
+test("each variable shows what the deploy really substitutes, from the server", () => {
+  // The client used to guess: `document_root` for {path} (the deploy runs in the code
+  // root, which differs for sites with a web-root subfolder) and "PHP 8.4" for {php}.
+  // GitDeployer::placeholderValues() is the same code the deploy uses.
   const card = readFileSync(
     new URL("../components/applications/deployment/deploy-settings-card.jsx", import.meta.url),
     "utf8",
   );
-  assert.match(card, /"\{path\}": application\?\.document_root/);
+  assert.match(card, /\.\.\.settings\.placeholder_values,/);
+  assert.doesNotMatch(card, /application\?\.document_root|`PHP \$\{application\.php_version\}`/);
+  const values = { "{path}": "/home/u/shop/public_html", "{php}": "/usr/bin/php8.4", "{PHP83}": "/usr/bin/php8.3" };
+  assert.deepEqual(deploySettingsSchema.parse({ placeholder_values: values }).placeholder_values, values);
+  // PHP sends an empty map as [].
+  assert.deepEqual(deploySettingsSchema.parse({ placeholder_values: [] }).placeholder_values, {});
 });

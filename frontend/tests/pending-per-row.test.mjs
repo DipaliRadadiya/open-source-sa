@@ -33,7 +33,6 @@ test("lists whose rows can work side by side keep one busy state per row", () =>
   assert.match(read("components/firewall/rules-cards.jsx"), /pending\.includes\(rule\.id\)/);
   assert.match(read("components/sync/sync-results.jsx"), /pendingKeys\.includes\(key\)/);
   assert.match(read("components/sync/ignored-sheet.jsx"), /pendingKeys\.includes\(ignoreKey\(ignore\)\)/);
-  assert.match(read("components/applications/files/files-panel.jsx"), /const \[sizingPaths, setSizingPaths\] = useState\(\[\]\);/);
 });
 
 test("lists where only one can run at a time lock the other rows and say why", () => {

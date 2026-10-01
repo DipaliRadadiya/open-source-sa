@@ -9,8 +9,10 @@ import { isImageFile } from "@/lib/files/file-icon";
 import { canOpenFile } from "@/lib/files/openable";
 import { isWorldWritable, symbolicMode } from "@/lib/files/describe-mode";
 import { FILE_NAME } from "@/lib/files/name-style";
+import { SizeShareBar } from "@/components/applications/files/files-table";
+import { measuredSize, sizeShare } from "@/lib/files/folder-sizes";
 
-// `folderSizes` and `sizingPaths` are the desktop SizeCell's state, so phones can show folder size.
+// `folderSizes` is the table's too, so phones show the same folder sizes.
 export function FilesCards({
   appId,
   data,
@@ -20,17 +22,14 @@ export function FilesCards({
   highlightPath,
   selected = [],
   onToggle,
-  folderSizes = {},
-  sizingPaths = [],
+  folderSizes = null,
 }) {
   const t = useTranslations("applications.files");
-  // "Measuring…" lives one namespace up, shared with the dashboard.
-  const tSize = useTranslations("applications.size");
   return (
     <ul className="space-y-2">
       {data.map((file) => {
         const busy = busyPath === file.path;
-        const measuring = sizingPaths.includes(file.path);
+        const measured = measuredSize(file, folderSizes);
         return (
           <li
             key={file.path}
@@ -63,6 +62,7 @@ export function FilesCards({
                 {file.type === "dir" ? (
                   <Link
                     href={`/applications/${appId}/files?path=${encodeURIComponent(file.path)}`}
+                    prefetch={false}
                     className={cn("block font-medium hover:underline", FILE_NAME)}
                     title={file.name}
                   >
@@ -80,7 +80,7 @@ export function FilesCards({
                   >
                     {file.name}
                     {file.link_target ? (
-                      <span className="font-mono text-xs text-muted-foreground/70"> → {file.link_target}</span>
+                      <span className="font-mono text-xs text-muted-foreground"> → {file.link_target}</span>
                     ) : null}
                   </span>
                 ) : (
@@ -103,20 +103,15 @@ export function FilesCards({
                 {/* Two lines: size and age, then owner and mode, each token unbreakable (one
                     `·`-joined line split `-rw-r--r--` when wrapping). */}
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  {measuring ? (
-                    tSize("measuring")
-                  ) : file.type === "dir" && !folderSizes[file.path] ? (
-                    <button
-                      type="button"
-                      onClick={() => onAction("size", file)}
-                      className="underline decoration-dotted underline-offset-2 hover:text-foreground"
-                    >
-                      {t("size.calculate")}
-                    </button>
+                  {file.type !== "dir" ? (
+                    <span className="whitespace-nowrap tabular-nums">{file.size_human}</span>
+                  ) : measured ? (
+                    <span className="whitespace-nowrap tabular-nums">{measured.size_human}</span>
+                  ) : folderSizes?.loading ? (
+                    // A span, not <Skeleton> (a div), inside this <p>.
+                    <span className="inline-block h-3 w-10 animate-pulse rounded-md bg-muted align-middle" />
                   ) : (
-                    <span className="whitespace-nowrap tabular-nums">
-                      {file.type === "dir" ? folderSizes[file.path] : file.size_human}
-                    </span>
+                    <span title={t("sizes.notMeasured")}>—</span>
                   )}
                   {file.modified_at_human ? (
                     <>
@@ -125,9 +120,10 @@ export function FilesCards({
                     </>
                   ) : null}
                 </p>
+                <SizeShareBar share={sizeShare(measured, folderSizes)} className="my-1" />
                 {/* Spaced, not `·`-joined, so a wrapped second item has no stray leading dot. */}
                 {file.owner || file.mode ? (
-                  <p className="flex flex-wrap gap-x-2 font-mono text-xs leading-relaxed text-muted-foreground/80">
+                  <p className="flex flex-wrap gap-x-2 font-mono text-xs leading-relaxed text-muted-foreground">
                     {file.owner ? (
                       <span className="whitespace-nowrap">{[file.owner, file.group].filter(Boolean).join(":")}</span>
                     ) : null}

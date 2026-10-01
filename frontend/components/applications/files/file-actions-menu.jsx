@@ -8,7 +8,6 @@ import {
   Archive,
   FolderOpen,
   Lock,
-  Scale,
   Trash2,
 } from "lucide-react";
 import { fileDownloadUrl } from "@/lib/api/files";
@@ -74,14 +73,6 @@ export function FileActionItems({
           </Item>
           {canWrite ? <Separator /> : null}
         </>
-      ) : null}
-
-      {/* Directories only: a file's size is already in the row. */}
-      {file.type === "dir" ? (
-        <Item onSelect={() => onAction("size", file)}>
-          <Scale className="size-4" />
-          {t("actions.folderSize")}
-        </Item>
       ) : null}
 
       {canWrite ? (

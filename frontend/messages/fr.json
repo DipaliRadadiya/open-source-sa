@@ -847,7 +847,7 @@
     "passwordSameAsCurrent": "Choisissez un mot de passe différent de l'actuel.",
     "cronNameReserved": "Ce nom est déjà pris par un fichier du serveur ou du panneau. Choisissez-en un autre.",
     "cronRootRefused": "Les tâches ne peuvent pas s'exécuter en tant que root. Choisissez un utilisateur système.",
-    "directivesPhpOnly": "Uniquement des réglages PHP, un par ligne, comme php_admin_value[short_open_tag] = On. Les lignes de pool comme user = ou listen = ne sont pas acceptées ici.",
+    "directivesPhpOnly": "Uniquement des réglages PHP, un par ligne, comme display_errors = Off.",
     "noManagedWorkerKeys": "user, command, directory et les fichiers de journal sont définis par le panneau. Modifiez-les dans les champs ci-dessus, pas ici.",
     "insideApplication": "Utilisez un chemin situé dans le dossier de cette application.",
     "securityUsernameAscii": "Utilisez uniquement des lettres anglaises, des chiffres et . _ - @ : les navigateurs n'envoient pas les autres lettres de la même façon.",
@@ -4158,8 +4158,7 @@
         "compress": "Compresser",
         "extract": "Extraire",
         "permissions": "Autorisations",
-        "delete": "Supprimer",
-        "folderSize": "Taille du dossier"
+        "delete": "Supprimer"
       },
       "empty": {
         "title": "Ce dossier est vide",
@@ -4396,10 +4395,6 @@
         "permissionsDescriptionMixed": "Les éléments sélectionnés n’ont pas tous les mêmes permissions. L’enregistrement applique un seul mode à tous.",
         "permissionsChooseMode": "Choisissez les permissions à appliquer."
       },
-      "size": {
-        "failed": "Ce dossier n'a pas pu être mesuré.",
-        "calculate": "Calculer"
-      },
       "archiveFormat": {
         "legend": "Format d'archive",
         "mustBeArchive": "Le nom doit se terminer par .zip ou .tar.gz.",
@@ -4498,6 +4493,17 @@
           "extract": "Extrait vers « {target} »."
         },
         "failed": "Le traitement ne s'est pas terminé."
+      },
+      "sizes": {
+        "measuring": "Mesure de la taille des dossiers…",
+        "measured": "Taille des dossiers mesurée {ago}",
+        "measuredNoTime": "Taille des dossiers mesurée",
+        "partial": "Certains dossiers ont pris trop de temps à mesurer",
+        "failed": "Impossible de mesurer la taille des dossiers.",
+        "tooBig": "Ces dossiers sont trop volumineux pour être mesurés à temps.",
+        "measureAgain": "Mesurer à nouveau",
+        "tryAgain": "Réessayer",
+        "notMeasured": "Non mesuré"
       }
     },
     "workers": {
@@ -5026,7 +5032,7 @@
         "timezonePlaceholder": "Utiliser celui du serveur",
         "autoPrepend": "Fichier à exécuter avant chaque page",
         "directives": "Directives supplémentaires",
-        "directivesPlaceholder": "php_admin_value[opcache.enable] = 1"
+        "directivesPlaceholder": "display_errors = Off"
       },
       "hints": {
         "postTooSmall": "C'est plus petit que la limite d'upload, donc les envois de cette taille échoueront.",
@@ -5037,7 +5043,7 @@
         "sessionLifetime": "Secondes pendant lesquelles un fichier de session est conservé avant de pouvoir être nettoyé.",
         "timezone": "N'affecte que les dates que PHP produit, pas l'horloge du serveur.",
         "autoPrepend": "Un chemin dans cette application. Laissez vide sauf indication contraire.",
-        "directives": "Une par ligne, au format d'un pool PHP-FPM : php_admin_value[nom] = valeur. Tout ce qui est ici l'emporte sur les champs ci-dessus.",
+        "directives": "Un réglage PHP par ligne, comme display_errors = Off. Les réglages qui ont un champ sur cet écran, et les extensions, ne peuvent pas être définis ici.",
         "openBasedir": "Empêche PHP de lire ou écrire des fichiers hors du dossier de cette application.",
         "allowUrlFopen": "Permet à PHP de récupérer des URL distantes. Le désactiver bloque un moyen courant pour les malwares de communiquer.",
         "upload": "Augmente aussi la limite du serveur web lui-même, qui refuse les gros envois avant que PHP ne les voie. Une application configurée plus tôt le prend en compte la première fois que vous enregistrez.",

@@ -206,13 +206,19 @@ export const phpSettingsFormSchema = z.object({
     .trim()
     .max(4000, "max4000")
     .refine((value) => !/^\s*\[/m.test(value), "noSections")
-    // PHP settings only: a pool line such as `user = root` would change who the pool runs as.
+    // Same line grammar as App\Services\Server\Php\AdditionalDirectives: `name = value` or
+    // `php_[admin_]value|flag[name] = value`. The server refuses settings with their own field.
     .refine(
       (value) =>
         value
           .split("\n")
           .map((line) => line.trim())
-          .every((line) => line === "" || /^[;#]/.test(line) || /^php_(admin_)?(value|flag)\[[A-Za-z0-9_.]+\]\s*=/.test(line)),
+          .every(
+            (line) =>
+              line === "" ||
+              /^[;#]/.test(line) ||
+              /^(php_(admin_)?(value|flag)\[[A-Za-z_][A-Za-z0-9_.]*\]|[A-Za-z_][A-Za-z0-9_.]*)\s*=/.test(line),
+          ),
       "directivesPhpOnly",
     )
     .default(""),

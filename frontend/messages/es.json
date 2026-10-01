@@ -294,7 +294,7 @@
     "passwordSameAsCurrent": "Elige una contraseña distinta de la actual.",
     "cronNameReserved": "Ese nombre lo usa un archivo del servidor o del panel. Elige otro.",
     "cronRootRefused": "Las tareas no pueden ejecutarse como root. Elige un usuario del sistema.",
-    "directivesPhpOnly": "Solo ajustes de PHP, uno por línea, como php_admin_value[short_open_tag] = On. Aquí no se permiten líneas del pool como user = o listen =.",
+    "directivesPhpOnly": "Solo ajustes de PHP, uno por línea, como display_errors = Off.",
     "noManagedWorkerKeys": "user, command, directory y los archivos de registro los fija el panel. Cámbialos en los campos de arriba, no aquí.",
     "insideApplication": "Usa una ruta dentro de la carpeta de esta aplicación.",
     "securityUsernameAscii": "Usa solo letras inglesas, números y . _ - @: los navegadores no envían otras letras de la misma forma.",
@@ -4158,8 +4158,7 @@
         "compress": "Comprimir",
         "extract": "Extraer",
         "permissions": "Permisos",
-        "delete": "Eliminar",
-        "folderSize": "Tamaño de la carpeta"
+        "delete": "Eliminar"
       },
       "empty": {
         "title": "Esta carpeta está vacía",
@@ -4396,10 +4395,6 @@
         "permissionsDescriptionMixed": "Los elementos seleccionados no tienen todos los mismos permisos. Al guardar se aplica un único modo a todos.",
         "permissionsChooseMode": "Elige los permisos que se aplicarán."
       },
-      "size": {
-        "failed": "No se pudo medir esa carpeta.",
-        "calculate": "Calcular"
-      },
       "archiveFormat": {
         "legend": "Formato del archivo comprimido",
         "mustBeArchive": "El nombre debe terminar en .zip o .tar.gz.",
@@ -4498,6 +4493,17 @@
           "extract": "Extraído en \"{target}\"."
         },
         "failed": "El proceso no se completó."
+      },
+      "sizes": {
+        "measuring": "Midiendo el tamaño de las carpetas…",
+        "measured": "Tamaño de las carpetas medido {ago}",
+        "measuredNoTime": "Tamaño de las carpetas medido",
+        "partial": "Algunas carpetas tardaron demasiado en medirse",
+        "failed": "No se pudo medir el tamaño de las carpetas.",
+        "tooBig": "Estas carpetas son demasiado grandes para medirlas a tiempo.",
+        "measureAgain": "Medir de nuevo",
+        "tryAgain": "Reintentar",
+        "notMeasured": "Sin medir"
       }
     },
     "workers": {
@@ -5026,7 +5032,7 @@
         "timezonePlaceholder": "Usar la del servidor",
         "autoPrepend": "Archivo a ejecutar antes de cada página",
         "directives": "Directivas adicionales",
-        "directivesPlaceholder": "php_admin_value[opcache.enable] = 1"
+        "directivesPlaceholder": "display_errors = Off"
       },
       "hints": {
         "postTooSmall": "Es menor que el límite de subida, así que esas subidas seguirán fallando.",
@@ -5037,7 +5043,7 @@
         "sessionLifetime": "Segundos que se guarda una sesión antes de poder limpiarse.",
         "timezone": "Solo afecta a las fechas que genera PHP, no al reloj del servidor.",
         "autoPrepend": "Una ruta dentro de esta aplicación. Déjalo vacío salvo que te hayan indicado otra cosa.",
-        "directives": "Uno por línea, en formato de pool de PHP-FPM: php_admin_value[nombre] = valor. Lo de aquí manda sobre los campos de arriba.",
+        "directives": "Un ajuste de PHP por línea, como display_errors = Off. Los ajustes que tienen un campo en esta pantalla y las extensiones no se pueden definir aquí.",
         "openBasedir": "Impide que PHP lea o escriba archivos fuera de la carpeta de esta aplicación.",
         "allowUrlFopen": "Permite que PHP descargue URLs remotas. Desactivarlo bloquea una vía habitual del malware para comunicarse.",
         "upload": "También sube el límite del propio servidor web, que rechaza las subidas grandes antes de que PHP las vea. Una aplicación creada antes lo aplica la primera vez que guardas.",

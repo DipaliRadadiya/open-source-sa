@@ -22,6 +22,7 @@ export function FileBreadcrumb({ appId, path }) {
     <nav aria-label={t("breadcrumbLabel")} className="flex min-w-0 items-center gap-1 overflow-x-auto text-sm">
       <Link
         href={href(appId, segments, 0)}
+        prefetch={false}
         className="flex shrink-0 items-center gap-1.5 rounded px-1 py-0.5 text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <Folder className="size-3.5" />
@@ -47,6 +48,7 @@ export function FileBreadcrumb({ appId, path }) {
             ) : (
               <Link
                 href={href(appId, segments, realIndex)}
+                prefetch={false}
                 className="max-w-40 truncate rounded px-1 py-0.5 text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:max-w-64"
               >
                 {seg}

@@ -812,7 +812,6 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
                     <Label
                       label={t("fields.directives")}
                       name="additional_directives"
-                      directive="php_admin_value"
                       explain={t("hints.directives")}
                     />
                     <FormControl>

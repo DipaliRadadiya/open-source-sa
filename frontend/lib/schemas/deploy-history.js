@@ -51,6 +51,10 @@ export const deploySettingsSchema = z
     last_deployed_at_human: z.string().nullish(),
     // Sent rather than hardcoded, the same way the cron presets are.
     placeholders: z.array(z.string()).default([]),
+    // Token → what the deploy substitutes. PHP sends an empty map as `[]`.
+    placeholder_values: z
+      .preprocess((v) => (Array.isArray(v) ? {} : v), z.record(z.string(), z.string().nullable()))
+      .default({}),
   })
   .passthrough();
 

@@ -38,7 +38,7 @@ test("the two notations really are the same value", () => {
 });
 
 test("the column shows the octal, not only on hover", () => {
-  assert.match(table, /\{symbolic \? <span className="text-muted-foreground\/70">\{file\.mode\}<\/span> : null\}/);
+  assert.match(table, /\{symbolic \? <span>\{file\.mode\}<\/span> : null\}/);
   // Both lines come off one field. A second source is exactly what was
   // reported, and must not become true.
   assert.equal(table.match(/file\.mode/g).length >= 2, true);

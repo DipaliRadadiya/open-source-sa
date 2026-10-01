@@ -125,38 +125,22 @@ test("the detect log is graded as web format, because that is what it is", () =>
  * ------------------------------------------------------------------------ */
 
 test("folder size reaches the phone layout, not just the table", () => {
-  /*
-   * The action ran and the result landed in state, but `folderSizes` was only
-   * ever passed to the desktop table. On a phone the ⋯ menu closed and nothing
-   * happened, ever.
-   */
   const panel = read("components/applications/files/files-panel.jsx");
   const cards = read("components/applications/files/files-cards.jsx");
-
-  // The panel hands both pieces of state to the card list.
   const cardsBlock = panel.slice(panel.indexOf("<FilesCards"), panel.indexOf("<FilesTable"));
   assert.match(cardsBlock, /folderSizes=\{folderSizes\}/);
-  assert.match(cardsBlock, /sizingPaths=\{sizingPaths\}/);
-
-  // And the card renders it, with in-progress feedback.
-  assert.match(cards, /folderSizes = \{\},/);
-  assert.match(cards, /sizingPaths = \[\],/);
-  assert.match(cards, /const measuring = sizingPaths\.includes\(file\.path\)/);
-  assert.match(cards, /measuring \? \(\s*tSize\("measuring"\)/);
-  assert.match(cards, /file\.type === "dir" \? folderSizes\[file\.path\] : file\.size_human/);
+  assert.match(cards, /const measured = measuredSize\(file, folderSizes\);/);
+  assert.match(cards, /folderSizes\?\.loading \?/);
+  assert.match(cards, /<SizeShareBar share=\{sizeShare\(measured, folderSizes\)\}/);
 });
 
-test("the measuring label reuses the string that already existed", () => {
-  // `applications.size.measuring` is already shared with the dashboard. A
-  // files-scoped copy would be a second string for one sentence.
-  const cards = read("components/applications/files/files-cards.jsx");
-  assert.match(cards, /useTranslations\("applications\.size"\)/);
-
-  const en = JSON.parse(read("messages/en.json"));
-  assert.ok(en.applications.size.measuring, "the shared string is gone");
-  assert.equal(
-    en.applications.files.size?.measuring,
-    undefined,
-    "a duplicate files-scoped copy was added",
-  );
+test("\"Not measured\" says the same thing as everywhere else", () => {
+  // The dash's tooltip matches the panel's existing "Not measured" in every locale,
+  // and the old Calculate strings are gone rather than left orphaned.
+  for (const locale of ["en", "es", "hi", "de", "fr", "pt", "ja", "ru"]) {
+    const m = JSON.parse(read(`messages/${locale}.json`));
+    assert.equal(m.applications.files.sizes.notMeasured, m.applications.size.notMeasured, locale);
+    assert.equal(m.applications.files.size, undefined, `${locale} keeps the old size.* strings`);
+    assert.equal(m.applications.files.actions.folderSize, undefined, `${locale} keeps actions.folderSize`);
+  }
 });

@@ -94,10 +94,15 @@ test("a [section] header is refused — it would start a second pool", () => {
   assert.equal(field.safeParse("php_admin_value[opcache.enable] = 1\n [pool]").success, false);
 });
 
-test("extra directives take PHP settings only — no pool lines like user = root (bug list, 30 Sep)", () => {
+test("extra directives take PHP setting lines in either form, and nothing else", () => {
+  // Same grammar as the backend: `name = value` or `php_[admin_]value|flag[name] = value`.
+  // The server writes every line as php_admin_value/flag, so `user = root` can no longer
+  // change the pool; settings with their own field are refused there with a 422.
   const field = phpSettingsFormSchema.shape.additional_directives;
-  assert.equal(field.safeParse("php_flag[display_errors] = off\n; a comment").success, true);
-  for (const line of ["user = root", "listen = /tmp/x", "short_open_tag = On", "pm.max_children = 50"]) {
+  for (const ok of ["display_errors = Off", "php_flag[display_errors] = off\n; a comment", "opcache.enable=1", "# note\nshort_open_tag = On"]) {
+    assert.equal(field.safeParse(ok).success, true, ok);
+  }
+  for (const line of ["rm -rf /", "display_errors", "1abc = x", "php_admin_value[] = 1"]) {
     assert.equal(field.safeParse(line).error?.issues[0]?.message, "directivesPhpOnly", line);
   }
 });
