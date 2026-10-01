@@ -68,7 +68,12 @@ class DeploymentRecorder
         }
 
         $steps = $this->deployment->steps ?? [];
-        $steps[] = $step;
+
+        // One stage can take more than one command (`init` is git init and
+        // then the remote), and the list is the stages, not the commands.
+        if (end($steps) !== $step) {
+            $steps[] = $step;
+        }
 
         if ($result !== null) {
             $text = trim($result->output()."\n".$result->errorOutput());

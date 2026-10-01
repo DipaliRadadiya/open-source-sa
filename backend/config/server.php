@@ -1182,11 +1182,20 @@ return [
         // point rather than a policy: it is the user's file the moment they
         // open the screen.
         'default_scripts' => [
-            'php' => "cd {path}\ngit pull origin {branch}\n",
+            'php' => "cd {path}\ngit pull origin {branch}\n"
+                ."if [ -f composer.json ]; then\n    composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader\nfi\n",
             'node' => "cd {path}\ngit pull origin {branch}\nnpm ci\nnpm run build --if-present\n",
             'static' => "cd {path}\ngit pull origin {branch}\n",
             'proxy' => "cd {path}\ngit pull origin {branch}\n",
         ],
+
+        // Run on a deploy for which the user wrote no script and no build
+        // command, and only when the checkout's composer.json requires real
+        // packages — exactly the deploys the dependency check would otherwise
+        // fail as composer_dependencies_missing, so no site that deploys
+        // successfully today runs anything new. Until 2026-10-01 nothing ran,
+        // and every new Composer project failed its first deploy.
+        'composer_install' => "composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader\n",
 
         // Install + build for each package manager a Node application can
         // record. Used two ways: as-is for the create-form's build_command

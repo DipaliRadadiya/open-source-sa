@@ -1495,6 +1495,19 @@ is not there, the deploy fails as `composer_dependencies_missing` rather than
 as an unexplained `500` from the verify. A manifest with only `require-dev`, or
 only platform entries (`php`, `ext-*`), is left alone.
 
+**With no deploy script and no build command written**, the deploy now runs
+`composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader`
+as the site user (logged as the `script` step) when — and only when — that same
+check would have failed: `composer.json` requires real packages. Since
+2026-10-01; before, nothing ran, so every new Composer project failed its first
+deploy. A site with its own script or build command runs only that. The PHP
+`default_deploy_script` now ends with the same install, guarded by
+`if [ -f composer.json ]`.
+
+`deploy_script_customised` is `false` for a saved script that is the default
+apart from line endings and trailing whitespace. `steps` lists each stage once
+(`init` used to appear twice: it is two commands).
+
 `duration` is whole seconds, and null until the deploy has both started and finished.
 
 ---

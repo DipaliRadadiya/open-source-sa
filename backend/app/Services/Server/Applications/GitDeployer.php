@@ -172,6 +172,11 @@ class GitDeployer
 
             if (filled($this->script($application))) {
                 $this->runScript($application, $documentRoot);
+            } elseif ($this->requiresComposerPackages($documentRoot, $application)) {
+                // Nothing written to run, and a composer project that cannot
+                // serve without its packages: install them, rather than fail
+                // the check below. See `composer_install` in config/server.php.
+                $this->runScript($application, $documentRoot, (string) config('server.deployments.composer_install'));
             }
 
             // Before the restarts and before the verify, because this is the
@@ -539,7 +544,7 @@ class GitDeployer
         ]);
     }
 
-    private function runScript(Application $application, string $documentRoot): void
+    private function runScript(Application $application, string $documentRoot, ?string $script = null): void
     {
         // `set -e` so the script stops at the first failing line. Without it a
         // failed `composer install` is followed cheerfully by `php artisan
@@ -556,7 +561,7 @@ class GitDeployer
             $this->nodePath($application),
             $this->phpPath($application),
             'cd '.escapeshellarg($documentRoot),
-            $this->expand($this->script($application), $application, $documentRoot),
+            $this->expand($script ?? (string) $this->script($application), $application, $documentRoot),
         ]);
 
         $result = $this->serverOps->run(
@@ -641,6 +646,20 @@ class GitDeployer
             $autoload->reference,
             'composer_dependencies_missing',
         );
+    }
+
+    /**
+     * Does the checkout's `composer.json` require at least one real package?
+     * The same question, and the same answer, as {@see checkDependencies()}.
+     */
+    private function requiresComposerPackages(string $codeRoot, Application $application): bool
+    {
+        $manifest = $this->serverOps->run(
+            ['cat', $codeRoot.'/composer.json'],
+            ['feature' => 'application', 'op' => 'check_dependencies', 'application' => $application->id],
+        );
+
+        return $manifest->ok && $this->requiresPackages($manifest->output());
     }
 
     /**
