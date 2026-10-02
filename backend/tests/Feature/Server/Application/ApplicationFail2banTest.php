@@ -496,7 +496,10 @@ it('auto-migrates structured columns to raw INI on first GET', function () {
     expect($fresh->fail2ban_jail_content)->toContain('maxretry = 7')
         ->and($fresh->fail2ban_jail_content)->toContain('bantime  = 7200')
         ->and($fresh->fail2ban_jail_content)->toContain('findtime = 900')
-        ->and($fresh->fail2ban_filter_content)->toContain('failregex');
+        ->and($fresh->fail2ban_filter_content)->toContain('failregex')
+        // The current default: a `[{slug}]` header gave fail2ban no
+        // failregex at all, and the copy kept the wp-admin rule (bug #93).
+        ->and($fresh->fail2ban_filter_content)->toBe(app(ApplicationFail2banManager::class)->defaultFilterContent());
 
     // The log path is left as the placeholder rather than resolved here, so
     // the write path substitutes whatever the active web-server driver says.
@@ -792,7 +795,7 @@ it('takes the wp-admin rule out of a filter still on the old default, on fail2ba
     $this->artisan('fail2ban:resync')->assertSuccessful();
 
     expect($this->application->fresh()->fail2ban_filter_content)->not->toContain('wp-admin')
-        ->and($writes[$this->filterD.'/panel-site-shop.conf'] ?? '')->toContain('wp-login.php')
+        ->and($writes[$this->filterD.'/panel-site-shop.conf'] ?? '')->toContain('wp-login\.php')
         ->and($writes[$this->filterD.'/panel-site-shop.conf'] ?? '')->not->toContain('wp-admin');
 });
 
@@ -865,4 +868,45 @@ describe('the settings a site jail may use', function () {
 
         expect($app->fresh()->fail2ban_jail_content)->toContain('action = example');
     });
+});
+
+/*
+ * Bug #93: every login POST counted, a successful one too, so an admin who
+ * signed in three times in ten minutes was banned for an hour. WordPress
+ * answers a wrong password with 200 and a right one with a 302 (measured on
+ * the nginx test server); only 200 counts, as in v7. Lines as nginx wrote
+ * them on that server.
+ */
+it('counts a failed WordPress login and not a successful one', function () {
+    $this->application = createFail2banApp('Shop', 'shop.test', 'wordpress');
+
+    $filter = $this->withHeaders(appFail2banHeaders())->getJson(appFail2banUrl())->assertOk()->json('filter_template');
+
+    $regexes = collect(explode("\n", $filter))
+        ->map(fn (string $line) => trim((string) preg_replace('/^failregex\s*=/', '', trim($line))))
+        ->filter(fn (string $line) => str_starts_with($line, '^<HOST>'))
+        ->map(fn (string $line) => '/'.str_replace(['<HOST>', '/'], ['(?<host>\S+)', '\/'], $line).'/');
+
+    $matches = fn (string $line) => $regexes->contains(fn (string $regex) => preg_match($regex, $line) === 1);
+
+    expect($matches('167.233.229.184 - - [02/Oct/2026:15:32:47 +0000] "POST /wp-login.php HTTP/2.0" 200 6388 "-" "curl/8.5.0"'))->toBeTrue()
+        ->and($matches('167.233.229.184 - - [02/Oct/2026:15:32:49 +0000] "POST /wp-login.php HTTP/2.0" 302 0 "-" "curl/8.5.0"'))->toBeFalse()
+        ->and($matches('203.0.113.9 - - [02/Oct/2026:15:32:47 +0000] "POST /xmlrpc.php HTTP/1.1" 200 400 "-" "x"'))->toBeTrue()
+        ->and($matches('203.0.113.9 - - [02/Oct/2026:15:32:47 +0000] "GET /wp-login.php HTTP/1.1" 200 400 "-" "x"'))->toBeFalse();
+});
+
+it('moves a site still on the previous default to the failed-login rule on fail2ban:resync', function () {
+    $this->application = createFail2banApp('Shop', 'shop.test', 'wordpress', [
+        'fail2ban_jail_name' => 'panel-site-shop',
+        'fail2ban_jail_content' => "[{name}]\nenabled  = true\nfilter   = {filter}\nlogpath  = {logpath}\n",
+        'fail2ban_filter_content' => "[Definition]\nfailregex = ^<HOST> .* \"(POST|PUT|DELETE) .*wp-login.php\n"
+            ."            ^<HOST> .* \"(POST|PUT|DELETE) .*xmlrpc.php\nignoreregex =\n",
+    ]);
+
+    $writes = [];
+    fakeAppFail2ban(writes: $writes);
+
+    $this->artisan('fail2ban:resync')->assertSuccessful();
+
+    expect($this->application->fresh()->fail2ban_filter_content)->toBe(app(ApplicationFail2banManager::class)->defaultFilterContent());
 });

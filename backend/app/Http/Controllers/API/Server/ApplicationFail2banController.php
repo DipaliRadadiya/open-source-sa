@@ -228,11 +228,11 @@ class ApplicationFail2banController extends Controller
             .'bantime  = '.((int) ($bantime ?: $defaults['bantime']))."\n"
             .'findtime = '.((int) ($findtime ?: $defaults['findtime']))."\n";
 
-        $filter = "[{$slug}]\n"
-            ."failregex = ^<HOST> .* \"(POST|PUT|DELETE) .*wp-login.php\n"
-            ."           ^<HOST> .* \"(POST|PUT|DELETE) .*xmlrpc.php\n"
-            ."           ^<HOST> .* \"(POST|PUT|DELETE) .*wp-admin.*\n"
-            ."ignoreregex =\n";
+        // The current default, not a copy of an old one: this copy still had
+        // the `wp-admin` rule that banned logged-in admins, counted successful
+        // logins (bug #93), and was headed `[{slug}]` rather than
+        // `[Definition]`, so fail2ban found no failregex in it at all.
+        $filter = app(ApplicationFail2banManager::class)->defaultFilterContent();
 
         $application->fail2ban_jail_name = $slug;
         $application->fail2ban_jail_content = $jail;

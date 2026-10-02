@@ -253,24 +253,39 @@ class ApplicationFail2banManager
     {
         return <<<'INI'
             [Definition]
-            failregex = ^<HOST> .* "(POST|PUT|DELETE) .*wp-login.php
-                       ^<HOST> .* "(POST|PUT|DELETE) .*xmlrpc.php
+            failregex = ^<HOST> .* "POST [^"]*wp-login\.php[^"]*" 200\b
+                       ^<HOST> .* "POST [^"]*xmlrpc\.php[^"]*" 200\b
             ignoreregex =
 
             INI;
     }
 
     /**
-     * The default filter as it shipped until 2026-09-28, with the `wp-admin`
-     * rule that banned logged-in administrators — see defaultFilterContent().
+     * Earlier defaults, replaced when a site still has one word for word.
+     *
+     * Until 2026-09-28 it had a `wp-admin` rule that banned logged-in
+     * administrators. Until 2026-10-02 it counted every login POST, and a
+     * successful login is one too: an admin who signed in three times in ten
+     * minutes was banned for an hour (bug #93). WordPress answers a wrong
+     * password with 200 and a right one with a 302 redirect (measured on the
+     * nginx test server), so only 200 counts now — as in v7. XML-RPC answers
+     * 200 either way, so every XML-RPC POST still counts, also as in v7.
      */
-    private const LEGACY_DEFAULT_FILTER = <<<'INI'
+    private const LEGACY_DEFAULT_FILTERS = [
+        <<<'INI'
         [Definition]
         failregex = ^<HOST> .* "(POST|PUT|DELETE) .*wp-login.php
                    ^<HOST> .* "(POST|PUT|DELETE) .*xmlrpc.php
                    ^<HOST> .* "(POST|PUT|DELETE) .*wp-admin.*
         ignoreregex =
-        INI;
+        INI,
+        <<<'INI'
+        [Definition]
+        failregex = ^<HOST> .* "(POST|PUT|DELETE) .*wp-login.php
+                   ^<HOST> .* "(POST|PUT|DELETE) .*xmlrpc.php
+        ignoreregex =
+        INI,
+    ];
 
     /**
      * Replace a site's filter with the current default when it is still, word
@@ -290,7 +305,7 @@ class ApplicationFail2banManager
 
         if ($application->fail2ban_jail_name === null
             || $application->fail2ban_jail_content === null
-            || $words((string) $application->fail2ban_filter_content) !== $words(self::LEGACY_DEFAULT_FILTER)) {
+            || ! in_array($words((string) $application->fail2ban_filter_content), array_map($words, self::LEGACY_DEFAULT_FILTERS), true)) {
             return false;
         }
 
