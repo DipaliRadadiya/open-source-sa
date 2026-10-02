@@ -1536,7 +1536,6 @@
       "unbannedAll": "{count, plural, one {# Adresse entsperrt} other {# Adressen entsperrt}}",
       "alreadyGone": "Diese Adresse ist nicht mehr gesperrt — nichts hat sich geändert.",
       "noneToClear": "Niemand war gesperrt.",
-      "failed": "Das konnte nicht ausgeführt werden.",
       "emptyTitle": "Niemand ist gesperrt",
       "emptyBody": "Adressen erscheinen hier, sobald sie gesperrt werden.",
       "unbanAllTitle": "{count, plural, one {Diese Adresse entsperren?} other {Alle # Adressen entsperren?}}",
@@ -1552,7 +1551,9 @@
       "next": "Weiter",
       "noMatches": "Keine Adresse passt.",
       "sinceShort": "Gesperrt {at}",
-      "seeLog": "Protokoll ansehen"
+      "seeLog": "Protokoll ansehen",
+      "unbanFailed": "{ip} konnte nicht entsperrt werden.",
+      "unbanAllFailed": "Die Adressen konnten nicht entsperrt werden."
     },
     "ban": {
       "action": "Adresse sperren",

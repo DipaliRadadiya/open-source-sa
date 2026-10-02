@@ -1536,7 +1536,6 @@
       "unbannedAll": "{count, plural, one {# address unbanned} other {# addresses unbanned}}",
       "alreadyGone": "That address is not banned any more — nothing changed.",
       "noneToClear": "Nobody was banned.",
-      "failed": "We could not do that.",
       "emptyTitle": "Nobody is banned",
       "emptyBody": "Addresses show up here once they get banned.",
       "unbanAllTitle": "{count, plural, one {Unban this address?} other {Unban all # addresses?}}",
@@ -1552,7 +1551,9 @@
       "next": "Next",
       "noMatches": "No addresses match.",
       "sinceShort": "Banned {at}",
-      "seeLog": "See the log"
+      "seeLog": "See the log",
+      "unbanFailed": "{ip} could not be unbanned.",
+      "unbanAllFailed": "The addresses could not be unbanned."
     },
     "ban": {
       "action": "Ban an address",

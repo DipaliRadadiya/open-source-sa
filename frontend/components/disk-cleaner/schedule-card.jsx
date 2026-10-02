@@ -204,9 +204,15 @@ export function ScheduleCard({ schedule, categories, canManage }) {
         icon={CalendarClock}
         title={t("schedule.title")}
         description={t("schedule.dialogDescription")}
+        // A form, so Enter in the threshold field saves like every other dialog.
+        asForm
+        onSubmit={(event) => {
+          event.preventDefault();
+          save();
+        }}
         footer={
           <>
-            <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={pending}>
               {t("confirm.cancel")}
             </Button>
             <ReasonTooltip
@@ -214,7 +220,7 @@ export function ScheduleCard({ schedule, categories, canManage }) {
             >
               {/* Spinner and label while saving: the dialog stays open, so a
                   greyed-out button alone reads as a missed click. */}
-              <Button onClick={save} disabled={pending || (enabled && picked.size === 0) || thresholdInvalid}>
+              <Button type="submit" disabled={pending || (enabled && picked.size === 0) || thresholdInvalid}>
                 {pending ? <Loader2 className="size-4 animate-spin" /> : null}
                 {pending ? t("schedule.saving") : t("schedule.save")}
               </Button>

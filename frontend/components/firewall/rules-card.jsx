@@ -298,6 +298,7 @@ export function RulesCard({
           </p>
         ) : null}
 
+        {/* Widths from the widest option in all 8 languages (fr "Utilisateur de base de données"). */}
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <SearchInput placeholder={t("rules.search")} />
           <FacetSelect
@@ -308,7 +309,7 @@ export function RulesCard({
               { value: "1", label: t("rules.filters.enabled") },
               { value: "0", label: t("rules.filters.disabled") },
             ]}
-            className="w-full sm:w-40"
+            className="w-full sm:w-44"
           />
           <FacetSelect
             paramKey="action"
@@ -318,7 +319,7 @@ export function RulesCard({
               { value: "allow", label: t("rules.allow") },
               { value: "deny", label: t("rules.deny") },
             ]}
-            className="w-full sm:w-36"
+            className="w-full sm:w-48"
           />
           <FacetSelect
             paramKey="origin"
@@ -329,7 +330,7 @@ export function RulesCard({
               { value: "default", label: t("rules.filters.default") },
               { value: "db_user", label: t("rules.filters.database") },
             ]}
-            className="w-full sm:w-40"
+            className="w-full sm:w-72"
           />
           <FacetSelect
             paramKey="sort"
@@ -341,7 +342,7 @@ export function RulesCard({
               { value: "action", label: t("rules.filters.actionAsc") },
               { value: "protocol", label: t("rules.filters.protocolAsc") },
             ]}
-            className="w-full sm:w-44"
+            className="w-full sm:w-56"
           />
         </div>
 

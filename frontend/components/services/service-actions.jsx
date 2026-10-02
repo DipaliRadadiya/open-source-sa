@@ -122,7 +122,6 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
       });
     } finally {
       setBusyAction(null);
-      setConfirming(null);
     }
   }
 
@@ -263,8 +262,12 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
         cancelLabel={t("confirm.cancel")}
         confirmLabel={confirming ? t(`actions.${confirming}`) : ""}
         confirmVariant={confirmIsRestart ? "default" : "destructive"}
-        pending={busy}
-        onConfirm={() => run(confirming)}
+        // Closes on confirm: the row shows the progress, and the page stays usable.
+        onConfirm={() => {
+          const action = confirming;
+          setConfirming(null);
+          run(action);
+        }}
       />
     </div>
   );

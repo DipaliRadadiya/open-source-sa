@@ -1536,7 +1536,6 @@
       "unbannedAll": "{count, plural, one {# dirección desbloqueada} other {# direcciones desbloqueadas}}",
       "alreadyGone": "Esa dirección ya no está bloqueada — no ha cambiado nada.",
       "noneToClear": "No había nadie bloqueado.",
-      "failed": "No hemos podido hacerlo.",
       "emptyTitle": "No hay nadie bloqueado",
       "emptyBody": "Las direcciones aparecen aquí en cuanto se las bloquea.",
       "unbanAllTitle": "{count, plural, one {¿Desbloquear esta dirección?} other {¿Desbloquear las # direcciones?}}",
@@ -1552,7 +1551,9 @@
       "next": "Siguiente",
       "noMatches": "Ninguna dirección coincide.",
       "sinceShort": "Bloqueada {at}",
-      "seeLog": "Ver el registro"
+      "seeLog": "Ver el registro",
+      "unbanFailed": "No se pudo desbloquear {ip}.",
+      "unbanAllFailed": "No se pudieron desbloquear las direcciones."
     },
     "ban": {
       "action": "Bloquear una dirección",

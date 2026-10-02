@@ -179,7 +179,8 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
                     ? // Off: the rule allows nothing while disabled.
                       t("quick.tileOffBody", { port: preset.port })
                     : risky && !done
-                      ? t("quick.tileRisky", { name: risky })
+                      ? // The tile's own label ("MariaDB"), not the process name ("mariadb").
+                        t("quick.tileRisky", { name: preset.label })
                       : t("quick.tileBody", {
                           protocol: (preset.protocol || "tcp").toUpperCase(),
                           port: preset.port,
@@ -341,8 +342,9 @@ function Tile({
           )}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="flex items-center gap-1.5">
-            <span className="min-w-0 truncate text-sm font-medium">{title}</span>
+          {/* Wraps rather than truncates: at 1024 "Web server set" was cut to "Web server …". */}
+          <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+            <span className="min-w-0 text-sm font-medium break-words">{title}</span>
             {done ? (
               <span className="shrink-0 rounded bg-success/15 px-1.5 py-0.5 text-xs font-medium uppercase tracking-wide text-success">
                 {doneLabel}

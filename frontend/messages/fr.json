@@ -1536,7 +1536,6 @@
       "unbannedAll": "{count, plural, one {# adresse débannie} other {# adresses débannies}}",
       "alreadyGone": "Cette adresse n'est plus bannie — rien n'a changé.",
       "noneToClear": "Personne n'était banni.",
-      "failed": "Impossible de faire cela.",
       "emptyTitle": "Personne n'est banni",
       "emptyBody": "Les adresses apparaissent ici une fois bannie.",
       "unbanAllTitle": "{count, plural, one {Débannir cette adresse ?} other {Débannir les # adresses ?}}",
@@ -1552,7 +1551,9 @@
       "next": "Suivant",
       "noMatches": "Aucune adresse correspondante.",
       "sinceShort": "Bannie {at}",
-      "seeLog": "Voir le journal"
+      "seeLog": "Voir le journal",
+      "unbanFailed": "Impossible de débannir {ip}.",
+      "unbanAllFailed": "Impossible de débannir les adresses."
     },
     "ban": {
       "action": "Bannir une adresse",

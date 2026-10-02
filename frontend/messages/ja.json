@@ -1536,7 +1536,6 @@
       "unbannedAll": "{count, plural, one {# 件のアドレスのブロックを解除しました} other {# 件のアドレスのブロックを解除しました}}",
       "alreadyGone": "そのアドレスは既にブロックされていません — 変更はありません。",
       "noneToClear": "ブロックされているアドレスはありません。",
-      "failed": "実行できませんでした。",
       "emptyTitle": "ブロック中のアドレスはありません",
       "emptyBody": "アドレスはブロックされるとここに表示されます。",
       "unbanAllTitle": "{count, plural, one {このアドレスのブロックを解除しますか？} other {# 件すべてのアドレスのブロックを解除しますか？}}",
@@ -1552,7 +1551,9 @@
       "next": "次へ",
       "noMatches": "一致するアドレスはありません。",
       "sinceShort": "{at} にブロック",
-      "seeLog": "ログを表示"
+      "seeLog": "ログを表示",
+      "unbanFailed": "{ip} のブロックを解除できませんでした。",
+      "unbanAllFailed": "アドレスのブロックを解除できませんでした。"
     },
     "ban": {
       "action": "アドレスをブロック",

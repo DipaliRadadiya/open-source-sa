@@ -149,17 +149,19 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
       await unbanIp(ban.ip, ban.jail);
       await refreshAndWait();
       toast.success(t("banned.unbanned", { ip: ban.ip }));
+      setUnbanConfirm(null);
     } catch (error) {
       // 404 = not banned anywhere: the list is stale, so reload it.
       if (error.response?.status === 404) {
         toast.info(t("banned.alreadyGone"));
+        setUnbanConfirm(null);
         refresh();
         return;
       }
-      toast.error(apiMessage(error, t("banned.failed")));
+      // The dialog stays open, so Unban can be pressed again.
+      toast.error(apiMessage(error, t("banned.unbanFailed", { ip: ban.ip })));
     } finally {
       setUnbanning(null);
-      setUnbanConfirm(null);
     }
   }
 
@@ -177,7 +179,7 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
         refresh();
         return;
       }
-      toast.error(apiMessage(error, t("banned.failed")));
+      toast.error(apiMessage(error, t("banned.unbanAllFailed")));
     } finally {
       setClearing(false);
     }
@@ -198,7 +200,8 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
 
   return (
     <Card>
-      <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-start sm:justify-between">
+      {/* One row only from xl: below that four actions wrapped and left "Unban all" alone. */}
+      <CardHeader className="flex flex-col gap-3 space-y-0 xl:flex-row xl:items-start xl:justify-between">
         <div className="space-y-1">
           <CardTitle className="text-base font-semibold">{t("banned.title")}</CardTitle>
           <CardDescription>{t("banned.description")}</CardDescription>

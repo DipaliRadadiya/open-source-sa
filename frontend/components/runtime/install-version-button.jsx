@@ -40,9 +40,16 @@ export function InstallVersionButton({
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
 
+  // Started here but not in `installed` yet (the refresh is still on its way): counted
+  // as installed so the dialog cannot offer it twice. Dropped once the list has it,
+  // so a failed install is offered again.
+  const [started, setStarted] = useState([]);
+  const listed = new Set((Array.isArray(installed) ? installed : []).map((item) => String(typeof item === "string" ? item : item?.version)));
+  const justStarted = started.filter((v) => !listed.has(v));
+
   // Whether installed versions belong in this list is settled here, not by the
   // page. See lib/runtime/install-options.js.
-  const options = installOptions(installable, installed);
+  const options = installOptions(installable, [...(Array.isArray(installed) ? installed : []), ...justStarted]);
   const everythingInstalled = allInstalled(options);
   // The raw choice; `version` below is that choice reconciled against what is
   // still on offer, because the list changes underneath a mounted dialog.
@@ -65,6 +72,7 @@ export function InstallVersionButton({
     setPending(true);
     try {
       const response = await INSTALL[runtime](version);
+      setStarted((current) => [...current, String(version)]);
       toast.success(
         response.status === 200
           ? t("install.already", { version })
