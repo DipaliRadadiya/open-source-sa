@@ -2,14 +2,18 @@
 
 namespace App\Http\Requests\Server\Cronjob;
 
+use App\Http\Requests\Server\Cronjob\Concerns\ConfinesRunAs;
 use App\Rules\NotReservedCronFile;
 use App\Rules\SingleLine;
 use App\Rules\ValidCronExpression;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreCronjobRequest extends FormRequest
 {
+    use ConfinesRunAs;
+
     public function authorize(): bool
     {
         return $this->user()?->canManage('cronjob') ?? false;
@@ -46,5 +50,10 @@ class StoreCronjobRequest extends FormRequest
         return [
             'command.not_regex' => __('errors/cronjob.unresolved_placeholder'),
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(fn (Validator $validator) => $this->confineRunAs($validator));
     }
 }

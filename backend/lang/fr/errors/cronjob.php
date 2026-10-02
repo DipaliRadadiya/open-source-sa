@@ -18,6 +18,7 @@ return [
     ],
     'invalid_expression' => "La planification n'est pas une expression cron valide.",
     'invalid_user' => "L'utilisateur sélectionné n'existe pas sur le serveur.",
+    'user_not_allowed' => 'Seul l\'administrateur du panneau peut exécuter une tâche cron avec un compte qui n\'est pas un utilisateur système du panneau.',
     'unresolved_placeholder' => "La commande contient encore le marqueur {path} — remplacez-le par le répertoire de l'application.",
     'no_newline' => 'Cette valeur ne peut pas contenir de sauts de ligne.',
     'reserved_name' => 'Ce nom est réservé et ne peut pas être utilisé.',
