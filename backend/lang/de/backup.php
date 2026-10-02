@@ -42,6 +42,7 @@ return [
         'monthly' => 'Läuft am 1. jedes Monats zur gewählten Uhrzeit.',
     ],
     'errors' => [
+        'excluded_not_kept' => 'Wiederhergestellt, aber :path, das diese Sicherung ausgeschlossen hat, konnte nicht behalten werden; es liegt noch in der Kopie für Rückgängig.',
         'restore_unverified' => 'Diese Sicherung wurde nie verifiziert und kann daher nicht wiederhergestellt werden.',
         'restore_no_application' => 'Die Anwendung zu dieser Sicherung existiert nicht mehr.',
         'restore_confirm' => 'Geben Sie die Domain der Anwendung exakt ein, um die Wiederherstellung zu bestätigen.',

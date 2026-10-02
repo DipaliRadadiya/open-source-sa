@@ -70,6 +70,10 @@ class SwapFiles implements RestoreStep
 
         $this->move($context, $staged, $siteRoot, 'restore_swap');
 
+        if ($context->rollbackPath !== null) {
+            $this->keepExcluded($context, $context->rollbackPath, $siteRoot);
+        }
+
         // The archive preserves the ownership it was created with, but a
         // restore onto a rebuilt server can land files owned by a uid that no
         // longer maps to this site's user — which shows up as a white screen
@@ -107,6 +111,77 @@ class SwapFiles implements RestoreStep
         if ($context->processStopped) {
             $this->processes->start($context->application);
             $context->processStopped = false;
+        }
+    }
+
+    /**
+     * Bring back what the backup deliberately left out.
+     *
+     * The swap replaces the whole site with the archive, and the archive does
+     * not contain the paths its target excluded -- so a restore permanently
+     * deleted them: exclude `wp-content/uploads` from a "Files and database"
+     * backup, restore it, and every upload was gone, with Undo unable to help
+     * (bug #78). Each excluded path that exists in the site as it was, and is
+     * absent from what was restored, is carried over.
+     *
+     * Hard links (`cp -al`), not a move: no second copy of a large uploads
+     * folder, and the copy kept aside for Undo stays whole.
+     *
+     * Patterns are the ones the archive was made with (manifest), or -- for a
+     * backup taken before they were recorded -- the target's current ones.
+     * Either is safe: only paths missing from the restored copy are filled.
+     */
+    private function keepExcluded(RestoreContext $context, string $previous, string $siteRoot): void
+    {
+        $patterns = $context->backup->manifest['file_excludes']
+            ?? (array) ($context->backup->target?->file_excludes ?? []);
+        $patterns = array_values(array_filter(array_map(
+            fn ($pattern) => ltrim(preg_replace('#^\./#', '', trim((string) $pattern)) ?? '', '/'),
+            (array) $patterns,
+        ), fn (string $pattern) => $pattern !== ''));
+
+        if ($patterns === []) {
+            return;
+        }
+
+        $op = ['feature' => 'backup', 'op' => 'restore_keep_excluded', 'application' => $context->application->id];
+
+        $match = [];
+        foreach ($patterns as $pattern) {
+            if ($match !== []) {
+                $match[] = '-o';
+            }
+            array_push($match, '-path', $previous.'/'.$pattern, '-o', '-path', $previous.'/*/'.$pattern);
+        }
+
+        // -prune: an excluded directory is carried whole, its contents are
+        // not listed one by one.
+        $found = $this->serverOps->run(
+            ['find', $previous, '(', ...$match, ')', '-prune', '-print0'],
+            $op,
+            timeout: 600,
+        );
+
+        foreach (array_filter(explode("\0", $found->output())) as $path) {
+            if (! str_starts_with($path, $previous.'/')) {
+                continue;
+            }
+            $relative = substr($path, strlen($previous) + 1);
+            $target = $siteRoot.'/'.$relative;
+
+            // Already restored from the archive: the archive wins.
+            if ($this->serverOps->run(['test', '-e', $target], $op)->ok) {
+                continue;
+            }
+
+            $this->serverOps->run(['mkdir', '-p', dirname($target)], $op);
+            $copied = $this->serverOps->run(['cp', '-al', $path, $target], $op, timeout: 600);
+
+            if ($copied->failed()) {
+                // Not fatal: the restore itself succeeded, and the original is
+                // still in the copy kept for Undo. Said in the run's log.
+                $context->restore->update(['reason' => trim(($context->restore->reason ?? '')."\n".__('backup.errors.excluded_not_kept', ['path' => $relative]))]);
+            }
         }
     }
 

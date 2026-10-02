@@ -42,6 +42,7 @@ return [
         'monthly' => 'É executado no dia 1 de cada mês no horário escolhido.',
     ],
     'errors' => [
+        'excluded_not_kept' => 'Restaurado, mas :path, excluído deste backup, não pôde ser mantido; ele ainda está na cópia guardada para Desfazer.',
         'restore_unverified' => 'Esta cópia nunca foi verificada, por isso não pode ser restaurada.',
         'restore_no_application' => 'A aplicação desta cópia já não existe.',
         'restore_confirm' => 'Escreva exatamente o domínio da aplicação para confirmar a restauração.',

@@ -42,6 +42,7 @@ return [
         'monthly' => 'Runs on the 1st of each month at the chosen time.',
     ],
     'errors' => [
+        'excluded_not_kept' => 'Restored, but :path, which this backup excluded, could not be kept; it is still in the copy kept for Undo.',
         'restore_unverified' => 'This backup was never verified, so it cannot be restored.',
         'restore_no_application' => 'The application this backup belongs to no longer exists.',
         'restore_confirm' => 'Type the application domain exactly to confirm the restore.',

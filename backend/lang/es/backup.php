@@ -42,6 +42,7 @@ return [
         'monthly' => 'Se ejecuta el día 1 de cada mes a la hora elegida.',
     ],
     'errors' => [
+        'excluded_not_kept' => 'Restaurado, pero :path, que esta copia excluía, no se pudo conservar; sigue en la copia guardada para Deshacer.',
         'restore_unverified' => 'Esta copia nunca se verificó, así que no se puede restaurar.',
         'restore_no_application' => 'La aplicación de esta copia ya no existe.',
         'restore_confirm' => 'Escribe el dominio de la aplicación exactamente para confirmar la restauración.',

@@ -42,6 +42,7 @@ return [
         'monthly' => 'S’exécute le 1er de chaque mois à l’heure choisie.',
     ],
     'errors' => [
+        'excluded_not_kept' => 'Restauré, mais :path, exclu de cette sauvegarde, n\'a pas pu être conservé ; il reste dans la copie gardée pour Annuler.',
         'restore_unverified' => 'Cette sauvegarde n\'a jamais été vérifiée, elle ne peut donc pas être restaurée.',
         'restore_no_application' => 'L\'application de cette sauvegarde n\'existe plus.',
         'restore_confirm' => 'Saisissez exactement le domaine de l\'application pour confirmer la restauration.',
