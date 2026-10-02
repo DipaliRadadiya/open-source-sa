@@ -10,4 +10,5 @@ return [
     'no_system_user' => 'Ce site n\'a pas d\'utilisateur système.',
     'run_failed' => 'La commande de l\'extension a échoué de façon inattendue.',
     'unregistered' => 'Site désenregistré.',
+    'option_required' => ':option est requis pour ce rapport.',
 ];

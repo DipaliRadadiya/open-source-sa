@@ -13,4 +13,5 @@ return [
     'no_system_user' => 'This site has no system user.',
     'run_failed' => 'The addon command failed unexpectedly.',
     'unregistered' => 'Site unregistered.',
+    'option_required' => ':option is required for this report.',
 ];

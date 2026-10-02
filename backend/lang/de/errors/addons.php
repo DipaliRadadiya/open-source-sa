@@ -10,4 +10,5 @@ return [
     'no_system_user' => 'Diese Website hat keinen Systembenutzer.',
     'run_failed' => 'Der Addon-Befehl ist unerwartet fehlgeschlagen.',
     'unregistered' => 'Website abgemeldet.',
+    'option_required' => ':option ist für diesen Bericht erforderlich.',
 ];

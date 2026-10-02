@@ -6031,7 +6031,20 @@ The product launched as InsightHub; the binary, its repository and its database 
 | GET | `/central/addons/log-monitoring/applications` | Every site Log Monitoring Suite knows |
 | POST | `/central/addons/applications/{application}/log-monitoring/register` | Registers the site (key `v8-<id>`) and stores its id. Safe to repeat: an earlier registration of the same site is adopted. A name/domain held by another site → `422 addon_command_failed`, `addon.field` says which. |
 | DELETE | `/central/addons/applications/{application}/log-monitoring/register` | Unregisters it. Deleting the site does this too. |
-| GET | `/central/addons/applications/{application}/log-monitoring/bandwidth/{report}` | `report`: `summary`, `trends`, `bot-vs-human`, `high-usage-urls`, `by-file-type`, `top-ips`; `?limit=1..1000` on lists. Cached 5 minutes; errors are not cached. More groups (dashboard, traffic, errors, bots, user agents) are added as the toolkit ports them. |
+| GET | `/central/addons/applications/{application}/log-monitoring/{group}/{report}` | Every report insighthub-agent had, on its own paths (below). `?limit=1..1000` on lists. Cached 5 minutes; errors are not cached. |
+
+Reports (the agent's route names; answers keep its keys — a single object under `data`, lists with `per_page` / `total` / `data`):
+
+| Group | Reports |
+|---|---|
+| `dashboard` | `stats`, `top-records`, `daily-log-count`, `top-url-count`, `method-count`, `bot-count`, `device-type-count`, `url-method-status-count`, `status-count`, `country-count`, `mimetype-bandwidth-sum`, `url-mimetype-bandwidth-sum`, `bot-vs-human` |
+| `traffic` | `summary`, `daily-request-count`, `top-ips-by-url`, `top-ips-by-country`, `latest-access-logs` (default 100 rows), `referer-count`, `url-and-field-count` (**`?field=`** an access-log column, required), `sitemap-url`, `url-and-method-count`, `url-and-status-count` |
+| `errors` | `stats`, `error-rate`, `error-code-breakdown`, `status-code-data` (**`?status_code=`** `1xx`…`5xx`, required), `bot-vs-human`, `status-summary`, `status-code-trends`, `referer-error-logs` |
+| `bots` | `summary`, `bot-traffic-trends`, `url-status-count`, `traffic-distribution`, `most-crawled-urls`, `traffic-by-ip`, `traffic-percentage` |
+| `user-agents` | `summary`, `breakdown`, `popular`, `url-request-count`, `os-pie-chart` |
+| `bandwidth` | `summary`, `trends`, `bot-vs-human`, `high-usage-urls`, `by-file-type`, `top-ips` |
+
+Fixed vs the agent (numbers can differ from v7 on these): `dashboard/top-records` ranks the top IP by requests (v7 always reported 1); `dashboard/bot-count` counts bots (v7 counted humans); `bots/traffic-distribution` is ordered by count; `traffic/latest-access-logs` returns at most 100 rows unless `limit` says otherwise (v7 returned every row); percentages on a site with no traffic are 0 (v7 failed).
 
 ## Incoming Deploy Webhooks
 

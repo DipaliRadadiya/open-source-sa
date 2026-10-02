@@ -10,4 +10,5 @@ return [
     'no_system_user' => 'このサイトにはシステムユーザーがいません。',
     'run_failed' => 'アドオンのコマンドが予期せず失敗しました。',
     'unregistered' => 'サイトの登録を解除しました。',
+    'option_required' => 'このレポートには :option が必要です。',
 ];

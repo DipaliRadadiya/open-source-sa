@@ -10,4 +10,5 @@ return [
     'no_system_user' => 'Este sitio no tiene usuario del sistema.',
     'run_failed' => 'El comando del complemento falló inesperadamente.',
     'unregistered' => 'Sitio dado de baja.',
+    'option_required' => ':option es obligatorio para este informe.',
 ];

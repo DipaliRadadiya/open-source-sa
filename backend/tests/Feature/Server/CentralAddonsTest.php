@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\API\Server\Addons\InsightsAddonController;
 use App\Jobs\RunAddonCommand;
 use App\Models\ActivityLog;
 use App\Models\AddonRun;
@@ -365,4 +366,37 @@ it('unregisters a site from InsightHub when the site is deleted', function () {
 
     expect(collect($GLOBALS['addonRan'])->contains(fn ($c) => in_array('applications:remove', $c['command'], true)
         && in_array("--key=v8-{$this->site->id}", $c['command'], true)))->toBeTrue();
+});
+
+it('serves every report group the toolkit has, on the paths v7 used', function () {
+    Cache::flush();
+    $this->site->forceFill(['insighthub_id' => 7])->save();
+    fakeAddon(fn () => ['{"status":"success","data":{}}']);
+
+    $base = "/api/central/addons/applications/{$this->site->id}/log-monitoring";
+    foreach (['dashboard/stats' => 'dashboard:stats', 'traffic/summary' => 'traffic:summary', 'errors/status-summary' => 'errors:status-summary',
+        'bots/bot-traffic-trends' => 'bots:traffic-trends', 'user-agents/os-pie-chart' => 'user-agents:os-pie-chart'] as $path => $command) {
+        $this->withHeaders(addonHeaders($this->token))->getJson("{$base}/{$path}")->assertOk();
+        expect(lastAddonCommand())->toBe(["{$this->binDir}/insighthub-toolkit", $command, '--application=7']);
+    }
+
+    expect(collect(InsightsAddonController::REPORTS)->flatten()->count())->toBe(49);
+});
+
+it('requires and checks the extra option two reports take', function () {
+    Cache::flush();
+    $this->site->forceFill(['insighthub_id' => 7])->save();
+    fakeAddon(fn () => ['{"status":"success","data":[]}']);
+    $base = "/api/central/addons/applications/{$this->site->id}/log-monitoring";
+
+    $this->withHeaders(addonHeaders($this->token))->getJson("{$base}/traffic/url-and-field-count")->assertUnprocessable()->assertJsonValidationErrors('field');
+    $this->withHeaders(addonHeaders($this->token))->getJson("{$base}/traffic/url-and-field-count?field=raw_log")->assertUnprocessable();
+    $this->withHeaders(addonHeaders($this->token))->getJson("{$base}/errors/status-code-data?status_code=6xx")->assertUnprocessable();
+    expect($GLOBALS['addonRan'])->toBe([]);
+
+    $this->withHeaders(addonHeaders($this->token))->getJson("{$base}/traffic/url-and-field-count?field=method&limit=5")->assertOk();
+    expect(lastAddonCommand())->toBe(["{$this->binDir}/insighthub-toolkit", 'traffic:url-and-field-count', '--application=7', '--limit=5', '--field=method']);
+
+    $this->withHeaders(addonHeaders($this->token))->getJson("{$base}/errors/status-code-data?status_code=5xx")->assertOk();
+    expect(lastAddonCommand())->toContain('--status-code=5xx');
 });
