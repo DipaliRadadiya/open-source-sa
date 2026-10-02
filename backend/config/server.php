@@ -1128,6 +1128,11 @@ return [
 
     'applications' => [
         'systemd_dir' => env('SERVER_SYSTEMD_DIR', '/etc/systemd/system'),
+        // How long a freshly started app must stay up, on the same process,
+        // before it counts as started (bug #91). A Node app missing its
+        // node_modules is "active" for a moment and dies a second later; the
+        // unit waits 5 s before restarting it, so 3 s catches the crash.
+        'settle_seconds' => (int) env('SERVER_APP_SETTLE_SECONDS', 3),
 
         /*
         | Asking a freshly started application for a page before calling it

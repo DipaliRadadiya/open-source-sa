@@ -99,7 +99,7 @@ class ProcessSupervisor
 
         $started = $this->systemctl('restart', $application);
 
-        if ($started->failed() || ! $this->active($application)) {
+        if ($started->failed() || ! $this->settled($application)) {
             $reference = $started->reference;
             $this->forget($application);
 
@@ -249,6 +249,41 @@ class ProcessSupervisor
             ['systemctl', 'is-active', '--quiet', $this->unit($application)],
             ['feature' => 'application', 'op' => 'unit_is_active', 'application' => $application->id],
         )->ok;
+    }
+
+    /**
+     * Up, and still up on the same process a moment later.
+     *
+     * `is-active` straight after a restart answers for a process that has
+     * not had time to fail: a cloned Node app without its node_modules was
+     * reported started and Running, and died a second later (bug #91). A
+     * crash in the wait leaves the unit in its restart delay (not active) or
+     * on a new process (a different MainPID).
+     */
+    private function settled(Application $application): bool
+    {
+        if (! $this->active($application)) {
+            return false;
+        }
+
+        $pid = $this->mainPid($application);
+        $seconds = (int) config('server.applications.settle_seconds', 3);
+
+        if ($seconds <= 0) {
+            return true;
+        }
+
+        sleep($seconds);
+
+        return $this->active($application) && $this->mainPid($application) === $pid;
+    }
+
+    private function mainPid(Application $application): string
+    {
+        return trim($this->serverOps->run(
+            ['systemctl', 'show', '--property=MainPID', '--value', $this->unit($application)],
+            ['feature' => 'application', 'op' => 'unit_main_pid', 'application' => $application->id],
+        )->output());
     }
 
     private function exists(Application $application): bool

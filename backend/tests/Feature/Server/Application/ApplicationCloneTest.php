@@ -807,3 +807,54 @@ describe('cloning a git application', function () {
         });
     });
 });
+
+/*
+ * Bug #91: a cloned one-click Node app (Uptime Kuma) was copied without
+ * node_modules, so it could not start — and the clone still said Completed,
+ * because the start check asked systemd before the process had time to die.
+ */
+it('copies node_modules for a Node site, and leaves it out for anything else', function (string $type, string $profile, bool $kept) {
+    fakeCloneServer();
+
+    $source = Application::forceCreate([
+        'system_user_id' => $this->systemUser->id, 'name' => 'Src '.$type,
+        'slug' => 'src-'.$type, 'domain' => "src-{$type}.test", 'site_type' => $type,
+        'serving_profile' => $profile, 'status' => 'active', 'web_root' => '/', 'node_version' => '22',
+        'app_port' => 3002, 'start_command' => 'node server.js', 'php_version' => '8.4',
+    ]);
+
+    runClone($source, "src-{$type}-clone.test");
+
+    Process::assertRan(fn ($p) => in_array('rsync', (array) $p->command, true)
+        && in_array('node_modules/', (array) $p->command, true) === ! $kept);
+})->with([
+    'Uptime Kuma' => ['uptimekuma', 'node', true],
+    'static' => ['static', 'static', false],
+]);
+
+it('fails the clone when the app dies right after starting, instead of calling it Completed', function () {
+    config(['server.applications.settle_seconds' => 1]);
+    $pid = 100;
+
+    Process::fake(function ($process) use (&$pid) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        // A new process each time it is asked: crashed and restarted.
+        if (($args[0] ?? '') === 'systemctl' && ($args[1] ?? '') === 'show' && in_array('--property=MainPID', $args, true)) {
+            return Process::result(output: (string) $pid++);
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $source = Application::forceCreate([
+        'system_user_id' => $this->systemUser->id, 'name' => 'Kuma',
+        'slug' => 'kuma', 'domain' => 'kuma.test', 'site_type' => 'uptimekuma',
+        'serving_profile' => 'node', 'status' => 'active', 'node_version' => '22',
+        'app_port' => 3003, 'start_command' => 'node server.js',
+    ]);
+
+    $record = runClone($source, 'kuma-clone.test');
+
+    expect($record->status->value)->toBe('failed');
+});

@@ -260,9 +260,7 @@ class CloneManager
                 $this->provisioner->codePath($source),
                 $this->provisioner->codePath($target),
                 $target,
-                $this->siteTypes->find($source->site_type)?->method() === 'git'
-                    ? []
-                    : self::GIT_WORKING_COPY,
+                $this->workingCopyExcludes($source),
             );
 
             if ($needsDatabase) {
@@ -290,6 +288,27 @@ class CloneManager
         $cloneRecord->update(['target_application_id' => $target->id]);
 
         return $target->fresh();
+    }
+
+    /**
+     * What a clone may leave behind.
+     *
+     * Nothing for a git site (it has to be a working copy), and not
+     * node_modules for a Node site: a one-click Node app (Uptime Kuma, n8n…)
+     * was cloned without it, and nothing installs it again — a clone runs no
+     * deploy — so the copy could not start (bug #91).
+     *
+     * @return list<string>
+     */
+    private function workingCopyExcludes(Application $source): array
+    {
+        if ($this->siteTypes->find($source->site_type)?->method() === 'git') {
+            return [];
+        }
+
+        return $source->serving_profile === 'node'
+            ? array_values(array_diff(self::GIT_WORKING_COPY, ['node_modules/']))
+            : self::GIT_WORKING_COPY;
     }
 
     /**
