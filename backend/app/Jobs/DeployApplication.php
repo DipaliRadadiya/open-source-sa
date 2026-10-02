@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Actions\Server\Application\UpdateApplicationWebRoot;
 use App\Enums\ApplicationStatus;
 use App\Enums\DeploymentStatus;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
@@ -14,9 +15,11 @@ use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\DeploymentRecorder;
 use App\Services\Server\Applications\GitDeployer;
 use App\Services\Server\Applications\ProvisioningBudget;
+use App\Services\Server\ServerOps;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -121,6 +124,8 @@ class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
 
             $recorder->succeed($result['commit'] ?? null, $result['message'] ?? null, $result['author'] ?? null);
 
+            $this->servePublicDirectory($application);
+
             $activityLogger->log('application.deployed', $application, [
                 'name' => $application->name,
                 'branch' => $application->branch,
@@ -166,6 +171,43 @@ class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
                     'failed_step' => 'worker',
                     'finished_at' => now(),
                 ]);
+        }
+    }
+
+    /**
+     * Serve `public/` for a Laravel or Symfony repository (bug #43).
+     *
+     * A Git PHP site starts on web root `/`, and these frameworks keep their
+     * front controller in `public/` with `.env`, the source and `vendor/`
+     * beside it — so `/` served the secrets (`/.env`) and no application.
+     * Only while the web root is still the default: one the user chose is
+     * theirs. Recognised by the front controller plus the framework's own
+     * console, and no `index.php` at the top that `/` could be meant for.
+     *
+     * Never fails the deploy: the code is live, and the user can still set
+     * the web root by hand.
+     */
+    private function servePublicDirectory(Application $application): void
+    {
+        if ($application->serving_profile !== 'php' || trim((string) $application->web_root, '/') !== '') {
+            return;
+        }
+
+        $ops = app(ServerOps::class);
+        $root = rtrim($application->codePath(), '/');
+        $exists = fn (string $path) => $ops->run(['test', '-f', "{$root}/{$path}"], ['feature' => 'application', 'op' => 'detect_framework', 'application' => $application->id])->ok;
+
+        if (! $exists('public/index.php') || $exists('index.php') || (! $exists('artisan') && ! $exists('bin/console'))) {
+            return;
+        }
+
+        try {
+            app(UpdateApplicationWebRoot::class)->execute($application, 'public');
+        } catch (Throwable $e) {
+            Log::channel('server-ops')->warning('could not move a framework site to public/', [
+                'application' => $application->id,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 }
