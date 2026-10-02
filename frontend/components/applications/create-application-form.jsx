@@ -691,7 +691,7 @@ export function CreateApplicationForm({
   const tCommon = useTranslations("common");
   const { name: brand } = useBranding();
   const router = useRouter();
-  const { pushAndWait } = useRefresh();
+  const { pushAndWait, refreshAndWait } = useRefresh();
   const [accountsRefreshing, startAccountsRefresh] = useTransition();
   const [gitSource, setGitSource] = useState("account");
   const [repositories, setRepositories] = useState([]);
@@ -1375,7 +1375,17 @@ export function CreateApplicationForm({
       );
       toast.success(t("created"));
     } catch (error) {
-      if (newUser?.id) {
+      // Rolled back only when the server refused (4xx). After a 5xx or no answer the
+      // application may exist, and removing its system user would break it; the user
+      // is kept and offered under "Use an existing system user".
+      const refused = Boolean(error.response) && error.response.status < 500;
+      if (newUser?.id && !refused) {
+        // Switch to the kept user so pressing Create again does not hit "name taken".
+        await refreshAndWait();
+        form.setValue("generate_system_user", false);
+        form.setValue("system_user_id", String(newUser.id), { shouldValidate: true });
+      }
+      if (newUser?.id && refused) {
         const removed = await deleteSystemUser(newUser.id).then(() => true, () => false);
         // Left behind: a retry would find the name taken, so warn and refresh so it is
         // offered under "Use an existing system user".

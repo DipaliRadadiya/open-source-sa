@@ -79,7 +79,7 @@ export function EditUserDialog({ database, user, open, onOpenChange, remoteUsers
     } catch (error) {
       const restartAnswer = restart.ask(error);
       if (restartAnswer && (await restartAnswer)) return onSubmit({ ...submitted, restart_cluster: true });
-      if (!restartAnswer) handleValidationError(error, form);
+      if (!restartAnswer) handleValidationError(error, form, { fallback: t("saveFailed") });
     }
   }
 

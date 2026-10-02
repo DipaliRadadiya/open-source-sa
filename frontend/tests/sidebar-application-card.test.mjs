@@ -40,7 +40,8 @@ test("status is a dot here, and comes from the one status definition", () => {
    * restating either.
    */
   assert.match(badge, /export function ApplicationStatusDot/);
-  assert.match(badge, /const variant = paused \? "warning" : \(STATUS_VARIANTS\[application\.status\] \?\? "secondary"\)/);
+  // Paused and a stopped process are both amber; otherwise the one STATUS_VARIANTS map.
+  assert.match(badge, /const variant = paused \|\| down \? "warning" : \(STATUS_VARIANTS\[application\.status\] \?\? "secondary"\)/);
   assert.match(badge, /const DOT_TONES = \{/);
 
   // The sidebar must not hand-roll its own colour.

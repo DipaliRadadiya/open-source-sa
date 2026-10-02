@@ -50,7 +50,7 @@ export function UserPasswordDialog({ database, user, open, onOpenChange }) {
       await refreshAndWait();
       toast.success(t("passwordChanged", { username: user.username }));
     } catch (error) {
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: t("passwordFailed") });
     }
   }
 

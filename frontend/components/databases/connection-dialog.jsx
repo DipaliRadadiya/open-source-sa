@@ -89,7 +89,7 @@ export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
       }
       form.reset({ ...submitted, password: "" });
     } catch (error) {
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: t("saveFailed") });
     }
   }
 

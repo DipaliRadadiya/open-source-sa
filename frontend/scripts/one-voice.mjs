@@ -56,6 +56,12 @@ export const MANY_MEANINGS = {
     reason:
       "The verb on a service button and the noun for a start time. Most languages inflect one and not the other.",
   },
+  Stopped: {
+    // Scoped: only these inflect the adjective; everywhere else one word must serve.
+    locales: ["es", "fr", "pt"],
+    reason:
+      "A state agreeing with its noun: a service (masculine) and an application (feminine: aplicación, application, aplicação).",
+  },
   Custom: {
     reason:
       "An adjective. German, French, Portuguese and Russian must agree it with the noun it qualifies.",

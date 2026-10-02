@@ -14,6 +14,7 @@ import { RelinkGitAccountDialog } from "@/components/applications/relink-git-acc
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 // A failed redeploy leaves the old code serving, so the card reports the last successful deploy.
@@ -50,10 +51,11 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
   }
 
   return (
-    <Card className={className}>
-      {/* Stacks on a phone. min-w-48, not min-w-0, on the text: beside shrink-0
-          buttons min-w-0 lets the title collapse to one word per line. */}
-      <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+    <Card className={cn("@container/source", className)}>
+      {/* Stacks until the CARD is wide enough: on the app dashboard it is a half-width
+          column, so the window width says nothing. min-w-48, not min-w-0, on the text:
+          beside shrink-0 buttons min-w-0 lets the title collapse to one word per line. */}
+      <CardHeader className="flex flex-col gap-3 space-y-0 @2xl/source:flex-row @2xl/source:items-start @2xl/source:justify-between @2xl/source:gap-4">
         <div className="min-w-48 flex-1 space-y-1.5">
           <CardTitle as="h2" className="flex items-center gap-2 text-lg font-semibold">
             <GitBranch className="size-4 text-primary" />
@@ -74,8 +76,7 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
             </Badge>
           ) : null}
         </div>
-        {/* Actions in the header: the card is a full-width band. */}
-        <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+        <div className="flex flex-wrap items-center gap-2 @2xl/source:shrink-0">
           {canDeploy ? (
             <Button
               size="sm"
@@ -100,7 +101,7 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
       </CardHeader>
       {/* gap, not space-y: space-y's compound selector would outrank margins set
           here. flex-1 fills the stretched row, with leftover space at the bottom. */}
-      <CardContent className="flex flex-1 flex-col gap-3">
+      <CardContent className="@container flex flex-1 flex-col gap-3">
         {/* Re-reads the page while a deploy runs, so the button comes back and
             "Last deployed" moves on without a reload. */}
         {deployInFlight ? <AutoRefresh intervalMs={5000} stopAfterMs={900000} /> : null}
@@ -149,7 +150,7 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
                 <p>{t("failedAt", { step: provisionStepLabel(application.failed_step, td) })}</p>
               )}
               {application.reference ? (
-                <p className="font-mono text-xs opacity-90">
+                <p className="font-mono text-xs">
                   {t("reference", { reference: application.reference })}
                 </p>
               ) : null}
@@ -157,7 +158,8 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
           </div>
         ) : null}
 
-        <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+        {/* By the card's width, not the window's: on the app dashboard it is a half-width column. */}
+        <div className="grid gap-3 text-sm @xs:grid-cols-2 @2xl:grid-cols-4">
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">{t("repository")}</p>
             <p className="break-all font-mono text-xs">{repository ?? "—"}</p>

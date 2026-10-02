@@ -19,6 +19,19 @@ export const STATUS_VARIANTS = {
   pending: "muted",
 };
 
+// `status` is setup state ("active" = set up), not whether the app runs. An app with a
+// process (Node, git) that is stopped or crashed must not read "Running".
+export function isProcessDown(application) {
+  return (
+    application.status === "active" &&
+    Boolean(application.has_process) &&
+    Boolean(application.deployed) &&
+    Boolean(application.process) &&
+    application.process.state !== "active" &&
+    application.process.state !== "activating"
+  );
+}
+
 // Badge and notes are split because the card and table place them differently.
 export function ApplicationStatusBadge({ application }) {
   const t = useTranslations("applications");
@@ -39,6 +52,14 @@ export function ApplicationStatusBadge({ application }) {
     return (
       <Badge variant="warning" className="font-normal">
         {t("deploying")}
+      </Badge>
+    );
+  }
+
+  if (isProcessDown(application)) {
+    return (
+      <Badge variant="warning" className="font-normal">
+        {t("processStoppedBadge")}
       </Badge>
     );
   }
@@ -65,12 +86,16 @@ const DOT_TONES = {
 export function ApplicationStatusDot({ application, className }) {
   const t = useTranslations("applications");
   const paused = Boolean(application.is_disabled);
-  const variant = paused ? "warning" : (STATUS_VARIANTS[application.status] ?? "secondary");
+  const redeploying = isRedeploying(application);
+  const down = !paused && !redeploying && isProcessDown(application);
+  const variant = paused || down ? "warning" : (STATUS_VARIANTS[application.status] ?? "secondary");
   const label = paused
     ? t("paused")
-    : isRedeploying(application)
+    : redeploying
       ? t("deploying")
-      : (t(`status.${application.status}`) ?? application.status_title ?? application.status);
+      : down
+        ? t("processStoppedBadge")
+        : (t(`status.${application.status}`) ?? application.status_title ?? application.status);
 
   return (
     <span className={cn("flex min-w-0 items-center gap-1.5", className)}>
@@ -82,13 +107,8 @@ export function ApplicationStatusDot({ application, className }) {
 
 export function ApplicationStatusNotes({ application, className }) {
   const t = useTranslations("applications");
-  const processDown =
-    application.status === "active" &&
-    application.has_process &&
-    application.deployed &&
-    application.process &&
-    application.process.state !== "active" &&
-    application.process.state !== "activating";
+  // The badge already says "Stopped"; the note adds only that it crashed.
+  const processDown = isProcessDown(application) && application.process.state === "failed";
   // Deploy is git-only, so this marker is too.
   const isGit = Boolean(application.repository || application.repository_url);
   const deployFailed = isGit && application.status === "active" && Boolean(application.failed_step);
@@ -133,7 +153,7 @@ export function ApplicationStatusNotes({ application, className }) {
       {processDown ? (
         <p className="flex items-center gap-1 text-xs text-destructive">
           <CircleAlert className="size-3 shrink-0" />
-          {application.process.state === "failed" ? t("markers.processFailed") : t("markers.processStopped")}
+          {t("markers.processFailed")}
         </p>
       ) : null}
       {deployFailed ? (

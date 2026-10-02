@@ -47,7 +47,7 @@ export function ProfileForm({ user, onDirtyChange }) {
       await refreshAndWait();
       toast.success(t("profile.success"));
     } catch (error) {
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: t("profile.failed") });
     }
   }
 

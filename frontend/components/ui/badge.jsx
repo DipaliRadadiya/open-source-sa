@@ -13,7 +13,8 @@ const badgeVariants = cva(
     variants: {
       variant: {
         // Not a status: a label. Reads as text, keeps its meaning.
-        default: "rounded-md bg-primary/10 px-1.5 text-primary [a]:hover:bg-primary/15",
+        // Text mixed toward foreground like Button's tinted variant: plain primary on this tint is 4.38:1.
+        default: "rounded-md bg-primary/10 px-1.5 text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] dark:text-primary [a]:hover:bg-primary/15",
         secondary: "rounded-md px-1 text-muted-foreground [a]:hover:text-foreground",
         destructive:
           "bg-destructive/10 text-destructive focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:focus-visible:ring-destructive/40 [a]:hover:bg-destructive/20",

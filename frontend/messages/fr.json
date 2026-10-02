@@ -565,7 +565,8 @@
       "unsavedTitle": "Abandonner les modifications non enregistrées ?",
       "unsavedDesc": "Vous avez des modifications de profil non enregistrées. Si vous changez d'onglet maintenant, elles seront perdues.",
       "unsavedDiscard": "Abandonner les modifications",
-      "unsavedKeep": "Continuer à modifier"
+      "unsavedKeep": "Continuer à modifier",
+      "failed": "Votre profil n'a pas pu être enregistré."
     },
     "password": {
       "title": "Changer le mot de passe",
@@ -579,7 +580,8 @@
       "success": "Mot de passe mis à jour.",
       "currentPlaceholder": "Saisissez votre mot de passe actuel",
       "confirmPlaceholder": "Saisissez à nouveau le nouveau mot de passe",
-      "requirements": "Au moins 10 caractères, avec majuscules, minuscules et un chiffre."
+      "requirements": "Au moins 10 caractères, avec majuscules, minuscules et un chiffre.",
+      "failed": "Votre mot de passe n'a pas pu être modifié."
     },
     "activity": {
       "title": "Votre activité",
@@ -701,7 +703,9 @@
     "signIn": "Se connecter",
     "signingIn": "Connexion…",
     "createAccount": "Créer un compte",
-    "creatingAccount": "Création du compte…"
+    "creatingAccount": "Création du compte…",
+    "signInFailed": "Impossible de vous connecter.",
+    "registerFailed": "Le compte n'a pas pu être créé."
   },
   "impersonation": {
     "banner": {
@@ -2859,7 +2863,8 @@
       "howHint": "Comment un programme atteint cette base de données. Un socket est plus rapide mais ne fonctionne que depuis ce serveur. TCP/IP fonctionne depuis n’importe quelle machine autorisée pour cet utilisateur.",
       "socketPathHint": "Le fichier par lequel un programme sur ce serveur se connecte, à la place d’un port réseau. Gardez la valeur par défaut sauf si la base a été installée ailleurs.",
       "hostHint": "L'adresse qu'un programme utilise pour atteindre cette base de données. Depuis ce même serveur, c'est localhost.",
-      "portHint": "Le port réseau sur lequel la base de données écoute — 3306 pour MySQL et MariaDB, 5432 pour PostgreSQL."
+      "portHint": "Le port réseau sur lequel la base de données écoute — 3306 pour MySQL et MariaDB, 5432 pour PostgreSQL.",
+      "saveFailed": "La connexion n'a pas pu être enregistrée."
     },
     "credentials": {
       "title": "Détails de connexion",
@@ -2925,7 +2930,10 @@
       "nameIsFixed": "Le nom d'un utilisateur de base de données ne peut pas être modifié après sa création. Créez un autre utilisateur.",
       "newPasswordRequiredHint": "MongoDB ne peut pas renommer un utilisateur, donc le compte est recréé de zéro. C’est pourquoi il faut définir un mot de passe.",
       "passwordUnknown": "Le panneau ne connaît pas le mot de passe : ce compte provient d'un autre serveur. Changez le mot de passe pour obtenir une chaîne de connexion.",
-      "passwordWithheld": "Mot de passe masqué — votre rôle ne peut pas gérer les bases de données."
+      "passwordWithheld": "Mot de passe masqué — votre rôle ne peut pas gérer les bases de données.",
+      "addFailed": "L'utilisateur n'a pas pu être ajouté.",
+      "passwordFailed": "Le mot de passe n'a pas pu être modifié.",
+      "saveFailed": "L'utilisateur n'a pas pu être enregistré."
     },
     "detail": {
       "size": "Taille",
@@ -3140,7 +3148,8 @@
       "confirm": "Redémarrer et continuer",
       "description": "Le serveur de bases de données doit redémarrer pour accepter des connexions depuis d'autres adresses. Les applications qui l'utilisent perdent leur connexion un instant."
     },
-    "backToList": "Retour aux bases de données"
+    "backToList": "Retour aux bases de données",
+    "createFailed": "La base n'a pas pu être créée."
   },
   "git": {
     "title": "Git",
@@ -3547,7 +3556,8 @@
       "stalledTitle": "Cela prend plus de temps que prévu",
       "stalledBody": "La configuration n'a pas signalé de progrès depuis un moment. Elle tourne peut-être encore — réessayez, ou contactez le support si cela persiste.",
       "checkAgain": "Vérifier à nouveau",
-      "startedAgo": "Démarré il y a {ago}. La plupart des applications sont prêtes en quelques minutes ; un installateur en un clic prend plus de temps."
+      "startedAgo": "Démarré il y a {ago}. La plupart des applications sont prêtes en quelques minutes ; un installateur en un clic prend plus de temps.",
+      "retryFailed": "Impossible de relancer la configuration."
     },
     "port": {
       "label": "Port de l'application",
@@ -5384,7 +5394,9 @@
     },
     "filters": {
       "allStatuses": "Tous les statuts",
-      "allTypes": "Tous les types"
+      "allTypes": "Tous les types",
+      "statusLabel": "Statut",
+      "typeLabel": "Type"
     },
     "noDatabase": {
       "title": "Aucun moteur de base de données n'est installé",
@@ -5565,7 +5577,8 @@
       "effectNoChanges": "L'utilisateur système ne peut plus ajouter, supprimer ni renommer d'éléments directement dans ce dossier.",
       "effectPublic": "Tout ce qui se trouve dans public_html fonctionne exactement comme avant."
     },
-    "deploying": "Déploiement"
+    "deploying": "Déploiement",
+    "processStoppedBadge": "Arrêtée"
   },
   "panelUpdate": {
     "title": "Mise à jour du panneau",

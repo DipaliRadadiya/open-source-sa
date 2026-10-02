@@ -144,7 +144,7 @@ export function CreateDatabaseDialog({
     } catch (error) {
       const restartAnswer = restart.ask(error);
       if (restartAnswer && (await restartAnswer)) return onSubmit({ ...submitted, restart_cluster: true });
-      if (!restartAnswer) handleValidationError(withUserFieldErrors(error, form), form);
+      if (!restartAnswer) handleValidationError(withUserFieldErrors(error, form), form, { fallback: t("createFailed") });
     }
   }
 

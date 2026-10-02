@@ -311,7 +311,7 @@ export function SiteTypePicker({ types = [], value, onChange }) {
                 className={cn(
                   "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
                   active
-                    ? "border-primary bg-primary/10 text-primary"
+                    ? "border-primary bg-primary/10 text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] dark:text-primary"
                     : "border-transparent bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                 )}
               >

@@ -127,7 +127,7 @@ export function CloneProgress({ clone: initial, sourceApplication, onDone, onAga
                   className={cn(
                     "flex size-5 shrink-0 items-center justify-center rounded-full border",
                     done && "border-success bg-success/10 text-success",
-                    current && "border-primary bg-primary/10 text-primary",
+                    current && "border-primary bg-primary/10 text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] dark:text-primary",
                     !done && !current && "border-muted-foreground/30 text-muted-foreground/50",
                   )}
                 >

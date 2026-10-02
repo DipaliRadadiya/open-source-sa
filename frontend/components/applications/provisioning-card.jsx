@@ -61,7 +61,8 @@ export function ProvisioningCard({ application, canManage = false }) {
       refreshThen(() => setRetrying(false));
     } catch (error) {
       toast.error(
-        apiMessage(error, t("failedAt", { step: stepLabel(application.failed_step) })),
+        // The retry itself failed; "Stopped at…" would read as the old failure repeating.
+        apiMessage(error, t("retryFailed")),
       );
       setRetrying(false);
     }

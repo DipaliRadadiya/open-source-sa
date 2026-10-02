@@ -42,7 +42,7 @@ export function RegisterForm({ policy }) {
       router.push("/setup");
       router.refresh();
     } catch (error) {
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: t("registerFailed") });
     }
   }
 

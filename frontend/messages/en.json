@@ -565,7 +565,8 @@
       "unsavedTitle": "Discard unsaved changes?",
       "unsavedDesc": "You have unsaved profile changes. If you switch tabs now, they will be lost.",
       "unsavedDiscard": "Discard changes",
-      "unsavedKeep": "Keep editing"
+      "unsavedKeep": "Keep editing",
+      "failed": "Your profile could not be saved."
     },
     "password": {
       "title": "Change password",
@@ -579,7 +580,8 @@
       "success": "Password updated.",
       "currentPlaceholder": "Enter your current password",
       "confirmPlaceholder": "Re-enter the new password",
-      "requirements": "At least 10 characters, with upper- and lower-case and a number."
+      "requirements": "At least 10 characters, with upper- and lower-case and a number.",
+      "failed": "Your password could not be changed."
     },
     "activity": {
       "title": "Your activity",
@@ -701,7 +703,9 @@
     "signIn": "Sign in",
     "signingIn": "Signing in…",
     "createAccount": "Create account",
-    "creatingAccount": "Creating account…"
+    "creatingAccount": "Creating account…",
+    "signInFailed": "Could not sign you in.",
+    "registerFailed": "The account could not be created."
   },
   "impersonation": {
     "banner": {
@@ -2859,7 +2863,8 @@
       "howHint": "How a program reaches this database. A socket is faster but only works from this server. TCP/IP works from anywhere this user is allowed to connect from.",
       "socketPathHint": "The file a program on this server connects through instead of a network port. Leave the default unless the database was installed somewhere unusual.",
       "hostHint": "The address a program uses to reach this database. From this same server that is localhost.",
-      "portHint": "The network port the database listens on — 3306 for MySQL and MariaDB, 5432 for PostgreSQL."
+      "portHint": "The network port the database listens on — 3306 for MySQL and MariaDB, 5432 for PostgreSQL.",
+      "saveFailed": "The connection could not be saved."
     },
     "credentials": {
       "title": "Connection details",
@@ -2925,7 +2930,10 @@
       "nameIsFixed": "A database user's name cannot be changed after it is created. Create another user instead.",
       "newPasswordRequiredHint": "MongoDB cannot rename a user, so the account is created again from scratch. That is why it needs a password set.",
       "passwordUnknown": "Password not known to the panel — this account came from another server. Change the password to get a connection string.",
-      "passwordWithheld": "Password hidden — your role can't manage databases."
+      "passwordWithheld": "Password hidden — your role can't manage databases.",
+      "addFailed": "The user could not be added.",
+      "passwordFailed": "The password could not be changed.",
+      "saveFailed": "The user could not be saved."
     },
     "detail": {
       "size": "Size",
@@ -3140,7 +3148,8 @@
       "confirm": "Restart and continue",
       "description": "The database server has to restart to accept connections from other addresses. Applications using it lose their connection for a moment."
     },
-    "backToList": "Back to databases"
+    "backToList": "Back to databases",
+    "createFailed": "The database could not be created."
   },
   "git": {
     "title": "Git",
@@ -3547,7 +3556,8 @@
       "stalledTitle": "This is taking longer than expected",
       "stalledBody": "Setup has not reported progress for a while. It may still be running — check again, or contact support if it stays like this.",
       "checkAgain": "Check again",
-      "startedAgo": "Started {ago}. Most applications are ready within a few minutes; a one-click installer takes longer."
+      "startedAgo": "Started {ago}. Most applications are ready within a few minutes; a one-click installer takes longer.",
+      "retryFailed": "Setup could not be started again."
     },
     "port": {
       "label": "Application port",
@@ -5384,7 +5394,9 @@
     },
     "filters": {
       "allStatuses": "All statuses",
-      "allTypes": "All types"
+      "allTypes": "All types",
+      "statusLabel": "Status",
+      "typeLabel": "Type"
     },
     "noDatabase": {
       "title": "No database engine is installed",
@@ -5565,7 +5577,8 @@
       "effectNoChanges": "The system user can no longer add, delete or rename items directly in this folder.",
       "effectPublic": "Everything inside public_html keeps working exactly as before."
     },
-    "deploying": "Deploying"
+    "deploying": "Deploying",
+    "processStoppedBadge": "Stopped"
   },
   "panelUpdate": {
     "title": "Panel update",

@@ -25,7 +25,7 @@ test("a generated user is created with the shown name and password, then used by
   assert.match(form, /payload\.system_user_id = newUser\?\.id;/);
   assert.doesNotMatch(form, /generate_system_user: true/);
   // A refused application leaves no account behind.
-  assert.match(form, /if \(newUser\?\.id\) \{\s*const removed = await deleteSystemUser\(newUser\.id\)/);
+  assert.match(form, /if \(newUser\?\.id && refused\) \{\s*const removed = await deleteSystemUser\(newUser\.id\)/);
 });
 test("switching into generate mode clears any id already chosen", () => {
   // Otherwise a stale id rides along beside the flag and the API 422s.

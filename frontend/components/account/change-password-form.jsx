@@ -43,7 +43,7 @@ export function ChangePasswordForm() {
       toast.success(t("password.success"));
       form.reset();
     } catch (error) {
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: t("password.failed") });
     }
   }
 

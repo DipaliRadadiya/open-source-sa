@@ -49,7 +49,7 @@ export function LoginForm() {
         form.setError("password", { message: t("tooManyAttempts") });
         return;
       }
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: t("signInFailed") });
     }
   }
 

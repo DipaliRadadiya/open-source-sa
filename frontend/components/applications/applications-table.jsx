@@ -151,12 +151,14 @@ function Filters({ statusOptions, typeOptions, t }) {
       <FacetSelect
         paramKey="status"
         allLabel={t("filters.allStatuses")}
+        label={t("filters.statusLabel")}
         options={statusOptions.map(([value, label]) => ({ value, label }))}
         className="w-full sm:w-40"
       />
       <FacetSelect
         paramKey="site_type"
         allLabel={t("filters.allTypes")}
+        label={t("filters.typeLabel")}
         options={typeOptions.map(([value, label]) => ({ value, label }))}
         className="w-full sm:w-44"
       />

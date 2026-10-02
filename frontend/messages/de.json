@@ -565,7 +565,8 @@
       "unsavedTitle": "Nicht gespeicherte Änderungen verwerfen?",
       "unsavedDesc": "Sie haben nicht gespeicherte Profiländerungen. Wenn Sie jetzt den Tab wechseln, gehen sie verloren.",
       "unsavedDiscard": "Änderungen verwerfen",
-      "unsavedKeep": "Weiter bearbeiten"
+      "unsavedKeep": "Weiter bearbeiten",
+      "failed": "Ihr Profil konnte nicht gespeichert werden."
     },
     "password": {
       "title": "Passwort ändern",
@@ -579,7 +580,8 @@
       "success": "Passwort aktualisiert.",
       "currentPlaceholder": "Aktuelles Passwort eingeben",
       "confirmPlaceholder": "Neues Passwort erneut eingeben",
-      "requirements": "Mindestens 10 Zeichen, mit Groß- und Kleinbuchstaben sowie einer Zahl."
+      "requirements": "Mindestens 10 Zeichen, mit Groß- und Kleinbuchstaben sowie einer Zahl.",
+      "failed": "Ihr Passwort konnte nicht geändert werden."
     },
     "activity": {
       "title": "Ihre Aktivität",
@@ -701,7 +703,9 @@
     "signIn": "Anmelden",
     "signingIn": "Meldet an…",
     "createAccount": "Konto erstellen",
-    "creatingAccount": "Konto wird erstellt…"
+    "creatingAccount": "Konto wird erstellt…",
+    "signInFailed": "Die Anmeldung ist fehlgeschlagen.",
+    "registerFailed": "Das Konto konnte nicht erstellt werden."
   },
   "impersonation": {
     "banner": {
@@ -2859,7 +2863,8 @@
       "howHint": "Wie ein Programm diese Datenbank erreicht. Ein Socket ist schneller, funktioniert aber nur von diesem Server. TCP/IP funktioniert von überall, wo diesem Benutzer Verbindungen erlaubt sind.",
       "socketPathHint": "Die Datei, über die sich ein Programm auf diesem Server statt über einen Netzwerkport verbindet. Belassen Sie die Vorgabe, es sei denn, die Datenbank wurde an einem ungewöhnlichen Ort installiert.",
       "hostHint": "Die Adresse, über die ein Programm diese Datenbank erreicht. Von diesem Server aus ist das localhost.",
-      "portHint": "Der Netzwerkport, auf dem die Datenbank erreichbar ist – 3306 für MySQL und MariaDB, 5432 für PostgreSQL."
+      "portHint": "Der Netzwerkport, auf dem die Datenbank erreichbar ist – 3306 für MySQL und MariaDB, 5432 für PostgreSQL.",
+      "saveFailed": "Die Verbindung konnte nicht gespeichert werden."
     },
     "credentials": {
       "title": "Verbindungsdaten",
@@ -2925,7 +2930,10 @@
       "nameIsFixed": "Der Name eines Datenbankbenutzers lässt sich nach dem Anlegen nicht ändern. Legen Sie stattdessen einen weiteren Benutzer an.",
       "newPasswordRequiredHint": "MongoDB kann einen Benutzer nicht umbenennen, deshalb wird das Konto von Grund auf neu erstellt. Deshalb muss ein Passwort gesetzt werden.",
       "passwordUnknown": "Das Panel kennt das Passwort nicht – dieses Konto stammt von einem anderen Server. Ändern Sie das Passwort, um eine Verbindungszeichenfolge zu erhalten.",
-      "passwordWithheld": "Passwort verborgen – Ihre Rolle darf keine Datenbanken verwalten."
+      "passwordWithheld": "Passwort verborgen – Ihre Rolle darf keine Datenbanken verwalten.",
+      "addFailed": "Der Benutzer konnte nicht hinzugefügt werden.",
+      "passwordFailed": "Das Passwort konnte nicht geändert werden.",
+      "saveFailed": "Der Benutzer konnte nicht gespeichert werden."
     },
     "detail": {
       "size": "Größe",
@@ -3140,7 +3148,8 @@
       "confirm": "Neu starten und fortfahren",
       "description": "Der Datenbankserver muss neu starten, um Verbindungen von anderen Adressen anzunehmen. Anwendungen, die ihn nutzen, verlieren kurz die Verbindung."
     },
-    "backToList": "Zurück zu Datenbanken"
+    "backToList": "Zurück zu Datenbanken",
+    "createFailed": "Die Datenbank konnte nicht erstellt werden."
   },
   "git": {
     "title": "Git",
@@ -3547,7 +3556,8 @@
       "stalledTitle": "Das dauert länger als erwartet",
       "stalledBody": "Die Einrichtung hat seit einer Weile keinen Fortschritt gemeldet. Möglicherweise läuft sie noch — prüfen Sie erneut oder wenden Sie sich an den Support, wenn es so bleibt.",
       "checkAgain": "Erneut prüfen",
-      "startedAgo": "Gestartet {ago}. Die meisten Anwendungen sind in wenigen Minuten fertig; ein Ein-Klick-Installer braucht länger."
+      "startedAgo": "Gestartet {ago}. Die meisten Anwendungen sind in wenigen Minuten fertig; ein Ein-Klick-Installer braucht länger.",
+      "retryFailed": "Die Einrichtung konnte nicht erneut gestartet werden."
     },
     "port": {
       "label": "Anwendungs-Port",
@@ -5384,7 +5394,9 @@
     },
     "filters": {
       "allStatuses": "Alle Status",
-      "allTypes": "Alle Typen"
+      "allTypes": "Alle Typen",
+      "statusLabel": "Status",
+      "typeLabel": "Typ"
     },
     "noDatabase": {
       "title": "Es ist keine Datenbank-Engine installiert",
@@ -5565,7 +5577,8 @@
       "effectNoChanges": "Der Systembenutzer kann direkt in diesem Ordner nichts mehr hinzufügen, löschen oder umbenennen.",
       "effectPublic": "Alles innerhalb von public_html funktioniert genau wie bisher."
     },
-    "deploying": "Wird deployt"
+    "deploying": "Wird deployt",
+    "processStoppedBadge": "Gestoppt"
   },
   "panelUpdate": {
     "title": "Panel-Update",

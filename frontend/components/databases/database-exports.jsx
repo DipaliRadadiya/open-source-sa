@@ -328,7 +328,7 @@ function ExportRow({ row, canManage, onDelete, slow = false }) {
           <p className="text-xs leading-relaxed text-destructive">
             {row.message ?? t("failedFallback")}
             {row.reference ? (
-              <span className="mt-0.5 block font-mono break-all opacity-80">
+              <span className="mt-0.5 block font-mono break-all">
                 {row.reference}
               </span>
             ) : null}

@@ -145,14 +145,15 @@ export function BackupCard({
                 <dd className="text-right text-muted-foreground">{target.next_run_at_human}</dd>
               </div>
             ) : null}
-            {/* States the consequence; paused is called out because it looks set up. */}
-            {state !== "protected" ? (
-              <div className="px-6 py-2.5 text-xs text-muted-foreground">
-                {state === "paused" ? t("pausedRisk") : t("unprotectedRisk")}
-              </div>
-            ) : null}
           </dl>
         )}
+        {/* States the consequence; paused is called out because it looks set up. Outside
+            the <dl>: a note is not a term/value pair. */}
+        {!failed && state !== "protected" ? (
+          <p className="border-t px-6 py-2.5 text-xs text-muted-foreground">
+            {state === "paused" ? t("pausedRisk") : t("unprotectedRisk")}
+          </p>
+        ) : null}
 
         {/* Covers the gap between the click and the first row appearing. */}
         {inProgress ? (
@@ -177,6 +178,8 @@ export function BackupCard({
             <Button
               variant="outline"
               size="sm"
+              // Wraps in a narrow card: some locales are longer than the card (ru, at 1280).
+              className="h-auto min-h-8 max-w-full py-1.5 text-center whitespace-normal"
               disabled={starting || inProgress}
               disabledReason={!starting && inProgress ? t("alreadyRunning") : null}
               onClick={backUpNow}
@@ -186,7 +189,7 @@ export function BackupCard({
             </Button>
           ) : null}
           {/* Primary when there is no target, except on a failed read. */}
-          <Button asChild variant={!failed && !target ? "default" : "outline"} size="sm">
+          <Button asChild variant={!failed && !target ? "default" : "outline"} size="sm" className="h-auto min-h-8 max-w-full py-1.5 text-center whitespace-normal">
             <Link href={href} prefetch={false}>
               {target || failed ? t("manage") : t("setUp")}
               <ArrowRight className="size-4" />

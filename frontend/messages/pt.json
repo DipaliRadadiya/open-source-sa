@@ -565,7 +565,8 @@
       "unsavedTitle": "Descartar alterações não salvas?",
       "unsavedDesc": "Você tem alterações de perfil não salvas. Se mudar de aba agora, elas serão perdidas.",
       "unsavedDiscard": "Descartar alterações",
-      "unsavedKeep": "Continuar editando"
+      "unsavedKeep": "Continuar editando",
+      "failed": "Não foi possível salvar seu perfil."
     },
     "password": {
       "title": "Alterar senha",
@@ -579,7 +580,8 @@
       "success": "Senha atualizada.",
       "currentPlaceholder": "Digite sua senha atual",
       "confirmPlaceholder": "Digite a nova senha novamente",
-      "requirements": "Pelo menos 10 caracteres, com letras maiúsculas e minúsculas e um número."
+      "requirements": "Pelo menos 10 caracteres, com letras maiúsculas e minúsculas e um número.",
+      "failed": "Não foi possível alterar sua senha."
     },
     "activity": {
       "title": "Sua atividade",
@@ -701,7 +703,9 @@
     "signIn": "Entrar",
     "signingIn": "Entrando…",
     "createAccount": "Criar conta",
-    "creatingAccount": "Criando conta…"
+    "creatingAccount": "Criando conta…",
+    "signInFailed": "Não foi possível entrar.",
+    "registerFailed": "Não foi possível criar a conta."
   },
   "impersonation": {
     "banner": {
@@ -2859,7 +2863,8 @@
       "howHint": "Como um programa acessa este banco de dados. Um socket é mais rápido, mas só funciona a partir deste servidor. TCP/IP funciona de qualquer lugar de onde este usuário tenha permissão para se conectar.",
       "socketPathHint": "O arquivo pelo qual um programa neste servidor se conecta, em vez de uma porta de rede. Deixe o padrão a menos que o banco de dados tenha sido instalado em um local incomum.",
       "hostHint": "O endereço que um programa usa para acessar este banco de dados. A partir deste mesmo servidor, é localhost.",
-      "portHint": "A porta de rede na qual o banco de dados escuta — 3306 para MySQL e MariaDB, 5432 para PostgreSQL."
+      "portHint": "A porta de rede na qual o banco de dados escuta — 3306 para MySQL e MariaDB, 5432 para PostgreSQL.",
+      "saveFailed": "Não foi possível salvar a conexão."
     },
     "credentials": {
       "title": "Detalhes da conexão",
@@ -2925,7 +2930,10 @@
       "nameIsFixed": "O nome de um usuário de banco de dados não pode ser alterado depois de criado. Crie outro usuário.",
       "newPasswordRequiredHint": "O MongoDB não consegue renomear um usuário, então a conta é criada novamente do zero. Por isso é preciso definir uma senha.",
       "passwordUnknown": "O painel não conhece a palavra-passe — esta conta veio de outro servidor. Altere a palavra-passe para obter uma string de ligação.",
-      "passwordWithheld": "Senha oculta — seu papel não pode gerenciar bancos de dados."
+      "passwordWithheld": "Senha oculta — seu papel não pode gerenciar bancos de dados.",
+      "addFailed": "Não foi possível adicionar o usuário.",
+      "passwordFailed": "Não foi possível alterar a senha.",
+      "saveFailed": "Não foi possível salvar o usuário."
     },
     "detail": {
       "size": "Tamanho",
@@ -3140,7 +3148,8 @@
       "confirm": "Reiniciar e continuar",
       "description": "O servidor de banco de dados precisa reiniciar para aceitar conexões de outros endereços. As aplicações que o usam perdem a conexão por um instante."
     },
-    "backToList": "Voltar para bancos de dados"
+    "backToList": "Voltar para bancos de dados",
+    "createFailed": "O banco de dados não pôde ser criado."
   },
   "git": {
     "title": "Git",
@@ -3547,7 +3556,8 @@
       "stalledTitle": "Isso está levando mais tempo que o esperado",
       "stalledBody": "A configuração não reportou progresso há um tempo. Pode ainda estar rodando — verifique de novo ou contate o suporte se continuar assim.",
       "checkAgain": "Verificar novamente",
-      "startedAgo": "Iniciada há {ago}. A maioria das aplicações fica pronta em alguns minutos; um instalador de um clique leva mais tempo."
+      "startedAgo": "Iniciada há {ago}. A maioria das aplicações fica pronta em alguns minutos; um instalador de um clique leva mais tempo.",
+      "retryFailed": "Não foi possível iniciar a configuração novamente."
     },
     "port": {
       "label": "Porta da aplicação",
@@ -5384,7 +5394,9 @@
     },
     "filters": {
       "allStatuses": "Todos os status",
-      "allTypes": "Todos os tipos"
+      "allTypes": "Todos os tipos",
+      "statusLabel": "Status",
+      "typeLabel": "Tipo"
     },
     "noDatabase": {
       "title": "Nenhum banco de dados instalado",
@@ -5565,7 +5577,8 @@
       "effectNoChanges": "O usuário do sistema não poderá mais adicionar, apagar ou renomear itens diretamente nesta pasta.",
       "effectPublic": "Tudo dentro de public_html continua funcionando exatamente como antes."
     },
-    "deploying": "Fazendo deploy"
+    "deploying": "Fazendo deploy",
+    "processStoppedBadge": "Parada"
   },
   "panelUpdate": {
     "title": "Atualização do painel",

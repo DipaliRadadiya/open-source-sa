@@ -8,7 +8,7 @@ function Marker({ tone, children }) {
       className={cn(
         "flex size-5 shrink-0 items-center justify-center rounded-full border",
         tone === "done" && "border-success bg-success/10 text-success",
-        tone === "working" && "border-primary bg-primary/10 text-primary",
+        tone === "working" && "border-primary bg-primary/10 text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] dark:text-primary",
         tone === "failed" && "border-destructive bg-destructive/10 text-destructive",
       )}
       aria-hidden
