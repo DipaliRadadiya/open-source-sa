@@ -45,7 +45,7 @@ class PanelUpdateController extends Controller
             'panel_update' => [
                 'installed' => $current,
                 'available' => $latest,
-                'update_available' => $releases->isNewer($current['version'], $latest['version']),
+                'update_available' => $releases->isUpdate($current, $latest),
                 'preflight' => $preflight->run(),
                 'latest_run' => $latestRun === null
                     ? null

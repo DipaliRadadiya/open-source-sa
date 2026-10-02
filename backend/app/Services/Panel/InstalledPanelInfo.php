@@ -42,6 +42,7 @@ class InstalledPanelInfo
      *     commit_short: ?string,
      *     branch: ?string,
      *     source: 'tag'|'tag-ahead'|'file'|'env'|'unknown',
+     *     committed_at: ?string,
      *     is_git_checkout: bool,
      *     has_local_changes: ?bool,
      * }
@@ -57,6 +58,10 @@ class InstalledPanelInfo
             'commit_short' => $commit === null ? null : substr($commit, 0, 7),
             'branch' => $this->branch(),
             'source' => $source,
+            // When the running code was committed. On a fresh install (a
+            // shallow clone with no tags) this is the only fact that says how
+            // it relates to a release: see AvailableRelease::isUpdate().
+            'committed_at' => $this->committedAt(),
             // Whether an in-place update is even possible on this box. A
             // packaged install without .git cannot be moved by git checkout.
             'is_git_checkout' => is_dir($this->repositoryPath().'/.git'),
@@ -98,6 +103,26 @@ class InstalledPanelInfo
         // thing to have on a commit, and reporting it as the installed version
         // would put a word where the update compares numbers.
         return preg_match('/^\d+(\.\d+){0,3}$/', $tag) === 1 ? $tag : null;
+    }
+
+    /**
+     * HEAD's commit date (ISO 8601), or null when git cannot say.
+     */
+    private function committedAt(): ?string
+    {
+        $path = $this->repositoryPath();
+
+        if (! is_dir($path.'/.git')) {
+            return null;
+        }
+
+        $result = Process::path($path)
+            ->timeout(10)
+            ->run(['git', '-c', 'safe.directory='.$path, 'log', '-1', '--format=%cI', 'HEAD']);
+
+        $date = trim($result->output());
+
+        return $result->successful() && $date !== '' ? $date : null;
     }
 
     /**

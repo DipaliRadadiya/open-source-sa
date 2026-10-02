@@ -110,6 +110,31 @@ class AvailableRelease
     }
 
     /**
+     * Whether the published release is an update for what is installed.
+     *
+     * Bug #6: a fresh install is a shallow clone of main with no tags, so its
+     * version comes from the VERSION file — 1.0.14 while main was 369 commits
+     * past v1.0.17. The panel offered v1.0.17, older code, and the update was
+     * refused by the forward-only guard. When the version is only the file's
+     * word, code committed after the release was published is not behind it.
+     *
+     * @param  array{version: ?string, source?: string, committed_at?: ?string}  $installed
+     * @param  array{version: ?string, published_at?: ?string}  $available
+     */
+    public function isUpdate(array $installed, array $available): bool
+    {
+        if (! $this->isNewer($installed['version'], $available['version'])) {
+            return false;
+        }
+
+        $fromFile = in_array($installed['source'] ?? null, ['file', 'unknown'], true);
+        $committed = strtotime((string) ($installed['committed_at'] ?? ''));
+        $published = strtotime((string) ($available['published_at'] ?? ''));
+
+        return ! ($fromFile && $committed !== false && $published !== false && $committed >= $published);
+    }
+
+    /**
      * Whether `$available` is newer than `$installed`.
      *
      * Returns false whenever either side is unknown. An update prompt shown on

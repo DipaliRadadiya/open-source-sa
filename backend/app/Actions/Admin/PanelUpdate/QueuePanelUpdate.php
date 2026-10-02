@@ -70,7 +70,7 @@ class QueuePanelUpdate
             $current = $this->installed->installed();
             $latest = $this->releases->latest();
 
-            if (! $this->releases->isNewer($current['version'], $latest['version'])) {
+            if (! $this->releases->isUpdate($current, $latest)) {
                 throw ValidationException::withMessages([
                     'version' => [__('panel_update.errors.no_update')],
                 ]);
