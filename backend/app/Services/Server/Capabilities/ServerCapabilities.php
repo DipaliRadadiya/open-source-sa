@@ -353,6 +353,20 @@ class ServerCapabilities
 
     private function hasBinary(string $binary): bool
     {
+        // Looked up directly first. `which` is on the privileged list, and
+        // install.sh records the stack before it writes the sudoers grant, so
+        // `sudo -n which node` was refused and a MERN box was recorded as
+        // having no Node until something else re-checked (bug #1).
+        $candidates = str_contains($binary, '/')
+            ? [$binary]
+            : array_map(fn (string $dir) => "{$dir}/{$binary}", (array) config('server.binary_search_path'));
+
+        foreach ($candidates as $path) {
+            if (is_file($path) && is_executable($path)) {
+                return true;
+            }
+        }
+
         return $this->serverOps->run(
             ['which', $binary],
             ['feature' => 'capabilities', 'op' => 'detect', 'binary' => $binary],

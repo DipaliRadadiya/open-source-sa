@@ -846,6 +846,15 @@ return [
 
     'node_binary' => env('SERVER_NODE_BINARY', 'node'),
 
+    // Where capability detection looks for a binary before asking `which`:
+    // sudo's default secure_path, i.e. where `sudo which` would have looked.
+    // Colon-separated, like PATH; the test suite empties it so the machine
+    // running the tests cannot answer for the server being faked.
+    'binary_search_path' => array_values(array_filter(explode(':', (string) env(
+        'SERVER_BINARY_SEARCH_PATH',
+        '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin',
+    )))),
+
     /*
     |--------------------------------------------------------------------------
     | Applications

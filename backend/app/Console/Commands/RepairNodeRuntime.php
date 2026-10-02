@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Exceptions\Server\Setting\SettingOperationException;
+use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Runtimes\NodeRuntime;
 use Illuminate\Console\Command;
 
@@ -29,7 +30,19 @@ class RepairNodeRuntime extends Command
 
     protected $description = 'Link the default Node into /usr/local/bin and hand every installed version to the fnm owner';
 
-    public function handle(NodeRuntime $node): int
+    public function handle(NodeRuntime $node, ServerCapabilities $capabilities): int
+    {
+        try {
+            return $this->repair($node);
+        } finally {
+            // Servers installed before bug #1 was fixed recorded "no Node"
+            // and kept it until some install re-checked. This runs on every
+            // deploy, after the links above exist, so it corrects them.
+            $capabilities->refresh();
+        }
+    }
+
+    private function repair(NodeRuntime $node): int
     {
         if (! $node->fnmInstalled()) {
             $this->info('fnm is not installed; nothing to repair.');

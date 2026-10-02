@@ -335,3 +335,58 @@ describe('detection tolerates either directory', function () {
         expect(app(ServerCapabilities::class)->webServer())->toBe('openlitespeed');
     });
 });
+
+/*
+ * Bug #1: install.sh records the stack before it writes the sudoers grant,
+ * and `which` is privileged, so `sudo -n which node` was refused and a MERN
+ * box came up recorded as having no Node.
+ */
+describe('finding Node before sudo is set up', function () {
+    beforeEach(function () {
+        $this->binDir = sys_get_temp_dir().'/sv-oss-capbin-'.getmypid();
+        File::deleteDirectory($this->binDir);
+        File::makeDirectory($this->binDir, 0755, true);
+        config(['server.binary_search_path' => [$this->binDir]]);
+
+        // Exactly what an install sees: every sudo refused.
+        Process::fake(['*' => Process::result(errorOutput: 'sudo: a password is required', exitCode: 1)]);
+    });
+
+    afterEach(fn () => File::deleteDirectory($this->binDir));
+
+    it('records Node on a fresh MERN install', function () {
+        File::put("{$this->binDir}/node", "#!/bin/sh\n");
+        chmod("{$this->binDir}/node", 0755);
+
+        $this->artisan('server:record-stack', ['stack' => 'mern'])->assertSuccessful();
+
+        expect(app(ServerCapabilities::class)->supports('node'))->toBeTrue();
+    });
+
+    it('still records no Node when there is none', function () {
+        $this->artisan('server:record-stack', ['stack' => 'mern'])->assertSuccessful();
+
+        expect(app(ServerCapabilities::class)->supports('node'))->toBeFalse();
+    });
+
+    it('does not count a file that cannot be run', function () {
+        File::put("{$this->binDir}/node", "x\n");
+        chmod("{$this->binDir}/node", 0644);
+
+        $this->artisan('server:record-stack', ['stack' => 'mern'])->assertSuccessful();
+
+        expect(app(ServerCapabilities::class)->supports('node'))->toBeFalse();
+    });
+
+    it('corrects an old wrong record on the next deploy', function () {
+        $this->artisan('server:record-stack', ['stack' => 'mern'])->assertSuccessful();
+        expect(app(ServerCapabilities::class)->supports('node'))->toBeFalse();
+
+        File::put("{$this->binDir}/node", "#!/bin/sh\n");
+        chmod("{$this->binDir}/node", 0755);
+
+        $this->artisan('runtimes:repair-node')->assertSuccessful();
+
+        expect(app(ServerCapabilities::class)->supports('node'))->toBeTrue();
+    });
+});
