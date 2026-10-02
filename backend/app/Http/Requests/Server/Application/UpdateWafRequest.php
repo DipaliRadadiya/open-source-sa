@@ -4,6 +4,7 @@ namespace App\Http\Requests\Server\Application;
 
 use App\Enums\WafCategory;
 use App\Enums\WafMode;
+use App\Models\ApplicationWafRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
@@ -31,7 +32,9 @@ class UpdateWafRequest extends FormRequest
             'exceptions' => ['array', 'max:50'],
             // No control characters: a newline cannot be part of a match and
             // only ever broke the config test (a 500) — refused here instead.
-            'exceptions.*' => ['string', 'min:1', 'max:255', 'not_regex:/[\x00-\x1F\x7F]/'],
+            // Bug #82: an exception skips every check for a path containing
+            // it, so `a` or `/` switched the firewall off for the whole site.
+            'exceptions.*' => ['string', 'min:'.ApplicationWafRule::EXCEPTION_MIN_LENGTH, 'max:255', 'not_regex:/[\x00-\x1F\x7F]/'],
             'custom_rules' => ['array', 'max:50'],
             'custom_rules.*' => ['string', 'min:1', 'max:255', 'not_regex:/[\x00-\x1F\x7F]/'],
         ];

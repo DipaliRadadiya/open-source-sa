@@ -98,9 +98,10 @@ server {
     set $waf_block "0";
     set $waf_exception "0";
 @foreach ($waf['exceptions'] as $exception)
-    if ($request_uri ~* "{!! $exception !!}") { set $waf_exception "1"; }
-    if ($args ~* "{!! $exception !!}") { set $waf_exception "1"; }
-    if ($http_user_agent ~* "{!! $exception !!}") { set $waf_exception "1"; }
+    {{-- `$uri`, the path without its query (bug #82): matched against the
+         query string or the user agent, an exception was a password anyone
+         could type. --}}
+    if ($uri ~* "{!! $exception !!}") { set $waf_exception "1"; }
 @endforeach
 @if (in_array('query_string', $waf['categories'], true))
     if ($bad_querystring_ng) { set $waf_block "1"; }

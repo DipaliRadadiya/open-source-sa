@@ -51,7 +51,9 @@
 @if ($waf)
     Include {{ config('server.waf.apache_setenvif_path') }}
 @foreach ($waf['exceptions'] as $exception)
-    SetEnvIfExpr "%{REQUEST_URI} =~ m#{!! $exception !!}#i || %{QUERY_STRING} =~ m#{!! $exception !!}#i || %{HTTP_USER_AGENT} =~ m#{!! $exception !!}#i" waf_exception
+    {{-- The path only (bug #82): matched against the query string or the
+         user agent, an exception was a password anyone could type. --}}
+    SetEnvIfExpr "%{REQUEST_URI} =~ m#{!! $exception !!}#i" waf_exception
 @endforeach
 @foreach ($waf['customRules'] as $rule)
     SetEnvIfExpr "%{REQUEST_URI} =~ m#{!! $rule !!}#i || %{QUERY_STRING} =~ m#{!! $rule !!}#i" waf_custom

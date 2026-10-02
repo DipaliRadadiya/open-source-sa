@@ -8,6 +8,7 @@ use App\Enums\DomainType;
 use App\Enums\WafMode;
 use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
+use App\Models\ApplicationWafRule;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Applications\ApplicationLogDirectory;
 use App\Services\Server\Applications\PanelDirectory;
@@ -529,7 +530,11 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             return null;
         }
 
-        $exceptions = $application->wafRules->where('type', 'exception')->pluck('value')->all();
+        // Short ones are skipped, not just refused on save: one stored before
+        // the limit would otherwise go on switching the firewall off.
+        $exceptions = $application->wafRules->where('type', 'exception')->pluck('value')
+            ->filter(fn (string $value): bool => mb_strlen(trim($value)) >= ApplicationWafRule::EXCEPTION_MIN_LENGTH)
+            ->values()->all();
 
         return [
             'mode' => $application->waf_mode instanceof WafMode ? $application->waf_mode->value : (string) $application->waf_mode,

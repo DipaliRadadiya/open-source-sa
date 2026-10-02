@@ -212,9 +212,9 @@ rewrite {
        Conditions are printed raw: they are already escaped for this syntax
        (OlsDriver::wafPattern, and the 8G file's own patterns). --}}
 @foreach ($waf['exceptions'] as $exception)
-  RewriteCond %{REQUEST_URI} {!! $exception !!} [NC,OR]
-  RewriteCond %{QUERY_STRING} {!! $exception !!} [NC,OR]
-  RewriteCond %{HTTP_USER_AGENT} {!! $exception !!} [NC]
+  {{-- The path only (bug #82): matched against the query string or the
+       user agent, an exception was a password anyone could type. --}}
+  RewriteCond %{REQUEST_URI} {!! $exception !!} [NC]
   RewriteRule ^ - [E=waf_exception:1]
 @endforeach
 @foreach ($wafRules as $category => $conditions)

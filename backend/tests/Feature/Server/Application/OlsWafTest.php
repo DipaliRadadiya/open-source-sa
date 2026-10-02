@@ -110,8 +110,9 @@ describe('the rendered vhost', function () {
         $config = olsVhost('enforce', ['mobiquo'], ['bad-path'], ['query_string', 'cookie']);
 
         expect($config)
-            ->toContain('RewriteCond %{QUERY_STRING} mobiquo [NC,OR]')
-            ->toContain('RewriteRule ^ - [E=waf_exception:1]')
+            // Bug #82: the path only — not the query, not the user agent.
+            ->toContain("RewriteCond %{REQUEST_URI} mobiquo [NC]\n  RewriteRule ^ - [E=waf_exception:1]")
+            ->not->toContain('RewriteCond %{QUERY_STRING} mobiquo')
             ->toContain('RewriteCond %{HTTP_COOKIE} (?:<|>|\\\'|%0A|%0D|%27|%00) [NC]')
             ->toContain('RewriteCond %{REQUEST_URI} bad\-path [NC,OR]')
             ->toContain("  RewriteCond %{ENV:waf_exception} !=1\n  RewriteCond %{ENV:waf_block} =1\n  RewriteRule ^ - [F,L]")
@@ -135,7 +136,7 @@ describe('the rendered vhost', function () {
     it('writes exceptions as literals an unquoted condition cannot misread', function () {
         $config = olsVhost('enforce', ['a b "c" \'d\' !x'], [], ['query_string']);
 
-        expect($config)->toContain('RewriteCond %{QUERY_STRING} a\x20b\x20\x22c\x22\x20\x27d\x27\x20\!x [NC,OR]');
+        expect($config)->toContain('RewriteCond %{REQUEST_URI} a\x20b\x20\x22c\x22\x20\x27d\x27\x20\!x [NC]');
     });
 
     it('adds the rewrite block to static and Node sites when only the firewall needs one', function (string $profile) {

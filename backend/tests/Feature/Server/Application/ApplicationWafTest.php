@@ -485,7 +485,7 @@ describe('exceptions and custom rules as written into the config', function () {
         // HTML-encoded, `&` became `&amp;` and the exception never matched.
         expect($config)->not->toContain('&amp;')->not->toContain('&quot;')->not->toContain('&#039;');
 
-        preg_match('/if \(\$args ~\* "((?:[^"\\\\]|\\\\.)*)"\) \{ set \$waf_exception "1"; \}/', $config, $m);
+        preg_match('/if \(\$uri ~\* "((?:[^"\\\\]|\\\\.)*)"\) \{ set \$waf_exception "1"; \}/', $config, $m);
 
         expect($m)->not->toBeEmpty()
             ->and(nginxMatches($m[1], 'a=b&'.$value))->toBeTrue()
@@ -494,38 +494,39 @@ describe('exceptions and custom rules as written into the config', function () {
 
     it('matches the text literally on nginx, backslashes and regex symbols included', function (string $value, string $hit, string $miss) {
         $config = wafVhost(NginxDriver::class, [$value]);
-        preg_match('/if \(\$args ~\* "((?:[^"\\\\]|\\\\.)*)"\) \{ set \$waf_exception "1"; \}/', $config, $m);
+        preg_match('/if \(\$uri ~\* "((?:[^"\\\\]|\\\\.)*)"\) \{ set \$waf_exception "1"; \}/', $config, $m);
 
         expect(nginxMatches($m[1], $hit))->toBeTrue()
             ->and(nginxMatches($m[1], $miss))->toBeFalse();
     })->with([
-        'dot' => ['a.b', 'xa.bx', 'axb'],
+        'dot' => ['ab.c', 'xab.cx', 'abxc'],
         'backslash' => ['c:\\tmp', 'path=c:\\tmp', 'path=c:tmp'],
         'regex symbols' => ['(a+)?', 'q=(a+)?', 'q=aa'],
     ]);
 
-    it('checks the query string on Apache, which SetEnvIf Query_String never did', function () {
+    it('matches an exception on the path only on Apache, a block rule on the query too', function () {
         $config = wafVhost(ApacheDriver::class, ['action=upload']);
 
-        // `Query_String` is not a SetEnvIf attribute; Apache read it as a
-        // request header that never exists, so the exception never matched.
+        // Bug #82: on the query string or the user agent, an exception was a
+        // password anyone could type. Block rules still read the query.
         expect($config)->not->toContain('Query_String')
             // Backslashes doubled: Apache's config parser halves them.
-            ->and($config)->toContain('SetEnvIfExpr "%{REQUEST_URI} =~ m#action\\\\=upload#i || %{QUERY_STRING} =~ m#action\\\\=upload#i || %{HTTP_USER_AGENT} =~ m#action\\\\=upload#i" waf_exception')
+            ->and($config)->toContain('SetEnvIfExpr "%{REQUEST_URI} =~ m#action\\\\=upload#i" waf_exception')
+            ->and($config)->not->toContain('%{QUERY_STRING} =~ m#action')
             ->and($config)->toContain('SetEnvIfExpr "%{REQUEST_URI} =~ m#qa\\\\-block#i || %{QUERY_STRING} =~ m#qa\\\\-block#i" waf_custom');
     });
 
     it('matches the text literally on Apache too, not as a regex', function (string $value, string $hit, string $miss) {
         // As Apache's config parser hands it to the expression engine.
         $config = OlsWafRuleset::apacheUnescape(wafVhost(ApacheDriver::class, [$value]), '"');
-        preg_match('/%\{QUERY_STRING\} =~ m#((?:[^#\\\\]|\\\\.)*)#i \|\| %\{HTTP_USER_AGENT\}/', $config, $m);
+        preg_match('/%\{REQUEST_URI\} =~ m#((?:[^#\\\\]|\\\\.)*)#i" waf_exception/', $config, $m);
 
         expect($m)->not->toBeEmpty()
             ->and(apacheMatches($m[1], $hit))->toBeTrue()
             ->and(apacheMatches($m[1], $miss))->toBeFalse();
     })->with([
         'ampersand and quotes' => ['page=1&x="it\'s"', 'page=1&x="it\'s"', 'page=1'],
-        'hash (the delimiter)' => ['a#b', 'xa#bx', 'ab'],
+        'hash (the delimiter)' => ['ab#c', 'xab#cx', 'abc'],
         'regex symbols' => ['(a+)?', 'q=(a+)?', 'q=aa'],
         'percent-brace' => ['%{HTTP_HOST}', 'x=%{HTTP_HOST}', 'x=host'],
         // Apache collapses `\\` in config arguments; a single escape left
@@ -540,4 +541,33 @@ describe('exceptions and custom rules as written into the config', function () {
             'enabled' => true, 'mode' => 'enforce', $field => ["x\nreturn 200 pwned;"],
         ])->assertStatus(422)->assertJsonValidationErrors("{$field}.0");
     })->with(['exceptions', 'custom_rules']);
+});
+
+/*
+ * Bug #82: an exception skips every check. Matched against the query string
+ * or the user agent it was a password anyone could type (`?x=mobiquo`), and a
+ * one-letter one switched the firewall off for the whole site.
+ */
+describe('exceptions (bug #82)', function () {
+    it('match the path only, on every web server and site kind', function (string $driver, string $profile) {
+        $this->application->forceFill(['serving_profile' => $profile, 'app_port' => 3000])->save();
+        $config = wafVhost($driver, ['mobiquo']);
+
+        expect($config)->toContain('mobiquo')
+            ->not->toMatch('/(\$args|\$http_user_agent|\$request_uri|QUERY_STRING\}|HTTP_USER_AGENT\}) [^\n]*mobiquo/');
+    })->with([NginxDriver::class, ApacheDriver::class, OlsDriver::class])->with(['php', 'static', 'node']);
+
+    it('refuses one shorter than four characters', function (string $short) {
+        fakeWafWebServer();
+
+        $this->withHeaders(wafHeaders())->putJson("/api/applications/{$this->application->id}/waf", [
+            'enabled' => true, 'mode' => 'enforce', 'exceptions' => [$short],
+        ])->assertStatus(422)->assertJsonValidationErrors('exceptions.0');
+    })->with(['a', '/', 'wp-']);
+
+    it('leaves a short one saved before the limit out of the config', function () {
+        $config = wafVhost(NginxDriver::class, ['/', 'mobiquo']);
+
+        expect($config)->toContain('"mobiquo"')->not->toContain('$uri ~* "/"');
+    });
 });
