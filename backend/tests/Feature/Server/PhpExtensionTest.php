@@ -132,6 +132,20 @@ it('lists what apt offers, not just what is installed', function () {
         ->and($catalog['redis']['enabled'])->toBeTrue();
 });
 
+/*
+ * Bug #29: many rows had no description. v7 shows apt's own one-liner, which
+ * the catalog already reads from `apt-cache search` and used to throw away.
+ */
+it('carries apt\'s description for each package, and none for a built-in', function () {
+    fakeExtensions();
+
+    $catalog = catalogFor($this->panel);
+
+    expect($catalog['xdebug']['summary'])->toBe('a php module')
+        ->and($catalog['redis']['summary'])->toBe('a php module')
+        ->and($catalog['json']['summary'])->toBeNull();
+});
+
 it('drops packages that share the prefix but are not extensions', function () {
     fakeExtensions();
 

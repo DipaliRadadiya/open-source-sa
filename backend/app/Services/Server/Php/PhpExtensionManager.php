@@ -63,7 +63,7 @@ class PhpExtensionManager
 
         $rows = [];
 
-        foreach ($this->availablePackages($version) as $name) {
+        foreach ($this->availablePackages($version) as $name => $summary) {
             $modules = $packageModules[$name] ?? [$name];
             $installed = isset($packageModules[$name]);
 
@@ -77,6 +77,10 @@ class PhpExtensionManager
                 // concerned, because that is what it behaves like.
                 'enabled' => $installed && $modules === array_values(array_intersect($modules, $enabledEverywhere)),
                 'builtin' => false,
+                // apt's one-line description, as v7 shows it (bug #29: many
+                // rows had none). English, from the package index — the
+                // screen's own translation, where one exists, comes first.
+                'summary' => $summary,
                 'sapis' => $this->sapiState($modules, $enabled),
                 // The state of the *operation*, not of the extension. A row
                 // that has never been installed is `ready` — meaning nothing
@@ -97,6 +101,7 @@ class PhpExtensionManager
                 'installed' => true,
                 'enabled' => true,
                 'builtin' => true,
+                'summary' => null,
                 'sapis' => [],
                 // Compiled in: there is no apt package, so there is nothing
                 // that could ever be mid-install.
@@ -332,7 +337,11 @@ class PhpExtensionManager
      * for that box. Non-extension packages that share the prefix (the SAPIs,
      * `-common`, `-dev`) are dropped: they are not things to toggle.
      *
-     * @return array<int, string>
+     * Keyed by extension, with apt's one-line description as the value (null
+     * when the index gives none) — the same line `apt-cache search` already
+     * prints, so it costs nothing extra.
+     *
+     * @return array<string, string|null>
      */
     private function availablePackages(string $version): array
     {
@@ -344,17 +353,16 @@ class PhpExtensionManager
         $excluded = (array) config('server.runtimes.php.non_extension_packages', []);
 
         $prefix = preg_quote($this->stack->packagePrefix($version), '/');
-        preg_match_all('/^'.$prefix.'([a-z0-9_]+)\s/m', $output, $matches);
+        preg_match_all('/^'.$prefix.'([a-z0-9_]+)(?:[ \t]+-[ \t]+([^\n]*))?[ \t]*$/m', $output, $matches, PREG_SET_ORDER);
 
-        return collect($matches[1] ?? [])
-            ->unique()
-            ->reject(fn (string $name) => in_array($name, $excluded, true))
+        return collect($matches)
+            ->mapWithKeys(fn (array $match) => [$match[1] => trim($match[2] ?? '') ?: null])
+            ->reject(fn (?string $summary, string $name) => in_array($name, $excluded, true))
             // LiteSpeed's repository carries `lsphp84-ioncube`. Installing it
             // beside the loader the ionCube card manages is two loaders in one
             // PHP — so ionCube has one control, and it is not this list.
-            ->reject(fn (string $name) => $this->isIonCube($name))
-            ->sort()
-            ->values()
+            ->reject(fn (?string $summary, string $name) => $this->isIonCube($name))
+            ->sortKeys()
             ->all();
     }
 

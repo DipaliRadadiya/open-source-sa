@@ -96,6 +96,8 @@ Auth-gated. Change own password.
 
 **Request:** `{"current_password": "…", "password": "…", "password_confirmation": "…"}`
 
+`422` on `password` when the new password is the same as the current one.
+
 **Response `200`:** `{"token": "…"}` — a fresh API token. Every other token of this user is revoked, so a bearer client must switch to this one (the session cookie stays valid).
 
 ---
@@ -3705,7 +3707,7 @@ Paged. `?search=` case-insensitively matches the database name; `?filter[engine]
 
 Field limits differ and the difference is not arbitrary: `name` allows up to **63** characters, `create_user.username` only **32**, which is MySQL 8's hard limit on a user name. Both are `[A-Za-z0-9_]` only — identifiers cannot be parameterised in DDL, so the regex *is* the injection guard, and anything outside it is rejected rather than escaped. `password` may be omitted and one is generated.
 
-`connection_preference` is `localhost` | `remote` | `anywhere`. **`host` is required when it is `remote`** and must be an IPv4 address or CIDR.
+`connection_preference` is `localhost` | `remote` | `anywhere`. **`host` is required when it is `remote`** and must be a real IPv4 address or range (`203.0.113.5`, `203.0.113.0/24`); `0.0.0.0`, a `/0` and `127.x` are refused there — use `anywhere` or `localhost`.
 
 `collation` must belong to the chosen `charset` — a valid-but-mismatched pair fails validation on `collation`, it is not silently corrected. Reserved system schema names are refused.
 
@@ -5447,9 +5449,12 @@ Sequence: back up → write → config test (`php-fpm -t`, or `lsphp -c php.ini 
 {"extensions": [
   {"name": "mysql", "package": "php8.4-mysql", "modules": ["mysqli","mysqlnd","pdo_mysql"],
    "installed": true, "enabled": true, "builtin": false,
+   "summary": "MySQL module for PHP",
    "sapis": {"cli": true, "fpm": true}, "status": "ready"}
 ], "toggle_supported": true, "panel_required": ["curl", "mbstring"]}
 ```
+
+**`summary`** — apt's one-line package description (English, from the package index), `null` for built-ins or when apt gives none. Show the screen's own translated description when there is one, else this.
 
 **`toggle_supported`** — `false` on OpenLiteSpeed: an installed extension is always on and cannot be switched off (`PUT … {"enabled": false}` returns `422`). Show installed extensions without an on/off switch; **Install** (`enabled: true` on a not-installed row) still works.
 
@@ -5604,6 +5609,15 @@ The same component list as the Services page — one read drives both screens.
 ```
 
 `state`: `installed | pending | installing | failed`. **`pending` means "not found"**, not "not tried". `action` is `null` when the panel cannot install this component (e.g. Redis, MongoDB).
+
+The `wp_cli` component (WP-CLI) is `recommended: false`, so it never affects `complete`. Its `action` is `POST /api/wp-cli/install`.
+
+---
+
+### POST `/wp-cli/install`
+**Permission:** `application` (manage) | **Throttle:** 10/min
+
+Queues the WP-CLI download to `/usr/local/bin/wp` (the same file the WordPress installer fetches on first use). `202 {"message": "Installing WP-CLI."}`; `422` when it is already installed. Poll `GET /setup`: the `wp_cli` row goes `installing → installed`, or `failed` with `reason` (`network`, `no_space`, `incomplete`, `sudo_denied`, `unknown`), a localized `message`, and `retryable: true`.
 
 ---
 
