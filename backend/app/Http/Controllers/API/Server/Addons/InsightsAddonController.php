@@ -89,6 +89,21 @@ class InsightsAddonController extends Controller
         ],
     ];
 
+    /**
+     * Reports that are one object or one series rather than a list, and so
+     * take no --limit. The toolkit refuses a flag a command does not define,
+     * so a `?limit=` sent to one of these is ignored here rather than passed
+     * on (found live: every one of these answered 502).
+     */
+    private const UNLIMITED = [
+        'dashboard:stats', 'dashboard:top-records', 'dashboard:daily-log-count', 'dashboard:bot-vs-human',
+        'traffic:summary', 'traffic:daily-request-count',
+        'errors:stats', 'errors:error-rate', 'errors:bot-vs-human', 'errors:status-summary', 'errors:status-code-trends',
+        'bots:summary', 'bots:traffic-trends', 'bots:traffic-percentage',
+        'user-agents:summary',
+        'bandwidth:summary', 'bandwidth:trends', 'bandwidth:bot-vs-human',
+    ];
+
     /** Reports that need one more option, and which. */
     private const REQUIRED_OPTION = [
         'traffic:url-and-field-count' => 'field',
@@ -130,7 +145,7 @@ class InsightsAddonController extends Controller
 
         $arguments = [$command, '--application='.$application->insighthub_id];
 
-        if ($request->filled('limit')) {
+        if ($request->filled('limit') && ! in_array($command, self::UNLIMITED, true)) {
             $arguments[] = '--limit='.(int) $request->validated('limit');
         }
 

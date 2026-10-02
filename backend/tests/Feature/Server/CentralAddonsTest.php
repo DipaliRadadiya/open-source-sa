@@ -400,3 +400,16 @@ it('requires and checks the extra option two reports take', function () {
     $this->withHeaders(addonHeaders($this->token))->getJson("{$base}/errors/status-code-data?status_code=5xx")->assertOk();
     expect(lastAddonCommand())->toContain('--status-code=5xx');
 });
+
+it('passes a limit only to reports that are lists', function () {
+    Cache::flush();
+    $this->site->forceFill(['insighthub_id' => 7])->save();
+    fakeAddon(fn () => ['{"status":"success","data":{}}']);
+    $base = "/api/central/addons/applications/{$this->site->id}/log-monitoring";
+
+    $this->withHeaders(addonHeaders($this->token))->getJson("{$base}/dashboard/stats?limit=3")->assertOk();
+    expect(lastAddonCommand())->not->toContain('--limit=3');
+
+    $this->withHeaders(addonHeaders($this->token))->getJson("{$base}/dashboard/status-count?limit=3")->assertOk();
+    expect(lastAddonCommand())->toContain('--limit=3');
+});
