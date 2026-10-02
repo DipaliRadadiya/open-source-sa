@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Application;
+use App\Models\Role;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Central\CentralUser;
@@ -158,4 +159,47 @@ describe('nothing else became easier to reach', function () {
         // Authenticated as themselves, and no machine account conjured up.
         expect(User::query()->where('is_system', true)->exists())->toBeFalse();
     });
+});
+
+/*
+ * Bug #50: central signs in as an administrator, so with one leaked key it
+ * could reset an administrator's password, create a new administrator or
+ * hand out roles. Who runs this panel is decided on it, not by central.
+ */
+it('cannot change the panel\'s users or roles', function () {
+    $admin = User::where('is_admin', true)->first();
+    $role = Role::create(['name' => 'Editors', 'slug' => 'editors']);
+    // Central's own machine account is created on its first request.
+    $this->withHeaders(central($this->token))->getJson('/api/admin/users')->assertOk();
+    $before = [User::count(), $admin->fresh()->password, Role::count()];
+
+    foreach ([
+        ['POST', '/api/admin/users', ['username' => 'intruder', 'email' => 'i@example.test', 'password' => 'Str0ng-Passw0rd!', 'role_ids' => [$role->id]]],
+        ['PUT', "/api/admin/users/{$admin->id}", ['email' => 'x@example.test']],
+        ['PUT', "/api/admin/users/{$admin->id}/reset-password", ['password' => 'Str0ng-Passw0rd!', 'password_confirmation' => 'Str0ng-Passw0rd!']],
+        ['PUT', "/api/admin/users/{$admin->id}/roles", ['role_ids' => [$role->id]]],
+        ['POST', "/api/admin/users/{$admin->id}/impersonate", []],
+        ['DELETE', "/api/admin/users/{$admin->id}", []],
+        ['POST', '/api/admin/roles', ['name' => 'Owners']],
+        ['PUT', "/api/admin/roles/{$role->id}", ['name' => 'Renamed']],
+        ['DELETE', "/api/admin/roles/{$role->id}", []],
+    ] as [$method, $uri, $body]) {
+        $this->withHeaders(central($this->token))->json($method, $uri, $body)
+            ->assertForbidden()
+            ->assertJsonPath('message', __('central.errors.not_for_central'));
+    }
+
+    expect([User::count(), $admin->fresh()->password, Role::count()])->toBe($before);
+});
+
+it('can still read the panel\'s users and roles', function () {
+    $this->withHeaders(central($this->token))->getJson('/api/admin/users')->assertOk();
+    $this->withHeaders(central($this->token))->getJson('/api/admin/roles')->assertOk();
+});
+
+it('leaves an administrator free to manage users', function () {
+    $admin = User::where('is_admin', true)->first();
+
+    $this->withHeaders(['Authorization' => 'Bearer '.$admin->createToken('t')->plainTextToken])
+        ->postJson('/api/admin/roles', ['name' => 'Owners'])->assertCreated();
 });

@@ -3,6 +3,7 @@
 use App\Http\Middleware\CentralOnly;
 use App\Http\Middleware\CentralSystemGuard;
 use App\Http\Middleware\CheckPermission;
+use App\Http\Middleware\NotCentral;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\ThrottleRequestsPerRoute;
 use App\Services\Admin\ApiErrorLogWriter;
@@ -92,6 +93,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => CheckPermission::class,
             'central' => CentralSystemGuard::class,
             'central.only' => CentralOnly::class,
+            'not.central' => NotCentral::class,
             // One counter per route for `throttle:N,M`; see the class.
             'throttle' => ThrottleRequestsPerRoute::class,
         ]);

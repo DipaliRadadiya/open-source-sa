@@ -6,9 +6,9 @@ use App\Http\Controllers\API\Admin\UserRoleController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/users', [UserController::class, 'index']);
-Route::post('/users', [UserController::class, 'store']);
-Route::put('/users/{user}', [UserController::class, 'update']);
-Route::delete('/users/{user}', [UserController::class, 'destroy']);
-Route::put('/users/{user}/reset-password', [UserController::class, 'resetPassword']);
-Route::put('/users/{user}/roles', [UserRoleController::class, 'update']);
-Route::post('/users/{user}/impersonate', ImpersonationController::class);
+Route::post('/users', [UserController::class, 'store'])->middleware('not.central');
+Route::put('/users/{user}', [UserController::class, 'update'])->middleware('not.central');
+Route::delete('/users/{user}', [UserController::class, 'destroy'])->middleware('not.central');
+Route::put('/users/{user}/reset-password', [UserController::class, 'resetPassword'])->middleware('not.central');
+Route::put('/users/{user}/roles', [UserRoleController::class, 'update'])->middleware('not.central');
+Route::post('/users/{user}/impersonate', ImpersonationController::class)->middleware('not.central');

@@ -10,5 +10,6 @@ return [
     'errors' => [
         'already_connected' => 'This panel is already connected. Disconnect it first to issue a new key.',
         'not_connected' => 'This panel is not connected.',
+        'not_for_central' => 'The central panel cannot change this panel\'s users or roles. Sign in as an administrator to do that.',
     ],
 ];
