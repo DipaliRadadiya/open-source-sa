@@ -82,6 +82,7 @@ class PhpVersionManager
     public function writeIni(string $version, string $contents): void
     {
         $path = $this->iniPath($version);
+        $this->assertExtensionsStayHome($version, $contents);
         $backup = $path.'.panel-bak';
 
         $this->must('backup', $this->serverOps->run(
@@ -107,6 +108,78 @@ class PhpVersionManager
         }
 
         $this->must('reload', $this->stack->reload($version), $version);
+    }
+
+    /**
+     * Refuse an extension loaded from anywhere but PHP's own directory
+     * (bug #28).
+     *
+     * The PHP-FPM master runs as root and loads every `extension` and
+     * `zend_extension` at start, so a path to any `.so` is code run as root.
+     * A bare name, or an absolute path straight inside the directory (where
+     * v7 copies the ionCube loader), is fine. `..` cannot pass the
+     * directory comparison; also closed: environment variables, and moving
+     * `extension_dir` itself.
+     *
+     * The directory comes from the binary's compiled-in PHP_EXTENSION_DIR,
+     * with `-n`: the ini being saved cannot move it.
+     */
+    private function assertExtensionsStayHome(string $version, string $contents): void
+    {
+        $directory = null;
+
+        foreach (preg_split('/\r?\n/', $contents) ?: [] as $line) {
+            if (preg_match('/^\s*(zend_extension|extension|extension_dir)\s*=\s*(.*)$/i', $line, $m) !== 1) {
+                continue;
+            }
+
+            $key = strtolower($m[1]);
+            $value = $this->iniValue($m[2]);
+            $bare = $key !== 'extension_dir' && preg_match('/^[A-Za-z0-9_.-]+$/', $value) === 1;
+
+            if ($bare) {
+                continue;
+            }
+
+            $directory ??= $this->extensionDirectory($version);
+            // `$`: PHP expands `${VAR}` in ini values when it reads them, so a
+            // path that looks like it is inside the directory may not be.
+            $allowed = ! str_contains($value, '$') && match ($key) {
+                'extension_dir' => rtrim($value, '/') === $directory,
+                default => str_starts_with($value, '/') && dirname($value) === $directory,
+            };
+
+            if (! $allowed) {
+                throw PhpConfigException::extensionOutsideDirectory(trim($line), $directory);
+            }
+        }
+    }
+
+    /** An ini value without its quotes or trailing comment. */
+    private function iniValue(string $raw): string
+    {
+        $raw = trim($raw);
+
+        if (preg_match('/^"([^"]*)"|^\'([^\']*)\'/', $raw, $m) === 1) {
+            return $m[1] !== '' ? $m[1] : ($m[2] ?? '');
+        }
+
+        return trim(explode(';', $raw, 2)[0]);
+    }
+
+    private function extensionDirectory(string $version): string
+    {
+        $result = $this->serverOps->run(
+            [$this->stack->binaryPath($version), '-n', '-r', 'echo PHP_EXTENSION_DIR;'],
+            ['feature' => 'php', 'op' => 'extension_dir', 'version' => $version],
+        );
+        $directory = rtrim(trim($result->output()), '/');
+
+        if ($result->failed() || ! str_starts_with($directory, '/')) {
+            throw PhpConfigException::operationFailed($version, $result->reference);
+        }
+
+        return $directory;
     }
 
     /**

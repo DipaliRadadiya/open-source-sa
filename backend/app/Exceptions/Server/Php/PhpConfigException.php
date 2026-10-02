@@ -38,6 +38,16 @@ class PhpConfigException extends Exception
     }
 
     /**
+     * Bug #28: an `extension=/tmp/x.so` in php.ini is code the PHP-FPM master
+     * — root — loads at the next reload. Extensions load from PHP's own
+     * extension directory only, which is also where v7 put ionCube.
+     */
+    public static function extensionOutsideDirectory(string $line, string $directory): self
+    {
+        return new self('errors/php.ini_extension_outside_dir', 422, replace: ['line' => $line, 'directory' => $directory]);
+    }
+
+    /**
      * The change is on disk but PHP was not told to pick it up, so it is not
      * active yet. Its own message: "could not be updated" would send someone
      * to redo a change that already happened.

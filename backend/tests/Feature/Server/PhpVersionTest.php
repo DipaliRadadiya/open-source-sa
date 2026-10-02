@@ -207,3 +207,52 @@ it('denies editing with view-only access', function () {
         ->putJson('/api/php/versions/8.4/ini', ['contents' => 'x', 'acknowledged' => true])
         ->assertForbidden();
 });
+
+/*
+ * Bug #28: php.ini is read by the PHP-FPM master, which runs as root, so an
+ * `extension=/tmp/x.so` is code run as root at the next reload. Extensions
+ * load from PHP's own directory only — which is also where v7 copied the
+ * ionCube loader, so a migrated v7 php.ini still saves.
+ */
+function fakePhpWithExtensionDir(): void
+{
+    Process::fake(fn ($p) => str_contains(implode(' ', (array) $p->command), 'PHP_EXTENSION_DIR')
+        ? Process::result(output: '/usr/lib/php/20240924')
+        : Process::result(exitCode: 0));
+}
+
+it('refuses an extension loaded from outside PHP\'s own directory, before writing anything', function (string $line) {
+    fakePhpWithExtensionDir();
+
+    $this->withHeaders(phpHeaders())->putJson('/api/php/versions/8.4/ini', [
+        'contents' => "memory_limit = 512M\n{$line}\n",
+        'acknowledged' => true,
+    ])->assertUnprocessable()
+        ->assertJsonPath('message', __('errors/php.ini_extension_outside_dir', ['line' => $line, 'directory' => '/usr/lib/php/20240924']));
+
+    Process::assertNotRan(fn ($p) => ($p->command[0] ?? '') === 'tee');
+    Process::assertNotRan(fn ($p) => ($p->command[0] ?? '') === 'systemctl');
+})->with([
+    'absolute elsewhere' => ['extension=/tmp/x.so'],
+    'zend_extension elsewhere' => ['zend_extension = "/home/site/evil.so"'],
+    'climbing out' => ['extension=/usr/lib/php/20240924/../../../../tmp/x.so'],
+    'relative climb' => ['extension=../../../tmp/x.so'],
+    'environment variable' => ['extension=${HOME}/x.so'],
+    'variable inside the directory' => ['extension=/usr/lib/php/20240924/${EVIL}'],
+    'moving extension_dir' => ['extension_dir = /tmp'],
+]);
+
+it('still saves the extension lines a real server has', function (string $line) {
+    fakePhpWithExtensionDir();
+
+    $this->withHeaders(phpHeaders())->putJson('/api/php/versions/8.4/ini', [
+        'contents' => "{$line}\n",
+        'acknowledged' => true,
+    ])->assertOk();
+})->with([
+    'bare name' => ['extension=redis'],
+    'bare .so' => ['extension = "imagick.so" ; comment'],
+    'commented out' => [';extension=/tmp/x.so'],
+    'v7 ionCube line' => ['zend_extension = /usr/lib/php/20240924/ioncube_loader_lin_8.4.so'],
+    'extension_dir unchanged' => ['extension_dir = "/usr/lib/php/20240924/"'],
+]);

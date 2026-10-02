@@ -13,6 +13,7 @@ return [
     'unknown_version' => 'PHP :version is not installed on this server.',
     'unreadable' => 'Could not read the PHP :version configuration.',
     'invalid_ini' => 'PHP rejected that configuration, so the previous one was restored. Nothing was reloaded.',
+    'ini_extension_outside_dir' => 'Extensions can only be loaded from PHP\'s own extension folder (:directory). Remove or change this line: :line',
     'reload_failed' => 'The change was made, but PHP :version could not be reloaded, so it is not active yet. Quote the reference to support.',
     'operation_failed' => 'The PHP :version configuration could not be updated.',
     'version_in_use' => 'PHP :version is used by :apps. Change those sites first.',
