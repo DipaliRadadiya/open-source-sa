@@ -25,6 +25,9 @@ use Illuminate\Contracts\Validation\ValidationRule;
  */
 class BotUserAgent implements ValidationRule
 {
+    /** `$blocking`: a value that will block. An allow entry can name a browser harmlessly. */
+    public function __construct(private bool $blocking = false) {}
+
     /**
      * Values that match a legitimate search crawler, or everything. Compared
      * case-insensitively against the whole value, not as substrings — the
@@ -81,6 +84,22 @@ class BotUserAgent implements ValidationRule
         // longer name that starts with it is a different agent.
         if (in_array($lower, self::SEARCH_ENGINES, true)) {
             $fail('errors/application.bot_agent_search_engine')->translate();
+
+            return;
+        }
+
+        // Bug #85: matched anywhere in the user agent, `Chrome`, `Android` or
+        // `Googlebot/2.1` blocked every real visitor or Google. Asked of the
+        // real user agents rather than a list of words, so every spelling of
+        // the mistake is caught.
+        if ($this->blocking) {
+            foreach ((array) config('ai_bots.real_visitors') as $who => $userAgent) {
+                if (mb_stripos((string) $userAgent, $trimmed) !== false) {
+                    $fail('errors/application.bot_agent_matches_visitors')->translate(['agent' => $who]);
+
+                    return;
+                }
+            }
         }
     }
 }

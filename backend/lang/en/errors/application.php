@@ -40,6 +40,7 @@ return [
     'bot_agent_invalid' => 'Enter a single bot name, like GPTBot or SemrushBot — letters, numbers, dots and dashes only.',
     'bot_agent_too_broad' => 'That is too general — it would also block search engines like Google and Bing. Use the bot\'s full name.',
     'bot_agent_search_engine' => 'That is a search engine, not an AI crawler. Blocking it would remove your site from search results.',
+    'bot_agent_matches_visitors' => 'That also appears in the user agent of :agent, so it would block real visitors. Use the crawler\'s own name instead.',
     'bot_agent_robots_only' => 'That name only works in robots.txt — no bot visits with it, so blocking it would do nothing. Use the robots.txt lines shown above instead.',
     'web_root_failed' => 'Changing the web root failed on the server.',
     'web_root_not_found' => 'The web root directory could not be found on the server. Check the web root in the application settings, and re-provision the application if it was never created.',

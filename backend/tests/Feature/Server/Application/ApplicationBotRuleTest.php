@@ -353,3 +353,43 @@ describe('the rules a reload has to survive', function () {
             ->toBe(['GPTBot', 'ScraperBot']);
     });
 });
+
+/*
+ * Bug #85: a block rule matches anywhere in the user agent, so `Chrome`,
+ * `Windows`, `Android` or `Googlebot/2.1` were accepted and blocked every
+ * real visitor — or Google. Tested against real user agents, not a word list.
+ */
+it('refuses a block that would match real browsers or search engines', function (string $value, string $who) {
+    fakeBotRuleServer();
+
+    $this->withHeaders(botRuleHeaders())
+        ->putJson(botRuleUrl(), ['policy' => 'block_training', 'blocked' => ['SemrushBot', $value]])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors', ['blocked.1' => [__('errors/application.bot_agent_matches_visitors', ['agent' => $who])]]);
+})->with([
+    ['Chrome', 'Chrome (Windows)'],
+    ['safari', 'Chrome (Windows)'],
+    ['Windows', 'Chrome (Windows)'],
+    ['Android', 'Chrome (Android)'],
+    ['Mozilla/5.0', 'Chrome (Windows)'],
+    ['Googlebot/2.1', 'Googlebot'],
+    ['iPhone', 'Safari (iPhone)'],
+]);
+
+it('still takes a real crawler\'s name, and lets an allow entry name a browser', function () {
+    fakeBotRuleServer();
+
+    $this->withHeaders(botRuleHeaders())
+        ->putJson(botRuleUrl(), ['policy' => 'block_training', 'blocked' => ['SemrushBot', 'AhrefsBot', 'MJ12bot'], 'allowed' => ['Chrome']])
+        ->assertOk();
+});
+
+it('ships no built-in AI bot that would block a real visitor', function () {
+    $builtIn = array_merge((array) config('ai_bots.training'), (array) config('ai_bots.search'), (array) config('ai_bots.agent'));
+
+    foreach ($builtIn as $bot) {
+        foreach ((array) config('ai_bots.real_visitors') as $who => $userAgent) {
+            expect(stripos($userAgent, (string) $bot))->toBeFalse("{$bot} matches {$who}");
+        }
+    }
+});

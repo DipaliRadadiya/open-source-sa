@@ -40,6 +40,7 @@ return [
     'bot_agent_invalid' => 'Saisissez un seul nom de robot, comme GPTBot ou SemrushBot — lettres, chiffres, points et tirets uniquement.',
     'bot_agent_too_broad' => 'C\'est trop général — cela bloquerait aussi des moteurs de recherche comme Google et Bing. Utilisez le nom complet du robot.',
     'bot_agent_search_engine' => 'C\'est un moteur de recherche, pas un robot d\'IA. Le bloquer retirerait votre site des résultats de recherche.',
+    'bot_agent_matches_visitors' => 'Cela apparaît aussi dans l\'agent utilisateur de :agent et bloquerait donc de vrais visiteurs. Utilisez plutôt le nom du robot lui-même.',
     'bot_agent_robots_only' => 'Ce nom ne fonctionne que dans robots.txt : aucun robot ne visite avec lui, le bloquer ne ferait rien. Utilisez plutôt les lignes robots.txt indiquées ci-dessus.',
     'web_root_failed' => 'La modification de la racine web a échoué sur le serveur.',
     'web_root_not_found' => 'Le répertoire racine web est introuvable sur le serveur. Vérifiez la racine web dans les paramètres de l\'application et reprovisionnez-la si elle n\'a jamais été créée.',

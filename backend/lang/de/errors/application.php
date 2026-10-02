@@ -40,6 +40,7 @@ return [
     'bot_agent_invalid' => 'Geben Sie einen einzelnen Bot-Namen ein, z. B. GPTBot oder SemrushBot – nur Buchstaben, Zahlen, Punkte und Bindestriche.',
     'bot_agent_too_broad' => 'Das ist zu allgemein – damit würden auch Suchmaschinen wie Google und Bing blockiert. Verwenden Sie den vollständigen Bot-Namen.',
     'bot_agent_search_engine' => 'Das ist eine Suchmaschine, kein KI-Crawler. Eine Blockierung würde Ihre Website aus den Suchergebnissen entfernen.',
+    'bot_agent_matches_visitors' => 'Das kommt auch im User-Agent von :agent vor und würde echte Besucher blockieren. Verwenden Sie stattdessen den eigenen Namen des Crawlers.',
     'bot_agent_robots_only' => 'Dieser Name funktioniert nur in der robots.txt – kein Bot besucht mit ihm, eine Sperre würde also nichts bewirken. Nutze stattdessen die oben gezeigten robots.txt-Zeilen.',
     'web_root_failed' => 'Das Ändern des Web-Roots ist auf dem Server fehlgeschlagen.',
     'web_root_not_found' => 'Das Web-Root-Verzeichnis wurde auf dem Server nicht gefunden. Prüfen Sie den Web-Root in den Anwendungseinstellungen und stellen Sie die Anwendung erneut bereit, falls sie nie erstellt wurde.',

@@ -27,7 +27,7 @@ class UpdateBotBlockerRequest extends FormRequest
             // reason the WAF's lists are: this is a short list of agents, not
             // a rule editor, and every entry costs a branch in the vhost.
             'blocked' => ['sometimes', 'array', 'max:50'],
-            'blocked.*' => ['string', new BotUserAgent],
+            'blocked.*' => ['string', new BotUserAgent(blocking: true)],
             'allowed' => ['sometimes', 'array', 'max:50'],
             'allowed.*' => ['string', new BotUserAgent],
         ];
