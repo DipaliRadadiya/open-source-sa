@@ -4,6 +4,7 @@ namespace App\Services\Server\Setup;
 
 use App\Contracts\SetupComponent;
 use App\Enums\InstallStatus;
+use App\Jobs\InstallWpCli;
 use App\Services\Runtime\DatabaseInstallProgress;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Capabilities\ServerCapabilities;
@@ -131,6 +132,7 @@ class SetupCatalog
             'database' => 'database',
             'php' => 'php',
             'node' => 'node',
+            'wp_cli' => InstallWpCli::RUNTIME,
             default => null,
         };
 

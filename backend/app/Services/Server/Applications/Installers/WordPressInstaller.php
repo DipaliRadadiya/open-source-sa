@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications\Installers;
 
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
+use App\Services\Server\WpCli\WpCli;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
@@ -164,20 +165,15 @@ class WordPressInstaller extends AbstractPhpInstaller
      */
     private function ensureWpCli(Application $application): void
     {
-        $path = (string) config('server.installers.wordpress.wp_cli', '/usr/local/bin/wp');
+        $wpCli = app(WpCli::class);
 
-        if ($this->serverOps->run(['test', '-x', $path], ['feature' => 'application', 'op' => 'installer.wp_cli_check'])->ok) {
+        if ($wpCli->installed()) {
             return;
         }
 
-        $this->run('install_cli', [
-            'curl', '--fail', '--location', '--silent', '--show-error',
-            '--proto', '=https', '--proto-redir', '=https',
-            '--output', $path,
-            (string) config('server.installers.wordpress.wp_cli_url'),
-        ], $application);
-
-        $this->run('install_cli', ['chmod', '0755', $path], $application);
+        foreach ($wpCli->installCommands() as $command) {
+            $this->run('install_cli', $command, $application);
+        }
     }
 
     /**

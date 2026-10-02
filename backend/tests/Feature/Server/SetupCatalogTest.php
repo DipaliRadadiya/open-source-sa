@@ -49,7 +49,7 @@ it('lists every component with a detected state', function () {
     $setup = fetchSetup();
 
     expect(collect($setup['components'])->pluck('key')->all())
-        ->toBe(['database', 'php', 'node', 'build_tools', 'redis', 'fail2ban']);
+        ->toBe(['database', 'php', 'node', 'build_tools', 'redis', 'fail2ban', 'wp_cli']);
 
     foreach ($setup['components'] as $component) {
         expect($component['state'])->toBeIn(['installed', 'pending', 'installing', 'failed']);

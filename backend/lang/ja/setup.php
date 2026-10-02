@@ -33,6 +33,10 @@ return [
             'title' => 'ビルドツール',
             'description' => 'ビルド済みで配布されないアプリ部品をサーバー上でコンパイルできるようにします。一部の Node アプリはインストールに必要です。',
         ],
+        'wp_cli' => [
+            'title' => 'WP-CLI',
+            'description' => 'WordPress のコマンドラインツールです。パネルはすべての WordPress 操作に使用し、ない場合は最初の WordPress サイト作成時に取得します。',
+        ],
     ],
 
 ];

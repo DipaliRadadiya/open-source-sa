@@ -33,6 +33,10 @@ return [
             'title' => 'Build-Tools',
             'description' => 'Ermöglicht dem Server, App-Komponenten zu kompilieren, die nicht vorgebaut ausgeliefert werden. Manche Node-Apps benötigen dies zur Installation.',
         ],
+        'wp_cli' => [
+            'title' => 'WP-CLI',
+            'description' => 'Das Kommandozeilen-Tool von WordPress. Das Panel nutzt es für jede WordPress-Aufgabe und lädt es mit der ersten WordPress-Seite, falls es fehlt.',
+        ],
     ],
 
 ];

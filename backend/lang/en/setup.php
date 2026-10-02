@@ -33,6 +33,10 @@ return [
             'title' => 'Build tools',
             'description' => 'Lets the server compile app components that don\'t ship ready-built. Some Node apps need this to install.',
         ],
+        'wp_cli' => [
+            'title' => 'WP-CLI',
+            'description' => 'WordPress\'s command-line tool. The panel uses it for every WordPress task, and fetches it with the first WordPress site if it\'s missing.',
+        ],
     ],
 
 ];

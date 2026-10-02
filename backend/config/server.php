@@ -2329,6 +2329,15 @@ return [
             ],
         ],
 
+        // A curl download from GitHub, not apt, so its own reasons: the
+        // shared `network` sentence talks about a package repository.
+        'wp_cli' => [
+            'failure_reasons' => [
+                'network' => '/Could not resolve host|Failed to connect|Connection timed out|Operation timed out|SSL/i',
+                'no_space' => '/No space left on device|Failure writing output/i',
+            ],
+        ],
+
         'php' => [
             // Offer PHP versions whose apt candidate is an alpha, beta, RC or
             // dev build. Off: those showed up in the install list looking

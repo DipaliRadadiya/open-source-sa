@@ -62,7 +62,6 @@ return [
         'unknown' => 'A instalação do fail2ban falhou. Indique a referência abaixo ao suporte.',
     ],
 
-
     /*
     | Per-runtime overrides, consulted before the shared groups above.
     |
@@ -79,6 +78,11 @@ return [
 
     'node_install_failed' => [
         'package_not_found' => 'Node :version não foi encontrado. Verifique o número da versão ou escolha uma da lista.',
+    ],
+
+    'wp_cli_install_failed' => [
+        'network' => 'Não foi possível acessar o GitHub, de onde o WP-CLI é baixado. Verifique se o servidor tem acesso à rede e tente novamente.',
+        'incomplete' => 'O WP-CLI foi baixado, mas não pode ser executado neste servidor. Ele precisa do `php` no PATH do servidor.',
     ],
 
     'database_install_failed' => [

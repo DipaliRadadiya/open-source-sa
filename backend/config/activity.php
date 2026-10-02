@@ -65,6 +65,7 @@ return [
             // operation: it creates users, sites and databases in one go.
             'sync',
             'system_user',
+            'wp_cli',
         ],
     ],
 ];

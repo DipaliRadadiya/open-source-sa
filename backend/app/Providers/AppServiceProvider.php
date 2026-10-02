@@ -20,6 +20,7 @@ use App\Services\Server\Setup\Components\Fail2banComponent;
 use App\Services\Server\Setup\Components\NodeComponent;
 use App\Services\Server\Setup\Components\PhpComponent;
 use App\Services\Server\Setup\Components\RedisComponent;
+use App\Services\Server\Setup\Components\WpCliComponent;
 use App\Services\Server\Setup\SetupCatalog;
 use App\Services\Server\Sync\Discoverers\ApplicationDiscoverer;
 use App\Services\Server\Sync\Discoverers\CertificateDiscoverer;
@@ -115,6 +116,7 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(BuildToolsComponent::class),
                 $app->make(RedisComponent::class),
                 $app->make(Fail2banComponent::class),
+                $app->make(WpCliComponent::class),
             ],
             $app->make(InstallTracker::class),
             $app->make(ServerCapabilities::class),

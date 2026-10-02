@@ -33,6 +33,10 @@ return [
             'title' => 'Ferramentas de compilação',
             'description' => 'Permite que o servidor compile componentes de aplicações que não vêm pré-compilados. Algumas apps Node precisam disto para instalar.',
         ],
+        'wp_cli' => [
+            'title' => 'WP-CLI',
+            'description' => 'A ferramenta de linha de comando do WordPress. O painel a usa em todas as tarefas do WordPress e a baixa com o primeiro site WordPress se estiver faltando.',
+        ],
     ],
 
 ];
