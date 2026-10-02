@@ -219,6 +219,15 @@ server {
     }
 @endforeach
 
+    {{-- Extra rules an addon keeps for this site (the WordPress toolkit's
+         xmlrpc and uploads-PHP blocks). Included, not rendered, so a domain,
+         certificate or HTTPS change that rewrites this file leaves them in
+         place. Before the PHP location on purpose: regex locations are
+         first-match, and v7 included its equivalent after it, so its
+         "block PHP in uploads" let `/wp-content/uploads/x.php` run. A glob
+         that matches nothing is not an error. --}}
+    include {{ $siteRules }}/*.conf;
+
     {{-- `[^/]\.php(/|$)`, not `\.php$`. Several applications address their own
          scripts with a path appended — Moodle's slash arguments are the loudest
          case, where every stylesheet and script is requested as

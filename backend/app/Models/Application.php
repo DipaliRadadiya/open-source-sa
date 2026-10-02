@@ -836,6 +836,19 @@ class Application extends Model
     }
 
     /**
+     * The root-owned directory of extra web server rules this site's vhost
+     * includes. {@see config('server.site_rules_root')}
+     *
+     * Named like the vhost file — the slug, which is immutable, or the domain
+     * on a row from before slugs existed — so the two always agree and the
+     * directory never has to follow a rename.
+     */
+    public function siteRulesPath(): string
+    {
+        return rtrim((string) config('server.site_rules_root'), '/').'/'.($this->slug ?: $this->domain);
+    }
+
+    /**
      * Where the WAF writes what it *would* have blocked, in detect mode.
      *
      * Defined once because the two places that needed it — the vhost template

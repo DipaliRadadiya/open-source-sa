@@ -14,6 +14,7 @@ use App\Models\Worker;
 use App\Services\Server\Certificates\CertbotClient;
 use App\Services\Server\Certificates\CertificateFiles;
 use App\Services\Server\Php\PoolManager;
+use App\Services\Server\ServerOps;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -71,6 +72,7 @@ class ApplicationArtifacts
         private ApplicationFail2banManager $fail2ban,
         private CertbotClient $certbot,
         private CertificateFiles $certificateFiles,
+        private ServerOps $serverOps,
     ) {}
 
     /**
@@ -137,6 +139,10 @@ class ApplicationArtifacts
             }
         });
 
+        $this->attempt($application, 'site_rules', function () use ($application) {
+            $this->removeSiteRules($application);
+        });
+
         $this->attempt($application, 'fail2ban', function () use ($application) {
             $this->fail2ban->disableForApp($application);
         });
@@ -167,8 +173,33 @@ class ApplicationArtifacts
     }
 
     /**
-     * Run one removal, and never let it stop the others.
+     * The site's rules directory, which its vhost includes — the WordPress
+     * toolkit's xmlrpc and uploads-PHP blocks live there.
+     *
+     * `find -delete`, not `rm -rf`: deleting a site runs no `rm -rf` at all
+     * unless its files were asked to go too, and tests hold that line. It
+     * removes the contents and then the directory, never follows a link, and
+     * needs no grant beyond the `find` already allowed. Still a recursive
+     * delete on a path built from a record — a blank slug would make it the
+     * root itself, and with it every site's rules — so that is refused
+     * outright rather than trusted to upstream validation.
      */
+    private function removeSiteRules(Application $application): void
+    {
+        $root = rtrim((string) config('server.site_rules_root'), '/');
+        $name = basename($application->siteRulesPath());
+
+        // Exactly one level under the root. With no slug and no domain the
+        // path is the root plus a slash, whose basename is the root's own name,
+        // so this comparison is what refuses it.
+        abort_unless($root !== '' && $application->siteRulesPath() === $root.'/'.$name && ! in_array($name, ['.', '..'], true), 500);
+
+        $this->serverOps->run(
+            ['find', $application->siteRulesPath(), '-delete'],
+            ['feature' => 'application', 'op' => 'remove_site_rules', 'application' => $application->id],
+        );
+    }
+
     /**
      * Delete every archive this site has, one at a time.
      *
@@ -218,6 +249,9 @@ class ApplicationArtifacts
         }
     }
 
+    /**
+     * Run one removal, and never let it stop the others.
+     */
     private function attempt(Application $application, string $artifact, callable $removal): void
     {
         try {

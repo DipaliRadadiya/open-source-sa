@@ -192,6 +192,12 @@ scripthandler {
        it the rule rewrites index.php to itself. --}}
 rewrite {
   enable                  1
+  {{-- Extra rules an addon keeps for this site (the WordPress toolkit's
+       xmlrpc and uploads-PHP blocks), as rewrite rules — the only syntax OLS
+       reads here. Included, not rendered, so a domain, certificate or HTTPS
+       change that rewrites this file leaves them in place. First, so a block
+       answers [F] before anything else is considered. --}}
+  include {{ $siteRules }}/*.conf
 @if (! $certificate)
   {{-- HTTP remains the application's working transport. Only stale/HSTS HTTPS
        requests are denied before they can reach this or another site. --}}

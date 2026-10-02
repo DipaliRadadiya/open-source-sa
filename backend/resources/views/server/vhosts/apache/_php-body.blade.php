@@ -153,3 +153,11 @@
     CustomLog {{ $waf['detectLogPath'] }} combined env=waf_custom
 @endif
 @endif
+
+    {{-- Extra rules an addon keeps for this site (the WordPress toolkit's
+         xmlrpc and uploads-PHP blocks). Included, not rendered, so a domain,
+         certificate or HTTPS change that rewrites this file leaves them in
+         place. `IncludeOptional` because the directory is usually empty.
+         Last, so a `<Files>`/`<LocationMatch>` deny here is merged after the
+         `<Directory>` grant above and wins. --}}
+    IncludeOptional {{ $siteRules }}/*.conf

@@ -129,6 +129,7 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     {
         $this->ensurePanelDirectory($application);
         $this->ensureChallengeRoot();
+        $this->ensureSiteRules($application);
 
         // The vhost names `logs/access.log`, and a web server refuses to start
         // when a log file's directory does not exist. A missing directory here
@@ -194,6 +195,25 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         // how the servers where `.panel` had been handed to the site user
         // repair themselves. See PanelDirectory::secure().
         app(PanelDirectory::class)->secure($application);
+    }
+
+    /**
+     * The site's extra-rules directory, which its vhost includes.
+     *
+     * Created before the vhost is written because the include must not point
+     * at nothing on OpenLiteSpeed. Root's, 0755, and never emptied here — the
+     * files inside are an addon's, and re-rendering the vhost must leave them
+     * exactly as they were. Removed with the site by ApplicationArtifacts,
+     * never by `remove()`: that also runs for a resync's legacy-config cleanup
+     * (on a copy with the slug blanked) and its rollback, and neither may take
+     * a site's rules with it. {@see config('server.site_rules_root')}
+     */
+    protected function ensureSiteRules(Application $application): void
+    {
+        $context = ['feature' => 'application', 'op' => 'ensure_site_rules', 'application' => $application->id];
+
+        $this->serverOps->run(['mkdir', '-p', $application->siteRulesPath()], $context);
+        $this->serverOps->run(['chmod', '0755', $application->siteRulesPath()], $context);
     }
 
     /**
@@ -370,6 +390,8 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             // challenge token.
             'challengeRoot' => rtrim((string) config('server.certificates.challenge_root'), '/'),
             'documentRoot' => $documentRoot,
+            // Included by the vhost, never rendered into it — see ensureSiteRules().
+            'siteRules' => $application->siteRulesPath(),
             // The largest request body this site accepts, in bytes.
             //
             // Every web server has its own default for this and nothing here

@@ -699,6 +699,27 @@ return [
     'cron_d' => env('SERVER_CRON_D', '/etc/cron.d'),
 
     /*
+    |--------------------------------------------------------------------------
+    | Per-site web server rules
+    |--------------------------------------------------------------------------
+    |
+    | One root-owned directory per site, `{root}/{slug}`, whose `*.conf` files
+    | the site's vhost includes. The vhost itself is rendered from a template
+    | and rewritten on every domain, certificate or HTTPS change, so anything
+    | written into it by hand or by an addon is lost on the next one. This
+    | directory is never rendered: the panel only creates it and removes it
+    | with the site, and what is inside belongs to whoever put it there — the
+    | WordPress toolkit's xmlrpc and uploads-PHP blocks, today.
+    |
+    | Root-owned and outside the site's home on purpose. v7 kept the same
+    | directory under the site and chowned it to the site user, which let the
+    | site's own account write web server configuration.
+    |
+    */
+
+    'site_rules_root' => env('SERVER_SITE_RULES_ROOT', '/etc/panel-site-rules'),
+
+    /*
     | Cron writes a job's output nowhere useful by default — it mails it, and a
     | server with no MTA discards it silently, so a failing job leaves no trace
     | at all. Managed jobs therefore redirect into one file per job here.
