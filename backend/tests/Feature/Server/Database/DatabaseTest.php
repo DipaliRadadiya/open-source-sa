@@ -1035,3 +1035,92 @@ it('does nothing when the engine is installed and answering', function () {
 
     Bus::assertNotDispatched(InstallDatabaseEngine::class);
 });
+
+/*
+|--------------------------------------------------------------------------
+| Bug #34: adopted databases and their users
+|--------------------------------------------------------------------------
+|
+| Adopt recorded the database and none of its users, so it showed 0 users
+| and deleting it left them behind with their rights. And a user that serves
+| two databases (common on a server brought over from v7) must not be dropped
+| with the first one: the other site would stop working.
+*/
+function fakeDbWithUsers(): ArrayObject
+{
+    $sqls = new ArrayObject;
+
+    Process::fake(function ($process) use ($sqls) {
+        $sql = (string) ($process->input ?? '');
+        $sqls->append($sql);
+
+        return match (true) {
+            str_contains($sql, 'SHOW DATABASES') => Process::result(output: "other_db\nshared_db\n"),
+            str_contains($sql, 'FROM mysql.user') => Process::result(output: "only_user\tlocalhost\nshared_user\t%\n"),
+            str_contains($sql, "SHOW GRANTS FOR 'only_user'") => Process::result(output: "GRANT ALL PRIVILEGES ON `other_db`.* TO `only_user`@`localhost`\n"),
+            str_contains($sql, "SHOW GRANTS FOR 'shared_user'") => Process::result(output: "GRANT ALL PRIVILEGES ON `other_db`.* TO `shared_user`@`%`\nGRANT SELECT ON `shared_db`.* TO `shared_user`@`%`\n"),
+            str_contains($sql, 'default_character_set_name') => Process::result(output: "utf8mb4\tutf8mb4_general_ci"),
+            default => Process::result(output: '0'),
+        };
+    });
+
+    return $sqls;
+}
+
+it('records the users an adopted database already has', function () {
+    fakeDbWithUsers();
+
+    test()->withHeaders(dbAuth())->postJson('/api/databases/adopt', ['engine' => 'mysql', 'names' => ['other_db']])->assertStatus(201);
+
+    $users = Database::where('name', 'other_db')->first()->users;
+
+    expect($users->map(fn ($u) => $u->username.'@'.$u->host)->sort()->values()->all())->toBe(['only_user@localhost', 'shared_user@%'])
+        ->and($users->firstWhere('username', 'shared_user')->connection_preference)->toBe('anywhere')
+        // The engine holds a hash, never the password.
+        ->and($users->pluck('password')->filter()->all())->toBe([]);
+});
+
+it('drops only the users that serve nothing else when an adopted database is deleted', function () {
+    $sqls = fakeDbWithUsers();
+    test()->withHeaders(dbAuth())->postJson('/api/databases/adopt', ['engine' => 'mysql', 'names' => ['other_db']])->assertStatus(201);
+    $db = Database::where('name', 'other_db')->first();
+
+    test()->withHeaders(dbAuth())->deleteJson("/api/databases/{$db->id}")->assertNoContent();
+
+    $dropped = collect($sqls)->filter(fn ($sql) => str_contains($sql, 'DROP USER'))->implode("\n");
+
+    expect($dropped)->toContain("'only_user'@'localhost'")
+        ->and($dropped)->not->toContain('shared_user');
+});
+
+it('keeps a user the panel has on another database too', function () {
+    $sqls = fakeDbWithUsers();
+    $one = Database::create(['name' => 'one', 'engine' => 'mysql']);
+    $two = Database::create(['name' => 'two', 'engine' => 'mysql']);
+    $one->users()->create(['username' => 'both', 'password' => 'p', 'connection_preference' => 'localhost', 'host' => 'localhost']);
+    $two->users()->create(['username' => 'both', 'password' => 'p', 'connection_preference' => 'localhost', 'host' => 'localhost']);
+
+    test()->withHeaders(dbAuth())->deleteJson("/api/databases/{$one->id}")->assertNoContent();
+
+    expect(collect($sqls)->contains(fn ($sql) => str_contains($sql, 'DROP USER')))->toBeFalse()
+        ->and($two->users()->count())->toBe(1);
+});
+
+it('keeps an adopted user when the engine cannot say what else it serves', function () {
+    $sqls = new ArrayObject;
+    Process::fake(function ($process) use ($sqls) {
+        $sql = (string) ($process->input ?? '');
+        $sqls->append($sql);
+
+        // The account listing fails; everything else works.
+        return str_contains($sql, 'FROM mysql.user')
+            ? Process::result(exitCode: 1, errorOutput: 'denied')
+            : Process::result(output: '0');
+    });
+    $db = Database::create(['name' => 'old_site', 'engine' => 'mysql']);
+    $db->users()->create(['username' => 'v7_user', 'password' => null, 'connection_preference' => 'localhost', 'host' => 'localhost']);
+
+    test()->withHeaders(dbAuth())->deleteJson("/api/databases/{$db->id}")->assertNoContent();
+
+    expect(collect($sqls)->contains(fn ($sql) => str_contains($sql, 'DROP USER')))->toBeFalse();
+});
