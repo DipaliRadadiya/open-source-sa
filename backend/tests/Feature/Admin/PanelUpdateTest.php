@@ -614,3 +614,81 @@ describe('the installed commit after git packs its refs', function () {
         expect(panelInfoFor(packed: true)->installed()['commit_hash'])->toBe(str_repeat('ab12', 10));
     });
 });
+
+/*
+ * Bug #6: a fresh install is a shallow clone of main with no tags, so its
+ * version is the VERSION file's word — 1.0.14 while main was 369 commits past
+ * v1.0.17. The panel offered v1.0.17 (older code), and pressing Update started
+ * a run the forward-only guard then refused.
+ */
+describe('an install whose version is only the file\'s word (bug #6)', function () {
+    function installedFromFile(string $committedAt): array
+    {
+        return ['version' => '1.0.14', 'source' => 'file', 'committed_at' => $committedAt];
+    }
+
+    it('offers no update when the running code is newer than the release', function () {
+        $releases = app(AvailableRelease::class);
+
+        expect($releases->isUpdate(installedFromFile('2026-10-01T12:00:00+00:00'), ['version' => '1.0.17', 'published_at' => '2026-09-20T10:00:00Z']))->toBeFalse();
+    });
+
+    it('still offers one when the release came after the running code', function () {
+        $releases = app(AvailableRelease::class);
+
+        expect($releases->isUpdate(installedFromFile('2026-09-01T12:00:00+00:00'), ['version' => '1.0.17', 'published_at' => '2026-09-20T10:00:00Z']))->toBeTrue()
+            // A real tag is still compared by number, as before.
+            ->and($releases->isUpdate(['version' => '1.0.14', 'source' => 'tag', 'committed_at' => '2026-10-01T12:00:00+00:00'], ['version' => '1.0.17', 'published_at' => '2026-09-20T10:00:00Z']))->toBeTrue();
+    });
+
+    it('says so on the screen, and refuses the button rather than starting a run that fails', function () {
+        fakeRelease('v1.0.17'); // published 2026-08-01
+        $info = Mockery::mock(InstalledPanelInfo::class)->makePartial();
+        $info->shouldReceive('installed')->andReturn([
+            'version' => '1.0.14', 'commit_hash' => str_repeat('a', 40), 'commit_short' => 'aaaaaaa', 'branch' => 'main',
+            'source' => 'file', 'committed_at' => '2026-10-01T12:00:00+00:00', 'is_git_checkout' => true, 'has_local_changes' => false,
+        ]);
+        app()->instance(InstalledPanelInfo::class, $info);
+
+        expect($this->withHeaders(panelAdminHeader())->getJson('/api/admin/panel-update')->json('panel_update.update_available'))->toBeFalse();
+
+        $this->withHeaders(panelAdminHeader())->postJson('/api/admin/panel-update')
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.version.0', __('panel_update.errors.no_update'));
+    });
+
+    it('reads the commit date off a real checkout', function () {
+        $repo = sys_get_temp_dir().'/panel-version-'.bin2hex(random_bytes(4));
+        mkdir($repo.'/backend', 0755, true);
+        Process::path($repo)->run(['git', 'init', '-q']);
+        Process::path($repo)->env(['GIT_COMMITTER_DATE' => '2026-10-01T12:00:00+00:00'])
+            ->run(['git', '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'r']);
+
+        $info = Mockery::mock(InstalledPanelInfo::class)->makePartial();
+        $info->shouldReceive('repositoryPath')->andReturn($repo);
+
+        expect($info->installed()['committed_at'])->toBe('2026-10-01T12:00:00+00:00');
+
+        Process::run(['rm', '-rf', $repo]);
+    });
+});
+
+/*
+ * Bug #19: sites:resync locks the panel directory with setfacl through the
+ * sudo grant, and ran before panel:sudoers. On a server whose grant was older
+ * than that, the lock failed and the directory stayed readable.
+ */
+it('updates the panel\'s privileges before anything that uses them', function () {
+    $script = inPlaceScript();
+    $sudoers = strpos($script, 'note sync_privileges');
+
+    expect($sudoers)->not->toBeFalse();
+
+    foreach (['resync_site_configs', 'record_firewall_defaults', 'resync_fail2ban', 'repair_node_runtime'] as $step) {
+        expect(strpos($script, "note {$step}"))->toBeGreaterThan($sudoers, "{$step} runs before sync_privileges");
+    }
+
+    // The progress list follows the script, so the bar does not jump back.
+    $steps = UpdateScript::STEPS;
+    expect(array_search('sync_privileges', $steps, true))->toBeLessThan(array_search('resync_site_configs', $steps, true));
+});
