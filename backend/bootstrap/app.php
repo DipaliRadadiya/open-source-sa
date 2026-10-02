@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CentralOnly;
 use App\Http\Middleware\CentralSystemGuard;
 use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\SetLocale;
@@ -90,6 +91,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'permission' => CheckPermission::class,
             'central' => CentralSystemGuard::class,
+            'central.only' => CentralOnly::class,
             // One counter per route for `throttle:N,M`; see the class.
             'throttle' => ThrottleRequestsPerRoute::class,
         ]);

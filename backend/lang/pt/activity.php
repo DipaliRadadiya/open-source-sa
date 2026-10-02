@@ -132,6 +132,7 @@ return [
     'application.primary_domain_changed' => 'Alterou o domínio principal de :from para :to',
     'application.certificate_requested' => 'Solicitou um certificado :type para :domain',
     'application.magic_login' => 'Iniciou sessão em :domain como utilizador do WordPress :wp_user',
+    'application.addon_command' => ':command executado em :domain via :addon',
     'application.certificate_dry_run' => 'Iniciou uma simulação de certificado para :domain',
     'application.certificate_dry_run_finished' => 'A simulação de certificado para :domain terminou (:result)',
     'application.certificate_issued' => 'Emitiu um certificado :type para :domain',

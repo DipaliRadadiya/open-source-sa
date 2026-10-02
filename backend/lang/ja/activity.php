@@ -132,6 +132,7 @@ return [
     'application.primary_domain_changed' => 'プライマリドメインを :from から :to に変更しました',
     'application.certificate_requested' => ':domain の :type 証明書を要求しました',
     'application.magic_login' => ':domain に WordPress ユーザー :wp_user としてログインしました',
+    'application.addon_command' => ':addon で :domain に :command を実行しました',
     'application.certificate_dry_run' => ':domain の証明書ドライランを開始しました',
     'application.certificate_dry_run_finished' => ':domain の証明書ドライランが完了しました (:result)',
     'application.certificate_issued' => ':domain の :type 証明書を発行しました',

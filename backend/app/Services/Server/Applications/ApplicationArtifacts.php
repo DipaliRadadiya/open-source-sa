@@ -11,6 +11,7 @@ use App\Models\Application;
 use App\Models\Backup;
 use App\Models\Cronjob;
 use App\Models\Worker;
+use App\Services\Addons\InsightHubToolkit;
 use App\Services\Server\Certificates\CertbotClient;
 use App\Services\Server\Certificates\CertificateFiles;
 use App\Services\Server\Php\PoolManager;
@@ -141,6 +142,16 @@ class ApplicationArtifacts
 
         $this->attempt($application, 'site_rules', function () use ($application) {
             $this->removeSiteRules($application);
+        });
+
+        $this->attempt($application, 'insighthub', function () use ($application) {
+            // Registered only through Central; a site InsightHub never heard
+            // of has nothing to remove. Resolved lazily like the others here.
+            $insighthub = app(InsightHubToolkit::class);
+
+            if ($application->insighthub_id !== null && $insighthub->installed()) {
+                $insighthub->unregister($application);
+            }
         });
 
         $this->attempt($application, 'fail2ban', function () use ($application) {

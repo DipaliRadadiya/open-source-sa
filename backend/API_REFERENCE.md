@@ -5958,6 +5958,79 @@ Revokes the current token. **Response `200`:** `{"message": "…"}`
 
 ---
 
+## Central — Paid Addons (WP Toolkit, InsightHub)
+
+**Central only.** Every route below answers **404 to anyone but Central** (administrators included) and is reached with `Authorization: Bearer <central token>`. The OSS panel does not offer these features itself. The addon binaries (`/usr/local/bin/wp-toolkit`, `/usr/local/bin/insighthub-toolkit`) are installed by Central and check their own licence against ServerAvatar on every run — the panel holds no licence logic.
+
+**Answers.** A synchronous route returns the addon's own JSON **unchanged** (`{"status":"success","message":…, …}`, same keys as the v7 agent routes). A route marked *queued* returns **`202`** with a run: `{"data":{"id","application_id","addon","command","status":"queued|running|succeeded|failed","http_status","result","created_at","started_at","finished_at"}}`; poll `GET /central/addons/runs/{id}` until `status` is `succeeded` or `failed`. `result` then holds what the synchronous call would have returned, and `http_status` its status.
+
+**Errors** — every body has a machine `code` and a translated `message`:
+
+| Status | `code` | Meaning |
+|---|---|---|
+| 403 | `addon_licence_required` | The addon says this server has not bought it |
+| 404 | `addon_not_installed` | The binary is not on this server |
+| 409 | `addon_site_not_registered` | InsightHub has no record of this site (call `register`) |
+| 422 | `addon_command_failed` | The addon ran and refused; its own error fields are under `addon` (e.g. `addon.message`, InsightHub's `addon.field`) |
+| 502 | `addon_bad_output` | It printed something that is not its JSON |
+| 504 | `addon_timed_out` | It did not finish (55 s for direct calls, 30 min for queued runs) |
+
+Plain `422` with `errors` is ordinary request validation. WordPress routes on a non-WordPress or not-yet-active site answer `404`.
+
+### GET `/central/addons`
+`{"addons":[{"name":"wp-toolkit","installed":true,"version":"…"},{"name":"insighthub-toolkit","installed":false,"version":null}]}`
+
+### GET `/central/addons/runs/{run}`
+A queued run (shape above).
+
+### WP Toolkit — `/central/addons/applications/{application}/wordpress/…`
+
+Runs WP-CLI as the site's owner, on its document root, under the site's own PHP version. `{slug}` is a plugin/theme slug (`[A-Za-z0-9][A-Za-z0-9._-]*`). Changes are written to the activity log (`application.addon_command`); reads are not.
+
+| Method | Path | Body | Queued | v7 agent route |
+|---|---|---|---|---|
+| GET | `plugins` | — | | `plugins/list` |
+| POST | `plugins` | `plugin` (slug or https URL), `activate`?, `version`? | ✓ | `plugins/install` |
+| DELETE | `plugins/{slug}` | `keep_files`? | | `plugins/uninstall` |
+| POST | `plugins/{slug}/toggle` | `action`: `activate`\|`deactivate` | | `plugins/toggle` |
+| POST | `plugins/{slug}/update` | — | ✓ | `plugins/update` |
+| POST | `plugins/update-all` | — | ✓ | `plugins/update-all` |
+| GET | `themes` | — | | `themes/list` |
+| POST | `themes` | `theme`, `activate`?, `version`? | ✓ | `themes/install` |
+| DELETE | `themes/{slug}` | — | | `themes/uninstall` |
+| POST | `themes/{slug}/activate` | — | | `themes/activate` |
+| POST | `themes/{slug}/update` | — | ✓ | `themes/update` |
+| POST | `themes/update-all` | — | ✓ | `themes/update-all` |
+| GET | `core/version` | — | | — |
+| POST | `core/update` | `version`?, `minor`? (also updates the database) | ✓ | `core-update` |
+| POST | `core/update-db` | — | ✓ | `database/update` |
+| POST | `core/verify-checksums` | — (a mismatch is a `succeeded` run with `verified:false`) | ✓ | `checksums/verify` |
+| GET | `summary/{part}` | `part`: `site`\|`users`\|`themes`\|`plugins`\|`cron` | | `summary`, `user/summary`, … |
+| POST | `search-replace` | `search`, `replace`, `dry_run`?, `include_guid`? (guid skipped by default) | ✓ | `search-replace` |
+| POST | `rewrite/flush` | `hard`? | | `rewrite/flush` |
+| POST | `cache/flush` | — | | `cache/flush` |
+| POST | `cron/run` | `all`? (default: due now) | ✓ | `wp-cron/run` |
+| PUT | `cron` | `enabled` | | `wp-cron/toggle` |
+| GET | `debug` | — | | `debug/info` |
+| PUT | `debug` | `setting`: `WP_DEBUG`\|`WP_DEBUG_LOG`\|`WP_DEBUG_DISPLAY`, `value` | | `debug/update` |
+| GET | `settings` | — | | `site-settings/get` |
+| PUT | `settings` | any of `site_language`, `timezone`, `date_format`, `time_format`, `permalink_structure` (`""` = plain links), `search_engine_visibility`, `wp_memory_limit`, `wp_max_memory_limit` — **only the keys sent are changed** | | `site-settings` |
+| GET | `maintenance-mode` | — | | `maintenance-mode/status` |
+| PUT | `maintenance-mode` | `active` | | `maintenance-mode/toggle` |
+| GET | `security` | — | | xmlrpc / uploads part of `summary` |
+| PUT | `security/{rule}` | `rule`: `xmlrpc`\|`uploads-php`; `blocked` | | `xmlrpc/toggle`, `php-execution-upload-directory/toggle` |
+
+`security` writes web server rules into the site's root-owned rules directory (`/etc/panel-site-rules/<slug>`), which survive every domain, certificate and HTTPS change.
+
+### InsightHub — access-log analytics
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/central/addons/insights/applications` | Every site InsightHub knows |
+| POST | `/central/addons/applications/{application}/insights/register` | Registers the site (key `v8-<id>`) and stores InsightHub's id. Safe to repeat: an earlier registration of the same site is adopted. A name/domain held by another site → `422 addon_command_failed`, `addon.field` says which. |
+| DELETE | `/central/addons/applications/{application}/insights/register` | Unregisters it. Deleting the site does this too. |
+| GET | `/central/addons/applications/{application}/insights/bandwidth/{report}` | `report`: `summary`, `trends`, `bot-vs-human`, `high-usage-urls`, `by-file-type`, `top-ips`; `?limit=1..1000` on lists. Cached 5 minutes; errors are not cached. More groups (dashboard, traffic, errors, bots, user agents) are added as the toolkit ports them. |
+
 ## Incoming Deploy Webhooks
 
 ### POST `/webhooks/deploy/{identifier}`

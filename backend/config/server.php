@@ -214,6 +214,12 @@ return [
             'hostnamectl', 'timedatectl', 'shutdown', 'df', 'du',
             'ps', 'kill', 'ss', 'curl', 'unzip', 'zip',
             'tar', 'git', 'fnm', 'wp',
+            // The paid addons Central installs (docs: sv-wp-toolkit and
+            // sv-insighthub-toolkit, docs/INTEGRATION.md). wp-toolkit sudoes
+            // to the site user itself and writes web server rules; the
+            // insighthub one reads every site's access log. Both are called
+            // only from the central-only addon endpoints.
+            'wp-toolkit', 'insighthub-toolkit',
         ],
 
         // Where a binary lives, when it is not /usr/bin/<name>.
@@ -252,6 +258,8 @@ return [
             'shutdown' => ['/usr/sbin/shutdown'],
             'fnm' => ['/usr/local/bin/fnm'],
             'wp' => ['/usr/local/bin/wp'],
+            'wp-toolkit' => ['/usr/local/bin/wp-toolkit'],
+            'insighthub-toolkit' => ['/usr/local/bin/insighthub-toolkit'],
         ],
 
         // Granted as patterns rather than names, and so absent from `binaries`.
@@ -718,6 +726,40 @@ return [
     */
 
     'site_rules_root' => env('SERVER_SITE_RULES_ROOT', '/etc/panel-site-rules'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Addon command-line tools
+    |--------------------------------------------------------------------------
+    |
+    | Paid addons are separate binaries Central installs on the server; the
+    | panel only detects them and runs them for Central (the routes in
+    | routes/api/server/central-addons.php answer nobody else). Whether a
+    | server may use one is decided by the binary itself, against the vendor's
+    | licence API — never here. A binary that is absent is "not installed".
+    |
+    | InsightHub reads its database location from a `.env` in its working
+    | directory, so it is always started from `workdir`: run from the panel's
+    | own directory it would read the panel's .env and the panel's database.
+    |
+    */
+
+    'addons' => [
+        'wp_toolkit' => [
+            'binary' => env('ADDON_WP_TOOLKIT_BINARY', '/usr/local/bin/wp-toolkit'),
+        ],
+        'insighthub' => [
+            'binary' => env('ADDON_INSIGHTHUB_BINARY', '/usr/local/bin/insighthub-toolkit'),
+            'workdir' => env('ADDON_INSIGHTHUB_WORKDIR', '/etc/insighthub-toolkit'),
+            // Every report starts the binary and opens its database, so the
+            // same chart asked for twice within this window is answered once.
+            'cache_seconds' => (int) env('ADDON_INSIGHTHUB_CACHE_SECONDS', 300),
+        ],
+        // A request waits this long for a command; anything that can take
+        // longer is queued and polled instead (AddonRun).
+        'sync_timeout' => 55,
+        'async_timeout' => 1800,
+    ],
 
     /*
     | Cron writes a job's output nowhere useful by default — it mails it, and a

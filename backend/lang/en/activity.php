@@ -138,6 +138,7 @@ return [
     'application.primary_domain_changed' => 'Changed the primary domain from :from to :to',
     'application.certificate_requested' => 'Requested a :type certificate for :domain',
     'application.magic_login' => 'Signed in to :domain as WordPress user :wp_user',
+    'application.addon_command' => 'Ran :command on :domain through :addon',
     'application.certificate_dry_run' => 'Started a certificate dry run for :domain',
     'application.certificate_dry_run_finished' => 'Certificate dry run for :domain finished (:result)',
     'application.certificate_issued' => 'Issued a :type certificate for :domain',
