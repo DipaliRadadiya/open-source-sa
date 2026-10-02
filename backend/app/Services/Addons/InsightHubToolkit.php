@@ -29,7 +29,9 @@ class InsightHubToolkit extends AddonCli
 
     public function label(): string
     {
-        return 'InsightHub';
+        // The product's current name. It launched as InsightHub, which is still
+        // what the binary, its repository and its database are called.
+        return 'Log Monitoring Suite';
     }
 
     protected function binary(): string

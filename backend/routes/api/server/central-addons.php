@@ -69,10 +69,10 @@ Route::middleware('central.only')->prefix('central/addons')->group(function (): 
         $wp('put', 'security/{rule}', 'security.set')->whereIn('rule', ['xmlrpc', 'uploads-php']);
     });
 
-    // ── InsightHub ───────────────────────────────────────────────────────────
-    Route::get('insights/applications', [InsightsAddonController::class, 'applications']);
-    Route::post('applications/{application}/insights/register', [InsightsAddonController::class, 'register']);
-    Route::delete('applications/{application}/insights/register', [InsightsAddonController::class, 'unregister']);
-    Route::get('applications/{application}/insights/{group}/{report}', [InsightsAddonController::class, 'report'])
+    // ── Log Monitoring Suite (binary: insighthub-toolkit) ───────────────────────────────────────────────────────────
+    Route::get('log-monitoring/applications', [InsightsAddonController::class, 'applications']);
+    Route::post('applications/{application}/log-monitoring/register', [InsightsAddonController::class, 'register']);
+    Route::delete('applications/{application}/log-monitoring/register', [InsightsAddonController::class, 'unregister']);
+    Route::get('applications/{application}/log-monitoring/{group}/{report}', [InsightsAddonController::class, 'report'])
         ->whereIn('group', array_keys(InsightsAddonController::REPORTS));
 });

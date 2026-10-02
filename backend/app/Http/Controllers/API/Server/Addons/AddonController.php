@@ -22,6 +22,7 @@ class AddonController extends Controller
         foreach ([$wp, $insighthub] as $addon) {
             $addons[] = [
                 'name' => $addon->name(),
+                'label' => $addon->label(),
                 'installed' => $addon->installed(),
                 'version' => $addon->version(),
             ];

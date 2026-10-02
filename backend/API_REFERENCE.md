@@ -5958,7 +5958,7 @@ Revokes the current token. **Response `200`:** `{"message": "…"}`
 
 ---
 
-## Central — Paid Addons (WP Toolkit, InsightHub)
+## Central — Paid Addons (WP Toolkit, Log Monitoring Suite)
 
 **Central only.** Every route below answers **404 to anyone but Central** (administrators included) and is reached with `Authorization: Bearer <central token>`. The OSS panel does not offer these features itself. The addon binaries (`/usr/local/bin/wp-toolkit`, `/usr/local/bin/insighthub-toolkit`) are installed by Central and check their own licence against ServerAvatar on every run — the panel holds no licence logic.
 
@@ -5970,15 +5970,15 @@ Revokes the current token. **Response `200`:** `{"message": "…"}`
 |---|---|---|
 | 403 | `addon_licence_required` | The addon says this server has not bought it |
 | 404 | `addon_not_installed` | The binary is not on this server |
-| 409 | `addon_site_not_registered` | InsightHub has no record of this site (call `register`) |
-| 422 | `addon_command_failed` | The addon ran and refused; its own error fields are under `addon` (e.g. `addon.message`, InsightHub's `addon.field`) |
+| 409 | `addon_site_not_registered` | Log Monitoring Suite has no record of this site (call `register`) |
+| 422 | `addon_command_failed` | The addon ran and refused; its own error fields are under `addon` (e.g. `addon.message`, Log Monitoring Suite's `addon.field`) |
 | 502 | `addon_bad_output` | It printed something that is not its JSON |
 | 504 | `addon_timed_out` | It did not finish (55 s for direct calls, 30 min for queued runs) |
 
 Plain `422` with `errors` is ordinary request validation. WordPress routes on a non-WordPress or not-yet-active site answer `404`.
 
 ### GET `/central/addons`
-`{"addons":[{"name":"wp-toolkit","installed":true,"version":"…"},{"name":"insighthub-toolkit","installed":false,"version":null}]}`
+`{"addons":[{"name":"wp-toolkit","label":"WP Toolkit","installed":true,"version":"…"},{"name":"insighthub-toolkit","label":"Log Monitoring Suite","installed":false,"version":null}]}`
 
 ### GET `/central/addons/runs/{run}`
 A queued run (shape above).
@@ -6022,14 +6022,16 @@ Runs WP-CLI as the site's owner, on its document root, under the site's own PHP 
 
 `security` writes web server rules into the site's root-owned rules directory (`/etc/panel-site-rules/<slug>`), which survive every domain, certificate and HTTPS change.
 
-### InsightHub — access-log analytics
+### Log Monitoring Suite — access-log analytics
+
+The product launched as InsightHub; the binary, its repository and its database keep that name (`insighthub-toolkit`).
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/central/addons/insights/applications` | Every site InsightHub knows |
-| POST | `/central/addons/applications/{application}/insights/register` | Registers the site (key `v8-<id>`) and stores InsightHub's id. Safe to repeat: an earlier registration of the same site is adopted. A name/domain held by another site → `422 addon_command_failed`, `addon.field` says which. |
-| DELETE | `/central/addons/applications/{application}/insights/register` | Unregisters it. Deleting the site does this too. |
-| GET | `/central/addons/applications/{application}/insights/bandwidth/{report}` | `report`: `summary`, `trends`, `bot-vs-human`, `high-usage-urls`, `by-file-type`, `top-ips`; `?limit=1..1000` on lists. Cached 5 minutes; errors are not cached. More groups (dashboard, traffic, errors, bots, user agents) are added as the toolkit ports them. |
+| GET | `/central/addons/log-monitoring/applications` | Every site Log Monitoring Suite knows |
+| POST | `/central/addons/applications/{application}/log-monitoring/register` | Registers the site (key `v8-<id>`) and stores its id. Safe to repeat: an earlier registration of the same site is adopted. A name/domain held by another site → `422 addon_command_failed`, `addon.field` says which. |
+| DELETE | `/central/addons/applications/{application}/log-monitoring/register` | Unregisters it. Deleting the site does this too. |
+| GET | `/central/addons/applications/{application}/log-monitoring/bandwidth/{report}` | `report`: `summary`, `trends`, `bot-vs-human`, `high-usage-urls`, `by-file-type`, `top-ips`; `?limit=1..1000` on lists. Cached 5 minutes; errors are not cached. More groups (dashboard, traffic, errors, bots, user agents) are added as the toolkit ports them. |
 
 ## Incoming Deploy Webhooks
 

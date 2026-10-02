@@ -112,7 +112,9 @@ it('is reachable with the central token', function () {
         ->assertOk()
         ->assertJsonPath('addons.0.name', 'wp-toolkit')
         ->assertJsonPath('addons.0.installed', true)
-        ->assertJsonPath('addons.0.version', 'wp-toolkit version 1.2');
+        ->assertJsonPath('addons.0.version', 'wp-toolkit version 1.2')
+        // Its current product name; it launched as InsightHub.
+        ->assertJsonPath('addons.1.label', 'Log Monitoring Suite');
 });
 
 // ── running a command ────────────────────────────────────────────────────────
@@ -282,16 +284,17 @@ it('asks for registration before any report', function () {
     fakeAddon(fn () => ['{"status":"success"}']);
 
     $this->withHeaders(addonHeaders($this->token))
-        ->getJson("/api/central/addons/applications/{$this->site->id}/insights/bandwidth/summary")
+        ->getJson("/api/central/addons/applications/{$this->site->id}/log-monitoring/bandwidth/summary")
         ->assertStatus(409)
-        ->assertJsonPath('code', 'addon_site_not_registered');
+        ->assertJsonPath('code', 'addon_site_not_registered')
+        ->assertJsonPath('message', 'This site is not registered with Log Monitoring Suite yet.');
 });
 
 it('registers a site under the panel key, from its own working directory', function () {
     fakeAddon(fn () => ['{"status":"success","application":{"id":7}}']);
 
     $this->withHeaders(addonHeaders($this->token))
-        ->postJson("/api/central/addons/applications/{$this->site->id}/insights/register")
+        ->postJson("/api/central/addons/applications/{$this->site->id}/log-monitoring/register")
         ->assertOk();
 
     $call = end($GLOBALS['addonRan']);
@@ -304,7 +307,7 @@ it('adopts its own earlier registration instead of failing on a retry', function
     fakeAddon(fn () => ['', '{"status":"error","code":"conflict","field":"key","application_id":9,"message":"taken"}', 1]);
 
     $this->withHeaders(addonHeaders($this->token))
-        ->postJson("/api/central/addons/applications/{$this->site->id}/insights/register")
+        ->postJson("/api/central/addons/applications/{$this->site->id}/log-monitoring/register")
         ->assertOk();
 
     expect($this->site->fresh()->insighthub_id)->toBe(9);
@@ -314,7 +317,7 @@ it('reports a name held by another site as a conflict', function () {
     fakeAddon(fn () => ['', '{"status":"error","code":"conflict","field":"domain","application_id":3,"message":"taken"}', 1]);
 
     $this->withHeaders(addonHeaders($this->token))
-        ->postJson("/api/central/addons/applications/{$this->site->id}/insights/register")
+        ->postJson("/api/central/addons/applications/{$this->site->id}/log-monitoring/register")
         ->assertUnprocessable()
         ->assertJsonPath('addon.field', 'domain');
 
@@ -326,7 +329,7 @@ it('answers a repeated report from the cache', function () {
     $this->site->forceFill(['insighthub_id' => 7])->save();
     fakeAddon(fn () => ['{"status":"success","data":{"total_bandwidth":10}}']);
 
-    $url = "/api/central/addons/applications/{$this->site->id}/insights/bandwidth/top-ips?limit=5";
+    $url = "/api/central/addons/applications/{$this->site->id}/log-monitoring/bandwidth/top-ips?limit=5";
     $this->withHeaders(addonHeaders($this->token))->getJson($url)->assertOk()->assertJsonPath('data.total_bandwidth', 10);
     $this->withHeaders(addonHeaders($this->token))->getJson($url)->assertOk();
 
@@ -339,7 +342,7 @@ it('does not cache a failure', function () {
     $this->site->forceFill(['insighthub_id' => 7])->save();
     fakeAddon(fn () => ['', '{"status":"error","code":"licence_required","message":"no"}', 1]);
 
-    $url = "/api/central/addons/applications/{$this->site->id}/insights/bandwidth/summary";
+    $url = "/api/central/addons/applications/{$this->site->id}/log-monitoring/bandwidth/summary";
     $this->withHeaders(addonHeaders($this->token))->getJson($url)->assertForbidden();
     $this->withHeaders(addonHeaders($this->token))->getJson($url)->assertForbidden();
 
@@ -350,7 +353,7 @@ it('knows only the reports the toolkit has', function () {
     $this->site->forceFill(['insighthub_id' => 7])->save();
 
     $this->withHeaders(addonHeaders($this->token))
-        ->getJson("/api/central/addons/applications/{$this->site->id}/insights/bandwidth/everything")
+        ->getJson("/api/central/addons/applications/{$this->site->id}/log-monitoring/bandwidth/everything")
         ->assertNotFound();
 });
 
