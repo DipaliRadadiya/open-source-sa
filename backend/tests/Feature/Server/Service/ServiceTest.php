@@ -488,3 +488,48 @@ it('gives each unit its own block even when one in the middle does not exist', f
         ->and($services['openlitespeed']['status'])->toBe('active')
         ->and($services['redis']['status'])->toBe('active');
 });
+
+/*
+ * Bug #12: PostgreSQL boots through its clusters (`postgresql@18-main`), each
+ * enabled on its own. "Start on boot" off disabled the `postgresql` meta unit
+ * only, and the cluster started after the next reboot anyway (measured on the
+ * OLS test server: both units enabled in multi-user.target.wants).
+ */
+it('switches start-on-boot for every PostgreSQL cluster, not just the meta unit', function (string $action) {
+    Process::fake(function ($process) {
+        $command = (array) $process->command;
+
+        if (($command[1] ?? null) === 'show') {
+            return Process::result(output: systemctlShowOutput($command, ['postgresql' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled']]));
+        }
+
+        if (($command[1] ?? null) === 'list-units') {
+            return Process::result(output: "postgresql@18-main.service loaded active running PostgreSQL Cluster 18-main\npostgresql@16-main.service loaded inactive dead PostgreSQL Cluster 16-main\n");
+        }
+
+        return Process::result();
+    });
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/services/postgresql', ['action' => $action])
+        ->assertOk();
+
+    foreach (['postgresql', 'postgresql@18-main.service', 'postgresql@16-main.service'] as $unit) {
+        Process::assertRan(fn ($p) => $p->command === ['systemctl', $action, $unit]);
+    }
+})->with(['disable', 'enable']);
+
+it('leaves the clusters alone for start, stop and restart, which reach them already', function () {
+    Process::fake(function ($process) {
+        $command = (array) $process->command;
+
+        return ($command[1] ?? null) === 'show'
+            ? Process::result(output: systemctlShowOutput($command, ['postgresql' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled']]))
+            : Process::result();
+    });
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/services/postgresql', ['action' => 'restart'])->assertOk();
+
+    Process::assertNotRan(fn ($p) => ($p->command[1] ?? null) === 'list-units');
+});

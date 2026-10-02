@@ -266,6 +266,60 @@ class ServiceManager
         ));
     }
 
+    /**
+     * Run an action on a catalog service, including the units that really
+     * start at boot for it.
+     *
+     * Bug #12: PostgreSQL boots through its clusters (`postgresql@18-main`),
+     * each enabled on its own; `postgresql` is a meta unit. Switching "Start
+     * on boot" off disabled the meta unit only, and the cluster started after
+     * the next reboot anyway. Start/stop/restart need no such help — the
+     * clusters are `PartOf=postgresql.service`.
+     *
+     * @param  array{unit: string, instances?: string}  $service
+     */
+    public function runService(array $service, string $action): ServerOpsResult
+    {
+        $result = $this->run($service['unit'], $action);
+
+        if ($result->failed() || ! isset($service['instances']) || ! in_array($action, ['enable', 'disable'], true)) {
+            return $result;
+        }
+
+        foreach ($this->instances($service['instances']) as $instance) {
+            $each = $this->run($instance, $action);
+
+            if ($each->failed()) {
+                return $each;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * The units systemd knows by this pattern (`postgresql@*`), running or not.
+     *
+     * @return array<int, string>
+     */
+    private function instances(string $pattern): array
+    {
+        $result = $this->serverOps->run(
+            ['systemctl', 'list-units', '--all', '--plain', '--no-legend', '--type=service', $pattern],
+            ['feature' => 'service', 'op' => 'list_instances', 'pattern' => $pattern],
+        );
+
+        if ($result->failed()) {
+            return [];
+        }
+
+        return collect(preg_split('/\r?\n/', trim($result->output())) ?: [])
+            ->map(fn (string $line) => strtok(trim($line), ' '))
+            ->filter(fn ($unit) => is_string($unit) && fnmatch($pattern.'.service', $unit))
+            ->values()
+            ->all();
+    }
+
     public function run(string $unit, string $action): ServerOpsResult
     {
         return $this->serverOps->run(

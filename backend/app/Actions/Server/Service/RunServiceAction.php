@@ -58,7 +58,7 @@ class RunServiceAction
             $this->refuseBrokenConfig($service);
         }
 
-        $result = $this->services->run($service['unit'], $action);
+        $result = $this->services->runService($service, $action);
 
         if ($result->failed()) {
             throw new ServiceOperationException($result->reference);

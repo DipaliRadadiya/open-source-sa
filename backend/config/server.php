@@ -1969,7 +1969,9 @@ return [
         | The port comes from the same env var as the engine's `default_port`
         | above, so the probe and the connection cannot drift apart.
         */
-        ['key' => 'postgresql', 'unit' => 'postgresql', 'label' => 'PostgreSQL', 'install' => ['database', 'postgresql'],
+        // `instances`: each cluster is enabled at boot on its own, so "Start
+        // on boot" has to reach them too (bug #12) — see runService().
+        ['key' => 'postgresql', 'unit' => 'postgresql', 'label' => 'PostgreSQL', 'install' => ['database', 'postgresql'], 'instances' => 'postgresql@*',
             'health' => ['pg_isready', '--quiet', '--host=127.0.0.1', '--port='.(int) env('SERVER_POSTGRES_PORT', 5432)]],
         ['key' => 'redis', 'unit' => 'redis-server', 'label' => 'Redis'],
         ['key' => 'supervisor', 'unit' => 'supervisor', 'label' => 'Supervisor'],
