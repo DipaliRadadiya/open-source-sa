@@ -1339,6 +1339,10 @@ return [
         // a decline writes nothing, so a new site never opens on a red error
         // about SSL the user has not set up yet.
         'auto_issue' => env('SV_AUTO_ISSUE_CERTIFICATES', true),
+        // Bug #52: the check after a reload can reach workers that do not know
+        // the new site yet. A "not served" answer is asked again this often.
+        'auto_issue_attempts' => (int) env('SV_AUTO_ISSUE_ATTEMPTS', 4),
+        'auto_issue_retry_seconds' => (int) env('SV_AUTO_ISSUE_RETRY_SECONDS', 2),
 
         // Warn this far out. Let's Encrypt certificates last 90 days and renew
         // at 30; a warning any earlier is noise, any later is not a warning.

@@ -58,10 +58,7 @@ class AutoIssueCertificate
             return null;
         }
 
-        $passed = array_values(array_map(
-            fn (array $result) => $result['domain'],
-            array_filter($this->reachability->checkAll($candidates), fn (array $result) => $result['ok']),
-        ));
+        $passed = $this->reachable($candidates);
 
         if ($passed === []) {
             return null;
@@ -81,6 +78,45 @@ class AutoIssueCertificate
             ->onQueue(app(QueueWorker::class)->priorityQueue());
 
         return $certificate;
+    }
+
+    /**
+     * The names that answered the dry-run challenge.
+     *
+     * Asked again, briefly, when the only problem is that the challenge was
+     * not served yet (bug #52). `systemctl reload` returns before the web
+     * server's new workers take over, and a Blank PHP, Static, Git, Staging
+     * or Clone site reaches this step straight after that reload — the old
+     * workers do not know the new name, so the check failed and no
+     * certificate was issued, while one-click apps, which install for a
+     * while first, got theirs. Measured on the nginx test server: the same
+     * check minutes later passed. Anything else (DNS elsewhere, a proxy) is a
+     * real answer and is not retried.
+     *
+     * @return array<int, string>
+     */
+    private function reachable($candidates): array
+    {
+        $attempts = max(1, (int) config('server.certificates.auto_issue_attempts', 4));
+        $delay = (int) config('server.certificates.auto_issue_retry_seconds', 2);
+
+        for ($attempt = 1; ; $attempt++) {
+            $results = $this->reachability->checkAll($candidates);
+            $passed = array_values(array_map(
+                fn (array $result) => $result['domain'],
+                array_filter($results, fn (array $result) => $result['ok']),
+            ));
+
+            $notYet = collect($results)->contains(fn (array $result) => ! $result['ok'] && ($result['reason'] ?? null) === 'challenge_not_served');
+
+            if ($passed !== [] || ! $notYet || $attempt >= $attempts) {
+                return $passed;
+            }
+
+            if ($delay > 0) {
+                sleep($delay);
+            }
+        }
     }
 
     /**

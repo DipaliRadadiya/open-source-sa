@@ -187,3 +187,69 @@ it('cannot break the provision it runs at the end of', function () {
     expect(Certificate::count())->toBe(0)
         ->and($this->application->fresh()->status->value)->toBe('active');
 });
+
+/*
+ * Bug #52: Blank PHP, Static, Git, Staging and Clone sites reach this step
+ * straight after `systemctl reload`, which returns before the new workers take
+ * over — the first challenge fetch got the old workers' 404, and no
+ * certificate was issued. Measured on the nginx test server: minutes later the
+ * same check passed. One-click apps, installing for a while first, never hit it.
+ */
+it('asks again when the web server has not picked up the new site yet', function () {
+    pointDnsHere();
+    $calls = 0;
+    Http::fake(function ($request) use (&$calls) {
+        $calls++;
+
+        // Old workers for the first two fetches, then the new config.
+        return $calls <= 2
+            ? Http::response('Not Found', 404)
+            : Http::response(basename(parse_url($request->url(), PHP_URL_PATH))."\n", 200);
+    });
+
+    app(AutoIssueCertificate::class)->attempt($this->application);
+
+    expect(Certificate::count())->toBe(1)->and($calls)->toBe(3);
+    Queue::assertPushed(IssueCertificate::class);
+});
+
+it('gives up quietly after a few tries, and does not retry a domain pointed elsewhere', function () {
+    pointDnsHere();
+    $calls = 0;
+    Http::fake(function () use (&$calls) {
+        $calls++;
+
+        return Http::response('Not Found', 404);
+    });
+
+    app(AutoIssueCertificate::class)->attempt($this->application);
+
+    expect(Certificate::count())->toBe(0)
+        ->and($calls)->toBe((int) config('server.certificates.auto_issue_attempts'));
+
+    // Pointed elsewhere is a real answer: asked once, never fetched.
+    pointDnsHere('198.51.100.5');
+    $calls = 0;
+
+    app(AutoIssueCertificate::class)->attempt($this->application->fresh(['domains', 'certificate']));
+
+    expect($calls)->toBe(0)->and(Certificate::count())->toBe(0);
+});
+
+it('checks a domain pointed elsewhere once, so a new site does not wait for nothing', function () {
+    $checks = 0;
+    $this->mock(DnsVerifier::class, function ($mock) use (&$checks) {
+        $mock->shouldReceive('verify')->andReturnUsing(function ($domain) use (&$checks) {
+            $checks++;
+            $domain->update(['dns_resolved_ip' => '198.51.100.5', 'behind_proxy' => false]);
+
+            return $domain;
+        });
+        $mock->shouldReceive('serverIp')->andReturn(test()->serverIp);
+    });
+    Http::fake();
+
+    app(AutoIssueCertificate::class)->attempt($this->application);
+
+    expect($checks)->toBe(1)->and(Certificate::count())->toBe(0);
+});
