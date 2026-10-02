@@ -243,7 +243,11 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
             $sql .= ' TEMPLATE template0';
         }
 
-        $this->must($sql.';');
+        // Bug #35: PostgreSQL grants CONNECT and TEMP on every new database to
+        // PUBLIC, so every site's user could open every other site's database
+        // and read its table names. Only its own users get in (createUser()
+        // grants them by name); the panel's account is a superuser.
+        $this->must($sql.'; REVOKE CONNECT, TEMPORARY ON DATABASE '.$this->ident($name).' FROM PUBLIC;');
     }
 
     /**
@@ -351,11 +355,22 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
             $this->literal($password),
         ));
 
-        $this->must(sprintf(
-            'ALTER DATABASE %s OWNER TO %s;',
-            $this->ident($database),
-            $this->ident($username),
-        ));
+        // A database has one owner, so a second user takes it over. Without
+        // PUBLIC's CONNECT (bug #35) the previous owner would then be locked
+        // out, so it gets CONNECT by name — after the transfer: a grant made
+        // to the owner is the owner's own right and moves with ownership.
+        // Measured on PostgreSQL 18, three users in turn: all three connect,
+        // any other role is refused.
+        $previous = trim($this->run(sprintf(
+            'SELECT pg_get_userbyid(datdba) FROM pg_database WHERE datname = %s;',
+            $this->literal($database),
+        ))->output());
+
+        $this->must(sprintf('ALTER DATABASE %s OWNER TO %s;', $this->ident($database), $this->ident($username)));
+
+        if ($previous !== '' && $previous !== $username) {
+            $this->must(sprintf('GRANT CONNECT, TEMPORARY ON DATABASE %s TO %s;', $this->ident($database), $this->ident($previous)));
+        }
 
         $this->mustIn($database, sprintf(
             'ALTER SCHEMA public OWNER TO %s; GRANT ALL ON SCHEMA public TO %s;',

@@ -354,3 +354,45 @@ it('reports an unmeasured counter as nothing, not as zero', function () {
 
     expect(pgEngine()->status()['slow_queries'])->toBeNull();
 });
+
+/*
+ * Bug #35: PostgreSQL grants CONNECT on every new database to PUBLIC, so one
+ * site's user could open another site's database and list its tables.
+ * Measured on PostgreSQL 18 (OLS test server, 2026-10-02): with this, the
+ * database's own users connect, any other role is refused.
+ */
+it('takes CONNECT away from everybody when it creates a database', function () {
+    pgEngine()->createDatabase('shop', null, null);
+
+    expect(pgStatements())->toContain('CREATE DATABASE "shop"; REVOKE CONNECT, TEMPORARY ON DATABASE "shop" FROM PUBLIC;');
+});
+
+it('keeps the previous owner connected when a second user takes the database over', function () {
+    Process::fake(function ($process) {
+        $this->ran[] = ['command' => $process->command, 'input' => (string) ($process->input ?? '')];
+
+        return Process::result(output: str_contains((string) $process->input, 'pg_get_userbyid') ? "first_user\n" : '1');
+    });
+
+    pgEngine()->createUser('second_user', 'localhost', 'pw', 'shop_db');
+
+    $sql = pgStatements();
+
+    // After the transfer, not before: a grant to the current owner is the
+    // owner's own right and moves with ownership (measured — the first user
+    // was locked out when it was granted first).
+    expect(strpos($sql, 'GRANT CONNECT, TEMPORARY ON DATABASE "shop_db" TO "first_user"'))
+        ->toBeGreaterThan(strpos($sql, 'ALTER DATABASE "shop_db" OWNER TO "second_user"'));
+});
+
+it('grants nothing extra when the user already owns the database', function () {
+    Process::fake(function ($process) {
+        $this->ran[] = ['command' => $process->command, 'input' => (string) ($process->input ?? '')];
+
+        return Process::result(output: str_contains((string) $process->input, 'pg_get_userbyid') ? "shop_user\n" : '1');
+    });
+
+    pgEngine()->createUser('shop_user', 'localhost', 'pw', 'shop_db');
+
+    expect(pgStatements())->not->toContain('GRANT CONNECT');
+});
