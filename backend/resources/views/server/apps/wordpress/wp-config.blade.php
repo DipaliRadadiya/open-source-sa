@@ -38,6 +38,12 @@ define('WP_ENVIRONMENT_TYPE', '{{ $environmentType }}');
 define('DISABLE_WP_CRON', true);
 @endif
 
+{{-- WordPress's own marker, kept verbatim: WP-CLI adds any constant that is
+     not here yet just above it (`wp config set`), and without it every such
+     addition failed — debug log, DISABLE_WP_CRON, memory limits, Object Cache
+     Pro's WP_REDIS_CONFIG. Found on a live server, 2026-10-02. --}}
+/* That's all, stop editing! Happy publishing. */
+
 if (! defined('ABSPATH')) {
     define('ABSPATH', __DIR__ . '/');
 }
