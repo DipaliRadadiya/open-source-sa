@@ -37,16 +37,45 @@ class Cronjob extends Model
         $base = Str::slug($name) ?: 'cronjob';
         $slug = $base;
         $suffix = 2;
+        $own = $ignoreId ? static::query()->find($ignoreId) : null;
 
         while (static::query()
             ->where('slug', $slug)
             ->when($ignoreId, fn ($query) => $query->where('id', '!=', $ignoreId))
             ->exists()
+            || ($suffix <= self::MAX_SLUG_PROBES && static::foreignFileAt($slug, $own))
         ) {
             $slug = $base.'-'.$suffix++;
         }
 
         return $slug;
+    }
+
+    /**
+     * How many names {@see uniqueSlug()} asks the disk about. Past it only the
+     * database decides, so a cron.d full of `x`, `x-2`, … cannot hang a request.
+     */
+    private const MAX_SLUG_PROBES = 50;
+
+    /**
+     * Whether cron.d already holds a file of that name that no job owns.
+     *
+     * The slug *is* the filename, and the reserved-name list only knows the
+     * OS's files. A job named "panel-scheduler" overwrote the panel's own
+     * scheduler and deleting the job deleted it (bug #17). Asking the disk
+     * covers the panel's files, the OS's and anything installed later — a
+     * clash gets a suffix instead of somebody else's file.
+     */
+    private static function foreignFileAt(string $slug, ?self $own): bool
+    {
+        $path = rtrim((string) config('server.cron_d'), '/').'/'.$slug;
+
+        if (! file_exists($path)) {
+            return false;
+        }
+
+        // A job's own file — or the file it was imported from — is not foreign.
+        return $own === null || ($own->slug !== $slug && $own->source_path !== $path);
     }
 
     /**
