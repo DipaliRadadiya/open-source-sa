@@ -98,6 +98,10 @@ class NodeController extends Controller
             return response()->json(['message' => __('errors/node.version_is_default')], 422);
         }
 
+        if ($node->panelVersion() === $version) {
+            return response()->json(['message' => __('errors/node.version_runs_panel', ['version' => $version])], 422);
+        }
+
         $node->uninstall($version);
 
         // The mirror of the refresh after an install. Removing the last Node

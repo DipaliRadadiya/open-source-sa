@@ -32,7 +32,7 @@ beforeEach(function () {
 /**
  * @param  array<int, string>  $installed  versions fnm reports
  */
-function fakeNode(bool $fnm = true, array $installed = [], ?string $default = null, bool $systemNode = true): ArrayObject
+function fakeNode(bool $fnm = true, array $installed = [], ?string $default = null, bool $systemNode = true, ?string $panelNode = null): ArrayObject
 {
     $runs = new ArrayObject;
 
@@ -40,7 +40,7 @@ function fakeNode(bool $fnm = true, array $installed = [], ?string $default = nu
         ->map(fn (string $v) => "* v{$v}".($v === $default ? ' default' : ''))
         ->implode("\n");
 
-    Process::fake(function ($process) use ($runs, $fnm, $list, $systemNode) {
+    Process::fake(function ($process) use ($runs, $fnm, $list, $systemNode, $panelNode) {
         $runs[] = [
             'command' => $process->command,
             'input' => (string) $process->input,
@@ -49,6 +49,11 @@ function fakeNode(bool $fnm = true, array $installed = [], ?string $default = nu
             'environment' => $process->environment,
         ];
         $command = $process->command;
+
+        // The panel frontend unit's ExecStart, as `systemctl show` prints it.
+        if ($command[0] === 'systemctl' && ($command[1] ?? '') === 'show' && $panelNode !== null) {
+            return Process::result(output: "{ path=/opt/fnm/node-versions/v{$panelNode}/installation/bin/node ; argv[]=/opt/fnm/node-versions/v{$panelNode}/installation/bin/node server.js ; }\n");
+        }
 
         if ($command[0] === 'which') {
             $wantsFnm = str_contains((string) $command[1], 'fnm');
@@ -354,6 +359,20 @@ it('refuses to remove the default version', function () {
     fakeNode(installed: ['20.11.0'], default: '20.11.0');
 
     nodeCall('DELETE', '/api/node/versions/20.11.0')->assertUnprocessable();
+});
+
+/*
+ * Bug #30: the panel's frontend unit runs a pinned fnm binary, which need not
+ * be the default — so the default check alone let it be removed.
+ */
+it('refuses to remove the version the panel itself runs on', function () {
+    fakeNode(installed: ['24.21.0', '22.11.0'], default: '22.11.0', panelNode: '24.21.0');
+
+    nodeCall('DELETE', '/api/node/versions/24.21.0')
+        ->assertUnprocessable()
+        ->assertJsonFragment(['message' => 'The panel itself runs on Node 24.21.0. It cannot be removed.']);
+
+    Process::assertNotRan(fn ($p) => in_array('uninstall', (array) $p->command, true));
 });
 
 it('removes a version nothing depends on', function () {

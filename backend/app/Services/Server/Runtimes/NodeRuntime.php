@@ -245,6 +245,24 @@ class NodeRuntime implements Runtime
      * fnm lays versions out predictably, which is the whole reason it was
      * chosen — this path is what ends up in a systemd unit.
      */
+    /**
+     * The fnm version the panel's own frontend runs on, or null.
+     *
+     * install.sh writes that binary's absolute path into the unit's
+     * `ExecStart=`, so it is read from there rather than assumed to be the
+     * default: removing it while it was not the default stopped the panel's
+     * screens with nothing pointing at why (bug #30).
+     */
+    public function panelVersion(): ?string
+    {
+        $result = $this->serverOps->run(
+            ['systemctl', 'show', '-p', 'ExecStart', '--value', (string) config('panel_update.services.frontend', 'panel-frontend.service')],
+            ['feature' => 'runtime', 'op' => 'node_panel_version'],
+        );
+
+        return preg_match('#/node-versions/v(\d+\.\d+\.\d+)/#', $result->output(), $match) === 1 ? $match[1] : null;
+    }
+
     public function binaryPath(string $version): string
     {
         $dir = rtrim((string) config('server.runtimes.node.dir', '/opt/fnm'), '/');
