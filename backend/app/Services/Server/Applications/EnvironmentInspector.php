@@ -22,6 +22,12 @@ class EnvironmentInspector
      */
     private const SECRET_PATTERN = '/(PASSWORD|SECRET|TOKEN|_KEY|^KEY$|SALT|HASH|DSN|CREDENTIAL|PRIVATE|AUTH)/i';
 
+    /** Whether a variable's value is kept off the screen. One rule, used by the diff too. */
+    public static function isSecret(string $key): bool
+    {
+        return preg_match(self::SECRET_PATTERN, $key) === 1;
+    }
+
     /**
      * Parse into ordered pairs. Comments and blank lines are dropped — this is
      * the structured view; the raw text is what the editor shows and what is
@@ -44,7 +50,7 @@ class EnvironmentInspector
                 continue;
             }
 
-            $secret = preg_match(self::SECRET_PATTERN, $m[1]) === 1;
+            $secret = self::isSecret($m[1]);
 
             $variables[] = [
                 'key' => $m[1],

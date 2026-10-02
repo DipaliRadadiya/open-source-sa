@@ -34,7 +34,7 @@ class EnvironmentDiff
      *
      * @return array{
      *     available: bool,
-     *     changes: array<int, array{key: string, before: string|null, after: string|null, status: string}>
+     *     changes: array<int, array{key: string, before: string|null, after: string|null, status: string, secret: bool}>
      * }
      */
     public function for(Application $application, ActivityLog $row): array
@@ -103,7 +103,7 @@ class EnvironmentDiff
     }
 
     /**
-     * @return array<int, array{key: string, before: string|null, after: string|null, status: string}>
+     * @return array<int, array{key: string, before: string|null, after: string|null, status: string, secret: bool}>
      */
     private function compare(string $before, string $after): array
     {
@@ -128,7 +128,16 @@ class EnvironmentDiff
 
         usort($changes, fn (array $a, array $b): int => $a['key'] <=> $b['key']);
 
-        return $changes;
+        // Bug #67: which secret changed, never what it was or became. The
+        // values are the ones the structured view already withholds, and the
+        // before side is a rotated secret nothing else on screen shows.
+        return array_map(function (array $change): array {
+            $secret = EnvironmentInspector::isSecret($change['key']);
+
+            return $secret
+                ? ['key' => $change['key'], 'before' => null, 'after' => null, 'status' => $change['status'], 'secret' => true]
+                : $change + ['secret' => false];
+        }, $changes);
     }
 
     /**

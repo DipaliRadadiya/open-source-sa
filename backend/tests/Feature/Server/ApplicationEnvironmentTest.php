@@ -542,10 +542,10 @@ describe('the history of who changed it', function () {
 });
 
 describe('what one change did, variable by variable', function () {
-    it('shows the old and new value of every key that moved', function () {
+    it('shows the old and new value of every key that moved, except a secret\'s', function () {
         // The values come off the backup files, never out of the activity log.
         $this->disk['/home/envowner/deployed-site/.env.bak-20260907-120000'] =
-            "APP_ENV=production\nAPP_KEY=base64:abc\nDB_PASSWORD=hunter2\n";
+            "APP_ENV=production\nAPP_KEY=base64:abc\nDB_PASSWORD=hunter2\nAPP_DEBUG=true\n";
         $this->backupNames = ['.env.bak-20260907-120000'];
         fakeSite();
 
@@ -559,25 +559,27 @@ describe('what one change did, variable by variable', function () {
         ]);
 
         // Nothing has changed the file since, so "after" is what is on disk:
-        // DB_PASSWORD rotated, APP_KEY gone, MAIL_HOST added.
+        // DB_PASSWORD rotated, APP_KEY gone, MAIL_HOST added, APP_DEBUG off.
         $this->disk['/home/envowner/deployed-site/.env'] =
-            "APP_ENV=production\nDB_PASSWORD=rotated\nMAIL_HOST=smtp.test\n";
+            "APP_ENV=production\nDB_PASSWORD=rotated\nMAIL_HOST=smtp.test\nAPP_DEBUG=false\n";
 
-        $changes = collect(
-            $this->actingAs($this->admin)
-                ->getJson(envUrl('/history/'.$log->id.'/diff'))
-                ->assertOk()
-                ->json('diff.changes')
-        )->keyBy('key');
+        $response = $this->actingAs($this->admin)->getJson(envUrl('/history/'.$log->id.'/diff'))->assertOk();
+        $changes = collect($response->json('diff.changes'))->keyBy('key');
 
+        // Bug #67: which secret changed, never its value — the before side
+        // is a rotated password nothing else on screen shows.
         expect($changes['DB_PASSWORD'])->toMatchArray([
-            'before' => 'hunter2', 'after' => 'rotated', 'status' => 'changed',
+            'before' => null, 'after' => null, 'status' => 'changed', 'secret' => true,
         ])
             ->and($changes['APP_KEY'])->toMatchArray([
-                'before' => 'base64:abc', 'after' => null, 'status' => 'removed',
+                'before' => null, 'after' => null, 'status' => 'removed', 'secret' => true,
+            ])
+            ->and($response->getContent())->not->toContain('hunter2')->not->toContain('rotated')->not->toContain('base64:abc')
+            ->and($changes['APP_DEBUG'])->toMatchArray([
+                'before' => 'true', 'after' => 'false', 'status' => 'changed', 'secret' => false,
             ])
             ->and($changes['MAIL_HOST'])->toMatchArray([
-                'before' => null, 'after' => 'smtp.test', 'status' => 'added',
+                'before' => null, 'after' => 'smtp.test', 'status' => 'added', 'secret' => false,
             ])
             // Unchanged keys are not noise worth showing.
             ->and($changes->has('APP_ENV'))->toBeFalse();

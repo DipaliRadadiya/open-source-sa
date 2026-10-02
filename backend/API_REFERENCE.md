@@ -1756,6 +1756,8 @@ Each issue is `{type, severity, message, meta}` (corrected 2026-09-29 — this s
 ### GET `/applications/{application}/environment`
 **Permission:** `app_environment` (**manage**) — was view until 2026-09-29. The `.env` screen is shown only to who may edit it: a view-only grant no longer opens it, and neither the sidebar nor `GET /permissions` reports `view: true` for `app_environment` (or `app_magic_login`, whose routes were always manage-only) unless `manage` is granted too. `GET …/environment/history` is manage as well.
 
+`GET …/environment/history/{log}/diff` (manage) returns `{"diff": {"available": true, "changes": [{"key": "DB_PASSWORD", "before": null, "after": null, "status": "changed", "secret": true}, {"key": "APP_DEBUG", "before": "true", "after": "false", "status": "changed", "secret": false}]}}`. `status` is `added | changed | removed`. **A secret key (`PASSWORD`, `SECRET`, `TOKEN`, `_KEY`, … — the same rule that hides values in the variables view) never carries its values**: show it as "changed (hidden)".
+
 **`404`**, not `403`, for site types that don't use a `.env` (e.g. WordPress — it uses `wp-config.php`). The screen does not exist there, which is a different statement from "you may not have it"; `403` is reserved for a caller who lacks the permission on a site that does have the screen.
 
 ```json
@@ -5969,6 +5971,8 @@ Generates a token, replacing any existing one. Enabling again rotates it and inv
 **Auth:** administrator session
 
 Revokes the current token. **Response `200`:** `{"message": "…"}`
+
+**What the central token may not do:** create, edit, delete, re-password, re-role or impersonate panel users, or create/edit/delete roles — `403` with a translated `message`. It can still list them (`GET /admin/users`, `GET /admin/roles`). Who runs the panel is decided on the panel.
 
 ---
 
