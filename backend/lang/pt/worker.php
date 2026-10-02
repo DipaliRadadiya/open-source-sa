@@ -37,5 +37,10 @@ return [
 
     'errors' => [
         'queue_conflict' => 'Esta aplicação já tem o outro tipo de worker de fila. O Horizon supervisiona os seus próprios workers, por isso correr ambos faz cada trabalho ser processado duas vezes.',
+        'extra_config_user' => 'Defina a conta em «Executar como», não na configuração extra.',
+        'user_not_allowed' => 'Os workers só podem ser executados com a conta do site (:user). Apenas o administrador do painel pode escolher outra conta.',
+        'directory_outside_home' => 'O diretório tem de estar dentro da pasta pessoal do site (:home).',
+        'log_outside_logs' => 'O ficheiro de registo tem de estar na pasta de registos do site (:path).',
+        'extra_config_key' => 'A configuração extra não pode definir «:key». Apenas o administrador do painel pode alterá-lo.',
     ],
 ];

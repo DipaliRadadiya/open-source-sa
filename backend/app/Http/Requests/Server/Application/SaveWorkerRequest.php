@@ -88,6 +88,8 @@ class SaveWorkerRequest extends FormRequest
 
     public function withValidator(Validator $validator): void
     {
+        $validator->after(fn (Validator $validator) => $this->confine($validator));
+
         $validator->after(function (Validator $validator): void {
             /** @var Application $application */
             $application = $this->route('application');
@@ -113,5 +115,67 @@ class SaveWorkerRequest extends FormRequest
                 $validator->errors()->add('kind', __('worker.errors.queue_conflict'));
             }
         });
+    }
+
+    /**
+     * Keys in Extra config that change who runs what, or where root writes.
+     */
+    private const CONFINED_KEYS = ['user', 'command', 'directory', 'stdout_logfile', 'stderr_logfile'];
+
+    /**
+     * A worker is a process supervisord starts as root and hands to `user`,
+     * and whose log file root opens. Bug #72: anyone allowed to manage
+     * workers could run one as root, or have root write anywhere.
+     *
+     * The panel admin keeps what v7 allowed: any account, any path. Workers
+     * moved over from v7 are adopted, not posted here, so they keep working.
+     * Everyone else is held to the site's own account and folders.
+     */
+    private function confine(Validator $validator): void
+    {
+        /** @var Application $application */
+        $application = $this->route('application');
+        /** @var Worker|null $worker */
+        $worker = $this->route('worker');
+        $extra = (string) $this->input('extra_config', '');
+
+        // Not even for the admin: the screen shows the "Run as" field, and a
+        // `user=` underneath it would make that field lie.
+        if (preg_match('/^\s*user\s*=/mi', $extra) === 1) {
+            $validator->errors()->add('extra_config', __('worker.errors.extra_config_user'));
+        }
+
+        if ($this->user()?->is_admin) {
+            return;
+        }
+
+        $siteUser = (string) $application->systemUser?->username;
+        // What the worker will run as after this save: a request that leaves
+        // the field out keeps the stored one, so editing a root worker's
+        // command is caught too.
+        $user = $this->has('user') ? $this->input('user') : $worker?->user;
+
+        if ($user !== null && $user !== '' && $user !== $siteUser) {
+            $validator->errors()->add('user', __('worker.errors.user_not_allowed', ['user' => $siteUser]));
+        }
+
+        $home = rtrim((string) $application->systemUser?->home_path, '/');
+        $directory = $this->has('directory') ? $this->input('directory') : $worker?->directory;
+
+        if ($directory !== null && $directory !== '' && ($home === '' || ! str_starts_with(rtrim((string) $directory, '/').'/', $home.'/'))) {
+            $validator->errors()->add('directory', __('worker.errors.directory_outside_home', ['home' => $home]));
+        }
+
+        // Only the site's own logs folder. It is root-owned, so the site user
+        // cannot plant a symlink there for root to follow; their home is not.
+        $logFile = $this->has('log_file') ? $this->input('log_file') : $worker?->log_file;
+
+        if ($logFile !== null && $logFile !== '' && dirname((string) $logFile) !== $application->logsPath()) {
+            $validator->errors()->add('log_file', __('worker.errors.log_outside_logs', ['path' => $application->logsPath()]));
+        }
+
+        if (preg_match('/^\s*('.implode('|', self::CONFINED_KEYS).')\s*=/mi', $extra, $match) === 1) {
+            $validator->errors()->add('extra_config', __('worker.errors.extra_config_key', ['key' => strtolower($match[1])]));
+        }
     }
 }

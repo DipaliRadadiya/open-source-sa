@@ -1185,3 +1185,79 @@ it('restarts a worker with the resolved php, not a bare versioned name', functio
             && str_contains($command, 'artisan queue:restart'),
     ))->toBeTrue();
 });
+
+/*
+ * Bug #72: anyone allowed to manage workers could run one as root, point its
+ * log at /etc, or override the account in Extra config. The admin keeps v7's
+ * freedom; everyone else is held to the site's own account and folders.
+ */
+describe('who a worker may run as', function () {
+    beforeEach(function () {
+        $this->member = User::factory()->create();
+        grantPermission($this->member, 'app_worker', manage: true);
+    });
+
+    it('refuses another account for a non-admin', function (string $user) {
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->member)->postJson(workerUrl(), workerPayload(['user' => $user]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('user');
+    })->with(['root', 'panel', 'www-data']);
+
+    it('lets a non-admin run it as the site account', function () {
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->member)->postJson(workerUrl(), workerPayload(['user' => 'workerowner']))->assertCreated();
+        $this->actingAs($this->member)->postJson(workerUrl(), workerPayload(['name' => 'Second', 'kind' => 'custom']))->assertCreated();
+    });
+
+    it('lets the admin choose root, as v7 did', function () {
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload(['user' => 'root']))->assertCreated();
+    });
+
+    it('keeps a non-admin from editing a worker that runs as root', function () {
+        fakeWorkerSupervisor();
+        $id = $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload(['user' => 'root']))->json('worker.id');
+
+        // `user` left out: the stored root still counts.
+        $this->actingAs($this->member)->putJson(workerUrl("/{$id}"), workerPayload(['command' => 'bash -c id']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('user');
+    });
+
+    it('keeps a non-admin inside the site folders', function (array $fields, string $error) {
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->member)->postJson(workerUrl(), workerPayload($fields))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors($error);
+    })->with([
+        'directory under /etc' => [['directory' => '/etc'], 'directory'],
+        'directory beside the home' => [['directory' => '/home/workerowner2'], 'directory'],
+        'log under /etc' => [['log_file' => '/etc/cron.d/x'], 'log_file'],
+        'log in the home, where a symlink can be planted' => [['log_file' => '/home/workerowner/w.log'], 'log_file'],
+        'command in extra config' => [['extra_config' => "command=/bin/sh\n"], 'extra_config'],
+        'log in extra config' => [['extra_config' => 'stdout_logfile = /etc/x'], 'extra_config'],
+    ]);
+
+    it('takes a non-admin path that stays inside', function () {
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->member)->postJson(workerUrl(), workerPayload([
+            'directory' => '/home/workerowner/queued-site',
+            'log_file' => $this->application->logsPath().'/queue.log',
+            'extra_config' => "environment=APP_ENV=\"production\"\n",
+        ]))->assertCreated();
+    });
+
+    it('refuses user= in extra config even for the admin', function () {
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload(['extra_config' => "  User = root\n"]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['extra_config' => __('worker.errors.extra_config_user')]);
+    });
+});

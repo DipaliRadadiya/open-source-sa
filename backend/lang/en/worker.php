@@ -45,5 +45,10 @@ return [
 
     'errors' => [
         'queue_conflict' => 'This application already has the other kind of queue worker. Horizon supervises its own workers, so running both means every job is handled twice.',
+        'extra_config_user' => 'Set the account in “Run as”, not in Extra config.',
+        'user_not_allowed' => 'Workers can only run as the site\'s own account (:user). Only the panel administrator can choose another account.',
+        'directory_outside_home' => 'The directory must be inside the site\'s home folder (:home).',
+        'log_outside_logs' => 'The log file must be in the site\'s logs folder (:path).',
+        'extra_config_key' => 'Extra config cannot set “:key”. Only the panel administrator can change it.',
     ],
 ];
