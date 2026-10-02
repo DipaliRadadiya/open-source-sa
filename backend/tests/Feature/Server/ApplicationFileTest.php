@@ -634,8 +634,17 @@ function fakeFileBrowserServer(): void
             $lines = ['Archive:  x.zip', 'Zip file size: 1 bytes, number of entries: '.count($entries)];
 
             foreach ($entries as $e) {
-                $perm = $e['type'].str_repeat('-', 9);
-                $lines[] = "{$perm}  3.0 unx {$e['size']} tx stor 26-Aug-05 08:53 {$e['name']}";
+                // `perm`/`os` as unzip prints them for a zip made elsewhere
+                // (Windows: `-rw-a--` / `fat`); `raw` is a line verbatim.
+                if (isset($e['raw'])) {
+                    $lines[] = $e['raw'];
+
+                    continue;
+                }
+
+                $perm = $e['perm'] ?? $e['type'].str_repeat('-', 9);
+                $os = $e['os'] ?? 'unx';
+                $lines[] = "{$perm}  3.0 {$os} {$e['size']} tx stor 26-Aug-05 08:53 {$e['name']}";
             }
 
             $lines[] = count($entries).' files, 0 bytes uncompressed, 0 bytes compressed:  0.0%';
@@ -1512,6 +1521,53 @@ describe('extracting', function () {
         $this->actingAs($this->admin)->postJson(filesUrl('/extract'), extractPayload())->assertAccepted();
 
         expect(FileBrowserFake::$fs['wp-content/plugins/my-plugin/plugin.php']['content'])->toBe('extracted');
+    });
+
+    /*
+     * Bug #57: a zip made on Windows lists `-rw-a--` (MS-DOS attributes), and
+     * one made by Python or Java lists `?rw-------` (no type). The parser took
+     * only Unix's ten-character form, skipped every entry, and said "That
+     * archive has nothing in it".
+     */
+    it('extracts a zip made on Windows, or by a tool that records no file type', function (array $entries) {
+        fakeFileBrowserServer();
+        FileBrowserFake::$archives['wp-content/plugins/thing.zip'] = $entries;
+
+        $this->actingAs($this->admin)->postJson(filesUrl('/extract'), extractPayload())->assertAccepted();
+
+        expect(FileBrowserFake::$fs)->toHaveKey('wp-content/plugins/my-plugin/plugin.php');
+    })->with([
+        'Windows' => [[
+            ['type' => 'd', 'perm' => 'drwx---', 'os' => 'fat', 'size' => 0, 'name' => 'my-plugin/'],
+            ['type' => '-', 'perm' => '-rw-a--', 'os' => 'fat', 'size' => 12, 'name' => 'my-plugin/plugin.php'],
+        ]],
+        'no file type' => [[
+            ['type' => '?', 'perm' => '?rw-------', 'size' => 12, 'name' => 'my-plugin/plugin.php'],
+        ]],
+    ]);
+
+    it('refuses an entry that is neither a file nor a directory', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$archives['wp-content/plugins/thing.zip'] = [
+            ['type' => 'p', 'perm' => 'prw-r--r--', 'size' => 0, 'name' => 'my-plugin/fifo'],
+        ];
+
+        $this->actingAs($this->admin)->postJson(filesUrl('/extract'), extractPayload())->assertStatus(422);
+
+        expect(FileBrowserFake::$fs)->not->toHaveKey('wp-content/plugins/my-plugin/fifo');
+    });
+
+    it('refuses an archive with an entry it could not read, rather than extracting it unchecked', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$archives['wp-content/plugins/thing.zip'] = [
+            ['type' => '-', 'size' => 12, 'name' => 'my-plugin/plugin.php'],
+            ['raw' => 'something this parser cannot read'],
+        ];
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/extract'), extractPayload())
+            ->assertStatus(422)
+            ->assertJsonPath('message', __('errors/application.archive_unreadable'));
     });
 
     it('refuses a zip-slip entry before extracting anything', function () {

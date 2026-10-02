@@ -1754,6 +1754,10 @@ class FileBrowser
 
         foreach ($entries as $entry) {
             abort_if($entry['type'] === 'l', 422, __('errors/application.archive_has_symlink'));
+            // `?`: no file type recorded (zips written by Python, Java and the
+            // like), which unzip extracts as a plain file — it only makes a
+            // link when the entry says it is one.
+            abort_unless(in_array($entry['type'], ['-', 'd', '?'], true), 422, __('errors/application.archive_unsafe_entry'));
 
             $name = rtrim($entry['name'], '/');
 
@@ -1799,12 +1803,25 @@ class FileBrowser
 
         $entries = [];
 
+        // Any attribute string, not only Unix's `-rw-r--r--`: a zip made on
+        // Windows lists `-rw-a--` (MS-DOS attributes), so every entry was
+        // skipped and the archive read as empty (bug #57). The type is still
+        // the first character, and validateArchiveEntries() admits files and
+        // directories only.
         foreach (explode("\n", $result->output()) as $line) {
-            if (preg_match('/^([-dl])[-rwxsSt]{9}\s+\S+\s+\S+\s+(\d+)\s+\S+\s+\S+\s+\S+\s+\S+\s+(.*)$/', $line, $m) !== 1) {
+            if (preg_match('/^(\S)\S{5,9}\s+\d+\.\d+\s+\S+\s+(\d+)\s+\S+\s+\S+\s+\S+\s+\S+\s+(.*)$/', $line, $m) !== 1) {
                 continue;
             }
 
             $entries[] = ['type' => $m[1], 'size' => (int) $m[2], 'name' => $m[3]];
+        }
+
+        // Every entry unzip will extract has to have been read here — a line
+        // this parser skipped would be extracted without being checked. unzip
+        // ends the listing with "N files, …"; a count that disagrees refuses
+        // the archive.
+        if (preg_match('/^(\d+) files?,/m', $result->output(), $total) === 1) {
+            abort_if((int) $total[1] !== count($entries), 422, __('errors/application.archive_unreadable'));
         }
 
         return $entries;
