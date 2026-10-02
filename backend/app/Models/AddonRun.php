@@ -23,12 +23,17 @@ class AddonRun extends Model
 
     public const FAILED = 'failed';
 
-    protected $fillable = ['application_id', 'addon', 'command', 'status', 'arguments', 'http_status', 'result', 'started_at', 'finished_at'];
+    protected $fillable = ['application_id', 'addon', 'command', 'status', 'arguments', 'input', 'http_status', 'result', 'started_at', 'finished_at'];
+
+    /** Never serialised: it can hold a script or credentials. */
+    protected $hidden = ['input'];
 
     protected function casts(): array
     {
         return [
             'arguments' => 'array',
+            // What the command reads on stdin; encrypted at rest.
+            'input' => 'encrypted',
             'result' => 'array',
             'http_status' => 'integer',
             'started_at' => 'datetime',

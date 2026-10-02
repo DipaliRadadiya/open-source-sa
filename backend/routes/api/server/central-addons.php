@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\API\Server\Addons\AddonController;
 use App\Http\Controllers\API\Server\Addons\InsightsAddonController;
+use App\Http\Controllers\API\Server\Addons\ObjectCacheProController;
 use App\Http\Controllers\API\Server\Addons\WordPressAddonController;
 use App\Services\Addons\WpToolkitCommands;
 use Illuminate\Support\Facades\Route;
@@ -64,6 +65,13 @@ Route::middleware('central.only')->prefix('central/addons')->group(function (): 
         $wp('put', 'settings', 'settings.set');
         $wp('get', 'maintenance-mode', 'maintenance.get');
         $wp('put', 'maintenance-mode', 'maintenance.set');
+
+        $wp('post', 'blueprint', 'blueprint.apply');
+
+        Route::get('object-cache-pro', [ObjectCacheProController::class, 'show']);
+        Route::post('object-cache-pro', [ObjectCacheProController::class, 'store']);
+        Route::post('object-cache-pro/rotate', [ObjectCacheProController::class, 'rotate']);
+        Route::delete('object-cache-pro', [ObjectCacheProController::class, 'destroy']);
 
         $wp('get', 'security', 'security.get');
         $wp('put', 'security/{rule}', 'security.set')->whereIn('rule', ['xmlrpc', 'uploads-php']);

@@ -5,14 +5,17 @@ use App\Jobs\RunAddonCommand;
 use App\Models\ActivityLog;
 use App\Models\AddonRun;
 use App\Models\Application;
+use App\Models\ApplicationRedisAccount;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Addons\SiteRedisAccount;
 use App\Services\Addons\WpToolkit;
 use App\Services\Server\Applications\ApplicationArtifacts;
 use App\Services\Server\CentralTokenManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Process\PendingProcess;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 
@@ -74,7 +77,7 @@ function fakeAddon(callable $answer): void
 {
     Process::fake(function (PendingProcess $process) use ($answer) {
         $command = (array) $process->command;
-        $GLOBALS['addonRan'][] = ['command' => $command, 'cwd' => $process->path];
+        $GLOBALS['addonRan'][] = ['command' => $command, 'cwd' => $process->path, 'input' => $process->input, 'env' => $process->environment];
         [$out, $err, $exit] = $answer($command) + ['', '', 0];
 
         return Process::result(output: $out, errorOutput: $err, exitCode: $exit);
@@ -412,4 +415,174 @@ it('passes a limit only to reports that are lists', function () {
 
     $this->withHeaders(addonHeaders($this->token))->getJson("{$base}/dashboard/status-count?limit=3")->assertOk();
     expect(lastAddonCommand())->toContain('--limit=3');
+});
+
+// ── blueprint ────────────────────────────────────────────────────────────────
+
+it('queues a blueprint with its script on stdin, encrypted at rest and never echoed', function () {
+    Queue::fake();
+    $blueprint = [
+        'selected_plugins' => [['slug' => 'akismet', 'activate' => true]],
+        'custom_theme_plugins' => [['label' => 'Mine', 'link' => 'https://cdn.example/p.zip?key=LINK-SECRET', 'type' => 'custom-plugin']],
+        'delete_all_themes' => true, 'timezone' => 'UTC',
+        'script' => "wp option update blogdescription 'SCRIPT-SECRET'",
+    ];
+
+    $response = $this->withHeaders(addonHeaders($this->token))->postJson(wpUrl('/blueprint'), $blueprint)
+        ->assertStatus(202)->assertJsonPath('data.command', 'blueprint.apply');
+
+    expect($response->getContent())->not->toContain('SCRIPT-SECRET');
+    $run = AddonRun::firstOrFail();
+    expect(array_slice($run->arguments, 0, 2))->toBe(['blueprint', 'apply'])
+        ->and(implode(' ', $run->arguments))->not->toContain('SECRET')
+        ->and(DB::table('addon_runs')->value('input'))->not->toContain('SCRIPT-SECRET');
+
+    $sent = json_decode($run->input, true);
+    expect($sent['script'])->toBe($blueprint['script'])
+        ->and($sent['selected_plugins'][0])->toBe(['slug' => 'akismet', 'activate' => true])
+        ->and($sent['delete_all_themes'])->toBeTrue()
+        ->and($sent)->not->toHaveKey('language');
+
+    fakeAddon(fn () => ['{"status":"success","completed":true,"steps":[]}']);
+    (new RunAddonCommand($run->id))->handle(app(WpToolkit::class));
+
+    $call = end($GLOBALS['addonRan']);
+    expect($call['input'])->toBe($run->input)
+        ->and(AddonRun::first()->status)->toBe(AddonRun::SUCCEEDED)
+        // The script has done its job; it does not outlive the run.
+        ->and(DB::table('addon_runs')->value('input'))->toBeNull();
+});
+
+it('refuses a blueprint with values the toolkit could misread', function (array $bad) {
+    Queue::fake();
+    $this->withHeaders(addonHeaders($this->token))->postJson(wpUrl('/blueprint'), $bad)->assertUnprocessable();
+    expect(AddonRun::count())->toBe(0);
+})->with([
+    'slug as a flag' => [['selected_plugins' => [['slug' => '--path=/etc']]]],
+    'http link' => [['custom_theme_plugins' => [['link' => 'http://x/p.zip', 'type' => 'custom-plugin']]]],
+    'unknown custom type' => [['custom_theme_plugins' => [['link' => 'https://x/p.zip', 'type' => 'mu-plugin']]]],
+    'script too large' => [['script' => str_repeat('x', 65537)]],
+]);
+
+// ── Object Cache Pro ─────────────────────────────────────────────────────────
+
+/** A Redis that answers like 7.x with a password set; records every call. */
+function fakeRedisAndToolkit(string $version = '7.2.4', array $toolkitAnswer = ['{"status":"success","object_cache_pro":{"active":true}}']): void
+{
+    config(['database.redis.default.password' => 'ADMIN-PW', 'server.redis_cli' => '/usr/bin/redis-cli']);
+    fakeAddon(function (array $command) use ($version, $toolkitAnswer) {
+        if (str_ends_with($command[0], 'redis-cli')) {
+            return match (true) {
+                in_array('INFO', $command, true) => ["# Server\r\nredis_version:{$version}\r\n"],
+                in_array('aclfile', $command, true) => ["aclfile\n\n"],
+                default => ["OK\n"],
+            };
+        }
+
+        return $toolkitAnswer;
+    });
+}
+
+function redisCalls(): array
+{
+    return array_values(array_filter($GLOBALS['addonRan'], fn ($c) => str_ends_with($c['command'][0], 'redis-cli')));
+}
+
+it('gives the site its own Redis login, limited to its own keys, and queues the install', function () {
+    Queue::fake();
+    fakeRedisAndToolkit();
+
+    $this->withHeaders(addonHeaders($this->token))
+        ->postJson(wpUrl('/object-cache-pro'), ['token' => 'abc123def456', 'plugin_url' => 'https://objectcache.pro/dl?k=1', 'prefetch' => true])
+        ->assertStatus(202)->assertJsonPath('data.command', 'object-cache-pro.enable');
+
+    $account = ApplicationRedisAccount::firstOrFail();
+    $setuser = collect(redisCalls())->first(fn ($c) => in_array('SETUSER', $c['command'], true))['command'];
+
+    expect($account->username)->toBe("sv_site_{$this->site->id}")
+        ->and($setuser)->toContain('reset', 'on', '~sv'.$this->site->id.':*', 'resetchannels', '-@admin', '-@dangerous', '#'.hash('sha256', $account->password))
+        // The site's password and the admin password never on a command line.
+        ->and(implode(' ', array_merge(...array_column($GLOBALS['addonRan'], 'command'))))->not->toContain($account->password)->not->toContain('ADMIN-PW')
+        ->and(redisCalls()[0]['env'])->toBe(['REDISCLI_AUTH' => 'ADMIN-PW'])
+        ->and(collect(redisCalls())->contains(fn ($c) => in_array('REWRITE', $c['command'], true)))->toBeTrue();
+
+    $input = json_decode(AddonRun::firstOrFail()->input, true);
+    expect($input)->toMatchArray(['token' => 'abc123def456', 'plugin_url' => 'https://objectcache.pro/dl?k=1', 'prefetch' => true,
+        'username' => $account->username, 'password' => $account->password, 'prefix' => 'sv'.$this->site->id.':', 'database' => 0]);
+});
+
+it('refuses when Redis could not keep sites apart', function (string $version, ?string $adminPassword) {
+    Queue::fake();
+    fakeRedisAndToolkit($version);
+    config(['database.redis.default.password' => $adminPassword]);
+
+    $this->withHeaders(addonHeaders($this->token))
+        ->postJson(wpUrl('/object-cache-pro'), ['token' => 'abc123def456', 'plugin_url' => 'https://objectcache.pro/dl'])
+        ->assertStatus(409)->assertJsonPath('code', 'object_cache_redis_unavailable');
+
+    expect(ApplicationRedisAccount::count())->toBe(0)->and(AddonRun::count())->toBe(0);
+})->with([
+    'Redis 5, no ACLs' => ['5.0.7', 'ADMIN-PW'],
+    'no admin password, so anyone is the default user' => ['7.2.4', null],
+]);
+
+it('rotates the password without a moment the site cannot log in', function () {
+    fakeRedisAndToolkit();
+    $account = app(SiteRedisAccount::class)->ensure($this->site);
+    $account->settings = ['token' => 'abc123def456', 'plugin_url' => 'https://objectcache.pro/dl'];
+    $account->save();
+    $old = $account->password;
+    $GLOBALS['addonRan'] = [];
+
+    $this->withHeaders(addonHeaders($this->token))->postJson(wpUrl('/object-cache-pro/rotate'))->assertOk();
+
+    $new = ApplicationRedisAccount::firstOrFail()->password;
+    $order = collect($GLOBALS['addonRan'])->map(fn ($c) => str_ends_with($c['command'][0], 'redis-cli')
+        ? implode(' ', array_slice($c['command'], 5)) : 'toolkit '.$c['command'][2])->values()->all();
+    $configure = collect($GLOBALS['addonRan'])->first(fn ($c) => in_array('configure', $c['command'], true));
+
+    expect($new)->not->toBe($old)
+        ->and($order)->toContain("ACL SETUSER sv_site_{$this->site->id} #".hash('sha256', $new))
+        ->and(array_search("ACL SETUSER sv_site_{$this->site->id} #".hash('sha256', $new), $order))->toBeLessThan(array_search('toolkit configure', $order))
+        ->and(array_search('toolkit configure', $order))->toBeLessThan(array_search("ACL SETUSER sv_site_{$this->site->id} !".hash('sha256', $old), $order))
+        ->and(json_decode($configure['input'], true))->toMatchArray(['password' => $new])->not->toHaveKey('plugin_url');
+});
+
+it('withdraws the new password and keeps the old one if the site could not take it', function () {
+    fakeRedisAndToolkit(toolkitAnswer: ['', '{"status":"error","message":"wp-config.php is not writable"}', 1]);
+    config(['database.redis.default.password' => 'ADMIN-PW']);
+    $account = ApplicationRedisAccount::create(['application_id' => $this->site->id, 'username' => "sv_site_{$this->site->id}",
+        'password' => 'OLD-PASSWORD', 'prefix' => "sv{$this->site->id}:", 'settings' => ['token' => 'abc123def456']]);
+
+    $this->withHeaders(addonHeaders($this->token))->postJson(wpUrl('/object-cache-pro/rotate'))->assertUnprocessable();
+
+    $setusers = collect(redisCalls())->filter(fn ($c) => in_array('SETUSER', $c['command'], true))->map(fn ($c) => end($c['command']))->values();
+    expect(ApplicationRedisAccount::firstOrFail()->password)->toBe('OLD-PASSWORD')
+        ->and($setusers->first())->toStartWith('#')
+        ->and($setusers->last())->toBe('!'.substr($setusers->first(), 1))
+        ->and($setusers)->not->toContain('!'.hash('sha256', 'OLD-PASSWORD'));
+});
+
+it('removes the plugin first and the Redis login after, and both with the site', function () {
+    fakeRedisAndToolkit();
+    app(SiteRedisAccount::class)->ensure($this->site);
+    $GLOBALS['addonRan'] = [];
+
+    $this->withHeaders(addonHeaders($this->token))->deleteJson(wpUrl('/object-cache-pro'))->assertOk();
+
+    $order = collect($GLOBALS['addonRan'])->map(fn ($c) => implode(' ', $c['command']))->values();
+    $disable = $order->search(fn ($c) => str_contains($c, 'object-cache-pro disable'));
+    $deluser = $order->search(fn ($c) => str_contains($c, 'ACL DELUSER'));
+    expect($disable)->not->toBeFalse()->and($deluser)->toBeGreaterThan($disable)
+        ->and(ApplicationRedisAccount::count())->toBe(0);
+
+    app(SiteRedisAccount::class)->ensure($this->site);
+    app(ApplicationArtifacts::class)->remove($this->site);
+    expect(ApplicationRedisAccount::count())->toBe(0);
+});
+
+it('rotating a site without Object Cache Pro is refused', function () {
+    fakeRedisAndToolkit();
+    $this->withHeaders(addonHeaders($this->token))->postJson(wpUrl('/object-cache-pro/rotate'))->assertUnprocessable();
+    expect(redisCalls())->toBe([]);
 });

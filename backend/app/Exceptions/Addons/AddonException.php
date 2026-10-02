@@ -16,6 +16,9 @@ use RuntimeException;
  *   addon_command_failed     422  the addon ran and refused (its own message)
  *   addon_bad_output         502  it answered something that is not its JSON
  *   addon_timed_out          504  it did not answer in time
+ *   object_cache_redis_unavailable 409  this server's Redis cannot give a site
+ *                                       an isolated account (not running,
+ *                                       older than 6, or no password)
  */
 class AddonException extends RuntimeException
 {
@@ -26,6 +29,7 @@ class AddonException extends RuntimeException
         'addon_command_failed' => 422,
         'addon_bad_output' => 502,
         'addon_timed_out' => 504,
+        'object_cache_redis_unavailable' => 409,
     ];
 
     /**

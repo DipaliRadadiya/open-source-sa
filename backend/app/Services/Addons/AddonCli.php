@@ -69,12 +69,16 @@ abstract class AddonCli
     /**
      * Run the addon and return its decoded success document.
      *
+     * `$input` goes to the binary on stdin: a blueprint, Redis credentials --
+     * anything that must not appear on a command line, which every account on
+     * the server can read through the process list.
+     *
      * @param  array<int, string>  $arguments
      * @return array<string, mixed>
      *
      * @throws AddonException
      */
-    public function run(array $arguments, int $timeout, array $context = []): array
+    public function run(array $arguments, int $timeout, array $context = [], ?string $input = null): array
     {
         if (! $this->installed()) {
             throw AddonException::of('addon_not_installed', $this->label());
@@ -84,6 +88,7 @@ abstract class AddonCli
             [$this->binary(), ...$arguments],
             $this->context($arguments[0] ?? 'run', $context),
             timeout: $timeout,
+            input: $input,
             cwd: $this->workdir(),
         );
 

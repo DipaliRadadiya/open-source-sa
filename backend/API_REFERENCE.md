@@ -6020,6 +6020,23 @@ Runs WP-CLI as the site's owner, on its document root, under the site's own PHP 
 | GET | `security` | — | | xmlrpc / uploads part of `summary` |
 | PUT | `security/{rule}` | `rule`: `xmlrpc`\|`uploads-php`; `blocked` | | `xmlrpc/toggle`, `php-execution-upload-directory/toggle` |
 
+#### Blueprint — `POST …/wordpress/blueprint` (queued)
+
+The saved blueprint, sent whole (Central stores blueprints, as v7's backend did): `selected_plugins` / `selected_themes` (`[{slug, name?, activate?}]`), `custom_theme_plugins` (`[{label?, link (https), type: custom-plugin|custom-theme, activate?}]`), `remove_hello_world`, `remove_sample_page`, `delete_all_themes`, `delete_all_plugins`, `delete_unneeded_core_file`, `language`, `timezone`, `date_format`, `time_format`, `se_indexing_disable`, `organize_upload_folders`, `permalink_structure`, `debug_mode`, `debug_log`, `debug_error`, and **`script`** (≤ 64 KB) — run after every other step **as the site's owner, never root**, from the WordPress root, 10-minute limit.
+
+The run's `result` lists every step (`steps: [{step, status: ok|failed, message?}]`, `completed`, `failed`) and the script's `exit_code`, `output` (last 64 KB), `timed_out`. A step that fails does not stop the rest; `completed` is false and the run's status is `succeeded` (the blueprint ran; read `completed`). The blueprint, script included, goes to the toolkit on stdin and is stored encrypted only until the run finishes.
+
+#### Object Cache Pro — `…/wordpress/object-cache-pro`
+
+| Method | Path | Body | |
+|---|---|---|---|
+| GET | `object-cache-pro` | — | `{"object_cache_pro":{"active","configured","version"}}` |
+| POST | `object-cache-pro` | `token`, `plugin_url` (https), optional `prefetch`, `split_alloptions`, `strict`, `debug`, `maxttl`, `timeout`, `read_timeout` | queued (downloads the plugin) |
+| POST | `object-cache-pro/rotate` | — | new Redis password, written into the site |
+| DELETE | `object-cache-pro` | — | removes the drop-in, plugin and settings, then the site's Redis login |
+
+The Redis connection is **not** taken from the caller: the panel gives each site its own Redis 6 ACL user, `sv_site_<id>`, that can reach only keys under `sv<id>:`, with no channels and no administrative or dangerous commands — so one site cannot read another's cache or the panel's own data in the same Redis. (v7 opened the Redis socket to every account with `unixsocketperm 777`.) Rotation adds the new password before removing the old, so the site is never locked out, and withdraws it if the site could not take it. Refused with **409 `object_cache_redis_unavailable`** when Redis is not running, is older than 6, or has no password (without one, any site could log in as the all-powerful default user).
+
 `security` writes web server rules into the site's root-owned rules directory (`/etc/panel-site-rules/<slug>`), which survive every domain, certificate and HTTPS change.
 
 ### Log Monitoring Suite — access-log analytics

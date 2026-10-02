@@ -40,11 +40,13 @@ class RunAddonCommand implements ShouldQueue
         $run->update(['status' => AddonRun::RUNNING, 'started_at' => now()]);
 
         try {
-            $answer = $toolkit->run($run->arguments, (int) config('server.addons.async_timeout'), ['run' => $run->id]);
+            $answer = $toolkit->run($run->arguments, (int) config('server.addons.async_timeout'), ['run' => $run->id], $run->input);
 
-            $run->update(['status' => AddonRun::SUCCEEDED, 'http_status' => 200, 'result' => $answer, 'finished_at' => now()]);
+            // The input has done its job; a blueprint script or a Redis
+            // password does not need to outlive the run that used it.
+            $run->update(['status' => AddonRun::SUCCEEDED, 'http_status' => 200, 'result' => $answer, 'input' => null, 'finished_at' => now()]);
         } catch (AddonException $e) {
-            $run->update(['status' => AddonRun::FAILED, 'http_status' => $e->status(), 'result' => $e->body(), 'finished_at' => now()]);
+            $run->update(['status' => AddonRun::FAILED, 'http_status' => $e->status(), 'result' => $e->body(), 'input' => null, 'finished_at' => now()]);
         } catch (Throwable $e) {
             report($e);
 
@@ -52,6 +54,7 @@ class RunAddonCommand implements ShouldQueue
                 'status' => AddonRun::FAILED,
                 'http_status' => 500,
                 'result' => ['code' => 'addon_run_failed', 'message' => __('errors/addons.run_failed')],
+                'input' => null,
                 'finished_at' => now(),
             ]);
         }
@@ -64,6 +67,7 @@ class RunAddonCommand implements ShouldQueue
             'status' => AddonRun::FAILED,
             'http_status' => 504,
             'result' => ['code' => 'addon_timed_out', 'message' => __('errors/addons.timed_out', ['addon' => 'WP Toolkit'])],
+            'input' => null,
             'finished_at' => now(),
         ]);
     }

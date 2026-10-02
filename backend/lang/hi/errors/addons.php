@@ -11,4 +11,9 @@ return [
     'run_failed' => 'ऐडऑन कमांड अनपेक्षित रूप से विफल हो गया।',
     'unregistered' => 'साइट का रजिस्ट्रेशन हटा दिया गया।',
     'option_required' => 'इस रिपोर्ट के लिए :option ज़रूरी है।',
+    'redis_unavailable' => 'इस सर्वर पर Redis नहीं चल रहा है, इसलिए Object Cache Pro सेट नहीं किया जा सकता।',
+    'redis_too_old' => 'हर साइट के अलग लॉगिन के लिए Object Cache Pro को Redis 6 या नया चाहिए; इस सर्वर पर Redis :version है।',
+    'redis_no_password' => 'पहले Redis पासवर्ड सेट करें: इसके बिना कोई भी साइट बाकी साइटों का कैश पढ़ सकती है।',
+    'redis_failed' => 'Redis साइट का लॉगिन नहीं बना सका।',
+    'object_cache_not_enabled' => 'इस साइट पर Object Cache Pro चालू नहीं है।',
 ];

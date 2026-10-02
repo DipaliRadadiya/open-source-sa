@@ -14,4 +14,9 @@ return [
     'run_failed' => 'The addon command failed unexpectedly.',
     'unregistered' => 'Site unregistered.',
     'option_required' => ':option is required for this report.',
+    'redis_unavailable' => 'Redis is not running on this server, so Object Cache Pro cannot be set up.',
+    'redis_too_old' => 'Object Cache Pro needs Redis 6 or newer for a separate login per site; this server has Redis :version.',
+    'redis_no_password' => 'Set a Redis password first: without one, any site could read every other site\'s cache.',
+    'redis_failed' => 'Redis refused to create the site\'s login.',
+    'object_cache_not_enabled' => 'Object Cache Pro is not enabled on this site.',
 ];

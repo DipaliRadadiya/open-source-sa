@@ -12,6 +12,7 @@ use App\Models\Backup;
 use App\Models\Cronjob;
 use App\Models\Worker;
 use App\Services\Addons\InsightHubToolkit;
+use App\Services\Addons\SiteRedisAccount;
 use App\Services\Server\Certificates\CertbotClient;
 use App\Services\Server\Certificates\CertificateFiles;
 use App\Services\Server\Php\PoolManager;
@@ -142,6 +143,11 @@ class ApplicationArtifacts
 
         $this->attempt($application, 'site_rules', function () use ($application) {
             $this->removeSiteRules($application);
+        });
+
+        $this->attempt($application, 'redis_account', function () use ($application) {
+            // Object Cache Pro's Redis user; a site without one has nothing to remove.
+            app(SiteRedisAccount::class)->remove($application);
         });
 
         $this->attempt($application, 'insighthub', function () use ($application) {

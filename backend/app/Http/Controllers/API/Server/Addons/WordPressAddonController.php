@@ -34,6 +34,8 @@ class WordPressAddonController extends Controller
         $entry = WpToolkitCommands::get($command);
 
         $arguments = $this->arguments($entry, $request, $application, $toolkit);
+        // Read on stdin by the toolkit, for what must not be on a command line.
+        $input = isset($entry['input']) ? ($entry['input'])($request->validated()) : null;
 
         if ($entry['mutates']) {
             $log->log('application.addon_command', $application, [
@@ -50,6 +52,7 @@ class WordPressAddonController extends Controller
                 'command' => $command,
                 'status' => AddonRun::QUEUED,
                 'arguments' => $arguments,
+                'input' => $input,
             ]);
 
             RunAddonCommand::dispatch($run->id);
@@ -57,7 +60,7 @@ class WordPressAddonController extends Controller
             return AddonRunResource::make($run)->response()->setStatusCode(202);
         }
 
-        return response()->json($toolkit->run($arguments, (int) config('server.addons.sync_timeout'), ['application' => $application->id]));
+        return response()->json($toolkit->run($arguments, (int) config('server.addons.sync_timeout'), ['application' => $application->id], $input));
     }
 
     /**

@@ -141,6 +141,49 @@ final class WpToolkitCommands
                 'async' => false, 'mutates' => true,
             ],
 
+            // ── blueprint ────────────────────────────────────────────────────
+            // The blueprint is saved in Central (it was v7's
+            // wordpress_blueprints table) and sent whole; it goes to the
+            // toolkit on stdin, script and all, never on a command line.
+            'blueprint.apply' => [
+                'rules' => [
+                    'selected_plugins' => ['sometimes', 'array', 'max:100'],
+                    'selected_plugins.*.slug' => ['required', 'string', 'max:200', 'regex:/^'.self::SLUG.'$/'],
+                    'selected_plugins.*.name' => ['sometimes', 'nullable', 'string', 'max:200'],
+                    'selected_plugins.*.activate' => ['sometimes', 'boolean'],
+                    'selected_themes' => ['sometimes', 'array', 'max:50'],
+                    'selected_themes.*.slug' => ['required', 'string', 'max:200', 'regex:/^'.self::SLUG.'$/'],
+                    'selected_themes.*.name' => ['sometimes', 'nullable', 'string', 'max:200'],
+                    'selected_themes.*.activate' => ['sometimes', 'boolean'],
+                    'custom_theme_plugins' => ['sometimes', 'array', 'max:50'],
+                    'custom_theme_plugins.*.label' => ['sometimes', 'nullable', 'string', 'max:200'],
+                    'custom_theme_plugins.*.link' => ['required', 'string', 'max:2048', 'regex:/^https:\/\/\S+$/'],
+                    'custom_theme_plugins.*.type' => ['required', 'in:custom-plugin,custom-theme'],
+                    'custom_theme_plugins.*.activate' => ['sometimes', 'boolean'],
+                    'remove_hello_world' => ['sometimes', 'boolean'],
+                    'remove_sample_page' => ['sometimes', 'boolean'],
+                    'delete_all_themes' => ['sometimes', 'boolean'],
+                    'delete_all_plugins' => ['sometimes', 'boolean'],
+                    'delete_unneeded_core_file' => ['sometimes', 'boolean'],
+                    'language' => ['sometimes', 'nullable', 'string', 'max:32'],
+                    'timezone' => ['sometimes', 'nullable', 'string', 'max:64'],
+                    'date_format' => ['sometimes', 'nullable', 'string', 'max:64'],
+                    'time_format' => ['sometimes', 'nullable', 'string', 'max:64'],
+                    'se_indexing_disable' => ['sometimes', 'boolean'],
+                    'organize_upload_folders' => ['sometimes', 'boolean'],
+                    'permalink_structure' => ['sometimes', 'nullable', 'string', 'max:255'],
+                    'debug_mode' => ['sometimes', 'boolean'],
+                    'debug_log' => ['sometimes', 'boolean'],
+                    'debug_error' => ['sometimes', 'boolean'],
+                    // Run after setup as the site's owner, never root.
+                    'script' => ['sometimes', 'nullable', 'string', 'max:65536'],
+                ],
+                'argv' => fn () => ['blueprint', 'apply'],
+                'input' => fn ($in) => json_encode(self::blueprint($in), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES),
+                // Downloads and installs; and the script may take minutes.
+                'async' => true, 'mutates' => true,
+            ],
+
             // ── web server rules (no WP-CLI) ─────────────────────────────────
             'security.get' => self::read(fn () => ['security', 'status']) + ['rules_target' => true],
             'security.set' => [
@@ -182,6 +225,39 @@ final class WpToolkitCommands
         }
 
         return $flags;
+    }
+
+    /**
+     * The blueprint as the toolkit reads it: only the fields it knows (it
+     * refuses unknown ones), with nulls dropped.
+     *
+     * @param  array<string, mixed>  $in
+     * @return array<string, mixed>
+     */
+    public static function blueprint(array $in): array
+    {
+        $item = fn (array $i): array => array_filter([
+            'name' => $i['name'] ?? null, 'slug' => $i['slug'] ?? null, 'activate' => (bool) ($i['activate'] ?? false),
+        ], fn ($v) => $v !== null);
+        $custom = fn (array $i): array => array_filter([
+            'label' => $i['label'] ?? null, 'link' => $i['link'] ?? null, 'type' => $i['type'] ?? null, 'activate' => (bool) ($i['activate'] ?? false),
+        ], fn ($v) => $v !== null);
+
+        $out = [
+            'selected_plugins' => array_map($item, $in['selected_plugins'] ?? []),
+            'selected_themes' => array_map($item, $in['selected_themes'] ?? []),
+            'custom_theme_plugins' => array_map($custom, $in['custom_theme_plugins'] ?? []),
+        ];
+        foreach (['remove_hello_world', 'remove_sample_page', 'delete_all_themes', 'delete_all_plugins', 'delete_unneeded_core_file', 'se_indexing_disable', 'organize_upload_folders', 'debug_mode', 'debug_log', 'debug_error'] as $flag) {
+            $out[$flag] = (bool) ($in[$flag] ?? false);
+        }
+        foreach (['language', 'timezone', 'date_format', 'time_format', 'permalink_structure', 'script'] as $text) {
+            if (filled($in[$text] ?? null)) {
+                $out[$text] = (string) $in[$text];
+            }
+        }
+
+        return $out;
     }
 
     private static function read(callable $argv): array

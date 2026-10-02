@@ -11,4 +11,9 @@ return [
     'run_failed' => 'El comando del complemento falló inesperadamente.',
     'unregistered' => 'Sitio dado de baja.',
     'option_required' => ':option es obligatorio para este informe.',
+    'redis_unavailable' => 'Redis no está en ejecución en este servidor, así que no se puede configurar Object Cache Pro.',
+    'redis_too_old' => 'Object Cache Pro necesita Redis 6 o posterior para un acceso propio por sitio; este servidor tiene Redis :version.',
+    'redis_no_password' => 'Primero establece una contraseña de Redis: sin ella, cualquier sitio podría leer la caché de los demás.',
+    'redis_failed' => 'Redis no pudo crear el acceso del sitio.',
+    'object_cache_not_enabled' => 'Object Cache Pro no está activado en este sitio.',
 ];

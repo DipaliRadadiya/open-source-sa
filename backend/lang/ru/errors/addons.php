@@ -11,4 +11,9 @@ return [
     'run_failed' => 'Команда дополнения неожиданно завершилась ошибкой.',
     'unregistered' => 'Регистрация сайта отменена.',
     'option_required' => 'Для этого отчёта требуется :option.',
+    'redis_unavailable' => 'Redis не запущен на этом сервере, поэтому настроить Object Cache Pro нельзя.',
+    'redis_too_old' => 'Для отдельного входа для каждого сайта Object Cache Pro нужен Redis 6 или новее; на этом сервере Redis :version.',
+    'redis_no_password' => 'Сначала задайте пароль Redis: без него любой сайт сможет читать кэш остальных.',
+    'redis_failed' => 'Redis не смог создать вход для сайта.',
+    'object_cache_not_enabled' => 'Object Cache Pro не включён на этом сайте.',
 ];
