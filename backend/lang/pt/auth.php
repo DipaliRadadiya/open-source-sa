@@ -6,4 +6,5 @@ return [
     'cannot_impersonate_self' => 'Você não pode personificar a sua própria conta.',
     'cannot_impersonate_admin' => 'Você não pode personificar outro administrador.',
     'not_impersonating' => 'Você não está personificando nenhum usuário no momento.',
+    'password_unchanged' => 'A nova palavra-passe tem de ser diferente da atual.',
 ];

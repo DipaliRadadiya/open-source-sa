@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Server\Database;
 
+use App\Rules\RemoteDatabaseHost;
 use App\Rules\SupportsRemoteDatabaseUsers;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -36,7 +37,7 @@ class UpdateDatabaseUserRequest extends FormRequest
             'restart_cluster' => ['sometimes', 'boolean'],
             'host' => [
                 Rule::requiredIf(fn () => $this->input('connection_preference') === 'remote'),
-                'nullable', 'regex:/^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/',
+                'nullable', new RemoteDatabaseHost($this->input('connection_preference')),
             ],
             'password' => ['sometimes', 'string', 'min:8', 'max:255'],
         ];

@@ -48,3 +48,20 @@ it('revokes all existing tokens when password changes', function () {
     expect(PersonalAccessToken::find($oldTokenId))->toBeNull();
     expect($user->fresh()->tokens()->count())->toBe(1);
 });
+
+// Bug #2: the same password was accepted as a change.
+it('refuses a new password that is the current one', function () {
+    $user = User::factory()->create(['password' => bcrypt('OldPassword123')]);
+    $token = $user->createToken('test')->plainTextToken;
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->putJson('/api/auth/password', [
+            'current_password' => 'OldPassword123',
+            'password' => 'OldPassword123',
+            'password_confirmation' => 'OldPassword123',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['password' => __('auth.password_unchanged')]);
+
+    expect($user->tokens()->count())->toBe(1);
+});

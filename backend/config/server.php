@@ -2142,8 +2142,10 @@ return [
             '/var/log/redis/*.log',
             '/var/log/supervisor/*.log',
             '/var/log/php*-fpm.log',
-            '/var/log/ufw.log',
-            '/var/log/fail2ban.log',
+            // Not ufw.log or fail2ban.log (bug #24): they are the record of
+            // attacks, and fail2ban's recidive jail reads its own log, so
+            // emptying it forgets every repeat offender. v7 never empties a
+            // live log; logrotate already keeps both in check.
         ],
     ],
 
@@ -2250,10 +2252,9 @@ return [
     'reboot_schedule' => [
         'file' => env('SERVER_REBOOT_SCHEDULE_FILE', 'panel-reboot'),
         'default_hour' => (int) env('SERVER_REBOOT_SCHEDULE_HOUR', 3),
-        // Not on the hour. Cron fires every :00 job on the same tick, and a
-        // reboot landing on top of a backup is how you get a half-written
-        // archive. ServerAvatar's docs advise the same buffer.
-        'minute' => (int) env('SERVER_REBOOT_SCHEDULE_MINUTE', 10),
+        // On the hour the user picked, as in v7 (bug #8: "04:00" restarted at
+        // 04:11). The operator can still move it off the hour here.
+        'minute' => (int) env('SERVER_REBOOT_SCHEDULE_MINUTE', 0),
         // Where a switched-off schedule's day/hour are kept, so switching it
         // back on offers what the administrator had. Panel-owned, never cron.
         'remembered' => env('SERVER_REBOOT_SCHEDULE_REMEMBERED', storage_path('app/reboot-schedule.json')),

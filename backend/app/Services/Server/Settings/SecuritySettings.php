@@ -212,16 +212,16 @@ class SecuritySettings implements SettingGroup
     }
 
     /**
-     * Let the user remove the rule for the port SSH has just left.
+     * Close the port SSH has just left, as v7 does (bug #7).
      *
-     * The rule opened for SSH is marked as the panel's, and the panel's rules
-     * cannot be removed while the firewall is on — right for the port SSH is
-     * on, wrong for the one it left. On the 26.04 test server, moving SSH to
-     * 2222 and back left 2222 open with no way to close it short of turning
-     * the firewall off. The rule is kept (closing a port someone may still
-     * be connected through is theirs to decide) but becomes an ordinary one.
-     * SshLockoutGuard still refuses removing whatever covers the port SSH is
-     * on now.
+     * The rule opened for SSH is the panel's, so it is the panel's to close:
+     * moving SSH to 2222 and back used to leave 2222 open, first with no way
+     * to close it, then as an ordinary rule the user had to find and delete.
+     * Connections already open through the old port survive — ufw keeps
+     * established traffic — so this cannot cut off the session making the
+     * change. A rule the user made for that port is theirs and stays; if
+     * ufw refuses the delete, the rule is released to the user instead.
+     * SshLockoutGuard still protects whatever covers the port SSH is on now.
      */
     private function releaseOldPortRule(int $port): void
     {
@@ -229,14 +229,24 @@ class SecuritySettings implements SettingGroup
             return;
         }
 
-        FirewallRule::query()
+        $rules = FirewallRule::query()
             ->where('port_from', $port)
             ->whereNull('port_to')
             ->where('protocol', 'tcp')
             ->where('action', 'allow')
             ->whereNull('source_ip')
             ->where('origin', '!=', 'user')
-            ->update(['origin' => 'user']);
+            ->get();
+
+        // Through ufw even while it is off: it keeps its rules when disabled,
+        // and a row deleted here alone would come back open on enable.
+        foreach ($rules as $rule) {
+            if ($this->firewall->remove($rule)->ok) {
+                $rule->delete();
+            } else {
+                $rule->forceFill(['origin' => 'user'])->save();
+            }
+        }
     }
 
     /**

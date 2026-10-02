@@ -215,3 +215,17 @@ it('takes world access off the .env once everything that writes it has run', fun
         ->and($narrow)->not->toBeFalse()
         ->and($narrow)->toBeGreaterThan($makeUser);
 });
+
+/*
+ * Bug #68: Statamic's .env.example ships APP_ENV=local and APP_DEBUG=true,
+ * and a live site in debug mode shows stack traces to any visitor. v7 sets
+ * production mode.
+ */
+it('installs in production mode, not with the example file\'s debug on', function () {
+    $runs = installStatamic();
+
+    $writes = collect($runs)->filter(fn ($run) => ($run['command'][0] ?? '') === 'tee')->pluck('input')->implode("\n");
+
+    expect($writes)->toContain('APP_ENV=production')
+        ->and($writes)->toContain('APP_DEBUG=false');
+});

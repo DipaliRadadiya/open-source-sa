@@ -6,4 +6,5 @@ return [
     'cannot_impersonate_self' => '自分自身になりすますことはできません。',
     'cannot_impersonate_admin' => '他の管理者になりすますことはできません。',
     'not_impersonating' => '現在、ユーザーになりすましていません。',
+    'password_unchanged' => '新しいパスワードは現在のパスワードと異なる必要があります。',
 ];

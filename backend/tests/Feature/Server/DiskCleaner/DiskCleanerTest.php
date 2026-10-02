@@ -375,3 +375,18 @@ describe('found on a live OpenLiteSpeed server, 2026-09-23', function () {
             ->assertUnprocessable();
     });
 });
+
+/*
+ * Bug #24: "Service logs", marked safe and schedulable, emptied ufw.log and
+ * fail2ban.log — the record of attacks, and the log fail2ban's recidive jail
+ * reads. v7 never empties a live log.
+ */
+it('never empties the security logs', function () {
+    $globs = (require base_path('config/server.php'))['disk_cleaner']['service_log_globs'];
+
+    foreach (['/var/log/ufw.log', '/var/log/fail2ban.log', '/var/log/auth.log'] as $log) {
+        foreach ($globs as $glob) {
+            expect(fnmatch($glob, $log))->toBeFalse("{$glob} would empty {$log}");
+        }
+    }
+});

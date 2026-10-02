@@ -128,20 +128,20 @@ it('writes a monthly reboot on the chosen date', function () {
     expect(cronLine())->toStartWith('10 5 1 * * root');
 });
 
-it('does not schedule the reboot on the hour', function () {
+it('uses the operator\'s minute when one is configured', function () {
     schedule(['enabled' => true, 'frequency' => 'daily', 'hour' => 3])->assertOk();
 
-    // Every :00 cron job fires on the same tick. A reboot landing on top of a
-    // running backup is a half-written archive.
-    expect(cronLine())->not->toStartWith('0 3 ');
+    // The default is on the hour, as v7; SERVER_REBOOT_SCHEDULE_MINUTE moves
+    // it off the hour for a box whose backups also run at :00.
+    expect(cronLine())->toStartWith('10 3 ');
 });
 
 it('gives logged-in users warning instead of cutting them off', function () {
     schedule(['enabled' => true, 'frequency' => 'daily', 'hour' => 3])->assertOk();
 
-    // `shutdown -r +1` sends the wall message and lets services stop; a bare
+    // `shutdown -r` sends the wall message and lets services stop; a bare
     // `reboot` does neither.
-    expect(cronLine())->toContain('/sbin/shutdown -r +1')
+    expect(cronLine())->toContain('/sbin/shutdown -r now')
         ->and(cronLine())->not->toContain('/sbin/reboot');
 });
 
@@ -345,4 +345,18 @@ it('labels the schedule with the zone cron runs in when /etc/timezone is absent'
     expect($response->json('settings.reboot_schedule.next_run'))->toEndWith('04:10:00');
 
     ServerTimezone::forget();
+});
+
+/*
+ * Bug #8: picking 04:00 restarted at 04:11 — the schedule sat at :10 and
+ * shutdown waited one more minute. v7 restarts at the hour picked.
+ */
+it('restarts at the hour picked, not ten minutes after it', function () {
+    expect((require base_path('config/server.php'))['reboot_schedule']['minute'])->toBe(0);
+
+    config(['server.reboot_schedule.minute' => 0]);
+    schedule(['enabled' => true, 'frequency' => 'daily', 'hour' => 4])->assertOk();
+
+    expect(cronLine())->toStartWith('0 4 * * * root')
+        ->and(cronLine())->not->toContain('+1');
 });

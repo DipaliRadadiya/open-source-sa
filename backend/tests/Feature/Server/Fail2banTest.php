@@ -137,6 +137,23 @@ it('queues the install and refuses to install twice', function () {
     f2b('POST', '/api/fail2ban/install')->assertUnprocessable();
 });
 
+/*
+ * Bug #3: the install wrote every jail off, so Setup said "You're all set"
+ * over a fail2ban protecting nothing. Debian's own default and v7 both turn
+ * the SSH jail on; the rest stay off until asked for.
+ */
+it('protects SSH as soon as fail2ban is installed, and nothing else', function () {
+    fakeFail2ban();
+
+    dispatch_sync(new InstallFail2ban);
+
+    $section = fn (string $jail) => (string) preg_replace('/\n\[.*$/s', '', (string) strstr(dropIn(), "[{$jail}]"));
+
+    expect($section('sshd'))->toContain('enabled = true')
+        ->and($section('recidive'))->toContain('enabled = false')
+        ->and(dropIn())->toContain('ignoreip = 127.0.0.1/8');
+});
+
 it('refuses to enable the SSH jail without an acknowledgement', function () {
     fakeFail2ban(bans: []);
 

@@ -6,4 +6,5 @@ return [
     'cannot_impersonate_self' => 'Vous ne pouvez pas usurper votre propre compte.',
     'cannot_impersonate_admin' => 'Vous ne pouvez pas usurper un autre administrateur.',
     'not_impersonating' => "Vous n'usurpez actuellement aucun utilisateur.",
+    'password_unchanged' => 'Le nouveau mot de passe doit être différent de l\'actuel.',
 ];

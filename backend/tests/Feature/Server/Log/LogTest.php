@@ -277,6 +277,38 @@ describe('sources the panel cannot open itself', function () {
         });
     }
 
+    /*
+     * Bug #21: /var/log/mongodb is mongodb:mongodb 0750. The MongoDB log was
+     * listed and answered "no permission"; v7 reads every log with sudo.
+     */
+    it('reads a log through sudo when its directory cannot be entered', function () {
+        fakePrivilegedLogs("mongo line\n");
+        File::makeDirectory($this->logDir.'/mongodb', 0755, true);
+        File::put($this->logDir.'/mongodb/mongod.log', "x\n");
+        chmod($this->logDir.'/mongodb', 0600);
+        config(['server.logs' => [
+            ['key' => 'mongodb', 'label' => 'MongoDB', 'group' => 'database', 'path' => $this->logDir.'/mongodb/mongod.log'],
+            ['key' => 'nginx_error', 'label' => 'Nginx — Error', 'group' => 'web', 'path' => $this->logDir.'/nginx-error.log'],
+            ['key' => 'absent', 'label' => 'Absent', 'group' => 'web', 'path' => $this->logDir.'/not-installed/x.log'],
+        ]]);
+        File::put($this->logDir.'/nginx-error.log', "ok\n");
+
+        $logs = collect($this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/logs')->assertOk()->json('logs'))->keyBy('key');
+
+        expect($logs['mongodb']['kind'])->toBe('privileged')
+            ->and($logs['mongodb']['readable'])->toBeTrue()
+            // One the panel can open stays a plain file, keeping follow/download.
+            ->and($logs['nginx_error']['kind'])->toBe('file')
+            // Nothing installed: not offered at all, rather than read through sudo.
+            ->and($logs->has('absent'))->toBeFalse();
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")->getJson('/api/logs/mongodb')
+            ->assertOk()->assertJsonPath('log.kind', 'privileged');
+
+        chmod($this->logDir.'/mongodb', 0755); // so afterEach can remove it
+    });
+
     it('offers them without the panel account being able to read the file', function () {
         fakePrivilegedLogs();
 

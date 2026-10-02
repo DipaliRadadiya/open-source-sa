@@ -6,4 +6,5 @@ return [
     'cannot_impersonate_self' => 'Sie können sich nicht selbst als Benutzer ausgeben.',
     'cannot_impersonate_admin' => 'Sie können keinen anderen Administrator imitieren.',
     'not_impersonating' => 'Sie geben sich derzeit nicht als Benutzer aus.',
+    'password_unchanged' => 'Das neue Passwort muss sich vom aktuellen unterscheiden.',
 ];

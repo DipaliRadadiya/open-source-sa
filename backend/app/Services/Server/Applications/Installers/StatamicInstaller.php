@@ -65,6 +65,13 @@ class StatamicInstaller extends AbstractPhpInstaller
         // Before `make:user`, so the first login lands on the real site.
         $this->setEnvValue($application, $application->envPath(), 'APP_URL', $application->url());
 
+        // The same file ships APP_ENV=local and APP_DEBUG=true, and a live
+        // site in debug mode prints stack traces, paths and config values to
+        // any visitor who triggers an error (bug #68). v7 installs it in
+        // production mode.
+        $this->setEnvValue($application, $application->envPath(), 'APP_ENV', 'production');
+        $this->setEnvValue($application, $application->envPath(), 'APP_DEBUG', 'false');
+
         // The email argument selects the non-interactive path. `--password` is
         // on the command line because Statamic offers no other way in — see
         // the class note.

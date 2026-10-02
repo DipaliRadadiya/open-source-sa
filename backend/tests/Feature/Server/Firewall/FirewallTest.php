@@ -901,3 +901,78 @@ it('lets create and update agree on the range, so neither can drift', function (
         ->assertUnprocessable()
         ->assertJsonValidationErrors('port_from');
 });
+
+/*
+ * Bug #20: ufw stops at the first match, and a deny for one address was
+ * appended below "allow 22 from anywhere", so it blocked nothing. As v7,
+ * deny and reject go on top.
+ */
+describe('where a rule lands', function () {
+    function fakeNumberedUfw(string $numbered, int $insertExit = 0): void
+    {
+        Process::fake(function ($process) use ($numbered, $insertExit) {
+            $command = array_values(array_diff($process->command, ['sudo', '-n']));
+
+            if ($command === ['ufw', 'status', 'numbered']) {
+                return Process::result(output: $numbered);
+            }
+            if (in_array('status', $command, true)) {
+                return Process::result(output: "Status: active\nDefault: deny (incoming), allow (outgoing), disabled (routed)\n");
+            }
+            if (($command[1] ?? '') === 'insert') {
+                return Process::result(errorOutput: $insertExit ? "ERROR: Invalid position '1'" : '', exitCode: $insertExit);
+            }
+
+            return Process::result();
+        });
+    }
+
+    $numbered = "Status: active\n\n     To                         Action      From\n     --                         ------      ----\n"
+        ."[ 1] 22/tcp                     ALLOW IN    Anywhere\n[ 2] 80/tcp                     ALLOW IN    Anywhere\n"
+        ."[ 3] 22/tcp (v6)                ALLOW IN    Anywhere (v6)\n[ 4] 80/tcp (v6)                ALLOW IN    Anywhere (v6)\n";
+
+    it('puts a deny on top, above the allow it would otherwise lose to', function () use ($numbered) {
+        fakeNumberedUfw($numbered);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->postJson('/api/firewall/rules', ['port_from' => 22, 'protocol' => 'tcp', 'action' => 'deny', 'source_ip' => '203.0.113.9'])
+            ->assertCreated();
+
+        Process::assertRan(fn ($p) => array_values(array_diff($p->command, ['sudo', '-n'])) === ['ufw', 'insert', '1', 'deny', 'from', '203.0.113.9', 'to', 'any', 'port', '22', 'proto', 'tcp']);
+        Process::assertNotRan(fn ($p) => array_values(array_diff($p->command, ['sudo', '-n']))[1] === 'deny');
+    });
+
+    it('puts an IPv6 deny above the first IPv6 rule, where ufw allows it', function () use ($numbered) {
+        fakeNumberedUfw($numbered);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->postJson('/api/firewall/rules', ['port_from' => 22, 'protocol' => 'tcp', 'action' => 'deny', 'source_ip' => '2001:db8::9'])
+            ->assertCreated();
+
+        Process::assertRan(fn ($p) => array_slice(array_values(array_diff($p->command, ['sudo', '-n'])), 0, 4) === ['ufw', 'insert', '3', 'deny']);
+    });
+
+    it('appends when there is nothing to insert above, or the insert is refused', function (string $list, int $insertExit) {
+        fakeNumberedUfw($list, $insertExit);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->postJson('/api/firewall/rules', ['port_from' => 8080, 'protocol' => 'tcp', 'action' => 'deny'])
+            ->assertCreated();
+
+        Process::assertRan(fn ($p) => array_values(array_diff($p->command, ['sudo', '-n'])) === ['ufw', 'deny', '8080/tcp']);
+    })->with([
+        'no rules yet' => ["Status: active\n", 0],
+        'insert refused' => [$numbered, 1],
+    ]);
+
+    it('leaves an allow where it always went', function () use ($numbered) {
+        fakeNumberedUfw($numbered);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->postJson('/api/firewall/rules', ['port_from' => 8080, 'protocol' => 'tcp', 'action' => 'allow'])
+            ->assertCreated();
+
+        Process::assertRan(fn ($p) => array_values(array_diff($p->command, ['sudo', '-n'])) === ['ufw', 'allow', '8080/tcp']);
+        Process::assertNotRan(fn ($p) => in_array('insert', $p->command, true));
+    });
+});

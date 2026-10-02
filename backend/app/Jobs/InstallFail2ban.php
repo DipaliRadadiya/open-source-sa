@@ -18,9 +18,8 @@ use Throwable;
  * an automatic retry of a package install just repeats a failure the operator
  * needs to read.
  *
- * Nothing is enabled here. A freshly installed fail2ban that immediately
- * started banning would be a surprise, and the one jail worth having is the
- * one that can lock you out — that stays a deliberate click.
+ * Only the SSH jail is enabled here, as Debian's own package and v7 do
+ * (bug #3); every other jail stays a deliberate click.
  */
 class InstallFail2ban implements ShouldQueue
 {
@@ -65,7 +64,7 @@ class InstallFail2ban implements ShouldQueue
                 self::RUNTIME,
                 self::VERSION,
                 null,
-                $classifier->classify(self::RUNTIME, $result->output().$result->errorOutput()),
+                $classifier->classify(self::RUNTIME, $result),
                 $result->reference,
             );
 
@@ -74,12 +73,16 @@ class InstallFail2ban implements ShouldQueue
             return;
         }
 
-        // Write our drop-in with every jail off, so the installed service has
-        // the panel's settings from the start and no jail nobody asked for.
+        // Write our drop-in so the installed service has the panel's settings
+        // from the start. The SSH jail is on, as Debian's own default and v7
+        // have it: installing fail2ban and protecting nothing, while Setup said
+        // "You're all set", was bug #3. Every other jail stays off until asked
+        // for. The jail bans on the port SSH really uses (jailOptions()), and
+        // loopback is always ignored.
         $fail2ban->write(
             (array) config('server.fail2ban.defaults'),
             [],
-            array_fill_keys(array_column((array) config('server.fail2ban.jails', []), 'name'), false),
+            ['sshd' => true] + array_fill_keys(array_column((array) config('server.fail2ban.jails', []), 'name'), false),
         );
 
         // Installed and configured: the package is on disk now, which is the

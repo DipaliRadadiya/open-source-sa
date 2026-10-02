@@ -464,12 +464,41 @@ class LogManager
     private function catalog(): array
     {
         return array_merge(
-            config('server.logs', []),
+            array_map(fn (array $source) => $this->withReadAccess($source), (array) config('server.logs', [])),
             $this->phpFpmLogs(),
             $this->postgresLogs(),
             $this->cronjobLogs(),
             $this->workerLogs(),
         );
+    }
+
+    /**
+     * Read through sudo what the panel cannot read itself, as v7 does.
+     *
+     * Bug #21: /var/log/mongodb is mongodb:mongodb 0750, so the MongoDB log
+     * was listed and answered "no permission". Inside a directory the panel
+     * cannot enter, the file cannot even be seen to exist, so that counts as
+     * unreadable too. A source with an explicit kind is left as it is.
+     *
+     * @param  array<string, mixed>  $source
+     * @return array<string, mixed>
+     */
+    private function withReadAccess(array $source): array
+    {
+        $path = (string) ($source['path'] ?? '');
+
+        if (isset($source['kind']) || $path === '') {
+            return $source;
+        }
+
+        $dir = dirname($path);
+        // A directory that exists but cannot be entered hides whether the
+        // file is there; one that does not exist means nothing is installed.
+        $unreadable = file_exists($path)
+            ? ! is_readable($path)
+            : is_dir($dir) && ! is_executable($dir);
+
+        return $unreadable ? $source + ['kind' => 'privileged'] : $source;
     }
 
     /**

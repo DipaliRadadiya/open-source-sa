@@ -21,5 +21,6 @@ return [
     'phpmyadmin_user_not_found' => 'Der angegebene Datenbankbenutzer gehört nicht zu dieser Datenbank.',
     'phpmyadmin_not_isolated' => 'Diese phpMyAdmin-Site nutzt den serverweiten PHP-Pool, sodass ein Anmeldelink für jede andere Site lesbar wäre. Geben Sie ihr einen eigenen PHP-Pool, oder öffnen Sie phpMyAdmin und melden Sie sich mit den Datenbank-Zugangsdaten an.',
     'phpmyadmin_sso_unavailable' => 'Der Anmeldelink konnte auf der phpMyAdmin-Site nicht vorbereitet werden.',
-
+    'remote_host_invalid' => 'Geben Sie eine IPv4-Adresse oder einen Bereich ein, z. B. 203.0.113.5 oder 203.0.113.0/24.',
+    'remote_host_not_remote' => 'Diese Adresse ist keine entfernte. Verwenden Sie „Lokal“ für diesen Server oder „Überall“ für alle Adressen.',
 ];

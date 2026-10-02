@@ -70,7 +70,7 @@ class InstallSupervisor implements ShouldQueue
                 self::RUNTIME,
                 self::VERSION,
                 null,
-                $classifier->classify(self::RUNTIME, $result->output().$result->errorOutput()),
+                $classifier->classify(self::RUNTIME, $result),
                 $result->reference,
             );
 

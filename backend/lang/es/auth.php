@@ -6,4 +6,5 @@ return [
     'cannot_impersonate_self' => 'No puedes suplantar tu propia cuenta.',
     'cannot_impersonate_admin' => 'No puedes suplantar a otro administrador.',
     'not_impersonating' => 'Actualmente no estás suplantando a ningún usuario.',
+    'password_unchanged' => 'La nueva contraseña debe ser distinta de la actual.',
 ];

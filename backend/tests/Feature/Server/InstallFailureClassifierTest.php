@@ -1,10 +1,15 @@
 <?php
 
 use App\Enums\InstallStatus;
+use App\Jobs\InstallBuildTools;
+use App\Jobs\InstallFail2ban;
+use App\Jobs\InstallSupervisor;
 use App\Models\RuntimeInstall;
 use App\Services\Runtime\InstallFailureClassifier;
+use App\Services\Runtime\InstallTracker;
 use App\Services\Server\ServerOpsResult;
 use Illuminate\Process\FakeProcessResult;
+use Illuminate\Support\Facades\Process;
 
 /*
  * Why a failed install failed.
@@ -92,3 +97,26 @@ it('says the same thing when a PHP extension is refused', function () {
 
     expect($row->message())->toContain('panel:sudoers');
 });
+
+/*
+ * A failed install used to crash before saying why: the job handed the
+ * classifier a string where it takes the ServerOpsResult, a TypeError, so
+ * the reason was never recorded and the row was simply abandoned.
+ */
+it('records why a failed install failed, instead of crashing on the way', function (string $job, string $runtime, string $reason) {
+    Process::fake(fn ($process) => in_array('apt-get', (array) $process->command, true)
+        ? Process::result(errorOutput: 'E: Unable to locate package nothing', exitCode: 100)
+        : Process::result(exitCode: 1));
+    app(InstallTracker::class)->start($runtime, 'latest');
+
+    dispatch_sync(new $job);
+
+    $row = app(InstallTracker::class)->current($runtime, 'latest');
+
+    expect($row?->status?->value)->toBe('failed')
+        ->and($row->reason)->toBe($reason);
+})->with([
+    'fail2ban' => [InstallFail2ban::class, 'fail2ban', 'package_not_found'],
+    'build tools' => [InstallBuildTools::class, 'build_tools', 'unknown'],
+    'supervisor' => [InstallSupervisor::class, 'supervisor', 'unknown'],
+]);

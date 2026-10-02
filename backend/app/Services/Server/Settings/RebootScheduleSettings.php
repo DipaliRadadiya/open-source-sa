@@ -101,7 +101,8 @@ class RebootScheduleSettings implements SettingGroup
             ."SHELL=/bin/sh\n"
             ."PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin\n"
             // `shutdown -r` rather than `reboot`: it gives logged-in users the
-            // wall message and lets services stop cleanly.
+            // wall message and lets services stop cleanly. `now`, not `+1`:
+            // the restart happens at the time the screen shows (bug #8).
             //
             // The activity entry is written first, and separated with `;`
             // rather than `&&` on purpose: a reboot the administrator
@@ -109,7 +110,7 @@ class RebootScheduleSettings implements SettingGroup
             // would make an audit record a precondition of the restart, so a
             // logging failure would silently cancel maintenance — the opposite
             // of what an audit trail is for.
-            ."{$expression} root {$this->logCommand()} ; /sbin/shutdown -r +1 \"Scheduled reboot from the server panel\"\n";
+            ."{$expression} root {$this->logCommand()} ; /sbin/shutdown -r now \"Scheduled reboot from the server panel\"\n";
 
         $result = $this->files->put($path, $contents, ['feature' => 'setting', 'group' => 'reboot_schedule']);
 

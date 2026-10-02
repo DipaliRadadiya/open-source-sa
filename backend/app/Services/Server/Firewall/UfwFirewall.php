@@ -53,10 +53,56 @@ class UfwFirewall implements Firewall
 
     public function apply(FirewallRule $rule): ServerOpsResult
     {
-        return $this->serverOps->run(
-            array_merge(['ufw'], $this->ruleArgs($rule)),
-            ['feature' => 'firewall', 'op' => 'apply', 'rule' => $rule->id],
-        );
+        $context = ['feature' => 'firewall', 'op' => 'apply', 'rule' => $rule->id];
+
+        // ufw stops at the first rule that matches, and a plain add goes to
+        // the bottom. A deny for one address landed below "allow 22 from
+        // anywhere" and blocked nothing (bug #20), so — as v7 does — deny and
+        // reject go on top. Appending stays the fallback: with no rules yet
+        // there is no position to insert at.
+        if (in_array($rule->action, ['deny', 'reject'], true) && ($position = $this->topPosition($rule)) !== null) {
+            $inserted = $this->serverOps->run(
+                array_merge(['ufw', 'insert', (string) $position], $this->ruleArgs($rule)),
+                $context + ['position' => $position],
+            );
+
+            if ($inserted->ok) {
+                return $inserted;
+            }
+        }
+
+        return $this->serverOps->run(array_merge(['ufw'], $this->ruleArgs($rule)), $context);
+    }
+
+    /**
+     * Where the top of the rule list is for this rule, or null when unknown.
+     *
+     * ufw numbers its IPv6 rules after all the IPv4 ones and refuses to put
+     * an IPv6-only rule at position 1 ("Invalid position"), so a rule from an
+     * IPv6 address goes above the first IPv6 rule instead. Measured with
+     * `ufw --dry-run insert` on Ubuntu 26.04.
+     */
+    private function topPosition(FirewallRule $rule): ?int
+    {
+        $result = $this->serverOps->run(['ufw', 'status', 'numbered'], ['feature' => 'firewall', 'op' => 'status']);
+
+        if (! $result->ok) {
+            return null;
+        }
+
+        $ipv6 = $rule->source_ip !== null && str_contains($rule->source_ip, ':');
+
+        foreach (preg_split('/\r?\n/', $result->output()) ?: [] as $line) {
+            if (preg_match('/^\[\s*(\d+)\]/', $line, $match) !== 1) {
+                continue;
+            }
+
+            if (! $ipv6 || str_contains($line, '(v6)')) {
+                return (int) $match[1];
+            }
+        }
+
+        return null;
     }
 
     public function remove(FirewallRule $rule): ServerOpsResult

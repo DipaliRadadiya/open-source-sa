@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Server\Database;
 
+use App\Rules\RemoteDatabaseHost;
 use App\Rules\SupportsRemoteDatabaseUsers;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -40,7 +41,7 @@ class StoreDatabaseUserRequest extends FormRequest
             'host' => [
                 Rule::requiredIf(fn () => $this->input('connection_preference') === 'remote'),
                 'nullable',
-                'regex:/^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/',
+                new RemoteDatabaseHost($this->input('connection_preference')),
             ],
         ];
     }

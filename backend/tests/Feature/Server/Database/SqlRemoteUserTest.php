@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Database;
+use App\Models\DatabaseUser;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Cache;
@@ -107,4 +108,43 @@ it('gives a remote user a connection string to this server, not to its own host'
     mariaDbUser()
         ->assertCreated()
         ->assertJsonPath('user.connection_string', 'mariadb://shop_user:S3cretPass99@198.51.100.20:3306/shop');
+});
+
+/*
+ * Bug #37: a shape-only regex took 999.1.1.1. The user was created, ufw
+ * refused the rule with a 500, and the half-made rule could not be deleted.
+ * Like v7, an address that is not remote at all is refused too.
+ */
+it('refuses a remote address that is not one', function (string $host, string $message) {
+    fakeMariaDb();
+
+    mariaDbUser(['host' => $host, 'restart_cluster' => true])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['host' => __($message)]);
+
+    Process::assertNotRan(fn ($p) => in_array('ufw', (array) $p->command, true));
+    expect(DatabaseUser::count())->toBe(0);
+})->with([
+    'octet over 255' => ['999.1.1.1', 'errors/database.remote_host_invalid'],
+    'prefix over 32' => ['10.0.0.0/33', 'errors/database.remote_host_invalid'],
+    'ipv6' => ['2001:db8::1', 'errors/database.remote_host_invalid'],
+    'every address' => ['0.0.0.0', 'errors/database.remote_host_not_remote'],
+    'a /0' => ['10.0.0.0/0', 'errors/database.remote_host_not_remote'],
+    'loopback' => ['127.0.0.1', 'errors/database.remote_host_not_remote'],
+]);
+
+it('still takes a real address or range', function (string $host) {
+    fakeMariaDb();
+    $this->state->bind = '0.0.0.0';
+
+    mariaDbUser(['host' => $host])->assertCreated();
+})->with(['203.0.113.4', '203.0.113.0/24', '10.1.2.3/32']);
+
+// The API reference has always shown this request. The host is not used for
+// "anywhere", so the stricter remote check must not break a caller who sends it.
+it('still takes the documented 0.0.0.0/0 alongside "anywhere"', function () {
+    fakeMariaDb();
+    $this->state->bind = '0.0.0.0';
+
+    mariaDbUser(['connection_preference' => 'anywhere', 'host' => '0.0.0.0/0'])->assertCreated();
 });

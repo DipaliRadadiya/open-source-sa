@@ -318,7 +318,9 @@ describe('a socket-activated SSH (Ubuntu 24.04+)', function () {
         Process::assertRan(fn ($p) => array_slice($p->command, -3) === ['systemctl', 'restart', 'ssh.socket']);
     });
 
-    it('lets the rule for the port SSH left be removed, and keeps the new one protected', function () {
+    // Bug #7: as v7, the port SSH left is closed, not left open for the user
+    // to find. A rule the user made for that port is theirs and stays.
+    it('closes the port SSH left, and keeps the new one protected', function () {
         fakeSettings(sshSocket: true);
         $old = FirewallRule::create(['port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
         $web = FirewallRule::create(['port_from' => 443, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
@@ -327,8 +329,37 @@ describe('a socket-activated SSH (Ubuntu 24.04+)', function () {
             ->putJson('/api/settings/security', ['port' => 2222, 'permit_root_login' => 'no', 'password_authentication' => true])
             ->assertOk();
 
-        expect($old->fresh()->isProtected())->toBeFalse()
+        expect($old->fresh())->toBeNull()
             ->and($web->fresh()->isProtected())->toBeTrue();
+        Process::assertRan(fn ($p) => array_slice($p->command, -4) === ['ufw', 'delete', 'allow', '22/tcp']);
+    });
+
+    it('leaves a rule the user made for the old port, and releases one ufw will not delete', function () {
+        fakeSettings(sshSocket: true);
+        $theirs = FirewallRule::create(['port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'source_ip' => '203.0.113.7', 'origin' => 'user']);
+        $ours = FirewallRule::create(['port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+        Process::fake(function ($process) {
+            $cmd = ($process->command[0] ?? null) === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            return match (true) {
+                ($cmd[0] ?? '') === 'ufw' && ($cmd[1] ?? '') === 'delete' => Process::result(errorOutput: 'ERROR', exitCode: 1),
+                ($cmd[0] ?? '') === 'ufw' => Process::result(output: "Status: active\n"),
+                ($cmd[0] ?? '') === 'sshd' && ($cmd[1] ?? '') === '-T' => Process::result(output: "port 22\npermitrootlogin no\npasswordauthentication yes\n"),
+                ($cmd[0] ?? '') === 'tee' => (function () use ($cmd, $process) {
+                    File::put($cmd[1], (string) $process->input);
+
+                    return Process::result();
+                })(),
+                default => Process::result(),
+            };
+        });
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 2222, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertOk();
+
+        expect($theirs->fresh())->not->toBeNull()
+            ->and($ours->fresh()?->origin)->toBe('user');
     });
 
     it('protects the rule again when SSH moves back to a port it left', function () {
