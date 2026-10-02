@@ -4,6 +4,7 @@ namespace App\Services\Server;
 
 use App\Contracts\PhpStack;
 use App\Services\Server\Php\IniSyntaxCheck;
+use App\Services\Server\WebServers\OlsConfigCheck;
 
 /**
  * Validates a service's configuration without applying it.
@@ -20,6 +21,7 @@ class ConfigTester
     public function __construct(
         private ServerOps $serverOps,
         private PhpStack $stack,
+        private OlsConfigCheck $olsCheck,
     ) {}
 
     public function testable(string $key): bool
@@ -38,10 +40,14 @@ class ConfigTester
             return null;
         }
 
-        $result = $this->serverOps->run(
-            $command,
-            ['feature' => 'service', 'op' => 'config_test', 'service' => $key],
-        );
+        $context = ['feature' => 'service', 'op' => 'config_test', 'service' => $key];
+
+        // OpenLiteSpeed's raw test exits 0 on any config when /tmp/lshttpd is
+        // missing, and 1 on a mere warning. A restart is now refused on a
+        // failed test, so this one has to be the version that means something.
+        $result = $key === 'openlitespeed'
+            ? $this->olsCheck->run($context)
+            : $this->serverOps->run($command, $context);
 
         // A PHP unit's test exits 0 over an ini PHP could not parse.
         if ($this->stack->versionForService($key) !== null) {

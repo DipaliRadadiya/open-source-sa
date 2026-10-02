@@ -4,7 +4,9 @@ namespace App\Actions\Server\Service;
 
 use App\Exceptions\Server\Service\ServiceOperationException;
 use App\Services\ActivityLogger;
+use App\Services\Server\ConfigTester;
 use App\Services\Server\ServiceManager;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\ValidationException;
 
 class RunServiceAction
@@ -18,9 +20,17 @@ class RunServiceAction
         'disable' => 'disabled',
     ];
 
+    /**
+     * Actions that load the configuration from disk. Restarting nginx over a
+     * broken config does not keep the old one running — it stops nginx, fails
+     * to start it, and takes every site and the panel itself down with it.
+     */
+    private const TESTED_ACTIONS = ['start', 'restart', 'reload'];
+
     public function __construct(
         private ServiceManager $services,
         private ActivityLogger $activityLogger,
+        private ConfigTester $tester,
     ) {}
 
     /**
@@ -44,6 +54,10 @@ class RunServiceAction
             ]);
         }
 
+        if (in_array($action, self::TESTED_ACTIONS, true)) {
+            $this->refuseBrokenConfig($service);
+        }
+
         $result = $this->services->run($service['unit'], $action);
 
         if ($result->failed()) {
@@ -53,5 +67,27 @@ class RunServiceAction
         $this->activityLogger->log('service.'.self::VERBS[$action], null, ['service' => $service['label']]);
 
         return $this->services->describe($service);
+    }
+
+    /**
+     * Services with no config test are not held back: there is nothing to ask.
+     */
+    private function refuseBrokenConfig(array $service): void
+    {
+        $test = $this->tester->test($service['key']);
+
+        if ($test === null || $test['ok']) {
+            return;
+        }
+
+        $message = __('errors/service.config_invalid', [
+            'service' => $service['label'],
+        ]);
+
+        throw new HttpResponseException(response()->json([
+            'message' => $message,
+            'errors' => ['action' => [$message]],
+            'config_test' => $test,
+        ], 422));
     }
 }
