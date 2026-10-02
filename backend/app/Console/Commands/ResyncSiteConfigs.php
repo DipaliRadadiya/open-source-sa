@@ -13,6 +13,7 @@ use App\Services\Server\Applications\SiteRootLock;
 use App\Services\Server\Php\AdditionalDirectives;
 use App\Services\Server\Php\PoolManager;
 use App\Services\Server\SystemUsers\HomeDirectoryAccess;
+use App\Services\Server\WebServers\CatchAllSite;
 use Illuminate\Console\Command;
 
 /**
@@ -64,6 +65,7 @@ class ResyncSiteConfigs extends Command
             ));
         }
 
+        $this->ensureCatchAll(app(CatchAllSite::class));
         $this->lockSiteRoots($rootLock);
         $this->closeHomes($homeAccess);
         // The panel's own checkout, closed for the same reason as the homes
@@ -74,6 +76,25 @@ class ResyncSiteConfigs extends Command
         $this->reportSkippedDirectives();
 
         return self::SUCCESS;
+    }
+
+    /**
+     * A neutral answer for domains no site claims (bug #55) — see
+     * CatchAllSite. Here so every install, update and manual deploy gets it.
+     * Never fails the command: a server whose web server refuses it keeps
+     * the default it already had.
+     */
+    private function ensureCatchAll(CatchAllSite $catchAll): void
+    {
+        $result = $catchAll->ensure();
+
+        match ($result['status']) {
+            'updated' => $this->info('Unknown domains: now refused (web server reloaded).'),
+            'current' => $this->info('Unknown domains: already refused.'),
+            'skipped' => $this->info('Unknown domains: left to the server\'s own default.'),
+            'failed' => $this->warn('Unknown domains: not changed — the web server refused the default site'
+                .($result['reference'] ? ' (reference '.$result['reference'].')' : '').'.'),
+        };
     }
 
     /**

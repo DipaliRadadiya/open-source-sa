@@ -3459,6 +3459,17 @@ finish() {
     # the command reports what it did.
     run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan panel:close-directory' -- "$backend" "${PANEL_PHP_BIN}"
 
+    # The neutral answer for a domain no site claims (bug #55): without it the
+    # first site created would answer every unknown name, and on
+    # OpenLiteSpeed the TLS listener shows the panel's certificate. Written by
+    # sites:resync, which every update runs too. Never fatal: a web server
+    # that refuses it keeps its own default.
+    if sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan sites:resync' -- "$backend" "${PANEL_PHP_BIN}" >>"$LOG_FILE" 2>&1; then
+        ok "unknown domains get a neutral answer"
+    else
+        warn "could not set the default site for unknown domains — see $LOG_FILE"
+    fi
+
     # Prove the panel actually works before claiming the install succeeded.
     # Everything above this line only shows that commands ran as *root*; the
     # panel runs as an unprivileged account, and the gap between those two is

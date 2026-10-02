@@ -780,6 +780,138 @@ class OlsSharedConfig
      * not create in test mode happens to exist. A rollback wired to a check
      * that could not fail.
      */
+    /**
+     * Stop the secure listener presenting the panel's own certificate to
+     * names no site claims (bug #55).
+     *
+     * OpenLiteSpeed answers an unmapped name with its own 404 already, but the
+     * TLS handshake comes first and uses the listener's certificate — which
+     * install.sh set to the panel's. So any domain pointed at the server showed
+     * the panel's hostname. The panel's vhosts carry the same pair in their own
+     * `vhssl`, so the listener does not need it: it gets the reserved
+     * self-signed pair instead, the one sites without a certificate use.
+     *
+     * Only when the listener's certificate is exactly the one on the panel's
+     * own vhost. Anything else was set by somebody on purpose and is left.
+     *
+     * @param  array<int, string>  $panelHosts
+     * @return array{status: 'updated'|'current'|'skipped'|'failed', reference: ?string}
+     */
+    public function neutralListenerCertificate(array $panelHosts): array
+    {
+        return Cache::lock('ols-shared-config', 30)->block(20, fn () => $this->neutralListenerCertificateLocked($panelHosts));
+    }
+
+    /**
+     * @param  array<int, string>  $panelHosts
+     * @return array{status: 'updated'|'current'|'skipped'|'failed', reference: ?string}
+     */
+    private function neutralListenerCertificateLocked(array $panelHosts): array
+    {
+        $path = $this->path();
+        $context = ['feature' => 'web_server', 'op' => 'catch_all_listener'];
+        $read = $this->files->get($path, $context);
+
+        if ($read->failed()) {
+            return ['status' => 'failed', 'reference' => $read->reference];
+        }
+
+        $contents = $read->output();
+        $listener = (string) config('server.web_server_drivers.openlitespeed.ssl_listener', 'Defaultssl');
+
+        if (preg_match('/^listener\s+'.preg_quote($listener, '/').'\s*\{/m', $contents, $match, PREG_OFFSET_CAPTURE) !== 1) {
+            return ['status' => 'skipped', 'reference' => null];
+        }
+
+        $open = $match[0][1] + strlen($match[0][0]) - 1;
+        $close = $this->matchingBrace($contents, $open);
+
+        if ($close === null) {
+            return ['status' => 'skipped', 'reference' => null];
+        }
+
+        $block = substr($contents, $open, $close - $open);
+        $fallback = $this->certificateFiles->fallbackPaths();
+        $current = $this->directive($block, 'certFile');
+
+        if ($current === $fallback['certificate']) {
+            return ['status' => 'current', 'reference' => null];
+        }
+
+        $panelCertificate = $this->panelCertificate($contents, $block, $panelHosts, $context);
+
+        if ($current === null || $panelCertificate === null || $panelCertificate !== $current) {
+            return ['status' => 'skipped', 'reference' => null];
+        }
+
+        if ($this->tlsFallback($context) === null) {
+            return ['status' => 'failed', 'reference' => null];
+        }
+
+        $replaced = preg_replace(
+            ['/^(\s*keyFile\s+)\S+/m', '/^(\s*certFile\s+)\S+/m'],
+            ['${1}'.$fallback['private_key'], '${1}'.$fallback['certificate']],
+            $block,
+        );
+        $updated = substr($contents, 0, $open).$replaced.substr($contents, $close);
+
+        $backup = $path.'.panel-bak';
+        $backedUp = $this->serverOps->run(['cp', '-f', $path, $backup], $context);
+
+        if ($backedUp->failed()) {
+            return ['status' => 'failed', 'reference' => $backedUp->reference];
+        }
+
+        $written = $this->files->put($path, $updated, $context);
+        $test = $written->ok ? $this->test() : $written;
+
+        if ($test->failed()) {
+            $this->serverOps->run(['cp', '-f', $backup, $path], $context);
+
+            return ['status' => 'failed', 'reference' => $test->reference];
+        }
+
+        return ['status' => 'updated', 'reference' => null];
+    }
+
+    /**
+     * The certificate on the `vhssl` of the vhost the listener maps a panel
+     * host to, or null when there is no such vhost or it carries none.
+     *
+     * @param  array<int, string>  $panelHosts
+     * @param  array<string, mixed>  $context
+     */
+    private function panelCertificate(string $contents, string $listenerBlock, array $panelHosts, array $context): ?string
+    {
+        preg_match_all('/^\s*map\s+(\S+)\s+(.+)$/m', $listenerBlock, $maps, PREG_SET_ORDER);
+
+        foreach ($maps as $map) {
+            $domains = preg_split('/[\s,]+/', trim($map[2])) ?: [];
+
+            if (array_intersect($panelHosts, $domains) === []) {
+                continue;
+            }
+
+            if (preg_match('/^virtualHost\s+'.preg_quote($map[1], '/').'\s*\{(.*?)^\}/ms', $contents, $vhost) !== 1
+                || ($configFile = $this->directive($vhost[1], 'configFile')) === null) {
+                continue;
+            }
+
+            $vhconf = $this->files->get(str_replace('$SERVER_ROOT', dirname($this->path(), 2), $configFile), $context);
+
+            if ($vhconf->ok && preg_match('/^vhssl\s*\{(.*?)^\}/ms', $vhconf->output(), $ssl) === 1) {
+                return $this->directive($ssl[1], 'certFile');
+            }
+        }
+
+        return null;
+    }
+
+    private function directive(string $block, string $name): ?string
+    {
+        return preg_match('/^\s*'.$name.'\s+(\S+)/m', $block, $m) === 1 ? $m[1] : null;
+    }
+
     public function test(): ServerOpsResult
     {
         return $this->configCheck->run();

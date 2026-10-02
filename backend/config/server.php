@@ -888,6 +888,9 @@ return [
             'sites_available_dir' => env('SERVER_NGINX_SITES_AVAILABLE_DIR', '/etc/nginx/sites-available'),
             // Where the vhost templates point `access_log` / `error_log`.
             'log_dir' => env('SERVER_NGINX_LOG_DIR', '/var/log/nginx'),
+            // The answer for names no site claims (bug #55). conf.d is read
+            // before sites-enabled and needs no symlink.
+            'catch_all' => env('SERVER_NGINX_CATCH_ALL', '/etc/nginx/conf.d/panel-default-server.conf'),
             // Which PHP stack this web server implies — see `php_stacks`.
             'php_stack' => 'fpm',
         ],
@@ -899,6 +902,10 @@ return [
             // `${APACHE_LOG_DIR}` in the templates, resolved — Apache expands
             // it from envvars at start, which we cannot read.
             'log_dir' => env('SERVER_APACHE_LOG_DIR', '/var/log/apache2'),
+            // The answer for names no site claims (bug #55). conf-enabled is
+            // read before sites-enabled, so this is always the first vhost.
+            'catch_all' => env('SERVER_APACHE_CATCH_ALL', '/etc/apache2/conf-available/panel-default-site.conf'),
+            'catch_all_enabled_dir' => env('SERVER_APACHE_CATCH_ALL_ENABLED_DIR', '/etc/apache2/conf-enabled'),
             'php_stack' => 'fpm',
         ],
 

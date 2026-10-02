@@ -8,6 +8,8 @@ class NginxDriver extends AbstractWebServerDriver
 {
     private ?bool $http2Directive = null;
 
+    private ?string $version = null;
+
     public function name(): string
     {
         return 'nginx';
@@ -38,12 +40,31 @@ class NginxDriver extends AbstractWebServerDriver
             return $this->http2Directive;
         }
 
-        $result = $this->serverOps->run(['nginx', '-v'], ['feature' => 'web_server', 'op' => 'nginx_version'], timeout: 15);
-        $text = $result->output().$result->errorOutput();
+        return $this->http2Directive = $this->versionAtLeast('1.25.1');
+    }
 
-        return $this->http2Directive = $result->ok
-            && preg_match('~nginx/(\d+\.\d+\.\d+)~', $text, $m) === 1
-            && version_compare($m[1], '1.25.1', '>=');
+    /** False when the version cannot be read: the older syntax works everywhere. */
+    private function versionAtLeast(string $minimum): bool
+    {
+        $this->version ??= (function (): string {
+            $result = $this->serverOps->run(['nginx', '-v'], ['feature' => 'web_server', 'op' => 'nginx_version'], timeout: 15);
+
+            return $result->ok && preg_match('~nginx/(\d+\.\d+\.\d+)~', $result->output().$result->errorOutput(), $m) === 1
+                ? $m[1]
+                : '';
+        })();
+
+        return $this->version !== '' && version_compare($this->version, $minimum, '>=');
+    }
+
+    /**
+     * `ssl_reject_handshake` arrived in 1.19.4; Ubuntu 22.04 ships 1.18.
+     *
+     * @return array<string, mixed>
+     */
+    protected function catchAllViewData(): array
+    {
+        return parent::catchAllViewData() + ['rejectHandshake' => $this->versionAtLeast('1.19.4')];
     }
 
     protected function testCommand(): array

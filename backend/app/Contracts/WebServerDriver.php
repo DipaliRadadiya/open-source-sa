@@ -119,4 +119,16 @@ interface WebServerDriver
      * open rather than closed on a guess.
      */
     public function siteReaderUser(): ?string;
+
+    /**
+     * What answers a name no site on this server claims (bug #55), or null
+     * when this web server chooses its default some other way.
+     *
+     * Left to the web server, an unknown name went to the first site it
+     * loaded — a customer's site, with its certificate. `enabled` is the
+     * symlink the web server reads, when the file is not read where it lies.
+     *
+     * @return array{path: string, enabled: ?string, contents: string}|null
+     */
+    public function catchAllConfig(): ?array;
 }

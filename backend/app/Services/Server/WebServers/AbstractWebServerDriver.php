@@ -169,6 +169,31 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         return null;
     }
 
+    public function catchAllConfig(): ?array
+    {
+        $path = (string) config("server.web_server_drivers.{$this->name()}.catch_all");
+
+        if ($path === '' || ! View::exists("server.vhosts.{$this->name()}._catch-all")) {
+            return null;
+        }
+
+        $enabledDir = (string) config("server.web_server_drivers.{$this->name()}.catch_all_enabled_dir");
+
+        return [
+            'path' => $path,
+            'enabled' => $enabledDir === '' ? null : rtrim($enabledDir, '/').'/'.basename($path),
+            'contents' => View::make("server.vhosts.{$this->name()}._catch-all", $this->catchAllViewData())->render(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function catchAllViewData(): array
+    {
+        return ['tlsFallback' => $this->certificateFiles->fallbackPaths()];
+    }
+
     /**
      * The rendered config can name files inside `.panel/` — the WAF detect
      * log, the Basic Auth credential — and nginx refuses to start when a log
