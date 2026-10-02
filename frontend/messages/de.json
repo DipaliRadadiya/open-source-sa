@@ -1318,7 +1318,8 @@
     "clearFailed": "Das Log konnte nicht geleert werden.",
     "clearBodyAudit": "Dieses Log gehört zu der Aufzeichnung, was mit dem Server passiert ist — Anmeldungen, blockierte Anfragen, Sperren. Es zu leeren zerstört Beweise, die du nach einem Einbruch brauchen könntest, und ist nicht rückgängig zu machen. Die Datei zeichnet von jetzt an weiter auf.",
     "loadingSource": "{label} wird geladen…",
-    "linesCapped": "Es wird das Maximum angezeigt: {max, number} Zeilen."
+    "linesCapped": "Es wird das Maximum angezeigt: {max, number} Zeilen.",
+    "noPermission": "Ihre Rolle enthält nicht „Systemprotokolle“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum."
   },
   "services": {
     "title": "Dienste",

@@ -81,7 +81,9 @@ test("every control on the band is one size, radius and border", () => {
   assert.match(severityBlock, /filterToggleClass\(severity === key\)/);
   assert.doesNotMatch(severityBlock, /border-transparent/);
   // `size="sm"` is 32px with an 8px radius; the band is 36 and 10.
-  assert.match(code, /className="ml-auto h-9 rounded-lg border-destructive\/40/);
+  // ml-auto sits on a wrapper so it survives the disabled-with-reason tooltip span.
+  assert.match(code, /<div className="ml-auto">/);
+  assert.match(code, /className="h-9 rounded-lg border-destructive\/40/);
   // The tray held 36px children inside a 1px border, coming to 38.
   assert.match(code, /<div className="flex h-9 items-center overflow-hidden rounded-lg border divide-x">/);
   assert.match(code, /"size-9 h-full rounded-none"/);
@@ -91,7 +93,9 @@ test("Clear log carries destructive weight, and actions are divided from view", 
   // Kept from the same round: it was a plain outline button beside the "Last
   // 200 lines" dropdown — one changes what you see, the other empties the file
   // for good.
-  assert.match(code, /border-destructive\/40 text-destructive hover:bg-destructive\/10/);
+  // The destructive variant: hand-written red classes on an outline button lost to the
+  // outline's in-card tint and rendered blue (found 2 Oct).
+  assert.match(code, /variant="destructive"\s*size="sm"\s*className="h-9 rounded-lg border-destructive\/40"/);
   // Kept apart from the view actions by position, not a divider: last in the
   // band and pushed to the far end (a divider was left dangling at the start
   // of a wrapped line on a phone). 2026-09-23.

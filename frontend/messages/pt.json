@@ -1318,7 +1318,8 @@
     "clearFailed": "Não foi possível limpar o log.",
     "clearBodyAudit": "Este log faz parte de como o servidor registra o que aconteceu — acessos, requisições bloqueadas, banimentos. Limpá-lo destrói evidências que você pode precisar após uma invasão, e não pode ser desfeito. O arquivo continua gravando a partir de agora.",
     "loadingSource": "Carregando {label}…",
-    "linesCapped": "Mostrando o máximo possível: {max, number} linhas."
+    "linesCapped": "Mostrando o máximo possível: {max, number} linhas.",
+    "noPermission": "Seu papel não inclui Logs do sistema com acesso de Gerenciamento. Peça a um administrador para concedê-lo."
   },
   "services": {
     "title": "Serviços",

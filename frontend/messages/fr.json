@@ -1318,7 +1318,8 @@
     "clearFailed": "Le journal n'a pas pu être vidé.",
     "clearBodyAudit": "Ce journal fait partie de la manière dont le serveur enregistre ce qui s'y passe : connexions, requêtes bloquées, bannissements. Le vider détruit des preuves dont vous pourriez avoir besoin après une intrusion, et c'est irréversible. Le fichier continue d'enregistrer à partir de maintenant.",
     "loadingSource": "Chargement de {label}…",
-    "linesCapped": "Affichage du maximum possible : {max, number} lignes."
+    "linesCapped": "Affichage du maximum possible : {max, number} lignes.",
+    "noPermission": "Votre rôle n'inclut pas les journaux système avec l'accès Manage. Demandez à un administrateur de l'accorder."
   },
   "services": {
     "title": "Services",

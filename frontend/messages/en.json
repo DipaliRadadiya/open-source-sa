@@ -1318,7 +1318,8 @@
     "clearFailed": "The log could not be cleared.",
     "clearBodyAudit": "This log is part of how the server records what happened to it — sign-ins, blocked requests, bans. Clearing it destroys evidence you may need after a break-in, and it cannot be undone. The file keeps recording from now on.",
     "loadingSource": "Loading {label}…",
-    "linesCapped": "Showing the most there can be: {max, number} lines."
+    "linesCapped": "Showing the most there can be: {max, number} lines.",
+    "noPermission": "Your role does not include System Logs with Manage access. Ask an administrator to grant it."
   },
   "services": {
     "title": "Services",

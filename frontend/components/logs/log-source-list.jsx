@@ -145,7 +145,7 @@ function SourceButton({ source, selected, onSelect, size, modified, active, form
           ? "font-medium text-foreground hover:bg-muted"
           : "cursor-not-allowed text-muted-foreground",
         selected &&
-          "bg-primary/10 font-medium text-primary shadow-[inset_2px_0_0_0_var(--color-primary)] hover:bg-primary/15",
+          "bg-primary/10 font-medium text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] shadow-[inset_2px_0_0_0_var(--color-primary)] hover:bg-primary/15 dark:text-primary",
       )}
     >
       {/* Written to in the last few minutes: a dot answers "is this live?". */}

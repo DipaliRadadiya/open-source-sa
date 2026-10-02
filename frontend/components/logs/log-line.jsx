@@ -25,7 +25,7 @@ export function LogLine({ index, text, group, term, wrap, onCopy, copyLabel }) {
         tabIndex={-1}
         onClick={() => onCopy?.(text)}
         aria-label={copyLabel}
-        className="relative w-12 shrink-0 select-none text-right text-xs leading-6 tabular-nums text-console-muted/60 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+        className="relative w-12 shrink-0 select-none text-right text-xs leading-6 tabular-nums text-console-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
       >
         <span className="transition-opacity group-hover:opacity-0">{index}</span>
         <Copy

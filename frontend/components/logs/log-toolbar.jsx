@@ -63,6 +63,7 @@ export function LogToolbar({
   showDownload = true,
   // Emptying the log; null when unavailable or without `manage` (hidden, not disabled).
   onClear = null,
+  clearReason = null,
   clearing = false,
   busy,
   disabled,
@@ -81,8 +82,10 @@ export function LogToolbar({
   return (
     // Two rows: one would squeeze the heading to an ellipsis.
     <div className="flex flex-col gap-3 border-b bg-muted/40 px-4 py-3">
-      <div className="flex items-center gap-3">
-        <div className="min-w-0 flex-1">
+      {/* Wraps the tail pill below rather than squeezing the heading: min-w-48, not
+          min-w-0 (ru "Paused while filtering" left one word per line at 390). */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <div className="min-w-48 flex-1">
           <div className="flex items-center gap-2">
             <h2 className="truncate font-medium">{label}</h2>
             {busy ? (
@@ -316,14 +319,19 @@ export function LogToolbar({
 
           {/* Last, apart from the view actions: it empties the file for good. */}
           {onClear ? (
+            // ml-auto on a wrapper, not a divider (which would strand on a wrapped line): a
+            // disabled Button sits inside its reason tooltip's span.
+            <div className="ml-auto">
             <Button
               type="button"
-              variant="outline"
+              // The destructive variant, not outline + red classes: inside a card the outline
+              // variant's tint outranks them and the button rendered blue.
+              variant="destructive"
               size="sm"
-              /* Destructive: it empties the file. ml-auto, not a divider, which would strand on a wrapped line. */
-              className="ml-auto h-9 rounded-lg border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              className="h-9 rounded-lg border-destructive/40"
               onClick={onClear}
-              disabled={disabled || clearing}
+              disabled={disabled || clearing || Boolean(clearReason)}
+              disabledReason={clearReason}
             >
               {clearing ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -332,6 +340,7 @@ export function LogToolbar({
               )}
               {t("clear")}
             </Button>
+            </div>
           ) : null}
         </div>
       </div>
@@ -355,7 +364,8 @@ function IconAction({ icon: Icon, label, onClick, href, active, disabled }) {
     <Tooltip>
       <TooltipTrigger asChild>
         {href ? (
-          <Button {...shared} asChild={!disabled}>
+          // Disabled it is a <button>, not the link, so it needs its own name.
+          <Button {...shared} asChild={!disabled} aria-label={disabled ? label : undefined}>
             {disabled ? (
               <span>
                 <Icon className="size-4" />

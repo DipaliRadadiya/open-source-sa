@@ -396,9 +396,9 @@ export function LogsPanel({
           }
           downloadUrl={source ? logDownloadUrl(source.key) : undefined}
           showDownload={source?.downloadable !== false}
-          onClear={
-            canManage && source?.clearable ? () => setConfirmClear(true) : null
-          }
+          onClear={source?.clearable ? () => setConfirmClear(true) : null}
+          // Shown disabled with the reason rather than hidden, like every other write.
+          clearReason={canManage ? null : t("noPermission")}
           clearing={clearing}
           busy={busy}
           disabled={disabled}

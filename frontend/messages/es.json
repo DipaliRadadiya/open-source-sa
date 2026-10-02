@@ -1318,7 +1318,8 @@
     "clearFailed": "No se pudo vaciar el registro.",
     "clearBodyAudit": "Este registro forma parte de cómo el servidor anota lo que le ha pasado: inicios de sesión, peticiones bloqueadas, bloqueos. Vaciarlo destruye pruebas que podrías necesitar tras una intrusión y no se puede deshacer. El archivo sigue grabando desde ahora.",
     "loadingSource": "Cargando {label}…",
-    "linesCapped": "Se muestra el máximo posible: {max, number} líneas."
+    "linesCapped": "Se muestra el máximo posible: {max, number} líneas.",
+    "noPermission": "Tu rol no incluye Registros del sistema con acceso de gestión. Pide a un administrador que te lo conceda."
   },
   "services": {
     "title": "Servicios",
