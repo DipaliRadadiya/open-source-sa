@@ -218,7 +218,23 @@ class PhpExtensionManager
      */
     public function panelRequired(): array
     {
-        return (array) config('server.runtimes.php.panel_required', []);
+        $required = (array) config('server.runtimes.php.panel_required', []);
+
+        // The fixed list knows nothing about how this panel is configured.
+        // Cache, queue and sessions run on phpredis (bug #27: turning redis
+        // off took the panel down), and redis.so will not load without
+        // igbinary, which it was built against.
+        if (config('database.redis.client') === 'phpredis') {
+            array_push($required, 'redis', 'igbinary');
+        }
+
+        $required = [...$required, ...match (config('database.connections.'.config('database.default').'.driver')) {
+            'mysql', 'mariadb' => ['pdo_mysql', 'mysqlnd'],
+            'pgsql' => ['pdo_pgsql'],
+            default => [],
+        }];
+
+        return array_values(array_unique($required));
     }
 
     /**

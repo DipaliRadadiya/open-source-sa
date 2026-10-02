@@ -227,15 +227,16 @@ it('refuses to turn off a compiled-in extension', function () {
 it('reloads fpm after a toggle, because phpenmod does not', function () {
     $runs = fakeExtensions();
 
-    extCall('PUT', "/api/php/versions/{$this->panel}/extensions/redis", ['enabled' => false])
+    // Not the panel's own version: the panel's cache and queue run on redis.
+    extCall('PUT', "/api/php/versions/{$this->other}/extensions/redis", ['enabled' => false])
         ->assertOk();
 
     $commands = collect($runs);
 
-    expect($commands)->toContain(['/usr/sbin/phpdismod', '-v', $this->panel, '-s', 'ALL', 'redis'])
+    expect($commands)->toContain(['/usr/sbin/phpdismod', '-v', $this->other, '-s', 'ALL', 'redis'])
         // Without this the toggle flips in the UI and nothing changes on the
         // server until something else happens to restart FPM.
-        ->toContain(['systemctl', 'reload', "php{$this->panel}-fpm"]);
+        ->toContain(['systemctl', 'reload', "php{$this->other}-fpm"]);
 });
 
 it('toggles every SAPI at once', function () {
@@ -270,6 +271,43 @@ it('refuses to disable an extension the panel runs on', function () {
         ->assertJsonFragment(['message' => 'Turning curl off would take the panel offline — it needs curl.']);
 });
 
+/*
+ * Bug #27: redis was not on the list, and the panel's cache, queue and
+ * sessions run on phpredis. Turning it off took the panel down.
+ */
+it('refuses to disable redis under the panel when the panel uses phpredis', function () {
+    fakeExtensions();
+    config(['database.redis.client' => 'phpredis']);
+
+    extCall('PUT', "/api/php/versions/{$this->panel}/extensions/redis", ['enabled' => false])
+        ->assertUnprocessable()
+        ->assertJsonFragment(['message' => 'Turning redis off would take the panel offline — it needs redis.']);
+
+    extCall('GET', "/api/php/versions/{$this->panel}/extensions")
+        ->assertOk()
+        ->assertJsonPath('panel_required', fn (array $list) => in_array('redis', $list, true) && in_array('igbinary', $list, true));
+});
+
+it('lets redis go when the panel does not use phpredis', function () {
+    fakeExtensions();
+    config(['database.redis.client' => 'predis']);
+
+    extCall('PUT', "/api/php/versions/{$this->panel}/extensions/redis", ['enabled' => false])->assertOk();
+});
+
+it('protects the driver of the database the panel is on', function () {
+    $manager = app(PhpExtensionManager::class);
+    config(['server.runtimes.php.panel_required' => [], 'database.redis.client' => 'predis']);
+
+    // Flipped only around the call: the test itself is on sqlite.
+    $default = config('database.default');
+    config(['database.default' => 'mysql']);
+    $required = $manager->panelRequired();
+    config(['database.default' => $default]);
+
+    expect($required)->toBe(['pdo_mysql', 'mysqlnd']);
+});
+
 it('allows disabling that same extension on a version the panel does not use', function () {
     $runs = fakeExtensions();
 
@@ -300,7 +338,7 @@ it('404s for a version that is not installed', function () {
 it('never purges a package', function () {
     $runs = fakeExtensions();
 
-    extCall('PUT', "/api/php/versions/{$this->panel}/extensions/redis", ['enabled' => false])->assertOk();
+    extCall('PUT', "/api/php/versions/{$this->other}/extensions/redis", ['enabled' => false])->assertOk();
 
     // Disabling unlinks and stops. `apt purge php8.4-*` is how a server loses
     // php8.4-common and every site with it.
