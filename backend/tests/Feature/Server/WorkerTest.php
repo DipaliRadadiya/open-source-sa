@@ -1261,3 +1261,62 @@ describe('who a worker may run as', function () {
             ->assertJsonValidationErrors(['extra_config' => __('worker.errors.extra_config_user')]);
     });
 });
+
+/*
+ * Bug #73: switching a worker off stopped it, but its program still said
+ * autostart=true, so supervisord brought it back the next time it started —
+ * after every reboot.
+ */
+it('writes autostart=false for a worker that is switched off', function () {
+    fakeWorkerSupervisor();
+
+    $id = $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload())->assertCreated()->json('worker.id');
+    $worker = Worker::findOrFail($id)->load('application.systemUser');
+
+    expect(app(WorkerSupervisor::class)->render($worker))->toContain('autostart=true');
+
+    $this->actingAs($this->admin)->putJson(workerUrl("/{$id}"), workerPayload(['enabled' => false]))->assertOk();
+
+    expect(app(WorkerSupervisor::class)->render($worker->fresh()->load('application.systemUser')))->toContain('autostart=false');
+});
+
+it('still honours auto start being off for a worker that is on', function () {
+    fakeWorkerSupervisor();
+
+    $id = $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload(['auto_start' => false]))->assertCreated()->json('worker.id');
+
+    expect(app(WorkerSupervisor::class)->render(Worker::findOrFail($id)->load('application.systemUser')))->toContain('autostart=false');
+});
+
+it('rewrites a switched-off worker written before the fix on the next sites:resync, and leaves a running one', function () {
+    fakeWorkerSupervisor();
+
+    $off = Worker::findOrFail($this->actingAs($this->admin)->postJson(workerUrl(), workerPayload(['name' => 'Off']))->json('worker.id'));
+    $on = Worker::findOrFail($this->actingAs($this->admin)->postJson(workerUrl(), workerPayload(['name' => 'On']))->json('worker.id'));
+    $off->forceFill(['enabled' => false])->save();
+
+    // What a server updated from before the fix has on disk for both.
+    $stale = fn (Worker $w) => str_replace('autostart=false', 'autostart=true', app(WorkerSupervisor::class)->render($w->fresh()->load('application.systemUser')));
+    // The running one's file differs too, so only the guard keeps it as it is.
+    $disk = [app(WorkerSupervisor::class)->configPath($off) => $stale($off), app(WorkerSupervisor::class)->configPath($on) => $stale($on)."; edited by hand\n"];
+    $written = [];
+
+    Process::fake(function ($process) use ($disk, &$written) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        return match ($args[0]) {
+            'cat' => isset($disk[$args[1] ?? '']) ? Process::result(output: $disk[$args[1]]) : Process::result(exitCode: 1),
+            'tee' => (function () use ($args, &$written) {
+                $written[] = $args[1];
+
+                return Process::result();
+            })(),
+            default => Process::result(),
+        };
+    });
+
+    $this->artisan('sites:resync')->expectsOutputToContain('Switched-off workers: 1 kept off at boot.')->assertSuccessful();
+
+    expect($written)->toContain(app(WorkerSupervisor::class)->configPath($off))
+        ->and($written)->not->toContain(app(WorkerSupervisor::class)->configPath($on));
+});

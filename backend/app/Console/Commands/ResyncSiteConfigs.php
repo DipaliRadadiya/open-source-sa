@@ -5,16 +5,19 @@ namespace App\Console\Commands;
 use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
 use App\Models\SystemUser;
+use App\Models\Worker;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\Server\Applications\SecretFilePrivacy;
 use App\Services\Server\Applications\SiteConfigResyncer;
 use App\Services\Server\Applications\SiteRootLock;
+use App\Services\Server\Applications\WorkerSupervisor;
 use App\Services\Server\Php\AdditionalDirectives;
 use App\Services\Server\Php\PoolManager;
 use App\Services\Server\SystemUsers\HomeDirectoryAccess;
 use App\Services\Server\WebServers\CatchAllSite;
 use Illuminate\Console\Command;
+use Throwable;
 
 /**
  * Re-render every live site's vhost from the current templates and lists.
@@ -72,10 +75,32 @@ class ResyncSiteConfigs extends Command
         // and by the same means — see PanelDirectoryAccess.
         $this->call('panel:close-directory');
         $this->refreshUnits(app(ProcessSupervisor::class), app(ApplicationProvisioner::class));
+        $this->refreshDisabledWorkers(app(WorkerSupervisor::class));
         $this->narrowSecretFiles(app(SecretFilePrivacy::class));
         $this->reportSkippedDirectives();
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Switched-off workers were written with autostart=true and came back on
+     * every reboot (bug #73). Rewritten once here; running ones untouched.
+     */
+    private function refreshDisabledWorkers(WorkerSupervisor $workers): void
+    {
+        // Never fails the resync: a server without supervisor, or a grant
+        // that refuses it, simply keeps what it has.
+        try {
+            $refreshed = Worker::query()->where('enabled', false)->with('application.systemUser')->get()
+                ->filter(fn (Worker $worker) => $worker->application !== null && $workers->refreshDisabled($worker))
+                ->count();
+        } catch (Throwable) {
+            return;
+        }
+
+        if ($refreshed > 0) {
+            $this->info("Switched-off workers: {$refreshed} kept off at boot.");
+        }
     }
 
     /**

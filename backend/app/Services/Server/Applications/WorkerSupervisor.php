@@ -185,6 +185,36 @@ class WorkerSupervisor
         }
     }
 
+    /**
+     * Rewrite a switched-off worker's program when it is out of date, so it
+     * stays off after the next reboot (bug #73: they were written with
+     * autostart=true). Only switched-off workers: one that is running is never
+     * touched. True when it rewrote something.
+     */
+    public function refreshDisabled(Worker $worker): bool
+    {
+        if ($worker->enabled || ! $this->installed()) {
+            return false;
+        }
+
+        $context = $this->context($worker, 'worker_refresh');
+        $current = $this->files->get($this->configPath($worker), $context);
+        $rendered = $this->render($worker);
+
+        // Not there, or unreadable: nothing of ours to correct.
+        if ($current->failed() || $current->output() === $rendered) {
+            return false;
+        }
+
+        if ($this->files->put($this->configPath($worker), $rendered, $context)->failed()) {
+            return false;
+        }
+
+        $this->reload($worker);
+
+        return true;
+    }
+
     /** Stop every copy, then delete the program and let supervisord forget it. */
     public function remove(Worker $worker): void
     {
@@ -340,7 +370,10 @@ class WorkerSupervisor
             // Rewriting someone else's choice silently would change who owns
             // the files a running job writes.
             'user' => $worker->user ?: $application->systemUser->username,
-            'autoStart' => $worker->auto_start,
+            // Off as well while the worker is disabled: apply() stops it, but a
+            // config still saying autostart=true brought it back the next time
+            // supervisord started — every reboot (bug #73).
+            'autoStart' => $worker->auto_start && $worker->enabled,
             'autoRestart' => $worker->auto_restart,
             'stopWaitSeconds' => $worker->stop_wait_seconds,
             'logFile' => $this->logFile($worker),
