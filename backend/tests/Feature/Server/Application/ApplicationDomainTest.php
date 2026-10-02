@@ -523,6 +523,23 @@ it('refuses the hostnames the panel itself is served on', function (string $doma
         ->assertJsonValidationErrors('domain');
 })->with(['panel.example.org', 'API.panel.example.org']);
 
+/*
+ * Bug #54: create refused IPs; Add domain did not, and the server's own IP
+ * then served this site instead of the default 404.
+ */
+it('refuses an IP address as a domain', function (string $domain) {
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/domains", ['domain' => $domain])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['domain' => __('errors/application.domain_is_ip')]);
+})->with(['23.172.120.86', '127.0.0.1', '10.0.0.1']);
+
+it('still takes a domain whose labels are mostly digits', function () {
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/domains", ['domain' => '123.456.example.com'])
+        ->assertCreated();
+});
+
 it('still takes a sibling of the panel host', function () {
     config(['app.url' => 'https://panel.example.org', 'server.storage.panel_url' => 'https://panel.example.org']);
 

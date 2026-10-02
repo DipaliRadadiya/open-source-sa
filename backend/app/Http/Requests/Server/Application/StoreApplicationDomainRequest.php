@@ -32,6 +32,10 @@ class StoreApplicationDomainRequest extends FormRequest
             'domain' => [
                 'required', 'string', 'max:253',
                 'regex:/^(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))+$/i',
+                // The last label must hold a letter, as on create. Without it
+                // 23.172.120.86 and 127.0.0.1 passed, and the server's IP
+                // then served this site instead of a 404 (bug #54).
+                'not_regex:/\.[0-9-]+$/',
                 Rule::unique('application_domains', 'domain'),
                 new NotPanelHost,
             ],
@@ -67,6 +71,7 @@ class StoreApplicationDomainRequest extends FormRequest
 
         return [
             'redirect_to.regex' => __('errors/application.redirect_target_invalid'),
+            'domain.not_regex' => __('errors/application.domain_is_ip'),
             // Falls back to the plain message when the holder cannot be found
             // — a row deleted between the check and this call, say. Better a
             // vaguer sentence than one naming an application that is gone.

@@ -15,6 +15,7 @@ return [
     'primary_domain_not_removable' => 'No se puede eliminar el dominio principal. Haga principal otro dominio primero.',
     'primary_domain_not_editable' => 'Un dominio principal no se puede editar. Haz principal otro dominio primero.',
     'domain_taken' => 'Este dominio ya está en uso en este servidor.',
+    'domain_is_ip' => 'Introduzca un nombre de dominio, no una dirección IP.',
     'domain_taken_by' => 'Este dominio ya lo usa la aplicación «:application».',
     'domain_is_panel' => 'Esta es la dirección en la que se sirve el propio panel, así que un sitio no puede usarla.',
     'redirect_target_invalid' => 'El destino de la redirección debe ser una dirección web simple: https://, un host y una ruta opcional, sin cadena de consulta, espacios ni caracteres como ; # $ &.',
