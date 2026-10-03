@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { folderSizesResponseSchema } from "../lib/schemas/file.js";
-import { measuredSize, sizeShare, sizeSortKey } from "../lib/files/folder-sizes.js";
+import { measuredSize, sizeSortKey } from "../lib/files/folder-sizes.js";
 
 const read = (p) => fs.readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
 
@@ -30,15 +30,6 @@ test("a folder missing from sizes is not measured (null), never 0", () => {
   // A file never takes a folder's measurement, even with the same name.
   assert.equal(measuredSize({ type: "file", name: "plugins" }, sizes), null);
   assert.equal(measuredSize(dir("plugins"), null), null);
-});
-
-test("the share bar needs a complete total", () => {
-  const sizes = folderSizesResponseSchema.parse(answer);
-  const uploads = measuredSize(dir("uploads"), sizes);
-  assert.ok(Math.abs(sizeShare(uploads, sizes) - 52428800 / 62012699) < 1e-9);
-  assert.equal(sizeShare(uploads, { ...sizes, complete: false }), null);
-  assert.equal(sizeShare(uploads, { ...sizes, total: null }), null);
-  assert.equal(sizeShare(null, sizes), null);
 });
 
 test("biggest first puts unmeasured folders last and ignores the 4 KB entry size", () => {

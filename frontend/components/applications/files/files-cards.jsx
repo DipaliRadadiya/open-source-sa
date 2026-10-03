@@ -9,8 +9,7 @@ import { isImageFile } from "@/lib/files/file-icon";
 import { canOpenFile } from "@/lib/files/openable";
 import { isWorldWritable, symbolicMode } from "@/lib/files/describe-mode";
 import { FILE_NAME } from "@/lib/files/name-style";
-import { SizeShareBar } from "@/components/applications/files/files-table";
-import { measuredSize, sizeShare } from "@/lib/files/folder-sizes";
+import { measuredSize } from "@/lib/files/folder-sizes";
 
 // `folderSizes` is the table's too, so phones show the same folder sizes.
 export function FilesCards({
@@ -120,7 +119,6 @@ export function FilesCards({
                     </>
                   ) : null}
                 </p>
-                <SizeShareBar share={sizeShare(measured, folderSizes)} className="my-1" />
                 {/* Spaced, not `·`-joined, so a wrapped second item has no stray leading dot. */}
                 {file.owner || file.mode ? (
                   <p className="flex flex-wrap gap-x-2 font-mono text-xs leading-relaxed text-muted-foreground">

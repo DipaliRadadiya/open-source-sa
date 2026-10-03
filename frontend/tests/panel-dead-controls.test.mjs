@@ -131,7 +131,8 @@ test("folder size reaches the phone layout, not just the table", () => {
   assert.match(cardsBlock, /folderSizes=\{folderSizes\}/);
   assert.match(cards, /const measured = measuredSize\(file, folderSizes\);/);
   assert.match(cards, /folderSizes\?\.loading \?/);
-  assert.match(cards, /<SizeShareBar share=\{sizeShare\(measured, folderSizes\)\}/);
+  // The size bar was removed (Krishna, 3 Oct): the size is shown as text only.
+  assert.doesNotMatch(cards, /SizeShareBar/);
 });
 
 test("\"Not measured\" says the same thing as everywhere else", () => {

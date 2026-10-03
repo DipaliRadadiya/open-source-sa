@@ -18,7 +18,7 @@ import { FILE_NAME } from "@/lib/files/name-style";
 import { useModeSentence } from "@/components/applications/files/use-mode-sentence";
 import { isWorldWritable, symbolicMode } from "@/lib/files/describe-mode";
 import { SORT_COOKIE, serializeSort, writePref } from "@/lib/files/view-prefs";
-import { measuredSize, sizeShare, sizeSortKey } from "@/lib/files/folder-sizes";
+import { measuredSize, sizeSortKey } from "@/lib/files/folder-sizes";
 
 // Cells are module-level so flexRender's identity stays stable across re-renders
 // (see workers-table.jsx).
@@ -164,16 +164,6 @@ function NameCell({ row, table }) {
   );
 }
 
-export function SizeShareBar({ share, className }) {
-  if (share === null) return null;
-  return (
-    <span aria-hidden className={cn("block h-1 w-16 overflow-hidden rounded-full bg-muted", className)}>
-      {/* A non-empty folder keeps a visible sliver. */}
-      <span className="block h-full rounded-full bg-primary/60" style={{ width: `${share > 0 ? Math.max(share * 100, 3) : 0}%` }} />
-    </span>
-  );
-}
-
 function SizeCell({ row, table }) {
   const file = row.original;
   const t = useTranslations("applications.files");
@@ -191,12 +181,7 @@ function SizeCell({ row, table }) {
       <span className="text-muted-foreground" title={t("sizes.notMeasured")}>—</span>
     );
   }
-  return (
-    <span className="inline-flex flex-col items-end gap-1">
-      <span className="tabular-nums text-muted-foreground">{measured.size_human}</span>
-      <SizeShareBar share={sizeShare(measured, folderSizes)} />
-    </span>
-  );
+  return <span className="tabular-nums text-muted-foreground">{measured.size_human}</span>;
 }
 
 function ModifiedCell({ row }) {
