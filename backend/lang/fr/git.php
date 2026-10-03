@@ -20,9 +20,9 @@ return [
     ],
 
     'token_help' => [
-        'github' => 'Un jeton d\'accès personnel avec la portée « repo ».',
-        'gitlab' => 'Un jeton d\'accès personnel avec les portées « read_repository » et « read_api ».',
-        'bitbucket' => 'Un jeton d\'accès à portée limitée (espace de travail, projet ou dépôt). Un jeton limité à un dépôt n\'affichera que ce dépôt.',
+        'github' => 'Un jeton d’accès personnel avec la portée « repo » (il couvre aussi le webhook du déploiement au push).',
+        'gitlab' => 'Un jeton d’accès personnel avec les portées « read_repository » et « read_api ». Pour le déploiement au push, utilisez « api » au lieu de « read_api » : GitLab ne laisse qu’un jeton « api » ajouter et supprimer des webhooks.',
+        'bitbucket' => 'Un jeton d’accès à portée limitée (espace de travail, projet ou dépôt). Un jeton limité à un dépôt n’affichera que ce dépôt. Pour le déploiement au push, il lui faut aussi les droits de lecture, d’écriture et de suppression des webhooks, sinon la désactivation ne peut pas retirer le webhook.',
     ],
 
     /*

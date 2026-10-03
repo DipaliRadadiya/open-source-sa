@@ -212,6 +212,14 @@ it('maps only allow-listed repository fields from the provider', function () {
     ]);
 });
 
+it('tells people which token permissions deploy on push needs (bug #70)', function () {
+    // A Bitbucket token that can add a webhook but not delete one left
+    // deploy on push firing after it was switched off; GitLab's read_api
+    // cannot add a webhook at all.
+    expect(__('git.token_help.bitbucket'))->toContain('delete')
+        ->and(__('git.token_help.gitlab'))->toContain('"api"');
+});
+
 it('leaves out GitLab projects scheduled for deletion (bug #44)', function () {
     $account = connectGithub(['provider' => 'gitlab', 'identifier' => 'dev', 'token' => 'glpat_x', 'scopes' => []]);
 

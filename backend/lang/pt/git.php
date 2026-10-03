@@ -20,9 +20,9 @@ return [
     ],
 
     'token_help' => [
-        'github' => 'Um token de acesso pessoal com o escopo "repo".',
-        'gitlab' => 'Um token de acesso pessoal com os escopos "read_repository" e "read_api".',
-        'bitbucket' => 'Um token de acesso com escopo (workspace, projeto ou repositório). Um token limitado a um repositório listará apenas esse repositório.',
+        'github' => 'Um token de acesso pessoal com o escopo "repo" (também cobre o webhook do deploy ao fazer push).',
+        'gitlab' => 'Um token de acesso pessoal com os escopos "read_repository" e "read_api". Para deploy ao fazer push, use "api" em vez de "read_api": o GitLab só permite que um token com "api" adicione e remova webhooks.',
+        'bitbucket' => 'Um token de acesso com escopo (workspace, projeto ou repositório). Um token limitado a um repositório listará apenas esse repositório. Para deploy ao fazer push também precisa de permissão de leitura, escrita e eliminação de webhooks; caso contrário, desativá-lo não consegue remover o webhook.',
     ],
 
     /*

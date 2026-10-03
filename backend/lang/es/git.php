@@ -20,9 +20,9 @@ return [
     ],
 
     'token_help' => [
-        'github' => 'Un token de acceso personal con el ámbito «repo».',
-        'gitlab' => 'Un token de acceso personal con los ámbitos «read_repository» y «read_api».',
-        'bitbucket' => 'Un token de acceso con ámbito (espacio de trabajo, proyecto o repositorio). Un token limitado a un repositorio solo mostrará ese repositorio.',
+        'github' => 'Un token de acceso personal con el ámbito «repo» (también cubre el webhook del despliegue al hacer push).',
+        'gitlab' => 'Un token de acceso personal con los ámbitos «read_repository» y «read_api». Para desplegar al hacer push, usa «api» en lugar de «read_api»: GitLab solo permite añadir y quitar webhooks a un token con «api».',
+        'bitbucket' => 'Un token de acceso con ámbito (espacio de trabajo, proyecto o repositorio). Un token limitado a un repositorio solo mostrará ese repositorio. Para desplegar al hacer push también necesita permiso de lectura, escritura y eliminación de webhooks; si no, al desactivarlo no se podrá quitar el webhook.',
     ],
 
     /*

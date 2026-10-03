@@ -20,9 +20,9 @@ return [
     ],
 
     'token_help' => [
-        'github' => 'Ein persönliches Zugriffstoken mit dem Scope „repo".',
-        'gitlab' => 'Ein persönliches Zugriffstoken mit den Scopes „read_repository" und „read_api".',
-        'bitbucket' => 'Ein Access Token mit Gültigkeitsbereich (Workspace, Projekt oder Repository). Ein auf ein Repository begrenztes Token listet nur dieses Repository auf.',
+        'github' => 'Ein persönliches Zugriffstoken mit dem Scope „repo“ (deckt auch den Webhook für Deploy bei Push ab).',
+        'gitlab' => 'Ein persönliches Zugriffstoken mit den Scopes „read_repository“ und „read_api“. Für Deploy bei Push „api“ statt „read_api“ verwenden: GitLab lässt nur ein Token mit „api“ Webhooks anlegen und entfernen.',
+        'bitbucket' => 'Ein Access Token mit Gültigkeitsbereich (Workspace, Projekt oder Repository). Ein auf ein Repository begrenztes Token listet nur dieses Repository auf. Für Deploy bei Push braucht es zusätzlich Lese-, Schreib- und Löschrechte für Webhooks, sonst kann das Ausschalten den Webhook nicht entfernen.',
     ],
 
     /*

@@ -28,9 +28,9 @@ return [
     ],
 
     'token_help' => [
-        'github' => 'A personal access token with the "repo" scope.',
-        'gitlab' => 'A personal access token with the "read_repository" and "read_api" scopes.',
-        'bitbucket' => 'A scoped Access Token (workspace, project or repository level). A repository-scoped token will only list that repository.',
+        'github' => 'A personal access token with the "repo" scope (it also covers the webhook for deploy on push).',
+        'gitlab' => 'A personal access token with the "read_repository" and "read_api" scopes. For deploy on push, use "api" instead of "read_api": GitLab only lets a token with "api" add and remove webhooks.',
+        'bitbucket' => 'A scoped Access Token (workspace, project or repository level). A repository-scoped token will only list that repository. For deploy on push it also needs webhook read, write and delete permission, or turning deploy on push off cannot remove the webhook.',
     ],
 
     /*
