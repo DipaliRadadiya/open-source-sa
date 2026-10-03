@@ -27,9 +27,13 @@ class RunApplicationProcess
     public function execute(Application $application, string $action): ServerOpsResult
     {
         $result = match ($action) {
-            'start' => $this->supervisor->start($application),
-            'stop' => $this->supervisor->stop($application),
-            default => $this->supervisor->restart($application),
+            // Persisted across a reboot, in both directions (bug #99): Stop
+            // only stopped the process, its unit stayed enabled, and the next
+            // boot brought back an application the screen said would stay
+            // offline "until it is started again".
+            'start' => $this->supervisor->resume($application),
+            'stop' => $this->supervisor->suspend($application),
+            default => $this->supervisor->restartAndKeep($application),
         };
 
         $this->activityLogger->log('application.process_'.$action, $application, [

@@ -326,6 +326,12 @@ class ProcessSupervisor
      */
     public function suspend(Application $application): ServerOpsResult
     {
+        // An application still under the old panel's PM2 has no unit of ours
+        // to disable; `disable` failed on it and refused the stop entirely.
+        if ($this->legacy($application)) {
+            return $this->stop($application);
+        }
+
         $disabled = $this->systemctl('disable', $application);
 
         return $disabled->failed() ? $disabled : $this->stop($application);
@@ -336,9 +342,31 @@ class ProcessSupervisor
      */
     public function resume(Application $application): ServerOpsResult
     {
+        if ($this->legacy($application)) {
+            return $this->start($application);
+        }
+
         $enabled = $this->systemctl('enable', $application);
 
         return $enabled->failed() ? $enabled : $this->start($application);
+    }
+
+    /**
+     * Restart, and keep it starting at boot: what a person pressing Restart
+     * means. After Stop (which now disables the unit, bug #99) a plain
+     * restart left the application running until the next reboot only.
+     */
+    public function restartAndKeep(Application $application): ServerOpsResult
+    {
+        if (! $this->legacy($application)) {
+            $enabled = $this->systemctl('enable', $application);
+
+            if ($enabled->failed()) {
+                return $enabled;
+            }
+        }
+
+        return $this->restart($application);
     }
 
     public function restart(Application $application): ServerOpsResult

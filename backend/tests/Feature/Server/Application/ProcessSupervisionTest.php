@@ -638,6 +638,42 @@ describe('the endpoint', function () {
         Process::assertRan(fn ($p) => $p->command === ['systemctl', 'restart', "sv-app-{$app->id}.service"]);
     });
 
+    it('keeps a stopped application stopped across a reboot, and a started one starting (bug #99)', function () {
+        Process::fake(fn () => Process::result(output: ''));
+        $app = nodeApp();
+        $unit = "sv-app-{$app->id}.service";
+
+        // Stop only stopped the process: the unit stayed enabled and the next
+        // boot brought the application back, though the screen said it would
+        // stay offline until started again.
+        $this->withHeaders(supervisorHeaders())->postJson("/api/applications/{$app->id}/process/stop")->assertOk();
+        Process::assertRan(fn ($p) => $p->command === ['systemctl', 'disable', $unit]);
+        Process::assertRan(fn ($p) => $p->command === ['systemctl', 'stop', $unit]);
+
+        $this->withHeaders(supervisorHeaders())->postJson("/api/applications/{$app->id}/process/start")->assertOk();
+        Process::assertRan(fn ($p) => $p->command === ['systemctl', 'enable', $unit]);
+        Process::assertRan(fn ($p) => $p->command === ['systemctl', 'start', $unit]);
+    });
+
+    it('switches a restarted application back on for boot', function () {
+        // After Stop, a plain restart left it running only until the next reboot.
+        Process::fake(fn () => Process::result(output: ''));
+        $app = nodeApp();
+
+        $this->withHeaders(supervisorHeaders())->postJson("/api/applications/{$app->id}/process/restart")->assertOk();
+
+        Process::assertRan(fn ($p) => $p->command === ['systemctl', 'enable', "sv-app-{$app->id}.service"]);
+    });
+
+    it('stops an application still under the old panel\'s PM2 without a unit to disable', function () {
+        Process::fake(fn () => Process::result(output: ''));
+        $app = nodeApp(['supervisor_mode' => 'pm2', 'pm2_process_name' => 'legacy-api']);
+
+        $this->withHeaders(supervisorHeaders())->postJson("/api/applications/{$app->id}/process/stop")->assertOk();
+
+        Process::assertNotRan(fn ($p) => in_array('disable', (array) $p->command, true));
+    });
+
     it('rejects an action that is not one of the three', function () {
         Process::fake();
 
