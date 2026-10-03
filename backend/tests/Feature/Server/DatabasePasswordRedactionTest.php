@@ -57,6 +57,9 @@ it('redacts every form the engines send', function (string $line, string $secret
 })->with([
     'MySQL, as sent' => ["CREATE USER 'a'@'localhost' IDENTIFIED BY 'Se\\'cret1'; FLUSH PRIVILEGES;", 'cret1'],
     'MySQL, quoted in an error' => ["near 'IDENTIFIED BY 'Secret2'' at line 1", 'Secret2'],
+    // Measured on MariaDB 11.8: the snippet starts where parsing failed.
+    'MariaDB, snippet from BY' => ["ERROR 1064 (42000) at line 1: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'BY 'LiveS3cret'' at line 1", 'LiveS3cret'],
+    'MariaDB, snippet is the password' => ["to use near 'S3cret9'; FLUSH PRIVILEGES' at line 1", 'S3cret9'],
     'MySQL, with a plugin' => ["ALTER USER x IDENTIFIED WITH mysql_native_password BY 'Secret3'", 'Secret3'],
     'MySQL, SET PASSWORD' => ["SET PASSWORD FOR x = 'Secret4'", 'Secret4'],
     'PostgreSQL' => ["CREATE ROLE \"u\" WITH LOGIN PASSWORD 'Sec''ret5';", 'ret5'],
