@@ -1469,13 +1469,11 @@ return [
             'driver' => DockerAppInstaller::class,
         ],
 
-
         'chatwoot' => [
 
             'driver' => DockerAppInstaller::class,
 
         ],
-
 
         'excalidraw' => [
 
