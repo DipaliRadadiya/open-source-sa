@@ -49,9 +49,12 @@ function probeCount(array $seen): array
 {
     return [
         'total' => count($seen),
-        'package' => collect($seen)
-            ->filter(fn ($p) => in_array('dpkg-query', $p->command, true) || in_array('which', $p->command, true))
-            ->count(),
+        'package' => collect($seen)->filter(fn ($p) => in_array('dpkg-query', $p->command, true))->count(),
+        // `which <client>`: a PATH lookup, not the package manager. MongoDB
+        // looks for mongosh before running it (bug #48: on a box without it,
+        // sudo refused the missing binary and logged an error), and that one
+        // lookup takes the place of the run, so the total does not grow.
+        'lookup' => collect($seen)->filter(fn ($p) => in_array('which', $p->command, true))->count(),
     ];
 }
 
@@ -70,6 +73,7 @@ it('probes each engine once, and asks the package manager nothing, for a whole s
     expect(probeCount($seen))->toBe([
         'total' => count(app(DatabaseManager::class)->engineNames()),
         'package' => 0,
+        'lookup' => 1,
     ]);
 });
 
@@ -86,7 +90,7 @@ it('probes each engine once however many times one manager is asked', function (
     // question per engine, not three of each.
     $engines = count($manager->engineNames());
 
-    expect(probeCount($seen))->toBe(['total' => $engines * 2, 'package' => $engines]);
+    expect(probeCount($seen))->toBe(['total' => $engines * 2, 'package' => $engines, 'lookup' => 1]);
 });
 
 /**
