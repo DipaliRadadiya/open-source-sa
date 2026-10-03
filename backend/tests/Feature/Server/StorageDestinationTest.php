@@ -9,6 +9,7 @@ use App\Models\StorageDestination;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Backups\Storage\DestinationDisk;
+use App\Services\Server\Backups\Storage\Drivers\FtpDriver;
 use App\Services\Server\Backups\Storage\SftpHostKey;
 use App\Services\Server\Backups\Storage\StorageConnectionProber;
 use App\Services\Server\Backups\Storage\StorageDriverFactory;
@@ -382,6 +383,9 @@ describe('FTP destinations', function () {
             'config' => ['host' => 'backup.example.com', 'username' => 'u', 'password' => 'p'],
         ]);
 
+        // A server that does offer TLS: the password really is wrong.
+        ftpServerOffersTls(true);
+
         $this->app->bind(StorageConnectionProber::class, fn () => makeProber(
             fn (array $config) => new class
             {
@@ -398,6 +402,80 @@ describe('FTP destinations', function () {
         $this->withHeaders(storageAdminAuthHeader())
             ->postJson("/api/integrations/storage/destinations/{$dest->id}/test")
             ->assertOk()
+            ->assertJsonPath('test.error_class', 'invalid_credentials');
+    });
+});
+
+/**
+ * What `AUTH TLS` gets from the FTP server, without a network: true is `234`,
+ * false a refusal, null "could not ask". Records whether it was asked.
+ */
+function ftpServerOffersTls(?bool $answer): ArrayObject
+{
+    $asked = new ArrayObject;
+    $driver = Mockery::mock(FtpDriver::class)->makePartial();
+    $driver->shouldReceive('supportsTls')->andReturnUsing(function () use ($answer, $asked) {
+        $asked[] = true;
+
+        return $answer;
+    });
+    app()->instance(FtpDriver::class, $driver);
+
+    return $asked;
+}
+
+describe('an FTP server without encryption (bug #39)', function () {
+    beforeEach(function () {
+        $this->refusingLogin = fn () => $this->app->bind(StorageConnectionProber::class, fn () => makeProber(
+            fn (array $config) => new class
+            {
+                public function put(string $key, mixed $contents, array $options = []): bool
+                {
+                    throw new FtpUnableToAuthenticate;
+                }
+            },
+        ));
+    });
+
+    it('says the server has no TLS instead of blaming the password', function () {
+        // vsftpd without TLS refuses `AUTH TLS` with 530, the same code as a
+        // wrong password (measured 2026-10-03), so the encrypted login was
+        // reported as "rejected the credentials" with the password right.
+        $dest = StorageDestination::create([
+            'name' => 'NAS', 'provider' => StorageProvider::Ftp, 'prefix' => null,
+            'config' => ['host' => 'backup.example.com', 'username' => 'u', 'password' => 'p'],
+        ]);
+        ftpServerOffersTls(false);
+        ($this->refusingLogin)();
+
+        $this->withHeaders(storageAdminAuthHeader())
+            ->postJson("/api/integrations/storage/destinations/{$dest->id}/test")
+            ->assertOk()
+            ->assertJsonPath('test.error_class', 'ftp_no_tls')
+            ->assertJsonPath('test.message', __('storage.test.ftp_no_tls'));
+    });
+
+    it('does not ask when TLS is already off, or when the server could not be asked', function () {
+        $plain = StorageDestination::create([
+            'name' => 'Plain', 'provider' => StorageProvider::Ftp, 'prefix' => null,
+            'config' => ['host' => 'backup.example.com', 'username' => 'u', 'password' => 'p', 'ssl' => false],
+        ]);
+        $asked = ftpServerOffersTls(false);
+        ($this->refusingLogin)();
+
+        $this->withHeaders(storageAdminAuthHeader())
+            ->postJson("/api/integrations/storage/destinations/{$plain->id}/test")
+            ->assertJsonPath('test.error_class', 'invalid_credentials');
+        expect(count($asked))->toBe(0);
+
+        $tls = StorageDestination::create([
+            'name' => 'Unknown', 'provider' => StorageProvider::Ftp, 'prefix' => null,
+            'config' => ['host' => 'backup.example.com', 'username' => 'u', 'password' => 'p'],
+        ]);
+        ftpServerOffersTls(null);
+
+        $this->withHeaders(storageAdminAuthHeader())
+            ->postJson("/api/integrations/storage/destinations/{$tls->id}/test")
             ->assertJsonPath('test.error_class', 'invalid_credentials');
     });
 });

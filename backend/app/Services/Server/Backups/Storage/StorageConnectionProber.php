@@ -4,6 +4,7 @@ namespace App\Services\Server\Backups\Storage;
 
 use App\Enums\StorageProvider;
 use App\Models\StorageDestination;
+use App\Services\Server\Backups\Storage\Drivers\FtpDriver;
 use Closure;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Log;
@@ -152,10 +153,21 @@ class StorageConnectionProber
                 'detail' => null,
             ];
         } catch (Throwable $e) {
+            $key = $driver->classify($e);
+
+            // An encrypted FTP login refused by a server that has no TLS at
+            // all reads as a wrong password (bug #39): ask the server which.
+            if ($key === 'storage.test.invalid_credentials'
+                && $driver instanceof FtpDriver
+                && (bool) ($destination->configValue('ssl') ?? true)
+                && $driver->supportsTls($destination) === false) {
+                $key = 'storage.test.ftp_no_tls';
+            }
+
             return $this->failure(
                 destination: $destination,
                 durationMs: $this->elapsed($start),
-                i18nKey: $driver->classify($e),
+                i18nKey: $key,
                 exception: $e,
             );
         }

@@ -82,6 +82,7 @@ return [
         'bucket_not_found' => 'Aucun bucket ne porte ce nom. Vérifiez le nom du bucket : il est sensible à la casse.',
         'wrong_region' => 'Le bucket se trouve dans une autre région. Indiquez la région dans laquelle le bucket a été créé.',
         'tls_failed' => 'Impossible d\'établir une connexion sécurisée (TLS) avec le point de terminaison. Le certificat du serveur est absent, non approuvé ou défectueux : vérifiez l\'URL du point de terminaison et le certificat du serveur.',
+        'ftp_no_tls' => 'Ce serveur FTP ne prend pas en charge le chiffrement (FTPS) : la connexion chiffrée a donc été refusée. Activez TLS sur le serveur, ou désactivez « Utiliser TLS (FTPS) » si une connexion non chiffrée est acceptable.',
         'mismatch' => 'La destination a relu des octets différents de ceux écrits.',
         'forbidden_host' => 'Cette adresse de point de terminaison n’est pas autorisée.',
         'invalid_endpoint' => 'Saisissez une URL de point de terminaison https:// valide pour le bucket.',

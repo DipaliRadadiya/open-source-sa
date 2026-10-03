@@ -82,6 +82,7 @@ return [
         'bucket_not_found' => 'Não existe nenhum bucket com esse nome. Verifique o nome do bucket — diferencia maiúsculas de minúsculas.',
         'wrong_region' => 'O bucket está em outra região. Informe a região em que o bucket foi criado.',
         'tls_failed' => 'Não foi possível estabelecer uma conexão segura (TLS) com o endpoint. O certificado do servidor está ausente, não é confiável ou está com defeito — verifique a URL do endpoint e o certificado do servidor.',
+        'ftp_no_tls' => 'Este servidor FTP não suporta encriptação (FTPS), por isso o início de sessão encriptado foi recusado. Ative o TLS no servidor ou desative "Usar TLS (FTPS)" se uma ligação não encriptada for aceitável.',
         'mismatch' => 'O destino gravou e leu de volta bytes diferentes.',
         'forbidden_host' => 'Esse endereço de endpoint não é permitido.',
         'invalid_endpoint' => 'Informe uma URL de endpoint https:// válida para o bucket.',

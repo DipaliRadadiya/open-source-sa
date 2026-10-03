@@ -152,6 +152,37 @@ class FtpDriver extends RemoteHostDriver
     }
 
     /**
+     * Does this server offer encryption (FTPS) at all?
+     *
+     * Asked only after an encrypted login was refused (bug #39). A server
+     * with no TLS refuses `AUTH TLS`, and vsftpd does it with **530** — the
+     * same code as a wrong password, measured 2026-10-03 — so the failure
+     * was reported as "rejected the credentials" with the password right.
+     * `234` is the one answer that means yes. Null when the server could not
+     * be asked, so the caller keeps its own verdict.
+     */
+    public function supportsTls(StorageDestination $destination): ?bool
+    {
+        $connection = @ftp_connect(
+            (string) $destination->configValue('host', ''),
+            (int) ($destination->configValue('port') ?: self::DEFAULT_PORT),
+            10,
+        );
+
+        if ($connection === false) {
+            return null;
+        }
+
+        try {
+            $reply = (string) (@ftp_raw($connection, 'AUTH TLS')[0] ?? '');
+        } finally {
+            @ftp_close($connection);
+        }
+
+        return $reply === '' ? null : str_starts_with($reply, '234');
+    }
+
+    /**
      * Download straight onto disk, never through `php://temp`.
      *
      * The adapter's `readStream()` is `fopen('php://temp')` + `ftp_fget`: the
