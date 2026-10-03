@@ -205,7 +205,7 @@ class ServerOps
                 'command' => $this->loggableCommand($command),
                 'attempt' => $attempts,
                 'of' => $maxAttempts,
-                'stderr' => $stderr,
+                'stderr' => CommandRedactor::line($stderr),
             ]));
 
             if ($onRetry !== null) {
@@ -239,7 +239,9 @@ class ServerOps
             'exit_code' => $exitCode,
             'expected_exit' => $expectedExit,
             'timed_out' => $timedOut,
-            'stderr' => $stderr,
+            // Redacted like stdout (bug #22): a failed CREATE USER repeats
+            // its IDENTIFIED BY '<password>' here.
+            'stderr' => CommandRedactor::line($stderr),
             // Only on failure, and only the tail. Plenty of the tools the
             // panel drives report their errors on stdout and leave stderr
             // empty — `artisan` does, and so do wp-cli and composer — so a
@@ -500,7 +502,7 @@ class ServerOps
             'exit_code' => $exitCode,
             'stderr' => $timedOut
                 ? 'stream idle for '.$idleSeconds.'s; gave up after '.$bytes.' bytes'
-                : trim($stderr),
+                : CommandRedactor::line(trim($stderr)),
             'bytes' => $bytes,
             'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
             'actor_id' => Auth::id(),

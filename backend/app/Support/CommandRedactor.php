@@ -54,6 +54,35 @@ class CommandRedactor
             '/((?:--?[a-z0-9_-]*'.self::SECRET_WORDS.'[a-z0-9_-]*)\s+)(?:"[^"]*"|\'[^\']*\'|\S+)/i' => '$1[REDACTED]',
         ];
 
+        $value = preg_replace(array_keys($patterns), array_values($patterns), $value) ?? $value;
+
+        return self::statements($value);
+    }
+
+    /**
+     * Passwords inside database statements, which an engine repeats in its
+     * own error message (bug #22): a failed `CREATE USER` put `IDENTIFIED BY
+     * '<password>'` into the server log and onto Admin → Error logs.
+     *
+     * The quote counts are loose on purpose: MySQL quotes the statement it
+     * complains about (`near 'IDENTIFIED BY 'x''`), PostgreSQL doubles quotes
+     * inside a literal, and MongoDB is JavaScript.
+     */
+    public static function statements(string $value): string
+    {
+        $patterns = [
+            // MySQL/MariaDB: IDENTIFIED BY 'x', IDENTIFIED WITH plugin BY 'x',
+            // IDENTIFIED BY PASSWORD 'hash', IDENTIFIED VIA plugin USING 'x'.
+            "/(\bIDENTIFIED\s+(?:(?:WITH|VIA)\s+\S+\s+)?(?:BY|AS|USING)\s+(?:PASSWORD\s+)?)'(?:[^'\\\\]|\\\\.|'')*'/i" => "$1'[REDACTED]'",
+            // SET PASSWORD = 'x', PASSWORD('x'), and PostgreSQL's
+            // [ENCRYPTED] PASSWORD 'x' / E'x'.
+            "/(\bPASSWORD\s*(?:=\s*|\(\s*)?E?)'(?:[^'\\\\]|\\\\.|'')*'/i" => "$1'[REDACTED]'",
+            // SET PASSWORD [FOR account] = 'x' | PASSWORD('x').
+            "/(\bSET\s+PASSWORD\b[^=;]*=\s*(?:PASSWORD\s*\(\s*)?)'(?:[^'\\\\]|\\\\.|'')*'/i" => "$1'[REDACTED]'",
+            // MongoDB: pwd: "x", 'pwd': 'x', "pwd":"x".
+            '/((?:\bpwd|["\']pwd["\'])\s*:\s*)(?:"(?:[^"\\\\]|\\\\.)*"|\'(?:[^\'\\\\]|\\\\.)*\')/i' => '$1"[REDACTED]"',
+        ];
+
         return preg_replace(array_keys($patterns), array_values($patterns), $value) ?? $value;
     }
 }
