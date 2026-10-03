@@ -173,6 +173,8 @@ return [
     'backup.downloaded' => 'Descargó una copia de seguridad de :application',
     'backup.restored' => 'Restauró :application desde una copia de seguridad',
     'backup.restore_failed' => 'La restauración de :application falló (:reason)',
+    'backup.undone' => 'Deshizo la restauración de :application',
+    'backup.undo_failed' => 'No se pudo deshacer la restauración de :application (:reason)',
     'application.environment_updated' => 'Actualizó el entorno de :name (:keys)',
     'application.environment_restored' => 'Restauró un archivo de entorno anterior de :name',
     'application.permissions_fixed' => 'Restableció los permisos de archivo de :name',

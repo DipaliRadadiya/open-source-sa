@@ -173,6 +173,8 @@ return [
     'backup.downloaded' => 'Eine Sicherung von :application heruntergeladen',
     'backup.restored' => ':application aus einer Sicherung wiederhergestellt',
     'backup.restore_failed' => 'Wiederherstellung von :application fehlgeschlagen (:reason)',
+    'backup.undone' => 'Wiederherstellung von :application rückgängig gemacht',
+    'backup.undo_failed' => 'Rückgängigmachen der Wiederherstellung von :application fehlgeschlagen (:reason)',
     'application.environment_updated' => 'Umgebung für :name aktualisiert (:keys)',
     'application.environment_restored' => 'Frühere Umgebungsdatei für :name wiederhergestellt',
     'application.permissions_fixed' => 'Dateiberechtigungen für :name zurückgesetzt',
