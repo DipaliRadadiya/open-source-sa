@@ -212,6 +212,26 @@ it('maps only allow-listed repository fields from the provider', function () {
     ]);
 });
 
+it('leaves out GitLab projects scheduled for deletion (bug #44)', function () {
+    $account = connectGithub(['provider' => 'gitlab', 'identifier' => 'dev', 'token' => 'glpat_x', 'scopes' => []]);
+
+    Http::fake([
+        'gitlab.com/api/v4/projects*' => Http::response([
+            ['path_with_namespace' => 'dev/live', 'name' => 'live', 'visibility' => 'private', 'default_branch' => 'main', 'web_url' => 'https://gitlab.com/dev/live'],
+            // Kept by GitLab for days before it really goes; both field names
+            // GitLab has used.
+            ['path_with_namespace' => 'dev/going', 'name' => 'going', 'visibility' => 'private', 'marked_for_deletion_on' => '2026-10-01'],
+            ['path_with_namespace' => 'dev/gone', 'name' => 'gone', 'visibility' => 'private', 'marked_for_deletion_at' => '2026-10-01'],
+        ], 200),
+    ]);
+
+    $response = $this->withHeaders(asAdmin())
+        ->getJson("/api/integrations/git/accounts/{$account->id}/repositories")
+        ->assertOk();
+
+    expect(collect($response->json('repositories'))->pluck('full_name')->all())->toBe(['dev/live']);
+});
+
 it('lists branches for a repository', function () {
     $account = connectGithub();
 

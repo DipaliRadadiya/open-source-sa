@@ -83,6 +83,12 @@ class GitlabProvider extends AbstractGitProvider
 
         $items = (array) $response->json();
 
+        // A project scheduled for deletion is still returned for the days
+        // GitLab keeps it (bug #44); deploying one is building on something
+        // about to vanish. GitLab names the field differently across versions.
+        $live = array_filter($items, fn (array $project): bool => empty($project['marked_for_deletion_on'])
+            && empty($project['marked_for_deletion_at']));
+
         return [
             'repositories' => array_values(array_map(fn (array $project) => $this->repository(
                 (string) ($project['path_with_namespace'] ?? ''),
@@ -90,8 +96,9 @@ class GitlabProvider extends AbstractGitProvider
                 ($project['visibility'] ?? 'private') !== 'public',
                 $project['default_branch'] ?? null,
                 $project['web_url'] ?? null,
-            ), $items)),
+            ), $live)),
             'page' => $page,
+            // Counted before the filter: a full page means GitLab may have more.
             'has_more' => count($items) >= $this->perPage(),
         ];
     }
