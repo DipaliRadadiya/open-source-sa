@@ -17,6 +17,7 @@ use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -117,6 +118,30 @@ class RunBackup implements ShouldBeUniqueUntilProcessing, ShouldQueue
                 'feature' => 'backup',
                 'backup_target' => $this->backupTargetId,
             ]);
+
+            // Someone pressed "Back up now" and was told it started. Skipping
+            // in silence left them believing a backup existed (bug #80), so a
+            // manual run leaves a row saying why it was not taken. A scheduled
+            // run stays quiet: the next one takes the restored site.
+            if ($this->actorId !== null) {
+                $skipped = Backup::create([
+                    'backup_target_id' => $target->id,
+                    'application_id' => $target->application_id,
+                    'user_id' => $this->actorId,
+                    'type' => $target->type->value,
+                    'is_safety' => false,
+                    'status' => BackupStatus::Failed,
+                    'reason' => 'restore_in_progress',
+                    'reference' => (string) Str::uuid(),
+                    'started_at' => now(),
+                    'finished_at' => now(),
+                ]);
+
+                $activity->log('backup.failed', $skipped, [
+                    'application' => $target->application->name,
+                    'reason' => __('backup.errors.restore_in_progress'),
+                ], User::find($this->actorId));
+            }
 
             return;
         }

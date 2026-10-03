@@ -67,6 +67,7 @@ return [
         'unknown' => 'La sauvegarde a échoué pour une raison inconnue.',
         'crashed' => "La sauvegarde s'est arrêtée brutalement — le processus a été tué avant de finir. En général le serveur a manqué de mémoire, ou le worker a redémarré en cours de route.",
         'abandoned' => "Cette sauvegarde n'a jamais donné de nouvelles et a été clôturée. Son worker a disparu, rien n'a été téléversé.",
+        'restore_in_progress' => 'Non effectuée : une restauration de ce site a commencé avant que cette sauvegarde puisse s’exécuter. Relancez-la une fois la restauration terminée.',
         'clear_not_running' => "Cette sauvegarde n'est pas en cours, il n'y a rien à effacer.",
         'clear_too_soon' => "Cette sauvegarde est peut-être encore en cours. Elle se clôture d'elle-même :minutes minutes après son démarrage si le worker ne répond pas.",
         'prune_old_backups' => 'Les anciennes sauvegardes n’ont pas pu être supprimées. La nouvelle est intacte ; le stockage conserve peut-être plus de copies que prévu.',

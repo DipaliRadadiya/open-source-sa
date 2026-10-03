@@ -67,6 +67,7 @@ return [
         'unknown' => 'The backup failed for an unknown reason.',
         'crashed' => 'The backup stopped unexpectedly — the process was killed before it could finish. Usually the server ran out of memory, or the worker was restarted mid-backup.',
         'abandoned' => 'This backup never reported back and has been closed out. Its worker is gone, so nothing was uploaded.',
+        'restore_in_progress' => 'Not taken: a restore of this site started before this backup could run. Start it again once the restore has finished.',
         'clear_not_running' => 'This backup is not in progress, so there is nothing to clear.',
         'clear_too_soon' => 'This backup may still be running. It clears itself :minutes minutes after it started if the worker never reports back.',
         'prune_old_backups' => 'Old backups could not be removed. The new backup is safe; storage may just be holding more copies than the retention setting.',

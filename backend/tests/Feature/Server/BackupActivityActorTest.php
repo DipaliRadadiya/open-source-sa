@@ -140,3 +140,38 @@ it('records an Undo as an undo, not as another restore', function (RestoreStatus
     'succeeded' => [RestoreStatus::Succeeded, 'undone'],
     'failed' => [RestoreStatus::Failed, 'undo_failed'],
 ]);
+
+describe('a backup that a restore got in front of (bug #80)', function () {
+    beforeEach(function () {
+        // A restore of the same site, queued or running: the backup must not
+        // capture a half-restored site, so it is skipped.
+        Restore::create([
+            'backup_id' => ($this->backupOf)()->id,
+            'application_id' => $this->application->id,
+            'user_id' => $this->user->id,
+            'type' => 'full',
+            'status' => RestoreStatus::Running,
+            'reference' => (string) Str::uuid(),
+        ]);
+
+        // Not reached: the skip comes first.
+        app()->instance(BackupRunner::class, Mockery::mock(BackupRunner::class)->shouldNotReceive('run')->getMock());
+    });
+
+    it('tells the person who pressed Back up now that it was not taken', function () {
+        app()->call([new RunBackup($this->target->id, $this->user->id), 'handle']);
+
+        $row = Backup::where('reason', 'restore_in_progress')->sole();
+
+        expect($row->status)->toBe(BackupStatus::Failed)
+            ->and($row->user_id)->toBe($this->user->id)
+            ->and(ActivityLog::where('type', 'backup')->where('action', 'failed')->sole()->user_id)->toBe($this->user->id);
+    });
+
+    it('stays quiet for a scheduled run, which the next schedule covers', function () {
+        app()->call([new RunBackup($this->target->id), 'handle']);
+
+        expect(Backup::where('reason', 'restore_in_progress')->exists())->toBeFalse()
+            ->and(ActivityLog::where('type', 'backup')->exists())->toBeFalse();
+    });
+});

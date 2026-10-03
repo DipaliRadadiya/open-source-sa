@@ -67,6 +67,7 @@ return [
         'unknown' => 'A cópia de segurança falhou por um motivo desconhecido.',
         'crashed' => 'A cópia de segurança parou inesperadamente — o processo foi encerrado antes de terminar. Normalmente o servidor ficou sem memória, ou o worker reiniciou no meio.',
         'abandoned' => 'Esta cópia de segurança nunca respondeu e foi encerrada. O seu worker desapareceu, portanto nada foi enviado.',
+        'restore_in_progress' => 'Não efetuada: um restauro deste site começou antes de esta cópia poder ser executada. Inicie-a novamente quando o restauro terminar.',
         'clear_not_running' => 'Esta cópia de segurança não está em curso, portanto não há nada para limpar.',
         'clear_too_soon' => 'Esta cópia de segurança pode ainda estar em execução. Ela encerra-se sozinha :minutes minutos após começar se o worker não responder.',
         'prune_old_backups' => 'Não foi possível remover as cópias antigas. A nova cópia está segura; o armazenamento pode ter mais cópias do que o configurado.',
