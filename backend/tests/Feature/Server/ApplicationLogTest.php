@@ -137,6 +137,16 @@ it('reads the process output from the site\'s own log directory', function () {
         ->toContain('sv-app: listening on 3000');
 });
 
+it('shows a Node app\'s coloured output without the colour codes (bug #63)', function () {
+    $this->application->update(['start_command' => 'node server.js']);
+    $this->files['/home/logowner/logged-site/logs/app.log'] = "\e[32minfo\e[39m: listening on \e[1m3000\e[22m\n";
+    fakeLogs();
+
+    // The screen showed `[32minfo[39m`. A search matches the visible text.
+    expect($this->actingAs($this->admin)->getJson(logUrl('/application?grep=info: listening'))->json('log.lines'))
+        ->toBe(['info: listening on 3000']);
+});
+
 it('keeps the process\'s errors in a source of their own', function () {
     // Merged into stdout, a stack trace is one line among thousands of
     // request logs; separate, it is the first thing on the screen.

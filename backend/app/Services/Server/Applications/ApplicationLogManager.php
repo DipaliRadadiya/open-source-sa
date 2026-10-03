@@ -314,10 +314,15 @@ class ApplicationLogManager
     }
 
     /**
+     * Lines, without terminal colour codes (bug #63): Node apps colour their
+     * output, and the screen showed `[32m` and the like around every word.
+     * Stripped before filtering, so a search matches what the user sees.
+     *
      * @return array<int, string>
      */
     private function split(string $content): array
     {
+        $content = preg_replace('/\e\[[0-9;?]*[A-Za-z]/', '', $content) ?? $content;
         $content = rtrim(str_replace("\r\n", "\n", $content), "\n");
 
         return $content === '' ? [] : explode("\n", $content);
