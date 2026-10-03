@@ -534,6 +534,14 @@ it('does not fail the update when the firewall backfill is missing', function ()
         ->and($line)->toContain('||');
 });
 
+it('restricts existing PostgreSQL databases without letting it fail the update (bug #35)', function () {
+    $line = collect(explode("\n", inPlaceScript()))
+        ->first(fn (string $l): bool => str_contains($l, 'databases:restrict-postgres'));
+
+    expect($line)->not->toBeNull()
+        ->and($line)->toContain('|| echo "WARNING');
+});
+
 it('warns rather than going quiet when that backfill is skipped', function () {
     // Silently swallowing it would leave the firewall screen reading an empty
     // table with nothing anywhere saying why.
@@ -684,7 +692,7 @@ it('updates the panel\'s privileges before anything that uses them', function ()
 
     expect($sudoers)->not->toBeFalse();
 
-    foreach (['resync_site_configs', 'record_firewall_defaults', 'resync_fail2ban', 'repair_node_runtime'] as $step) {
+    foreach (['resync_site_configs', 'record_firewall_defaults', 'resync_fail2ban', 'restrict_postgres_databases', 'repair_node_runtime'] as $step) {
         expect(strpos($script, "note {$step}"))->toBeGreaterThan($sudoers, "{$step} runs before sync_privileges");
     }
 

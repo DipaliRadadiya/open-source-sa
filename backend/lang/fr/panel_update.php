@@ -10,6 +10,7 @@ return [
     'steps' => [
         'record_firewall_defaults' => 'Enregistrement des règles de pare-feu par défaut',
         'resync_fail2ban' => 'Resynchronisation de la configuration fail2ban',
+        'restrict_postgres_databases' => 'Restriction des bases PostgreSQL à leurs propres utilisateurs',
         'refresh_npm_catalogue' => 'Actualisation du catalogue npm',
         'refresh_lifecycle_catalogue' => 'Actualisation du catalogue de cycle de vie des runtimes',
         'repair_node_runtime' => 'Réparation de l\'environnement Node',
@@ -49,6 +50,7 @@ return [
         'configure_queue_worker' => 'Le processus de file d’attente n’a pas pu être configuré.',
         'record_firewall_defaults' => 'Les règles de pare-feu par défaut n’ont pas pu être enregistrées.',
         'resync_fail2ban' => 'La configuration fail2ban n’a pas pu être resynchronisée.',
+        'restrict_postgres_databases' => 'Les bases PostgreSQL n’ont pas pu être restreintes à leurs propres utilisateurs.',
         'refresh_npm_catalogue' => 'Le catalogue npm n’a pas pu être actualisé.',
         'refresh_lifecycle_catalogue' => 'Le catalogue de cycle de vie des runtimes n’a pas pu être actualisé.',
         'repair_node_runtime' => 'L\'environnement Node n\'a pas pu être réparé.',

@@ -10,6 +10,7 @@ return [
     'steps' => [
         'record_firewall_defaults' => 'Firewall-Standardregeln werden erfasst',
         'resync_fail2ban' => 'fail2ban-Konfiguration wird neu synchronisiert',
+        'restrict_postgres_databases' => 'PostgreSQL-Datenbanken werden auf ihre eigenen Benutzer beschränkt',
         'refresh_npm_catalogue' => 'npm-Katalog wird aktualisiert',
         'refresh_lifecycle_catalogue' => 'Laufzeit-Lebenszykluskatalog wird aktualisiert',
         'repair_node_runtime' => 'Node-Laufzeit wird repariert',
@@ -49,6 +50,7 @@ return [
         'configure_queue_worker' => 'Der Queue-Worker konnte nicht konfiguriert werden.',
         'record_firewall_defaults' => 'Die Firewall-Standardregeln konnten nicht erfasst werden.',
         'resync_fail2ban' => 'Die fail2ban-Konfiguration konnte nicht neu synchronisiert werden.',
+        'restrict_postgres_databases' => 'Die PostgreSQL-Datenbanken konnten nicht auf ihre eigenen Benutzer beschränkt werden.',
         'refresh_npm_catalogue' => 'Der npm-Katalog konnte nicht aktualisiert werden.',
         'refresh_lifecycle_catalogue' => 'Der Laufzeit-Lebenszykluskatalog konnte nicht aktualisiert werden.',
         'repair_node_runtime' => 'Die Node-Laufzeit konnte nicht repariert werden.',

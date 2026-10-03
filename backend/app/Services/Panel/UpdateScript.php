@@ -39,6 +39,7 @@ class UpdateScript
         'resync_site_configs',
         'record_firewall_defaults',
         'resync_fail2ban',
+        'restrict_postgres_databases',
         'refresh_npm_catalogue',
         'refresh_lifecycle_catalogue',
         'repair_node_runtime',
@@ -374,6 +375,13 @@ class UpdateScript
         # down to fix a jail.
         note resync_fail2ban
         {$asUser}{$php} {$backend}/artisan fail2ban:resync || echo "WARNING: fail2ban config not resynced; run 'artisan fail2ban:resync' if site jails are not banning"
+
+        # Bug #35: new PostgreSQL databases let only their own users connect;
+        # this does the same for databases made before that fix, which would
+        # otherwise stay open to every site's user on every existing server.
+        # Non-fatal: a database it cannot change keeps the access it had.
+        note restrict_postgres_databases
+        {$asUser}{$php} {$backend}/artisan databases:restrict-postgres || echo "WARNING: PostgreSQL databases not restricted; run 'artisan databases:restrict-postgres'"
 
         # The npm catalogue is what `npm_latest` is read from, and until it has
         # a row the Node screen cannot tell "npm is current" from "we do not

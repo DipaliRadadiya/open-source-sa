@@ -10,6 +10,7 @@ return [
     'steps' => [
         'record_firewall_defaults' => 'Записываются правила брандмауэра по умолчанию',
         'resync_fail2ban' => 'Повторная синхронизация конфигурации fail2ban',
+        'restrict_postgres_databases' => 'Ограничение доступа к базам PostgreSQL их собственными пользователями',
         'refresh_npm_catalogue' => 'Обновляется каталог npm',
         'refresh_lifecycle_catalogue' => 'Обновляется каталог жизненного цикла сред выполнения',
         'repair_node_runtime' => 'Восстановление среды Node',
@@ -49,6 +50,7 @@ return [
         'configure_queue_worker' => 'Не удалось настроить обработчик очереди.',
         'record_firewall_defaults' => 'Не удалось записать правила брандмауэра по умолчанию.',
         'resync_fail2ban' => 'Не удалось повторно синхронизировать конфигурацию fail2ban.',
+        'restrict_postgres_databases' => 'Не удалось ограничить доступ к базам PostgreSQL их собственными пользователями.',
         'refresh_npm_catalogue' => 'Не удалось обновить каталог npm.',
         'refresh_lifecycle_catalogue' => 'Не удалось обновить каталог жизненного цикла сред выполнения.',
         'repair_node_runtime' => 'Не удалось восстановить среду Node.',

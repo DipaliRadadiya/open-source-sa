@@ -10,6 +10,7 @@ return [
     'steps' => [
         'record_firewall_defaults' => 'फ़ायरवॉल की डिफ़ॉल्ट नियम दर्ज किए जा रहे हैं',
         'resync_fail2ban' => 'fail2ban कॉन्फ़िगरेशन पुनः समन्वयित किया जा रहा है',
+        'restrict_postgres_databases' => 'PostgreSQL डेटाबेस को उनके अपने उपयोगकर्ताओं तक सीमित किया जा रहा है',
         'refresh_npm_catalogue' => 'npm कैटलॉग रिफ़्रेश हो रहा है',
         'refresh_lifecycle_catalogue' => 'रनटाइम लाइफ़साइकल कैटलॉग रिफ़्रेश हो रहा है',
         'repair_node_runtime' => 'Node रनटाइम ठीक किया जा रहा है',
@@ -49,6 +50,7 @@ return [
         'configure_queue_worker' => 'क्यू वर्कर कॉन्फ़िगर नहीं हो सका।',
         'record_firewall_defaults' => 'फ़ायरवॉल के डिफ़ॉल्ट नियम दर्ज नहीं हो सके।',
         'resync_fail2ban' => 'fail2ban कॉन्फ़िगरेशन पुनः समन्वयित नहीं हो सका।',
+        'restrict_postgres_databases' => 'PostgreSQL डेटाबेस को उनके अपने उपयोगकर्ताओं तक सीमित नहीं किया जा सका।',
         'refresh_npm_catalogue' => 'npm कैटलॉग रिफ़्रेश नहीं हो सका।',
         'refresh_lifecycle_catalogue' => 'रनटाइम लाइफ़साइकल कैटलॉग रिफ़्रेश नहीं हो सका।',
         'repair_node_runtime' => 'Node रनटाइम ठीक नहीं किया जा सका।',

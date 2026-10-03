@@ -10,6 +10,7 @@ return [
     'steps' => [
         'record_firewall_defaults' => 'A registar as regras predefinidas da firewall',
         'resync_fail2ban' => 'A ressincronizar a configuração do fail2ban',
+        'restrict_postgres_databases' => 'A restringir as bases de dados PostgreSQL aos seus próprios utilizadores',
         'refresh_npm_catalogue' => 'A atualizar o catálogo do npm',
         'refresh_lifecycle_catalogue' => 'A atualizar o catálogo de ciclo de vida dos runtimes',
         'repair_node_runtime' => 'Reparando o ambiente Node',
@@ -49,6 +50,7 @@ return [
         'configure_queue_worker' => 'Não foi possível configurar o processador da fila.',
         'record_firewall_defaults' => 'Não foi possível registar as regras predefinidas da firewall.',
         'resync_fail2ban' => 'Não foi possível ressincronizar a configuração do fail2ban.',
+        'restrict_postgres_databases' => 'Não foi possível restringir as bases de dados PostgreSQL aos seus próprios utilizadores.',
         'refresh_npm_catalogue' => 'Não foi possível atualizar o catálogo do npm.',
         'refresh_lifecycle_catalogue' => 'Não foi possível atualizar o catálogo de ciclo de vida dos runtimes.',
         'repair_node_runtime' => 'Não foi possível reparar o ambiente Node.',

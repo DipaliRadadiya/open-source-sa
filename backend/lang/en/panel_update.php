@@ -17,6 +17,7 @@ return [
     'steps' => [
         'record_firewall_defaults' => 'Recording the firewall defaults',
         'resync_fail2ban' => 'Resyncing the fail2ban configuration',
+        'restrict_postgres_databases' => 'Restricting PostgreSQL databases to their own users',
         'refresh_npm_catalogue' => 'Refreshing the npm catalogue',
         'refresh_lifecycle_catalogue' => 'Refreshing the runtime lifecycle catalogue',
         'repair_node_runtime' => 'Repairing the Node runtime',
@@ -62,6 +63,7 @@ return [
         'configure_queue_worker' => 'The queue worker could not be configured.',
         'record_firewall_defaults' => 'The firewall defaults could not be recorded.',
         'resync_fail2ban' => 'The fail2ban configuration could not be resynced.',
+        'restrict_postgres_databases' => 'The PostgreSQL databases could not be restricted to their own users.',
         'refresh_npm_catalogue' => 'The npm catalogue could not be refreshed.',
         'refresh_lifecycle_catalogue' => 'The runtime lifecycle catalogue could not be refreshed.',
         'repair_node_runtime' => 'The Node runtime could not be repaired.',

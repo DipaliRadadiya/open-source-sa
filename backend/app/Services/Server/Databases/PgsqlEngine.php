@@ -266,6 +266,71 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
+     * Bug #35 for a database made before the fix: take CONNECT and TEMP away
+     * from PUBLIC, as {@see createDatabase()} now does for a new one.
+     *
+     * The revoke must not lock out anyone who really uses the database, and
+     * the panel cannot know every such role: an adopted database, or one
+     * from a migrated server, may be used by roles the panel never recorded.
+     * So first every role that *uses* it gets CONNECT by name: whoever owns
+     * a schema or table in it, or holds a grant on one, plus the panel's own
+     * recorded users. A role that relied on PUBLIC alone owns nothing there
+     * and can read no table in it, so it loses only the ability to list the
+     * names, which is the leak itself. Superusers bypass both and are left out.
+     *
+     * In one transaction, grants first: a failed grant leaves PUBLIC's
+     * access exactly as it was.
+     *
+     * @param  array<int, string>  $users  The panel's recorded users of it.
+     * @return bool Whether anything changed. False when PUBLIC already had no
+     *              CONNECT, or the database does not exist.
+     */
+    public function restrictToItsUsers(string $database, array $users): bool
+    {
+        $publicCanConnect = trim($this->run(sprintf(
+            "SELECT datacl IS NULL OR EXISTS (SELECT 1 FROM aclexplode(datacl) a WHERE a.grantee = 0 AND a.privilege_type = 'CONNECT') FROM pg_database WHERE datname = %s;",
+            $this->literal($database),
+        ))->output());
+
+        if ($publicCanConnect !== 't') {
+            return false;
+        }
+
+        $named = $users === [] ? 'NULL' : implode(', ', array_map(fn (string $user) => $this->literal($user), $users));
+
+        $result = $this->runIn($database, <<<SQL
+            SELECT r.rolname FROM pg_roles r
+            WHERE NOT r.rolsuper AND r.rolname NOT LIKE 'pg\_%' AND (
+                r.rolname IN ({$named})
+                OR EXISTS (SELECT 1 FROM pg_namespace n WHERE n.nspowner = r.oid AND n.nspname NOT LIKE 'pg\_%' AND n.nspname <> 'information_schema')
+                OR EXISTS (SELECT 1 FROM pg_class c WHERE c.relowner = r.oid AND c.relnamespace NOT IN (SELECT oid FROM pg_namespace WHERE nspname LIKE 'pg\_%' OR nspname = 'information_schema'))
+                OR EXISTS (SELECT 1 FROM pg_namespace n, aclexplode(n.nspacl) a WHERE a.grantee = r.oid AND n.nspname NOT LIKE 'pg\_%' AND n.nspname <> 'information_schema')
+                OR EXISTS (SELECT 1 FROM pg_class c, aclexplode(c.relacl) a WHERE a.grantee = r.oid AND c.relnamespace NOT IN (SELECT oid FROM pg_namespace WHERE nspname LIKE 'pg\_%' OR nspname = 'information_schema'))
+            );
+            SQL);
+
+        if ($result->failed()) {
+            throw new DatabaseOperationException($result->reference);
+        }
+
+        $roles = array_values(array_filter(array_map('trim', explode("\n", $result->output()))));
+
+        $grant = $roles === [] ? '' : sprintf(
+            'GRANT CONNECT, TEMPORARY ON DATABASE %s TO %s; ',
+            $this->ident($database),
+            implode(', ', array_map(fn (string $role) => $this->ident($role), $roles)),
+        );
+
+        $this->must(sprintf(
+            'BEGIN; %sREVOKE CONNECT, TEMPORARY ON DATABASE %s FROM PUBLIC; COMMIT;',
+            $grant,
+            $this->ident($database),
+        ));
+
+        return true;
+    }
+
+    /**
      * Drop the database, then the roles — with **no** `REASSIGN OWNED` /
      * `DROP OWNED`, which is the one thing that separates this from calling
      * `dropUser()` in a loop.

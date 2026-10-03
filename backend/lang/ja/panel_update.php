@@ -10,6 +10,7 @@ return [
     'steps' => [
         'record_firewall_defaults' => 'ファイアウォールの既定ルールを記録しています',
         'resync_fail2ban' => 'fail2ban の設定を再同期しています',
+        'restrict_postgres_databases' => 'PostgreSQL データベースを各自のユーザーに制限しています',
         'refresh_npm_catalogue' => 'npm カタログを更新しています',
         'refresh_lifecycle_catalogue' => 'ランタイムのサポート状況カタログを更新しています',
         'repair_node_runtime' => 'Node ランタイムを修復しています',
@@ -49,6 +50,7 @@ return [
         'configure_queue_worker' => 'キューワーカーを設定できませんでした。',
         'record_firewall_defaults' => 'ファイアウォールの既定ルールを記録できませんでした。',
         'resync_fail2ban' => 'fail2ban の設定を再同期できませんでした。',
+        'restrict_postgres_databases' => 'PostgreSQL データベースを各自のユーザーに制限できませんでした。',
         'refresh_npm_catalogue' => 'npm カタログを更新できませんでした。',
         'refresh_lifecycle_catalogue' => 'ランタイムのサポート状況カタログを更新できませんでした。',
         'repair_node_runtime' => 'Node ランタイムを修復できませんでした。',
