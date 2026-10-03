@@ -2252,6 +2252,30 @@ describe('a proxied node site', function () {
         expect($items[0]['attributes']['app_port'])->toBeNull();
     });
 
+    it('reads a server block written on one line (bug #41)', function () {
+        // nginx directives end at `;`, not at a newline. Read line by line,
+        // this valid config gave no domain and no root, and Sync skipped it.
+        fakeVhosts(['oneline' => 'server { listen 80; server_name one.test www.one.test; root /home/siteowner/oneline/public_html; index index.php; }']);
+        SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
+
+        $run = SyncRun::create(['status' => 'running', 'started_at' => now()]);
+        $items = app(ApplicationDiscoverer::class)->discover($run);
+
+        expect($items)->toHaveCount(1)
+            ->and($items[0]['attributes']['domains'])->toBe(['one.test', 'www.one.test'])
+            ->and($items[0]['attributes']['document_root'])->toBe('/home/siteowner/oneline/public_html');
+    });
+
+    it('ignores a root in a comment, even after a semicolon there', function () {
+        fakeVhosts(['commented' => "server {\n    # listen 8080; root /home/siteowner/old/public_html;\n    server_name c.test;\n    root /home/siteowner/commented/public_html;\n}"]);
+        SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
+
+        $run = SyncRun::create(['status' => 'running', 'started_at' => now()]);
+
+        expect(app(ApplicationDiscoverer::class)->discover($run)[0]['attributes']['document_root'])
+            ->toBe('/home/siteowner/commented/public_html');
+    });
+
     it('leaves a plain site portless rather than inventing one', function () {
         fakeVhosts(['plain' => "server {\n server_name plain.test;\n root /home/siteowner/plain/public_html;\n index index.php;\n}"]);
 

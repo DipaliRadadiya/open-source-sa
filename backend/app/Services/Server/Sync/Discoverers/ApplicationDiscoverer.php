@@ -538,8 +538,16 @@ class ApplicationDiscoverer implements Discoverable
     {
         $domains = [];
 
+        // nginx directives end at `;`, not at a newline, so a whole server
+        // block can sit on one line — `server { listen 80; server_name x;
+        // root /y; }` — and Sync skipped it (bug #41). A directive starts
+        // after a newline, `{` or `;`. Comments are dropped first so that
+        // widening cannot pick a commented-out `root` out of one.
+        $nginx = (string) preg_replace('/#[^\n]*/', '', $contents);
+        $start = '(?:^|[;{])\s*';
+
         // nginx: `server_name a b c;`
-        if (preg_match_all('/^\s*server_name\s+([^;]+);/mi', $contents, $matches)) {
+        if (preg_match_all('/'.$start.'server_name\s+([^;]+);/mi', $nginx, $matches)) {
             foreach ($matches[1] as $group) {
                 $domains = array_merge($domains, preg_split('/\s+/', trim($group)) ?: []);
             }
@@ -570,7 +578,7 @@ class ApplicationDiscoverer implements Discoverable
 
         $root = null;
 
-        if (preg_match('/^\s*root\s+([^;]+);/mi', $contents, $m)) {
+        if (preg_match('/'.$start.'root\s+([^;]+);/mi', $nginx, $m)) {
             $root = trim($m[1]);
         } elseif (preg_match('/^\s*DocumentRoot\s+"?([^"\s]+)"?/mi', $contents, $m)) {
             $root = trim($m[1]);
@@ -597,7 +605,7 @@ class ApplicationDiscoverer implements Discoverable
         // wrong.
         $port = null;
 
-        if (preg_match('#^\s*proxy_pass\s+https?://(?:127\.0\.0\.1|localhost|\[::1\]):(\d+)#mi', $contents, $m)) {
+        if (preg_match('#'.$start.'proxy_pass\s+https?://(?:127\.0\.0\.1|localhost|\[::1\]):(\d+)#mi', $nginx, $m)) {
             $port = (int) $m[1];
         }
 
