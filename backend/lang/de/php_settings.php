@@ -47,5 +47,9 @@ return [
         'reload_failed' => 'PHP-FPM ließ sich nicht neu laden, daher wurde die vorherige Konfiguration wiederhergestellt.',
         'no_sections' => 'Abschnittsüberschriften sind hier nicht erlaubt — sie würden einen zweiten Pool in diesem starten.',
         'function_list' => 'Dies muss eine kommagetrennte Liste von Funktionsnamen sein.',
+        'memory_unlimited' => 'Unbegrenzter Speicher (-1) ist nicht erlaubt: Eine Website könnte den gesamten Speicher des Servers belegen und alle anderen Websites mit lahmlegen. Gib ein Limit ein, z. B. 512M.',
+        'memory_over_ram' => 'Das ist mehr Speicher, als der Server hat (:ram). Gib ein kleineres Limit ein.',
+        'post_below_upload' => 'Die maximale POST-Größe (:post) muss mindestens so groß wie die maximale Upload-Größe (:upload) sein. Ein Upload wird innerhalb der Anfrage gesendet, sonst schlagen größere Uploads ohne Fehlermeldung fehl.',
+        'prepend_outside_site' => 'Die Datei muss im Ordner dieser Website liegen (:root/…).',
     ],
 ];

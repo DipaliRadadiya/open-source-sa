@@ -56,5 +56,9 @@ return [
         'reload_failed' => 'PHP-FPM would not reload, so the previous configuration was restored.',
         'no_sections' => 'Section headers are not allowed here — they would start a second pool inside this one.',
         'function_list' => 'This must be a comma-separated list of function names.',
+        'memory_unlimited' => 'Unlimited memory (-1) is not allowed: one site could use all of the server\'s memory and take every other site down with it. Enter a limit, like 512M.',
+        'memory_over_ram' => 'This is more memory than the server has (:ram). Enter a smaller limit.',
+        'post_below_upload' => 'The maximum POST size (:post) must be at least the maximum upload size (:upload). An upload is sent inside the request, so otherwise larger uploads fail with no error.',
+        'prepend_outside_site' => 'The file must be inside this site\'s folder (:root/…).',
     ],
 ];

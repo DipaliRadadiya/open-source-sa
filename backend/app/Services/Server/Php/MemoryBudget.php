@@ -79,9 +79,9 @@ class MemoryBudget
      * Total RAM, read from /proc rather than stored.
      *
      * A VPS can be resized under you, and a cached figure would then be a
-     * budget against a machine that no longer exists.
+     * budget against a machine that no longer exists. 0 when unknown.
      */
-    private function totalMemoryBytes(): int
+    public function totalMemoryBytes(): int
     {
         $meminfo = @file_get_contents('/proc/meminfo');
 
