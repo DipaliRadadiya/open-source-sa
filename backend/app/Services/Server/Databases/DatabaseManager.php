@@ -203,6 +203,27 @@ class DatabaseManager
     }
 
     /**
+     * Is this engine's server package installed, asked of dpkg alone?
+     *
+     * For callers that must not probe an engine to find out. Bug #22: the
+     * 5-minute metrics task ran `SELECT 1` against every engine, and on a
+     * MariaDB server "MySQL" is MariaDB's port reached with the default
+     * `root` and no password: about 12 "Access denied for user 'root'"
+     * warnings an hour in MariaDB's log, from the panel itself.
+     *
+     * Not {@see installed()}: that falls back to the client binary when the
+     * engine cannot be installed, and MariaDB's client answers to `mysql`.
+     */
+    public function serverInstalled(string $engine): bool
+    {
+        if (config("server.databases.engines.{$engine}.installer") === null) {
+            return false;
+        }
+
+        return app(Installers\EngineInstallerManager::class)->installer($engine)->installed();
+    }
+
+    /**
      * Charset => allowed collations for this engine, empty where the concept
      * does not exist.
      *

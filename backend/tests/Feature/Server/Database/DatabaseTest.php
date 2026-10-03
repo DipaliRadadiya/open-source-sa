@@ -670,15 +670,63 @@ it('returns the QPS history from db_metrics', function () {
 it('samples db metrics into the table and prunes old rows', function () {
     Carbon::setTestNow(Carbon::parse('2026-07-28 12:00:00'));
     DbMetric::create(['engine' => 'mysql', 'queries' => 1, 'connections' => 1, 'threads_running' => 0, 'sampled_at' => Carbon::parse('2026-07-26 12:00:00')]); // >24h old
-    fakeDb();
+    fakeMetricsServer(['mysql-server']);
 
     test()->artisan('db:sample-metrics')->assertExitCode(0);
 
-    // old row pruned; fresh rows added for the reachable engines (mysql+mariadb via fake).
+    // old row pruned; a fresh row added for the installed, reachable engine.
     expect(DbMetric::where('sampled_at', '<', Carbon::parse('2026-07-27 12:00:00'))->count())->toBe(0);
     expect(DbMetric::where('engine', 'mysql')->where('queries', 1000)->exists())->toBeTrue();
 
     Carbon::setTestNow();
+});
+
+/**
+ * fakeDb(), plus a dpkg that reports exactly these server packages installed.
+ * Every SQL client call is recorded with the engine's binary, so a test can
+ * see which engines were probed at all.
+ *
+ * @param  array<int, string>  $packages
+ */
+function fakeMetricsServer(array $packages): ArrayObject
+{
+    $probes = new ArrayObject;
+
+    Process::fake(function ($process) use ($packages, $probes) {
+        $cmd = $process->command;
+
+        if (($cmd[0] ?? '') === 'dpkg-query') {
+            return in_array(end($cmd), $packages, true)
+                ? Process::result(output: 'install ok installed')
+                : Process::result(exitCode: 1, errorOutput: 'dpkg-query: no packages found');
+        }
+
+        if (in_array($cmd[0] ?? '', ['mysql', 'mariadb', 'psql', 'mongosh'], true)) {
+            $probes[] = $cmd[0];
+        }
+
+        $sql = (string) ($process->input ?? '');
+
+        return match (true) {
+            str_contains($sql, 'SHOW GLOBAL STATUS') => Process::result(output: "Threads_connected\t5\nThreads_running\t1\nQueries\t1000"),
+            default => Process::result(output: '1'),
+        };
+    });
+
+    return $probes;
+}
+
+it('samples only engines whose server is installed, without probing the rest (bug #22)', function () {
+    // A MariaDB server. "MySQL" there is MariaDB's own port reached as root
+    // with no password: every 5 minutes, an "Access denied" in its log.
+    $probes = fakeMetricsServer(['mariadb-server']);
+
+    test()->artisan('db:sample-metrics')->assertExitCode(0);
+
+    expect(DbMetric::pluck('engine')->all())->toBe(['mariadb'])
+        ->and(collect($probes)->unique()->values()->all())->toBe(['mariadb'])
+        // Not even the empty root connection record the probe used to create.
+        ->and(DatabaseConnection::where('engine', 'mysql')->exists())->toBeFalse();
 });
 
 // ---- P2b: export (safe, read-only) ----
