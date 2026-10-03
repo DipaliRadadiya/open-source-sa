@@ -8,6 +8,7 @@ export const SYNC_RESOURCE_TYPES = [
   "ssh_key",
   "application",
   "php_settings",
+  "pm2_process",
   "worker",
   "database_user",
   "certificate",

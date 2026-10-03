@@ -44,6 +44,7 @@ const DEPENDS_ON = {
   ssh_key: "system_user",
   application: "system_user",
   php_settings: "application",
+  pm2_process: "application",
   worker: "application",
   certificate: "application",
   cronjob: "system_user",

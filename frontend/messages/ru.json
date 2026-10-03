@@ -6732,6 +6732,7 @@
       "ssh_key": "SSH-ключи",
       "application": "Приложения",
       "php_settings": "Настройки PHP",
+      "pm2_process": "Процессы PM2",
       "worker": "Воркеры",
       "database_user": "Пользователи БД",
       "certificate": "Сертификаты",

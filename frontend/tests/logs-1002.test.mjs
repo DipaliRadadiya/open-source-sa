@@ -142,3 +142,15 @@ test("sync: an add that fails to start says so (not 'the scan'), and counts are 
     assert.match(s.results.showing, /\{total, number\}/, l);
   }
 });
+
+test("sync: every backend discoverer is known to the frontend, in its order, with a label in every locale", () => {
+  const provider = read("../backend/app/Providers/AppServiceProvider.php");
+  const classes = [...provider.matchAll(/\$app->make\((\w+Discoverer)::class\)/g)].map((m) => m[1]);
+  const backend = classes.map((c) => read(`../backend/app/Services/Server/Sync/Discoverers/${c}.php`).match(/function resourceType\(\): string\s*\{\s*return '([a-z0-9_]+)';/)[1]);
+  const frontend = [...read("lib/schemas/sync.js").match(/SYNC_RESOURCE_TYPES = \[([\s\S]*?)\]/)[1].matchAll(/"([a-z0-9_]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(frontend, backend);
+  for (const l of ["en", "es", "hi", "de", "fr", "pt", "ja", "ru"]) {
+    const types = JSON.parse(read(`messages/${l}.json`)).sync.types;
+    for (const type of backend) assert.ok(types[type], `${l}: sync.types.${type}`);
+  }
+});

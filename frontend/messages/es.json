@@ -6732,6 +6732,7 @@
       "ssh_key": "Claves SSH",
       "application": "Aplicaciones",
       "php_settings": "Ajustes de PHP",
+      "pm2_process": "Procesos de PM2",
       "worker": "Workers",
       "database_user": "Usuarios de base de datos",
       "certificate": "Certificados",
