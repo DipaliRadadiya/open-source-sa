@@ -212,3 +212,15 @@ test("bug list #15: the Redis card warns when the panel's saved password no long
   assert.match(form, /redis\?\.password_out_of_sync === true \?/);
   assert.match(form, /canManage \? <p className="text-xs">\{t\("redis\.outOfSyncFix"\)\}<\/p> : null/);
 });
+
+test("setup: the WP-CLI row has its own icon and is gated like its API (application manage)", () => {
+  assert.match(read("components/setup/component-meta.js"), /wp_cli: SquareTerminal,/);
+  assert.match(read("app/(setup)/setup/page.jsx"), /wp_cli: can\(permissions, "application", "manage"\),/);
+});
+
+test("setup: the percentage counts recommended components only, and optional extras are named", () => {
+  const list = read("components/setup/setup-checklist.jsx");
+  assert.match(list, /Math\.round\(\(recommendedInstalled \/ recommended\.length\) \* 100\)/);
+  assert.match(list, /t\("optionalLeft", \{ count: optionalLeft \}\)/);
+  assert.doesNotMatch(list, /installedCount \/ components\.length/, "an optional extra read 83% next to 'You're all set'");
+});

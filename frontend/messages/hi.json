@@ -5899,7 +5899,6 @@
     "sectionAttention": "ध्यान चाहिए",
     "sectionRecommended": "अनुशंसित",
     "sectionOptional": "ये भी उपलब्ध हैं",
-    "summaryInstalled": "{count} इंस्टॉल हुए",
     "percentComplete": "{pct}% पूरा",
     "sectionAttentionHint": "कुछ पूरा नहीं हुआ। ऐप्लिकेशन जोड़ने से पहले इसे ठीक करना बेहतर है।",
     "sectionRecommendedHint": "ज़्यादातर सर्वरों के लिए सुझाया गया। आप इन्हें कभी भी जोड़ सकते हैं।",
@@ -5908,7 +5907,9 @@
     "chooseEngineFirst": "पहले एक डेटाबेस इंजन चुनें",
     "oneSqlOnly": "एक सर्वर पर केवल एक SQL इंजन चलता है। इंस्टॉल होने के बाद दूसरे पर जाने के लिए सर्वर दोबारा बनाना पड़ेगा।",
     "purposePostgresql": "उन ऐप्स के लिए जो खास तौर पर Postgres मांगती हैं",
-    "fail2banOff": "इंस्टॉल हो गया, पर अभी कुछ भी सुरक्षित नहीं है। <link>Fail2ban में SSH सुरक्षा चालू करें</link>।"
+    "fail2banOff": "इंस्टॉल हो गया, पर अभी कुछ भी सुरक्षित नहीं है। <link>Fail2ban में SSH सुरक्षा चालू करें</link>।",
+    "recommendedProgress": "{total} में से {done} सुझाए गए इंस्टॉल हुए",
+    "optionalLeft": "{count, plural, one {नीचे # वैकल्पिक चीज़ उपलब्ध है} other {नीचे # वैकल्पिक चीज़ें उपलब्ध हैं}}"
   },
   "storage": {
     "title": "स्टोरेज",

@@ -43,6 +43,8 @@ export default async function SetupPage() {
     php: can(permissions, "php", "manage"),
     node: can(permissions, "node", "manage"),
     build_tools: can(permissions, "node", "manage"),
+    // POST /wp-cli/install is application manage; a missing key reads as allowed.
+    wp_cli: can(permissions, "application", "manage"),
   };
 
   // Fetch installable versions only for the runtimes that still need one, so the

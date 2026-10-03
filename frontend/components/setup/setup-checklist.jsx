@@ -97,12 +97,13 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
 
   const recommended = components.filter((c) => c.recommended);
   const recommendedLeft = recommended.filter((c) => c.state !== "installed").length;
-  // Progress counts everything installed, not just the recommended set, so it
-  // never contradicts the "Already installed" list.
-  const installedCount = components.filter((c) => c.state === "installed").length;
+  // Progress measures the recommended set only, the same set "You're all set" and
+  // `complete` use: an optional extra (WP-CLI) left out read "83% complete · all set".
+  const recommendedInstalled = recommended.length - recommendedLeft;
+  const optionalLeft = components.filter((c) => !c.recommended && c.state !== "installed").length;
   const failedCount = components.filter((c) => c.state === "failed").length;
-  const pct = components.length
-    ? Math.round((installedCount / components.length) * 100)
+  const pct = recommended.length
+    ? Math.round((recommendedInstalled / recommended.length) * 100)
     : 100;
 
   // Needs-attention first, already-done last.
@@ -180,7 +181,7 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
             <span className="font-medium">
               {setup.complete
                 ? t("progressComplete")
-                : t("summaryInstalled", { count: installedCount })}
+                : t("recommendedProgress", { done: recommendedInstalled, total: recommended.length })}
             </span>
             {!setup.complete && failedCount ? (
               <>
@@ -195,6 +196,15 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
                 <Dot />
                 <span className="text-muted-foreground">
                   {t("recommendedLeft", { count: recommendedLeft })}
+                </span>
+              </>
+            ) : null}
+            {/* Named, so 100% does not read as "nothing else here". */}
+            {optionalLeft ? (
+              <>
+                <Dot />
+                <span className="text-muted-foreground">
+                  {t("optionalLeft", { count: optionalLeft })}
                 </span>
               </>
             ) : null}

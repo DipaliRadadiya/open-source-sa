@@ -5899,7 +5899,6 @@
     "sectionAttention": "Needs attention",
     "sectionRecommended": "Recommended",
     "sectionOptional": "Also available",
-    "summaryInstalled": "{count} installed",
     "percentComplete": "{pct}% complete",
     "sectionAttentionHint": "Something did not finish. Worth sorting before you add an application.",
     "sectionRecommendedHint": "Advised for most servers. You can add these at any time.",
@@ -5908,7 +5907,9 @@
     "chooseEngineFirst": "Pick a database engine first",
     "oneSqlOnly": "A server runs one SQL engine. Once this installs, switching to the other means rebuilding the server.",
     "purposePostgresql": "For apps that ask for Postgres by name",
-    "fail2banOff": "Installed, but nothing is protected yet. <link>Turn on SSH protection in Fail2ban</link>."
+    "fail2banOff": "Installed, but nothing is protected yet. <link>Turn on SSH protection in Fail2ban</link>.",
+    "recommendedProgress": "{done} of {total} recommended installed",
+    "optionalLeft": "{count, plural, one {# optional extra available below} other {# optional extras available below}}"
   },
   "storage": {
     "title": "Storage",

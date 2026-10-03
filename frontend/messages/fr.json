@@ -5899,7 +5899,6 @@
     "sectionAttention": "À vérifier",
     "sectionRecommended": "Recommandé",
     "sectionOptional": "Aussi disponible",
-    "summaryInstalled": "{count} installé(s)",
     "percentComplete": "{pct}% terminé",
     "sectionAttentionHint": "Quelque chose ne s'est pas terminé. À régler avant d'ajouter une application.",
     "sectionRecommendedHint": "Conseillé pour la plupart des serveurs. Vous pouvez les ajouter à tout moment.",
@@ -5908,7 +5907,9 @@
     "chooseEngineFirst": "Choisissez d'abord un moteur de base de données",
     "oneSqlOnly": "Un serveur n'exécute qu'un seul moteur SQL. Une fois celui-ci installé, passer à l'autre implique de reconstruire le serveur.",
     "purposePostgresql": "Pour les applications qui demandent Postgres par son nom",
-    "fail2banOff": "Installé, mais rien n'est encore protégé. <link>Activez la protection SSH dans Fail2ban</link>."
+    "fail2banOff": "Installé, mais rien n'est encore protégé. <link>Activez la protection SSH dans Fail2ban</link>.",
+    "recommendedProgress": "{done} recommandés installés sur {total}",
+    "optionalLeft": "{count, plural, one {# extra facultatif disponible ci-dessous} other {# extras facultatifs disponibles ci-dessous}}"
   },
   "storage": {
     "title": "Stockage",

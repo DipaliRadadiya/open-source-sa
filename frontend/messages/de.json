@@ -5899,7 +5899,6 @@
     "sectionAttention": "Handlungsbedarf",
     "sectionRecommended": "Empfohlen",
     "sectionOptional": "Ebenfalls verfügbar",
-    "summaryInstalled": "{count} installiert",
     "percentComplete": "{pct} % abgeschlossen",
     "sectionAttentionHint": "Etwas wurde nicht abgeschlossen. Klären Sie das, bevor Sie eine Anwendung hinzufügen.",
     "sectionRecommendedHint": "Für die meisten Server ratsam. Sie können das jederzeit ergänzen.",
@@ -5908,7 +5907,9 @@
     "chooseEngineFirst": "Wählen Sie zuerst eine Datenbank-Engine",
     "oneSqlOnly": "Ein Server betreibt eine SQL-Engine. Sobald diese installiert ist, heißt ein Wechsel zur anderen, den Server neu aufzubauen.",
     "purposePostgresql": "Für Anwendungen, die ausdrücklich Postgres verlangen",
-    "fail2banOff": "Installiert, schützt aber noch nichts. <link>SSH-Schutz in Fail2ban einschalten</link>."
+    "fail2banOff": "Installiert, schützt aber noch nichts. <link>SSH-Schutz in Fail2ban einschalten</link>.",
+    "recommendedProgress": "{done} von {total} empfohlenen installiert",
+    "optionalLeft": "{count, plural, one {# optionales Extra unten verfügbar} other {# optionale Extras unten verfügbar}}"
   },
   "storage": {
     "title": "Speicher",

@@ -5899,7 +5899,6 @@
     "sectionAttention": "Requiere atención",
     "sectionRecommended": "Recomendados",
     "sectionOptional": "También disponibles",
-    "summaryInstalled": "{count} instalados",
     "percentComplete": "{pct}% completado",
     "sectionAttentionHint": "Algo no terminó. Conviene resolverlo antes de añadir una aplicación.",
     "sectionRecommendedHint": "Aconsejado para la mayoría de servidores. Puedes añadirlos cuando quieras.",
@@ -5908,7 +5907,9 @@
     "chooseEngineFirst": "Elige primero un motor de base de datos",
     "oneSqlOnly": "Un servidor ejecuta un solo motor SQL. Una vez instalado, cambiar al otro implica reconstruir el servidor.",
     "purposePostgresql": "Para apps que piden Postgres expresamente",
-    "fail2banOff": "Instalado, pero todavía no protege nada. <link>Activa la protección de SSH en Fail2ban</link>."
+    "fail2banOff": "Instalado, pero todavía no protege nada. <link>Activa la protección de SSH en Fail2ban</link>.",
+    "recommendedProgress": "{done} de {total} recomendados instalados",
+    "optionalLeft": "{count, plural, one {# extra opcional disponible abajo} other {# extras opcionales disponibles abajo}}"
   },
   "storage": {
     "title": "Almacenamiento",

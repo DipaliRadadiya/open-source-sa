@@ -1,4 +1,4 @@
-import { Database, FileCode2, Hexagon, MemoryStick, ShieldCheck, Package } from "lucide-react";
+import { Database, FileCode2, Hexagon, MemoryStick, ShieldCheck, Package, SquareTerminal } from "lucide-react";
 
 // Icon per known component. No colour here: colour is reserved for state.
 // Unknown components fall back to a package icon so the list stays API-driven.
@@ -8,6 +8,7 @@ const ICONS = {
   node: Hexagon,
   redis: MemoryStick,
   fail2ban: ShieldCheck,
+  wp_cli: SquareTerminal,
 };
 
 const CHIP = "bg-muted";
