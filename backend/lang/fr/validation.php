@@ -262,4 +262,5 @@ return [
     'filter_content_string' => 'La configuration du filtre doit être du texte.',
     'filter_content_max' => 'La configuration du filtre est trop volumineuse (max. 65535 caractères).',
     'basic_auth_conflicts' => 'La protection par mot de passe ne peut pas être utilisée avec :type. Son interface s\'authentifie via l\'en-tête Authorization, que HTTP n\'autorise qu\'une fois par requête — l\'authentification Basic le consommerait et rendrait l\'application inaccessible. :type exige déjà ses propres identifiants.',
+    'basic_auth_username' => 'Le nom d’utilisateur ne peut contenir que des lettres latines non accentuées, des chiffres et des symboles, sans espace ni deux-points (:). Les navigateurs ne peuvent pas envoyer d’autres caractères de façon fiable.',
 ];

@@ -136,6 +136,21 @@ it('rejects a username containing a colon', function () {
         ->assertJsonValidationErrors(['username']);
 });
 
+it('rejects a username a browser cannot send reliably (bug #76)', function (string $username) {
+    $this->withHeaders(securityHeaders())
+        ->putJson(securityUrl(), ['enabled' => true, 'username' => $username, 'password' => 'correct-horse'])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.username.0', __('validation.basic_auth_username'));
+})->with(['accented' => 'josé', 'cyrillic' => 'админ', 'devanagari' => 'प्रयोक्ता', 'space' => 'my user']);
+
+it('accepts a username of letters, digits and symbols', function () {
+    fakeSecurityWebServer();
+
+    $this->withHeaders(securityHeaders())
+        ->putJson(securityUrl(), ['enabled' => true, 'username' => 'qa.user-01_@x', 'password' => 'correct-horse'])
+        ->assertOk();
+});
+
 it('restores the previous state before failing when the config test fails', function () {
     fakeSecurityWebServer(testPasses: false);
 

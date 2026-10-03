@@ -32,7 +32,13 @@ class UpdateBasicAuthRequest extends FormRequest
                 // The htpasswd line is `username:hash` — a colon in the
                 // username would corrupt it, and this is the one place
                 // nothing downstream re-validates that.
-                'regex:/^[^:\s]+$/',
+                //
+                // Printable ASCII only (bug #76). Browsers send Basic Auth
+                // credentials in an encoding the standard never pinned down,
+                // so a username with an accent or a non-Latin letter could be
+                // saved here and then never match what the browser sends:
+                // a site nobody can open.
+                'regex:/^[\x21-\x39\x3B-\x7E]+$/',
             ],
             'password' => [
                 Rule::requiredIf($this->boolean('enabled')),
@@ -40,6 +46,16 @@ class UpdateBasicAuthRequest extends FormRequest
                 'min:8',
                 'max:255',
             ],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'username.regex' => __('validation.basic_auth_username'),
         ];
     }
 

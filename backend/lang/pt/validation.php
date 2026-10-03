@@ -264,4 +264,5 @@ return [
     'filter_content_string' => 'A configuração do filtro tem de ser texto.',
     'filter_content_max' => 'A configuração do filtro é demasiado grande (máx. 65535 caracteres).',
     'basic_auth_conflicts' => 'A proteção por senha não pode ser usada com :type. A sua própria interface autentica-se com o cabeçalho Authorization, que o HTTP só permite uma vez por pedido — a autenticação Basic consumi-lo-ia e tornaria a aplicação inacessível. :type já exige as suas próprias credenciais.',
+    'basic_auth_username' => 'O nome de utilizador só pode conter letras inglesas, dígitos e símbolos, sem espaços nem dois pontos (:). Os navegadores não conseguem enviar outros caracteres de forma fiável.',
 ];
