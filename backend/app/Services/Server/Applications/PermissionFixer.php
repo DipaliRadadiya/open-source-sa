@@ -94,7 +94,7 @@ class PermissionFixer
      */
     private function isDirectory(Application $application, string $path): bool
     {
-        return $this->serverOps->run(
+        return $this->serverOps->probe(
             $this->asUser($application, ['test', '-d', $path]),
             ['feature' => 'application', 'op' => 'sessions_exist', 'application' => $application->id],
         )->ok;

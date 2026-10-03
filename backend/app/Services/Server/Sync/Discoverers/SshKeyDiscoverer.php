@@ -63,6 +63,7 @@ class SshKeyDiscoverer implements Discoverable
                 ['cat', $path],
                 ['feature' => 'sync', 'op' => 'discover_ssh_keys', 'system_user' => $systemUser->username],
                 timeout: 30,
+                expectedExitCodes: [1], // no authorized_keys yet (bug #48)
             );
 
             // No file is the normal case for a user who has never had a key.

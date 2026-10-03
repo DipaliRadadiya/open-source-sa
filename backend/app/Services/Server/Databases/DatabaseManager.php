@@ -199,6 +199,7 @@ class DatabaseManager
         return $this->serverOps->run(
             ['which', $client],
             ['feature' => 'database', 'engine' => $engine, 'op' => 'detect_client'],
+            expectedExitCodes: [1], // not on PATH: an answer (bug #48)
         )->ok;
     }
 

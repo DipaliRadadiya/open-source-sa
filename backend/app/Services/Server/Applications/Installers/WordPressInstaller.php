@@ -240,6 +240,8 @@ class WordPressInstaller extends AbstractPhpInstaller
             ['feature' => 'application', 'op' => 'installer.sync_url_check', 'application' => $application->id],
             timeout: $this->timeout(),
             cwd: $documentRoot,
+            // And logged as one (bug #48): "WP_HOME missing" was an error.
+            expectedExitCodes: [1],
         )->ok;
     }
 

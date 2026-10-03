@@ -170,7 +170,7 @@ class SwapFiles implements RestoreStep
             $target = $siteRoot.'/'.$relative;
 
             // Already restored from the archive: the archive wins.
-            if ($this->serverOps->run(['test', '-e', $target], $op)->ok) {
+            if ($this->serverOps->probe(['test', '-e', $target], $op)->ok) {
                 continue;
             }
 

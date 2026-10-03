@@ -312,6 +312,7 @@ class ChunkedUpload
             $this->asUser($application, ['stat', '-c', '%s', $path]),
             ['feature' => 'application', 'op' => 'file_upload_size', 'application' => $application->id],
             timeout: 15,
+            expectedExitCodes: [1], // "does not exist" is the null answer (bug #48)
         );
 
         return $result->failed() ? null : (int) trim($result->output());

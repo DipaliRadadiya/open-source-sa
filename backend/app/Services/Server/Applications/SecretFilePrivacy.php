@@ -159,7 +159,7 @@ class SecretFilePrivacy
             // Absent is ordinary (Statamic can keep its users in the
             // database), and `find` on a missing directory exits non-zero —
             // which reset() would report as Fix permissions failing.
-            if (! $ownUser || ! $this->serverOps->run(['runuser', '-u', $user, '--', 'test', '-d', $directory], $this->context($application))->ok) {
+            if (! $ownUser || ! $this->serverOps->probe(['runuser', '-u', $user, '--', 'test', '-d', $directory], $this->context($application))->ok) {
                 continue;
             }
 
@@ -186,7 +186,7 @@ class SecretFilePrivacy
             // A plain test as the user: absent is the common case (most types
             // have no `.env`), and nothing here should run against a path that
             // is not there.
-            if (! $this->serverOps->run(['runuser', '-u', $user, '--', 'test', '-f', $path], $this->context($application))->ok) {
+            if (! $this->serverOps->probe(['runuser', '-u', $user, '--', 'test', '-f', $path], $this->context($application))->ok) {
                 continue;
             }
 

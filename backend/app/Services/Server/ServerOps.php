@@ -219,9 +219,11 @@ class ServerOps
         // `test -f` uses exit 1 for "no", which is useful state rather than a
         // failed server command. Keep the unsuccessful result for the caller,
         // but do not put an expected answer on the admin error dashboard.
-        $expectedExit = ! $ok && $exitCode !== null && in_array($exitCode, $expectedExitCodes, true);
-
+        //
+        // Never a refused sudo, which exits 1 as well: that is the panel
+        // unable to ask at all, and the dashboard is where it gets noticed.
         $denied = ! $ok && $this->isSudoDenied($command, $stderr);
+        $expectedExit = ! $ok && ! $denied && $exitCode !== null && in_array($exitCode, $expectedExitCodes, true);
 
         Log::channel('server-ops')->{$ok || $expectedExit ? 'info' : 'error'}('server operation', array_merge($context, [
             // Named here rather than left to the reader. The admin error

@@ -719,7 +719,7 @@ class GitDeployer
             return;
         }
 
-        $autoload = $this->serverOps->run(
+        $autoload = $this->serverOps->probe(
             ['test', '-f', $codeRoot.'/vendor/autoload.php'],
             $context,
         );

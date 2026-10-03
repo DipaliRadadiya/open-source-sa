@@ -203,6 +203,7 @@ class CronjobDiscoverer implements Discoverable
                 ['crontab', '-l', '-u', (string) $username],
                 ['feature' => 'sync', 'op' => 'read_user_crontab', 'system_user' => $username],
                 timeout: 30,
+                expectedExitCodes: [1], // "no crontab for x" (bug #48)
             );
 
             // "no crontab for x" exits non-zero. The common case, not an error.

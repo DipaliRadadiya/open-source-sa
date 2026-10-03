@@ -153,3 +153,27 @@ it('still reports busy and stale locks as themselves', function () {
         ->and($busy->getStatusCode())->toBe(503)
         ->and($stale->getData(true)['code'])->toBe('server_stale_lock');
 });
+
+it('keeps a refused probe on the admin error dashboard', function () {
+    $dir = storage_path('logs/sudo-denied-probe-'.getmypid());
+    File::deleteDirectory($dir);
+    File::makeDirectory($dir, 0755, true);
+    config(['logging.channels.server-ops.path' => $dir.'/server-ops.log']);
+    Log::forgetChannel('server-ops');
+
+    Process::fake(fn () => denial());
+
+    // Exit 1 is "no" for `test -f` and also what sudo exits with when it
+    // refuses. Since bug #48 probes log their "no" as info; a refusal must
+    // not ride along with them, or a stale grant vanishes from the screen.
+    $this->ops->probe(['test', '-f', '/etc/passwd'], ['feature' => 'application', 'op' => 'env_locate']);
+
+    $token = User::factory()->admin()->create()->createToken('test')->plainTextToken;
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/admin/error-logs')
+        ->assertOk()
+        ->assertJsonPath('error_logs.0.operation', 'env_locate');
+
+    File::deleteDirectory($dir);
+});

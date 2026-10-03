@@ -132,10 +132,13 @@ class ApplicationEnvironment
      */
     private function present(Application $application, string $path, string $op): bool
     {
+        // Exit 1 is the answer "no such file", not a failure (bug #48): it
+        // filled the admin error log, once per site per screen load.
         $result = $this->run($application,
             ['test', '-f', $path],
             $this->context($application, $op),
             timeout: 15,
+            expectedExitCodes: [1],
         );
 
         if ($result->failed() && trim($result->errorOutput()) !== '') {
@@ -487,13 +490,16 @@ class ApplicationEnvironment
      * @param  array<int, string>  $command
      * @param  array<string, mixed>  $context
      */
-    private function run(Application $application, array $command, array $context, int $timeout = 60, ?string $input = null): ServerOpsResult
+    /**
+     * @param  array<int, int>  $expectedExitCodes
+     */
+    private function run(Application $application, array $command, array $context, int $timeout = 60, ?string $input = null, array $expectedExitCodes = []): ServerOpsResult
     {
         if ($this->asUser($application)) {
             $command = ['runuser', '-u', $application->systemUser->username, '--', ...$command];
         }
 
-        return $this->serverOps->run($command, $context, timeout: $timeout, input: $input);
+        return $this->serverOps->run($command, $context, timeout: $timeout, input: $input, expectedExitCodes: $expectedExitCodes);
     }
 
     /**

@@ -26,7 +26,7 @@ class WpCli
     /** Read from the box every time: anyone with root can remove it. */
     public function installed(): bool
     {
-        return $this->serverOps->run(['test', '-x', $this->path()], ['feature' => 'wp_cli', 'op' => 'check'])->ok;
+        return $this->serverOps->probe(['test', '-x', $this->path()], ['feature' => 'wp_cli', 'op' => 'check'])->ok;
     }
 
     /**

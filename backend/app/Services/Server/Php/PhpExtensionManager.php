@@ -412,6 +412,9 @@ class PhpExtensionManager
         $output = $this->serverOps->run(
             ['dpkg-query', '-S', ...$objects],
             ['feature' => 'php', 'op' => 'extension_owners', 'version' => $version],
+            // Exit 1 when some file belongs to no package (ionCube); the
+            // rest of the answer is still on stdout (bug #48).
+            expectedExitCodes: [1],
         )->output();
 
         $map = [];

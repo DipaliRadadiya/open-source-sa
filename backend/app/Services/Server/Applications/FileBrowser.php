@@ -927,6 +927,7 @@ class FileBrowser
                 ]),
                 ['feature' => 'application', 'op' => 'file_backups', 'application' => $application->id],
                 timeout: 15,
+                expectedExitCodes: [1], // no backups folder yet (bug #48)
             );
 
             if ($result->failed()) {
@@ -1554,6 +1555,8 @@ class FileBrowser
             ]),
             ['feature' => 'application', 'op' => 'trash_prune', 'application' => $application->id],
             timeout: 60,
+            // No trash yet on most sites: find exits 1 (bug #48).
+            expectedExitCodes: [1],
         );
 
         $this->sizeChanged($application);

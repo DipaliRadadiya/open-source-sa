@@ -98,14 +98,20 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
         return 'sql';
     }
 
+    /**
+     * A question, not an operation: "no" is an answer (bug #48). On a box
+     * with MariaDB only, every screen asking whether MySQL is there logged
+     * "Access denied for user 'root'" as an error. A failure that matters
+     * shows up on the operation that needs the engine.
+     */
     public function available(): bool
     {
-        return $this->run('SELECT 1;')->ok;
+        return $this->run('SELECT 1;', probe: true)->ok;
     }
 
     public function version(): ?string
     {
-        $result = $this->run('SELECT VERSION();');
+        $result = $this->run('SELECT VERSION();', probe: true);
 
         return $result->ok ? (trim($result->output()) ?: null) : null;
     }
@@ -530,7 +536,7 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
         }
     }
 
-    private function run(string $sql): ServerOpsResult
+    private function run(string $sql, bool $probe = false): ServerOpsResult
     {
         $client = (string) config("server.databases.engines.{$this->connection->engine}.client", 'mysql');
         $authFile = $this->writeAuthFile();
@@ -541,6 +547,7 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
                 ['feature' => 'database', 'engine' => $this->connection->engine, 'op' => 'query'],
                 60,
                 $sql, // statements over stdin — never on argv
+                expectedExitCodes: $probe ? [1] : [],
             );
         } finally {
             @unlink($authFile);

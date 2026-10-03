@@ -74,6 +74,8 @@ class MongoDbInstaller implements EngineInstaller
         $status = trim($this->serverOps->run(
             ['dpkg-query', '-W', '-f=${Status}', $this->serverPackage()],
             ['feature' => 'database', 'engine' => 'mongodb', 'op' => 'detect'],
+            // Exit 1: not installed, an answer (bug #48).
+            expectedExitCodes: [1],
         )->output());
 
         return str_contains($status, 'install ok installed');
