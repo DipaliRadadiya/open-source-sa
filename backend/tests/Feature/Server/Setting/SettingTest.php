@@ -473,6 +473,8 @@ describe('a socket-activated SSH (Ubuntu 24.04+)', function () {
         $fail2ban->shouldReceive('write')->once()->andReturnUsing(function () use (&$seenPort): void {
             $seenPort = SshPort::current();
         });
+        // And restarted, or its firewall rule stays on the old port.
+        $fail2ban->shouldReceive('restartSshJails')->once();
         app()->instance(Fail2banManager::class, $fail2ban);
 
         $this->withHeader('Authorization', "Bearer {$this->token}")

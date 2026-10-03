@@ -207,6 +207,10 @@ class SecuritySettings implements SettingGroup
             }
 
             $fail2ban->write($fail2ban->settings(), $fail2ban->ignoreIps(), $jails);
+
+            // The file alone is not enough: a running jail keeps its firewall
+            // rule on the old port until it is restarted.
+            $fail2ban->restartSshJails();
         } catch (Throwable $exception) {
             Log::channel('server-ops')->error('fail2ban jail not moved to the new SSH port', [
                 'feature' => 'setting', 'group' => 'security', 'op' => 'fail2ban_ssh_port',

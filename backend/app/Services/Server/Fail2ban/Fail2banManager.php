@@ -470,6 +470,36 @@ class Fail2banManager
         }
     }
 
+    /**
+     * Restart the running jails whose options name the SSH port, so their
+     * firewall rule is rebuilt for the port SSH is on now (bug #31).
+     *
+     * A reload re-reads jail.local and keeps a running jail's nftables rule:
+     * measured on the nginx test box, after a move to 2222 jail.local said
+     * 2222 while the rule still matched `dport 22` — bans landed on a port
+     * nothing listened on. `reload --restart <jail>` rebuilt it, and the bans
+     * came back from fail2ban's own database.
+     */
+    public function restartSshJails(): void
+    {
+        $active = $this->activeJails();
+
+        foreach ((array) config('server.fail2ban.jails', []) as $jail) {
+            $usesSshPort = collect($jail['options'] ?? [])
+                ->contains(fn ($value): bool => str_contains((string) $value, '{ssh_port}'));
+
+            if (! $usesSshPort || ! in_array($jail['name'], $active, true)) {
+                continue;
+            }
+
+            $result = $this->client(['reload', '--restart', $jail['name']]);
+
+            if ($result->failed()) {
+                throw Fail2banException::operationFailed($result->reference);
+            }
+        }
+    }
+
     public function ban(string $ip, string $jail): void
     {
         $this->assertJailActive($jail);

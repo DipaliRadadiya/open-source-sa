@@ -873,3 +873,14 @@ it('does nothing on a server that has never installed fail2ban', function () {
 
     expect(File::exists("{$this->jailD}/jail.local"))->toBeFalse();
 });
+
+it('restarts only the jails that watch the SSH port, so their rule moves with it (bug #31)', function () {
+    fakeFail2ban(bans: ['sshd' => [], 'recidive' => []]);
+
+    app(Fail2banManager::class)->restartSshJails();
+
+    // A reload kept the running rule on the old port (measured); a restart
+    // of that jail rebuilds it. recidive bans every port and is left alone.
+    Process::assertRan(fn ($p) => array_slice($p->command, -3) === ['reload', '--restart', 'sshd']);
+    Process::assertNotRan(fn ($p) => in_array('--restart', $p->command, true) && in_array('recidive', $p->command, true));
+});
