@@ -88,6 +88,9 @@ class DeleteBackup
         // by the time its last backup is cleaned up, and the log entry still
         // has to be able to name the site.
         $this->activityLogger->log('backup.deleted', $backup->application, [
+            // The sentence reads `:name`; without it the log showed the
+            // placeholder itself ("Deleted a backup of :name").
+            'name' => $backup->application?->name ?? '',
             'backup' => $backup->id,
             'started_at' => (string) $backup->created_at,
             // A safety backup is the parachute from a bad restore. Deleting one

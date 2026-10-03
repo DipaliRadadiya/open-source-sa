@@ -163,7 +163,10 @@ it('records the deletion, including when it was a safety copy', function () {
     // but it has to be findable afterwards.
     $entry = ActivityLog::query()->where('type', 'backup')->where('action', 'deleted')->firstOrFail();
 
-    expect($entry->properties['is_safety'])->toBeTrue();
+    expect($entry->properties['is_safety'])->toBeTrue()
+        // The sentence names the site; it used to show the raw `:name`.
+        ->and(__('activity.backup.deleted', $entry->properties))->not->toContain(':name')
+        ->and(__('activity.backup.deleted', $entry->properties))->toContain($backup->application->name);
 });
 
 it('needs manage, not just read', function () {
