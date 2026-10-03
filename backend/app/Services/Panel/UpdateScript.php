@@ -46,6 +46,7 @@ class UpdateScript
         'optimize',
         'frontend_build',
         'configure_queue_worker',
+        'configure_frontend_unit',
         'restart_services',
         'maintenance_off',
         'health_check',
@@ -459,6 +460,12 @@ class UpdateScript
         # so a unit left as it was loses nothing.
         note configure_queue_worker
         {$run}{$php} {$backend}/artisan panel:queue-worker || echo "WARNING: queue worker unit not updated; run 'artisan panel:queue-worker' as root"
+
+        # Bug #15: servers installed before HOSTNAME=127.0.0.1 was in the unit
+        # serve the panel's interface on every address. Rewrites the unit and
+        # reloads systemd; the restart below applies it. Never fatal.
+        note configure_frontend_unit
+        {$run}{$php} {$backend}/artisan panel:frontend-unit || echo "WARNING: frontend unit not updated; run 'artisan panel:frontend-unit' as root"
 
         note restart_services
         # The checkout keeps the same backend path. A graceful reload can keep
