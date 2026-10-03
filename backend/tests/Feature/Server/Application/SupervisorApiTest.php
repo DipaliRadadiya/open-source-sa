@@ -50,7 +50,7 @@ function apiApp(array $overrides = []): Application
     ], $overrides));
 }
 
-function asAdmin(): array
+function supervisorAuth(): array
 {
     return ['Authorization' => 'Bearer '.test()->token];
 }
@@ -68,7 +68,7 @@ describe('the worker count', function () {
 
         $application = apiApp();
 
-        $this->withHeaders(asAdmin())
+        $this->withHeaders(supervisorAuth())
             ->putJson("/api/applications/{$application->id}", ['process_instances' => 4])
             ->assertOk()
             ->assertJsonPath('application.process_instances', 4);
@@ -85,7 +85,7 @@ describe('the worker count', function () {
         // panel's users chose four instances and got one, with no error.
         $application = apiApp(['start_command' => '/usr/local/bin/nodebb']);
 
-        $this->withHeaders(asAdmin())
+        $this->withHeaders(supervisorAuth())
             ->putJson("/api/applications/{$application->id}", ['process_instances' => 4])
             ->assertStatus(422)
             ->assertJsonValidationErrors('process_instances');
@@ -98,7 +98,7 @@ describe('the worker count', function () {
         // the stored value would refuse a change that is about to make it true.
         $application = apiApp(['start_command' => '/usr/local/bin/nodebb']);
 
-        $this->withHeaders(asAdmin())
+        $this->withHeaders(supervisorAuth())
             ->putJson("/api/applications/{$application->id}", [
                 'start_command' => 'node server.js',
                 'process_instances' => 2,
@@ -111,7 +111,7 @@ describe('the worker count', function () {
 
         $application = apiApp();
 
-        $this->withHeaders(asAdmin())
+        $this->withHeaders(supervisorAuth())
             ->putJson("/api/applications/{$application->id}", ['process_instances' => 500])
             ->assertStatus(422)
             ->assertJsonValidationErrors('process_instances');
@@ -138,7 +138,7 @@ describe('converting to a unit', function () {
 
         $application = apiApp(['supervisor_mode' => 'pm2', 'pm2_process_name' => 'legacy-api']);
 
-        $this->withHeaders(asAdmin())
+        $this->withHeaders(supervisorAuth())
             ->postJson("/api/applications/{$application->id}/supervisor/convert")
             ->assertOk()
             ->assertJsonPath('application.supervisor_mode', 'systemd');
@@ -151,7 +151,7 @@ describe('converting to a unit', function () {
 
         $application = apiApp();
 
-        $this->withHeaders(asAdmin())
+        $this->withHeaders(supervisorAuth())
             ->postJson("/api/applications/{$application->id}/supervisor/convert")
             ->assertStatus(422);
 
@@ -170,7 +170,7 @@ describe('converting to a unit', function () {
             'start_command' => null,
         ]);
 
-        $this->withHeaders(asAdmin())
+        $this->withHeaders(supervisorAuth())
             ->postJson("/api/applications/{$application->id}/supervisor/convert")
             ->assertStatus(422);
 
@@ -186,7 +186,7 @@ describe('converting to a unit', function () {
 
         $application = apiApp(['supervisor_mode' => 'pm2', 'pm2_process_name' => 'legacy-api']);
 
-        $this->withHeaders(asAdmin())
+        $this->withHeaders(supervisorAuth())
             ->postJson("/api/applications/{$application->id}/supervisor/convert")
             ->assertStatus(500)
             ->assertJsonStructure(['message', 'reference']);
@@ -215,7 +215,7 @@ it('tells the frontend which supervisor an application is on', function () {
 
     $application = apiApp(['supervisor_mode' => 'pm2', 'pm2_process_name' => 'legacy-api']);
 
-    $this->withHeaders(asAdmin())
+    $this->withHeaders(supervisorAuth())
         ->getJson("/api/applications/{$application->id}")
         ->assertOk()
         ->assertJsonPath('application.supervisor_mode', 'pm2');
