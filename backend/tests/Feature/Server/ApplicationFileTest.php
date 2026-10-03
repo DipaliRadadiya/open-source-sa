@@ -231,6 +231,20 @@ it('re-tightens the session directory once the site is isolated', function () {
     expect(FixPermissionsFake::$ran)->toContain('runuser -u siteowner -- chmod -R 0700 /home/siteowner/shop/.panel/sessions');
 });
 
+it('skips the session directory a site does not have instead of failing (bug #96)', function () {
+    fakeFileServer();
+    // A static or Node site runs as its own user and has no PHP sessions:
+    // the directory is absent, so anything touching it fails.
+    FixPermissionsFake::$failOn = '.panel/sessions';
+    $this->application->isolated_at = now();
+    $this->application->save();
+
+    // Was a 500: chmod on the missing path failed the whole reset.
+    $this->actingAs($this->admin)->postJson(fixUrl())->assertOk();
+
+    expect(collect(FixPermissionsFake::$ran)->contains(fn (string $c) => str_contains($c, 'chmod -R 0700')))->toBeFalse();
+});
+
 it('leaves the session directory alone for a site that is not isolated', function () {
     fakeFileServer();
 

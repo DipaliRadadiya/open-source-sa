@@ -68,8 +68,14 @@ class PermissionFixer
         // own, not just the ones with a pool. Read from `isolated_at`, this
         // skipped every OpenLiteSpeed site — leaving session files at whatever
         // the bulk chmod above left them, which is not private.
-        if ($this->ownership->runsAsOwnUser($application)) {
-            $this->run($this->asUser($application, ['chmod', '-R', '0700', $this->pool->sessionPath($application)]), $application, 'chmod_sessions');
+        //
+        // Only where that directory exists. A static or Node site runs as its
+        // own user and has no PHP sessions at all, and chmod on the missing
+        // path failed the whole reset with a 500 (bug #96).
+        $sessions = $this->pool->sessionPath($application);
+
+        if ($this->ownership->runsAsOwnUser($application) && $this->isDirectory($application, $sessions)) {
+            $this->run($this->asUser($application, ['chmod', '-R', '0700', $sessions]), $application, 'chmod_sessions');
         }
     }
 
@@ -80,6 +86,18 @@ class PermissionFixer
     private function asUser(Application $application, array $command): array
     {
         return ['runuser', '-u', $application->systemUser->username, '--', ...$command];
+    }
+
+    /**
+     * Asked as the site user, like the chmod it guards: a path the user
+     * cannot see is not one this reset should be touching either.
+     */
+    private function isDirectory(Application $application, string $path): bool
+    {
+        return $this->serverOps->run(
+            $this->asUser($application, ['test', '-d', $path]),
+            ['feature' => 'application', 'op' => 'sessions_exist', 'application' => $application->id],
+        )->ok;
     }
 
     /**
