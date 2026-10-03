@@ -93,7 +93,7 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
       setPendingValues(null);
     } catch (error) {
       setPendingValues(null);
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: t("swap.saveFailed") });
     } finally {
       setSaving(false);
     }
@@ -152,15 +152,18 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
               label={t("swap.current")}
               hint={
                 memoryTotal?.human
-                  ? t("swap.memoryTotal", { size: memoryTotal.human })
+                  ? t("swap.memoryTotal", {
+                      size: formatBytes(memoryTotal.bytes, format) ?? memoryTotal.human,
+                    })
                   : undefined
               }
             >
-              <p className="text-sm whitespace-nowrap">
+              {/* The API's *_human strings are English-formatted; format the bytes for the locale. */}
+              <p className="text-sm">
                 {swap?.enabled
                   ? t("swap.currentValue", {
-                      size: swap.size_human,
-                      used: swap.used_human,
+                      size: formatBytes(swap.size, format) ?? swap.size_human,
+                      used: formatBytes(swap.used, format) ?? swap.used_human,
                     })
                   : t("swap.none")}
               </p>

@@ -7,6 +7,10 @@ import { cn } from "@/lib/utils";
 function EvidenceValue({ value }) {
   if (value == null) return <span className="text-muted-foreground">—</span>;
   if (typeof value === "boolean") return <span>{String(value)}</span>;
+  // A list (an application's domains) would otherwise print as "0 = …".
+  if (Array.isArray(value)) {
+    return <span className="font-mono text-xs break-all">{value.map(String).join(", ")}</span>;
+  }
 
   // php_settings ships a nested `values` object of ini directives.
   if (typeof value === "object") {

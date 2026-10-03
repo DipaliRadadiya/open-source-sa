@@ -47,7 +47,7 @@ export function GeneralForm({ general, canManage, timezones = [], changedBy }) {
       await refreshAndWait();
       toast.success(t("saved"));
     } catch (error) {
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: t("saveFailed") });
     }
   }
 

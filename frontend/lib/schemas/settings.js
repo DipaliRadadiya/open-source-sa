@@ -166,15 +166,16 @@ export const settingsResponseSchema = z.object({
 
 // Write shapes: one per PUT, mirroring the backend FormRequests
 
-// Matches the backend hostname regex.
-const HOSTNAME_RE = /^[a-zA-Z0-9]([a-zA-Z0-9\-.]{0,251}[a-zA-Z0-9])?$/;
+// Same as GeneralSettingsRequest: dot-separated labels of 1–63 characters, no hyphen
+// at either end of a label, 64 in all.
+const HOSTNAME_RE = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 
 export const generalFormSchema = z.object({
   hostname: z
     .string()
     .trim()
     .min(1, "requiredField")
-    .max(253, "tooLong")
+    .max(64, "hostnameTooLong")
     .regex(HOSTNAME_RE, "invalidHostname"),
   timezone: z.string().min(1, "requiredField"),
   ntp: z.boolean(),

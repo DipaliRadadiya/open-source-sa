@@ -4,6 +4,7 @@ const KEYS = [
   "required",
   "tooLong",
   "invalidHostname",
+  "hostnameTooLong",
   "invalidNumber",
   "swapTooLarge",
   "invalidPort",

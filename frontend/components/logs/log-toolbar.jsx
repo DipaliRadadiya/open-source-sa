@@ -61,6 +61,8 @@ export function LogToolbar({
   downloadUrl,
   // App logs have no download endpoint, so the action is hidden there.
   showDownload = true,
+  downloadReason = null,
+  followHint = null,
   // Emptying the log; null when unavailable or without `manage` (hidden, not disabled).
   onClear = null,
   clearReason = null,
@@ -106,6 +108,7 @@ export function LogToolbar({
                       ? t("wholeFile", { count: loaded })
                       : null,
                 t("serverTime"),
+                followHint,
               ]
                 .filter(Boolean)
                 .join(" · ")}
@@ -307,13 +310,15 @@ export function LogToolbar({
                 disabled={disabled && !reloadable}
               />
             </ReasonTooltip>
-            {showDownload ? (
-              <IconAction
-                icon={Download}
-                label={t("download")}
-                href={downloadUrl}
-                disabled={disabled}
-              />
+            {showDownload || downloadReason ? (
+              <ReasonTooltip reason={downloadReason} className="inline-flex h-full">
+                <IconAction
+                  icon={Download}
+                  label={t("download")}
+                  href={downloadUrl}
+                  disabled={disabled || Boolean(downloadReason)}
+                />
+              </ReasonTooltip>
             ) : null}
           </div>
 

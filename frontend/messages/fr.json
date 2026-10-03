@@ -1319,7 +1319,10 @@
     "clearBodyAudit": "Ce journal fait partie de la manière dont le serveur enregistre ce qui s'y passe : connexions, requêtes bloquées, bannissements. Le vider détruit des preuves dont vous pourriez avoir besoin après une intrusion, et c'est irréversible. Le fichier continue d'enregistrer à partir de maintenant.",
     "loadingSource": "Chargement de {label}…",
     "linesCapped": "Affichage du maximum possible : {max, number} lignes.",
-    "noPermission": "Votre rôle n'inclut pas les journaux système avec l'accès Manage. Demandez à un administrateur de l'accorder."
+    "noPermission": "Votre rôle n'inclut pas les journaux système avec l'accès Manage. Demandez à un administrateur de l'accorder.",
+    "liveOffLarge": "« En direct » est désactivé au-delà de 2 Mo — activez-le pour suivre",
+    "notDownloadable": "Ce journal n'est pas un fichier, il ne peut donc pas être téléchargé.",
+    "notClearable": "Ce journal n'est pas un fichier, il ne peut donc pas être vidé."
   },
   "services": {
     "title": "Services",
@@ -1867,7 +1870,8 @@
       "invalidTime": "Utilisez une heure sur 24 heures, comme 03:00.",
       "invalidMemory": "Utilisez une taille comme 256mb ou 1gb — ou 0 pour aucune limite.",
       "passwordTooShort": "Utilisez au moins 8 caractères.",
-      "invalidHour": "Choisissez une heure entre 0 et 23."
+      "invalidHour": "Choisissez une heure entre 0 et 23.",
+      "hostnameTooLong": "64 caractères maximum"
     },
     "server": {
       "title": "Serveur",
@@ -1884,7 +1888,8 @@
       "clockDrift": "Non synchronisée",
       "clockDriftHint": "NTP est activé mais l'horloge n'est pas synchronisée — les tâches peuvent tourner en retard et les heures des journaux seront fausses.",
       "noPermission": "Votre rôle n'inclut pas Paramètres avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
-      "timezoneSearch": "Rechercher des fuseaux horaires…"
+      "timezoneSearch": "Rechercher des fuseaux horaires…",
+      "saveFailed": "Les paramètres du serveur n'ont pas pu être enregistrés."
     },
     "security": {
       "title": "Connexion en SSH",
@@ -1915,16 +1920,11 @@
         "title": "Vérifiez avant d'enregistrer",
         "cancel": "Retour",
         "submit": "Appliquer les modifications",
-        "port": "SSH passe du port {from} au port {to}. Le nouveau port est d'abord ouvert dans le pare-feu.",
+        "port": "SSH passe du port {from} au port {to}. Le pare-feu ouvre d'abord le port {to}, puis ferme le port {from}, sauf si vous avez créé vous-même la règle du port {from}.",
         "passwordOff": "Les connexions par mot de passe cessent de fonctionner. Sans clé déjà présente sur ce serveur, vous serez bloqué.",
         "rootOff": "Root ne peut plus se connecter. Assurez-vous qu'un autre utilisateur peut le faire, avec sudo.",
         "rootPassword": "Root pourra se connecter avec un mot de passe — le compte que les attaques essaient en premier.",
-        "oldPortStaysOpen": "Le port {port} reste ouvert dans le pare-feu. Rien n'écoutera dessus.",
-        "testFirst": "Testez les nouveaux paramètres dans un autre terminal avant de fermer celui-ci.",
-        "closeOldPort": "Désactiver aussi la règle du pare-feu pour le port {port}",
-        "closeOldPortHint": "Conservée, pas supprimée — vous pouvez la réactiver.",
-        "oldPortClosed": "Port {port} fermé dans le pare-feu.",
-        "oldPortCloseFailed": "SSH a été modifié, mais le port {port} n'a pas pu être fermé. Faites-le sur la page Pare-feu."
+        "testFirst": "Testez les nouveaux paramètres dans un autre terminal avant de fermer celui-ci."
       },
       "rootPasswordWarning": "Root peut se connecter avec un mot de passe actuellement. C'est le compte que les attaques automatisées essaient en premier — passez la connexion root sur « clé uniquement ».",
       "signIn": {
@@ -1944,7 +1944,8 @@
         "save": "Enregistrer les paramètres SSH"
       },
       "description": "Qui peut accéder à la ligne de commande, et comment.",
-      "noPermission": "Votre rôle n'inclut pas Paramètres avec l'accès Gérer. Demandez à un administrateur de vous l'accorder."
+      "noPermission": "Votre rôle n'inclut pas Paramètres avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
+      "saveFailed": "Les paramètres SSH n'ont pas pu être enregistrés."
     },
     "performance": {
       "swap": {
@@ -1968,7 +1969,8 @@
         "recommended": "recommandé",
         "save": "Enregistrer le swap",
         "noRoom": "Cela utiliserait plus de la moitié de l'espace disque libre ({free} de libre). Choisissez une taille plus petite.",
-        "tight": "Un fichier swap de {size} ne laisse que {left} de libre sur le disque, alors que les applications et les sauvegardes en ont aussi besoin."
+        "tight": "Un fichier swap de {size} ne laisse que {left} de libre sur le disque, alors que les applications et les sauvegardes en ont aussi besoin.",
+        "saveFailed": "Le swap n'a pas pu être modifié."
       },
       "redis": {
         "passwordUnknownShort": "Impossible de vérifier",
@@ -2004,7 +2006,8 @@
         "removeFailed": "Impossible de supprimer le mot de passe Redis.",
         "notRunning": "Redis n'est pas en exécution.",
         "usage": "{used} utilisé",
-        "usageOfLimit": "{used} sur {limit}"
+        "usageOfLimit": "{used} sur {limit}",
+        "saveFailed": "Les paramètres Redis n'ont pas pu être enregistrés."
       },
       "noPermission": "Votre rôle n'inclut pas Paramètres avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
       "passwordNotManageable": "Cette installation ne peut pas réécrire son propre fichier de configuration, donc le mot de passe Redis ne peut pas être modifié ici. Modifiez-le sur le serveur et mettez à jour REDIS_PASSWORD."
@@ -2062,21 +2065,22 @@
           "dependencies": "Les paquets en attente ne peuvent pas être installés ensemble. Il faut généralement lancer apt à la main pour voir ce qui est retenu.",
           "worker": "Le processus qui exécutait la mise à jour a disparu — très probablement redémarré par la mise à jour elle-même. apt a peut-être fini le travail quand même : vérifiez le journal avant d'en lancer une autre.",
           "unknown": "La mise à jour a échoué. La sortie ci-dessous est ce qu'elle a dit."
-        }
+        },
+        "saveFailed": "Les paramètres de mise à jour n'ont pas pu être enregistrés."
       },
       "reboot": {
         "title": "Redémarrage manuel",
         "description": "Toutes les applications hébergées sont inaccessibles jusqu'à son retour, généralement moins d'une minute.",
         "when": "Démarrer",
         "now": "Maintenant",
-        "inMinutes": "Dans {minutes} minutes",
+        "inMinutes": "{minutes, plural, one {Dans 1 minute} other {Dans # minutes}}",
         "action": "Redémarrer le serveur",
         "confirmTitle": "Redémarrer ce serveur ?",
         "confirmNow": "Toutes les applications, bases de données et services de cette machine s'arrêtent maintenant et reviennent une fois le démarrage terminé. Le panneau est inaccessible pendant ce temps.",
-        "confirmDelayed": "Le serveur redémarre dans {minutes} minutes. Toutes les applications, bases de données et services qu'il héberge s'arrêtent jusqu'à son retour.",
+        "confirmDelayed": "{minutes, plural, one {Le serveur redémarre dans 1 minute.} other {Le serveur redémarre dans # minutes.}} Toutes les applications, bases de données et services qu'il héberge s'arrêtent jusqu'à son retour.",
         "confirmCancel": "Annuler",
         "confirmSubmit": "Redémarrer",
-        "scheduled": "Redémarrage planifié dans {minutes} minutes.",
+        "scheduled": "{minutes, plural, one {Redémarrage planifié dans 1 minute.} other {Redémarrage planifié dans # minutes.}}",
         "pendingAt": "Un redémarrage est planifié pour {at}.",
         "pendingUnknownTime": "Un redémarrage est planifié.",
         "countdownHours": "Redémarrage dans {hours}h {minutes}m.",
@@ -2111,7 +2115,8 @@
         "notScheduled": "Non planifié",
         "nextLabel": "Prochain redémarrage",
         "dayOfWeekHint": "Le jour où la tâche hebdomadaire s’exécute.",
-        "dayOfMonthHint": "La date à laquelle la tâche mensuelle s’exécute. Choisissez 28 ou moins pour qu’elle tombe chaque mois."
+        "dayOfMonthHint": "La date à laquelle la tâche mensuelle s’exécute. Choisissez 28 ou moins pour qu’elle tombe chaque mois.",
+        "saveFailed": "La planification n'a pas pu être enregistrée."
       },
       "summary": {
         "pendingYes": "Redémarrage nécessaire"
@@ -6663,7 +6668,7 @@
   },
   "sync": {
     "title": "Synchronisation du serveur",
-    "subtitle": "Trouvez les sites, utilisateurs et paramètres qui existent déjà sur ce serveur mais ne sont pas encore dans le panneau, puis ajoutez-les.",
+    "subtitle": "Trouvez les applications, utilisateurs et paramètres qui existent déjà sur ce serveur mais ne sont pas encore dans le panneau, puis ajoutez-les.",
     "common": {
       "cancel": "Annuler"
     },
@@ -6675,7 +6680,7 @@
     },
     "empty": {
       "title": "Ce serveur n'a pas encore été analysé",
-      "description": "Une analyse parcourt ce serveur à la recherche de sites, utilisateurs, certificats et paramètres que le panneau ne connaît pas. Elle ne fait que lire — rien n'est modifié tant que vous ne choisissez pas de l'ajouter.",
+      "description": "Une analyse parcourt ce serveur à la recherche d'applications, utilisateurs, certificats et paramètres que le panneau ne connaît pas. Elle ne fait que lire — rien n'est modifié tant que vous ne choisissez pas de l'ajouter.",
       "nothingFound": "Rien de nouveau n'a été trouvé",
       "nothingFoundHint": "Tout ce qui se trouve sur ce serveur est déjà dans le panneau, ou a été ignoré."
     },
@@ -6688,11 +6693,16 @@
       "adopted": "{count, plural, =0 {Rien n'a été ajouté} one {# élément ajouté au panneau} other {# éléments ajoutés au panneau}}",
       "skipped": "{count, plural, one {# ignoré} other {# ignorés}}",
       "failed": "{count, plural, one {# élément n'a pas pu être ajouté} other {# éléments n'ont pas pu être ajoutés}}",
-      "counts": "{adopted} ajoutés · {skipped} ignorés · {failed} échoués"
+      "counts": "{adopted} ajoutés · {skipped} ignorés · {failed} échoués",
+      "stoppedScan": "L'analyse s'est arrêtée avant la fin",
+      "stoppedScanHint": "Ce qu'elle a trouvé avant de s'arrêter est listé ci-dessous. Rien n'a été modifié sur votre serveur. Analysez à nouveau pour obtenir la liste complète.",
+      "stoppedAdopt": "L'ajout s'est arrêté avant la fin",
+      "stoppedAdoptHint": "Les éléments marqués Ajouté sont dans le panneau. Le reste n'a pas été ajouté — analysez à nouveau pour voir ce qui reste.",
+      "handledSoFar": "{count, plural, =0 {Rien de traité pour l'instant} one {# élément traité pour l'instant} other {# éléments traités pour l'instant}}"
     },
     "results": {
       "searchPlaceholder": "Rechercher par nom",
-      "showing": "{shown} sur {total} affichés",
+      "showing": "{shown, number} sur {total, number} affichés",
       "noMatches": "Aucune correspondance",
       "noMatchesHint": "Essayez une autre recherche, ou effacez les filtres de type.",
       "ignoredNote": "Ignoré — ne sera pas ajouté",
@@ -6720,9 +6730,9 @@
     "types": {
       "system_user": "Utilisateurs système",
       "ssh_key": "Clés SSH",
-      "application": "Sites web",
+      "application": "Applications",
       "php_settings": "Paramètres PHP",
-      "worker": "Workers de file",
+      "worker": "Workers",
       "database_user": "Utilisateurs de base de données",
       "certificate": "Certificats",
       "cronjob": "Tâches cron",
@@ -6752,16 +6762,17 @@
       "includeFirewall": "Ajouter aussi les règles de pare-feu",
       "firewallWarning": "Une fois que le panneau gère vos règles de pare-feu, un changement ultérieur peut fermer le port que vous utilisez. Laissez cette option désactivée sauf si vous êtes sûr.",
       "unmetDependency": "{types} nécessitent également l'ajout de {requires}. Sans cela, ils seront tous ignorés.",
-      "summary": "{count, plural, =0 {Rien ne sera ajouté} one {# élément sera ajouté} other {# éléments seront ajoutés}} sur {types, plural, one {# type} other {# types}}.",
+      "summary": "{count, plural, =0 {Rien ne sera ajouté.} one {# élément sera ajouté sur {types, plural, one {# type} other {# types}}.} other {# éléments seront ajoutés sur {types, plural, one {# type} other {# types}}.}}",
       "summaryIgnored": "{count, plural, one {# élément ignoré sera laissé tel quel} other {# éléments ignorés seront laissés tels quels}}.",
       "summaryIrreversible": "Action irréversible — les éléments ajoutés doivent être retirés un par un.",
       "confirm": "{count, plural, =0 {Ajouter au panneau} one {Ajouter # élément} other {Ajouter # éléments}}",
-      "includeFirewallHint": "Ouvrez aussi les ports dont cette application a besoin, pour qu’elle soit joignable immédiatement."
+      "afterApplications": "après les applications"
     },
     "errors": {
       "startFailed": "Impossible de démarrer l'analyse.",
       "ignoreFailed": "Impossible d'ignorer cet élément.",
-      "unignoreFailed": "Impossible d'annuler cette action."
+      "unignoreFailed": "Impossible d'annuler cette action.",
+      "addFailed": "Impossible de lancer l'ajout au panneau."
     },
     "stalled": "Cette analyse ne progresse plus. Elle a peut-être échoué sur le serveur."
   },

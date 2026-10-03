@@ -1319,7 +1319,10 @@
     "clearBodyAudit": "このログはサーバー上で起きたことを記録する仕組みの一部です — ログイン、ブロックしたリクエスト、ban などが含まれます。クリアすると、侵入後に必要となるかもしれない証拠が失われ、取り消すことはできません。今後ファイルへの記録は継続されます。",
     "loadingSource": "{label} を読み込み中…",
     "linesCapped": "表示できる最大の {max, number} 行を表示しています。",
-    "noPermission": "現在のロールには システムログ の管理権限が含まれていません。管理者に権限の付与を依頼してください。"
+    "noPermission": "現在のロールには システムログ の管理権限が含まれていません。管理者に権限の付与を依頼してください。",
+    "liveOffLarge": "2 MB を超えるログではライブはオフです。追跡するにはオンにしてください",
+    "notDownloadable": "このログはファイルではないため、ダウンロードできません。",
+    "notClearable": "このログはファイルではないため、クリアできません。"
   },
   "services": {
     "title": "サービス",
@@ -1867,7 +1870,8 @@
       "invalidTime": "03:00 のように24時間制で指定してください。",
       "invalidMemory": "256mb や 1gb のような形式で指定してください。制限なしの場合は 0 を指定します。",
       "passwordTooShort": "8文字以上で指定してください。",
-      "invalidHour": "0 から 23 の時間を選んでください。"
+      "invalidHour": "0 から 23 の時間を選んでください。",
+      "hostnameTooLong": "64文字以下"
     },
     "server": {
       "title": "サーバー",
@@ -1884,7 +1888,8 @@
       "clockDrift": "同期されていません",
       "clockDriftHint": "NTP は有効ですが時刻が同期されていません — スケジュールされたジョブが遅延し、ログの時刻が正確でなくなる可能性があります。",
       "noPermission": "現在のロールには、設定の管理権限が含まれていません。管理者に付与を依頼してください。",
-      "timezoneSearch": "タイムゾーンを検索…"
+      "timezoneSearch": "タイムゾーンを検索…",
+      "saveFailed": "サーバー設定を保存できませんでした。"
     },
     "security": {
       "title": "SSH でのサインイン",
@@ -1915,16 +1920,11 @@
         "title": "保存前に確認してください",
         "cancel": "戻る",
         "submit": "変更を適用",
-        "port": "SSH のポートを {from} から {to} に変更します。新しいポートは先にファイアウォールで開かれます。",
+        "port": "SSH のポートを {from} から {to} に変更します。ファイアウォールは先に {to} を開き、その後 {from} を閉じます（{from} のルールをご自身で追加した場合は閉じません）。",
         "passwordOff": "パスワードログインは機能しなくなります。このサーバーに鍵が既にない場合、ロックアウトされます。",
         "rootOff": "root はログインできなくなります。sudo を使える別のユーザーがいることを確認してください。",
         "rootPassword": "root がパスワードでログインできるようになります — 自動攻撃が最初に狙うアカウントです。",
-        "oldPortStaysOpen": "ポート {port} はファイアウォールで開いたままになります。ここで待ち受けるものはありません。",
-        "testFirst": "このターミナルを閉じる前に、別のターミナルで新しい設定をテストしてください。",
-        "closeOldPort": "ポート {port} のファイアウォールルールも無効にする",
-        "closeOldPortHint": "削除されず保持されます — 再度有効にできます。",
-        "oldPortClosed": "ポート {port} をファイアウォールで閉じました。",
-        "oldPortCloseFailed": "SSH は変更されましたが、ポート {port} を閉じられませんでした。ファイアウォールページで行ってください。"
+        "testFirst": "このターミナルを閉じる前に、別のターミナルで新しい設定をテストしてください。"
       },
       "rootPasswordWarning": "現在、root がパスワードでログインできます。自動攻撃が最初に試すアカウントです — root ログインを「鍵のみ」に設定してください。",
       "signIn": {
@@ -1944,7 +1944,8 @@
         "save": "SSH 設定を保存"
       },
       "description": "誰がコマンドラインに到達できるか、どのように到達するか。",
-      "noPermission": "現在のロールには、設定の管理権限が含まれていません。管理者に付与を依頼してください。"
+      "noPermission": "現在のロールには、設定の管理権限が含まれていません。管理者に付与を依頼してください。",
+      "saveFailed": "SSH 設定を保存できませんでした。"
     },
     "performance": {
       "swap": {
@@ -1968,7 +1969,8 @@
         "recommended": "推奨",
         "save": "スワップを保存",
         "noRoom": "ディスクの空き容量（{free}）の半分以上を使ってしまいます。もっと小さいサイズを選んでください。",
-        "tight": "{size} のスワップファイルでは、ディスクの空きが {left} しか残りません。アプリケーションやバックアップにもこの容量が必要です。"
+        "tight": "{size} のスワップファイルでは、ディスクの空きが {left} しか残りません。アプリケーションやバックアップにもこの容量が必要です。",
+        "saveFailed": "スワップを変更できませんでした。"
       },
       "redis": {
         "passwordUnknownShort": "確認できません",
@@ -2004,7 +2006,8 @@
         "removeFailed": "Redis のパスワードを削除できませんでした。",
         "notRunning": "Redis は実行されていません。",
         "usage": "使用中 {used}",
-        "usageOfLimit": "{limit} のうち {used}"
+        "usageOfLimit": "{limit} のうち {used}",
+        "saveFailed": "Redis 設定を保存できませんでした。"
       },
       "noPermission": "現在のロールには、設定の管理権限が含まれていません。管理者に付与を依頼してください。",
       "passwordNotManageable": "このインストールでは自身の設定ファイルを書き換えられないため、Redis パスワードをここから変更できません。サーバーで変更し、REDIS_PASSWORD を更新してください。"
@@ -2062,21 +2065,22 @@
           "dependencies": "保留中のパッケージを一緒にインストールできません。通常、何が保留されているかを確認するために apt を手動で実行する必要があります。",
           "worker": "アップグレードを実行していたプロセスが消えました — おそらくアップグレード自体によって再起動されたものです。apt が作業を完了した可能性もあります: 別のものを開始する前にログを確認してください。",
           "unknown": "アップグレードは失敗しました。下記はその出力です。"
-        }
+        },
+        "saveFailed": "更新設定を保存できませんでした。"
       },
       "reboot": {
         "title": "手動再起動",
         "description": "復旧するまでホストされているすべてのアプリケーションにアクセスできません。通常は 1 分以内です。",
         "when": "開始",
         "now": "今すぐ",
-        "inMinutes": "{minutes} 分後",
+        "inMinutes": "{minutes, plural, other {# 分後}}",
         "action": "サーバーを再起動",
         "confirmTitle": "このサーバーを再起動しますか？",
         "confirmNow": "このマシン上のすべてのアプリケーション、データベース、サービスがすぐに停止し、起動後に復帰します。再起動中はパネルに到達できません。",
-        "confirmDelayed": "サーバーは {minutes} 分後に再起動されます。すべてのアプリケーション、データベース、サービスは復旧するまで停止します。",
+        "confirmDelayed": "{minutes, plural, other {サーバーは # 分後に再起動されます。}}すべてのアプリケーション、データベース、サービスは復旧するまで停止します。",
         "confirmCancel": "キャンセル",
         "confirmSubmit": "再起動",
-        "scheduled": "{minutes} 分後に再起動をスケジュールしました。",
+        "scheduled": "{minutes, plural, other {# 分後に再起動をスケジュールしました。}}",
         "pendingAt": "{at} に再起動がスケジュールされています。",
         "pendingUnknownTime": "再起動がスケジュールされています。",
         "countdownHours": "{hours} 時間 {minutes} 分後に再起動します。",
@@ -2111,7 +2115,8 @@
         "notScheduled": "スケジュールなし",
         "nextLabel": "次回の再起動",
         "dayOfWeekHint": "週次ジョブを実行する曜日。",
-        "dayOfMonthHint": "月次ジョブを実行する日にちです。毎月実行されるよう28以下を選んでください。"
+        "dayOfMonthHint": "月次ジョブを実行する日にちです。毎月実行されるよう28以下を選んでください。",
+        "saveFailed": "スケジュールを保存できませんでした。"
       },
       "summary": {
         "pendingYes": "再起動が必要"
@@ -6663,7 +6668,7 @@
   },
   "sync": {
     "title": "サーバー同期",
-    "subtitle": "このサーバーにすで存在するウェブサイト、ユーザー、設定のうち、パネル未登録のものを検出してから追加します。",
+    "subtitle": "このサーバーにすでに存在するアプリケーション、ユーザー、設定のうち、パネル未登録のものを検出してから追加します。",
     "common": {
       "cancel": "キャンセル"
     },
@@ -6675,7 +6680,7 @@
     },
     "empty": {
       "title": "このサーバーはまだスキャンされていません",
-      "description": "スキャンでは、サーバーを調査してパネルが把握していないウェブサイト、ユーザー、証明書、設定を探します。読み取りのみを行い、追加を選択するまで何も変更されません。",
+      "description": "スキャンでは、サーバーを調査してパネルが把握していないアプリケーション、ユーザー、証明書、設定を探します。読み取りのみを行い、追加を選択するまで何も変更されません。",
       "nothingFound": "新しいものは見つかりませんでした",
       "nothingFoundHint": "このサーバー上のすべての項目はパネルに登録済みか、見送り済みです。"
     },
@@ -6688,11 +6693,16 @@
       "adopted": "{count, plural, =0 {何も追加されていません} other {# 件をパネルに追加しました}}",
       "skipped": "{count, plural, other {# 件スキップしました}}",
       "failed": "{count, plural, other {# 件を追加できませんでした}}",
-      "counts": "{adopted} 件追加 · {skipped} 件スキップ · {failed} 件失敗"
+      "counts": "{adopted} 件追加 · {skipped} 件スキップ · {failed} 件失敗",
+      "stoppedScan": "スキャンは完了する前に停止しました",
+      "stoppedScanHint": "停止するまでに見つかったものは下に表示されています。サーバーには何も変更されていません。すべてを確認するには再スキャンしてください。",
+      "stoppedAdopt": "追加は完了する前に停止しました",
+      "stoppedAdoptHint": "「追加済み」の項目はパネルに登録されています。それ以外は追加されていません。残りを確認するには再スキャンしてください。",
+      "handledSoFar": "{count, plural, =0 {まだ処理されていません} other {現在 # 件処理しました}}"
     },
     "results": {
       "searchPlaceholder": "名前で検索",
-      "showing": "{total} 件中 {shown} 件を表示",
+      "showing": "{total, number} 件中 {shown, number} 件を表示",
       "noMatches": "一致するものがありません",
       "noMatchesHint": "検索条件を変えるか、種類のフィルターをクリアしてください。",
       "ignoredNote": "見送り済み — 追加されません",
@@ -6720,9 +6730,9 @@
     "types": {
       "system_user": "システムユーザー",
       "ssh_key": "SSH 鍵",
-      "application": "ウェブサイト",
+      "application": "アプリケーション",
       "php_settings": "PHP 設定",
-      "worker": "キューワーカー",
+      "worker": "ワーカー",
       "database_user": "データベースユーザー",
       "certificate": "証明書",
       "cronjob": "Cronジョブ",
@@ -6752,16 +6762,17 @@
       "includeFirewall": "ファイアウォールルールも追加する",
       "firewallWarning": "パネルがファイアウォールルールを管理すると、ここでの変更によって接続に使うポートが閉じられる可能性があります。確信がある場合のみ有効にしてください。",
       "unmetDependency": "{types} を追加するには {requires} も必要です。これがないと、すべてスキップされます。",
-      "summary": "{count, plural, =0 {追加されるものはありません} other {# 件追加されます}}（{types, plural, other {# 種類}}）。",
+      "summary": "{count, plural, =0 {追加されるものはありません。} other {# 件追加されます（{types, plural, other {# 種類}}）。}}",
       "summaryIgnored": "{count, plural, other {見送り済みの # 件はそのまま残されます}}。",
       "summaryIrreversible": "この操作は取り消せません。追加した項目は1つずつ削除する必要があります。",
       "confirm": "{count, plural, =0 {パネルに追加} other {# 件を追加}}",
-      "includeFirewallHint": "このアプリケーションに必要なポートも開き、すぐに接続可能な状態にします。"
+      "afterApplications": "アプリケーションの後"
     },
     "errors": {
       "startFailed": "スキャンを開始できませんでした。",
       "ignoreFailed": "見送りにできませんでした。",
-      "unignoreFailed": "元に戻せませんでした。"
+      "unignoreFailed": "元に戻せませんでした。",
+      "addFailed": "パネルへの追加を開始できませんでした。"
     },
     "stalled": "このスキャンは進捗の報告を停止しています。サーバーで失敗した可能性があります。"
   },

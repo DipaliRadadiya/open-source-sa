@@ -33,8 +33,9 @@ test("'the whole file' is only said of a log with a file size", () => {
   assert.match(PANEL, /wholeFile=\{!truncated && lines\.length > 0 && source\?\.size != null\}/);
 });
 
-test("Download is hidden where the API refuses it", () => {
-  assert.match(PANEL, /showDownload=\{source\?\.downloadable !== false\}/);
+test("Download is disabled, with the reason, where the API refuses it", () => {
+  // Was hidden; shown disabled since 2 Oct so the journal says why it has no download.
+  assert.match(PANEL, /downloadReason=\{source\?\.downloadable === false \? t\("notDownloadable"\) : null\}/);
 });
 
 test("'written just now' reads the stamp as UTC, whatever the browser's zone", () => {

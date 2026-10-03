@@ -2,7 +2,6 @@ import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getSettings } from "@/lib/settings/get-settings";
-import { getFirewall } from "@/lib/firewall/get-firewall";
 import { SshForm } from "@/components/settings/ssh-form";
 import { changedFor } from "@/lib/settings/changed-for";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -21,30 +20,10 @@ export default async function SettingsSecurityPage() {
   if (failed || !data?.security)
     return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
 
-  // The rule holding the current SSH port open; after a port change the confirm
-  // dialog offers to switch it off. Needs firewall view permission.
-
-  const firewall = can(permissions, "firewall", "view")
-    ? await getFirewall()
-    : null;
-  // Not gated on the firewall being enabled: the rule survives and is enforced
-  // again as soon as the firewall is switched on.
-  const oldPortRule = firewall?.data?.rules.find(
-    (rule) =>
-      rule.port_from === data?.security?.port &&
-      !rule.port_to &&
-      rule.enabled !== false &&
-      rule.action !== "deny",
-  );
-
   return (
     <SshForm
       security={data.security}
       canManage={canManage}
-      oldPortRule={
-        oldPortRule ? { id: oldPortRule.id, port: oldPortRule.port_from } : null
-      }
-      canManageFirewall={can(permissions, "firewall", "manage")}
       changedBy={await changedFor(lastChanged, "security")}
     />
   );

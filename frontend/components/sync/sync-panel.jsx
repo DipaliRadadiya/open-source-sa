@@ -134,7 +134,7 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
       setAdoptOpen(false);
     } catch (error) {
       // A second live run is a 422 whose message explains it; show it as is.
-      toast.error(apiMessage(error, t("errors.startFailed")));
+      toast.error(apiMessage(error, mode === "apply" ? t("errors.addFailed") : t("errors.startFailed")));
     } finally {
       setStarting(false);
     }
@@ -254,11 +254,14 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
           description={t("empty.description")}
         />
       ) : items.length === 0 && run.finished ? (
-        <EmptyState
-          icon={ScanSearch}
-          title={t("empty.nothingFound")}
-          description={t("empty.nothingFoundHint")}
-        />
+        // A run that stopped proves nothing about what is left; the summary says so.
+        run.status === "failed" ? null : (
+          <EmptyState
+            icon={ScanSearch}
+            title={t("empty.nothingFound")}
+            description={t("empty.nothingFoundHint")}
+          />
+        )
       ) : (
         <SyncResults
           items={items}

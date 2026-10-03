@@ -1319,7 +1319,10 @@
     "clearBodyAudit": "Este log faz parte de como o servidor registra o que aconteceu — acessos, requisições bloqueadas, banimentos. Limpá-lo destrói evidências que você pode precisar após uma invasão, e não pode ser desfeito. O arquivo continua gravando a partir de agora.",
     "loadingSource": "Carregando {label}…",
     "linesCapped": "Mostrando o máximo possível: {max, number} linhas.",
-    "noPermission": "Seu papel não inclui Logs do sistema com acesso de Gerenciamento. Peça a um administrador para concedê-lo."
+    "noPermission": "Seu papel não inclui Logs do sistema com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
+    "liveOffLarge": "“Ao vivo” fica desligado em logs acima de 2 MB — ative para acompanhar",
+    "notDownloadable": "Este log não é um arquivo, então não pode ser baixado.",
+    "notClearable": "Este log não é um arquivo, então não pode ser limpo."
   },
   "services": {
     "title": "Serviços",
@@ -1867,7 +1870,8 @@
       "invalidTime": "Use um horário no formato 24h, como 03:00.",
       "invalidMemory": "Use um tamanho como 256mb ou 1gb — ou 0 para sem limite.",
       "passwordTooShort": "Use 8 caracteres ou mais.",
-      "invalidHour": "Escolha uma hora entre 0 e 23."
+      "invalidHour": "Escolha uma hora entre 0 e 23.",
+      "hostnameTooLong": "Deve ter 64 caracteres ou menos"
     },
     "server": {
       "title": "Servidor",
@@ -1884,7 +1888,8 @@
       "clockDrift": "Fora de sincronia",
       "clockDriftHint": "O NTP está ativo, mas o relógio não sincronizou — tarefas agendadas podem rodar tarde e os logs ficarão com horário errado.",
       "noPermission": "Seu papel não inclui Configuração com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
-      "timezoneSearch": "Buscar fusos horários…"
+      "timezoneSearch": "Buscar fusos horários…",
+      "saveFailed": "Não foi possível salvar as configurações do servidor."
     },
     "security": {
       "title": "Acesso via SSH",
@@ -1915,16 +1920,11 @@
         "title": "Confira antes de salvar",
         "cancel": "Voltar",
         "submit": "Aplicar alterações",
-        "port": "O SSH vai da porta {from} para {to}. A nova porta é aberta no firewall primeiro.",
+        "port": "O SSH vai da porta {from} para {to}. O firewall abre a {to} primeiro e depois fecha a {from}, a menos que a regra da {from} tenha sido criada por você.",
         "passwordOff": "Logins com senha param de funcionar. Sem uma chave já neste servidor, você ficará trancado fora.",
         "rootOff": "O root não poderá mais entrar. Garanta que outro usuário consegue, com sudo.",
         "rootPassword": "O root poderá entrar com senha — a conta que ataques automatizados tentam primeiro.",
-        "oldPortStaysOpen": "A porta {port} permanece aberta no firewall. Nada ficará escutando nela.",
-        "testFirst": "Teste as novas configurações em outro terminal antes de fechar este.",
-        "closeOldPort": "Também desativar a regra de firewall da porta {port}",
-        "closeOldPortHint": "Mantida, não excluída — você pode reativá-la.",
-        "oldPortClosed": "Porta {port} fechada no firewall.",
-        "oldPortCloseFailed": "O SSH foi alterado, mas a porta {port} não pôde ser fechada. Faça isso na página de Firewall."
+        "testFirst": "Teste as novas configurações em outro terminal antes de fechar este."
       },
       "rootPasswordWarning": "O root pode entrar com senha agora. Essa é a conta que ataques automatizados tentam primeiro — defina o login do root como “Apenas com chave”.",
       "signIn": {
@@ -1944,7 +1944,8 @@
         "save": "Salvar configurações de SSH"
       },
       "description": "Quem alcança a linha de comando, e como.",
-      "noPermission": "Seu papel não inclui Configuração com acesso de Gerenciamento. Peça a um administrador para concedê-lo."
+      "noPermission": "Seu papel não inclui Configuração com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
+      "saveFailed": "Não foi possível salvar as configurações de SSH."
     },
     "performance": {
       "swap": {
@@ -1968,7 +1969,8 @@
         "recommended": "recomendado",
         "save": "Salvar swap",
         "noRoom": "Isso usaria mais da metade do espaço livre em disco ({free} livres). Escolha um tamanho menor.",
-        "tight": "Um arquivo de swap de {size} deixa só {left} livres no disco, e as aplicações e os backups também precisam desse espaço."
+        "tight": "Um arquivo de swap de {size} deixa só {left} livres no disco, e as aplicações e os backups também precisam desse espaço.",
+        "saveFailed": "Não foi possível alterar o swap."
       },
       "redis": {
         "passwordUnknownShort": "Não foi possível verificar",
@@ -2004,7 +2006,8 @@
         "removeFailed": "Não foi possível remover a senha do Redis.",
         "notRunning": "O Redis não está em execução.",
         "usage": "{used} em uso",
-        "usageOfLimit": "{used} de {limit}"
+        "usageOfLimit": "{used} de {limit}",
+        "saveFailed": "Não foi possível salvar as configurações do Redis."
       },
       "noPermission": "Seu papel não inclui Configuração com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
       "passwordNotManageable": "Esta instalação não pode reescrever o próprio arquivo de configuração, então a senha do Redis não pode ser alterada aqui. Altere no servidor e atualize REDIS_PASSWORD."
@@ -2062,21 +2065,22 @@
           "dependencies": "Os pacotes pendentes não podem ser instalados juntos. Geralmente é preciso rodar o apt manualmente para ver o que está retido.",
           "worker": "O processo que rodava a atualização sumiu — provavelmente reiniciado pela própria atualização. O apt pode ter concluído o trabalho mesmo assim: confira o log antes de iniciar outra.",
           "unknown": "A atualização falhou. A saída abaixo é o que ela disse."
-        }
+        },
+        "saveFailed": "Não foi possível salvar as configurações de atualização."
       },
       "reboot": {
         "title": "Reinício manual",
         "description": "Todas as aplicações hospedadas ficam inacessíveis até que ele retorne, normalmente em menos de um minuto.",
         "when": "Iniciar",
         "now": "Agora",
-        "inMinutes": "Em {minutes} minutos",
+        "inMinutes": "{minutes, plural, one {Em 1 minuto} other {Em # minutos}}",
         "action": "Reiniciar servidor",
         "confirmTitle": "Reiniciar este servidor?",
         "confirmNow": "Todas as aplicações, bancos de dados e serviços desta máquina param agora e voltam assim que terminar a inicialização. O painel fica indisponível enquanto isso.",
-        "confirmDelayed": "O servidor reinicia em {minutes} minutos. Todas as aplicações, bancos de dados e serviços nele param até voltar.",
+        "confirmDelayed": "{minutes, plural, one {O servidor reinicia em 1 minuto.} other {O servidor reinicia em # minutos.}} Todas as aplicações, bancos de dados e serviços nele param até voltar.",
         "confirmCancel": "Cancelar",
         "confirmSubmit": "Reiniciar",
-        "scheduled": "Reinício agendado em {minutes} minutos.",
+        "scheduled": "{minutes, plural, one {Reinício agendado em 1 minuto.} other {Reinício agendado em # minutos.}}",
         "pendingAt": "Há um reinício agendado para {at}.",
         "pendingUnknownTime": "Há um reinício agendado.",
         "countdownHours": "Reiniciando em {hours}h {minutes}m.",
@@ -2111,7 +2115,8 @@
         "notScheduled": "Sem agendamento",
         "nextLabel": "Próximo reinício",
         "dayOfWeekHint": "Em que dia a tarefa semanal é executada.",
-        "dayOfMonthHint": "Em que data a tarefa mensal é executada. Escolha 28 ou menos para que rode em todos os meses."
+        "dayOfMonthHint": "Em que data a tarefa mensal é executada. Escolha 28 ou menos para que rode em todos os meses.",
+        "saveFailed": "O agendamento não pôde ser salvo."
       },
       "summary": {
         "pendingYes": "Reinício necessário"
@@ -6663,7 +6668,7 @@
   },
   "sync": {
     "title": "Sincronização do servidor",
-    "subtitle": "Encontre sites, usuários e configurações que já existem neste servidor, mas que ainda não estão no painel, e adicione-os.",
+    "subtitle": "Encontre aplicações, usuários e configurações que já existem neste servidor, mas que ainda não estão no painel, e adicione-os.",
     "common": {
       "cancel": "Cancelar"
     },
@@ -6675,7 +6680,7 @@
     },
     "empty": {
       "title": "Este servidor ainda não foi examinado",
-      "description": "Uma varredura procura neste servidor sites, usuários, certificados e configurações que o painel desconhece. Apenas lê — nada é alterado até você optar por adicionar.",
+      "description": "Uma varredura procura neste servidor aplicações, usuários, certificados e configurações que o painel desconhece. Apenas lê — nada é alterado até você optar por adicionar.",
       "nothingFound": "Nada novo foi encontrado",
       "nothingFoundHint": "Tudo neste servidor já está no painel ou foi dispensado."
     },
@@ -6688,11 +6693,16 @@
       "adopted": "{count, plural, =0 {Nada foi adicionado} one {# item adicionado ao painel} other {# itens adicionados ao painel}}",
       "skipped": "{count, plural, one {# foi ignorado} other {# foram ignorados}}",
       "failed": "{count, plural, one {# item não pôde ser adicionado} other {# itens não puderam ser adicionados}}",
-      "counts": "{adopted} adicionados · {skipped} ignorados · {failed} com falha"
+      "counts": "{adopted} adicionados · {skipped} ignorados · {failed} com falha",
+      "stoppedScan": "A varredura parou antes de terminar",
+      "stoppedScanHint": "O que ela encontrou antes de parar está listado abaixo. Nada foi alterado no servidor. Examine novamente para ver a lista completa.",
+      "stoppedAdopt": "A adição parou antes de terminar",
+      "stoppedAdoptHint": "Os itens marcados como Adicionado estão no painel. O restante não foi adicionado — examine novamente para ver o que falta.",
+      "handledSoFar": "{count, plural, =0 {Nada processado até agora} one {# item processado até agora} other {# itens processados até agora}}"
     },
     "results": {
       "searchPlaceholder": "Buscar por nome",
-      "showing": "Exibindo {shown} de {total}",
+      "showing": "Exibindo {shown, number} de {total, number}",
       "noMatches": "Nada encontrado",
       "noMatchesHint": "Tente outra busca ou limpe os filtros de tipo.",
       "ignoredNote": "Dispensado — não será adicionado",
@@ -6720,9 +6730,9 @@
     "types": {
       "system_user": "Usuários do sistema",
       "ssh_key": "Chaves SSH",
-      "application": "Sites",
+      "application": "Aplicações",
       "php_settings": "Configurações do PHP",
-      "worker": "Queue workers",
+      "worker": "Workers",
       "database_user": "Usuários de banco de dados",
       "certificate": "Certificados",
       "cronjob": "Tarefas cron",
@@ -6752,16 +6762,17 @@
       "includeFirewall": "Adicionar também regras de firewall",
       "firewallWarning": "Quando o painel passa a gerenciar suas regras de firewall, uma alteração futura aqui pode fechar a porta pela qual você se conecta. Deixe desativado a menos que tenha certeza.",
       "unmetDependency": "{types} precisam que {requires} também seja adicionado. Sem isso, todos eles serão ignorados.",
-      "summary": "{count, plural, =0 {Nada será adicionado} one {# item será adicionado} other {# itens serão adicionados}} em {types, plural, one {# tipo} other {# tipos}}.",
+      "summary": "{count, plural, =0 {Nada será adicionado.} one {# item será adicionado em {types, plural, one {# tipo} other {# tipos}}.} other {# itens serão adicionados em {types, plural, one {# tipo} other {# tipos}}.}}",
       "summaryIgnored": "{count, plural, one {# item dispensado será deixado de lado} other {# itens dispensados serão deixados de lado}}.",
       "summaryIrreversible": "Não há como desfazer — itens adicionados precisam ser removidos um a um.",
       "confirm": "{count, plural, =0 {Adicionar ao painel} one {Adicionar # item} other {Adicionar # itens}}",
-      "includeFirewallHint": "Também abre as portas que esta aplicação precisa, para que ela fique acessível imediatamente."
+      "afterApplications": "depois das aplicações"
     },
     "errors": {
       "startFailed": "Não foi possível iniciar a varredura.",
       "ignoreFailed": "Não foi possível dispensar.",
-      "unignoreFailed": "Não foi possível desfazer."
+      "unignoreFailed": "Não foi possível desfazer.",
+      "addFailed": "Não foi possível começar a adicionar ao painel."
     },
     "stalled": "Esta varredura parou de reportar progresso. Pode ter falhado no servidor."
   },

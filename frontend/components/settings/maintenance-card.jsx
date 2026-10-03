@@ -424,7 +424,7 @@ function UpdatesSection({ updates, canManage }) {
       await refreshAndWait();
       toast.success(t("updates.saved"));
     } catch (error) {
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: t("updates.saveFailed") });
     }
   }
 
@@ -578,7 +578,7 @@ function ScheduleSection({ schedule, presets, presetsFailed, canManage }) {
         values.enabled ? t("schedule.saved") : t("schedule.turnedOff"),
       );
     } catch (error) {
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: t("schedule.saveFailed") });
     }
   }
 
@@ -900,7 +900,8 @@ function ManualSection({
 
       <InfoRow label={t("reboot.when")}>
         <Select value={delay} onValueChange={setDelay} disabled={!canManage}>
-          <SelectTrigger id="reboot-delay" className="w-full">
+          {/* InfoRow's label is not a <label>, so the trigger carries the same words. */}
+          <SelectTrigger id="reboot-delay" aria-label={t("reboot.when")} className="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

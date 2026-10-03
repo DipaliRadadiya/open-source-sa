@@ -2,7 +2,12 @@ import { useMemo, useState } from "react";
 import { DownloadCloud, ShieldAlert, TriangleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { FIREWALL_RESOURCE_TYPE } from "@/lib/schemas/sync";
-import { adoptionPlan, unmetDependencies } from "@/lib/server/sync-selection";
+import {
+  adoptionPlan,
+  deferredTypes,
+  unmetDependencies,
+  withImplicitParents,
+} from "@/lib/server/sync-selection";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -12,9 +17,19 @@ import { Label } from "@/components/ui/label";
 export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPresent, pending, onConfirm }) {
   const t = useTranslations("sync");
 
+  const deferred = useMemo(() => deferredTypes(items), [items]);
+
+  // Only types with something to add, plus those read after the applications:
+  // a type present only as skipped rows (the panel's own site) would be a ticked box adding 0.
   const adoptable = useMemo(
-    () => typesPresent.filter((type) => type !== FIREWALL_RESOURCE_TYPE),
-    [typesPresent],
+    () =>
+      typesPresent.filter(
+        (type) =>
+          type !== FIREWALL_RESOURCE_TYPE &&
+          (deferred.includes(type) ||
+            items.some((item) => item.resource_type === type && item.action === "found")),
+      ),
+    [typesPresent, items, deferred],
   );
 
   // null means "everything adoptable". Not `useState(adoptable)`: the dialog mounts
@@ -38,17 +53,27 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
   // Computed ONCE for both the request and the summary. Firewall rules have no tick-box
   // (the warning checkbox gates them), so `selected` never contains them.
   const adopting = useMemo(
-    () => (includeFirewall ? [...selected, FIREWALL_RESOURCE_TYPE] : selected),
-    [selected, includeFirewall],
-  );
-
-  const plan = useMemo(
-    () => adoptionPlan({ items, ignoredKeys, selectedTypes: adopting, includeFirewall }),
-    [items, ignoredKeys, adopting, includeFirewall],
+    () =>
+      withImplicitParents(
+        includeFirewall ? [...selected, FIREWALL_RESOURCE_TYPE] : selected,
+        adoptable,
+      ),
+    [selected, includeFirewall, adoptable],
   );
 
   // `adopting`, not `selected` — the same list the count and the request use.
   const unmet = useMemo(() => unmetDependencies(adopting), [adopting]);
+
+  // A type whose parent is unticked is skipped whole by the backend, so it adds nothing.
+  const plan = useMemo(() => {
+    const blocked = new Set(unmet.map((entry) => entry.type));
+    return adoptionPlan({
+      items,
+      ignoredKeys,
+      selectedTypes: adopting.filter((type) => !blocked.has(type)),
+      includeFirewall,
+    });
+  }, [items, ignoredKeys, adopting, unmet, includeFirewall]);
 
   function toggleType(type, checked) {
     setPicked((current) => {
@@ -91,11 +116,14 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
                 />
                 <Label
                   htmlFor={`adopt-type-${type}`}
-                  className="flex items-center gap-1.5 font-normal"
+                  className="flex flex-wrap items-center gap-x-1.5 font-normal"
                 >
-                  {t(`types.${type}`)}
-                  <span className="text-xs text-muted-foreground">
-                    {plan.perType.get(type) ?? 0}
+                  {/* Wraps whole, below the name, rather than squeezing it onto two lines. */}
+                  <span className="whitespace-nowrap">{t(`types.${type}`)}</span>
+                  <span className="text-xs whitespace-nowrap text-muted-foreground">
+                    {deferred.includes(type)
+                      ? t("adopt.afterApplications")
+                      : (plan.perType.get(type) ?? 0)}
                   </span>
                 </Label>
               </div>
@@ -113,7 +141,7 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
               onCheckedChange={(checked) => setIncludeFirewall(checked === true)}
             />
             <div className="space-y-1">
-              <Label htmlFor="adopt-firewall" className="font-normal" hint={t("adopt.includeFirewallHint")}>
+              <Label htmlFor="adopt-firewall" className="font-normal">
                 {t("adopt.includeFirewall")}
               </Label>
               <p className="flex items-start gap-1.5 text-xs text-warning">
@@ -147,7 +175,9 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
               {t("adopt.summaryIgnored", { count: plan.ignoredCount })}
             </p>
           ) : null}
-          <p className="mt-1 text-muted-foreground">{t("adopt.summaryIrreversible")}</p>
+          {plan.total ? (
+            <p className="mt-1 text-muted-foreground">{t("adopt.summaryIrreversible")}</p>
+          ) : null}
         </div>
       </div>
     </ConfirmDialog>

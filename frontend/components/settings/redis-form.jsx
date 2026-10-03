@@ -118,7 +118,7 @@ export function RedisForm({ redis, canManage, changedBy }) {
       toast.success(t("redis.saved"));
       setChanging(false);
     } catch (error) {
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: t("redis.saveFailed") });
     }
   }
 
@@ -254,7 +254,12 @@ export function RedisForm({ redis, canManage, changedBy }) {
                           ? t("redis.passwordHint")
                           : showStored
                             ? t("redis.currentPasswordHint")
-                            : t("redis.passwordHintNone")
+                            : // Withheld from view-only users, so a missing value does not mean "none".
+                              redis?.has_password
+                              ? canManage
+                                ? t("redis.passwordSet")
+                                : null
+                              : t("redis.passwordHintNone")
                   }
                   error={validationMessage(
                     tv,
@@ -264,6 +269,12 @@ export function RedisForm({ redis, canManage, changedBy }) {
                   <div className="space-y-1.5">
                     {showStored ? (
                       <PasswordReveal password={redis.password} className="text-left" />
+                    ) : !canManage ? (
+                      <p className="text-sm">
+                        {redis?.has_password
+                          ? t("redis.passwordSet")
+                          : t("redis.passwordNone")}
+                      </p>
                     ) : (
                       <>
                         <FormControl>

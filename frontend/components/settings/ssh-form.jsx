@@ -3,20 +3,17 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { useRefresh } from "@/hooks/use-refresh";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { KeyRound, ShieldAlert, TriangleAlert } from "lucide-react";
 import { securityFormSchema, ROOT_LOGIN_OPTIONS } from "@/lib/schemas/settings";
 import { updateSecuritySettings } from "@/lib/api/settings";
-import { updateFirewallRule } from "@/lib/api/firewall";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { validationMessage } from "@/lib/settings/validation-message";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { Form, FormField, FormControl } from "@/components/ui/form";
 import { ChoiceField } from "@/components/ui/choice-field";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -27,26 +24,18 @@ import {
   SectionActions,
 } from "@/components/settings/setting-row";
 
-// `oldPortRule` holds the CURRENT port open; after a move it is disabled, not deleted
-// (system-seeded rules cannot be deleted).
 export function SshForm({
   security,
   canManage,
-  oldPortRule,
-  canManageFirewall,
   changedBy,
 }) {
   const t = useTranslations("settings.security");
   const tv = useTranslations("settings.validation");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [pendingValues, setPendingValues] = useState(null);
   // The confirmed save runs outside handleSubmit (the dialog resolved it), so
   // react-hook-form's own isSubmitting is already false by then.
   const [saving, setSaving] = useState(false);
-  // Offered, and ticked, only when there is actually a rule to close and the
-  // user is allowed to touch the firewall.
-  const canCloseOldPort = Boolean(oldPortRule && canManageFirewall);
-  const [closeOldPort, setCloseOldPort] = useState(true);
 
   const defaults = {
     port: security?.port ?? 22,
@@ -87,32 +76,15 @@ export function SshForm({
     setSaving(true);
     try {
       await updateSecuritySettings(values);
-      toast.success(t("saved"));
-
-      // Strictly after the port change: closing the old port first would leave
-      // neither reachable. A failure here is reported separately.
-      if (
-        canCloseOldPort &&
-        closeOldPort &&
-        Number(values.port) !== defaults.port
-      ) {
-        try {
-          await updateFirewallRule(oldPortRule.id, { enabled: false });
-          toast.success(t("confirm.oldPortClosed", { port: oldPortRule.port }));
-        } catch {
-          toast.error(
-            t("confirm.oldPortCloseFailed", { port: oldPortRule.port }),
-          );
-        }
-      }
       form.reset({ ...values, port: String(values.port) });
+      await refreshAndWait();
       setPendingValues(null);
-      router.refresh();
+      toast.success(t("saved"));
     } catch (error) {
       // Close the dialog so a 422 (e.g. "no SSH key present") is readable on the
       // field it belongs to rather than behind an overlay.
       setPendingValues(null);
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: t("saveFailed") });
     } finally {
       setSaving(false);
     }
@@ -284,36 +256,8 @@ export function SshForm({
                 </span>
               </li>
             ))}
-            {risks.includes("port") && oldPortRule && !canManageFirewall ? (
-              <li className="flex gap-2">
-                <span aria-hidden className="text-muted-foreground">
-                  •
-                </span>
-                <span>
-                  {t("confirm.oldPortStaysOpen", { port: oldPortRule.port })}
-                </span>
-              </li>
-            ) : null}
           </ul>
   
-          {risks.includes("port") && canCloseOldPort ? (
-            <div className="flex items-start gap-3 rounded-lg border p-3">
-              <Checkbox
-                id="close-old-port"
-                checked={closeOldPort}
-                onCheckedChange={(next) => setCloseOldPort(next === true)}
-                className="mt-0.5"
-              />
-              <div className="space-y-1">
-                <Label htmlFor="close-old-port" className="text-sm font-medium">
-                  {t("confirm.closeOldPort", { port: oldPortRule.port })}
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  {t("confirm.closeOldPortHint")}
-                </p>
-              </div>
-            </div>
-          ) : null}
           <p className="text-sm text-muted-foreground">
             {t("confirm.testFirst")}
           </p>

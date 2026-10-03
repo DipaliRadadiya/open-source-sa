@@ -1319,7 +1319,10 @@
     "clearBodyAudit": "This log is part of how the server records what happened to it — sign-ins, blocked requests, bans. Clearing it destroys evidence you may need after a break-in, and it cannot be undone. The file keeps recording from now on.",
     "loadingSource": "Loading {label}…",
     "linesCapped": "Showing the most there can be: {max, number} lines.",
-    "noPermission": "Your role does not include System Logs with Manage access. Ask an administrator to grant it."
+    "noPermission": "Your role does not include System Logs with Manage access. Ask an administrator to grant it.",
+    "liveOffLarge": "Live is off for logs over 2 MB — turn it on to follow",
+    "notDownloadable": "This log isn't a file, so it can't be downloaded.",
+    "notClearable": "This log isn't a file, so it can't be cleared."
   },
   "services": {
     "title": "Services",
@@ -1867,7 +1870,8 @@
       "invalidTime": "Use a 24-hour time, like 03:00.",
       "invalidMemory": "Use a size like 256mb or 1gb — or 0 for no limit.",
       "passwordTooShort": "Use 8 characters or more.",
-      "invalidHour": "Pick an hour from 0 to 23."
+      "invalidHour": "Pick an hour from 0 to 23.",
+      "hostnameTooLong": "Must be 64 characters or fewer"
     },
     "server": {
       "title": "Server",
@@ -1884,7 +1888,8 @@
       "clockDrift": "Not in sync",
       "clockDriftHint": "NTP is on but the clock has not synced — scheduled jobs may run late and log times will be wrong.",
       "noPermission": "Your role does not include Setting with Manage access. Ask an administrator to grant it.",
-      "timezoneSearch": "Search timezones…"
+      "timezoneSearch": "Search timezones…",
+      "saveFailed": "Server settings could not be saved."
     },
     "security": {
       "title": "Signing in over SSH",
@@ -1915,16 +1920,11 @@
         "title": "Check this before you save",
         "cancel": "Go back",
         "submit": "Apply changes",
-        "port": "SSH moves from port {from} to {to}. The new port is opened in the firewall first.",
+        "port": "SSH moves from port {from} to {to}. The firewall opens {to} first and closes {from} afterwards, unless you added the rule for {from} yourself.",
         "passwordOff": "Password logins stop working. Without a key already on this server, you're locked out.",
         "rootOff": "Root can no longer log in. Make sure another user can, with sudo.",
         "rootPassword": "Root will be able to log in with a password — the account attacks try first.",
-        "oldPortStaysOpen": "Port {port} stays open in the firewall. Nothing will be listening on it.",
-        "testFirst": "Test the new settings in another terminal before closing this one.",
-        "closeOldPort": "Also switch off the firewall rule for port {port}",
-        "closeOldPortHint": "Kept, not deleted — you can turn it back on.",
-        "oldPortClosed": "Port {port} closed in the firewall.",
-        "oldPortCloseFailed": "SSH was changed, but port {port} could not be closed. Do it on the Firewall page."
+        "testFirst": "Test the new settings in another terminal before closing this one."
       },
       "rootPasswordWarning": "Root can log in with a password right now. That is the account automated attacks try first — set Root login to “Key only”.",
       "signIn": {
@@ -1944,7 +1944,8 @@
         "save": "Save SSH settings"
       },
       "description": "Who can reach the command line, and how.",
-      "noPermission": "Your role does not include Setting with Manage access. Ask an administrator to grant it."
+      "noPermission": "Your role does not include Setting with Manage access. Ask an administrator to grant it.",
+      "saveFailed": "SSH settings could not be saved."
     },
     "performance": {
       "swap": {
@@ -1968,7 +1969,8 @@
         "recommended": "recommended",
         "save": "Save swap",
         "noRoom": "That would use more than half of the free disk space ({free} free). Choose a smaller size.",
-        "tight": "A {size} swap file leaves only {left} free on the disk, and applications and backups need that space too."
+        "tight": "A {size} swap file leaves only {left} free on the disk, and applications and backups need that space too.",
+        "saveFailed": "Swap could not be changed."
       },
       "redis": {
         "passwordUnknownShort": "Cannot check",
@@ -2004,7 +2006,8 @@
         "removeFailed": "Could not remove the Redis password.",
         "notRunning": "Redis is not running.",
         "usage": "{used} in use",
-        "usageOfLimit": "{used} of {limit}"
+        "usageOfLimit": "{used} of {limit}",
+        "saveFailed": "Redis settings could not be saved."
       },
       "noPermission": "Your role does not include Setting with Manage access. Ask an administrator to grant it.",
       "passwordNotManageable": "This install cannot rewrite its own configuration file, so the Redis password cannot be changed from here. Change it on the server and update REDIS_PASSWORD."
@@ -2062,21 +2065,22 @@
           "dependencies": "The packages waiting cannot be installed together. This usually needs apt run by hand to see what is held back.",
           "worker": "The process running the upgrade disappeared — most likely restarted by the upgrade itself. apt may have finished the work anyway: check the log before starting another.",
           "unknown": "The upgrade failed. The output below is what it said."
-        }
+        },
+        "saveFailed": "Update settings could not be saved."
       },
       "reboot": {
         "title": "Manual restart",
         "description": "All hosted applications are unreachable until it returns, typically under a minute.",
         "when": "Start",
         "now": "Right now",
-        "inMinutes": "In {minutes} minutes",
+        "inMinutes": "{minutes, plural, one {In 1 minute} other {In # minutes}}",
         "action": "Restart server",
         "confirmTitle": "Restart this server?",
         "confirmNow": "Every application, database and service on this machine stops now and comes back once it has booted. The panel is unreachable while that happens.",
-        "confirmDelayed": "The server restarts in {minutes} minutes. Every application, database and service on it stops until it is back.",
+        "confirmDelayed": "{minutes, plural, one {The server restarts in 1 minute.} other {The server restarts in # minutes.}} Every application, database and service on it stops until it is back.",
         "confirmCancel": "Cancel",
         "confirmSubmit": "Restart",
-        "scheduled": "Restart scheduled in {minutes} minutes.",
+        "scheduled": "{minutes, plural, one {Restart scheduled in 1 minute.} other {Restart scheduled in # minutes.}}",
         "pendingAt": "A restart is scheduled for {at}.",
         "pendingUnknownTime": "A restart is scheduled.",
         "countdownHours": "Restarting in {hours}h {minutes}m.",
@@ -2111,7 +2115,8 @@
         "notScheduled": "Not scheduled",
         "nextLabel": "Next restart",
         "dayOfWeekHint": "Which day the weekly job runs.",
-        "dayOfMonthHint": "Which date the monthly job runs. Pick 28 or lower so it runs in every month."
+        "dayOfMonthHint": "Which date the monthly job runs. Pick 28 or lower so it runs in every month.",
+        "saveFailed": "The schedule could not be saved."
       },
       "summary": {
         "pendingYes": "Restart needed"
@@ -6663,7 +6668,7 @@
   },
   "sync": {
     "title": "Server Sync",
-    "subtitle": "Find websites, users and settings that already exist on this server but aren't in the panel yet, then add them.",
+    "subtitle": "Find applications, users and settings that already exist on this server but aren't in the panel yet, then add them.",
     "common": {
       "cancel": "Cancel"
     },
@@ -6675,7 +6680,7 @@
     },
     "empty": {
       "title": "This server hasn't been scanned yet",
-      "description": "A scan looks through this server for websites, users, certificates and settings that the panel doesn't know about. It only reads — nothing is changed until you choose to add it.",
+      "description": "A scan looks through this server for applications, users, certificates and settings that the panel doesn't know about. It only reads — nothing is changed until you choose to add it.",
       "nothingFound": "Nothing new was found",
       "nothingFoundHint": "Everything on this server is already in the panel, or has been dismissed."
     },
@@ -6688,11 +6693,16 @@
       "adopted": "{count, plural, =0 {Nothing was added} one {Added # thing to the panel} other {Added # things to the panel}}",
       "skipped": "{count, plural, one {# was skipped} other {# were skipped}}",
       "failed": "{count, plural, one {# thing couldn't be added} other {# things couldn't be added}}",
-      "counts": "{adopted} added · {skipped} skipped · {failed} failed"
+      "counts": "{adopted} added · {skipped} skipped · {failed} failed",
+      "stoppedScan": "The scan stopped before it finished",
+      "stoppedScanHint": "Anything it found before stopping is listed below. Nothing has been changed on your server. Scan again to get the full list.",
+      "stoppedAdopt": "Adding stopped before it finished",
+      "stoppedAdoptHint": "Items marked Added are in the panel. The rest were not added — scan again to see what is left.",
+      "handledSoFar": "{count, plural, =0 {Nothing handled yet} one {# handled so far} other {# handled so far}}"
     },
     "results": {
       "searchPlaceholder": "Search by name",
-      "showing": "Showing {shown} of {total}",
+      "showing": "Showing {shown, number} of {total, number}",
       "noMatches": "Nothing matches",
       "noMatchesHint": "Try a different search, or clear the type filters.",
       "ignoredNote": "Dismissed — this won't be added",
@@ -6720,9 +6730,9 @@
     "types": {
       "system_user": "System users",
       "ssh_key": "SSH keys",
-      "application": "Websites",
+      "application": "Applications",
       "php_settings": "PHP settings",
-      "worker": "Queue workers",
+      "worker": "Workers",
       "database_user": "Database users",
       "certificate": "Certificates",
       "cronjob": "Cron jobs",
@@ -6752,16 +6762,17 @@
       "includeFirewall": "Also add firewall rules",
       "firewallWarning": "Once the panel manages your firewall rules, a later change here can close the port you connect on. Leave this off unless you're sure.",
       "unmetDependency": "{types} need {requires} to be added too. Without it, every one of them will be skipped.",
-      "summary": "{count, plural, =0 {Nothing will be added} one {# thing will be added} other {# things will be added}} across {types, plural, one {# type} other {# types}}.",
+      "summary": "{count, plural, =0 {Nothing will be added.} one {# thing will be added across {types, plural, one {# type} other {# types}}.} other {# things will be added across {types, plural, one {# type} other {# types}}.}}",
       "summaryIgnored": "{count, plural, one {# dismissed item will be left alone} other {# dismissed items will be left alone}}.",
       "summaryIrreversible": "There's no undo for this — added items must be removed one by one.",
       "confirm": "{count, plural, =0 {Add to the panel} one {Add # thing} other {Add # things}}",
-      "includeFirewallHint": "Also open the ports this application needs, so it is reachable straight away."
+      "afterApplications": "after applications"
     },
     "errors": {
       "startFailed": "Couldn't start the scan.",
       "ignoreFailed": "Couldn't dismiss that.",
-      "unignoreFailed": "Couldn't undo that."
+      "unignoreFailed": "Couldn't undo that.",
+      "addFailed": "Couldn't start adding to the panel."
     },
     "stalled": "This scan has stopped reporting progress. It may have failed on the server."
   },

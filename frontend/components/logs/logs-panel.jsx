@@ -14,7 +14,7 @@ import { matchesSeverity } from "@/lib/logs/severity";
 import { LogSourceList } from "@/components/logs/log-source-list";
 import { LogToolbar } from "@/components/logs/log-toolbar";
 import { LogViewer } from "@/components/logs/log-viewer";
-import { FOLLOW_COOKIE, LINES_COOKIE, resolveFollow } from "@/lib/logs/follow-preference";
+import { AUTO_FOLLOW_MAX_BYTES, FOLLOW_COOKIE, LINES_COOKIE, resolveFollow } from "@/lib/logs/follow-preference";
 import { writeCookie } from "@/lib/logs/app-log-prefs";
 import { apiMessage } from "@/lib/api/error-message";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -395,10 +395,16 @@ export function LogsPanel({
             copy(visible.join("\n"), t("copiedLines", { count: visible.length }))
           }
           downloadUrl={source ? logDownloadUrl(source.key) : undefined}
-          showDownload={source?.downloadable !== false}
-          onClear={source?.clearable ? () => setConfirmClear(true) : null}
-          // Shown disabled with the reason rather than hidden, like every other write.
-          clearReason={canManage ? null : t("noPermission")}
+          // Shown disabled with the reason rather than hidden, like every other action.
+          downloadReason={source?.downloadable === false ? t("notDownloadable") : null}
+          onClear={source ? () => setConfirmClear(true) : null}
+          clearReason={!source?.clearable ? t("notClearable") : canManage ? null : t("noPermission")}
+          // Big logs start with Live off (performance); say so unless the reader chose it.
+          followHint={
+            !follow && followPref !== "off" && appends && source?.readable && (source?.size ?? 0) > AUTO_FOLLOW_MAX_BYTES
+              ? t("liveOffLarge")
+              : null
+          }
           clearing={clearing}
           busy={busy}
           disabled={disabled}

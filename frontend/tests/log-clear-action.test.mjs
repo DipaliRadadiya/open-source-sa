@@ -89,7 +89,7 @@ test("server logs offer the action only where the API says it is allowed", () =>
   // disabled with the reason (tests/logs-1002.test.mjs), not hidden.
   assert.match(
     serverPanel,
-    /onClear=\{source\?\.clearable \? \(\) => setConfirmClear\(true\) : null\}/,
+    /clearReason=\{!source\?\.clearable \? t\("notClearable"\) : canManage \? null : t\("noPermission"\)\}/,
   );
 });
 

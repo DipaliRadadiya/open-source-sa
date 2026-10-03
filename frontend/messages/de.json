@@ -1319,7 +1319,10 @@
     "clearBodyAudit": "Dieses Log gehört zu der Aufzeichnung, was mit dem Server passiert ist — Anmeldungen, blockierte Anfragen, Sperren. Es zu leeren zerstört Beweise, die du nach einem Einbruch brauchen könntest, und ist nicht rückgängig zu machen. Die Datei zeichnet von jetzt an weiter auf.",
     "loadingSource": "{label} wird geladen…",
     "linesCapped": "Es wird das Maximum angezeigt: {max, number} Zeilen.",
-    "noPermission": "Ihre Rolle enthält nicht „Systemprotokolle“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum."
+    "noPermission": "Ihre Rolle enthält nicht „Systemprotokolle“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
+    "liveOffLarge": "„Live“ ist bei Logs über 2 MB aus – zum Mitverfolgen einschalten",
+    "notDownloadable": "Dieses Log ist keine Datei und kann daher nicht heruntergeladen werden.",
+    "notClearable": "Dieses Log ist keine Datei und kann daher nicht geleert werden."
   },
   "services": {
     "title": "Dienste",
@@ -1867,7 +1870,8 @@
       "invalidTime": "Verwenden Sie eine 24-Stunden-Zeit, etwa 03:00.",
       "invalidMemory": "Verwenden Sie eine Größe wie 256mb oder 1gb — oder 0 für kein Limit.",
       "passwordTooShort": "Verwenden Sie 8 Zeichen oder mehr.",
-      "invalidHour": "Wählen Sie eine Stunde von 0 bis 23."
+      "invalidHour": "Wählen Sie eine Stunde von 0 bis 23.",
+      "hostnameTooLong": "Darf höchstens 64 Zeichen lang sein"
     },
     "server": {
       "title": "Server",
@@ -1884,7 +1888,8 @@
       "clockDrift": "Nicht synchron",
       "clockDriftHint": "NTP ist an, aber die Uhr wurde nicht synchronisiert — geplante Jobs können zu spät laufen und Protokollzeiten sind falsch.",
       "noPermission": "Ihre Rolle enthält nicht „Einstellung“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
-      "timezoneSearch": "Zeitzonen suchen…"
+      "timezoneSearch": "Zeitzonen suchen…",
+      "saveFailed": "Die Servereinstellungen konnten nicht gespeichert werden."
     },
     "security": {
       "title": "Anmelden über SSH",
@@ -1915,16 +1920,11 @@
         "title": "Prüfen Sie das, bevor Sie speichern",
         "cancel": "Zurück",
         "submit": "Änderungen anwenden",
-        "port": "SSH wechselt von Port {from} auf {to}. Der neue Port wird vorher in der Firewall geöffnet.",
+        "port": "SSH wechselt von Port {from} auf {to}. Die Firewall öffnet zuerst {to} und schließt danach {from}, außer Sie haben die Regel für {from} selbst angelegt.",
         "passwordOff": "Anmeldungen mit Passwort funktionieren nicht mehr. Ohne Schlüssel, der schon auf diesem Server liegt, sind Sie ausgesperrt.",
         "rootOff": "Root kann sich nicht mehr anmelden. Stellen Sie sicher, dass ein anderer Benutzer es kann — mit sudo.",
         "rootPassword": "Root wird sich mit einem Passwort anmelden können — das Konto, das Angriffe zuerst probieren.",
-        "oldPortStaysOpen": "Port {port} bleibt in der Firewall offen. Darauf wird nichts lauschen.",
-        "testFirst": "Testen Sie die neuen Einstellungen in einem anderen Terminal, bevor Sie dieses schließen.",
-        "closeOldPort": "Firewall-Regel für Port {port} ebenfalls ausschalten",
-        "closeOldPortHint": "Bleibt erhalten und wird nicht gelöscht — Sie können sie wieder einschalten.",
-        "oldPortClosed": "Port {port} in der Firewall geschlossen.",
-        "oldPortCloseFailed": "SSH wurde geändert, aber Port {port} konnte nicht geschlossen werden. Erledigen Sie das auf der Firewall-Seite."
+        "testFirst": "Testen Sie die neuen Einstellungen in einem anderen Terminal, bevor Sie dieses schließen."
       },
       "rootPasswordWarning": "Root kann sich derzeit mit einem Passwort anmelden. Das ist das Konto, das automatisierte Angriffe zuerst probieren — setzen Sie die Root-Anmeldung auf „Nur mit Schlüssel“.",
       "signIn": {
@@ -1944,7 +1944,8 @@
         "save": "SSH-Einstellungen speichern"
       },
       "description": "Wer die Kommandozeile erreichen darf und wie.",
-      "noPermission": "Ihre Rolle enthält nicht „Einstellung“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum."
+      "noPermission": "Ihre Rolle enthält nicht „Einstellung“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
+      "saveFailed": "Die SSH-Einstellungen konnten nicht gespeichert werden."
     },
     "performance": {
       "swap": {
@@ -1968,7 +1969,8 @@
         "recommended": "empfohlen",
         "save": "Swap speichern",
         "noRoom": "Das würde mehr als die Hälfte des freien Speicherplatzes belegen ({free} frei). Wählen Sie eine kleinere Größe.",
-        "tight": "Eine Swap-Datei von {size} lässt nur {left} frei auf der Festplatte — Anwendungen und Backups brauchen diesen Platz auch."
+        "tight": "Eine Swap-Datei von {size} lässt nur {left} frei auf der Festplatte — Anwendungen und Backups brauchen diesen Platz auch.",
+        "saveFailed": "Swap konnte nicht geändert werden."
       },
       "redis": {
         "passwordUnknownShort": "Kann nicht geprüft werden",
@@ -2004,7 +2006,8 @@
         "removeFailed": "Das Redis-Passwort konnte nicht entfernt werden.",
         "notRunning": "Redis läuft nicht.",
         "usage": "{used} verwendet",
-        "usageOfLimit": "{used} von {limit}"
+        "usageOfLimit": "{used} von {limit}",
+        "saveFailed": "Die Redis-Einstellungen konnten nicht gespeichert werden."
       },
       "noPermission": "Ihre Rolle enthält nicht „Einstellung“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
       "passwordNotManageable": "Diese Installation kann ihre eigene Konfigurationsdatei nicht neu schreiben, daher kann das Redis-Passwort hier nicht geändert werden. Ändern Sie es auf dem Server und aktualisieren Sie REDIS_PASSWORD."
@@ -2062,21 +2065,22 @@
           "dependencies": "Die wartenden Pakete lassen sich nicht gemeinsam installieren. Dafür muss apt meist von Hand ausgeführt werden, um zu sehen, was zurückgehalten wird.",
           "worker": "Der Prozess, der das Upgrade ausführte, ist verschwunden — höchstwahrscheinlich vom Upgrade selbst neu gestartet. apt hat die Arbeit möglicherweise trotzdem beendet: prüfe das Protokoll, bevor du ein weiteres startest.",
           "unknown": "Das Upgrade ist fehlgeschlagen. Die Ausgabe unten ist, was es gesagt hat."
-        }
+        },
+        "saveFailed": "Die Update-Einstellungen konnten nicht gespeichert werden."
       },
       "reboot": {
         "title": "Manueller Neustart",
         "description": "Alle gehosteten Anwendungen sind nicht erreichbar, bis er zurück ist — meist unter einer Minute.",
         "when": "Start",
         "now": "Sofort",
-        "inMinutes": "In {minutes} Minuten",
+        "inMinutes": "{minutes, plural, one {In 1 Minute} other {In # Minuten}}",
         "action": "Server neu starten",
         "confirmTitle": "Diesen Server neu starten?",
         "confirmNow": "Jede Anwendung, Datenbank und jeder Dienst auf diesem Server stoppt jetzt und kehrt nach dem Hochfahren zurück. Das Panel ist währenddessen nicht erreichbar.",
-        "confirmDelayed": "Der Server startet in {minutes} Minuten neu. Jede Anwendung, Datenbank und jeder Dienst darauf stoppt, bis er wieder da ist.",
+        "confirmDelayed": "{minutes, plural, one {Der Server startet in 1 Minute neu.} other {Der Server startet in # Minuten neu.}} Jede Anwendung, Datenbank und jeder Dienst darauf stoppt, bis er wieder da ist.",
         "confirmCancel": "Abbrechen",
         "confirmSubmit": "Neu starten",
-        "scheduled": "Neustart in {minutes} Minuten geplant.",
+        "scheduled": "{minutes, plural, one {Neustart in 1 Minute geplant.} other {Neustart in # Minuten geplant.}}",
         "pendingAt": "Ein Neustart ist für {at} geplant.",
         "pendingUnknownTime": "Ein Neustart ist geplant.",
         "countdownHours": "Neustart in {hours} Std. {minutes} Min.",
@@ -2111,7 +2115,8 @@
         "notScheduled": "Nicht geplant",
         "nextLabel": "Nächster Neustart",
         "dayOfWeekHint": "An welchem Tag der wöchentliche Job ausgeführt wird.",
-        "dayOfMonthHint": "An welchem Datum der monatliche Job ausgeführt wird. Wählen Sie 28 oder weniger, damit er in jedem Monat läuft."
+        "dayOfMonthHint": "An welchem Datum der monatliche Job ausgeführt wird. Wählen Sie 28 oder weniger, damit er in jedem Monat läuft.",
+        "saveFailed": "Der Zeitplan konnte nicht gespeichert werden."
       },
       "summary": {
         "pendingYes": "Neustart erforderlich"
@@ -6663,7 +6668,7 @@
   },
   "sync": {
     "title": "Server-Sync",
-    "subtitle": "Finden Sie Websites, Benutzer und Einstellungen, die auf diesem Server schon existieren, aber noch nicht im Panel sind, und fügen Sie sie hinzu.",
+    "subtitle": "Finden Sie Anwendungen, Benutzer und Einstellungen, die auf diesem Server schon existieren, aber noch nicht im Panel sind, und fügen Sie sie hinzu.",
     "common": {
       "cancel": "Abbrechen"
     },
@@ -6675,7 +6680,7 @@
     },
     "empty": {
       "title": "Dieser Server wurde noch nicht durchsucht",
-      "description": "Ein Durchlauf sieht diesen Server nach Websites, Benutzern, Zertifikaten und Einstellungen durch, die das Panel nicht kennt. Er liest nur — es wird nichts geändert, bis Sie etwas hinzufügen.",
+      "description": "Ein Durchlauf sieht diesen Server nach Anwendungen, Benutzern, Zertifikaten und Einstellungen durch, die das Panel nicht kennt. Er liest nur — es wird nichts geändert, bis Sie etwas hinzufügen.",
       "nothingFound": "Es wurde nichts Neues gefunden",
       "nothingFoundHint": "Alles auf diesem Server ist bereits im Panel oder wurde ausgeblendet."
     },
@@ -6688,11 +6693,16 @@
       "adopted": "{count, plural, =0 {Es wurde nichts hinzugefügt} one {# Eintrag zum Panel hinzugefügt} other {# Einträge zum Panel hinzugefügt}}",
       "skipped": "{count, plural, one {# wurde übersprungen} other {# wurden übersprungen}}",
       "failed": "{count, plural, one {# Eintrag konnte nicht hinzugefügt werden} other {# Einträge konnten nicht hinzugefügt werden}}",
-      "counts": "{adopted} hinzugefügt · {skipped} übersprungen · {failed} fehlgeschlagen"
+      "counts": "{adopted} hinzugefügt · {skipped} übersprungen · {failed} fehlgeschlagen",
+      "stoppedScan": "Der Durchlauf wurde vor dem Ende abgebrochen",
+      "stoppedScanHint": "Was bis dahin gefunden wurde, steht unten. Auf Ihrem Server wurde nichts geändert. Durchsuchen Sie erneut, um die vollständige Liste zu erhalten.",
+      "stoppedAdopt": "Das Hinzufügen wurde vor dem Ende abgebrochen",
+      "stoppedAdoptHint": "Als „Hinzugefügt“ markierte Einträge sind im Panel. Der Rest wurde nicht hinzugefügt — durchsuchen Sie erneut, um zu sehen, was noch fehlt.",
+      "handledSoFar": "{count, plural, =0 {Noch nichts bearbeitet} one {# Eintrag bisher bearbeitet} other {# Einträge bisher bearbeitet}}"
     },
     "results": {
       "searchPlaceholder": "Nach Namen suchen",
-      "showing": "{shown} von {total} werden gezeigt",
+      "showing": "{shown, number} von {total, number} werden gezeigt",
       "noMatches": "Nichts passt",
       "noMatchesHint": "Versuchen Sie eine andere Suche oder setzen Sie die Typfilter zurück.",
       "ignoredNote": "Ausgeblendet — das wird nicht hinzugefügt",
@@ -6720,9 +6730,9 @@
     "types": {
       "system_user": "Systembenutzer",
       "ssh_key": "SSH-Schlüssel",
-      "application": "Websites",
+      "application": "Anwendungen",
       "php_settings": "PHP-Einstellungen",
-      "worker": "Queue-Worker",
+      "worker": "Worker",
       "database_user": "Datenbankbenutzer",
       "certificate": "Zertifikate",
       "cronjob": "Cronjobs",
@@ -6752,16 +6762,17 @@
       "includeFirewall": "Auch Firewall-Regeln hinzufügen",
       "firewallWarning": "Sobald das Panel Ihre Firewall-Regeln verwaltet, kann eine spätere Änderung hier den Port schließen, über den Sie verbunden sind. Lassen Sie das aus, sofern Sie nicht sicher sind.",
       "unmetDependency": "{types} brauchen, dass {requires} ebenfalls hinzugefügt wird. Ohne das wird jeder davon übersprungen.",
-      "summary": "{count, plural, =0 {Es wird nichts hinzugefügt} one {# Eintrag wird hinzugefügt} other {# Einträge werden hinzugefügt}} über {types, plural, one {# Typ} other {# Typen}}.",
+      "summary": "{count, plural, =0 {Es wird nichts hinzugefügt.} one {# Eintrag wird hinzugefügt, über {types, plural, one {# Typ} other {# Typen}}.} other {# Einträge werden hinzugefügt, über {types, plural, one {# Typ} other {# Typen}}.}}",
       "summaryIgnored": "{count, plural, one {# ausgeblendeter Eintrag bleibt unberührt} other {# ausgeblendete Einträge bleiben unberührt}}.",
       "summaryIrreversible": "Dafür gibt es kein Zurück — hinzugefügte Einträge müssen einzeln entfernt werden.",
       "confirm": "{count, plural, =0 {Zum Panel hinzufügen} one {# Eintrag hinzufügen} other {# Einträge hinzufügen}}",
-      "includeFirewallHint": "Öffnet zusätzlich die Ports, die diese Seite benötigt, damit sie sofort erreichbar ist."
+      "afterApplications": "nach den Anwendungen"
     },
     "errors": {
       "startFailed": "Der Durchlauf konnte nicht gestartet werden.",
       "ignoreFailed": "Das konnte nicht ausgeblendet werden.",
-      "unignoreFailed": "Das konnte nicht zurückgenommen werden."
+      "unignoreFailed": "Das konnte nicht zurückgenommen werden.",
+      "addFailed": "Das Hinzufügen zum Panel konnte nicht gestartet werden."
     },
     "stalled": "Dieser Durchlauf meldet keinen Fortschritt mehr. Möglicherweise ist er auf dem Server fehlgeschlagen."
   },

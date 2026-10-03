@@ -9,8 +9,11 @@ export function SyncSummary({ run, loaded, running }) {
   const totals = runTotals(run.totals);
   const preview = run.mode === "preview";
 
+  // The run itself died (worker killed, or reaped as stale): no item has to
+  // fail for that, and "nothing found" would be a false all-clear.
+  const stopped = run.finished && run.status === "failed";
   /* Failures lead: they are the only rows anyone needs to act on. */
-  const failed = totals.failed > 0;
+  const failed = stopped || totals.failed > 0;
 
   const tone = running ? "running" : failed ? "failed" : preview ? "preview" : "done";
   const Icon = { running: Loader2, failed: CircleAlert, preview: Eye, done: CircleCheck }[tone];
@@ -42,7 +45,18 @@ export function SyncSummary({ run, loaded, running }) {
             {/* A climbing count, not a percentage: the total is unknown until
                 the scan finishes. */}
             <p className="text-sm text-muted-foreground">
-              {t("summary.foundSoFar", { count: loaded })}
+              {preview
+                ? t("summary.foundSoFar", { count: loaded })
+                : t("summary.handledSoFar", { count: loaded })}
+            </p>
+          </>
+        ) : stopped ? (
+          <>
+            <p className="font-medium">
+              {preview ? t("summary.stoppedScan") : t("summary.stoppedAdopt")}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {preview ? t("summary.stoppedScanHint") : t("summary.stoppedAdoptHint")}
             </p>
           </>
         ) : failed ? (

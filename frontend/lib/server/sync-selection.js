@@ -49,6 +49,40 @@ const DEPENDS_ON = {
   cronjob: "system_user",
 };
 
+/**
+ * Types a preview lists as one "after the applications are added" line: an
+ * apply adopts the applications first and only then reads these, so they must
+ * be sent with it even though nothing of them was found yet.
+ */
+export function deferredTypes(items) {
+  const types = new Set();
+  for (const item of items ?? []) {
+    if (
+      item.action === "skipped" &&
+      item.resource_key === item.resource_type &&
+      DEPENDS_ON[item.resource_type] === "application"
+    ) {
+      types.add(item.resource_type);
+    }
+  }
+  return SYNC_RESOURCE_TYPES.filter((type) => types.has(type));
+}
+
+/**
+ * Adds the parents a request needs but the dialog does not offer. ServerSync runs
+ * a type only after its parent ran in the same request, even when the parent has
+ * nothing new — so a site owned by a user the panel already has would be skipped
+ * unless "system_user" is sent too. A parent the user unticked stays out.
+ */
+export function withImplicitParents(types, offered) {
+  const sent = [...types];
+  for (let i = 0; i < sent.length; i++) {
+    const parent = DEPENDS_ON[sent[i]];
+    if (parent && !sent.includes(parent) && !offered.includes(parent)) sent.push(parent);
+  }
+  return SYNC_RESOURCE_TYPES.filter((type) => sent.includes(type));
+}
+
 /** Selected types ServerSync skips because the type they depend on was not selected. */
 export function unmetDependencies(selectedTypes) {
   const selected = new Set(selectedTypes ?? []);
