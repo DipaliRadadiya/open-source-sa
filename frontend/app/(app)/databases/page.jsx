@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getTranslations, getFormatter } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
@@ -125,6 +126,14 @@ export default async function DatabasesPage({ searchParams }) {
       ? getSiteTypes().catch(() => ({ siteTypes: [] }))
       : Promise.resolve({ siteTypes: [] }),
   ]);
+
+  // A 422 means a bad filter/sort in the link (an old bookmark, a typo): drop them,
+  // keep the search, as the Applications page does. "Try again" would only repeat it.
+  if (dbFailed && dbStatus === 422 && ["sort", "engine", "attached", "per_page", "direction"].some((key) => sp?.[key])) {
+    const kept = new URLSearchParams();
+    if (typeof sp.search === "string" && sp.search) kept.set("search", sp.search);
+    redirect(`/databases${kept.size ? `?${kept}` : ""}`);
+  }
 
   if (dbFailed)
     return (

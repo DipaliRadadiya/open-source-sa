@@ -185,3 +185,15 @@ test("a disabled Select says why, like Button and Input", () => {
   assert.match(select, /reason=\{disabled \? \(disabledReason \?\? inheritedReason\?\.reason\) : null\}/);
   assert.match(select, /if \(disabled && inheritedReason\?\.handled && !disabledReason\) return control;/);
 });
+
+test("central #32: a bad filter or sort in the Databases link falls back to the plain list", () => {
+  const page = read("app/(app)/databases/page.jsx");
+  assert.match(page, /if \(dbFailed && dbStatus === 422 && \["sort", "engine", "attached", "per_page", "direction"\]\.some\(\(key\) => sp\?\.\[key\]\)\) \{/);
+  assert.match(page, /redirect\(`\/databases\$\{kept\.size \? `\?\$\{kept\}` : ""\}`\);/);
+});
+
+test("central #9: dashboard stat cards format sizes for the locale", () => {
+  const cards = read("components/dashboard/stat-cards.jsx");
+  assert.match(cards, /const size = \(value, human\) => formatBytes\(value, format\) \?\? human;/);
+  assert.doesNotMatch(cards, /used: (memory|swap|disk)\.used_human/);
+});

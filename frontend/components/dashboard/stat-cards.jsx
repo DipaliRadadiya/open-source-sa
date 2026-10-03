@@ -3,11 +3,14 @@ import { Cpu, MemoryStick, HardDrive, Activity, ArrowLeftRight } from "lucide-re
 import { cn } from "@/lib/utils";
 import { pct, usageStatus } from "@/lib/metrics/usage-level";
 import { StatCard } from "@/components/ui/stat-card";
+import { formatBytes } from "@/lib/format/bytes";
 
 export function StatCards({ metrics, stale = false, ratesReady = true }) {
   const t = useTranslations("serverDashboard");
   const format = useFormatter();
   const loading = !metrics;
+  // The API's *_human strings are English-formatted ("1,024 MB" reads as about 1 MB in German).
+  const size = (value, human) => formatBytes(value, format) ?? human;
 
   // Same thresholds that colour the bar. `fallback` covers a real state with no
   // percentage (no swap: Off; unreadable disk: Unknown).
@@ -73,10 +76,10 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
         status={statusFor(memory?.percent)}
         hint={
           memory?.total_human
-            ? t("usedOf", { used: memory.used_human, total: memory.total_human })
+            ? t("usedOf", { used: size(memory.used, memory.used_human), total: size(memory.total, memory.total_human) })
             : ""
         }
-        sub={memory?.free_human ? t("free", { free: memory.free_human }) : ""}
+        sub={memory?.free_human ? t("free", { free: size(memory.free, memory.free_human) }) : ""}
         hasSub
         loading={loading}
       />
@@ -91,12 +94,12 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
         status={Number(swap?.total) > 0 ? statusFor(swap?.percent) : statusFor(null, "off")}
         hint={
           Number(swap?.total) > 0 && swap?.used_human && swap?.total_human
-            ? t("usedOf", { used: swap.used_human, total: swap.total_human })
+            ? t("usedOf", { used: size(swap.used, swap.used_human), total: size(swap.total, swap.total_human) })
             : t("swapOff")
         }
         sub={
           Number(swap?.total) > 0 && swap?.free_human
-            ? t("free", { free: swap.free_human })
+            ? t("free", { free: size(swap.free, swap.free_human) })
             : ""
         }
         hasSub
@@ -113,12 +116,12 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
         status={Number(disk?.total) > 0 ? statusFor(disk?.percent) : statusFor(null, "unknown")}
         hint={
           Number(disk?.total) > 0 && disk?.total_human
-            ? t("usedOf", { used: disk.used_human, total: disk.total_human })
+            ? t("usedOf", { used: size(disk.used, disk.used_human), total: size(disk.total, disk.total_human) })
             : t("diskUnknown")
         }
         sub={
           Number(disk?.total) > 0 && disk?.free_human
-            ? t("free", { free: disk.free_human })
+            ? t("free", { free: size(disk.free, disk.free_human) })
             : ""
         }
         hasSub
