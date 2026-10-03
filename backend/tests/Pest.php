@@ -332,3 +332,26 @@ function answerFind($process): ?ProcessResult
 
     return Process::result(output: implode("\n", $lines).($lines ? "\n" : ''));
 }
+
+/**
+ * The archive path in a tar argv, found by name rather than position.
+ *
+ * `$command[2]` worked only while the command was exactly `tar -czf <path>`.
+ * It became `tar --use-compress-program='pigz -1' -cf <path>` when compression
+ * moved off `-z`, and every fixture that indexed position 2 silently began
+ * writing a file literally named `-cf` — so the real archive never appeared and
+ * the step failed on `is_file()`, miles from the cause.
+ *
+ * Shared by BackupRunTest and RestoreRunTest. It lived in the first, so the
+ * second failed whenever it ran on its own.
+ */
+function tarArchivePath(array $command): ?string
+{
+    foreach ($command as $argument) {
+        if (is_string($argument) && str_ends_with($argument, '.tar.gz')) {
+            return $argument;
+        }
+    }
+
+    return null;
+}

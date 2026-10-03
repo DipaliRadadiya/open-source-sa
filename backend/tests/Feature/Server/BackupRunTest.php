@@ -16,7 +16,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
-use RuntimeException;
 
 /*
  * The value here is the whole chain: dump → archive → upload → verify → prune.
@@ -84,26 +83,6 @@ function backupTarget(array $overrides = []): BackupTarget
 }
 
 /** Make `tar` produce a real file so the archive step behaves like the real one. */
-/**
- * The archive path in a tar argv, found by name rather than position.
- *
- * `$command[2]` worked only while the command was exactly `tar -czf <path>`.
- * It became `tar --use-compress-program='pigz -1' -cf <path>` when compression
- * moved off `-z`, and every fixture that indexed position 2 silently began
- * writing a file literally named `-cf` — so the real archive never appeared and
- * the step failed on `is_file()`, miles from the cause.
- */
-function tarArchivePath(array $command): ?string
-{
-    foreach ($command as $argument) {
-        if (is_string($argument) && str_ends_with($argument, '.tar.gz')) {
-            return $argument;
-        }
-    }
-
-    return null;
-}
-
 function fakeTar(): void
 {
     Process::fake(function ($process) {

@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\Applications\SiteTypeManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Sleep;
 use Illuminate\Testing\TestResponse;
 
 /**
@@ -41,6 +42,10 @@ beforeEach(function () {
     $this->su = SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
 
     Process::fake();
+    // Every site type is created here, n8n included, and its installer
+    // waits for n8n to come up: 60 real two-second sleeps against a fake
+    // server that never answers made this one file take two minutes.
+    Sleep::fake();
 });
 
 function createSite(array $payload = []): TestResponse
