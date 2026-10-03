@@ -20,7 +20,7 @@ class InstallNodeVersionRequest extends FormRequest
         return [
             // A full semantic version, and nothing else. It reaches a command
             // argument, so the shape is the guard.
-            'version' => ['required', 'string', 'regex:/^\d+\.\d+\.\d+$/',
+            'version' => ['bail', 'required', 'string', 'regex:/^\d+\.\d+\.\d+$/',
                 // A real release, not just the shape of one (bug #31): 99.0.0
                 // was accepted and left a failed entry behind.
                 function (string $attribute, mixed $value, \Closure $fail): void {

@@ -744,6 +744,16 @@ describe('a Node version that does not exist (bug #31)', function () {
         expect(RuntimeInstall::where('runtime', 'node')->where('version', '99.0.0')->exists())->toBeFalse();
     });
 
+    it('gives a malformed version one message, not two', function () {
+        fakeNode();
+
+        // Found live: "99" was told both that its format is wrong and that
+        // it does not exist.
+        nodeCall('POST', '/api/node/versions', ['version' => '99'])
+            ->assertUnprocessable()
+            ->assertJsonCount(1, 'errors.version');
+    });
+
     it('lets a failed install\'s entry be removed', function () {
         fakeNode();
         RuntimeInstall::create([
