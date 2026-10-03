@@ -120,7 +120,17 @@ class WorkerController extends Controller
         // The slug that names this worker's systemd unit is derived on the
         // model's `creating` hook — it is not fillable, so no request can
         // choose the name of a file the panel writes.
-        $worker = Worker::create($request->validated() + [
+        $data = $request->validated();
+
+        // A queue worker that is not given time to finish loses the job it
+        // is running at every restart (bug #74). A custom worker keeps the
+        // column's default unless asked otherwise.
+        if (! array_key_exists('stop_wait_seconds', $data)
+            && in_array($data['kind'] ?? Worker::KIND_CUSTOM, [Worker::KIND_QUEUE, Worker::KIND_HORIZON], true)) {
+            $data['stop_wait_seconds'] = Worker::MAX_STOP_WAIT;
+        }
+
+        $worker = Worker::create($data + [
             'application_id' => $application->id,
         ]);
 

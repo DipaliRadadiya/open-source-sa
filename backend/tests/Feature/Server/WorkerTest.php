@@ -348,6 +348,29 @@ it('creates a worker and starts as many copies as asked for', function () {
     expect(WorkerFake::$running["sv-worker-{$worker->slug}"] ?? 0)->toBe(3);
 });
 
+it('gives a queue worker time to finish its job, and a custom one the usual 30 seconds (bug #74)', function () {
+    fakeWorkerSupervisor();
+
+    // supervisord kills a worker that outlives stopwaitsecs; at 30 seconds a
+    // restart killed any queued job longer than that, mid-run.
+    $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload())->assertCreated();
+    $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload([
+        'name' => 'Sync', 'kind' => 'custom', 'command' => 'php8.4 artisan app:sync',
+    ]))->assertCreated();
+
+    expect(Worker::where('kind', 'queue')->value('stop_wait_seconds'))->toBe(Worker::MAX_STOP_WAIT)
+        ->and(Worker::where('kind', 'custom')->value('stop_wait_seconds'))->toBe(30);
+});
+
+it('accepts a stop wait up to an hour, and no more', function () {
+    fakeWorkerSupervisor();
+
+    $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload(['stop_wait_seconds' => 3600]))->assertCreated();
+    $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload(['name' => 'Second', 'kind' => 'custom', 'stop_wait_seconds' => 3601]))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('stop_wait_seconds');
+});
+
 it('reports a partly-running pool as its own state', function () {
     fakeWorkerSupervisor();
     $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload(['processes' => 3]));

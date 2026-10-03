@@ -28,6 +28,18 @@ class Worker extends Model
     public const KIND_CUSTOM = 'custom';
 
     /**
+     * The longest a worker may be given to finish its job before it is
+     * killed, and what a queue worker starts with (bug #74).
+     *
+     * Supervisor's stopwaitsecs must outlast the longest job, or a restart
+     * kills one mid-run. It defaulted to 30 seconds and could not exceed 600,
+     * while the Laravel queue preset lets a worker run for an hour
+     * (`--max-time=3600`). Laravel's own deployment docs use 3600. A queue
+     * worker that is idle stops at once, so a high ceiling costs nothing.
+     */
+    public const MAX_STOP_WAIT = 3600;
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

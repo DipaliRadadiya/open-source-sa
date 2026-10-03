@@ -79,7 +79,7 @@ class SaveWorkerRequest extends FormRequest
 
             'auto_start' => ['sometimes', 'boolean'],
             'processes' => ['sometimes', 'integer', 'min:1', 'max:'.self::MAX_PROCESSES],
-            'stop_wait_seconds' => ['sometimes', 'integer', 'min:1', 'max:600'],
+            'stop_wait_seconds' => ['sometimes', 'integer', 'min:1', 'max:'.Worker::MAX_STOP_WAIT],
             'auto_restart' => ['sometimes', 'boolean'],
             'restart_on_deploy' => ['sometimes', 'boolean'],
             'enabled' => ['sometimes', 'boolean'],
