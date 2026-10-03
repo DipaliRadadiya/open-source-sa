@@ -19,6 +19,7 @@ import { Note } from "@/components/ui/note";
 import { Button } from "@/components/ui/button";
 import { ContainerVolumes } from "@/components/applications/container-volumes";
 import { ContainerCredentials } from "@/components/applications/container-credentials";
+import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import {
   Select,
   SelectContent,
@@ -163,330 +164,332 @@ export function ContainerCard({
   }
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Box className="size-4" />
-          {t("title")}
-        </CardTitle>
-      </CardHeader>
-      <Form {...form}>
-        <form noValidate onSubmit={form.handleSubmit(save)}>
-          <CardContent className="space-y-4">
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium text-muted-foreground">
-                {t("image")}
-              </p>
-              <code className="block truncate rounded-lg border bg-muted/40 px-3 py-2 font-mono text-xs">
-                {application.image || t("noImage")}
-              </code>
-              <p className="text-xs text-muted-foreground">{t("imageHint")}</p>
-            </div>
-
-            {/* Its own button, not part of Save. Pulling is not a settings
-                change: it downloads, recreates the container, and can take
-                minutes on a large image — batching it into a form that also
-                edits a port would hide all of that behind one click.
-
-                Here rather than on the deploy card because this is the deploy
-                story for a container: `compose up` reuses an image it already
-                has, so without this a site on a floating tag never moves. */}
-            {canManage ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">{t("pullTitle")}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {t("pullHint")}
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={pulling}
-                  onClick={async () => {
-                    setPulling(true);
-                    try {
-                      await pullContainerImage(application.id);
-                      await refreshAndWait();
-                      toast.success(t("pulled"));
-                    } catch (error) {
-                      toast.error(apiMessage(error, t("pullFailed")));
-                    } finally {
-                      setPulling(false);
-                    }
-                  }}
-                >
-                  <RefreshCw
-                    className={pulling ? "size-4 animate-spin" : "size-4"}
-                  />
-                  {t("pull")}
-                </Button>
+    <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Box className="size-4" />
+            {t("title")}
+          </CardTitle>
+        </CardHeader>
+        <Form {...form}>
+          <form noValidate onSubmit={form.handleSubmit(save)}>
+            <CardContent className="space-y-4">
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground">
+                  {t("image")}
+                </p>
+                <code className="block truncate rounded-lg border bg-muted/40 px-3 py-2 font-mono text-xs">
+                  {application.image || t("noImage")}
+                </code>
+                <p className="text-xs text-muted-foreground">{t("imageHint")}</p>
               </div>
-            ) : null}
 
-            <FormField
-              control={form.control}
-              name="registry_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("registry")}</FormLabel>
-                  <Select
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    disabled={!canManage}
+              {/* Its own button, not part of Save. Pulling is not a settings
+                  change: it downloads, recreates the container, and can take
+                  minutes on a large image — batching it into a form that also
+                  edits a port would hide all of that behind one click.
+
+                  Here rather than on the deploy card because this is the deploy
+                  story for a container: `compose up` reuses an image it already
+                  has, so without this a site on a floating tag never moves. */}
+              {canManage ? (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{t("pullTitle")}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("pullHint")}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={pulling}
+                    onClick={async () => {
+                      setPulling(true);
+                      try {
+                        await pullContainerImage(application.id);
+                        await refreshAndWait();
+                        toast.success(t("pulled"));
+                      } catch (error) {
+                        toast.error(apiMessage(error, t("pullFailed")));
+                      } finally {
+                        setPulling(false);
+                      }
+                    }}
                   >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t("noRegistry")} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value={NO_REGISTRY}>
-                        {t("noRegistry")}
-                      </SelectItem>
-                      {/* The site's own credential, kept in the list even if it is
-                          gone — deleting a registry detaches the site rather than
-                          blocking, so this option can legitimately name a row that
-                          no longer exists. Dropping it would silently show
-                          "anonymous" for a site whose next pull will fail. */}
-                      {missingRegistry ? (
-                        <SelectItem value={defaults.registry_id}>
-                          {t("missingRegistryOption")}
-                        </SelectItem>
-                      ) : null}
-                      {registries.map((registry) => (
-                        <SelectItem
-                          key={registry.id}
-                          value={String(registry.id)}
-                        >
-                          {registry.name} — {registry.registry}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>{t("registryHint")}</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <RefreshCw
+                      className={pulling ? "size-4 animate-spin" : "size-4"}
+                    />
+                    {t("pull")}
+                  </Button>
+                </div>
+              ) : null}
 
-            {registries.length === 0 ? (
-              // An empty chooser with no explanation reads as a broken control —
-              // the same reason the networks note below exists.
-              <Note icon={KeyRound}>
-                {t("noRegistries")}{" "}
-                <Link
-                  href="/integrations/registries"
-                  className="font-medium text-primary underline"
-                >
-                  {t("noRegistriesLink")}
-                </Link>
-              </Note>
-            ) : null}
+              <FormField
+                control={form.control}
+                name="registry_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("registry")}</FormLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={!canManage}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("noRegistry")} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={NO_REGISTRY}>
+                          {t("noRegistry")}
+                        </SelectItem>
+                        {/* The site's own credential, kept in the list even if it is
+                            gone — deleting a registry detaches the site rather than
+                            blocking, so this option can legitimately name a row that
+                            no longer exists. Dropping it would silently show
+                            "anonymous" for a site whose next pull will fail. */}
+                        {missingRegistry ? (
+                          <SelectItem value={defaults.registry_id}>
+                            {t("missingRegistryOption")}
+                          </SelectItem>
+                        ) : null}
+                        {registries.map((registry) => (
+                          <SelectItem
+                            key={registry.id}
+                            value={String(registry.id)}
+                          >
+                            {registry.name} — {registry.registry}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>{t("registryHint")}</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="docker_network"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("network")}</FormLabel>
-                  <Select
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    disabled={!canManage}
+              {registries.length === 0 ? (
+                // An empty chooser with no explanation reads as a broken control —
+                // the same reason the networks note below exists.
+                <Note icon={KeyRound}>
+                  {t("noRegistries")}{" "}
+                  <Link
+                    href="/integrations/registries"
+                    className="font-medium text-primary underline"
                   >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t("defaultBridge")} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value={DEFAULT_NETWORK}>
-                        {t("defaultBridge")}
-                      </SelectItem>
-                      {missing ? (
-                        <SelectItem value={defaults.docker_network}>
-                          {t("missingOption", {
-                            name: defaults.docker_network,
-                          })}
+                    {t("noRegistriesLink")}
+                  </Link>
+                </Note>
+              ) : null}
+
+              <FormField
+                control={form.control}
+                name="docker_network"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("network")}</FormLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={!canManage}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("defaultBridge")} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={DEFAULT_NETWORK}>
+                          {t("defaultBridge")}
                         </SelectItem>
-                      ) : null}
-                      {networks.map((network) => (
-                        <SelectItem key={network.name} value={network.name}>
-                          {network.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>{t("networkHint")}</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
+                        {missing ? (
+                          <SelectItem value={defaults.docker_network}>
+                            {t("missingOption", {
+                              name: defaults.docker_network,
+                            })}
+                          </SelectItem>
+                        ) : null}
+                        {networks.map((network) => (
+                          <SelectItem key={network.name} value={network.name}>
+                            {network.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>{t("networkHint")}</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {networks.length === 0 ? (
+                // An empty chooser with no explanation reads as a broken control.
+                <Note icon={Network}>
+                  {t("noNetworks")}{" "}
+                  <Link
+                    href="/docker"
+                    className="font-medium text-primary underline"
+                  >
+                    {t("noNetworksLink")}
+                  </Link>
+                </Note>
+              ) : null}
+
+              {missing ? (
+                <Note icon={Network} title={t("missingTitle")}>
+                  {t("missingBody", { name: defaults.docker_network })}
+                </Note>
+              ) : null}
+
+              {/* The name to type, said out loud.
+
+                  Compose also registers the service name — `app` in every file the
+                  panel generates — so two sites on one network both answer to
+                  `app` and Docker's DNS picks one at random. The slug alias is
+                  unique, and a unique name nobody is told about is no better than
+                  no unique name at all. */}
+              {defaults.docker_network !== DEFAULT_NETWORK && !missing ? (
+                <Note icon={Network} title={t("reachableTitle")}>
+                  {t("reachableBody", { alias: application.slug })}
+                </Note>
+              ) : null}
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="container_port"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("containerPort")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          disabled={!canManage}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>{t("containerPortHint")}</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="memory_limit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("memoryLimit")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder={limits.defaultMemoryLimit ?? "512m"}
+                          disabled={!canManage}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        {limits.defaultMemoryLimit
+                          ? t("memoryLimitHint", {
+                              default: limits.defaultMemoryLimit,
+                            })
+                          : t("memoryLimitHintUnknown")}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="cpu_limit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("cpuLimit")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          // The placeholder says what empty MEANS, because for this
+                          // field empty is not "the default" — it is no limit at
+                          // all, which is the opposite of what the field beside it
+                          // does with an empty value.
+                          placeholder={t("cpuLimitPlaceholder")}
+                          inputMode="decimal"
+                          disabled={!canManage}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        {/* The server's real core count, not a description of the
+                            rule. "Up to the number of CPUs this server has" cannot
+                            be acted on without leaving the page, and a hardcoded
+                            number would be wrong on every box but one. Falls back
+                            to the rule only when the box could not be asked — a
+                            confident wrong number is worse than a vaguer right
+                            one. */}
+                        {limits.cpus
+                          ? t("cpuLimitHint", { cores: limits.cpus })
+                          : t("cpuLimitHintUnknown")}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* What the two numbers actually do, which is the part nobody knows
+                  and the part that decides whether a limit was the right tool.
+
+                  They fail in opposite ways: over the memory ceiling the kernel
+                  kills the container and Docker restarts it, so the symptom is a
+                  site that drops requests; over the CPU quota nothing is killed,
+                  the container just waits, so the symptom is slowness with no
+                  error anywhere. Somebody debugging one while thinking of the
+                  other gets nowhere. */}
+              <Note icon={Gauge} title={t("limitsTitle")}>
+                {t("limitsBody")}
+              </Note>
+
+              {/* Its own control, not part of the form above. A mount is a discrete
+                  fact that saves on add and remove — batching it into the Save
+                  button would hide that each change recreates the container. */}
+              <ContainerVolumes
+                application={application}
+                volumes={volumes}
+                canManage={canManage}
+              />
+
+              {/* Only for a site the panel generated credentials for, and only for
+                  somebody who can manage it — the endpoint is gated on `manage`, so
+                  rendering the control for anyone else offers a button whose only
+                  outcome is 403. */}
+              {canManage ? (
+                <ContainerCredentials application={application} />
+              ) : null}
+            </CardContent>
+            <CardSaveFooter
+              submit
+              saving={saving}
+              dirty={form.formState.isDirty}
+              saveReason={
+                !canManage
+                  ? t("noPermission")
+                  : !form.formState.isDirty
+                    ? t("nothingToSave")
+                    : null
+              }
+              onDiscard={() => form.reset(defaults)}
+              saveLabel={t("saveAction")}
+              // Said before the click, not discovered after it.
+              note={t("restartNote")}
+              savingNote={t("savingNote")}
+              showReason
             />
-
-            {networks.length === 0 ? (
-              // An empty chooser with no explanation reads as a broken control.
-              <Note icon={Network}>
-                {t("noNetworks")}{" "}
-                <Link
-                  href="/docker"
-                  className="font-medium text-primary underline"
-                >
-                  {t("noNetworksLink")}
-                </Link>
-              </Note>
-            ) : null}
-
-            {missing ? (
-              <Note icon={Network} title={t("missingTitle")}>
-                {t("missingBody", { name: defaults.docker_network })}
-              </Note>
-            ) : null}
-
-            {/* The name to type, said out loud.
-
-                Compose also registers the service name — `app` in every file the
-                panel generates — so two sites on one network both answer to
-                `app` and Docker's DNS picks one at random. The slug alias is
-                unique, and a unique name nobody is told about is no better than
-                no unique name at all. */}
-            {defaults.docker_network !== DEFAULT_NETWORK && !missing ? (
-              <Note icon={Network} title={t("reachableTitle")}>
-                {t("reachableBody", { alias: application.slug })}
-              </Note>
-            ) : null}
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="container_port"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("containerPort")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        inputMode="numeric"
-                        disabled={!canManage}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>{t("containerPortHint")}</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="memory_limit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("memoryLimit")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={limits.defaultMemoryLimit ?? "512m"}
-                        disabled={!canManage}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      {limits.defaultMemoryLimit
-                        ? t("memoryLimitHint", {
-                            default: limits.defaultMemoryLimit,
-                          })
-                        : t("memoryLimitHintUnknown")}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="cpu_limit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("cpuLimit")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        // The placeholder says what empty MEANS, because for this
-                        // field empty is not "the default" — it is no limit at
-                        // all, which is the opposite of what the field beside it
-                        // does with an empty value.
-                        placeholder={t("cpuLimitPlaceholder")}
-                        inputMode="decimal"
-                        disabled={!canManage}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      {/* The server's real core count, not a description of the
-                          rule. "Up to the number of CPUs this server has" cannot
-                          be acted on without leaving the page, and a hardcoded
-                          number would be wrong on every box but one. Falls back
-                          to the rule only when the box could not be asked — a
-                          confident wrong number is worse than a vaguer right
-                          one. */}
-                      {limits.cpus
-                        ? t("cpuLimitHint", { cores: limits.cpus })
-                        : t("cpuLimitHintUnknown")}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* What the two numbers actually do, which is the part nobody knows
-                and the part that decides whether a limit was the right tool.
-
-                They fail in opposite ways: over the memory ceiling the kernel
-                kills the container and Docker restarts it, so the symptom is a
-                site that drops requests; over the CPU quota nothing is killed,
-                the container just waits, so the symptom is slowness with no
-                error anywhere. Somebody debugging one while thinking of the
-                other gets nowhere. */}
-            <Note icon={Gauge} title={t("limitsTitle")}>
-              {t("limitsBody")}
-            </Note>
-
-            {/* Its own control, not part of the form above. A mount is a discrete
-                fact that saves on add and remove — batching it into the Save
-                button would hide that each change recreates the container. */}
-            <ContainerVolumes
-              application={application}
-              volumes={volumes}
-              canManage={canManage}
-            />
-
-            {/* Only for a site the panel generated credentials for, and only for
-                somebody who can manage it — the endpoint is gated on `manage`, so
-                rendering the control for anyone else offers a button whose only
-                outcome is 403. */}
-            {canManage ? (
-              <ContainerCredentials application={application} />
-            ) : null}
-          </CardContent>
-          <CardSaveFooter
-            submit
-            saving={saving}
-            dirty={form.formState.isDirty}
-            saveReason={
-              !canManage
-                ? t("noPermission")
-                : !form.formState.isDirty
-                  ? t("nothingToSave")
-                  : null
-            }
-            onDiscard={() => form.reset(defaults)}
-            saveLabel={t("saveAction")}
-            // Said before the click, not discovered after it.
-            note={t("restartNote")}
-            savingNote={t("savingNote")}
-            showReason
-          />
-        </form>
-      </Form>
-    </Card>
+          </form>
+        </Form>
+      </Card>
+    </DisabledReasonProvider>
   );
 }

@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
@@ -46,6 +44,7 @@ export function AttachSiteDialog({
   sites = [],
 }) {
   const t = useTranslations("docker.attach");
+  const tc = useTranslations("common");
   const { refreshAndWait } = useRefresh();
 
   const [site, setSite] = useState("");
@@ -118,6 +117,7 @@ export function AttachSiteDialog({
           <Button
             type="submit"
             disabled={pending || !site || (isVolume && !path.trim())}
+            disabledReason={!site ? tc("chooseAnOption") : isVolume && !path.trim() ? tc("enterAValue") : null}
           >
             {pending && <Loader2 className="size-4 animate-spin" />}
             {pending ? t("attaching") : t("attach")}

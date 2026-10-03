@@ -2,12 +2,20 @@ import * as React from "react"
 import { Select as SelectPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { ReasonTooltip, useDisabledReason } from "@/components/ui/reason-tooltip"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
+
+// Radix keeps `disabled` on the root; the trigger needs it to show why.
+const SelectDisabledContext = React.createContext(false);
 
 function Select({
   ...props
 }) {
-  return <SelectPrimitive.Root data-slot="select" {...props} />;
+  return (
+    <SelectDisabledContext.Provider value={Boolean(props.disabled)}>
+      <SelectPrimitive.Root data-slot="select" {...props} />
+    </SelectDisabledContext.Provider>
+  );
 }
 
 function SelectGroup({
@@ -32,9 +40,12 @@ function SelectTrigger({
   className,
   size = "default",
   children,
+  disabledReason,
   ...props
 }) {
-  return (
+  const disabled = React.useContext(SelectDisabledContext) || Boolean(props.disabled);
+  const inheritedReason = useDisabledReason();
+  const control = (
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       data-size={size}
@@ -48,6 +59,19 @@ function SelectTrigger({
         <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
+  );
+
+  // Same rule as Button and Input: a parent already showing a tooltip wins.
+  if (disabled && inheritedReason?.handled && !disabledReason) return control;
+
+  return (
+    <ReasonTooltip
+      // The wrapper takes the trigger's width only when the trigger fills its row.
+      className={/(^|\s)w-full(\s|$)/.test(className ?? "") ? "flex w-full" : "inline-flex"}
+      reason={disabled ? (disabledReason ?? inheritedReason?.reason) : null}
+    >
+      {control}
+    </ReasonTooltip>
   );
 }
 

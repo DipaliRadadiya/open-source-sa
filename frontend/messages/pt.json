@@ -5656,7 +5656,7 @@
       "savingNote": "A reescrever o ficheiro compose e a recriar o contentor…",
       "saved": "Definições do contentor guardadas.",
       "failed": "Não foi possível guardar as definições do contentor.",
-      "noPermission": "Não tem permissão para alterar este site.",
+      "noPermission": "Você não tem permissão para alterar esta aplicação.",
       "nothingToSave": "Nada foi alterado.",
       "volumes": {
         "title": "Volumes",
@@ -5690,7 +5690,8 @@
         "acknowledgeFailed": "Não foi possível registrar. As credenciais não mudaram.",
         "laterHint": "Elas continuam disponíveis em Contêiner → Mostrar.",
         "loading": "Carregando credenciais",
-        "failed": "Não foi possível carregar as credenciais. Não feche este aviso — recarregue a página."
+        "failed": "Não foi possível carregar as credenciais. Não feche este aviso — recarregue a página.",
+        "valuesNotShown": "Disponível quando os valores estiverem na tela."
       },
       "registry": "Registo",
       "noRegistry": "Nenhum — obter anonimamente",

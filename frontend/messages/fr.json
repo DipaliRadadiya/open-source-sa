@@ -5656,7 +5656,7 @@
       "savingNote": "Réécriture du fichier compose et recréation du conteneur…",
       "saved": "Paramètres du conteneur enregistrés.",
       "failed": "Impossible d'enregistrer les paramètres du conteneur.",
-      "noPermission": "Vous n'avez pas la permission de modifier ce site.",
+      "noPermission": "Vous n'avez pas la permission de modifier cette application.",
       "nothingToSave": "Rien n'a changé.",
       "volumes": {
         "title": "Volumes",
@@ -5690,7 +5690,8 @@
         "acknowledgeFailed": "Impossible d'enregistrer cette confirmation. Les identifiants sont inchangés.",
         "laterHint": "Ils restent disponibles via Conteneur → Afficher.",
         "loading": "Chargement des identifiants",
-        "failed": "Impossible de charger les identifiants. Ne fermez pas ce message — rechargez la page."
+        "failed": "Impossible de charger les identifiants. Ne fermez pas ce message — rechargez la page.",
+        "valuesNotShown": "Disponible une fois les valeurs affichées."
       },
       "registry": "Registre",
       "noRegistry": "Aucun — récupération anonyme",

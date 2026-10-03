@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
@@ -43,6 +41,7 @@ export function ContainerVolumes({
   canManage = false,
 }) {
   const t = useTranslations("applications.container.volumes");
+  const tc = useTranslations("common");
   const { refreshAndWait } = useRefresh();
 
   const mounts = application.volume_mounts ?? [];
@@ -189,6 +188,7 @@ export function ContainerVolumes({
               type="submit"
               size="sm"
               disabled={pending || !volume || !path.trim()}
+              disabledReason={!volume ? tc("chooseAnOption") : !path.trim() ? tc("enterAValue") : null}
             >
               <Plus className="size-4" />
               {t("add")}

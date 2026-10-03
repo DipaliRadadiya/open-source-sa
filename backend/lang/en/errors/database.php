@@ -20,6 +20,7 @@ return [
     'phpmyadmin_not_selectable' => 'The selected site is not an active phpMyAdmin installation.',
     'phpmyadmin_user_not_found' => 'The specified database user does not belong to this database.',
     'phpmyadmin_not_isolated' => 'This phpMyAdmin site shares the server-wide PHP pool, so a sign-in link would be readable by every other site. Give it its own PHP pool, or open phpMyAdmin and sign in with the database credentials.',
+    'phpmyadmin_requires_https' => 'This phpMyAdmin site has no HTTPS, so the sign-in link and the database session would travel unencrypted. Issue an SSL certificate for it first.',
     'phpmyadmin_sso_unavailable' => 'The sign-in link could not be prepared on the phpMyAdmin site.',
     'remote_host_invalid' => 'Enter an IPv4 address or range, such as 203.0.113.5 or 203.0.113.0/24.',
     'remote_host_not_remote' => 'That address is not a remote one. Use “Local” for this server or “Anywhere” for every address.',

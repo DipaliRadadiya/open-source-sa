@@ -49,6 +49,7 @@ export function ComposeEditor({
   initialGenerated,
 }) {
   const t = useTranslations("applications.compose");
+  const tc = useTranslations("common");
   const { refreshAndWait } = useRefresh();
 
   const [contents, setContents] = useState(initialCompose);
@@ -182,6 +183,7 @@ export function ComposeEditor({
               size="sm"
               variant="ghost"
               disabled={saving || !dirty}
+              disabledReason={!dirty ? tc("nothingToRevert") : null}
               onClick={() => {
                 setContents(initialCompose);
                 setErrors([]);

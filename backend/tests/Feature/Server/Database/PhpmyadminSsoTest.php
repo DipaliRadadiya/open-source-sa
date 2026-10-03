@@ -70,7 +70,25 @@ beforeEach(function () {
         'status' => ApplicationStatus::Active,
         'isolated_at' => now(),
     ]);
+    securePma($this->pmaApp);
 });
+
+/**
+ * A certificate the site can serve, for its own name. Sign-in links are
+ * refused over plain HTTP (bug #98), so every happy path needs one.
+ */
+function securePma(Application $application): Application
+{
+    Certificate::factory()->create([
+        'application_id' => $application->id,
+        'status' => CertificateStatus::Active,
+        'domains' => [$application->domain],
+        'certificate_path' => "/etc/letsencrypt/live/{$application->domain}/fullchain.pem",
+        'private_key_path' => "/etc/letsencrypt/live/{$application->domain}/privkey.pem",
+    ]);
+
+    return $application->refresh();
+}
 
 /**
  * Every command the endpoint ran, as a flat string.
@@ -124,34 +142,27 @@ describe('POST /databases/{database}/phpmyadmin-sso', function () {
      * TLS listener at all — so the button led to a connection refused, which
      * reads as a broken panel rather than a missing certificate.
      */
-    it('sends the user to the scheme the site actually answers on', function () {
+    it('refuses a phpMyAdmin site without HTTPS (bug #98)', function () {
         grantDatabasePermission($this->user);
-
         DatabaseUser::factory()->create(['database_id' => $this->database->id]);
 
-        $response = $this->postJson("/api/databases/{$this->database->id}/phpmyadmin-sso");
+        // The link carries a live database session, and the cookie it buys
+        // then rides along with every request. Over plain HTTP both cross the
+        // network in clear text. Magic Login already refused this.
+        $this->pmaApp->certificate()->delete();
 
-        $response->assertOk()->assertJsonStructure(['redirect_url']);
-        expect($response->json('redirect_url'))
-            ->toStartWith("http://{$this->pmaApp->domain}/sso.php?token=");
+        $this->postJson("/api/databases/{$this->database->id}/phpmyadmin-sso")
+            ->assertStatus(422)
+            ->assertJsonFragment(['message' => __('errors/database.phpmyadmin_requires_https')]);
+
+        // Refused before anything was written to the site.
+        expect(collect(ssoCommands())->filter(fn ($c) => str_contains($c, 'tee')))->toBeEmpty();
     });
 
     it('sends the user over https once the site has a servable certificate', function () {
         grantDatabasePermission($this->user);
 
         DatabaseUser::factory()->create(['database_id' => $this->database->id]);
-
-        Certificate::factory()->create([
-            'application_id' => $this->pmaApp->id,
-            'status' => CertificateStatus::Active,
-            // Covering this site's own hostname. `scheme()` asks both
-            // questions — is the certificate servable, and is it for *this*
-            // name — because an active certificate for another domain served
-            // over https is a browser warning, not a working site.
-            'domains' => [$this->pmaApp->domain],
-            'certificate_path' => '/etc/letsencrypt/live/pma.example.com/fullchain.pem',
-            'private_key_path' => '/etc/letsencrypt/live/pma.example.com/privkey.pem',
-        ]);
 
         $response = $this->postJson("/api/databases/{$this->database->id}/phpmyadmin-sso");
 
@@ -486,12 +497,12 @@ it('opens the phpMyAdmin the caller asked for, not whichever came first', functi
     // existed the endpoint took `->first()` on an unordered query, so this one
     // was unreachable — and a client could not correct it afterwards, because
     // the token is written into the chosen site's own directory.
-    $second = Application::factory()->create([
+    $second = securePma(Application::factory()->create([
         'site_type' => 'phpmyadmin',
         'domain' => 'pma-two.example.com',
         'status' => ApplicationStatus::Active,
         'isolated_at' => now(),
-    ]);
+    ]));
 
     $response = $this->postJson(
         "/api/databases/{$this->database->id}/phpmyadmin-sso?application_id={$second->id}"
@@ -522,12 +533,12 @@ it('refuses a site that is not an active phpMyAdmin', function () {
 it('falls back to the same installation every time when none is named', function () {
     grantDatabasePermission($this->user);
     DatabaseUser::factory()->create(['database_id' => $this->database->id]);
-    Application::factory()->create([
+    securePma(Application::factory()->create([
         'site_type' => 'phpmyadmin',
         'domain' => 'pma-two.example.com',
         'status' => ApplicationStatus::Active,
         'isolated_at' => now(),
-    ]);
+    ]));
 
     // Ordered, so an unnamed choice is stable. `first()` on an unordered query
     // is whatever the engine returns, which can differ between two identical

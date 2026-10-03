@@ -3092,6 +3092,9 @@ ExecStart=${NODE_BIN} ${APP_DIR}/frontend/.next/standalone/server.js
 Restart=always
 RestartSec=5
 Environment=PORT=${FRONTEND_PORT}
+# Loopback only: every web server above proxies to 127.0.0.1, and Next binds
+# 0.0.0.0 unless told otherwise (bug #15).
+Environment=HOSTNAME=127.0.0.1
 Environment=NODE_ENV=production
 StandardOutput=journal
 StandardError=journal

@@ -141,7 +141,11 @@ export function FirstRunCredentials({ application, className }) {
         {/* Enabled only once the values are on screen. A dismiss button beside a
             row of spinners invites the one click that cannot be undone. */}
         <div className="flex flex-wrap items-center gap-3">
-          <Button onClick={acknowledge} disabled={saving || !secrets}>
+          <Button
+            onClick={acknowledge}
+            disabled={saving || !secrets}
+            disabledReason={!secrets ? t("valuesNotShown") : null}
+          >
             {saving ? <Loader2 className="size-3.5 animate-spin" /> : null}
             {t("acknowledge")}
           </Button>
