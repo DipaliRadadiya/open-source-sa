@@ -308,6 +308,29 @@ it('refuses a username that already exists instead of failing with a 500 (bug #3
         ->and(DatabaseUser::where('username', 'shop_user')->exists())->toBeFalse();
 });
 
+it('refuses a taken first-user name before making the new database', function () {
+    $sqls = new ArrayObject;
+    Process::fake(function ($process) use ($sqls) {
+        $sql = (string) ($process->input ?? '');
+        $sqls[] = $sql;
+
+        return str_contains($sql, 'FROM mysql.user WHERE user')
+            ? Process::result(output: 'user_exists')
+            : Process::result(output: '1');
+    });
+
+    // Found live: the database was made, logged as created and dropped
+    // again, and the message named a field the form does not have.
+    test()->withHeaders(dbAuth())->postJson('/api/databases', [
+        'name' => 'shop', 'engine' => 'mysql',
+        'create_user' => ['username' => 'shop_user', 'password' => 'S3cretPass99'],
+    ])->assertStatus(422)
+        ->assertJsonValidationErrors(['create_user.username' => __('errors/database.user_exists', ['username' => 'shop_user'])]);
+
+    expect(collect($sqls)->contains(fn (string $q) => str_contains($q, 'CREATE DATABASE')))->toBeFalse()
+        ->and(Database::where('name', 'shop')->exists())->toBeFalse();
+});
+
 it('removes an engine user when remote firewall setup fails', function () {
     fakeDb();
     app()->instance(Firewall::class, new class implements Firewall

@@ -23,6 +23,29 @@ class CreateDatabaseUser
     ) {}
 
     /**
+     * Refuse a name the engine already has, before anything is changed (bug
+     * #36): the engine refuses a second account with the same name and host,
+     * and that refusal reached the user as a 500 with a reference.
+     *
+     * Public so a new database with a first user asks before the database is
+     * made, rather than making it and dropping it again.
+     *
+     * @param  array{username: string, connection_preference?: string, host?: ?string}  $data
+     *
+     * @throws ValidationException
+     */
+    public function ensureUsernameFree(string $engine, string $database, array $data, string $field = 'username'): void
+    {
+        $host = $this->resolveHost($data['connection_preference'] ?? 'localhost', $data['host'] ?? null);
+
+        if ($this->manager->engine($engine)->userExists($data['username'], $host, $database)) {
+            throw ValidationException::withMessages([
+                $field => [__('errors/database.user_exists', ['username' => $data['username']])],
+            ]);
+        }
+    }
+
+    /**
      * @param  array{username: string, password?: ?string, connection_preference?: string, host?: ?string, restart_cluster?: bool}  $data
      */
     public function execute(Database $database, array $data): DatabaseUser
@@ -39,14 +62,7 @@ class CreateDatabaseUser
         $engine = $this->manager->engine($database->engine);
         $engineUserCreated = false;
 
-        // Before anything is changed (bug #36): the engine refuses a second
-        // account with the same name and host, and that refusal reached the
-        // user as a 500 with a reference.
-        if ($engine->userExists($data['username'], $host, $database->name)) {
-            throw ValidationException::withMessages([
-                'username' => [__('errors/database.user_exists', ['username' => $data['username']])],
-            ]);
-        }
+        $this->ensureUsernameFree($database->engine, $database->name, $data);
 
         try {
             $engine->createUser($data['username'], $host, $password, $database->name);

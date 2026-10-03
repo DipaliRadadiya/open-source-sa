@@ -29,6 +29,10 @@ class CreateDatabase
             $charset = $data['charset'] ?? null;
             $collation = $data['collation'] ?? null;
 
+            if (! empty($data['create_user'])) {
+                $this->createUser->ensureUsernameFree($engineName, $data['name'], $data['create_user'], 'create_user.username');
+            }
+
             $engine->createDatabase($data['name'], $charset, $collation);
 
             // Left blank, the engine picked its own default — record what it
