@@ -137,15 +137,15 @@ export function ProcessCard({ application, canManage = false, className }) {
         {canManage ? (
           <div className="flex flex-wrap gap-2">
             {[
-              // Each disabled action says why.
-              { action: "start", icon: Play, reason: state === "active" ? t("alreadyRunning") : null },
-              { action: "restart", icon: RotateCw, reason: state === "active" ? null : t("notRunning") },
-              { action: "stop", icon: Square, reason: state === "active" ? null : t("notRunning") },
-            ].map(({ action, icon: Icon, reason }) => (
+              // Each disabled action says why; Stop is red as on the Services page.
+              { action: "start", icon: Play, variant: "default", reason: state === "active" ? t("alreadyRunning") : null },
+              { action: "restart", icon: RotateCw, variant: "outline", reason: state === "active" ? null : t("notRunning") },
+              { action: "stop", icon: Square, variant: "destructive", reason: state === "active" ? null : t("notRunning") },
+            ].map(({ action, icon: Icon, variant, reason }) => (
               <Button
                 key={action}
                 size="sm"
-                variant="outline"
+                variant={variant}
                 // Stop takes the application offline, so it asks first.
                 onClick={() => (action === "stop" ? setConfirmStop(true) : run(action))}
                 disabled={Boolean(pending) || Boolean(reason)}

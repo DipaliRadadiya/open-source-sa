@@ -237,3 +237,11 @@ test("sync: a scan that has found nothing yet shows it is working, not 'Nothing 
   assert.match(pending, /<ResultsHeader \/>/);
   assert.match(pending, /<Skeleton/);
 });
+
+test("process card: Start, Restart and Stop each look like what they do", () => {
+  const card = read("components/applications/process-card.jsx");
+  assert.match(card, /action: "start", icon: Play, variant: "default"/);
+  assert.match(card, /action: "restart", icon: RotateCw, variant: "outline"/);
+  assert.match(card, /action: "stop", icon: Square, variant: "destructive"/);
+  assert.match(card, /variant=\{variant\}/);
+});

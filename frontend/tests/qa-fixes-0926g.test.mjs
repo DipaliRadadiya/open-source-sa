@@ -21,7 +21,7 @@ test("AD-B: Security labels wrap instead of being cut off", () => {
 test("AD-C / AD-I: Stop asks first; buttons follow the process state", () => {
   assert.match(proc, /action === "stop" \? setConfirmStop\(true\) : run\(action\)/);
   assert.match(proc, /<ConfirmDialog[\s\S]*onConfirm=\{\(\) => run\("stop"\)\}/);
-  assert.match(proc, /action: "start", icon: Play, reason: state === "active"/);
+  assert.match(proc, /action: "start", icon: Play, variant: "default", reason: state === "active"/);
 });
 
 test("AD-D: Deploy now waits for a running deploy", () => {
