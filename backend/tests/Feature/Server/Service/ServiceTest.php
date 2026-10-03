@@ -531,5 +531,54 @@ it('leaves the clusters alone for start, stop and restart, which reach them alre
     $this->withHeader('Authorization', "Bearer {$this->token}")
         ->putJson('/api/services/postgresql', ['action' => 'restart'])->assertOk();
 
-    Process::assertNotRan(fn ($p) => ($p->command[1] ?? null) === 'list-units');
+    // No action on a cluster unit. Listing them is a read, which the reply
+    // now does to report their memory (bug #13).
+    Process::assertNotRan(fn ($p) => in_array($p->command[1] ?? null, ['start', 'stop', 'restart', 'enable', 'disable'], true)
+        && str_starts_with((string) ($p->command[2] ?? ''), 'postgresql@'));
+});
+
+it('reports PostgreSQL\'s memory from its clusters, not the empty meta unit (bug #13)', function () {
+    // `postgresql` is a oneshot wrapper: systemd tracks no memory for it, so
+    // the row read "—" forever while 18-main used 50 MB (measured on nginx 118).
+    $memory = [
+        'postgresql' => '[not set]',
+        'postgresql@18-main.service' => '52355072',
+        'postgresql@16-main.service' => '[not set]',
+    ];
+
+    Process::fake(function ($process) use ($memory) {
+        $command = $process->command;
+
+        if (($command[0] ?? '') === 'pg_isready') {
+            return Process::result(output: '127.0.0.1:5432 - accepting connections');
+        }
+
+        if (($command[1] ?? null) === 'list-units') {
+            return Process::result(output: "postgresql@18-main.service loaded active running PostgreSQL Cluster 18-main\npostgresql@16-main.service loaded inactive dead PostgreSQL Cluster 16-main\n");
+        }
+
+        if (($command[1] ?? null) === 'show') {
+            $asked = array_values(array_filter(array_slice($command, 2), fn (string $a) => ! str_starts_with($a, '--')));
+
+            return Process::result(output: implode("\n\n", array_map(fn (string $unit) => implode("\n", [
+                'Id='.(str_ends_with($unit, '.service') ? $unit : "{$unit}.service"),
+                'LoadState='.(array_key_exists($unit, $memory) ? 'loaded' : 'not-found'),
+                'ActiveState='.(array_key_exists($unit, $memory) ? 'active' : 'inactive'),
+                'UnitFileState=enabled',
+                'CanReload=no',
+                'MemoryCurrent='.($memory[$unit] ?? '[not set]'),
+                'CPUUsageNSec=[not set]',
+                'TasksCurrent='.($unit === 'postgresql@18-main.service' ? '7' : '[not set]'),
+            ]), $asked))."\n");
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $usage = postgresServiceRow()['usage'];
+
+    // The running cluster's figures; the stopped one adds nothing.
+    expect($usage['memory_bytes'])->toBe(52355072)
+        ->and($usage['memory_human'])->toBe('49.9 MB')
+        ->and($usage['tasks'])->toBe(7);
 });

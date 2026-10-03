@@ -152,7 +152,7 @@ class ServiceManager
             // UI only offers the button where it means something.
             'testable' => $this->tester->testable($service['key']),
             // A stopped unit has no resources to report — see ServiceUsage.
-            'usage' => $state['status'] === 'active' ? $this->usage->build($service['unit'], $state['properties']) : null,
+            'usage' => $state['status'] === 'active' ? $this->usage->build($service['unit'], $this->usageProperties($service, $state['properties'])) : null,
             // This service's log files, as keys into the existing Logs feature
             // rather than a second way to read a log. Only sources that exist
             // on the box appear, so the button is never a dead end.
@@ -295,6 +295,40 @@ class ServiceManager
         }
 
         return $result;
+    }
+
+    /**
+     * The resource figures a service's row should show.
+     *
+     * Bug #13: `postgresql` is a meta unit with no process of its own, so its
+     * MemoryCurrent is "[not set]" and the row showed "—" forever, while the
+     * database ran as `postgresql@18-main`. A service whose catalog entry
+     * names its instances reports their sum instead.
+     *
+     * @param  array{unit: string, instances?: string}  $service
+     * @param  array<string, string|null>  $properties
+     * @return array<string, string|null>
+     */
+    private function usageProperties(array $service, array $properties): array
+    {
+        if (! isset($service['instances']) || ($units = $this->instances($service['instances'])) === []) {
+            return $properties;
+        }
+
+        $sum = ['MemoryCurrent' => null, 'CPUUsageNSec' => null, 'TasksCurrent' => null];
+
+        foreach ($this->inspectMany($units) as $state) {
+            foreach (array_keys($sum) as $key) {
+                $value = $state['properties'][$key] ?? null;
+
+                // systemd prints "[not set]" for a figure it does not track.
+                if (is_string($value) && ctype_digit($value)) {
+                    $sum[$key] = (string) ((int) $sum[$key] + (int) $value);
+                }
+            }
+        }
+
+        return array_map(fn (?string $value) => $value, $sum + $properties);
     }
 
     /**
