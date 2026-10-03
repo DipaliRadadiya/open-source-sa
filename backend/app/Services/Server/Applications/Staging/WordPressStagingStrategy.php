@@ -8,6 +8,7 @@ use App\Exceptions\Server\Application\StagingOperationException;
 use App\Models\Application;
 use App\Models\Database;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\WordPressUrlVariants;
 use App\Services\Server\Databases\DatabaseIdentifier;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\DatabasePassword;
@@ -65,7 +66,10 @@ class WordPressStagingStrategy implements StagingStrategy
 
         $this->writeWpConfig($staging, $stagingDocumentRoot, $stagingDatabase, "{$connection->host}:{$connection->port}");
 
-        $this->searchReplace($staging, $stagingDocumentRoot, $production->url(), $staging->url());
+        // Every spelling, not just the one URL (bug #92): a link saved as
+        // http:// or in the block editor's escaped form otherwise still points
+        // at the live site.
+        $this->rewriteUrls($staging, $stagingDocumentRoot, $production, $staging);
 
         $this->writeMailTrap($staging, $stagingDocumentRoot);
         $this->writeNoIndexPlugin($staging, $stagingDocumentRoot);
@@ -214,59 +218,19 @@ class WordPressStagingStrategy implements StagingStrategy
     }
 
     /**
-     * Replace every spelling of the source URL, longest first.
-     *
-     * One literal `https://staging.example.com` is not enough, and the gaps
-     * are the ones that leave a site half-migrated:
-     *
-     *  - **Scheme mismatch.** `Application::url()` builds from the site's own
-     *    scheme, so a staging site on http and a production site on https
-     *    produce two strings that never match each other. That single case
-     *    misses *everything*.
-     *  - **Escaped slashes.** The block editor and any JSON-encoded option
-     *    store `https:\/\/host`. wp-cli does not unescape before matching, so
-     *    a plain replace walks straight past post content.
-     *  - **Protocol-relative.** `//host` appears in enqueued asset URLs.
-     *  - **Bare domain.** Email templates, plugin settings and CSV exports
-     *    keep the host with no scheme at all.
-     *
-     * Ordered longest to shortest so the bare-domain pass runs last and
-     * cannot corrupt a string an earlier, more specific pass already fixed.
+     * Replace every spelling of the source URL — see WordPressUrlVariants.
      */
     private function rewriteUrls(Application $application, string $documentRoot, Application $from, Application $to): void
     {
-        foreach ($this->urlVariants($from, $to) as [$search, $replace]) {
+        foreach (WordPressUrlVariants::between($from, $to) as $variant) {
+            [$search, $replace] = $variant;
+
             if ($search === $replace) {
                 continue;
             }
 
-            $this->searchReplace($application, $documentRoot, $search, $replace);
+            $this->searchReplace($application, $documentRoot, $search, $replace, $variant[2] ?? false);
         }
-    }
-
-    /**
-     * @return array<int, array{0: string, 1: string}>
-     */
-    private function urlVariants(Application $from, Application $to): array
-    {
-        $fromHost = $from->domain;
-        $toHost = $to->domain;
-
-        $variants = [];
-
-        // Both schemes for each side, so a staging-on-http / production-on-
-        // https pair is still caught.
-        foreach (['https://', 'http://'] as $scheme) {
-            $variants[] = [$scheme.$fromHost, $to->url()];
-            $variants[] = [str_replace('/', '\\/', $scheme).$fromHost, str_replace('/', '\\/', $to->url())];
-        }
-
-        $variants[] = ['//'.$fromHost, '//'.$toHost];
-        $variants[] = ['\\/\\/'.$fromHost, '\\/\\/'.$toHost];
-        // Last, and only the host: anything with a scheme is already done.
-        $variants[] = [$fromHost, $toHost];
-
-        return $variants;
     }
 
     /**
@@ -434,7 +398,7 @@ class WordPressStagingStrategy implements StagingStrategy
      * `--skip-columns=guid` protects feed identity;
      * `--skip-plugins --skip-themes` survives a broken one.
      */
-    private function searchReplace(Application $application, string $documentRoot, string $from, string $to): void
+    private function searchReplace(Application $application, string $documentRoot, string $from, string $to, bool $regex = false): void
     {
         $this->runAsSiteUser($application, [
             $this->wpCliBinary(),
@@ -443,6 +407,7 @@ class WordPressStagingStrategy implements StagingStrategy
             '--all-tables', '--precise', '--recurse-objects',
             '--skip-columns=guid',
             '--skip-plugins', '--skip-themes',
+            ...($regex ? ['--regex', '--regex-delimiter='.WordPressUrlVariants::REGEX_DELIMITER] : []),
         ]);
     }
 

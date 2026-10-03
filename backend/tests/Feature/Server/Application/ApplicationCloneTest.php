@@ -157,6 +157,44 @@ it('clones a WordPress site including its database', function () {
     Process::assertRan(fn ($p) => in_array('runuser', $p->command, true) && in_array('search-replace', $p->command, true));
 });
 
+it('rewrites every spelling of the source address, not just its URL (bug #92)', function () {
+    fakeCloneServer();
+
+    $source = Application::forceCreate([
+        'system_user_id' => $this->systemUser->id,
+        'name' => 'Shop', 'slug' => 'shop', 'domain' => 'shop.test', 'site_type' => 'wordpress',
+        'serving_profile' => 'php', 'status' => 'active', 'web_root' => '/', 'php_version' => '8.4',
+    ]);
+    $database = Database::create(['name' => 'shop_db', 'engine' => 'mysql', 'application_id' => $source->id]);
+    DatabaseUser::create(['database_id' => $database->id, 'username' => 'shop_user', 'password' => 'secret', 'connection_preference' => 'localhost', 'host' => 'localhost']);
+
+    // A subdomain of the source: the case a plain bare-domain pass would turn
+    // into copy.copy.shop.test, because every address already rewritten
+    // still contains `shop.test`.
+    expect(runClone($source, 'copy.shop.test')->status->value)->toBe('completed');
+
+    $searched = fn (string $term, bool $regex = false) => Process::assertRan(function ($p) use ($term, $regex) {
+        $i = array_search('search-replace', $p->command, true);
+
+        return $i !== false && $p->command[$i + 1] === $term
+            && in_array('--regex', $p->command, true) === $regex;
+    });
+
+    // Links saved over http:// pointed at the original — the reported bug.
+    $searched('http://shop.test');
+    $searched('https://shop.test');
+    // The block editor's escaped form, and protocol-relative asset URLs.
+    $searched('http:\\/\\/shop.test');
+    $searched('//shop.test');
+    // The bare host only as a whole name.
+    $searched('(?<![A-Za-z0-9.-])shop\\.test(?![A-Za-z0-9-]|\\.[A-Za-z0-9])', regex: true);
+    Process::assertNotRan(function ($p) {
+        $i = array_search('search-replace', $p->command, true);
+
+        return $i !== false && $p->command[$i + 1] === 'shop.test';
+    });
+});
+
 it('refuses to clone a database-needing type with no clone recipe', function () {
     fakeCloneServer();
 

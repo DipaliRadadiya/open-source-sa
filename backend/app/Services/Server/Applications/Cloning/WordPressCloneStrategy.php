@@ -8,6 +8,7 @@ use App\Exceptions\Server\Application\CloneOperationException;
 use App\Models\Application;
 use App\Models\Database;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\WordPressUrlVariants;
 use App\Services\Server\Databases\DatabaseIdentifier;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\DatabasePassword;
@@ -61,7 +62,16 @@ class WordPressCloneStrategy implements CloneStrategy
 
         $this->writeWpConfig($clone, $documentRoot, $cloneDatabase, "{$connection->host}:{$connection->port}");
 
-        $this->searchReplace($clone, $documentRoot, $source->url(), $clone->url());
+        // Every spelling of the source's address, not just its current URL
+        // (bug #92): a link saved as http://, in the block editor's escaped
+        // form or as a bare domain otherwise still pointed at the original.
+        foreach (WordPressUrlVariants::between($source, $clone) as $variant) {
+            [$search, $replace] = $variant;
+
+            if ($search !== $replace) {
+                $this->searchReplace($clone, $documentRoot, $search, $replace, $variant[2] ?? false);
+            }
+        }
     }
 
     private function createCloneDatabase(Application $source, Application $clone, string $engine): Database
@@ -103,7 +113,7 @@ class WordPressCloneStrategy implements CloneStrategy
         $this->writeSecretFile($clone, "{$documentRoot}/wp-config.php", $contents);
     }
 
-    private function searchReplace(Application $application, string $documentRoot, string $from, string $to): void
+    private function searchReplace(Application $application, string $documentRoot, string $from, string $to, bool $regex = false): void
     {
         $result = $this->serverOps->run(
             array_merge(
@@ -115,6 +125,7 @@ class WordPressCloneStrategy implements CloneStrategy
                     '--all-tables', '--precise', '--recurse-objects',
                     '--skip-columns=guid',
                     '--skip-plugins', '--skip-themes',
+                    ...($regex ? ['--regex', '--regex-delimiter='.WordPressUrlVariants::REGEX_DELIMITER] : []),
                 ],
             ),
             $this->context($application, 'clone_wp_cli'),

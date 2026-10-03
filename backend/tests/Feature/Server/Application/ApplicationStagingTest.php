@@ -626,6 +626,34 @@ function searchReplaceTerms(array $commands): array
     return $terms;
 }
 
+it('points the new staging copy at itself under every spelling of the live address (bug #92)', function () {
+    fakeStagingServer();
+
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    $searched = fn (string $term, bool $regex = false) => Process::assertRan(function ($p) use ($term, $regex) {
+        $i = array_search('search-replace', $p->command, true);
+
+        return $i !== false && $p->command[$i + 1] === $term
+            && in_array('--regex', $p->command, true) === $regex;
+    });
+
+    // Only `https://shop.test` was replaced, so a link saved over http://, in
+    // the block editor's escaped form or as a bare host still led to live.
+    $searched('https://shop.test');
+    $searched('http://shop.test');
+    $searched('http:\\/\\/shop.test');
+    $searched('//shop.test');
+    // staging.shop.test contains shop.test: a plain bare pass would have made
+    // staging.staging.shop.test of every address already rewritten.
+    $searched('(?<![A-Za-z0-9.-])shop\\.test(?![A-Za-z0-9-]|\\.[A-Za-z0-9])', regex: true);
+    Process::assertNotRan(function ($p) {
+        $i = array_search('search-replace', $p->command, true);
+
+        return $i !== false && $p->command[$i + 1] === 'shop.test';
+    });
+});
+
 it('never copies wp-config.php onto production', function () {
     fakeStagingServer();
     $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
