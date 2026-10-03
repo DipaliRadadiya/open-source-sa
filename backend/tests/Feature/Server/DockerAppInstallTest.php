@@ -8,6 +8,7 @@ use App\Services\Applications\SiteTypeManager;
 use App\Services\Applications\Types\AbstractDockerAppType;
 use App\Services\Server\Applications\ComposeValidator;
 use App\Services\Server\Applications\Installers\DockerAppInstaller;
+use App\Services\Server\Applications\InstallerManager;
 use App\Services\Server\HostCpus;
 use App\Services\Server\ServerOps;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -140,6 +141,25 @@ dataset('docker apps', [
     // so the second app is a decision still to be made and the dataset has one
     // entry rather than a card that 404s at `docker pull`.
 ]);
+
+it('is wired to the Docker installer, for each app', function (string $type, int $port, array $roles) {
+    // **The test that was missing, and what it cost.** Registering an app takes
+    // three edits to `config/server.php`: the type class, the `docker_apps`
+    // definition, and an `installers.<name>.driver` entry. Chatwoot and
+    // Excalidraw shipped with the first two and not the third. Every test in this
+    // file still passed, because `installDockerApp()` calls the installer
+    // directly — so the suite proved the file renders and never asked whether
+    // anything would render it.
+    //
+    // On a real box the site fell back to the GENERIC Docker driver, which wrote
+    // a compose file with an empty `image:` and a bind mount of the site
+    // directory. `docker compose up` refused it: "services.app.image must be a
+    // string". An app installed from the catalog, failing on an empty image.
+    expect(app(InstallerManager::class)->hasInstaller($type))
+        ->toBeTrue("{$type} has no installers.{$type}.driver — it will fall back to the generic Docker site")
+        ->and(app(InstallerManager::class)->installerForType($type))
+        ->toBeInstanceOf(DockerAppInstaller::class);
+})->with('docker apps');
 
 it('writes a compose file that parses, for each app', function (string $type, int $port, array $roles) {
     $application = installDockerApp(dockerAppSite($type));

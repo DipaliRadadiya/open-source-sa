@@ -1469,6 +1469,20 @@ return [
             'driver' => DockerAppInstaller::class,
         ],
 
+
+        'chatwoot' => [
+
+            'driver' => DockerAppInstaller::class,
+
+        ],
+
+
+        'excalidraw' => [
+
+            'driver' => DockerAppInstaller::class,
+
+        ],
+
         'metabase' => [
             'driver' => DockerAppInstaller::class,
         ],
