@@ -3,6 +3,7 @@
 namespace App\Services\Server\Setup\Components;
 
 use App\Contracts\SetupComponent;
+use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\WpCli\WpCli;
 
 /**
@@ -14,7 +15,20 @@ use App\Services\Server\WpCli\WpCli;
  */
 class WpCliComponent implements SetupComponent
 {
-    public function __construct(private WpCli $wpCli) {}
+    public function __construct(
+        private WpCli $wpCli,
+        private ServerCapabilities $capabilities,
+    ) {}
+
+    /**
+     * Only where WordPress can be hosted, which is a PHP site. Missing, this
+     * method made the class abstract and every Setup page a fatal error once
+     * `applies()` joined the contract.
+     */
+    public function applies(): bool
+    {
+        return $this->capabilities->hosts('php');
+    }
 
     public function key(): string
     {

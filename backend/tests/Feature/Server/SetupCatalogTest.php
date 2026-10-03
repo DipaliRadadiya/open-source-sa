@@ -203,3 +203,20 @@ it('lets a user with only view access read it', function () {
         ->getJson('/api/setup')
         ->assertOk();
 });
+
+it('offers wp-cli only where PHP sites are hosted', function () {
+    // WpCliComponent predated `applies()` on the contract; without it the
+    // class could not even be loaded and every Setup page was a fatal error.
+    fakeBareServer();
+
+    expect(collect(fetchSetup()['components'])->pluck('key'))->toContain('wp_cli');
+
+    ServerCapability::query()->delete();
+    ServerCapability::create([
+        'stack' => 'docker', 'web_server' => 'nginx',
+        'capabilities' => ['php' => true, 'node' => false, 'serving_profiles' => ['docker']],
+        'source' => 'installer', 'verified_at' => now(),
+    ]);
+
+    expect(collect(fetchSetup()['components'])->pluck('key'))->not->toContain('wp_cli');
+});
