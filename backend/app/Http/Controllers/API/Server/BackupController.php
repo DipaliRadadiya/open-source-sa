@@ -362,6 +362,11 @@ class BackupController extends Controller
         // so a download already in flight is unaffected when it lapses.
         $expiresAt = now()->addMinutes(5);
 
+        // Made before the log entry, because making it can still be refused
+        // (a destination with no signed links). Bug #45: the entry used to
+        // come first, so a refused download was recorded as "Downloaded".
+        $url = $driverUrl ?? $this->signedUrl($disk, $key, $expiresAt);
+
         // A link to every file on the site plus its database dump. Who asked
         // for it belongs in the audit trail — the URL itself does not, since
         // it carries a working credential for those five minutes.
@@ -372,7 +377,7 @@ class BackupController extends Controller
 
         return response()->json([
             'download' => [
-                'url' => $driverUrl ?? $this->signedUrl($disk, $key, $expiresAt),
+                'url' => $url,
 
                 // Only meaningful for a signed URL. A Drive link does not
                 // expire — it is gated on who the browser is signed in as, not
