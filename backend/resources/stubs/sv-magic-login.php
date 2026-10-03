@@ -42,22 +42,34 @@ function sv_magic_login_maybe_authenticate()
     $presented = (string) $_POST[SV_MAGIC_LOGIN_FIELD];
     $stored = get_option(SV_MAGIC_LOGIN_OPTION);
 
-    // Consumed before it is checked, not after. Deleting on the way out leaves
-    // a window in which two concurrent requests both read a valid token; the
-    // second one should find nothing whatever the first one decides.
-    delete_option(SV_MAGIC_LOGIN_OPTION);
-
     if (! is_array($stored) || empty($stored['hash']) || empty($stored['user_id']) || empty($stored['expires_at'])) {
         return;
     }
 
+    // A spent token is cleaned up, and nothing more.
     if (time() > (int) $stored['expires_at']) {
+        delete_option(SV_MAGIC_LOGIN_OPTION);
+
         return;
     }
 
     // Constant time: a timing-comparable check on a secret this valuable is
     // worth avoiding even though the token is single-use and short-lived.
+    //
+    // A wrong value leaves the token where it is. It used to be deleted
+    // before this check, so any visitor posting the field with any value
+    // cancelled the administrator's pending login (bug #97). Guessing is not
+    // the risk that ordering guarded against: the token is 64 random
+    // characters and lives for seconds.
     if (! hash_equals((string) $stored['hash'], hash('sha256', $presented))) {
+        return;
+    }
+
+    // Consumed here, and only one request can consume it: delete_option()
+    // is true only for the request whose DELETE removed the row. Two
+    // concurrent requests with the right token both get this far, and the
+    // second finds nothing to delete.
+    if (! delete_option(SV_MAGIC_LOGIN_OPTION)) {
         return;
     }
 
