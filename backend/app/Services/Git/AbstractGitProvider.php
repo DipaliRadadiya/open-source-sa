@@ -3,8 +3,10 @@
 namespace App\Services\Git;
 
 use App\Contracts\GitProvider;
+use App\Exceptions\BlockedHostException;
 use App\Exceptions\Server\GitProviderException;
 use App\Models\GitAccount;
+use App\Support\RemoteHost;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Carbon;
@@ -24,12 +26,31 @@ abstract class AbstractGitProvider implements GitProvider
 {
     protected function client(GitAccount $account): PendingRequest
     {
+        // Pinned to an address checked just now (bug #34): the account's host
+        // was checked when it was saved, but a name can resolve to something
+        // else later, and `127.0.0.1.nip.io` never looked like loopback at
+        // all. A blocked address throws here, inside send(), and reaches the
+        // user as "unreachable" with a reference.
+        $pin = RemoteHost::pin($account->apiBaseUrl());
+
         return Http::withToken($account->token)
             ->acceptJson()
             ->baseUrl($account->apiBaseUrl())
             ->connectTimeout((int) config('server.git.connect_timeout', 3))
             ->timeout((int) config('server.git.timeout', 5))
-            ->maxRedirects((int) config('server.git.max_redirects', 3));
+            ->withOptions([
+                ...($pin !== null ? ['curl' => [CURLOPT_RESOLVE => [$pin]]] : []),
+                // A redirect is a new host, checked the same way.
+                'allow_redirects' => [
+                    'max' => (int) config('server.git.max_redirects', 3),
+                    'protocols' => ['https'],
+                    'on_redirect' => function ($request, $response, $uri): void {
+                        if (RemoteHost::resolvesToBlocked($uri->getHost())) {
+                            throw new BlockedHostException($uri->getHost());
+                        }
+                    },
+                ],
+            ]);
     }
 
     /**

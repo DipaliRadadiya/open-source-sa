@@ -7,6 +7,7 @@ use App\Http\Controllers\API\Server\BackupController;
 use App\Models\StorageDestination;
 use App\Rules\SafeRemoteHost;
 use App\Rules\SingleLine;
+use App\Support\RemoteHost;
 
 /**
  * Shared behaviour for the providers that address a host and land in a real
@@ -73,7 +74,13 @@ abstract class RemoteHostDriver implements StorageDriver
      */
     public function preflight(StorageDestination $destination): ?string
     {
-        return null;
+        // What the host resolves to now (bug #34), not only what it said
+        // when it was saved. Not pinned for the connection itself: connecting
+        // by address would change the name a saved SFTP host key is held
+        // under, and private LAN addresses are allowed here anyway.
+        $host = (string) $destination->configValue('host', '');
+
+        return $host !== '' && RemoteHost::resolvesToBlocked($host) ? 'storage.test.forbidden_host' : null;
     }
 
     /**

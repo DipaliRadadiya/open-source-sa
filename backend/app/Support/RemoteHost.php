@@ -2,6 +2,9 @@
 
 namespace App\Support;
 
+use App\Exceptions\BlockedHostException;
+use Closure;
+
 /**
  * Whether a host the panel was asked to connect to is one it may connect to.
  *
@@ -116,6 +119,113 @@ class RemoteHost
         // No letter in the final label means this is not a DNS name.
         // `127.1`, `2130706433` and `0177.0.0.1` all land here.
         return preg_match('/[a-z]/', $last) !== 1;
+    }
+
+    /** @var (Closure(string): array<int, string>)|null */
+    private static ?Closure $resolver = null;
+
+    /**
+     * Swap name resolution, for tests. Null restores the system resolver.
+     *
+     * @param  (Closure(string): array<int, string>)|null  $resolver
+     */
+    public static function resolveUsing(?Closure $resolver): void
+    {
+        self::$resolver = $resolver;
+    }
+
+    /**
+     * The addresses a name resolves to; an IP literal is its own answer and
+     * a name that does not resolve has none.
+     *
+     * IPv4 through gethostbynamel(), which reads /etc/hosts as curl does —
+     * `dns_get_record()` alone would not see a name pointed at 127.0.0.1
+     * there. IPv6 from DNS.
+     *
+     * @return array<int, string>
+     */
+    public static function addresses(string $host): array
+    {
+        $host = self::canonical($host);
+
+        if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
+            return [$host];
+        }
+
+        if (self::$resolver !== null) {
+            return (self::$resolver)($host);
+        }
+
+        $addresses = gethostbynamel($host) ?: [];
+
+        foreach (@dns_get_record($host, DNS_AAAA) ?: [] as $record) {
+            if (isset($record['ipv6'])) {
+                $addresses[] = $record['ipv6'];
+            }
+        }
+
+        return array_values(array_unique($addresses));
+    }
+
+    /**
+     * Blocked by what was typed, or by any address it resolves to (bug #34).
+     *
+     * `isBlocked()` judges the text only, so `127.0.0.1.nip.io` — a public
+     * wildcard DNS name for 127.0.0.1 — passed and the panel connected to
+     * itself. Any one blocked address is enough: a name with two records is
+     * a coin toss between them.
+     */
+    public static function resolvesToBlocked(string $host): bool
+    {
+        if (self::isBlocked($host)) {
+            return true;
+        }
+
+        foreach (self::addresses($host) as $address) {
+            if (self::isBlocked($address)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * curl's `RESOLVE` entry for this URL: its host pinned to an address that
+     * was just checked, so the connection cannot be sent somewhere else by a
+     * second lookup that answers differently (DNS rebinding).
+     *
+     * Null when there is nothing to pin: an IP literal, or a name that does
+     * not resolve (curl then fails on its own).
+     *
+     * @throws BlockedHostException
+     */
+    public static function pin(string $url): ?string
+    {
+        $parts = parse_url($url);
+
+        if (! is_array($parts) || ! isset($parts['host'])) {
+            return null;
+        }
+
+        $host = self::canonical($parts['host']);
+        $port = $parts['port'] ?? (strtolower($parts['scheme'] ?? 'https') === 'http' ? 80 : 443);
+
+        if (self::resolvesToBlocked($host)) {
+            throw new BlockedHostException($host);
+        }
+
+        if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
+            return null;
+        }
+
+        $address = self::addresses($host)[0] ?? null;
+
+        if ($address === null) {
+            return null;
+        }
+
+        return "{$host}:{$port}:".(str_contains($address, ':') ? "[{$address}]" : $address);
     }
 
     /**

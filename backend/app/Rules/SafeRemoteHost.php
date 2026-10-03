@@ -73,7 +73,8 @@ class SafeRemoteHost implements ValidationRule
             return;
         }
 
-        if (RemoteHost::isBlocked($host)) {
+        // What it resolves to as well as what was typed (bug #34).
+        if (RemoteHost::resolvesToBlocked($host)) {
             $fail($this->blockedKey)->translate();
         }
     }

@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use App\Support\RemoteHost;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
@@ -9,6 +10,11 @@ abstract class TestCase extends BaseTestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // No real DNS in tests: a host check resolves names (bug #34), and a
+        // lookup per validation would make the suite slow and depend on the
+        // network. A test about resolution sets its own answers.
+        RemoteHost::resolveUsing(fn (): array => []);
 
         // The deploy's health check waits for a site that is still coming up —
         // four probes over about fourteen seconds. That schedule is the whole

@@ -4,9 +4,11 @@ namespace App\Services\Server\Backups\Storage\Drivers;
 
 use App\Contracts\StorageDriver;
 use App\Enums\StorageProvider;
+use App\Exceptions\BlockedHostException;
 use App\Models\StorageDestination;
 use App\Rules\SafeProviderHost;
 use App\Rules\SingleLine;
+use App\Support\RemoteHost;
 use Aws\Exception\AwsException;
 use GuzzleHttp\Exception\TransferException;
 use Throwable;
@@ -54,6 +56,12 @@ class S3Driver implements StorageDriver
             // 2019 — and an empty endpoint *means* AWS.
             'use_path_style_endpoint' => $endpoint !== '',
 
+            // Pinned to an address checked now (bug #34): the endpoint was
+            // checked when it was saved, but a name can point somewhere else
+            // later. A blocked one throws BlockedHostException, and the backup
+            // fails before anything connects.
+            ...$this->pinned($endpoint),
+
             // MUST stay true. With `throw => false` the adapter swallows
             // failures and returns null/false, so an upload that never
             // happened looks identical to one that did — a backup reporting
@@ -72,12 +80,32 @@ class S3Driver implements StorageDriver
     }
 
     /**
-     * Nothing to check up front: for this provider a successful write really
-     * does mean the destination works, so the round trip is the whole test.
+     * Only the endpoint's address: for this provider a successful write
+     * really does mean the destination works, so the round trip is the rest
+     * of the test. Checked here as well as in config() so the Test button
+     * says why rather than "could not connect" (bug #34).
      */
     public function preflight(StorageDestination $destination): ?string
     {
-        return null;
+        $endpoint = (string) $destination->configValue('endpoint', '');
+        $host = $endpoint === '' ? null : parse_url($endpoint, PHP_URL_HOST);
+
+        return is_string($host) && RemoteHost::resolvesToBlocked($host) ? 'storage.test.forbidden_host' : null;
+    }
+
+    /**
+     * The SDK's curl option pinning a custom endpoint's host. Nothing for
+     * AWS itself (no endpoint) or a name that does not resolve.
+     *
+     * @return array<string, mixed>
+     *
+     * @throws BlockedHostException
+     */
+    private function pinned(string $endpoint): array
+    {
+        $pin = $endpoint === '' ? null : RemoteHost::pin($endpoint);
+
+        return $pin === null ? [] : ['http' => ['curl' => [CURLOPT_RESOLVE => [$pin]]]];
     }
 
     /**
