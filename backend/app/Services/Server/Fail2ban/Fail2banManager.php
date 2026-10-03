@@ -3,8 +3,11 @@
 namespace App\Services\Server\Fail2ban;
 
 use App\Exceptions\Server\Fail2ban\Fail2banException;
+use App\Services\Server\Applications\DnsVerifier;
+use App\Services\Server\ServerAddresses;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use App\Services\Server\ServerPublicIp;
 use App\Support\SshPort;
 use Symfony\Component\HttpFoundation\IpUtils;
 
@@ -278,7 +281,20 @@ class Fail2banManager
      */
     public function isOwnAddress(string $ip): bool
     {
-        return IpUtils::checkIp($ip, self::ALWAYS_IGNORED);
+        if (IpUtils::checkIp($ip, self::ALWAYS_IGNORED)) {
+            return true;
+        }
+
+        // Its other addresses too (bug #27): banning the public IP on
+        // `recidive` cut the panel off from its own API exactly as loopback
+        // did. The interfaces' addresses, plus the public one, which behind
+        // NAT is on no interface and comes from the cloud's metadata.
+        $own = [
+            ...app(ServerAddresses::class)->local(),
+            app(ServerPublicIp::class)->detect(fn () => app(DnsVerifier::class)->serverIp()),
+        ];
+
+        return IpUtils::checkIp($ip, array_values(array_filter($own)));
     }
 
     /**

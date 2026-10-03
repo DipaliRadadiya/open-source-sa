@@ -5,6 +5,8 @@ use App\Models\ActivityLog;
 use App\Models\User;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Fail2ban\Fail2banManager;
+use App\Services\Server\ServerAddresses;
+use App\Services\Server\ServerPublicIp;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
@@ -450,6 +452,24 @@ it('refuses any address inside the loopback range, not just the literal one', fu
         ->assertUnprocessable()
         ->assertJsonPath('message', __('errors/fail2ban.ip_own_address'));
 });
+
+it('refuses to ban the server\'s own public and interface addresses (bug #27)', function (string $ip) {
+    // Behind NAT the public address is on no interface, so the two come from
+    // different places; banning either on `recidive` cut the panel off.
+    $addresses = Mockery::mock(ServerAddresses::class);
+    $addresses->shouldReceive('local')->andReturn(['127.0.0.1', '::1', '10.50.0.52']);
+    app()->instance(ServerAddresses::class, $addresses);
+    $public = Mockery::mock(ServerPublicIp::class);
+    $public->shouldReceive('detect')->andReturn('23.172.120.118');
+    app()->instance(ServerPublicIp::class, $public);
+    fakeFail2ban(bans: ['recidive' => []]);
+
+    f2b('POST', '/api/fail2ban/bans', ['ip' => $ip, 'jail' => 'recidive'])
+        ->assertUnprocessable()
+        ->assertJsonPath('message', __('errors/fail2ban.ip_own_address'));
+
+    Process::assertNotRan(fn ($p) => in_array('banip', $p->command, true));
+})->with(['public, from metadata' => ['23.172.120.118'], 'private interface' => ['10.50.0.52']]);
 
 it('refuses to ban the address the request comes from', function (string $jail) {
     fakeFail2ban(bans: ['sshd' => [], 'recidive' => []]);
