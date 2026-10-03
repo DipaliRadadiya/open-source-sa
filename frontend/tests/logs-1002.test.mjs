@@ -178,3 +178,10 @@ test("bug #82: the exceptions hint says path only and at least 4 characters", ()
   assert.match(hint, /at least 4 characters/);
   assert.doesNotMatch(hint, /browser name\. Keep|matched against the web address, the part after/);
 });
+
+test("a disabled Select says why, like Button and Input", () => {
+  const select = read("components/ui/select.jsx");
+  assert.match(select, /SelectDisabledContext\.Provider value=\{Boolean\(props\.disabled\)\}/);
+  assert.match(select, /reason=\{disabled \? \(disabledReason \?\? inheritedReason\?\.reason\) : null\}/);
+  assert.match(select, /if \(disabled && inheritedReason\?\.handled && !disabledReason\) return control;/);
+});

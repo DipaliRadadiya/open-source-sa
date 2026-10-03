@@ -5656,7 +5656,7 @@
       "savingNote": "Compose-Datei wird neu geschrieben und der Container neu erstellt …",
       "saved": "Container-Einstellungen gespeichert.",
       "failed": "Die Container-Einstellungen konnten nicht gespeichert werden.",
-      "noPermission": "Sie haben keine Berechtigung, diese Website zu ändern.",
+      "noPermission": "Sie haben keine Berechtigung, diese Anwendung zu ändern.",
       "nothingToSave": "Nichts hat sich geändert.",
       "volumes": {
         "title": "Volumes",
@@ -5690,7 +5690,8 @@
         "acknowledgeFailed": "Das konnte nicht vermerkt werden. Die Zugangsdaten sind unverändert.",
         "laterHint": "Sie bleiben unter Container → Anzeigen verfügbar.",
         "loading": "Zugangsdaten werden geladen",
-        "failed": "Die Zugangsdaten konnten nicht geladen werden. Schließen Sie dies nicht — laden Sie die Seite neu."
+        "failed": "Die Zugangsdaten konnten nicht geladen werden. Schließen Sie dies nicht — laden Sie die Seite neu.",
+        "valuesNotShown": "Verfügbar, sobald die Werte angezeigt werden."
       },
       "registry": "Registry",
       "noRegistry": "Keine — anonym laden",

@@ -5656,7 +5656,7 @@
       "savingNote": "Rewriting the compose file and recreating the container…",
       "saved": "Container settings saved.",
       "failed": "Couldn't save the container settings.",
-      "noPermission": "You don't have permission to change this site.",
+      "noPermission": "You don't have permission to change this application.",
       "nothingToSave": "Nothing has changed.",
       "volumes": {
         "title": "Volumes",
@@ -5690,7 +5690,8 @@
         "acknowledgeFailed": "Couldn't record that. The credentials are unchanged.",
         "laterHint": "They stay available under Container → Reveal.",
         "loading": "Loading credentials",
-        "failed": "Couldn't load the credentials. Don't dismiss this — try reloading the page."
+        "failed": "Couldn't load the credentials. Don't dismiss this — try reloading the page.",
+        "valuesNotShown": "Available once the values are on screen."
       },
       "registry": "Registry",
       "noRegistry": "None — pull anonymously",

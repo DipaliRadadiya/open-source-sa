@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Eye, KeyRound, Loader2 } from "lucide-react";

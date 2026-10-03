@@ -41,6 +41,7 @@ export function DockerResourcesPanel({
   canManageSites = false,
 }) {
   const t = useTranslations("docker");
+  const tc = useTranslations("common");
   const { refreshAndWait } = useRefresh();
 
   const [pending, setPending] = useState(null);
@@ -94,7 +95,12 @@ export function DockerResourcesPanel({
                 className="h-9 w-48"
                 aria-label={t("networks.placeholder")}
               />
-              <Button type="submit" size="sm" disabled={pending === "create-network" || !newNetwork.trim()}>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={pending === "create-network" || !newNetwork.trim()}
+                disabledReason={!newNetwork.trim() ? tc("enterAValue") : null}
+              >
                 <Plus className="size-4" />
                 {t("create")}
               </Button>
@@ -265,7 +271,12 @@ export function DockerResourcesPanel({
                 className="h-9 w-48"
                 aria-label={t("volumes.placeholder")}
               />
-              <Button type="submit" size="sm" disabled={pending === "create-volume" || !newVolume.trim()}>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={pending === "create-volume" || !newVolume.trim()}
+                disabledReason={!newVolume.trim() ? tc("enterAValue") : null}
+              >
                 <Plus className="size-4" />
                 {t("create")}
               </Button>
