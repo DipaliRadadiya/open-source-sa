@@ -496,6 +496,19 @@ class ApplicationProvisioner
             $this->containers->apply($application, $documentRoot);
             $this->progress->record('start_app');
 
+            // The post-start hook, which this early return used to skip — so the
+            // branch above fixed "the supervisor was never called from here" and
+            // then reproduced it one method along. A no-op for every app that
+            // passes its admin credential in as an environment variable, which is
+            // all of them but Chatwoot: its production seeds create no user, only
+            // a flag opening a setup page to whoever asks first.
+            //
+            // Not preceded by `readiness->verify()` the way the systemd path is.
+            // That check has its own timeout and 19 container apps currently reach
+            // Active without it; `afterStart()` does its own waiting, for as long
+            // as a first-boot migration takes.
+            $this->installers->afterStart($application, $documentRoot);
+
             return;
         }
 

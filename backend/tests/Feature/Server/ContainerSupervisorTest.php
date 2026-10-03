@@ -370,6 +370,32 @@ it('is actually reached by provisioning, not merely callable', function () {
         ->and(substr_count($provisioner, "serving_profile === 'docker'"))->toBeGreaterThanOrEqual(2);
 });
 
+it('runs the post-start hook for a container application too', function () {
+    // The same gap, one method along. The docker branch of `startProcess()`
+    // returns early — so the fix for "the supervisor was never called from here"
+    // left `afterStart()` unreachable for every container app, and the hook that
+    // claims Chatwoot's first-run page was dead code for the one case it was
+    // written for. Found on a real box: the site reached Active with
+    // `/installation/onboarding` still answering 200 to anyone.
+    //
+    // Reads the wiring, like the test above, because the alternative is a full
+    // provision and this is the fact that actually broke.
+    $source = file_get_contents(base_path('app/Services/Server/Applications/ApplicationProvisioner.php'));
+
+    // From `startProcess()` specifically — `serving_profile === 'docker'` appears
+    // earlier in the file too, and anchoring on the first match read most of the
+    // class instead of the branch in question.
+    $method = strpos($source, 'private function startProcess(');
+    $branch = substr($source, $method, strpos($source, 'return;', $method) - $method);
+
+    expect($branch)
+        ->toContain("serving_profile === 'docker'")
+        // The CALL, not the word. Asserting on `afterStart` alone passed with the
+        // call deleted, because the comment above it says the word -- a source
+        // assertion that a comment can satisfy is not an assertion about code.
+        ->toContain('$this->installers->afterStart(');
+});
+
 it('persists the type fields that are columns', function () {
     // `typeSettings()` skips fields that are real columns — correctly, a
     // column should not live in a JSON blob — but the create action's own
