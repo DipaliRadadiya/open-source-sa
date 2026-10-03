@@ -78,6 +78,16 @@ it('rejects an invalid frequency or a non-safe category', function () {
         ->assertJsonValidationErrors('categories.0');
 });
 
+it('accepts a threshold of 1 to 99 per cent only (bug #25)', function (int $percent, bool $ok) {
+    // A disk is never more than 100% full, so a threshold of 100 never
+    // triggers: a schedule that saved and then never ran.
+    $response = $this->actingAs($this->admin)->putJson('/api/disk-cleaner/schedule', [
+        'enabled' => true, 'frequency' => 'daily', 'categories' => ['service_logs'], 'threshold_percent' => $percent,
+    ]);
+
+    $ok ? $response->assertOk() : $response->assertJsonValidationErrors('threshold_percent');
+})->with([[1, true], [99, true], [100, false], [0, false]]);
+
 it('deletes the schedule', function () {
     DiskCleanerSchedule::create(['enabled' => true, 'frequency' => 'daily', 'categories' => ['service_logs']]);
 

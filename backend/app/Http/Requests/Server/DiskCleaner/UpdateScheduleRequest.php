@@ -47,7 +47,9 @@ class UpdateScheduleRequest extends FormRequest
              */
             'categories' => ['required', 'array', 'min:1'],
             'categories.*' => [Rule::in($safe)],
-            'threshold_percent' => ['nullable', 'integer', 'min:1', 'max:100'],
+            // 99, not 100: a disk is never more than full, so a threshold of 100
+            // never fires and the schedule never runs (bug #25).
+            'threshold_percent' => ['nullable', 'integer', 'min:1', 'max:99'],
         ];
     }
 }
