@@ -15,6 +15,7 @@ use App\Rules\SupportedPhpVersion;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Applications\ComposeValidator;
 use App\Services\Server\Applications\EngineVersionSupport;
+use App\Services\Server\Applications\GitDeployer;
 use App\Services\Server\Applications\InstallerManager;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Php\PhpVersionManager;
@@ -395,6 +396,37 @@ class StoreApplicationRequest extends FormRequest
 
                 foreach ($verdict['errors'] as $error) {
                     $validator->errors()->add('compose', $error);
+                }
+            },
+
+            // A git site's repository and branch, before anything exists
+            // (bug #101). A wrong URL used to create the site anyway: it said
+            // "Running" and its first deploy failed with no reason shown.
+            // Last of the field checks, and only when everything else passed,
+            // because it reaches the git host.
+            function (Validator $validator) {
+                if ($validator->errors()->isNotEmpty()
+                    || app(SiteTypeManager::class)->find((string) $this->input('site_type'))?->method() !== 'git') {
+                    return;
+                }
+
+                $probe = (new Application)->forceFill([
+                    'git_account_id' => $this->input('git_account_id'),
+                    'repository' => $this->input('repository'),
+                    'repository_url' => $this->input('repository_url'),
+                    'branch' => $this->input('branch'),
+                ]);
+
+                $reason = app(GitDeployer::class)->checkRemoteBranch($probe);
+
+                if ($reason !== null) {
+                    $field = match (true) {
+                        $reason === 'branch_missing' => 'branch',
+                        $this->filled('repository_url') => 'repository_url',
+                        default => 'repository',
+                    };
+
+                    $validator->errors()->add($field, __("validation.git_{$reason}", ['branch' => (string) $this->input('branch')]));
                 }
             },
 

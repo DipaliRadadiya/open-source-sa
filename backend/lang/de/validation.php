@@ -263,4 +263,7 @@ return [
     'filter_content_max' => 'Die Filter-Konfiguration ist zu groß (max. 65535 Zeichen).',
     'basic_auth_conflicts' => 'Passwortschutz kann nicht mit :type verwendet werden. Dessen eigene Oberfläche meldet sich über den Authorization-Header an, den HTTP nur einmal pro Anfrage erlaubt — Basic Auth würde ihn belegen und die Anwendung unerreichbar machen. :type verlangt bereits eigene Zugangsdaten.',
     'basic_auth_username' => 'Der Benutzername darf nur englische Buchstaben, Ziffern und Symbole enthalten, ohne Leerzeichen und ohne Doppelpunkt (:). Browser können andere Zeichen nicht zuverlässig senden.',
+    'git_repository_unreachable' => 'Das Repository war nicht erreichbar. Prüfe die Adresse und ob das Konto (oder das Repository, falls öffentlich) den Zugriff erlaubt.',
+    'git_host_unreachable' => 'Der Server konnte den Git-Host nicht erreichen. Prüfe seine Netzwerkverbindung und versuche es erneut.',
+    'git_branch_missing' => 'Der Branch ":branch" existiert in diesem Repository nicht.',
 ];

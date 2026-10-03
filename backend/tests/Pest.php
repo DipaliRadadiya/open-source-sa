@@ -164,7 +164,27 @@ function fakePostgresOnlyAnswer(mixed $process): ?FakeProcessResult
  */
 function fakeUsableSqlEngine(): void
 {
-    Process::fake(fn (mixed $process) => fakeDatabaseAnswer($process) ?? Process::result(exitCode: 1));
+    Process::fake(fn (mixed $process) => fakeDatabaseAnswer($process) ?? fakeGitRemoteAnswer($process) ?? Process::result(exitCode: 1));
+}
+
+/**
+ * Answer `git ls-remote --heads <url> refs/heads/<branch>` as a reachable
+ * repository that has the branch.
+ *
+ * Creating a git site and changing its branch now ask the repository first
+ * (bugs #71, #101). An empty success is a repository WITHOUT the branch, so a
+ * fake that answers every command with nothing describes a broken setup —
+ * which these tests do not mean.
+ */
+function fakeGitRemoteAnswer(mixed $process): ?FakeProcessResult
+{
+    $command = (array) $process->command;
+
+    if (! in_array('ls-remote', $command, true)) {
+        return null;
+    }
+
+    return Process::result(output: "0123456789abcdef0123456789abcdef01234567\t".end($command)."\n");
 }
 
 /**

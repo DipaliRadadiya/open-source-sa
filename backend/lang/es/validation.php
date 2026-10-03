@@ -288,4 +288,7 @@ return [
     'filter_content_max' => 'La configuración del filtro es demasiado grande (máx. 65535 caracteres).',
     'basic_auth_conflicts' => 'La protección con contraseña no se puede usar con :type. Su propia interfaz inicia sesión con la cabecera Authorization, que HTTP solo permite una vez por petición: la autenticación básica la consumiría y dejaría la aplicación inaccesible. :type ya requiere sus propias credenciales.',
     'basic_auth_username' => 'El nombre de usuario solo puede contener letras inglesas, dígitos y símbolos, sin espacios ni dos puntos (:). Los navegadores no pueden enviar otros caracteres de forma fiable.',
+    'git_repository_unreachable' => 'No se pudo acceder al repositorio. Comprueba la dirección y que la cuenta (o el repositorio, si es público) permite el acceso.',
+    'git_host_unreachable' => 'El servidor no pudo conectar con el servidor git. Comprueba su conexión de red e inténtalo de nuevo.',
+    'git_branch_missing' => 'La rama ":branch" no existe en este repositorio.',
 ];

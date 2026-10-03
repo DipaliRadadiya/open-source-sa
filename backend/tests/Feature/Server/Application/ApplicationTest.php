@@ -10,6 +10,7 @@ use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Testing\TestResponse;
 use Illuminate\Validation\ValidationException;
 
 beforeEach(function () {
@@ -170,6 +171,56 @@ it('creates a git application from a public url with no account', function () {
     // No credential is involved at all for a public repo.
     $response->assertJsonPath('application.git_account_id', null);
     $response->assertJsonPath('application.repository_url', 'https://github.com/laravel/laravel.git');
+});
+
+describe('a git repository that is not there (bug #101)', function () {
+    // A wrong URL used to create the site anyway: it said "Running" and its
+    // first deploy failed with no reason. Now nothing is created.
+    function createFromPublicUrl(string $branch = 'main'): TestResponse
+    {
+        return test()->withHeaders(appHeaders())->postJson('/api/applications', [
+            'site_type' => 'git',
+            'name' => 'Typo',
+            'domain' => 'typo.example.com',
+            'system_user_id' => test()->su->id,
+            'git_source' => 'public_url',
+            'repository_url' => 'https://github.com/laravel/laravl.git',
+            'branch' => $branch,
+            'rendering_type' => 'php',
+        ]);
+    }
+
+    it('refuses a repository that cannot be reached', function () {
+        capableServer();
+        Process::fake(fn ($process) => fakeDatabaseAnswer($process) ?? (in_array('ls-remote', $process->command, true)
+            ? Process::result(errorOutput: "remote: Repository not found.\nfatal: repository 'https://github.com/laravel/laravl.git/' not found", exitCode: 128)
+            : Process::result(exitCode: 1)));
+
+        createFromPublicUrl()->assertUnprocessable()
+            ->assertJsonPath('errors.repository_url.0', __('validation.git_repository_unreachable'));
+
+        expect(Application::where('domain', 'typo.example.com')->exists())->toBeFalse();
+    });
+
+    it('refuses a branch the repository does not have', function () {
+        capableServer();
+        Process::fake(fn ($process) => fakeDatabaseAnswer($process) ?? (in_array('ls-remote', $process->command, true)
+            ? Process::result(output: '')
+            : Process::result(exitCode: 1)));
+
+        createFromPublicUrl('mian')->assertUnprocessable()
+            ->assertJsonPath('errors.branch.0', __('validation.git_branch_missing', ['branch' => 'mian']));
+    });
+
+    it('says when the git host itself cannot be reached', function () {
+        capableServer();
+        Process::fake(fn ($process) => fakeDatabaseAnswer($process) ?? (in_array('ls-remote', $process->command, true)
+            ? Process::result(errorOutput: "fatal: unable to access 'https://github.com/x/y.git/': Could not resolve host: github.com", exitCode: 128)
+            : Process::result(exitCode: 1)));
+
+        createFromPublicUrl()->assertUnprocessable()
+            ->assertJsonPath('errors.repository_url.0', __('validation.git_host_unreachable'));
+    });
 });
 
 it('rejects a public repository url pointing at the server itself', function () {

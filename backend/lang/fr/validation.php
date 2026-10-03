@@ -263,4 +263,7 @@ return [
     'filter_content_max' => 'La configuration du filtre est trop volumineuse (max. 65535 caractères).',
     'basic_auth_conflicts' => 'La protection par mot de passe ne peut pas être utilisée avec :type. Son interface s\'authentifie via l\'en-tête Authorization, que HTTP n\'autorise qu\'une fois par requête — l\'authentification Basic le consommerait et rendrait l\'application inaccessible. :type exige déjà ses propres identifiants.',
     'basic_auth_username' => 'Le nom d’utilisateur ne peut contenir que des lettres latines non accentuées, des chiffres et des symboles, sans espace ni deux-points (:). Les navigateurs ne peuvent pas envoyer d’autres caractères de façon fiable.',
+    'git_repository_unreachable' => 'Le dépôt est inaccessible. Vérifiez l’adresse et que le compte (ou le dépôt, s’il est public) autorise l’accès.',
+    'git_host_unreachable' => 'Le serveur n’a pas pu joindre l’hébergeur git. Vérifiez sa connexion réseau et réessayez.',
+    'git_branch_missing' => 'La branche ":branch" n’existe pas dans ce dépôt.',
 ];

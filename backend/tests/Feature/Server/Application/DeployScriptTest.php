@@ -38,7 +38,7 @@ beforeEach(function () {
         'branch' => 'develop',
     ]);
 
-    Process::fake(fn () => Process::result(exitCode: 0));
+    Process::fake(fn ($process) => fakeGitRemoteAnswer($process) ?? Process::result(exitCode: 0));
 });
 
 function deployNow(): void
@@ -181,6 +181,33 @@ it('strips carriage returns from a script pasted on Windows', function () {
     // `sh` reads the \r as part of the command, producing "command not found:
     // composer\r" — an error that is impossible to see in a terminal.
     expect($this->application->fresh()->deploy_script)->not->toContain("\r");
+});
+
+it('refuses a branch that does not exist in the repository (bug #71)', function () {
+    // The repository answers, but has no such branch: an empty ls-remote.
+    Process::fake(fn ($process) => Process::result(output: ''));
+
+    $this->actingAs($this->admin)
+        ->putJson("/api/applications/{$this->application->id}/deployment-settings", ['branch' => 'no-such-branch'])
+        ->assertStatus(422)
+        ->assertJsonPath('errors.branch.0', __('validation.git_branch_missing', ['branch' => 'no-such-branch']));
+
+    expect($this->application->fresh()->branch)->not->toBe('no-such-branch');
+    Process::assertRan(fn ($process) => in_array('ls-remote', $process->command, true)
+        && end($process->command) === 'refs/heads/no-such-branch');
+});
+
+it('asks the repository only when the branch actually changes', function () {
+    Process::fake();
+
+    $this->actingAs($this->admin)
+        ->putJson("/api/applications/{$this->application->id}/deployment-settings", [
+            'deploy_script' => 'echo ok',
+            'branch' => $this->application->branch,
+        ])
+        ->assertOk();
+
+    Process::assertNotRan(fn ($process) => in_array('ls-remote', $process->command, true));
 });
 
 it('refuses a branch name that is not one', function (string $branch) {

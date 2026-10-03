@@ -36,7 +36,7 @@ beforeEach(function () {
         'shell' => '/bin/bash', 'sudo' => false,
     ]);
 
-    Process::fake(fn () => Process::result(output: ''));
+    Process::fake(fn ($process) => fakeGitRemoteAnswer($process) ?? Process::result(output: ''));
 });
 
 function renderPayload(array $overrides = []): array

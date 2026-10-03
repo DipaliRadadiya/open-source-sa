@@ -2,8 +2,11 @@
 
 namespace App\Http\Requests\Server\Application;
 
+use App\Models\Application;
 use App\Rules\DeployScriptPhpInstalled;
+use App\Services\Server\Applications\GitDeployer;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class UpdateDeploySettingsRequest extends FormRequest
 {
@@ -34,6 +37,33 @@ class UpdateDeploySettingsRequest extends FormRequest
 
             'webhook_enabled' => ['sometimes', 'boolean'],
         ];
+    }
+
+    /**
+     * A new branch must exist in the repository (bug #71): any name was
+     * saved, and the next deploy failed on a ref that was never there.
+     * Asked only when the branch actually changes, since it reaches the git
+     * host.
+     *
+     * @return array<int, \Closure>
+     */
+    public function after(): array
+    {
+        return [function (Validator $validator): void {
+            $application = $this->route('application');
+
+            if (! $application instanceof Application || ! $this->filled('branch')
+                || $validator->errors()->has('branch') || $this->input('branch') === $application->branch) {
+                return;
+            }
+
+            $probe = clone $application;
+            $probe->branch = (string) $this->input('branch');
+
+            if (($reason = app(GitDeployer::class)->checkRemoteBranch($probe)) !== null) {
+                $validator->errors()->add('branch', __("validation.git_{$reason}", ['branch' => $probe->branch]));
+            }
+        }];
     }
 
     protected function prepareForValidation(): void

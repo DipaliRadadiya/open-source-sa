@@ -110,6 +110,31 @@ it('clones a private repository without the token ever touching the command line
     expect($app->fresh()->status->value)->toBe('active');
 });
 
+it('hands the checkout to the site user even when the fetch fails (bug #101)', function () {
+    // `git init` runs as root; the hand-over came only after a successful
+    // fetch, so a failed first deploy left a root-owned .git the site user
+    // could neither repair nor delete.
+    Process::fake(fn ($process) => match (true) {
+        $process->command[0] === 'test' => Process::result(exitCode: 1),
+        in_array('fetch', $process->command, true) => Process::result(errorOutput: 'fatal: repository not found', exitCode: 128),
+        default => Process::result(exitCode: 0),
+    });
+
+    $app = gitApp();
+    runDeploy($app);
+
+    Process::assertRan(fn ($p) => $p->command[0] === 'chown' && $p->command[1] === '-R'
+        && str_ends_with((string) end($p->command), '/public_html'));
+});
+
+it('hands it over once, not twice, when the deploy gets that far', function () {
+    fakeGit();
+    runDeploy(gitApp());
+
+    // The normal hand-over already happened; the safety net stays out of it.
+    Process::assertRanTimes(fn ($p) => $p->command[0] === 'chown' && $p->command[1] === '-R', 1);
+});
+
 it('deletes the credential file even when the fetch fails', function () {
     Process::fake(fn ($process) => match (true) {
         $process->command[0] === 'test' => Process::result(exitCode: 1),
@@ -191,6 +216,32 @@ it('points the remote at the new url before fetching, not after', function () {
         ->and($fetch)->not->toBeFalse()
         ->and($setUrl)->toBeLessThan($fetch);
 });
+
+it('adds origin only when the checkout does not have it (bug #71)', function (string $remotes, bool $adds) {
+    // Run every time and left to fail, `remote add` logged "remote origin
+    // already exists" as an error on every deploy after the first.
+    $ran = collect();
+
+    Process::fake(function ($process) use ($ran, $remotes) {
+        $ran->push(implode(' ', (array) $process->command));
+
+        return match (true) {
+            $process->command[0] === 'test' => Process::result(exitCode: 0),
+            end($process->command) === 'remote' => Process::result(output: $remotes),
+            in_array('rev-parse', $process->command, true) => Process::result(output: "newsha\n"),
+            default => Process::result(exitCode: 0),
+        };
+    });
+
+    runDeploy(gitApp());
+
+    expect($ran->contains(fn (string $c) => str_contains($c, 'remote add origin')))->toBe($adds)
+        // Moved to the right URL either way.
+        ->and($ran->contains(fn (string $c) => str_contains($c, 'remote set-url origin')))->toBeTrue();
+})->with([
+    'a fresh checkout' => ['', true],
+    'every deploy after the first' => ["origin\n", false],
+]);
 
 it('needs no credential at all for a public repository', function () {
     fakeGit();

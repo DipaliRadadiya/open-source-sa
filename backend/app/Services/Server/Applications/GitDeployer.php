@@ -81,6 +81,7 @@ class GitDeployer
     public function deploy(Application $application, string $documentRoot): array
     {
         $credentialFile = null;
+        $handedOver = false;
 
         $this->progress->open($application);
 
@@ -102,12 +103,21 @@ class GitDeployer
                 'git', 'init', '--quiet', '--initial-branch', $branch, $documentRoot,
             ]);
 
-            // Unchecked on purpose: on every deploy after the first, `origin`
-            // already exists and this fails. That is expected, not an error.
-            $this->serverOps->run(
-                ['git', '-C', $documentRoot, 'remote', 'add', 'origin', $remote],
-                ['feature' => 'application', 'op' => 'git.remote_add'],
+            // Added only when it is missing. It used to be run every time and
+            // left to fail, which on every deploy after the first wrote
+            // "remote origin already exists" into the log as an error
+            // (bug #71) — noise that buries the real failures. `git remote`
+            // lists and always succeeds.
+            $remotes = $this->serverOps->run(
+                ['git', '-C', $documentRoot, 'remote'],
+                ['feature' => 'application', 'op' => 'git.remote_list'],
             );
+
+            if (! in_array('origin', preg_split('/\s+/', trim($remotes->output())) ?: [], true)) {
+                $this->run('init', null, [
+                    'git', '-C', $documentRoot, 'remote', 'add', 'origin', $remote,
+                ]);
+            }
 
             // **Before the fetch, not after it.**
             //
@@ -163,6 +173,7 @@ class GitDeployer
                 "{$application->systemUser->username}:{$application->systemUser->username}",
                 $documentRoot,
             ]);
+            $handedOver = true;
 
             // Before the deploy script, which is where `php artisan migrate`
             // lives: it reads the file this seeds.
@@ -226,6 +237,18 @@ class GitDeployer
                 ...$details,
             ];
         } finally {
+            // A deploy that failed before the hand-over above (a fetch from a
+            // wrong URL or a revoked token) left the `.git` that `git init`
+            // made as root, which the site user can then neither repair nor
+            // delete (bug #101). Handed over anyway; best effort, the deploy
+            // has already failed for its own reason.
+            if (! $handedOver && $application->systemUser !== null) {
+                $this->serverOps->run(
+                    ['chown', '-R', "{$application->systemUser->username}:{$application->systemUser->username}", $documentRoot],
+                    ['feature' => 'application', 'op' => 'git.reclaim_ownership'],
+                );
+            }
+
             // Always — a failed deploy must not leave a credential on disk.
             if ($credentialFile !== null) {
                 $this->serverOps->run(
@@ -366,6 +389,65 @@ class GitDeployer
             'directory_size_bytes' => $bytes,
             'directory_size_updated_at' => now(),
         ]);
+    }
+
+    /**
+     * Can this repository be reached, and does the branch exist in it?
+     *
+     * Null when both hold, or the reason: `repository_unreachable` (wrong
+     * URL, no access, or the account's token cannot see it),
+     * `host_unreachable` (the server could not reach the git host at all)
+     * or `branch_missing`. Asked before anything is created or saved: a site
+     * created from a wrong URL used to exist anyway, report "Running", and
+     * fail its first deploy with no reason (bug #101); a branch was saved
+     * unchecked and broke the next deploy (bug #71).
+     *
+     * The same remote and credential the deploy itself uses, so a probe that
+     * passes is a fetch that can. `ls-remote` downloads nothing, never
+     * prompts (credential.interactive=never, GIT_TERMINAL_PROMPT=0) and is
+     * bounded by a short timeout.
+     */
+    public function checkRemoteBranch(Application $application): ?string
+    {
+        $branch = $application->branch ?: 'main';
+        $credentialFile = null;
+
+        try {
+            $credentialFile = $this->writeCredential($application);
+
+            $command = ['git'];
+
+            if ($credentialFile !== null) {
+                array_push($command, '-c', "credential.helper=store --file={$credentialFile}", '-c', 'credential.interactive=never');
+            }
+
+            array_push($command, 'ls-remote', '--heads', $this->remoteUrl($application), 'refs/heads/'.$branch);
+
+            $result = $this->serverOps->run(
+                $command,
+                ['feature' => 'application', 'op' => 'git.probe'],
+                timeout: (int) config('server.git_probe_timeout', 20),
+                env: ['GIT_TERMINAL_PROMPT' => '0'],
+            );
+        } catch (ProvisioningFailedException) {
+            // The credential could not be written: no answer either way, so
+            // the probe stays out of the way rather than refusing a site.
+            return null;
+        } finally {
+            if ($credentialFile !== null) {
+                $this->serverOps->run(['rm', '-f', $credentialFile], ['feature' => 'application', 'op' => 'remove_credential']);
+            }
+        }
+
+        if ($result->ok) {
+            return str_contains($result->output(), 'refs/heads/'.$branch) ? null : 'branch_missing';
+        }
+
+        $error = $result->errorOutput();
+
+        return preg_match('/Could not resolve host|Connection timed out|Failed to connect|Network is unreachable/i', $error) === 1 || $result->timedOut
+            ? 'host_unreachable'
+            : 'repository_unreachable';
     }
 
     /**
