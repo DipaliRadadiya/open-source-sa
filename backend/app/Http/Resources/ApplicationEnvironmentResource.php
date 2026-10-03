@@ -40,12 +40,18 @@ class ApplicationEnvironmentResource extends JsonResource
 
         // The file is where the framework reads it, and that happens to be
         // inside a directory the web server hands out by path. Reported rather
-        // than quietly relocated: moving it would break the application, and
-        // Apache's dotfile rule is a DirectoryMatch, which does not cover a
-        // `.env` file at all.
+        // than quietly relocated: moving it would break the application.
+        //
+        // Not when any part of the path below the web root is a dotfile or
+        // dot-directory: every vhost refuses those (nginx and Apache at any
+        // depth, OLS since its rule stopped being anchored), so Akaunting's
+        // and Mautic's `.env` answered 403 while this said "exposed".
+        $root = $application->documentRoot().'/';
         $exposed = $exists
             && $application->servesFiles()
-            && str_starts_with($path, $application->documentRoot().'/');
+            && str_starts_with($path, $root)
+            && ! collect(explode('/', substr($path, strlen($root))))
+                ->contains(fn (string $part) => str_starts_with($part, '.'));
 
         return [
             'exists' => $exists,

@@ -336,8 +336,12 @@ rewrite {
      from provisioning. The directories are named rather than matched with a
      `(?!well-known)` lookahead, both because .well-known must stay reachable
      for certificate issuance and because OLS's regex support is not
-     documented as handling lookaheads. --}}
-context exp:^/\.(git|svn|hg|bzr|env|panel) {
+     documented as handling lookaheads.
+
+     Not anchored to the top of the site: `^/\.` refused /.env and served
+     /sub/.env with 200 (measured on OLS), where nginx and Apache refuse a
+     dotfile at any depth. --}}
+context exp:/\.(git|svn|hg|bzr|env|panel) {
   allowBrowse             0
 }
 @foreach ($deniedPaths as $pattern)

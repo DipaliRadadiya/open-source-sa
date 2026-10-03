@@ -308,18 +308,18 @@ describe('which file the screen opens', function () {
             ->and($response->json('environment.raw'))->toContain('base64:real');
     });
 
-    it('says so when that file is reachable over the web', function () {
+    it('does not call a .env in the web root exposed, since every vhost refuses dotfiles', function () {
         $this->disk = ['/home/envowner/deployed-site/public_html/.env' => "APP_KEY=base64:real\n"];
         fakeSite();
 
         $response = $this->actingAs($this->admin)->getJson(envUrl())->assertOk();
 
-        // Reported, not silently relocated. Moving it would break the site,
-        // and Apache's dotfile rule is a DirectoryMatch — it does not cover a
-        // `.env` file at all, so this is a live disclosure and not a theory.
-        expect($response->json('environment.exposed'))->toBeTrue()
+        // It said "exposed" for Akaunting and Mautic while their /.env
+        // answered 403: nginx and Apache refuse a dotfile at any depth, and
+        // OLS does too since its rule stopped being anchored to `/`.
+        expect($response->json('environment.exposed'))->toBeFalse()
             ->and(collect($response->json('environment.checks'))->pluck('code'))
-            ->toContain('file_exposed');
+            ->not->toContain('file_exposed');
     });
 
     it('does not cry exposure for a file the panel put out of reach', function () {

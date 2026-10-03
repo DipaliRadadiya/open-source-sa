@@ -113,7 +113,7 @@ index {
 {{-- `exp:` is OpenLiteSpeed's regex context; nginx's `~` fails the config
      test. Named directories rather than a lookahead, so .well-known stays
      reachable for certificate issuance. --}}
-context exp:^/\.(git|svn|hg|bzr|env|panel) {
+context exp:/\.(git|svn|hg|bzr|env|panel) {
   allowBrowse             0
 }
 

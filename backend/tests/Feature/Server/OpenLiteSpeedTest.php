@@ -1003,7 +1003,9 @@ describe('the driver', function () {
         // so the deny rule is the only thing keeping the password hash off
         // the public internet. nginx and Apache get that from a lookahead;
         // OLS has to name it.
-        expect($config)->toContain('context exp:^/\.(git|svn|hg|bzr|env|panel) {')
+        // Unanchored: `^/` refused /.env and served /sub/.env (measured).
+        expect($config)->toContain('context exp:/\.(git|svn|hg|bzr|env|panel) {')
+            ->and($config)->not->toContain('context exp:^/\.(git')
             ->and($config)->not->toContain('context ~')
             // .well-known must stay reachable or certificates cannot be issued.
             // The deny rule names the directories it blocks rather than using a
