@@ -197,3 +197,11 @@ test("central #9: dashboard stat cards format sizes for the locale", () => {
   assert.match(cards, /const size = \(value, human\) => formatBytes\(value, format\) \?\? human;/);
   assert.doesNotMatch(cards, /used: (memory|swap|disk)\.used_human/);
 });
+
+test("central #46: Turn off names storages beyond the newest five, and the retention hint hides while invalid", () => {
+  const page = read("app/(app)/applications/[application]/backups/page.jsx");
+  assert.match(page, /meta\.total > backups\.length\s*\? \(await getBackups\(\{ application: id, per_page: 100 \}\)\)/);
+  assert.match(read("components/applications/backups/backups-panel.jsx"), /\.\.\.archiveDestinations,/);
+  const fields = read("components/backups/backup-settings-fields.jsx");
+  assert.match(fields, /form\.formState\.errors\.retention_count \|\| !retentionInRange \? null/);
+});

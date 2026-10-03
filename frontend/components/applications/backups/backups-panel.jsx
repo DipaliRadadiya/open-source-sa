@@ -48,6 +48,7 @@ export function BackupsPanel({
   target,
   destinations,
   backups,
+  archiveDestinations = [],
   total = 0,
   activeRestore = null,
   canManage,
@@ -297,7 +298,11 @@ export function BackupsPanel({
           // Every destination this site's archives sit in, not just the current one.
           destinationNames={[
             ...new Set(
-              [target?.storage_destination_name, ...(backups ?? []).map((backup) => backup.storage_destination_name)].filter(Boolean),
+              [
+                target?.storage_destination_name,
+                ...(backups ?? []).map((backup) => backup.storage_destination_name),
+                ...archiveDestinations,
+              ].filter(Boolean),
             ),
           ]}
         />

@@ -84,6 +84,12 @@ export default async function ApplicationBackupsPage({ params }) {
     settled ? getBackupTargetOptions() : Promise.resolve({ options: null }),
   ]);
 
+  // Turn off names every storage holding an archive, and the list above is only the newest five.
+  const archiveDestinations =
+    canRestore && !backupsFailed && meta.total > backups.length
+      ? (await getBackups({ application: id, per_page: 100 })).backups.map((backup) => backup.storage_destination_name)
+      : [];
+
   // Only site types that declare `needs_database` get the warning.
   const needsDatabase = siteNeedsDatabase(siteTypes.siteTypes, application.site_type);
 
@@ -104,6 +110,7 @@ export default async function ApplicationBackupsPage({ params }) {
           target={target}
           destinations={destinations}
           backups={backups}
+          archiveDestinations={archiveDestinations}
           total={meta.total}
           backupsFailed={backupsFailed}
           backupsForbidden={backupsFailed && backupsStatus === 403}

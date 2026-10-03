@@ -101,6 +101,12 @@ export function BackupSettingsFields({
   const automatic = useWatch({ control: form.control, name: "enabled" });
   const frequency = useWatch({ control: form.control, name: "frequency" });
   const retention = useWatch({ control: form.control, name: "retention_count" });
+  // The form validates on Save, so while typing "-1" the hint would say "Keeps the newest -1 backup".
+  const retentionBounds = options?.retention ?? { min: 1, max: Number.MAX_SAFE_INTEGER };
+  const retentionInRange =
+    Number.isInteger(Number(retention)) &&
+    Number(retention) >= retentionBounds.min &&
+    Number(retention) <= retentionBounds.max;
   const type = useWatch({ control: form.control, name: "type" });
   const applicationId = useWatch({ control: form.control, name: "application_id" });
   // List field errors are per line (`file_excludes.3`) with no field-level
@@ -397,7 +403,7 @@ export function BackupSettingsFields({
                   </FormControl>
                   {/* Counts backups, not days; the hint says so on hourly schedules.
                       Hidden while the value is invalid. */}
-                  {form.formState.errors.retention_count ? null : (
+                  {form.formState.errors.retention_count || !retentionInRange ? null : (
                     <FormDescription>
                       {span?.unit === "hours"
                         ? t("retentionHintHours", { hours: span.amount })
