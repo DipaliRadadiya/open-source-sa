@@ -43,6 +43,17 @@ class IssuePhpmyadminSsoToken
         $pmaApp = $this->resolvePhpmyadminApp($applicationId);
         $dbUser = $this->resolveDatabaseUser($database, $databaseUserId);
 
+        // Bug #98: the sign-in link carries a live database session, and the
+        // session cookie it buys is then sent with every request. Over plain
+        // HTTP both cross the network in clear text. Magic Login refuses the
+        // same case for the same reason; this did not.
+        if ($pmaApp->scheme() !== 'https') {
+            throw new PhpmyadminSsoException(
+                message: __('errors/database.phpmyadmin_requires_https'),
+                feature: 'database',
+            );
+        }
+
         if (! $this->sso->canIssue($pmaApp)) {
             throw new PhpmyadminSsoException(
                 message: __('errors/database.phpmyadmin_not_isolated'),

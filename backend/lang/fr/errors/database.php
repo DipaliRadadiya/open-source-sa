@@ -20,6 +20,7 @@ return [
     'phpmyadmin_not_selectable' => 'Le site sélectionné n\'est pas une installation phpMyAdmin active.',
     'phpmyadmin_user_not_found' => 'L\'utilisateur de base de données spécifié n\'appartient pas à cette base de données.',
     'phpmyadmin_not_isolated' => 'Ce site phpMyAdmin partage le pool PHP de tout le serveur : un lien de connexion serait donc lisible par tous les autres sites. Attribuez-lui son propre pool PHP, ou ouvrez phpMyAdmin et connectez-vous avec les identifiants de la base de données.',
+    'phpmyadmin_requires_https' => 'Ce site phpMyAdmin n’a pas de HTTPS : le lien de connexion et la session de base de données circuleraient sans chiffrement. Émettez d’abord un certificat SSL pour ce site.',
     'phpmyadmin_sso_unavailable' => 'Le lien de connexion n\'a pas pu être préparé sur le site phpMyAdmin.',
     'remote_host_invalid' => 'Saisissez une adresse ou une plage IPv4, par exemple 203.0.113.5 ou 203.0.113.0/24.',
     'remote_host_not_remote' => 'Cette adresse n\'est pas distante. Utilisez « Local » pour ce serveur ou « Partout » pour toutes les adresses.',

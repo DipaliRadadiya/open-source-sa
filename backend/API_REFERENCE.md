@@ -4001,7 +4001,7 @@ One-click auto-login to phpMyAdmin for the database's user. Works only for MySQL
 
 The frontend receives a `redirect_url` and should immediately redirect the browser to it. The URL contains a one-time token (TTL 60 s) that the `sso.php` script on the phpMyAdmin site consumes — it deletes the token before using it, so the link works exactly once.
 
-**Never assume the scheme.** `redirect_url` is `http://` until the phpMyAdmin site has a servable certificate and `https://` afterwards; redirect to the URL as given. A site with no certificate has no TLS listener at all, so an assumed `https://` is a connection refused.
+**HTTPS only (changed 2026-10-03, bug #98).** A phpMyAdmin site without a servable certificate is refused with `422` (below): the link and the session cookie it buys would otherwise cross the network in clear text. Magic Login already refused the same case. `redirect_url` is therefore always `https://`; still redirect to the URL as given rather than building one.
 
 **Query (optional):** `?database_user_id=1` — log in as a specific database user. Without this the first available user is used.
 
@@ -4013,7 +4013,12 @@ To build a picker, list `GET /applications?filter[site_type]=phpmyadmin` and pas
 
 **Response `200`:**
 ```json
-{"redirect_url": "http://pma.example.com/sso.php?token=***"}
+{"redirect_url": "https://pma.example.com/sso.php?token=***"}
+```
+
+**Response `422`** — the phpMyAdmin site has no HTTPS (added 2026-10-03). Offer to issue a certificate for it:
+```json
+{"message": "This phpMyAdmin site has no HTTPS, so the sign-in link and the database session would travel unencrypted. Issue an SSL certificate for it first."}
 ```
 
 **Response `422`** — MongoDB database:
