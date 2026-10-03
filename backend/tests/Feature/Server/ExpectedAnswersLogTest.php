@@ -2,6 +2,7 @@
 
 use App\Models\DatabaseConnection;
 use App\Models\User;
+use App\Services\Server\Databases\MongoEngine;
 use App\Services\Server\Databases\SqlEngine;
 use App\Services\Server\ServerOps;
 use Illuminate\Support\Facades\File;
@@ -69,5 +70,24 @@ it('does not put a file that is not there on the dashboard', function () {
     Process::fake(fn () => Process::result(exitCode: 1));
 
     expect(app(ServerOps::class)->probe(['test', '-f', '/home/site/.env'], ['op' => 'env_locate'])->ok)->toBeFalse()
+        ->and(dashboardErrors())->toBe([]);
+});
+
+it('does not run mongosh, and so log a refused sudo, where MongoDB is not installed', function () {
+    $runs = new ArrayObject;
+    Process::fake(function ($process) use ($runs) {
+        $runs[] = $process->command;
+
+        return Process::result(exitCode: 1); // `which mongosh`: not there
+    });
+
+    $engine = new MongoEngine(new DatabaseConnection([
+        'engine' => 'mongodb', 'connection_type' => 'tcp', 'host' => '127.0.0.1', 'port' => 27017,
+    ]), app(ServerOps::class));
+
+    expect($engine->available())->toBeFalse()
+        ->and($engine->version())->toBeNull()
+        ->and(collect($runs)->flatten()->contains('mongosh'))->toBeTrue()
+        ->and(collect($runs)->contains(fn (array $c) => in_array('--nodb', $c, true)))->toBeFalse()
         ->and(dashboardErrors())->toBe([]);
 });

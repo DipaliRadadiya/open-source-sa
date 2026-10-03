@@ -31,13 +31,23 @@ class MongoEngine implements DatabaseEngine
         return 'mongo';
     }
 
+    /**
+     * A question, so "no" is an answer (bug #48). Without mongosh on the box
+     * the run is refused by sudo — its allowlist names a binary that is not
+     * there — and that refusal is rightly an error; so the client is looked
+     * for first, and a server without MongoDB answers no quietly.
+     */
     public function available(): bool
     {
-        return $this->run('db.adminCommand({ ping: 1 });')->ok;
+        return $this->clientPresent() && $this->run('db.adminCommand({ ping: 1 });')->ok;
     }
 
     public function version(): ?string
     {
+        if (! $this->clientPresent()) {
+            return null;
+        }
+
         $result = $this->run('print(db.version());');
 
         return $result->ok ? (trim($result->output()) ?: null) : null;
@@ -401,6 +411,16 @@ class MongoEngine implements DatabaseEngine
         if ($result->failed()) {
             throw new DatabaseOperationException($result->reference);
         }
+    }
+
+    private ?bool $clientPresent = null;
+
+    private function clientPresent(): bool
+    {
+        return $this->clientPresent ??= $this->serverOps->probe(
+            ['which', (string) config('server.databases.engines.mongodb.client', 'mongosh')],
+            ['feature' => 'database', 'engine' => 'mongodb', 'op' => 'detect_client'],
+        )->ok;
     }
 
     private function run(string $script): ServerOpsResult

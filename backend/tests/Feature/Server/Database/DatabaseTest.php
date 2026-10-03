@@ -94,6 +94,8 @@ it('names generic SQL and MongoDB client operations in the server log', function
             && $context['engine'] === $engine
             && $context['op'] === 'query',
     )->andReturn(new ServerOpsResult(true, 'query-reference', null));
+    // MongoDB looks for its client first (bug #48).
+    $ops->shouldReceive('probe')->andReturn(new ServerOpsResult(true, 'probe-reference', null));
 
     expect((new $class($connection, $ops))->available())->toBeTrue();
 })->with([
