@@ -7,11 +7,14 @@ use App\Contracts\SettingGroup;
 use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Models\FirewallRule;
 use App\Models\SshKey;
+use App\Services\Server\Fail2ban\Fail2banManager;
 use App\Services\Server\Firewall\ListeningPorts;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\SystemUsers\SshUsersGroup;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 /**
  * SSH hardening — port, root login, password auth. Written to a managed
@@ -181,6 +184,34 @@ class SecuritySettings implements SettingGroup
 
         if ($portChanged) {
             $this->releaseOldPortRule($previousPort);
+            $this->moveFail2banJail();
+        }
+    }
+
+    /**
+     * Point the SSH jail at the port SSH now listens on (bug #31). jail.local
+     * resolves `{ssh_port}` when it is written, so after a move it went on
+     * banning port 22 while attacks arrived on the new one.
+     *
+     * Last, and never fatal: SSH has already moved safely by now, and failing
+     * the save over the jail would report a change that did happen as one
+     * that did not. Logged for the Error Log screen instead.
+     */
+    private function moveFail2banJail(): void
+    {
+        $fail2ban = app(Fail2banManager::class);
+
+        try {
+            if (! $fail2ban->installed() || ($jails = $fail2ban->configuredJails()) === []) {
+                return;
+            }
+
+            $fail2ban->write($fail2ban->settings(), $fail2ban->ignoreIps(), $jails);
+        } catch (Throwable $exception) {
+            Log::channel('server-ops')->error('fail2ban jail not moved to the new SSH port', [
+                'feature' => 'setting', 'group' => 'security', 'op' => 'fail2ban_ssh_port',
+                'exception' => $exception::class, 'message' => $exception->getMessage(),
+            ]);
         }
     }
 

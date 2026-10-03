@@ -3,6 +3,8 @@
 use App\Models\ActivityLog;
 use App\Models\FirewallRule;
 use App\Models\User;
+use App\Services\Server\Fail2ban\Fail2banManager;
+use App\Support\SshPort;
 use Carbon\Carbon;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
@@ -456,6 +458,58 @@ describe('a socket-activated SSH (Ubuntu 24.04+)', function () {
 
         expect(File::get($this->dir.'/00-panel.conf'))->toContain("Port 22\n")->not->toContain('Port 2222');
         Process::assertRanTimes(fn ($p) => array_slice($p->command, -3) === ['systemctl', 'restart', 'ssh.socket'], 2);
+    });
+
+    // Bug #31: jail.local resolves {ssh_port} when written, so after a move
+    // the SSH jail went on banning port 22.
+    it('moves the fail2ban SSH jail to the new port, after SSH has moved', function () {
+        fakeSettings(sshSocket: true);
+        $seenPort = null;
+        $fail2ban = Mockery::mock(Fail2banManager::class);
+        $fail2ban->shouldReceive('installed')->andReturnTrue();
+        $fail2ban->shouldReceive('configuredJails')->andReturn(['sshd' => true]);
+        $fail2ban->shouldReceive('settings')->andReturn(['bantime' => 600]);
+        $fail2ban->shouldReceive('ignoreIps')->andReturn([]);
+        $fail2ban->shouldReceive('write')->once()->andReturnUsing(function () use (&$seenPort): void {
+            $seenPort = SshPort::current();
+        });
+        app()->instance(Fail2banManager::class, $fail2ban);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 2222, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertOk();
+
+        // Written once SSH is on 2222, so {ssh_port} resolves to the new port.
+        expect($seenPort)->toBe(2222);
+    });
+
+    it('keeps the SSH move when the jail cannot be rewritten', function () {
+        fakeSettings(sshSocket: true);
+        $fail2ban = Mockery::mock(Fail2banManager::class);
+        $fail2ban->shouldReceive('installed')->andReturnTrue();
+        $fail2ban->shouldReceive('configuredJails')->andReturn(['sshd' => true]);
+        $fail2ban->shouldReceive('settings')->andReturn([]);
+        $fail2ban->shouldReceive('ignoreIps')->andReturn([]);
+        $fail2ban->shouldReceive('write')->andThrow(new RuntimeException('reload failed'));
+        app()->instance(Fail2banManager::class, $fail2ban);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 2222, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertOk();
+
+        expect(File::get($this->dir.'/00-panel.conf'))->toContain('Port 2222');
+    });
+
+    it('does not touch fail2ban when the port stays the same', function () {
+        fakeSettings(sshSocket: true);
+        $fail2ban = Mockery::mock(Fail2banManager::class);
+        $fail2ban->shouldNotReceive('write');
+        $fail2ban->shouldReceive('installed', 'configuredJails', 'settings', 'ignoreIps')->andReturn(true, [], [], []);
+        app()->instance(Fail2banManager::class, $fail2ban);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 22, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertOk();
     });
 
     it('leaves the socket alone when the port stays the same', function () {
