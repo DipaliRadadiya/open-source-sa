@@ -58,6 +58,10 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
   // Counted over what can actually change (excludes built-ins).
   const onCount = changeable.filter((extension) => extension.enabled).length;
 
+  // Our translated line when there is one, else apt's own (English) description.
+  const describe = (extension) =>
+    t.has(`extensionInfo.${extension.name}`) ? t(`extensionInfo.${extension.name}`) : (extension.summary ?? null);
+
   const term = query.trim().toLowerCase();
   const matched = changeable
     .filter((extension) =>
@@ -68,8 +72,7 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
       if (extension.name.toLowerCase().includes(term)) return true;
       if (extension.modules.some((module) => module.toLowerCase().includes(term))) return true;
       // Descriptions are searched too: users know the purpose, not the package name.
-      const key = `extensionInfo.${extension.name}`;
-      return t.has(key) && t(key).toLowerCase().includes(term);
+      return Boolean(describe(extension)?.toLowerCase().includes(term));
     });
 
   // No pager: the list scrolls in a fixed height, and search and filter narrow it.
@@ -195,9 +198,9 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
                         <span className="font-mono text-sm font-medium">{extension.name}</span>
 
                         {/* Wraps instead of truncating; max-w-0 keeps the column from widening the table. */}
-                        {t.has(`extensionInfo.${extension.name}`) ? (
+                        {describe(extension) ? (
                           <span className="block text-xs whitespace-normal text-muted-foreground">
-                            {t(`extensionInfo.${extension.name}`)}
+                            {describe(extension)}
                           </span>
                         ) : null}
 

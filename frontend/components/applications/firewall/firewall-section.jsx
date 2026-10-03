@@ -277,8 +277,8 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                             disabled={locked}
                             placeholder={t("exceptionsPlaceholder")}
                             emptyText={t("exceptionsEmpty")}
-                            // An exception skips every check, and a short one
-                            // (e.g. "a") matches every user agent.
+                            // An exception skips every check for any path containing it,
+                            // so "a" or "/" would switch the firewall off; the API refuses under 4.
                             minLength={4}
                           />
                         </div>

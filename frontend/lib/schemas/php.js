@@ -73,6 +73,8 @@ export const phpExtensionSchema = z.object({
   enabled: z.boolean().optional().default(false),
   // Compiled into PHP: nothing to switch, and the API refuses.
   builtin: z.boolean().optional().default(false),
+  // apt's one-line description (English); the screen's own translation wins when it has one.
+  summary: z.string().nullish(),
   // The last operation on this extension: installing | ready | failed.
   status: z.string().nullish(),
   current_step: z.string().nullish(),

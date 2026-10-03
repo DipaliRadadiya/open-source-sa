@@ -3412,7 +3412,12 @@
           "changed": "Alterado"
         },
         "showOlder": "{count, plural, one {Mostrar # alteração anterior} other {Mostrar # alterações anteriores}}",
-        "olderFailed": "Não foi possível carregar as alterações anteriores."
+        "olderFailed": "Não foi possível carregar as alterações anteriores.",
+        "hidden": {
+          "added": "Adicionado (oculto)",
+          "removed": "Removido (oculto)",
+          "changed": "Alterado (oculto)"
+        }
       },
       "pageSubtitleReadOnly": "Veja o arquivo .env desta aplicação.",
       "emptyFilePlaceholder": "# Este arquivo está vazio — adicione variáveis e salve",
@@ -4862,7 +4867,7 @@
       "lastCategory": "Pelo menos uma verificação precisa permanecer ativa. Para parar de verificar tudo, desligue o firewall.",
       "advanced": "Ajustes finos",
       "exceptionsTitle": "Permitir passagem",
-      "exceptionsHint": "Uma requisição contendo qualquer uma dessas palavras pula todas as verificações — comparada com o endereço web, a parte após o ? e o nome do navegador. Mantenha-as específicas: uma palavra curta ou comum desliga o firewall em grande parte da aplicação.",
+      "exceptionsHint": "Uma requisição cujo caminho do endereço web contenha qualquer um destes itens pula todas as verificações. Só o caminho é comparado — não a parte após o ? nem o nome do navegador. Use pelo menos 4 caracteres e mantenha-os específicos: uma palavra comum desliga o firewall em grande parte da aplicação.",
       "exceptionsPlaceholder": "ex.: meu-plugin",
       "exceptionsEmpty": "Nada está sendo permitido passar.",
       "blocksTitle": "Sempre bloquear",

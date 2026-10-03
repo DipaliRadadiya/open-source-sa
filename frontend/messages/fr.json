@@ -3412,7 +3412,12 @@
           "changed": "Modifié"
         },
         "showOlder": "{count, plural, one {Afficher # modification plus ancienne} other {Afficher # modifications plus anciennes}}",
-        "olderFailed": "Les modifications plus anciennes n'ont pas pu être chargées."
+        "olderFailed": "Les modifications plus anciennes n'ont pas pu être chargées.",
+        "hidden": {
+          "added": "Ajouté (masqué)",
+          "removed": "Supprimé (masqué)",
+          "changed": "Modifié (masqué)"
+        }
       },
       "pageSubtitleReadOnly": "Consultez le fichier .env de cette application.",
       "emptyFilePlaceholder": "# Ce fichier est vide — ajoutez des variables et enregistrez",
@@ -4862,7 +4867,7 @@
       "lastCategory": "Au moins une vérification doit rester activée. Pour arrêter toute vérification, désactivez le pare-feu.",
       "advanced": "Réglage fin",
       "exceptionsTitle": "Laisser passer",
-      "exceptionsHint": "Une requête contenant l'un de ces mots saute toutes les vérifications — correspondance avec l'adresse web, la partie après le ?, et le nom du navigateur. Restez spécifique : un mot court ou courant désactive le pare-feu sur une grande partie de l'application.",
+      "exceptionsHint": "Une requête dont le chemin de l'adresse web contient l'un de ces éléments saute toutes les vérifications. Seul le chemin est comparé — pas la partie après le ? ni le nom du navigateur. Utilisez au moins 4 caractères et restez spécifique : un mot courant désactive le pare-feu sur une grande partie de l'application.",
       "exceptionsPlaceholder": "ex. mon-plugin-personnalise",
       "exceptionsEmpty": "Rien n'est laissé passer.",
       "blocksTitle": "Toujours bloquer",

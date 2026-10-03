@@ -154,3 +154,27 @@ test("sync: every backend discoverer is known to the frontend, in its order, wit
     for (const type of backend) assert.ok(types[type], `${l}: sync.types.${type}`);
   }
 });
+
+test("bug #29: an extension without our own description shows apt's summary, and is searchable by it", () => {
+  assert.match(read("lib/schemas/php.js"), /summary: z\.string\(\)\.nullish\(\)/);
+  const card = read("components/php/extensions-card.jsx");
+  assert.match(card, /t\.has\(`extensionInfo\.\$\{extension\.name\}`\) \? t\(`extensionInfo\.\$\{extension\.name\}`\) : \(extension\.summary \?\? null\)/);
+  assert.match(card, /return Boolean\(describe\(extension\)\?\.toLowerCase\(\)\.includes\(term\)\);/);
+});
+
+test("bug #67: a secret in the .env history reads 'Changed (hidden)', not two empty sides", () => {
+  const diff = read("components/applications/environment/environment-diff.jsx");
+  assert.equal((diff.match(/change\.secret \?/g) ?? []).length, 2, "table and stacked rows");
+  for (const l of ["en", "es", "hi", "de", "fr", "pt", "ja", "ru"]) {
+    const h = JSON.parse(read(`messages/${l}.json`)).applications.environment.history.hidden;
+    for (const s of ["added", "changed", "removed"]) assert.ok(h[s], `${l}.hidden.${s}`);
+  }
+  assert.equal(JSON.parse(read("messages/en.json")).applications.environment.history.hidden.changed, "Changed (hidden)");
+});
+
+test("bug #82: the exceptions hint says path only and at least 4 characters", () => {
+  const hint = JSON.parse(read("messages/en.json")).applications.firewall.exceptionsHint;
+  assert.match(hint, /web address path/);
+  assert.match(hint, /at least 4 characters/);
+  assert.doesNotMatch(hint, /browser name\. Keep|matched against the web address, the part after/);
+});

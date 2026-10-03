@@ -3412,7 +3412,12 @@
           "changed": "Geändert"
         },
         "showOlder": "{count, plural, one {# ältere Änderung zeigen} other {# ältere Änderungen zeigen}}",
-        "olderFailed": "Ältere Änderungen konnten nicht geladen werden."
+        "olderFailed": "Ältere Änderungen konnten nicht geladen werden.",
+        "hidden": {
+          "added": "Hinzugefügt (verborgen)",
+          "removed": "Entfernt (verborgen)",
+          "changed": "Geändert (verborgen)"
+        }
       },
       "pageSubtitleReadOnly": "Sehen Sie die .env-Datei dieser Anwendung ein.",
       "emptyFilePlaceholder": "# Diese Datei ist leer — Variablen hinzufügen und speichern",
@@ -4862,7 +4867,7 @@
       "lastCategory": "Mindestens eine Prüfung muss an bleiben. Um gar nicht mehr zu prüfen, schalten Sie die Firewall aus.",
       "advanced": "Feinabstimmung",
       "exceptionsTitle": "Diese durchlassen",
-      "exceptionsHint": "Eine Anfrage, die eines dieser Wörter enthält, überspringt jede Prüfung — verglichen wird mit der Webadresse, dem Teil nach dem ? und dem Browsernamen. Halten Sie sie spezifisch: ein kurzes oder häufiges Wort schaltet die Firewall auf großen Teilen Ihrer Anwendung ab.",
+      "exceptionsHint": "Eine Anfrage, deren Webadressen-Pfad einen dieser Einträge enthält, überspringt jede Prüfung. Verglichen wird nur der Pfad — nicht der Teil nach dem ? und nicht der Browsername. Verwenden Sie mindestens 4 Zeichen und halten Sie sie spezifisch: ein häufiges Wort schaltet die Firewall auf großen Teilen Ihrer Anwendung ab.",
       "exceptionsPlaceholder": "z. B. mein-plugin-name",
       "exceptionsEmpty": "Es wird nichts durchgelassen.",
       "blocksTitle": "Diese immer blockieren",

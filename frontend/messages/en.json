@@ -3412,7 +3412,12 @@
           "changed": "Changed"
         },
         "showOlder": "{count, plural, one {Show # older change} other {Show # older changes}}",
-        "olderFailed": "Older changes could not be loaded."
+        "olderFailed": "Older changes could not be loaded.",
+        "hidden": {
+          "added": "Added (hidden)",
+          "removed": "Removed (hidden)",
+          "changed": "Changed (hidden)"
+        }
       },
       "pageSubtitleReadOnly": "View this application's .env file.",
       "emptyFilePlaceholder": "# This file is empty — add variables and save",
@@ -4862,7 +4867,7 @@
       "lastCategory": "At least one check has to stay on. To stop checking altogether, turn the firewall off.",
       "advanced": "Fine-tuning",
       "exceptionsTitle": "Let these through",
-      "exceptionsHint": "A request containing any of these words skips every check — matched against the web address, the part after the ?, and the browser name. Keep them specific: a short or common word switches the firewall off across much of your application.",
+      "exceptionsHint": "A request whose web address path contains any of these skips every check. Only the path is matched — not the part after the ? or the browser name. Use at least 4 characters and keep them specific: a common word switches the firewall off across much of your application.",
       "exceptionsPlaceholder": "e.g. my-plugin-name",
       "exceptionsEmpty": "Nothing is being let through.",
       "blocksTitle": "Always block these",

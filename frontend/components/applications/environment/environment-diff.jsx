@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getEnvironmentDiff } from "@/lib/api/environment";
 import { apiMessage } from "@/lib/api/error-message";
@@ -78,12 +78,21 @@ export function EnvironmentDiff({ state }) {
                   <td className="px-3 py-2 align-top">
                     <KeyName change={change} />
                   </td>
-                  <td className="px-3 py-2 align-top">
-                    <Value value={change.before} tone="removed" />
-                  </td>
-                  <td className="px-3 py-2 align-top">
-                    <Value value={change.after} tone="added" />
-                  </td>
+                  {/* A secret never carries its values; null here is not "not set". */}
+                  {change.secret ? (
+                    <td colSpan={2} className="px-3 py-2 align-top">
+                      <Hidden status={change.status} />
+                    </td>
+                  ) : (
+                    <>
+                      <td className="px-3 py-2 align-top">
+                        <Value value={change.before} tone="removed" />
+                      </td>
+                      <td className="px-3 py-2 align-top">
+                        <Value value={change.after} tone="added" />
+                      </td>
+                    </>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -92,16 +101,20 @@ export function EnvironmentDiff({ state }) {
             {data.changes.map((change) => (
               <li key={change.key} className="space-y-2 px-3 py-2.5">
                 <KeyName change={change} />
-                <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-1.5">
-                  <dt className="pt-0.5 text-muted-foreground">{t("colBefore")}</dt>
-                  <dd>
-                    <Value value={change.before} tone="removed" />
-                  </dd>
-                  <dt className="pt-0.5 text-muted-foreground">{t("colAfter")}</dt>
-                  <dd>
-                    <Value value={change.after} tone="added" />
-                  </dd>
-                </dl>
+                {change.secret ? (
+                  <Hidden status={change.status} />
+                ) : (
+                  <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-1.5">
+                    <dt className="pt-0.5 text-muted-foreground">{t("colBefore")}</dt>
+                    <dd>
+                      <Value value={change.before} tone="removed" />
+                    </dd>
+                    <dt className="pt-0.5 text-muted-foreground">{t("colAfter")}</dt>
+                    <dd>
+                      <Value value={change.after} tone="added" />
+                    </dd>
+                  </dl>
+                )}
               </li>
             ))}
           </ul>
@@ -122,6 +135,16 @@ function KeyName({ change }) {
         </Badge>
       ) : null}
     </div>
+  );
+}
+
+function Hidden({ status }) {
+  const t = useTranslations("applications.environment.history");
+  return (
+    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+      <Lock className="size-3.5 shrink-0" aria-hidden />
+      {t.has(`hidden.${status}`) ? t(`hidden.${status}`) : t("hidden.changed")}
+    </span>
   );
 }
 
