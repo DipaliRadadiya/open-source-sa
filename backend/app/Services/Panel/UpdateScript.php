@@ -461,7 +461,7 @@ class UpdateScript
         note configure_queue_worker
         {$run}{$php} {$backend}/artisan panel:queue-worker || echo "WARNING: queue worker unit not updated; run 'artisan panel:queue-worker' as root"
 
-        # Bug #15: servers installed before HOSTNAME=127.0.0.1 was in the unit
+        # Bug #15: servers installed before the unit pinned a loopback HOSTNAME
         # serve the panel's interface on every address. Rewrites the unit and
         # reloads systemd; the restart below applies it. Never fatal.
         note configure_frontend_unit
