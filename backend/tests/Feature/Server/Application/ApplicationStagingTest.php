@@ -137,11 +137,37 @@ it('refuses a second staging site for the same application', function () {
     fakeStagingServer();
     $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
 
+    // A 422 that says why (bug #88), not a 500 with a reference to quote.
     $this->withHeaders(stagingHeaders())
         ->postJson(stagingUrl(), ['domain' => 'staging2.shop.test'])
-        ->assertStatus(500);
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.application.0', __('errors/application.staging_exists'));
 
     expect(Application::where('production_application_id', $this->production->id)->count())->toBe(1);
+});
+
+it('refuses a staging copy of a staging copy (bug #89)', function () {
+    fakeStagingServer();
+    $stagingId = $this->withHeaders(stagingHeaders())
+        ->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated()->json('staging.id');
+
+    // Once the first staging is gone, a second-level copy is a normal-looking
+    // site that still swallows every email and hides from search engines.
+    $this->withHeaders(stagingHeaders())
+        ->postJson("/api/applications/{$stagingId}/staging", ['domain' => 'staging.staging.shop.test'])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.application.0', __('errors/application.staging_of_staging'));
+
+    expect(Application::where('production_application_id', $stagingId)->exists())->toBeFalse();
+});
+
+it('refuses a push when there is no staging copy (bug #88)', function () {
+    fakeStagingServer();
+
+    $this->withHeaders(stagingHeaders())
+        ->postJson(stagingUrl().'/push', ['mode' => 'full'])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.application.0', __('errors/application.staging_missing'));
 });
 
 it('refuses staging for a site type with no staging recipe', function () {

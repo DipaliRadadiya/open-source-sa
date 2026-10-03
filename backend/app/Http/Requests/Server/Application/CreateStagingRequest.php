@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests\Server\Application;
 
+use App\Models\Application;
 use App\Rules\NotPanelHost;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class CreateStagingRequest extends FormRequest
 {
@@ -31,6 +33,34 @@ class CreateStagingRequest extends FormRequest
                 new NotPanelHost,
             ],
         ];
+    }
+
+    /**
+     * What the site itself rules out, as a 422 the user can read.
+     *
+     * Bug #88: both cases reached StagingManager, which can only throw a
+     * generic 500 with a reference, for something that is not a server
+     * failure at all. Bug #89: nothing refused a staging copy of a staging
+     * copy, which outlives the first one as a normal-looking site that still
+     * swallows every email and hides from search engines.
+     *
+     * @return array<int, \Closure>
+     */
+    public function after(): array
+    {
+        return [function (Validator $validator): void {
+            $application = $this->route('application');
+
+            if (! $application instanceof Application) {
+                return;
+            }
+
+            if ($application->production_application_id !== null) {
+                $validator->errors()->add('application', __('errors/application.staging_of_staging'));
+            } elseif ($application->staging()->exists()) {
+                $validator->errors()->add('application', __('errors/application.staging_exists'));
+            }
+        }];
     }
 
     protected function prepareForValidation(): void

@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Server\Application;
 
+use App\Models\Application;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class PushStagingRequest extends FormRequest
 {
@@ -23,6 +25,23 @@ class PushStagingRequest extends FormRequest
             // without a second thought should do.
             'mode' => ['required', Rule::in(['files', 'database', 'full'])],
         ];
+    }
+
+    /**
+     * Bug #88: a push with no staging copy reached StagingManager, which can
+     * only answer a generic 500.
+     *
+     * @return array<int, \Closure>
+     */
+    public function after(): array
+    {
+        return [function (Validator $validator): void {
+            $application = $this->route('application');
+
+            if ($application instanceof Application && ! $application->staging()->exists()) {
+                $validator->errors()->add('application', __('errors/application.staging_missing'));
+            }
+        }];
     }
 
     public function mode(): string

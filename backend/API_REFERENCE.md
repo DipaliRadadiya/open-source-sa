@@ -2589,6 +2589,10 @@ Create a staging clone.
 
 **Response `201`:** `{"staging": {"id": 5, "status": "provisioning", …}}`
 
+**Response `422`** (added 2026-10-03, bugs #88/#89; was a generic `500`) under `errors.application`:
+- the site already has a staging copy: *"This site already has a staging copy. Push it or delete it first."*
+- the site **is** a staging copy: *"This is a staging copy. Make staging copies from the live site."* Hide the button on staging sites.
+
 ---
 
 ### POST `/applications/{application}/staging/push`
@@ -2604,6 +2608,8 @@ Push staging changes back to production.
 Before either mode changes production, the panel creates a temporary private file snapshot. If the push fails, it restores the files (and the database for `full`) before bringing production back online. A successful push or successful recovery removes the temporary file snapshot; the pre-push SQL dump is retained.
 
 **Response `200`:** `{"application": {...updated production record...}}`
+
+**Response `422`** (added 2026-10-03, bug #88; was a generic `500`) — no staging copy exists: `errors.application` = *"This site has no staging copy to push."*
 
 **Recovery failure `500`:**
 ```json
