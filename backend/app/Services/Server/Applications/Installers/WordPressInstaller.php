@@ -108,6 +108,10 @@ class WordPressInstaller extends AbstractPhpInstaller
             (string) config('server.installers.wordpress.wp_cli', '/usr/local/bin/wp'),
         ];
 
+        // Read before anything changes: the content follows only a real
+        // change of scheme, and this also runs on every routine resync.
+        $previous = $this->currentHome($application, $wp, $documentRoot);
+
         // Constants first. A staging site pins WP_HOME/WP_SITEURL in
         // wp-config.php so a copied database can never point it at
         // production — and a constant overrides the option. Left alone, the
@@ -135,6 +139,86 @@ class WordPressInstaller extends AbstractPhpInstaller
                 '--skip-plugins', '--skip-themes',
             ], null, $documentRoot);
         }
+
+        $this->followSchemeInContent($application, $wp, $documentRoot, $previous, $url);
+    }
+
+    /**
+     * The site's own links in its content, moved to the new scheme with it.
+     *
+     * A certificate changed `home` and `siteurl` and nothing else, so posts
+     * kept every `http://` link to the site itself — on a page now served
+     * over https, where browsers block http images and scripts as mixed
+     * content. A clone or new staging copy has it worst: it is copied before
+     * its certificate exists, so every link to itself is http (found testing
+     * bug #92). A failed certificate calls this back with the old address,
+     * which turns the links back too.
+     *
+     * Only on a real change of scheme for the same host: this runs on every
+     * routine resync, and a full-table search-replace there would be waste.
+     * The host is matched up to its end, so `http://example.com.au` is not
+     * another site's address made https. Best effort: a failure here must not
+     * fail the certificate the site is otherwise ready to serve.
+     *
+     * @param  array<int, string>  $wp
+     */
+    private function followSchemeInContent(Application $application, array $wp, string $documentRoot, ?string $previous, string $url): void
+    {
+        $from = parse_url((string) $previous);
+        $to = parse_url($url);
+
+        if (! isset($from['scheme'], $from['host'], $to['scheme'], $to['host'])
+            || $from['host'] !== $to['host'] || $from['scheme'] === $to['scheme']) {
+            return;
+        }
+
+        $host = preg_quote($to['host'], '#');
+        $end = '(?![A-Za-z0-9-]|\\.[A-Za-z0-9])';
+
+        foreach (['://', ':\\/\\/'] as $separator) {
+            $this->serverOps->run(
+                [
+                    'runuser', '-u', $application->systemUser->username, '--',
+                    ...$wp,
+                    'search-replace',
+                    $from['scheme'].preg_quote($separator, '#').$host.$end,
+                    $to['scheme'].$separator.$to['host'],
+                    '--regex', '--regex-delimiter=#',
+                    '--path='.$documentRoot,
+                    '--all-tables', '--precise', '--recurse-objects',
+                    '--skip-columns=guid',
+                    '--skip-plugins', '--skip-themes',
+                ],
+                ['feature' => 'application', 'op' => 'installer.sync_url_content', 'application' => $application->id],
+                timeout: $this->timeout(),
+                cwd: $documentRoot,
+            );
+        }
+    }
+
+    /**
+     * `home` as WordPress answers it (a pinned WP_HOME included), or null.
+     *
+     * @param  array<int, string>  $wp
+     */
+    private function currentHome(Application $application, array $wp, string $documentRoot): ?string
+    {
+        $result = $this->serverOps->run(
+            [
+                'runuser', '-u', $application->systemUser->username, '--',
+                ...$wp,
+                'option', 'get', 'home',
+                '--path='.$documentRoot,
+                '--skip-plugins', '--skip-themes',
+            ],
+            ['feature' => 'application', 'op' => 'installer.sync_url_check', 'application' => $application->id],
+            timeout: $this->timeout(),
+            cwd: $documentRoot,
+        );
+
+        $home = trim($result->output());
+
+        return $result->ok && $home !== '' ? $home : null;
     }
 
     /**
