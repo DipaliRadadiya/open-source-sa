@@ -5974,9 +5974,11 @@ Generates a token, replacing any existing one. Enabling again rotates it and inv
 ### GET `/central/status`
 **Auth:** administrator session
 
-**Response `200`:** `{"central": {"enabled": true, "token": "sv_central_a***************"}}`
+**Response `200`:** `{"central": {"enabled": true, "token": "sv_central_a***************", "connected": false, "last_used_at": null}}`
 
 `token` is `null` when `enabled` is `false`. Never the raw value.
+
+`enabled` means a key exists; `connected` means Central has used it (`last_used_at`, ISO 8601, updated at most once a minute). Between the two, show "Waiting for Central". Generating a new key sets `connected` back to `false`.
 
 ### DELETE `/central`
 **Auth:** administrator session

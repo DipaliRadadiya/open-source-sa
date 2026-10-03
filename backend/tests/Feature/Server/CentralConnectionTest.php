@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -207,4 +208,43 @@ it('records connecting and disconnecting the central panel', function () {
 
     $this->deleteJson('/api/central')->assertOk();
     $this->assertDatabaseHas('activity_logs', ['type' => 'central', 'action' => 'disconnected', 'user_id' => $this->user->id]);
+});
+
+it('says waiting until Central has used the key, then connected (bug #49)', function () {
+    $this->seed(PermissionSeeder::class);
+    grantAdmin($this->user);
+
+    $token = $this->postJson('/api/central/enable')->assertCreated()->json('central_token')
+        ?? DB::table('settings')->where('id', 1)->value('central_token');
+
+    // It said "Connected" here, before Central had even been given the key.
+    $this->getJson('/api/central/status')
+        ->assertJsonPath('central.enabled', true)
+        ->assertJsonPath('central.connected', false)
+        ->assertJsonPath('central.last_used_at', null);
+
+    auth()->forgetGuards();
+    $this->getJson('/api/applications', ['Authorization' => 'Bearer '.$token])->assertOk();
+
+    grantAdmin($this->user);
+    $status = $this->getJson('/api/central/status');
+
+    expect($status->json('central.connected'))->toBeTrue()
+        ->and($status->json('central.last_used_at'))->not->toBeNull();
+
+    // A new key is a new wait: Central has not seen this one.
+    $this->postJson('/api/central/enable')->assertCreated();
+    $this->getJson('/api/central/status')->assertJsonPath('central.connected', false);
+});
+
+it('does not count a wrong key as Central using it', function () {
+    $this->seed(PermissionSeeder::class);
+    grantAdmin($this->user);
+    $this->postJson('/api/central/enable')->assertCreated();
+
+    auth()->forgetGuards();
+    $this->getJson('/api/applications', ['Authorization' => 'Bearer sv_central_wrong'])->assertUnauthorized();
+
+    grantAdmin($this->user);
+    $this->getJson('/api/central/status')->assertJsonPath('central.connected', false);
 });

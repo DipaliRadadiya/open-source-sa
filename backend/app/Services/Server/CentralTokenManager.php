@@ -34,6 +34,7 @@ class CentralTokenManager
             if ($setting) {
                 DB::table('settings')->where('id', 1)->update([
                     'central_token' => $token,
+                    'central_token_used_at' => null,
                 ]);
             } else {
                 DB::table('settings')->insert([
@@ -58,7 +59,7 @@ class CentralTokenManager
      */
     public function disable(): void
     {
-        DB::table('settings')->where('id', 1)->update(['central_token' => null]);
+        DB::table('settings')->where('id', 1)->update(['central_token' => null, 'central_token_used_at' => null]);
 
         Log::info('central management disabled');
     }
@@ -77,6 +78,8 @@ class CentralTokenManager
         return [
             'enabled' => true,
             'masked' => $this->mask($row->central_token),
+            // Bug #49: a key is not a connection until Central has used it.
+            'last_used_at' => $row->central_token_used_at,
         ];
     }
 
@@ -93,6 +96,21 @@ class CentralTokenManager
                 feature: 'central',
             );
         }
+
+        $this->recordUse();
+    }
+
+    /**
+     * Note that Central used the key. At most once a minute: Central calls
+     * on every request, and a write per request buys nothing the screen can
+     * show.
+     */
+    private function recordUse(): void
+    {
+        DB::table('settings')->where('id', 1)
+            ->where(fn ($query) => $query->whereNull('central_token_used_at')
+                ->orWhere('central_token_used_at', '<', now()->subMinute()))
+            ->update(['central_token_used_at' => now()]);
     }
 
     private function generate(): string
