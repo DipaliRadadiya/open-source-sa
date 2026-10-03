@@ -59,7 +59,8 @@ it('gives OpenLiteSpeed a password-free context for that path, open to the serve
     $config = app(OlsDriver::class)->renderConfig($this->application, $this->root);
 
     expect($config)
-        ->toMatch('#context /wp-cron\.php \{\n  location\s+/home/siteowner/blog/public_html/wp-cron\.php#')
+        // A regex context: a plain one inherits the realm of `context /`.
+        ->toMatch('#context exp:\^/wp\\\\-cron\\\\\.php\$ \{\n  location\s+/home/siteowner/blog/public_html/wp-cron\.php#')
         ->toContain('allow                 127.0.0.1, ::1, 10.50.0.52, 23.172.120.118')
         ->toContain('deny                  ALL');
 });

@@ -65,9 +65,12 @@ context /.well-known/acme-challenge {
 @foreach ($basicAuth['serverOnly']['paths'] ?? [] as $path)
 {{-- The application's own request to itself (WordPress's wp-cron.php,
      bug #75): no realm, so no password, but only from this server's own
-     addresses; anyone else gets 403. More specific than `context /`, so it
-     wins for this one path and nothing else. --}}
-context {{ $path }} {
+     addresses; anyone else gets 403. A regex (`exp:`) context, measured on
+     OpenLiteSpeed 1.9 (2026-10-03): a plain `context /wp-cron.php` inherits
+     the realm of `context /` and still asked the server itself for the
+     password (401); the regex context does not, and WordPress's own
+     `wp cron test` passes. --}}
+context exp:^{{ preg_quote($path, '#') }}$ {
   location                {{ $documentRoot }}{{ $path }}
   allowBrowse             1
   accessControl  {
