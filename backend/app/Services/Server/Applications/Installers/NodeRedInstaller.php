@@ -83,6 +83,11 @@ class NodeRedInstaller extends AbstractNodeInstaller
             // Behind the panel's reverse proxy, so binding anywhere else would
             // publish the editor on the server's own address as well.
             uiHost: '127.0.0.1',
+            // Every visitor arrives from that proxy, so without this the
+            // editor's audit log and any flow reading req.ip see 127.0.0.1
+            // (bug #66). Loopback only: a client cannot pass its own
+            // X-Forwarded-For through, the proxy appends the real address.
+            httpServerOptions: { 'trust proxy': 'loopback' },
             flowFile: 'flows.json',
             adminAuth: {
                 type: 'credentials',

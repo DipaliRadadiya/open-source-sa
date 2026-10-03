@@ -368,6 +368,10 @@ it('gives Node-RED a password, because it ships without one', function () {
         // binding rejects $2y$ outright.
         ->toMatch('/password: "\$2a\$/')
         ->toContain('uiPort: process.env.PORT')
+        // Trusts the panel's own proxy and nothing else (bug #66): otherwise
+        // every visitor is 127.0.0.1, and with `true` a client could choose
+        // its own address by sending X-Forwarded-For.
+        ->toContain("httpServerOptions: { 'trust proxy': 'loopback' }")
         // The default user directory is under the home, which the unit mounts
         // read-only — so a flow could never be saved.
         ->and($app->fresh()->start_command)
