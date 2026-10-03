@@ -262,8 +262,20 @@ class AppServiceProvider extends ServiceProvider
         // `PasswordPolicy` describes the same numbers for the API.
         Password::defaults(fn () => PasswordPolicy::rule());
 
-        RateLimiter::for('login', fn (Request $request) => Limit::perMinute(5)
-            ->by($request->string('username').'|'.$request->ip()));
+        // Three limits, all applied (bug #2). The pair limit alone let one
+        // address try five passwords on every username in turn: changing the
+        // name was a fresh budget. Per address across all names stops that;
+        // per name across all addresses stops the same password list spread
+        // over many machines from locking nobody out of nothing.
+        RateLimiter::for('login', function (Request $request): array {
+            $username = mb_strtolower(trim((string) $request->string('username')));
+
+            return [
+                Limit::perMinute(5)->by('pair:'.$username.'|'.$request->ip()),
+                Limit::perMinute(20)->by('ip:'.$request->ip()),
+                Limit::perMinute(10)->by('user:'.$username),
+            ];
+        });
 
         // The budget every authenticated request draws on, unless a route
         // explicitly opts out. Env-tunable because the right number depends on

@@ -47,3 +47,40 @@ it('has the sentence in every locale', function () {
             ->toContain('30');
     }
 });
+
+describe('the login limit (bug #2)', function () {
+    it('stops one address trying many usernames', function () {
+        // Four tries on each of five names is under the per-name-and-address
+        // limit every time. Changing the name used to be a fresh budget.
+        foreach (range(1, 5) as $n) {
+            foreach (range(1, 4) as $_) {
+                test()->postJson('/api/auth/login', ['username' => "guess{$n}", 'password' => 'wrong'])->assertStatus(422);
+            }
+        }
+
+        test()->postJson('/api/auth/login', ['username' => 'guess6', 'password' => 'wrong'])->assertStatus(429);
+    });
+
+    it('stops one username being tried from many addresses', function () {
+        foreach (range(1, 10) as $n) {
+            test()->withServerVariables(['REMOTE_ADDR' => "203.0.113.{$n}"])
+                ->postJson('/api/auth/login', ['username' => 'Admin', 'password' => 'wrong'])
+                ->assertStatus(422);
+        }
+
+        // Case does not make it a different account.
+        test()->withServerVariables(['REMOTE_ADDR' => '203.0.113.99'])
+            ->postJson('/api/auth/login', ['username' => 'admin', 'password' => 'wrong'])
+            ->assertStatus(429);
+    });
+
+    it('still lets someone in who mistyped a few times', function () {
+        User::factory()->create(['username' => 'returning', 'password' => 'Correct-Horse-9']);
+
+        foreach (range(1, 3) as $_) {
+            test()->postJson('/api/auth/login', ['username' => 'returning', 'password' => 'wrong'])->assertStatus(422);
+        }
+
+        test()->postJson('/api/auth/login', ['username' => 'returning', 'password' => 'Correct-Horse-9'])->assertOk();
+    });
+});
