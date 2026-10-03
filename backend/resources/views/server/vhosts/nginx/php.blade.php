@@ -145,7 +145,28 @@ server {
     }
 @endif
 @if ($basicAuth)
+@if ($basicAuth['serverOnly'])
+    {{-- The application's own requests to itself (WordPress's wp-cron.php,
+         bug #75) skip the password, and only those: the path must match
+         exactly AND the request must come from one of this server's own
+         addresses. `auth_basic` treats a realm that evaluates to "off" as
+         off, which is what lets this be decided per request. `if` here only
+         sets variables, in server context, where it is safe. --}}
+    set $sv_auth_realm "Restricted";
+    set $sv_auth_open "";
+    if ($uri ~ "^({{ collect($basicAuth['serverOnly']['paths'])->map(fn ($p) => preg_quote($p, '"'))->implode('|') }})$") {
+        set $sv_auth_open "p";
+    }
+    if ($remote_addr ~ "^({{ collect($basicAuth['serverOnly']['addresses'])->map(fn ($a) => preg_quote($a, '"'))->implode('|') }})$") {
+        set $sv_auth_open "${sv_auth_open}s";
+    }
+    if ($sv_auth_open = "ps") {
+        set $sv_auth_realm off;
+    }
+    auth_basic           $sv_auth_realm;
+@else
     auth_basic           "Restricted";
+@endif
     auth_basic_user_file {{ $basicAuth['htpasswdPath'] }};
 @endif
 

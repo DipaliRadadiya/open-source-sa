@@ -102,7 +102,22 @@
             AuthType Basic
             AuthName "Restricted"
             AuthUserFile {{ $basicAuth['htpasswdPath'] }}
+@if ($basicAuth['serverOnly'])
+            {{-- The application's own requests to itself (WordPress's
+                 wp-cron.php, bug #75) need no password, and only those:
+                 exact path AND one of this server's own addresses. Still
+                 inside the RequireAll above, so the bot blocker and the
+                 firewall apply to them like to everything else. --}}
+            <RequireAny>
+                Require valid-user
+                <RequireAll>
+                    Require expr "%{REQUEST_URI} =~ m#^({{ collect($basicAuth['serverOnly']['paths'])->map(fn ($p) => preg_quote($p, '#'))->implode('|') }})$#"
+                    Require ip {{ implode(' ', $basicAuth['serverOnly']['addresses']) }}
+                </RequireAll>
+            </RequireAny>
+@else
             Require valid-user
+@endif
 @else
             Require all granted
 @endif

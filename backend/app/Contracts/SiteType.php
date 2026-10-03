@@ -210,6 +210,15 @@ interface SiteType
     public function wellKnownRoutes(): array;
 
     /**
+     * Paths the application calls on itself over HTTP, which Password
+     * Protection must let through when — and only when — the request comes
+     * from the server itself. Exact paths, each starting with `/`.
+     *
+     * @return array<int, string>
+     */
+    public function serverOnlyPaths(): array;
+
+    /**
      * File extensions the web server must serve with a specific type, which
      * the application sets in its `.htaccess` on Apache.
      *

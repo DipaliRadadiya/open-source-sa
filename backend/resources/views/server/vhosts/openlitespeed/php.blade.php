@@ -62,6 +62,21 @@ context /.well-known/acme-challenge {
      explicitly only when protection is on, so an unprotected site's config
      is byte-for-byte what it always was — the ACME context above is more
      specific and matches first, so it is never affected either way. --}}
+@foreach ($basicAuth['serverOnly']['paths'] ?? [] as $path)
+{{-- The application's own request to itself (WordPress's wp-cron.php,
+     bug #75): no realm, so no password, but only from this server's own
+     addresses; anyone else gets 403. More specific than `context /`, so it
+     wins for this one path and nothing else. --}}
+context {{ $path }} {
+  location                {{ $documentRoot }}{{ $path }}
+  allowBrowse             1
+  accessControl  {
+    allow                 {{ implode(', ', $basicAuth['serverOnly']['addresses']) }}
+    deny                  ALL
+  }
+}
+
+@endforeach
 context / {
   location                {{ $documentRoot }}
   allowBrowse             1

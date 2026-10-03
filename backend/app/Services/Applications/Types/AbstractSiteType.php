@@ -280,6 +280,14 @@ abstract class AbstractSiteType implements SiteType
     }
 
     /**
+     * @return array<int, string>
+     */
+    public function serverOnlyPaths(): array
+    {
+        return [];
+    }
+
+    /**
      * @return array{redirects: array<string, string>, fallback: string|null}
      */
     public function wellKnownRoutes(): array

@@ -17,6 +17,7 @@ use App\Services\Server\Certificates\CertbotClient;
 use App\Services\Server\Certificates\CertificateFiles;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\Php\PoolManager;
+use App\Services\Server\ServerAddresses;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Facades\View;
@@ -488,6 +489,13 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             'basicAuth' => $application->basic_auth_enabled ? [
                 'realm' => 'sv-app-'.$application->id,
                 'htpasswdPath' => $application->basicAuthPath(),
+                // Paths the application requests from itself (WordPress's
+                // wp-cron.php, bug #75), let through without a password only
+                // from the server's own addresses; null when the type has none.
+                'serverOnly' => ($serverOnly = $siteType?->serverOnlyPaths() ?? []) === [] ? null : [
+                    'paths' => $serverOnly,
+                    'addresses' => app(ServerAddresses::class)->local(),
+                ],
             ] : null,
             // A single regex-ready, alternation-joined string — already
             // escaped — or null when the policy blocks nothing. Resolved

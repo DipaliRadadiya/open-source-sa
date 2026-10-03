@@ -88,6 +88,19 @@ class WordPressSiteType extends AbstractSiteType
     }
 
     /**
+     * WordPress runs its scheduled work (scheduled posts, update checks,
+     * plugin jobs) by requesting its own `wp-cron.php` over HTTP. With
+     * Password Protection on, that request got the 401 every visitor gets,
+     * so nothing scheduled ever ran (bug #75).
+     *
+     * @return array<int, string>
+     */
+    public function serverOnlyPaths(): array
+    {
+        return ['/wp-cron.php'];
+    }
+
+    /**
      * Staging is a per-type recipe, not a generic file copy: pushing a
      * WordPress staging site back needs URL rewriting inside serialised data,
      * wp-cron disabled and outbound mail trapped. That recipe exists for
