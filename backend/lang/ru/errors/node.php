@@ -7,6 +7,7 @@
 return [
     'not_installed' => 'Node :version не установлен.',
     'version_in_use' => 'Node :version используется: :apps. Сначала измените эти сайты.',
+    'version_unknown' => 'Node.js :version не существует. Выберите версию из списка.',
     'version_is_default' => 'Это версия по умолчанию. Сначала выберите другую.',
     'version_runs_panel' => 'Сама панель работает на Node :version. Эту версию нельзя удалить.',
     'npm_target_unknown' => 'Не удалось получить список выпусков npm, поэтому нельзя определить, какой npm подходит для этой версии Node. Повторите попытку, когда у сервера будет доступ в интернет, или выполните `php artisan runtimes:refresh-npm`.',

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\Server;
 
+use App\Enums\InstallStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Node\InstallNodeVersionRequest;
 use App\Http\Requests\Server\Node\NodeDefaultRequest;
@@ -84,7 +85,17 @@ class NodeController extends Controller
      */
     public function destroy(string $version, NodeRuntime $node, PinnedSites $pinned, ActivityLogger $log, ServerCapabilities $capabilities): JsonResponse
     {
-        abort_unless($node->installed($version), 404);
+        if (! $node->installed($version)) {
+            // A failed install leaves an entry with nothing installed behind
+            // it. Remove answered 404 for it forever (bug #31), so the entry
+            // could never be cleared; clearing it is what Remove means here.
+            $failed = app(InstallTracker::class)->current('node', $version);
+            abort_unless($failed?->status === InstallStatus::Failed, 404);
+
+            $failed->delete();
+
+            return response()->json(null, 204);
+        }
 
         $sites = $pinned->allFor('node_version', $version);
 

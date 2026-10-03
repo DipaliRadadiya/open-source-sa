@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Server\Node;
 
+use App\Services\Server\Runtimes\NodeRuntime;
 use Illuminate\Foundation\Http\FormRequest;
 
 class InstallNodeVersionRequest extends FormRequest
@@ -19,7 +20,15 @@ class InstallNodeVersionRequest extends FormRequest
         return [
             // A full semantic version, and nothing else. It reaches a command
             // argument, so the shape is the guard.
-            'version' => ['required', 'string', 'regex:/^\d+\.\d+\.\d+$/'],
+            'version' => ['required', 'string', 'regex:/^\d+\.\d+\.\d+$/',
+                // A real release, not just the shape of one (bug #31): 99.0.0
+                // was accepted and left a failed entry behind.
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (app(NodeRuntime::class)->releaseExists((string) $value) === false) {
+                        $fail(__('errors/node.version_unknown', ['version' => $value]));
+                    }
+                },
+            ],
         ];
     }
 }

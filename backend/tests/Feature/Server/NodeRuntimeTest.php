@@ -1,9 +1,11 @@
 <?php
 
 use App\Actions\Server\Application\CreateApplication;
+use App\Enums\InstallStatus;
 use App\Jobs\InstallNodeVersion;
 use App\Models\Application;
 use App\Models\NpmRelease;
+use App\Models\RuntimeInstall;
 use App\Models\RuntimeLifecycle;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
@@ -726,5 +728,39 @@ describe('a Node site created without a version', function () {
 
     it('keeps the version it was asked for', function () {
         expect(createNodeSite('nodered', ['node_version' => '24.1.0'])->node_version)->toBe('24.1.0');
+    });
+});
+
+describe('a Node version that does not exist (bug #31)', function () {
+    it('refuses to install it', function () {
+        fakeNode();
+
+        // Only the shape was checked, so 99.0.0 was queued, failed in fnm
+        // and left an entry behind.
+        nodeCall('POST', '/api/node/versions', ['version' => '99.0.0'])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.version.0', __('errors/node.version_unknown', ['version' => '99.0.0']));
+
+        expect(RuntimeInstall::where('runtime', 'node')->where('version', '99.0.0')->exists())->toBeFalse();
+    });
+
+    it('lets a failed install\'s entry be removed', function () {
+        fakeNode();
+        RuntimeInstall::create([
+            'runtime' => 'node', 'version' => '20.11.0', 'status' => InstallStatus::Failed,
+            'reason' => 'install', 'started_at' => now(), 'finished_at' => now(),
+        ]);
+
+        // Remove answered 404 for anything not installed, so this entry
+        // stayed on the screen for good.
+        nodeCall('DELETE', '/api/node/versions/20.11.0')->assertNoContent();
+
+        expect(RuntimeInstall::where('version', '20.11.0')->exists())->toBeFalse();
+    });
+
+    it('still answers 404 for a version that is neither installed nor failed', function () {
+        fakeNode();
+
+        nodeCall('DELETE', '/api/node/versions/18.20.4')->assertNotFound();
     });
 });

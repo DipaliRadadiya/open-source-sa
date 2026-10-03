@@ -10,6 +10,7 @@ use App\Services\Runtime\LifecycleCatalog;
 use App\Services\Runtime\NpmCatalog;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -121,6 +122,34 @@ class NodeRuntime implements Runtime
         )->output());
 
         return ['version' => ltrim($version, 'v'), 'path' => $path];
+    }
+
+    /**
+     * Is this a Node release that exists?
+     *
+     * Asked before an install (bug #31): the version was only checked for its
+     * shape, so `99.0.0` was accepted, queued, failed in fnm, and left an
+     * entry behind. The whole release list, not just the newest per major the
+     * picker shows: an older patch is a real version someone may need.
+     *
+     * Null when the list cannot be read (no fnm, no network), so an install
+     * is never refused for want of an answer — fnm will say so itself.
+     */
+    public function releaseExists(string $version): ?bool
+    {
+        $releases = Cache::remember('node.remote_releases', now()->addHour(), function (): array {
+            if (! $this->fnmInstalled()) {
+                return [];
+            }
+
+            return collect(preg_split('/\r?\n/', trim($this->fnm(['list-remote'])->output())) ?: [])
+                ->map(fn (string $line) => $this->parseVersion($line))
+                ->filter()
+                ->values()
+                ->all();
+        });
+
+        return $releases === [] ? null : in_array($version, $releases, true);
     }
 
     /**
