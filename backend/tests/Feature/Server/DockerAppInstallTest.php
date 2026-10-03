@@ -142,6 +142,60 @@ dataset('docker apps', [
     // entry rather than a card that 404s at `docker pull`.
 ]);
 
+it('claims the first-run endpoint, and survives being called at all', function () {
+    // Two things, and the second is the embarrassing one.
+    //
+    // The flow: the endpoint answers 200 while the setup page is open, the panel
+    // posts the generated credentials, and the controller closes it — so the
+    // re-check sees a redirect. If it still answers 200 the owner was not created
+    // and provisioning must fail rather than report a claimable site as Active.
+    //
+    // And: that `afterStart()` can be CALLED. It shipped calling `$this->run()`,
+    // copied from N8nInstaller, which has that helper from AbstractSiteInstaller —
+    // a parent this class does not have. Nothing caught it, because no test
+    // reached the method and `phpstan analyse` produces no output on this box, so
+    // the first thing to run the line was a real provision.
+    $application = installDockerApp(dockerAppSite('chatwoot'));
+    $application->forceFill([
+        'app_port' => 3002,
+        'settings' => ['admin_email' => 'owner@example.com'],
+    ])->save();
+
+    $posted = null;
+    $checks = 0;
+
+    Process::fake(function ($process) use (&$posted, &$checks) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        if (($args[0] ?? '') !== 'curl') {
+            return Process::result(exitCode: 0);
+        }
+
+        // The POST carries `-X POST`; the probe does not.
+        if (in_array('POST', $args, true)) {
+            $posted = $args;
+
+            return Process::result(exitCode: 0);
+        }
+
+        // Open first, closed once the post has happened — a fake that always
+        // answered 200 would assert against a server this fake had broken.
+        $checks++;
+
+        return Process::result(output: $posted === null ? '200' : '302');
+    });
+
+    app(DockerAppInstaller::class)->afterStart($application->fresh(), '/home/owner/site/public_html');
+
+    expect($posted)->not->toBeNull('the first-run endpoint was never claimed')
+        ->and(implode(' ', $posted))->toContain('/installation/onboarding')
+        ->and(implode(' ', $posted))->toContain('user[email]=owner@example.com')
+        // Set and non-blank, the controller registers the installation with
+        // ChatwootHub — someone else's server learning about this one.
+        ->and(implode(' ', $posted))->not->toContain('subscribe_to_updates')
+        ->and($checks)->toBeGreaterThanOrEqual(2);
+});
+
 it('is wired to the Docker installer, for each app', function (string $type, int $port, array $roles) {
     // **The test that was missing, and what it cost.** Registering an app takes
     // three edits to `config/server.php`: the type class, the `docker_apps`

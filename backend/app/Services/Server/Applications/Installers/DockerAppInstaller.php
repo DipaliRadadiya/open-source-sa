@@ -196,7 +196,21 @@ class DockerAppInstaller implements SiteInstaller
 
         $command[] = $url;
 
-        $this->run('create_admin', $command, $application);
+        // `$this->serverOps->run()`, not `$this->run()`. The host installers have
+        // that helper from `AbstractSiteInstaller`; this class implements
+        // `SiteInstaller` directly and shares nothing with them — which its own
+        // docblock says, and which I still copied the call shape from N8nInstaller
+        // without checking. It cost a provision: the poll found the endpoint open
+        // and then died on an undefined method, leaving the instance unclaimed.
+        $posted = $this->serverOps->run(
+            $command,
+            ['feature' => 'application', 'op' => 'installer.create_admin', 'application' => $application->id],
+            timeout: 90,
+        );
+
+        if ($posted->failed()) {
+            throw new ProvisioningFailedException('create_admin', $posted->reference);
+        }
 
         // The endpoint closes itself when it succeeds, so asking again is the
         // only honest confirmation that an owner exists. A 2xx from a Rails form
