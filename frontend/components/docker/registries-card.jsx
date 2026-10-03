@@ -34,7 +34,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
+import { Caution } from "@/components/ui/caution";
 import { Label } from "@/components/ui/label";
+import { Note } from "@/components/ui/note";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -80,6 +89,8 @@ export function RegistriesCard({ initialRegistries, canManage }) {
     token: "",
   });
   const [errors, setErrors] = useState({});
+  // Which registry the form is giving instructions for; set again on every open.
+  const [provider, setProvider] = useState("dockerhub");
 
   async function run(key, action, successMessage) {
     setPending(key);
