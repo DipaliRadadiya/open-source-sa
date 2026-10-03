@@ -298,9 +298,14 @@ export function RulesCard({
           </p>
         ) : null}
 
-        {/* Widths from the widest option in all 8 languages (fr "Utilisateur de base de données"). */}
+        {/* One row when it fits: each filter is as wide as its current choice and
+            the search gives way down to 14rem (fr placeholder), then the filters wrap.
+            Fixed widths for the widest option in every language (fr "Utilisateur
+            de base de données") left no room for the search. */}
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-          <SearchInput placeholder={t("rules.search")} />
+          <div className="sm:max-w-xs sm:min-w-56 sm:flex-1">
+            <SearchInput placeholder={t("rules.search")} />
+          </div>
           <FacetSelect
             paramKey="enabled"
             allLabel={t("rules.filters.anyEnabled")}
@@ -309,7 +314,7 @@ export function RulesCard({
               { value: "1", label: t("rules.filters.enabled") },
               { value: "0", label: t("rules.filters.disabled") },
             ]}
-            className="w-full sm:w-44"
+            className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
           />
           <FacetSelect
             paramKey="action"
@@ -319,7 +324,7 @@ export function RulesCard({
               { value: "allow", label: t("rules.allow") },
               { value: "deny", label: t("rules.deny") },
             ]}
-            className="w-full sm:w-48"
+            className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
           />
           <FacetSelect
             paramKey="origin"
@@ -330,7 +335,7 @@ export function RulesCard({
               { value: "default", label: t("rules.filters.default") },
               { value: "db_user", label: t("rules.filters.database") },
             ]}
-            className="w-full sm:w-72"
+            className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
           />
           <FacetSelect
             paramKey="sort"
@@ -342,7 +347,7 @@ export function RulesCard({
               { value: "action", label: t("rules.filters.actionAsc") },
               { value: "protocol", label: t("rules.filters.protocolAsc") },
             ]}
-            className="w-full sm:w-56"
+            className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
           />
         </div>
 

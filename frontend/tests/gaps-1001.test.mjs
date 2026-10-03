@@ -34,10 +34,14 @@ test("a version whose install just started is not offered again before the list 
 
 test("firewall and fail2ban layout fixes from the 1024 pass", () => {
   const rules = read("components/firewall/rules-card.jsx");
-  for (const [key, w] of [["enabled", "sm:w-44"], ["action", "sm:w-48"], ["origin", "sm:w-72"], ["sort", "sm:w-56"]]) {
+  // Each filter is as wide as its own choice, so no language can cut one off;
+  // the search keeps room for the longest placeholder (fr) and the row wraps below that.
+  for (const key of ["enabled", "action", "origin", "sort"]) {
     const i = rules.indexOf(`paramKey="${key}"`);
-    assert.match(rules.slice(i, i + 900), new RegExp(`className="w-full ${w}"`), key);
+    assert.match(rules.slice(i, i + 900), /className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"/, key);
   }
+  assert.match(rules, /<div className="sm:max-w-xs sm:min-w-56 sm:flex-1">\s*<SearchInput placeholder=\{t\("rules\.search"\)\} \/>/);
+  assert.match(rules, /<div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">/);
   const quick = read("components/firewall/quick-add-card.jsx");
   assert.doesNotMatch(quick, /min-w-0 truncate text-sm font-medium">\{title\}/);
   assert.match(quick, /t\("quick\.tileRisky", \{ name: preset\.label \}\)/);
