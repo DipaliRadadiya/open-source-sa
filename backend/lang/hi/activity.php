@@ -219,7 +219,10 @@ return [
     'sync.started' => 'सर्वर सिंक शुरू किया (:mode)',
     'sync.ignored' => 'सर्वर सिंक से :resource_key हटाया',
     'sync.unignored' => 'सर्वर सिंक में :resource_key वापस जोड़ा',
+    'sync.legacy_handover' => 'पुराने पैनल से सर्वर का हस्तांतरण पूरा किया',
     'application.supervisor_install_started' => ':name के लिए supervisor इंस्टॉल करना शुरू किया',
+    'application.supervisor_converted' => ':name को PM2 से systemd पर ले जाया',
+    'application.supervisor_convert_failed' => ':name को PM2 से systemd पर नहीं ले जाया जा सका; यह फिर से PM2 के तहत चल रहा है',
     'application.supervisor_installed' => 'supervisor इंस्टॉल किया',
     'application.supervisor_install_failed' => 'supervisor इंस्टॉल नहीं हो सका (:reference)',
 

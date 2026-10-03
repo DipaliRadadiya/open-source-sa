@@ -219,7 +219,10 @@ return [
     'sync.started' => 'サーバー同期を開始しました (:mode)',
     'sync.ignored' => 'サーバー同期から :resource_key を除外しました',
     'sync.unignored' => 'サーバー同期に :resource_key を戻しました',
+    'sync.legacy_handover' => '旧パネルからのサーバー引き継ぎを完了しました',
     'application.supervisor_install_started' => ':name のために supervisor のインストールを開始しました',
+    'application.supervisor_converted' => ':name を PM2 から systemd に移行しました',
+    'application.supervisor_convert_failed' => ':name を PM2 から systemd に移行できませんでした。PM2 の管理下に戻しました',
     'application.supervisor_installed' => 'supervisor をインストールしました',
     'application.supervisor_install_failed' => 'supervisor をインストールできませんでした (:reference)',
 

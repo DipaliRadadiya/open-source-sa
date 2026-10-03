@@ -260,3 +260,20 @@ it('is refused to someone who cannot', function () {
 
     expect(collect($f['ran'])->contains(fn (string $c) => str_contains($c, 'systemctl')))->toBeFalse();
 });
+
+it('leaves an activity entry with a sentence, not its key', function () {
+    // The docker/pm2 merge logged this event with no sentence, so the
+    // Activity Log showed `activity.sync.legacy_handover`.
+    adopted();
+    handoverFake();
+
+    $headers = ['Authorization' => 'Bearer '.test()->token];
+
+    $this->withHeaders($headers)->postJson('/api/server/sync/handover')->assertOk();
+
+    $entry = collect($this->withHeaders($headers)->getJson('/api/admin/activity-log')->assertOk()->json('activity_log'))
+        ->firstWhere('action', 'legacy_handover');
+
+    expect($entry)->not->toBeNull()
+        ->and($entry['description'])->not->toStartWith('activity.');
+});

@@ -225,7 +225,10 @@ return [
     'sync.started' => 'Started a server sync (:mode)',
     'sync.ignored' => 'Dismissed :resource_key from server sync',
     'sync.unignored' => 'Restored :resource_key to server sync',
+    'sync.legacy_handover' => 'Finished taking over the server from the old panel',
     'application.supervisor_install_started' => 'Started installing supervisor for :name',
+    'application.supervisor_converted' => 'Moved :name from PM2 to systemd',
+    'application.supervisor_convert_failed' => 'Could not move :name from PM2 to systemd; it is back under PM2',
     'application.supervisor_installed' => 'Installed supervisor',
     'application.supervisor_install_failed' => 'Could not install supervisor (:reference)',
 

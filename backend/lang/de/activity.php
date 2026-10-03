@@ -219,7 +219,10 @@ return [
     'sync.started' => 'Server-Synchronisierung gestartet (:mode)',
     'sync.ignored' => ':resource_key aus der Server-Synchronisierung ausgeblendet',
     'sync.unignored' => ':resource_key wieder in die Server-Synchronisierung aufgenommen',
+    'sync.legacy_handover' => 'Übernahme des Servers vom alten Panel abgeschlossen',
     'application.supervisor_install_started' => 'Installation von Supervisor für :name gestartet',
+    'application.supervisor_converted' => ':name von PM2 zu systemd verschoben',
+    'application.supervisor_convert_failed' => ':name konnte nicht von PM2 zu systemd verschoben werden; läuft wieder unter PM2',
     'application.supervisor_installed' => 'Supervisor installiert',
     'application.supervisor_install_failed' => 'Supervisor konnte nicht installiert werden (:reference)',
 
