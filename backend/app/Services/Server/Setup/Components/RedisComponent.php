@@ -23,6 +23,12 @@ class RedisComponent implements SetupComponent
 {
     public function __construct(private RedisSettings $redis) {}
 
+    /** The panel's own cache, on every server. */
+    public function applies(): bool
+    {
+        return true;
+    }
+
     public function key(): string
     {
         return 'redis';

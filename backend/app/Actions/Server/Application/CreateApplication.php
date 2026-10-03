@@ -98,6 +98,35 @@ class CreateApplication
                     'rendering_type' => $data['rendering_type'] ?? null,
                     'status' => ApplicationStatus::Pending,
                     'system_user_id' => $data['system_user_id'],
+                    // A type's declared fields that are real columns.
+                    //
+                    // `typeSettings()` deliberately skips those — a column
+                    // should be a column, not a key in a JSON blob — but the
+                    // list below sets only the fields every type shares, so a
+                    // column-backed type field was dropped by both and
+                    // vanished. Measured, not theorised: a Docker application
+                    // was created with `image`, `container_port` and `compose`
+                    // all null, and the user's pasted compose file simply did
+                    // not exist afterwards.
+                    //
+                    // Spread FIRST, so the explicit entries below win. Last
+                    // was my first attempt and it is exactly backwards: a
+                    // type declaring `deploy_script` then overwrote the
+                    // CRLF-normalised value with the raw one, and a script
+                    // pasted from Windows went back to failing with
+                    // "command not found: composer\r". The suite caught it.
+                    ...$this->typeColumns($type->fields(), $data),
+                    // The create form's "make a new one" fields, folded into the
+                    // columns the compose file is rendered from.
+                    //
+                    // Resolved here rather than left as separate columns, so
+                    // there is ONE place that answers "what network is this site
+                    // on" — a `docker_network_new` living alongside
+                    // `docker_network` would be a second source for the same
+                    // fact, and the compose renderer would have to know about
+                    // both. The objects themselves are created on the box at
+                    // provision time; this records the intent.
+                    ...$this->containerWiring($data),
                     'name' => $data['name'],
                     'domain' => $data['domain'],
                     // A blank version is the server default, resolved and
@@ -207,6 +236,76 @@ class CreateApplication
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
+    /**
+     * The type's declared fields that are columns on the model.
+     *
+     * The mirror of {@see typeSettings()}: that one takes the fields which are
+     * NOT columns, this one takes the fields which are. Between them every
+     * declared field lands somewhere, which is the property that was missing —
+     * a field in neither list is accepted by validation and then silently
+     * discarded.
+     *
+     * @param  array<int, array<string, mixed>>  $fields
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    /**
+     * The network and volume a container site was created with.
+     *
+     * `docker_network_new` and `docker_network` are two answers to one question,
+     * and validation refuses both at once (`prohibits`) — so whichever arrived
+     * lands in the same column and nothing downstream has to ask which field it
+     * came from.
+     *
+     * The volume pair becomes the first entry of `volume_mounts`, the same shape
+     * the Container card edits. Both halves or neither: validation makes each
+     * `required_with` the other, so a half-filled pair cannot reach here.
+     *
+     * **`docker_mode` is not resolved here and not stored at all** — see the
+     * form-only list in `typeSettings()`. It answers a question about the form, and
+     * the site already records which way it was made by having a compose file or not.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function containerWiring(array $data): array
+    {
+        $wiring = [];
+
+        $network = trim((string) ($data['docker_network_new'] ?? '')) !== ''
+            ? (string) $data['docker_network_new']
+            : (string) ($data['docker_network'] ?? '');
+
+        if ($network !== '') {
+            $wiring['docker_network'] = $network;
+        }
+
+        $volume = trim((string) ($data['volume_new'] ?? ''));
+        $path = trim((string) ($data['volume_path'] ?? ''));
+
+        if ($volume !== '' && $path !== '') {
+            $wiring['volume_mounts'] = [['volume' => $volume, 'path' => $path]];
+        }
+
+        return $wiring;
+    }
+
+    private function typeColumns(array $fields, array $data): array
+    {
+        $columns = (new Application)->getFillable();
+        $values = [];
+
+        foreach ($fields as $field) {
+            $name = (string) $field['name'];
+
+            if (in_array($name, $columns, true) && array_key_exists($name, $data)) {
+                $values[$name] = $data[$name];
+            }
+        }
+
+        return $values;
+    }
+
     private function typeSettings(array $fields, array $data): array
     {
         $columns = (new Application)->getFillable();
@@ -228,8 +327,27 @@ class CreateApplication
             $settings['database_engine'] = (string) $data['database_engine'];
         }
 
+        /*
+         * Declared fields that shape the create FORM and are never stored anywhere.
+         *
+         * `docker_mode` chooses whether the Docker card asks for an image and a port
+         * or for a compose file. It answers a question about the form, not about the
+         * site — and the site already records which way it was made, by having a
+         * compose file or not. Storing it would be a second source for that, free to
+         * drift, and the first person to trust the wrong one gets a surprise.
+         *
+         * Listed rather than silently dropped: the guard in ContainerSupervisorTest
+         * requires every declared field to be a column, a setting, or named as a
+         * deliberate exception, and this is where the exception lives.
+         */
+        $formOnly = ['docker_mode'];
+
         foreach ($fields as $field) {
             $name = (string) $field['name'];
+
+            if (in_array($name, $formOnly, true)) {
+                continue;
+            }
 
             if (! in_array($name, $columns, true) && array_key_exists($name, $data)) {
                 $settings[$name] = $data[$name];
@@ -298,6 +416,12 @@ class CreateApplication
         // it — so asking for the command here left Uptime Kuma and friends
         // with no port at all, a unit with no `PORT`, and a reverse proxy
         // pointed at nothing.
-        return $servingProfile === 'node' ? $this->ports->allocate() : null;
+        // Both need one, for the same reason: nginx proxies to a loopback port
+        // and something has to be listening on it. A container without an
+        // allocated port renders a vhost pointing at `127.0.0.1:` and every
+        // request to the site is a 502.
+        return in_array($servingProfile, ['node', 'docker'], true)
+            ? $this->ports->allocate()
+            : null;
     }
 }

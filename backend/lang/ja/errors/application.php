@@ -1,6 +1,20 @@
 <?php
 
 return [
+    'compose_port_ambiguous' => 'この compose ファイルは複数のポートを公開しているため、どれがサイトを提供するのかパネルには判断できません。「コンテナのポート」にプロキシ対象の内部ポートを指定してください。',
+    'compose_unparsable' => 'Docker がこの compose ファイルを読み取れませんでした。インデントと引用符を確認してください。Docker 自身のエラーはサーバー操作ログにあります。',
+    'compose_no_services' => 'この compose ファイルにはサービスが定義されていないため、実行するものがありません。',
+    'compose_bind_outside' => 'サービス :service が :path をマウントしていますが、これはこのアプリケーション自身のディレクトリの外です。コンテナは自分のファイルのみマウントできます。',
+    'compose_port_public' => 'この compose ファイルは、パネルが書き換えられない形式でポートをすべてのアドレスに公開しています。Docker のファイアウォール規則はパネルより前に適用されるため、ファイアウォール画面で閉じていると表示されていてもインターネットから到達可能になります。`"127.0.0.1:3001:3001"` のように 127.0.0.1 へ公開してください。nginx がプロキシします。',
+    'compose_forbidden' => [
+        'privileged' => 'サービス :service は特権モードで実行され、ホスト全体を掌握します。',
+        'cap_add' => 'サービス :service は Linux ケーパビリティを追加します。SYS_ADMIN だけでホストのファイルシステムをマウントできます。',
+        'devices' => 'サービス :service はホストのデバイスをマップします。生のブロックデバイスはそのディスク上の全ファイルです。',
+        'namespace' => 'サービス :service はホストの名前空間を共有し、コンテナ外のプロセスを参照・シグナル送信できます。',
+        'security_opt' => 'サービス :service はセキュリティオプションを設定します。AppArmor や seccomp を無効化する箇所です。',
+        'network_mode' => 'サービス :service はネットワークモードを設定します。ホストのネットワーク上に置かれ、ループバック公開もファイアウォールも迂回します。',
+        'cgroup_parent' => 'サービス :service は親 cgroup を設定し、このサーバーが適用するリソース制限を回避します。',
+    ],
     'database_engine_not_used' => 'このアプリケーションはデータベースを使用しません。',
     'database_engine_unsupported' => 'このアプリケーションはそのデータベースエンジンを使用できません。:application は別のものに対応しています。',
     'database_engine_unavailable' => 'そのデータベースエンジンはこのサーバーで実行されていません。先にインストールまたは起動してください。',
@@ -23,6 +37,12 @@ return [
     'no_web_server' => 'ウェブサーバーが検出されません',
     'provision_failed' => 'サイトのセットアップが「:step」の段階で失敗しました。',
     'not_a_git_application' => 'このアプリケーションはgitデプロイではないため、取得するものがありません。',
+    'not_a_container' => 'このアプリケーションはコンテナで動作していないため、コンテナ設定はありません。',
+    'container_not_running' => 'このコンテナは稼働していないため、更新するものがありません。先にサイトをプロビジョニングするか有効化してください。',
+    'container_pull_failed' => 'イメージを取得できませんでした。参照 :reference。',
+    'container_apply_failed' => '設定は保存しましたが、その設定でコンテナを起動できませんでした。参照 :reference。',
+    'compose_apply_failed' => 'compose ファイルを適用できなかったため、サイトは以前のファイルに戻されました。参照 :reference。',
+    'docker_removal_not_permitted' => 'Docker のネットワークやボリュームを削除する権限がありません。それらを残してサイトを削除するか、Docker の権限を持つ人に依頼してください。',
     'no_database_engine' => '利用可能なデータベースエンジンがありません。このアプリケーションを作成する前に MySQL または MariaDB を設定してください。',
     'no_process' => '「:name」は独自のプロセスを実行していません。',
     'process_failed' => 'アプリケーションを:actionできませんでした。参照番号をサポートにお伝えください。',

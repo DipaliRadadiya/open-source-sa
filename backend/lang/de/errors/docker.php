@@ -1,0 +1,23 @@
+<?php
+
+return [
+    'not_a_docker_server' => 'Dieser Server hostet keine Container und hat daher weder Docker-Netzwerke noch -Volumes.',
+    'invalid_name' => 'Ein Name darf Buchstaben, Ziffern, Punkte, Binde- und Unterstriche enthalten und muss mit einem Buchstaben oder einer Ziffer beginnen.',
+    'network_exists' => 'Ein Netzwerk namens :name existiert bereits.',
+    'volume_exists' => 'Ein Volume namens :name existiert bereits.',
+    'network_built_in' => ':name ist eines von Dockers eigenen Netzwerken. Docker legt es beim Neustart wieder an, und es zu entfernen würde jeden Container auf diesem Server lahmlegen.',
+    'network_in_use' => 'Am Netzwerk :name hängen noch Container: :containers. Stoppen oder trennen Sie sie zuerst.',
+    'network_used_by_sites' => 'Diese Websites sollen dem Netzwerk :name beitreten: :sites. Ändern Sie zuerst deren Netzwerk — eine Entfernung würde verhindern, dass sie starten.',
+    'volume_in_use' => 'Das Volume :name wird noch von :count Container(n) genutzt. Stoppen Sie diese zuerst — ein Volume im Betrieb zu löschen entfernt Daten, die gerade geschrieben werden.',
+    'volume_in_use_by' => 'Das Volume :name wird noch von :containers verwendet. Stoppen Sie diese zuerst — ein Volume im Einsatz zu entfernen löscht Daten, die gerade geschrieben werden.',
+    'volume_used_by_sites' => 'Diese Websites binden das Volume :name ein: :sites. Entfernen Sie dort zuerst die Einbindung — eine Löschung vernichtet die darin gespeicherten Daten.',
+    'network_create_failed' => 'Das Netzwerk konnte nicht erstellt werden. Referenz :reference.',
+    'network_remove_failed' => 'Das Netzwerk konnte nicht entfernt werden. Referenz :reference.',
+    'volume_create_failed' => 'Das Volume konnte nicht erstellt werden. Referenz :reference.',
+    'volume_remove_failed' => 'Das Volume konnte nicht entfernt werden. Referenz :reference.',
+    'registry_deleted' => 'Die Registry-Anmeldedaten wurden gelöscht. Sites, die sie genutzt haben, laden Images ab jetzt anonym.',
+    'registry_credential_unwritable' => 'Die Registry-Anmeldedaten konnten nicht auf die Festplatte geschrieben werden, daher wurde Docker nie gefragt. Referenz :reference.',
+    'database_start_failed' => 'Die Datenbank konnte nicht gestartet werden (:step). Es blieb nichts zurück — kein Eintrag, kein Container und kein belegter Port.',
+    'database_version_unknown' => 'Diese Engine hat keine Version :version. Wählen Sie eine, die das Panel für :engine anbietet.',
+    'database_deleted' => 'Die Datenbank wurde entfernt.',
+];

@@ -2,6 +2,8 @@
 
 return [
     'checks' => [
+        'docker' => 'Docker',
+        'docker_exposure' => 'Exposition des conteneurs',
         'dynamic_response_limit' => 'Plafond de téléchargement de fichiers',
         'site_root_lock' => 'Verrouillage du dossier du site',
         'home_access' => 'Accès aux dossiers personnels',
@@ -19,6 +21,10 @@ return [
         'driver_contention' => 'Contention des pilotes',
     ],
     'fixes' => [
+        'docker_missing' => 'Docker n\'est pas installé. Installez-le depuis la page Services si vous comptez exécuter des conteneurs ; rien d\'autre sur ce serveur n\'en a besoin.',
+        'docker_down' => 'Docker est installé mais son démon ne répond pas. Lancez `sudo systemctl status docker` pour voir pourquoi, puis `sudo systemctl start docker`. Aucun conteneur ne peut démarrer d\'ici là.',
+        'docker_denied' => 'Le démon fonctionne mais a refusé le panel. Lancez `sudo php artisan panel:sudoers` pour actualiser l\'autorisation sudo. N\'ajoutez PAS l\'utilisateur du site au groupe `docker` comme contournement : appartenir à ce groupe équivaut à être root sur ce serveur.',
+        'docker_exposure' => 'Un conteneur publie un port sur toutes les adresses. Docker écrit ses propres règles de pare-feu avant celles d\'ufw, donc ce port est joignable depuis internet même si la page Pare-feu l\'affiche fermé. Republiez-le sur 127.0.0.1 et laissez nginx faire le proxy, ce que le panel fait pour les conteneurs qu\'il crée.',
         'home_open' => 'Le dossier personnel d\'un utilisateur système est ouvert à tous les autres comptes locaux : tout fichier écrit par ses sites avec des permissions ordinaires — sessions, fichiers .env, bases de données — peut être lu par l\'utilisateur de n\'importe quel autre site. Exécutez `php artisan sites:resync` : il installe le paquet acl s\'il manque et ferme chaque dossier personnel à tous sauf au panneau et au serveur web.',
         'dynamic_response_limit' => 'OpenLiteSpeed limite la taille de ce que PHP renvoie, et sa valeur par défaut est trop basse pour le gestionnaire de fichiers : tout téléchargement au-delà est refusé par un 413 avant que le panel ne le voie, donc rien n\'apparaît dans les journaux. Définissez `maxDynRespSize 1024G` dans /usr/local/lsws/conf/httpd_config.conf puis redémarrez avec `sudo /usr/local/lsws/bin/lswsctrl restart`. Les nouvelles installations l\'ont déjà ; les anciennes non, car les mises à jour livrent du code et pas de la configuration. `0` ne signifie pas illimité — il signifie zéro.',
         'site_root_unlocked' => 'Le dossier d\'un site peut être renommé par son propre utilisateur et remplacé par un dossier qu\'il contrôle — ce qui contourne les réglages PHP verrouillés du site et permet à une action du panneau d\'écrire hors du site. Exécutez `php artisan sites:resync`, qui verrouille tous les dossiers de sites et signale ceux qu\'il n\'a pas pu verrouiller. « Impossible à vérifier » signifie généralement que le système de fichiers ne gère pas l\'attribut immuable (ZFS, certains conteneurs) ; un site encore non verrouillé après la resynchronisation a un dossier qui ne ressemble pas à celui créé par le panneau — examinez-le avant de lui faire confiance. Un site adopté par la synchronisation du serveur a un dossier qui appartient à son propre utilisateur : verrouillez-le depuis la page de ce site avec le bouton Verrouiller.',

@@ -180,8 +180,49 @@ return [
     */
 
     'custom' => [
+
+        // Docker's own bounds, moved from the daemon to the form. `compose up`
+        // refuses an over-provisioned quota — it does not clamp it — so without
+        // these the save lands as a provisioning failure with Docker's sentence
+        // in it, while the panel shows a limit the container does not have.
+        'cpu_limit' => [
+            'format' => 'Use a number of CPUs, with up to two decimal places — 1, 1.5, 0.5.',
+            'positive' => 'The smallest CPU limit Docker accepts is :minimum. Leave the field empty for no limit.',
+            'too_many' => 'This server has :cores CPUs, and Docker will not start a container asking for more. Choose :cores or less.',
+        ],
+
+        'memory_limit' => [
+            'format' => 'Use a size with a unit — 512m or 2g. A number on its own means bytes to Docker, not megabytes.',
+            'too_small' => 'Docker will not start a container with less than 6m of memory.',
+        ],
+
+        // A registry address Docker cannot interpret is silently IGNORED at
+        // pull time — the credential simply never applies and the error is
+        // identical to having none. So these are refusals at the form, and each
+        // one names the specific mistake rather than saying "invalid".
+        'registry' => [
+            'empty' => 'Enter the registry\'s address — `docker.io` for Docker Hub, `ghcr.io`, or your own host.',
+            'path' => 'That looks like a namespace or a repository, not a registry. Enter the host on its own — `ghcr.io`, not `ghcr.io/your-org`.',
+            'credentials' => 'Do not put a username or password in the address. Enter the host on its own; the credentials go in the fields below.',
+            'host' => 'That is not a registry address. Enter a hostname, optionally with a port — `registry.example.com` or `registry.example.com:5000`.',
+            'port' => 'The port must be between 1 and 65535.',
+        ],
         'attribute-name' => [
             'rule-name' => 'custom-message',
+        ],
+
+        // Laravel's default reads "The docker network new field prohibits docker
+        // network from being present" — raw attribute names at a user.
+        'docker_network_new' => [
+            'prohibits' => 'Either pick a network from the list or name a new one — not both. They are two answers to the same question.',
+        ],
+
+        'volume_path' => [
+            'required_with' => 'Give the path inside the container where this volume should appear, for example /var/lib/mysql.',
+        ],
+
+        'volume_new' => [
+            'required_with' => 'Name the volume to create, or clear the path if you do not want one.',
         ],
     ],
 
@@ -208,6 +249,22 @@ return [
     'start_command_wrapper' => 'Start the app with its entry file, for example "node server.js", not with :binary. A package manager forks the real process, so signals never reach it.',
 
     'port_in_use_by_app' => 'Port :port is already used by another application on this server.',
+
+    // A network the panel created, named by a site that will join it.
+    'docker_network_invalid' => 'Start the network name with a letter or number, then letters, numbers, dots, dashes or underscores.',
+    'docker_network_missing' => 'There is no Docker network called \':name\' on this server. It may have been removed since this page loaded.',
+
+    // Mounting a panel-created volume into a container site.
+    'docker_volume_invalid' => 'Start the volume name with a letter or number, then letters, numbers, dots, dashes or underscores.',
+    'docker_volume_missing' => 'There is no Docker volume called \':name\' on this server. It may have been removed since this page loaded.',
+    'docker_mount_duplicate' => 'Two volumes cannot mount at :path. Docker would keep only one of them, without saying which.',
+    'docker_mount_root' => 'Choose a path inside the container, for example /var/lib/mysql.',
+    'docker_mount_site_root' => 'That path is where the site\'s own files are mounted (:path). A volume there hides them from the container — the files stay on the server but the site serves an empty volume.',
+    'docker_mount_reserved' => ':path is part of the image the container boots from. An empty volume over it leaves a container that cannot start.',
+
+    // A name the panel is about to create, so the inverse rule: not taken.
+    'docker_network_taken' => 'A network called \':name\' already exists on this server. Pick it from the list above instead of creating a second one.',
+    'docker_volume_taken' => 'A volume called \':name\' already exists on this server. Mount the existing one from the site\'s Container card instead of creating a second one.',
     'node_version_unsupported' => 'The :type application runs on Node :range. Choose a version in that range — outside it the application refuses to start and the site serves nothing.',
     'php_version_unsupported' => 'The :type application runs on PHP :range. Choose a version in that range — outside it the install fails part-way through, inside the application\'s own code, leaving a site to clean up.',
     'php_version_default_unsupported' => 'The :type application runs on PHP :range. Leaving this empty uses the server default (:default), which is outside that range — choose a version in the range instead.',

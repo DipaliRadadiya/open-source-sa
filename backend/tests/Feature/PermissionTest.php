@@ -13,7 +13,7 @@ it('creates the Administrator system role with every permission, idempotently', 
     expect($admin)->toHaveCount(1);
     expect($admin->first()->is_system)->toBeTrue();
     // holds every permission at both levels, view+manage
-    expect($admin->first()->permissions()->count())->toBe(34);
+    expect($admin->first()->permissions()->count())->toBe(38);
     foreach ($admin->first()->permissions as $permission) {
         expect((bool) $permission->pivot->view)->toBeTrue();
         expect((bool) $permission->pivot->manage)->toBeTrue();
@@ -23,13 +23,15 @@ it('creates the Administrator system role with every permission, idempotently', 
 it('seeds the server and application permission items in order', function () {
     $this->seed(PermissionSeeder::class);
 
-    expect(Permission::count())->toBe(34);
-    expect(Permission::where('level', 'server')->count())->toBe(18);
-    expect(Permission::where('level', 'application')->count())->toBe(16);
+    expect(Permission::count())->toBe(38);
+    expect(Permission::where('level', 'server')->count())->toBe(20);
+    expect(Permission::where('level', 'application')->count())->toBe(18);
 
     $server = Permission::where('level', 'server')->orderBy('order');
     expect($server->pluck('name')->first())->toBe('dashboard');
-    expect($server->pluck('name')->last())->toBe('storage');
+    // `registry` is last because it was appended rather than slotted in, so
+    // adding it moved nothing that was already there.
+    expect($server->pluck('name')->last())->toBe('registry');
 
     $app = Permission::where('level', 'application')->orderBy('order');
     expect($app->pluck('name')->first())->toBe('app_dashboard');
@@ -46,16 +48,21 @@ it('seeds the server and application permission items in order', function () {
         ->every(fn (string $name) => str_starts_with($name, 'app_')))->toBeTrue();
 });
 
-it('groups the git and storage permissions under the integration sub-level', function () {
+it('groups the git, storage and registry permissions under the integration sub-level', function () {
     $this->seed(PermissionSeeder::class);
 
     $integrations = Permission::where('sub_level', 'integration')->orderBy('order')->get();
 
-    expect($integrations->pluck('name')->all())->toBe(['git', 'storage']);
+    // Registry credentials belong here for the reason this group exists: an
+    // externally-held credential the features consume. They were a card at the
+    // bottom of the Docker page, which is what made them undiscoverable.
+    expect($integrations->pluck('name')->all())->toBe(['git', 'storage', 'registry']);
     expect($integrations->pluck('level')->unique()->all())->toBe(['server']);
-    expect($integrations->pluck('url')->all())->toBe(['/integrations/git', '/integrations/storage']);
+    expect($integrations->pluck('url')->all())->toBe([
+        '/integrations/git', '/integrations/storage', '/integrations/registries',
+    ]);
     // the existing items are untouched — no sidebar churn
-    expect(Permission::where('sub_level', 'server')->count())->toBe(16);
+    expect(Permission::where('sub_level', 'server')->count())->toBe(17);
 });
 
 it('returns a localized sub-level header alongside each permission', function () {
@@ -97,7 +104,12 @@ it('shows an admin every permission with full view+manage access', function () {
     $response = $this->withHeader('Authorization', "Bearer {$token}")
         ->getJson('/api/permissions');
 
-    $response->assertOk()->assertJsonCount(34, 'permissions');
+    // 37 in the catalog, 36 here: `registry` is gated on the server hosting
+    // containers, and a test with no capability row falls back to
+    // `ServerCapabilities::DEFAULT_PROFILES`, which is php/node/static. That is the
+    // same answer the Docker endpoints have always given on an unknown box, so it
+    // is the consistent one rather than a gap.
+    $response->assertOk()->assertJsonCount(37, 'permissions');
     foreach ($response->json('permissions') as $permission) {
         expect($permission['permissions']['view'])->toBeTrue();
         expect($permission['permissions']['manage'])->toBeTrue();
@@ -154,14 +166,14 @@ it('filters the check endpoint by level', function () {
         ->getJson('/api/permissions/check?level=server');
 
     // level=server spans both sub-levels — the grouping is a display concern
-    $response->assertOk()->assertJsonCount(18, 'permissions');
+    $response->assertOk()->assertJsonCount(19, 'permissions');
 
     // …and level=application returns the sidebar rendered *inside* an app.
     // Each level is its own sidebar; this filter is what separates them.
     $this->withHeader('Authorization', "Bearer {$token}")
         ->getJson('/api/permissions/check?level=application')
         ->assertOk()
-        ->assertJsonCount(16, 'permissions')
+        ->assertJsonCount(18, 'permissions')
         ->assertJsonPath('permissions.0.name', 'app_dashboard');
 });
 

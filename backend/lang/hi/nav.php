@@ -13,12 +13,14 @@ return [
     'service' => 'सेवाएँ',
     'php' => 'PHP',
     'node' => 'Node.js',
+    'docker' => 'Docker',
     'setting' => 'सेटिंग्स',
     'disk_cleaner' => 'डिस्क क्लीनर',
     'activity_log' => 'गतिविधि लॉग',
     'sync' => 'सर्वर सिंक',
     'git' => 'Git',
     'storage' => 'स्टोरेज',
+    'registry' => 'Docker रजिस्ट्री',
 
     // Application sidebar. Separate keys from the server-level ones above:
     // `logs` is the machine's auth.log, `app_log` is one site's access log,
@@ -27,6 +29,8 @@ return [
     'app_domain' => 'डोमेन और SSL',
     'app_deployment' => 'डिप्लॉयमेंट्स',
     'app_environment' => 'एनवायरनमेंट',
+    'app_container' => 'कंटेनर',
+    'app_compose' => 'compose फ़ाइल',
     'app_worker' => 'वर्कर्स',
     'app_file' => 'फ़ाइलें',
     'app_log' => 'लॉग',

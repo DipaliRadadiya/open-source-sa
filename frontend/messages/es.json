@@ -1435,7 +1435,8 @@
       "retryOnSetup": "Reintentar en la página de configuración",
       "retryOnDatabases": "Reintentar en la página de bases de datos",
       "retryOnPhp": "Reintentar en la página de PHP",
-      "retryOnFail2ban": "Reintentar en la página de Fail2ban"
+      "retryOnFail2ban": "Reintentar en la página de Fail2ban",
+      "retryOnDocker": "Reintentar en la página de Docker"
     },
     "summary": {
       "attention": "{count, plural, =1 {1 servicio necesita atención} other {# servicios necesitan atención}}",
@@ -1464,6 +1465,7 @@
       "openDatabases": "Abrir bases de datos",
       "openPhp": "Abrir PHP",
       "openFail2ban": "Abrir Fail2ban",
+      "openDocker": "Abrir Docker",
       "unitFailedNoLog": "Instalado pero no en ejecución. Prueba a iniciarlo; si vuelve a detenerse, el error está en el registro del sistema del servidor."
     },
     "moreActions": "Más acciones para {name}"
@@ -2365,6 +2367,10 @@
     "tabs": {
       "extensions": "Extensiones",
       "ioncube": "ionCube"
+    },
+    "unavailable": {
+      "title": "PHP no se gestiona en este servidor",
+      "body": "Este servidor aloja contenedores, así que no sirve sitios PHP ni tiene versiones de PHP que gestionar. PHP sigue instalado para el propio panel, y su servicio se puede reiniciar desde Servicios."
     }
   },
   "node": {
@@ -2457,6 +2463,10 @@
       "eol": "Sin soporte",
       "endsOn": "El soporte termina el {date}.",
       "endedOn": "El soporte terminó el {date}."
+    },
+    "unavailable": {
+      "title": "Node.js no se gestiona en este servidor",
+      "body": "Este servidor aloja contenedores y no ejecuta aplicaciones en el propio host, así que no hay versiones de Node.js que gestionar. Un contenedor trae su propio entorno de ejecución."
     }
   },
   "diskCleaner": {
@@ -3150,7 +3160,12 @@
       "description": "El servidor de bases de datos tiene que reiniciarse para aceptar conexiones desde otras direcciones. Las aplicaciones que lo usan pierden la conexión un momento."
     },
     "backToList": "Volver a bases de datos",
-    "createFailed": "No se pudo crear la base de datos."
+    "createFailed": "No se pudo crear la base de datos.",
+    "unavailable": {
+      "title": "Las bases de datos no se gestionan en este servidor",
+      "body": "Este servidor aloja contenedores. Una aplicación que necesita una base de datos trae la suya como contenedor, así que el panel no gestiona ningún motor aquí, y sus propios datos están en SQLite de todos modos."
+    },
+    "backToList": "Volver a bases de datos"
   },
   "git": {
     "title": "Git",
@@ -3727,7 +3742,10 @@
       "removeDatabasesOff": "{count, plural, one {{databases} permanece en el servidor, sin vincular a ninguna aplicación. Elimínala desde Bases de datos si ya no la necesitas.} other {{databases} permanecen en el servidor, sin vincular a ninguna aplicación. Elimínalas desde Bases de datos si ya no las necesitas.}}",
       "databasesFailed": "La aplicación se eliminó, pero no se pudo eliminar {databases}.",
       "goToDatabases": "Abrir Bases de datos",
-      "removeFilesHint": "Desactivado: la aplicación se elimina del panel pero sus archivos permanecen en el servidor. Activado: los archivos y sus copias de seguridad se eliminan y no se pueden recuperar."
+      "removeFilesHint": "Desactivado: la aplicación se elimina del panel pero sus archivos permanecen en el servidor. Activado: los archivos y sus copias de seguridad se eliminan y no se pueden recuperar.",
+      "removeDocker": "Eliminar también la red y los volúmenes de Docker de este sitio ({count})",
+      "removeDockerOn": "Se eliminará {names}. Lo que otro sitio siga usando se conserva: el servidor lo comprueba en el momento de eliminar, no ahora.",
+      "removeDockerOff": "{names} permanece en el servidor. Sus datos se conservan y puedes eliminarlos más tarde desde la página de Docker."
     },
     "systemUserMissing": {
       "title": "Falta el usuario del sistema de esta aplicación",
@@ -5322,7 +5340,8 @@
       "measuring": "Midiendo…",
       "measured": "Tamaño medido.",
       "measureFailed": "No se pudo medir el tamaño.",
-      "measureHint": "Medir esta aplicación en el disco ahora"
+      "measureHint": "Medir esta aplicación en el disco ahora",
+      "inVolumes": "de los cuales {size} están en volúmenes Docker"
     },
     "status": {
       "pending": "Pendiente",
@@ -5579,7 +5598,102 @@
       "effectPublic": "Todo lo que hay dentro de public_html sigue funcionando exactamente igual."
     },
     "deploying": "Desplegando",
-    "processStoppedBadge": "Detenida"
+    "processStoppedBadge": "Detenida",
+    "container": {
+      "title": "Contenedor",
+      "image": "Imagen",
+      "noImage": "No hay ninguna imagen registrada",
+      "imageHint": "Se cambia volviendo a desplegar el sitio, no aquí: la nueva imagen se descarga antes de sustituir el contenedor anterior.",
+      "network": "Red",
+      "networkHint": "Los contenedores de una misma red se localizan por su nombre. El puente predeterminado de Docker no permite eso.",
+      "defaultBridge": "Puente predeterminado de Docker",
+      "noNetworks": "Este servidor todavía no tiene redes propias, así que no hay ninguna a la que unirse.",
+      "noNetworksLink": "Crea una red en la página de Docker.",
+      "missingOption": "{name} (ya no está en este servidor)",
+      "missingTitle": "Esta red ya no existe",
+      "missingBody": "El sitio está configurado para unirse a {name} y este servidor ya no la tiene. El contenedor no arrancará hasta que elijas una red que exista o vuelvas a crear esa.",
+      "reachableTitle": "Cómo llegan otros contenedores a este sitio",
+      "reachableBody": "Usa el nombre de host {alias} — por ejemplo http://{alias} desde otro contenedor de la misma red. Evita «app»: todos los sitios que crea el panel responden a ese nombre, así que apunta a uno cualquiera.",
+      "containerPort": "Puerto del contenedor",
+      "containerPortHint": "El puerto en el que escucha tu aplicación dentro del contenedor.",
+      "memoryLimit": "Límite de memoria",
+      "memoryLimitHint": "Por ejemplo 512m o 2g. Un número sin unidad significa bytes, no megabytes. Vacío usa el valor por defecto del servidor: {default}.",
+      "memoryLimitHintUnknown": "Por ejemplo 512m o 2g. Un número sin unidad significa bytes, no megabytes. Vacío usa el valor por defecto del servidor.",
+      "cpuLimit": "Límite de CPU",
+      "cpuLimitPlaceholder": "Sin límite",
+      "cpuLimitHint": "En núcleos — 1 para un núcleo completo, 0.5 para la mitad. Este servidor tiene {cores}. Vacío significa sin límite alguno.",
+      "cpuLimitHintUnknown": "En núcleos — 1 para un núcleo completo, 0.5 para la mitad. No puede superar lo que tiene este servidor. Vacío significa sin límite alguno.",
+      "limitsTitle": "Cómo se comportan estos dos límites",
+      "limitsBody": "Ambos son techos solo para este contenedor, no reservas — no se aparta nada para él. Fallan de formas opuestas, y conviene saberlo antes de investigar: por encima del techo de memoria el contenedor se mata y se reinicia, así que el sitio pierde peticiones; por encima de la cuota de CPU no se mata nada, el contenedor simplemente espera, así que el sitio va lento sin ningún error.",
+      "saveAction": "Guardar ajustes del contenedor",
+      "restartNote": "Al guardar se recrea el contenedor, así que el sitio estará caído unos segundos.",
+      "savingNote": "Reescribiendo el archivo compose y recreando el contenedor…",
+      "saved": "Ajustes del contenedor guardados.",
+      "failed": "No se han podido guardar los ajustes del contenedor.",
+      "noPermission": "No tienes permiso para cambiar este sitio.",
+      "nothingToSave": "No ha cambiado nada.",
+      "volumes": {
+        "title": "Volúmenes",
+        "empty": "Ningún volumen montado. El contenedor no conserva nada que sobreviva a una reconstrucción.",
+        "choose": "Elige un volumen",
+        "alreadyMounted": "{name} (ya montado)",
+        "pathPlaceholder": "/var/lib/mysql",
+        "pathLabel": "Ruta dentro del contenedor",
+        "add": "Montar",
+        "remove": "Desmontar {volume}",
+        "added": "{volume} montado. El contenedor se ha recreado.",
+        "removed": "{volume} desmontado. El contenedor se ha recreado.",
+        "failed": "No se han podido cambiar los montajes.",
+        "invalid": "Elige un volumen e indica una ruta absoluta dentro del contenedor, por ejemplo /var/lib/mysql.",
+        "noVolumes": "Este servidor todavía no tiene volúmenes, así que no hay nada que montar.",
+        "noVolumesLink": "Crea un volumen en la página de Docker.",
+        "hint": "Un volumen conserva datos que sobreviven a la reconstrucción del contenedor. Montarlo recrea el contenedor y empieza vacío: lo que la imagen tuviera en esa ruta queda oculto, no combinado."
+      },
+      "credentials": {
+        "title": "Credenciales generadas",
+        "reveal": "Mostrar",
+        "revealing": "Cargando…",
+        "hint": "Se crearon al instalar la aplicación y se guardan cifradas. Mostrarlas queda registrado en el historial de actividad.",
+        "shownWarning": "Cualquiera que pueda gestionar este sitio puede leerlas. Son las credenciales reales de la base de datos de la aplicación: no se pueden cambiar aquí, porque la base de datos en marcha conservaría el valor anterior.",
+        "failed": "No se han podido cargar las credenciales."
+      },
+      "firstRun": {
+        "title": "Guarde estas credenciales ahora",
+        "body": "El panel las generó al instalar esta aplicación. No se pueden cambiar desde aquí — la aplicación las guarda en su propia base de datos — así que cópielas en un lugar seguro antes de cerrar este aviso.",
+        "acknowledge": "Las he guardado",
+        "acknowledgeFailed": "No se pudo registrar. Las credenciales no han cambiado.",
+        "laterHint": "Siguen disponibles en Contenedor → Mostrar.",
+        "loading": "Cargando credenciales",
+        "failed": "No se pudieron cargar las credenciales. No cierre este aviso — recargue la página."
+      },
+      "registry": "Registro",
+      "noRegistry": "Ninguno — descargar de forma anónima",
+      "registryHint": "La credencial guardada con la que este sitio descarga su imagen. Déjelo en Ninguno para una imagen pública.",
+      "missingRegistryOption": "Credencial eliminada: la próxima descarga de este sitio será anónima",
+      "noRegistries": "No hay credenciales de registro guardadas en este servidor, así que solo se pueden descargar imágenes públicas.",
+      "noRegistriesLink": "Añada una en Integraciones → Registros de Docker.",
+      "pullTitle": "Actualizar la imagen",
+      "pullHint": "Descarga la imagen otra vez y recrea el contenedor. Reiniciar el sitio no vuelve a consultar el registro, así que una etiqueta movida necesita esto.",
+      "pull": "Descargar y volver a desplegar",
+      "pulled": "Se descargó la imagen y se recreó el contenedor.",
+      "pullFailed": "No se pudo descargar la imagen.",
+      "pageSubtitle": "La red, los puertos, los límites de CPU y memoria y los volúmenes con los que se ejecuta este contenedor."
+    },
+    "compose": {
+      "title": "Archivo compose",
+      "hint": "El archivo con el que funciona este sitio. Las variables de entorno, los servicios adicionales y los volúmenes están todos aquí: un contenedor no tiene una pantalla de Entorno aparte.",
+      "description": "Se edita con el propio analizador de Docker comprobándolo. El panel rechaza un archivo que publique fuera de 127.0.0.1 o que monte algo fuera del directorio de este sitio.",
+      "loadFailed": "No se pudo leer el archivo compose.",
+      "safety": "Guardar recrea el contenedor de este sitio, así que estará brevemente caído. Si el nuevo archivo no arranca, el panel restaura el anterior y levanta el sitio con ese: no se quedará con un sitio parado.",
+      "takeover": "Este sitio funciona ahora con un archivo que el panel genera a partir de los campos Imagen y Puerto del contenedor de arriba. Guardar aquí pasa el archivo a su cargo: desde ese momento se ejecuta este texto y esos campos dejan de gobernarlo. No hay vuelta al archivo generado salvo borrando este.",
+      "acknowledge": "Entiendo que guardar reemplaza el archivo generado de forma permanente.",
+      "save": "Guardar y aplicar",
+      "saved": "Se aplicó el archivo compose y se recreó el contenedor.",
+      "failed": "No se pudo aplicar el archivo compose.",
+      "copy": "Copiar",
+      "revert": "Revertir",
+      "unsaved": "Cambios sin guardar"
+    }
   },
   "panelUpdate": {
     "title": "Actualización del panel",
@@ -6685,5 +6799,176 @@
       "disconnectFailed": "No se pudo desconectar."
     },
     "cardTitle": "Conexión"
+  },
+  "docker": {
+    "title": "Docker",
+    "subtitle": "Redes y volúmenes compartidos por los contenedores de este servidor.",
+    "create": "Crear",
+    "remove": "Quitar",
+    "none": "Ninguna",
+    "failed": "No se pudo completar.",
+    "loadFailed": "No se pudieron leer las redes y volúmenes de Docker.",
+    "ownedByApp": "App n.º {id}",
+    "unavailable": {
+      "title": "No es un servidor de contenedores",
+      "body": "Este servidor no aloja contenedores, así que no tiene redes ni volúmenes de Docker."
+    },
+    "columns": {
+      "name": "Nombre",
+      "path": "Ruta",
+      "driver": "Controlador",
+      "attached": "Contenedores",
+      "size": "Tamaño",
+      "usedBy": "Usada por"
+    },
+    "networks": {
+      "title": "Redes",
+      "placeholder": "nombre-de-red",
+      "hint": "Los contenedores en una misma red definida por el usuario pueden localizarse por nombre. El puente integrado de Docker no lo permite, y por eso una app y su base de datos necesitan una de estas.",
+      "builtIn": "Propia de Docker",
+      "created": "Red {name} creada.",
+      "removed": "Red {name} eliminada.",
+      "removeTitle": "¿Eliminar la red {name}?",
+      "removeBody": "No hay nada conectado. Los contenedores que la esperen más adelante no arrancarán hasta que se vuelva a crear.",
+      "removeBusy": "Todavía hay contenedores conectados a esta red. Deténlos o desconéctalos primero.",
+      "removeUsedBySites": "Estos sitios están configurados para unirse a esta red: {sites}. Cambia primero su red: si la eliminas ahora, dejarán de arrancar.",
+      "noPorts": "Sin puertos",
+      "internalOnly": "solo interno"
+    },
+    "volumes": {
+      "title": "Volúmenes",
+      "placeholder": "nombre-de-volumen",
+      "hint": "Un volumen es donde un contenedor guarda los datos que deben sobrevivir a una reconstrucción.",
+      "empty": "Aún no hay volúmenes en este servidor.",
+      "inUse": "{count} contenedor(es)",
+      "inUseUnnamed": "{count} contenedor(es) — nombres no disponibles",
+      "unused": "Sin usar",
+      "created": "Volumen {name} creado.",
+      "removed": "Volumen {name} eliminado.",
+      "removeTitle": "¿Eliminar el volumen {name}?",
+      "removeBody": "Esto borra los datos que contiene. Ahora mismo nadie lo usa, pero un contenedor detenido puede seguir esperándolo.",
+      "removeBusy": "Un contenedor en ejecución usa este volumen. Eliminarlo borraría datos que algo sigue escribiendo.",
+      "removeUsedBySites": "Estos sitios montan este volumen: {sites}. Quita primero el montaje: si lo eliminas ahora, se destruyen los datos que guardan en él."
+    },
+    "attach": {
+      "action": "Conectar un sitio",
+      "networkTitle": "Conectar un sitio a {name}",
+      "networkBody": "El sitio se une a esta red y puede localizar por su nombre a los demás contenedores que hay en ella.",
+      "volumeTitle": "Montar {name} en un sitio",
+      "volumeBody": "El sitio monta este volumen en una ruta dentro de su contenedor y conserva ahí los datos entre reconstrucciones.",
+      "site": "Sitio",
+      "chooseSite": "Elige un sitio",
+      "noSites": "En este servidor no hay sitios en contenedor en ejecución.",
+      "alreadyAttached": "{site} (ya conectado)",
+      "path": "Ruta dentro del contenedor",
+      "pathHint": "Donde aparece el volumen dentro del contenedor, por ejemplo /var/lib/mysql. No la carpeta propia del sitio.",
+      "attach": "Vincular",
+      "attaching": "Vinculando…",
+      "attached": "{name} conectado a {site}.",
+      "failed": "No se ha podido conectar.",
+      "cancel": "Cancelar",
+      "theSite": "el sitio",
+      "restartWarning": "Esto reescribe la configuración de {site} y recrea su contenedor, así que el sitio estará caído unos segundos."
+    },
+    "registries": {
+      "title": "Credenciales de registro",
+      "add": "Añadir registro",
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "edit": "Editar",
+      "remove": "Quitar",
+      "test": "Probar conexión",
+      "hint": "Añada una credencial aquí y luego elíjala en un sitio de contenedor — en el formulario de creación, o después en los ajustes de Contenedor del sitio. Los sitios que quedan en «Ninguno» descargan de forma anónima, que es lo correcto para cualquier imagen pública.",
+      "empty": "No hay credenciales de registro guardadas. Añada una para ejecutar una imagen privada.",
+      "failed": "Eso no funcionó.",
+      "created": "{name} se añadió.",
+      "updated": "{name} se guardó.",
+      "removed": "{name} se eliminó.",
+      "tested": "Se contactó con el registro.",
+      "dockerHub": "Docker Hub",
+      "tokenHintEdit": "Déjelo vacío para mantener el token guardado. Escriba uno nuevo para reemplazarlo.",
+      "usedBySites": "{count, plural, one {# sitio} other {# sitios}}",
+      "usedByNone": "Ningún sitio",
+      "fields": {
+        "name": "Nombre",
+        "registry": "Dirección del registro",
+        "username": "Usuario",
+        "token": "Token de acceso",
+        "provider": "¿Dónde está alojada la imagen?"
+      },
+      "placeholders": {
+        "name": "GHCR",
+        "registry": "ghcr.io"
+      },
+      "columns": {
+        "name": "Nombre",
+        "registry": "Registro",
+        "username": "Usuario",
+        "status": "Estado",
+        "usedBy": "Usada por"
+      },
+      "invalid": {
+        "name": "Dé a esta credencial un nombre que reconozca.",
+        "registry": "Introduzca solo el host: ghcr.io, no ghcr.io/su-org, y sin usuario ni contraseña.",
+        "username": "Introduzca el usuario al que pertenece este token.",
+        "token": "Pegue el token sin espacios ni saltos de línea."
+      },
+      "errors": {
+        "invalid_credentials": "El registro rechazó este usuario y este token.",
+        "unreachable": "No se pudo contactar con el registro desde este servidor.",
+        "unknown": "El registro rechazó la conexión sin indicar el motivo."
+      },
+      "confirm": {
+        "title": "¿Eliminar {name}?",
+        "body": "La credencial se elimina de este servidor. Ningún sitio la está usando.",
+        "bodyInUse": "{count, plural, one {# sitio está} other {# sitios están}} configurado(s) para descargar con esta credencial. No se eliminan y siguen funcionando, pero su próxima descarga será anónima y fallará si la imagen es privada."
+      },
+      "emptyTitle": "Todavía no hay credenciales de registro",
+      "emptyBody": "Solo necesita una para ejecutar una imagen privada. Tenga a mano su usuario del registro y un token de acceso, no la contraseña de su cuenta. Las imágenes públicas no necesitan nada aquí.",
+      "registryHint": "Solo el host: sin https://, sin espacio de nombres, sin repositorio. Añada un puerto si el suyo usa uno.",
+      "registryHintFixed": "Fijo para este proveedor. Docker guarda las credenciales con esta dirección exacta, y cualquier otra forma de escribirla se ignora en lugar de rechazarse.",
+      "howTo": {
+        "title": "Cómo obtenerlo",
+        "step3": "Péguelo abajo y pulse Probar conexión: el panel consulta el registro en ese momento, en vez de dejar que lo descubra en el primer despliegue."
+      },
+      "temporaryToken": "Este registro emite credenciales de corta duración; las de AWS ECR duran doce horas. Un token pegado aquí funcionará ahora y empezará a fallar al caducar, porque el panel no lo renueva. Use un registro con un token de larga duración, o cuente con actualizarlo a mano.",
+      "providers": {
+        "dockerhub": {
+          "label": "Docker Hub",
+          "step1": "En Docker Hub, abra Ajustes de la cuenta → Personal access tokens y cree un token con acceso Read.",
+          "step2": "Su usuario es su Docker ID: el nombre que aparece en la URL de su perfil, no su correo electrónico.",
+          "usernameHint": "Su Docker ID, no el correo con el que inicia sesión.",
+          "tokenHint": "Un token de acceso personal con acceso Read. La contraseña de la cuenta no funcionará si tiene la verificación en dos pasos activada.",
+          "linkLabel": "Abrir los tokens de acceso de Docker Hub"
+        },
+        "ghcr": {
+          "label": "GitHub Container Registry",
+          "step1": "En GitHub, abra Settings → Developer settings → Personal access tokens → Tokens (classic) y cree uno con el ámbito read:packages.",
+          "step2": "Tiene que ser un token clásico. Un token fine-grained no puede llevar read:packages, así que se rechaza aunque parezca válido.",
+          "usernameHint": "Su nombre de usuario de GitHub.",
+          "tokenHint": "Un token de acceso personal clásico con read:packages. Los tokens fine-grained no funcionan aquí.",
+          "linkLabel": "Abrir los tokens de acceso personal de GitHub"
+        },
+        "gitlab": {
+          "label": "GitLab Container Registry",
+          "step1": "En su proyecto de GitLab, abra Settings → Repository → Deploy tokens y cree uno con el ámbito read_registry.",
+          "step2": "El usuario es el del propio token de despliegue, que GitLab muestra una sola vez al crearlo, no el nombre de su cuenta.",
+          "usernameHint": "El usuario del token de despliegue, no su cuenta de GitLab.",
+          "tokenHint": "Un token de despliegue de proyecto o de grupo con read_registry. Un token de acceso personal también sirve, con el mismo ámbito.",
+          "linkLabel": "Leer la guía de tokens de despliegue de GitLab"
+        },
+        "other": {
+          "label": "Otro registro o registro autoalojado",
+          "step1": "Introduzca el host del registro, con puerto si usa uno; por ejemplo registry.example.com:5000.",
+          "step2": "Use el usuario y el token o contraseña que ese registro acepte para un docker login. Basta una cuenta de solo lectura: esta credencial únicamente descarga.",
+          "usernameHint": "Lo que ese registro acepte para docker login.",
+          "tokenHint": "El token o la contraseña de esa cuenta. Basta el acceso de solo lectura: el panel solo descarga.",
+          "linkLabel": ""
+        }
+      },
+      "subtitle": "Credenciales que este servidor usa para descargar imágenes de contenedor privadas.",
+      "unavailableTitle": "Este servidor no aloja contenedores",
+      "unavailableBody": "Las credenciales de registro sirven para descargar imágenes de contenedor. Este servidor no ejecuta ninguno, así que no hay nada que descargar."
+    }
   }
 }

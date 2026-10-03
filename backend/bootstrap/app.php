@@ -3,6 +3,10 @@
 use App\Http\Middleware\CentralOnly;
 use App\Http\Middleware\CentralSystemGuard;
 use App\Http\Middleware\CheckPermission;
+use App\Http\Middleware\EnsureServerHostsContainers;
+use App\Http\Middleware\EnsureServerHostsPhpSites;
+use App\Http\Middleware\EnsureServerManagesDatabases;
+use App\Http\Middleware\EnsureServerRunsHostApplications;
 use App\Http\Middleware\NotCentral;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\ThrottleRequestsPerRoute;
@@ -91,6 +95,22 @@ return Application::configure(basePath: dirname(__DIR__))
         // adding to it, so a second call silently drops the first.
         $middleware->alias([
             'permission' => CheckPermission::class,
+            // Refuses database management where the stack hosts nothing that
+            // uses one. See the class for why it is middleware rather than a
+            // check in twenty-nine controller actions.
+            'manages-databases' => EnsureServerManagesDatabases::class,
+            // The mirror of the above: Docker's own screens, on a server that
+            // hosts containers.
+            'hosts-containers' => EnsureServerHostsContainers::class,
+            // And the same for PHP's own screens. A Docker box has PHP
+            // installed — the panel is a Laravel application — but serves no
+            // PHP sites, so managing versions and ini files there is managing
+            // nothing.
+            'hosts-php' => EnsureServerHostsPhpSites::class,
+            // Node's screens, on a server that runs anything on the host at all.
+            // Not "hosts Node sites": a LEMP box needs Node to build a PHP site's
+            // assets. See the class.
+            'runs-host-apps' => EnsureServerRunsHostApplications::class,
             'central' => CentralSystemGuard::class,
             'central.only' => CentralOnly::class,
             'not.central' => NotCentral::class,

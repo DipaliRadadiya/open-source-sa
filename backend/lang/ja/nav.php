@@ -13,12 +13,14 @@ return [
     'service' => 'サービス',
     'php' => 'PHP',
     'node' => 'Node.js',
+    'docker' => 'Docker',
     'setting' => '設定',
     'disk_cleaner' => 'ディスククリーナー',
     'activity_log' => 'アクティビティログ',
     'sync' => 'サーバー同期',
     'git' => 'Git',
     'storage' => 'ストレージ',
+    'registry' => 'Docker レジストリ',
 
     // Application sidebar. Separate keys from the server-level ones above:
     // `logs` is the machine's auth.log, `app_log` is one site's access log,
@@ -27,6 +29,8 @@ return [
     'app_domain' => 'ドメインとSSL',
     'app_deployment' => 'デプロイ',
     'app_environment' => '環境変数',
+    'app_container' => 'コンテナ',
+    'app_compose' => 'compose ファイル',
     'app_worker' => 'ワーカー',
     'app_file' => 'ファイル',
     'app_log' => 'ログ',

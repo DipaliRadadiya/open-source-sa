@@ -21,6 +21,20 @@ class ApplicationResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            /*
+             * 🔴 Never sent, and the Container screen needed it.
+             *
+             * The slug IS the hostname other containers reach a container site by —
+             * `ContainerSupervisor` writes it into the compose file as the network
+             * alias precisely because every generated file names its service `app`,
+             * so `app` resolves to an arbitrary one of them. The panel's note telling
+             * people which name to use read "Use the hostname" and then named nothing,
+             * because this field did not exist in the payload.
+             *
+             * Found by a browser test asserting that every `application.<field>` a
+             * container screen reads is actually sent and declared.
+             */
+            'slug' => $this->slug,
             'domain' => $this->domain,
             // Built here, not by the client. Three frontend components each
             // assembled `https://${domain}` themselves, which is a broken link
@@ -159,6 +173,37 @@ class ApplicationResource extends JsonResource
             'build_command' => $this->build_command,
             'start_command' => $this->start_command,
 
+            // What a container site runs as. Present for every application so
+            // the shape of the payload does not depend on the site type, and
+            // null on the ones that are not containers — the frontend decides
+            // whether to render the card from `serving_profile`, which is the
+            // same thing the backend gates the endpoint on.
+            'image' => $this->image,
+            'container_port' => $this->container_port,
+            'memory_limit' => $this->memory_limit,
+            // Null is a meaningful answer and not a missing one: it means no CPU
+            // quota, where a null `memory_limit` means the configured default.
+            'cpu_limit' => $this->cpu_limit,
+            'docker_network' => $this->docker_network,
+            'volume_mounts' => $this->volume_mounts ?? [],
+            // Which stored credential pulls this image, if any. The id for the
+            // form, and the name so a page can say "pulls with GHCR" without a
+            // second request — but never anything from the credential itself.
+            // Null is the common case and means anonymous, not misconfigured.
+            'registry_id' => $this->registry_id,
+            'registry_name' => $this->whenLoaded('registry', fn (): ?string => $this->registry?->name),
+            // The NAMES of the generated credentials, never the values. Enough for
+            // the UI to decide whether to render a Credentials section and what to
+            // label each row; the values come from their own endpoint, so they are
+            // not in every application payload, every list response and every
+            // browser cache along the way.
+            'container_secret_keys' => array_keys((array) ($this->docker_secrets ?? [])),
+            // Whether anybody has confirmed they saved them. False is what puts the
+            // first-run card on the dashboard, so this is a flag about a PERSON
+            // rather than about the data — a site whose credentials were rendered
+            // and never acknowledged still answers false, deliberately.
+            'credentials_acknowledged' => $this->credentials_seen_at !== null,
+
             // Whether this application runs a process of its own, and what
             // systemd says about it *right now*. Null for PHP and static sites,
             // which have nothing to run — render no controls for those rather
@@ -283,7 +328,16 @@ class ApplicationResource extends JsonResource
             // machine serving the sites. It is set when a deploy happens and
             // when somebody asks for it, which is why the time it was taken
             // travels with it. A size with no date reads as current.
+            // The site's TOTAL — document root plus its Docker volumes. The name
+            // is historical; for a container site the document root alone holds a
+            // compose file, and reporting that as the site's size ordered the
+            // list by the length of people's YAML.
             'directory_size_bytes' => $this->directory_size_bytes,
+            // The volumes' share of it, so the total is explainable. Null means
+            // the site has no volumes to measure, which is a different statement
+            // from 0 — every PHP, Node and static site answers null, and the UI
+            // says nothing about volumes for them.
+            'volume_size_bytes' => $this->volume_size_bytes,
             'directory_size_measured_at' => $this->directory_size_updated_at?->format('d-m-Y H:i:s'),
             'directory_size_measured_at_human' => $this->directory_size_updated_at?->diffForHumans(),
 

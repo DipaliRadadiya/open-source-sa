@@ -26,7 +26,6 @@ return [
         ],
     ],
 
-
     'robots_txt' => [
         'note' => 'Google (Gemini) and Apple train their AI on pages their normal search crawlers fetch, so no bot block can stop them without also removing you from search. To opt out of their AI training, add these lines to your site\'s robots.txt:',
     ],

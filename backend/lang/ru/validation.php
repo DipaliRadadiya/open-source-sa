@@ -159,8 +159,48 @@ return [
     'required_if_declined' => 'Поле :attribute обязательно для заполнения, когда :other отклонено.',
 
     'custom' => [
+
+        // Docker accepts a CPU quota larger than the machine and silently
+        // clamps it, so the refusal has to come from here — and it names what
+        // the server actually has rather than saying "invalid".
+        'cpu_limit' => [
+            'format' => 'Укажите количество CPU, максимум с двумя десятичными знаками — 1, 1.5, 0.5.',
+            'positive' => 'Минимальный лимит CPU, который принимает Docker, — :minimum. Оставьте поле пустым, чтобы не задавать лимит.',
+            'too_many' => 'На этом сервере :cores CPU, и Docker не запустит контейнер, который просит больше. Выберите :cores или меньше.',
+        ],
+
+        'memory_limit' => [
+            'format' => 'Укажите размер с единицей — 512m или 2g. Число без единицы Docker понимает как байты, а не мегабайты.',
+            'too_small' => 'Docker не запустит контейнер с памятью менее 6m.',
+        ],
+
+        // A registry address Docker cannot interpret is silently IGNORED at
+        // pull time — the credential simply never applies and the error is
+        // identical to having none. So these are refusals at the form, and each
+        // one names the specific mistake rather than saying "invalid".
+        'registry' => [
+            'empty' => 'Укажите адрес реестра — `docker.io` для Docker Hub, `ghcr.io` или ваш собственный хост.',
+            'path' => 'Это похоже на пространство имён или репозиторий, а не на реестр. Укажите только хост — `ghcr.io`, а не `ghcr.io/ваша-организация`.',
+            'credentials' => 'Не указывайте имя пользователя или пароль в адресе. Укажите только хост; учётные данные вводятся в полях ниже.',
+            'host' => 'Это не адрес реестра. Укажите имя хоста, при необходимости с портом — `registry.example.com` или `registry.example.com:5000`.',
+            'port' => 'Порт должен быть от 1 до 65535.',
+        ],
         'attribute-name' => [
             'rule-name' => 'custom-message',
+        ],
+
+        // Laravel's default reads "The docker network new field prohibits docker
+        // network from being present" — raw attribute names at a user.
+        'docker_network_new' => [
+            'prohibits' => 'Выберите сеть из списка или укажите имя новой — не одновременно. Это два ответа на один вопрос.',
+        ],
+
+        'volume_path' => [
+            'required_with' => 'Укажите путь внутри контейнера, где должен появиться этот том, например /var/lib/mysql.',
+        ],
+
+        'volume_new' => [
+            'required_with' => 'Укажите имя тома для создания или очистите путь, если том не нужен.',
         ],
     ],
 
@@ -176,6 +216,22 @@ return [
     'start_command_wrapper' => 'Запускайте приложение через входной файл, например «node server.js», а не через :binary. Менеджер пакетов порождает реальный процесс отдельно, поэтому сигналы до него не доходят.',
 
     'port_in_use_by_app' => 'Порт :port уже занят другим приложением на этом сервере.',
+
+    // A network the panel created, named by a site that will join it.
+    'docker_network_invalid' => 'Начните имя сети с буквы или цифры, далее используйте буквы, цифры, точки, дефисы или подчёркивания.',
+    'docker_network_missing' => 'На этом сервере нет сети Docker с именем \':name\'. Возможно, она была удалена после загрузки страницы.',
+
+    // Mounting a panel-created volume into a container site.
+    'docker_volume_invalid' => 'Начните имя тома с буквы или цифры, далее используйте буквы, цифры, точки, дефисы или подчёркивания.',
+    'docker_volume_missing' => 'На этом сервере нет тома Docker с именем \':name\'. Возможно, он был удалён после загрузки страницы.',
+    'docker_mount_duplicate' => 'Два тома нельзя смонтировать в :path. Docker оставит только один и не скажет, какой именно.',
+    'docker_mount_root' => 'Укажите путь внутри контейнера, например /var/lib/mysql.',
+    'docker_mount_site_root' => 'По этому пути смонтированы собственные файлы сайта (:path). Том здесь скрывает их от контейнера — файлы остаются на сервере, но сайт отдаёт пустой том.',
+    'docker_mount_reserved' => ':path входит в образ, с которого запускается контейнер. Пустой том поверх него оставит контейнер, который не сможет запуститься.',
+
+    // A name the panel is about to create, so the inverse rule: not taken.
+    'docker_network_taken' => 'Сеть с именем \':name\' уже есть на этом сервере. Выберите её в списке выше, а не создавайте вторую.',
+    'docker_volume_taken' => 'Том с именем \':name\' уже есть на этом сервере. Подключите существующий на карточке «Контейнер» сайта, а не создавайте второй.',
     'node_version_unsupported' => 'Приложение :type работает на Node :range. Выберите версию из этого диапазона — вне его приложение откажется запускаться и сайт ничего не отдаст.',
     'php_version_unsupported' => 'Приложение :type работает на PHP :range. Выберите версию из этого диапазона — вне его установка обрывается на полпути, внутри кода самого приложения, и оставляет сайт, который придётся убирать.',
     'php_version_default_unsupported' => 'Приложение :type работает на PHP :range. Если оставить это поле пустым, будет использована серверная версия по умолчанию (:default) — она вне диапазона. Выберите версию из диапазона.',

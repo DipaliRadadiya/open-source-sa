@@ -2,6 +2,7 @@
 
 return [
     'sources' => [
+        'container' => 'Контейнер',
         'access' => 'Журнал доступа',
         'error' => 'Журнал ошибок',
         'application' => 'Вывод приложения',

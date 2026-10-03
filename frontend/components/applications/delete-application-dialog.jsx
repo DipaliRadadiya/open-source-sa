@@ -29,8 +29,18 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
   // Null when the user is gone; absent (undefined) when it was not loaded.
   const orphaned = application?.system_user === null;
   const [removeDatabases, setRemoveDatabases] = useState(true);
+  // On by default, like files and databases: a volume holding a container site's
+  // database is as unrecoverable as the database a LEMP site had.
+  const [removeDockerResources, setRemoveDockerResources] = useState(true);
   // Only names databases on the checkbox; the API resolves the list itself.
   const [databases, setDatabases] = useState([]);
+
+  // The site's own network and the volumes it mounts, from the payload. Not filtered by
+  // what other sites use -- the server decides that at the moment it deletes.
+  const dockerResourceNames = [
+    ...(application.volume_mounts ?? []).map((mount) => mount.volume),
+    ...(application.docker_network ? [application.docker_network] : []),
+  ].filter((name, index, all) => name && all.indexOf(name) === index);
 
   // Fetched on open, not mount (rendered per row). A failure hides the checkbox.
   useEffect(() => {
@@ -83,9 +93,12 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
     try {
       // Databases only when listed and ticked: an unconditional remove_databases is
       // a 403 for roles without database manage, and would drop unlisted databases.
+      // Docker resources follow the same rule, for the same reason.
       const { data } = await deleteApplication(application.id, {
         removeFiles: removeFiles && !orphaned,
         removeDatabases: databases.length > 0 && removeDatabases,
+        removeDockerResources:
+          dockerResourceNames.length > 0 && removeDockerResources,
       });
 
       // A 200 can still carry database failures: warn, naming what is left.
@@ -175,6 +188,31 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
             </div>
           </div>
         )}
+
+        {/* Only for a container site with something to remove, like the databases box. */}
+        {dockerResourceNames.length ? (
+          <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-3">
+            <Checkbox
+              id="delete-app-docker"
+              checked={removeDockerResources}
+              onCheckedChange={(value) => setRemoveDockerResources(value === true)}
+              className="mt-0.5"
+            />
+            <div className="space-y-1">
+              <Label htmlFor="delete-app-docker" className="text-sm font-medium">
+                {t("removeDocker", { count: dockerResourceNames.length })}
+              </Label>
+              {/* Named, not counted. The caveat is stated while the box is still
+                  unchecked -- it is what decides whether somebody ticks it. */}
+              <p className="text-xs leading-5 text-muted-foreground">
+                {t(removeDockerResources ? "removeDockerOn" : "removeDockerOff", {
+                  count: dockerResourceNames.length,
+                  names: dockerResourceNames.join(", "),
+                })}
+              </p>
+            </div>
+          </div>
+        ) : null}
 
         {/* Only when the site has a database. */}
         {databases.length ? (

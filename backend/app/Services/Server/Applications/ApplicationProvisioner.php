@@ -9,6 +9,7 @@ use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Jobs\MeasureApplicationSize;
 use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
+use App\Services\Server\Docker\DockerResources;
 use App\Services\Server\Php\PoolManager;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
@@ -36,6 +37,7 @@ class ApplicationProvisioner
         private WebServerManager $webServers,
         private InstallerManager $installers,
         private ProcessSupervisor $supervisor,
+        private ContainerSupervisor $containers,
         private ProvisionProgress $progress,
         private AutoIssueCertificate $autoCertificate,
         private PoolManager $pools,
@@ -239,7 +241,22 @@ class ApplicationProvisioner
                 ['feature' => 'application', 'op' => 'mkdir', 'application' => $application->id],
             );
 
-            if ($result->failed() || $application->site_type !== 'git') {
+            // Git sites need it because their code reads it. A container needs
+            // it because the compose file the panel generates declares
+            // `env_file` unconditionally — and Compose treats a missing one as
+            // fatal, so this guard being `=== 'git'` meant no container site
+            // built from the image/port fields could start at all. It failed at
+            // `container_start` with a reference number, several steps after the
+            // step that did not create the file.
+            //
+            // Not visible in the suite: `Process` is faked, so `docker compose
+            // up` succeeded against a file that was never there. And not
+            // visible on the test box either, because the only container site on
+            // it used a PASTED compose file, which has no `env_file` line.
+            $needsEnv = $application->site_type === 'git'
+                || $application->serving_profile === 'docker';
+
+            if ($result->failed() || ! $needsEnv) {
                 return $result;
             }
 
@@ -462,6 +479,39 @@ class ApplicationProvisioner
      */
     private function startProcess(Application $application, string $documentRoot): void
     {
+        // A container is supervised by compose, not by systemd, and this is
+        // the fork that was missing: `ContainerSupervisor` existed, was
+        // tested, and was never called from here — so a Docker application
+        // provisioned to "active" with no container anywhere and nginx
+        // proxying to a port nothing listened on. Every test drove the
+        // supervisor directly, which proved it worked and nothing about
+        // whether it was reachable.
+        if ($application->serving_profile === 'docker') {
+            // The network and the volumes BEFORE the container, because the
+            // compose file declares them `external: true` — which means Compose
+            // looks them up and refuses rather than creating them. A site created
+            // with "make a new network" has nothing on the box yet at this point.
+            app(DockerResources::class)->ensureFor($application);
+
+            $this->containers->apply($application, $documentRoot);
+            $this->progress->record('start_app');
+
+            // The post-start hook, which this early return used to skip — so the
+            // branch above fixed "the supervisor was never called from here" and
+            // then reproduced it one method along. A no-op for every app that
+            // passes its admin credential in as an environment variable, which is
+            // all of them but Chatwoot: its production seeds create no user, only
+            // a flag opening a setup page to whoever asks first.
+            //
+            // Not preceded by `readiness->verify()` the way the systemd path is.
+            // That check has its own timeout and 19 container apps currently reach
+            // Active without it; `afterStart()` does its own waiting, for as long
+            // as a first-boot migration takes.
+            $this->installers->afterStart($application, $documentRoot);
+
+            return;
+        }
+
         $installer = $this->installers->installerFor($application);
         $command = $installer?->startCommand($application, $documentRoot);
 
@@ -509,8 +559,11 @@ class ApplicationProvisioner
      * Files are only deleted when explicitly asked for — losing a user's code
      * must never be a side effect of removing a panel record.
      */
-    public function deprovision(Application $application, bool $removeFiles = false): void
-    {
+    public function deprovision(
+        Application $application,
+        bool $removeFiles = false,
+        bool $removeDockerVolumes = false,
+    ): void {
         // Off for good, whether the files go or stay: `rm -rf` cannot remove an
         // immutable directory, and files left to the user must be the user's
         // to tidy up — an immutable directory in their home that nothing
@@ -518,8 +571,21 @@ class ApplicationProvisioner
         $this->rootLock->unlock($application);
 
         // The process first: a unit left running holds its port and keeps
-        // serving traffic for a site the panel has stopped listing.
+        // serving traffic for a site the panel has stopped listing. A
+        // container does exactly the same, so both are asked — `remove()` on
+        // either is a no-op when there was nothing of that kind.
         $this->supervisor->remove($application);
+
+        if ($application->serving_profile === 'docker') {
+            // The volumes flag rides along here rather than being a second pass,
+            // because `compose down` is the only thing that knows which volumes a
+            // PASTED file declared — the panel never recorded those.
+            $this->containers->remove(
+                $application,
+                $this->documentRoot($application),
+                $removeDockerVolumes,
+            );
+        }
 
         // Then everything else the panel wrote outside the site's own
         // directory — the PHP-FPM pool, worker units, the fail2ban jail, the

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\API\Server\ApplicationContainerController;
 use App\Http\Controllers\API\Server\ApplicationController;
 use App\Http\Controllers\API\Server\ApplicationDomainController;
 use App\Http\Controllers\API\Server\ApplicationRootLockController;
@@ -71,6 +72,65 @@ Route::post('/applications/{application}/root-lock', [ApplicationRootLockControl
 
 Route::put('/applications/{application}/web-root', [ApplicationWebRootController::class, 'update'])
     ->middleware(['permission:application,manage', 'throttle:10,1']);
+
+// Container settings. Its own sub-resource for the same reason web-root is one:
+// applying it rewrites the compose file and recreates the container, which is a
+// server mutation with real downtime, not a field write.
+//
+// Throttled at the same rate as the other apply paths — each call runs
+// `docker compose up -d`, and a form that can be spammed is a site that can be
+// restarted in a loop.
+Route::put('/applications/{application}/container', [ApplicationContainerController::class, 'update'])
+    ->middleware(['permission:app_container,manage', 'throttle:10,1']);
+
+// The compose file this site runs.
+//
+// `view` to read it and `manage` to replace it, unlike the settings endpoint which
+// is manage-only: reading the file is how somebody diagnoses their own site, and it
+// carries nothing the application payload does not already imply. Writing it is a
+// different matter — it can stop the site.
+Route::get('/applications/{application}/container/compose', [ApplicationContainerController::class, 'compose'])
+    ->middleware(['permission:app_compose', 'throttle:60,1']);
+
+// Throttled like the other apply paths: each save recreates the container, and a
+// form that can be spammed is a site that can be restarted in a loop.
+Route::put('/applications/{application}/container/compose', [ApplicationContainerController::class, 'updateCompose'])
+    ->middleware(['permission:app_compose,manage', 'throttle:10,1']);
+
+// Pull a newer image and recreate the container on it.
+//
+// `manage` on the application, not `docker,manage`: this changes what one site
+// runs, which is the site's own permission — the same call the settings endpoint
+// above makes. Gating it on Docker would mean somebody who may restart a site may
+// not update it.
+//
+// Throttled harder than the settings write. Each call can be a multi-gigabyte
+// download, so this is the one container endpoint where a spammed form costs
+// bandwidth rather than a restart.
+Route::post('/applications/{application}/container/pull', [ApplicationContainerController::class, 'pull'])
+    ->middleware(['permission:app_container,manage', 'throttle:6,1']);
+
+// The generated credentials, behind `manage` rather than `view`: reading a
+// database password is not a read-only act in any sense that matters, and the
+// permission that governs changing the site is the one that should govern seeing
+// what it was built with.
+//
+// Throttled harder than the write above. A write is something a person does once;
+// a GET that returns every password on a site is worth rate-limiting against a
+// token that has leaked.
+Route::get('/applications/{application}/container/secrets', [ApplicationContainerController::class, 'secrets'])
+    ->middleware(['permission:app_container,manage', 'throttle:6,1']);
+
+// "I have saved these." Its own endpoint because the panel cannot rotate a
+// generated credential — that means rewriting the compose file and the credential
+// inside the running database — so hiding the first-run card as a side effect of
+// rendering it would lose an unrecoverable password to a page refresh. Only a
+// person can say they have it.
+//
+// Same permission as reading them: acknowledging is a statement about values you
+// were only allowed to see under `manage`.
+Route::post('/applications/{application}/container/secrets/acknowledge', [ApplicationContainerController::class, 'acknowledgeSecrets'])
+    ->middleware(['permission:app_container,manage', 'throttle:20,1']);
 
 // Site type. Read the disk to find out what is installed, then relabel the
 // site to match.

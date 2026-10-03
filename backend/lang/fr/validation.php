@@ -159,8 +159,48 @@ return [
     'required_if_declined' => 'Le champ :attribute est obligatoire quand :other est refusé.',
 
     'custom' => [
+
+        // Docker accepts a CPU quota larger than the machine and silently
+        // clamps it, so the refusal has to come from here — and it names what
+        // the server actually has rather than saying "invalid".
+        'cpu_limit' => [
+            'format' => 'Indiquez un nombre de CPU, avec au plus deux décimales — 1, 1.5, 0.5.',
+            'positive' => 'La plus petite limite de CPU acceptée par Docker est :minimum. Laissez le champ vide pour aucune limite.',
+            'too_many' => 'Ce serveur a :cores CPU, et Docker refuse de démarrer un conteneur qui en demande plus. Choisissez :cores ou moins.',
+        ],
+
+        'memory_limit' => [
+            'format' => 'Indiquez une taille avec une unité — 512m ou 2g. Un nombre seul signifie des octets pour Docker, pas des mégaoctets.',
+            'too_small' => 'Docker ne démarrera pas un conteneur avec moins de 6m de mémoire.',
+        ],
+
+        // A registry address Docker cannot interpret is silently IGNORED at
+        // pull time — the credential simply never applies and the error is
+        // identical to having none. So these are refusals at the form, and each
+        // one names the specific mistake rather than saying "invalid".
+        'registry' => [
+            'empty' => 'Saisissez l’adresse du registre — `docker.io` pour Docker Hub, `ghcr.io`, ou votre propre hôte.',
+            'path' => 'Cela ressemble à un espace de noms ou à un dépôt, pas à un registre. Saisissez l’hôte seul — `ghcr.io`, pas `ghcr.io/votre-org`.',
+            'credentials' => 'Ne mettez pas de nom d’utilisateur ni de mot de passe dans l’adresse. Saisissez l’hôte seul ; les identifiants vont dans les champs ci-dessous.',
+            'host' => 'Ce n’est pas une adresse de registre. Saisissez un nom d’hôte, éventuellement avec un port — `registry.example.com` ou `registry.example.com:5000`.',
+            'port' => 'Le port doit être compris entre 1 et 65535.',
+        ],
         'attribute-name' => [
             'rule-name' => 'custom-message',
+        ],
+
+        // Laravel's default reads "The docker network new field prohibits docker
+        // network from being present" — raw attribute names at a user.
+        'docker_network_new' => [
+            'prohibits' => 'Choisissez un réseau dans la liste ou nommez-en un nouveau, mais pas les deux : ce sont deux réponses à la même question.',
+        ],
+
+        'volume_path' => [
+            'required_with' => 'Indiquez le chemin dans le conteneur où ce volume doit apparaître, par exemple /var/lib/mysql.',
+        ],
+
+        'volume_new' => [
+            'required_with' => 'Donnez un nom au volume à créer, ou effacez le chemin si vous n\'en voulez pas.',
         ],
     ],
 
@@ -176,6 +216,22 @@ return [
     'start_command_wrapper' => 'Démarrez l\'app avec son fichier d\'entrée, par exemple « node server.js », pas avec :binary. Un gestionnaire de paquets fork le vrai processus, donc les signaux ne l\'atteignent jamais.',
 
     'port_in_use_by_app' => 'Le port :port est déjà utilisé par une autre application sur ce serveur.',
+
+    // A network the panel created, named by a site that will join it.
+    'docker_network_invalid' => 'Commencez le nom du réseau par une lettre ou un chiffre, puis utilisez des lettres, des chiffres, des points, des tirets ou des tirets bas.',
+    'docker_network_missing' => 'Il n\'existe aucun réseau Docker nommé \':name\' sur ce serveur. Il a peut-être été supprimé depuis le chargement de cette page.',
+
+    // Mounting a panel-created volume into a container site.
+    'docker_volume_invalid' => 'Commencez le nom du volume par une lettre ou un chiffre, puis utilisez des lettres, des chiffres, des points, des tirets ou des tirets bas.',
+    'docker_volume_missing' => 'Il n\'existe aucun volume Docker nommé \':name\' sur ce serveur. Il a peut-être été supprimé depuis le chargement de cette page.',
+    'docker_mount_duplicate' => 'Deux volumes ne peuvent pas être montés sur :path. Docker n\'en garderait qu\'un, sans dire lequel.',
+    'docker_mount_root' => 'Choisissez un chemin à l\'intérieur du conteneur, par exemple /var/lib/mysql.',
+    'docker_mount_site_root' => 'C\'est à ce chemin que les fichiers du site sont montés (:path). Un volume ici les masque au conteneur : les fichiers restent sur le serveur, mais le site sert un volume vide.',
+    'docker_mount_reserved' => ':path fait partie de l\'image avec laquelle le conteneur démarre. Un volume vide par-dessus donne un conteneur incapable de démarrer.',
+
+    // A name the panel is about to create, so the inverse rule: not taken.
+    'docker_network_taken' => 'Un réseau nommé \':name\' existe déjà sur ce serveur. Sélectionnez-le dans la liste ci-dessus plutôt que d\'en créer un second.',
+    'docker_volume_taken' => 'Un volume nommé \':name\' existe déjà sur ce serveur. Montez l\'existant depuis la carte Conteneur du site plutôt que d\'en créer un second.',
     'node_version_unsupported' => 'L\'application :type fonctionne avec Node :range. Choisissez une version dans cette plage : en dehors, l\'application refuse de démarrer et le site ne sert rien.',
     'php_version_unsupported' => 'L\'application :type fonctionne avec PHP :range. Choisissez une version dans cette plage : en dehors, l\'installation échoue à mi-parcours, dans le code de l\'application elle-même, et laisse un site à nettoyer.',
     'php_version_default_unsupported' => 'L\'application :type fonctionne avec PHP :range. Laisser ce champ vide utilise la valeur par défaut du serveur (:default), qui est hors de cette plage — choisissez plutôt une version dans la plage.',

@@ -29,6 +29,8 @@ const BUILT_APPLICATION_URLS = new Set([
   "/domains",
   "/deployment",
   "/environment",
+  "/container",
+  "/compose",
   "/logs",
   "/workers",
   "/files",
@@ -60,12 +62,14 @@ const BUILT_SERVER_URLS = new Set([
   "/services",
   "/php",
   "/node",
+  "/docker",
   "/settings",
   "/disk-cleaner",
   "/backups",
   "/activity-log",
   "/integrations/git",
   "/integrations/storage",
+  "/integrations/registries",
   "/sync",
 ]);
 
@@ -74,7 +78,9 @@ export function isServerNavBuilt(url) {
 }
 
 export function isNavBuilt(panel, url) {
-  return panel === "application" ? isApplicationNavBuilt(url) : isServerNavBuilt(url);
+  return panel === "application"
+    ? isApplicationNavBuilt(url)
+    : isServerNavBuilt(url);
 }
 
 // Resolves a catalog item for the panel it belongs to: application items get

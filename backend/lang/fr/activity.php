@@ -124,6 +124,9 @@ return [
     'git_account.disconnected' => 'A déconnecté le compte :provider :label',
     'application.created' => 'A créé l\'application :name (:site_type)',
     'application.updated' => 'A mis à jour l\'application :name',
+    'application.container_updated' => 'A mis à jour les paramètres du conteneur de :name',
+    'application.container_secrets_viewed' => 'A consulté les identifiants du conteneur de :name',
+    'application.docker_resources_removed' => 'A supprimé le réseau et les volumes Docker de :name',
     'application.deleted' => 'A supprimé l\'application :name (:site_type)',
     'application.process_start' => ':name démarrée',
     'application.process_stop' => ':name arrêtée',
@@ -217,4 +220,16 @@ return [
     'application.supervisor_install_started' => 'Installation de supervisor démarrée pour :name',
     'application.supervisor_installed' => 'Supervisor installé',
     'application.supervisor_install_failed' => 'Supervisor n\'a pas pu être installé (:reference)',
+
+    'registry.created' => 'Identifiants de registre :name ajoutés pour :registry',
+    'registry.updated' => 'Identifiants de registre :name mis à jour pour :registry',
+    'registry.deleted' => 'Identifiants de registre :name supprimés pour :registry (:applications_detached sites détachés)',
+    'registry.tested' => 'Identifiants de registre :name testés pour :registry',
+    'application.container_pulled' => ':image récupérée de nouveau et conteneur de :name recréé',
+    'application.compose_updated' => 'Fichier compose de :name mis à jour',
+    'docker_database.created' => 'Base de données :engine :name créée sur le port :port',
+    'docker_database.deleted' => 'Base de données :engine :name supprimée',
+    'docker_database.credentials_viewed' => 'Identifiants de la base de données :engine :name consultés',
+    'application.credentials_acknowledged' => 'A confirmé avoir enregistré les identifiants générés de :name',
+
 ];

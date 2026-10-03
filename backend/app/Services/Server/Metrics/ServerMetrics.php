@@ -5,6 +5,7 @@ namespace App\Services\Server\Metrics;
 use App\Services\Server\Applications\DnsVerifier;
 use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Databases\DatabaseManager;
+use App\Services\Server\HostCpus;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerPublicIp;
 use App\Support\Bytes;
@@ -527,9 +528,14 @@ class ServerMetrics
         return 'Unknown';
     }
 
+    /**
+     * Delegated, so the metrics screen and the CPU-limit validator cannot
+     * disagree about the size of the box — a validator that refused a limit the
+     * dashboard had just advertised would be the panel arguing with itself.
+     */
     private function cpuCores(): int
     {
-        return max(1, substr_count($this->proc('cpuinfo'), 'processor'));
+        return app(HostCpus::class)->count();
     }
 
     private function primaryIp(): string

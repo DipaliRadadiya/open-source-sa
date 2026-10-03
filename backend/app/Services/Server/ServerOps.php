@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
+use Symfony\Component\Process\Exception\RuntimeException as SymfonyProcessException;
 
 /**
  * Runs a local server command via the Process facade (array args — no shell
@@ -163,6 +164,33 @@ class ServerOps
                 // empty message. A command killed at its ceiling and a command
                 // that refused are different problems with different answers.
                 $timedOut = true;
+
+                // ORDER MATTERS, and it is not stylistic: Laravel's
+                // ProcessTimedOutException extends Symfony's RuntimeException, so
+                // this catch shadows the one above if the two are swapped. Put it
+                // first and a timed-out command is reported as a failed spawn,
+                // `timedOut` is never set, and every operation that hits its
+                // ceiling loses the one fact worth having. The file-manager test
+                // that exists for that flag caught it.
+            } catch (SymfonyProcessException $e) {
+                // The class docblock says "Never throws" and every caller
+                // relies on it — they read `failed()` and raise their own
+                // translated exception. This escaped: a command whose working
+                // directory the panel user cannot enter fails inside
+                // `posix_spawn`, before the process exists, and the raw
+                // Symfony exception went past every caller's handling to the
+                // user as a stack trace.
+                //
+                // Found with `docker compose config` and a cwd of
+                // /home/ubuntu, which is 0750 and not the panel's to enter.
+                // Nothing about it is Docker-specific.
+                //
+                // The component's own RuntimeException rather than
+                // ProcessStartFailedException alone: an unreadable directory
+                // and a nonexistent one throw different subclasses, and the
+                // first version of this caught only the first. Scoped to the
+                // Process component, so it cannot swallow anything else.
+                $stderr = 'could not start the process: '.$e->getMessage();
             }
 
             if ($ok || $attempts >= $maxAttempts || ! $this->isTransient($stderr)) {

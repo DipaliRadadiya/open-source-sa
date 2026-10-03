@@ -2,6 +2,7 @@
 
 return [
     'sources' => [
+        'container' => 'コンテナ',
         'access' => 'アクセスログ',
         'error' => 'エラーログ',
         'application' => 'アプリケーションの出力',

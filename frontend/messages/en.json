@@ -1435,7 +1435,8 @@
       "retryOnSetup": "Retry on the setup page",
       "retryOnDatabases": "Retry on the databases page",
       "retryOnPhp": "Retry on the PHP page",
-      "retryOnFail2ban": "Retry on the Fail2ban page"
+      "retryOnFail2ban": "Retry on the Fail2ban page",
+      "retryOnDocker": "Retry on the Docker page"
     },
     "summary": {
       "attention": "{count, plural, =1 {1 service needs attention} other {# services need attention}}",
@@ -1464,6 +1465,7 @@
       "openDatabases": "Open databases",
       "openPhp": "Open PHP",
       "openFail2ban": "Open Fail2ban",
+      "openDocker": "Open Docker",
       "unitFailedNoLog": "Installed but not running. Try starting it; if it stops again, its error is in the server's system journal."
     },
     "moreActions": "More actions for {name}"
@@ -2365,6 +2367,10 @@
     "tabs": {
       "extensions": "Extensions",
       "ioncube": "ionCube"
+    },
+    "unavailable": {
+      "title": "PHP is not managed on this server",
+      "body": "This server hosts containers, so it serves no PHP sites and has no PHP versions to manage. PHP is still installed for the panel itself, and its service can be restarted from Services."
     }
   },
   "node": {
@@ -2457,6 +2463,10 @@
       "eol": "No longer supported",
       "endsOn": "Support ends on {date}.",
       "endedOn": "Support ended on {date}."
+    },
+    "unavailable": {
+      "title": "Node.js is not managed on this server",
+      "body": "This server hosts containers and runs no applications on the host itself, so there are no Node.js versions to manage. A container brings its own runtime."
     }
   },
   "diskCleaner": {
@@ -3150,7 +3160,12 @@
       "description": "The database server has to restart to accept connections from other addresses. Applications using it lose their connection for a moment."
     },
     "backToList": "Back to databases",
-    "createFailed": "The database could not be created."
+    "createFailed": "The database could not be created.",
+    "unavailable": {
+      "title": "Databases are not managed on this server",
+      "body": "This server hosts containers. An application that needs a database brings one as a container of its own, so the panel manages no engine here — and its own data is SQLite regardless."
+    },
+    "backToList": "Back to databases"
   },
   "git": {
     "title": "Git",
@@ -3727,7 +3742,10 @@
       "removeDatabasesOff": "{count, plural, one {{databases} stays on the server, no longer linked to any application. Remove it from Databases if you no longer need it.} other {{databases} stay on the server, no longer linked to any application. Remove them from Databases if you no longer need them.}}",
       "databasesFailed": "The application was deleted, but {databases} could not be removed.",
       "goToDatabases": "Open Databases",
-      "removeFilesHint": "Off, the application is removed from the panel but its files stay on the server. On, the files and its backups are deleted and cannot be recovered."
+      "removeFilesHint": "Off, the application is removed from the panel but its files stay on the server. On, the files and its backups are deleted and cannot be recovered.",
+      "removeDocker": "Also delete this site's Docker network and volumes ({count})",
+      "removeDockerOn": "{names} will be deleted. Anything another site is still using is kept — the server checks at the moment it deletes, not now.",
+      "removeDockerOff": "{names} stays on the server. Its data survives, and you can remove it later from the Docker page."
     },
     "systemUserMissing": {
       "title": "This application's system user is missing",
@@ -5322,7 +5340,8 @@
       "measuring": "Measuring…",
       "measured": "Size measured.",
       "measureFailed": "The size could not be measured.",
-      "measureHint": "Measure this application on disk now"
+      "measureHint": "Measure this application on disk now",
+      "inVolumes": "{size} of this is in Docker volumes"
     },
     "status": {
       "pending": "Pending",
@@ -5579,7 +5598,102 @@
       "effectPublic": "Everything inside public_html keeps working exactly as before."
     },
     "deploying": "Deploying",
-    "processStoppedBadge": "Stopped"
+    "processStoppedBadge": "Stopped",
+    "container": {
+      "title": "Container",
+      "image": "Image",
+      "noImage": "No image recorded",
+      "imageHint": "Changed by redeploying the site, not here — a new image is pulled before the old container is replaced.",
+      "network": "Network",
+      "networkHint": "Containers on the same network reach each other by name. Docker's default bridge cannot do that.",
+      "defaultBridge": "Docker's default bridge",
+      "noNetworks": "This server has no networks of its own yet, so there is nothing to join.",
+      "noNetworksLink": "Create a network on the Docker page.",
+      "missingOption": "{name} (no longer on this server)",
+      "missingTitle": "This network is gone",
+      "missingBody": "The site is set to join {name}, and this server no longer has it. The container will not start until you pick a network that exists, or recreate that one.",
+      "reachableTitle": "How other containers reach this site",
+      "reachableBody": "Use the hostname {alias} — for example http://{alias} from another container on the same network. Avoid “app”: every site the panel builds answers to that name, so it resolves to an arbitrary one of them.",
+      "containerPort": "Container port",
+      "containerPortHint": "The port your application listens on inside the container.",
+      "memoryLimit": "Memory limit",
+      "memoryLimitHint": "For example 512m or 2g. A bare number means bytes, not megabytes. Empty uses the server default of {default}.",
+      "memoryLimitHintUnknown": "For example 512m or 2g. A bare number means bytes, not megabytes. Empty uses the server default.",
+      "cpuLimit": "CPU limit",
+      "cpuLimitPlaceholder": "No limit",
+      "cpuLimitHint": "In cores — 1 for one full core, 0.5 for half. This server has {cores}. Empty means no limit at all.",
+      "cpuLimitHintUnknown": "In cores — 1 for one full core, 0.5 for half. You cannot set more than this server has. Empty means no limit at all.",
+      "limitsTitle": "How these two limits behave",
+      "limitsBody": "Both are ceilings for this container alone, not reservations — nothing is set aside for it. They fail in opposite ways, which is worth knowing before you debug one: past the memory ceiling the container is killed and restarted, so the site drops requests; past the CPU quota nothing is killed and the container simply waits, so the site is slow with no error anywhere.",
+      "saveAction": "Save container settings",
+      "restartNote": "Saving recreates the container, so the site is down for a few seconds.",
+      "savingNote": "Rewriting the compose file and recreating the container…",
+      "saved": "Container settings saved.",
+      "failed": "Couldn't save the container settings.",
+      "noPermission": "You don't have permission to change this site.",
+      "nothingToSave": "Nothing has changed.",
+      "volumes": {
+        "title": "Volumes",
+        "empty": "No volumes mounted. The container keeps nothing that survives a rebuild.",
+        "choose": "Choose a volume",
+        "alreadyMounted": "{name} (already mounted)",
+        "pathPlaceholder": "/var/lib/mysql",
+        "pathLabel": "Path inside the container",
+        "add": "Mount",
+        "remove": "Unmount {volume}",
+        "added": "{volume} mounted. The container was recreated.",
+        "removed": "{volume} unmounted. The container was recreated.",
+        "failed": "Couldn't change the mounts.",
+        "invalid": "Pick a volume and give an absolute path inside the container, for example /var/lib/mysql.",
+        "noVolumes": "This server has no volumes yet, so there is nothing to mount.",
+        "noVolumesLink": "Create a volume on the Docker page.",
+        "hint": "A volume keeps data that survives the container being rebuilt. Mounting one recreates the container, and it starts empty — whatever the image had at that path is hidden, not merged."
+      },
+      "credentials": {
+        "title": "Generated credentials",
+        "reveal": "Reveal",
+        "revealing": "Loading…",
+        "hint": "Created when the app was installed, and stored encrypted. Revealing them is recorded in the activity log.",
+        "shownWarning": "Anyone who can manage this site can read these. They are the app's real database credentials — changing one here is not possible, because the running database would keep the old value.",
+        "failed": "Couldn't load the credentials."
+      },
+      "firstRun": {
+        "title": "Save these credentials now",
+        "body": "The panel generated these when it installed this app. They cannot be changed from here — the app stores them inside its own database — so copy them somewhere safe before you dismiss this.",
+        "acknowledge": "I've saved these",
+        "acknowledgeFailed": "Couldn't record that. The credentials are unchanged.",
+        "laterHint": "They stay available under Container → Reveal.",
+        "loading": "Loading credentials",
+        "failed": "Couldn't load the credentials. Don't dismiss this — try reloading the page."
+      },
+      "registry": "Registry",
+      "noRegistry": "None — pull anonymously",
+      "registryHint": "The stored credential this site pulls its image with. Leave it as None for a public image.",
+      "missingRegistryOption": "Deleted credential — this site's next pull will be anonymous",
+      "noRegistries": "No registry credentials are stored on this server, so only public images can be pulled.",
+      "noRegistriesLink": "Add one under Integrations → Docker Registries.",
+      "pullTitle": "Update the image",
+      "pullHint": "Fetches the image again and recreates the container. Bringing the site up on its own does not re-check the registry, so a moved tag needs this.",
+      "pull": "Pull and redeploy",
+      "pulled": "The image was pulled and the container recreated.",
+      "pullFailed": "The image could not be pulled.",
+      "pageSubtitle": "The network, ports, CPU and memory limits and volumes this container runs with."
+    },
+    "compose": {
+      "title": "Compose file",
+      "hint": "The file this site runs. Environment variables, extra services and volumes all live here — a container has no separate Environment screen.",
+      "description": "Edited with Docker's own parser checking it. The panel refuses a file that publishes off 127.0.0.1 or mounts anything outside this site's own directory.",
+      "loadFailed": "The compose file could not be read.",
+      "safety": "Saving recreates this site's container, so it is briefly down. If the new file will not come up, the panel puts the previous one back and starts the site on that — you will not be left with a stopped site.",
+      "takeover": "This site currently runs a file the panel generates from the Image and Container port fields above. Saving here takes the file over: from then on this text is what runs, and those fields stop driving it. There is no way back to the generated file except clearing this one.",
+      "acknowledge": "I understand that saving replaces the generated file permanently.",
+      "save": "Save and apply",
+      "saved": "The compose file was applied and the container recreated.",
+      "failed": "The compose file could not be applied.",
+      "copy": "Copy",
+      "revert": "Revert",
+      "unsaved": "Unsaved changes"
+    }
   },
   "panelUpdate": {
     "title": "Panel update",
@@ -6685,5 +6799,176 @@
       "disconnectFailed": "Couldn't disconnect."
     },
     "cardTitle": "Connection"
+  },
+  "docker": {
+    "title": "Docker",
+    "subtitle": "Networks and volumes shared by this server's containers.",
+    "create": "Create",
+    "remove": "Remove",
+    "none": "None",
+    "failed": "That didn't work.",
+    "loadFailed": "Couldn't read Docker's networks and volumes.",
+    "ownedByApp": "App #{id}",
+    "unavailable": {
+      "title": "Not a container server",
+      "body": "This server doesn't host containers, so it has no Docker networks or volumes."
+    },
+    "columns": {
+      "name": "Name",
+      "path": "Path",
+      "driver": "Driver",
+      "attached": "Containers",
+      "size": "Size",
+      "usedBy": "Used by"
+    },
+    "networks": {
+      "title": "Networks",
+      "placeholder": "network-name",
+      "hint": "Containers on the same user-defined network can reach each other by name. Docker's built-in bridge can't do that, which is why an app and its database need one of these.",
+      "builtIn": "Docker's own",
+      "created": "Network {name} created.",
+      "removed": "Network {name} removed.",
+      "removeTitle": "Remove network {name}?",
+      "removeBody": "Nothing is attached to it. Containers that later expect it will fail to start until it's recreated.",
+      "removeBusy": "Containers are still attached to this network. Stop or detach them first.",
+      "removeUsedBySites": "These sites are set to join this network: {sites}. Change their network first — removing it now would stop them starting.",
+      "noPorts": "No ports",
+      "internalOnly": "internal only"
+    },
+    "volumes": {
+      "title": "Volumes",
+      "placeholder": "volume-name",
+      "hint": "A volume is where a container keeps data that has to survive being rebuilt.",
+      "empty": "No volumes on this server yet.",
+      "inUse": "{count} container(s)",
+      "inUseUnnamed": "{count} container(s) — names unavailable",
+      "unused": "Not in use",
+      "created": "Volume {name} created.",
+      "removed": "Volume {name} removed.",
+      "removeTitle": "Remove volume {name}?",
+      "removeBody": "This deletes the data inside it. Nothing is using it right now, but a stopped container may still expect it.",
+      "removeBusy": "A running container is using this volume. Removing it would delete data something is still writing to.",
+      "removeUsedBySites": "These sites mount this volume: {sites}. Remove the mount from them first — deleting it now destroys the data they keep in it."
+    },
+    "attach": {
+      "action": "Attach a site",
+      "networkTitle": "Attach a site to {name}",
+      "networkBody": "The site joins this network and can reach the other containers on it by name.",
+      "volumeTitle": "Mount {name} into a site",
+      "volumeBody": "The site mounts this volume at a path inside its container, and keeps data there across rebuilds.",
+      "site": "Site",
+      "chooseSite": "Choose a site",
+      "noSites": "No container sites are running on this server.",
+      "alreadyAttached": "{site} (already attached)",
+      "path": "Path inside the container",
+      "pathHint": "Where the volume appears inside the container, for example /var/lib/mysql. Not the site's own directory.",
+      "attach": "Attach",
+      "attaching": "Attaching…",
+      "attached": "{name} attached to {site}.",
+      "failed": "Couldn't attach it.",
+      "cancel": "Cancel",
+      "theSite": "the site",
+      "restartWarning": "This rewrites {site}'s configuration and recreates its container, so the site is down for a few seconds."
+    },
+    "registries": {
+      "title": "Registry credentials",
+      "add": "Add registry",
+      "save": "Save",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "remove": "Remove",
+      "test": "Test connection",
+      "hint": "Add a credential here, then choose it on a container site — on the create form, or later in the site's Container settings. Sites left on “None” pull anonymously, which is correct for every public image.",
+      "empty": "No registry credentials are stored. Add one to run a private image.",
+      "failed": "That did not work.",
+      "created": "{name} was added.",
+      "updated": "{name} was saved.",
+      "removed": "{name} was deleted.",
+      "tested": "The registry was contacted.",
+      "dockerHub": "Docker Hub",
+      "tokenHintEdit": "Leave empty to keep the stored token. Type a new one to replace it.",
+      "usedBySites": "{count, plural, one {# site} other {# sites}}",
+      "usedByNone": "No sites",
+      "fields": {
+        "name": "Name",
+        "registry": "Registry address",
+        "username": "Username",
+        "token": "Access token",
+        "provider": "Where is the image hosted?"
+      },
+      "placeholders": {
+        "name": "GHCR",
+        "registry": "ghcr.io"
+      },
+      "columns": {
+        "name": "Name",
+        "registry": "Registry",
+        "username": "Username",
+        "status": "Status",
+        "usedBy": "Used by"
+      },
+      "invalid": {
+        "name": "Give this credential a name you will recognise.",
+        "registry": "Enter the host on its own — ghcr.io, not ghcr.io/your-org, and no username or password.",
+        "username": "Enter the username this token belongs to.",
+        "token": "Paste the token with no spaces or line breaks."
+      },
+      "errors": {
+        "invalid_credentials": "The registry refused this username and token.",
+        "unreachable": "The registry could not be reached from this server.",
+        "unknown": "The registry refused the connection without saying why."
+      },
+      "confirm": {
+        "title": "Delete {name}?",
+        "body": "The credential is deleted from this server. No site is using it.",
+        "bodyInUse": "{count, plural, one {# site is} other {# sites are}} set to pull with this credential. They are not deleted and keep running — but their next pull will be anonymous, and will fail if the image is private."
+      },
+      "emptyTitle": "No registry credentials yet",
+      "emptyBody": "You only need one to run a private image. Have your registry username and an access token ready — not your account password. Public images need nothing here.",
+      "registryHint": "The host on its own — no https://, no namespace, no repository. Add a port if yours uses one.",
+      "registryHintFixed": "Fixed for this provider. Docker stores credentials under this exact address, and any other spelling is ignored rather than rejected.",
+      "howTo": {
+        "title": "How to get this",
+        "step3": "Paste it below and press Test connection — the panel asks the registry straight away rather than leaving you to find out on your first deploy."
+      },
+      "temporaryToken": "This registry issues short-lived credentials — AWS ECR's last twelve hours. A token pasted here will authenticate now and start failing once it expires, because the panel does not refresh it. Use a registry with a long-lived token, or expect to update this by hand.",
+      "providers": {
+        "dockerhub": {
+          "label": "Docker Hub",
+          "step1": "In Docker Hub, open Account settings → Personal access tokens and create a token with Read access.",
+          "step2": "Your username is your Docker ID — the name in your profile URL, not your email address.",
+          "usernameHint": "Your Docker ID, not the email you sign in with.",
+          "tokenHint": "A personal access token with Read access. Your account password will not work if two-factor authentication is on.",
+          "linkLabel": "Open Docker Hub access tokens"
+        },
+        "ghcr": {
+          "label": "GitHub Container Registry",
+          "step1": "In GitHub, open Settings → Developer settings → Personal access tokens → Tokens (classic) and create one with the read:packages scope.",
+          "step2": "It must be a classic token. A fine-grained token cannot carry read:packages, so it is refused even though it looks valid.",
+          "usernameHint": "Your GitHub username.",
+          "tokenHint": "A classic personal access token with read:packages. Fine-grained tokens do not work here.",
+          "linkLabel": "Open GitHub personal access tokens"
+        },
+        "gitlab": {
+          "label": "GitLab Container Registry",
+          "step1": "In your GitLab project, open Settings → Repository → Deploy tokens and create one with the read_registry scope.",
+          "step2": "The username is the deploy token's own username, which GitLab shows you once when the token is created — not your GitLab account name.",
+          "usernameHint": "The deploy token's username, not your GitLab account.",
+          "tokenHint": "A project or group deploy token with read_registry. A personal access token also works, with the same scope.",
+          "linkLabel": "Read GitLab's deploy token guide"
+        },
+        "other": {
+          "label": "Other or self-hosted registry",
+          "step1": "Enter the registry's host, with a port if it uses one — for example registry.example.com:5000.",
+          "step2": "Use whatever username and token or password that registry accepts for a docker login. A read-only account is enough; this credential only pulls.",
+          "usernameHint": "Whatever this registry accepts for docker login.",
+          "tokenHint": "The token or password for that account. Read-only access is enough — the panel only pulls.",
+          "linkLabel": ""
+        }
+      },
+      "subtitle": "Credentials this server uses to pull private container images.",
+      "unavailableTitle": "This server hosts no containers",
+      "unavailableBody": "Registry credentials are for pulling container images. This server runs none, so there is nothing for a credential to pull for."
+    }
   }
 }

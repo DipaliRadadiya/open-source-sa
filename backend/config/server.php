@@ -1,13 +1,29 @@
 <?php
 
 use App\Services\Applications\Types\AkauntingSiteType;
+use App\Services\Applications\Types\BookStackSiteType;
+use App\Services\Applications\Types\ChatwootSiteType;
 use App\Services\Applications\Types\CraftCmsSiteType;
+use App\Services\Applications\Types\DockerSiteType;
+use App\Services\Applications\Types\ExcalidrawSiteType;
+use App\Services\Applications\Types\ForgejoSiteType;
+use App\Services\Applications\Types\FreshRssSiteType;
+use App\Services\Applications\Types\GhostSiteType;
+use App\Services\Applications\Types\GiteaSiteType;
 use App\Services\Applications\Types\GitSiteType;
+use App\Services\Applications\Types\GlanceSiteType;
+use App\Services\Applications\Types\GrafanaSiteType;
+use App\Services\Applications\Types\HomepageSiteType;
+use App\Services\Applications\Types\ItToolsSiteType;
 use App\Services\Applications\Types\JoomlaSiteType;
+use App\Services\Applications\Types\MatomoSiteType;
+use App\Services\Applications\Types\MattermostSiteType;
 use App\Services\Applications\Types\MauticSiteType;
+use App\Services\Applications\Types\MetabaseSiteType;
 use App\Services\Applications\Types\MoodleSiteType;
 use App\Services\Applications\Types\N8nSiteType;
 use App\Services\Applications\Types\NextcloudSiteType;
+use App\Services\Applications\Types\NocoDbSiteType;
 use App\Services\Applications\Types\NodeBbSiteType;
 use App\Services\Applications\Types\NodeRedSiteType;
 use App\Services\Applications\Types\PhpMyAdminSiteType;
@@ -15,7 +31,11 @@ use App\Services\Applications\Types\PhpSiteType;
 use App\Services\Applications\Types\PrestaShopSiteType;
 use App\Services\Applications\Types\StatamicSiteType;
 use App\Services\Applications\Types\StaticSiteType;
+use App\Services\Applications\Types\StirlingPdfSiteType;
 use App\Services\Applications\Types\UptimeKumaSiteType;
+use App\Services\Applications\Types\VaultwardenSiteType;
+use App\Services\Applications\Types\WikiJsSiteType;
+use App\Services\Applications\Types\WordPressContainerSiteType;
 use App\Services\Applications\Types\WordPressSiteType;
 use App\Services\Git\BitbucketProvider;
 use App\Services\Git\GithubProvider;
@@ -25,6 +45,7 @@ use App\Services\Git\Webhooks\GithubWebhook;
 use App\Services\Git\Webhooks\GitlabWebhook;
 use App\Services\Server\Applications\Installers\AkauntingInstaller;
 use App\Services\Server\Applications\Installers\CraftCmsInstaller;
+use App\Services\Server\Applications\Installers\DockerAppInstaller;
 use App\Services\Server\Applications\Installers\JoomlaInstaller;
 use App\Services\Server\Applications\Installers\MauticInstaller;
 use App\Services\Server\Applications\Installers\MoodleInstaller;
@@ -56,6 +77,8 @@ use App\Services\Server\DiskCleaner\Targets\TmpTarget;
 use App\Services\Server\Doctor\Checks\AccountLocksCheck;
 use App\Services\Server\Doctor\Checks\BinariesCheck;
 use App\Services\Server\Doctor\Checks\DatabaseCheck;
+use App\Services\Server\Doctor\Checks\DockerCheck;
+use App\Services\Server\Doctor\Checks\DockerExposureCheck;
 use App\Services\Server\Doctor\Checks\DriverContentionCheck;
 use App\Services\Server\Doctor\Checks\DynamicResponseLimitCheck;
 use App\Services\Server\Doctor\Checks\FrontendBuildCheck;
@@ -220,6 +243,12 @@ return [
             // insighthub one reads every site's access log. Both are called
             // only from the central-only addon endpoints.
             'wp-toolkit', 'insighthub-toolkit',
+            // Docker. Granted to the panel rather than by adding the site user
+            // to the `docker` group, and the distinction is the whole security
+            // model: group membership is root equivalence -- a member can bind
+            // mount / into a container and write anywhere. So the panel
+            // elevates the specific commands and nobody else gets the socket.
+            'docker',
         ],
 
         // Where a binary lives, when it is not /usr/bin/<name>.
@@ -542,6 +571,8 @@ return [
             ServicesCheck::class,
             WebServerCheck::class,
             DynamicResponseLimitCheck::class,
+            DockerCheck::class,
+            DockerExposureCheck::class,
             FrontendBuildCheck::class,
             WritablePathsCheck::class,
             DatabaseCheck::class,
@@ -1503,6 +1534,89 @@ return [
         | nobody asked for.
         */
 
+        // Every Docker app maps to the one installer: the differences between
+        // them live entirely in the site type — template, port, volumes, secrets
+        // — so a class per app would be five methods of delegation each.
+        'matomo' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'grafana' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'bookstack' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'wordpress_container' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'mattermost' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'chatwoot' => [
+
+            'driver' => DockerAppInstaller::class,
+
+        ],
+
+        'excalidraw' => [
+
+            'driver' => DockerAppInstaller::class,
+
+        ],
+
+        'metabase' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'nocodb' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'wikijs' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'forgejo' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'freshrss' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'gitea' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'glance' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'homepage' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'ittools' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'stirlingpdf' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'vaultwarden' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'ghost' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
         'uptimekuma' => [
             'driver' => UptimeKumaInstaller::class,
             'repository' => env('SERVER_UPTIME_KUMA_REPO', 'https://github.com/louislam/uptime-kuma.git'),
@@ -1631,7 +1745,383 @@ return [
         'min_confidence' => 60,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Docker
+    |--------------------------------------------------------------------------
+    */
+
+    'docker' => [
+        // A container with no ceiling can exhaust the box and take the panel
+        // with it. Per-application overridable; never absent.
+        'default_memory_limit' => env('DOCKER_DEFAULT_MEMORY_LIMIT', '512m'),
+
+        // A database is not the application, and one budget for the pair means
+        // the app's ceiling is really the pair's. MySQL's default buffer pool
+        // alone is 128M, so a one-click app sharing 512m with its engine would
+        // be tuned by whichever container asked for memory first.
+        'default_db_memory_limit' => env('DOCKER_DEFAULT_DB_MEMORY_LIMIT', '512m'),
+
+        // How long the installer waits for an app's first-run setup endpoint to
+        // answer before giving up, in two-second tries. Generous because Chatwoot
+        // migrates its database on first boot behind a 502: 90 is three minutes.
+        'claim_attempts' => env('DOCKER_CLAIM_ATTEMPTS', 90),
+
+        // `compose up` pulls an image the first time, and an image can be
+        // large on a slow link. Generous, because the failure it prevents is a
+        // deploy that was working and got killed.
+        'command_timeout' => (int) env('DOCKER_COMMAND_TIMEOUT', 600),
+
+        // Where a registry credential is materialised for the length of one
+        // pull. Mirrors `git_credential_dir`, and for the identical reason: the
+        // secret has to reach a CLI that only reads it from a file, so it is
+        // written root-owned and removed in a `finally`.
+        //
+        // **Never the site's document root.** The site user can read their own
+        // tree, and the panel deliberately keeps them out of the `docker` group
+        // because that group is root-equivalent — handing them a registry token
+        // there would give away by file what was withheld by group.
+        // Defaults to the system temp dir, the same as `git_credential_dir`,
+        // and deliberately not a new path under /var/lib: install.sh runs once
+        // and the updater ships code, never directories, so a fresh default
+        // path would exist on new boxes and be missing on every existing one.
+        // The per-pull subdirectory is created on demand regardless.
+        'registry_credential_dir' => env('DOCKER_REGISTRY_CREDENTIAL_DIR', sys_get_temp_dir()),
+
+        // The credential probe talks to a remote registry, so it needs its own
+        // ceiling: `command_timeout` is 600s because a pull may be gigabytes,
+        // and a login that has not answered in half a minute is not going to.
+        // The endpoint is throttled as well — a slow registry must not become a
+        // way to occupy the panel's workers.
+        'login_timeout' => (int) env('DOCKER_LOGIN_TIMEOUT', 30),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | One-click Docker applications
+    |--------------------------------------------------------------------------
+    |
+    | The images each Docker app runs, here rather than in its site type so an
+    | operator can pin or mirror one without editing code — the same reason the
+    | PHP one-clicks keep their repositories and archive URLs in config.
+    |
+    | A floating tag, not a digest. A one-click that pins an exact version does
+    | not stay current; it stops being noticed, and every site created after
+    | that gets an old release. `5-alpine` tracks Ghost 5 patches, which is the
+    | behaviour somebody choosing "one-click Ghost" is asking for. The rendered
+    | compose file is stored per site, so an existing site is NOT moved when this
+    | changes — only new ones.
+    |
+    */
+    /*
+    |--------------------------------------------------------------------------
+    | Containerised database engines
+    |--------------------------------------------------------------------------
+    |
+    | Engines a Docker box can run as shared objects for its container sites —
+    | not as applications. A database has no HTTP interface, so it gets no domain,
+    | no vhost and no certificate; see the DockerDatabase model for why that
+    | distinction is structural rather than a preference.
+    |
+    | Versions are explicit image references rather than a pattern with the
+    | version interpolated. A transform would happily invent `postgres:99-alpine`
+    | for a version somebody typed, and the failure would land at `docker pull`
+    | minutes into provisioning. Every tag below was verified against the
+    | registry's per-tag endpoint on 2026-09-30 — not against a page of recent
+    | tags, which returns the 60 most recently UPDATED and reports a live tag as
+    | missing.
+    |
+    | MySQL's 9.x innovation line is deliberately absent: `9.4` had not been
+    | rebuilt since 2025-10-18, and a stale innovation release is the wrong
+    | default for a panel to offer. 8.4 is the LTS.
+    |
+    | `data_path` is the directory the engine keeps its data in, which the panel
+    | mounts as a named volume. `port` is the port inside the container.
+    |
+    */
+    'docker_databases' => [
+        // Where the compose files live. Root-owned and outside any site's tree: a
+        // database is not a site and has no system user, and the file holds its
+        // password. Created on demand, because install.sh runs once and the
+        // updater ships code rather than directories.
+        'directory' => env('DOCKER_DATABASE_DIR', '/var/lib/panel/docker-databases'),
+
+        // How long to wait for a new engine to report itself healthy before
+        // treating it as broken. Generous on purpose: MySQL's first start
+        // initialises a data directory and can take half a minute on a small box,
+        // and a create that gave up early would roll back a database that was
+        // about to work. Two minutes is well past any healthy first start and
+        // well short of leaving somebody watching a spinner.
+        'ready_timeout' => (int) env('DOCKER_DATABASE_READY_TIMEOUT', 120),
+
+        'engines' => [
+            'postgres' => [
+                'label' => 'PostgreSQL',
+                'port' => 5432,
+                'data_path' => '/var/lib/postgresql/data',
+                /*
+                | 🔴 **Postgres 18 moved its data directory, and mounting the old
+                | path makes the container REFUSE TO START.** It says so itself:
+                |
+                |   The suggested container configuration for 18+ is to place a
+                |   single mount at /var/lib/postgresql which will then place
+                |   PostgreSQL data in a subdirectory, allowing usage of
+                |   "pg_upgrade --link" without mount point boundary issues.
+                |
+                | `PGDATA` is `/var/lib/postgresql/18/docker` in that image and the
+                | declared `VOLUME` is `/var/lib/postgresql`; 16 and 17 still use
+                | `/var/lib/postgresql/data` for both. Verified on the box with
+                | `docker inspect` on all three.
+                |
+                | Found because 18 is the NEWEST version, so it is what the new
+                | one-click control offers by default — the first database anybody
+                | starts from that screen was the one that could not start. The
+                | panel rolled it back correctly ("no row, no container and no port
+                | held"), so the only symptom was a create that failed.
+                |
+                | A per-version override rather than a second engine entry: it is
+                | the same engine, and splitting it would double the versions list
+                | in the UI.
+                */
+                'data_path_overrides' => [
+                    '18' => '/var/lib/postgresql',
+                ],
+                'template' => 'server.docker.databases.postgres',
+                // The default user and database the image creates on an empty
+                // data directory. Both are init-only: changing them afterwards
+                // does nothing, which is why they are fixed here rather than
+                // asked for — a field that silently stops applying is worse than
+                // no field. See `init-only env vars` in the panel's own history.
+                'versions' => [
+                    '18' => 'postgres:18-alpine',
+                    '17' => 'postgres:17-alpine',
+                    '16' => 'postgres:16-alpine',
+                ],
+            ],
+
+            'mysql' => [
+                'label' => 'MySQL',
+                'port' => 3306,
+                'data_path' => '/var/lib/mysql',
+                'template' => 'server.docker.databases.mysql',
+                'versions' => [
+                    '8.4' => 'mysql:8.4',
+                    '8.0' => 'mysql:8.0',
+                ],
+            ],
+
+            'mariadb' => [
+                'label' => 'MariaDB',
+                'port' => 3306,
+                'data_path' => '/var/lib/mysql',
+                // MariaDB's image accepts the MYSQL_* variables as well as its
+                // own, so it shares MySQL's template rather than duplicating it.
+                'template' => 'server.docker.databases.mysql',
+                'versions' => [
+                    '12.3' => 'mariadb:12.3',
+                    '11.8' => 'mariadb:11.8',
+                    '11.4' => 'mariadb:11.4',
+                ],
+            ],
+
+            'mongodb' => [
+                'label' => 'MongoDB',
+                'port' => 27017,
+                'data_path' => '/data/db',
+                'template' => 'server.docker.databases.mongodb',
+                'versions' => [
+                    '8' => 'mongo:8',
+                    '7' => 'mongo:7',
+                ],
+            ],
+
+            'redis' => [
+                'label' => 'Redis',
+                'port' => 6379,
+                'data_path' => '/data',
+                'template' => 'server.docker.databases.redis',
+                'versions' => [
+                    '8' => 'redis:8-alpine',
+                    '7' => 'redis:7-alpine',
+                ],
+            ],
+
+            'valkey' => [
+                'label' => 'Valkey',
+                'port' => 6379,
+                'data_path' => '/data',
+                // A Redis fork with the same wire protocol and the same
+                // `--requirepass`, so the same template.
+                'template' => 'server.docker.databases.redis',
+                'versions' => [
+                    '9' => 'valkey/valkey:9-alpine',
+                    '8' => 'valkey/valkey:8-alpine',
+                ],
+            ],
+        ],
+    ],
+
+    'docker_apps' => [
+        'matomo' => [
+            'image' => env('DOCKER_APP_MATOMO_IMAGE', 'matomo:5-apache'),
+            // MariaDB, not MySQL: Matomo's own documentation and its schema
+            // assumptions are written against it, and 10.11 is the LTS line.
+            'db_image' => env('DOCKER_APP_MATOMO_DB_IMAGE', 'mariadb:10.11'),
+        ],
+
+        'grafana' => [
+            // The 13.2 line rather than `latest`, for the reason this whole list
+            // is versioned: `latest` moves a running site onto a new major the day
+            // upstream tags one, and because the rendered compose is stored per
+            // site that only ever reaches NEW sites. 13.2 tracks its own patches.
+            'image' => env('DOCKER_APP_GRAFANA_IMAGE', 'grafana/grafana:13.2'),
+        ],
+
+        'bookstack' => [
+            // `latest`, like Metabase and NocoDB above, and for the same reason
+            // they have it: linuxserver publishes only immutable
+            // `version-vX.Y.Z` tags and `latest` — there is no minor line to
+            // track. An exact pin here would stop being noticed and every site
+            // created afterwards would get an old release, which is the failure
+            // this list's comment warns about. A running site is unaffected
+            // either way: its compose file is stored, so a moving tag reaches
+            // only NEW sites.
+            //
+            // `26.09` was here first and does not exist. The repository was
+            // verified alive and the tag was then assumed from the version
+            // pattern — `26.09.1` and `26.09.20260929` are real, a bare `26.09`
+            // is not, and the install failed at `docker pull`. Check the tag,
+            // not just the repository.
+            'image' => env('DOCKER_APP_BOOKSTACK_IMAGE', 'lscr.io/linuxserver/bookstack:latest'),
+            // 11.4 is the current MariaDB LTS, supported to 2029 and comfortably
+            // above BookStack's 10.6 floor. Matomo pins 10.11 because Matomo's own
+            // documentation does; there is no such constraint here.
+            'db_image' => env('DOCKER_APP_BOOKSTACK_DB_IMAGE', 'mariadb:11.4'),
+        ],
+
+        'wordpress_container' => [
+            // 7.1-apache: the current line, and the apache variant because it
+            // serves HTTP itself — the fpm variants need a second container in
+            // front, which is a web server inside a container behind the web
+            // server on the host.
+            //
+            // Tag verified against the registry's per-tag endpoint, not by reading
+            // a page of recent tags: that page is the 60 most recently UPDATED and
+            // gives false negatives, which is how `mariadb:11.4` looked missing
+            // while pulling fine.
+            'image' => env('DOCKER_APP_WORDPRESS_IMAGE', 'wordpress:7.1-apache'),
+            'db_image' => env('DOCKER_APP_WORDPRESS_DB_IMAGE', 'mariadb:11.4'),
+        ],
+
+        'mattermost' => [
+            'image' => env('DOCKER_APP_MATTERMOST_IMAGE', 'mattermost/mattermost-team-edition:release-10'),
+            'db_image' => env('DOCKER_APP_MATTERMOST_DB_IMAGE', 'postgres:16-alpine'),
+        ],
+
+        // pgvector, not postgres: Chatwoot's schema declares the `vector`
+        // extension and plain Postgres refuses the migration. Pinned to pg16
+        // rather than tracking newest -- Postgres 18, mongo 8 and MariaDB 12.3
+        // each broke an app in this catalog by being the default.
+        'chatwoot' => [
+            'image' => env('DOCKER_APP_CHATWOOT_IMAGE', 'chatwoot/chatwoot:v4.17.1'),
+            'db_image' => env('DOCKER_APP_CHATWOOT_DB_IMAGE', 'pgvector/pgvector:pg16'),
+            'redis_image' => env('DOCKER_APP_CHATWOOT_REDIS_IMAGE', 'redis:7-alpine'),
+        ],
+
+        // `latest` is the only tag worth naming: of nearly a thousand published
+        // tags the rest are `sha-<commit>`, and there is no semver at all. Lower
+        // risk than it would be elsewhere -- a static frontend has no data and no
+        // migration, so a bad image is a broken page a redeploy fixes.
+        'excalidraw' => [
+            'image' => env('DOCKER_APP_EXCALIDRAW_IMAGE', 'excalidraw/excalidraw:latest'),
+        ],
+
+        'metabase' => [
+            'image' => env('DOCKER_APP_METABASE_IMAGE', 'metabase/metabase:latest'),
+            'db_image' => env('DOCKER_APP_METABASE_DB_IMAGE', 'postgres:16-alpine'),
+        ],
+
+        'nocodb' => [
+            'image' => env('DOCKER_APP_NOCODB_IMAGE', 'nocodb/nocodb:latest'),
+            'db_image' => env('DOCKER_APP_NOCODB_DB_IMAGE', 'postgres:16-alpine'),
+        ],
+
+        'wikijs' => [
+            // Pinned to the 2 line: Wiki.js 3 is a rewrite still in beta, and
+            // `latest` would move a one-click onto it the day it ships.
+            'image' => env('DOCKER_APP_WIKIJS_IMAGE', 'ghcr.io/requarks/wiki:2'),
+            'db_image' => env('DOCKER_APP_WIKIJS_DB_IMAGE', 'postgres:16-alpine'),
+        ],
+
+        'forgejo' => [
+            // Pinned to a major line: `latest` did not resolve on the registry, and a
+            // one-click that follows a rolling tag moves sites onto a new major
+            // the day it ships.
+            'image' => env('DOCKER_APP_FORGEJO_IMAGE', 'codeberg.org/forgejo/forgejo:9'),
+        ],
+
+        'freshrss' => [
+            'image' => env('DOCKER_APP_FRESHRSS_IMAGE', 'freshrss/freshrss:latest'),
+        ],
+
+        'gitea' => [
+            // Major line, not `latest`: a Gitea major upgrade migrates its database and
+            // is not something a site should do because a tag moved.
+            'image' => env('DOCKER_APP_GITEA_IMAGE', 'gitea/gitea:1'),
+        ],
+
+        'glance' => [
+            'image' => env('DOCKER_APP_GLANCE_IMAGE', 'glanceapp/glance:latest'),
+        ],
+
+        'homepage' => [
+            'image' => env('DOCKER_APP_HOMEPAGE_IMAGE', 'ghcr.io/gethomepage/homepage:latest'),
+        ],
+
+        'ittools' => [
+            'image' => env('DOCKER_APP_ITTOOLS_IMAGE', 'corentinth/it-tools:latest'),
+        ],
+
+        'stirlingpdf' => [
+            'image' => env('DOCKER_APP_STIRLINGPDF_IMAGE', 'stirlingtools/stirling-pdf:latest'),
+        ],
+
+        'vaultwarden' => [
+            // `latest` on purpose here: Vaultwarden tracks Bitwarden's client protocol,
+            // and running behind on it breaks the apps rather than merely ageing.
+            'image' => env('DOCKER_APP_VAULTWARDEN_IMAGE', 'vaultwarden/server:latest'),
+        ],
+
+        'ghost' => [
+            'image' => env('DOCKER_APP_GHOST_IMAGE', 'ghost:5-alpine'),
+            // 8.0 rather than 8.4: Ghost 5 documents 8.0, and MySQL 8.4 changed
+            // the default authentication plugin — a combination that fails at
+            // connect time with an error about a plugin, not about a version.
+            'db_image' => env('DOCKER_APP_GHOST_DB_IMAGE', 'mysql:8.0'),
+        ],
+    ],
+
     'site_types' => [
+        DockerSiteType::class,
+        GhostSiteType::class,
+        VaultwardenSiteType::class,
+        GiteaSiteType::class,
+        ForgejoSiteType::class,
+        FreshRssSiteType::class,
+        StirlingPdfSiteType::class,
+        ItToolsSiteType::class,
+        GlanceSiteType::class,
+        HomepageSiteType::class,
+        NocoDbSiteType::class,
+        MatomoSiteType::class,
+        MattermostSiteType::class,
+        ChatwootSiteType::class,
+        ExcalidrawSiteType::class,
+        MetabaseSiteType::class,
+        WikiJsSiteType::class,
+        GrafanaSiteType::class,
+        BookStackSiteType::class,
+        WordPressContainerSiteType::class,
         WordPressSiteType::class,
         NextcloudSiteType::class,
         JoomlaSiteType::class,
@@ -1953,6 +2443,17 @@ return [
         | a match is a list somebody forgets to extend. Omit the key and the
         | service behaves as before — absent until its unit exists.
         */
+        /*
+        | Docker. `install` names the runtime_installs row so the Services list
+        | shows the entry while it installs and after a failed install, rather
+        | than the row simply not existing -- which reads as "I asked for
+        | Docker, where did it go".
+        |
+        | The unit is `docker`, not `docker.socket`: the socket unit is active
+        | on a box where the daemon has failed to start, so reading it would
+        | report a working Docker on a server that cannot run a container.
+        */
+        ['key' => 'docker', 'unit' => 'docker', 'label' => 'Docker', 'install' => ['runtime', 'docker']],
         ['key' => 'mysql', 'unit' => 'mysql', 'label' => 'MySQL', 'install' => ['database', 'mysql']],
         ['key' => 'mariadb', 'unit' => 'mariadb', 'label' => 'MariaDB', 'install' => ['database', 'mariadb']],
         ['key' => 'mongodb', 'unit' => 'mongod', 'label' => 'MongoDB', 'install' => ['database', 'mongodb']],

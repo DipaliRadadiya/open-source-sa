@@ -47,6 +47,10 @@ return [
             'cronjob',
             'database',
             'disk_cleaner',
+            // Containerised database engines. Server, beside `database`, for the
+            // same reason: it is an engine running on this machine, and the only
+            // difference is that this one is in a container.
+            'docker_database',
             'fail2ban',
             'firewall',
             'git_account',
@@ -54,6 +58,11 @@ return [
             'node',
             'panel_update',
             'php',
+            // Stored registry credentials. Server rather than account, and the
+            // distinction is worth stating: it is a credential the MACHINE uses to
+            // pull images, not one of the panel's people — the same reading that
+            // puts `git_account` and `storage_destination` on this side.
+            'registry',
             'server',
             'service',
             'setting',

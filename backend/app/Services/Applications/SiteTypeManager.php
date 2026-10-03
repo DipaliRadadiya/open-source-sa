@@ -87,6 +87,17 @@ class SiteTypeManager
     public const BLOCKED_WEB_SERVER = 'web_server';
 
     /**
+     * The stack does not host this kind of application at all.
+     *
+     * Separate from `BLOCKED_RUNTIME` because there is nothing to install. A
+     * Docker box has PHP on it — the panel is PHP — so the runtime check
+     * passes and would have offered WordPress on a server that will never
+     * serve a PHP site. Offering an install button here would be the same lie
+     * the web-server code exists to avoid.
+     */
+    public const BLOCKED_STACK = 'stack';
+
+    /**
      * PHP is here, but no version this application runs on. The way out is the
      * PHP screen when the package index has one, and none when it does not —
      * the reason says which.
@@ -95,6 +106,26 @@ class SiteTypeManager
 
     public function catalog(): array
     {
+        // Types this stack will never host are left out entirely, rather than
+        // rendered as blocked cards.
+        //
+        // Every other block is worth showing: a missing runtime or database
+        // names something you can install, and a web-server refusal affects a
+        // type or two while the rest of the grid still works. `stack` is not
+        // like them — nothing installs a way out, and it is true of every card
+        // at once. On a container-only server that meant seventeen cards
+        // repeating one sentence about the server, which is noise rather than
+        // honesty, and a worse screen than the one it replaced.
+        //
+        // The refusal itself is untouched: `unavailable()` still answers for
+        // these types, and `StoreApplicationRequest` still calls it, so the
+        // endpoint refuses a filtered type exactly as before. This hides a card
+        // whose endpoint says no — not a button whose endpoint works.
+        $types = array_filter(
+            $this->all(),
+            fn (SiteType $type) => ($this->unavailable($type)['code'] ?? null) !== self::BLOCKED_STACK,
+        );
+
         return array_map(function (SiteType $type) {
             $profile = $type->servingProfile();
             $blocked = $this->unavailable($type);
@@ -152,7 +183,7 @@ class SiteTypeManager
                 'php_version_range' => $type->supportedPhpRange(),
                 'fields' => [...$type->fields(), ...$this->engineField($type)],
             ];
-        }, $this->all());
+        }, $types);
     }
 
     /**
@@ -174,6 +205,21 @@ class SiteTypeManager
      */
     public function unavailable(SiteType $type): ?array
     {
+        // First, because it is the strongest refusal and the others would
+        // answer misleadingly. A Docker box HAS php and node installed — the
+        // panel needs both — so the runtime check below passes cleanly for
+        // WordPress, and the user would be shown a card that fails only once
+        // they try to build a site with it.
+        if (! $this->capabilities->hosts($type->servingProfile())) {
+            return [
+                'code' => self::BLOCKED_STACK,
+                'reason' => __('application.unavailable.stack'),
+                // Nothing to install would change this, so the card must not
+                // offer to fix itself.
+                'runtime' => null,
+            ];
+        }
+
         $runtime = $this->requiredRuntime($type->servingProfile());
 
         if ($runtime !== null && ! $this->capabilities->supports($runtime)) {

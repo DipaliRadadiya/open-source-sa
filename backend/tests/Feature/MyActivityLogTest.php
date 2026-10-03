@@ -173,3 +173,107 @@ it('does not require admin access to view own activity log', function () {
         ->getJson('/api/activity-log')
         ->assertOk();
 });
+
+/*
+ * A property the sentence cannot substitute must not take the screen down.
+ *
+ * 🔴 Found on the test box, not here: `GET /activity-log` answered **500 for the
+ * whole log**. `Translator::makeReplacements()` calls `ucfirst()` on every value, so
+ * one row whose properties hold an ARRAY is a `TypeError` inside the framework —
+ * `mb_substr(): Argument #1 ($string) must be of type string, array given` — and it
+ * fails the response, not the row.
+ *
+ * Three Docker events do it: `container_secrets_viewed` records which credential
+ * KEYS were handed over, and `docker_resources_removed` records what it `removed`
+ * and what it `kept`. 516 rows of them already existed, so no change to what gets
+ * recorded could have fixed a single one.
+ */
+
+it('renders a row whose properties hold an array, instead of failing the whole log', function () {
+    $user = User::factory()->create(['username' => 'arrayprops', 'password' => bcrypt('Password123')]);
+
+    ActivityLog::create([
+        'user_id' => $user->id,
+        'type' => 'application',
+        'action' => 'container_secrets_viewed',
+        'properties' => ['name' => 'Shop', 'keys' => ['ADMIN_PASSWORD', 'DB_PASSWORD']],
+    ]);
+
+    $response = $this->withHeader('Authorization', 'Bearer '.$user->createToken('t')->plainTextToken)
+        ->getJson('/api/activity-log')
+        ->assertOk();
+
+    $row = collect($response->json('activity_log'))->firstWhere('action', 'container_secrets_viewed');
+
+    // The sentence for this event does not name the keys — it is "Viewed the
+    // container credentials for :name" — so the assertion is that the row RENDERS,
+    // not that the list appears. The array still has to be survivable: it reaches
+    // `__()` as a replacement whether the sentence uses it or not, which is the
+    // whole bug.
+    expect($row['description'])->toBe('Viewed the container credentials for Shop')
+        ->and($row['description'])->not->toContain('Array');
+});
+
+it('reads out a list the sentence does name', function () {
+    // Where a sentence DOES use the array, joining beats counting: "which volumes
+    // were removed" is the question, and `2` is not an answer to it.
+    $user = User::factory()->create(['username' => 'listprops', 'password' => bcrypt('Password123')]);
+
+    ActivityLog::create([
+        'user_id' => $user->id,
+        'type' => 'application',
+        'action' => 'docker_resources_removed',
+        'properties' => ['name' => 'Shop', 'removed' => ['sv-app-7_data', 'sv-app-7_db'], 'kept' => []],
+    ]);
+
+    $row = collect($this->withHeader('Authorization', 'Bearer '.$user->createToken('t')->plainTextToken)
+        ->getJson('/api/activity-log')->assertOk()->json('activity_log'))
+        ->firstWhere('action', 'docker_resources_removed');
+
+    expect($row['description'])->not->toContain('Array');
+
+    // The joined value is what a sentence using `:removed` would substitute.
+    expect(__('activity.application.docker_resources_removed', [
+        'name' => 'Shop', 'removed' => 'sv-app-7_data, sv-app-7_db',
+    ]))->not->toContain('Array');
+});
+
+it('says so in words when the list is empty', function () {
+    // `:removed` substituting to nothing reads as a broken sentence rather than a
+    // true one — "Removed  from Shop" with a hole in it.
+    $user = User::factory()->create(['username' => 'emptyprops', 'password' => bcrypt('Password123')]);
+
+    ActivityLog::create([
+        'user_id' => $user->id,
+        'type' => 'application',
+        'action' => 'container_secrets_viewed',
+        'properties' => ['name' => 'Shop', 'keys' => []],
+    ]);
+
+    $row = collect($this->withHeader('Authorization', 'Bearer '.$user->createToken('t')->plainTextToken)
+        ->getJson('/api/activity-log')->assertOk()->json('activity_log'))
+        ->firstWhere('action', 'container_secrets_viewed');
+
+    // Nothing to assert in the sentence itself — it does not name the list — so
+    // the contract is that an empty array is as survivable as a full one.
+    expect($row['description'])->toBe('Viewed the container credentials for Shop');
+});
+
+it('renders a false boolean as a word rather than a gap', function () {
+    // PHP casts `false` to `''`, so `rolled_back` on a save that did not roll back
+    // left a hole mid-sentence.
+    $user = User::factory()->create(['username' => 'boolprops', 'password' => bcrypt('Password123')]);
+
+    ActivityLog::create([
+        'user_id' => $user->id,
+        'type' => 'application',
+        'action' => 'compose_updated',
+        'properties' => ['name' => 'Shop', 'rolled_back' => false, 'applied' => true],
+    ]);
+
+    $row = collect($this->withHeader('Authorization', 'Bearer '.$user->createToken('t')->plainTextToken)
+        ->getJson('/api/activity-log')->assertOk()->json('activity_log'))
+        ->firstWhere('action', 'compose_updated');
+
+    expect($row['description'])->not->toBeEmpty();
+});

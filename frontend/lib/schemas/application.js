@@ -11,7 +11,9 @@ const textField = z.object({
   default: z.unknown().optional(),
   help: z.string().nullish(),
   placeholder: z.string().nullish(),
-  options: z.array(z.object({ value: z.string(), label: z.string() })).default([]),
+  options: z
+    .array(z.object({ value: z.string(), label: z.string() }))
+    .default([]),
   source: z.string().nullish(),
   depends_on: z.string().nullish(),
   generate: z.boolean().default(false),
@@ -58,10 +60,12 @@ export const siteTypesResponseSchema = z.object({
   site_types: z.array(siteTypeSchema).default([]),
 });
 
-export const systemUserOptionSchema = z.object({
-  id: z.number(),
-  username: z.string(),
-}).passthrough();
+export const systemUserOptionSchema = z
+  .object({
+    id: z.number(),
+    username: z.string(),
+  })
+  .passthrough();
 
 export const systemUsersResponseSchema = z.object({
   system_users: z.array(systemUserOptionSchema).default([]),
@@ -124,8 +128,34 @@ export const applicationSchema = z.object({
     })
     .nullish(),
   serving_profile: z.string().nullish(),
+  // What a container site is wired to. Declared here as well as on the detail
+  // payload because the Docker page's attach dialog reads the LIST: without
+  // these, Zod strips them and every site looks unattached — so the dialog would
+  // offer to attach a site to the network it is already on.
+  docker_network: z.string().nullish(),
+  volume_mounts: z
+    .array(z.object({ volume: z.string(), path: z.string() }))
+    .nullish()
+    .transform((mounts) => mounts ?? []),
+  // Names only. Enough to know whether to offer a Credentials section and what to
+  // label each row; the values are fetched on demand from their own endpoint.
+  container_secret_keys: z
+    .array(z.string())
+    .nullish()
+    .transform((keys) => keys ?? []),
+  // Whether a person has confirmed they saved them. **Defaults to true when
+  // absent**, which is the safe direction: a missing field must not put a
+  // first-run card full of passwords on the dashboard of a site that has been
+  // running for a year. Zod strips what it does not declare, so this being here
+  // at all is what makes the card possible.
+  credentials_acknowledged: z
+    .boolean()
+    .nullish()
+    .transform((seen) => seen ?? true),
   rendering_type: z.string().nullish(),
-  status: z.enum(["pending", "provisioning", "active", "failed"]).catch("pending"),
+  status: z
+    .enum(["pending", "provisioning", "active", "failed"])
+    .catch("pending"),
   status_title: z.string().nullish(),
   deployed: z.boolean().default(false),
   system_user: systemUserOptionSchema.nullish(),
@@ -203,8 +233,19 @@ export const applicationSchema = z.object({
   // Set only when the cause is identified, already localized; fall back to the step otherwise.
   failed_reason_title: z.string().nullish(),
   reference: z.string().nullish(),
+  // The container fields. Undeclared fields are stripped by this non-passthrough
+  // object, and the Container screen then saves the blanks back over real values.
+  slug: z.string().nullish(),
+  image: z.string().nullish(),
+  container_port: z.number().nullish(),
+  memory_limit: z.string().nullish(),
+  cpu_limit: z.string().nullish(),
+  registry_id: z.number().nullish(),
   // Shown in the sites list; must be declared or Zod strips them.
   directory_size_bytes: z.number().nullish(),
+  // The volumes' share of the total. Nullish is meaningful: absent means the site
+  // has no volumes to measure, and the dashboard says nothing about them.
+  volume_size_bytes: z.number().nullish(),
   directory_size_measured_at: z.string().nullish(),
   directory_size_measured_at_human: z.string().nullish(),
   created_at: z.string().nullish(),
@@ -317,7 +358,11 @@ export const securityFormSchema = z
       ctx.addIssue({ path: ["username"], code: "custom", message: "securityUsernameAscii" });
     }
     if (!data.password) {
-      ctx.addIssue({ path: ["password"], code: "custom", message: "required_password" });
+      ctx.addIssue({
+        path: ["password"],
+        code: "custom",
+        message: "required_password",
+      });
     } else if (data.password.length < 8) {
       ctx.addIssue({ path: ["password"], code: "custom", message: "min8" });
     } else if (data.password.length > 255) {
@@ -325,12 +370,13 @@ export const securityFormSchema = z
     }
   });
 
-const applicationDomainLabel =
-  /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+const applicationDomainLabel = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
 /** A hostname only — no protocol, path, query, credentials, or port. */
 export function isValidApplicationDomain(value) {
-  const domain = String(value ?? "").trim().toLowerCase();
+  const domain = String(value ?? "")
+    .trim()
+    .toLowerCase();
   if (
     !domain ||
     domain.length > 253 ||

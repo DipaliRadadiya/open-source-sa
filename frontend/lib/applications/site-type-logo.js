@@ -1,6 +1,14 @@
 // Keyed on the API's stable `name`. Explicit filenames, so an unknown type gets the fallback icon.
 const LOGOS = {
   wordpress: "wordpress.svg",
+  // The container WordPress is the same product and gets the same mark. Keyed
+  // separately because the key IS the type name, and the two types exist because
+  // `name()` has to be unique — see WordPressContainerSiteType.
+  //
+  // It is also the first Docker one-click with a logo at all: the other sixteen
+  // have no entry here and fall back to the generic glyph, which is worth fixing
+  // as its own piece of work rather than leaving one card looking different.
+  wordpress_container: "wordpress.svg",
   nextcloud: "nextcloud.svg",
   joomla: "joomla.svg",
   moodle: "moodle.svg",

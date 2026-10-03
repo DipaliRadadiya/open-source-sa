@@ -16,7 +16,11 @@ import { LoadFailed } from "@/components/data-table/load-failed";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { RuntimeStatusNotice } from "@/components/runtime/version-status";
-import { anyInFlight, RUNTIME_POLL_MS, RUNTIME_POLL_STOP_MS } from "@/lib/runtime/in-flight";
+import {
+  anyInFlight,
+  RUNTIME_POLL_MS,
+  RUNTIME_POLL_STOP_MS,
+} from "@/lib/runtime/in-flight";
 import { FileCode2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { PermissionDenied } from "@/components/sections/permission-denied";
@@ -30,17 +34,40 @@ export async function generateMetadata() {
 
 export default async function PhpPage({ searchParams }) {
   const sp = await searchParams;
-  const [permissions, t, { data, failed, status, failure, message }] = await Promise.all([
-    getPermissions(),
-    getTranslations("php"),
-    getPhp(),
-  ]);
+  const [permissions, t, { data, failed, status, failure, message }] =
+    await Promise.all([getPermissions(), getTranslations("php"), getPhp()]);
 
   // Runtimes are gated by the same permission as the rest of the server config.
-  if (!can(permissions, "php", "view")) return <PermissionDenied title={t("title")} />;
+  if (!can(permissions, "php", "view"))
+    return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "php", "manage");
 
-  if (failed || !data) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
+  // A 409 is not a failure to report — it is the honest answer on a Docker box,
+  // whose stack serves no PHP sites. The sidebar already stops offering this
+  // screen there, so this is reached by a bookmark or a tab left open across a
+  // stack change, and both deserve a sentence rather than a red error card.
+  if (failed && status === 409) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title={t("title")} />
+        <EmptyState
+          icon={FileCode2}
+          title={t("unavailable.title")}
+          description={t("unavailable.body")}
+        />
+      </div>
+    );
+  }
+
+  if (failed || !data)
+    return (
+      <LoadFailed
+        description={t("loadFailed")}
+        status={status}
+        failure={failure}
+        message={message}
+      />
+    );
 
   const php = data;
   const versions = php?.versions ?? [];
@@ -53,7 +80,8 @@ export default async function PhpPage({ searchParams }) {
     versions[0]?.version ??
     null;
 
-  const current = versions.find((version) => version.version === selected) ?? null;
+  const current =
+    versions.find((version) => version.version === selected) ?? null;
 
   const installState = versionState(current);
   // Both endpoints 404 for a version that is not installed (installing, failed,
@@ -72,7 +100,10 @@ export default async function PhpPage({ searchParams }) {
   return (
     <div className="space-y-6">
       {inFlight ? (
-        <AutoRefresh intervalMs={RUNTIME_POLL_MS} stopAfterMs={RUNTIME_POLL_STOP_MS} />
+        <AutoRefresh
+          intervalMs={RUNTIME_POLL_MS}
+          stopAfterMs={RUNTIME_POLL_STOP_MS}
+        />
       ) : null}
 
       <PageHeader title={t("title")} subtitle={t("subtitle")} />

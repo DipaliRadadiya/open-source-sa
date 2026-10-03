@@ -1435,7 +1435,8 @@
       "retryOnSetup": "Auf der Einrichtungsseite erneut versuchen",
       "retryOnDatabases": "Auf der Datenbankseite erneut versuchen",
       "retryOnPhp": "Auf der PHP-Seite erneut versuchen",
-      "retryOnFail2ban": "Auf der Fail2ban-Seite erneut versuchen"
+      "retryOnFail2ban": "Auf der Fail2ban-Seite erneut versuchen",
+      "retryOnDocker": "Auf der Docker-Seite erneut versuchen"
     },
     "summary": {
       "attention": "{count, plural, =1 {1 Dienst braucht Aufmerksamkeit} other {# Dienste brauchen Aufmerksamkeit}}",
@@ -1464,6 +1465,7 @@
       "openDatabases": "Datenbanken öffnen",
       "openPhp": "PHP öffnen",
       "openFail2ban": "Fail2ban öffnen",
+      "openDocker": "Docker öffnen",
       "unitFailedNoLog": "Installiert, aber nicht laufend. Versuchen Sie, den Dienst zu starten; stoppt er erneut, steht der Fehler im System-Journal des Servers."
     },
     "moreActions": "Weitere Aktionen für {name}"
@@ -2365,6 +2367,10 @@
     "tabs": {
       "extensions": "Erweiterungen",
       "ioncube": "ionCube"
+    },
+    "unavailable": {
+      "title": "PHP wird auf diesem Server nicht verwaltet",
+      "body": "Dieser Server hostet Container, serviert also keine PHP-Sites und hat keine PHP-Versionen zu verwalten. PHP ist weiterhin für das Panel selbst installiert, und sein Dienst kann unter Dienste neu gestartet werden."
     }
   },
   "node": {
@@ -2457,6 +2463,10 @@
       "eol": "Nicht mehr unterstützt",
       "endsOn": "Support endet am {date}.",
       "endedOn": "Support endete am {date}."
+    },
+    "unavailable": {
+      "title": "Node.js wird auf diesem Server nicht verwaltet",
+      "body": "Dieser Server hostet Container und führt auf dem Host selbst keine Anwendungen aus, daher gibt es keine Node.js-Versionen zu verwalten. Ein Container bringt seine eigene Laufzeitumgebung mit."
     }
   },
   "diskCleaner": {
@@ -3150,7 +3160,12 @@
       "description": "Der Datenbankserver muss neu starten, um Verbindungen von anderen Adressen anzunehmen. Anwendungen, die ihn nutzen, verlieren kurz die Verbindung."
     },
     "backToList": "Zurück zu Datenbanken",
-    "createFailed": "Die Datenbank konnte nicht erstellt werden."
+    "createFailed": "Die Datenbank konnte nicht erstellt werden.",
+    "unavailable": {
+      "title": "Datenbanken werden auf diesem Server nicht verwaltet",
+      "body": "Dieser Server hostet Container. Eine Anwendung, die eine Datenbank braucht, bringt sie als eigenen Container mit, daher verwaltet das Panel hier keine Engine — und seine eigenen Daten liegen ohnehin in SQLite."
+    },
+    "backToList": "Zurück zu Datenbanken"
   },
   "git": {
     "title": "Git",
@@ -3727,7 +3742,10 @@
       "removeDatabasesOff": "{count, plural, one {{databases} bleibt auf dem Server, ohne Verknüpfung zu einer Anwendung. Entfernen Sie sie unter „Datenbanken“, wenn Sie sie nicht mehr brauchen.} other {{databases} bleiben auf dem Server, ohne Verknüpfung zu einer Anwendung. Entfernen Sie sie unter „Datenbanken“, wenn Sie sie nicht mehr brauchen.}}",
       "databasesFailed": "Die Anwendung wurde gelöscht, aber {databases} konnte nicht entfernt werden.",
       "goToDatabases": "Datenbanken öffnen",
-      "removeFilesHint": "Aus: Die Seite wird aus dem Panel entfernt, aber ihre Dateien bleiben auf dem Server. Ein: Die Dateien und die Sicherungen werden gelöscht und können nicht wiederhergestellt werden."
+      "removeFilesHint": "Aus: Die Seite wird aus dem Panel entfernt, aber ihre Dateien bleiben auf dem Server. Ein: Die Dateien und die Sicherungen werden gelöscht und können nicht wiederhergestellt werden.",
+      "removeDocker": "Auch Docker-Netzwerk und -Volumes dieser Website löschen ({count})",
+      "removeDockerOn": "{names} wird gelöscht. Was eine andere Website noch verwendet, bleibt erhalten — der Server prüft das beim Löschen, nicht jetzt.",
+      "removeDockerOff": "{names} bleibt auf dem Server. Die Daten bleiben erhalten und können später auf der Docker-Seite entfernt werden."
     },
     "systemUserMissing": {
       "title": "Der Systembenutzer dieser Anwendung fehlt",
@@ -5322,7 +5340,8 @@
       "measuring": "Misst…",
       "measured": "Größe ermittelt.",
       "measureFailed": "Die Größe konnte nicht gemessen werden.",
-      "measureHint": "Diese Anwendung jetzt auf der Platte messen"
+      "measureHint": "Diese Anwendung jetzt auf der Platte messen",
+      "inVolumes": "davon {size} in Docker-Volumes"
     },
     "status": {
       "pending": "Ausstehend",
@@ -5579,7 +5598,102 @@
       "effectPublic": "Alles innerhalb von public_html funktioniert genau wie bisher."
     },
     "deploying": "Wird deployt",
-    "processStoppedBadge": "Gestoppt"
+    "processStoppedBadge": "Gestoppt",
+    "container": {
+      "title": "Container",
+      "image": "Image",
+      "noImage": "Kein Image erfasst",
+      "imageHint": "Wird durch ein erneutes Deployment geändert, nicht hier — ein neues Image wird geladen, bevor der alte Container ersetzt wird.",
+      "network": "Netzwerk",
+      "networkHint": "Container im selben Netzwerk erreichen sich über ihren Namen. Die Standard-Bridge von Docker kann das nicht.",
+      "defaultBridge": "Standard-Bridge von Docker",
+      "noNetworks": "Dieser Server hat noch keine eigenen Netzwerke, also gibt es keins zum Beitreten.",
+      "noNetworksLink": "Auf der Docker-Seite ein Netzwerk erstellen.",
+      "missingOption": "{name} (nicht mehr auf diesem Server)",
+      "missingTitle": "Dieses Netzwerk existiert nicht mehr",
+      "missingBody": "Die Website soll {name} beitreten, und dieser Server hat es nicht mehr. Der Container startet erst, wenn Sie ein vorhandenes Netzwerk wählen oder dieses neu erstellen.",
+      "reachableTitle": "Wie andere Container diese Website erreichen",
+      "reachableBody": "Verwenden Sie den Hostnamen {alias} — zum Beispiel http://{alias} aus einem anderen Container im selben Netzwerk. Vermeiden Sie „app“: jede vom Panel erstellte Website antwortet auf diesen Namen, er trifft also eine beliebige davon.",
+      "containerPort": "Container-Port",
+      "containerPortHint": "Der Port, auf dem Ihre Anwendung innerhalb des Containers lauscht.",
+      "memoryLimit": "Speicherlimit",
+      "memoryLimitHint": "Zum Beispiel 512m oder 2g. Eine Zahl ohne Einheit bedeutet Bytes, nicht Megabytes. Leer verwendet den Serverstandard {default}.",
+      "memoryLimitHintUnknown": "Zum Beispiel 512m oder 2g. Eine Zahl ohne Einheit bedeutet Bytes, nicht Megabytes. Leer verwendet den Serverstandard.",
+      "cpuLimit": "CPU-Limit",
+      "cpuLimitPlaceholder": "Kein Limit",
+      "cpuLimitHint": "In Kernen — 1 für einen ganzen Kern, 0.5 für die Hälfte. Dieser Server hat {cores}. Leer bedeutet überhaupt kein Limit.",
+      "cpuLimitHintUnknown": "In Kernen — 1 für einen ganzen Kern, 0.5 für die Hälfte. Mehr als dieser Server hat ist nicht möglich. Leer bedeutet überhaupt kein Limit.",
+      "limitsTitle": "Wie sich diese beiden Limits verhalten",
+      "limitsBody": "Beide sind Obergrenzen nur für diesen Container, keine Reservierungen — es wird nichts für ihn freigehalten. Sie versagen auf entgegengesetzte Weise, was man vor der Fehlersuche wissen sollte: über der Speichergrenze wird der Container beendet und neu gestartet, die Website verliert also Anfragen; über dem CPU-Kontingent wird nichts beendet, der Container wartet nur, die Website ist also langsam, ohne dass irgendwo ein Fehler erscheint.",
+      "saveAction": "Container-Einstellungen speichern",
+      "restartNote": "Beim Speichern wird der Container neu erstellt, die Website ist einige Sekunden nicht erreichbar.",
+      "savingNote": "Compose-Datei wird neu geschrieben und der Container neu erstellt …",
+      "saved": "Container-Einstellungen gespeichert.",
+      "failed": "Die Container-Einstellungen konnten nicht gespeichert werden.",
+      "noPermission": "Sie haben keine Berechtigung, diese Website zu ändern.",
+      "nothingToSave": "Nichts hat sich geändert.",
+      "volumes": {
+        "title": "Volumes",
+        "empty": "Keine Volumes eingebunden. Der Container behält nichts, was einen Neuaufbau übersteht.",
+        "choose": "Volume auswählen",
+        "alreadyMounted": "{name} (bereits eingebunden)",
+        "pathPlaceholder": "/var/lib/mysql",
+        "pathLabel": "Pfad innerhalb des Containers",
+        "add": "Einbinden",
+        "remove": "{volume} aushängen",
+        "added": "{volume} eingebunden. Der Container wurde neu erstellt.",
+        "removed": "{volume} ausgehängt. Der Container wurde neu erstellt.",
+        "failed": "Die Einbindungen konnten nicht geändert werden.",
+        "invalid": "Wählen Sie ein Volume und geben Sie einen absoluten Pfad im Container an, zum Beispiel /var/lib/mysql.",
+        "noVolumes": "Dieser Server hat noch keine Volumes, es gibt also nichts einzubinden.",
+        "noVolumesLink": "Auf der Docker-Seite ein Volume erstellen.",
+        "hint": "Ein Volume behält Daten, die einen Neuaufbau des Containers überstehen. Das Einbinden erstellt den Container neu, und das Volume startet leer — was das Image an diesem Pfad hatte, wird verborgen, nicht zusammengeführt."
+      },
+      "credentials": {
+        "title": "Erzeugte Zugangsdaten",
+        "reveal": "Anzeigen",
+        "revealing": "Wird geladen…",
+        "hint": "Bei der Installation der Anwendung erzeugt und verschlüsselt gespeichert. Das Anzeigen wird im Aktivitätsprotokoll vermerkt.",
+        "shownWarning": "Jede Person, die diese Website verwalten darf, kann diese Werte lesen. Es sind die echten Datenbank-Zugangsdaten der Anwendung — sie hier zu ändern ist nicht möglich, weil die laufende Datenbank den alten Wert behielte.",
+        "failed": "Die Zugangsdaten konnten nicht geladen werden."
+      },
+      "firstRun": {
+        "title": "Speichern Sie diese Zugangsdaten jetzt",
+        "body": "Das Panel hat sie bei der Installation dieser Anwendung erzeugt. Sie lassen sich hier nicht ändern — die Anwendung speichert sie in ihrer eigenen Datenbank — kopieren Sie sie also an einen sicheren Ort, bevor Sie dies schließen.",
+        "acknowledge": "Ich habe sie gespeichert",
+        "acknowledgeFailed": "Das konnte nicht vermerkt werden. Die Zugangsdaten sind unverändert.",
+        "laterHint": "Sie bleiben unter Container → Anzeigen verfügbar.",
+        "loading": "Zugangsdaten werden geladen",
+        "failed": "Die Zugangsdaten konnten nicht geladen werden. Schließen Sie dies nicht — laden Sie die Seite neu."
+      },
+      "registry": "Registry",
+      "noRegistry": "Keine — anonym laden",
+      "registryHint": "Die gespeicherten Anmeldedaten, mit denen diese Site ihr Image lädt. Für ein öffentliches Image auf Keine lassen.",
+      "missingRegistryOption": "Gelöschte Anmeldedaten — der nächste Pull dieser Site ist anonym",
+      "noRegistries": "Auf diesem Server sind keine Registry-Anmeldedaten gespeichert, es können also nur öffentliche Images geladen werden.",
+      "noRegistriesLink": "Fügen Sie welche unter Integrationen → Docker-Registries hinzu.",
+      "pullTitle": "Image aktualisieren",
+      "pullHint": "Lädt das Image erneut und erstellt den Container neu. Ein Neustart der Site prüft die Registry nicht erneut — ein verschobener Tag braucht dies.",
+      "pull": "Laden und neu ausrollen",
+      "pulled": "Das Image wurde geladen und der Container neu erstellt.",
+      "pullFailed": "Das Image konnte nicht geladen werden.",
+      "pageSubtitle": "Netzwerk, Ports, CPU- und Speicherlimits und Volumes, mit denen dieser Container läuft."
+    },
+    "compose": {
+      "title": "Compose-Datei",
+      "hint": "Die Datei, mit der diese Site läuft. Umgebungsvariablen, weitere Dienste und Volumes stehen alle hier — ein Container hat keinen separaten Umgebungs-Bildschirm.",
+      "description": "Wird von Dockers eigenem Parser geprüft. Das Panel lehnt eine Datei ab, die außerhalb von 127.0.0.1 veröffentlicht oder etwas außerhalb des Verzeichnisses dieser Site einbindet.",
+      "loadFailed": "Die Compose-Datei konnte nicht gelesen werden.",
+      "safety": "Beim Speichern wird der Container dieser Site neu erstellt, sie ist also kurz offline. Startet die neue Datei nicht, legt das Panel die vorherige zurück und startet die Site damit — Sie bleiben nicht mit einer gestoppten Site zurück.",
+      "takeover": "Diese Site läuft derzeit mit einer Datei, die das Panel aus den Feldern Image und Container-Port oben erzeugt. Speichern übernimmt die Datei: ab dann läuft dieser Text, und jene Felder steuern sie nicht mehr. Zurück zur erzeugten Datei geht es nur, indem Sie diese löschen.",
+      "acknowledge": "Mir ist klar, dass das Speichern die erzeugte Datei dauerhaft ersetzt.",
+      "save": "Speichern und anwenden",
+      "saved": "Die Compose-Datei wurde angewendet und der Container neu erstellt.",
+      "failed": "Die Compose-Datei konnte nicht angewendet werden.",
+      "copy": "Kopieren",
+      "revert": "Zurücksetzen",
+      "unsaved": "Nicht gespeicherte Änderungen"
+    }
   },
   "panelUpdate": {
     "title": "Panel-Update",
@@ -6685,5 +6799,176 @@
       "disconnectFailed": "Die Verbindung konnte nicht getrennt werden."
     },
     "cardTitle": "Verbindung"
+  },
+  "docker": {
+    "title": "Docker",
+    "subtitle": "Netzwerke und Volumes, die sich die Container dieses Servers teilen.",
+    "create": "Erstellen",
+    "remove": "Entfernen",
+    "none": "Keine",
+    "failed": "Das hat nicht funktioniert.",
+    "loadFailed": "Dockers Netzwerke und Volumes konnten nicht gelesen werden.",
+    "ownedByApp": "App #{id}",
+    "unavailable": {
+      "title": "Kein Container-Server",
+      "body": "Dieser Server hostet keine Container und hat daher weder Docker-Netzwerke noch -Volumes."
+    },
+    "columns": {
+      "name": "Name",
+      "path": "Pfad",
+      "driver": "Treiber",
+      "attached": "Container",
+      "size": "Größe",
+      "usedBy": "Genutzt von"
+    },
+    "networks": {
+      "title": "Netzwerke",
+      "placeholder": "netzwerk-name",
+      "hint": "Container im selben benutzerdefinierten Netzwerk erreichen einander über ihren Namen. Dockers eingebaute Bridge kann das nicht — deshalb brauchen eine App und ihre Datenbank so ein Netzwerk.",
+      "builtIn": "Dockers eigenes",
+      "created": "Netzwerk {name} erstellt.",
+      "removed": "Netzwerk {name} entfernt.",
+      "removeTitle": "Netzwerk {name} entfernen?",
+      "removeBody": "Es ist nichts damit verbunden. Container, die es später erwarten, starten nicht, bis es neu erstellt wird.",
+      "removeBusy": "An diesem Netzwerk hängen noch Container. Stoppen oder trennen Sie sie zuerst.",
+      "removeUsedBySites": "Diese Websites sollen diesem Netzwerk beitreten: {sites}. Ändern Sie zuerst deren Netzwerk — eine Entfernung würde verhindern, dass sie starten.",
+      "noPorts": "Keine Ports",
+      "internalOnly": "nur intern"
+    },
+    "volumes": {
+      "title": "Volumes",
+      "placeholder": "volume-name",
+      "hint": "In einem Volume bewahrt ein Container die Daten auf, die einen Neuaufbau überstehen müssen.",
+      "empty": "Auf diesem Server gibt es noch keine Volumes.",
+      "inUse": "{count} Container",
+      "inUseUnnamed": "{count} Container — Namen nicht verfügbar",
+      "unused": "Nicht in Benutzung",
+      "created": "Volume {name} erstellt.",
+      "removed": "Volume {name} entfernt.",
+      "removeTitle": "Volume {name} entfernen?",
+      "removeBody": "Damit werden die darin enthaltenen Daten gelöscht. Gerade nutzt es nichts, aber ein gestoppter Container kann es noch erwarten.",
+      "removeBusy": "Ein laufender Container nutzt dieses Volume. Es zu entfernen würde Daten löschen, die gerade geschrieben werden.",
+      "removeUsedBySites": "Diese Websites binden dieses Volume ein: {sites}. Entfernen Sie dort zuerst die Einbindung — eine Löschung vernichtet die darin gespeicherten Daten."
+    },
+    "attach": {
+      "action": "Website verbinden",
+      "networkTitle": "Website mit {name} verbinden",
+      "networkBody": "Die Website tritt diesem Netzwerk bei und erreicht die anderen Container darin über ihren Namen.",
+      "volumeTitle": "{name} in eine Website einbinden",
+      "volumeBody": "Die Website bindet dieses Volume unter einem Pfad in ihrem Container ein und behält dort Daten über Neuaufbauten hinweg.",
+      "site": "Website",
+      "chooseSite": "Website auswählen",
+      "noSites": "Auf diesem Server laufen keine Container-Websites.",
+      "alreadyAttached": "{site} (bereits verbunden)",
+      "path": "Pfad innerhalb des Containers",
+      "pathHint": "Wo das Volume im Container erscheint, zum Beispiel /var/lib/mysql. Nicht das eigene Verzeichnis der Website.",
+      "attach": "Verknüpfen",
+      "attaching": "Wird verknüpft…",
+      "attached": "{name} mit {site} verbunden.",
+      "failed": "Verbinden nicht möglich.",
+      "cancel": "Abbrechen",
+      "theSite": "die Website",
+      "restartWarning": "Dies ändert die Konfiguration von {site} und erstellt deren Container neu, die Website ist einige Sekunden nicht erreichbar."
+    },
+    "registries": {
+      "title": "Registry-Anmeldedaten",
+      "add": "Registry hinzufügen",
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "edit": "Bearbeiten",
+      "remove": "Entfernen",
+      "test": "Verbindung testen",
+      "hint": "Legen Sie hier Anmeldedaten an und wählen Sie sie dann auf einer Container-Site — im Anlegen-Formular oder später in den Container-Einstellungen der Site. Sites, die auf „Keine“ stehen, laden anonym, was für jedes öffentliche Image richtig ist.",
+      "empty": "Es sind keine Registry-Anmeldedaten gespeichert. Fügen Sie welche hinzu, um ein privates Image auszuführen.",
+      "failed": "Das hat nicht funktioniert.",
+      "created": "{name} wurde hinzugefügt.",
+      "updated": "{name} wurde gespeichert.",
+      "removed": "{name} wurde gelöscht.",
+      "tested": "Die Registry wurde kontaktiert.",
+      "dockerHub": "Docker Hub",
+      "tokenHintEdit": "Leer lassen, um das gespeicherte Token zu behalten. Ein neues eingeben, um es zu ersetzen.",
+      "usedBySites": "{count, plural, one {# Site} other {# Sites}}",
+      "usedByNone": "Keine Sites",
+      "fields": {
+        "name": "Name",
+        "registry": "Registry-Adresse",
+        "username": "Benutzername",
+        "token": "Access-Token",
+        "provider": "Wo liegt das Image?"
+      },
+      "placeholders": {
+        "name": "GHCR",
+        "registry": "ghcr.io"
+      },
+      "columns": {
+        "name": "Name",
+        "registry": "Registry",
+        "username": "Benutzername",
+        "status": "Status",
+        "usedBy": "Genutzt von"
+      },
+      "invalid": {
+        "name": "Geben Sie diesen Anmeldedaten einen Namen, den Sie wiedererkennen.",
+        "registry": "Geben Sie nur den Host an — ghcr.io, nicht ghcr.io/ihre-org, und ohne Benutzername oder Passwort.",
+        "username": "Geben Sie den Benutzernamen an, zu dem dieses Token gehört.",
+        "token": "Fügen Sie das Token ohne Leerzeichen oder Zeilenumbrüche ein."
+      },
+      "errors": {
+        "invalid_credentials": "Die Registry hat diesen Benutzernamen und dieses Token abgelehnt.",
+        "unreachable": "Die Registry ist von diesem Server nicht erreichbar.",
+        "unknown": "Die Registry hat die Verbindung ohne Angabe eines Grundes abgelehnt."
+      },
+      "confirm": {
+        "title": "{name} löschen?",
+        "body": "Die Anmeldedaten werden von diesem Server gelöscht. Keine Site verwendet sie.",
+        "bodyInUse": "{count, plural, one {# Site lädt} other {# Sites laden}} mit diesen Anmeldedaten. Sie werden nicht gelöscht und laufen weiter, ihr nächster Pull ist jedoch anonym und schlägt fehl, wenn das Image privat ist."
+      },
+      "emptyTitle": "Noch keine Registry-Anmeldedaten",
+      "emptyBody": "Sie brauchen sie nur, um ein privates Image auszuführen. Halten Sie Ihren Registry-Benutzernamen und ein Access-Token bereit — nicht Ihr Kontopasswort. Öffentliche Images brauchen hier nichts.",
+      "registryHint": "Nur der Host — kein https://, kein Namespace, kein Repository. Mit Port, falls Ihrer einen nutzt.",
+      "registryHintFixed": "Für diesen Anbieter fest. Docker speichert Anmeldedaten unter genau dieser Adresse; jede andere Schreibweise wird ignoriert statt abgelehnt.",
+      "howTo": {
+        "title": "So bekommen Sie das",
+        "step3": "Unten einfügen und auf Verbindung testen drücken — das Panel fragt die Registry sofort, statt es Sie beim ersten Deploy herausfinden zu lassen."
+      },
+      "temporaryToken": "Diese Registry gibt kurzlebige Anmeldedaten aus — die von AWS ECR halten zwölf Stunden. Ein hier eingefügtes Token funktioniert jetzt und schlägt nach Ablauf fehl, denn das Panel erneuert es nicht. Nutzen Sie eine Registry mit langlebigem Token, oder rechnen Sie damit, dies von Hand zu aktualisieren.",
+      "providers": {
+        "dockerhub": {
+          "label": "Docker Hub",
+          "step1": "Öffnen Sie in Docker Hub Kontoeinstellungen → Personal access tokens und erstellen Sie ein Token mit Read-Zugriff.",
+          "step2": "Ihr Benutzername ist Ihre Docker-ID — der Name in Ihrer Profil-URL, nicht Ihre E-Mail-Adresse.",
+          "usernameHint": "Ihre Docker-ID, nicht die E-Mail zum Anmelden.",
+          "tokenHint": "Ein Personal Access Token mit Read-Zugriff. Das Kontopasswort funktioniert nicht, wenn Zwei-Faktor-Authentifizierung aktiv ist.",
+          "linkLabel": "Docker-Hub-Access-Tokens öffnen"
+        },
+        "ghcr": {
+          "label": "GitHub Container Registry",
+          "step1": "Öffnen Sie in GitHub Settings → Developer settings → Personal access tokens → Tokens (classic) und erstellen Sie eines mit dem Scope read:packages.",
+          "step2": "Es muss ein klassisches Token sein. Ein Fine-grained-Token kann read:packages nicht tragen und wird daher abgelehnt, obwohl es gültig aussieht.",
+          "usernameHint": "Ihr GitHub-Benutzername.",
+          "tokenHint": "Ein klassisches Personal Access Token mit read:packages. Fine-grained-Tokens funktionieren hier nicht.",
+          "linkLabel": "GitHub Personal Access Tokens öffnen"
+        },
+        "gitlab": {
+          "label": "GitLab Container Registry",
+          "step1": "Öffnen Sie in Ihrem GitLab-Projekt Settings → Repository → Deploy tokens und erstellen Sie eines mit dem Scope read_registry.",
+          "step2": "Der Benutzername ist der des Deploy-Tokens, den GitLab nur einmal beim Erstellen anzeigt — nicht Ihr GitLab-Kontoname.",
+          "usernameHint": "Der Benutzername des Deploy-Tokens, nicht Ihr GitLab-Konto.",
+          "tokenHint": "Ein Projekt- oder Gruppen-Deploy-Token mit read_registry. Ein Personal Access Token mit demselben Scope geht auch.",
+          "linkLabel": "GitLabs Anleitung zu Deploy-Tokens lesen"
+        },
+        "other": {
+          "label": "Andere oder selbst gehostete Registry",
+          "step1": "Geben Sie den Host der Registry an, mit Port falls nötig — zum Beispiel registry.example.com:5000.",
+          "step2": "Nutzen Sie Benutzername und Token oder Passwort, die diese Registry für ein docker login akzeptiert. Ein Konto mit Nur-Lese-Rechten reicht; diese Anmeldedaten laden nur.",
+          "usernameHint": "Was diese Registry für docker login akzeptiert.",
+          "tokenHint": "Das Token oder Passwort dieses Kontos. Nur-Lese-Zugriff reicht — das Panel lädt nur.",
+          "linkLabel": ""
+        }
+      },
+      "subtitle": "Anmeldedaten, mit denen dieser Server private Container-Images lädt.",
+      "unavailableTitle": "Dieser Server hostet keine Container",
+      "unavailableBody": "Registry-Anmeldedaten dienen dem Laden von Container-Images. Dieser Server führt keine aus, es gibt also nichts zu laden."
+    }
   }
 }

@@ -130,6 +130,9 @@ return [
     'git_account.disconnected' => 'Disconnected the :provider account :label',
     'application.created' => 'Created application :name (:site_type)',
     'application.updated' => 'Updated application :name',
+    'application.container_updated' => 'Updated container settings for :name',
+    'application.container_secrets_viewed' => 'Viewed the container credentials for :name',
+    'application.docker_resources_removed' => 'Removed the Docker network and volumes for :name',
     'application.deleted' => 'Deleted application :name (:site_type)',
     'application.process_start' => 'Started :name',
     'application.process_stop' => 'Stopped :name',
@@ -223,4 +226,28 @@ return [
     'application.supervisor_install_started' => 'Started installing supervisor for :name',
     'application.supervisor_installed' => 'Installed supervisor',
     'application.supervisor_install_failed' => 'Could not install supervisor (:reference)',
+
+    /*
+    | The Docker stack's own events. Absent until now, and the absence was
+    | invisible: `__()` returns the key verbatim when it cannot find a
+    | translation, so the activity log rendered `activity.registry.created`
+    | as the sentence and nothing failed. `GET /admin/activity-log/filters`
+    | builds its dropdowns from these keys too, so the rows could not be
+    | filtered to either.
+    |
+    | Every placeholder here has to exist in the event's PROPERTIES —
+    | `ActivityLogResource` substitutes from those and nothing else. Three
+    | of these events had no `name` property and now carry one.
+    */
+    'registry.created' => 'Added the registry credential :name for :registry',
+    'registry.updated' => 'Updated the registry credential :name for :registry',
+    'registry.deleted' => 'Deleted the registry credential :name for :registry (:applications_detached sites detached)',
+    'registry.tested' => 'Tested the registry credential :name for :registry',
+    'application.container_pulled' => 'Pulled :image again and recreated the container for :name',
+    'application.compose_updated' => 'Updated the compose file for :name',
+    'docker_database.created' => 'Created the :engine database :name on port :port',
+    'docker_database.deleted' => 'Deleted the :engine database :name',
+    'docker_database.credentials_viewed' => 'Viewed the credentials for the :engine database :name',
+    'application.credentials_acknowledged' => 'Confirmed saving the generated credentials for :name',
+
 ];

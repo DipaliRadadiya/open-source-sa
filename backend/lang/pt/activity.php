@@ -124,6 +124,9 @@ return [
     'git_account.disconnected' => 'Desconectou a conta :provider :label',
     'application.created' => 'Criou a aplicação :name (:site_type)',
     'application.updated' => 'Atualizou a aplicação :name',
+    'application.container_updated' => 'Atualizou as definições do contentor de :name',
+    'application.container_secrets_viewed' => 'Consultou as credenciais do contentor de :name',
+    'application.docker_resources_removed' => 'Removeu a rede e os volumes Docker de :name',
     'application.deleted' => 'Excluiu a aplicação :name (:site_type)',
     'application.process_start' => ':name iniciada',
     'application.process_stop' => ':name parada',
@@ -217,4 +220,16 @@ return [
     'application.supervisor_install_started' => 'Instalação do supervisor iniciada para :name',
     'application.supervisor_installed' => 'Supervisor instalado',
     'application.supervisor_install_failed' => 'Não foi possível instalar o supervisor (:reference)',
+
+    'registry.created' => 'Adicionou a credencial de registro :name para :registry',
+    'registry.updated' => 'Atualizou a credencial de registro :name para :registry',
+    'registry.deleted' => 'Excluiu a credencial de registro :name para :registry (:applications_detached sites desvinculados)',
+    'registry.tested' => 'Testou a credencial de registro :name para :registry',
+    'application.container_pulled' => 'Baixou :image novamente e recriou o contêiner de :name',
+    'application.compose_updated' => 'Atualizou o arquivo compose de :name',
+    'docker_database.created' => 'Criou o banco de dados :engine :name na porta :port',
+    'docker_database.deleted' => 'Excluiu o banco de dados :engine :name',
+    'docker_database.credentials_viewed' => 'Consultou as credenciais do banco de dados :engine :name',
+    'application.credentials_acknowledged' => 'Confirmou ter salvo as credenciais geradas de :name',
+
 ];

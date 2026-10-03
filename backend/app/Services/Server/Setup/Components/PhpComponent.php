@@ -3,6 +3,7 @@
 namespace App\Services\Server\Setup\Components;
 
 use App\Contracts\SetupComponent;
+use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Runtimes\PhpRuntime;
 
 /**
@@ -15,7 +16,20 @@ use App\Services\Server\Runtimes\PhpRuntime;
  */
 class PhpComponent implements SetupComponent
 {
-    public function __construct(private PhpRuntime $php) {}
+    public function __construct(private PhpRuntime $php,
+        private ServerCapabilities $capabilities,
+    ) {}
+
+    /**
+     * Only where PHP *sites* are hosted. PHP is installed on every server
+     * because the panel is a Laravel application, but this row exists so
+     * somebody can add a second version for a site that needs one — and on a
+     * server that hosts no PHP sites there is no such site to need it.
+     */
+    public function applies(): bool
+    {
+        return $this->capabilities->hosts('php');
+    }
 
     public function key(): string
     {

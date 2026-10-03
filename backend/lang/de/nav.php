@@ -13,12 +13,14 @@ return [
     'service' => 'Dienste',
     'php' => 'PHP',
     'node' => 'Node.js',
+    'docker' => 'Docker',
     'setting' => 'Einstellungen',
     'disk_cleaner' => 'Datenträgerbereinigung',
     'activity_log' => 'Aktivitätsprotokoll',
     'sync' => 'Server-Sync',
     'git' => 'Git',
     'storage' => 'Speicher',
+    'registry' => 'Docker-Registries',
 
     // Application sidebar. Separate keys from the server-level ones above:
     // `logs` is the machine's auth.log, `app_log` is one site's access log,
@@ -27,6 +29,8 @@ return [
     'app_domain' => 'Domains & SSL',
     'app_deployment' => 'Deployments',
     'app_environment' => 'Umgebung',
+    'app_container' => 'Container',
+    'app_compose' => 'Compose-Datei',
     'app_worker' => 'Worker',
     'app_file' => 'Dateien',
     'app_log' => 'Protokolle',

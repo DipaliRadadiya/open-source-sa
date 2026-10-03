@@ -159,8 +159,48 @@ return [
     'required_if_declined' => ':other が拒否された場合、:attribute は必須です。',
 
     'custom' => [
+
+        // Docker accepts a CPU quota larger than the machine and silently
+        // clamps it, so the refusal has to come from here — and it names what
+        // the server actually has rather than saying "invalid".
+        'cpu_limit' => [
+            'format' => 'CPU 数を、小数点以下 2 桁までで指定してください — 1、1.5、0.5。',
+            'positive' => 'Docker が受け付ける最小の CPU 制限は :minimum です。制限なしにする場合は空欄のままにしてください。',
+            'too_many' => 'このサーバーの CPU は :cores 個で、これを超えて要求するコンテナは Docker が起動しません。:cores 以下を指定してください。',
+        ],
+
+        'memory_limit' => [
+            'format' => '単位付きのサイズを指定してください — 512m や 2g。単位のない数値は Docker にはバイトとして扱われ、メガバイトではありません。',
+            'too_small' => 'メモリが 6m 未満のコンテナは Docker が起動しません。',
+        ],
+
+        // A registry address Docker cannot interpret is silently IGNORED at
+        // pull time — the credential simply never applies and the error is
+        // identical to having none. So these are refusals at the form, and each
+        // one names the specific mistake rather than saying "invalid".
+        'registry' => [
+            'empty' => 'レジストリのアドレスを入力してください — Docker Hub なら `docker.io`、ほかに `ghcr.io` や自前のホストです。',
+            'path' => 'それは名前空間かリポジトリのように見えます。レジストリではありません。ホストだけを入力してください — `ghcr.io/your-org` ではなく `ghcr.io` です。',
+            'credentials' => 'アドレスにユーザー名やパスワードを含めないでください。ホストだけを入力し、認証情報は下のフィールドに入れてください。',
+            'host' => 'レジストリのアドレスではありません。ホスト名を、必要ならポートも付けて入力してください — `registry.example.com` または `registry.example.com:5000`。',
+            'port' => 'ポートは 1 から 65535 の間でなければなりません。',
+        ],
         'attribute-name' => [
             'rule-name' => 'custom-message',
+        ],
+
+        // Laravel's default reads "The docker network new field prohibits docker
+        // network from being present" — raw attribute names at a user.
+        'docker_network_new' => [
+            'prohibits' => 'リストからネットワークを選ぶか、新しい名前を入力するかのどちらかにしてください。両方はできません。同じ問いに対する2つの答えです。',
+        ],
+
+        'volume_path' => [
+            'required_with' => 'このボリュームをコンテナ内のどこに置くか、パスを指定してください。例: /var/lib/mysql',
+        ],
+
+        'volume_new' => [
+            'required_with' => '作成するボリュームの名前を入力してください。不要な場合はパスを空にしてください。',
         ],
     ],
 
@@ -176,6 +216,22 @@ return [
     'start_command_wrapper' => 'アプリはエントリファイル（例:「node server.js」）で起動してください。:binary では実際のプロセスがフォークされ、シグナルが届きません。',
 
     'port_in_use_by_app' => 'ポート :port はこのサーバーの別のアプリケーションが使用中です。',
+
+    // A network the panel created, named by a site that will join it.
+    'docker_network_invalid' => 'ネットワーク名は英数字で始め、その後は英数字、ドット、ハイフン、アンダースコアを使用してください。',
+    'docker_network_missing' => 'このサーバーに \':name\' という Docker ネットワークはありません。このページを読み込んだあとに削除された可能性があります。',
+
+    // Mounting a panel-created volume into a container site.
+    'docker_volume_invalid' => 'ボリューム名は英数字で始め、その後は英数字、ドット、ハイフン、アンダースコアを使用してください。',
+    'docker_volume_missing' => 'このサーバーに \':name\' という Docker ボリュームはありません。このページを読み込んだあとに削除された可能性があります。',
+    'docker_mount_duplicate' => '2 つのボリュームを :path にマウントできません。Docker はどちらか一方だけを残し、どちらかは示しません。',
+    'docker_mount_root' => 'コンテナ内のパスを指定してください。例: /var/lib/mysql',
+    'docker_mount_site_root' => 'そのパスにはサイト自身のファイルがマウントされています (:path)。ここにボリュームを置くとコンテナから見えなくなります。ファイルはサーバー上に残りますが、サイトは空のボリュームを配信します。',
+    'docker_mount_reserved' => ':path はコンテナが起動するイメージの一部です。空のボリュームで覆うと、コンテナは起動できません。',
+
+    // A name the panel is about to create, so the inverse rule: not taken.
+    'docker_network_taken' => '\':name\' という名前のネットワークはこのサーバーに既に存在します。2つ目を作成せず、上のリストから選択してください。',
+    'docker_volume_taken' => '\':name\' という名前のボリュームはこのサーバーに既に存在します。2つ目を作成せず、サイトのコンテナカードから既存のものをマウントしてください。',
     'node_version_unsupported' => ':type アプリケーションは Node :range で動作します。その範囲内のバージョンを選んでください。範囲外ではアプリケーションが起動を拒否し、サイトは何も配信しません。',
     'php_version_unsupported' => ':type アプリケーションは PHP :range で動作します。その範囲内のバージョンを選んでください。範囲外ではインストールがアプリケーション自身のコードの途中で失敗し、後片付けの必要なサイトが残ります。',
     'php_version_default_unsupported' => ':type アプリケーションは PHP :range で動作します。この欄を空のままにするとサーバーの既定値 (:default) が使われますが、これは範囲外です。範囲内のバージョンを選んでください。',

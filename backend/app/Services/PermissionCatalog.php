@@ -42,6 +42,15 @@ class PermissionCatalog
             // meant "can reboot the server and move the SSH port".
             ['name' => 'php', 'title' => 'PHP', 'icon' => 'file-code', 'url' => '/php', 'order' => 10],
             ['name' => 'node', 'title' => 'Node.js', 'icon' => 'hexagon', 'url' => '/node', 'order' => 11],
+            // Networks and volumes: one permission, because they are the same
+            // job — the shared Docker objects an application's containers sit
+            // on and write to. Splitting them would give somebody the ability
+            // to delete the volume holding a database while being unable to
+            // see the network it talks over.
+            //
+            // Registry credentials are NOT here, and that is the cut: those live
+            // somewhere else and are filed with the integrations below.
+            ['name' => 'docker', 'title' => 'Docker', 'icon' => 'container', 'url' => '/docker', 'order' => 11.5],
             ['name' => 'setting', 'title' => 'Settings', 'icon' => 'settings', 'url' => '/settings', 'order' => 12],
             ['name' => 'disk_cleaner', 'title' => 'Disk Cleaner', 'icon' => 'trash-2', 'url' => '/disk-cleaner', 'order' => 13],
             // The backups dashboard: history and restore across every app and
@@ -63,6 +72,18 @@ class PermissionCatalog
             // their own sub-level so the sidebar renders them as a section.
             ['name' => 'git', 'title' => 'Git', 'icon' => 'git-branch', 'url' => '/integrations/git', 'order' => 16, 'sub_level' => 'integration'],
             ['name' => 'storage', 'title' => 'Storage', 'icon' => 'hard-drive', 'url' => '/integrations/storage', 'order' => 17, 'sub_level' => 'integration'],
+            // Registry credentials. An integration rather than a corner of the
+            // Docker screen, and for the reason that section exists: it is an
+            // externally-held credential the features consume, exactly like a git
+            // account or a storage destination. It was at the bottom of the Docker
+            // page, which made the panel's only private-image support something
+            // you had to already know about to find.
+            //
+            // Its own permission, not `docker`, because the sidebar row IS the
+            // permission row — and because the two grants mean different things:
+            // `docker` manages networks and volumes on this box, while this stores
+            // a credential that can pull private code onto it.
+            ['name' => 'registry', 'title' => 'Docker Registries', 'icon' => 'key-round', 'url' => '/integrations/registries', 'order' => 18, 'sub_level' => 'integration'],
 
             // ── Application level ────────────────────────────────────────
             //
@@ -107,6 +128,26 @@ class PermissionCatalog
             ['name' => 'app_domain', 'title' => 'Domains & SSL', 'icon' => 'globe', 'url' => '/domains'],
             ['name' => 'app_deployment', 'title' => 'Deployments', 'icon' => 'git-branch', 'url' => '/deployment'],
             ['name' => 'app_environment', 'title' => 'Environment', 'icon' => 'file-key', 'url' => '/environment'],
+            // The compose file, for container sites only — the site-type filter in
+            // `VisiblePermissions` drops it everywhere else, the same way it drops
+            // `app_environment` from a WordPress install.
+            //
+            // Its own screen rather than a dialog on the Dashboard, because this
+            // file IS the site: its image, its ports, its volumes and its
+            // environment variables are all in here. A container has no Environment
+            // screen precisely because its variables live in this file instead, so
+            // this sits where that one would.
+            // What the container runs as: its network, the port inside it, its
+            // memory ceiling, the volumes it mounts, the registry it pulls with,
+            // and the credentials the panel generated for it.
+            //
+            // Its own screen for the reason Compose got one — these controls were a
+            // full-width card at the bottom of the Dashboard, under the domains and
+            // the backups, which is a long way from where somebody goes looking for
+            // "what is this container doing". Structured settings here, the raw file
+            // next door; two questions, two screens.
+            ['name' => 'app_container', 'title' => 'Container', 'icon' => 'box', 'url' => '/container'],
+            ['name' => 'app_compose', 'title' => 'Compose File', 'icon' => 'file-code-2', 'url' => '/compose'],
             // Supervisor workers and a Node process are the same question —
             // "what is running in the background?" — so they are one screen
             // with different tooling underneath, not two menu items.

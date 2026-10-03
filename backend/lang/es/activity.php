@@ -124,6 +124,9 @@ return [
     'git_account.disconnected' => 'Desconectó la cuenta de :provider :label',
     'application.created' => 'Creó la aplicación :name (:site_type)',
     'application.updated' => 'Actualizó la aplicación :name',
+    'application.container_updated' => 'Actualizó los ajustes del contenedor de :name',
+    'application.container_secrets_viewed' => 'Consultó las credenciales del contenedor de :name',
+    'application.docker_resources_removed' => 'Eliminó la red y los volúmenes de Docker de :name',
     'application.deleted' => 'Eliminó la aplicación :name (:site_type)',
     'application.process_start' => 'Se inició :name',
     'application.process_stop' => 'Se detuvo :name',
@@ -217,4 +220,16 @@ return [
     'application.supervisor_install_started' => 'Se inició la instalación de supervisor para :name',
     'application.supervisor_installed' => 'Se instaló supervisor',
     'application.supervisor_install_failed' => 'No se pudo instalar supervisor (:reference)',
+
+    'registry.created' => 'Añadió la credencial de registro :name para :registry',
+    'registry.updated' => 'Actualizó la credencial de registro :name para :registry',
+    'registry.deleted' => 'Eliminó la credencial de registro :name para :registry (:applications_detached sitios desvinculados)',
+    'registry.tested' => 'Probó la credencial de registro :name para :registry',
+    'application.container_pulled' => 'Descargó :image de nuevo y recreó el contenedor de :name',
+    'application.compose_updated' => 'Actualizó el archivo compose de :name',
+    'docker_database.created' => 'Creó la base de datos :engine :name en el puerto :port',
+    'docker_database.deleted' => 'Eliminó la base de datos :engine :name',
+    'docker_database.credentials_viewed' => 'Consultó las credenciales de la base de datos :engine :name',
+    'application.credentials_acknowledged' => 'Confirmó haber guardado las credenciales generadas de :name',
+
 ];

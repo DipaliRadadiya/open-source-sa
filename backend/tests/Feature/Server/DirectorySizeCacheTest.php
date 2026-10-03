@@ -441,3 +441,174 @@ it('measures every site when the sweep is unbounded', function () {
     expect(Application::query()->where('directory_size_bytes', 777)->count())
         ->toBe(Application::query()->count());
 });
+
+/*
+ * A container site's size is mostly not in its directory.
+ *
+ * 🔴 Measured on the test box: a Mattermost install reported **6,468 bytes** —
+ * the length of its compose file — while its six volumes held about 284 MB, one
+ * of them 164 MB of plugins. The sites list sorts by this figure, so it was
+ * ordering container sites by how much YAML they had.
+ *
+ * The volumes are unreadable to the site's own user by design (`/var/lib/docker/
+ * volumes` is root-owned at 0700), which is why `du` as the site user could never
+ * have found them, and why this is a second measurement rather than a wider one.
+ */
+
+/** A container site, and a fake box that answers for its volumes. */
+function containerSizeSite(array $overrides = []): Application
+{
+    return Application::factory()->create(array_merge([
+        'system_user_id' => test()->systemUser->id,
+        'site_type' => 'docker',
+        'serving_profile' => 'docker',
+    ], $overrides));
+}
+
+/**
+ * @param  array<string, int>  $volumes  name => bytes
+ */
+function fakeSizeBox(int $directoryBytes, array $volumes, string $root = '/home'): void
+{
+    Process::fake(function ($process) use ($directoryBytes, $volumes) {
+        $command = $process->command;
+
+        if (in_array('find', $command, true)) {
+            return Process::result(output: "d\t4096");
+        }
+
+        if (in_array('volume', $command, true) && in_array('ls', $command, true)) {
+            $lines = [];
+            foreach ($volumes as $name => $bytes) {
+                $lines[] = $name."\t/var/lib/docker/volumes/{$name}/_data";
+            }
+
+            return Process::result(output: implode("\n", $lines)."\n");
+        }
+
+        if (in_array('du', $command, true)) {
+            // Which `du` this is, decided by what it was asked about — the volume
+            // walk names mountpoints, the site walk names the document root.
+            $paths = array_values(array_filter(
+                $command,
+                fn ($arg): bool => is_string($arg) && str_starts_with($arg, '/'),
+            ));
+
+            $lines = [];
+
+            foreach ($paths as $path) {
+                if (str_starts_with($path, '/var/lib/docker/volumes/')) {
+                    $name = explode('/', substr($path, strlen('/var/lib/docker/volumes/')))[0];
+                    $lines[] = ($volumes[$name] ?? 0)."\t".$path;
+
+                    continue;
+                }
+
+                $lines[] = $directoryBytes."\t".$path;
+            }
+
+            return Process::result(output: implode("\n", $lines)."\n");
+        }
+
+        return Process::result(exitCode: 0);
+    });
+}
+
+it('counts a container site as its directory plus its volumes', function () {
+    $application = containerSizeSite();
+
+    fakeSizeBox(6468, [
+        'sv-app-'.$application->id.'_data' => 24_049_047,
+        'sv-app-'.$application->id.'_plugins' => 164_246_710,
+    ]);
+
+    app(FileBrowser::class)->applicationSize($application, refresh: true);
+
+    $fresh = $application->fresh();
+
+    expect($fresh->volume_size_bytes)->toBe(188_295_757)
+        // The total, because this is the figure the list shows and sorts by.
+        ->and($fresh->directory_size_bytes)->toBe(188_302_225);
+});
+
+it('leaves the volume figure null for a site that has no volumes to measure', function () {
+    // Null, not 0. "This question does not apply" and "the volumes are empty" are
+    // different answers, and the second one would have the dashboard explaining a
+    // breakdown to somebody running WordPress.
+    Process::fake(fn ($process) => match (true) {
+        in_array('du', $process->command, true) => Process::result(output: "1048576\t/home/site/public_html\n"),
+        in_array('find', $process->command, true) => Process::result(output: "d\t4096"),
+        default => Process::result(exitCode: 0),
+    });
+
+    app(FileBrowser::class)->applicationSize($this->application, refresh: true);
+
+    $fresh = $this->application->fresh();
+
+    expect($fresh->volume_size_bytes)->toBeNull()
+        ->and($fresh->directory_size_bytes)->toBe(1048576);
+
+    // And Docker was never asked. On a server with no Docker installed that call
+    // is a failure, and on any server it is a shell-out to be told nothing.
+    Process::assertNotRan(fn ($process): bool => in_array('volume', $process->command, true));
+});
+
+it('does not count another site\'s volumes as its own', function () {
+    // `sv-app-2_` against `sv-app-20_data` is the collision that matters, and it
+    // is why the match is a prefix including the underscore rather than the
+    // looser pattern the Docker page uses to attribute a volume to a site.
+    $application = containerSizeSite();
+    $otherId = $application->id + 1;
+
+    fakeSizeBox(1000, [
+        'sv-app-'.$application->id.'_mine' => 5_000,
+        'sv-app-'.$otherId.'_theirs' => 900_000,
+        'unrelated-volume' => 700_000,
+    ]);
+
+    app(FileBrowser::class)->applicationSize($application, refresh: true);
+
+    expect($application->fresh()->volume_size_bytes)->toBe(5_000);
+});
+
+it('counts a volume attached by name as well as one the panel prefixed', function () {
+    // Two sources, and neither is complete: `volume_mounts` holds what somebody
+    // attached on the Container screen — which can be a volume the panel did not
+    // create and does not prefix — while the prefix covers every volume a
+    // one-click app or a pasted compose file brought with it.
+    $application = containerSizeSite([
+        'volume_mounts' => [['volume' => 'shared-uploads', 'path' => '/data']],
+    ]);
+
+    fakeSizeBox(1000, [
+        'sv-app-'.$application->id.'_own' => 2_000,
+        'shared-uploads' => 40_000,
+        'somebody-elses' => 800_000,
+    ]);
+
+    app(FileBrowser::class)->applicationSize($application, refresh: true);
+
+    expect($application->fresh()->volume_size_bytes)->toBe(42_000);
+});
+
+it('does not let a folder-size click drop the volumes back out of the total', function () {
+    // `folderSize('/')` used to write its figure into `directory_size_bytes`,
+    // which was right while the two meant the same thing. They do not any more —
+    // so asking the File Manager for the root folder's size would have quietly
+    // reset the site to its compose file's length until the next real
+    // measurement, and nothing would have said so.
+    $application = containerSizeSite();
+
+    fakeSizeBox(6468, ['sv-app-'.$application->id.'_data' => 500_000]);
+
+    app(FileBrowser::class)->applicationSize($application, refresh: true);
+
+    expect($application->fresh()->directory_size_bytes)->toBe(506_468);
+
+    $folder = app(FileBrowser::class)->folderSize($application->fresh(), '/');
+
+    // The folder answers about the folder — honestly, and it is the smaller
+    // number — and the site's own figure is untouched.
+    expect($folder['size'])->toBe(6468)
+        ->and($application->fresh()->directory_size_bytes)->toBe(506_468);
+});

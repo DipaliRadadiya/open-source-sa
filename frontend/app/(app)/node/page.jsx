@@ -11,7 +11,11 @@ import { LoadFailed } from "@/components/data-table/load-failed";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { RuntimeStatusNotice } from "@/components/runtime/version-status";
-import { anyInFlight, RUNTIME_POLL_MS, RUNTIME_POLL_STOP_MS } from "@/lib/runtime/in-flight";
+import {
+  anyInFlight,
+  RUNTIME_POLL_MS,
+  RUNTIME_POLL_STOP_MS,
+} from "@/lib/runtime/in-flight";
 import { PageHeader } from "@/components/ui/page-header";
 import { PermissionDenied } from "@/components/sections/permission-denied";
 
@@ -24,16 +28,38 @@ export async function generateMetadata() {
 
 export default async function NodePage({ searchParams }) {
   const sp = await searchParams;
-  const [permissions, t, { data, failed, status, failure, message }] = await Promise.all([
-    getPermissions(),
-    getTranslations("node"),
-    getNode(),
-  ]);
+  const [permissions, t, { data, failed, status, failure, message }] =
+    await Promise.all([getPermissions(), getTranslations("node"), getNode()]);
 
-  if (!can(permissions, "node", "view")) return <PermissionDenied title={t("title")} />;
+  if (!can(permissions, "node", "view"))
+    return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "node", "manage");
 
-  if (failed || !data) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
+  // A 409 is the honest answer on a Docker box, which runs nothing on the host at
+  // all — not a failure to report. The sidebar already stops offering this screen,
+  // so this is a bookmark or a tab left open across a stack change.
+  if (failed && status === 409) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title={t("title")} />
+        <EmptyState
+          icon={Hexagon}
+          title={t("unavailable.title")}
+          description={t("unavailable.body")}
+        />
+      </div>
+    );
+  }
+
+  if (failed || !data)
+    return (
+      <LoadFailed
+        description={t("loadFailed")}
+        status={status}
+        failure={failure}
+        message={message}
+      />
+    );
 
   const node = data;
   const versions = node?.versions ?? [];
@@ -46,7 +72,8 @@ export default async function NodePage({ searchParams }) {
     versions[0]?.version ??
     null;
 
-  const current = versions.find((version) => version.version === selected) ?? null;
+  const current =
+    versions.find((version) => version.version === selected) ?? null;
 
   // fnm installs take minutes and finish silently, so in-flight versions are polled.
   const inFlight = anyInFlight(versions);
@@ -54,7 +81,10 @@ export default async function NodePage({ searchParams }) {
   return (
     <div className="space-y-6">
       {inFlight ? (
-        <AutoRefresh intervalMs={RUNTIME_POLL_MS} stopAfterMs={RUNTIME_POLL_STOP_MS} />
+        <AutoRefresh
+          intervalMs={RUNTIME_POLL_MS}
+          stopAfterMs={RUNTIME_POLL_STOP_MS}
+        />
       ) : null}
 
       <PageHeader title={t("title")} subtitle={t("subtitle")} />

@@ -17,6 +17,7 @@ import {
   getApplicationCertificate,
 } from "@/lib/applications/get-application-domains";
 import { ProvisioningCard } from "@/components/applications/provisioning-card";
+import { FirstRunCredentials } from "@/components/applications/first-run-credentials";
 import { ApplicationRowActions } from "@/components/applications/application-row-actions";
 import { SiteFactsCard } from "@/components/applications/site-facts-card";
 import { SourceCard } from "@/components/applications/source-card";
@@ -84,6 +85,13 @@ export default async function ApplicationDetailPage({ params }) {
   const isGit = Boolean(application.repository || application.repository_url);
   // Only a serving site has domains, a certificate or a running process.
   const settled = isSettled(application);
+
+  // The generated credentials, until somebody says they have saved them. Gated on
+  // `app_container` manage -- the same permission the values are behind.
+  const showFirstRunCredentials =
+    !application.credentials_acknowledged &&
+    (application.container_secret_keys ?? []).length > 0 &&
+    can(appPermissions, "app_container", "manage", "application");
 
   // The payload has `git_account_id` but no provider. `cache()`d, no provider API call.
   const gitAccounts =
@@ -324,6 +332,15 @@ export default async function ApplicationDetailPage({ params }) {
       ) : (
         /* Cards are direct grid children so each row shares a height. */
         <div className="grid items-stretch gap-6 lg:grid-cols-2 xl:grid-cols-3">
+          {/* Above the facts, once, full width. It disappears for good once somebody
+              says they have saved them, and these cannot be rotated from the panel. */}
+          {showFirstRunCredentials ? (
+            <FirstRunCredentials
+              application={application}
+              className="lg:col-span-2 xl:col-span-3"
+            />
+          ) : null}
+
           <SiteFactsCard
             application={application}
             canManage={canManage}
@@ -394,6 +411,10 @@ export default async function ApplicationDetailPage({ params }) {
               className={isGit ? undefined : "lg:col-span-2 xl:col-span-3"}
             />
           ) : null}
+          {/* The container's own settings live on their own screen now. They
+              were a full-width card here, under the domains and the backups,
+              which is a long way from where anybody looks for "what is this
+              container doing" — see the Container item in this site's sidebar. */}
         </div>
       )}
     </div>

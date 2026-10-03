@@ -280,6 +280,19 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
   // Null when unmeasured: shown as "Not measured", never "0 B".
   const size = formatBytes(application.directory_size_bytes, format);
 
+  // What share of that is in Docker volumes, for a container site. The total on
+  // its own is unexplainable: 284 MB against a document root the File Manager
+  // shows as almost empty reads as a bug in the panel, and the volumes are where
+  // a container site keeps everything it owns.
+  //
+  // Null — not 0 — means the site has no volumes to measure, so every PHP, Node
+  // and static site gets no second line rather than "0 B in volumes".
+  const volumeSize =
+    application.volume_size_bytes === null ||
+    application.volume_size_bytes === undefined
+      ? null
+      : formatBytes(application.volume_size_bytes, format);
+
   const facts = [
     {
       icon: Package,
@@ -325,6 +338,10 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
       icon: HardDrive,
       label: t("columns.size"),
       value: size ?? t("size.notMeasured"),
+      // Only once there is a measurement to break down. A site nobody has
+      // measured says "Not measured", and hanging "0 B in volumes" under that
+      // would be describing a number that is not there.
+      note: size && volumeSize ? t("size.inVolumes", { size: volumeSize }) : null,
       action: canManage
         ? { onClick: measure, busy: measuring, label: t("size.measureHint"), icon: Ruler }
         : null,

@@ -159,8 +159,48 @@ return [
     'required_if_declined' => 'जब :other अस्वीकार किया जाए तो :attribute आवश्यक है।',
 
     'custom' => [
+
+        // Docker accepts a CPU quota larger than the machine and silently
+        // clamps it, so the refusal has to come from here — and it names what
+        // the server actually has rather than saying "invalid".
+        'cpu_limit' => [
+            'format' => 'CPU की संख्या दें, अधिकतम दो दशमलव स्थान तक — 1, 1.5, 0.5।',
+            'positive' => 'Docker द्वारा स्वीकार की जाने वाली सबसे छोटी CPU सीमा :minimum है। कोई सीमा न रखने के लिए फ़ील्ड खाली छोड़ें।',
+            'too_many' => 'इस सर्वर में :cores CPU हैं, और इससे अधिक माँगने वाला कंटेनर Docker शुरू नहीं करेगा। :cores या उससे कम चुनें।',
+        ],
+
+        'memory_limit' => [
+            'format' => 'इकाई के साथ आकार दें — 512m या 2g। केवल संख्या का मतलब Docker के लिए बाइट्स है, मेगाबाइट नहीं।',
+            'too_small' => 'Docker 6m से कम मेमोरी वाला कंटेनर शुरू नहीं करेगा।',
+        ],
+
+        // A registry address Docker cannot interpret is silently IGNORED at
+        // pull time — the credential simply never applies and the error is
+        // identical to having none. So these are refusals at the form, and each
+        // one names the specific mistake rather than saying "invalid".
+        'registry' => [
+            'empty' => 'रजिस्ट्री का पता दर्ज करें — Docker Hub के लिए `docker.io`, या `ghcr.io`, या आपका स्वयं का होस्ट।',
+            'path' => 'यह नेमस्पेस या रिपॉज़िटरी जैसा लगता है, रजिस्ट्री जैसा नहीं। केवल होस्ट दर्ज करें — `ghcr.io`, `ghcr.io/your-org` नहीं।',
+            'credentials' => 'पते में उपयोगकर्ता नाम या पासवर्ड न डालें। केवल होस्ट दर्ज करें; क्रेडेंशियल नीचे के फ़ील्ड में जाते हैं।',
+            'host' => 'यह रजिस्ट्री का पता नहीं है। होस्टनेम दर्ज करें, चाहें तो पोर्ट के साथ — `registry.example.com` या `registry.example.com:5000`।',
+            'port' => 'पोर्ट 1 और 65535 के बीच होना चाहिए।',
+        ],
         'attribute-name' => [
             'rule-name' => 'custom-message',
+        ],
+
+        // Laravel's default reads "The docker network new field prohibits docker
+        // network from being present" — raw attribute names at a user.
+        'docker_network_new' => [
+            'prohibits' => 'सूची से कोई नेटवर्क चुनें या नए का नाम दें — दोनों नहीं। ये एक ही प्रश्न के दो उत्तर हैं।',
+        ],
+
+        'volume_path' => [
+            'required_with' => 'वह पथ दें जहाँ यह वॉल्यूम कंटेनर के अंदर दिखे, उदाहरण के लिए /var/lib/mysql।',
+        ],
+
+        'volume_new' => [
+            'required_with' => 'बनाने वाले वॉल्यूम का नाम दें, या यदि नहीं चाहिए तो पथ खाली कर दें।',
         ],
     ],
 
@@ -176,6 +216,22 @@ return [
     'start_command_wrapper' => 'ऐप को उसकी एंट्री फ़ाइल से शुरू करें, जैसे "node server.js", :binary से नहीं। पैकेज मैनेजर असली प्रक्रिया को फ़ोर्क करता है, इसलिए सिग्नल उस तक नहीं पहुँचते।',
 
     'port_in_use_by_app' => 'पोर्ट :port इस सर्वर पर पहले से किसी अन्य एप्लिकेशन द्वारा उपयोग में है।',
+
+    // A network the panel created, named by a site that will join it.
+    'docker_network_invalid' => 'नेटवर्क का नाम अक्षर या अंक से शुरू करें, उसके बाद अक्षर, अंक, बिंदु, डैश या अंडरस्कोर का उपयोग करें।',
+    'docker_network_missing' => 'इस सर्वर पर \':name\' नाम का कोई Docker नेटवर्क नहीं है। यह पेज लोड होने के बाद इसे हटाया जा सकता है।',
+
+    // Mounting a panel-created volume into a container site.
+    'docker_volume_invalid' => 'वॉल्यूम का नाम अक्षर या अंक से शुरू करें, उसके बाद अक्षर, अंक, बिंदु, डैश या अंडरस्कोर का उपयोग करें।',
+    'docker_volume_missing' => 'इस सर्वर पर \':name\' नाम का कोई Docker वॉल्यूम नहीं है। यह पेज लोड होने के बाद इसे हटाया जा सकता है।',
+    'docker_mount_duplicate' => 'दो वॉल्यूम :path पर माउंट नहीं हो सकते। Docker केवल एक रखेगा, और यह नहीं बताएगा कि कौन सा।',
+    'docker_mount_root' => 'कंटेनर के अंदर का कोई पथ चुनें, उदाहरण के लिए /var/lib/mysql।',
+    'docker_mount_site_root' => 'उस पथ पर साइट की अपनी फ़ाइलें माउंट होती हैं (:path)। वहाँ वॉल्यूम लगाने से वे कंटेनर से छिप जाती हैं — फ़ाइलें सर्वर पर रहती हैं, पर साइट खाली वॉल्यूम दिखाती है।',
+    'docker_mount_reserved' => ':path उस इमेज का हिस्सा है जिससे कंटेनर बूट होता है। उसके ऊपर खाली वॉल्यूम लगाने से कंटेनर शुरू नहीं हो पाएगा।',
+
+    // A name the panel is about to create, so the inverse rule: not taken.
+    'docker_network_taken' => 'इस सर्वर पर \':name\' नाम का नेटवर्क पहले से मौजूद है। दूसरा बनाने के बजाय उसे ऊपर की सूची से चुनें।',
+    'docker_volume_taken' => 'इस सर्वर पर \':name\' नाम का वॉल्यूम पहले से मौजूद है। दूसरा बनाने के बजाय साइट के कंटेनर कार्ड से मौजूदा वॉल्यूम माउंट करें।',
     'node_version_unsupported' => ':type एप्लिकेशन Node :range पर चलता है। इसी रेंज में कोई संस्करण चुनें — इसके बाहर एप्लिकेशन शुरू होने से इनकार कर देता है और साइट कुछ भी सर्व नहीं करती।',
     'php_version_unsupported' => ':type एप्लिकेशन PHP :range पर चलता है। इसी रेंज में कोई संस्करण चुनें — इसके बाहर इंस्टॉल एप्लिकेशन के अपने कोड के भीतर बीच में ही विफल हो जाता है और साफ़ करने के लिए एक साइट छोड़ जाता है।',
     'php_version_default_unsupported' => ':type एप्लिकेशन PHP :range पर चलता है। इस फ़ील्ड को खाली छोड़ने पर सर्वर का डिफ़ॉल्ट (:default) इस्तेमाल होता है, जो इस रेंज के बाहर है — इसके बजाय रेंज के भीतर कोई संस्करण चुनें।',

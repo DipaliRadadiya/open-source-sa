@@ -2,6 +2,8 @@
 
 return [
     'checks' => [
+        'docker' => 'Docker',
+        'docker_exposure' => 'Container exposure',
         'dynamic_response_limit' => 'File download ceiling',
         'site_root_lock' => 'Site folder lock',
         'home_access' => 'Home folder access',
@@ -19,6 +21,10 @@ return [
         'driver_contention' => 'Driver contention',
     ],
     'fixes' => [
+        'docker_missing' => 'Docker is not installed. Install it from the Services page if you intend to run containers; nothing else on this server needs it.',
+        'docker_down' => 'Docker is installed but its daemon is not answering. Run `sudo systemctl status docker` to see why, then `sudo systemctl start docker`. No container can run until it does.',
+        'docker_denied' => 'The daemon is running but refused the panel. Run `sudo php artisan panel:sudoers` to refresh the sudo grant. Do NOT add the site user to the `docker` group as a workaround — membership of that group is equivalent to root on this server.',
+        'docker_exposure' => 'A container is publishing a port to every address. Docker writes its own firewall rules ahead of ufw, so that port is reachable from the internet even though the Firewall page shows it closed. Republish it to 127.0.0.1 and let nginx proxy to it, which is what the panel does for the containers it creates.',
         'home_open' => 'A system user\'s home is open to every other local account, so any file its sites wrote with ordinary permissions — sessions, .env files, database files — can be read by every other site\'s user. Run `php artisan sites:resync`: it installs the acl package if it is missing and closes each home to everyone except the panel and the web server.',
         'dynamic_response_limit' => 'OpenLiteSpeed caps the size of anything PHP returns, and it ships too low for the file manager — any download over the limit is refused with a 413 before the panel sees it, so nothing appears in the panel\'s logs. Set `maxDynRespSize 1024G` in /usr/local/lsws/conf/httpd_config.conf and restart with `sudo /usr/local/lsws/bin/lswsctrl restart`. Fresh installs already have this; a panel installed before it does not, because updates ship code and not configuration. `0` does not mean unlimited — it means zero.',
         'site_root_unlocked' => 'A site\'s folder can be renamed by its own user and replaced with one they control — defeating the site\'s locked PHP settings and letting a panel action write outside the site. Run `php artisan sites:resync`, which locks every site folder and names any it could not. "Could not be checked" usually means the filesystem has no immutable flag (ZFS, some containers); a site listed as not locked after a resync has a folder that does not look like the one the panel created — inspect it before trusting it. A site that server sync adopted has a folder its own user owns: lock it from that site\'s page with the Lock button.',

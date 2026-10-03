@@ -91,6 +91,24 @@ abstract class AbstractSiteType implements SiteType
             $features[] = 'app_environment';
         }
 
+        // Anything a container serves has a container to configure and a compose
+        // file that defines it — the BYO-image type and all fifteen one-click apps
+        // alike.
+        //
+        // Here rather than on each of those, and that is not tidiness: they were on
+        // `DockerSiteType` only, which quietly 404'd the credentials endpoint for
+        // every one-click app — the exact set of sites that HAS generated
+        // credentials. Found by installing Ghost, not by a test, because every test
+        // that exercised the endpoint used the BYO type.
+        //
+        // A container also gets no `app_environment` above, by the same condition:
+        // its variables live in the compose file rather than in a `.env` the panel
+        // owns, which is why that screen is replaced rather than joined.
+        if ($this->servingProfile() === 'docker') {
+            $features[] = 'app_container';
+            $features[] = 'app_compose';
+        }
+
         return $features;
     }
 

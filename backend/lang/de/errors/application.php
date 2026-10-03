@@ -1,6 +1,20 @@
 <?php
 
 return [
+    'compose_port_ambiguous' => 'Diese Compose-Datei veröffentlicht mehr als einen Port, daher kann das Panel nicht erkennen, welcher die Website bedient. Tragen Sie unter „Container-Port“ den internen Port ein, der weitergeleitet werden soll.',
+    'compose_unparsable' => 'Docker konnte diese Compose-Datei nicht lesen. Prüfen Sie Einrückung und Anführungszeichen — die Meldung von Docker selbst steht im Serveroperations-Protokoll.',
+    'compose_no_services' => 'Diese Compose-Datei definiert keine Dienste, es gäbe also nichts auszuführen.',
+    'compose_bind_outside' => 'Dienst :service bindet :path ein, was außerhalb des eigenen Verzeichnisses dieser Anwendung liegt. Ein Container darf nur seine eigenen Dateien einbinden.',
+    'compose_port_public' => 'Diese Compose-Datei veröffentlicht einen Port auf allen Adressen in einer Form, die das Panel nicht umschreiben konnte. Dockers Firewall-Regeln stehen vor denen des Panels, der Port wäre also aus dem Internet erreichbar, obwohl die Firewall-Seite ihn als geschlossen anzeigt. Veröffentlichen Sie ihn auf 127.0.0.1 — etwa `"127.0.0.1:3001:3001"` — dann übernimmt nginx den Proxy.',
+    'compose_forbidden' => [
+        'privileged' => 'Dienst :service läuft privilegiert, was ihm den gesamten Host gibt.',
+        'cap_add' => 'Dienst :service fügt Linux-Capabilities hinzu. SYS_ADMIN allein genügt, um die Dateisysteme des Hosts einzuhängen.',
+        'devices' => 'Dienst :service bindet ein Host-Gerät ein. Ein rohes Blockgerät ist jede Datei auf dieser Platte.',
+        'namespace' => 'Dienst :service teilt einen Namensraum des Hosts und kann damit Prozesse außerhalb des Containers sehen und ihnen Signale senden.',
+        'security_opt' => 'Dienst :service setzt Sicherheitsoptionen. Genau dort werden AppArmor und seccomp abgeschaltet.',
+        'network_mode' => 'Dienst :service setzt einen Netzwerkmodus. Das würde ihn in das Netzwerk des Hosts stellen — vorbei an der Loopback-Veröffentlichung und an der Firewall.',
+        'cgroup_parent' => 'Dienst :service setzt ein übergeordnetes cgroup und umgeht damit die Ressourcengrenzen dieses Servers.',
+    ],
     'database_engine_not_used' => 'Diese Anwendung verwendet keine Datenbank.',
     'database_engine_unsupported' => 'Diese Anwendung kann diese Datenbank-Engine nicht verwenden. :application unterstützt eine andere.',
     'database_engine_unavailable' => 'Diese Datenbank-Engine läuft auf diesem Server nicht. Installiere oder starte sie zuerst.',
@@ -23,6 +37,12 @@ return [
     'no_web_server' => 'kein Webserver erkannt',
     'provision_failed' => 'Die Einrichtung der Website ist im Schritt „:step" fehlgeschlagen.',
     'not_a_git_application' => 'Diese Anwendung ist kein Git-Deployment — es gibt nichts abzurufen.',
+    'not_a_container' => 'Diese Anwendung läuft nicht in einem Container und hat daher keine Container-Einstellungen.',
+    'container_not_running' => 'Dieser Container läuft nicht, es gibt also nichts zu aktualisieren. Provisionieren oder aktivieren Sie die Site zuerst.',
+    'container_pull_failed' => 'Das Image konnte nicht geladen werden. Referenz :reference.',
+    'container_apply_failed' => 'Die Einstellungen wurden gespeichert, der Container konnte damit aber nicht gestartet werden. Referenz :reference.',
+    'compose_apply_failed' => 'Die Compose-Datei konnte nicht angewendet werden, daher läuft die Site wieder mit der vorherigen. Referenz :reference.',
+    'docker_removal_not_permitted' => 'Sie haben keine Berechtigung, Docker-Netzwerke oder -Volumes zu löschen. Entfernen Sie die Website ohne sie, oder fragen Sie jemanden mit Docker-Zugriff.',
     'no_database_engine' => 'Keine Datenbank-Engine verfügbar. Installiere und konfiguriere MySQL oder MariaDB, bevor du diese Anwendung anlegst.',
     'no_process' => '„:name“ führt keinen eigenen Prozess aus.',
     'process_failed' => 'Die Anwendung konnte nicht :action werden. Nenne dem Support die Referenz.',

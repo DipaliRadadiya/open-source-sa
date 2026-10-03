@@ -124,6 +124,9 @@ return [
     'git_account.disconnected' => ':provider खाता :label हटाया',
     'application.created' => 'एप्लिकेशन :name (:site_type) बनाया',
     'application.updated' => 'एप्लिकेशन :name अपडेट किया',
+    'application.container_updated' => ':name की कंटेनर सेटिंग अपडेट की',
+    'application.container_secrets_viewed' => ':name की कंटेनर क्रेडेंशियल देखीं',
+    'application.docker_resources_removed' => ':name के Docker नेटवर्क और वॉल्यूम हटाए',
     'application.deleted' => 'एप्लिकेशन :name (:site_type) हटाया',
     'application.process_start' => ':name शुरू किया',
     'application.process_stop' => ':name बंद किया',
@@ -217,4 +220,16 @@ return [
     'application.supervisor_install_started' => ':name के लिए supervisor इंस्टॉल करना शुरू किया',
     'application.supervisor_installed' => 'supervisor इंस्टॉल किया',
     'application.supervisor_install_failed' => 'supervisor इंस्टॉल नहीं हो सका (:reference)',
+
+    'registry.created' => ':registry के लिए रजिस्ट्री क्रेडेंशियल :name जोड़ा',
+    'registry.updated' => ':registry के लिए रजिस्ट्री क्रेडेंशियल :name अपडेट किया',
+    'registry.deleted' => ':registry के लिए रजिस्ट्री क्रेडेंशियल :name हटाया (:applications_detached साइटें अलग की गईं)',
+    'registry.tested' => ':registry के लिए रजिस्ट्री क्रेडेंशियल :name जाँचा',
+    'application.container_pulled' => ':image दोबारा खींचा और :name का कंटेनर फिर बनाया',
+    'application.compose_updated' => ':name की compose फ़ाइल अपडेट की',
+    'docker_database.created' => ':engine डेटाबेस :name पोर्ट :port पर बनाया',
+    'docker_database.deleted' => ':engine डेटाबेस :name हटाया',
+    'docker_database.credentials_viewed' => ':engine डेटाबेस :name के क्रेडेंशियल देखे',
+    'application.credentials_acknowledged' => ':name के लिए जनरेट किए गए क्रेडेंशियल सहेजने की पुष्टि की',
+
 ];

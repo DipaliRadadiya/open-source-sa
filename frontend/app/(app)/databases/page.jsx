@@ -8,8 +8,15 @@ import {
   getConnections,
 } from "@/lib/databases/get-databases";
 import { getExports } from "@/lib/databases/get-exports";
-import { getAllApplications, getPhpmyadminSite, getSiteTypes } from "@/lib/applications/get-applications";
-import { getDatabaseCounts, getUnlinkedCount } from "@/lib/databases/get-databases";
+import {
+  getAllApplications,
+  getPhpmyadminSite,
+  getSiteTypes,
+} from "@/lib/applications/get-applications";
+import {
+  getDatabaseCounts,
+  getUnlinkedCount,
+} from "@/lib/databases/get-databases";
 import { formatBytes } from "@/lib/format/bytes";
 import { parseApiDate } from "@/lib/format/api-date";
 import { EngineBar } from "@/components/databases/engine-bar";
@@ -18,6 +25,8 @@ import { UntrackedBanner } from "@/components/databases/untracked-banner";
 import { UnlinkedBanner } from "@/components/databases/unlinked-banner";
 import { DatabasesTable } from "@/components/databases/databases-table";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { EmptyState } from "@/components/data-table/empty-state";
+import { Database } from "lucide-react";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
 import { PageHeader } from "@/components/ui/page-header";
 import { PermissionDenied } from "@/components/sections/permission-denied";
@@ -43,16 +52,62 @@ export default async function DatabasesPage({ searchParams }) {
   ]);
   const { engines, failed, status, failure, message } = live;
 
-  if (!can(permissions, "database", "view")) return <PermissionDenied title={t("title")} />;
+  if (!can(permissions, "database", "view"))
+    return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "database", "manage");
 
-  if (failed) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
+  // A 409 is the honest answer on a Docker box, not a failure to report: an
+  // application that wants a database there brings one as a container, and the
+  // panel manages no engine. The sidebar already stops offering this screen, so
+  // this is reached by a bookmark or a tab left open across a stack change — both
+  // of which deserve a sentence rather than a red error card.
+  if (failed && status === 409) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title={t("title")} />
+        <EmptyState
+          icon={Database}
+          title={t("unavailable.title")}
+          description={t("unavailable.body")}
+        />
+      </div>
+    );
+  }
+
+  if (failed)
+    return (
+      <LoadFailed
+        description={t("loadFailed")}
+        status={status}
+        failure={failure}
+        message={message}
+      />
+    );
 
   // Only a running engine can hold databases; skip the list otherwise.
   const usable = engines.some((engine) => engine.running);
 
-  const [{ databases, meta: dbMeta, failed: dbFailed, status: dbStatus, failure: dbFailure, message: dbMessage }, untracked, connections, exportList, phpmyadmin, appList, dbCounts, unlinkedCount, catalogue] = await Promise.all([
-    usable ? getDatabases(query) : Promise.resolve({ databases: [], failed: false }),
+  const [
+    {
+      databases,
+      meta: dbMeta,
+      failed: dbFailed,
+      status: dbStatus,
+      failure: dbFailure,
+      message: dbMessage,
+    },
+    untracked,
+    connections,
+    exportList,
+    phpmyadmin,
+    appList,
+    dbCounts,
+    unlinkedCount,
+    catalogue,
+  ] = await Promise.all([
+    usable
+      ? getDatabases(query)
+      : Promise.resolve({ databases: [], failed: false }),
     usable && canManage ? getUntracked(engines) : Promise.resolve([]),
   // Needed most when nothing is reachable.
     canManage ? getConnections() : Promise.resolve([]),
@@ -71,7 +126,15 @@ export default async function DatabasesPage({ searchParams }) {
       : Promise.resolve({ siteTypes: [] }),
   ]);
 
-  if (dbFailed) return <LoadFailed description={t("loadFailed")} status={dbStatus} failure={dbFailure} message={dbMessage} />;
+  if (dbFailed)
+    return (
+      <LoadFailed
+        description={t("loadFailed")}
+        status={dbStatus}
+        failure={dbFailure}
+        message={dbMessage}
+      />
+    );
 
   // The newest restorable dump per database: completed and its file still on
   // disk. Compared by timestamp, not by endpoint order or id.
@@ -80,7 +143,8 @@ export default async function DatabasesPage({ searchParams }) {
     if (row.status !== "completed" || row.available === false) continue;
     const at = parseApiDate(row.finished_at ?? row.created_at)?.getTime() ?? 0;
     const current = lastBackup[row.database_id];
-    if (!current || at > current.at) lastBackup[row.database_id] = { ...row, at };
+    if (!current || at > current.at)
+      lastBackup[row.database_id] = { ...row, at };
   }
 
   // No server-side size total: show the size only when this page holds every

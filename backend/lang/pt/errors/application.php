@@ -1,6 +1,20 @@
 <?php
 
 return [
+    'compose_port_ambiguous' => 'Este ficheiro compose publica mais do que uma porta, pelo que o painel não consegue saber qual serve o site. Defina «Porta do contentor» com a porta interna que deve ser encaminhada.',
+    'compose_unparsable' => 'O Docker não conseguiu ler este ficheiro compose. Verifique a indentação e as aspas — o erro do próprio Docker está no registo de operações do servidor.',
+    'compose_no_services' => 'Este ficheiro compose não define serviços, pelo que não haveria nada para executar.',
+    'compose_bind_outside' => 'O serviço :service monta :path, que está fora do diretório próprio desta aplicação. Um contentor só pode montar os seus próprios ficheiros.',
+    'compose_port_public' => 'Este ficheiro compose publica uma porta em todos os endereços num formato que o painel não conseguiu reescrever. As regras de firewall do Docker vêm antes das do painel, pelo que estaria acessível a partir da internet mesmo com a página da Firewall a mostrá-la fechada. Publique-a em 127.0.0.1 — por exemplo `"127.0.0.1:3001:3001"` — e o nginx fará de proxy.',
+    'compose_forbidden' => [
+        'privileged' => 'O serviço :service corre em modo privilegiado, o que lhe dá o host inteiro.',
+        'cap_add' => 'O serviço :service adiciona capacidades do Linux. SYS_ADMIN por si só chega para montar os sistemas de ficheiros do host.',
+        'devices' => 'O serviço :service mapeia um dispositivo do host. Um dispositivo de blocos em bruto é cada ficheiro desse disco.',
+        'namespace' => 'O serviço :service partilha um dos namespaces do host, o que lhe permite ver e sinalizar processos fora do contentor.',
+        'security_opt' => 'O serviço :service define opções de segurança. É aí que o AppArmor e o seccomp são desligados.',
+        'network_mode' => 'O serviço :service define um modo de rede. Isso colocá-lo-ia na rede do host, contornando a publicação em loopback e a firewall.',
+        'cgroup_parent' => 'O serviço :service define um cgroup pai, escapando aos limites de recursos que este servidor aplica.',
+    ],
     'database_engine_not_used' => 'Este aplicativo não usa banco de dados.',
     'database_engine_unsupported' => 'Este aplicativo não pode usar esse mecanismo de banco de dados. :application é compatível com outro.',
     'database_engine_unavailable' => 'Esse mecanismo de banco de dados não está em execução neste servidor. Instale-o ou inicie-o primeiro.',
@@ -23,6 +37,12 @@ return [
     'no_web_server' => 'nenhum servidor web detectado',
     'provision_failed' => 'A configuração do site falhou na etapa ":step".',
     'not_a_git_application' => 'A aplicação não é uma implantação git, portanto não há nada para baixar.',
+    'not_a_container' => 'Esta aplicação não é executada num contentor, por isso não tem definições de contentor.',
+    'container_not_running' => 'Este contentor não está em execução, por isso não há nada para atualizar. Aprovisione ou ative o site primeiro.',
+    'container_pull_failed' => 'Não foi possível obter a imagem. Referência :reference.',
+    'container_apply_failed' => 'As definições foram guardadas, mas não foi possível iniciar o contentor com elas. Referência :reference.',
+    'compose_apply_failed' => 'Não foi possível aplicar o ficheiro compose, por isso o site voltou ao que estava a usar antes. Referência :reference.',
+    'docker_removal_not_permitted' => 'Não tem permissão para eliminar redes ou volumes Docker. Remova o site sem eles, ou peça a alguém com acesso ao Docker.',
     'no_database_engine' => 'Nenhum mecanismo de banco de dados disponível. Instale e configure o MySQL ou MariaDB antes de criar esta aplicação.',
     'no_process' => '"‎:name" não executa um processo próprio.',
     'process_failed' => 'Não foi possível :action a aplicação. Informe a referência ao suporte.',

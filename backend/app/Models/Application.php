@@ -26,9 +26,14 @@ use Illuminate\Support\Str;
 #[Fillable([
     'system_user_id', 'production_application_id', 'cloned_from_application_id', 'name', 'domain', 'site_type', 'serving_profile', 'status',
     'php_version', 'node_version', 'app_port', 'rendering_type', 'web_root',
+    // Containerised applications. `container_port` is the port INSIDE the
+    // container; `app_port` is the loopback port on the host that nginx
+    // proxies to, and conflating the two publishes a container on a port
+    // another application already holds.
+    'image', 'registry_id', 'container_port', 'memory_limit', 'cpu_limit', 'compose', 'docker_network', 'volume_mounts', 'docker_secrets', 'credentials_seen_at',
     'build_command', 'deploy_script', 'start_command', 'package_manager',
     'git_account_id', 'repository', 'repository_url', 'branch', 'settings', 'install_secrets',
-    'steps', 'failed_step', 'failed_reason', 'provisioning_started_at', 'reference', 'last_commit', 'last_deployed_at', 'directory_size_bytes', 'directory_size_updated_at',
+    'steps', 'failed_step', 'failed_reason', 'provisioning_started_at', 'reference', 'last_commit', 'last_deployed_at', 'directory_size_bytes', 'volume_size_bytes', 'directory_size_updated_at',
     'current_release_id', 'previous_release_path',
     'webhook_enabled', 'webhook_provider', 'webhook_identifier', 'webhook_secret', 'webhook_remote_id',
     'webhook_last_delivered_at',
@@ -81,6 +86,11 @@ class Application extends Model
             'waf_enabled' => 'boolean',
             'waf_mode' => WafMode::class,
             'waf_categories' => 'array',
+            'volume_mounts' => 'array',
+            // Live database credentials for a one-click container app. Encrypted
+            // for the same reason `webhook_secret` is: it grants access.
+            'docker_secrets' => 'encrypted:array',
+            'credentials_seen_at' => 'datetime',
             'fail2ban_enabled' => 'boolean',
             'fail2ban_jail_name' => 'string',
             'fail2ban_jail_content' => 'string',
@@ -93,6 +103,7 @@ class Application extends Model
             'steps' => 'array',
             'last_deployed_at' => 'datetime',
             'directory_size_bytes' => 'integer',
+            'volume_size_bytes' => 'integer',
             'directory_size_updated_at' => 'datetime',
             'webhook_enabled' => 'boolean',
             // Encrypted at rest: this is the one value that lets an
@@ -131,6 +142,17 @@ class Application extends Model
     public function gitAccount(): BelongsTo
     {
         return $this->belongsTo(GitAccount::class);
+    }
+
+    /**
+     * Null for a public image — which is every one-click app and most sites.
+     *
+     * Deliberately shaped like `gitAccount()` above: the same question (whose
+     * credential pulls this code) with the same answer for the same reason.
+     */
+    public function registry(): BelongsTo
+    {
+        return $this->belongsTo(Registry::class);
     }
 
     /**

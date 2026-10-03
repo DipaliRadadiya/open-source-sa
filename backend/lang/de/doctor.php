@@ -2,6 +2,8 @@
 
 return [
     'checks' => [
+        'docker' => 'Docker',
+        'docker_exposure' => 'Container-Erreichbarkeit',
         'dynamic_response_limit' => 'Obergrenze für Datei-Downloads',
         'site_root_lock' => 'Sperre des Site-Ordners',
         'home_access' => 'Zugriff auf Home-Verzeichnisse',
@@ -19,6 +21,10 @@ return [
         'driver_contention' => 'Treiber-Konkurrenz',
     ],
     'fixes' => [
+        'docker_missing' => 'Docker ist nicht installiert. Installieren Sie es auf der Seite „Dienste“, wenn Sie Container ausführen möchten; nichts anderes auf diesem Server benötigt es.',
+        'docker_down' => 'Docker ist installiert, aber sein Daemon antwortet nicht. Führen Sie `sudo systemctl status docker` aus, um den Grund zu sehen, dann `sudo systemctl start docker`. Bis dahin kann kein Container laufen.',
+        'docker_denied' => 'Der Daemon läuft, hat das Panel aber abgewiesen. Führen Sie `sudo php artisan panel:sudoers` aus, um die sudo-Berechtigung zu erneuern. Fügen Sie den Website-Benutzer NICHT als Behelfslösung der Gruppe `docker` hinzu — Mitgliedschaft in dieser Gruppe entspricht root auf diesem Server.',
+        'docker_exposure' => 'Ein Container veröffentlicht einen Port auf allen Adressen. Docker schreibt eigene Firewall-Regeln vor denen von ufw, daher ist dieser Port aus dem Internet erreichbar, obwohl die Firewall-Seite ihn als geschlossen anzeigt. Veröffentlichen Sie ihn erneut auf 127.0.0.1 und lassen Sie nginx als Proxy arbeiten — genau das tut das Panel bei den Containern, die es selbst erstellt.',
         'home_open' => 'Das Home-Verzeichnis eines Systembenutzers ist für alle anderen lokalen Konten offen, sodass jede Datei, die seine Websites mit normalen Rechten geschrieben haben – Sitzungen, .env-Dateien, Datenbankdateien –, von den Benutzern aller anderen Websites gelesen werden kann. Führen Sie `php artisan sites:resync` aus: Es installiert bei Bedarf das Paket acl und schließt jedes Home-Verzeichnis für alle außer dem Panel und dem Webserver.',
         'dynamic_response_limit' => 'OpenLiteSpeed begrenzt die Größe dessen, was PHP zurückgibt, und der Standardwert ist für den Dateimanager zu niedrig: Jeder Download darüber wird mit einem 413 abgelehnt, bevor das Panel ihn sieht — in den Protokollen erscheint deshalb nichts. Setzen Sie `maxDynRespSize 1024G` in /usr/local/lsws/conf/httpd_config.conf und starten Sie mit `sudo /usr/local/lsws/bin/lswsctrl restart` neu. Neuinstallationen haben das bereits; ältere nicht, denn Updates liefern Code und keine Konfiguration. `0` bedeutet nicht unbegrenzt — es bedeutet null.',
         'site_root_unlocked' => 'Der Ordner einer Site kann von ihrem eigenen Benutzer umbenannt und durch einen eigenen ersetzt werden – damit werden die gesperrten PHP-Einstellungen der Site umgangen, und eine Panel-Aktion kann außerhalb der Site schreiben. Führen Sie `php artisan sites:resync` aus; es sperrt alle Site-Ordner und nennt die, bei denen es nicht ging. „Konnte nicht geprüft werden“ bedeutet meist, dass das Dateisystem kein Immutable-Attribut kennt (ZFS, manche Container); eine Site, die nach dem Resync weiterhin nicht gesperrt ist, hat einen Ordner, der nicht wie der vom Panel angelegte aussieht – prüfen Sie ihn, bevor Sie ihm vertrauen. Eine Website, die der Server-Sync übernommen hat, hat einen Ordner, der ihrem eigenen Benutzer gehört: Sperre ihn auf der Seite dieser Website mit der Schaltfläche Sperren.',

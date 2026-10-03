@@ -1,6 +1,20 @@
 <?php
 
 return [
+    'compose_port_ambiguous' => 'This compose file publishes more than one port, so the panel cannot tell which one serves the site. Set Container port to the port inside the container that should be proxied.',
+    'compose_unparsable' => 'Docker could not read this compose file. Check the indentation and quoting — the error from Docker itself is in the server operations log.',
+    'compose_no_services' => 'This compose file defines no services, so there would be nothing to run.',
+    'compose_bind_outside' => 'Service :service mounts :path, which is outside this application\'s own directory. A container may only mount its own files.',
+    'compose_port_public' => 'This compose file publishes a port to every address in a form the panel could not rewrite. Docker\'s firewall rules sit ahead of the panel\'s, so it would be reachable from the internet while the Firewall page shows it closed. Publish it to 127.0.0.1 — for example `"127.0.0.1:3001:3001"` — and nginx will proxy to it.',
+    'compose_forbidden' => [
+        'privileged' => 'Service :service runs privileged, which gives it the whole host.',
+        'cap_add' => 'Service :service adds Linux capabilities. SYS_ADMIN alone is enough to mount the host\'s filesystems.',
+        'devices' => 'Service :service maps a host device. A raw block device is every file on that disk.',
+        'namespace' => 'Service :service shares one of the host\'s namespaces, which lets it see and signal processes outside the container.',
+        'security_opt' => 'Service :service sets security options. This is where AppArmor and seccomp get turned off.',
+        'network_mode' => 'Service :service sets a network mode. That would put it on the host\'s network, past the loopback publishing and past the firewall.',
+        'cgroup_parent' => 'Service :service sets a cgroup parent, which escapes the resource limits this server applies.',
+    ],
     'database_engine_not_used' => 'This application does not use a database.',
     'database_engine_unsupported' => 'This application cannot use that database engine. :application supports a different one.',
     'database_engine_unavailable' => 'That database engine is not running on this server. Install or start it first.',
@@ -23,6 +37,12 @@ return [
     'no_web_server' => 'no detected web server',
     'provision_failed' => 'Setting up the site failed at the ":step" step.',
     'not_a_git_application' => 'The application is not a git deployment, so there is nothing to fetch.',
+    'not_a_container' => 'This application does not run in a container, so it has no container settings.',
+    'container_not_running' => 'This container is not running, so there is nothing to update. Provision or enable the site first.',
+    'container_pull_failed' => 'The image could not be pulled. Reference :reference.',
+    'container_apply_failed' => 'The settings were saved, but the container could not be brought up on them. Reference :reference.',
+    'compose_apply_failed' => 'The compose file could not be applied, so the site was put back on the one it was running before. Reference :reference.',
+    'docker_removal_not_permitted' => 'You don\'t have permission to delete Docker networks or volumes. Remove the site without them, or ask someone with Docker access.',
     'no_database_engine' => 'No database engine is available. Install and configure MySQL or MariaDB before creating this application.',
     'no_process' => '":name" does not run a process of its own.',
     'process_failed' => 'Could not :action the application. Quote the reference to support.',

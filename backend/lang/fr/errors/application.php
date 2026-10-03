@@ -1,6 +1,20 @@
 <?php
 
 return [
+    'compose_port_ambiguous' => 'Ce fichier compose publie plusieurs ports : le panel ne peut pas savoir lequel sert le site. Renseignez « Port du conteneur » avec le port interne à mandater.',
+    'compose_unparsable' => 'Docker n\'a pas pu lire ce fichier compose. Vérifiez l\'indentation et les guillemets ; l\'erreur de Docker figure dans le journal des opérations serveur.',
+    'compose_no_services' => 'Ce fichier compose ne définit aucun service : il n\'y aurait rien à exécuter.',
+    'compose_bind_outside' => 'Le service :service monte :path, hors du répertoire propre à cette application. Un conteneur ne peut monter que ses propres fichiers.',
+    'compose_port_public' => 'Ce fichier compose publie un port sur toutes les adresses sous une forme que le panel n\'a pas pu réécrire. Les règles de pare-feu de Docker passent avant celles du panel : il serait joignable depuis internet alors que la page Pare-feu l\'affiche fermé. Publiez-le sur 127.0.0.1 — par exemple `"127.0.0.1:3001:3001"` — et nginx fera le proxy.',
+    'compose_forbidden' => [
+        'privileged' => 'Le service :service s\'exécute en mode privilégié, ce qui lui donne tout l\'hôte.',
+        'cap_add' => 'Le service :service ajoute des capacités Linux. SYS_ADMIN suffit à monter les systèmes de fichiers de l\'hôte.',
+        'devices' => 'Le service :service mappe un périphérique de l\'hôte. Un périphérique bloc brut, c\'est tous les fichiers de ce disque.',
+        'namespace' => 'Le service :service partage un espace de noms de l\'hôte, ce qui lui permet de voir et de signaler des processus hors du conteneur.',
+        'security_opt' => 'Le service :service définit des options de sécurité. C\'est là qu\'on désactive AppArmor et seccomp.',
+        'network_mode' => 'Le service :service définit un mode réseau, ce qui le placerait sur le réseau de l\'hôte, hors de la publication loopback et hors du pare-feu.',
+        'cgroup_parent' => 'Le service :service définit un cgroup parent, ce qui contourne les limites de ressources appliquées par ce serveur.',
+    ],
     'database_engine_not_used' => 'Cette application n\'utilise pas de base de données.',
     'database_engine_unsupported' => 'Cette application ne peut pas utiliser ce moteur de base de données. :application en prend en charge un autre.',
     'database_engine_unavailable' => 'Ce moteur de base de données ne fonctionne pas sur ce serveur. Installez-le ou démarrez-le d\'abord.',
@@ -23,6 +37,12 @@ return [
     'no_web_server' => 'aucun serveur web détecté',
     'provision_failed' => 'La configuration du site a échoué à l\'étape « :step ».',
     'not_a_git_application' => 'Cette application n\'est pas un déploiement git : il n\'y a rien à récupérer.',
+    'not_a_container' => 'Cette application ne s\'exécute pas dans un conteneur : elle n\'a donc pas de paramètres de conteneur.',
+    'container_not_running' => 'Ce conteneur n’est pas en cours d’exécution, il n’y a donc rien à mettre à jour. Provisionnez ou activez d’abord le site.',
+    'container_pull_failed' => 'L’image n’a pas pu être récupérée. Référence :reference.',
+    'container_apply_failed' => 'Les réglages ont été enregistrés, mais le conteneur n’a pas pu être démarré avec eux. Référence :reference.',
+    'compose_apply_failed' => 'Le fichier compose n’a pas pu être appliqué ; le site a été remis sur celui qu’il utilisait auparavant. Référence :reference.',
+    'docker_removal_not_permitted' => 'Vous n\'avez pas la permission de supprimer des réseaux ou des volumes Docker. Supprimez le site sans eux, ou demandez à quelqu\'un ayant accès à Docker.',
     'no_database_engine' => 'Aucun moteur de base de données disponible. Installez et configurez MySQL ou MariaDB avant de créer cette application.',
     'no_process' => '« :name » n\'exécute pas de processus propre.',
     'process_failed' => 'Impossible de :action l\'application. Communiquez la référence au support.',

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\Server;
 use App\Actions\Server\Application\CreateApplication;
 use App\Actions\Server\Application\DeleteApplication;
 use App\Actions\Server\Application\DeleteApplicationDatabases;
+use App\Actions\Server\Application\DeleteApplicationDockerResources;
 use App\Actions\Server\Application\DeprovisionApplication;
 use App\Actions\Server\Application\DisableApplication;
 use App\Actions\Server\Application\EnableApplication;
@@ -281,6 +282,7 @@ class ApplicationController extends Controller
         DeprovisionApplication $deprovision,
         DeleteApplication $action,
         DeleteApplicationDatabases $databases,
+        DeleteApplicationDockerResources $dockerResources,
     ): JsonResponse {
         // A queued worker can still be writing this site's files and config.
         // Deleting its record now would leave those mutations untracked.
@@ -294,8 +296,33 @@ class ApplicationController extends Controller
             ? $application->databases()->with('users')->get()
             : null;
 
-        $deprovision->execute($application, $request->boolean('remove_files'));
+        // Decided BEFORE the row is deleted, because "does another site mount this"
+        // is a query over applications and after the delete every volume looks
+        // unclaimed. Removed AFTER deprovision, because `docker volume rm` refuses a
+        // volume any container references and `docker network rm` refuses a network
+        // with an attached endpoint — and until `compose down` runs, this site's own
+        // containers are both.
+        //
+        // Doing both halves up front was the first attempt and failed on a real box
+        // with `solo-net:remove-failed`. Same before/after split as the databases
+        // below, for the same kind of reason.
+        $dockerPlan = $request->boolean('remove_docker_resources')
+            ? $dockerResources->plan($application)
+            : null;
+
+        // The Docker opt-in reaches `compose down` as `--volumes`. Without it a
+        // pasted compose file's own named volumes survive the delete they were
+        // explicitly included in — found on a real box, see ContainerSupervisor.
+        $deprovision->execute(
+            $application,
+            $request->boolean('remove_files'),
+            $request->boolean('remove_docker_resources'),
+        );
         $action->execute($application);
+
+        if ($dockerPlan !== null) {
+            $dockerResources->apply($application, $dockerPlan);
+        }
 
         // Site first, databases after — never the reverse. A database dropped
         // before a site delete that then failed is the data of a site still

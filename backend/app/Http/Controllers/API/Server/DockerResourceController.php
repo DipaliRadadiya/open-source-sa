@@ -1,0 +1,206 @@
+<?php
+
+namespace App\Http\Controllers\API\Server;
+
+use App\Http\Controllers\Controller;
+use App\Services\Server\Docker\DockerResources;
+use App\Services\Server\HostCpus;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+/**
+ * Docker's networks and volumes.
+ *
+ * The refusals live here rather than in the service, because they are about
+ * what the panel is willing to do rather than about how to do it — and each
+ * one exists because Docker's own answer is worse than nothing:
+ *
+ *  - A network with containers on it: `docker network rm` says "has active
+ *    endpoints" and names neither the network nor what is on it, leaving the
+ *    user to go and run docker themselves to find out.
+ *  - A volume in use: `docker volume rm` refuses, but `-f` does not, and the
+ *    panel must never be the thing that deletes a running database.
+ *  - `bridge`, `host`, `none`: Docker recreates them on restart, so a delete
+ *    is a control that either fails or does damage.
+ */
+class DockerResourceController extends Controller
+{
+    public function networks(DockerResources $docker): JsonResponse
+    {
+        return response()->json(['networks' => $docker->networks()]);
+    }
+
+    public function volumes(DockerResources $docker): JsonResponse
+    {
+        return response()->json(['volumes' => $docker->volumes()]);
+    }
+
+    /**
+     * What this machine can be asked for, so a limit field can say so.
+     *
+     * Exists because the alternative is a form that describes the rule instead of
+     * the server: "up to the number of CPUs this server has" is a sentence nobody
+     * can act on without leaving the page, and a hardcoded ceiling would be wrong
+     * on every box but the one it was written on. The CPU field is bounded by this
+     * number server-side, so a hint that stated anything else would be a hint that
+     * disagrees with the validator.
+     *
+     * Its own endpoint rather than a field on `/basic-info`, which is
+     * **unauthenticated** — the size of the box is not something to hand to
+     * anonymous visitors. Gated on `docker` (view) with the rest of this file.
+     *
+     * The defaults come with it so the placeholders can show what a site gets when
+     * the field is left empty, which is the other half of "clear instruction": the
+     * memory field's empty state is 512m, and the CPU field's empty state is no
+     * limit at all. Those are different answers and the UI has to be able to say
+     * which is which without hardcoding either.
+     */
+    public function limits(HostCpus $cpus): JsonResponse
+    {
+        return response()->json([
+            'limits' => [
+                'cpus' => $cpus->count(),
+                'default_memory_limit' => (string) config('server.docker.default_memory_limit', '512m'),
+                'default_db_memory_limit' => (string) config('server.docker.default_db_memory_limit', '512m'),
+            ],
+        ]);
+    }
+
+    public function createNetwork(Request $request, DockerResources $docker): JsonResponse
+    {
+        $name = (string) $request->input('name');
+
+        abort_unless(DockerResources::validName($name), 422, __('errors/docker.invalid_name'));
+
+        // Asked before creating rather than reading Docker's error after:
+        // "network with name X already exists" is fine for a terminal and
+        // wrong for a form, which wants to say which field is at fault.
+        $existing = collect($docker->networks())->firstWhere('name', $name);
+
+        abort_if($existing !== null, 422, __('errors/docker.network_exists', ['name' => $name]));
+
+        $result = $docker->createNetwork($name);
+
+        abort_if($result->failed(), 500, __('errors/docker.network_create_failed', [
+            'reference' => $result->reference,
+        ]));
+
+        return response()->json(['networks' => $docker->networks()], 201);
+    }
+
+    public function removeNetwork(string $name, DockerResources $docker): JsonResponse
+    {
+        $network = collect($docker->networks())->firstWhere('name', $name);
+
+        abort_if($network === null, 404);
+
+        abort_if(
+            $network['built_in'],
+            422,
+            __('errors/docker.network_built_in', ['name' => $name]),
+        );
+
+        // Named, not counted. "It is in use" sends someone to the terminal;
+        // "uptime-kuma-1 is on it" tells them what to stop.
+        abort_if(
+            $network['containers'] !== [],
+            409,
+            __('errors/docker.network_in_use', [
+                'name' => $name,
+                'containers' => implode(', ', array_column($network['containers'], 'name')),
+            ]),
+        );
+
+        // The second refusal, and the one the container check cannot make: a
+        // site whose container is STOPPED is attached to nothing, so everything
+        // above passes and the delete succeeds — then the site's compose file
+        // still names this network with `external: true` and it will not start
+        // again. Nothing would connect the failure to this click.
+        abort_if(
+            $network['sites'] !== [],
+            409,
+            __('errors/docker.network_used_by_sites', [
+                'name' => $name,
+                'sites' => implode(', ', array_column($network['sites'], 'name')),
+            ]),
+        );
+
+        $result = $docker->removeNetwork($name);
+
+        abort_if($result->failed(), 500, __('errors/docker.network_remove_failed', [
+            'reference' => $result->reference,
+        ]));
+
+        return response()->json(['networks' => $docker->networks()]);
+    }
+
+    public function createVolume(Request $request, DockerResources $docker): JsonResponse
+    {
+        $name = (string) $request->input('name');
+
+        abort_unless(DockerResources::validName($name), 422, __('errors/docker.invalid_name'));
+
+        $existing = collect($docker->volumes())->firstWhere('name', $name);
+
+        abort_if($existing !== null, 422, __('errors/docker.volume_exists', ['name' => $name]));
+
+        $result = $docker->createVolume($name);
+
+        abort_if($result->failed(), 500, __('errors/docker.volume_create_failed', [
+            'reference' => $result->reference,
+        ]));
+
+        return response()->json(['volumes' => $docker->volumes()], 201);
+    }
+
+    public function removeVolume(string $name, DockerResources $docker): JsonResponse
+    {
+        $volume = collect($docker->volumes())->firstWhere('name', $name);
+
+        abort_if($volume === null, 404);
+
+        // The one that matters. `docker volume rm -f` would do this happily,
+        // and a volume is where a container's data lives — deleting one that
+        // is attached is deleting a running database.
+        // Named when the panel could name them, counted when it could not.
+        // The two are different facts and must not read the same: an empty list
+        // beside a non-zero `Links` means `docker inspect` did not answer, which
+        // is not the same as "nothing is using it" — and the delete is refused
+        // either way, because `in_use` reads the stricter source.
+        abort_if(
+            $volume['in_use'],
+            409,
+            $volume['container_names'] !== []
+                ? __('errors/docker.volume_in_use_by', [
+                    'name' => $name,
+                    'containers' => implode(', ', $volume['container_names']),
+                ])
+                : __('errors/docker.volume_in_use', [
+                    'name' => $name,
+                    'count' => (string) $volume['containers'],
+                ]),
+        );
+
+        // The guard `in_use` cannot make, and the one that matters most on this
+        // screen: a STOPPED site has no container, so `Links` is 0 and every
+        // check above passes — while the volume still holds that site's data.
+        // Deleting a network out from under a stopped site breaks a start;
+        // deleting its volume destroys the database.
+        abort_if(
+            $volume['sites'] !== [],
+            409,
+            __('errors/docker.volume_used_by_sites', [
+                'name' => $name,
+                'sites' => implode(', ', array_column($volume['sites'], 'name')),
+            ]),
+        );
+
+        $result = $docker->removeVolume($name);
+
+        abort_if($result->failed(), 500, __('errors/docker.volume_remove_failed', [
+            'reference' => $result->reference,
+        ]));
+
+        return response()->json(['volumes' => $docker->volumes()]);
+    }
+}

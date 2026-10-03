@@ -16,13 +16,20 @@ class DeprovisionApplication
 {
     public function __construct(private ApplicationProvisioner $provisioner) {}
 
-    public function execute(Application $application, bool $removeFiles = false): void
-    {
+    public function execute(
+        Application $application,
+        bool $removeFiles = false,
+        bool $removeDockerVolumes = false,
+    ): void {
         // Never provisioned — there is no config to remove and no reload to do.
         if ($application->status->value === 'pending') {
             return;
         }
 
-        $this->provisioner->deprovision($application->load('systemUser'), $removeFiles);
+        $this->provisioner->deprovision(
+            $application->load('systemUser'),
+            $removeFiles,
+            $removeDockerVolumes,
+        );
     }
 }

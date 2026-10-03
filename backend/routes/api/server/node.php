@@ -10,11 +10,18 @@ use Illuminate\Support\Facades\Route;
  */
 
 // Polled while a Node version installs — same progress feed as /php.
-Route::get('/node', [NodeController::class, 'index'])
-    ->withoutMiddleware('throttle:api')
-    ->middleware(['permission:node', 'throttle:progress']);
-Route::put('/node/default', [NodeController::class, 'setDefault'])->middleware('permission:node,manage');
+/*
+ * Gated on the server running anything on the host — see
+ * EnsureServerRunsHostApplications for why that is not the same question as
+ * "does it host Node sites", and why a LEMP box must keep these.
+ */
+Route::middleware('runs-host-apps')->group(function (): void {
+    Route::get('/node', [NodeController::class, 'index'])
+        ->withoutMiddleware('throttle:api')
+        ->middleware(['permission:node', 'throttle:progress']);
+    Route::put('/node/default', [NodeController::class, 'setDefault'])->middleware('permission:node,manage');
 
-Route::post('/node/versions', [NodeController::class, 'store'])->middleware('permission:node,manage');
-Route::delete('/node/versions/{version}', [NodeController::class, 'destroy'])->middleware('permission:node,manage');
-Route::post('/node/versions/{version}/npm', [NodeController::class, 'updateNpm'])->middleware('permission:node,manage');
+    Route::post('/node/versions', [NodeController::class, 'store'])->middleware('permission:node,manage');
+    Route::delete('/node/versions/{version}', [NodeController::class, 'destroy'])->middleware('permission:node,manage');
+    Route::post('/node/versions/{version}/npm', [NodeController::class, 'updateNpm'])->middleware('permission:node,manage');
+});

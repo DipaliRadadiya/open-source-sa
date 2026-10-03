@@ -124,6 +124,9 @@ return [
     'git_account.disconnected' => ':provider-Konto :label getrennt',
     'application.created' => 'Anwendung :name (:site_type) erstellt',
     'application.updated' => 'Anwendung :name aktualisiert',
+    'application.container_updated' => 'Container-Einstellungen für :name aktualisiert',
+    'application.container_secrets_viewed' => 'Container-Zugangsdaten für :name angesehen',
+    'application.docker_resources_removed' => 'Docker-Netzwerk und -Volumes für :name entfernt',
     'application.deleted' => 'Anwendung :name (:site_type) gelöscht',
     'application.process_start' => ':name gestartet',
     'application.process_stop' => ':name gestoppt',
@@ -217,4 +220,16 @@ return [
     'application.supervisor_install_started' => 'Installation von Supervisor für :name gestartet',
     'application.supervisor_installed' => 'Supervisor installiert',
     'application.supervisor_install_failed' => 'Supervisor konnte nicht installiert werden (:reference)',
+
+    'registry.created' => 'Registry-Zugangsdaten :name für :registry hinzugefügt',
+    'registry.updated' => 'Registry-Zugangsdaten :name für :registry aktualisiert',
+    'registry.deleted' => 'Registry-Zugangsdaten :name für :registry gelöscht (:applications_detached Websites getrennt)',
+    'registry.tested' => 'Registry-Zugangsdaten :name für :registry getestet',
+    'application.container_pulled' => ':image erneut geladen und den Container von :name neu erstellt',
+    'application.compose_updated' => 'Compose-Datei von :name aktualisiert',
+    'docker_database.created' => ':engine-Datenbank :name auf Port :port erstellt',
+    'docker_database.deleted' => ':engine-Datenbank :name gelöscht',
+    'docker_database.credentials_viewed' => 'Zugangsdaten der :engine-Datenbank :name angesehen',
+    'application.credentials_acknowledged' => 'Speichern der generierten Zugangsdaten für :name bestätigt',
+
 ];
