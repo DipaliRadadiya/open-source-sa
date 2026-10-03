@@ -27,6 +27,26 @@ class ProcessKiller
      */
     public const SIGNALS = ['TERM', 'KILL'];
 
+    /**
+     * Database server processes, as `ps` names them, and the units they run in.
+     *
+     * Bug #5: this screen stopped MariaDB, MySQL, PostgreSQL and MongoDB with
+     * one click, taking every site's database offline at once. Operator's
+     * call (2026-10-03): refuse them outright, like SSH. A hung database is
+     * restarted from the Services screen, which brings it back up; a signal
+     * from here only takes it down.
+     *
+     * Both lists, because each misses something on its own: the name catches
+     * a database the unit lookup cannot place, and the unit catches every
+     * PostgreSQL backend, whose `comm` is whatever its role set it to.
+     *
+     * @var array<int, string>
+     */
+    public const DATABASE_COMMANDS = ['mariadbd', 'mysqld', 'mysqld_safe', 'postgres', 'mongod'];
+
+    /** @var array<int, string> */
+    public const DATABASE_UNITS = ['mariadb', 'mysql', 'mysqld', 'postgresql', 'mongod', 'mongodb'];
+
     public function __construct(private ServerOps $serverOps) {}
 
     /**
@@ -116,9 +136,40 @@ class ProcessKiller
             throw ProcessKillException::protectedProcess();
         }
 
-        if ($this->inProtectedUnit($pid)) {
+        $unit = $this->unitOf($pid);
+
+        if (in_array($process['command'], self::DATABASE_COMMANDS, true) || $this->isDatabaseUnit($unit)) {
+            throw ProcessKillException::databaseEngine();
+        }
+
+        if ($this->inProtectedUnit($unit)) {
             throw ProcessKillException::protectedProcess();
         }
+    }
+
+    /**
+     * The systemd unit a PID runs in, without its `.service` suffix, or null
+     * when systemd cannot say.
+     */
+    private function unitOf(int $pid): ?string
+    {
+        $result = $this->serverOps->run(
+            ['ps', '-o', 'unit=', '-p', (string) $pid],
+            ['feature' => 'process', 'op' => 'inspect_unit', 'pid' => $pid],
+        );
+
+        $unit = preg_replace('/\.service$/', '', trim($result->output()));
+
+        return (! $result->ok || $unit === '' || $unit === '-') ? null : $unit;
+    }
+
+    /**
+     * `postgresql@18-main` is a cluster of `postgresql`; the instance part is
+     * the version and cluster name, which differ per server.
+     */
+    private function isDatabaseUnit(?string $unit): bool
+    {
+        return $unit !== null && in_array(explode('@', $unit)[0], self::DATABASE_UNITS, true);
     }
 
     /**
@@ -138,16 +189,9 @@ class ProcessKiller
      * login session or a site's app unit is not affected. When systemd cannot
      * say, the name check above is all there is — as before.
      */
-    private function inProtectedUnit(int $pid): bool
+    private function inProtectedUnit(?string $unit): bool
     {
-        $result = $this->serverOps->run(
-            ['ps', '-o', 'unit=', '-p', (string) $pid],
-            ['feature' => 'process', 'op' => 'inspect_unit', 'pid' => $pid],
-        );
-
-        $unit = preg_replace('/\.service$/', '', trim($result->output()));
-
-        if (! $result->ok || $unit === '' || $unit === '-') {
+        if ($unit === null) {
             return false;
         }
 

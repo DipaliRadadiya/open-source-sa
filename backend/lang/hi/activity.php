@@ -176,6 +176,8 @@ return [
     'backup.downloaded' => ':application का एक बैकअप डाउनलोड किया',
     'backup.restored' => ':application को बैकअप से पुनर्स्थापित किया',
     'backup.restore_failed' => ':application की पुनर्स्थापना विफल रही (:reason)',
+    'backup.undone' => ':application की पुनर्स्थापना पूर्ववत की',
+    'backup.undo_failed' => ':application की पुनर्स्थापना पूर्ववत करना विफल रहा (:reason)',
     'application.environment_updated' => ':name का एनवायरनमेंट अद्यतन किया (:keys)',
     'application.environment_restored' => ':name की पिछली एनवायरनमेंट फ़ाइल पुनर्स्थापित की',
     'application.permissions_fixed' => ':name की फ़ाइल अनुमतियाँ रीसेट कीं',

@@ -176,6 +176,8 @@ return [
     'backup.downloaded' => ':application のバックアップをダウンロードしました',
     'backup.restored' => ':application をバックアップから復元しました',
     'backup.restore_failed' => ':application の復元に失敗しました (:reason)',
+    'backup.undone' => ':application の復元を元に戻しました',
+    'backup.undo_failed' => ':application の復元を元に戻せませんでした (:reason)',
     'application.environment_updated' => ':name の環境変数を更新しました (:keys)',
     'application.environment_restored' => ':name の以前の環境ファイルを復元しました',
     'application.permissions_fixed' => ':name のファイル権限をリセットしました',

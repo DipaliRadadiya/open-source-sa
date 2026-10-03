@@ -10,7 +10,9 @@ use Illuminate\Support\Facades\Date;
 /**
  * Samples per-engine DB metrics every 5 minutes into `db_metrics` for the
  * Query Monitor chart, then prunes past the retention window (bounded like
- * server_metrics). Only engines that are reachable are sampled.
+ * server_metrics). Only engines that are installed and reachable are
+ * sampled — installed first, and without a probe, because probing an engine
+ * that is not there logs into whatever owns its port (bug #22).
  */
 class SampleDbMetrics extends Command
 {
@@ -23,6 +25,10 @@ class SampleDbMetrics extends Command
         $now = Date::now();
 
         foreach ($manager->engineNames() as $engineName) {
+            if (! $manager->serverInstalled($engineName)) {
+                continue;
+            }
+
             $engine = $manager->engine($engineName);
             if (! $engine->available()) {
                 continue;

@@ -36,6 +36,15 @@ class ProcessKillException extends Exception
         return new self('errors/process.protected', 422);
     }
 
+    /**
+     * A database server. Stopping it takes every site's database offline;
+     * the Services screen restarts it instead.
+     */
+    public static function databaseEngine(): self
+    {
+        return new self('errors/process.database', 422);
+    }
+
     public static function kernelThread(): self
     {
         return new self('errors/process.kernel_thread', 422);

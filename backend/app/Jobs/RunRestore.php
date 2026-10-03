@@ -58,7 +58,7 @@ class RunRestore implements ShouldBeUniqueUntilProcessing, ShouldQueue
 
     public function handle(RestoreRunner $runner, ActivityLogger $activity): void
     {
-        $restore = Restore::with(['backup.target.storageDestination', 'application.systemUser'])
+        $restore = Restore::with(['backup.target.storageDestination', 'application.systemUser', 'user'])
             ->find($this->restoreId);
 
         if ($restore === null) {
@@ -79,13 +79,23 @@ class RunRestore implements ShouldBeUniqueUntilProcessing, ShouldQueue
 
         $restore = $runner->run($restore);
 
+        $succeeded = $restore->status === RestoreStatus::Succeeded;
+
+        // Bug #46. Undo is a restore of the safety backup an earlier restore
+        // took, and used to read as an ordinary restore. And the job runs on
+        // the queue with nobody signed in, so the entry was written without
+        // the person who pressed the button: anonymous in the panel-wide log,
+        // absent from their own.
         $activity->log(
-            $restore->status === RestoreStatus::Succeeded ? 'backup.restored' : 'backup.restore_failed',
+            $restore->backup->is_safety
+                ? ($succeeded ? 'backup.undone' : 'backup.undo_failed')
+                : ($succeeded ? 'backup.restored' : 'backup.restore_failed'),
             $restore,
             [
                 'application' => $restore->application->name,
                 'reason' => $restore->reason ?? '',
             ],
+            $restore->user,
         );
     }
 

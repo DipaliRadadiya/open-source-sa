@@ -176,6 +176,8 @@ return [
     'backup.downloaded' => 'Скачал резервную копию :application',
     'backup.restored' => 'Восстановил :application из резервной копии',
     'backup.restore_failed' => 'Восстановление :application не удалось (:reason)',
+    'backup.undone' => 'Отменил восстановление :application',
+    'backup.undo_failed' => 'Отменить восстановление :application не удалось (:reason)',
     'application.environment_updated' => 'Обновил окружение :name (:keys)',
     'application.environment_restored' => 'Восстановил предыдущий файл окружения :name',
     'application.permissions_fixed' => 'Сбросил права доступа к файлам :name',

@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\Applications\Types\GitSiteType;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Php\AdditionalDirectives;
+use App\Services\Server\Php\MemoryBudget;
 use App\Services\Server\Php\PhpVersionManager;
 use App\Services\Server\Php\PoolIsolator;
 use App\Services\Server\Php\PoolManager;
@@ -1412,3 +1413,97 @@ function editPools(Closure $edit): void
         }
     }
 }
+
+function serverRam(int $bytes): void
+{
+    $budget = Mockery::mock(MemoryBudget::class)->makePartial();
+    $budget->shouldReceive('totalMemoryBytes')->andReturn($bytes);
+    app()->instance(MemoryBudget::class, $budget);
+}
+
+describe('values that are the right shape but wrong (bug #61)', function () {
+    beforeEach(function () {
+        fakePhpServer();
+
+        // A 2 GB server, whatever machine runs the tests.
+        serverRam(2 * 1024 ** 3);
+
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+    });
+
+    it('refuses unlimited memory', function () {
+        // Operator's call: -1 lets one site take the whole server's memory.
+        $this->actingAs($this->admin)->putJson(phpUrl(), ['memory_limit' => '-1'])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.memory_limit.0', __('php_settings.errors.memory_unlimited'));
+    });
+
+    it('lets a site that already has -1 save its other settings', function () {
+        // Refusing an unchanged field would make the whole screen unsaveable.
+        ApplicationPhpSettings::updateOrCreate(['application_id' => $this->application->id], ['memory_limit' => '-1']);
+
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['memory_limit' => '-1', 'max_execution_time' => 60])
+            ->assertOk();
+    });
+
+    it('refuses more memory than the server has, and allows up to it', function () {
+        $this->actingAs($this->admin)->putJson(phpUrl(), ['memory_limit' => '99G'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('memory_limit');
+
+        // Not rounded up: a 5.8 GB server named as "6 GB" would refuse 6G
+        // while saying there is room for it.
+        serverRam((int) (5.8 * 1024 ** 3));
+
+        $this->actingAs($this->admin)->putJson(phpUrl(), ['memory_limit' => '6G'])
+            ->assertJsonPath('errors.memory_limit.0', __('php_settings.errors.memory_over_ram', ['ram' => '5.8 GB']));
+        serverRam(2 * 1024 ** 3);
+
+        $this->actingAs($this->admin)->putJson(phpUrl(), ['memory_limit' => '2G'])->assertOk();
+    });
+
+    it('refuses a post size smaller than the upload size', function () {
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['upload_max_filesize' => '64M', 'post_max_size' => '32M'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('post_max_size');
+
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['upload_max_filesize' => '64M', 'post_max_size' => '64M'])
+            ->assertOk();
+    });
+
+    it('compares against the saved upload size when only the post size is sent', function () {
+        ApplicationPhpSettings::updateOrCreate(['application_id' => $this->application->id], ['upload_max_filesize' => '1G']);
+
+        $this->actingAs($this->admin)->putJson(phpUrl(), ['post_max_size' => '512M'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('post_max_size');
+    });
+
+    it('refuses raising only the upload size past the saved post size', function () {
+        ApplicationPhpSettings::updateOrCreate(['application_id' => $this->application->id], ['post_max_size' => '64M']);
+
+        $this->actingAs($this->admin)->putJson(phpUrl(), ['upload_max_filesize' => '128M'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('upload_max_filesize');
+    });
+
+    it('refuses a prepend file outside the site', function (string $path) {
+        $this->actingAs($this->admin)->putJson(phpUrl(), ['auto_prepend_file' => $path])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('auto_prepend_file');
+    })->with([
+        'another site' => '/home/othersite/blog/public_html/wp-config.php',
+        'a sibling sharing the prefix' => '/home/siteowner/shop-old/x.php',
+        'relative' => 'prepend.php',
+        'system file' => '/etc/passwd',
+    ]);
+
+    it('accepts a prepend file inside the site', function () {
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['auto_prepend_file' => '/home/siteowner/shop/public_html/wordfence-waf.php'])
+            ->assertOk();
+    });
+});

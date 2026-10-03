@@ -182,6 +182,8 @@ return [
     'backup.downloaded' => 'Downloaded a backup of :application',
     'backup.restored' => 'Restored :application from a backup',
     'backup.restore_failed' => 'Restore of :application failed (:reason)',
+    'backup.undone' => 'Undid the restore of :application',
+    'backup.undo_failed' => 'Undoing the restore of :application failed (:reason)',
     'application.environment_updated' => 'Updated the environment for :name (:keys)',
     'application.environment_restored' => 'Restored a previous environment file for :name',
     'application.permissions_fixed' => 'Reset file permissions for :name',

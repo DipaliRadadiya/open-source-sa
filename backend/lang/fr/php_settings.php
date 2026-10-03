@@ -47,5 +47,9 @@ return [
         'reload_failed' => 'PHP-FPM n\'a pas pu être rechargé, la configuration précédente a donc été restaurée.',
         'no_sections' => 'Les en-têtes de section sont interdits ici — ils démarreraient un second pool à l\'intérieur de celui-ci.',
         'function_list' => 'Ce doit être une liste de noms de fonctions séparés par des virgules.',
+        'memory_unlimited' => 'La mémoire illimitée (-1) n\'est pas autorisée : un site pourrait utiliser toute la mémoire du serveur et faire tomber tous les autres sites. Saisissez une limite, par exemple 512M.',
+        'memory_over_ram' => 'C\'est plus de mémoire que n\'en a le serveur (:ram). Saisissez une limite plus petite.',
+        'post_below_upload' => 'La taille POST maximale (:post) doit être au moins égale à la taille d\'envoi maximale (:upload). Un fichier envoyé passe dans la requête ; sinon, les envois plus gros échouent sans aucune erreur.',
+        'prepend_outside_site' => 'Le fichier doit se trouver dans le dossier de ce site (:root/…).',
     ],
 ];

@@ -674,6 +674,10 @@ describe('downloading a backup', function () {
             ->getJson("/api/backups/{$this->backup->id}/download")
             ->assertStatus(422)
             ->assertJsonValidationErrors('backup');
+
+        // Bug #45: the entry was written before the link, so this refusal
+        // used to read "Downloaded" in the Activity Log.
+        expect(ActivityLog::where('type', 'backup')->where('action', 'downloaded')->exists())->toBeFalse();
     });
 
     it('records who asked, without putting the signed url in the log', function () {

@@ -7,6 +7,7 @@ use App\Jobs\Concerns\ExpiresUniqueLock;
 use App\Models\Backup;
 use App\Models\BackupTarget;
 use App\Models\Restore;
+use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\StagingManager;
 use App\Services\Server\Backups\BackupRunner;
@@ -138,6 +139,9 @@ class RunBackup implements ShouldBeUniqueUntilProcessing, ShouldQueue
                 'application' => $target->application->name,
                 'reason' => $backup->reason ?? '',
             ],
+            // Bug #46: whoever pressed "Back up now". Null for a scheduled
+            // run, which the log shows as System, and that is what it was.
+            $this->actorId !== null ? User::find($this->actorId) : null,
         );
     }
 
