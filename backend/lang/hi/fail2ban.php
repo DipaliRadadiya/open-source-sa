@@ -13,6 +13,7 @@ return [
 
     'created_successfully' => 'Fail2ban सफलतापूर्वक कॉन्फ़िगर हो गया!',
     'test_failed' => 'Fail2ban कॉन्फ़िगरेशन परीक्षण विफल रहा।',
+    'rejected' => 'Fail2ban ने यह कॉन्फ़िगरेशन अस्वीकार कर दिया, इसलिए कुछ भी नहीं बदला गया।',
     'already_disabled' => 'इस एप्लिकेशन के लिए Fail2ban पहले से ही अक्षम है।',
     'disabled_successfully' => 'Fail2ban सफलतापूर्वक अक्षम कर दिया गया!',
 

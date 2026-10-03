@@ -14,6 +14,7 @@ return [
     // Per-application fail2ban (raw INI)
     'created_successfully' => 'Fail2ban configured successfully!',
     'test_failed' => 'Fail2ban configuration test failed.',
+    'rejected' => 'Fail2ban refused this configuration, so nothing was changed.',
     'already_disabled' => 'Fail2ban is already disabled for this application.',
     'disabled_successfully' => 'Fail2ban disabled successfully!',
 

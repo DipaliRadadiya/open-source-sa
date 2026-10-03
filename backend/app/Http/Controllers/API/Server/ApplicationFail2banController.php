@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\Server;
 
+use App\Exceptions\Server\Application\Fail2banConfigRejectedException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\CustomFail2banRequest;
 use App\Models\Application;
@@ -119,7 +120,18 @@ class ApplicationFail2banController extends Controller
 
         // Applied first, recorded after. Saved before, a reload that failed
         // left the database describing a config the server had rolled back.
-        $manager->enableForApp($application, $jailContent, $filterContent);
+        // The test passes some configs the daemon then refuses on reload
+        // (bug #95); the old files are back by now, and the user gets
+        // fail2ban's message in the same shape as a failed test.
+        try {
+            $manager->enableForApp($application, $jailContent, $filterContent);
+        } catch (Fail2banConfigRejectedException $e) {
+            return response()->json([
+                'testOk' => false,
+                'message' => __('fail2ban.rejected'),
+                'output' => $e->output,
+            ], 422);
+        }
 
         // A jail saved before names were prefixed still has its old files;
         // left there, the site would run two jails on one log.

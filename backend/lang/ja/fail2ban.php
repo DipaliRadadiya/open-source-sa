@@ -13,6 +13,7 @@ return [
 
     'created_successfully' => 'Fail2ban を設定しました。',
     'test_failed' => 'Fail2ban の設定テストに失敗しました。',
+    'rejected' => 'Fail2ban がこの設定を拒否したため、何も変更されていません。',
     'already_disabled' => 'このアプリケーションの Fail2ban はすでに無効です。',
     'disabled_successfully' => 'Fail2ban を無効にしました。',
 

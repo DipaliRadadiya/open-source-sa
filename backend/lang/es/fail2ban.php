@@ -13,6 +13,7 @@ return [
 
     'created_successfully' => '¡Fail2ban configurado correctamente!',
     'test_failed' => 'La prueba de configuración de Fail2ban falló.',
+    'rejected' => 'Fail2ban rechazó esta configuración, así que no se cambió nada.',
     'already_disabled' => 'Fail2ban ya está desactivado para esta aplicación.',
     'disabled_successfully' => '¡Fail2ban desactivado correctamente!',
 

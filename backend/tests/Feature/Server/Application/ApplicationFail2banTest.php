@@ -99,8 +99,9 @@ function fakeAppFail2ban(
     bool $existing = true,
     ?ArrayObject $runs = null,
     array $packageOwned = [],
+    string $reloadError = '',
 ): void {
-    Process::fake(function ($process) use ($testOk, &$writes, $reloadOk, $existing, $runs, $packageOwned) {
+    Process::fake(function ($process) use ($testOk, &$writes, $reloadOk, $existing, $runs, $packageOwned, $reloadError) {
         $args = $process->command[0] === 'sudo'
             ? array_slice($process->command, 2)
             : $process->command;
@@ -161,7 +162,7 @@ function fakeAppFail2ban(
 
             return match ($args[1] ?? '') {
                 'ping' => Process::result(output: 'Server replied: pong'),
-                'reload' => Process::result(exitCode: $reloadOk ? 0 : 255),
+                'reload' => Process::result(errorOutput: $reloadOk ? '' : $reloadError, exitCode: $reloadOk ? 0 : 255),
                 default => Process::result(exitCode: 0),
             };
         }
@@ -372,6 +373,26 @@ it('puts the previous jail back and reloads again when the reload fails', functi
         ->toContain(['mv', '-f', $jailPath.'.panel-bak', $jailPath])
         ->and($commands->filter(fn (array $c) => ($c[1] ?? '') === 'reload'))->toHaveCount(2)
         // Applied first, recorded after: a rolled-back config is not saved.
+        ->and($this->application->fresh()->fail2ban_jail_content)->toBeNull();
+});
+
+it('gives fail2ban\'s own reason when it refuses the jail on reload (bug #95)', function () {
+    $this->application = createFail2banApp('Shop', 'shop.test');
+    $runs = new ArrayObject;
+    // Measured on a real server: `-t` passed this filter, the reload refused it.
+    fakeAppFail2ban(reloadOk: false, existing: true, runs: $runs, reloadError: "2026-10-03 13:02:42,878 fail2ban                [281466]: ERROR   NOK: (\"No failure-id group in '^foo bar'\",)\n");
+
+    $jail = "[{name}]\nenabled = true\nfilter = {filter}\nlogpath = {logpath}\n";
+
+    $this->withHeaders(appFail2banHeaders())
+        ->postJson(appFail2banUrl(), ['jail_config_content' => $jail, 'filter_config_content' => "[Definition]\nfailregex = ^foo bar\n"])
+        ->assertStatus(422)
+        ->assertJsonPath('testOk', false)
+        ->assertJsonPath('message', __('fail2ban.rejected'))
+        ->assertJsonPath('output', "ERROR NOK: (\"No failure-id group in '^foo bar'\",)");
+
+    // Still rolled back, exactly as for any failed reload.
+    expect(collect($runs->getArrayCopy())->filter(fn (array $c) => ($c[1] ?? '') === 'reload'))->toHaveCount(2)
         ->and($this->application->fresh()->fail2ban_jail_content)->toBeNull();
 });
 

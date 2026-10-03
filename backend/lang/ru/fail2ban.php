@@ -13,6 +13,7 @@ return [
 
     'created_successfully' => 'Fail2ban успешно настроен!',
     'test_failed' => 'Проверка конфигурации Fail2ban не пройдена.',
+    'rejected' => 'Fail2ban отклонил эту конфигурацию, поэтому ничего не изменено.',
     'already_disabled' => 'Fail2ban уже отключён для этого приложения.',
     'disabled_successfully' => 'Fail2ban успешно отключён!',
 

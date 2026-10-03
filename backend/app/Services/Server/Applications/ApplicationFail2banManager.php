@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Applications;
 
+use App\Exceptions\Server\Application\Fail2banConfigRejectedException;
 use App\Exceptions\Server\Application\Fail2banOperationException;
 use App\Models\Application;
 use App\Services\Server\ServerOps;
@@ -419,8 +420,16 @@ class ApplicationFail2banManager
                 $this->must($this->serverOps->run(['tee', $path], $context + ['op' => 'fail2ban_write'], input: $content));
             }
 
-            $this->must($this->client(['reload']));
-        } catch (Fail2banOperationException $e) {
+            $reload = $this->client(['reload']);
+
+            // fail2ban answered and said no: about the user's config, in its
+            // own words. Anything else (no socket, timeout) stays a 500.
+            if ($reload->failed() && str_contains($reload->errorOutput(), 'NOK:')) {
+                throw new Fail2banConfigRejectedException($reload->reference, $this->readable($reload->errorOutput()));
+            }
+
+            $this->must($reload);
+        } catch (Fail2banOperationException|Fail2banConfigRejectedException $e) {
             $this->restore($backups, $context);
             $this->client(['reload']);
 
@@ -654,6 +663,19 @@ class ApplicationFail2banManager
                 $context + ['op' => 'fail2ban_restore'],
             );
         }
+    }
+
+    /**
+     * fail2ban's log lines without the timestamp and process prefix, which
+     * say nothing to the person who wrote the jail.
+     */
+    private function readable(string $output): string
+    {
+        return collect(explode("\n", trim($output)))
+            ->map(fn (string $line) => preg_replace('/^\d{4}-\d\d-\d\d [\d:,]+\s+\S+\s+\[\d+\]:\s+/', '', $line) ?? $line)
+            ->map(fn (string $line) => preg_replace('/\s{2,}/', ' ', trim($line)) ?? $line)
+            ->filter()
+            ->implode("\n");
     }
 
     private function must(ServerOpsResult $result): void
