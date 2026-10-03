@@ -1414,14 +1414,19 @@ function editPools(Closure $edit): void
     }
 }
 
+function serverRam(int $bytes): void
+{
+    $budget = Mockery::mock(MemoryBudget::class)->makePartial();
+    $budget->shouldReceive('totalMemoryBytes')->andReturn($bytes);
+    app()->instance(MemoryBudget::class, $budget);
+}
+
 describe('values that are the right shape but wrong (bug #61)', function () {
     beforeEach(function () {
         fakePhpServer();
 
         // A 2 GB server, whatever machine runs the tests.
-        $budget = Mockery::mock(MemoryBudget::class)->makePartial();
-        $budget->shouldReceive('totalMemoryBytes')->andReturn(2 * 1024 ** 3);
-        app()->instance(MemoryBudget::class, $budget);
+        serverRam(2 * 1024 ** 3);
 
         $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
     });
@@ -1446,6 +1451,14 @@ describe('values that are the right shape but wrong (bug #61)', function () {
         $this->actingAs($this->admin)->putJson(phpUrl(), ['memory_limit' => '99G'])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('memory_limit');
+
+        // Not rounded up: a 5.8 GB server named as "6 GB" would refuse 6G
+        // while saying there is room for it.
+        serverRam((int) (5.8 * 1024 ** 3));
+
+        $this->actingAs($this->admin)->putJson(phpUrl(), ['memory_limit' => '6G'])
+            ->assertJsonPath('errors.memory_limit.0', __('php_settings.errors.memory_over_ram', ['ram' => '5.8 GB']));
+        serverRam(2 * 1024 ** 3);
 
         $this->actingAs($this->admin)->putJson(phpUrl(), ['memory_limit' => '2G'])->assertOk();
     });

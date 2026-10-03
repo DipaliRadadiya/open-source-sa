@@ -179,7 +179,7 @@ class SavePhpSettingsRequest extends FormRequest
             $ram = app(MemoryBudget::class)->totalMemoryBytes();
 
             if ($ram > 0 && ApplicationPhpSettings::toBytes($value) > $ram) {
-                $fail(__('php_settings.errors.memory_over_ram', ['ram' => Number::fileSize($ram)]));
+                $fail(__('php_settings.errors.memory_over_ram', ['ram' => Number::fileSize($ram, maxPrecision: 1)]));
             }
         };
     }
