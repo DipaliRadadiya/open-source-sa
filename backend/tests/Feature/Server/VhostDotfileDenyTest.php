@@ -79,7 +79,7 @@ it('denies the panel directory in every OpenLiteSpeed template that filters dotf
             base_path('resources/views/'.str_replace('.', '/', $template).'.blade.php')
         );
 
-        if (! str_contains($source, 'context exp:^/\\.')) {
+        if (! str_contains($source, 'context exp:/\\.')) {
             continue;
         }
 
@@ -89,7 +89,7 @@ it('denies the panel directory in every OpenLiteSpeed template that filters dotf
         // segment is what has to be refused. Asserted on the deny context
         // itself, not the file, so a stray mention of the word elsewhere
         // cannot satisfy it.
-        preg_match('/context exp:\^\/\\\\\.\(([^)]+)\)/', $source, $matches);
+        preg_match('/context exp:\/\\\\\.\(([^)]+)\)/', $source, $matches);
 
         expect($matches[1] ?? '')->toContain('panel');
     }

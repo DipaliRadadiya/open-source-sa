@@ -115,22 +115,26 @@ describe('the rendered vhost', function () {
             ->not->toContain('RewriteCond %{QUERY_STRING} mobiquo')
             ->toContain('RewriteCond %{HTTP_COOKIE} (?:<|>|\\\'|%0A|%0D|%27|%00) [NC]')
             ->toContain('RewriteCond %{REQUEST_URI} bad\-path [NC,OR]')
-            ->toContain("  RewriteCond %{ENV:waf_exception} !=1\n  RewriteCond %{ENV:waf_block} =1\n  RewriteRule ^ - [F,L]")
+            ->toContain("  RewriteCond %{ENV:waf_exception} !=1\n  RewriteCond %{ENV:waf_block} !^$\n  RewriteRule ^ - [E=waf_would:1,F,L]")
+            // Each rule names itself, for the log line (bug #84).
+            ->toContain('RewriteRule ^ - [E=waf_block:cookie]')
+            ->toContain('RewriteRule ^ - [E=waf_block:custom_rule]')
             // Only the categories that are on.
             ->not->toContain('%{HTTP_USER_AGENT} (?:')
-            ->not->toContain('logFormat');
+            // Blocking is logged too (bug #84): it used to leave no record.
+            ->toContain('waf=%{waf_would}e reason=%{waf_block}e');
     });
 
     it('only marks the request in detect mode, and writes the mark into the access log', function () {
         $config = olsVhost('detect');
 
         expect($config)
-            ->toContain("  RewriteCond %{ENV:waf_block} =1\n  RewriteRule ^ - [E=waf_would:1]")
+            ->toContain("  RewriteCond %{ENV:waf_block} !^$\n  RewriteRule ^ - [E=waf_would:1]")
             // Unquoted: OLS writes a quoted logFormat literally, quotes and all.
-            ->toContain('logFormat               %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i" waf=%{waf_would}e');
+            ->toContain('logFormat               %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i" waf=%{waf_would}e reason=%{waf_block}e');
 
         preg_match('/^rewrite \{.*?^\}/sm', $config, $m);
-        expect($m[0])->not->toContain('waf_block} =1'."\n".'  RewriteRule ^ - [F,L]');
+        expect($m[0])->not->toContain('E=waf_would:1,F,L]');
     });
 
     it('writes exceptions as literals an unquoted condition cannot misread', function () {

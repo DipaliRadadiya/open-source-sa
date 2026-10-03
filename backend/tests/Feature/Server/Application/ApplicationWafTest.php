@@ -571,3 +571,53 @@ describe('exceptions (bug #82)', function () {
         expect($config)->toContain('"mobiquo"')->not->toContain('$uri ~* "/"');
     });
 });
+
+describe('the firewall log (bug #84)', function () {
+    it('records what nginx blocks, with the rule that matched', function () {
+        $writes = [];
+        fakeWafWebServer(onWrite: function ($write) use (&$writes) {
+            $writes[] = $write;
+        });
+
+        $this->withHeaders(wafHeaders())
+            ->putJson(wafUrl(), ['enabled' => true, 'mode' => 'enforce', 'categories' => ['query_string']])
+            ->assertOk();
+
+        $vhost = collect($writes)->first(fn ($w) => str_ends_with($w['path'], '/shop.conf'))['input'];
+        $format = 'panel_waf_'.$this->application->id;
+
+        // Blocking left no record at all.
+        expect($vhost)
+            ->toContain('return 403')
+            ->toContain("log_format {$format} ")
+            ->toContain('waf=$waf_reason action=blocked')
+            ->toContain('set $waf_reason "query_string"')
+            ->toContain("access_log {$this->application->wafDetectLogPath()} {$format} if=\$waf_matched;")
+            // log_format is http-level only: above the server block.
+            ->and(strpos($vhost, 'log_format'))->toBeLessThan(strpos($vhost, 'server {'));
+    });
+
+    it('records what Apache blocks, and not what an exception let through', function () {
+        $this->application->forceFill(['waf_enabled' => true, 'waf_mode' => 'enforce', 'waf_categories' => ['cookie']])->save();
+
+        $vhost = app(ApacheDriver::class)->renderConfig($this->application->load('systemUser'), '/home/siteowner/shop/public_html');
+
+        expect($vhost)->toContain('waf=cookie action=blocked" "expr=-n reqenv(\'waf_cookie\') && -z reqenv(\'waf_exception\')"');
+    });
+
+    it('empties the log when the firewall is switched off', function () {
+        $this->application->forceFill(['waf_enabled' => true, 'waf_mode' => 'detect'])->save();
+        $runs = new ArrayObject;
+        fakeWafWebServer();
+        Process::fake(function ($process) use ($runs) {
+            $runs[] = $process->command;
+
+            return Process::result(exitCode: 0);
+        });
+
+        $this->withHeaders(wafHeaders())->putJson(wafUrl(), ['enabled' => false, 'mode' => 'detect'])->assertOk();
+
+        expect(collect($runs)->contains(fn (array $c) => in_array('truncate', $c, true)
+            && in_array($this->application->wafDetectLogPath(), $c, true)))->toBeTrue();
+    });
+});

@@ -60,11 +60,13 @@ errorlog $VH_ROOT/logs/error.log {
 
 accesslog $VH_ROOT/logs/access.log {
   useServer               0
-@if ($waf && $waf['mode'] === 'detect')
-  {{-- OLS allows one access log per site, so detect mode marks the lines
+@if ($waf)
+  {{-- OLS allows one access log per site, so the firewall marks its lines
        here (`waf=1`) instead of writing waf-detect.log; the log screen
-       filters on it. Combined format otherwise, as OLS writes by default. --}}
-  logFormat               %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i" waf=%{waf_would}e
+       filters on it. In both modes since bug #84 (blocking left no record),
+       with the rule that matched; a 403 is a block, anything else a
+       detection. Combined format otherwise, as OLS writes by default. --}}
+  logFormat               %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i" waf=%{waf_would}e reason=%{waf_block}e
 @endif
   rollingSize             10M
   keepDays                30
@@ -146,17 +148,17 @@ rewrite {
 @foreach ($conditions as [$variable, $pattern])
   RewriteCond {!! '%{'.$variable.'}' !!} {!! $pattern !!} [NC{{ $loop->last ? '' : ',OR' }}]
 @endforeach
-  RewriteRule ^ - [E=waf_block:1]
+  RewriteRule ^ - [E=waf_block:{{ $category }}]
 @endforeach
 @foreach ($waf['customRules'] as $rule)
   RewriteCond %{REQUEST_URI} {!! $rule !!} [NC,OR]
   RewriteCond %{QUERY_STRING} {!! $rule !!} [NC]
-  RewriteRule ^ - [E=waf_block:1]
+  RewriteRule ^ - [E=waf_block:custom_rule]
 @endforeach
   RewriteCond %{ENV:waf_exception} !=1
-  RewriteCond %{ENV:waf_block} =1
+  RewriteCond %{ENV:waf_block} !^$
 @if ($waf['mode'] === 'enforce')
-  RewriteRule ^ - [F,L]
+  RewriteRule ^ - [E=waf_would:1,F,L]
 @else
   RewriteRule ^ - [E=waf_would:1]
 @endif

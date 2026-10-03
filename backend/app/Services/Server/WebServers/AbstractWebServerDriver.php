@@ -542,7 +542,7 @@ abstract class AbstractWebServerDriver implements WebServerDriver
      * blocked, so the template renders no block at all rather than an
      * `<RequireAny>`/`if` chain with nothing inside it.
      *
-     * @return array{mode: string, categories: array<int, string>, exceptions: array<int, string>, customRules: array<int, string>, detectLogPath: string}|null
+     * @return array{mode: string, categories: array<int, string>, exceptions: array<int, string>, customRules: array<int, string>, detectLogPath: string, logFormat: string}|null
      */
     private function wafViewData(Application $application, string $documentRoot): ?array
     {
@@ -577,6 +577,9 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             'exceptions' => array_map(fn (string $value): string => $this->wafPattern($value), $exceptions),
             'customRules' => array_map(fn (string $value): string => $this->wafPattern($value), $customRules),
             'detectLogPath' => $application->wafDetectLogPath(),
+            // nginx: the name of the site's own log_format for that file. A
+            // name is server-wide in nginx, so it carries the site's id.
+            'logFormat' => 'panel_waf_'.$application->id,
         ];
     }
 

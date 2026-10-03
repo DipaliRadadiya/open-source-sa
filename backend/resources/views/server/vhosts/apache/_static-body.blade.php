@@ -129,30 +129,32 @@
 
     ErrorLog  {{ $logDir }}/error.log
     CustomLog {{ $logDir }}/access.log combined
-@if ($waf && $waf['mode'] === 'detect')
-    {{-- One line per active category/custom rule rather than a single
-         combined condition — Apache's `env=` only tests one variable, with
-         no OR across several. A request matching two categories logs
-         twice; harmless for a diagnostic log nobody is asked to dedupe. --}}
+@if ($waf)
+    {{-- Both modes (bug #84): blocking used to leave no record of what it
+         blocked. One line per active category/custom rule — a request
+         matching two logs twice, harmless for a log nobody is asked to
+         dedupe. `expr=`, not `env=`: an excepted request was never blocked
+         and must not be logged as if it were. The format is combined plus
+         which rule matched and what was done. --}}
 @if (in_array('query_string', $waf['categories'], true))
-    CustomLog {{ $waf['detectLogPath'] }} combined env=waf_query
+    CustomLog {{ $waf['detectLogPath'] }} "%h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\" waf=query_string action={{ $waf['mode'] === 'enforce' ? 'blocked' : 'detected' }}" "expr=-n reqenv('waf_query') && -z reqenv('waf_exception')"
 @endif
 @if (in_array('request_uri', $waf['categories'], true))
-    CustomLog {{ $waf['detectLogPath'] }} combined env=waf_uri
+    CustomLog {{ $waf['detectLogPath'] }} "%h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\" waf=request_uri action={{ $waf['mode'] === 'enforce' ? 'blocked' : 'detected' }}" "expr=-n reqenv('waf_uri') && -z reqenv('waf_exception')"
 @endif
 @if (in_array('user_agent', $waf['categories'], true))
-    CustomLog {{ $waf['detectLogPath'] }} combined env=waf_agent
+    CustomLog {{ $waf['detectLogPath'] }} "%h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\" waf=user_agent action={{ $waf['mode'] === 'enforce' ? 'blocked' : 'detected' }}" "expr=-n reqenv('waf_agent') && -z reqenv('waf_exception')"
 @endif
 @if (in_array('referrer', $waf['categories'], true))
-    CustomLog {{ $waf['detectLogPath'] }} combined env=waf_referer
+    CustomLog {{ $waf['detectLogPath'] }} "%h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\" waf=referrer action={{ $waf['mode'] === 'enforce' ? 'blocked' : 'detected' }}" "expr=-n reqenv('waf_referer') && -z reqenv('waf_exception')"
 @endif
 @if (in_array('cookie', $waf['categories'], true))
-    CustomLog {{ $waf['detectLogPath'] }} combined env=waf_cookie
+    CustomLog {{ $waf['detectLogPath'] }} "%h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\" waf=cookie action={{ $waf['mode'] === 'enforce' ? 'blocked' : 'detected' }}" "expr=-n reqenv('waf_cookie') && -z reqenv('waf_exception')"
 @endif
 @if (in_array('method', $waf['categories'], true))
-    CustomLog {{ $waf['detectLogPath'] }} combined env=waf_method
+    CustomLog {{ $waf['detectLogPath'] }} "%h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\" waf=method action={{ $waf['mode'] === 'enforce' ? 'blocked' : 'detected' }}" "expr=-n reqenv('waf_method') && -z reqenv('waf_exception')"
 @endif
 @if ($waf['customRules'] !== [])
-    CustomLog {{ $waf['detectLogPath'] }} combined env=waf_custom
+    CustomLog {{ $waf['detectLogPath'] }} "%h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\" waf=custom_rule action={{ $waf['mode'] === 'enforce' ? 'blocked' : 'detected' }}" "expr=-n reqenv('waf_custom') && -z reqenv('waf_exception')"
 @endif
 @endif

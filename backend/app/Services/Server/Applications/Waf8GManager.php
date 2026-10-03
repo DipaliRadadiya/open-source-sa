@@ -109,6 +109,17 @@ class Waf8GManager
 
         $application->save();
 
+        // Switched off: its log is emptied (bug #84). Kept, it came back the
+        // next time the firewall went on, full of hits against rules that
+        // were no longer there. `-c`: nothing to empty is not an error. OLS
+        // marks lines in the site's own access log instead, which stays.
+        if ($previousEnabled && ! $enabled && $this->webServers->driver()->name() !== 'openlitespeed') {
+            $this->serverOps->run(
+                ['truncate', '-c', '-s', '0', $application->wafDetectLogPath()],
+                ['feature' => 'waf', 'op' => 'clear_log', 'application' => $application->id],
+            );
+        }
+
         // Only when the request actually carried a list. Rewriting the rows to
         // the same values on every save would churn the table and, worse,
         // reset their timestamps so "when did this rule appear" stops being

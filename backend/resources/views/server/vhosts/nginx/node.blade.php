@@ -1,4 +1,10 @@
 {{-- Managed by the panel. Manual edits are overwritten on the next deploy. --}}
+@if ($waf)
+{{-- The firewall log's format, which nginx only accepts at http level: a site
+     file is included there, so each site declares its own, under its own name.
+     Combined, plus which rule matched and what was done (bug #84). --}}
+log_format {{ $waf['logFormat'] }} '$remote_addr - $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent" waf=$waf_reason action={{ $waf['mode'] === 'enforce' ? 'blocked' : 'detected' }}';
+@endif
 @if ($forceHttps)
 {{-- Plain HTTP exists only to send visitors to HTTPS — with one exception, and
      it is not optional: the ACME challenge has to stay reachable on port 80 or
@@ -97,6 +103,7 @@ server {
          a staging site to one IP in every worked nginx example of it. --}}
     set $waf_block "0";
     set $waf_exception "0";
+    set $waf_reason "-";
 @foreach ($waf['exceptions'] as $exception)
     {{-- `$uri`, the path without its query (bug #82): matched against the
          query string or the user agent, an exception was a password anyone
@@ -104,36 +111,37 @@ server {
     if ($uri ~* "{!! $exception !!}") { set $waf_exception "1"; }
 @endforeach
 @if (in_array('query_string', $waf['categories'], true))
-    if ($bad_querystring_ng) { set $waf_block "1"; }
+    if ($bad_querystring_ng) { set $waf_block "1"; set $waf_reason "query_string"; }
 @endif
 @if (in_array('request_uri', $waf['categories'], true))
-    if ($bad_request_ng) { set $waf_block "1"; }
+    if ($bad_request_ng) { set $waf_block "1"; set $waf_reason "request_uri"; }
 @endif
 @if (in_array('user_agent', $waf['categories'], true))
-    if ($bad_bot_ng) { set $waf_block "1"; }
+    if ($bad_bot_ng) { set $waf_block "1"; set $waf_reason "user_agent"; }
 @endif
 @if (in_array('referrer', $waf['categories'], true))
-    if ($bad_referer_ng) { set $waf_block "1"; }
+    if ($bad_referer_ng) { set $waf_block "1"; set $waf_reason "referrer"; }
 @endif
 @if (in_array('cookie', $waf['categories'], true))
-    if ($bad_cookie_ng) { set $waf_block "1"; }
+    if ($bad_cookie_ng) { set $waf_block "1"; set $waf_reason "cookie"; }
 @endif
 @if (in_array('method', $waf['categories'], true))
-    if ($not_allowed_method_ng) { set $waf_block "1"; }
+    if ($not_allowed_method_ng) { set $waf_block "1"; set $waf_reason "method"; }
 @endif
 @foreach ($waf['customRules'] as $rule)
-    if ($request_uri ~* "{!! $rule !!}") { set $waf_block "1"; }
-    if ($args ~* "{!! $rule !!}") { set $waf_block "1"; }
+    if ($request_uri ~* "{!! $rule !!}") { set $waf_block "1"; set $waf_reason "custom_rule"; }
+    if ($args ~* "{!! $rule !!}") { set $waf_block "1"; set $waf_reason "custom_rule"; }
 @endforeach
     set $waf_decision "${waf_block}${waf_exception}";
+    {{-- Logged in both modes (bug #84): blocking used to leave no record of
+         what it blocked. The format is the site's own, declared above. --}}
+    set $waf_matched "0";
+    if ($waf_decision = "10") { set $waf_matched "1"; }
+    access_log {{ $waf['detectLogPath'] }} {{ $waf['logFormat'] }} if=$waf_matched;
 @if ($waf['mode'] === 'enforce')
     if ($waf_decision = "10") {
         return 403;
     }
-@else
-    set $waf_would_block "0";
-    if ($waf_decision = "10") { set $waf_would_block "1"; }
-    access_log {{ $waf['detectLogPath'] }} combined if=$waf_would_block;
 @endif
 @endif
 @if ($botBlock)
