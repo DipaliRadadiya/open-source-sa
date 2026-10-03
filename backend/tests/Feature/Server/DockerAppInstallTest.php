@@ -127,6 +127,11 @@ dataset('docker apps', [
     'grafana' => ['grafana', 3000, ['data']],
     'bookstack' => ['bookstack', 80, ['config', 'db']],
     'wordpress_container' => ['wordpress_container', 80, ['app', 'db']],
+    // Four services, which nothing else here has: a Rails app, a Sidekiq worker
+    // that every email and webhook depends on, pgvector and Redis.
+    'chatwoot' => ['chatwoot', 3000, ['storage', 'db', 'redis']],
+    // Nothing to persist at all — a static bundle, like IT-Tools.
+    'excalidraw' => ['excalidraw', 80, []],
     // Strapi was the intended second app and publishes NO official image —
     // `strapi/strapi` and `strapi/base` are both gone from Docker Hub, and
     // upstream's own guidance is to build your own from a `create-strapi-app`
@@ -142,11 +147,16 @@ it('writes a compose file that parses, for each app', function (string $type, in
     $parsed = Yaml::parse((string) $application->compose);
 
     expect($parsed)->toBeArray()
-        // One service for a Group A app, two for an app with its own database.
-        // Asserted as a range rather than a magic number, and the "exactly one
-        // service publishes a port" test below is what actually pins the shape.
+        // One service for a Group A app, two for an app with its own database,
+        // four for Chatwoot — a web container, a worker, pgvector and Redis.
+        //
+        // The ceiling was 2 until Chatwoot, and raising it costs nothing that was
+        // being protected: this was always a sanity range, and the shape is
+        // actually pinned by the two tests below — exactly one service publishes a
+        // port, and EVERY service carries a memory ceiling and bounded logs.
+        // Those hold a four-service app to the same rules as a one-service one.
         ->and(count($parsed['services']))->toBeGreaterThanOrEqual(1)
-        ->and(count($parsed['services']))->toBeLessThanOrEqual(2)
+        ->and(count($parsed['services']))->toBeLessThanOrEqual(4)
         // The app's own port is published, and the panel's allocated host port
         // is what nginx proxies to.
         ->and($application->container_port)->toBe($port);
@@ -228,18 +238,26 @@ it('generates a different secret for every site', function (string $type, int $p
         return;
     }
 
+    // Declared by the type: a secret the PANEL uses rather than the file. The
+    // reach-the-file assertion is inverted for these — in the compose file they
+    // would be a credential with no reader, published where the File Manager can
+    // open it. Chatwoot's admin password is the only one.
+    $panelOnly = app(SiteTypeManager::class)->find($type)->panelOnlySecrets();
+
     foreach ($keys as $key) {
         $a = $first->docker_secrets[$key] ?? null;
         $b = $second->docker_secrets[$key] ?? null;
 
         expect($a)->not->toBeNull("{$key} was not generated")
             ->and(strlen($a))->toBeGreaterThanOrEqual(24)
-            ->and($a)->not->toBe($b, "{$key} is the same on two sites")
-            // And it actually reached the file — a stored secret the template
-            // never interpolates is a credential nothing uses. See
-            // `secretReachedFile()` for the one app that encodes on the way in.
-            ->and(secretReachedFile((string) $first->compose, $a))
-            ->toBeTrue("{$key} was stored but never reached the compose file");
+            ->and($a)->not->toBe($b, "{$key} is the same on two sites");
+
+        expect(secretReachedFile((string) $first->compose, $a))->toBe(
+            ! in_array($key, $panelOnly, true),
+            in_array($key, $panelOnly, true)
+                ? "{$key} is panel-only and must not be in the compose file"
+                : "{$key} was stored but never reached the compose file",
+        );
     }
 })->with('docker apps');
 
@@ -251,7 +269,16 @@ it('ships no secret in the template itself', function (string $type, int $port, 
 
     $source = file_get_contents($path);
 
+    $panelOnly = app(SiteTypeManager::class)->find($type)->panelOnlySecrets();
+
     foreach (app(SiteTypeManager::class)->find($type)->generatedSecrets() as $key) {
+        if (in_array($key, $panelOnly, true)) {
+            // Must be ABSENT, not interpolated — asserted above.
+            expect($source)->not->toContain("\$secrets['{$key}']");
+
+            continue;
+        }
+
         // Every secret is interpolated, never literal.
         expect($source)->toContain("\$secrets['{$key}']");
         expect($source)->not->toMatch('/'.preg_quote($key, '/').':\s*[A-Za-z0-9]{6,}\s*$/m');
@@ -348,10 +375,20 @@ it('asks only how big to run it, because the app has answered everything else', 
     // so it is the only question the app cannot answer on the user's behalf. This
     // asserted `[]` until the two limit fields were added, and loosening it to
     // "some fields" would have thrown away the guarantee it exists for.
+    // **The second exception, named rather than allowed.** Chatwoot's first
+    // administrator cannot be passed in as an environment variable the way every
+    // other app's is — its production seeds create no user, only a flag that opens
+    // a setup page to whoever asks first — so the panel claims that endpoint and
+    // needs an address to claim it for. Still a closed list: the expectation is
+    // exact per app, so a third field on any app is a failure here.
+    $expected = $type === 'chatwoot'
+        ? ['memory_limit', 'cpu_limit', 'admin_email']
+        : ['memory_limit', 'cpu_limit'];
+
     $siteType = app(SiteTypeManager::class)->find($type);
 
     expect($siteType)->toBeInstanceOf(AbstractDockerAppType::class)
-        ->and(collect($siteType->fields())->pluck('name')->all())->toBe(['memory_limit', 'cpu_limit'])
+        ->and(collect($siteType->fields())->pluck('name')->all())->toBe($expected)
         ->and($siteType->needsDatabase())->toBeFalse();
 })->with('docker apps');
 
@@ -416,7 +453,16 @@ it('keeps the same secrets when the url changes', function (string $type, int $p
 
     expect($after->docker_secrets)->toBe($before);
 
+    // A panel-only secret was never in the file, so "still there" is the wrong
+    // question for it; that it survived the re-render at all is asserted above,
+    // where the whole array is compared.
+    $panelOnly = app(SiteTypeManager::class)->find($type)->panelOnlySecrets();
+
     foreach ($before as $key => $value) {
+        if (in_array($key, $panelOnly, true)) {
+            continue;
+        }
+
         expect(secretReachedFile((string) $after->compose, $value))
             ->toBeTrue("{$key} stopped reaching the compose file when the url moved");
     }

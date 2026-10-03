@@ -2,8 +2,10 @@
 
 use App\Services\Applications\Types\AkauntingSiteType;
 use App\Services\Applications\Types\BookStackSiteType;
+use App\Services\Applications\Types\ChatwootSiteType;
 use App\Services\Applications\Types\CraftCmsSiteType;
 use App\Services\Applications\Types\DockerSiteType;
+use App\Services\Applications\Types\ExcalidrawSiteType;
 use App\Services\Applications\Types\ForgejoSiteType;
 use App\Services\Applications\Types\FreshRssSiteType;
 use App\Services\Applications\Types\GhostSiteType;
@@ -1660,6 +1662,11 @@ return [
         // be tuned by whichever container asked for memory first.
         'default_db_memory_limit' => env('DOCKER_DEFAULT_DB_MEMORY_LIMIT', '512m'),
 
+        // How long the installer waits for an app's first-run setup endpoint to
+        // answer before giving up, in two-second tries. Generous because Chatwoot
+        // migrates its database on first boot behind a 502: 90 is three minutes.
+        'claim_attempts' => env('DOCKER_CLAIM_ATTEMPTS', 90),
+
         // `compose up` pulls an image the first time, and an image can be
         // large on a slow link. Generous, because the failure it prevents is a
         // deploy that was working and got killed.
@@ -1911,6 +1918,24 @@ return [
             'db_image' => env('DOCKER_APP_MATTERMOST_DB_IMAGE', 'postgres:16-alpine'),
         ],
 
+        // pgvector, not postgres: Chatwoot's schema declares the `vector`
+        // extension and plain Postgres refuses the migration. Pinned to pg16
+        // rather than tracking newest -- Postgres 18, mongo 8 and MariaDB 12.3
+        // each broke an app in this catalog by being the default.
+        'chatwoot' => [
+            'image' => env('DOCKER_APP_CHATWOOT_IMAGE', 'chatwoot/chatwoot:v4.17.1'),
+            'db_image' => env('DOCKER_APP_CHATWOOT_DB_IMAGE', 'pgvector/pgvector:pg16'),
+            'redis_image' => env('DOCKER_APP_CHATWOOT_REDIS_IMAGE', 'redis:7-alpine'),
+        ],
+
+        // `latest` is the only tag worth naming: of nearly a thousand published
+        // tags the rest are `sha-<commit>`, and there is no semver at all. Lower
+        // risk than it would be elsewhere -- a static frontend has no data and no
+        // migration, so a bad image is a broken page a redeploy fixes.
+        'excalidraw' => [
+            'image' => env('DOCKER_APP_EXCALIDRAW_IMAGE', 'excalidraw/excalidraw:latest'),
+        ],
+
         'metabase' => [
             'image' => env('DOCKER_APP_METABASE_IMAGE', 'metabase/metabase:latest'),
             'db_image' => env('DOCKER_APP_METABASE_DB_IMAGE', 'postgres:16-alpine'),
@@ -1990,6 +2015,8 @@ return [
         NocoDbSiteType::class,
         MatomoSiteType::class,
         MattermostSiteType::class,
+        ChatwootSiteType::class,
+        ExcalidrawSiteType::class,
         MetabaseSiteType::class,
         WikiJsSiteType::class,
         GrafanaSiteType::class,

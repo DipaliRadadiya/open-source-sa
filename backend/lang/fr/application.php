@@ -14,6 +14,8 @@ return [
         'ghost' => ['title' => 'Ghost', 'tagline' => 'Publication et newsletters — fonctionne avec son propre MySQL'],
         'matomo' => ['title' => 'Matomo', 'tagline' => 'Analyse web sur votre propre serveur — une alternative à Google Analytics'],
         'mattermost' => ['title' => 'Mattermost', 'tagline' => 'Chat d\'équipe — fonctionne avec son propre PostgreSQL'],
+        'chatwoot' => ['title' => 'Chatwoot', 'tagline' => 'Boîte de réception du support client — fonctionne avec son propre PostgreSQL et Redis'],
+        'excalidraw' => ['title' => 'Excalidraw', 'tagline' => 'Tableau blanc — les dessins restent dans votre navigateur ; le partage et la collaboration en direct passent par excalidraw.com'],
         'forgejo' => ['title' => 'Forgejo', 'tagline' => 'Hébergement Git — fork de Gitea géré par la communauté'],
         'freshrss' => ['title' => 'FreshRSS', 'tagline' => 'Lecteur de flux auto-hébergé'],
         'gitea' => ['title' => 'Gitea', 'tagline' => 'Hébergement Git avec tickets et pull requests'],

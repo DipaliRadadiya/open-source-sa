@@ -14,6 +14,8 @@ return [
         'ghost' => ['title' => 'Ghost', 'tagline' => 'パブリッシングとニュースレター — 専用の MySQL 付きで動作'],
         'matomo' => ['title' => 'Matomo', 'tagline' => '自分のサーバーで動くウェブ解析 — Google Analytics の代替'],
         'mattermost' => ['title' => 'Mattermost', 'tagline' => 'チームチャット — 専用の PostgreSQL 付きで動作'],
+        'chatwoot' => ['title' => 'Chatwoot', 'tagline' => 'カスタマーサポート受信箱 — 専用の PostgreSQL と Redis で動作します'],
+        'excalidraw' => ['title' => 'Excalidraw', 'tagline' => 'ホワイトボード — 描いた内容はブラウザー内に保存されます。共有とライブ共同編集は excalidraw.com を経由します'],
         'forgejo' => ['title' => 'Forgejo', 'tagline' => 'Git ホスティング — コミュニティ運営の Gitea フォーク'],
         'freshrss' => ['title' => 'FreshRSS', 'tagline' => 'セルフホスト型フィードリーダー'],
         'gitea' => ['title' => 'Gitea', 'tagline' => 'Issue とプルリクエスト付きの Git ホスティング'],

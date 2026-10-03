@@ -96,6 +96,51 @@ abstract class AbstractDockerAppType extends AbstractSiteType
     }
 
     /**
+     * Generated secrets the compose file does NOT contain, and must not.
+     *
+     * Every other generated secret is a credential the app reads from its
+     * environment, and a stored secret the template never interpolates is dead
+     * weight — which is an invariant the suite enforces.
+     *
+     * Chatwoot's `ADMIN_PASSWORD` is the exception that needs declaring rather
+     * than excusing: Chatwoot never reads it. The panel generates it, posts it to
+     * the first-run endpoint on this site's behalf, and shows it once on the
+     * first-run card. Putting it in the compose file would publish the
+     * administrator's password into a file the File Manager can open, for no
+     * reader at all.
+     *
+     * @return list<string>
+     */
+    public function panelOnlySecrets(): array
+    {
+        return [];
+    }
+
+    /**
+     * A first-run setup endpoint to claim, before a stranger does.
+     *
+     * Null for every app whose administrator is created during install: the
+     * compose file passes the credential in as an environment variable and the
+     * app has an owner before it has ever answered a request.
+     *
+     * Chatwoot cannot do that. Its production seeds create no user at all -- they
+     * set a flag that opens a setup endpoint to whoever asks first, on a public
+     * URL from the moment the container starts. So the installer posts to it the
+     * moment the site is up, which both creates the administrator and closes the
+     * endpoint. This is the shape `N8nInstaller` and `UptimeKumaInstaller`
+     * already solve for host apps.
+     *
+     * Returns the path to post to and the form fields to send, so the HTTP and
+     * the retrying stay in the installer where every other command already lives.
+     *
+     * @return array{path: string, fields: array<string, string>}|null
+     */
+    public function firstRunClaim(Application $application): ?array
+    {
+        return null;
+    }
+
+    /**
      * Files this app cannot start without, as path-inside-the-container => body.
      *
      * Glance is the reason this exists: it exits on boot with

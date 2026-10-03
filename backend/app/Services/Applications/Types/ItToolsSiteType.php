@@ -6,9 +6,9 @@ namespace App\Services\Applications\Types;
  * IT-Tools — a collection of developer utilities.
  *
  * **No volumes at all**, and that is correct rather than an omission: everything
- * runs in the browser and the container serves static assets. It is the only app
- * here with nothing to persist, which is why the shared template makes the
- * volume block conditional.
+ * runs in the browser and the container serves static assets. One of two apps
+ * here with nothing to persist (Excalidraw is the other), which is why the
+ * shared template makes the volume block conditional.
  */
 class ItToolsSiteType extends AbstractDockerAppType
 {

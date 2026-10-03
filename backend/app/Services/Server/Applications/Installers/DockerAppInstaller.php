@@ -11,6 +11,7 @@ use App\Services\Server\Applications\ContainerSupervisor;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
 
 /**
@@ -143,7 +144,13 @@ class DockerAppInstaller implements SiteInstaller
     }
 
     /**
-     * Nothing to do once the container is up — and it has to be said explicitly.
+     * Claim the first-run setup endpoint, for the apps that have one.
+     *
+     * This was a documented no-op, on the reasoning that "no container one-click
+     * has that shape: each generates its admin credential during install and the
+     * compose file passes it in before the app has ever run". Chatwoot is the
+     * app that reasoning did not survive — its production seeds create no user at
+     * all, only a flag that opens a setup page to whoever asks first.
      *
      * `AbstractSiteInstaller` carries an empty default, but this class implements
      * `SiteInstaller` directly (it shares nothing with the host installers: no
@@ -155,13 +162,92 @@ class DockerAppInstaller implements SiteInstaller
      * died with no output at all.
      *
      * The hook exists for apps whose first administrator is created by whoever
-     * opens the site first — n8n and Uptime Kuma — so an install that stopped at
-     * "started" handed the site to the first stranger to find the URL. No
-     * container one-click has that shape: each generates its admin credential
-     * during install and the compose file passes it in as an environment variable
-     * before the app has ever run. If one ever does, this is where it goes.
+     * opens the site first — n8n and Uptime Kuma among the host installers — so
+     * an install that stopped at "started" handed the site to the first stranger
+     * to find the URL. Which app needs it is declared by the type, in
+     * `firstRunClaim()`; everything else still returns null and this is still a
+     * no-op for them.
      */
-    public function afterStart(Application $application, string $documentRoot): void {}
+    public function afterStart(Application $application, string $documentRoot): void
+    {
+        $claim = $this->typeFor($application)?->firstRunClaim($application);
+
+        if ($claim === null) {
+            return;
+        }
+
+        $url = 'http://127.0.0.1:'.((int) $application->app_port).$claim['path'];
+
+        // Already claimed: a Retry Setup on a site somebody has since logged into
+        // must not try to create a second owner.
+        if (! $this->claimEndpointOpen($application, $url)) {
+            return;
+        }
+
+        $command = ['curl', '-sS', '--fail-with-body', '--max-time', '60', '-X', 'POST'];
+
+        foreach ($claim['fields'] as $field => $value) {
+            // `--data-urlencode`, not `-d`: a generated password contains
+            // characters that are syntax in a form body, and a name or company
+            // is whatever the site was called.
+            $command[] = '--data-urlencode';
+            $command[] = "{$field}={$value}";
+        }
+
+        $command[] = $url;
+
+        $this->run('create_admin', $command, $application);
+
+        // The endpoint closes itself when it succeeds, so asking again is the
+        // only honest confirmation that an owner exists. A 2xx from a Rails form
+        // post is not one: the controller answers a redirect either way and
+        // reports its failures through a flash message.
+        if ($this->claimEndpointOpen($application, $url)) {
+            throw new ProvisioningFailedException('create_admin', (string) Str::uuid(), 'owner_not_created');
+        }
+    }
+
+    /**
+     * Whether the first-run endpoint is still open, once the app can answer.
+     *
+     * Open is 200 — the setup page. Closed is a redirect, which is what the
+     * controller serves once an owner exists. Anything else means "not yet":
+     * on its way up the container refuses the connection, and Chatwoot in
+     * particular migrates its database on first boot, so this can be a minute or
+     * more of 502s before a real answer.
+     *
+     * @throws ProvisioningFailedException
+     */
+    private function claimEndpointOpen(Application $application, string $url): bool
+    {
+        $attempts = max(1, (int) config('server.docker.claim_attempts', 90));
+
+        for ($attempt = 1; $attempt <= $attempts; $attempt++) {
+            // Not `run()`, which fails the install on the first non-2xx — and
+            // every status this is waiting through is a non-2xx.
+            $response = $this->serverOps->run(
+                ['curl', '-sS', '-o', '/dev/null', '-w', '%{http_code}', '--max-time', '10', $url],
+                ['feature' => 'application', 'op' => 'installer.create_admin_wait', 'application' => $application->id],
+                timeout: 20,
+            );
+
+            $status = $response->ok ? trim($response->output()) : '';
+
+            if ($status === '200') {
+                return true;
+            }
+
+            if ($status !== '' && str_starts_with($status, '3')) {
+                return false;
+            }
+
+            if ($attempt < $attempts) {
+                Sleep::for(2)->seconds();
+            }
+        }
+
+        throw new ProvisioningFailedException('create_admin', (string) Str::uuid(), 'app_not_ready');
+    }
 
     /**
      * @param  array<string, mixed>  $context
@@ -339,6 +425,10 @@ class DockerAppInstaller implements SiteInstaller
             'volumes' => $volumes,
             'image' => (string) config("server.docker_apps.{$type->name()}.image"),
             'dbImage' => (string) config("server.docker_apps.{$type->name()}.db_image"),
+            // Chatwoot is the first app here needing a third image. Absent for
+            // every other app, which is why it is a plain lookup rather than a
+            // required key -- a template that does not use it never sees it.
+            'redisImage' => (string) config("server.docker_apps.{$type->name()}.redis_image"),
         ])->render();
     }
 
