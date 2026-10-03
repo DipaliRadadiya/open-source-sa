@@ -45,7 +45,7 @@ return [
     'docker_removal_not_permitted' => 'No tienes permiso para eliminar redes ni volúmenes de Docker. Elimina el sitio sin ellos o pide ayuda a alguien con acceso a Docker.',
     'no_database_engine' => 'No hay ningún motor de base de datos disponible. Instala y configura MySQL o MariaDB antes de crear esta aplicación.',
     'no_process' => '":name" no ejecuta un proceso propio.',
-    'no_process' => '\":name\" no ejecuta un proceso propio.',
+    'no_process' => '":name" no ejecuta un proceso propio.',
     'not_adopted' => '«:name» ya se ejecuta bajo una unidad systemd.',
     'convert_no_entrypoint' => 'Defina un comando de inicio que nombre un script, por ejemplo «node server.js», antes de cambiar «:name» a una unidad systemd. El panel anterior no registró ninguno que pueda ejecutarse directamente.',
     'convert_failed' => 'No se pudo cambiar «:name» a una unidad systemd. La aplicación se ha devuelto a PM2 y está en marcha. Indique la referencia al soporte.',
