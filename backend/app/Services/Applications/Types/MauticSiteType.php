@@ -114,4 +114,16 @@ class MauticSiteType extends AbstractSiteType
     {
         return ['min' => '8.2', 'max' => '8.5'];
     }
+
+    /**
+     * Mautic reads a `.env` beside its code, the same as Craft and Statamic
+     * (bug #69). The editor finds it there: ApplicationEnvironment reads the
+     * file the framework actually loads before the one it would create.
+     *
+     * @return array<int, string>
+     */
+    public function features(): array
+    {
+        return [...parent::features(), 'app_environment'];
+    }
 }

@@ -97,7 +97,10 @@ it('offers an environment file only where the panel owns one', function () {
         ->and(sidebarFor(makeFeatureApp('git')))->toContain('app_environment')
         // Craft and Statamic are the marketplace exceptions: both read .env.
         ->and(sidebarFor(makeFeatureApp('craftcms')))->toContain('app_environment')
-        ->and(sidebarFor(makeFeatureApp('statamic')))->toContain('app_environment');
+        ->and(sidebarFor(makeFeatureApp('statamic')))->toContain('app_environment')
+        // And Akaunting (Laravel) and Mautic (Symfony), bug #69.
+        ->and(sidebarFor(makeFeatureApp('akaunting')))->toContain('app_environment')
+        ->and(sidebarFor(makeFeatureApp('mautic')))->toContain('app_environment');
 });
 
 it('offers staging only where a staging recipe exists', function () {

@@ -117,4 +117,16 @@ class AkauntingSiteType extends AbstractSiteType
             '^/(modules|vendor)/.*\\.(php[0-9]?|phtml|phar|inc|json|lock|md|txt|xml|ya?ml|dist|sh|twig|stub|neon)$',
         ];
     }
+
+    /**
+     * Akaunting reads a `.env` beside its code, the same as Craft and Statamic
+     * (bug #69). The editor finds it there: ApplicationEnvironment reads the
+     * file the framework actually loads before the one it would create.
+     *
+     * @return array<int, string>
+     */
+    public function features(): array
+    {
+        return [...parent::features(), 'app_environment'];
+    }
 }
