@@ -206,3 +206,33 @@ describe('processes inside a unit the server needs', function () {
         killPid(4001)->assertOk();
     });
 });
+
+describe('database servers (bug #5)', function () {
+    // One click on MariaDB took every site's database offline. Operator's
+    // call: refused outright, like SSH; the Services screen restarts them.
+    it('refuses a database server by its process name', function (string $command) {
+        $runs = fakeProcess($command, 'mysql');
+
+        killPid(5000)->assertUnprocessable()
+            ->assertJsonPath('message', __('errors/process.database'));
+
+        expect(collect($runs)->contains(fn ($c) => $c[0] === 'kill'))->toBeFalse();
+    })->with(['mariadbd', 'mysqld', 'postgres', 'mongod']);
+
+    it('refuses a database server by its unit, whatever the process is called', function (string $unit) {
+        // A PostgreSQL backend is placed by its unit: the cluster's instance
+        // part (`18-main`) differs on every server.
+        $runs = fakeProcessInUnit('worker', $unit);
+
+        killPid(5001)->assertUnprocessable()
+            ->assertJsonPath('message', __('errors/process.database'));
+
+        expect(collect($runs)->contains(fn ($c) => $c[0] === 'kill'))->toBeFalse();
+    })->with(['mariadb.service', 'mysql.service', 'postgresql@18-main.service', 'mongod.service']);
+
+    it('still stops a site process whose name only resembles a database', function () {
+        fakeProcessInUnit('postgres-exporter', 'sv-app-metrics.service');
+
+        killPid(5002)->assertOk();
+    });
+});
