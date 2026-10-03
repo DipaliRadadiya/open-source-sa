@@ -8,6 +8,7 @@ return [
         'nextjs' => 'Next.js',
         'nuxt' => 'Nuxt',
         'node' => 'Node.js',
+        'symfony' => 'Symfony',
         'unknown' => 'Desconhecido',
     ],
 

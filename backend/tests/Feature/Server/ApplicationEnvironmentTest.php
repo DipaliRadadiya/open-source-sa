@@ -807,3 +807,35 @@ describe('the mode a save leaves the file in', function () {
             ->and($commands->contains(fn (array $c) => in_array('0600', $c, true)))->toBeFalse();
     });
 });
+
+describe('one-click apps with a .env beside their code (bug #69)', function () {
+    it('opens Mautic\'s real .env and names it Symfony, not Node.js', function () {
+        $this->application->forceFill(['site_type' => 'mautic', 'slug' => 'mautic'])->save();
+        // Where Mautic really keeps it: inside the document root, beside its
+        // code. Mautic also ships a package.json for its asset build, which
+        // the detector used to see first.
+        $this->disk = ['/home/envowner/mautic/public_html/.env' => "APP_ENV=prod\nAPP_DEBUG=0\n"];
+        $this->present = ['/home/envowner/mautic/public_html/bin/console', '/home/envowner/mautic/public_html/package.json'];
+        fakeSite();
+
+        $response = $this->actingAs($this->admin)->getJson(envUrl())->assertOk();
+
+        expect($response->json('environment.path'))->toBe('/home/envowner/mautic/public_html/.env')
+            ->and($response->json('environment.raw'))->toBe("APP_ENV=prod\nAPP_DEBUG=0\n")
+            ->and($response->json('environment.framework'))->toBe('symfony')
+            ->and($response->json('environment.framework_title'))->toBe('Symfony');
+    });
+
+    it('opens Akaunting\'s real .env as a Laravel application', function () {
+        $this->application->forceFill(['site_type' => 'akaunting', 'slug' => 'akaunting'])->save();
+        $this->disk = ['/home/envowner/akaunting/public_html/.env' => "APP_NAME=Akaunting\nDB_PASSWORD=secret\n"];
+        $this->present = ['/home/envowner/akaunting/public_html/artisan'];
+        fakeSite();
+
+        $response = $this->actingAs($this->admin)->getJson(envUrl())->assertOk();
+
+        expect($response->json('environment.path'))->toBe('/home/envowner/akaunting/public_html/.env')
+            ->and($response->json('environment.raw'))->toContain('DB_PASSWORD=secret')
+            ->and($response->json('environment.framework'))->toBe('laravel');
+    });
+});

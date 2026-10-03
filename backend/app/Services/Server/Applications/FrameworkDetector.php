@@ -31,6 +31,14 @@ class FrameworkDetector
 
     public const NODE = 'node';
 
+    /**
+     * Mautic, and a Symfony application deployed from git. Its marker,
+     * `bin/console`, is asked before `package.json`: Mautic ships one for
+     * its asset build, and was reported as a Node.js application — with the
+     * stricter checks a systemd-read `.env` gets (bug #69).
+     */
+    public const SYMFONY = 'symfony';
+
     public const UNKNOWN = 'unknown';
 
     public function __construct(
@@ -120,6 +128,7 @@ class FrameworkDetector
             $this->exists($application, $root.'/please') => self::STATAMIC,
             $this->exists($application, $root.'/craft') => self::CRAFT,
             $this->exists($application, $root.'/artisan') => self::LARAVEL,
+            $this->exists($application, $root.'/bin/console') => self::SYMFONY,
             $this->anyExists($application, $root, ['next.config.js', 'next.config.mjs', 'next.config.ts']) => self::NEXTJS,
             $this->anyExists($application, $root, ['nuxt.config.js', 'nuxt.config.mjs', 'nuxt.config.ts']) => self::NUXT,
             $this->exists($application, $root.'/package.json') => self::NODE,
