@@ -181,7 +181,7 @@ return [
     'application.environment_updated' => ':name का एनवायरनमेंट अद्यतन किया (:keys)',
     'application.environment_restored' => ':name की पिछली एनवायरनमेंट फ़ाइल पुनर्स्थापित की',
     'application.permissions_fixed' => ':name की फ़ाइल अनुमतियाँ रीसेट कीं',
-    'application.log_cleared' => ':subject के लिए :log लॉग खाली किया',
+    'application.log_cleared' => ':name के लिए :log लॉग खाली किया',
     'log.cleared' => ':log लॉग खाली किया',
     'application.file_edited' => ':name पर :path संपादित की',
     'application.file_uploaded' => ':name पर :path अपलोड की',

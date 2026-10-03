@@ -105,7 +105,7 @@ class ApplicationLogController extends Controller
 
         $logs->clear($application, $key);
 
-        $activity->log('application.log_cleared', $application, ['log' => $key]);
+        $activity->log('application.log_cleared', $application, ['log' => $key, 'name' => $application->name]);
 
         // The source still exists, it is simply empty now — so the client can
         // re-read it rather than being told the key is gone.

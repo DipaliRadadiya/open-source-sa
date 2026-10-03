@@ -383,7 +383,10 @@ it('records who emptied which log', function () {
 
     expect($entry)->not->toBeNull()
         ->and($entry->properties['log'])->toBe('error')
-        ->and($entry->subject_id)->toBe($this->application->id);
+        ->and($entry->subject_id)->toBe($this->application->id)
+        // Bug #64: it read "Cleared the error log for :subject".
+        ->and(__('activity.application.log_cleared', $entry->properties))
+        ->toBe('Cleared the error log for '.$this->application->name);
 });
 
 it('refuses a source this application does not have', function () {

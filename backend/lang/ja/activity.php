@@ -181,7 +181,7 @@ return [
     'application.environment_updated' => ':name の環境変数を更新しました (:keys)',
     'application.environment_restored' => ':name の以前の環境ファイルを復元しました',
     'application.permissions_fixed' => ':name のファイル権限をリセットしました',
-    'application.log_cleared' => ':subject の :log ログを消去しました',
+    'application.log_cleared' => ':name の :log ログを消去しました',
     'log.cleared' => ':log ログを消去しました',
     'application.file_edited' => ':name の :path を編集しました',
     'application.file_uploaded' => ':name に :path をアップロードしました',

@@ -187,7 +187,7 @@ return [
     'application.environment_updated' => 'Updated the environment for :name (:keys)',
     'application.environment_restored' => 'Restored a previous environment file for :name',
     'application.permissions_fixed' => 'Reset file permissions for :name',
-    'application.log_cleared' => 'Cleared the :log log for :subject',
+    'application.log_cleared' => 'Cleared the :log log for :name',
     'log.cleared' => 'Cleared the :log log',
     'application.file_edited' => 'Edited :path on :name',
     'application.file_uploaded' => 'Uploaded :path to :name',

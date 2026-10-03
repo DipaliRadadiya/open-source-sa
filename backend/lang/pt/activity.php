@@ -181,7 +181,7 @@ return [
     'application.environment_updated' => 'Atualizou o ambiente de :name (:keys)',
     'application.environment_restored' => 'Restaurou um ficheiro de ambiente anterior de :name',
     'application.permissions_fixed' => 'Redefiniu as permissões de ficheiro de :name',
-    'application.log_cleared' => 'Limpou o registo :log de :subject',
+    'application.log_cleared' => 'Limpou o registo :log de :name',
     'log.cleared' => 'Limpou o registo :log',
     'application.file_edited' => 'Editou :path em :name',
     'application.file_uploaded' => 'Carregou :path para :name',
