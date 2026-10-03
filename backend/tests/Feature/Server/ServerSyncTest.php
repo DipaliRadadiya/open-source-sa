@@ -297,7 +297,9 @@ describe('what a preview promises', function () {
     it('says once per type that a found site\'s workers, SSL and PHP settings come after the sites', function () {
         $said = runSync(SyncMode::Preview)->items()->where('reason', 'after_sites_adopted')->pluck('resource_type')->sort()->values()->all();
 
-        expect($said)->toBe(['certificate', 'php_settings', 'worker']);
+        // pm2_process (from the PM2 merge) depends on sites too, so it gets
+        // the same notice.
+        expect($said)->toBe(['certificate', 'php_settings', 'pm2_process', 'worker']);
     });
 
     it('does not say it on an apply, which has adopted the sites by then', function () {
@@ -2277,7 +2279,10 @@ describe('a proxied node site', function () {
         $item = $discoverer->discover($run)[0];
 
         $first = $discoverer->adopt($item);
+        // Its own folder too: adopting the same folder twice is refused
+        // before the port is looked at (a47c8ae2), which is not this test.
         $item['attributes']['domains'] = ['second.salite.top'];
+        $item['attributes']['slug'] = 'n8napp-second';
         $second = $discoverer->adopt($item);
 
         expect($first->app_port)->toBe(50241)
