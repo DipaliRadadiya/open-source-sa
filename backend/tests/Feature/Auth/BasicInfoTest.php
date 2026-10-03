@@ -17,3 +17,9 @@ it('reports registration closed once a user exists', function () {
 
     $response->assertOk()->assertJsonPath('basic_info.registration_open', false);
 });
+
+it('reports the same version as /health (bug #51)', function () {
+    $health = $this->getJson('/api/health')->assertOk()->json('health.version');
+
+    expect($this->getJson('/api/basic-info')->json('basic_info.app_version'))->toBe($health);
+});

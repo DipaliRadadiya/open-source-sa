@@ -215,6 +215,15 @@ class InstalledPanelInfo
     }
 
     /**
+     * Just the version, for a reader that needs nothing else: the same answer
+     * {@see installed()} gives, without its commit, branch and change checks.
+     */
+    public function versionNumber(): ?string
+    {
+        return $this->version()[0];
+    }
+
+    /**
      * @return array{0: ?string, 1: 'tag'|'tag-ahead'|'file'|'env'|'unknown'}
      */
     private function version(): array
