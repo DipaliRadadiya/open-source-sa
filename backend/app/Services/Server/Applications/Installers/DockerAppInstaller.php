@@ -337,11 +337,40 @@ class DockerAppInstaller implements SiteInstaller
     {
         $secrets = [];
 
+        $complex = $type->complexSecrets();
+
         foreach ($type->generatedSecrets() as $key) {
-            $secrets[$key] = Str::random(32);
+            $secrets[$key] = in_array($key, $complex, true)
+                ? $this->complexSecret()
+                : Str::random(32);
         }
 
         return $secrets;
+    }
+
+    /**
+     * A password that satisfies a policy, not merely a random one.
+     *
+     * `Str::random(32)` is 32 alphanumeric characters — ample entropy, and
+     * rejected by an app that requires a symbol. Built from one character of each
+     * class plus random filler and shuffled, so the guarantee is structural
+     * rather than probabilistic: drawing 32 random alphanumerics and hoping for an
+     * upper-case letter is a test that passes almost always, which is the worst
+     * kind.
+     *
+     * Symbols restricted to ones that survive a URL-encoded form post, a YAML
+     * scalar and a shell argument without quoting games.
+     */
+    private function complexSecret(): string
+    {
+        $password =
+            Str::upper(Str::random(1))
+            .Str::lower(Str::random(1))
+            .(string) random_int(0, 9)
+            .collect(str_split('!@#%^*-_=+'))->random()
+            .Str::random(28);
+
+        return collect(str_split($password))->shuffle()->implode('');
     }
 
     /**

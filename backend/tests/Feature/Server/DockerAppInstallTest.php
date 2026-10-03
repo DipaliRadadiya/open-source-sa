@@ -142,6 +142,35 @@ dataset('docker apps', [
     // entry rather than a card that 404s at `docker pull`.
 ]);
 
+it('generates a password that satisfies a policy, not merely a random one', function () {
+    // Measured against a running Chatwoot: an alphanumeric password creates no
+    // user, and the onboarding controller answers the same redirect whether it
+    // built the account or swallowed the exception into a flash message. So the
+    // only symptom of the default `Str::random(32)` was a site that never got an
+    // owner, found by counting rows in its database.
+    //
+    // Run repeatedly because the guarantee is meant to be structural: drawing 32
+    // random alphanumerics and hoping for an upper-case letter is a test that
+    // passes almost always, which is worse than one that fails.
+    foreach (range(1, 40) as $run) {
+        // A distinct port and system user per run: the helper creates one, and
+        // the username is unique.
+        $password = installDockerApp(dockerAppSite('chatwoot', 20100 + $run, "owner{$run}"))
+            ->docker_secrets['ADMIN_PASSWORD'];
+
+        expect(strlen($password))->toBeGreaterThanOrEqual(24)
+            ->and($password)->toMatch('/[A-Z]/')
+            ->and($password)->toMatch('/[a-z]/')
+            ->and($password)->toMatch('/[0-9]/')
+            ->and($password)->toMatch('/[!@#%^*\-_=+]/');
+    }
+
+    // And the apps that declare no policy are untouched — a symbol in a password
+    // an app reads from its environment is a quoting bug waiting to happen.
+    expect(installDockerApp(dockerAppSite('grafana', 20199, 'gfowner'))->docker_secrets['GF_SECURITY_ADMIN_PASSWORD'])
+        ->toMatch('/^[A-Za-z0-9]+$/');
+});
+
 it('claims the first-run endpoint, and survives being called at all', function () {
     // Two things, and the second is the embarrassing one.
     //

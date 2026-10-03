@@ -96,6 +96,26 @@ abstract class AbstractDockerAppType extends AbstractSiteType
     }
 
     /**
+     * Generated secrets that must satisfy a password policy, not just be random.
+     *
+     * The default generator is `Str::random(32)` — 32 alphanumeric characters,
+     * which is plenty of entropy and is refused outright by an app that demands a
+     * symbol. Chatwoot does: measured against a running container, an
+     * alphanumeric password creates no user and its onboarding controller answers
+     * the same redirect either way, so the only visible symptom is a site that
+     * never gets an owner.
+     *
+     * The same shape as `N8nSiteType`, which states n8n's rule in `rules()`
+     * "instead of failing the install at the last step".
+     *
+     * @return list<string>
+     */
+    public function complexSecrets(): array
+    {
+        return [];
+    }
+
+    /**
      * Generated secrets the compose file does NOT contain, and must not.
      *
      * Every other generated secret is a credential the app reads from its

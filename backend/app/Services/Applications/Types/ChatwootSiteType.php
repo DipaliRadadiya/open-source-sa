@@ -118,6 +118,18 @@ class ChatwootSiteType extends AbstractDockerAppType
     }
 
     /**
+     * Chatwoot refuses a password with no symbol in it, and says so by creating
+     * no user — its onboarding controller redirects identically whether the
+     * account was built or an exception was swallowed into a flash message.
+     *
+     * @return list<string>
+     */
+    public function complexSecrets(): array
+    {
+        return ['ADMIN_PASSWORD'];
+    }
+
+    /**
      * Chatwoot never reads `ADMIN_PASSWORD` — the panel posts it to the
      * onboarding endpoint and shows it once. In the compose file it would be the
      * administrator's password sitting in a file the File Manager can open, with
