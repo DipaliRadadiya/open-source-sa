@@ -191,9 +191,10 @@ it('claims the first-run endpoint, and survives being called at all', function (
     ])->save();
 
     $posted = null;
+    $postedBody = null;
     $checks = 0;
 
-    Process::fake(function ($process) use (&$posted, &$checks) {
+    Process::fake(function ($process) use (&$posted, &$postedBody, &$checks) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 
         if (($args[0] ?? '') !== 'curl') {
@@ -203,6 +204,7 @@ it('claims the first-run endpoint, and survives being called at all', function (
         // The POST carries `-X POST`; the probe does not.
         if (in_array('POST', $args, true)) {
             $posted = $args;
+            $postedBody = (string) $process->input;
 
             return Process::result(exitCode: 0);
         }
@@ -216,13 +218,26 @@ it('claims the first-run endpoint, and survives being called at all', function (
 
     app(DockerAppInstaller::class)->afterStart($application->fresh(), '/home/owner/site/public_html');
 
+    $argv = implode(' ', $posted);
+
     expect($posted)->not->toBeNull('the first-run endpoint was never claimed')
-        ->and(implode(' ', $posted))->toContain('/installation/onboarding')
-        ->and(implode(' ', $posted))->toContain('user[email]=owner@example.com')
+        ->and($argv)->toContain('/installation/onboarding')
+        ->and($checks)->toBeGreaterThanOrEqual(2);
+
+    // **The credentials are on stdin, not in argv.** An argument is readable
+    // through `ps` by any local user while the request runs, and it is recorded
+    // verbatim in the server-ops log: `CommandRedactor` matches `--flags` and URL
+    // query parameters, and `user[password]=` is neither. Five generated admin
+    // passwords were found in cleartext in a real box's log.
+    expect($argv)->not->toContain('user[password]')
+        ->and($argv)->not->toContain($application->fresh()->docker_secrets['ADMIN_PASSWORD'])
+        ->and($argv)->toContain('--data-binary');
+
+    expect($postedBody)->toContain('owner%40example.com')
+        ->and($postedBody)->toContain(urlencode($application->fresh()->docker_secrets['ADMIN_PASSWORD']))
         // Set and non-blank, the controller registers the installation with
         // ChatwootHub — someone else's server learning about this one.
-        ->and(implode(' ', $posted))->not->toContain('subscribe_to_updates')
-        ->and($checks)->toBeGreaterThanOrEqual(2);
+        ->and($postedBody)->not->toContain('subscribe_to_updates');
 });
 
 it('fails the provision when the app accepted the post and still has no owner', function () {

@@ -693,6 +693,97 @@ it('skips a half-written mount rather than rendering a broken line', function ()
  * ceiling and unbounded logs, which are the two failures that take a box down.
  */
 
+it('keeps the limits when the image is pulled, not only when the site is applied', function () {
+    // "Pull and redeploy" on a pasted-compose site used to DELETE the override and
+    // recreate the container with no `mem_limit`, no `cpus` and unbounded logs.
+    // `writeOverride()` reads `$pastedServices`, which only `contents()` fills, and
+    // `pull()` called it without rendering first. `start()` three methods away
+    // carries a comment saying exactly why it re-renders.
+    $pasted = <<<'YAML'
+    services:
+      web:
+        image: nginx:1.27-alpine
+        ports:
+          - "127.0.0.1:20001:80"
+    YAML;
+
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        'compose_validate' => fn () => new ServerOpsResult(
+            ok: true, reference: 'r', result: processResult(json_encode([
+                'services' => [
+                    'web' => ['image' => 'nginx:1.27-alpine', 'ports' => [['published' => '20001', 'target' => 80, 'host_ip' => '127.0.0.1']]],
+                ],
+            ])), answered: true,
+        ),
+        'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+    ], $ran, $written);
+
+    $application = containerApp();
+    $application->forceFill(['compose' => $pasted])->save();
+
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
+        ->pull($application, '/home/shop/shop/public_html');
+
+    $override = overrideWritten();
+
+    expect($override)->not->toBeNull('pull wrote no override, so the limits were dropped')
+        ->and($override)->toContain('  web:')
+        ->and($override)->toContain('mem_limit')
+        ->and($override)->toContain('max-size');
+});
+
+it('does not carry a pasted file\'s service names into a generated one', function () {
+    // The rollback path. `UpdateContainerCompose` renders the pasted file, fails,
+    // then renders the GENERATED one on the same instance — and `$pastedServices`
+    // was only ever set, never reset, so the second override named services the
+    // generated file does not have. `compose up` is then handed an override
+    // referring to nothing, and the rollback fails with the site already down.
+    $pasted = <<<'YAML'
+    services:
+      invented:
+        image: nginx:1.27-alpine
+        ports:
+          - "127.0.0.1:20001:80"
+    YAML;
+
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        'compose_validate' => fn () => new ServerOpsResult(
+            ok: true, reference: 'r', result: processResult(json_encode([
+                'services' => [
+                    'invented' => ['image' => 'nginx:1.27-alpine', 'ports' => [['published' => '20001', 'target' => 80, 'host_ip' => '127.0.0.1']]],
+                ],
+            ])), answered: true,
+        ),
+        'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+    ], $ran, $written);
+
+    $supervisor = new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops));
+
+    $application = containerApp();
+    $application->forceFill(['compose' => $pasted])->save();
+    $supervisor->apply($application, '/home/shop/shop/public_html');
+
+    expect(overrideWritten())->toContain('  invented:');
+
+    // `overrideWritten()` is a memo of the last WRITE, and the correct behaviour
+    // here is a DELETE — so without clearing it first this asserts against the
+    // previous render and passes whatever happens. Reset, then the memo is only
+    // non-empty if the second render wrote an override of its own.
+    overrideWritten('');
+
+    // Now the generated file, same instance — as a rollback does.
+    $application->forceFill(['compose' => null])->save();
+    $supervisor->apply($application->fresh(), '/home/shop/shop/public_html');
+
+    expect(overrideWritten())->not->toContain('invented',
+        'the generated render wrote an override naming the pasted file\'s services')
+        ->and(overrideWritten())->toBe('', 'a generated file needs no override at all');
+});
+
 it('gives a pasted compose file a memory ceiling and bounded logs', function () {
     $pasted = <<<'YAML'
     services:

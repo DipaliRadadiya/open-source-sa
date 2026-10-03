@@ -14,6 +14,7 @@ return [
         'security_opt' => 'O serviço :service define opções de segurança. É aí que o AppArmor e o seccomp são desligados.',
         'network_mode' => 'O serviço :service define um modo de rede. Isso colocá-lo-ia na rede do host, contornando a publicação em loopback e a firewall.',
         'cgroup_parent' => 'O serviço :service define um cgroup pai, escapando aos limites de recursos que este servidor aplica.',
+        'build' => 'O serviço :service constrói uma imagem a partir de um caminho neste servidor. O contexto de construção é lido como root, pelo que pode copiar ficheiros para os quais o contentor nunca teve uma montagem. Use antes uma imagem publicada.',
     ],
     'database_engine_not_used' => 'Este aplicativo não usa banco de dados.',
     'database_engine_unsupported' => 'Este aplicativo não pode usar esse mecanismo de banco de dados. :application é compatível com outro.',

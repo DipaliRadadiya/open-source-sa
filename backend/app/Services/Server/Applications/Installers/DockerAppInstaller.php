@@ -184,17 +184,22 @@ class DockerAppInstaller implements SiteInstaller
             return;
         }
 
-        $command = ['curl', '-sS', '--fail-with-body', '--max-time', '60', '-X', 'POST'];
+        // **The body goes on stdin, never in argv.** It carries the generated
+        // administrator password, and an argument is world-readable through `ps`
+        // for as long as the request runs — and is recorded verbatim in the
+        // server-ops log, because `CommandRedactor` matches `--flags` and URL
+        // query parameters, neither of which `user[password]=` is. Five of them
+        // were sitting in cleartext on a test box before this was found.
+        //
+        // `N8nInstaller` already posts its owner credentials this way.
+        $body = http_build_query($claim['fields'], '', '&', PHP_QUERY_RFC1738);
 
-        foreach ($claim['fields'] as $field => $value) {
-            // `--data-urlencode`, not `-d`: a generated password contains
-            // characters that are syntax in a form body, and a name or company
-            // is whatever the site was called.
-            $command[] = '--data-urlencode';
-            $command[] = "{$field}={$value}";
-        }
-
-        $command[] = $url;
+        $command = [
+            'curl', '-sS', '--fail-with-body', '--max-time', '60', '-X', 'POST',
+            '-H', 'Content-Type: application/x-www-form-urlencoded',
+            '--data-binary', '@-',
+            $url,
+        ];
 
         // `$this->serverOps->run()`, not `$this->run()`. The host installers have
         // that helper from `AbstractSiteInstaller`; this class implements
@@ -206,6 +211,7 @@ class DockerAppInstaller implements SiteInstaller
             $command,
             ['feature' => 'application', 'op' => 'installer.create_admin', 'application' => $application->id],
             timeout: 90,
+            input: $body,
         );
 
         if ($posted->failed()) {

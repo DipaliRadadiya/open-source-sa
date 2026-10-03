@@ -44,6 +44,12 @@ class ComposeValidator
      *    the loopback publishing this panel relies on and past the firewall
      *    with it.
      *  - `cgroup_parent` — escaping the resource limits the panel sets.
+     *  - `build` — a build context is a host path the daemon reads as root, and
+     *    `dockerfile_inline` can `COPY` from it. `context: /root` puts the
+     *    server's own keys inside an image the site then runs. The bind-mount
+     *    check below does not cover it: that walks `volumes`, and this is a
+     *    different key reaching the same filesystem. The panel RUNS images, it
+     *    is not a build service — every template here names one.
      *
      * @var array<string, string>
      */
@@ -57,6 +63,7 @@ class ComposeValidator
         'security_opt' => 'security_opt',
         'network_mode' => 'network_mode',
         'cgroup_parent' => 'cgroup_parent',
+        'build' => 'build',
     ];
 
     public function __construct(private ServerOps $serverOps) {}

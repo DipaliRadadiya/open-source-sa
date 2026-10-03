@@ -240,6 +240,13 @@ class ContainerSupervisor
      */
     public function pull(Application $application, string $documentRoot): void
     {
+        // Re-render first, exactly as `start()` does. `writeOverride()` reads
+        // `$pastedServices`, which only `contents()` populates — called without it
+        // the list is empty, the override is DELETED, and `up` recreates the
+        // container with no `mem_limit`, no `cpus` and unbounded logs. So pressing
+        // "Pull and redeploy" on a pasted-compose site silently removed its limits.
+        $this->contents($application, $documentRoot);
+
         $override = $this->writeOverride(
             $application,
             $documentRoot,
@@ -281,6 +288,13 @@ class ContainerSupervisor
      */
     private function contents(Application $application, string $documentRoot): string
     {
+        // Reset per render, not only set on the pasted branch. `UpdateContainerCompose`
+        // rolls back by calling this again on the SAME instance — pasted file first,
+        // generated file second — and a list left over from the first names services
+        // the second does not have, so the override `compose up` is given refers to
+        // nothing and the rollback fails with the site already down.
+        $this->pastedServices = [];
+
         $compose = (string) $application->compose;
 
         if (trim($compose) !== '') {

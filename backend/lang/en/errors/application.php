@@ -14,6 +14,7 @@ return [
         'security_opt' => 'Service :service sets security options. This is where AppArmor and seccomp get turned off.',
         'network_mode' => 'Service :service sets a network mode. That would put it on the host\'s network, past the loopback publishing and past the firewall.',
         'cgroup_parent' => 'Service :service sets a cgroup parent, which escapes the resource limits this server applies.',
+        'build' => 'Service :service builds an image from a path on this server. The build context is read as root, so it can copy files the container was never given a mount for. Use a published image instead.',
     ],
     'database_engine_not_used' => 'This application does not use a database.',
     'database_engine_unsupported' => 'This application cannot use that database engine. :application supports a different one.',

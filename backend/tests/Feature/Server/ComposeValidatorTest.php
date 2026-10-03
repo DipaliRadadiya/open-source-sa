@@ -169,6 +169,11 @@ it('refuses every documented way out of the container', function () {
         'security_opt' => ['apparmor:unconfined'],
         'network_mode' => 'host',
         'cgroup_parent' => '/',
+        // A build context is a host path the daemon reads as ROOT, and the
+        // bind-mount check does not cover it — that walks `volumes`, and this is
+        // a different key reaching the same filesystem. `context: /root` puts the
+        // server's own keys into an image the site then runs.
+        'build' => ['context' => '/root'],
     ];
 
     foreach ($cases as $key => $value) {
@@ -284,4 +289,19 @@ it('reports no port when the file publishes none', function () {
     $resolved = ['services' => ['worker' => ['image' => 'busybox']]];
 
     expect((new ComposeValidator(composeOps([])))->publishedPort($resolved))->toBeNull();
+});
+
+it('refuses a build even when the context looks local', function () {
+    // Not only the obvious `/root`. The panel runs published images — every
+    // template here names one — so the key is refused outright rather than
+    // path-checked, because `dockerfile_inline` can `COPY` from anywhere the
+    // context reaches and a relative context is resolved by the daemon, not here.
+    foreach ([['context' => '.'], ['context' => './app'], ['dockerfile_inline' => "FROM scratch\nCOPY /etc/shadow /"]] as $build) {
+        $ops = composeOps(['services' => ['web' => ['image' => 'nginx', 'build' => $build]]]);
+
+        $verdict = (new ComposeValidator($ops))->validate('...', ROOT);
+
+        expect($verdict['ok'])->toBeFalse('a build was allowed: '.json_encode($build))
+            ->and(implode(' ', $verdict['errors']))->toContain('builds an image');
+    }
 });

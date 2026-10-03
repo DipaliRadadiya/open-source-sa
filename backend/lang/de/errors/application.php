@@ -14,6 +14,7 @@ return [
         'security_opt' => 'Dienst :service setzt Sicherheitsoptionen. Genau dort werden AppArmor und seccomp abgeschaltet.',
         'network_mode' => 'Dienst :service setzt einen Netzwerkmodus. Das würde ihn in das Netzwerk des Hosts stellen — vorbei an der Loopback-Veröffentlichung und an der Firewall.',
         'cgroup_parent' => 'Dienst :service setzt ein übergeordnetes cgroup und umgeht damit die Ressourcengrenzen dieses Servers.',
+        'build' => 'Dienst :service baut ein Image aus einem Pfad auf diesem Server. Der Build-Kontext wird als root gelesen und kann damit Dateien kopieren, für die der Container nie einen Mount hatte. Verwenden Sie stattdessen ein veröffentlichtes Image.',
     ],
     'database_engine_not_used' => 'Diese Anwendung verwendet keine Datenbank.',
     'database_engine_unsupported' => 'Diese Anwendung kann diese Datenbank-Engine nicht verwenden. :application unterstützt eine andere.',
