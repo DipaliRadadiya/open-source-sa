@@ -8,6 +8,7 @@ import { LocalSearchInput } from "@/components/data-table/local-search-input";
 import { SyncEvidence } from "@/components/sync/sync-evidence";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -26,6 +27,61 @@ const ACTION_VARIANTS = {
   failed: "destructive",
   found: "outline",
 };
+
+// Percentages, so the bars shrink with a phone-width column instead of widening the table.
+const PENDING_NAME_WIDTHS = ["w-[45%]", "w-[60%]", "w-[38%]", "w-[52%]"];
+
+function ResultsHeader() {
+  const t = useTranslations("sync");
+  return (
+    <TableHeader>
+      <TableRow className="bg-muted/40 hover:bg-muted/40">
+        <TableHead className="w-10 px-1 sm:px-2" />
+        {/* Below sm the type moves under the name so the row fits a phone. */}
+        <TableHead className="hidden w-[16%] sm:table-cell">{t("results.columns.type")}</TableHead>
+        <TableHead>{t("results.columns.name")}</TableHead>
+        <TableHead className="w-[12%]">{t("results.columns.outcome")}</TableHead>
+        <TableHead className="w-10 px-1 sm:px-2" />
+      </TableRow>
+    </TableHeader>
+  );
+}
+
+// The results table before its first row arrives: same columns, placeholder rows.
+export function SyncResultsPending({ message }) {
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground" role="status">
+        {message}
+      </p>
+      <div className="overflow-x-auto rounded-xl border" aria-hidden>
+        <Table>
+          <ResultsHeader />
+          <TableBody>
+            {PENDING_NAME_WIDTHS.map((width) => (
+              <TableRow key={width} className="hover:bg-transparent">
+                <TableCell className="px-1 sm:px-2">
+                  <Skeleton className="mx-auto size-5 rounded-md" />
+                </TableCell>
+                <TableCell className="hidden sm:table-cell">
+                  <Skeleton className="h-4 w-20" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className={cn("h-4", width)} />
+                  <Skeleton className="mt-1.5 h-3 w-16 sm:hidden" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-5 w-14 rounded-full" />
+                </TableCell>
+                <TableCell className="px-1 sm:px-2" />
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
 
 // One table, not per-type sections: type counts are uneven; the chips carry counts.
 export function SyncResults({
@@ -130,16 +186,7 @@ export function SyncResults({
       ) : (
         <div className="overflow-x-auto rounded-xl border">
           <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/40 hover:bg-muted/40">
-                <TableHead className="w-10 px-1 sm:px-2" />
-                {/* Below sm the type moves under the name so the row fits a phone. */}
-                <TableHead className="hidden w-[16%] sm:table-cell">{t("results.columns.type")}</TableHead>
-                <TableHead>{t("results.columns.name")}</TableHead>
-                <TableHead className="w-[12%]">{t("results.columns.outcome")}</TableHead>
-                <TableHead className="w-10 px-1 sm:px-2" />
-              </TableRow>
-            </TableHeader>
+            <ResultsHeader />
             <TableBody>
               {visible.map((item) => {
                 const key = ignoreKey(item);

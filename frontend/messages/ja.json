@@ -6728,7 +6728,9 @@
       "ignoreShort": "閉じる",
       "restoreShort": "見送りを元に戻す",
       "working": "処理中…",
-      "wholeType": "すべて"
+      "wholeType": "すべて",
+      "waiting": "スキャンで見つかった項目が順にここに表示されます。",
+      "waitingAdopt": "追加された項目から順にここに表示されます。"
     },
     "outcomes": {
       "found": "検出済み",

@@ -6728,7 +6728,9 @@
       "ignoreShort": "Dismiss",
       "restoreShort": "Undo dismissing",
       "working": "Working…",
-      "wholeType": "All of them"
+      "wholeType": "All of them",
+      "waiting": "Results appear here as the scan finds them.",
+      "waitingAdopt": "Each item appears here as it is added."
     },
     "outcomes": {
       "found": "Found",

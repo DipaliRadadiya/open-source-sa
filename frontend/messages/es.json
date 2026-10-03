@@ -6728,7 +6728,9 @@
       "ignoreShort": "Descartar",
       "restoreShort": "Deshacer el descarte",
       "working": "Trabajando…",
-      "wholeType": "Todos"
+      "wholeType": "Todos",
+      "waiting": "Los resultados aparecen aquí a medida que el análisis los encuentra.",
+      "waitingAdopt": "Cada elemento aparece aquí a medida que se añade."
     },
     "outcomes": {
       "found": "Encontrado",

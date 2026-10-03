@@ -6728,7 +6728,9 @@
       "ignoreShort": "Ausblenden",
       "restoreShort": "Ausblenden zurücknehmen",
       "working": "Läuft…",
-      "wholeType": "Alle"
+      "wholeType": "Alle",
+      "waiting": "Ergebnisse erscheinen hier, sobald der Durchlauf sie findet.",
+      "waitingAdopt": "Jeder Eintrag erscheint hier, sobald er hinzugefügt ist."
     },
     "outcomes": {
       "found": "Gefunden",

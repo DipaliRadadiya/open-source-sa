@@ -6728,7 +6728,9 @@
       "ignoreShort": "Dispensar",
       "restoreShort": "Desfazer dispensa",
       "working": "Trabalhando…",
-      "wholeType": "Todos"
+      "wholeType": "Todos",
+      "waiting": "Os resultados aparecem aqui conforme a varredura os encontra.",
+      "waitingAdopt": "Cada item aparece aqui assim que é adicionado."
     },
     "outcomes": {
       "found": "Encontrado",

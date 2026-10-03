@@ -224,3 +224,16 @@ test("setup: the percentage counts recommended components only, and optional ext
   assert.match(list, /t\("optionalLeft", \{ count: optionalLeft \}\)/);
   assert.doesNotMatch(list, /installedCount \/ components\.length/, "an optional extra read 83% next to 'You're all set'");
 });
+
+test("sync: a scan that has found nothing yet shows it is working, not 'Nothing matches'", () => {
+  const panel = read("components/sync/sync-panel.jsx");
+  assert.match(panel, /items\.length === 0 && running \?/);
+  assert.match(panel, /t\("results\.waiting"\)/);
+  assert.ok(panel.indexOf("items.length === 0 && running") < panel.indexOf("<SyncResults\n"), "checked before the results list");
+  assert.match(panel, /<SyncResultsPending/);
+  // The placeholder is the results table itself (same header), not a separate box.
+  const results = read("components/sync/sync-results.jsx");
+  const pending = results.slice(results.indexOf("export function SyncResultsPending"), results.indexOf("export function SyncResults("));
+  assert.match(pending, /<ResultsHeader \/>/);
+  assert.match(pending, /<Skeleton/);
+});

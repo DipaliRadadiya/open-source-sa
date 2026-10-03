@@ -6728,7 +6728,9 @@
       "ignoreShort": "Ignorer",
       "restoreShort": "Annuler l'ignor",
       "working": "Traitement…",
-      "wholeType": "Tous"
+      "wholeType": "Tous",
+      "waiting": "Les résultats apparaissent ici au fur et à mesure que l'analyse les trouve.",
+      "waitingAdopt": "Chaque élément apparaît ici dès qu'il est ajouté."
     },
     "outcomes": {
       "found": "Trouvé",

@@ -17,7 +17,7 @@ import { syncRunResponseSchema } from "@/lib/schemas/sync";
 import { ignoreKey, ignoreKeySet, typesPresent } from "@/lib/server/sync-selection";
 import { AdoptDialog } from "@/components/sync/adopt-dialog";
 import { IgnoredSheet } from "@/components/sync/ignored-sheet";
-import { SyncResults } from "@/components/sync/sync-results";
+import { SyncResults, SyncResultsPending } from "@/components/sync/sync-results";
 import { SyncSummary } from "@/components/sync/sync-summary";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { useRefresh } from "@/hooks/use-refresh";
@@ -252,6 +252,11 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
           icon={ScanSearch}
           title={t("empty.title")}
           description={t("empty.description")}
+        />
+      ) : items.length === 0 && running ? (
+        // Nothing found yet is not "Nothing matches": rows stream in as the scan finds them.
+        <SyncResultsPending
+          message={run.mode === "preview" ? t("results.waiting") : t("results.waitingAdopt")}
         />
       ) : items.length === 0 && run.finished ? (
         // A run that stopped proves nothing about what is left; the summary says so.
