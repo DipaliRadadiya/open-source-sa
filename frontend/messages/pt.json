@@ -2007,7 +2007,9 @@
         "notRunning": "O Redis não está em execução.",
         "usage": "{used} em uso",
         "usageOfLimit": "{used} de {limit}",
-        "saveFailed": "Não foi possível salvar as configurações do Redis."
+        "saveFailed": "Não foi possível salvar as configurações do Redis.",
+        "outOfSync": "A senha do Redis salva no painel não funciona mais — ela foi alterada no servidor. Tarefas na fila, cache e sessões não conseguem acessar o Redis até que voltem a coincidir.",
+        "outOfSyncFix": "Defina uma nova senha abaixo; o painel atualiza o Redis e sua própria cópia ao mesmo tempo."
       },
       "noPermission": "Seu papel não inclui Configuração com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
       "passwordNotManageable": "Esta instalação não pode reescrever o próprio arquivo de configuração, então a senha do Redis não pode ser alterada aqui. Altere no servidor e atualize REDIS_PASSWORD."

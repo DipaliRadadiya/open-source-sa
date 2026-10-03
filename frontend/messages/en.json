@@ -2007,7 +2007,9 @@
         "notRunning": "Redis is not running.",
         "usage": "{used} in use",
         "usageOfLimit": "{used} of {limit}",
-        "saveFailed": "Redis settings could not be saved."
+        "saveFailed": "Redis settings could not be saved.",
+        "outOfSync": "The panel's saved Redis password no longer works — it was changed on the server. Queued jobs, the cache and sessions can't reach Redis until they match again.",
+        "outOfSyncFix": "Set a new password below; the panel updates Redis and its own copy together."
       },
       "noPermission": "Your role does not include Setting with Manage access. Ask an administrator to grant it.",
       "passwordNotManageable": "This install cannot rewrite its own configuration file, so the Redis password cannot be changed from here. Change it on the server and update REDIS_PASSWORD."

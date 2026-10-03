@@ -2007,7 +2007,9 @@
         "notRunning": "Redis は実行されていません。",
         "usage": "使用中 {used}",
         "usageOfLimit": "{limit} のうち {used}",
-        "saveFailed": "Redis 設定を保存できませんでした。"
+        "saveFailed": "Redis 設定を保存できませんでした。",
+        "outOfSync": "パネルに保存されている Redis のパスワードが使えなくなっています。サーバー上で変更されました。一致するまで、キューのジョブ、キャッシュ、セッションは Redis に接続できません。",
+        "outOfSyncFix": "下で新しいパスワードを設定してください。パネルが Redis と自身のコピーを同時に更新します。"
       },
       "noPermission": "現在のロールには、設定の管理権限が含まれていません。管理者に付与を依頼してください。",
       "passwordNotManageable": "このインストールでは自身の設定ファイルを書き換えられないため、Redis パスワードをここから変更できません。サーバーで変更し、REDIS_PASSWORD を更新してください。"

@@ -2007,7 +2007,9 @@
         "notRunning": "Redis läuft nicht.",
         "usage": "{used} verwendet",
         "usageOfLimit": "{used} von {limit}",
-        "saveFailed": "Die Redis-Einstellungen konnten nicht gespeichert werden."
+        "saveFailed": "Die Redis-Einstellungen konnten nicht gespeichert werden.",
+        "outOfSync": "Das im Panel gespeicherte Redis-Passwort funktioniert nicht mehr — es wurde auf dem Server geändert. Warteschlangen, Cache und Sitzungen erreichen Redis erst wieder, wenn beide übereinstimmen.",
+        "outOfSyncFix": "Legen Sie unten ein neues Passwort fest; das Panel aktualisiert Redis und seine eigene Kopie gemeinsam."
       },
       "noPermission": "Ihre Rolle enthält nicht „Einstellung“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
       "passwordNotManageable": "Diese Installation kann ihre eigene Konfigurationsdatei nicht neu schreiben, daher kann das Redis-Passwort hier nicht geändert werden. Ändern Sie es auf dem Server und aktualisieren Sie REDIS_PASSWORD."

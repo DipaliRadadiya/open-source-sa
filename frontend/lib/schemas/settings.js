@@ -131,6 +131,8 @@ export const redisSettingsSchema = z.object({
   password_manageable: z.boolean().optional().default(true),
   // Usage beside the limit; a configured Redis that is not running differs from a healthy one.
   running: z.boolean().nullable().optional(),
+  // The panel's saved password no longer opens Redis (changed outside the panel). Null: not checked.
+  password_out_of_sync: z.boolean().nullable().optional(),
   memory_used: z.number().nullable().optional(),
   memory_used_human: z.string().nullable().optional(),
 });

@@ -2007,7 +2007,9 @@
         "notRunning": "Redis n'est pas en exécution.",
         "usage": "{used} utilisé",
         "usageOfLimit": "{used} sur {limit}",
-        "saveFailed": "Les paramètres Redis n'ont pas pu être enregistrés."
+        "saveFailed": "Les paramètres Redis n'ont pas pu être enregistrés.",
+        "outOfSync": "Le mot de passe Redis enregistré par le panneau ne fonctionne plus : il a été modifié sur le serveur. Les tâches en file, le cache et les sessions ne peuvent plus joindre Redis tant qu'ils ne correspondent pas.",
+        "outOfSyncFix": "Définissez un nouveau mot de passe ci-dessous ; le panneau met à jour Redis et sa propre copie en même temps."
       },
       "noPermission": "Votre rôle n'inclut pas Paramètres avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
       "passwordNotManageable": "Cette installation ne peut pas réécrire son propre fichier de configuration, donc le mot de passe Redis ne peut pas être modifié ici. Modifiez-le sur le serveur et mettez à jour REDIS_PASSWORD."

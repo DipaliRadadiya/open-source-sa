@@ -205,3 +205,10 @@ test("central #46: Turn off names storages beyond the newest five, and the reten
   const fields = read("components/backups/backup-settings-fields.jsx");
   assert.match(fields, /form\.formState\.errors\.retention_count \|\| !retentionInRange \? null/);
 });
+
+test("bug list #15: the Redis card warns when the panel's saved password no longer works", () => {
+  assert.match(read("lib/schemas/settings.js"), /password_out_of_sync: z\.boolean\(\)\.nullable\(\)\.optional\(\)/);
+  const form = read("components/settings/redis-form.jsx");
+  assert.match(form, /redis\?\.password_out_of_sync === true \?/);
+  assert.match(form, /canManage \? <p className="text-xs">\{t\("redis\.outOfSyncFix"\)\}<\/p> : null/);
+});

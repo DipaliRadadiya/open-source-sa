@@ -172,6 +172,16 @@ export function RedisForm({ redis, canManage, changedBy }) {
                 {t("redis.notRunning")}
               </p>
             ) : null}
+
+            {redis?.password_out_of_sync === true ? (
+              <div className="mt-3.5 flex gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3.5 py-2.5 text-sm text-destructive">
+                <CircleAlert className="mt-0.5 size-4 shrink-0" />
+                <div className="space-y-1">
+                  <p>{t("redis.outOfSync")}</p>
+                  {canManage ? <p className="text-xs">{t("redis.outOfSyncFix")}</p> : null}
+                </div>
+              </div>
+            ) : null}
   
             <FormField
               control={form.control}
