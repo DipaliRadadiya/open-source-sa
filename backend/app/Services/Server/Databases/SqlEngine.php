@@ -190,6 +190,22 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
         return trim($result->output()) === '1';
     }
 
+    public function userExists(string $username, string $host, string $database): bool
+    {
+        $result = $this->run(sprintf(
+            // A word, not a count: "1" is what every other probe answers.
+            "SELECT IF(EXISTS (SELECT 1 FROM mysql.user WHERE user = '%s' AND host = '%s'), 'user_exists', 'user_free');",
+            $this->esc($username),
+            $this->esc($host),
+        ));
+
+        if ($result->failed()) {
+            throw new DatabaseOperationException($result->reference);
+        }
+
+        return trim($result->output()) === 'user_exists';
+    }
+
     /**
      * The databases one account has been granted something on.
      *

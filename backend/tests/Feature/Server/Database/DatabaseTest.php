@@ -285,6 +285,29 @@ it('adds a user to an existing database', function () {
     expect(DatabaseUser::where('username', 'later_user')->first()->connection_preference)->toBe('remote');
 });
 
+it('refuses a username that already exists instead of failing with a 500 (bug #36)', function () {
+    $sqls = new ArrayObject;
+    Process::fake(function ($process) use ($sqls) {
+        $sql = (string) ($process->input ?? '');
+        $sqls[] = $sql;
+
+        return str_contains($sql, 'FROM mysql.user WHERE user')
+            ? Process::result(output: 'user_exists')
+            : Process::result(output: '1');
+    });
+    $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
+
+    // The engine refused the second account, and that reached the user as
+    // "the database operation failed" with a reference to quote.
+    test()->withHeaders(dbAuth())->postJson("/api/databases/{$db->id}/users", [
+        'username' => 'shop_user', 'password' => 'AnotherPass88', 'connection_preference' => 'localhost',
+    ])->assertStatus(422)
+        ->assertJsonPath('errors.username.0', __('errors/database.user_exists', ['username' => 'shop_user']));
+
+    expect(collect($sqls)->contains(fn (string $q) => str_contains($q, 'CREATE USER')))->toBeFalse()
+        ->and(DatabaseUser::where('username', 'shop_user')->exists())->toBeFalse();
+});
+
 it('removes an engine user when remote firewall setup fails', function () {
     fakeDb();
     app()->instance(Firewall::class, new class implements Firewall

@@ -10,6 +10,7 @@ use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\DatabasePassword;
 use App\Services\Server\Databases\RemoteAccessPreparer;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class CreateDatabaseUser
@@ -37,6 +38,15 @@ class CreateDatabaseUser
 
         $engine = $this->manager->engine($database->engine);
         $engineUserCreated = false;
+
+        // Before anything is changed (bug #36): the engine refuses a second
+        // account with the same name and host, and that refusal reached the
+        // user as a 500 with a reference.
+        if ($engine->userExists($data['username'], $host, $database->name)) {
+            throw ValidationException::withMessages([
+                'username' => [__('errors/database.user_exists', ['username' => $data['username']])],
+            ]);
+        }
 
         try {
             $engine->createUser($data['username'], $host, $password, $database->name);

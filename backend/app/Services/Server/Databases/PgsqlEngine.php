@@ -175,6 +175,21 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
         return trim($result->output()) === '1';
     }
 
+    public function userExists(string $username, string $host, string $database): bool
+    {
+        // A role is cluster-wide: the host is not part of it.
+        $result = $this->run(sprintf(
+            "SELECT CASE WHEN EXISTS (SELECT 1 FROM pg_roles WHERE rolname = %s) THEN 'user_exists' ELSE 'user_free' END;",
+            $this->literal($username),
+        ));
+
+        if ($result->failed()) {
+            throw new DatabaseOperationException($result->reference);
+        }
+
+        return trim($result->output()) === 'user_exists';
+    }
+
     /**
      * The databases that are an account's own: owned by it, or granted to it
      * by name.

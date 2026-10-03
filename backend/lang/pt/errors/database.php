@@ -21,6 +21,7 @@ return [
     'phpmyadmin_user_not_found' => 'O usuário de banco de dados especificado não pertence a este banco de dados.',
     'phpmyadmin_not_isolated' => 'Este site phpMyAdmin compartilha o pool de PHP de todo o servidor, portanto um link de acesso seria legível por todos os outros sites. Dê a ele seu próprio pool de PHP, ou abra o phpMyAdmin e entre com as credenciais do banco de dados.',
     'phpmyadmin_requires_https' => 'Este site do phpMyAdmin não tem HTTPS, por isso o link de acesso e a sessão da base de dados seriam transmitidos sem encriptação. Emita primeiro um certificado SSL para ele.',
+    'user_exists' => 'Já existe um utilizador de base de dados chamado ":username". Escolha outro nome.',
     'phpmyadmin_sso_unavailable' => 'Não foi possível preparar o link de acesso no site phpMyAdmin.',
     'remote_host_invalid' => 'Introduza um endereço ou intervalo IPv4, por exemplo 203.0.113.5 ou 203.0.113.0/24.',
     'remote_host_not_remote' => 'Esse endereço não é remoto. Use «Local» para este servidor ou «Qualquer lugar» para todos os endereços.',

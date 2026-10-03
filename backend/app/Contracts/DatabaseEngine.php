@@ -49,6 +49,15 @@ interface DatabaseEngine
      */
     public function identifierAvailable(string $name, string $host = 'localhost'): bool;
 
+    /**
+     * Whether the account a new user would become already exists: the same
+     * name and host on MySQL/MariaDB, the role on PostgreSQL, the user in
+     * that database on MongoDB. Asked before creating one (bug #36), where
+     * the engine's own refusal could only surface as a 500. Throws when the
+     * server cannot answer, like identifierAvailable().
+     */
+    public function userExists(string $username, string $host, string $database): bool;
+
     public function createDatabase(string $name, ?string $charset, ?string $collation): void;
 
     public function dropDatabase(string $name): void;

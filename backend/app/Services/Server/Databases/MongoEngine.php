@@ -114,6 +114,19 @@ class MongoEngine implements DatabaseEngine
         return trim($result->output()) === '1';
     }
 
+    public function userExists(string $username, string $host, string $database): bool
+    {
+        // A MongoDB user belongs to one database, so the same name may exist
+        // in another without conflict.
+        $result = $this->run('print(db.getSiblingDB('.$this->js($database).').getUser('.$this->js($username).') !== null ? "user_exists" : "user_free");');
+
+        if ($result->failed()) {
+            throw new DatabaseOperationException($result->reference);
+        }
+
+        return trim($result->output()) === 'user_exists';
+    }
+
     public function createDatabase(string $name, ?string $charset, ?string $collation): void
     {
         // Mongo creates a DB lazily; make a placeholder collection so it lists.

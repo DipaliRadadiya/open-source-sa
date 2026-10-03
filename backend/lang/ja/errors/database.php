@@ -21,6 +21,7 @@ return [
     'phpmyadmin_user_not_found' => '指定されたデータベースユーザーはこのデータベースに属していません。',
     'phpmyadmin_not_isolated' => 'このphpMyAdminサイトはサーバー全体のPHPプールを共有しているため、サインインリンクが他のすべてのサイトから読み取れてしまいます。専用のPHPプールを割り当てるか、phpMyAdminを開いてデータベースの認証情報でサインインしてください。',
     'phpmyadmin_requires_https' => 'この phpMyAdmin サイトには HTTPS がないため、サインインリンクとデータベースセッションが暗号化されずに送信されます。先に SSL 証明書を発行してください。',
+    'user_exists' => 'データベースユーザー「:username」は既に存在します。別の名前を選んでください。',
     'phpmyadmin_sso_unavailable' => 'phpMyAdminサイトでサインインリンクを準備できませんでした。',
     'remote_host_invalid' => '203.0.113.5 や 203.0.113.0/24 のような IPv4 アドレスまたは範囲を入力してください。',
     'remote_host_not_remote' => 'そのアドレスはリモートではありません。このサーバーには「ローカル」、すべてのアドレスには「どこからでも」を使ってください。',
