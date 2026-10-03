@@ -20,6 +20,7 @@ class AddSshKeyToDroplet extends Command
 
         if (! $token) {
             $this->error('No DO token. Pass --token= or set digitalocean.token in config.');
+
             return self::FAILURE;
         }
 
@@ -39,10 +40,12 @@ class AddSshKeyToDroplet extends Command
         if ($resp->successful()) {
             $actionId = $resp->json('action.id');
             $this->info("Done. Action ID: $actionId");
+
             return 0;
         }
 
         $this->error("Failed: HTTP {$resp->status()} — {$resp->body()}");
+
         return 1;
     }
 }

@@ -62,7 +62,6 @@ return [
         'unknown' => 'fail2ban इंस्टॉल करना विफल रहा। नीचे दिया संदर्भ सपोर्ट को बताएं।',
     ],
 
-
     /*
     | Per-runtime overrides, consulted before the shared groups above.
     |

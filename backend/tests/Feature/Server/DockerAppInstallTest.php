@@ -225,6 +225,49 @@ it('claims the first-run endpoint, and survives being called at all', function (
         ->and($checks)->toBeGreaterThanOrEqual(2);
 });
 
+it('fails the provision when the app accepted the post and still has no owner', function () {
+    // The real report: a Chatwoot deploy failed with nothing but a reference.
+    // The post had been ACCEPTED — Chatwoot answers the same redirect whether it
+    // built the account or raised, and it puts the reason in a flash its own SPA
+    // never renders. Measured in the container: `test@test.com` raises
+    // "We do not allow disposable emails"; the identical request with a real
+    // address succeeds.
+    //
+    // So the panel cannot read the cause, and must not call the site Active
+    // either — until an owner exists, whoever opens the URL can become one.
+    $application = installDockerApp(dockerAppSite('chatwoot'));
+    $application->forceFill([
+        'app_port' => 3002,
+        'settings' => ['admin_email' => 'someone@test.com'],
+    ])->save();
+
+    Process::fake(function ($process) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        if (($args[0] ?? '') !== 'curl') {
+            return Process::result(exitCode: 0);
+        }
+
+        // The post succeeds; the endpoint stays OPEN, because no owner was made.
+        return in_array('POST', $args, true)
+            ? Process::result(exitCode: 0)
+            : Process::result(output: '200');
+    });
+
+    expect(fn () => app(DockerAppInstaller::class)->afterStart($application->fresh(), '/home/owner/site/public_html'))
+        ->toThrow(ProvisioningFailedException::class);
+
+    try {
+        app(DockerAppInstaller::class)->afterStart($application->fresh(), '/home/owner/site/public_html');
+    } catch (ProvisioningFailedException $e) {
+        // Not `owner_not_created`, whose text sends somebody to an application log
+        // that says nothing about this.
+        expect($e->reason)->toBe('claim_refused')
+            ->and($e->step)->toBe('create_admin')
+            ->and(__("application.failure_reason.{$e->reason}"))->toContain('disposable');
+    }
+});
+
 it('is wired to the Docker installer, for each app', function (string $type, int $port, array $roles) {
     // **The test that was missing, and what it cost.** Registering an app takes
     // three edits to `config/server.php`: the type class, the `docker_apps`

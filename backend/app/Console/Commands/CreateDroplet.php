@@ -22,6 +22,7 @@ class CreateDroplet extends Command
 
         if (! $token) {
             $this->error('No DO token provided. Pass --token= or set digitalocean.token in config.');
+
             return self::FAILURE;
         }
 
@@ -54,13 +55,14 @@ class CreateDroplet extends Command
 
         if (! $response->successful()) {
             $this->error('Droplet creation failed: '.$response->body());
+
             return self::FAILURE;
         }
 
         $droplet = $response->json('droplet');
         $ip = collect($droplet['networks']['v4'])->firstWhere('type', '==', 'public')['ip_address'] ?? null;
 
-        $this->info("Droplet created!");
+        $this->info('Droplet created!');
         $this->line("ID:        {$droplet['id']}");
         $this->line("Name:      {$droplet['name']}");
         $this->line("Region:    {$droplet['region']['slug']}");
@@ -74,7 +76,7 @@ class CreateDroplet extends Command
     private function cloudConfig(): string
     {
         // Cloud-init: install essentials, resize root, set hostname
-        return base64_encode("#cloud-config
+        return base64_encode('#cloud-config
 package_update: true
 packages:
   - curl
@@ -82,7 +84,7 @@ packages:
   - git
   - unzip
 runcmd:
-  - hostnamectl set-hostname ".escapeshellarg($this->option('name'))."
-");
+  - hostnamectl set-hostname '.escapeshellarg($this->option('name')).'
+');
     }
 }

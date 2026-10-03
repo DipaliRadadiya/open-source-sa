@@ -62,7 +62,6 @@ return [
         'unknown' => 'fail2ban のインストールに失敗しました。下記の参照番号をサポートにお伝えください。',
     ],
 
-
     /*
     | Per-runtime overrides, consulted before the shared groups above.
     |

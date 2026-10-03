@@ -21,7 +21,6 @@ return [
         ],
     ],
 
-
     'robots_txt' => [
         'note' => 'A Google (Gemini) e a Apple treinam a IA com as páginas obtidas pelos seus rastreadores de pesquisa normais, por isso nenhum bloqueio de bots o impede sem também o retirar da pesquisa. Para recusar o treino de IA, adicione estas linhas ao robots.txt do seu site:',
     ],

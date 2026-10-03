@@ -62,7 +62,6 @@ return [
         'unknown' => 'Installing fail2ban failed. Quote the reference below to support.',
     ],
 
-
     /*
     | Per-runtime overrides, consulted before the shared groups above.
     |

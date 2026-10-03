@@ -217,7 +217,18 @@ class DockerAppInstaller implements SiteInstaller
         // post is not one: the controller answers a redirect either way and
         // reports its failures through a flash message.
         if ($this->claimEndpointOpen($application, $url)) {
-            throw new ProvisioningFailedException('create_admin', (string) Str::uuid(), 'owner_not_created');
+            // `claim_refused`, not `owner_not_created`: the post was ACCEPTED and no
+            // owner exists, which is the app rejecting the credentials rather than
+            // anything going wrong in transit. Chatwoot answers the same redirect
+            // either way and puts its reason in a flash its own SPA never renders,
+            // so there is nothing to read and nothing in its log — "check the
+            // application log" would send somebody to an empty room.
+            //
+            // Measured: `test@test.com` raises
+            // `CustomExceptions::Account::InvalidEmail: We do not allow disposable
+            // emails`, and the identical request with a real address succeeds. So
+            // the message names that cause instead of describing the symptom.
+            throw new ProvisioningFailedException('create_admin', $posted->reference, 'claim_refused');
         }
     }
 

@@ -62,7 +62,6 @@ return [
         'unknown' => 'Не удалось установить fail2ban. Сообщите в поддержку код ниже.',
     ],
 
-
     /*
     | Per-runtime overrides, consulted before the shared groups above.
     |

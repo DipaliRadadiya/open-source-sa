@@ -62,7 +62,6 @@ return [
         'unknown' => 'L\'installation de fail2ban a échoué. Communiquez la référence ci-dessous au support.',
     ],
 
-
     /*
     | Per-runtime overrides, consulted before the shared groups above.
     |
