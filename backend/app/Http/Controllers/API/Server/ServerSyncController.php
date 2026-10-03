@@ -12,6 +12,7 @@ use App\Jobs\RunServerSync;
 use App\Models\SyncIgnore;
 use App\Models\SyncRun;
 use App\Services\ActivityLogger;
+use App\Services\Server\Applications\LegacyHandover;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -73,6 +74,29 @@ class ServerSyncController extends Controller
      * of the last item it has, and appends what comes back. Returning the
      * whole list every second would re-send a thousand rows to add three.
      */
+    /**
+     * Finish taking a migrated server over: the writes Sync deliberately does
+     * not make.
+     *
+     * Separate from Sync, and separate for a reason. `discover()` and
+     * `adopt()` are forbidden from touching the server, because the whole
+     * feature depends on people not being afraid to press Sync — and these are
+     * the customer's live sites. Retiring the old agent, repairing boot
+     * persistence and giving PM2's logs a rotation policy are all server
+     * writes, so they are a decision someone makes rather than a side effect
+     * of looking.
+     *
+     * None of it restarts an application. Safe on a working server.
+     */
+    public function handover(LegacyHandover $handover, ActivityLogger $activity): JsonResponse
+    {
+        $result = $handover->complete();
+
+        $activity->log('sync.legacy_handover', null, $result);
+
+        return response()->json($result);
+    }
+
     public function show(Request $request, SyncRun $run): JsonResponse
     {
         $since = (int) $request->query('since', 0);

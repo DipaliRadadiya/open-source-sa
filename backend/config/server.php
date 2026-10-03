@@ -1165,6 +1165,26 @@ return [
         // unit waits 5 s before restarting it, so 3 s catches the crash.
         'settle_seconds' => (int) env('SERVER_APP_SETTLE_SECONDS', 3),
 
+        // For applications adopted from the old panel, which are still run by
+        // its per-user PM2 daemon. Bare, so `runuser` resolves it on PATH: the
+        // old panel installed PM2 globally from NodeSource (`/usr/bin`) but
+        // then upgraded Node with `n`, which relocates the whole toolchain to
+        // `/usr/local` — so neither absolute path is right on every server.
+        'pm2_binary' => env('SERVER_LEGACY_PM2_BINARY', 'pm2'),
+        'pm2_timeout' => (int) env('SERVER_LEGACY_PM2_TIMEOUT', 120),
+
+        // The old panel's agent. Its HTTPS listener is hardcoded in its own
+        // source, which is why the port is the primary signal; the unit is
+        // named after a build-time variable and differs per white-label build,
+        // so that one is a pattern.
+        'legacy_agent_port' => (int) env('SERVER_LEGACY_AGENT_PORT', 43210),
+        'legacy_agent_unit_pattern' => env('SERVER_LEGACY_AGENT_UNIT_PATTERN', '/(serveravatar|sa-agent)/i'),
+        'legacy_agent_paths' => [
+            '/usr/local/bin/serveravatar-agent',
+            '/opt/serveravatar/serveravatar-agent',
+            '/home/backend/agent/serveravatar-agent',
+        ],
+
         /*
         | Asking a freshly started application for a page before calling it
         | provisioned.
@@ -2811,6 +2831,12 @@ return [
             // are never hidden by this — only the offer to add new ones.
             'offer_eol' => filter_var(env('SERVER_NODE_OFFER_EOL', false), FILTER_VALIDATE_BOOLEAN),
             'install_timeout' => (int) env('SERVER_NODE_INSTALL_TIMEOUT', 900),
+            // PM2 is installed per Node version, for applications that run
+            // more than one process. Pinned rather than `@latest`: two servers
+            // provisioned a week apart would otherwise get different majors,
+            // and re-running the install would upgrade PM2 underneath running
+            // applications.
+            'pm2_version' => env('SERVER_PM2_VERSION', '6.0.13'),
         ],
 
         // Where "the newest npm this Node version can run" comes from. Read

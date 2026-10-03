@@ -290,6 +290,11 @@ return [
         'foot' => 'Platzhalterseite, erstellt vom Control Panel.',
     ],
 
+    'supervisor_mode' => [
+        'systemd' => 'systemd-Unit',
+        'pm2' => 'PM2 (übernommen)',
+    ],
+
     'disabled_page' => [
         'title' => 'Seite nicht verfügbar',
         'heading' => 'Diese Seite ist vorübergehend nicht verfügbar',

@@ -3164,8 +3164,7 @@
     "unavailable": {
       "title": "Databases are not managed on this server",
       "body": "This server hosts containers. An application that needs a database brings one as a container of its own, so the panel manages no engine here — and its own data is SQLite regardless."
-    },
-    "backToList": "Back to databases"
+    }
   },
   "git": {
     "title": "Git",
@@ -3778,7 +3777,24 @@
       "stopTitle": "Stop {name}?",
       "stopBody": "The application goes offline until it is started again, and visitors get an error page in the meantime.",
       "stopping": "Stopping…",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "supervisorPm2": "PM2 (adopted)",
+      "workers": "Processes",
+      "workersCount": "{total}",
+      "workersDegraded": "{online} of {total} online",
+      "convert": {
+        "action": "Switch to a systemd unit",
+        "title": "Switch “{name}” to a systemd unit?",
+        "description": "This site is still run by the previous panel’s PM2. Moving it to a systemd unit restarts the application.",
+        "restarts": "The application restarts. It is usually back within a few seconds.",
+        "rollback": "If it does not answer afterwards, we put it straight back under PM2 — so a failure leaves your site up.",
+        "gains": "A unit gives this site its own memory limit, accurate per-site metrics and its logs beside the files.",
+        "confirm": "Switch and restart",
+        "converting": "Switching…",
+        "cancel": "Cancel",
+        "done": "“{name}” now runs under a systemd unit.",
+        "failed": "We could not switch this application."
+      }
     },
     "domains": {
       "title": "Domains and SSL",

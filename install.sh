@@ -117,6 +117,7 @@ WEB_SERVER=""      # derived from STACK
 # builds this exists to avoid. Set by derive_php_runtime() once the stack is
 # known.
 PANEL_PHP_BIN=""   # CLI: artisan, composer, queue worker, cron
+COMPOSER_BIN=""    # resolved in install_packages; may predate us
 PANEL_PHP_SAPI=""  # what the web server talks to: "fpm" or "lsapi"
 
 # ─── Output ──────────────────────────────────────────────────────────────────
@@ -306,20 +307,43 @@ preflight() {
     # Ports, before any web server is installed. `ss` ships with iproute2 on
     # both supported releases. A web server that is already ours is not a
     # conflict — this is the re-run case.
+    # A web server on 80/443 is not automatically a conflict. Three cases:
+    #
+    #   ours          — a re-run. Always fine.
+    #   a supported   — an existing nginx/Apache, which is what a server being
+    #   web server      migrated from another panel looks like. The panel adds
+    #                   one vhost beside whatever is already there; it never
+    #                   rewrites global config, and `nginx -t` gates the reload.
+    #                   Refusing here forced the operator to stop their web
+    #                   server for the whole install, taking every hosted site
+    #                   offline to install a panel that was going to share that
+    #                   web server anyway.
+    #   anything else — a real conflict, and still fatal.
     local port
     for port in 80 443; do
-        if ss -ltnH "sport = :${port}" 2>/dev/null | grep -q .; then
-            if [[ -f /etc/nginx/sites-enabled/${PANEL_SLUG}.conf ]] \
-               || [[ -f /etc/apache2/sites-enabled/${PANEL_SLUG}.conf ]]; then
-                skip "port ${port} is in use by our own web server"
-            else
-                die "port ${port} is already in use by something else.
-     The panel needs 80 and 443. Stop that service and run this again:
-       ss -ltnp 'sport = :${port}'"
-            fi
+        ss -ltnH "sport = :${port}" 2>/dev/null | grep -q . || continue
+
+        if [[ -f /etc/nginx/sites-enabled/${PANEL_SLUG}.conf ]] \
+           || [[ -f /etc/apache2/sites-enabled/${PANEL_SLUG}.conf ]]; then
+            skip "port ${port} is in use by our own web server"
+            continue
         fi
+
+        local holder
+        holder=$(ss -ltnpH "sport = :${port}" 2>/dev/null | grep -oP 'users:\(\("\K[^"]+' | head -1)
+
+        case "$holder" in
+            nginx|apache2|httpd|litespeed|lshttpd)
+                skip "port ${port} is served by ${holder}, which the panel will share"
+                ;;
+            *)
+                die "port ${port} is already in use by ${holder:-something else}.
+     The panel needs 80 and 443, or a web server it can share them with.
+     Stop that service and run this again:
+       ss -ltnp 'sport = :${port}'"
+                ;;
+        esac
     done
-    ok "ports 80 and 443 are free"
 
     local free_mb
     free_mb=$(df -Pm /var | awk 'NR==2 {print $4}')
@@ -1126,16 +1150,25 @@ install_packages() {
     run_progress "Installing ${WEB_SERVER}, Redis, SQLite, supervisor, and PHP ${PHP_VERSION}" apt-get install -y "${web_pkgs[@]}" redis-server sqlite3 supervisor "${php_pkgs[@]}"
     ok "${WEB_SERVER}, redis, sqlite, PHP ${PHP_VERSION}"
 
-    if ! command -v composer >/dev/null 2>&1; then
+    # Whatever composer we end up using, remember *where* it is. The check
+    # below asks "is composer installed anywhere", and the install step later
+    # used to invoke a hardcoded /usr/local/bin/composer — so on a server that
+    # already had one somewhere else the install skipped the download and then
+    # died on a path it had never created. Found on a migrated box carrying
+    # Ubuntu's /usr/bin/composer.
+    COMPOSER_BIN=$(command -v composer 2>/dev/null || true)
+
+    if [[ -z "$COMPOSER_BIN" ]]; then
         run curl -fsSL -o /tmp/composer-setup.php https://getcomposer.org/installer
         # PANEL_PHP_BIN, not a bare `php`: on OpenLiteSpeed there is no
         # /usr/bin/php at all, and a bare invocation would either fail or --
         # worse -- find some other PHP and install composer against it.
         run "$PANEL_PHP_BIN" /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
         rm -f /tmp/composer-setup.php
+        COMPOSER_BIN=/usr/local/bin/composer
         ok "composer"
     else
-        skip "composer"
+        skip "composer (${COMPOSER_BIN})"
     fi
 }
 
@@ -1437,7 +1470,7 @@ setup_backend() {
     # Through the interpreter rather than relying on composer's own shebang.
     # The `php` symlink above makes the shebang work too, but naming the binary
     # here means this step does not depend on PATH at all.
-    run sudo -u "$APP_USER" -H "$PANEL_PHP_BIN" /usr/local/bin/composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader -d "$dir"
+    run sudo -u "$APP_USER" -H "$PANEL_PHP_BIN" "${COMPOSER_BIN:-/usr/local/bin/composer}" install --no-dev --no-interaction --prefer-dist --optimize-autoloader -d "$dir"
     ok "dependencies installed"
 
     [[ -f "${dir}/.env" ]] || cp "${dir}/.env.example" "${dir}/.env"

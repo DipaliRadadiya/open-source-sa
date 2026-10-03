@@ -6,6 +6,7 @@ use App\Enums\AiBotPolicy;
 use App\Enums\ApplicationStatus;
 use App\Enums\DeploymentStatus;
 use App\Enums\DomainType;
+use App\Enums\SupervisorMode;
 use App\Enums\WafCategory;
 use App\Enums\WafMode;
 use App\Exceptions\Server\Application\SystemUserMissingException;
@@ -31,7 +32,7 @@ use Illuminate\Support\Str;
     // proxies to, and conflating the two publishes a container on a port
     // another application already holds.
     'image', 'registry_id', 'container_port', 'memory_limit', 'cpu_limit', 'compose', 'docker_network', 'volume_mounts', 'docker_secrets', 'credentials_seen_at',
-    'build_command', 'deploy_script', 'start_command', 'package_manager',
+    'build_command', 'deploy_script', 'start_command', 'package_manager', 'process_instances', 'supervisor_mode', 'pm2_process_name',
     'git_account_id', 'repository', 'repository_url', 'branch', 'settings', 'install_secrets',
     'steps', 'failed_step', 'failed_reason', 'provisioning_started_at', 'reference', 'last_commit', 'last_deployed_at', 'directory_size_bytes', 'volume_size_bytes', 'directory_size_updated_at',
     'current_release_id', 'previous_release_path',
@@ -96,6 +97,7 @@ class Application extends Model
             'fail2ban_jail_content' => 'string',
             'fail2ban_filter_content' => 'string',
             'status' => ApplicationStatus::class,
+            'supervisor_mode' => SupervisorMode::class,
             'settings' => 'array',
             // The passwords a one-click installer needs, held only until the
             // install succeeds. See installSettings().

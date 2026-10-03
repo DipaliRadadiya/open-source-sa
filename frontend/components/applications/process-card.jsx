@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Loader2, Play, RotateCw, Square } from "lucide-react";
+import { ArrowRightLeft, Loader2, Play, RotateCw, Square } from "lucide-react";
 import { controlApplicationProcess } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatBytes } from "@/lib/format/bytes";
+import { ConvertSupervisorDialog } from "@/components/applications/convert-supervisor-dialog";
 
 const STATE_VARIANT = { active: "success", failed: "destructive", activating: "warning" };
 
@@ -27,8 +28,9 @@ export function ProcessCard({ application, canManage = false, className }) {
   const { refreshThen } = useRefresh();
   const [pending, setPending] = useState(null);
   const [confirmStop, setConfirmStop] = useState(false);
-    // systemd records a stopped Node process as "failed" (it exits on SIGTERM),
-    // so the expected outcome of the last click decides how it reads.
+  const [converting, setConverting] = useState(false);
+  // systemd records a stopped Node process as "failed" (it exits on SIGTERM),
+  // so the expected outcome of the last click decides how it reads.
   const [expected, setExpected] = useState(null);
 
   const process = application.process ?? {};
@@ -56,6 +58,23 @@ export function ProcessCard({ application, canManage = false, className }) {
       : "—");
   const notStartedYet = state !== "active" && !application.deployed;
 
+  // Adopted from the old panel and still run by its PM2 daemon. A supported
+  // state, not a broken one — so it is labelled rather than warned about, and
+  // the only thing offered is the choice to move.
+  const adopted = application.supervisor_mode === "pm2";
+  const instances = process.instances ?? null;
+  const online = process.online ?? null;
+
+  // Only worth a line when there is more than one, and phrased as a fraction
+  // only when some are down: "3 of 4" is a problem someone should see, and
+  // "4 of 4" is noise that makes the real case harder to spot.
+  const workers =
+    instances && instances > 1
+      ? online !== null && online < instances
+        ? t("workersDegraded", { online, total: instances })
+        : t("workersCount", { total: instances })
+      : null;
+
   async function run(action) {
     setPending(action);
     try {
@@ -80,15 +99,26 @@ export function ProcessCard({ application, canManage = false, className }) {
     { label: t("since"), value: state === "active" ? formatSince(process.since, format) : null },
     { label: t("memory"), value: memory },
     { label: t("restarts"), value: process.restarts },
+    { label: t("workers"), value: workers },
   ].filter((fact) => fact.value !== null && fact.value !== undefined && fact.value !== "");
 
   return (
     <Card className={className}>
       <CardHeader className="gap-1.5">
         <CardTitle as="h2">{t("title")}</CardTitle>
-        <Badge variant={STATE_VARIANT[state] ?? "muted"} className="font-normal">
-          {stateLabel}
-        </Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* `muted` is the STATE pill; `secondary` below is a label, which is
+              what the badge naming distinguishes. The branch predates that
+              distinction and used `secondary` for both. */}
+          <Badge variant={STATE_VARIANT[state] ?? "muted"} className="font-normal">
+            {stateLabel}
+          </Badge>
+          {adopted ? (
+            <Badge variant="secondary" className="font-normal">
+              {t("supervisorPm2")}
+            </Badge>
+          ) : null}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {notStartedYet ? (
@@ -129,6 +159,18 @@ export function ProcessCard({ application, canManage = false, className }) {
                 {t(action)}
               </Button>
             ))}
+
+            {adopted ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setConverting(true)}
+                disabled={Boolean(pending)}
+              >
+                <ArrowRightLeft className="size-3.5" />
+                {t("convert.action")}
+              </Button>
+            ) : null}
           </div>
         ) : null}
         <ConfirmDialog
@@ -144,6 +186,14 @@ export function ProcessCard({ application, canManage = false, className }) {
           onConfirm={() => run("stop")}
         />
       </CardContent>
+
+      {adopted ? (
+        <ConvertSupervisorDialog
+          application={application}
+          open={converting}
+          onOpenChange={setConverting}
+        />
+      ) : null}
     </Card>
   );
 }

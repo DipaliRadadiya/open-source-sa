@@ -25,6 +25,13 @@ export function controlApplicationProcess(id, action) {
   return api.post(`/applications/${id}/process/${action}`);
 }
 
+// Its own endpoint rather than a field on update: it restarts the application, and
+// one supervisor has to release the port before the other can bind it. The API rolls
+// back to PM2 if the unit will not serve, so a failure leaves the site up.
+export function convertApplicationSupervisor(id) {
+  return api.post(`/applications/${id}/supervisor/convert`);
+}
+
 // Nothing else measures a site untouched by the panel. Throttled 10/min (cost scales with file count).
 export function measureApplicationSize(id) {
   return api.post(`/applications/${id}/directory-size`);

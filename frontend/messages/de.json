@@ -3164,8 +3164,7 @@
     "unavailable": {
       "title": "Datenbanken werden auf diesem Server nicht verwaltet",
       "body": "Dieser Server hostet Container. Eine Anwendung, die eine Datenbank braucht, bringt sie als eigenen Container mit, daher verwaltet das Panel hier keine Engine — und seine eigenen Daten liegen ohnehin in SQLite."
-    },
-    "backToList": "Zurück zu Datenbanken"
+    }
   },
   "git": {
     "title": "Git",
@@ -3778,7 +3777,24 @@
       "stopTitle": "{name} stoppen?",
       "stopBody": "Die Anwendung ist offline, bis sie wieder gestartet wird, und Besucher sehen so lange eine Fehlerseite.",
       "stopping": "Wird gestoppt…",
-      "cancel": "Abbrechen"
+      "cancel": "Abbrechen",
+      "supervisorPm2": "PM2 (übernommen)",
+      "workers": "Prozesse",
+      "workersCount": "{total}",
+      "workersDegraded": "{online} von {total} online",
+      "convert": {
+        "action": "Auf systemd-Unit umstellen",
+        "title": "„{name}“ auf eine systemd-Unit umstellen?",
+        "description": "Diese Website wird noch vom PM2 des alten Panels betrieben. Die Umstellung auf eine systemd-Unit startet die Anwendung neu.",
+        "restarts": "Die Anwendung startet neu. Normalerweise ist sie in wenigen Sekunden wieder da.",
+        "rollback": "Antwortet sie danach nicht, stellen wir sie sofort auf PM2 zurück — ein Fehlschlag lässt Ihre Website also online.",
+        "gains": "Eine Unit gibt dieser Website ein eigenes Speicherlimit, genaue Messwerte und ihre Logs neben den Dateien.",
+        "confirm": "Umstellen und neu starten",
+        "converting": "Wird umgestellt…",
+        "cancel": "Abbrechen",
+        "done": "„{name}“ läuft jetzt unter einer systemd-Unit.",
+        "failed": "Diese Anwendung konnte nicht umgestellt werden."
+      }
     },
     "domains": {
       "title": "Domains und SSL",

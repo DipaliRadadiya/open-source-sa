@@ -3164,8 +3164,7 @@
     "unavailable": {
       "title": "Les bases de données ne sont pas gérées sur ce serveur",
       "body": "Ce serveur héberge des conteneurs. Une application qui a besoin d’une base de données en apporte une sous forme de conteneur, le panneau ne gère donc aucun moteur ici — et ses propres données sont en SQLite de toute façon."
-    },
-    "backToList": "Retour aux bases de données"
+    }
   },
   "git": {
     "title": "Git",
@@ -3778,7 +3777,24 @@
       "stopTitle": "Arrêter {name} ?",
       "stopBody": "L'application est hors ligne jusqu'à son redémarrage, et les visiteurs voient une page d'erreur en attendant.",
       "stopping": "Arrêt…",
-      "cancel": "Annuler"
+      "cancel": "Annuler",
+      "supervisorPm2": "PM2 (repris)",
+      "workers": "Processus",
+      "workersCount": "{total}",
+      "workersDegraded": "{online} sur {total} en ligne",
+      "convert": {
+        "action": "Passer à une unité systemd",
+        "title": "Passer « {name} » à une unité systemd ?",
+        "description": "Ce site est encore géré par le PM2 de l’ancien panneau. Le passage à une unité systemd redémarre l’application.",
+        "restarts": "L’application redémarre. Elle est généralement de retour en quelques secondes.",
+        "rollback": "Si elle ne répond pas ensuite, nous la remettons immédiatement sous PM2 — un échec laisse donc votre site en ligne.",
+        "gains": "Une unité donne à ce site sa propre limite mémoire, des métriques exactes et ses journaux à côté de ses fichiers.",
+        "confirm": "Passer et redémarrer",
+        "converting": "Passage…",
+        "cancel": "Annuler",
+        "done": "« {name} » tourne désormais sous une unité systemd.",
+        "failed": "Impossible de basculer cette application."
+      }
     },
     "domains": {
       "title": "Domaines et SSL",

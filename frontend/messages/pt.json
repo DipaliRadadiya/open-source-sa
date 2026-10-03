@@ -3164,8 +3164,7 @@
     "unavailable": {
       "title": "As bases de dados não são geridas neste servidor",
       "body": "Este servidor aloja contentores. Uma aplicação que precisa de uma base de dados traz a sua como contentor, por isso o painel não gere nenhum motor aqui — e os seus próprios dados estão em SQLite de qualquer forma."
-    },
-    "backToList": "Voltar para bancos de dados"
+    }
   },
   "git": {
     "title": "Git",
@@ -3778,7 +3777,24 @@
       "stopTitle": "Parar {name}?",
       "stopBody": "A aplicação fica offline até ser iniciada de novo, e enquanto isso os visitantes veem uma página de erro.",
       "stopping": "Parando…",
-      "cancel": "Cancelar"
+      "cancel": "Cancelar",
+      "supervisorPm2": "PM2 (adotado)",
+      "workers": "Processos",
+      "workersCount": "{total}",
+      "workersDegraded": "{online} de {total} online",
+      "convert": {
+        "action": "Mudar para uma unidade systemd",
+        "title": "Mudar «{name}» para uma unidade systemd?",
+        "description": "Este site ainda é executado pelo PM2 do painel anterior. Mudá-lo para uma unidade systemd reinicia a aplicação.",
+        "restarts": "A aplicação reinicia. Normalmente volta em poucos segundos.",
+        "rollback": "Se depois não responder, repomo-la logo no PM2 — por isso uma falha deixa o seu site no ar.",
+        "gains": "Uma unidade dá a este site o seu próprio limite de memória, métricas exactas e os registos junto dos ficheiros.",
+        "confirm": "Mudar e reiniciar",
+        "converting": "A mudar…",
+        "cancel": "Cancelar",
+        "done": "«{name}» passa a correr sob uma unidade systemd.",
+        "failed": "Não foi possível mudar esta aplicação."
+      }
     },
     "domains": {
       "title": "Domínios e SSL",

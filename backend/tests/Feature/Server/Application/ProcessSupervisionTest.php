@@ -58,6 +58,33 @@ function supervisorHeaders(): array
     return ['Authorization' => 'Bearer '.test()->token];
 }
 
+/**
+ * The unit file `apply()` writes, captured from the `tee` that writes it.
+ *
+ * The logrotate policy is written first — systemd creates the log files but
+ * not their directory — so the unit is found by content rather than position.
+ */
+function renderedUnit(Application $application): string
+{
+    $written = new ArrayObject;
+
+    Process::fake(function ($p) use ($written) {
+        if (($p->command[0] ?? '') === 'tee') {
+            $written[] = (string) $p->input;
+        }
+
+        return Process::result(output: '');
+    });
+
+    app(ProcessSupervisor::class)->apply($application, '/home/appuser/api.test');
+
+    $unit = collect($written)->first(fn (string $c) => str_contains($c, '[Unit]'));
+
+    expect($unit)->not->toBeNull('no unit file was written');
+
+    return (string) $unit;
+}
+
 describe('the unit', function () {
     it('names the pinned Node, the allocated port and the site user', function () {
         $written = new ArrayObject;
@@ -171,6 +198,194 @@ describe('the unit', function () {
         Process::fake();
 
         expect(app(ProcessSupervisor::class)->runs(nodeApp(['start_command' => null])))->toBeFalse();
+    });
+
+    it('leaves the slice alone, because the workers are still in it', function () {
+        Process::fake();
+
+        app(ProcessSupervisor::class)->remove(nodeApp());
+
+        // The application's unit and every one of its worker units share
+        // `sv-app-<id>.slice`. Stopping a slice kills what is still inside it,
+        // and the workers are removed after this — by the code that knows how
+        // to disable them first.
+        Process::assertNotRan(fn ($p) => in_array('stop', (array) $p->command, true)
+            && str_contains(implode(' ', (array) $p->command), '.slice'));
+    });
+
+    it('releases the slice, which systemd does not reclaim on its own', function () {
+        Process::fake();
+
+        $application = nodeApp();
+
+        app(ProcessSupervisor::class)->releaseSlice($application);
+
+        // Removing the unit leaves the slice loaded and active. Unreleased, a
+        // long-lived box accumulates one per application ever deleted.
+        Process::assertRan(fn ($p) => implode(' ', (array) $p->command)
+            === 'systemctl stop sv-app-'.$application->id.'.slice');
+    });
+
+    it('runs node directly when the application wants one process', function () {
+        $unit = renderedUnit(nodeApp());
+
+        expect($unit)->toContain('ExecStart=/opt/fnm/node-versions/v20.11.0/installation/bin/node server.js')
+            ->and($unit)->not->toContain('pm2-runtime')
+            // No PM2, so no state directory and no widened crash window.
+            ->and($unit)->not->toContain('PM2_HOME')
+            ->and($unit)->toContain('StartLimitIntervalSec=60');
+    });
+
+    it('hands the script to pm2-runtime when it wants more than one', function () {
+        $unit = renderedUnit(nodeApp(['process_instances' => 4]));
+
+        // The script, not the interpreter: PM2 forks a JavaScript file through
+        // Node's cluster module. Given `node` it would have nothing to fork.
+        expect($unit)->toContain(
+            'ExecStart=/opt/fnm/node-versions/v20.11.0/installation/bin/pm2-runtime start server.js'
+            .' --interpreter /opt/fnm/node-versions/v20.11.0/installation/bin/node'
+            .' -i 4 --name sv-app-1 --raw'
+        );
+    });
+
+    it('gives PM2 a writable state directory outside the document root', function () {
+        $application = nodeApp(['process_instances' => 4]);
+        $home = app(ProcessSupervisor::class)->pm2Home($application);
+        $unit = renderedUnit($application);
+
+        // Left at its ~/.pm2 default this lands under ProtectHome=read-only
+        // and PM2 cannot start — reporting the hardening, not the directory.
+        expect($unit)->toContain('Environment=PM2_HOME='.$home)
+            ->and($unit)->toMatch('/ReadWritePaths=.*'.preg_quote($home, '/').'/')
+            // A sibling of public_html, never inside it: anything under the
+            // document root is a URL, and a socket is not for publishing.
+            ->and($home)->not->toContain('public_html');
+    });
+
+    it('widens the crash window for PM2, whose failure cycle is slower', function () {
+        // PM2 retries the workers itself before exiting, so a full failure
+        // takes ~18s. Against a 60s window the count never reaches five and
+        // the unit restarts forever while still reporting active.
+        expect(renderedUnit(nodeApp(['process_instances' => 4])))
+            ->toContain('StartLimitIntervalSec=300');
+    });
+
+    it('passes the application its own arguments after the separator', function () {
+        expect(renderedUnit(nodeApp(['process_instances' => 2, 'start_command' => 'node server.js --port-offset 2'])))
+            ->toContain('--raw -- --port-offset 2');
+    });
+
+    it('will not cluster a command with no script for PM2 to fork', function (string $command) {
+        // Cluster mode is not a flag that applies to any command. Pointed at
+        // something it cannot fork, PM2 silently runs one fork-mode process —
+        // the old panel's users chose four instances and got one, with no
+        // error anywhere. Better to run the command we were given.
+        $unit = renderedUnit(nodeApp(['process_instances' => 4, 'start_command' => $command]));
+
+        expect($unit)->not->toContain('pm2-runtime')
+            ->and($unit)->not->toContain('PM2_HOME');
+    })->with([
+        'a bare binary' => '/usr/local/bin/nodebb',
+        'node with no script' => 'node',
+    ]);
+
+    it('creates the PM2 directory owned by the site, not root', function () {
+        $runs = new ArrayObject;
+        Process::fake(function ($p) use ($runs) {
+            $runs[] = $p->command;
+
+            return Process::result(output: '');
+        });
+
+        app(ProcessSupervisor::class)->apply(nodeApp(['process_instances' => 4]), '/home/appuser/api.test');
+
+        // Unlike the log dir, which root owns because systemd opens append:
+        // targets before dropping privileges, this one is written by the
+        // application's own process.
+        $commands = collect($runs)->map(fn ($c) => implode(' ', $c));
+
+        expect($commands->contains(fn ($c) => str_contains($c, 'chown appuser:appuser')
+            && str_contains($c, '/pm2')))->toBeTrue();
+    });
+
+    it('installs PM2 into the application\'s own Node version when it is missing', function () {
+        $runs = new ArrayObject;
+        // Stateful, because the code checks the same thing before and after
+        // acting on it. A fake that always answers "missing" makes the
+        // post-install verification fail against a box the fake broke.
+        $installed = new ArrayObject(['yes' => false]);
+
+        Process::fake(function ($p) use ($runs, $installed) {
+            $args = ($p->command[0] ?? '') === 'sudo' ? array_slice((array) $p->command, 2) : (array) $p->command;
+            $runs[] = $args;
+
+            $line = implode(' ', $args);
+
+            if (str_contains($line, 'npm install -g pm2@')) {
+                $installed['yes'] = true;
+
+                return Process::result(output: '');
+            }
+
+            // `test -x <pm2-runtime>`: absent until the install has run.
+            if (($args[0] ?? '') === 'test' && str_contains((string) ($args[2] ?? ''), 'pm2-runtime')) {
+                return Process::result(exitCode: $installed['yes'] ? 0 : 1, output: '');
+            }
+
+            return Process::result(output: '');
+        });
+
+        app(ProcessSupervisor::class)->apply(nodeApp(['process_instances' => 4]), '/home/appuser/api.test');
+
+        $commands = collect($runs)->map(fn (array $c) => implode(' ', $c));
+
+        // That version's own npm, not a global one: runtimes are per
+        // application via fnm, so there is no single PM2 to install once.
+        expect($commands->contains(fn (string $c) => str_contains($c, '/v20.11.0/installation/bin/npm install -g pm2@')))
+            ->toBeTrue();
+
+        // Pinned. `@latest` would give two servers provisioned a week apart
+        // different majors, and upgrade PM2 under running applications.
+        expect($commands->contains(fn (string $c) => str_contains($c, 'pm2@latest')))->toBeFalse();
+    });
+
+    it('does not reinstall PM2 on a version that already has it', function () {
+        $runs = new ArrayObject;
+        Process::fake(function ($p) use ($runs) {
+            $runs[] = ($p->command[0] ?? '') === 'sudo' ? array_slice((array) $p->command, 2) : (array) $p->command;
+
+            return Process::result(output: '');
+        });
+
+        app(ProcessSupervisor::class)->apply(nodeApp(['process_instances' => 4]), '/home/appuser/api.test');
+
+        expect(collect($runs)->map(fn (array $c) => implode(' ', $c))
+            ->contains(fn (string $c) => str_contains($c, 'npm install -g pm2')))->toBeFalse();
+    });
+
+    it('names the slice once, so the unit and the cleanup cannot disagree', function () {
+        $written = new ArrayObject;
+        Process::fake(function ($p) use ($written) {
+            if (($p->command[0] ?? '') === 'tee') {
+                $written[] = (string) $p->input;
+            }
+
+            return Process::result(output: '');
+        });
+
+        $application = nodeApp();
+        $supervisor = app(ProcessSupervisor::class);
+
+        $supervisor->apply($application, '/home/appuser/api.test');
+
+        // The template renders whatever `slice()` returns. When each built the
+        // name itself they were free to stop agreeing, and the cleanup would
+        // then stop a slice nothing was ever in.
+        // Not the first write — the logrotate policy is written before the
+        // unit, because systemd creates the log files but not their directory.
+        $unit = collect($written)->first(fn (string $c) => str_contains($c, '[Unit]'));
+
+        expect($unit)->toContain('Slice='.$supervisor->slice($application));
     });
 });
 
@@ -487,4 +702,121 @@ describe('refreshing a unit to the current template', function () {
         expect(app(ProcessSupervisor::class)->refreshUnit(nodeApp(), '/home/appuser/api.test'))->toBeFalse();
         Process::assertNotRan(fn ($p) => in_array('tee', $p->command, true));
     });
+});
+
+/**
+ * An application adopted from the old panel, still run by its PM2 daemon.
+ *
+ * The routing lives in ProcessSupervisor rather than in its callers, so these
+ * assert through the same public API that GitDeployer, the environment
+ * controller and the restore steps use — none of which know two supervisors
+ * exist.
+ */
+describe('an adopted application', function () {
+    function pm2App(array $overrides = []): Application
+    {
+        return nodeApp(array_merge([
+            'supervisor_mode' => 'pm2',
+            'pm2_process_name' => 'legacy-api',
+        ], $overrides));
+    }
+
+    /** @return ArrayObject<int, string> */
+    function ranFor(callable $act): ArrayObject
+    {
+        $ran = new ArrayObject;
+
+        Process::fake(function ($p) use ($ran) {
+            $args = ($p->command[0] ?? '') === 'sudo' ? array_slice((array) $p->command, 2) : (array) $p->command;
+            $ran[] = implode(' ', $args);
+
+            return Process::result(output: '[]');
+        });
+
+        $act();
+
+        return $ran;
+    }
+
+    it('writes no unit on deploy, and restarts the daemon instead', function () {
+        $application = pm2App();
+
+        $ran = ranFor(fn () => app(ProcessSupervisor::class)->apply($application, '/home/appuser/api.test'));
+
+        // A deploy still has to get the new code into the running process.
+        expect(collect($ran)->contains(fn (string $c) => str_contains($c, 'pm2 restart legacy-api')))->toBeTrue()
+            ->and(collect($ran)->contains(fn (string $c) => str_contains($c, 'sv-app-')))->toBeFalse()
+            ->and(collect($ran)->contains(fn (string $c) => str_starts_with($c, 'systemctl')))->toBeFalse();
+    });
+
+    it('deletes from the daemon rather than looking for a unit', function () {
+        $application = pm2App();
+
+        $ran = ranFor(fn () => app(ProcessSupervisor::class)->remove($application));
+
+        expect(collect($ran)->contains(fn (string $c) => str_contains($c, 'pm2 delete legacy-api')))->toBeTrue()
+            ->and(collect($ran)->contains(fn (string $c) => str_contains($c, 'systemctl disable')))->toBeFalse();
+    });
+
+    it('sends start, stop and restart to the daemon', function (string $action) {
+        $application = pm2App();
+
+        $ran = ranFor(fn () => app(ProcessSupervisor::class)->{$action}($application));
+
+        expect(collect($ran)->contains(fn (string $c) => str_contains($c, "pm2 {$action} legacy-api")))->toBeTrue();
+    })->with(['start', 'stop', 'restart']);
+
+    it('has no slice of ours to release, and does not pretend to fail', function () {
+        $application = pm2App();
+
+        $ran = ranFor(fn () => expect(app(ProcessSupervisor::class)->releaseSlice($application)->ok)->toBeTrue());
+
+        // A deprovision must not stall on the absence of something that was
+        // never created.
+        expect(collect($ran)->contains(fn (string $c) => str_contains($c, '.slice')))->toBeFalse();
+    });
+
+    it('answers status in the same shape as a unit does', function () {
+        $application = pm2App();
+
+        Process::fake(fn () => Process::result(output: json_encode([
+            ['name' => 'legacy-api', 'pm2_env' => ['status' => 'online', 'restart_time' => 1], 'monit' => ['memory' => 40, 'cpu' => 2]],
+            ['name' => 'legacy-api', 'pm2_env' => ['status' => 'online', 'restart_time' => 0], 'monit' => ['memory' => 60, 'cpu' => 1]],
+        ])));
+
+        // Same keys either way, so nothing downstream branches on the
+        // supervisor; `supervisor` is there for anything that wants to label
+        // it, and the fields a given supervisor cannot answer are null rather
+        // than invented.
+        expect(app(ProcessSupervisor::class)->status($application))->toMatchArray([
+            'state' => 'online',
+            'sub_state' => null,
+            'since' => null,
+            'memory' => 100,
+            'restarts' => 1,
+            'instances' => 2,
+            'online' => 2,
+            'supervisor' => 'pm2',
+        ]);
+    });
+
+    it('is still known to run when adoption recorded no start command', function () {
+        // The old panel stored a package-manager invocation and rewrote it on
+        // the way to PM2, so there may be nothing here we could parse. What it
+        // has is a name the daemon knows it by.
+        expect(app(ProcessSupervisor::class)->runs(pm2App(['start_command' => null])))->toBeTrue();
+    });
+});
+
+it('labels a systemd application as one, and admits what it cannot count', function () {
+    Process::fake(fn () => Process::result(output: "ActiveState=active\nSubState=running\nMemoryCurrent=1024\nNRestarts=0\n"));
+
+    expect(app(ProcessSupervisor::class)->status(nodeApp()))->toMatchArray([
+        'state' => 'active',
+        'instances' => 1,
+        // The unit is one cgroup; how many workers live inside it is PM2's to
+        // know. Null rather than a guess.
+        'online' => null,
+        'supervisor' => 'systemd',
+    ]);
 });
