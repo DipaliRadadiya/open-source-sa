@@ -111,6 +111,8 @@ return [
     'cannot_delete_root' => 'Le dossier racine du site ne peut pas être supprimé.',
     'target_not_archive' => 'Le nom de la nouvelle archive doit se terminer par .zip, .tar.gz ou .tgz.',
     'unknown_backup' => 'Ce n\'est pas une sauvegarde connue de ce fichier.',
+    'environment_key_locked' => ':key ne peut pas être modifiée ni supprimée ici. L\'application chiffre ses données enregistrées avec elle, et une clé différente rendrait ces données illisibles.',
+    'environment_key_locked_backup' => 'Cette sauvegarde a une :key différente. La restaurer rendrait illisibles les données que l\'application a chiffrées depuis.',
 
     'upload_directory_missing' => 'Le dossier de destination de cet envoi n\'existe plus.',
     'upload_insufficient_space' => 'Le serveur ne dispose pas d\'assez d\'espace disque libre pour cet envoi.',

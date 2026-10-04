@@ -111,6 +111,8 @@ return [
     'cannot_delete_root' => 'Der Stammordner der Website kann nicht gelöscht werden.',
     'target_not_archive' => 'Der Name des neuen Archivs muss auf .zip, .tar.gz oder .tgz enden.',
     'unknown_backup' => 'Das ist keine bekannte Sicherung dieser Datei.',
+    'environment_key_locked' => ':key kann hier nicht geändert oder entfernt werden. Die Anwendung verschlüsselt ihre gespeicherten Daten damit, und ein anderer Schlüssel würde diese Daten unlesbar machen.',
+    'environment_key_locked_backup' => 'Diese Sicherung hat einen anderen :key. Sie wiederherzustellen würde die Daten unlesbar machen, die die Anwendung seitdem verschlüsselt hat.',
 
     'upload_directory_missing' => 'Der Ordner für diesen Upload existiert nicht mehr.',
     'upload_insufficient_space' => 'Auf dem Server ist nicht genügend freier Speicherplatz für diesen Upload vorhanden.',

@@ -112,6 +112,8 @@ return [
     'cannot_delete_root' => 'The site\'s own root folder cannot be deleted.',
     'target_not_archive' => 'The new archive\'s name must end in .zip, .tar.gz or .tgz.',
     'unknown_backup' => 'That is not a known backup of this file.',
+    'environment_key_locked' => ':key cannot be changed or removed here. The application encrypts its stored data with it, and a different key would make that data unreadable.',
+    'environment_key_locked_backup' => 'This backup has a different :key. Restoring it would make the data the application has encrypted since then unreadable.',
 
     'upload_directory_missing' => 'The folder this upload was going to no longer exists.',
     'upload_insufficient_space' => 'The server does not have enough free disk space for this upload.',

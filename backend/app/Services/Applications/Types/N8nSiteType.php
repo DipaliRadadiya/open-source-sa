@@ -92,6 +92,14 @@ class N8nSiteType extends AbstractSiteType
      * The npm package this site type installs, so the catalog knows what to
      * ask the registry about.
      */
+    /**
+     * Encrypts every saved credential. See N8nInstaller's class note.
+     */
+    public function lockedEnvironmentKeys(): array
+    {
+        return ['N8N_ENCRYPTION_KEY'];
+    }
+
     public function npmPackage(): ?string
     {
         return 'n8n';

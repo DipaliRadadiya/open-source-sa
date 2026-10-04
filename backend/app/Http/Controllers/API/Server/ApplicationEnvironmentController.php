@@ -13,6 +13,7 @@ use App\Services\Server\Applications\ApplicationEnvironment;
 use App\Services\Server\Applications\EnvironmentDiff;
 use App\Services\Server\Applications\EnvironmentHistory;
 use App\Services\Server\Applications\EnvironmentInspector;
+use App\Services\Server\Applications\EnvironmentKeyLock;
 use App\Services\Server\Applications\FrameworkDetector;
 use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\Server\ServerOps;
@@ -54,6 +55,7 @@ class ApplicationEnvironmentController extends Controller
         Application $application,
         ApplicationEnvironment $files,
         EnvironmentInspector $inspector,
+        EnvironmentKeyLock $lock,
         FrameworkDetector $detector,
         ActivityLogger $activity,
     ): JsonResponse {
@@ -75,6 +77,12 @@ class ApplicationEnvironmentController extends Controller
         }
 
         $before = $files->exists($application) ? $files->read($application) : '';
+
+        if (($key = $lock->violation($application, $before, $raw)) !== null) {
+            throw ValidationException::withMessages([
+                'raw' => [__('errors/application.environment_key_locked', ['key' => $key])],
+            ]);
+        }
 
         $backup = $files->write($application, $raw);
 
@@ -98,6 +106,28 @@ class ApplicationEnvironmentController extends Controller
             'applied' => $applied,
             'restarted' => $restarted,
         ]);
+    }
+
+    private function refuseLockedKeyChange(Application $application, ApplicationEnvironment $files, EnvironmentKeyLock $lock, string $name): void
+    {
+        try {
+            $backup = $files->readBackup($application, $name);
+        } catch (RuntimeException) {
+            throw ValidationException::withMessages(['backup' => [__('errors/application.unknown_backup')]]);
+        }
+
+        // Missing: restore() below answers that, as before.
+        if ($backup === null) {
+            return;
+        }
+
+        $current = $files->exists($application) ? $files->read($application) : '';
+
+        if (($key = $lock->violation($application, $current, $backup)) !== null) {
+            throw ValidationException::withMessages([
+                'backup' => [__('errors/application.environment_key_locked_backup', ['key' => $key])],
+            ]);
+        }
     }
 
     /**
@@ -153,10 +183,15 @@ class ApplicationEnvironmentController extends Controller
         RestoreEnvironmentRequest $request,
         Application $application,
         ApplicationEnvironment $files,
+        EnvironmentKeyLock $lock,
         FrameworkDetector $detector,
         ActivityLogger $activity,
     ): JsonResponse {
         $name = (string) $request->validated('backup');
+
+        // An older copy is as able to carry a different key as a typed one:
+        // a backup from before a key change would undo it the same way.
+        $this->refuseLockedKeyChange($application, $files, $lock, $name);
 
         // A well-formed name that is not (or no longer) on disk is the user's
         // mistake — a stale list — not a server failure.

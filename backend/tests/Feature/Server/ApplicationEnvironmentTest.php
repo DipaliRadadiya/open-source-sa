@@ -839,3 +839,106 @@ describe('one-click apps with a .env beside their code (bug #69)', function () {
             ->and($response->json('environment.framework'))->toBe('laravel');
     });
 });
+
+describe('the key an application encrypts its data with (bug #17)', function () {
+    beforeEach(function () {
+        $this->application->forceFill(['site_type' => 'n8n', 'slug' => 'flows', 'serving_profile' => 'node'])->save();
+        $this->env = '/home/envowner/flows/public_html/.env';
+        $this->disk = [$this->env => "N8N_ENCRYPTION_KEY=\"0123456789abcdef0123\"\nN8N_PORT=5678\n"];
+        $this->present = [];
+    });
+
+    it('refuses to change n8n\'s encryption key', function () {
+        fakeSite();
+
+        // Accepted before, and every credential saved in n8n became unreadable,
+        // with no error until a workflow next ran.
+        $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => "N8N_ENCRYPTION_KEY=\"ffffffffffffffffffff\"\nN8N_PORT=5678\n"])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.raw.0', __('errors/application.environment_key_locked', ['key' => 'N8N_ENCRYPTION_KEY']));
+
+        expect($this->written)->toBeNull();
+    });
+
+    it('refuses to remove it or empty it', function (string $raw) {
+        fakeSite();
+
+        $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => $raw])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('raw');
+
+        expect($this->written)->toBeNull();
+    })->with([
+        'removed' => ["N8N_PORT=5678\n"],
+        'emptied' => ["N8N_ENCRYPTION_KEY=\nN8N_PORT=5678\n"],
+        'a second, different value' => ["N8N_ENCRYPTION_KEY=\"0123456789abcdef0123\"\nN8N_ENCRYPTION_KEY=other\n"],
+    ]);
+
+    it('still saves every other change, however the key is quoted', function () {
+        fakeSite();
+
+        $raw = "N8N_PORT=5679\nN8N_ENCRYPTION_KEY='0123456789abcdef0123'\n";
+
+        $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => $raw])->assertOk();
+
+        expect($this->written)->toBe($raw);
+    });
+
+    it('lets a file with no key yet be given one', function (string $current) {
+        $this->disk = [$this->env => $current];
+        fakeSite();
+
+        $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => "N8N_PORT=5678\nN8N_ENCRYPTION_KEY=newkey0123456789\n"])
+            ->assertOk();
+    })->with([
+        'no line' => ["N8N_PORT=5678\n"],
+        'an empty line' => ["N8N_PORT=5678\nN8N_ENCRYPTION_KEY=\n"],
+    ]);
+
+    it('refuses to restore a backup that holds another key', function () {
+        $this->disk['/home/envowner/flows/public_html/.env.bak-20260101-000000'] = "N8N_ENCRYPTION_KEY=\"oldoldoldoldoldold\"\n";
+        fakeSite();
+
+        // A copy from before a key change undoes it just the same.
+        $this->actingAs($this->admin)->postJson(envUrl('/restore'), ['backup' => '.env.bak-20260101-000000'])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.backup.0', __('errors/application.environment_key_locked_backup', ['key' => 'N8N_ENCRYPTION_KEY']));
+
+        expect($this->written)->toBeNull();
+    });
+
+    it('restores a backup that holds the same key', function () {
+        $this->disk['/home/envowner/flows/public_html/.env.bak-20260101-000000'] = "N8N_ENCRYPTION_KEY=0123456789abcdef0123\nN8N_PORT=1\n";
+        fakeSite();
+
+        $this->actingAs($this->admin)->postJson(envUrl('/restore'), ['backup' => '.env.bak-20260101-000000'])
+            ->assertOk();
+
+        expect($this->written)->toContain('N8N_PORT=1');
+    });
+
+    it('locks APP_KEY on the Laravel apps the panel installs', function (string $type, string $path) {
+        $this->application->forceFill(['site_type' => $type, 'slug' => 'books', 'serving_profile' => 'php'])->save();
+        $this->disk = [$path => "APP_KEY=base64:abc\n"];
+        $this->present = ['/home/envowner/books/public_html/artisan'];
+        fakeSite();
+
+        $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => "APP_KEY=base64:xyz\n"])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.raw.0', __('errors/application.environment_key_locked', ['key' => 'APP_KEY']));
+    })->with([
+        ['akaunting', '/home/envowner/books/public_html/.env'],
+        // Served from its own /public, so the code is the app root.
+        ['statamic', '/home/envowner/books/.env'],
+    ]);
+
+    it('leaves a git site\'s APP_KEY to its owner', function () {
+        // The code is theirs; so is deciding to rotate its key.
+        $this->application->forceFill(['site_type' => 'git', 'slug' => 'deployed-site', 'serving_profile' => 'php'])->save();
+        $this->disk = ['/home/envowner/deployed-site/.env' => "APP_KEY=base64:abc\n"];
+        $this->present = ['/home/envowner/deployed-site/public_html/artisan'];
+        fakeSite();
+
+        $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => "APP_KEY=base64:xyz\n"])->assertOk();
+    });
+});

@@ -112,6 +112,8 @@ return [
     'cannot_delete_root' => 'No se puede eliminar la carpeta raíz del sitio.',
     'target_not_archive' => 'El nombre del nuevo archivo comprimido debe terminar en .zip, .tar.gz o .tgz.',
     'unknown_backup' => 'Esa no es una copia de seguridad conocida de este archivo.',
+    'environment_key_locked' => ':key no se puede cambiar ni eliminar aquí. La aplicación cifra sus datos guardados con ella, y una clave distinta haría que esos datos fueran ilegibles.',
+    'environment_key_locked_backup' => 'Esta copia tiene una :key distinta. Restaurarla haría ilegibles los datos que la aplicación ha cifrado desde entonces.',
 
     'upload_directory_missing' => 'La carpeta de destino de esta subida ya no existe.',
     'upload_insufficient_space' => 'El servidor no tiene suficiente espacio libre en disco para esta subida.',

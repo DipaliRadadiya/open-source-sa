@@ -100,6 +100,15 @@ class StatamicSiteType extends AbstractSiteType
      * Statamic is Laravel underneath, so it has a `.env` like any Laravel
      * application even though it arrives as a one-click install.
      */
+    /**
+     * Laravel's encryption key: a new one signs everybody out and leaves
+     * anything the application encrypted with the old one unreadable.
+     */
+    public function lockedEnvironmentKeys(): array
+    {
+        return ['APP_KEY'];
+    }
+
     public function features(): array
     {
         // And Laravel's queue with it — being installed in one click does not

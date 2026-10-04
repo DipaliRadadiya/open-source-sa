@@ -303,6 +303,15 @@ abstract class AbstractSiteType implements SiteType
         return [];
     }
 
+    /**
+     * None by default. A git site's code is the user's own, and rotating its
+     * key is theirs to decide.
+     */
+    public function lockedEnvironmentKeys(): array
+    {
+        return [];
+    }
+
     public function defaultWebRoot(): string
     {
         return '/';

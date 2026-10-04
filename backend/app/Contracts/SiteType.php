@@ -225,4 +225,14 @@ interface SiteType
      * @return array<string, string>
      */
     public function mimeTypes(): array;
+
+    /**
+     * `.env` keys the Environment editor may not change or remove once they
+     * hold a value (bug #17): the key the application encrypts its stored
+     * data with. A different one does not fail loudly — it makes that data
+     * unreadable, and nothing says so until the application next reads it.
+     *
+     * @return array<int, string>
+     */
+    public function lockedEnvironmentKeys(): array;
 }

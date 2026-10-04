@@ -65,6 +65,28 @@ class EnvironmentInspector
     }
 
     /**
+     * Every value one key is given in the file, in order, secret or not.
+     *
+     * Every one rather than "the" value: which definition wins depends on who
+     * reads the file (dotenv keeps the first, systemd the last), so a check
+     * that must not be fooled looks at all of them.
+     *
+     * @return array<int, string>
+     */
+    public function values(string $raw, string $key): array
+    {
+        $values = [];
+
+        foreach ($this->lines($raw) as $line) {
+            if (preg_match('/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=(.*)$/', $line, $m) === 1 && $m[1] === $key) {
+                $values[] = $this->unquote(trim($m[2]));
+            }
+        }
+
+        return $values;
+    }
+
+    /**
      * Everything worth telling the user about this file, framework-aware.
      *
      * Each entry carries the key, its current value, a severity and a

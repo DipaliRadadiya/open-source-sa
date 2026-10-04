@@ -111,6 +111,8 @@ return [
     'cannot_delete_root' => 'サイトのルートフォルダは削除できません。',
     'target_not_archive' => '新しいアーカイブ名は .zip、.tar.gz、.tgz のいずれかで終わる必要があります。',
     'unknown_backup' => 'それはこのファイルの既知のバックアップではありません。',
+    'environment_key_locked' => ':key はここで変更または削除できません。アプリケーションは保存データをこのキーで暗号化しており、別のキーにするとそのデータは読めなくなります。',
+    'environment_key_locked_backup' => 'このバックアップの :key は異なります。復元すると、それ以降にアプリケーションが暗号化したデータが読めなくなります。',
 
     'upload_directory_missing' => 'このアップロード先のフォルダーは存在しなくなりました。',
     'upload_insufficient_space' => 'このアップロードに必要な空きディスク容量がサーバーにありません。',

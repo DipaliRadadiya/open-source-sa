@@ -125,6 +125,15 @@ class AkauntingSiteType extends AbstractSiteType
      *
      * @return array<int, string>
      */
+    /**
+     * Laravel's encryption key: a new one signs everybody out and leaves
+     * anything the application encrypted with the old one unreadable.
+     */
+    public function lockedEnvironmentKeys(): array
+    {
+        return ['APP_KEY'];
+    }
+
     public function features(): array
     {
         return [...parent::features(), 'app_environment'];
