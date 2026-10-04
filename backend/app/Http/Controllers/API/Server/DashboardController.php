@@ -62,7 +62,7 @@ class DashboardController extends Controller
      * why. Logged to the activity trail with what was actually killed, read
      * at kill time rather than taken from the request.
      */
-    public function killProcess(KillProcessRequest $request, int $pid, ProcessKiller $killer, ActivityLogger $log): JsonResponse
+    public function killProcess(KillProcessRequest $request, string $pid, ProcessKiller $killer, ActivityLogger $log): JsonResponse
     {
         $killed = $killer->kill($pid, (string) ($request->validated('signal') ?? 'TERM'));
 

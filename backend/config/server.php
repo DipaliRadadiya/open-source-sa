@@ -3134,6 +3134,9 @@ return [
         'disk_devices' => env('SERVER_METRICS_DISK_DEVICES', '/^(sd|nvme|vd|xvd|hd|md)/'),
         'retention_hours' => (int) env('SERVER_METRICS_RETENTION_HOURS', 24),
         'processes_limit' => (int) env('SERVER_METRICS_PROCESSES_LIMIT', 25),
+        // How long Stop waits for a signalled process to exit before saying
+        // it is still running (bug #6). TERM is a request, not a guarantee.
+        'stop_wait_seconds' => (int) env('SERVER_PROCESS_STOP_WAIT_SECONDS', 5),
     ],
 
     /*

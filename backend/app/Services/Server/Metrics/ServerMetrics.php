@@ -2,10 +2,12 @@
 
 namespace App\Services\Server\Metrics;
 
+use App\Exceptions\Server\Process\ProcessKillException;
 use App\Services\Server\Applications\DnsVerifier;
 use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\HostCpus;
+use App\Services\Server\ProcessKiller;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerPublicIp;
 use App\Support\Bytes;
@@ -36,6 +38,7 @@ class ServerMetrics
         private ServerPublicIp $publicIp,
         private ServerCapabilities $capabilities,
         private DatabaseManager $databases,
+        private ProcessKiller $killer,
     ) {}
 
     /**
@@ -175,6 +178,7 @@ class ServerMetrics
 
         $processes = [];
         $total = 0;
+        $placement = null;
 
         foreach (array_slice(preg_split('/\r?\n/', trim($output)) ?: [], 1) as $line) {
             $parts = preg_split('/\s+/', trim($line), 5);
@@ -191,6 +195,9 @@ class ServerMetrics
                 continue;
             }
 
+            $placement ??= $this->processPlacement();
+            $refusal = $this->refusalFor((int) $parts[0], $placement);
+
             $processes[] = [
                 'pid' => (int) $parts[0],
                 'user' => $parts[1],
@@ -199,10 +206,77 @@ class ServerMetrics
                 // Keep the complete argv for diagnosis, but never let a
                 // credential-bearing option cross the API boundary.
                 'command' => CommandRedactor::line($parts[4]),
+                // Bug #7: the screen offered Stop on processes the endpoint
+                // refuses, so the user found out only after clicking.
+                'stoppable' => $refusal === null,
+                'reason' => $refusal === null ? null : ProcessKillException::refused($refusal)->reason(),
             ];
         }
 
         return ['processes' => $processes, 'total' => $total, 'limit' => $limit];
+    }
+
+    /**
+     * Parent, unit and short name for every process, from one `ps` call —
+     * what ProcessKiller::refusal() needs, without a command per row.
+     *
+     * `comm` last because it is the only column that can hold a space. Read
+     * after the list, so a listed process that exited in between is absent
+     * here — see refusalFor().
+     *
+     * @return array<int, array{ppid: int, unit: ?string, command: string}>
+     */
+    private function processPlacement(): array
+    {
+        $output = $this->serverOps->run(
+            ['ps', '-eo', 'pid=,ppid=,unit=,comm='],
+            ['feature' => 'dashboard', 'op' => 'process_units'],
+        )->output();
+
+        $placement = [];
+
+        foreach (preg_split('/\r?\n/', trim($output)) ?: [] as $line) {
+            $parts = preg_split('/\s+/', trim($line), 4);
+
+            if (count($parts) < 4 || ! ctype_digit($parts[0])) {
+                continue;
+            }
+
+            $unit = preg_replace('/\.service$/', '', $parts[2]);
+
+            $placement[(int) $parts[0]] = [
+                'ppid' => (int) $parts[1],
+                'unit' => $unit === '-' || $unit === '' ? null : $unit,
+                'command' => $parts[3],
+            ];
+        }
+
+        return $placement;
+    }
+
+    /**
+     * The refusal Stop would give this process, asked of the same rules.
+     *
+     * A process missing from the placement list exited between the two `ps`
+     * calls; Stop would answer "not found", so it is not offered either. An
+     * empty list means the second `ps` itself failed — then the button stays
+     * offered and the endpoint, which checks again, has the last word.
+     *
+     * @param  array<int, array{ppid: int, unit: ?string, command: string}>  $placement
+     */
+    private function refusalFor(int $pid, array $placement): ?string
+    {
+        if ($placement === []) {
+            return null;
+        }
+
+        if (! isset($placement[$pid])) {
+            return 'gone';
+        }
+
+        $process = $placement[$pid];
+
+        return $this->killer->refusal($pid, $process['command'], $process['ppid'], $process['unit']);
     }
 
     /**

@@ -49,6 +49,7 @@ function fakeDashboard(): void
             ($cmd[0] ?? '') === 'nginx' => Process::result(errorOutput: 'nginx version: nginx/1.24.0'),
             ($cmd[0] ?? '') === 'redis-server' => Process::result(output: 'Redis server v=7.2.4 sha=0'),
             ($cmd[0] ?? '') === 'mysql' => Process::result(output: 'mysql  Ver 8.0.36 for Linux'),
+            $cmd === ['ps', '-eo', 'pid=,ppid=,unit=,comm='] => Process::result(output: "    1     0 init.scope systemd\n 1234     1 nginx.service nginx\n 5678     1 mysql.service mysqld\n 4242  4000 session-4.scope sleep\n"),
             ($cmd[0] ?? '') === 'ps' => Process::result(output: "  PID USER  %CPU %MEM COMMAND\n 9999 panel 99.0  0.1 /usr/bin/ps -eo pid,user:20,%cpu,%mem,args --sort=-%cpu\n 1234 root   5.0  2.1 /usr/sbin/nginx -g daemon off;\n 5678 mysql  3.0 10.5 /usr/sbin/mysqld --defaults-file=/etc/mysql/my.cnf --password=topsecret --api-key abc123\n"),
             default => Process::result(exitCode: 0),
         };
@@ -116,6 +117,50 @@ it('returns the server process table', function () {
     Process::assertRan(fn ($process) => $process->command === [
         'ps', '-eo', 'pid,user:20,%cpu,%mem,args', '--sort=-%cpu',
     ]);
+});
+
+it('says which processes Stop would refuse, and why (bug #7)', function () {
+    config(['server.protected_services' => ['nginx', 'php8.4-fpm']]);
+    fakeDashboard();
+
+    // The same rules as the Stop endpoint, so the screen can grey the button
+    // out instead of failing after the click.
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/server/processes')->assertOk()
+        ->assertJsonPath('processes.0.pid', 1234)
+        ->assertJsonPath('processes.0.stoppable', false)
+        ->assertJsonPath('processes.0.reason', __('errors/process.protected'))
+        ->assertJsonPath('processes.1.pid', 5678)
+        ->assertJsonPath('processes.1.stoppable', false)
+        ->assertJsonPath('processes.1.reason', __('errors/process.database'));
+});
+
+it('offers Stop on an ordinary process', function () {
+    Process::fake(function ($process) {
+        return match ($process->command) {
+            ['ps', '-eo', 'pid=,ppid=,unit=,comm='] => Process::result(output: " 4242  4000 session-4.scope sleep\n"),
+            default => Process::result(output: "  PID USER %CPU %MEM COMMAND\n 4242 deploy 1.0 0.1 sleep 600\n"),
+        };
+    });
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/server/processes')->assertOk()
+        ->assertJsonPath('processes.0.stoppable', true)
+        ->assertJsonPath('processes.0.reason', null);
+});
+
+it('does not offer Stop on a process that exited between the two reads', function () {
+    Process::fake(function ($process) {
+        return match ($process->command) {
+            ['ps', '-eo', 'pid=,ppid=,unit=,comm='] => Process::result(output: " 1     0 init.scope systemd\n"),
+            default => Process::result(output: "  PID USER %CPU %MEM COMMAND\n 4242 deploy 1.0 0.1 sleep 600\n"),
+        };
+    });
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/server/processes')->assertOk()
+        ->assertJsonPath('processes.0.stoppable', false)
+        ->assertJsonPath('processes.0.reason', __('errors/process.not_found'));
 });
 
 it('counts every process, not the rows it returns', function () {

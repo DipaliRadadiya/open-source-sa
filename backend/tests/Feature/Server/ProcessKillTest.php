@@ -3,7 +3,9 @@
 use App\Models\ActivityLog;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Process\FakeProcessResult;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Sleep;
 use Illuminate\Testing\TestResponse;
 
 beforeEach(function () {
@@ -12,7 +14,21 @@ beforeEach(function () {
     $this->token = $this->admin->createToken('t')->plainTextToken;
 
     config(['server.protected_services' => ['nginx', 'php8.4-fpm']]);
+    Sleep::fake();
 });
+
+/**
+ * The answer to `ps -o lstart=,stat= -p <pid>`: the process is there until a
+ * `kill` has been run, then gone — what a process that honours TERM does.
+ */
+function startedAnswer(ArrayObject $runs): FakeProcessResult
+{
+    $killed = collect($runs)->contains(fn ($c) => $c[0] === 'kill');
+
+    return $killed
+        ? Process::result(output: '', exitCode: 1)
+        : Process::result(output: "Sun Oct  4 10:00:00 2026 S\n");
+}
 
 /**
  * Fake `ps -o comm=,user=,ppid= -p <pid>` for one process, and let the kill
@@ -25,9 +41,13 @@ function fakeProcess(string $command, string $user = 'deploy', int $ppid = 1000)
     Process::fake(function ($process) use ($runs, $command, $user, $ppid) {
         $runs[] = $process->command;
 
-        return $process->command[0] === 'ps'
-            ? Process::result(output: "{$command} {$user} {$ppid}\n")
-            : Process::result(exitCode: 0);
+        if ($process->command[0] !== 'ps') {
+            return Process::result(exitCode: 0);
+        }
+
+        return in_array('lstart=,stat=', $process->command, true)
+            ? startedAnswer($runs)
+            : Process::result(output: "{$command} {$user} {$ppid}\n");
     });
 
     return $runs;
@@ -120,6 +140,19 @@ it('reports a PID that is no longer running as not found', function () {
     killPid(999_999)->assertNotFound();
 });
 
+it('answers not found for a PID no process can have (bug #8)', function (string $pid) {
+    $runs = fakeProcess('sleep');
+
+    // Past PHP_INT_MAX this was a 500: the route promised digits, and the
+    // controller asked for an int the value could not fit.
+    test()->withHeader('Authorization', 'Bearer '.test()->token)
+        ->deleteJson("/api/server/processes/{$pid}")
+        ->assertNotFound()
+        ->assertJsonPath('message', __('errors/process.not_found'));
+
+    expect(collect($runs))->toBeEmpty();
+})->with(['99999999999999999999999', '4194305', '0']);
+
 it('reads what it is killing at kill time, not from the request', function () {
     $runs = fakeProcess('sleep');
 
@@ -167,6 +200,10 @@ describe('processes inside a unit the server needs', function () {
             $runs[] = $process->command;
 
             if ($process->command[0] === 'ps') {
+                if (in_array('lstart=,stat=', $process->command, true)) {
+                    return startedAnswer($runs);
+                }
+
                 return in_array('unit=', $process->command, true)
                     ? Process::result(output: "{$unit}\n")
                     : Process::result(output: "{$command} root 1\n");
@@ -234,5 +271,109 @@ describe('database servers (bug #5)', function () {
         fakeProcessInUnit('postgres-exporter', 'sv-app-metrics.service');
 
         killPid(5002)->assertOk();
+    });
+});
+
+describe('the operating system\'s own services (bug #5)', function () {
+    it('refuses a process in a unit the server runs on', function (string $command, string $unit) {
+        $runs = fakeProcessInUnit($command, $unit);
+
+        killPid(6000)->assertUnprocessable()
+            ->assertJsonPath('message', __('errors/process.protected'));
+
+        expect(collect($runs)->contains(fn ($c) => $c[0] === 'kill'))->toBeFalse();
+    })->with([
+        ['dbus-daemon', 'dbus.service'],
+        ['cron', 'cron.service'],
+        ['systemd-journal', 'systemd-journald.service'],
+        ['systemd-resolve', 'systemd-resolved.service'],
+        ['rsyslogd', 'rsyslog.service'],
+    ]);
+});
+
+describe('a process that does not exit (bug #6)', function () {
+    /**
+     * A process that ignores TERM: `ps` keeps finding it, with the same start
+     * time, whatever is sent.
+     */
+    function fakeStubbornProcess(): ArrayObject
+    {
+        $runs = new ArrayObject;
+
+        Process::fake(function ($process) use ($runs) {
+            $runs[] = $process->command;
+
+            if ($process->command[0] !== 'ps') {
+                return Process::result();
+            }
+
+            return match (true) {
+                in_array('lstart=,stat=', $process->command, true) => Process::result(output: "Sun Oct  4 10:00:00 2026 S\n"),
+                in_array('unit=', $process->command, true) => Process::result(output: "session-4.scope\n"),
+                default => Process::result(output: "sleep deploy 1000\n"),
+            };
+        });
+
+        return $runs;
+    }
+
+    it('says it is still running instead of "stopped"', function () {
+        fakeStubbornProcess();
+
+        // 409, so the screen's error path offers Force stop.
+        killPid(7000)->assertStatus(409)
+            ->assertJsonPath('message', __('errors/process.still_running'));
+
+        expect(ActivityLog::where('action', 'process_killed')->exists())->toBeFalse();
+    });
+
+    it('has nothing stronger to offer when KILL does not end it', function () {
+        fakeStubbornProcess();
+
+        killPid(7000, ['signal' => 'KILL'])->assertStatus(409)
+            ->assertJsonPath('message', __('errors/process.still_running_after_kill'));
+    });
+
+    it('treats the PID coming back with another start time as exited', function () {
+        // PIDs are recycled: the number now belongs to something else, and the
+        // process we signalled is gone.
+        $runs = new ArrayObject;
+
+        Process::fake(function ($process) use ($runs) {
+            $runs[] = $process->command;
+            $killed = collect($runs)->contains(fn ($c) => $c[0] === 'kill');
+
+            return match (true) {
+                $process->command[0] !== 'ps' => Process::result(),
+                in_array('lstart=,stat=', $process->command, true) => Process::result(
+                    output: $killed ? "Sun Oct  4 11:30:00 2026 S\n" : "Sun Oct  4 10:00:00 2026 S\n",
+                ),
+                in_array('unit=', $process->command, true) => Process::result(output: "session-4.scope\n"),
+                default => Process::result(output: "sleep deploy 1000\n"),
+            };
+        });
+
+        killPid(7001)->assertOk();
+    });
+
+    it('treats a zombie as exited', function () {
+        // Exited and waiting for its parent; no signal makes that faster.
+        $runs = new ArrayObject;
+
+        Process::fake(function ($process) use ($runs) {
+            $runs[] = $process->command;
+            $killed = collect($runs)->contains(fn ($c) => $c[0] === 'kill');
+
+            return match (true) {
+                $process->command[0] !== 'ps' => Process::result(),
+                in_array('lstart=,stat=', $process->command, true) => Process::result(
+                    output: $killed ? "Sun Oct  4 10:00:00 2026 Z\n" : "Sun Oct  4 10:00:00 2026 S\n",
+                ),
+                in_array('unit=', $process->command, true) => Process::result(output: "session-4.scope\n"),
+                default => Process::result(output: "sleep deploy 1000\n"),
+            };
+        });
+
+        killPid(7002)->assertOk();
     });
 });

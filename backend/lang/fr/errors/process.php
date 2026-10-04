@@ -7,4 +7,6 @@ return [
     'kernel_thread' => 'Les threads du noyau ne peuvent pas être arrêtés.',
     'self' => 'Le panneau ne peut pas arrêter son propre processus.',
     'kill_failed' => 'Impossible d\'arrêter le processus.',
+    'still_running' => 'Le processus est toujours en cours d\'exécution. Il est peut-être encore en train de s\'arrêter, ou il ignore la demande. Utilisez Forcer l\'arrêt pour le terminer maintenant.',
+    'still_running_after_kill' => 'Le processus est toujours en cours d\'exécution après Forcer l\'arrêt. Il est probablement bloqué en attente d\'un disque ou d\'un partage réseau, et aucun signal ne peut le terminer avant la fin de cette attente.',
 ];

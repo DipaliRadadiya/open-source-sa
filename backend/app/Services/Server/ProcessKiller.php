@@ -3,6 +3,8 @@
 namespace App\Services\Server;
 
 use App\Exceptions\Server\Process\ProcessKillException;
+use Closure;
+use Illuminate\Support\Sleep;
 
 /**
  * Signals a running process, subject to a short list of refusals.
@@ -47,13 +49,39 @@ class ProcessKiller
     /** @var array<int, string> */
     public const DATABASE_UNITS = ['mariadb', 'mysql', 'mysqld', 'postgresql', 'mongod', 'mongodb'];
 
+    /**
+     * Units the operating system itself runs on (bug #5).
+     *
+     * Stopping any of these from a web form is never the fix for anything the
+     * screen shows. cron and dbus do not come back on their own — cron is what
+     * runs the panel's scheduler, so backups and renewals quietly stop — and
+     * the rest take down logging, name resolution, logins or the clock. Unit
+     * names measured with `ps -eo unit=` on Ubuntu 26.04 (nginx test server).
+     *
+     * @var array<int, string>
+     */
+    public const CORE_UNITS = [
+        'dbus', 'cron', 'polkit', 'rsyslog', 'chrony',
+        'systemd-journald', 'systemd-logind', 'systemd-networkd',
+        'systemd-resolved', 'systemd-udevd', 'systemd-timesyncd',
+    ];
+
+    /**
+     * The largest PID Linux can hand out (`PID_MAX_LIMIT` on 64-bit). Anything
+     * above it cannot be running, so it is "not found" rather than an integer
+     * the rest of the stack has to survive (bug #8).
+     */
+    public const PID_MAX = 4194304;
+
     public function __construct(private ServerOps $serverOps) {}
 
     /**
      * @return array{pid: int, command: string, user: string, signal: string}
      */
-    public function kill(int $pid, string $signal): array
+    public function kill(string $pid, string $signal): array
     {
+        $pid = self::validPid($pid) ?? throw ProcessKillException::notFound();
+
         $process = $this->inspect($pid);
 
         if ($process === null) {
@@ -62,7 +90,13 @@ class ProcessKiller
             throw ProcessKillException::notFound();
         }
 
-        $this->guard($pid, $process);
+        $refusal = $this->refusal($pid, $process['command'], $process['ppid'], fn (): ?string => $this->unitOf($pid));
+
+        if ($refusal !== null) {
+            throw ProcessKillException::refused($refusal);
+        }
+
+        $started = $this->startedAt($pid);
 
         $result = $this->serverOps->run(
             ['kill', "-{$signal}", (string) $pid],
@@ -73,7 +107,141 @@ class ProcessKiller
             throw ProcessKillException::failed($result->reference);
         }
 
+        if (! $this->exited($pid, $started)) {
+            throw $signal === 'KILL'
+                ? ProcessKillException::survivedKill()
+                : ProcessKillException::stillRunning();
+        }
+
         return [...$process, 'pid' => $pid, 'signal' => $signal];
+    }
+
+    /**
+     * Why a process may not be stopped from this screen, or null when it may.
+     *
+     * One answer for both callers: the Stop endpoint, and the process list
+     * that greys the button out (bug #7). Two copies of these rules would
+     * drift, and a list that offers Stop on a process the endpoint refuses is
+     * exactly the report that started this.
+     *
+     * `$unit` is a closure for the endpoint, where finding the unit is one
+     * more command and the checks before it usually answer first; the list
+     * already has every unit from one `ps` call and passes it as a string.
+     *
+     * @param  string|null|Closure(): ?string  $unit
+     * @return 'protected'|'kernel_thread'|'self'|'database'|null
+     */
+    public function refusal(int $pid, string $command, int $ppid, string|Closure|null $unit): ?string
+    {
+        // PID 1 is the init system. Killing it panics the kernel — there is no
+        // circumstance in which this is the intent.
+        if ($pid === 1) {
+            return 'protected';
+        }
+
+        // Kernel threads (children of kthreadd, PID 2) aren't processes in any
+        // sense the user means, and don't respond to signals.
+        if ($pid === 2 || $ppid === 2) {
+            return 'kernel_thread';
+        }
+
+        // Killing our own worker kills the request doing the killing; killing
+        // the master takes the panel offline and with it the way back in.
+        if ($pid === getmypid() || $pid === posix_getppid()) {
+            return 'self';
+        }
+
+        if ($this->belongsToProtectedService($command)) {
+            // These already can't be stopped from the Services screen. A PID
+            // is not a way around that decision.
+            return 'protected';
+        }
+
+        $unit = $unit instanceof Closure ? $unit() : $unit;
+
+        if (in_array($command, self::DATABASE_COMMANDS, true) || $this->isDatabaseUnit($unit)) {
+            return 'database';
+        }
+
+        if ($this->inProtectedUnit($unit)) {
+            return 'protected';
+        }
+
+        return null;
+    }
+
+    /**
+     * The PID in a request path as an integer, or null when it cannot name a
+     * process. Taken as a string because the route only promises digits: a
+     * value past PHP_INT_MAX does not fit the `int` a controller would ask
+     * for, and that mismatch was a 500.
+     */
+    public static function validPid(string $pid): ?int
+    {
+        if (preg_match('/^[0-9]{1,7}$/', $pid) !== 1) {
+            return null;
+        }
+
+        $value = (int) $pid;
+
+        return $value >= 1 && $value <= self::PID_MAX ? $value : null;
+    }
+
+    /**
+     * When the process started, as `ps` prints it — the part of a process
+     * that a recycled PID does not share. Null when the PID is not running.
+     */
+    private function startedAt(int $pid): ?string
+    {
+        $result = $this->serverOps->run(
+            ['ps', '-o', 'lstart=,stat=', '-p', (string) $pid],
+            ['feature' => 'process', 'op' => 'inspect_start', 'pid' => $pid],
+            expectedExitCodes: [1],
+        );
+
+        $line = trim($result->output());
+
+        if (! $result->ok || $line === '') {
+            return null;
+        }
+
+        // A zombie has exited; it is only waiting for its parent to read the
+        // exit status, and no signal will make it go faster.
+        $state = (string) preg_replace('/^.*\s/', '', $line);
+
+        if (str_starts_with($state, 'Z')) {
+            return null;
+        }
+
+        return trim((string) preg_replace('/\s+\S+$/', '', $line));
+    }
+
+    /**
+     * Whether the signalled process has gone (bug #6).
+     *
+     * `kill` returns as soon as the signal is delivered, and TERM is a
+     * request: a process may take a moment to shut down, or ignore it. The
+     * screen used to say "stopped" either way. A PID that comes back with a
+     * different start time is another process that has been handed the same
+     * number, so the one we signalled has gone.
+     */
+    private function exited(int $pid, ?string $started): bool
+    {
+        $deadline = microtime(true) + (float) config('server.metrics.stop_wait_seconds', 5);
+
+        while (true) {
+            $now = $this->startedAt($pid);
+
+            if ($now === null || $now !== $started) {
+                return true;
+            }
+
+            if (microtime(true) >= $deadline) {
+                return false;
+            }
+
+            Sleep::for(250)->milliseconds();
+        }
     }
 
     /**
@@ -105,46 +273,6 @@ class ProcessKiller
             'user' => (string) ($parts[1] ?? ''),
             'ppid' => (int) ($parts[2] ?? 0),
         ];
-    }
-
-    /**
-     * @param  array{command: string, user: string, ppid: int}  $process
-     */
-    private function guard(int $pid, array $process): void
-    {
-        // PID 1 is the init system. Killing it panics the kernel — there is no
-        // circumstance in which this is the intent.
-        if ($pid === 1) {
-            throw ProcessKillException::protectedProcess();
-        }
-
-        // Kernel threads (children of kthreadd, PID 2) aren't processes in any
-        // sense the user means, and don't respond to signals.
-        if ($pid === 2 || $process['ppid'] === 2) {
-            throw ProcessKillException::kernelThread();
-        }
-
-        // Killing our own worker kills the request doing the killing; killing
-        // the master takes the panel offline and with it the way back in.
-        if ($pid === getmypid() || $pid === posix_getppid()) {
-            throw ProcessKillException::self();
-        }
-
-        if ($this->belongsToProtectedService($process['command'])) {
-            // These already can't be stopped from the Services screen. A PID
-            // is not a way around that decision.
-            throw ProcessKillException::protectedProcess();
-        }
-
-        $unit = $this->unitOf($pid);
-
-        if (in_array($process['command'], self::DATABASE_COMMANDS, true) || $this->isDatabaseUnit($unit)) {
-            throw ProcessKillException::databaseEngine();
-        }
-
-        if ($this->inProtectedUnit($unit)) {
-            throw ProcessKillException::protectedProcess();
-        }
     }
 
     /**
@@ -185,7 +313,8 @@ class ProcessKiller
      * logins stop until someone restarts it by other means.
      *
      * Protected: every unit the Services screen protects (web server, redis,
-     * the panel's PHP), SSH, and the panel's own units. A process in a user's
+     * the panel's PHP), SSH, the panel's own units, and the operating system's
+     * own (CORE_UNITS). A process in a user's
      * login session or a site's app unit is not affected. When systemd cannot
      * say, the name check above is all there is — as before.
      */
@@ -198,6 +327,7 @@ class ProcessKiller
         $protected = [
             ...app(ServiceManager::class)->protectedUnits(),
             'ssh', 'sshd',
+            ...self::CORE_UNITS,
             ...array_values((array) config('panel_update.services', [])),
         ];
 

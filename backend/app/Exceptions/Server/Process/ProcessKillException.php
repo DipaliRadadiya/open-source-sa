@@ -59,14 +59,57 @@ class ProcessKillException extends Exception
         return new self('errors/process.self', 422);
     }
 
+    /**
+     * A refusal from ProcessKiller::refusal(), by its reason.
+     */
+    public static function refused(string $reason): self
+    {
+        return match ($reason) {
+            'database' => self::databaseEngine(),
+            'kernel_thread' => self::kernelThread(),
+            'self' => self::self(),
+            'gone' => self::notFound(),
+            default => self::protectedProcess(),
+        };
+    }
+
+    /**
+     * TERM was delivered and the process is still there (bug #6). A 409 so
+     * the screen's existing error path offers Force stop — the process is in
+     * a state the request did not change, not one it may not touch.
+     */
+    public static function stillRunning(): self
+    {
+        return new self('errors/process.still_running', 409);
+    }
+
+    /**
+     * KILL cannot be ignored, so a process that survives it is stuck inside
+     * the kernel (usually waiting on a disk or network mount). There is no
+     * stronger signal to offer.
+     */
+    public static function survivedKill(): self
+    {
+        return new self('errors/process.still_running_after_kill', 409);
+    }
+
     public static function failed(string $reference): self
     {
         return new self('errors/process.kill_failed', 500, $reference);
     }
 
+    /**
+     * The user-facing sentence, for a caller that reports the refusal
+     * rather than throwing it — the process list's `reason`.
+     */
+    public function reason(): string
+    {
+        return __($this->messageKey);
+    }
+
     public function render(Request $request): JsonResponse
     {
-        $payload = ['message' => __($this->messageKey)];
+        $payload = ['message' => $this->reason()];
 
         if ($this->reference !== null) {
             $payload['reference'] = $this->reference;
