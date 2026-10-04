@@ -6,7 +6,7 @@
 
 return [
     'not_installed' => 'Node :version स्थापित नहीं है।',
-    'version_in_use' => 'Node :version का उपयोग :apps कर रहे हैं। पहले उन साइटों को बदलें।',
+    'version_in_use' => 'Node :version का उपयोग :apps कर रहे हैं। किसी साइट का Node संस्करण अभी बदला नहीं जा सकता, इसलिए यह संस्करण रखें, या पहले उन साइटों को हटाएँ।',
     'version_unknown' => 'Node.js :version मौजूद नहीं है। सूची से कोई संस्करण चुनें।',
     'version_is_default' => 'यह डिफ़ॉल्ट संस्करण है। पहले कोई अन्य चुनें।',
     'version_runs_panel' => 'पैनल स्वयं Node :version पर चलता है। इसे हटाया नहीं जा सकता।',

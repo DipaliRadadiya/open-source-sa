@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Application;
+use App\Models\Cronjob;
 use App\Models\Database;
 use App\Models\SystemUser;
 use App\Models\User;
@@ -161,4 +162,18 @@ it('follows the domain when a certificate is issued, and clears the cached confi
 
     expect(collect($runs)->contains(fn ($run) => in_array('config:clear', $run['command'], true)))
         ->toBeTrue();
+});
+
+it('schedules Laravel\'s scheduler every minute, once (bug #15)', function () {
+    installAkaunting();
+
+    $job = Cronjob::query()->sole();
+
+    expect($job->command)->toBe('/usr/bin/php8.4 -f '.$this->application->documentRoot().'/artisan schedule:run')
+        ->and($job->expression)->toBe('* * * * *')
+        ->and($job->application_owned)->toBeTrue();
+
+    installAkaunting();
+
+    expect(Cronjob::query()->count())->toBe(1);
 });

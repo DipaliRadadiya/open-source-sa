@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\AppPackageRelease;
+use App\Rules\SupportedNodeVersion;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Runtime\AppPackageCatalog;
 use Illuminate\Support\Facades\Http;
@@ -116,5 +117,21 @@ describe('parsing engines.node', function () {
         expect($parse(''))->toBeNull()
             ->and($parse('*'))->toBeNull()
             ->and($parse('^24.0.0'))->toBeNull();
+    });
+});
+
+describe('Node-RED (bug #16)', function () {
+    it('declares the floor of the major the installer pins, not "any Node"', function () {
+        // The type declared no range. The installer pins major 4, whose
+        // engines.node is ">=18.5"; Node-RED 5 would need 22.9.
+        expect(config('server.installers.nodered.version'))->toBe('4', 'The Node-RED pin moved: update NodeRedSiteType::supportedNodeRange() to that major\'s engines.node.')
+            ->and(app(SiteTypeManager::class)->find('nodered')->supportedNodeRange())
+            ->toBe(['min' => '18.5', 'max' => null]);
+    });
+
+    it('refuses a Node below the floor and admits one above it', function () {
+        expect(SupportedNodeVersion::admits('18.5', null, '18.4.0'))->toBeFalse()
+            ->and(SupportedNodeVersion::admits('18.5', null, '18.20.4'))->toBeTrue()
+            ->and(SupportedNodeVersion::admits('18.5', null, '24.1.0'))->toBeTrue();
     });
 });

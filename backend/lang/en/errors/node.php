@@ -6,7 +6,7 @@
 
 return [
     'not_installed' => 'Node :version is not installed.',
-    'version_in_use' => 'Node :version is used by :apps. Change those sites first.',
+    'version_in_use' => 'Node :version is used by :apps. A site\'s Node version cannot be changed yet, so keep this version, or delete those sites first.',
     'version_unknown' => 'Node.js :version does not exist. Choose a version from the list.',
     'version_is_default' => 'This is the default version. Choose another default first.',
     'version_runs_panel' => 'The panel itself runs on Node :version. It cannot be removed.',

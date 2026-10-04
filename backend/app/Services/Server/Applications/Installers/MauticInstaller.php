@@ -105,6 +105,36 @@ class MauticInstaller extends AbstractPhpInstaller
             'SELECT COUNT(*) FROM users',
             '--no-interaction',
         ], null, $documentRoot);
+
+        $this->scheduleJobs($application, $documentRoot);
+    }
+
+    /**
+     * Mautic's cron jobs (bug #15). Without them Mautic installs and looks
+     * fine, and nothing happens: segments never fill, campaigns never run,
+     * queued messages are never sent. Mautic leaves them to the host.
+     *
+     * The "required" set from Mautic's documentation (5.x, Cron jobs), plus
+     * imports and webhooks, which do nothing until they are used. Staggered
+     * across each quarter hour, as the documentation asks, so no two start in
+     * the same minute. With the installer's memory limit: the console is what
+     * needed 512M to install (see phpCommand()).
+     */
+    private function scheduleJobs(Application $application, string $documentRoot): void
+    {
+        $memory = array_slice($this->phpCommand($application), 1);
+
+        foreach ([
+            'mautic:segments:update' => ['segments', '0,15,30,45 * * * *'],
+            'mautic:campaigns:update' => ['campaign members', '5,20,35,50 * * * *'],
+            'mautic:campaigns:trigger' => ['campaign events', '10,25,40,55 * * * *'],
+            'mautic:messages:send' => ['queued messages', '2,17,32,47 * * * *'],
+            'mautic:custom-field:create-column' => ['custom fields', '7,22,37,52 * * * *'],
+            'mautic:import' => ['imports', '12,27,42,57 * * * *'],
+            'mautic:webhooks:process' => ['webhooks', '3,18,33,48 * * * *'],
+        ] as $command => [$label, $expression]) {
+            $this->scheduleCron($application, $documentRoot, 'bin/console '.$command, $expression, 'Mautic '.$label, $memory);
+        }
     }
 
     public function syncUrl(Application $application, string $url): void

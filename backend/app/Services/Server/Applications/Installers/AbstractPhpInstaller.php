@@ -132,11 +132,19 @@ abstract class AbstractPhpInstaller extends AbstractSiteInstaller
      * and can be edited or removed like any other. Skipped when a job with the
      * same command already exists, so Retry Setup does not add a second.
      *
+     * `$script` may carry arguments (`bin/console mautic:segments:update`):
+     * `php -f <file> <args>` hands them to the script. `$phpOptions` go
+     * before `-f`, for a console that needs more than the CLI's default
+     * memory.
+     *
+     * @param  array<int, string>  $phpOptions
+     *
      * @throws ProvisioningFailedException
      */
-    protected function scheduleCron(Application $application, string $documentRoot, string $script, string $expression): void
+    protected function scheduleCron(Application $application, string $documentRoot, string $script, string $expression, string $label = 'background jobs', array $phpOptions = []): void
     {
-        $command = $this->stack->binaryPath($this->phpVersion($application)).' -f '.$documentRoot.'/'.$script;
+        $command = implode(' ', [$this->stack->binaryPath($this->phpVersion($application)), ...$phpOptions])
+            .' -f '.$documentRoot.'/'.$script;
 
         if (Cronjob::query()->where('command', $command)->exists()) {
             return;
@@ -144,7 +152,9 @@ abstract class AbstractPhpInstaller extends AbstractSiteInstaller
 
         try {
             app(CreateCronjob::class)->execute([
-                'name' => Str::limit($application->name, 200, '').' background jobs #'.$application->id,
+                // Unique per job: an application with several (Mautic) needs a
+                // name for each, and cron job names are unique.
+                'name' => Str::limit($application->name, 200, '').' '.$label.' #'.$application->id,
                 'system_user_id' => $application->system_user_id,
                 'application_id' => $application->id,
                 'application_owned' => true,

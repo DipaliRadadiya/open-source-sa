@@ -46,7 +46,11 @@ class DeleteSystemUser
                 ]);
             }
 
-            if ($result->failed()) {
+            // Exit 6 is "user does not exist": removed outside the panel, so
+            // the delete could never succeed and the row was stuck (bug #26).
+            // Confirmed with getent before trusting it — the panel's side
+            // (its row, its cron files) is all that is left to remove.
+            if ($result->failed() && ! ($result->exitCode() === 6 && $this->goneFromServer($systemUser->username))) {
                 $this->activityLogger->log('system_user.delete_failed', $systemUser, ['username' => $systemUser->username]);
                 throw new SystemUserDeleteFailedException($result->reference);
             }
@@ -71,6 +75,16 @@ class DeleteSystemUser
 
             $systemUser->delete();
         });
+    }
+
+    private function goneFromServer(string $username): bool
+    {
+        // `getent passwd` exits 2 for a name it does not know.
+        return $this->serverOps->run(
+            ['getent', 'passwd', $username],
+            ['feature' => 'system_user', 'op' => 'delete_check_gone', 'system_user' => $username],
+            expectedExitCodes: [2],
+        )->exitCode() === 2;
     }
 
     /**

@@ -6,7 +6,7 @@
 
 return [
     'not_installed' => 'Node :version n\'est pas installé.',
-    'version_in_use' => 'Node :version est utilisé par :apps. Modifiez d\'abord ces sites.',
+    'version_in_use' => 'Node :version est utilisé par :apps. La version de Node d\'un site ne peut pas encore être modifiée : conservez cette version ou supprimez d\'abord ces sites.',
     'version_unknown' => 'Node.js :version n’existe pas. Choisissez une version dans la liste.',
     'version_is_default' => 'C\'est la version par défaut. Choisissez-en une autre d\'abord.',
     'version_runs_panel' => 'Le panneau lui-même fonctionne avec Node :version. Cette version ne peut pas être supprimée.',

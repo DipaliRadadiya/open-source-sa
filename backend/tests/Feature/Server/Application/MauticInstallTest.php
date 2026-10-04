@@ -2,6 +2,7 @@
 
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
+use App\Models\Cronjob;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Applications\ApplicationProvisioner;
@@ -209,4 +210,30 @@ it('uses implicit TLS on port 465', function () {
     $this->application->forceFill(['settings' => array_merge($this->application->settings, ['mailer_port' => 465])])->save();
 
     expect(mauticLocalParameters(installMautic())['mailer_dsn'])->toStartWith('smtps://');
+});
+
+it('schedules the cron jobs Mautic needs, staggered, on the site\'s PHP, once (bug #15)', function () {
+    // Without them Mautic installs and nothing happens: segments never fill,
+    // campaigns never run, queued messages are never sent.
+    installMautic();
+
+    $jobs = Cronjob::query()->orderBy('id')->get();
+    $root = $this->application->documentRoot();
+
+    expect($jobs->pluck('command')->all())->toBe(array_map(
+        fn (string $command) => "/usr/bin/php8.4 -d memory_limit=512M -f {$root}/bin/console {$command}",
+        ['mautic:segments:update', 'mautic:campaigns:update', 'mautic:campaigns:trigger', 'mautic:messages:send',
+            'mautic:custom-field:create-column', 'mautic:import', 'mautic:webhooks:process'],
+    ));
+
+    // Never two in the same minute, as Mautic's documentation asks.
+    $minutes = $jobs->flatMap(fn ($job) => explode(',', explode(' ', $job->expression)[0]));
+    expect($minutes->duplicates())->toBeEmpty()
+        ->and($jobs->every(fn ($job) => $job->application_owned && $job->application_id === $this->application->id))->toBeTrue()
+        ->and($jobs->pluck('name')->unique())->toHaveCount(7);
+
+    // Retry Setup runs the installer again.
+    installMautic();
+
+    expect(Cronjob::query()->count())->toBe(7);
 });

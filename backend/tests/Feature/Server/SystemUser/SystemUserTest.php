@@ -347,3 +347,40 @@ it('says the user still has processes when userdel exits 8, and keeps the row', 
 
     expect(SystemUser::find($su->id))->not->toBeNull();
 });
+
+describe('a user already removed from the server (bug #26)', function () {
+    it('finishes the panel\'s side instead of failing forever', function () {
+        // userdel exits 6 for a name the server no longer has; getent agrees.
+        Process::fake(fn ($p) => match (true) {
+            in_array('userdel', $p->command, true) => Process::result(errorOutput: "userdel: user 'gone' does not exist", exitCode: 6),
+            in_array('getent', $p->command, true) && in_array('passwd', $p->command, true) => Process::result(exitCode: 2),
+            default => Process::result(),
+        });
+        $admin = User::factory()->admin()->create();
+        $su = SystemUser::create(['username' => 'gone', 'home_path' => '/home/gone', 'shell' => '/bin/bash']);
+
+        $this->withHeader('Authorization', 'Bearer '.$admin->createToken('t')->plainTextToken)
+            ->deleteJson("/api/system-users/{$su->id}")
+            ->assertSuccessful();
+
+        expect(SystemUser::count())->toBe(0);
+    });
+
+    it('still fails when the server says the user is there after all', function () {
+        // Exit 6 alone is not trusted: the row is only removed when getent
+        // cannot find the account either.
+        Process::fake(fn ($p) => match (true) {
+            in_array('userdel', $p->command, true) => Process::result(exitCode: 6),
+            in_array('getent', $p->command, true) && in_array('passwd', $p->command, true) => Process::result(output: "gone:x:1001:1001::/home/gone:/bin/bash\n"),
+            default => Process::result(),
+        });
+        $admin = User::factory()->admin()->create();
+        $su = SystemUser::create(['username' => 'gone', 'home_path' => '/home/gone', 'shell' => '/bin/bash']);
+
+        $this->withHeader('Authorization', 'Bearer '.$admin->createToken('t')->plainTextToken)
+            ->deleteJson("/api/system-users/{$su->id}")
+            ->assertServerError();
+
+        expect(SystemUser::count())->toBe(1);
+    });
+});

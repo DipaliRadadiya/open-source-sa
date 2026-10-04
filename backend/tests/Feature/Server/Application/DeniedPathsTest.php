@@ -72,6 +72,8 @@ it('denies what the application protects on Apache, before PHP can run it, on ng
 })->with([
     'akaunting' => ['akaunting', ['/storage/logs/laravel.log', '/storage/framework/sessions/abc', '/artisan', '/composer.json', '/vendor/autoload.php', '/config/app.php', '/.env']],
     'prestashop' => ['prestashop', ['/var/logs/prod-2026-09-26.log', '/app/config/parameters.php', '/vendor/autoload.php', '/modules/ps_mbo/vendor/x.php', '/upload/shell.php', '/img/x.php', '/themes/classic/templates/index.tpl', '/composer.lock']],
+    // Bug #14: vendor scripts ran straight from the web on nginx.
+    'mautic' => ['mautic', ['/vendor/symfony/console/Application.php', '/config/local.php', '/app/AppKernel.php', '/plugins/MauticFocusBundle/Config/config.php', '/media/files/shell.php', '/var/logs/mautic_prod-2026-10-04.php', '/var/spool/default/x.message', '/autoload.php', '/importmap.php', '/.env', '/.env.local', '/composer.json']],
 ]);
 
 it('still serves what the application needs', function (string $siteType, array $mustServe) {
@@ -84,6 +86,7 @@ it('still serves what the application needs', function (string $siteType, array 
 })->with([
     'akaunting' => ['akaunting', ['/', '/index.php', '/public/css/app.css', '/public/js/akaunting.min.js', '/vendor/some/pkg/dist/app.js', '/modules/Foo/Resources/assets/logo.png', '/auth/login']],
     'prestashop' => ['prestashop', ['/', '/index.php', '/admin172vrcqtzvkqymg2kse/index.php', '/img/p/1/1.jpg', '/themes/classic/assets/css/theme.css', '/js/jquery/jquery-3.7.1.min.js', '/modules/ps_mbo/views/img/logo.png', '/api/products']],
+    'mautic' => ['mautic', ['/', '/index.php', '/s/login', '/s/dashboard', '/media/js/app.js', '/media/css/app.css', '/media/images/mautic_logo.png', '/plugins/MauticFocusBundle/Assets/js/focus.js', '/themes/blank/html/base.html.twig', '/mtc.js', '/form/submit']],
 ]);
 
 it('renders them as deny contexts on OpenLiteSpeed', function (string $siteType) {
@@ -92,7 +95,7 @@ it('renders them as deny contexts on OpenLiteSpeed', function (string $siteType)
     foreach (app(SiteTypeManager::class)->find($siteType)->deniedPaths() as $pattern) {
         expect($config)->toContain("context exp:{$pattern} {\n  allowBrowse             0\n}");
     }
-})->with(['akaunting', 'prestashop']);
+})->with(['akaunting', 'prestashop', 'mautic']);
 
 it('adds nothing for an application that needs nothing', function (string $driver) {
     $config = deniedPathsVhost('wordpress', $driver);

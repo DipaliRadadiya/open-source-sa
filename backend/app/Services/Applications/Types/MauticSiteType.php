@@ -116,6 +116,31 @@ class MauticSiteType extends AbstractSiteType
     }
 
     /**
+     * Bug #14: Mautic protects itself with one Apache `.htaccess` — every
+     * `.php` denied except `/index.php` (and the legacy `/upgrade/upgrade.php`),
+     * plus `.env*` and `composer.json/lock` — which nginx never reads and
+     * OpenLiteSpeed only where the vhost allows it. So `vendor/` scripts ran
+     * straight from the web. Read from the `.htaccess` of a real install
+     * (nginx test server, 2026-10-04).
+     *
+     * Written without lookaheads (OpenLiteSpeed's contexts): any PHP below
+     * the top level, the four helper scripts beside index.php by name, and
+     * `var/` whole — logs, cache and the mail spool, none of it served.
+     *
+     * @return array<int, string>
+     */
+    public function deniedPaths(): array
+    {
+        return [
+            '^/[^/]+/.*\\.(php[0-9]?|phtml|phar)$',
+            '^/(autoload|ecs|importmap|phpstan-bootstrap)\\.php$',
+            '^/var/',
+            '/\\.env',
+            '^/composer\\.(json|lock)$',
+        ];
+    }
+
+    /**
      * Mautic reads a `.env` beside its code, the same as Craft and Statamic
      * (bug #69). The editor finds it there: ApplicationEnvironment reads the
      * file the framework actually loads before the one it would create.

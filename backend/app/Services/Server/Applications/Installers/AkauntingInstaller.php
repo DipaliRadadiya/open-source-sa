@@ -71,6 +71,12 @@ class AkauntingInstaller extends AbstractPhpInstaller
             '--admin-password='.($settings['admin_password'] ?? ''),
             '--no-interaction',
         ], null, $documentRoot);
+
+        // Bug #15: recurring invoices, bill and payment reminders and its
+        // other scheduled work run from Laravel's scheduler, which needs a
+        // cron line every minute — Akaunting's documentation says so, and
+        // nothing added one.
+        $this->scheduleCron($application, $documentRoot, 'artisan schedule:run', '* * * * *', 'scheduler');
     }
 
     /**

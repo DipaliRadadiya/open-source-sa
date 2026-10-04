@@ -60,6 +60,22 @@ class NodeRedSiteType extends AbstractSiteType
         return true;
     }
 
+    /**
+     * Bug #16: the type declared no range, so every installed Node was
+     * offered, however old.
+     *
+     * For the release the installer pins — major 4 (`server.installers.
+     * nodered.version`), whose `engines.node` is `>=18.5` (4.1.15, read from
+     * the npm registry 2026-10-04). Not the catalog: the registry's
+     * single-version endpoint does not resolve a bare major ("version not
+     * found: 4"), so a refresh would store nothing. Node-RED 5 needs 22.9 —
+     * moving the pin means moving this, and a test says so.
+     */
+    public function supportedNodeRange(): ?array
+    {
+        return ['min' => '18.5', 'max' => null];
+    }
+
     public function fields(): array
     {
         return array_merge($this->commonFields(), [

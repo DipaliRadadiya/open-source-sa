@@ -6,7 +6,7 @@
 
 return [
     'not_installed' => 'Node :version はインストールされていません。',
-    'version_in_use' => 'Node :version は :apps が使用しています。先にそれらのサイトを変更してください。',
+    'version_in_use' => 'Node :version は :apps が使用しています。サイトの Node バージョンはまだ変更できないため、このバージョンを残すか、先にそれらのサイトを削除してください。',
     'version_unknown' => 'Node.js :version は存在しません。一覧からバージョンを選んでください。',
     'version_is_default' => 'これは既定のバージョンです。先に別のものを選んでください。',
     'version_runs_panel' => 'パネル自体が Node :version で動作しています。削除できません。',

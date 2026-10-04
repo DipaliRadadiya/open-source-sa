@@ -354,7 +354,7 @@ it('refuses to remove a version a site depends on, and names the site', function
     // cause.
     nodeCall('DELETE', '/api/node/versions/18.20.4')
         ->assertUnprocessable()
-        ->assertJsonFragment(['message' => 'Node 18.20.4 is used by Checkout. Change those sites first.']);
+        ->assertJsonFragment(['message' => __('errors/node.version_in_use', ['version' => '18.20.4', 'apps' => 'Checkout'])]);
 });
 
 it('refuses to remove the default version', function () {
