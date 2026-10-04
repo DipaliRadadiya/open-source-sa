@@ -368,6 +368,9 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
         foreach ($users as $user) {
             $this->must('DROP ROLE IF EXISTS '.$this->ident($user['username']).';');
         }
+
+        // Its group, if it had one: owned nothing once the database went.
+        $this->must('DROP ROLE IF EXISTS '.$this->ident($this->ownerGroup($name)).';');
     }
 
     public function databaseSize(string $name): int
@@ -412,7 +415,7 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     }
 
     /**
-     * Create the role and give it ownership of its one database.
+     * Create the role and give it its database.
      *
      * Ownership, not `GRANT ALL PRIVILEGES ON DATABASE`. That grant was
      * measured to leave the account unable to read a table *or* create one —
@@ -420,6 +423,10 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
      * the `public` schema is not writable by PUBLIC either. An application
      * handed such an account fails inside its own installer, long after the
      * panel has reported the site created.
+     *
+     * The first user owns the database itself. A database has one owner, so
+     * from the second user on it belongs to a shared role instead — see
+     * {@see shareWithGroup()}.
      *
      * The schema is re-owned in a second connection because `ALTER SCHEMA`
      * has to run *inside* the database that holds the schema, while
@@ -435,33 +442,140 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
             $this->literal($password),
         ));
 
-        // A database has one owner, so a second user takes it over. Without
-        // PUBLIC's CONNECT (bug #35) the previous owner would then be locked
-        // out, so it gets CONNECT by name — after the transfer: a grant made
-        // to the owner is the owner's own right and moves with ownership.
-        // Measured on PostgreSQL 18, three users in turn: all three connect,
-        // any other role is refused.
-        $previous = trim($this->run(sprintf(
-            'SELECT pg_get_userbyid(datdba) FROM pg_database WHERE datname = %s;',
-            $this->literal($database),
-        ))->output());
+        [$owner, $kind] = $this->databaseOwner($database);
+        $group = $this->ownerGroup($database);
 
-        $this->must(sprintf('ALTER DATABASE %s OWNER TO %s;', $this->ident($database), $this->ident($username)));
+        if ($owner === $group) {
+            $this->joinGroup($username, $database, $group);
+        } elseif ($kind === 'login' && $owner !== $username) {
+            $this->shareWithGroup($database, $owner, $username, $group);
+        } else {
+            $this->must(sprintf('ALTER DATABASE %s OWNER TO %s;', $this->ident($database), $this->ident($username)));
 
-        if ($previous !== '' && $previous !== $username) {
-            $this->must(sprintf('GRANT CONNECT, TEMPORARY ON DATABASE %s TO %s;', $this->ident($database), $this->ident($previous)));
+            $this->mustIn($database, sprintf(
+                'ALTER SCHEMA public OWNER TO %s; GRANT ALL ON SCHEMA public TO %s;',
+                $this->ident($username),
+                $this->ident($username),
+            ));
         }
-
-        $this->mustIn($database, sprintf(
-            'ALTER SCHEMA public OWNER TO %s; GRANT ALL ON SCHEMA public TO %s;',
-            $this->ident($username),
-            $this->ident($username),
-        ));
 
         // The host half of the account. A role is cluster-wide, so this is the
         // only place the address is recorded — and without it a user created
         // as "remote" would be a role that exists and cannot connect.
         $this->syncHbaRule($database, $username, $host);
+    }
+
+    /**
+     * The shared role that owns a database once it has more than one user.
+     *
+     * Not a name a user can be given: usernames are `[A-Za-z0-9_]`, and `#`
+     * is neither. PostgreSQL cuts identifiers at 63 bytes without an error,
+     * so a long database name is shortened with a hash of the whole name —
+     * two databases sharing a 57-character prefix must not share an owner.
+     */
+    public function ownerGroup(string $database): string
+    {
+        $suffix = '#owner';
+
+        if (strlen($database.$suffix) <= 63) {
+            return $database.$suffix;
+        }
+
+        return substr($database, 0, 63 - strlen($suffix) - 9).'-'.substr(sha1($database), 0, 8).$suffix;
+    }
+
+    /**
+     * Who owns the database, and whether that is a site's login role.
+     *
+     * 'login' is an ordinary account; anything else — a superuser such as the
+     * panel's own connection account, or a role that cannot log in — is
+     * 'other', and is never moved into a group.
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function databaseOwner(string $database): array
+    {
+        $row = explode("\t", trim($this->run(sprintf(
+            "SELECT r.rolname, CASE WHEN r.rolcanlogin AND NOT r.rolsuper THEN 'login' ELSE 'other' END "
+            .'FROM pg_database d JOIN pg_roles r ON r.oid = d.datdba WHERE d.datname = %s;',
+            $this->literal($database),
+        ))->output()));
+
+        return [$row[0], $row[1] ?? 'other'];
+    }
+
+    /**
+     * A second user on a database (bug #23).
+     *
+     * Before this the second user took the database and its schema over, and
+     * the tables stayed with the first: measured on PostgreSQL 18, the second
+     * user got "permission denied for table" on every one of them, **and the
+     * first could no longer create a table** — it had lost the schema.
+     *
+     * Now everything the first user owns in the database moves to a shared
+     * role nobody logs in as, and both users become members of it. Each user
+     * acts as that role inside this database (`SET role`), so a table either
+     * of them creates is the group's, and every member can read, write and
+     * alter every table — a later migration by either user works.
+     */
+    private function shareWithGroup(string $database, string $owner, string $username, string $group): void
+    {
+        $exists = trim($this->run(sprintf('SELECT 1 FROM pg_roles WHERE rolname = %s;', $this->literal($group)))->output()) === '1';
+
+        // One transaction: done in steps, an application connecting halfway
+        // would meet tables owned by a role it is not yet acting as.
+        $this->mustIn($database, 'BEGIN; '
+            .($exists ? '' : sprintf('CREATE ROLE %s NOLOGIN; ', $this->ident($group)))
+            .$this->reassignWithin($database, $owner, $group)
+            .$this->joinGroupSql($owner, $database, $group)
+            .$this->joinGroupSql($username, $database, $group)
+            .'COMMIT;');
+    }
+
+    private function joinGroup(string $username, string $database, string $group): void
+    {
+        $this->must($this->joinGroupSql($username, $database, $group));
+    }
+
+    /**
+     * Make a user a member of the database's group, acting as it there.
+     *
+     * CONNECT by name as well, though membership carries it: the database is
+     * the user's by name then, which is how {@see reachableDatabases()} and
+     * {@see restrictToItsUsers()} recognise its users.
+     */
+    private function joinGroupSql(string $username, string $database, string $group): string
+    {
+        return sprintf(
+            'GRANT %1$s TO %2$s; GRANT CONNECT, TEMPORARY ON DATABASE %3$s TO %2$s; ALTER ROLE %2$s IN DATABASE %3$s SET role = %1$s; ',
+            $this->ident($group),
+            $this->ident($username),
+            $this->ident($database),
+        );
+    }
+
+    /**
+     * `REASSIGN OWNED`, kept to one database.
+     *
+     * It moves what the role owns in the current database *and* every
+     * database it owns anywhere in the cluster. A role adopted from a
+     * migrated server can own more than one, so those are handed straight
+     * back in the same transaction — measured: the other database stays the
+     * role's own. Returned as SQL for the caller's transaction.
+     */
+    private function reassignWithin(string $database, string $from, string $to): string
+    {
+        $others = array_values(array_filter(array_map('trim', explode("\n", $this->run(sprintf(
+            'SELECT datname FROM pg_database WHERE datdba = (SELECT oid FROM pg_roles WHERE rolname = %s) AND datname <> %s;',
+            $this->literal($from),
+            $this->literal($database),
+        ))->output()))));
+
+        return sprintf('REASSIGN OWNED BY %s TO %s; ', $this->ident($from), $this->ident($to))
+            .implode('', array_map(
+                fn (string $other) => sprintf('ALTER DATABASE %s OWNER TO %s; ', $this->ident($other), $this->ident($from)),
+                $others,
+            ));
     }
 
     /**
@@ -476,7 +590,10 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
      */
     public function dropUser(string $username, string $host, string $database): void
     {
-        $admin = (string) $this->connection->username;
+        // Into the group when the database has one: what this user made there
+        // is the other users' data too.
+        $group = $this->ownerGroup($database);
+        $admin = $this->databaseOwner($database)[0] === $group ? $group : (string) $this->connection->username;
 
         // Reassign before dropping so the database survives its owner. Both
         // are sent together: a REASSIGN that succeeds and a DROP OWNED that

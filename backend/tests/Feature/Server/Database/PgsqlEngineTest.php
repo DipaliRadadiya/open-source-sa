@@ -367,22 +367,129 @@ it('takes CONNECT away from everybody when it creates a database', function () {
     expect(pgStatements())->toContain('CREATE DATABASE "shop"; REVOKE CONNECT, TEMPORARY ON DATABASE "shop" FROM PUBLIC;');
 });
 
-it('keeps the previous owner connected when a second user takes the database over', function () {
-    Process::fake(function ($process) {
-        $this->ran[] = ['command' => $process->command, 'input' => (string) ($process->input ?? '')];
+/**
+ * Answer the engine's questions about one database's owner.
+ *
+ * @param  array<int, string>  $otherDatabases  Other databases the owner owns.
+ */
+function fakePgOwner(string $owner, string $kind, bool $groupExists = false, array $otherDatabases = []): void
+{
+    Process::fake(function ($process) use ($owner, $kind, $groupExists, $otherDatabases) {
+        $input = (string) ($process->input ?? '');
+        test()->ran = [...test()->ran, ['command' => $process->command, 'input' => $input]];
 
-        return Process::result(output: str_contains((string) $process->input, 'pg_get_userbyid') ? "first_user\n" : '1');
+        return Process::result(output: match (true) {
+            str_contains($input, 'JOIN pg_roles r ON r.oid = d.datdba') => "{$owner}\t{$kind}\n",
+            str_contains($input, 'SELECT 1 FROM pg_roles WHERE rolname') => $groupExists ? "1\n" : '',
+            str_contains($input, 'SELECT datname FROM pg_database WHERE datdba') => implode("\n", $otherDatabases),
+            default => '1',
+        });
+    });
+}
+
+describe('a second user on one database (bug #23)', function () {
+    // Measured on PostgreSQL 18: the second user took the database over and
+    // got "permission denied" on every table the first had made, and the
+    // first lost the schema and could no longer create a table.
+    it('moves the first user\'s things to a shared role and makes both members', function () {
+        fakePgOwner('first_user', 'login');
+
+        pgEngine()->createUser('second_user', 'localhost', 'pw', 'shop_db');
+
+        $sql = pgStatements();
+
+        expect($sql)->toContain('CREATE ROLE "shop_db#owner" NOLOGIN;')
+            ->and($sql)->toContain('REASSIGN OWNED BY "first_user" TO "shop_db#owner";')
+            ->and($sql)->toContain('GRANT "shop_db#owner" TO "first_user";')
+            ->and($sql)->toContain('GRANT "shop_db#owner" TO "second_user";')
+            // Acting as the group, so whatever either user creates is shared.
+            ->and($sql)->toContain('ALTER ROLE "first_user" IN DATABASE "shop_db" SET role = "shop_db#owner";')
+            ->and($sql)->toContain('ALTER ROLE "second_user" IN DATABASE "shop_db" SET role = "shop_db#owner";')
+            // Not the old takeover.
+            ->and($sql)->not->toContain('ALTER DATABASE "shop_db" OWNER TO "second_user"');
     });
 
-    pgEngine()->createUser('second_user', 'localhost', 'pw', 'shop_db');
+    it('does it in one transaction', function () {
+        fakePgOwner('first_user', 'login');
 
-    $sql = pgStatements();
+        pgEngine()->createUser('second_user', 'localhost', 'pw', 'shop_db');
 
-    // After the transfer, not before: a grant to the current owner is the
-    // owner's own right and moves with ownership (measured — the first user
-    // was locked out when it was granted first).
-    expect(strpos($sql, 'GRANT CONNECT, TEMPORARY ON DATABASE "shop_db" TO "first_user"'))
-        ->toBeGreaterThan(strpos($sql, 'ALTER DATABASE "shop_db" OWNER TO "second_user"'));
+        // In steps, an application connecting halfway meets tables owned by a
+        // role it is not yet acting as.
+        $script = collect(test()->ran)->pluck('input')->first(fn (string $input) => str_contains($input, 'REASSIGN OWNED'));
+
+        expect($script)->toStartWith('BEGIN;')
+            ->and($script)->toEndWith('COMMIT;')
+            ->and($script)->toContain('CREATE ROLE "shop_db#owner"')
+            ->and($script)->toContain('SET role = "shop_db#owner"');
+    });
+
+    it('hands back the other databases the first user owns', function () {
+        // REASSIGN OWNED moves every database the role owns, cluster-wide.
+        fakePgOwner('first_user', 'login', otherDatabases: ['blog_db']);
+
+        pgEngine()->createUser('second_user', 'localhost', 'pw', 'shop_db');
+
+        $sql = pgStatements();
+
+        expect(strpos($sql, 'ALTER DATABASE "blog_db" OWNER TO "first_user";'))
+            ->toBeGreaterThan(strpos($sql, 'REASSIGN OWNED BY "first_user"'));
+    });
+
+    it('only joins a third user to the group', function () {
+        fakePgOwner('shop_db#owner', 'other', groupExists: true);
+
+        pgEngine()->createUser('third_user', 'localhost', 'pw', 'shop_db');
+
+        $sql = pgStatements();
+
+        expect($sql)->toContain('GRANT "shop_db#owner" TO "third_user";')
+            ->and($sql)->toContain('ALTER ROLE "third_user" IN DATABASE "shop_db" SET role = "shop_db#owner";')
+            ->and($sql)->not->toContain('REASSIGN OWNED')
+            ->and($sql)->not->toContain('CREATE ROLE "shop_db#owner"');
+    });
+
+    it('never moves the panel\'s own account into a group', function () {
+        // A database made without a user is owned by the panel's superuser;
+        // REASSIGN OWNED BY it would move every database it owns.
+        fakePgOwner('panel_admin', 'other');
+
+        pgEngine()->createUser('first_user', 'localhost', 'pw', 'shop_db');
+
+        $sql = pgStatements();
+
+        expect($sql)->toContain('ALTER DATABASE "shop_db" OWNER TO "first_user"')
+            ->and($sql)->not->toContain('REASSIGN OWNED')
+            ->and($sql)->not->toContain('#owner');
+    });
+
+    it('gives a removed user\'s things to the group, not the panel', function () {
+        fakePgOwner('shop_db#owner', 'other', groupExists: true);
+
+        pgEngine()->dropUser('second_user', 'localhost', 'shop_db');
+
+        expect(pgStatements())->toContain('REASSIGN OWNED BY "second_user" TO "shop_db#owner"');
+    });
+
+    it('drops the group with its database', function () {
+        pgEngine()->teardownDatabase('shop_db', [['username' => 'first_user', 'host' => 'localhost']]);
+
+        expect(pgStatements())->toContain('DROP ROLE IF EXISTS "shop_db#owner";');
+    });
+
+    it('names a group no user or database can share, however long the name', function () {
+        $engine = pgEngine();
+        $long = str_repeat('a', 62);
+
+        // `#` is outside the username rule. PostgreSQL cuts names at 63 bytes
+        // without an error, which would cut the marker off and leave a role
+        // named exactly like the database — on a migrated server, often the
+        // name of the database's own user.
+        expect($engine->ownerGroup('shop_db'))->toBe('shop_db#owner')
+            ->and(strlen($engine->ownerGroup($long.'x')))->toBeLessThanOrEqual(63)
+            ->and($engine->ownerGroup($long.'x'))->toEndWith('#owner')
+            ->and($engine->ownerGroup($long.'x'))->not->toBe($engine->ownerGroup($long.'y'));
+    });
 });
 
 it('grants nothing extra when the user already owns the database', function () {
