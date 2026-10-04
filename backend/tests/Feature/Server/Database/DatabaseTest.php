@@ -1220,3 +1220,47 @@ it('keeps an adopted user when the engine cannot say what else it serves', funct
 
     expect(collect($sqls)->contains(fn ($sql) => str_contains($sql, 'DROP USER')))->toBeFalse();
 });
+
+describe('database usernames (bug #25)', function () {
+    it('refuses a rename onto a name the server already has', function () {
+        $sqls = new ArrayObject;
+        Process::fake(function ($process) use ($sqls) {
+            $sql = (string) ($process->input ?? '');
+            $sqls[] = $sql;
+
+            return str_contains($sql, 'FROM mysql.user WHERE user')
+                ? Process::result(output: 'user_exists')
+                : Process::result(output: '1');
+        });
+        $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
+        $user = $db->users()->create(['username' => 'old_u', 'password' => 'oldpw', 'connection_preference' => 'localhost', 'host' => 'localhost']);
+
+        // Was a 500 from inside the engine.
+        test()->withHeaders(dbAuth())->patchJson("/api/databases/{$db->id}/users/{$user->id}", ['username' => 'taken_u'])
+            ->assertStatus(422)
+            ->assertJsonPath('errors.username.0', __('errors/database.user_exists', ['username' => 'taken_u']));
+
+        expect(collect($sqls)->contains(fn (string $q) => str_contains($q, 'RENAME USER')))->toBeFalse()
+            ->and($user->fresh()->username)->toBe('old_u');
+    });
+
+    it('does not ask about the name when only the host changes', function () {
+        // A PostgreSQL role has no host, so asking would find the user itself.
+        Process::fake(fn () => Process::result(output: 'user_exists'));
+        $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
+        $user = $db->users()->create(['username' => 'same_u', 'password' => 'pw', 'connection_preference' => 'localhost', 'host' => 'localhost']);
+
+        test()->withHeaders(dbAuth())->patchJson("/api/databases/{$db->id}/users/{$user->id}", [
+            'connection_preference' => 'remote', 'host' => '10.0.0.9',
+        ])->assertJsonMissingValidationErrors('username');
+    });
+
+    it('refuses PostgreSQL\'s own and reserved names', function (string $name) {
+        fakeDb();
+        $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
+
+        test()->withHeaders(dbAuth())->postJson("/api/databases/{$db->id}/users", [
+            'username' => $name, 'password' => 'AnotherPass88', 'connection_preference' => 'localhost',
+        ])->assertStatus(422)->assertJsonValidationErrors('username');
+    })->with(['postgres', 'pg_monitor', 'PG_x']);
+});

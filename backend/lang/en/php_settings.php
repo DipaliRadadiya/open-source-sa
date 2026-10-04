@@ -58,6 +58,7 @@ return [
         'function_list' => 'This must be a comma-separated list of function names.',
         'memory_unlimited' => 'Unlimited memory (-1) is not allowed: one site could use all of the server\'s memory and take every other site down with it. Enter a limit, like 512M.',
         'memory_over_ram' => 'This is more memory than the server has (:ram). Enter a smaller limit.',
+        'memory_too_low' => 'That is too little memory: PHP reads a number without a unit as bytes, so the site could not start. Enter at least 32M — for example :suggestion.',
         'post_below_upload' => 'The maximum POST size (:post) must be at least the maximum upload size (:upload). An upload is sent inside the request, so otherwise larger uploads fail with no error.',
         'prepend_outside_site' => 'The file must be inside this site\'s folder (:root/…).',
     ],

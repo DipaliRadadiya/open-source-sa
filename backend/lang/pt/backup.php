@@ -48,6 +48,7 @@ return [
         'restore_confirm' => 'Escreva exatamente o domínio da aplicação para confirmar a restauração.',
         'restore_already_running' => 'Já está a decorrer uma restauração para esta aplicação.',
         'restore_no_database' => 'Esta cópia não contém nenhuma base de dados.',
+        'target_no_database' => 'Este site não tem banco de dados para fazer backup. Escolha :files.',
         'restore_no_files' => 'Esta cópia não contém ficheiros.',
         'download_no_artifact' => 'Esta cópia de segurança nunca terminou de ser enviada, por isso não há nenhum arquivo para transferir.',
         'download_no_destination' => 'O destino de armazenamento para onde esta cópia foi enviada já não existe.',

@@ -31,6 +31,7 @@ return [
     'primary_domain_not_editable' => 'Um domínio principal não pode ser editado. Torne outro domínio principal primeiro.',
     'domain_taken' => 'Este domínio já está a ser utilizado neste servidor.',
     'domain_is_ip' => 'Introduza um nome de domínio, não um endereço IP.',
+    'invalid_domain' => 'Informe um nome de domínio válido, como example.com. Cada parte pode usar letras, números e hífens, mas não pode começar nem terminar com hífen nem estar vazia.',
     'domain_taken_by' => 'Este domínio já é utilizado pela aplicação «:application».',
     'domain_is_panel' => 'Este é o endereço em que o próprio painel é servido, por isso um site não pode usá-lo.',
     'redirect_target_invalid' => 'O destino do redirecionamento deve ser um endereço web simples: https://, um host e um caminho opcional, sem query string, espaços ou caracteres como ; # $ &.',

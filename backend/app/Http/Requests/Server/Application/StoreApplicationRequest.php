@@ -7,6 +7,7 @@ use App\Enums\DomainOrigin;
 use App\Models\Application;
 use App\Rules\AvailablePort;
 use App\Rules\AvailableSiteName;
+use App\Rules\Hostname;
 use App\Rules\NotPanelHost;
 use App\Rules\SingleLine;
 use App\Rules\StartCommand;
@@ -62,7 +63,7 @@ class StoreApplicationRequest extends FormRequest
             'name' => ['required', 'string', 'max:'.Application::MAX_NAME_LENGTH, new SingleLine, Rule::unique('applications', 'name'), new AvailableSiteName],
             'domain' => [
                 'required', 'string', 'max:255',
-                'regex:/^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/',
+                new Hostname,
                 // The domains table owns hostnames across the whole server.
                 // Validate that fact here rather than letting its unique
                 // index surface as a database exception after the application
@@ -164,6 +165,12 @@ class StoreApplicationRequest extends FormRequest
             'database_engine' => [
                 'nullable', 'string',
                 function (string $attribute, mixed $value, Closure $fail) use ($type) {
+                    // An unknown site_type is already refused above; there is
+                    // no installer to ask, and asking was a 500 (bug #12).
+                    if ($type === null) {
+                        return;
+                    }
+
                     $installer = app(InstallerManager::class)->installerForType($type->name());
 
                     if ($installer === null || ! $installer->needsDatabase()) {

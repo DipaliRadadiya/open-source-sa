@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Server\Application;
 
+use App\Rules\Hostname;
 use App\Rules\NotPanelHost;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -25,7 +26,7 @@ class CreateCloneRequest extends FormRequest
             'name' => ['sometimes', 'string', 'max:255', Rule::unique('applications', 'name')],
             'domain' => [
                 'required', 'string', 'max:255',
-                'regex:/^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/',
+                new Hostname,
                 Rule::unique('applications', 'domain'),
                 // A staging or clone gets a domains row as its primary, and that
                 // table's unique index covers every alias on the server too — an

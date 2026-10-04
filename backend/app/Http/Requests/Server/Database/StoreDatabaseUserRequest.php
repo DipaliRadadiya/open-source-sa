@@ -27,6 +27,8 @@ class StoreDatabaseUserRequest extends FormRequest
             'username' => [
                 'required', 'string', 'regex:/^[A-Za-z0-9_]{1,32}$/',
                 Rule::notIn((array) config('server.databases.system_users', [])),
+                // PostgreSQL reserves the prefix and refuses CREATE ROLE (bug #25).
+                'not_regex:/^pg_/i',
             ],
             'password' => ['nullable', 'string', 'min:8', 'max:255'],
             'connection_preference' => [

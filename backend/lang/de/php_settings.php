@@ -49,6 +49,7 @@ return [
         'function_list' => 'Dies muss eine kommagetrennte Liste von Funktionsnamen sein.',
         'memory_unlimited' => 'Unbegrenzter Speicher (-1) ist nicht erlaubt: Eine Website könnte den gesamten Speicher des Servers belegen und alle anderen Websites mit lahmlegen. Gib ein Limit ein, z. B. 512M.',
         'memory_over_ram' => 'Das ist mehr Speicher, als der Server hat (:ram). Gib ein kleineres Limit ein.',
+        'memory_too_low' => 'Das ist zu wenig Speicher: PHP liest eine Zahl ohne Einheit als Bytes, die Website könnte also nicht starten. Gib mindestens 32M ein, z. B. :suggestion.',
         'post_below_upload' => 'Die maximale POST-Größe (:post) muss mindestens so groß wie die maximale Upload-Größe (:upload) sein. Ein Upload wird innerhalb der Anfrage gesendet, sonst schlagen größere Uploads ohne Fehlermeldung fehl.',
         'prepend_outside_site' => 'Die Datei muss im Ordner dieser Website liegen (:root/…).',
     ],

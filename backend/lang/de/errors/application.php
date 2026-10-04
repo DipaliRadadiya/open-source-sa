@@ -31,6 +31,7 @@ return [
     'primary_domain_not_editable' => 'Eine primäre Domain kann nicht bearbeitet werden. Mache zuerst eine andere Domain zur primären.',
     'domain_taken' => 'Diese Domain wird auf diesem Server bereits verwendet.',
     'domain_is_ip' => 'Geben Sie einen Domainnamen ein, keine IP-Adresse.',
+    'invalid_domain' => 'Gib einen gültigen Domainnamen ein, z. B. example.com. Jeder Teil darf Buchstaben, Ziffern und Bindestriche enthalten, aber nicht mit einem Bindestrich beginnen oder enden und nicht leer sein.',
     'domain_taken_by' => 'Diese Domain wird bereits von der Anwendung „:application“ verwendet.',
     'domain_is_panel' => 'Unter dieser Adresse wird das Panel selbst ausgeliefert, daher kann eine Website sie nicht verwenden.',
     'redirect_target_invalid' => 'Das Weiterleitungsziel muss eine einfache Webadresse sein: https://, ein Host und optional ein Pfad – ohne Query-String, Leerzeichen oder Zeichen wie ; # $ &.',

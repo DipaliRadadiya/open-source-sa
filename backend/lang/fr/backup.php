@@ -48,6 +48,7 @@ return [
         'restore_confirm' => 'Saisissez exactement le domaine de l\'application pour confirmer la restauration.',
         'restore_already_running' => 'Une restauration est déjà en cours pour cette application.',
         'restore_no_database' => 'Cette sauvegarde ne contient aucune base de données.',
+        'target_no_database' => 'Ce site n\'a aucune base de données à sauvegarder. Choisissez plutôt :files.',
         'restore_no_files' => 'Cette sauvegarde ne contient aucun fichier.',
         'download_no_artifact' => 'Cette sauvegarde n’a jamais fini d’être téléversée, il n’y a donc aucune archive à télécharger.',
         'download_no_destination' => 'La destination de stockage vers laquelle cette sauvegarde a été téléversée n’existe plus.',

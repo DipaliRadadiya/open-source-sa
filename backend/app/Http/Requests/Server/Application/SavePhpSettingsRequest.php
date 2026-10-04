@@ -149,6 +149,9 @@ class SavePhpSettingsRequest extends FormRequest
         ];
     }
 
+    /** 32M: below this no application the panel installs can start. */
+    private const MEMORY_MINIMUM = 32 * 1024 * 1024;
+
     /**
      * Bug #61: `-1` and `99G` passed, being the right shape.
      *
@@ -172,6 +175,17 @@ class SavePhpSettingsRequest extends FormRequest
 
             if ($value === '-1') {
                 $fail(__('php_settings.errors.memory_unlimited'));
+
+                return;
+            }
+
+            // Bug #19: `64` is 64 *bytes* to PHP, and `0` is none at all;
+            // either is accepted by the format and takes the site down on its
+            // next request. Nothing a site runs fits below 32M.
+            if (ApplicationPhpSettings::toBytes($value) < self::MEMORY_MINIMUM) {
+                $fail(__('php_settings.errors.memory_too_low', [
+                    'suggestion' => ctype_digit($value) && (int) $value > 0 ? $value.'M' : '128M',
+                ]));
 
                 return;
             }

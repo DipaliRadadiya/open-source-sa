@@ -3365,7 +3365,9 @@ return [
                 'supports_remote_users' => true,
             ],
         ],
-        'system_users' => ['root', 'mysql.sys', 'mysql.session', 'mysql.infoschema', 'debian-sys-maint', 'mariadb.sys'],
+        // `postgres` is PostgreSQL's own superuser (bug #25). Names starting
+        // with `pg_` are reserved by PostgreSQL too and refused by the requests.
+        'system_users' => ['root', 'mysql.sys', 'mysql.session', 'mysql.infoschema', 'debian-sys-maint', 'mariadb.sys', 'postgres'],
 
         'default_charset' => 'utf8mb4',
         'default_collation' => 'utf8mb4_unicode_ci',

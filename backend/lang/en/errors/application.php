@@ -31,6 +31,7 @@ return [
     'primary_domain_not_editable' => 'A primary domain cannot be edited. Make another domain primary first.',
     'domain_taken' => 'This domain is already in use on this server.',
     'domain_is_ip' => 'Enter a domain name, not an IP address.',
+    'invalid_domain' => 'Enter a valid domain name, such as example.com. Each part may use letters, digits and hyphens, but cannot start or end with a hyphen or be empty.',
     'domain_taken_by' => 'This domain is already in use by the application “:application”.',
     'domain_is_panel' => 'This is the address the panel itself is served on, so a site cannot use it.',
     'redirect_target_invalid' => 'The redirect target must be a plain web address: https://, a host and an optional path — no query string, spaces or characters such as ; # $ &.',

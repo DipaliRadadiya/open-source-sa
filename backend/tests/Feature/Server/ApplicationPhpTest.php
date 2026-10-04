@@ -1463,6 +1463,21 @@ describe('values that are the right shape but wrong (bug #61)', function () {
         $this->actingAs($this->admin)->putJson(phpUrl(), ['memory_limit' => '2G'])->assertOk();
     });
 
+    it('refuses a memory limit no site can start with (bug #19)', function (string $value, string $suggestion) {
+        // `64` is 64 bytes to PHP; `0` is none. Both took the site down.
+        $this->actingAs($this->admin)->putJson(phpUrl(), ['memory_limit' => $value])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.memory_limit.0', __('php_settings.errors.memory_too_low', ['suggestion' => $suggestion]));
+    })->with([
+        'a number without a unit' => ['64', '64M'],
+        'zero' => ['0', '128M'],
+        'too small with a unit' => ['16M', '128M'],
+    ]);
+
+    it('still accepts 32M', function () {
+        $this->actingAs($this->admin)->putJson(phpUrl(), ['memory_limit' => '32M'])->assertOk();
+    });
+
     it('refuses a post size smaller than the upload size', function () {
         $this->actingAs($this->admin)
             ->putJson(phpUrl(), ['upload_max_filesize' => '64M', 'post_max_size' => '32M'])

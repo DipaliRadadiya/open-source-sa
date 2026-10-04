@@ -5,6 +5,7 @@ namespace App\Http\Requests\Server\Application;
 use App\Models\Application;
 use App\Models\Worker;
 use App\Rules\AvailablePort;
+use App\Rules\Hostname;
 use App\Rules\StartCommand;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -100,7 +101,7 @@ class UpdateApplicationRequest extends FormRequest
             // told this endpoint renames a site finds out that it does not.
             // {@see UpdateApplication} for what a rename used to do.
             'name' => ['prohibited'],
-            'domain' => ['sometimes', 'string', 'max:255', 'regex:/^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/'],
+            'domain' => ['sometimes', 'string', 'max:255', new Hostname],
             // See StoreApplicationRequest: this becomes a path used by root.
             'web_root' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9._\-\/]+$/', 'not_regex:/(^|\/)\.\.(\/|$)/'],
             'build_command' => ['sometimes', 'nullable', 'string', 'max:500'],

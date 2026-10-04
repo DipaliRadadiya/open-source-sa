@@ -31,6 +31,7 @@ return [
     'primary_domain_not_editable' => 'Un domaine principal ne peut pas être modifié. Définissez d’abord un autre domaine comme principal.',
     'domain_taken' => 'Ce domaine est déjà utilisé sur ce serveur.',
     'domain_is_ip' => 'Saisissez un nom de domaine, pas une adresse IP.',
+    'invalid_domain' => 'Saisissez un nom de domaine valide, par exemple example.com. Chaque partie peut contenir des lettres, des chiffres et des tirets, mais ne peut ni commencer ni finir par un tiret, ni être vide.',
     'domain_taken_by' => 'Ce domaine est déjà utilisé par l’application « :application ».',
     'domain_is_panel' => 'C’est l’adresse sur laquelle le panneau lui-même est servi ; un site ne peut donc pas l’utiliser.',
     'redirect_target_invalid' => 'La cible de la redirection doit être une adresse web simple : https://, un hôte et un chemin facultatif, sans chaîne de requête, espaces ni caractères comme ; # $ &.',

@@ -7,6 +7,7 @@ use App\Models\ActivityLog;
 use App\Models\Application;
 use App\Models\Backup;
 use App\Models\BackupTarget;
+use App\Models\Database;
 use App\Models\StorageDestination;
 use App\Models\SystemUser;
 use App\Models\User;
@@ -569,6 +570,10 @@ describe('the settings form options', function () {
                 ->assertOk();
         }
 
+        // A site with a database: a Database backup of a site without one is
+        // refused on purpose (bug #33).
+        Database::create(['name' => 'shop', 'engine' => 'mysql', 'application_id' => $this->application->id]);
+
         foreach ($options['types'] as $type) {
             $this->withHeaders(backupHeaders())
                 ->putJson(
@@ -1015,4 +1020,30 @@ it('names the clock the scheduler uses, not the one the server runs on', functio
 
     ServerTimezone::forget();
     @unlink($timezoneFile);
+});
+
+describe('a Database backup for a site with no database (bug #33)', function () {
+    it('is refused, naming the choice that works', function () {
+        // n8n keeps its data in files; every run archived nothing.
+        $this->withHeaders(backupHeaders())
+            ->putJson("/api/applications/{$this->application->id}/backup-target", targetPayload(['type' => 'database']))
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.type.0', __('backup.errors.target_no_database', ['files' => __('backup.type.filesystem')]));
+
+        expect(BackupTarget::count())->toBe(0);
+    });
+
+    it('is accepted once the site has a database', function () {
+        Database::create(['name' => 'shop', 'engine' => 'mysql', 'application_id' => $this->application->id]);
+
+        $this->withHeaders(backupHeaders())
+            ->putJson("/api/applications/{$this->application->id}/backup-target", targetPayload(['type' => 'database']))
+            ->assertOk();
+    });
+
+    it('leaves Files and Full alone', function (string $type) {
+        $this->withHeaders(backupHeaders())
+            ->putJson("/api/applications/{$this->application->id}/backup-target", targetPayload(['type' => $type]))
+            ->assertOk();
+    })->with(['filesystem', 'full']);
 });

@@ -1465,3 +1465,23 @@ it('records creating, updating and deleting a destination, without its credentia
         ->and($rows->last()->properties)->toBe(['name' => 'Renamed'])
         ->and(json_encode($rows->pluck('properties')))->not->toContain('secret_value');
 });
+
+it('refuses a folder that walks out of the bucket (bug #36)', function (string $prefix) {
+    $this->withHeaders(storageAdminAuthHeader())
+        ->postJson('/api/integrations/storage/destinations', s3Payload(['prefix' => $prefix]))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('prefix');
+
+    $destination = makeDestination();
+
+    $this->withHeaders(storageAdminAuthHeader())
+        ->patchJson("/api/integrations/storage/destinations/{$destination->id}", ['prefix' => $prefix])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('prefix');
+})->with(['../x', 'a/../../b', '..', 'a/..']);
+
+it('still accepts a folder with dots in its names', function () {
+    $this->withHeaders(storageAdminAuthHeader())
+        ->postJson('/api/integrations/storage/destinations', s3Payload(['prefix' => 'site.v2/..backups/']))
+        ->assertJsonMissingValidationErrors('prefix');
+});

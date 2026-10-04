@@ -25,6 +25,8 @@ class UpdateDatabaseUserRequest extends FormRequest
             'username' => [
                 'sometimes', 'string', 'regex:/^[A-Za-z0-9_]{1,32}$/',
                 Rule::notIn((array) config('server.databases.system_users', [])),
+                // PostgreSQL reserves the prefix and refuses CREATE ROLE (bug #25).
+                'not_regex:/^pg_/i',
             ],
             'connection_preference' => [
                 'sometimes', Rule::in(['localhost', 'remote', 'anywhere']),

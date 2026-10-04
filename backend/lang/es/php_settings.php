@@ -49,6 +49,7 @@ return [
         'function_list' => 'Debe ser una lista de nombres de funciones separados por comas.',
         'memory_unlimited' => 'No se permite memoria ilimitada (-1): un sitio podría usar toda la memoria del servidor y tumbar todos los demás sitios. Introduce un límite, como 512M.',
         'memory_over_ram' => 'Esto es más memoria de la que tiene el servidor (:ram). Introduce un límite menor.',
+        'memory_too_low' => 'Es muy poca memoria: PHP interpreta un número sin unidad como bytes, así que el sitio no podría arrancar. Introduce al menos 32M, por ejemplo :suggestion.',
         'post_below_upload' => 'El tamaño máximo de POST (:post) debe ser al menos el tamaño máximo de subida (:upload). Una subida se envía dentro de la petición, así que si no, las subidas más grandes fallan sin ningún error.',
         'prepend_outside_site' => 'El archivo debe estar dentro de la carpeta de este sitio (:root/…).',
     ],

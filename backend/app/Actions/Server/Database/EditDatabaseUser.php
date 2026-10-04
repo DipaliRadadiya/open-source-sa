@@ -7,6 +7,7 @@ use App\Services\ActivityLogger;
 use App\Services\Server\Databases\DatabaseFirewall;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\RemoteAccessPreparer;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Edit an existing DB user's credentials: username, connection_preference/host
@@ -37,6 +38,16 @@ class EditDatabaseUser
 
         $renamed = $newUsername !== $user->username || $newHost !== $user->host;
         $passwordChanged = ! empty($data['password']);
+
+        // Bug #25: renaming onto a name the server already has failed inside
+        // the engine as a 500. Asked first, as adding a user already does —
+        // and only for a new name: a role's host is not part of it on
+        // PostgreSQL, so a host-only change would find the user itself.
+        if ($newUsername !== $user->username && $engine->userExists($newUsername, $newHost, $database->name)) {
+            throw ValidationException::withMessages([
+                'username' => [__('errors/database.user_exists', ['username' => $newUsername])],
+            ]);
+        }
 
         // Before anything is changed, for the same reason the firewall sync is:
         // a refusal must not leave the panel describing an account the engine

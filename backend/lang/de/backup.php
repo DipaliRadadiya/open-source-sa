@@ -48,6 +48,7 @@ return [
         'restore_confirm' => 'Geben Sie die Domain der Anwendung exakt ein, um die Wiederherstellung zu bestätigen.',
         'restore_already_running' => 'Für diese Anwendung läuft bereits eine Wiederherstellung.',
         'restore_no_database' => 'Diese Sicherung enthält keine Datenbank.',
+        'target_no_database' => 'Diese Website hat keine Datenbank, die gesichert werden kann. Wähle stattdessen :files.',
         'restore_no_files' => 'Diese Sicherung enthält keine Dateien.',
         'download_no_artifact' => 'Diese Sicherung wurde nie vollständig hochgeladen, daher gibt es kein Archiv zum Herunterladen.',
         'download_no_destination' => 'Das Speicherziel, in das diese Sicherung hochgeladen wurde, existiert nicht mehr.',

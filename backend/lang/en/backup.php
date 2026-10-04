@@ -48,6 +48,7 @@ return [
         'restore_confirm' => 'Type the application domain exactly to confirm the restore.',
         'restore_already_running' => 'A restore for this application is already running.',
         'restore_no_database' => 'This backup does not contain a database.',
+        'target_no_database' => 'This site has no database to back up. Choose :files instead.',
         'restore_no_files' => 'This backup does not contain any files.',
         'download_no_artifact' => 'This backup never finished uploading, so there is no archive to download.',
         'download_no_destination' => 'The storage destination this backup was uploaded to no longer exists.',

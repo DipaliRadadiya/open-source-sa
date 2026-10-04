@@ -3,9 +3,11 @@
 namespace App\Http\Requests\Server\Backup;
 
 use App\Enums\BackupType;
+use App\Models\Application;
 use App\Models\BackupTarget;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 /**
  * Create or update the backup settings for one application.
@@ -46,5 +48,25 @@ class SaveBackupTargetRequest extends FormRequest
             'database_excludes' => ['sometimes', 'array', 'max:100'],
             'database_excludes.*' => ['string', 'max:64'],
         ];
+    }
+
+    /**
+     * Bug #33: a Database backup was accepted for a site with no database
+     * (n8n keeps its data in files), and every run then archived nothing.
+     * Full and Files backups are unaffected.
+     *
+     * @return array<int, \Closure>
+     */
+    public function after(): array
+    {
+        return [function (Validator $validator): void {
+            $application = $this->route('application');
+
+            if ($this->input('type') === BackupType::Database->value
+                && $application instanceof Application
+                && ! $application->databases()->exists()) {
+                $validator->errors()->add('type', __('backup.errors.target_no_database', ['files' => __('backup.type.filesystem')]));
+            }
+        }];
     }
 }

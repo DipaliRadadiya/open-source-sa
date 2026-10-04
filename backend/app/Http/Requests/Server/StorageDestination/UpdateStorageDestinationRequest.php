@@ -34,7 +34,9 @@ class UpdateStorageDestinationRequest extends FormRequest
                 new SingleLine,
             ],
 
-            'prefix' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:#^[A-Za-z0-9._/-]*$#'],
+            // `..` walks out of the bucket or folder the destination names (bug
+            // #36) — refused as the SFTP/FTP root already is.
+            'prefix' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:#^[A-Za-z0-9._/-]*$#', 'not_regex:#(^|/)\.\.(/|$)#'],
 
             // Immutable. The `config` blob's *shape* is defined by the
             // provider, so changing the provider would reinterpret a stored

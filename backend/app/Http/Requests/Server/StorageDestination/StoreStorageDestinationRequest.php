@@ -39,7 +39,9 @@ class StoreStorageDestinationRequest extends FormRequest
             // Provider-independent: every destination lands somewhere inside
             // its own space, whether that space is an S3 key prefix or a
             // subdirectory of an FTP account.
-            'prefix' => ['nullable', 'string', 'max:255', 'regex:#^[A-Za-z0-9._/-]*$#'],
+            // `..` walks out of the bucket or folder the destination names (bug
+            // #36) — refused as the SFTP/FTP root already is.
+            'prefix' => ['nullable', 'string', 'max:255', 'regex:#^[A-Za-z0-9._/-]*$#', 'not_regex:#(^|/)\.\.(/|$)#'],
         ], $this->providerRules());
     }
 

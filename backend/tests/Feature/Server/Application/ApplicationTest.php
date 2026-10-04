@@ -660,3 +660,47 @@ it('refuses an application name that would be two systemd directives', function 
         ->assertUnprocessable()
         ->assertJsonValidationErrors('name');
 });
+
+it('refuses a hostname with an empty or hyphen-edged label (bug #9)', function (string $domain) {
+    $this->withHeaders(appHeaders())->postJson('/api/applications', [
+        'site_type' => 'static',
+        'name' => 'Bad host',
+        'domain' => $domain,
+        'system_user_id' => $this->su->id,
+    ])->assertStatus(422)
+        ->assertJsonPath('errors.domain.0', __('errors/application.invalid_domain'));
+
+    expect(Application::count())->toBe(0);
+})->with(['-bad-.example.com', 'qa..example.com']);
+
+it('accepts a punycode top-level domain (bug #11)', function () {
+    $response = $this->withHeaders(appHeaders())->postJson('/api/applications', [
+        'site_type' => 'static',
+        'name' => 'Punycode',
+        'domain' => 'example.xn--p1ai',
+        'system_user_id' => $this->su->id,
+    ]);
+
+    expect($response->json('errors.domain'))->toBeNull();
+});
+
+it('answers an unknown site type with a database engine as a 422, not a 500 (bug #12)', function () {
+    $this->withHeaders(appHeaders())->postJson('/api/applications', [
+        'site_type' => 'not-a-type',
+        'name' => 'Unknown',
+        'domain' => 'unknown.example.com',
+        'system_user_id' => $this->su->id,
+        'database_engine' => 'mysql',
+    ])->assertStatus(422)->assertJsonValidationErrors('site_type');
+});
+
+it('refuses a Joomla table prefix that does not start with a letter (bug #13)', function () {
+    // Joomla's own installer refuses it, after the site has been created.
+    $this->withHeaders(appHeaders())->postJson('/api/applications', [
+        'site_type' => 'joomla',
+        'name' => 'Joomla',
+        'domain' => 'joomla.example.com',
+        'system_user_id' => $this->su->id,
+        'table_prefix' => '1abc_',
+    ])->assertStatus(422)->assertJsonValidationErrors('table_prefix');
+});

@@ -81,7 +81,9 @@ class JoomlaSiteType extends AbstractSiteType
             'admin_email' => ['required', 'email', 'max:255'],
             // Joomla's own minimum is 12.
             'admin_password' => ['required', 'string', 'min:12'],
-            'table_prefix' => ['nullable', 'string', 'max:15', 'regex:/^[A-Za-z0-9_]+$/'],
+            // Starting with a letter, as Joomla's own installer requires — `1abc`
+            // was accepted here and the install failed inside Joomla (bug #13).
+            'table_prefix' => ['nullable', 'string', 'max:15', 'regex:/^[A-Za-z][A-Za-z0-9_]*$/'],
         ];
     }
 
