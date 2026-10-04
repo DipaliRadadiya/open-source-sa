@@ -3975,6 +3975,8 @@ The password is returned in full, deliberately: the user has to paste it into th
 
 **PostgreSQL, more than one user (2026-10-04, bug #23).** A PostgreSQL database has one owner, and the second user used to take it over: it could read none of the first user's tables, and the first lost the ability to create any. Now, when a second user is added, the database and everything the first user owns in it move to a shared role (`{database}#owner`, cannot log in, never listed as a user), both users become members, and each acts as that role inside this database — so every user can read, write and alter every table, whoever made it. Further users just join. Deleting a user hands what it made to the shared role. A database with one user is unchanged.
 
+**Restoring a PostgreSQL database (2026-10-04)** gives it back to the users recorded here before loading it, and loads it as its owner (the one user, or the shared role), so the restored tables are theirs. Before this a restored database belonged to the panel's account and every user was refused at connect. A dump that needs an extension only a superuser may create (e.g. PostGIS) still loads as the panel account. MySQL/MariaDB grants survive the drop and need nothing.
+
 **Response `201`:** `{"user": {...}}`
 
 ---

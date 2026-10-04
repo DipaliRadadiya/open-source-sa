@@ -374,6 +374,13 @@ class MongoEngine implements DatabaseEngine
         }
     }
 
+    /**
+     * Users are created against the database but stored outside it, so a drop
+     * and create should leave them as they were — read in MongoDB's
+     * documentation, not measured: no test server runs MongoDB.
+     */
+    public function reattachUsers(string $database, array $usernames): void {}
+
     public function restore(string $database, string $path): void
     {
         $client = (string) config('server.databases.engines.mongodb.restore_client', 'mongorestore');

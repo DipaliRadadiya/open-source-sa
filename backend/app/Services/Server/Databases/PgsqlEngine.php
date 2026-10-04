@@ -487,21 +487,21 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     /**
      * Who owns the database, and whether that is a site's login role.
      *
-     * 'login' is an ordinary account; anything else — a superuser such as the
-     * panel's own connection account, or a role that cannot log in — is
-     * 'other', and is never moved into a group.
+     * 'login' is an ordinary account, 'nologin' a role nobody logs in as (the
+     * group), 'super' a superuser such as the panel's own connection account.
+     * Only a 'login' owner is ever moved into a group.
      *
      * @return array{0: string, 1: string}
      */
     private function databaseOwner(string $database): array
     {
         $row = explode("\t", trim($this->run(sprintf(
-            "SELECT r.rolname, CASE WHEN r.rolcanlogin AND NOT r.rolsuper THEN 'login' ELSE 'other' END "
+            "SELECT r.rolname, CASE WHEN r.rolsuper THEN 'super' WHEN r.rolcanlogin THEN 'login' ELSE 'nologin' END "
             .'FROM pg_database d JOIN pg_roles r ON r.oid = d.datdba WHERE d.datname = %s;',
             $this->literal($database),
         ))->output()));
 
-        return [$row[0], $row[1] ?? 'other'];
+        return [$row[0], $row[1] ?? 'super'];
     }
 
     /**
@@ -801,6 +801,23 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
      * Import a plain dump. Destructive — the caller drops and recreates the
      * database first, so this is the inverse of dump() rather than a merge.
      *
+     * **As the database's owner**, not as the panel's account. The dump
+     * carries no ownership (`--no-owner`), so whoever loads it owns every
+     * table — and loaded as the panel's superuser, not one of the site's
+     * users could read them (measured on PostgreSQL 18, 2026-10-04). The
+     * caller gives the database back to its users first
+     * ({@see reattachUsers()}); `SET ROLE` then makes what the dump creates
+     * theirs. A database with no user is owned by the panel and loads as
+     * before.
+     *
+     * Except when the dump needs an extension only a superuser may create
+     * (PostGIS, for one). Creating it first as the panel does not help: the
+     * dump's next line is `COMMENT ON EXTENSION`, which only the extension's
+     * owner may run (measured), so the load would fail — and so would the
+     * undo, from a safety backup holding the same extension. That dump loads
+     * as the panel, as every dump did before. Trusted extensions (pg_trgm,
+     * pgcrypto, uuid-ossp, hstore, citext…) are created by the owner itself.
+     *
      * `--file`, not stdin: a site's dump is routinely larger than the whole PHP
      * memory limit, and reading it in to pass as process input would kill the
      * worker on exactly the databases most worth restoring.
@@ -813,13 +830,116 @@ class PgsqlEngine implements DatabaseEngine, ListensRemotely
     {
         $client = (string) config("server.databases.engines.{$this->engine()}.client", 'psql');
 
+        [$owner, $kind] = $this->databaseOwner($database);
+        $asOwner = $owner !== '' && $kind !== 'super' && $this->ownerMayCreate($database, $this->extensionsIn($path));
+
         $this->mustRun([
             $client,
             ...$this->connectionArgs(),
             '--dbname='.$database,
             '--set=ON_ERROR_STOP=1',
+            // psql runs -c and -f in order, in one session.
+            ...($asOwner ? ['--command=SET ROLE '.$this->ident($owner).';'] : []),
             '--file='.$path,
         ], 'restore', 3600);
+    }
+
+    /**
+     * Give a recreated database back to its users ({@see DatabaseEngine}).
+     *
+     * One user owns it and its schema, as a new database's first user does.
+     * More than one share it through the group, as {@see shareWithGroup()}
+     * leaves them — created here if a database from before that change has
+     * several users and no group, since the restored tables have a single
+     * owner and the others could read none of them otherwise. One
+     * transaction, inside the database.
+     */
+    public function reattachUsers(string $database, array $usernames): void
+    {
+        // Only roles that still exist: one dropped outside the panel would
+        // otherwise fail the whole transaction, after the database has
+        // already been dropped for the restore.
+        $usernames = $usernames === [] ? [] : array_values(array_filter(array_map('trim', explode("\n", $this->run(sprintf(
+            'SELECT rolname FROM pg_roles WHERE rolname IN (%s) ORDER BY rolname;',
+            implode(', ', array_map(fn (string $user) => $this->literal($user), array_unique($usernames))),
+        ))->output()))));
+
+        if ($usernames === []) {
+            return;
+        }
+
+        if (count($usernames) === 1) {
+            $user = $this->ident($usernames[0]);
+
+            $this->mustIn($database, sprintf(
+                'BEGIN; ALTER DATABASE %1$s OWNER TO %2$s; ALTER SCHEMA public OWNER TO %2$s; GRANT ALL ON SCHEMA public TO %2$s; COMMIT;',
+                $this->ident($database),
+                $user,
+            ));
+
+            return;
+        }
+
+        $group = $this->ownerGroup($database);
+        $exists = trim($this->run(sprintf('SELECT 1 FROM pg_roles WHERE rolname = %s;', $this->literal($group)))->output()) === '1';
+
+        $this->mustIn($database, 'BEGIN; '
+            .($exists ? '' : sprintf('CREATE ROLE %s NOLOGIN; ', $this->ident($group)))
+            .sprintf('ALTER DATABASE %1$s OWNER TO %2$s; ALTER SCHEMA public OWNER TO %2$s; ', $this->ident($database), $this->ident($group))
+            .implode('', array_map(fn (string $user) => $this->joinGroupSql($user, $database, $group), $usernames))
+            .'COMMIT;');
+    }
+
+    /**
+     * The extensions a dump creates, read a line at a time — dumps are
+     * routinely larger than PHP's memory limit. pg_dump writes each
+     * `CREATE EXTENSION IF NOT EXISTS name WITH SCHEMA …;` on its own line.
+     *
+     * @return array<int, string>
+     */
+    private function extensionsIn(string $path): array
+    {
+        $handle = @fopen($path, 'rb');
+
+        if ($handle === false) {
+            return [];
+        }
+
+        $names = [];
+
+        try {
+            while (($line = fgets($handle)) !== false) {
+                if (preg_match('/^CREATE EXTENSION (?:IF NOT EXISTS )?("(?:[^"]|"")+"|[A-Za-z0-9_-]+)/', $line, $m) === 1) {
+                    $names[] = str_replace('""', '"', trim($m[1], '"'));
+                }
+            }
+        } finally {
+            fclose($handle);
+        }
+
+        return array_values(array_unique($names));
+    }
+
+    /**
+     * Whether every one of these extensions may be created by a database's
+     * owner: marked trusted in its control file (PostgreSQL 13+). An unknown
+     * one counts as not — it fails either way, and loading as the panel at
+     * least fails the way it always has.
+     *
+     * @param  array<int, string>  $extensions
+     */
+    private function ownerMayCreate(string $database, array $extensions): bool
+    {
+        if ($extensions === []) {
+            return true;
+        }
+
+        $trusted = array_filter(array_map('trim', explode("\n", $this->runIn($database, sprintf(
+            'SELECT DISTINCT name FROM pg_available_extension_versions WHERE trusted AND name IN (%s);',
+            implode(', ', array_map(fn (string $name) => $this->literal($name), $extensions)),
+        ))->output())));
+
+        return array_diff($extensions, $trusted) === [];
     }
 
     /*

@@ -166,4 +166,19 @@ interface DatabaseEngine
      * inverse of dump() rather than a merge.
      */
     public function restore(string $database, string $path): void;
+
+    /**
+     * Give a database that has just been dropped and created again back to
+     * the users the panel has recorded for it — before {@see restore()}, which
+     * may load its contents as them.
+     *
+     * Only PostgreSQL has anything to do: a MySQL grant outlives the database
+     * it names (measured on MariaDB, 2026-10-04), and a MongoDB user is kept
+     * outside its database. A PostgreSQL database's owner and CONNECT grants
+     * go with it, so without this every user of a restored database was
+     * refused at connect.
+     *
+     * @param  array<int, string>  $usernames
+     */
+    public function reattachUsers(string $database, array $usernames): void;
 }

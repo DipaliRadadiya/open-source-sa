@@ -98,6 +98,9 @@ class RestoreDatabase implements RestoreStep
 
             $engine->dropDatabase($database->name);
             $engine->createDatabase($database->name, $database->charset, $database->collation);
+            // Before the load, which may run as them: on PostgreSQL the new
+            // database belonged to the panel and no site user could connect.
+            $engine->reattachUsers($database->name, $database->users()->pluck('username')->all());
             $engine->restore($database->name, $dump);
         }
     }

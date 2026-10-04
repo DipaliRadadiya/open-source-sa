@@ -8,6 +8,7 @@ use App\Models\Application;
 use App\Models\Backup;
 use App\Models\BackupTarget;
 use App\Models\Database;
+use App\Models\DatabaseUser;
 use App\Models\Restore;
 use App\Models\StorageDestination;
 use App\Models\SystemUser;
@@ -516,6 +517,10 @@ describe('restoring a database', function () {
             });
         }
 
+        $engine->shouldReceive('reattachUsers')->andReturnUsing(function (string $name, array $users) use (&$calls) {
+            $calls[] = 'reattach:'.$name.':'.implode(',', $users);
+        });
+
         $manager = Mockery::mock(DatabaseManager::class);
         $manager->shouldReceive('engine')->andReturn($engine);
         $manager->shouldReceive('driver')->andReturn('sql');
@@ -617,6 +622,28 @@ describe('restoring a database', function () {
         $calls = [];
         restoreDatabaseStep($calls)->run(databaseRestoreContext($staging));
 
-        expect($calls)->toBe(['drop:shop', 'create:shop', 'restore:shop']);
+        expect($calls)->toBe(['drop:shop', 'create:shop', 'reattach:shop:', 'restore:shop']);
+    });
+
+    it('gives the recreated database back to its users before loading it', function () {
+        // PostgreSQL: the database came back owned by the panel, and every one
+        // of its users was refused at connect (measured 2026-10-04).
+        $database = Database::create([
+            'application_id' => $this->application->id,
+            'name' => 'shop', 'engine' => 'postgresql',
+        ]);
+        DatabaseUser::create(['database_id' => $database->id, 'username' => 'shop_one', 'password' => 'x', 'host' => 'localhost']);
+        DatabaseUser::create(['database_id' => $database->id, 'username' => 'shop_two', 'password' => 'x', 'host' => 'localhost']);
+
+        $staging = $this->home.'/staging-pg';
+        File::ensureDirectoryExists($staging);
+        // The mocked manager reports every engine as `sql`, so the dump needs
+        // the end marker that check looks for.
+        File::put($staging.'/db-shop.sql', "CREATE TABLE t (i int);\n-- Dump completed on 2026-10-04  3:00:00\n");
+
+        $calls = [];
+        restoreDatabaseStep($calls)->run(databaseRestoreContext($staging));
+
+        expect($calls)->toBe(['drop:shop', 'create:shop', 'reattach:shop:shop_one,shop_two', 'restore:shop']);
     });
 });

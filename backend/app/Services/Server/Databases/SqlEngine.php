@@ -478,6 +478,11 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
         }
     }
 
+    /**
+     * Grants name the database, not its contents, and survive a drop: nothing to give back.
+     */
+    public function reattachUsers(string $database, array $usernames): void {}
+
     public function restore(string $database, string $path): void
     {
         $client = (string) config("server.databases.engines.{$this->connection->engine}.client", 'mysql');

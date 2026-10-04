@@ -503,3 +503,132 @@ it('grants nothing extra when the user already owns the database', function () {
 
     expect(pgStatements())->not->toContain('GRANT CONNECT');
 });
+
+describe('a restore gives the database back to its users', function () {
+    /**
+     * Answer the engine's questions for a restore of `shop_db`.
+     *
+     * @param  array<int, string>  $roles  The recorded users that exist as roles.
+     * @param  array<int, string>  $trusted  Extensions the server marks trusted.
+     */
+    function fakePgRestore(string $owner = 'shop_user', string $kind = 'login', array $roles = [], bool $groupExists = false, array $trusted = []): void
+    {
+        Process::fake(function ($process) use ($owner, $kind, $roles, $groupExists, $trusted) {
+            $input = (string) ($process->input ?? '');
+            test()->ran = [...test()->ran, ['command' => $process->command, 'input' => $input]];
+
+            return Process::result(output: match (true) {
+                str_contains($input, 'JOIN pg_roles r ON r.oid = d.datdba') => "{$owner}\t{$kind}\n",
+                str_contains($input, 'SELECT rolname FROM pg_roles WHERE rolname IN') => implode("\n", $roles),
+                str_contains($input, 'SELECT 1 FROM pg_roles WHERE rolname') => $groupExists ? "1\n" : '',
+                str_contains($input, 'pg_available_extension_versions') => implode("\n", $trusted),
+                default => '',
+            });
+        });
+    }
+
+    function pgDump(string $contents): string
+    {
+        $path = tempnam(sys_get_temp_dir(), 'pgdump');
+        file_put_contents($path, $contents);
+
+        return $path;
+    }
+
+    /** The argv of the psql run that loads the dump. */
+    function loadCommand(): array
+    {
+        return collect(test()->ran)->pluck('command')->first(
+            fn (array $command) => collect($command)->contains(fn ($arg) => str_starts_with((string) $arg, '--file=')),
+        );
+    }
+
+    it('makes a single user the owner again', function () {
+        fakePgRestore(roles: ['shop_user']);
+
+        pgEngine()->reattachUsers('shop_db', ['shop_user']);
+
+        expect(pgStatements())->toContain('BEGIN; ALTER DATABASE "shop_db" OWNER TO "shop_user"; ALTER SCHEMA public OWNER TO "shop_user";')
+            ->and(pgStatements())->not->toContain('#owner');
+    });
+
+    it('gives a shared database back to its group, and every user back to the group', function () {
+        fakePgRestore(roles: ['one', 'two'], groupExists: true);
+
+        pgEngine()->reattachUsers('shop_db', ['one', 'two']);
+
+        $sql = pgStatements();
+
+        expect($sql)->toContain('ALTER DATABASE "shop_db" OWNER TO "shop_db#owner";')
+            ->and($sql)->toContain('ALTER ROLE "one" IN DATABASE "shop_db" SET role = "shop_db#owner";')
+            ->and($sql)->toContain('ALTER ROLE "two" IN DATABASE "shop_db" SET role = "shop_db#owner";')
+            ->and($sql)->toContain('GRANT CONNECT, TEMPORARY ON DATABASE "shop_db" TO "two";')
+            ->and($sql)->not->toContain('CREATE ROLE "shop_db#owner"');
+    });
+
+    it('creates the group for several users from before there was one', function () {
+        fakePgRestore(roles: ['one', 'two']);
+
+        pgEngine()->reattachUsers('shop_db', ['one', 'two']);
+
+        expect(pgStatements())->toContain('CREATE ROLE "shop_db#owner" NOLOGIN;');
+    });
+
+    it('leaves out a recorded user whose role is gone', function () {
+        // One dropped outside the panel would fail the whole transaction, with
+        // the database already dropped for the restore.
+        fakePgRestore(roles: ['one']);
+
+        pgEngine()->reattachUsers('shop_db', ['one', 'gone']);
+
+        expect(pgStatements())->toContain('ALTER DATABASE "shop_db" OWNER TO "one";')
+            ->and(pgStatements())->not->toContain('"gone"');
+    });
+
+    it('does nothing for a database with no users', function () {
+        fakePgRestore();
+
+        pgEngine()->reattachUsers('shop_db', []);
+
+        expect(test()->ran)->toBe([]);
+    });
+
+    it('loads the dump as the owner, so what it creates is theirs', function () {
+        fakePgRestore();
+
+        pgEngine()->restore('shop_db', pgDump("CREATE TABLE t (i int);\n"));
+
+        $command = loadCommand();
+        $setRole = array_search('--command=SET ROLE "shop_user";', $command, true);
+        $file = collect($command)->search(fn ($arg) => str_starts_with((string) $arg, '--file='));
+
+        // Before the file: psql runs them in the order given, in one session.
+        expect($setRole)->not->toBeFalse()->and($setRole)->toBeLessThan($file);
+    });
+
+    it('loads as the panel when the panel owns the database', function () {
+        fakePgRestore(owner: 'panel_admin', kind: 'super');
+
+        pgEngine()->restore('shop_db', pgDump("CREATE TABLE t (i int);\n"));
+
+        expect(implode(' ', loadCommand()))->not->toContain('SET ROLE');
+    });
+
+    it('loads as the owner when every extension the dump needs is trusted', function () {
+        fakePgRestore(trusted: ['pg_trgm']);
+
+        pgEngine()->restore('shop_db', pgDump("CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;\nCOMMENT ON EXTENSION pg_trgm IS 'x';\n"));
+
+        expect(implode(' ', loadCommand()))->toContain('SET ROLE "shop_user"');
+    });
+
+    it('loads as the panel when the dump needs an extension only a superuser may create', function () {
+        // As the owner, the dump's COMMENT ON EXTENSION would fail (measured),
+        // and so would an undo from a safety backup holding the same one.
+        fakePgRestore(trusted: ['pg_trgm']);
+
+        pgEngine()->restore('shop_db', pgDump("CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;\nCREATE EXTENSION IF NOT EXISTS postgis WITH SCHEMA public;\n"));
+
+        expect(implode(' ', loadCommand()))->not->toContain('SET ROLE');
+    });
+});
