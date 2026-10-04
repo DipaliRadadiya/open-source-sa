@@ -1829,6 +1829,8 @@ Replace the entire `.env` file. Optionally restart the app's process after save.
 
 Syntax errors return `422` with `errors.raw` listing the problem.
 
+**Locked keys (2026-10-04, bug #17).** The key an application encrypts its stored data with cannot be changed or removed once it has a value: `N8N_ENCRYPTION_KEY` on n8n, `APP_KEY` on Akaunting and Statamic. Such a save is a `422` on `raw` naming the key; every other line can still be edited. A file with no value for the key yet may be given one. Git sites have no locked keys — the code, and rotating its key, are the owner's.
+
 ---
 
 ### POST `/applications/{application}/environment/restore`
@@ -1839,6 +1841,8 @@ Restore a previous snapshot.
 **Request:** `{"backup": ".env.bak-20260728-141530", "restart": true}`
 
 `backup` is the `name` from the list, verbatim. It reaches a path, so anything not matching `.env.bak-YYYYMMDD-HHMMSS` exactly is refused rather than sanitised — a `422` on `backup`, as is a well-formed name that is no longer on disk (both were `500`s until 2026-09-29). The current file is backed up first, so restoring the wrong snapshot is itself undoable.
+
+A backup whose locked key (see PUT above) differs from the current file's is a `422` on `backup`: restoring it would undo a key change the same way typing one would.
 
 **Response `200`:** `{"environment": {...}}`
 
@@ -3969,6 +3973,8 @@ The password is returned in full, deliberately: the user has to paste it into th
 
 `connection_preference`: `localhost | remote | anywhere`. Remote/anywhere opens the engine port in the firewall (`origin: db_user`); the rule is closed again when the last user needing it is deleted, moved, or its database deleted.
 
+**PostgreSQL, more than one user (2026-10-04, bug #23).** A PostgreSQL database has one owner, and the second user used to take it over: it could read none of the first user's tables, and the first lost the ability to create any. Now, when a second user is added, the database and everything the first user owns in it move to a shared role (`{database}#owner`, cannot log in, never listed as a user), both users become members, and each acts as that role inside this database — so every user can read, write and alter every table, whoever made it. Further users just join. Deleting a user hands what it made to the shared role. A database with one user is unchanged.
+
 **Response `201`:** `{"user": {...}}`
 
 ---
@@ -4504,10 +4510,12 @@ Top processes by CPU.
 
 ```json
 {"processes": [
-  {"pid": 1234, "user": "www-data", "cpu": 25.3, "memory": 4.2, "command": "php-fpm: pool www"},
-  {"pid": 5678, "user": "siteowner", "cpu": 8.1, "memory": 1.5, "command": "node /home/siteowner/shop.example.com/server.js"}
+  {"pid": 1234, "user": "www-data", "cpu": 25.3, "memory": 4.2, "command": "php-fpm: pool www", "stoppable": false, "reason": "This process belongs to a protected service and cannot be stopped here."},
+  {"pid": 5678, "user": "siteowner", "cpu": 8.1, "memory": 1.5, "command": "node /home/siteowner/shop.example.com/server.js", "stoppable": true, "reason": null}
 ], "meta": {"total": 187, "limit": 25}}
 ```
+
+**`stoppable` / `reason` added 2026-10-04 (bug #7).** Whether `DELETE` below would refuse this process, from the same rules, and the refusal's message when it would. Disable Stop on a row with `stoppable: false` and show `reason`. The endpoint still checks again at stop time.
 
 ---
 
@@ -4520,7 +4528,9 @@ Stop a process.
 
 **Response `200`:** `{"process": {"pid": 1234, "command": "php-fpm: pool www", "user": "www-data", "signal": "TERM"}}`
 
-`404` — PID no longer running. `422` — PID 1, kernel threads, the panel's PHP, or protected service processes. `500` — signal failed.
+`404` — PID no longer running, or a number no process can have (above Linux's 4194304; was a `500` until 2026-10-04). `422` — PID 1, kernel threads, the panel's PHP, a database server, SSH, the panel's own units, the operating system's own services (dbus, cron, systemd-journald/logind/networkd/resolved/udevd/timesyncd, polkit, rsyslog, chrony — added 2026-10-04, bug #5), or protected service processes. `500` — signal failed.
+
+**`409` (2026-10-04, bug #6)** — the signal was delivered and the process is still running after 5 seconds. For `TERM` the message suggests Force stop (`{"signal": "KILL"}`); after `KILL` it says the process is stuck in the kernel and no signal can end it yet. Before this, Stop answered `200` without checking.
 
 ---
 
