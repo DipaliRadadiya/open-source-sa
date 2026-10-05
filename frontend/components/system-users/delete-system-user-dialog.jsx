@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CopyButton } from "@/components/ui/copy-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Caution } from "@/components/ui/caution";
 import { apiMessage } from "@/lib/api/error-message";
-import { genericErrorMessage } from "@/lib/api/generic-error";
 import { useRefresh } from "@/hooks/use-refresh";
 
 export function DeleteSystemUserDialog({ user, open, onOpenChange, prevPage = null }) {
@@ -16,6 +16,9 @@ export function DeleteSystemUserDialog({ user, open, onOpenChange, prevPage = nu
   const { refreshThen, navigateThen } = useRefresh();
   const [pending, setPending] = useState(false);
   const [confirm, setConfirm] = useState("");
+  // A refusal the person has to act on (a session still open) stays in the dialog;
+  // a toast is gone before they have read it.
+  const [refusal, setRefusal] = useState(null);
   // The row, and the ⋯ that opened this, are gone once it is deleted.
   const removed = useRef(false);
 
@@ -23,13 +26,17 @@ export function DeleteSystemUserDialog({ user, open, onOpenChange, prevPage = nu
   const matches = confirm.trim() === username;
 
   function handleOpenChange(next) {
-    if (!next) setConfirm("");
+    if (!next) {
+      setConfirm("");
+      setRefusal(null);
+    }
     onOpenChange?.(next);
   }
 
   async function onConfirm() {
     if (!matches) return;
     setPending(true);
+    setRefusal(null);
     // Toasted once the row has gone from the list.
     const done = (say) => {
       const after = () => {
@@ -52,8 +59,11 @@ export function DeleteSystemUserDialog({ user, open, onOpenChange, prevPage = nu
         done(() => toast.info(t("toast.alreadyGone", { username })));
         return;
       }
-      // 422 = still owns applications; show the backend's translated message.
-      toast.error(apiMessage(error, genericErrorMessage()));
+      // 422 = still owns applications, or still has processes; the backend's sentence
+      // says which.
+      const reason = error?.response?.data?.errors?.system_user?.[0];
+      if (error?.response?.status === 422 && reason) setRefusal(reason);
+      else toast.error(apiMessage(error, t("toast.deleteFailed")));
       setPending(false);
     }
   }
@@ -78,6 +88,11 @@ export function DeleteSystemUserDialog({ user, open, onOpenChange, prevPage = nu
         document.querySelector("[data-su-add]")?.focus();
       }}
     >
+      {refusal ? (
+        <Caution tone="destructive" size="md">
+          <p>{refusal}</p>
+        </Caution>
+      ) : null}
       <div className="space-y-2">
         {/* Copy button, because the name must be typed exactly; matches the
             delete-application dialog. */}

@@ -2,18 +2,11 @@ import { useState, useEffect } from "react";
 import Link from "@/components/ui/app-link";
 import { Globe } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FormModal } from "@/components/ui/form-modal";
 import { getSystemUserDetail } from "@/lib/api/system-users";
-
-function statusVariant(status) {
-  const s = (status ?? "").toLowerCase();
-  if (/(active|running|online|live|deployed)/.test(s)) return "success";
-  if (/(stop|error|fail|offline|down|inactive)/.test(s)) return "destructive";
-  return "muted";
-}
+import { ApplicationStatusBadge } from "@/components/applications/application-status-badge";
 
 export function SystemUserAppsDialog({ user, open, onOpenChange }) {
   const t = useTranslations("systemUsers");
@@ -89,7 +82,9 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
           ) : (
             <ul className="grid gap-2 sm:grid-cols-2">
               {shown.map((app) => (
-                <li key={app.id}>
+                // min-w-0: a grid item is as wide as its content, so a long domain pushed the
+                // status off a phone screen.
+                <li key={app.id} className="min-w-0">
                   <Link
                     href={`/applications/${app.id}`}
                     prefetch={false}
@@ -99,7 +94,8 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
                     <div className="flex min-w-0 items-start gap-2.5">
                       <Globe className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium" title={app.name}>{app.name}</p>
+                        {/* Wraps: truncated, "QA Blog" and "QA Blog (Staging)" read the same on a phone. */}
+                        <p className="text-sm font-medium [overflow-wrap:anywhere]">{app.name}</p>
                         {app.domain ? (
                           <p className="truncate text-xs text-muted-foreground">
                             {app.domain}
@@ -109,13 +105,11 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
                         ) : null}
                       </div>
                     </div>
+                    {/* The same badge and words as the Applications page. */}
                     {app.status ? (
-                      <Badge
-                        variant={statusVariant(app.status)}
-                        className="shrink-0 font-normal capitalize"
-                      >
-                        {app.status}
-                      </Badge>
+                      <span className="shrink-0">
+                        <ApplicationStatusBadge application={app} />
+                      </span>
                     ) : null}
                   </Link>
                 </li>

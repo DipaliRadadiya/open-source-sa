@@ -69,7 +69,8 @@
       "description": "Votre rôle n'inclut pas l'autorisation de voir ceci. Demandez-la à un administrateur."
     },
     "serverNavigation": "Menu du serveur",
-    "loadingPage": "Chargement de la page…"
+    "loadingPage": "Chargement de la page…",
+    "close": "Fermer"
   },
   "systemUsers": {
     "title": "Utilisateurs système",
@@ -121,7 +122,15 @@
       "keyAdded": "Clé SSH ajoutée.",
       "keyRemoved": "Clé SSH retirée.",
       "alreadyGone": "{username} avait déjà été supprimé.",
-      "sshOffNotEnforced": "Connexion SSH désactivée ici. Elle prend effet dès que vous enregistrez Paramètres → Accès et sécurité."
+      "sshOffNotEnforced": "Connexion SSH désactivée ici. Elle prend effet dès que vous enregistrez Paramètres → Accès et sécurité.",
+      "createFailed": "L'utilisateur système n'a pas pu être créé.",
+      "deleteFailed": "L'utilisateur système n'a pas pu être supprimé.",
+      "passwordFailed": "Le mot de passe n'a pas pu être modifié.",
+      "sudoFailed": "L'accès sudo n'a pas pu être modifié.",
+      "sshFailed": "La connexion SSH n'a pas pu être modifiée.",
+      "shellFailed": "Le shell de connexion n'a pas pu être modifié.",
+      "keyAddFailed": "La clé SSH n'a pas pu être ajoutée.",
+      "keyRemoveFailed": "La clé SSH n'a pas pu être retirée."
     },
     "create": {
       "title": "Ajouter un utilisateur système",
@@ -141,21 +150,21 @@
       "sshAccessHint": "Permet à ce compte de se connecter via SSH.",
       "password": "Mot de passe",
       "passwordPlaceholder": "Laisser vide pour aucun mot de passe",
-      "passwordHint": "Généré pour vous. Conservez-le, modifiez-le ou effacez-le. Vous pourrez le revoir plus tard depuis le menu ⋯ de l'utilisateur → Mot de passe.",
-      "generate": "Générer",
-      "sshNeedsLoginShell": "{shell} n'autorise pas la connexion, donc l'accès SSH ne peut pas être activé avec."
+      "passwordHint": "Généré pour vous. Modifiez-le, ou videz-le pour ne pas mettre de mot de passe.",
+      "generate": "Générer"
     },
     "password": {
       "open": "Mot de passe",
       "title": "Mot de passe",
-      "subtitle": "Mot de passe de connexion au serveur pour {username}.",
+      "subtitle": "Mot de passe du compte Linux {username}.",
       "current": "Mot de passe actuel",
       "setNew": "Définir un nouveau mot de passe",
       "new": "Nouveau mot de passe",
       "newPlaceholder": "Au moins 10 caractères",
       "confirm": "Confirmer le mot de passe",
       "confirmPlaceholder": "Saisissez à nouveau le nouveau mot de passe",
-      "submit": "Enregistrer le mot de passe"
+      "submit": "Enregistrer le mot de passe",
+      "sshSignInOff": "La connexion SSH par mot de passe est désactivée sur ce serveur : ce mot de passe ne permet pas de se connecter en SSH ou SFTP. Utilisez plutôt une clé SSH."
     },
     "sshKeysAction": "Clés SSH",
     "apps": "Applications",

@@ -69,7 +69,8 @@
       "description": "Your role doesn't include permission to view this. Ask an administrator to grant it."
     },
     "serverNavigation": "Server menu",
-    "loadingPage": "Loading page…"
+    "loadingPage": "Loading page…",
+    "close": "Close"
   },
   "systemUsers": {
     "title": "System Users",
@@ -121,7 +122,15 @@
       "keyAdded": "SSH key added.",
       "keyRemoved": "SSH key removed.",
       "alreadyGone": "{username} had already been deleted.",
-      "sshOffNotEnforced": "SSH login switched off. It takes effect once you save Settings → Access & security."
+      "sshOffNotEnforced": "SSH login switched off. It takes effect once you save Settings → Access & security.",
+      "createFailed": "The system user could not be created.",
+      "deleteFailed": "The system user could not be deleted.",
+      "passwordFailed": "The password could not be changed.",
+      "sudoFailed": "Sudo access could not be changed.",
+      "sshFailed": "SSH login could not be changed.",
+      "shellFailed": "The login shell could not be changed.",
+      "keyAddFailed": "The SSH key could not be added.",
+      "keyRemoveFailed": "The SSH key could not be removed."
     },
     "create": {
       "title": "Add system user",
@@ -141,21 +150,21 @@
       "sshAccessHint": "Lets this account sign in over SSH.",
       "password": "Password",
       "passwordPlaceholder": "Leave empty for no password",
-      "passwordHint": "Generated for you. Keep it, change it or clear it. You can see it again later from the user's ⋯ menu → Password.",
-      "generate": "Generate",
-      "sshNeedsLoginShell": "{shell} does not allow login, so SSH access cannot be turned on with it."
+      "passwordHint": "Generated for you. Change it, or clear it for no password.",
+      "generate": "Generate"
     },
     "password": {
       "open": "Password",
       "title": "Password",
-      "subtitle": "The server login password for {username}.",
+      "subtitle": "The Linux account password for {username}.",
       "current": "Current password",
       "setNew": "Set a new password",
       "new": "New password",
       "newPlaceholder": "At least 10 characters",
       "confirm": "Confirm password",
       "confirmPlaceholder": "Re-enter the new password",
-      "submit": "Save password"
+      "submit": "Save password",
+      "sshSignInOff": "SSH password sign-in is off on this server, so this password can't be used to sign in over SSH or SFTP. Use an SSH key instead."
     },
     "sshKeysAction": "SSH keys",
     "apps": "Applications",

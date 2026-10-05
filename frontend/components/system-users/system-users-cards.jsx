@@ -8,7 +8,15 @@ import { AppsCell } from "@/components/system-users/apps-cell";
 import { SystemUserRowActions } from "@/components/system-users/system-user-row-actions";
 
 // The shell picker takes the full width underneath so shell names fit.
-export function SystemUsersCards({ users, shells = [], canManage = false, prevPage = null, sshEnforced = null }) {
+export function SystemUsersCards({
+  users,
+  shells = [],
+  canManage = false,
+  prevPage = null,
+  sshEnforced = null,
+  sshPasswordOff = false,
+  canOpenSecurity = false,
+}) {
   const t = useTranslations("systemUsers");
 
   return (
@@ -33,7 +41,13 @@ export function SystemUsersCards({ users, shells = [], canManage = false, prevPa
             </div>
             {/* For viewers too: the menu is how SSH keys are reached. */}
             <div className="-me-2 -mt-1 shrink-0">
-              <SystemUserRowActions user={user} canManage={canManage} prevPage={prevPage} />
+              <SystemUserRowActions
+                user={user}
+                canManage={canManage}
+                prevPage={prevPage}
+                sshPasswordOff={sshPasswordOff}
+                canOpenSecurity={canOpenSecurity}
+              />
             </div>
           </div>
 

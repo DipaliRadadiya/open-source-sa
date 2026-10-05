@@ -7,7 +7,6 @@ import { PendingSwitch } from "@/components/ui/pending-switch";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { apiMessage } from "@/lib/api/error-message";
-import { genericErrorMessage } from "@/lib/api/generic-error";
 import { useRefresh } from "@/hooks/use-refresh";
 
 // Enabling sudo (a root grant) asks first; everything else applies immediately.
@@ -54,7 +53,7 @@ export function AccessSwitch({ user, field, canManage = true, sshEnforced = null
         refresh();
         return;
       }
-      toast.error(apiMessage(error, genericErrorMessage()));
+      toast.error(apiMessage(error, field === "sudo" ? t("toast.sudoFailed") : t("toast.sshFailed")));
     }
   }
 

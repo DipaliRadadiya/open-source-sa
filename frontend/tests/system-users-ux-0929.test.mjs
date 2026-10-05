@@ -27,7 +27,9 @@ test("UX-1: a sudo user's SSH switch shows on, locked, with the reason", () => {
 test("UX-2/3/7/10: wording", () => {
   const en = msgs("en");
   assert.doesNotMatch(en.create.passwordHint, /Set password/);
-  assert.match(en.create.passwordHint, /Password/);
+  // One line (Krishna 5 Oct): the password is already visible in the Password column.
+  assert.doesNotMatch(en.create.passwordHint, /⋯/);
+  assert.ok(en.create.passwordHint.length < 70);
   assert.equal(en.password.title, en.password.open);
   assert.equal(en.create.publicKey, "SSH public key");
   assert.ok(en.sshNotEnforced.body.length < 140);

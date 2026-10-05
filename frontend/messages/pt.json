@@ -69,7 +69,8 @@
       "description": "Sua função não inclui permissão para ver isto. Peça a um administrador para conceder."
     },
     "serverNavigation": "Menu do servidor",
-    "loadingPage": "Carregando a página…"
+    "loadingPage": "Carregando a página…",
+    "close": "Fechar"
   },
   "systemUsers": {
     "title": "Usuários do sistema",
@@ -121,7 +122,15 @@
       "keyAdded": "Chave SSH adicionada.",
       "keyRemoved": "Chave SSH removida.",
       "alreadyGone": "{username} já tinha sido excluído.",
-      "sshOffNotEnforced": "Login SSH desligado aqui. Passa a valer quando você salvar Configurações → Acesso e segurança."
+      "sshOffNotEnforced": "Login SSH desligado aqui. Passa a valer quando você salvar Configurações → Acesso e segurança.",
+      "createFailed": "Não foi possível criar o usuário de sistema.",
+      "deleteFailed": "Não foi possível excluir o usuário de sistema.",
+      "passwordFailed": "Não foi possível alterar a senha.",
+      "sudoFailed": "Não foi possível alterar o acesso sudo.",
+      "sshFailed": "Não foi possível alterar o login SSH.",
+      "shellFailed": "Não foi possível alterar o shell de login.",
+      "keyAddFailed": "Não foi possível adicionar a chave SSH.",
+      "keyRemoveFailed": "Não foi possível remover a chave SSH."
     },
     "create": {
       "title": "Adicionar usuário de sistema",
@@ -141,21 +150,21 @@
       "sshAccessHint": "Permite que esta conta faça login via SSH.",
       "password": "Senha",
       "passwordPlaceholder": "Deixe vazio para nenhuma senha",
-      "passwordHint": "Gerada para você. Guarde, altere ou limpe. Você pode vê-la novamente depois no menu ⋯ do usuário → Senha.",
-      "generate": "Gerar",
-      "sshNeedsLoginShell": "{shell} não permite login, então o acesso SSH não pode ser ativado com ele."
+      "passwordHint": "Gerada para você. Altere-a, ou apague-a para ficar sem senha.",
+      "generate": "Gerar"
     },
     "password": {
       "open": "Senha",
       "title": "Senha",
-      "subtitle": "A senha de login no servidor para {username}.",
+      "subtitle": "A senha da conta Linux {username}.",
       "current": "Senha atual",
       "setNew": "Definir uma nova senha",
       "new": "Nova senha",
       "newPlaceholder": "Pelo menos 10 caracteres",
       "confirm": "Confirmar senha",
       "confirmPlaceholder": "Digite a nova senha novamente",
-      "submit": "Salvar senha"
+      "submit": "Salvar senha",
+      "sshSignInOff": "O login SSH com senha está desligado neste servidor, então esta senha não serve para entrar por SSH ou SFTP. Use uma chave SSH."
     },
     "sshKeysAction": "Chaves SSH",
     "apps": "Aplicações",

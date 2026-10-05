@@ -27,7 +27,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { apiMessage } from "@/lib/api/error-message";
-import { genericErrorMessage } from "@/lib/api/generic-error";
 import { useRefresh } from "@/hooks/use-refresh";
 
 // `canManage` false = read-only: the list without Add or Remove (listing only
@@ -119,7 +118,7 @@ export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
       document.querySelector("[data-ssh-key-name]")?.focus();
     } catch (error) {
       if (error?.response?.status === 404) return gone();
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: t("toast.keyAddFailed") });
     }
   }
 
@@ -141,7 +140,7 @@ export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
         return;
       }
       setRemoving(null);
-      toast.error(apiMessage(error, genericErrorMessage()));
+      toast.error(apiMessage(error, t("toast.keyRemoveFailed")));
     } finally {
       setPending(false);
     }

@@ -69,7 +69,8 @@
       "description": "Tu rol no incluye permiso para ver esto. Pide a un administrador que te lo conceda."
     },
     "serverNavigation": "Menú del servidor",
-    "loadingPage": "Cargando la página…"
+    "loadingPage": "Cargando la página…",
+    "close": "Cerrar"
   },
   "auth": {
     "loginTitle": "Iniciar sesión",
@@ -754,7 +755,15 @@
       "keyAdded": "Clave SSH añadida.",
       "keyRemoved": "Clave SSH eliminada.",
       "alreadyGone": "{username} ya se había eliminado.",
-      "sshOffNotEnforced": "Inicio de sesión SSH desactivado aquí. Se aplica cuando guardes Ajustes → Acceso y seguridad."
+      "sshOffNotEnforced": "Inicio de sesión SSH desactivado aquí. Se aplica cuando guardes Ajustes → Acceso y seguridad.",
+      "createFailed": "No se pudo crear el usuario del sistema.",
+      "deleteFailed": "No se pudo eliminar el usuario del sistema.",
+      "passwordFailed": "No se pudo cambiar la contraseña.",
+      "sudoFailed": "No se pudo cambiar el acceso sudo.",
+      "sshFailed": "No se pudo cambiar el inicio de sesión SSH.",
+      "shellFailed": "No se pudo cambiar el shell de inicio de sesión.",
+      "keyAddFailed": "No se pudo añadir la clave SSH.",
+      "keyRemoveFailed": "No se pudo eliminar la clave SSH."
     },
     "create": {
       "title": "Añadir usuario del sistema",
@@ -774,21 +783,21 @@
       "sshAccessHint": "Permite que esta cuenta inicie sesión por SSH.",
       "password": "Contraseña",
       "passwordPlaceholder": "Déjalo vacío para no poner contraseña",
-      "passwordHint": "Generada automáticamente. Consérvala, cámbiala o bórrala. Podrás volver a verla más tarde desde el menú ⋯ del usuario → Contraseña.",
-      "generate": "Generar",
-      "sshNeedsLoginShell": "{shell} no permite iniciar sesión, así que no se puede activar el acceso SSH con ese shell."
+      "passwordHint": "Generada automáticamente. Cámbiala o bórrala para no poner contraseña.",
+      "generate": "Generar"
     },
     "password": {
       "open": "Contraseña",
       "title": "Contraseña",
-      "subtitle": "La contraseña de inicio de sesión del servidor para {username}.",
+      "subtitle": "La contraseña de la cuenta Linux {username}.",
       "current": "Contraseña actual",
       "setNew": "Establecer una nueva contraseña",
       "new": "Nueva contraseña",
       "newPlaceholder": "Al menos 10 caracteres",
       "confirm": "Confirmar contraseña",
       "confirmPlaceholder": "Vuelve a introducir la nueva contraseña",
-      "submit": "Guardar contraseña"
+      "submit": "Guardar contraseña",
+      "sshSignInOff": "El inicio de sesión SSH con contraseña está desactivado en este servidor, así que esta contraseña no sirve para entrar por SSH o SFTP. Usa una clave SSH."
     },
     "sshKeysAction": "Claves SSH",
     "apps": "Aplicaciones",

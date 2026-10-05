@@ -20,9 +20,17 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { PasswordReveal } from "@/components/system-users/password-reveal";
+import { Note } from "@/components/ui/note";
+import Link from "@/components/ui/app-link";
 import { useRefresh } from "@/hooks/use-refresh";
 
-export function SystemUserPasswordDialog({ user, open, onOpenChange }) {
+export function SystemUserPasswordDialog({
+  user,
+  open,
+  onOpenChange,
+  sshPasswordOff = false,
+  canOpenSecurity = false,
+}) {
   const t = useTranslations("systemUsers");
   const { refresh, refreshThen } = useRefresh();
 
@@ -46,7 +54,7 @@ export function SystemUserPasswordDialog({ user, open, onOpenChange }) {
         refresh();
         return;
       }
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: t("toast.passwordFailed") });
     }
   }
 
@@ -89,6 +97,18 @@ export function SystemUserPasswordDialog({ user, open, onOpenChange }) {
           </>
         }
       >
+        {/* "Server login password" overpromises when sshd refuses passwords. */}
+        {sshPasswordOff ? (
+          <Note>
+            <p>{t("password.sshSignInOff")}</p>
+            {canOpenSecurity ? (
+              <Link href="/settings/security" prefetch={false} className="text-primary underline-offset-4 hover:underline">
+                {t("sshNotEnforced.action")}
+              </Link>
+            ) : null}
+          </Note>
+        ) : null}
+
         <div className="space-y-1.5 rounded-lg border bg-muted/30 p-3">
           <p className="text-xs font-medium text-muted-foreground">
             {t("password.current")}

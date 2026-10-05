@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/select";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { apiMessage } from "@/lib/api/error-message";
-import { genericErrorMessage } from "@/lib/api/generic-error";
 import { useRefresh } from "@/hooks/use-refresh";
 import { offeredShells } from "@/lib/system-users/offered-shells";
 
@@ -57,7 +56,7 @@ export function ShellSelect({ user, shells = [], canManage = true, className }) 
         refresh();
         return;
       }
-      toast.error(apiMessage(error, genericErrorMessage()));
+      toast.error(apiMessage(error, t("toast.shellFailed")));
     }
   }
 
@@ -70,7 +69,7 @@ export function ShellSelect({ user, shells = [], canManage = true, className }) 
   return (
     <Select value={shown} disabled={busy} onValueChange={onChange}>
       {/* Sized to the title, not a fixed width, which cut long translations mid-word. */}
-      <SelectTrigger className={cn("h-8 w-auto max-w-72 text-xs", className)}>
+      <SelectTrigger aria-label={t("access.shell")} className={cn("h-8 w-auto max-w-72 text-xs", className)}>
         {/* Title only: Radix copies the selected item's children into the trigger, so the
             path and description would add a second line. */}
         <SelectValue>{label}</SelectValue>

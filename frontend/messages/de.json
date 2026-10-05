@@ -69,7 +69,8 @@
       "description": "Ihre Rolle enthält keine Berechtigung, dies anzusehen. Bitten Sie einen Administrator darum."
     },
     "serverNavigation": "Server-Menü",
-    "loadingPage": "Seite wird geladen…"
+    "loadingPage": "Seite wird geladen…",
+    "close": "Schließen"
   },
   "systemUsers": {
     "title": "Systembenutzer",
@@ -121,7 +122,15 @@
       "keyAdded": "SSH-Schlüssel hinzugefügt.",
       "keyRemoved": "SSH-Schlüssel entfernt.",
       "alreadyGone": "{username} wurde bereits gelöscht.",
-      "sshOffNotEnforced": "SSH-Anmeldung ausgeschaltet. Das greift, sobald Sie Einstellungen → Zugang & Sicherheit speichern."
+      "sshOffNotEnforced": "SSH-Anmeldung ausgeschaltet. Das greift, sobald Sie Einstellungen → Zugang & Sicherheit speichern.",
+      "createFailed": "Der Systembenutzer konnte nicht erstellt werden.",
+      "deleteFailed": "Der Systembenutzer konnte nicht gelöscht werden.",
+      "passwordFailed": "Das Passwort konnte nicht geändert werden.",
+      "sudoFailed": "Der Sudo-Zugriff konnte nicht geändert werden.",
+      "sshFailed": "Die SSH-Anmeldung konnte nicht geändert werden.",
+      "shellFailed": "Die Anmelde-Shell konnte nicht geändert werden.",
+      "keyAddFailed": "Der SSH-Schlüssel konnte nicht hinzugefügt werden.",
+      "keyRemoveFailed": "Der SSH-Schlüssel konnte nicht entfernt werden."
     },
     "create": {
       "title": "Systembenutzer hinzufügen",
@@ -141,21 +150,21 @@
       "sshAccessHint": "Erlaubt diesem Konto die Anmeldung über SSH.",
       "password": "Passwort",
       "passwordPlaceholder": "Leer lassen für kein Passwort",
-      "passwordHint": "Automatisch generiert. Übernehmen, ändern oder löschen – Sie können es später im ⋯-Menü des Benutzers → Passwort erneut einsehen.",
-      "generate": "Erzeugen",
-      "sshNeedsLoginShell": "{shell} erlaubt keine Anmeldung, daher kann SSH-Zugriff damit nicht aktiviert werden."
+      "passwordHint": "Automatisch generiert. Ändern Sie es, oder leeren Sie es für kein Passwort.",
+      "generate": "Erzeugen"
     },
     "password": {
       "open": "Passwort",
       "title": "Passwort",
-      "subtitle": "Das Server-Anmeldepasswort für {username}.",
+      "subtitle": "Das Passwort des Linux-Kontos {username}.",
       "current": "Aktuelles Passwort",
       "setNew": "Neues Passwort festlegen",
       "new": "Neues Passwort",
       "newPlaceholder": "Mindestens 10 Zeichen",
       "confirm": "Passwort bestätigen",
       "confirmPlaceholder": "Neues Passwort erneut eingeben",
-      "submit": "Passwort speichern"
+      "submit": "Passwort speichern",
+      "sshSignInOff": "Die SSH-Anmeldung per Passwort ist auf diesem Server ausgeschaltet, daher funktioniert dieses Passwort nicht für SSH oder SFTP. Verwenden Sie stattdessen einen SSH-Schlüssel."
     },
     "sshKeysAction": "SSH-Schlüssel",
     "apps": "Anwendungen",

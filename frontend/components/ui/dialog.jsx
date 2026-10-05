@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 import { OpenerCapture, useReturnFocus } from "@/components/ui/use-return-focus"
 import { Button } from "@/components/ui/button"
 import { XIcon } from "lucide-react"
+import { useTranslations } from "next-intl"
 
 function Dialog({
   ...props
@@ -52,6 +53,7 @@ function DialogContent({
   onCloseAutoFocus,
   ...props
 }) {
+  const t = useTranslations("common");
   const focus = useReturnFocus(onCloseAutoFocus);
   return (
     <DialogPortal>
@@ -70,7 +72,7 @@ function DialogContent({
           <DialogPrimitive.Close data-slot="dialog-close" asChild>
             <Button variant="ghost" className="absolute top-2 right-2" size="icon-sm">
               <XIcon />
-              <span className="sr-only">Close</span>
+              <span className="sr-only">{t("close")}</span>
             </Button>
           </DialogPrimitive.Close>
         )}
@@ -97,6 +99,7 @@ function DialogFooter({
   children,
   ...props
 }) {
+  const t = useTranslations("common");
   return (
     <div
       data-slot="dialog-footer"
@@ -109,7 +112,7 @@ function DialogFooter({
       {children}
       {showCloseButton && (
         <DialogPrimitive.Close asChild>
-          <Button variant="outline">Close</Button>
+          <Button variant="outline">{t("close")}</Button>
         </DialogPrimitive.Close>
       )}
     </div>

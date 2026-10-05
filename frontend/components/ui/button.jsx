@@ -21,8 +21,10 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        // Hover moves a shade away from the text colour; `/90` let white show through and
+        // dropped white text below 4.5:1. Shades exist once branding applies; the mix is the fallback.
         default:
-          "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 hover:shadow-sm",
+          "bg-primary text-primary-foreground shadow-xs hover:bg-[var(--primary-700,color-mix(in_oklch,var(--primary),black_12%))] hover:shadow-sm dark:hover:bg-[var(--primary-300,color-mix(in_oklch,var(--primary),white_12%))]",
         // Filled plus border so it reads on white and `bg-muted`; colour comes from
         // compoundVariants below.
         outline: "",

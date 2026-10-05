@@ -83,7 +83,7 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated, initialS
       const chosen = shells.find((entry) => entry.value === (values.shell || DEFAULT_SHELL));
       if (chosen?.allows_login === false) {
         form.setError("ssh_access", {
-          message: t("create.sshNeedsLoginShell", { shell: chosen.title }),
+          message: t("sshNeedsLoginShell", { shell: chosen.title }),
         });
         scrollToFirstError();
         return;
@@ -106,7 +106,7 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated, initialS
       // Not onOpenChange: our own close skips Radix's callback, leaving "More options" expanded.
       handleOpenChange(false);
     } catch (error) {
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: t("toast.createFailed") });
     }
   }
 
@@ -288,7 +288,7 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated, initialS
                   label: t("create.sshAccess"),
                   // Sudo users always get SSH.
                   hint: noLoginShell
-                    ? t("create.sshNeedsLoginShell", { shell: chosenShellEntry.title })
+                    ? t("sshNeedsLoginShell", { shell: chosenShellEntry.title })
                     : sshViaSudo
                       ? t("sshViaSudo")
                       : t("create.sshAccessHint"),

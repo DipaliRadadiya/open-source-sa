@@ -16,7 +16,13 @@ import { DeleteSystemUserDialog } from "@/components/system-users/delete-system-
 
 // Shown to viewers too: the menu is the only way to view a user's SSH keys.
 // Actions they cannot take stay visible, disabled with the reason.
-export function SystemUserRowActions({ user, canManage = true, prevPage = null }) {
+export function SystemUserRowActions({
+  user,
+  canManage = true,
+  prevPage = null,
+  sshPasswordOff = false,
+  canOpenSecurity = false,
+}) {
   const t = useTranslations("systemUsers");
   const [pwOpen, setPwOpen] = useState(false);
   const [keysOpen, setKeysOpen] = useState(false);
@@ -76,7 +82,13 @@ export function SystemUserRowActions({ user, canManage = true, prevPage = null }
       </DropdownMenu>
 
       {canManage ? (
-        <SystemUserPasswordDialog user={user} open={pwOpen} onOpenChange={setPwOpen} />
+        <SystemUserPasswordDialog
+          user={user}
+          open={pwOpen}
+          onOpenChange={setPwOpen}
+          sshPasswordOff={sshPasswordOff}
+          canOpenSecurity={canOpenSecurity}
+        />
       ) : null}
       <SshKeysDialog user={user} open={keysOpen} onOpenChange={setKeysOpen} canManage={canManage} />
       {canManage ? (

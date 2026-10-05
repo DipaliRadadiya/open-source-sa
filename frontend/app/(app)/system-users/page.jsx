@@ -3,6 +3,7 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getSystemUsersPage } from "@/lib/system-users/get-system-users";
 import { getShells } from "@/lib/system-users/get-shells";
+import { getSettings } from "@/lib/settings/get-settings";
 import { SystemUsersTable } from "@/components/system-users/system-users-table";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
@@ -26,7 +27,13 @@ export default async function SystemUsersPage({ searchParams }) {
 
   if (!can(permissions, "system_user", "view")) return <PermissionDenied title={t("title")} />;
   // Shells come from the server so the picker never offers one it refuses.
-  const [usersPage, shells] = await Promise.all([getSystemUsersPage(query), getShells()]);
+  const [usersPage, shells, settings] = await Promise.all([
+    getSystemUsersPage(query),
+    getShells(),
+    can(permissions, "setting", "view") ? getSettings() : null,
+  ]);
+  // Only a known "off": an unread setting must not claim anything about sign-in.
+  const sshPasswordOff = settings?.data?.security?.password_authentication === false;
   const canManage = can(permissions, "system_user", "manage");
 
   // SECURITY: the index returns cleartext passwords; viewers get a placeholder.
@@ -58,6 +65,7 @@ export default async function SystemUsersPage({ searchParams }) {
           shells={shells}
           canManage={canManage}
           canOpenSecurity={can(permissions, "setting", "manage")}
+          sshPasswordOff={sshPasswordOff}
         />
       )}
     </div>

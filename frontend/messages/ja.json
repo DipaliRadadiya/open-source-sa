@@ -69,7 +69,8 @@
       "description": "このロールにはこれを表示する権限が含まれていません。管理者に権限の付与を依頼してください。"
     },
     "serverNavigation": "サーバーメニュー",
-    "loadingPage": "ページを読み込んでいます…"
+    "loadingPage": "ページを読み込んでいます…",
+    "close": "閉じる"
   },
   "systemUsers": {
     "title": "システムユーザー",
@@ -121,7 +122,15 @@
       "keyAdded": "SSH 鍵を追加しました。",
       "keyRemoved": "SSH 鍵を削除しました。",
       "alreadyGone": "{username} はすでに削除されています。",
-      "sshOffNotEnforced": "SSH ログインをオフにしました。設定 → アクセスとセキュリティ を保存すると適用されます。"
+      "sshOffNotEnforced": "SSH ログインをオフにしました。設定 → アクセスとセキュリティ を保存すると適用されます。",
+      "createFailed": "システムユーザーを作成できませんでした。",
+      "deleteFailed": "システムユーザーを削除できませんでした。",
+      "passwordFailed": "パスワードを変更できませんでした。",
+      "sudoFailed": "sudo アクセスを変更できませんでした。",
+      "sshFailed": "SSH ログインを変更できませんでした。",
+      "shellFailed": "ログインシェルを変更できませんでした。",
+      "keyAddFailed": "SSH 鍵を追加できませんでした。",
+      "keyRemoveFailed": "SSH 鍵を削除できませんでした。"
     },
     "create": {
       "title": "システムユーザーを追加",
@@ -141,21 +150,21 @@
       "sshAccessHint": "このアカウントが SSH でログインできるようにします。",
       "password": "パスワード",
       "passwordPlaceholder": "パスワードを設定しない場合は空欄",
-      "passwordHint": "自動生成されます。保管、変更、削除が可能です。後でユーザーの ⋯ メニュー →「パスワード」から再確認できます。",
-      "generate": "生成",
-      "sshNeedsLoginShell": "{shell} ではログインできないため、これを使用して SSH アクセスを有効にすることはできません。"
+      "passwordHint": "自動生成されます。変更するか、空にするとパスワードなしになります。",
+      "generate": "生成"
     },
     "password": {
       "open": "パスワード",
       "title": "パスワード",
-      "subtitle": "{username} のサーバーログイン用パスワードです。",
+      "subtitle": "Linux アカウント {username} のパスワードです。",
       "current": "現在のパスワード",
       "setNew": "新しいパスワードを設定",
       "new": "新しいパスワード",
       "newPlaceholder": "10文字以上",
       "confirm": "パスワードの確認",
       "confirmPlaceholder": "新しいパスワードを再入力",
-      "submit": "パスワードを保存"
+      "submit": "パスワードを保存",
+      "sshSignInOff": "このサーバーでは SSH のパスワードログインがオフのため、このパスワードでは SSH や SFTP にログインできません。代わりに SSH 鍵を使用してください。"
     },
     "sshKeysAction": "SSH 鍵",
     "apps": "アプリケーション",

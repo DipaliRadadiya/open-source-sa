@@ -110,8 +110,16 @@ function CreatedCell({ row }) {
 }
 
 function RowActionsCell({ row, table }) {
-  const { canManage, prevPage } = table.options.meta;
-  return <SystemUserRowActions user={row.original} canManage={canManage} prevPage={prevPage} />;
+  const { canManage, prevPage, sshPasswordOff, canOpenSecurity } = table.options.meta;
+  return (
+    <SystemUserRowActions
+      user={row.original}
+      canManage={canManage}
+      prevPage={prevPage}
+      sshPasswordOff={sshPasswordOff}
+      canOpenSecurity={canOpenSecurity}
+    />
+  );
 }
 
 export function SystemUsersTable(props) {
@@ -123,7 +131,14 @@ export function SystemUsersTable(props) {
   );
 }
 
-function SystemUsersList({ data, meta, shells = [], canManage = false, canOpenSecurity = false }) {
+function SystemUsersList({
+  data,
+  meta,
+  shells = [],
+  canManage = false,
+  canOpenSecurity = false,
+  sshPasswordOff = false,
+}) {
   const t = useTranslations("systemUsers");
   const searchParams = useSearchParams();
   const setQuery = useSetQuery();
@@ -247,13 +262,15 @@ function SystemUsersList({ data, meta, shells = [], canManage = false, canOpenSe
               canManage={canManage}
               prevPage={prevPage}
               sshEnforced={sshEnforced}
+              sshPasswordOff={sshPasswordOff}
+              canOpenSecurity={canOpenSecurity}
             />
           </div>
           <div className="hidden xl:block">
             <DataTable
               columns={columns}
               data={filtered}
-              meta={{ canManage, shells, prevPage, sshEnforced }}
+              meta={{ canManage, shells, prevPage, sshEnforced, sshPasswordOff, canOpenSecurity }}
             />
           </div>
         </>
