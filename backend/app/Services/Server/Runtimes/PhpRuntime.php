@@ -10,9 +10,11 @@ use App\Services\Runtime\InstallFailureClassifier;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\Php\FpmReloadGrace;
 use App\Services\Server\Php\IonCubeLoader;
+use App\Services\Server\Php\LegacyPhpTimezone;
 use App\Services\Server\Php\PhpVersionManager;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use App\Support\ServerTimezone;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -43,6 +45,7 @@ class PhpRuntime implements Runtime
         private IonCubeLoader $ionCube,
         private ManagedFile $files,
         private FpmReloadGrace $reloadGrace,
+        private LegacyPhpTimezone $legacyTimezone,
     ) {}
 
     public function key(): string
@@ -523,6 +526,12 @@ class PhpRuntime implements Runtime
         // So the reloads every site change makes on this version finish the
         // requests in flight instead of answering them 502. Never fatal.
         $this->reloadGrace->apply($version);
+
+        // PHP before 8.0 dies on a guessed zone that is not UTC; told the
+        // server's zone explicitly from the start. Never fatal, like the above.
+        if (LegacyPhpTimezone::needed($version)) {
+            $this->legacyTimezone->apply($version, ServerTimezone::get());
+        }
     }
 
     /**

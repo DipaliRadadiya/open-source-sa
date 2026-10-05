@@ -5,7 +5,9 @@ namespace App\Services\Server\Settings;
 use App\Contracts\SettingGroup;
 use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Services\Server\ManagedFile;
+use App\Services\Server\Php\LegacyPhpTimezone;
 use App\Services\Server\ServerOps;
+use App\Support\ServerTimezone;
 use Illuminate\Support\Facades\Log;
 
 /** Timezone, NTP time sync, and hostname — via timedatectl / hostnamectl. */
@@ -14,6 +16,7 @@ class GeneralSettings implements SettingGroup
     public function __construct(
         private ServerOps $serverOps,
         private ManagedFile $files,
+        private LegacyPhpTimezone $legacyPhp,
     ) {}
 
     public function key(): string
@@ -68,6 +71,11 @@ class GeneralSettings implements SettingGroup
 
         if ($data['timezone'] !== $current['timezone']) {
             $this->run(['timedatectl', 'set-timezone', $data['timezone']]);
+            ServerTimezone::forget();
+
+            // PHP 5.6–7.4 cannot guess any zone but UTC, and every site on
+            // them answered 500 after this change (junior re-test #14).
+            $this->legacyPhp->applyAll($data['timezone']);
         }
 
         if ($data['hostname'] !== $current['hostname']) {
