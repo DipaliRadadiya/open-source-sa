@@ -220,18 +220,7 @@ class SiteTypeManager
         // panel needs both — so the runtime check below passes cleanly for
         // WordPress, and the user would be shown a card that fails only once
         // they try to build a site with it.
-        // `servingProfiles()`, not `servingProfile()`: a type is blocked only
-        // when this server hosts NONE of the profiles it could be served by.
-        // Asked about the single declared profile, the git card — whose
-        // declared value is the `php` fallback and whose rendering type also
-        // produces node and static — was refused on every MERN server, the one
-        // stack built for running the user's own Node code.
-        $hosted = array_filter(
-            $type->servingProfiles(),
-            fn (string $profile): bool => $this->capabilities->hosts($profile),
-        );
-
-        if ($hosted === []) {
+        if (! $this->capabilities->hosts($type->servingProfile())) {
             return [
                 'code' => self::BLOCKED_STACK,
                 'reason' => __('application.unavailable.stack'),

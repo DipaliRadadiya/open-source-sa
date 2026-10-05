@@ -17,21 +17,6 @@ use App\Services\Server\Php\ServerDefaultPhp;
 abstract class AbstractSiteType implements SiteType
 {
     /**
-     * Just the declared profile, which is the honest answer for every type
-     * whose rendering is fixed by the product it installs: WordPress is PHP,
-     * Uptime Kuma is Node, and no choice on the create form changes either.
-     *
-     * Only a type that lets the *user* decide how it is served overrides this —
-     * `GitSiteType`, where the rendering type does exactly that.
-     *
-     * @return array<int, string>
-     */
-    public function servingProfiles(): array
-    {
-        return [$this->servingProfile()];
-    }
-
-    /**
      * Derived rather than listed, so adding a type does not mean copying
      * sixteen names into it. Only the differences are worth writing down, and
      * a type overrides this when it has one.

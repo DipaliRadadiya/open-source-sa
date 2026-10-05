@@ -47,21 +47,6 @@ interface SiteType
     /** php | node | static | proxy — what has to be installed to serve it. */
     public function servingProfile(): string;
 
-    /**
-     * Every profile this type can end up served by.
-     *
-     * `servingProfile()` is one value because an application row holds one, but
-     * for some types it is only the *default* — a git repository becomes php,
-     * node or static depending on the rendering type the user picks, and
-     * `ServingProfile::resolve()` is what decides. A stack that hosts any
-     * member of this set can offer the type; gating on the single default hid
-     * the git card from every MERN server, which is the one stack whose whole
-     * purpose is deploying Node code.
-     *
-     * @return array<int, string>
-     */
-    public function servingProfiles(): array;
-
     /** Grouping for the card grid, e.g. `cms`, `developer`. */
     public function category(): string;
 
