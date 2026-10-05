@@ -6801,7 +6801,6 @@
     "title": "Central management",
     "pageSubtitle": "Let a central panel manage this server on your behalf.",
     "subtitle": "Generate a key here, then paste it into your central panel to connect this server to it.",
-    "keyActive": "Key active",
     "disconnected": "This server is no longer connected to Central.",
     "cancel": "Cancel",
     "power": {
@@ -6846,7 +6845,13 @@
       "generateFailed": "Couldn't generate a key.",
       "disconnectFailed": "Couldn't disconnect."
     },
-    "cardTitle": "Connection"
+    "cardTitle": "Connection",
+    "state": {
+      "connected": "Connected",
+      "waiting": "Waiting for Central",
+      "lastUsed": "Last used by Central: {ago}.",
+      "waitingHint": "This changes to Connected the first time Central uses the key."
+    }
   },
   "docker": {
     "title": "Docker",

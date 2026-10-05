@@ -6801,7 +6801,6 @@
     "title": "Central管理",
     "pageSubtitle": "セントラルパネルからこのサーバーを管理できるようにします。",
     "subtitle": "ここで鍵を生成し、セントラルパネルに貼り付けてこのサーバーを接続してください。",
-    "keyActive": "キー有効",
     "disconnected": "このサーバーはCentralに接続されていません。",
     "cancel": "キャンセル",
     "power": {
@@ -6846,7 +6845,13 @@
       "generateFailed": "鍵を生成できませんでした。",
       "disconnectFailed": "接続を解除できませんでした。"
     },
-    "cardTitle": "接続"
+    "cardTitle": "接続",
+    "state": {
+      "connected": "接続済み",
+      "waiting": "Central を待機中",
+      "lastUsed": "Central の最終使用: {ago}",
+      "waitingHint": "Central が初めて鍵を使用すると「接続済み」に変わります。"
+    }
   },
   "docker": {
     "title": "Docker",

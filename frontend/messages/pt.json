@@ -6801,7 +6801,6 @@
     "title": "Gerenciamento central",
     "pageSubtitle": "Permita que um painel central gerencie este servidor por você.",
     "subtitle": "Gere uma chave aqui e cole-a no seu painel central para conectar este servidor a ele.",
-    "keyActive": "Chave ativa",
     "disconnected": "Este servidor não está mais conectado ao Central.",
     "cancel": "Cancelar",
     "power": {
@@ -6846,7 +6845,13 @@
       "generateFailed": "Não foi possível gerar uma chave.",
       "disconnectFailed": "Não foi possível desconectar."
     },
-    "cardTitle": "Conexão"
+    "cardTitle": "Conexão",
+    "state": {
+      "connected": "Conectado",
+      "waiting": "Aguardando o Central",
+      "lastUsed": "Último uso pelo Central: {ago}.",
+      "waitingHint": "Isto muda para Conectado na primeira vez que o Central usar a chave."
+    }
   },
   "docker": {
     "title": "Docker",

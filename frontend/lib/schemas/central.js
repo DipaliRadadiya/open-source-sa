@@ -9,6 +9,9 @@ export const centralStatusSchema = z
     // The mask, e.g. "sv_central_a***************". Null while disabled; never
     // the raw value.
     token: z.string().nullish(),
+    // `enabled` = a key exists; `connected` = Central has used it (ISO `last_used_at`).
+    connected: z.boolean().default(false),
+    last_used_at: z.string().nullish(),
   })
   .passthrough();
 

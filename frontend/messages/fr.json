@@ -6801,7 +6801,6 @@
     "title": "Gestion centralisée",
     "pageSubtitle": "Laissez un panel central gérer ce serveur pour vous.",
     "subtitle": "Générez une clé ici, puis collez-la dans votre panel central pour y connecter ce serveur.",
-    "keyActive": "Clé active",
     "disconnected": "Ce serveur n'est plus connecté à Central.",
     "cancel": "Annuler",
     "power": {
@@ -6846,7 +6845,13 @@
       "generateFailed": "Impossible de générer une clé.",
       "disconnectFailed": "Impossible de se déconnecter."
     },
-    "cardTitle": "Connexion"
+    "cardTitle": "Connexion",
+    "state": {
+      "connected": "Connecté",
+      "waiting": "En attente de Central",
+      "lastUsed": "Dernière utilisation par Central : {ago}.",
+      "waitingHint": "L’état passe à Connecté dès que Central utilise la clé pour la première fois."
+    }
   },
   "docker": {
     "title": "Docker",

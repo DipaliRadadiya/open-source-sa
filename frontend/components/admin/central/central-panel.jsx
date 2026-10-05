@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
-import { useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Loader2, Link2Off, PlugZap, RefreshCw, ShieldAlert } from "lucide-react";
 import { disableCentral, enableCentral } from "@/lib/api/central";
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { AutoRefresh } from "@/components/ui/auto-refresh";
 
 // Connect and regenerate share one endpoint; pressing it while connected
 // rotates the token and breaks the old one, so only that press is confirmed.
@@ -28,7 +29,19 @@ export function CentralPanel({ status }) {
   const [confirming, setConfirming] = useState(null);
   const [acknowledged, setAcknowledged] = useState(false);
 
+  const format = useFormatter();
+  const now = useNow({ updateInterval: 30000 });
+
+  // A key existing is not Central having it: until Central first uses the key the
+  // screen waits rather than claiming a connection.
   const connected = Boolean(status?.enabled);
+  const linked = connected && Boolean(status?.connected);
+  const lastUsed = linked && status?.last_used_at ? new Date(status.last_used_at) : null;
+  // Clock skew must not read as "in 5 seconds".
+  const lastUsedAgo =
+    lastUsed && !Number.isNaN(lastUsed.getTime())
+      ? format.relativeTime(Math.min(lastUsed.getTime(), now.getTime()), now)
+      : null;
 
   async function generate() {
     setPending("generate");
@@ -73,18 +86,32 @@ export function CentralPanel({ status }) {
             {/* Not `title`: that duplicates the page heading directly above. */}
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
               {t("cardTitle")}
-              {connected ? (
+              {linked ? (
                 <Badge variant="success" className="font-normal">
-                  {t("keyActive")}
+                  {t("state.connected")}
+                </Badge>
+              ) : connected ? (
+                <Badge variant="warning" className="font-normal">
+                  {t("state.waiting")}
                 </Badge>
               ) : null}
             </CardTitle>
             <CardDescription>{t("subtitle")}</CardDescription>
+            {linked && lastUsedAgo ? (
+              // Server and browser read the clock a moment apart; same as the cron "next run".
+              <p className="text-xs text-muted-foreground" suppressHydrationWarning>
+                {t("state.lastUsed", { ago: lastUsedAgo })}
+              </p>
+            ) : connected && !linked ? (
+              <p className="text-xs text-muted-foreground">{t("state.waitingHint")}</p>
+            ) : null}
           </div>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {/* Picks up Central's first use without a reload. */}
+        {connected && !linked ? <AutoRefresh intervalMs={15000} stopAfterMs={900000} /> : null}
         {/* The token is not scoped: CentralUser is created with is_admin and
             the Administrator role, so it grants admin on every endpoint. */}
         <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">

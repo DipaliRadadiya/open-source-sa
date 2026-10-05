@@ -6801,7 +6801,6 @@
     "title": "Zentrale Verwaltung",
     "pageSubtitle": "Lassen Sie ein zentrales Panel diesen Server für Sie verwalten.",
     "subtitle": "Erzeugen Sie hier einen Schlüssel und fügen Sie ihn in Ihr zentrales Panel ein, um diesen Server damit zu verbinden.",
-    "keyActive": "Schlüssel aktiv",
     "disconnected": "Dieser Server ist nicht mehr mit Central verbunden.",
     "cancel": "Abbrechen",
     "power": {
@@ -6846,7 +6845,13 @@
       "generateFailed": "Es konnte kein Schlüssel erzeugt werden.",
       "disconnectFailed": "Die Verbindung konnte nicht getrennt werden."
     },
-    "cardTitle": "Verbindung"
+    "cardTitle": "Verbindung",
+    "state": {
+      "connected": "Verbunden",
+      "waiting": "Warten auf Central",
+      "lastUsed": "Zuletzt von Central verwendet: {ago}.",
+      "waitingHint": "Sobald Central den Schlüssel zum ersten Mal verwendet, wechselt dies zu Verbunden."
+    }
   },
   "docker": {
     "title": "Docker",
