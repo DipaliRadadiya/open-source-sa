@@ -30,6 +30,7 @@ export function FormModal({
   className,
   // Selector for the control to focus when it is not the first one.
   initialFocus,
+  onCloseAutoFocus,
 }) {
   const inner = (
     <>
@@ -73,6 +74,7 @@ export function FormModal({
           "flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg",
           className,
         )}
+        onCloseAutoFocus={onCloseAutoFocus}
         // Never focus a label's "?" hint: Radix would open the note.
         onOpenAutoFocus={(event) => {
           const chosen = initialFocus ? event.currentTarget.querySelector(initialFocus) : null;

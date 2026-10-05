@@ -145,7 +145,9 @@ export function DestinationRow({
                   className={
                     result.ok
                       ? "flex items-start gap-1.5 text-xs text-success"
-                      : "flex items-start gap-1.5 text-xs text-destructive"
+                      : result.notRun
+                        ? "flex items-start gap-1.5 text-xs text-muted-foreground"
+                        : "flex items-start gap-1.5 text-xs text-destructive"
                   }
                 >
                   {result.ok ? (
@@ -163,7 +165,7 @@ export function DestinationRow({
                   </span>
                 </p>
                 {/* Wrong keys are the common cause, so the fix is offered inline. */}
-                {!result.ok && canManage ? (
+                {!result.ok && !result.notRun && canManage ? (
                   <Button
                     type="button"
                     variant="outline"

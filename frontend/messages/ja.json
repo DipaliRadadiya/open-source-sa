@@ -879,7 +879,8 @@
     "securityUsernameAscii": "半角英字、数字、. _ - @ のみ使用してください。それ以外の文字はブラウザによって送信方法が異なります。",
     "excludeInsideSite": "storage/logs のように、アプリケーションのフォルダー内のパスを指定してください（/ や .. は使えません）",
     "cronTrailingComment": "# のメモを削除してください。cron は # 以降をすべてコメントとして扱うため、ジョブのログを書き込む部分も無効になります。",
-    "cronReboot": "@reboot はここでは使えません。@daily や */5 * * * * などのスケジュールを使ってください。"
+    "cronReboot": "@reboot はここでは使えません。@daily や */5 * * * * などのスケジュールを使ってください。",
+    "hostForbidden": "バックアップサーバー自体のアドレスを入力してください。localhost や 127.0.0.1 などのローカルアドレスは使えません。"
   },
   "serverDashboard": {
     "title": "ダッシュボード",
@@ -3299,7 +3300,8 @@
         "gitlab_host": "セルフホストの GitLab を使用する場合のみ入力してください。gitlab.com の場合は空欄にしてください。プロジェクトのアドレスではなく、ログイン時に使用するアドレス(例: https://gitlab.example.com)を入力してください。",
         "bitbucket_workspace": "Bitbucket のアドレスに含まれるワークスペース ID: bitbucket.org/workspace-id/repository"
       },
-      "scopeNote_gitlab": "<strong>なぜ api？</strong> パネルがデプロイ用ウェブフックを自動で追加できる GitLab の権限はこれだけです。ただし GitLab アカウントへのフルアクセスも与えるため、このトークンはパネル専用に作成し、有効期限を設定してください。権限を絞りたい場合は、代わりに <scope>read_repository</scope> と <scope>read_api</scope> を選び、ウェブフックはご自身で追加してください。"
+      "scopeNote_gitlab": "<strong>なぜ api？</strong> パネルがデプロイ用ウェブフックを自動で追加できる GitLab の権限はこれだけです。ただし GitLab アカウントへのフルアクセスも与えるため、このトークンはパネル専用に作成し、有効期限を設定してください。権限を絞りたい場合は、代わりに <scope>read_repository</scope> と <scope>read_api</scope> を選び、ウェブフックはご自身で追加してください。",
+      "failed": "アカウントを接続できませんでした。"
     },
     "edit": {
       "title": "アカウントを編集",
@@ -3314,7 +3316,8 @@
       "saved": "アカウントを更新しました。",
       "namePlaceholder": "例: 会社用 GitHub",
       "workspacePlaceholder": "your-workspace-id",
-      "workspaceLabelHint": "使用するリポジトリがあるBitbucketのワークスペース。"
+      "workspaceLabelHint": "使用するリポジトリがあるBitbucketのワークスペース。",
+      "failed": "変更を保存できませんでした。"
     },
     "replace": {
       "title": "{label} のトークンを差し替え",
@@ -3328,7 +3331,8 @@
       "replaced": "トークンを差し替えました。",
       "rejected": "{provider} がこのトークンを拒否しました。現在のトークンはそのまま利用可能です。",
       "tokenPlaceholder": "新しいトークンを貼り付け",
-      "tokenLabelHint": "現在のアクセストークンを置き換える新しいトークンです。保存すると古いトークンはすぐに使えなくなります。"
+      "tokenLabelHint": "現在のアクセストークンを置き換える新しいトークンです。保存すると古いトークンはすぐに使えなくなります。",
+      "failed": "新しいトークンを保存できませんでした。"
     },
     "disconnect": {
       "title": "{label} の接続を解除しますか？",
@@ -5991,7 +5995,8 @@
       "failedDriveBadKey": "前回のテストは{when}に失敗しました — サービスアカウントキーを読み取れませんでした。",
       "failedDriveQuota": "前回のテストは{when}に失敗しました — 保存容量の不足により Google がアップロードを拒否しました。",
       "failedDriveIncomplete": "前回のテストは{when}に失敗しました — キーまたはフォルダー ID がありません。",
-      "needsConnect": "まだ接続されていません。Google アカウントへのアクセスを承認してください。"
+      "needsConnect": "まだ接続されていません。Google アカウントへのアクセスを承認してください。",
+      "testNotRun": "テストは実行されなかったため、接続の状態はわかりません。もう一度お試しください。"
     },
     "form": {
       "provider": "プロバイダー",
@@ -6068,7 +6073,7 @@
     "connect": {
       "title": "ストレージ送信先を追加",
       "subtitle": "バックアップの送信先。",
-      "credentialsNote": "キーは暗号化して保存され、再表示はできません。後から変更するには差し替えてください。",
+      "credentialsNote": "ログイン情報は暗号化して保存され、再表示はできません。後から変更するには差し替えてください。",
       "cancel": "キャンセル",
       "submit": "保存先を追加",
       "saving": "追加中…",
@@ -6078,7 +6083,9 @@
       "permissionsNote": "このバケットでオブジェクトのアップロード、ダウンロード、削除の権限が必要です。削除権限も重要で、設定された保持期間を超えた古いバックアップは削除されます。",
       "keyDocs": "これらのキーはどこで確認できますか？",
       "permissionsNoteRemote": "そのディレクトリでファイルを作成・読み取り・削除できる権限が必要です。バックアップは保持数を超えた古いアーカイブを削除するため、読み取り専用では機能しません。",
-      "addedNeedsConnect": "保存先を追加しました。完了するには、下の行の「接続」から Google アカウントへのアクセスを承認してください。"
+      "addedNeedsConnect": "保存先を追加しました。完了するには、下の行の「接続」から Google アカウントへのアクセスを承認してください。",
+      "failed": "保存先を追加できませんでした。",
+      "testNotRun": "保存しましたが、接続テストは実行されませんでした。保存先の「テスト」を押してもう一度お試しください。"
     },
     "edit": {
       "title": "送信先を編集",
@@ -6088,7 +6095,8 @@
       "saving": "保存中…",
       "saved": "送信先を更新しました。",
       "credentialsUntouched": "保存済みのキーはそのまま残ります — 変更するには「認証情報を差し替え」を使用してください。",
-      "providerLocked": "プロバイダーは {provider} で固定されています。別のものを使うには、この保存先を削除して新規に追加してください。"
+      "providerLocked": "プロバイダーは {provider} で固定されています。別のものを使うには、この保存先を削除して新規に追加してください。",
+      "failed": "変更を保存できませんでした。"
     },
     "replace": {
       "title": "認証情報を置き換え",
@@ -6099,7 +6107,9 @@
       "saving": "差し替え中…",
       "replacedAndTested": "キーを差し替えました — 接続は正常です。",
       "replacedButFailed": "キーは差し替えましたが、接続テストは失敗しました。",
-      "onlyWhatYouChange": "変更する項目だけを入力してください。空欄のままにした項目は現在の値を保持します。"
+      "onlyWhatYouChange": "変更する項目だけを入力してください。空欄のままにした項目は現在の値を保持します。",
+      "failed": "新しいキーを保存できませんでした。",
+      "replacedNotTested": "キーは差し替えましたが、接続テストは実行されませんでした。「テスト」を押してもう一度お試しください。"
     },
     "delete": {
       "title": "この送信先を削除しますか？",

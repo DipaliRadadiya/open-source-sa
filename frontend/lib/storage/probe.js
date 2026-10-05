@@ -1,8 +1,10 @@
+import { apiMessage } from "@/lib/api/error-message";
 import { testDestination } from "@/lib/api/storage";
 import { storageTestResponseSchema } from "@/lib/schemas/storage";
 
-// The endpoint returns 200 either way; the outcome is `test.success`. A transport failure is also `{ok: false}`.
-export async function probeDestination(id, fallbackMessage) {
+// The endpoint returns 200 either way; the outcome is `test.success`. A failed request
+// is `{ok: false, notRun: true}`: the test never ran, so it says nothing about the destination.
+export async function probeDestination(id, fallbackMessage, notRunMessage = fallbackMessage) {
   try {
     const { data } = await testDestination(id);
     const parsed = storageTestResponseSchema.safeParse(data);
@@ -10,7 +12,7 @@ export async function probeDestination(id, fallbackMessage) {
 
     const { success, message, latency_ms: latency } = parsed.data.test;
     return { ok: success, message: message || fallbackMessage, latency };
-  } catch {
-    return { ok: false, message: fallbackMessage };
+  } catch (error) {
+    return { ok: false, notRun: true, message: apiMessage(error, notRunMessage) };
   }
 }

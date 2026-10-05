@@ -879,7 +879,8 @@
     "securityUsernameAscii": "Utilisez uniquement des lettres anglaises, des chiffres et . _ - @ : les navigateurs n'envoient pas les autres lettres de la même façon.",
     "excludeInsideSite": "Utilisez un chemin situé dans le dossier de l'application, comme storage/logs, sans / ni ..",
     "cronTrailingComment": "Supprimez la note avec #. Cron traite tout ce qui suit # comme un commentaire, y compris la partie qui écrit le journal de la tâche.",
-    "cronReboot": "@reboot n'est pas pris en charge ici. Utilisez une planification, par exemple @daily ou */5 * * * *."
+    "cronReboot": "@reboot n'est pas pris en charge ici. Utilisez une planification, par exemple @daily ou */5 * * * *.",
+    "hostForbidden": "Saisissez l’adresse du serveur de sauvegarde lui-même. Les adresses locales comme localhost ou 127.0.0.1 ne sont pas autorisées."
   },
   "serverDashboard": {
     "title": "Tableau de bord",
@@ -3299,7 +3300,8 @@
         "gitlab_host": "Uniquement pour un GitLab auto-hébergé. Laissez vide pour gitlab.com. Utilisez l'adresse à laquelle vous vous connectez, comme https://gitlab.example.com — pas l'adresse d'un projet.",
         "bitbucket_workspace": "L'identifiant d'espace de travail depuis votre adresse Bitbucket : bitbucket.org/identifiant-espace/depot."
       },
-      "scopeNote_gitlab": "<strong>Pourquoi api ?</strong> C'est la seule permission GitLab qui permet au panneau d'ajouter le webhook de déploiement pour vous. Elle donne aussi un accès complet à votre compte GitLab : créez ce jeton uniquement pour le panneau, avec une date d'expiration. Vous préférez moins d'accès ? Cochez plutôt <scope>read_repository</scope> et <scope>read_api</scope> et ajoutez le webhook vous-même."
+      "scopeNote_gitlab": "<strong>Pourquoi api ?</strong> C'est la seule permission GitLab qui permet au panneau d'ajouter le webhook de déploiement pour vous. Elle donne aussi un accès complet à votre compte GitLab : créez ce jeton uniquement pour le panneau, avec une date d'expiration. Vous préférez moins d'accès ? Cochez plutôt <scope>read_repository</scope> et <scope>read_api</scope> et ajoutez le webhook vous-même.",
+      "failed": "Impossible de connecter le compte."
     },
     "edit": {
       "title": "Modifier le compte",
@@ -3314,7 +3316,8 @@
       "saved": "Compte mis à jour.",
       "namePlaceholder": "ex. GitHub de l'entreprise",
       "workspacePlaceholder": "your-workspace-id",
-      "workspaceLabelHint": "Le workspace Bitbucket dont vous voulez utiliser les dépôts."
+      "workspaceLabelHint": "Le workspace Bitbucket dont vous voulez utiliser les dépôts.",
+      "failed": "Impossible d’enregistrer les modifications."
     },
     "replace": {
       "title": "Remplacer le token de {label}",
@@ -3328,7 +3331,8 @@
       "replaced": "Token remplacé.",
       "rejected": "{provider} a refusé ce token. Votre token actuel est toujours en place.",
       "tokenPlaceholder": "Collez le nouveau token",
-      "tokenLabelHint": "Un nouveau jeton d’accès qui remplace l’actuel. L’ancien jeton cesse de fonctionner dès que vous enregistrez."
+      "tokenLabelHint": "Un nouveau jeton d’accès qui remplace l’actuel. L’ancien jeton cesse de fonctionner dès que vous enregistrez.",
+      "failed": "Impossible d’enregistrer le nouveau token."
     },
     "disconnect": {
       "title": "Déconnecter {label} ?",
@@ -5991,7 +5995,8 @@
       "failedDriveBadKey": "Le dernier test a échoué {when} — la clé du compte de service n’a pas pu être lue.",
       "failedDriveQuota": "Le dernier test a échoué {when} — Google a refusé l’envoi faute de quota.",
       "failedDriveIncomplete": "Le dernier test a échoué {when} — la clé ou l’identifiant du dossier manque.",
-      "needsConnect": "Pas encore connecté : autorisez l’accès à votre compte Google."
+      "needsConnect": "Pas encore connecté : autorisez l’accès à votre compte Google.",
+      "testNotRun": "Le test n’a pas été lancé : cela ne dit rien de la connexion. Réessayez."
     },
     "form": {
       "provider": "Fournisseur",
@@ -6068,7 +6073,7 @@
     "connect": {
       "title": "Ajouter une destination de stockage",
       "subtitle": "Un endroit où envoyer les sauvegardes.",
-      "credentialsNote": "Les clés sont stockées chiffrées et ne sont plus jamais affichées — pour les modifier plus tard, il faut les remplacer.",
+      "credentialsNote": "Les identifiants sont stockés chiffrés et ne sont plus jamais affichés — pour les modifier plus tard, il faut les remplacer.",
       "cancel": "Annuler",
       "submit": "Ajouter une destination",
       "saving": "Ajout…",
@@ -6078,7 +6083,9 @@
       "permissionsNote": "La clé doit avoir les permissions pour téléverser, télécharger et supprimer des objets dans ce bucket. La suppression est importante — les sauvegardes effacent les anciennes archives une fois la limite de rétention dépassée.",
       "keyDocs": "Où trouver ces clés ?",
       "permissionsNoteRemote": "Le compte doit pouvoir créer, lire et supprimer des fichiers dans ce répertoire — les sauvegardes suppriment les anciennes archives au-delà de la limite de rétention, un accès en lecture seule ne peut donc pas fonctionner.",
-      "addedNeedsConnect": "Destination ajoutée. Autorisez l’accès à votre compte Google pour terminer : utilisez Connecter dans la ligne ci-dessous."
+      "addedNeedsConnect": "Destination ajoutée. Autorisez l’accès à votre compte Google pour terminer : utilisez Connecter dans la ligne ci-dessous.",
+      "failed": "Impossible d’ajouter la destination.",
+      "testNotRun": "Enregistré, mais le test de connexion n’a pas été lancé. Cliquez sur Tester sur la destination pour réessayer."
     },
     "edit": {
       "title": "Modifier la destination",
@@ -6088,7 +6095,8 @@
       "saving": "Enregistrement…",
       "saved": "Destination mise à jour.",
       "credentialsUntouched": "Les clés stockées ne sont pas modifiées — utilisez Remplacer les identifiants pour les changer.",
-      "providerLocked": "Le fournisseur est fixé à {provider}. Pour en utiliser un autre, supprimez cette destination et ajoutez-en une nouvelle."
+      "providerLocked": "Le fournisseur est fixé à {provider}. Pour en utiliser un autre, supprimez cette destination et ajoutez-en une nouvelle.",
+      "failed": "Impossible d’enregistrer les modifications."
     },
     "replace": {
       "title": "Remplacer les identifiants",
@@ -6099,7 +6107,9 @@
       "saving": "Remplacement…",
       "replacedAndTested": "Clés remplacées — la connexion fonctionne.",
       "replacedButFailed": "Clés remplacées, mais le test de connexion a échoué.",
-      "onlyWhatYouChange": "Ne remplissez que ce que vous changez. Les champs laissés vides conservent leur valeur actuelle."
+      "onlyWhatYouChange": "Ne remplissez que ce que vous changez. Les champs laissés vides conservent leur valeur actuelle.",
+      "failed": "Impossible d’enregistrer les nouvelles clés.",
+      "replacedNotTested": "Clés remplacées, mais le test de connexion n’a pas été lancé. Cliquez sur Tester pour réessayer."
     },
     "delete": {
       "title": "Supprimer cette destination ?",

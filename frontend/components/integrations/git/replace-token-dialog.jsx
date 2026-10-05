@@ -52,8 +52,10 @@ export function ReplaceTokenDialog({ account, open, onOpenChange }) {
         handleValidationError(error, form);
         return;
       }
+      const rejected = t("rejected", { provider: account.provider_title });
+      // Same as connecting: a 422 is a refused token named by lowercase id.
       setFailure(
-        apiMessage(error, t("rejected", { provider: account.provider_title })),
+        error.response?.status === 422 ? rejected : apiMessage(error, t("failed")),
       );
     }
   }

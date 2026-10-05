@@ -105,6 +105,7 @@ export function ConnectForm({
   onAccountConnected,
   onBack,
   onOpenChange,
+  onCloseAutoFocus,
 }) {
   const t = useTranslations("git.connect");
   const { name: brand } = useBranding();
@@ -148,7 +149,12 @@ export function ConnectForm({
         handleValidationError(error, form);
         return;
       }
-      setFailure(apiMessage(error, t("rejected", { provider: provider.title })));
+      const rejected = t("rejected", { provider: provider.title });
+      // A 422 here is a refused token, and the API names the provider by its
+      // lowercase id ("github"). Anything else is not the token's fault.
+      setFailure(
+        error.response?.status === 422 ? rejected : apiMessage(error, t("failed")),
+      );
     }
   }
 
@@ -170,6 +176,7 @@ export function ConnectForm({
         icon={HeaderIcon}
         title={t("title", { provider: provider.title })}
         description={t("subtitle", { brand })}
+        onCloseAutoFocus={onCloseAutoFocus}
         footer={
           /* One action; "Change" in the band replaces a Back button. */
           <div className="flex w-full justify-end">

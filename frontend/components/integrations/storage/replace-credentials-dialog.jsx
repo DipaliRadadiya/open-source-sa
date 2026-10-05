@@ -53,11 +53,15 @@ export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
       onOpenChange?.(false);
       form.reset(defaults);
 
-      const verdict = await probeDestination(destination.id, t("replacedButFailed"));
+      const verdict = await probeDestination(
+        destination.id,
+        t("replacedButFailed"),
+        t("replacedNotTested"),
+      );
       if (verdict.ok) toast.success(t("replacedAndTested"));
       else toast.error(verdict.message, { duration: 10000 });
     } catch (error) {
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: t("failed") });
     }
   }
 

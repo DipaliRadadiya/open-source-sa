@@ -92,7 +92,11 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
 
   const connectButton = (
     <ReasonTooltip reason={connectReason}>
-      <Button disabled={Boolean(connectReason)} onClick={() => setConnecting(true)}>
+      <Button
+        disabled={Boolean(connectReason)}
+        onClick={() => setConnecting(true)}
+        data-git-connect
+      >
         <Plus className="size-4" />
         {t("connect.action")}
       </Button>

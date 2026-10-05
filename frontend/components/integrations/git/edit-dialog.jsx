@@ -55,7 +55,7 @@ export function EditDialog({ account, open, onOpenChange }) {
       toast.success(t("saved"));
       onOpenChange?.(false);
     } catch (error) {
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: t("failed") });
     }
   }
 

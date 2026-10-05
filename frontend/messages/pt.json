@@ -879,7 +879,8 @@
     "securityUsernameAscii": "Use apenas letras em inglês, números e . _ - @ — os navegadores não enviam outras letras da mesma forma.",
     "excludeInsideSite": "Use um caminho dentro da pasta da aplicação, como storage/logs, sem / nem ..",
     "cronTrailingComment": "Remova a nota com #. O cron trata tudo depois de # como comentário, incluindo a parte que grava o log da tarefa.",
-    "cronReboot": "@reboot não é compatível aqui. Use um agendamento, por exemplo @daily ou */5 * * * *."
+    "cronReboot": "@reboot não é compatível aqui. Use um agendamento, por exemplo @daily ou */5 * * * *.",
+    "hostForbidden": "Informe o endereço do próprio servidor de backup. Endereços locais como localhost ou 127.0.0.1 não são permitidos."
   },
   "serverDashboard": {
     "title": "Painel",
@@ -3299,7 +3300,8 @@
         "gitlab_host": "Apenas para um GitLab auto-hospedado. Deixe em branco para gitlab.com. Use o endereço em que você faz login, como https://gitlab.example.com — não o endereço de um projeto.",
         "bitbucket_workspace": "O ID do workspace do seu endereço Bitbucket: bitbucket.org/workspace-id/repository."
       },
-      "scopeNote_gitlab": "<strong>Por que api?</strong> É a única permissão do GitLab que deixa o painel adicionar o webhook de deploy para você. Ela também dá acesso total à sua conta do GitLab, então crie este token só para o painel e defina uma data de expiração. Prefere menos acesso? Marque <scope>read_repository</scope> e <scope>read_api</scope> e adicione o webhook você mesmo."
+      "scopeNote_gitlab": "<strong>Por que api?</strong> É a única permissão do GitLab que deixa o painel adicionar o webhook de deploy para você. Ela também dá acesso total à sua conta do GitLab, então crie este token só para o painel e defina uma data de expiração. Prefere menos acesso? Marque <scope>read_repository</scope> e <scope>read_api</scope> e adicione o webhook você mesmo.",
+      "failed": "Não foi possível conectar a conta."
     },
     "edit": {
       "title": "Editar conta",
@@ -3314,7 +3316,8 @@
       "saved": "Conta atualizada.",
       "namePlaceholder": "ex.: GitHub da empresa",
       "workspacePlaceholder": "your-workspace-id",
-      "workspaceLabelHint": "O workspace do Bitbucket cujos repositórios você quer usar."
+      "workspaceLabelHint": "O workspace do Bitbucket cujos repositórios você quer usar.",
+      "failed": "Não foi possível salvar as alterações."
     },
     "replace": {
       "title": "Substituir o token de {label}",
@@ -3328,7 +3331,8 @@
       "replaced": "Token substituído.",
       "rejected": "{provider} rejeitou este token. Seu token atual continua ativo.",
       "tokenPlaceholder": "Cole o novo token",
-      "tokenLabelHint": "Um novo token de acesso para substituir o atual. O token antigo para de funcionar assim que você salvar."
+      "tokenLabelHint": "Um novo token de acesso para substituir o atual. O token antigo para de funcionar assim que você salvar.",
+      "failed": "Não foi possível salvar o novo token."
     },
     "disconnect": {
       "title": "Desconectar {label}?",
@@ -5991,7 +5995,8 @@
       "failedDriveBadKey": "O último teste falhou {when} — não foi possível ler a chave da conta de serviço.",
       "failedDriveQuota": "O último teste falhou {when} — o Google recusou o envio por falta de cota.",
       "failedDriveIncomplete": "O último teste falhou {when} — falta a chave ou o ID da pasta.",
-      "needsConnect": "Ainda não conectado — aprove o acesso à sua conta Google."
+      "needsConnect": "Ainda não conectado — aprove o acesso à sua conta Google.",
+      "testNotRun": "O teste não foi executado, então isso não diz nada sobre a conexão. Tente de novo."
     },
     "form": {
       "provider": "Provedor",
@@ -6068,7 +6073,7 @@
     "connect": {
       "title": "Adicionar um destino de armazenamento",
       "subtitle": "Um lugar para enviar os backups.",
-      "credentialsNote": "As chaves são armazenadas criptografadas e nunca mais serão exibidas — para alterá-las depois, você as substitui.",
+      "credentialsNote": "Os dados de acesso são armazenados criptografados e nunca mais serão exibidos — para alterá-los depois, você os substitui.",
       "cancel": "Cancelar",
       "submit": "Adicionar destino",
       "saving": "Adicionando…",
@@ -6078,7 +6083,9 @@
       "permissionsNote": "A chave precisa de permissão para enviar, baixar e excluir objetos neste bucket. Excluir também é importante — os backups removem arquivos antigos ao ultrapassarem o limite de retenção que você definir.",
       "keyDocs": "Onde encontro essas chaves?",
       "permissionsNoteRemote": "A conta precisa criar, ler e excluir arquivos nesse diretório — os backups removem arquivos antigos ao passar do limite de retenção, então acesso somente leitura não funciona.",
-      "addedNeedsConnect": "Destino adicionado. Aprove o acesso à sua conta Google para concluir — use Conectar na linha abaixo."
+      "addedNeedsConnect": "Destino adicionado. Aprove o acesso à sua conta Google para concluir — use Conectar na linha abaixo.",
+      "failed": "Não foi possível adicionar o destino.",
+      "testNotRun": "Salvo, mas o teste de conexão não foi executado. Clique em Testar no destino para tentar de novo."
     },
     "edit": {
       "title": "Editar destino",
@@ -6088,7 +6095,8 @@
       "saving": "Salvando…",
       "saved": "Destino atualizado.",
       "credentialsUntouched": "As chaves armazenadas não são tocadas — use Substituir credenciais para alterá-las.",
-      "providerLocked": "O provedor está fixado em {provider}. Para usar outro, exclua este destino e adicione um novo."
+      "providerLocked": "O provedor está fixado em {provider}. Para usar outro, exclua este destino e adicione um novo.",
+      "failed": "Não foi possível salvar as alterações."
     },
     "replace": {
       "title": "Substituir credenciais",
@@ -6099,7 +6107,9 @@
       "saving": "Substituindo…",
       "replacedAndTested": "Chaves substituídas — a conexão funciona.",
       "replacedButFailed": "Chaves substituídas, mas o teste de conexão falhou.",
-      "onlyWhatYouChange": "Preencha apenas o que estiver mudando. O que for deixado vazio mantém o valor atual."
+      "onlyWhatYouChange": "Preencha apenas o que estiver mudando. O que for deixado vazio mantém o valor atual.",
+      "failed": "Não foi possível salvar as novas chaves.",
+      "replacedNotTested": "Chaves substituídas, mas o teste de conexão não foi executado. Clique em Testar para tentar de novo."
     },
     "delete": {
       "title": "Excluir este destino?",

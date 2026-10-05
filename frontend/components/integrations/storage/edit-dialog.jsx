@@ -63,7 +63,7 @@ export function EditDestinationDialog({ destination, open, onOpenChange, oauthRe
       toast.success(t("saved"));
       onOpenChange?.(false);
     } catch (error) {
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: t("failed") });
     }
   }
 

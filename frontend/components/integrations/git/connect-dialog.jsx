@@ -6,6 +6,15 @@ import { useBranding } from "@/components/branding-provider";
 import { ProviderLogo } from "@/components/integrations/git/provider-logo";
 import { ConnectForm } from "@/components/integrations/git/connect-form";
 
+// Each step is its own modal, so the control that opened the current one (a
+// provider button, or "Change") is gone by the time it closes.
+function focusConnectButton(event) {
+  const opener = document.querySelector("[data-git-connect]");
+  if (!opener) return;
+  event.preventDefault();
+  opener.focus();
+}
+
 // The form mounts fresh per provider so its generated Zod schema never changes under a half-filled form.
 export function ConnectDialog({
   providers,
@@ -32,6 +41,7 @@ export function ConnectDialog({
         onAccountConnected={onAccountConnected}
         onBack={() => setChosen(null)}
         onOpenChange={handleOpenChange}
+        onCloseAutoFocus={focusConnectButton}
       />
     );
   }
@@ -40,6 +50,7 @@ export function ConnectDialog({
     <FormModal
       open={open}
       onOpenChange={handleOpenChange}
+      onCloseAutoFocus={focusConnectButton}
       icon={Plug}
       title={t("pickTitle")}
       description={t("pickSubtitle")}

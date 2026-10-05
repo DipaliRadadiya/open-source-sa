@@ -42,7 +42,11 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
     testing.start(destination.id);
     setResults((prev) => ({ ...prev, [destination.id]: null }));
     // 200 does NOT mean the connection works — the verdict is in the body.
-    const verdict = await probeDestination(destination.id, t("row.testFailed"));
+    const verdict = await probeDestination(
+      destination.id,
+      t("row.testFailed"),
+      t("row.testNotRun"),
+    );
     setResults((prev) => ({ ...prev, [destination.id]: verdict }));
     testing.finish(destination.id);
   }

@@ -33,10 +33,6 @@ export default async function RegistriesPage() {
     getRegistriesPage(),
   ]);
 
-  if (!can(permissions, "registry", "view"))
-    return <PermissionDenied title={t("title")} />;
-  const canManage = can(permissions, "registry", "manage");
-
   // A 409 is the honest answer on a server that hosts no containers, not a failure
   // to report: a credential for pulling images is nothing without something to pull
   // them for. The sidebar already hides this there, so this is a bookmark.
@@ -52,6 +48,11 @@ export default async function RegistriesPage() {
       </div>
     );
   }
+  // After the 409: on a server without Docker the backend leaves `registry` out of
+  // everyone's permissions, so checking it first told an admin "no access".
+  if (!can(permissions, "registry", "view"))
+    return <PermissionDenied title={t("title")} />;
+  const canManage = can(permissions, "registry", "manage");
 
   if (list.failed) {
     return (

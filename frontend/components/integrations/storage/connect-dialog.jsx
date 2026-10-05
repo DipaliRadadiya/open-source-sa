@@ -66,12 +66,12 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri 
       // The check runs after the dialog closes so it never blocks the save; its
       // verdict is what the user is told.
       if (created?.id) {
-        const verdict = await probeDestination(created.id, t("testFailed"));
+        const verdict = await probeDestination(created.id, t("testFailed"), t("testNotRun"));
         if (verdict.ok) toast.success(t("testPassed"));
         else toast.error(verdict.message, { duration: 10000 });
       }
     } catch (error) {
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: t("failed") });
     }
   }
 

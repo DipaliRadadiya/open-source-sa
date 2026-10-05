@@ -879,7 +879,8 @@
     "securityUsernameAscii": "Use only English letters, numbers and . _ - @ — browsers don't send other letters the same way.",
     "excludeInsideSite": "Use a path inside the application's folder, like storage/logs — not / or ..",
     "cronTrailingComment": "Remove the # note. Cron treats everything after # as a comment, including the part that writes the job's log.",
-    "cronReboot": "@reboot isn't supported here. Use a schedule, for example @daily or */5 * * * *."
+    "cronReboot": "@reboot isn't supported here. Use a schedule, for example @daily or */5 * * * *.",
+    "hostForbidden": "Enter the backup server’s own address. Local addresses like localhost or 127.0.0.1 are not allowed."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -3299,7 +3300,8 @@
         "gitlab_host": "Only for a self-hosted GitLab. Leave this empty for gitlab.com. Use the address you sign in at, like https://gitlab.example.com — not the address of a project.",
         "bitbucket_workspace": "The workspace ID from your Bitbucket address: bitbucket.org/workspace-id/repository."
       },
-      "scopeNote_gitlab": "<strong>Why api?</strong> It is the only GitLab permission that lets the panel add the deploy webhook for you. It also gives full access to your GitLab account, so create this token only for the panel and give it an expiry date. Prefer less access? Tick <scope>read_repository</scope> and <scope>read_api</scope> instead and add the webhook yourself."
+      "scopeNote_gitlab": "<strong>Why api?</strong> It is the only GitLab permission that lets the panel add the deploy webhook for you. It also gives full access to your GitLab account, so create this token only for the panel and give it an expiry date. Prefer less access? Tick <scope>read_repository</scope> and <scope>read_api</scope> instead and add the webhook yourself.",
+      "failed": "The account could not be connected."
     },
     "edit": {
       "title": "Edit account",
@@ -3314,7 +3316,8 @@
       "saved": "Account updated.",
       "namePlaceholder": "e.g. Company GitHub",
       "workspacePlaceholder": "your-workspace-id",
-      "workspaceLabelHint": "The Bitbucket workspace whose repositories you want to use."
+      "workspaceLabelHint": "The Bitbucket workspace whose repositories you want to use.",
+      "failed": "The changes could not be saved."
     },
     "replace": {
       "title": "Replace the token for {label}",
@@ -3328,7 +3331,8 @@
       "replaced": "Token replaced.",
       "rejected": "{provider} rejected this token. Your current token is still in place.",
       "tokenPlaceholder": "Paste the new token",
-      "tokenLabelHint": "A new access token to replace the current one. The old token stops working as soon as you save."
+      "tokenLabelHint": "A new access token to replace the current one. The old token stops working as soon as you save.",
+      "failed": "The new token could not be saved."
     },
     "disconnect": {
       "title": "Disconnect {label}?",
@@ -5991,7 +5995,8 @@
       "failedDriveBadKey": "The last test failed {when} — the service account key could not be read.",
       "failedDriveQuota": "The last test failed {when} — Google refused the upload for lack of storage quota.",
       "failedDriveIncomplete": "The last test failed {when} — the key or the folder ID is missing.",
-      "needsConnect": "Not connected yet — approve access to your Google account."
+      "needsConnect": "Not connected yet — approve access to your Google account.",
+      "testNotRun": "The test did not run, so this says nothing about the connection. Try again."
     },
     "form": {
       "provider": "Provider",
@@ -6068,7 +6073,7 @@
     "connect": {
       "title": "Add a storage destination",
       "subtitle": "Somewhere to send backups to.",
-      "credentialsNote": "Keys are stored encrypted and never shown again — to change them later you replace them.",
+      "credentialsNote": "Login details are stored encrypted and never shown again — to change them later, you replace them.",
       "cancel": "Cancel",
       "submit": "Add destination",
       "saving": "Adding…",
@@ -6078,7 +6083,9 @@
       "permissionsNote": "The key needs permission to upload, download and delete objects in this bucket. Delete matters too — backups remove old archives once they pass the retention limit you set.",
       "keyDocs": "Where do I find these keys?",
       "permissionsNoteRemote": "The account needs to create, read and delete files in that directory — backups remove old archives when they pass the retention limit, so read-only access cannot work.",
-      "addedNeedsConnect": "Destination added. Approve access to your Google account to finish — use Connect on the row below."
+      "addedNeedsConnect": "Destination added. Approve access to your Google account to finish — use Connect on the row below.",
+      "failed": "The destination could not be added.",
+      "testNotRun": "Saved, but the connection test did not run. Press Test on the destination to try again."
     },
     "edit": {
       "title": "Edit destination",
@@ -6088,7 +6095,8 @@
       "saving": "Saving…",
       "saved": "Destination updated.",
       "credentialsUntouched": "The stored keys are left alone — use Replace credentials to change them.",
-      "providerLocked": "The provider is fixed at {provider}. To use a different one, delete this destination and add a new one."
+      "providerLocked": "The provider is fixed at {provider}. To use a different one, delete this destination and add a new one.",
+      "failed": "The changes could not be saved."
     },
     "replace": {
       "title": "Replace credentials",
@@ -6099,7 +6107,9 @@
       "saving": "Replacing…",
       "replacedAndTested": "Keys replaced — the connection works.",
       "replacedButFailed": "Keys replaced, but the connection test failed.",
-      "onlyWhatYouChange": "Fill in only what you are changing. Anything left empty keeps its current value."
+      "onlyWhatYouChange": "Fill in only what you are changing. Anything left empty keeps its current value.",
+      "failed": "The new keys could not be saved.",
+      "replacedNotTested": "Keys replaced, but the connection test did not run. Press Test to try again."
     },
     "delete": {
       "title": "Delete this destination?",
