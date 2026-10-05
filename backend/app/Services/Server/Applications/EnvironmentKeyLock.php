@@ -8,7 +8,7 @@ use App\Services\Applications\SiteTypeManager;
 
 /**
  * Keeps the Environment editor from changing an application's encryption key
- * (bug #17).
+ * (bug #17), or a key the panel itself relies on (bug #7).
  *
  * Saving n8n's `.env` with a different `N8N_ENCRYPTION_KEY` was accepted, and
  * every credential stored in n8n became permanently unreadable — with no error
@@ -30,7 +30,7 @@ class EnvironmentKeyLock
      */
     public function violation(Application $application, string $current, string $next): ?string
     {
-        foreach ($this->types->find($application->site_type)?->lockedEnvironmentKeys() ?? [] as $key) {
+        foreach ($this->keys($application) as $key) {
             $now = $this->held($current, $key);
 
             if ($now === []) {
@@ -43,6 +43,39 @@ class EnvironmentKeyLock
         }
 
         return null;
+    }
+
+    /**
+     * Why `$key` cannot change, for the editor (`$backup` false) or for
+     * restoring one of its backups.
+     */
+    public function message(Application $application, string $key, bool $backup = false): string
+    {
+        $managed = in_array($key, $this->type($application)?->panelManagedEnvironmentKeys() ?? [], true);
+
+        $line = match (true) {
+            $managed && $backup => 'errors/application.environment_key_managed_backup',
+            $managed => 'errors/application.environment_key_managed',
+            $backup => 'errors/application.environment_key_locked_backup',
+            default => 'errors/application.environment_key_locked',
+        };
+
+        return __($line, ['key' => $key]);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function keys(Application $application): array
+    {
+        $type = $this->type($application);
+
+        return [...$type?->lockedEnvironmentKeys() ?? [], ...$type?->panelManagedEnvironmentKeys() ?? []];
+    }
+
+    private function type(Application $application): ?SiteType
+    {
+        return $this->types->find($application->site_type);
     }
 
     /**

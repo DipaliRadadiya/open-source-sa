@@ -877,7 +877,7 @@ describe('the key an application encrypts its data with (bug #17)', function () 
     it('still saves every other change, however the key is quoted', function () {
         fakeSite();
 
-        $raw = "N8N_PORT=5679\nN8N_ENCRYPTION_KEY='0123456789abcdef0123'\n";
+        $raw = "N8N_PORT=5678\nN8N_ENCRYPTION_KEY='0123456789abcdef0123'\nGENERIC_TIMEZONE=Asia/Kolkata\n";
 
         $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => $raw])->assertOk();
 
@@ -908,13 +908,41 @@ describe('the key an application encrypts its data with (bug #17)', function () 
     });
 
     it('restores a backup that holds the same key', function () {
-        $this->disk['/home/envowner/flows/public_html/.env.bak-20260101-000000'] = "N8N_ENCRYPTION_KEY=0123456789abcdef0123\nN8N_PORT=1\n";
+        $this->disk['/home/envowner/flows/public_html/.env.bak-20260101-000000'] = "N8N_ENCRYPTION_KEY=0123456789abcdef0123\nN8N_PORT=5678\nGENERIC_TIMEZONE=UTC\n";
         fakeSite();
 
         $this->actingAs($this->admin)->postJson(envUrl('/restore'), ['backup' => '.env.bak-20260101-000000'])
             ->assertOk();
 
-        expect($this->written)->toContain('N8N_PORT=1');
+        expect($this->written)->toContain('GENERIC_TIMEZONE=UTC');
+    });
+
+    it('refuses n8n\'s port, data folder and listen address, which the panel set', function (string $key, string $from, string $to) {
+        // Bug #7 (re-test 2026-10-05): N8N_PORT=5999 saved with 200, and at the
+        // next restart n8n listened where the vhost sends nothing.
+        $this->disk = [$this->env => "N8N_ENCRYPTION_KEY=\"0123456789abcdef0123\"\n{$key}={$from}\n"];
+        fakeSite();
+
+        $this->actingAs($this->admin)->putJson(envUrl(), ['raw' => "N8N_ENCRYPTION_KEY=\"0123456789abcdef0123\"\n{$key}={$to}\n"])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.raw.0', __('errors/application.environment_key_managed', ['key' => $key]));
+
+        expect($this->written)->toBeNull();
+    })->with([
+        'port' => ['N8N_PORT', '5678', '5999'],
+        'data folder' => ['N8N_USER_FOLDER', '/home/envowner/flows/public_html', '/tmp'],
+        'listen address' => ['N8N_LISTEN_ADDRESS', '127.0.0.1', '0.0.0.0'],
+    ]);
+
+    it('refuses a backup with another port, with the panel\'s reason, not the encryption one', function () {
+        $this->disk['/home/envowner/flows/public_html/.env.bak-20260101-000000'] = "N8N_ENCRYPTION_KEY=0123456789abcdef0123\nN8N_PORT=1\n";
+        fakeSite();
+
+        $this->actingAs($this->admin)->postJson(envUrl('/restore'), ['backup' => '.env.bak-20260101-000000'])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.backup.0', __('errors/application.environment_key_managed_backup', ['key' => 'N8N_PORT']));
+
+        expect($this->written)->toBeNull();
     });
 
     it('locks APP_KEY on the Laravel apps the panel installs', function (string $type, string $path) {

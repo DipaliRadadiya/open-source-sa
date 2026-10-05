@@ -80,7 +80,7 @@ class ApplicationEnvironmentController extends Controller
 
         if (($key = $lock->violation($application, $before, $raw)) !== null) {
             throw ValidationException::withMessages([
-                'raw' => [__('errors/application.environment_key_locked', ['key' => $key])],
+                'raw' => [$lock->message($application, $key)],
             ]);
         }
 
@@ -125,7 +125,7 @@ class ApplicationEnvironmentController extends Controller
 
         if (($key = $lock->violation($application, $current, $backup)) !== null) {
             throw ValidationException::withMessages([
-                'backup' => [__('errors/application.environment_key_locked_backup', ['key' => $key])],
+                'backup' => [$lock->message($application, $key, backup: true)],
             ]);
         }
     }

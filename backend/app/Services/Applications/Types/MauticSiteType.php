@@ -127,6 +127,12 @@ class MauticSiteType extends AbstractSiteType
      * the top level, the four helper scripts beside index.php by name, and
      * `var/` whole — logs, cache and the mail spool, none of it served.
      *
+     * And `bin/` whole: `bin/console` and its neighbours have no `.php`
+     * ending, so the PHP rule never saw them and nginx served the source as a
+     * download (junior re-test, 2026-10-05). Mautic's own `.htaccess` does
+     * not cover them either — it is a folder of command-line tools, and
+     * nothing in it is ever requested by a browser.
+     *
      * @return array<int, string>
      */
     public function deniedPaths(): array
@@ -135,6 +141,7 @@ class MauticSiteType extends AbstractSiteType
             '^/[^/]+/.*\\.(php[0-9]?|phtml|phar)$',
             '^/(autoload|ecs|importmap|phpstan-bootstrap)\\.php$',
             '^/var/',
+            '^/bin/',
             '/\\.env',
             '^/composer\\.(json|lock)$',
         ];

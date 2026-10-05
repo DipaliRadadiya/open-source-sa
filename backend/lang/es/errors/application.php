@@ -115,6 +115,8 @@ return [
     'unknown_backup' => 'Esa no es una copia de seguridad conocida de este archivo.',
     'environment_key_locked' => ':key no se puede cambiar ni eliminar aquí. La aplicación cifra sus datos guardados con ella, y una clave distinta haría que esos datos fueran ilegibles.',
     'environment_key_locked_backup' => 'Esta copia tiene una :key distinta. Restaurarla haría ilegibles los datos que la aplicación ha cifrado desde entonces.',
+    'environment_key_managed' => ':key no se puede cambiar ni eliminar aquí. Lo estableció el panel y el sitio depende de él: otro valor haría que el sitio dejara de funcionar tras su próximo reinicio.',
+    'environment_key_managed_backup' => 'Esta copia tiene un :key distinto. Lo estableció el panel y el sitio depende de él, así que restaurar esta copia haría que el sitio dejara de funcionar tras su próximo reinicio.',
 
     'upload_directory_missing' => 'La carpeta de destino de esta subida ya no existe.',
     'upload_insufficient_space' => 'El servidor no tiene suficiente espacio libre en disco para esta subida.',

@@ -235,4 +235,19 @@ interface SiteType
      * @return array<int, string>
      */
     public function lockedEnvironmentKeys(): array;
+
+    /**
+     * `.env` keys the panel itself relies on, refused in the Environment editor
+     * the same way (bug #7, re-test 2026-10-05): the port the vhost proxies to,
+     * the folder the service keeps its data in, the address it listens on.
+     * A different value does not fail on save — it fails at the next restart,
+     * as a site that answers 502 or an application published past its vhost.
+     *
+     * Kept apart from {@see lockedEnvironmentKeys()} only for the message: the
+     * reason is different, and telling someone their port is an encryption key
+     * would be wrong.
+     *
+     * @return array<int, string>
+     */
+    public function panelManagedEnvironmentKeys(): array;
 }

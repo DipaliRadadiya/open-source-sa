@@ -115,6 +115,8 @@ return [
     'unknown_backup' => 'That is not a known backup of this file.',
     'environment_key_locked' => ':key cannot be changed or removed here. The application encrypts its stored data with it, and a different key would make that data unreadable.',
     'environment_key_locked_backup' => 'This backup has a different :key. Restoring it would make the data the application has encrypted since then unreadable.',
+    'environment_key_managed' => ':key cannot be changed or removed here. The panel set it and the site depends on it: a different value would stop the site working after its next restart.',
+    'environment_key_managed_backup' => 'This backup has a different :key. The panel set it and the site depends on it, so restoring this backup would stop the site working after its next restart.',
 
     'upload_directory_missing' => 'The folder this upload was going to no longer exists.',
     'upload_insufficient_space' => 'The server does not have enough free disk space for this upload.',

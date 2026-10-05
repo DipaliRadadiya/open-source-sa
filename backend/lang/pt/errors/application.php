@@ -115,6 +115,8 @@ return [
     'unknown_backup' => 'Essa não é uma cópia de segurança conhecida deste ficheiro.',
     'environment_key_locked' => ':key não pode ser alterada nem removida aqui. A aplicação criptografa os dados salvos com ela, e uma chave diferente tornaria esses dados ilegíveis.',
     'environment_key_locked_backup' => 'Este backup tem uma :key diferente. Restaurá-lo tornaria ilegíveis os dados que a aplicação criptografou desde então.',
+    'environment_key_managed' => ':key não pode ser alterado nem removido aqui. O painel o definiu e o site depende dele: outro valor faria o site parar de funcionar após a próxima reinicialização.',
+    'environment_key_managed_backup' => 'Este backup tem um :key diferente. O painel o definiu e o site depende dele, então restaurar este backup faria o site parar de funcionar após a próxima reinicialização.',
 
     'upload_directory_missing' => 'A pasta de destino deste envio já não existe.',
     'upload_insufficient_space' => 'O servidor não tem espaço livre em disco suficiente para este envio.',

@@ -114,6 +114,8 @@ return [
     'unknown_backup' => 'Ce n\'est pas une sauvegarde connue de ce fichier.',
     'environment_key_locked' => ':key ne peut pas être modifiée ni supprimée ici. L\'application chiffre ses données enregistrées avec elle, et une clé différente rendrait ces données illisibles.',
     'environment_key_locked_backup' => 'Cette sauvegarde a une :key différente. La restaurer rendrait illisibles les données que l\'application a chiffrées depuis.',
+    'environment_key_managed' => ':key ne peut pas être modifié ni supprimé ici. Le panneau l\'a défini et le site en dépend : une autre valeur empêcherait le site de fonctionner après son prochain redémarrage.',
+    'environment_key_managed_backup' => 'Cette sauvegarde a un :key différent. Le panneau l\'a défini et le site en dépend : la restaurer empêcherait le site de fonctionner après son prochain redémarrage.',
 
     'upload_directory_missing' => 'Le dossier de destination de cet envoi n\'existe plus.',
     'upload_insufficient_space' => 'Le serveur ne dispose pas d\'assez d\'espace disque libre pour cet envoi.',

@@ -312,6 +312,11 @@ abstract class AbstractSiteType implements SiteType
         return [];
     }
 
+    public function panelManagedEnvironmentKeys(): array
+    {
+        return [];
+    }
+
     public function defaultWebRoot(): string
     {
         return '/';

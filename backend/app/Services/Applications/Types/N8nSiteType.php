@@ -97,6 +97,17 @@ class N8nSiteType extends AbstractSiteType
     }
 
     /**
+     * Written by N8nInstaller from the site's own record: the vhost proxies to
+     * `app_port`, the data lives in the site folder, and loopback keeps n8n
+     * behind its vhost. Edited here, each one broke the site at the next
+     * restart instead of on save.
+     */
+    public function panelManagedEnvironmentKeys(): array
+    {
+        return ['N8N_PORT', 'N8N_USER_FOLDER', 'N8N_LISTEN_ADDRESS'];
+    }
+
+    /**
      * The npm package this site type installs, so the catalog knows what to
      * ask the registry about.
      */

@@ -72,8 +72,9 @@ it('denies what the application protects on Apache, before PHP can run it, on ng
 })->with([
     'akaunting' => ['akaunting', ['/storage/logs/laravel.log', '/storage/framework/sessions/abc', '/artisan', '/composer.json', '/vendor/autoload.php', '/config/app.php', '/.env']],
     'prestashop' => ['prestashop', ['/var/logs/prod-2026-09-26.log', '/app/config/parameters.php', '/vendor/autoload.php', '/modules/ps_mbo/vendor/x.php', '/upload/shell.php', '/img/x.php', '/themes/classic/templates/index.tpl', '/composer.lock']],
-    // Bug #14: vendor scripts ran straight from the web on nginx.
-    'mautic' => ['mautic', ['/vendor/symfony/console/Application.php', '/config/local.php', '/app/AppKernel.php', '/plugins/MauticFocusBundle/Config/config.php', '/media/files/shell.php', '/var/logs/mautic_prod-2026-10-04.php', '/var/spool/default/x.message', '/autoload.php', '/importmap.php', '/.env', '/.env.local', '/composer.json']],
+    // Bug #14: vendor scripts ran straight from the web on nginx; bin/console
+    // (no .php ending) was still served as a download (re-test 2026-10-05).
+    'mautic' => ['mautic', ['/vendor/symfony/console/Application.php', '/config/local.php', '/app/AppKernel.php', '/plugins/MauticFocusBundle/Config/config.php', '/media/files/shell.php', '/var/logs/mautic_prod-2026-10-04.php', '/var/spool/default/x.message', '/bin/console', '/bin/composer', '/autoload.php', '/importmap.php', '/.env', '/.env.local', '/composer.json']],
 ]);
 
 it('still serves what the application needs', function (string $siteType, array $mustServe) {
