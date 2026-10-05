@@ -285,6 +285,49 @@ class ServerOps
     }
 
     /**
+     * sudo's default secure_path on Debian and Ubuntu.
+     *
+     * The panel account's own PATH is the wrong thing to search, and searching
+     * it produced a false report the first time it was tried: `useradd`,
+     * `userdel`, `usermod` and `chpasswd` live in /usr/sbin, which is not on an
+     * unprivileged user's PATH, so they looked missing on a box where they were
+     * present and working. sudo resolves binaries through secure_path, so that
+     * is the path to ask about.
+     */
+    private const SEARCH_PATH = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin';
+
+    /**
+     * Is this binary installed? Asked **without** sudo, deliberately.
+     *
+     * `run()` puts `sudo -n` in front of every allowlisted binary, and sudo
+     * matches its NOPASSWD rules against the *resolved absolute path*. When the
+     * binary does not exist there is nothing to resolve, so no rule matches, and
+     * sudo's answer is not "command not found" — it is
+     *
+     *     sudo: a password is required
+     *
+     * which is indistinguishable from a stale sudo grant. So an absent binary
+     * and an ungranted one arrive as the same string, and `$denied` is true for
+     * both. Every caller that infers "installed?" from a failed elevated call is
+     * therefore reading privileges, not presence.
+     *
+     * That is not hypothetical: it is how `panel:doctor` ended every lemp, lamp,
+     * mern and ols install with a red "docker is installed but the daemon did
+     * not answer" on servers with no Docker on them at all. Ask presence here
+     * first, and the elevated call only has to explain a real refusal.
+     *
+     * `command -v` rather than `is_executable()` on a guessed path, so this
+     * resolves the binary the same way the real call will.
+     */
+    public function binaryExists(string $binary): bool
+    {
+        return Process::timeout(10)
+            ->env(['PATH' => self::SEARCH_PATH])
+            ->run(['sh', '-c', 'command -v '.escapeshellarg($binary)])
+            ->successful();
+    }
+
+    /**
      * Run a boolean existence probe. Exit 1 means "not found", so it remains
      * a false result for the caller while being logged as an expected answer.
      * Timeouts and every other exit code remain genuine operation failures.

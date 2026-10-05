@@ -3,7 +3,7 @@
 namespace App\Services\Server\Doctor\Checks;
 
 use App\Contracts\DoctorCheck;
-use Illuminate\Support\Facades\Process;
+use App\Services\Server\ServerOps;
 
 /**
  * Are the tools the panel shells out to actually installed?
@@ -58,6 +58,8 @@ class BinariesCheck implements DoctorCheck
         'g++' => 'building native Node modules (n8n, NodeBB)',
     ];
 
+    public function __construct(private ServerOps $serverOps) {}
+
     public function key(): string
     {
         return 'binaries';
@@ -102,25 +104,17 @@ class BinariesCheck implements DoctorCheck
     }
 
     /**
-     * sudo's default secure_path on Debian and Ubuntu.
+     * Delegated to `ServerOps::binaryExists()` rather than asked here.
      *
-     * Searching the panel account's own PATH is wrong and produced a false
-     * report the first time this ran: useradd, userdel, usermod and chpasswd
-     * live in /usr/sbin, which is not on an unprivileged user's PATH, so they
-     * looked missing on a box where they were present and working. sudo
-     * resolves them through secure_path, so that is the path to ask about.
-     */
-    private const SEARCH_PATH = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin';
-
-    /**
-     * `command -v` rather than is_executable() on a guessed path, so this
-     * resolves the binary the same way the real call will.
+     * The search path is sudo's `secure_path` and the reason is subtle (an
+     * unprivileged PATH has no /usr/sbin on it, so half of REQUIRED looks
+     * missing on a box where it works). Two copies of that reasoning is one
+     * copy too many — and the second caller is `DockerCheck`, which needs it
+     * for a sharper reason: an absent binary and an ungranted one are the same
+     * string coming out of `sudo -n`.
      */
     private function exists(string $binary): bool
     {
-        return Process::timeout(10)
-            ->env(['PATH' => self::SEARCH_PATH])
-            ->run(['sh', '-c', 'command -v '.escapeshellarg($binary)])
-            ->successful();
+        return $this->serverOps->binaryExists($binary);
     }
 }

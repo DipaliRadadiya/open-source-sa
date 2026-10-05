@@ -41,14 +41,42 @@ class DockerExposureCheck implements DoctorCheck
 
     public function run(): array
     {
+        // Presence first, and without sudo. `sudo -n docker` on a box with no
+        // Docker answers "a password is required" rather than "command not
+        // found" — there is no binary for sudo to resolve against its rules —
+        // so an absent Docker and an ungranted one arrive identically. Asking
+        // here is what lets the two branches below mean different things.
+        if (! $this->serverOps->binaryExists('docker')) {
+            return [
+                'status' => 'pass',
+                'detail' => 'Docker is not installed — nothing to expose',
+                'fix' => null,
+            ];
+        }
+
         $result = $this->serverOps->run(
             ['docker', 'ps', '--format', '{{.Names}}\t{{.Ports}}'],
             ['feature' => 'doctor', 'op' => 'docker_ps'],
             timeout: 20,
         );
 
-        // Docker absent or down is DockerCheck's business, not this one's. Two
-        // checks failing for one cause buries the cause.
+        // Docker being refused is not Docker being absent, and this is the one
+        // check where the difference is a security claim. Without this branch a
+        // denied sudo produced "nothing to expose" — a check asserting that no
+        // container is open to the internet on the strength of a command it was
+        // never allowed to run. Said out loud instead, as a warning: unproven,
+        // not proven safe.
+        if ($result->denied) {
+            return [
+                'status' => 'warn',
+                'detail' => 'could not list containers: the panel\'s sudo grant does not cover docker, so'
+                    .' published ports were not checked (reference '.$result->reference.')',
+                'fix' => 'doctor.fixes.docker_sudo',
+            ];
+        }
+
+        // Docker down is DockerCheck's business, not this one's. Two checks
+        // failing for one cause buries the cause.
         if (! $result->answered) {
             return [
                 'status' => 'pass',
