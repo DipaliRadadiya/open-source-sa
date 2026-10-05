@@ -47,6 +47,38 @@ afterEach(function () {
     File::deleteDirectory($this->phpDir);
 });
 
+/**
+ * apt and phpenmod as they really behave on the fake /etc/php: the package's
+ * ini lands in mods-available, and phpenmod links it into the SAPI's conf.d.
+ * Without that the panel reads back an extension that never came on — which
+ * since junior re-test #11 it reports, as it should.
+ */
+function fakeRedisPackage(ArrayObject $runs): void
+{
+    $dir = test()->phpDir.'/8.4';
+
+    Process::fake(function ($process) use ($runs, $dir) {
+        $command = $process->command;
+        $runs[] = $command;
+
+        if (($command[0] ?? '') === 'apt-cache') {
+            return Process::result(output: "php8.4-redis - Redis\n");
+        }
+
+        if (($command[0] ?? '') === 'apt-get') {
+            File::ensureDirectoryExists("{$dir}/mods-available");
+            File::put("{$dir}/mods-available/redis.ini", "extension=redis.so\n");
+        }
+
+        if (str_ends_with((string) ($command[0] ?? ''), 'phpenmod')) {
+            File::ensureDirectoryExists("{$dir}/fpm/conf.d");
+            File::put("{$dir}/fpm/conf.d/20-redis.ini", '');
+        }
+
+        return Process::result(output: '');
+    });
+}
+
 function progressHeaders(): array
 {
     return ['Authorization' => 'Bearer '.test()->token];
@@ -273,14 +305,7 @@ describe('extensions', function () {
 
     it('switches an extension on after installing it, rather than trusting postinst', function () {
         $runs = new ArrayObject;
-
-        Process::fake(function ($process) use ($runs) {
-            $runs[] = $process->command;
-
-            return Process::result(output: ($process->command[0] ?? '') === 'apt-cache'
-                ? "php8.4-redis - Redis\n"
-                : '');
-        });
+        fakeRedisPackage($runs);
 
         app(PhpExtensionManager::class)->install('8.4', 'redis');
 
@@ -295,9 +320,7 @@ describe('extensions', function () {
     it('logs an extension install as installed, not as enabled', function () {
         // It logged `extension_enabled` — "Enabled the redis extension" for
         // something the user had just installed.
-        Process::fake(fn ($process) => Process::result(output: ($process->command[0] ?? '') === 'apt-cache'
-            ? "php8.4-redis - Redis\n"
-            : ''));
+        fakeRedisPackage(new ArrayObject);
 
         app()->call([new InstallPhpExtension('8.4', 'redis'), 'handle']);
 
@@ -326,6 +349,21 @@ describe('extensions', function () {
 
         try {
             app(PhpExtensionManager::class)->install('8.4', 'redis');
+        } catch (RuntimeInstallException $e) {
+            expect($e->reason)->toBe('enable_failed');
+        }
+    });
+
+    it('reports an extension phpenmod left off as not enabled, not as installed and on', function () {
+        // Junior re-test #11: phpenmod exits 0 for a name it has no ini for.
+        // apt "installs" nothing here, so nothing can come on.
+        Process::fake(fn ($process) => Process::result(output: ($process->command[0] ?? '') === 'apt-cache'
+            ? "php8.4-redis - Redis\n"
+            : ''));
+
+        try {
+            app(PhpExtensionManager::class)->install('8.4', 'redis');
+            $this->fail('An extension that never came on was reported as installed and on.');
         } catch (RuntimeInstallException $e) {
             expect($e->reason)->toBe('enable_failed');
         }

@@ -1384,7 +1384,7 @@ describe('the lsphp stack', function () {
         // phpenmod only understands /etc/php; pointed at the lsws tree it
         // exits zero having changed nothing. Saying so beats reporting a
         // success that never happened.
-        expect(fn () => app(LsphpPhpStack::class)->extensionToggleCommand('8.4', 'redis', true))
+        expect(fn () => app(LsphpPhpStack::class)->extensionToggleCommand('8.4', ['redis'], true))
             ->toThrow(PhpConfigException::class);
     });
 

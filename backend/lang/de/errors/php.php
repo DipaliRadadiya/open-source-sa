@@ -25,6 +25,8 @@ return [
     // LSPHP has no phpenmod equivalent. Refusing beats a control that
     // reports success and changes nothing.
     'unsupported_on_stack' => 'Das wird vom PHP-Stack :stack nicht unterstützt.',
+    'extension_not_disabled' => 'Die Erweiterung :extension für PHP :version konnte nicht deaktiviert werden: Sie ist weiterhin geladen, es wurde also nichts geändert.',
+    'extension_not_enabled' => 'Die Erweiterung :extension für PHP :version konnte nicht aktiviert werden: Sie ist weiterhin nicht geladen, es wurde also nichts geändert.',
 
     'ioncube_unsupported_version' => 'ionCube veröffentlicht keinen Loader für PHP :version.',
     'ioncube_unsupported_architecture' => 'ionCube veröffentlicht keinen Loader für die Architektur dieses Servers (:architecture).',

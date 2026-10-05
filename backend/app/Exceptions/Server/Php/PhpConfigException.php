@@ -63,6 +63,16 @@ class PhpConfigException extends Exception
     }
 
     /**
+     * The toggle ran and the extension is still where it was (junior re-test
+     * #11). Its own message, so "Disabled" is never reported for an extension
+     * that is still loaded.
+     */
+    public static function extensionUnchanged(string $version, string $extension, bool $enable, string $reference): self
+    {
+        return new self($enable ? 'errors/php.extension_not_enabled' : 'errors/php.extension_not_disabled', 422, $reference, ['extension' => $extension, 'version' => $version]);
+    }
+
+    /**
      * The PHP stack this server runs has no way to do it. Refusing is the
      * honest answer — the alternative is a control that reports success and
      * changes nothing.

@@ -99,9 +99,14 @@ interface PhpStack
      * exit zero having changed nothing — a toggle that reports success and
      * does nothing is worse than one that fails.
      *
+     * Takes the package's modules, not its name: the `mysql` package is
+     * `mysqli`, `mysqlnd` and `pdo_mysql`, and `phpdismod mysql` exits 0 with
+     * "ini file doesn't exist" having changed nothing (junior re-test #11).
+     *
+     * @param  array<int, string>  $modules
      * @return array<int, string>
      */
-    public function extensionToggleCommand(string $version, string $extension, bool $enable): array;
+    public function extensionToggleCommand(string $version, array $modules, bool $enable): array;
 
     /** Validate the configuration without changing anything. */
     public function configTest(string $version): ServerOpsResult;

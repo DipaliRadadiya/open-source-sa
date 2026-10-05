@@ -279,8 +279,10 @@ class PhpExtensionManager
     {
         $this->assertVersion($version);
 
+        $modules = $this->find($version, $name)['modules'] ?? [$name];
+
         $result = $this->serverOps->run(
-            $this->stack->extensionToggleCommand($version, $name, $enable),
+            $this->stack->extensionToggleCommand($version, $modules, $enable),
             ['feature' => 'php', 'op' => $enable ? 'extension_enable' : 'extension_disable', 'version' => $version, 'extension' => $name],
         );
 
@@ -289,6 +291,13 @@ class PhpExtensionManager
         }
 
         $this->reload($version);
+
+        // Read back, not assumed. `phpdismod` exits 0 for a name it has no ini
+        // for, so "the command succeeded" was never evidence the extension
+        // moved — and the screen and the activity log both said it had.
+        if (($this->find($version, $name)['enabled'] ?? null) !== $enable) {
+            throw PhpConfigException::extensionUnchanged($version, $name, $enable, $result->reference);
+        }
     }
 
     /**

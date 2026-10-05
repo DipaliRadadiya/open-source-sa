@@ -162,14 +162,16 @@ class FpmPhpStack implements PhpStack
      *
      * @return array<int, string>
      */
-    public function extensionToggleCommand(string $version, string $extension, bool $enable): array
+    public function extensionToggleCommand(string $version, array $modules, bool $enable): array
     {
         $binary = (string) config(
             'server.runtimes.php.'.($enable ? 'enmod_binary' : 'dismod_binary'),
             $enable ? '/usr/sbin/phpenmod' : '/usr/sbin/phpdismod',
         );
 
-        return [$binary, '-v', $version, '-s', 'ALL', $extension];
+        // All in one call, measured on PHP 8.3: one module at a time leaves a
+        // window where mysqli is on and mysqlnd, which it needs, is not.
+        return [$binary, '-v', $version, '-s', 'ALL', ...$modules];
     }
 
     public function configTest(string $version): ServerOpsResult

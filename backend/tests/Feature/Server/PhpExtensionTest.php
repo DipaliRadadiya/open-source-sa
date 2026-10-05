@@ -82,7 +82,7 @@ function fakeExtensions(?callable $override = null): ArrayObject
 
         if ($first === 'dpkg-query') {
             $owner = [
-                'curl' => 'curl', 'mbstring' => 'mbstring', 'redis' => 'redis', 'opcache' => 'opcache',
+                'curl' => 'curl', 'mbstring' => 'mbstring', 'redis' => 'redis', 'opcache' => 'opcache', 'xdebug' => 'xdebug',
                 // The case the whole design turns on: one package, three modules.
                 'mysqli' => 'mysql', 'pdo_mysql' => 'mysql', 'mysqlnd' => 'mysql',
             ];
@@ -92,6 +92,38 @@ function fakeExtensions(?callable $override = null): ArrayObject
                 ->filter(fn ($a) => str_ends_with((string) $a, '.so'))
                 ->map(fn ($path) => 'php'.test()->panel.'-'.($owner[basename($path, '.so')] ?? 'unknown').": {$path}")
                 ->join("\n"));
+        }
+
+        // apt puts the package's .so and its mods-available ini in place.
+        if ($first === 'apt-get' && in_array('install', $command, true)
+            && preg_match('/^php(\d+\.\d+)-([a-z0-9_]+)$/', (string) end($command), $m)) {
+            File::put(test()->phpDir."/{$m[1]}/mods-available/{$m[2]}.ini", "extension={$m[2]}.so\n");
+            File::put("{$soDir}/{$m[2]}.so", '');
+
+            return Process::result(exitCode: 0);
+        }
+
+        // phpenmod / phpdismod as Debian's really behave (measured on PHP 8.3,
+        // 2026-10-05): each named module with an ini in mods-available gets its
+        // conf.d link added or removed, and a name with no ini is skipped with
+        // a warning — exit 0 either way.
+        if (in_array(basename($first), ['phpenmod', 'phpdismod'], true)) {
+            $version = $command[array_search('-v', $command, true) + 1];
+            $dir = test()->phpDir."/{$version}";
+
+            foreach (array_slice($command, array_search('ALL', $command, true) + 1) as $module) {
+                if (! File::exists("{$dir}/mods-available/{$module}.ini")) {
+                    continue;
+                }
+
+                foreach (['cli', 'fpm'] as $sapi) {
+                    basename($first) === 'phpenmod'
+                        ? File::put("{$dir}/{$sapi}/conf.d/20-{$module}.ini", '')
+                        : File::delete("{$dir}/{$sapi}/conf.d/20-{$module}.ini");
+                }
+            }
+
+            return Process::result(errorOutput: '');
         }
 
         // `php -r 'echo ini_get("extension_dir");'`
@@ -320,6 +352,38 @@ it('protects the driver of the database the panel is on', function () {
     config(['database.default' => $default]);
 
     expect($required)->toBe(['pdo_mysql', 'mysqlnd']);
+});
+
+/*
+| Junior re-test #11: turning off `mysql` answered 200 and logged "Disabled"
+| while mysqli and pdo_mysql stayed loaded — phpdismod was handed the package
+| name, has no ini by that name, and exits 0 anyway (measured on PHP 8.3).
+*/
+
+it('turns off every module of a package, not just its name', function () {
+    $runs = fakeExtensions();
+    config(['database.redis.client' => 'predis']);
+
+    extCall('PUT', "/api/php/versions/{$this->panel}/extensions/mysql", ['enabled' => false])
+        ->assertOk()
+        ->assertJsonPath('extension.enabled', false);
+
+    expect(collect($runs))->toContain(['/usr/sbin/phpdismod', '-v', $this->panel, '-s', 'ALL', 'mysqli', 'mysqlnd', 'pdo_mysql'])
+        ->and(File::exists("{$this->phpDir}/{$this->panel}/fpm/conf.d/20-mysqli.ini"))->toBeFalse()
+        ->and(File::exists("{$this->phpDir}/{$this->panel}/fpm/conf.d/20-pdo_mysql.ini"))->toBeFalse();
+});
+
+it('says so, and logs nothing, when the extension did not actually move', function () {
+    // The tool exits 0 and changes nothing — exactly what phpdismod does for
+    // a name it has no ini for.
+    fakeExtensions(fn (array $command) => str_ends_with((string) $command[0], 'phpdismod') ? Process::result() : null);
+    config(['database.redis.client' => 'predis']);
+
+    extCall('PUT', "/api/php/versions/{$this->panel}/extensions/redis", ['enabled' => false])
+        ->assertUnprocessable()
+        ->assertJsonPath('message', __('errors/php.extension_not_disabled', ['extension' => 'redis', 'version' => $this->panel]));
+
+    $this->assertDatabaseMissing('activity_logs', ['type' => 'php', 'action' => 'extension_disabled']);
 });
 
 it('allows disabling that same extension on a version the panel does not use', function () {

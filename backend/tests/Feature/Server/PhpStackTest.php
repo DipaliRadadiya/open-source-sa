@@ -107,9 +107,9 @@ describe('the FPM facts it now owns', function () {
     it('toggles an extension across every SAPI with Debian own tools', function () {
         // -s ALL, not per-SAPI: an extension on for the web and off for the
         // CLI is a site that works in a browser and fails in a cron deploy.
-        expect($this->stack->extensionToggleCommand('8.4', 'redis', true))
+        expect($this->stack->extensionToggleCommand('8.4', ['redis'], true))
             ->toBe(['/usr/sbin/phpenmod', '-v', '8.4', '-s', 'ALL', 'redis'])
-            ->and($this->stack->extensionToggleCommand('8.4', 'redis', false))
+            ->and($this->stack->extensionToggleCommand('8.4', ['redis'], false))
             ->toBe(['/usr/sbin/phpdismod', '-v', '8.4', '-s', 'ALL', 'redis']);
     });
 

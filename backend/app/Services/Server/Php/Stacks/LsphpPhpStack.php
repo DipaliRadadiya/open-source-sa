@@ -412,7 +412,7 @@ class LsphpPhpStack implements PhpStack
      *
      * @throws PhpConfigException
      */
-    public function extensionToggleCommand(string $version, string $extension, bool $enable): array
+    public function extensionToggleCommand(string $version, array $modules, bool $enable): array
     {
         throw PhpConfigException::unsupportedOnStack($this->key());
     }
