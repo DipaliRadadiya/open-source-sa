@@ -1092,11 +1092,13 @@ back online as a side effect of a relabel.
 ### PUT `/applications/{application}/web-root`
 **Permission:** `application` (manage) | **Throttle:** 10/min
 
-Change the served directory (creates it if missing, rewrites vhost, tests + reloads).
+Change the served directory (rewrites vhost, tests + reloads).
 
 **Request:** `{"web_root": "/public"}`
 
 **Response `200`:** `{"application": {"id": 1, "web_root": "/public"}}`
+
+**The folder must already exist on a live site (2026-10-05, junior re-test #8).** A missing one is a `422` on `web_root` whose message names the full path (`/home/owner/shop/public_html/etc`), and nothing changes. It used to be created empty, and the site answered 403 at once. Sites not provisioned yet (and disabled ones) still just store the value. The same rule applies when `web_root` arrives on `PUT /applications/{application}`. A `500` with a `reference` means the check itself could not run, not that the folder is missing.
 
 **`web_root` selects what the web server serves; it does not move the code.**
 A git checkout always lands at `{app_root}/public_html`, and the web root
@@ -1830,6 +1832,8 @@ Replace the entire `.env` file. Optionally restart the app's process after save.
 Syntax errors return `422` with `errors.raw` listing the problem.
 
 **Locked keys (2026-10-04, bug #17).** The key an application encrypts its stored data with cannot be changed or removed once it has a value: `N8N_ENCRYPTION_KEY` on n8n, `APP_KEY` on Akaunting and Statamic. Such a save is a `422` on `raw` naming the key; every other line can still be edited. A file with no value for the key yet may be given one. Git sites have no locked keys — the code, and rotating its key, are the owner's.
+
+**Panel-managed keys (2026-10-05, junior re-test #7).** n8n's `N8N_PORT`, `N8N_USER_FOLDER` and `N8N_LISTEN_ADDRESS` are refused the same way: the vhost proxies to the port the panel recorded, the data lives in the site folder, and n8n listens on loopback behind its vhost. Changing one answered `200` and broke the site at the next restart. The `422` message differs from the encryption-key one (`environment_key_managed` / `_backup`), so show `errors.raw[0]` (or `errors.backup[0]`) as it is.
 
 ---
 
@@ -5216,6 +5220,8 @@ The panel **never reboots here**, even when the upgrade demands one. `reboot_req
 
 **Response `200`:** `{"general": {...}}`
 
+**PHP 5.6–7.4 are told the new zone (2026-10-05, junior re-test #14).** Those versions die with "Timezone database is corrupt" when they have to guess any zone but UTC, so every site on them answered 500 after a change here. A timezone change now writes `date.timezone` into `00-panel-timezone.ini` in each of their scan directories and reloads them; installing PHP below 8.0 does the same with the current zone. PHP 8.x is left alone. A site's own `php_timezone` still wins. Never fails the request: the server timezone has already changed.
+
 ---
 
 ### PUT `/settings/swap`
@@ -5491,6 +5497,8 @@ Sequence: back up → write → config test (`php-fpm -t`, or `lsphp -c php.ini 
 **Request:** `{"enabled": true}`
 
 `on, not installed` → `202` (apt queued). `off` → `200` (unlinked, never purged). Built-in / panel-required → `422`.
+
+**Every module of the package moves (2026-10-05, junior re-test #11).** `mysql` is `mysqli`, `mysqlnd` and `pdo_mysql`, and all three are switched together; before, only the package name was passed, which Debian's tool skips with exit 0, so the answer was `200` and nothing changed. The state is now read back after the change: if the extension did not move, the answer is `422` with a message saying so (and a `reference`), and no activity is logged.
 
 `500` with a `reference` when the change was made but PHP could not be reloaded — it is **not active yet**, and the message says so. A queued install that ends that way fails with `reason: "reload_failed"` (distinct from `enable_failed`, where the module was not switched on at all).
 
