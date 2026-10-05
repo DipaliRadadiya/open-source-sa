@@ -1,8 +1,14 @@
 <?php
 
+use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Models\User;
 use App\Services\Admin\ApiErrorLogWriter;
+use Illuminate\Console\Events\ScheduledTaskFinished;
+use Illuminate\Console\Scheduling\Event;
+use Illuminate\Console\Scheduling\EventMutex;
 use Illuminate\Http\Request;
+use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Queue\Jobs\SyncJob;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -405,4 +411,68 @@ it('prefers what the command printed over a summary of it', function () {
         ->getJson('/api/admin/error-logs')
         ->assertOk()
         ->assertJsonPath('error_logs.0.error', 'gyp ERR! stack Error: not found: make');
+});
+
+/*
+| ERR-02 (old QA list, 2026-10-01): the screen reads the server-ops log, and
+| failed jobs and scheduled tasks were written only to laravel.log, so an
+| admin relying on the screen never saw them.
+*/
+
+it('shows a queued job that failed', function () {
+    // The event the queue worker fires when a job gives up for good.
+    $job = new SyncJob(app(), json_encode([
+        'displayName' => 'App\\Jobs\\ProvisionApplication', 'job' => 'Illuminate\\Queue\\CallQueuedHandler@call', 'data' => [],
+    ]), 'redis', 'default');
+
+    event(new JobFailed('redis', $job, new RuntimeException('the worker gave up on this')));
+
+    $entries = $this->actingAs(User::factory()->admin()->create())
+        ->getJson('/api/admin/error-logs')->assertOk()->json('error_logs');
+
+    $entry = collect($entries)->firstWhere('operation', 'job.failed');
+
+    expect($entry)->not->toBeNull()
+        ->and($entry['message'])->toBe('A background job failed.')
+        ->and($entry['command'])->toBe('App\\Jobs\\ProvisionApplication')
+        ->and($entry['error'])->toContain('the worker gave up on this');
+});
+
+it('shows a scheduled command that exited non-zero', function () {
+    $event = new Event(app(EventMutex::class), 'php artisan applications:measure-sizes');
+    $event->exitCode = 1;
+
+    event(new ScheduledTaskFinished($event, 0.5));
+
+    $entries = $this->actingAs(User::factory()->admin()->create())
+        ->getJson('/api/admin/error-logs')->assertOk()->json('error_logs');
+
+    $entry = collect($entries)->firstWhere('operation', 'schedule.failed');
+
+    expect($entry['message'])->toBe('A scheduled task failed.')
+        ->and($entry['command'])->toContain('measure-sizes')
+        ->and($entry['exit_code'])->toBe(1);
+});
+
+it('does not log a scheduled command that succeeded', function () {
+    $event = new Event(app(EventMutex::class), 'php artisan applications:measure-sizes');
+    $event->exitCode = 0;
+
+    event(new ScheduledTaskFinished($event, 0.5));
+
+    $entries = $this->actingAs(User::factory()->admin()->create())
+        ->getJson('/api/admin/error-logs')->assertOk()->json('error_logs');
+
+    expect(json_encode($entries))->not->toContain('schedule.failed');
+});
+
+it('gives an API 500 the reference the user was shown, not a new one', function () {
+    $exception = new SettingOperationException('0d3f6c1e-6b1a-4c55-9f0e-1c2b3a4d5e6f');
+
+    app(ApiErrorLogWriter::class)->record($exception, Request::create('/api/anything', 'GET'));
+
+    $entries = $this->actingAs(User::factory()->admin()->create())
+        ->getJson('/api/admin/error-logs?reference=0d3f6c1e-6b1a-4c55-9f0e-1c2b3a4d5e6f')->assertOk()->json('error_logs');
+
+    expect($entries)->not->toBeEmpty();
 });

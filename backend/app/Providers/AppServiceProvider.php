@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Contracts\Firewall;
 use App\Contracts\PhpStack;
 use App\Models\User;
+use App\Services\Admin\ApiErrorLogWriter;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Applications\DeploymentRecorder;
 use App\Services\Server\Applications\ProvisionProgress;
@@ -38,11 +39,16 @@ use App\Support\Scheduling\BootScopedEventMutex;
 use Google\Client as GoogleClient;
 use Google\Service\Drive as GoogleDrive;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Console\Events\ScheduledTaskFailed;
+use Illuminate\Console\Events\ScheduledTaskFinished;
 use Illuminate\Console\Scheduling\EventMutex;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\Request;
+use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ServiceProvider;
@@ -130,6 +136,24 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Background failures on the admin Error Log screen (ERR-02): it reads
+        // the server-ops log, and these were only ever written to laravel.log.
+        Queue::failing(function (JobFailed $event): void {
+            app(ApiErrorLogWriter::class)->recordBackground('job.failed', $event->job->resolveName(), $event->exception);
+        });
+
+        Event::listen(ScheduledTaskFailed::class, function (ScheduledTaskFailed $event): void {
+            app(ApiErrorLogWriter::class)->recordBackground('schedule.failed', (string) ($event->task->description ?: $event->task->command), $event->exception);
+        });
+
+        // A scheduled artisan command runs in its own process: it does not
+        // throw here, it exits non-zero, and only Finished says so.
+        Event::listen(ScheduledTaskFinished::class, function (ScheduledTaskFinished $event): void {
+            if (($event->task->exitCode ?? 0) !== 0) {
+                app(ApiErrorLogWriter::class)->recordBackground('schedule.failed', (string) ($event->task->description ?: $event->task->command), exitCode: (int) $event->task->exitCode);
+            }
+        });
+
         Gate::define('access-admin', fn (User $user): bool => $user->isAdmin());
 
         // Laravel ships no Google Drive driver, so `Storage::build()` cannot

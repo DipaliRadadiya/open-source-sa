@@ -22,7 +22,11 @@ class ApiErrorLogWriter
 
         try {
             Log::channel('server-ops')->error('api.error', [
-                'reference' => (string) Str::uuid(),
+                // The reference the user was shown, when the exception carries
+                // one (ERR-02): two entries for one 500 with two different
+                // references, the second saying only the class name, sent
+                // anyone looking it up to the wrong one.
+                'reference' => $this->reference($exception),
                 'status' => $this->status($exception),
                 'method' => $request->method(),
                 'route' => $request->route()?->uri() ?? $request->path(),
@@ -48,6 +52,48 @@ class ApiErrorLogWriter
         } catch (Throwable) {
             // Observability must never replace the original API failure.
         }
+    }
+
+    /**
+     * A queued job or a scheduled task that failed, on the same screen as the
+     * API errors (ERR-02).
+     *
+     * They were written only to laravel.log, which the Error Log screen does
+     * not read: a provisioning job dying at the worker, a nightly command
+     * failing seventeen times — none of it visible to an admin relying on the
+     * screen. Same channel, same shape, its own `source`.
+     */
+    public function recordBackground(string $source, string $name, ?Throwable $exception = null, ?int $exitCode = null): string
+    {
+        $reference = $exception !== null ? $this->reference($exception) : (string) Str::uuid();
+
+        try {
+            Log::channel('server-ops')->error($source, array_filter([
+                'reference' => $reference,
+                // The fields the Error Log screen already shows: a headline,
+                // what ran, and why it stopped.
+                'message' => $source === 'job.failed' ? 'A background job failed.' : 'A scheduled task failed.',
+                'feature' => $source === 'job.failed' ? 'queue' : 'schedule',
+                'op' => $source,
+                'command' => $name,
+                'exit_code' => $exitCode,
+                'exception' => $exception !== null ? $exception::class : null,
+                'detail' => $exception !== null ? $this->summarise($exception) : null,
+                'file' => $exception !== null ? $this->relative($exception->getFile()).':'.$exception->getLine() : null,
+                'trace' => $exception !== null ? $this->appFrames($exception) : null,
+            ], fn ($value) => $value !== null));
+        } catch (Throwable) {
+            // Observability must never replace the original failure.
+        }
+
+        return $reference;
+    }
+
+    private function reference(Throwable $exception): string
+    {
+        $reference = property_exists($exception, 'reference') ? ($exception->reference ?? null) : null;
+
+        return is_string($reference) && $reference !== '' ? $reference : (string) Str::uuid();
     }
 
     /**
