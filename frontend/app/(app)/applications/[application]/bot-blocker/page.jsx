@@ -53,7 +53,7 @@ export default async function ApplicationBotBlockerPage({ params, searchParams }
   // Traffic needs the separate `app_log` grant; hidden without it rather than showing "no bots".
   const canSeeTraffic = can(appPermissions, "app_log", "view", "application");
 
-  const [{ policies, failed: policiesFailed, status: policiesStatus, failure: policiesFailure, message: policiesMessage }, traffic] = settled
+  const [{ policies, robotsTxt, failed: policiesFailed, status: policiesStatus, failure: policiesFailure, message: policiesMessage }, traffic] = settled
     ? await Promise.all([
         getAiBotPolicies(),
         canSeeTraffic ? getBotTraffic(id, days) : Promise.resolve(null),
@@ -78,6 +78,7 @@ export default async function ApplicationBotBlockerPage({ params, searchParams }
           <BotBlockerSection
             appId={id}
             policies={policies}
+            robotsTxt={robotsTxt}
             currentPolicy={application.ai_bot_policy ?? "allow_all"}
             currentBlocked={application.bot_blocked ?? []}
             currentAllowed={application.bot_allowed ?? []}

@@ -4844,7 +4844,11 @@
       "noPermission": "आपकी भूमिका में AI बॉट ब्लॉकर (इस ऐप्लिकेशन के लिए) का Manage एक्सेस नहीं है। इसे देने के लिए किसी एडमिन से कहें।",
       "nothingToSave": "सहेजने के लिए कुछ नहीं",
       "robotsTxtOnly": "केवल robots.txt",
-      "robotsTxtOnlyNote": "{names} आपकी साइट पर कभी नहीं आते — Google और Apple अपने सामान्य क्रॉलर से AI ट्रेन करते हैं और ये नाम केवल robots.txt में पढ़ते हैं। इन्हें यहाँ ब्लॉक करने से यह नहीं रुकता; इन्हें robots.txt में Disallow: / के साथ जोड़ें।"
+      "robotsTxtOnlyNote": "{names} आपकी साइट पर कभी नहीं आते — Google और Apple अपने सामान्य क्रॉलर से AI ट्रेन करते हैं और ये नाम केवल robots.txt में पढ़ते हैं। इन्हें यहाँ ब्लॉक करने से यह नहीं रुकता; इन्हें robots.txt में Disallow: / के साथ जोड़ें।",
+      "robotsTxt": {
+        "title": "इसे robots.txt में भी जोड़ें",
+        "copy": "robots.txt की पंक्तियाँ कॉपी करें"
+      }
     },
     "firewall": {
       "pageTitle": "वेब फ़ायरवॉल",

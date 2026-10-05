@@ -4844,7 +4844,11 @@
       "noPermission": "Ваша роль не включает доступ к управлению AI Bot Blocker для этого приложения. Попросите администратора предоставить его.",
       "nothingToSave": "Нечего сохранять",
       "robotsTxtOnly": "только robots.txt",
-      "robotsTxtOnlyNote": "{names} никогда не заходят на сайт — Google и Apple обучают ИИ обычными краулерами и читают эти имена только в robots.txt. Блокировка здесь этого не остановит; добавьте их в robots.txt с Disallow: /."
+      "robotsTxtOnlyNote": "{names} никогда не заходят на сайт — Google и Apple обучают ИИ обычными краулерами и читают эти имена только в robots.txt. Блокировка здесь этого не остановит; добавьте их в robots.txt с Disallow: /.",
+      "robotsTxt": {
+        "title": "Добавьте это и в robots.txt",
+        "copy": "Скопировать строки robots.txt"
+      }
     },
     "firewall": {
       "pageTitle": "Веб-брандмауэр",

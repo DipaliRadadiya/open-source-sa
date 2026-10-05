@@ -7,7 +7,8 @@ import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
-import { Bot, ChevronDown, Globe, Plus, ShieldBan, ShieldCheck, ShieldHalf, X } from "lucide-react";
+import { Bot, ChevronDown, FileText, Globe, Plus, ShieldBan, ShieldCheck, ShieldHalf, X } from "lucide-react";
+import { CopyButton } from "@/components/ui/copy-button";
 import { cn } from "@/lib/utils";
 import { Note } from "@/components/ui/note";
 import { updateApplicationBotBlocker } from "@/lib/api/applications";
@@ -256,6 +257,25 @@ function RuleEditor({ kind, icon: Icon, bots, refused = {}, disabled, onAdd, onR
   );
 }
 
+// Google and Apple train on what their search crawlers fetch, so blocking by name
+// cannot stop it; robots.txt can. Text and lines come from the API.
+function RobotsTxtLines({ note, lines }) {
+  const t = useTranslations("applications.botBlocker.robotsTxt");
+  return (
+    <Note icon={FileText} title={t("title")}>
+      <div className="space-y-2">
+        {note ? <p>{note}</p> : null}
+        <div className="flex items-start gap-2 rounded-md border bg-background p-2">
+          <pre className="min-w-0 flex-1 overflow-x-auto font-mono text-xs leading-relaxed text-foreground">
+            {lines.trimEnd()}
+          </pre>
+          <CopyButton value={lines} label={t("copy")} className="size-7 shrink-0" />
+        </div>
+      </div>
+    </Note>
+  );
+}
+
 function BotGroup({ label, bots }) {
   return (
     <div className="space-y-2">
@@ -275,6 +295,7 @@ function BotGroup({ label, bots }) {
 export function BotBlockerSection({
   appId,
   policies: sentPolicies,
+  robotsTxt = null,
   currentPolicy,
   currentBlocked = [],
   currentAllowed = [],
@@ -483,6 +504,12 @@ export function BotBlockerSection({
               </RadioGroup>
             </div>
   
+            {/* Follows the chosen option, not the saved one: it is advice for the
+                owner's robots.txt, independent of Save. */}
+            {selected?.robots_txt_recommended && robotsTxt?.lines ? (
+              <RobotsTxtLines note={robotsTxt.note} lines={robotsTxt.lines} />
+            ) : null}
+
             {/* Per-site exceptions share the policy's Save: the backend resolves
                 all three in one request. */}
             <div className="space-y-3 border-t pt-5">

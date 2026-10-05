@@ -4844,7 +4844,11 @@
       "noPermission": "現在のロールには、このアプリケーションの AI Bot Blocker の管理権限が含まれていません。管理者に付与を依頼してください。",
       "nothingToSave": "保存する内容がありません",
       "robotsTxtOnly": "robots.txt のみ",
-      "robotsTxtOnlyNote": "{names} はサイトを訪問しません。Google と Apple は通常のクローラーで AI を学習させ、これらの名前は robots.txt でのみ参照します。ここでブロックしても止められないため、robots.txt に Disallow: / で追加してください。"
+      "robotsTxtOnlyNote": "{names} はサイトを訪問しません。Google と Apple は通常のクローラーで AI を学習させ、これらの名前は robots.txt でのみ参照します。ここでブロックしても止められないため、robots.txt に Disallow: / で追加してください。",
+      "robotsTxt": {
+        "title": "robots.txt にもこれを追加してください",
+        "copy": "robots.txt の行をコピー"
+      }
     },
     "firewall": {
       "pageTitle": "Web ファイアウォール",

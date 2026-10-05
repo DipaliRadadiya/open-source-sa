@@ -47,7 +47,7 @@ export const getSiteTypes = cache(async function getSiteTypes() {
 // Server-wide catalog, cached per request.
 export const getAiBotPolicies = cache(async function getAiBotPolicies() {
   const result = await read("/ai-bot-policies", aiBotPoliciesResponseSchema);
-  return { policies: result.data?.ai_bot_policies ?? null, failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
+  return { policies: result.data?.ai_bot_policies ?? null, robotsTxt: result.data?.robots_txt ?? null, failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 });
 
 // Cached per request: layout, page and `generateMetadata` all ask for it.

@@ -277,10 +277,17 @@ export const aiBotPolicySchema = z.object({
   description: z.string(),
   blocked_bots: z.array(z.string()).default([]),
   blocked_count: z.number().default(0),
+  // Whether the robots.txt lines below also apply to this choice.
+  robots_txt_recommended: z.boolean().default(false),
 });
 
 export const aiBotPoliciesResponseSchema = z.object({
   ai_bot_policies: z.record(z.string(), aiBotPolicySchema).default({}),
+  // Google's and Apple's AI-training opt-out, which only robots.txt can express;
+  // the panel shows it for the owner to add and never writes the file.
+  robots_txt: z
+    .object({ note: z.string().default(""), lines: z.string().default("") })
+    .nullish(),
 });
 
 // `unavailable` (log unreadable) is NOT `empty`; never show it as "no bots".

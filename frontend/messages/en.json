@@ -4844,7 +4844,11 @@
       "noPermission": "Your role does not include AI Bot Blocker for this application with Manage access. Ask an administrator to grant it.",
       "nothingToSave": "Nothing to save",
       "robotsTxtOnly": "robots.txt only",
-      "robotsTxtOnlyNote": "{names} never visit your site — Google and Apple train AI with their normal crawlers and only read these names in robots.txt. Blocking them here doesn't stop that; add them to robots.txt with Disallow: / instead."
+      "robotsTxtOnlyNote": "{names} never visit your site — Google and Apple train AI with their normal crawlers and only read these names in robots.txt. Blocking them here doesn't stop that; add them to robots.txt with Disallow: / instead.",
+      "robotsTxt": {
+        "title": "Also add this to robots.txt",
+        "copy": "Copy the robots.txt lines"
+      }
     },
     "firewall": {
       "pageTitle": "Web Firewall",

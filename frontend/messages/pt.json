@@ -4844,7 +4844,11 @@
       "noPermission": "Seu papel não inclui AI Bot Blocker para esta aplicação com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
       "nothingToSave": "Nada para salvar",
       "robotsTxtOnly": "só robots.txt",
-      "robotsTxtOnlyNote": "{names} nunca visitam seu site — Google e Apple treinam IA com seus rastreadores normais e só leem esses nomes no robots.txt. Bloqueá-los aqui não impede isso; adicione-os ao robots.txt com Disallow: /."
+      "robotsTxtOnlyNote": "{names} nunca visitam seu site — Google e Apple treinam IA com seus rastreadores normais e só leem esses nomes no robots.txt. Bloqueá-los aqui não impede isso; adicione-os ao robots.txt com Disallow: /.",
+      "robotsTxt": {
+        "title": "Adicione também isto ao robots.txt",
+        "copy": "Copiar as linhas do robots.txt"
+      }
     },
     "firewall": {
       "pageTitle": "Web Firewall",

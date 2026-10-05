@@ -4844,7 +4844,11 @@
       "noPermission": "Votre rôle n'inclut pas Bloqueur de bots IA pour cette application avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
       "nothingToSave": "Rien à enregistrer",
       "robotsTxtOnly": "robots.txt uniquement",
-      "robotsTxtOnlyNote": "{names} ne visitent jamais votre site : Google et Apple entraînent leur IA avec leurs robots habituels et ne lisent ces noms que dans robots.txt. Les bloquer ici n'y change rien ; ajoutez-les plutôt à robots.txt avec Disallow: /."
+      "robotsTxtOnlyNote": "{names} ne visitent jamais votre site : Google et Apple entraînent leur IA avec leurs robots habituels et ne lisent ces noms que dans robots.txt. Les bloquer ici n'y change rien ; ajoutez-les plutôt à robots.txt avec Disallow: /.",
+      "robotsTxt": {
+        "title": "Ajoutez aussi ceci à robots.txt",
+        "copy": "Copier les lignes robots.txt"
+      }
     },
     "firewall": {
       "pageTitle": "Pare-feu web",

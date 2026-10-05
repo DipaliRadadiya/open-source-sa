@@ -4844,7 +4844,11 @@
       "noPermission": "Ihre Rolle enthält nicht „KI-Bot-Blocker“ für diese Anwendung mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
       "nothingToSave": "Nichts zu speichern",
       "robotsTxtOnly": "nur robots.txt",
-      "robotsTxtOnlyNote": "{names} besuchen Ihre Website nie — Google und Apple trainieren KI mit ihren normalen Crawlern und lesen diese Namen nur in robots.txt. Sie hier zu blockieren verhindert das nicht; tragen Sie sie stattdessen mit Disallow: / in robots.txt ein."
+      "robotsTxtOnlyNote": "{names} besuchen Ihre Website nie — Google und Apple trainieren KI mit ihren normalen Crawlern und lesen diese Namen nur in robots.txt. Sie hier zu blockieren verhindert das nicht; tragen Sie sie stattdessen mit Disallow: / in robots.txt ein.",
+      "robotsTxt": {
+        "title": "Fügen Sie dies auch in robots.txt ein",
+        "copy": "robots.txt-Zeilen kopieren"
+      }
     },
     "firewall": {
       "pageTitle": "Web-Firewall",
