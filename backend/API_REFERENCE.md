@@ -790,6 +790,7 @@ They are equal for fifteen of the seventeen site types, because most application
 
   "basic_auth_enabled": false, "basic_auth_username": null,
   "basic_auth_supported": true,
+  "basic_auth_unencrypted": false,
 
   "ai_bot_policy": "block_training", "ai_bot_policy_title": "Block AI training crawlers",
   "waf_supported": true,
@@ -2560,6 +2561,8 @@ To disable: `{"enabled": false}`
 **Not every application can be put behind it.** `basic_auth_supported: false` on the application resource means this site's own interface signs in with the `Authorization` header — Node-RED's editor sends `Authorization: Bearer <token>` on every admin call. HTTP carries that header once per request, so Basic Auth and the application's own token cannot both travel: whichever one is sent, the other side answers `401`, and the application becomes unreachable rather than merely double-protected.
 
 Enabling it on such a site is a **`422`** on `enabled`, not a silent success. Disable the control when `basic_auth_supported` is false; those types mandate their own credentials at install time, so nothing is left unprotected.
+
+**Password protection forces HTTPS when the site has a certificate (2026-10-05, junior re-test #9).** Plain http is redirected to https *before* the password prompt, on nginx, Apache and OpenLiteSpeed, whatever `certificate.force_https` says, so the password never travels in clear. `force_https` keeps showing the user's own setting; turning it off while password protection is on changes nothing until protection is off too. A site **without** a certificate keeps working over http, and `basic_auth_unencrypted: true` says the password is sent unencrypted: show a warning such as "This site has no SSL certificate, so the password is sent unencrypted. Add a certificate to protect it."
 
 ---
 

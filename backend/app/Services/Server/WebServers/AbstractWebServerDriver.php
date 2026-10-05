@@ -421,7 +421,13 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             // own .htaccess — Nextcloud's CalDAV/CardDAV discovery and .mjs.
             'wellKnown' => $siteType?->wellKnownRoutes() ?? ['redirects' => [], 'fallback' => null],
             'mimeTypes' => $siteType?->mimeTypes() ?? [],
-            'forceHttps' => $forceHttps = (bool) ($application->scheme() === 'https' && $application->certificate?->force_https),
+            // Password protection forces it too (junior re-test #9): with the
+            // redirect off, plain http asked for the site password and took it
+            // in clear. Nothing to redirect to without a certificate, so an
+            // http-only site keeps working, and the API says it is unencrypted
+            // (`basic_auth_unencrypted`).
+            'forceHttps' => $forceHttps = $application->scheme() === 'https'
+                && ($application->certificate?->force_https || $application->basic_auth_enabled),
             // Names the certificate does not cover, while HTTPS is forced.
             // Sending one to https://<that name> lands the visitor on a
             // certificate error, so they go to the primary instead — which a

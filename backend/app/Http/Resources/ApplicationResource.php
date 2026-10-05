@@ -86,6 +86,10 @@ class ApplicationResource extends JsonResource
             // closer to a credential no API response should carry.
             'basic_auth_enabled' => (bool) $this->basic_auth_enabled,
             'basic_auth_username' => $this->basic_auth_enabled ? $this->basic_auth_username : null,
+            // On, and no certificate to send visitors to: the browser sends the
+            // password in clear. With one, http is redirected to https before
+            // the prompt, whatever Force HTTPS says (junior re-test #9).
+            'basic_auth_unencrypted' => $this->basic_auth_enabled && $this->resource->scheme() === 'http',
             // False when the application's own client signs in with the
             // Authorization header, which Basic Auth would consume -- the UI
             // disables the control rather than letting the user save something

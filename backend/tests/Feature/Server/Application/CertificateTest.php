@@ -1085,3 +1085,41 @@ it('has no number when there is no expiry date', function () {
 
     expect(CertificateResource::make($certificate)->resolve()['days_remaining'])->toBeNull();
 });
+
+/*
+| Junior re-test #9: with password protection on and Force HTTPS off, plain
+| http asked for the site password and took it in clear. A certificate now
+| means http is sent to https before the prompt, on every web server.
+*/
+
+it('sends http to https before asking for the site password, whatever Force HTTPS says', function (string $driver, string $redirect) {
+    activeCertificate($this->application);
+    $this->application->forceFill(['basic_auth_enabled' => true, 'basic_auth_username' => 'staff'])->save();
+
+    expect(renderedCertVhost($this->application->fresh(), $driver))->toContain($redirect);
+})->with([
+    'nginx' => ['nginx', 'return 301 https://$host$request_uri;'],
+    'apache' => ['apache', 'RedirectMatch 301 ^/(?!\.well-known/acme-challenge/)(.*)$ https://shop.example.com/$1'],
+    'openlitespeed' => ['openlitespeed', 'RewriteRule ^/?(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]'],
+]);
+
+it('leaves an http-only site with a password working, and says the password is unencrypted', function () {
+    $this->application->forceFill(['basic_auth_enabled' => true, 'basic_auth_username' => 'staff'])->save();
+
+    // Nothing to redirect to without a certificate.
+    expect(renderedCertVhost($this->application->fresh(), 'nginx'))->not->toContain('return 301 https://');
+
+    $this->actingAs($this->admin)->getJson("/api/applications/{$this->application->id}")
+        ->assertJsonPath('application.basic_auth_unencrypted', true);
+
+    activeCertificate($this->application);
+
+    $this->actingAs($this->admin)->getJson("/api/applications/{$this->application->id}")
+        ->assertJsonPath('application.basic_auth_unencrypted', false);
+});
+
+it('does not force https for a site without a password when Force HTTPS is off', function () {
+    activeCertificate($this->application);
+
+    expect(renderedCertVhost($this->application->fresh(), 'nginx'))->not->toContain('return 301 https://$host$request_uri;');
+});
