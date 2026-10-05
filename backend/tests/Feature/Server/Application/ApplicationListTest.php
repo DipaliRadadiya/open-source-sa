@@ -162,6 +162,20 @@ it('combines a filter with the search', function () {
         ->and($response->json('applications.0.name'))->toBe('Shop archive');
 });
 
+it('lists paused sites under Paused and not under Running', function () {
+    // Junior re-test #5: a paused site is `active` in the column, so it was
+    // listed under Running, and `paused` was refused as a status.
+    listedApp('Live', 'live.example.com');
+    listedApp('Resting', 'resting.example.com', ['disabled_at' => now()]);
+    listedApp('Broken', 'broken.example.com', ['status' => 'failed']);
+
+    $paused = $this->actingAs($this->admin)->getJson('/api/applications?filter[status]=paused')->assertOk();
+    $running = $this->actingAs($this->admin)->getJson('/api/applications?filter[status]=active')->assertOk();
+
+    expect(collect($paused->json('applications'))->pluck('name')->all())->toBe(['Resting'])
+        ->and(collect($running->json('applications'))->pluck('name')->all())->toBe(['Live']);
+});
+
 it('refuses a status that is not a real one', function () {
     listedApp('Live', 'live.example.com');
 

@@ -40,6 +40,8 @@ class IndexApplicationsRequest extends FormRequest
      * sorting by it means a join, and the column shows a username the list can
      * already be searched by.
      */
+    public const PAUSED = 'paused';
+
     public const SORTS = ['created_at', 'name', 'domain', 'status', 'site_type', 'directory_size_bytes'];
 
     /**
@@ -69,7 +71,10 @@ class IndexApplicationsRequest extends FormRequest
             // for repeatedly.
             'search' => ['sometimes', 'nullable', 'string', 'max:255'],
 
-            'filter.status' => ['sometimes', 'nullable', Rule::enum(ApplicationStatus::class)],
+            // `paused` is not a stored status — a paused site stays `active`
+            // with `disabled_at` set — but it is what the badge shows, so it
+            // is what the filter offers (junior re-test #5).
+            'filter.status' => ['sometimes', 'nullable', Rule::in([...array_column(ApplicationStatus::cases(), 'value'), self::PAUSED])],
 
             // Against the registered site types, not a free string — the same
             // list the catalog is built from, so the filter cannot offer or

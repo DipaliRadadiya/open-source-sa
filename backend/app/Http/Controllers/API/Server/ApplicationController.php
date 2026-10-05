@@ -53,7 +53,13 @@ class ApplicationController extends Controller
             ->with('systemUser', 'botRules')
             // Exact matches on indexed columns; the enum and the site-type list
             // are validated in the request, so anything reaching here is real.
-            ->when($filter['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
+            // A paused site is `active` in the column, so Running has to
+            // leave it out and Paused has to find it by `disabled_at`.
+            ->when($filter['status'] ?? null, fn ($query, $status) => match ($status) {
+                IndexApplicationsRequest::PAUSED => $query->whereNotNull('disabled_at'),
+                ApplicationStatus::Active->value => $query->where('status', $status)->whereNull('disabled_at'),
+                default => $query->where('status', $status),
+            })
             ->when($filter['site_type'] ?? null, fn ($query, $type) => $query->where('site_type', $type))
             // Name or domain — the two things somebody has in mind when they
             // go looking for a site. The helper groups the OR and makes the
