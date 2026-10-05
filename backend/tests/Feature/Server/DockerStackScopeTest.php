@@ -133,6 +133,30 @@ it('still offers PHP site types on a PHP stack', function () {
         ->and($wordpress['unavailable_code'])->not->toBe(SiteTypeManager::BLOCKED_STACK);
 });
 
+it('leaves the catalog a list on every stack, whichever end it filtered', function (string $stack) {
+    // The filter drops a contiguous run of types, and which end depends on the
+    // stack: a Docker box keeps the leading container types and stays a list by
+    // luck, while every other stack drops them and the survivors used to start
+    // at index 20. That asymmetry is why this is asserted per stack rather than
+    // once — the shape only broke on the stacks nobody tested it on, which was
+    // all of them except Docker.
+    //
+    // A gapped array is a JSON object, and the frontend parses this with
+    // `z.array()`, so the whole create page failed to read.
+    recordStack($stack);
+
+    expect(array_is_list(app(SiteTypeManager::class)->catalog()))->toBeTrue();
+})->with(['lemp', 'lamp', 'ols', 'mern', 'docker']);
+
+it('leaves the catalog a list on a server with no recorded stack', function () {
+    // The migrated-in box, which falls on `DEFAULT_PROFILES`. It hosts PHP and
+    // Node and no containers, so it filters the Docker types like a LEMP box
+    // does — and it is the shape the majority of real installs were serving.
+    ServerCapability::query()->delete();
+
+    expect(array_is_list(app(SiteTypeManager::class)->catalog()))->toBeTrue();
+});
+
 it('leaves the site-facing setup rows off a container-only server', function () {
     // The symptom that started this, and the fix I got wrong the first time.
     // Marking the database row `recommended => false` left it on the page with

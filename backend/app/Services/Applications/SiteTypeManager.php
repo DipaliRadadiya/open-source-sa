@@ -121,10 +121,20 @@ class SiteTypeManager
         // these types, and `StoreApplicationRequest` still calls it, so the
         // endpoint refuses a filtered type exactly as before. This hides a card
         // whose endpoint says no — not a button whose endpoint works.
-        $types = array_filter(
+        //
+        // `array_values`, and it is load-bearing: `array_filter` preserves keys,
+        // and the filtered-out types are contiguous at one end of `all()`. The
+        // survivors therefore start at a non-zero index, `json_encode` emits a
+        // JSON *object* instead of an array, and the frontend's `z.array()`
+        // rejects the whole payload — which took the create page down to a
+        // "could not read this" card on every stack except the one whose types
+        // happen to sit first. Every test here reads the response through
+        // `keyBy('name')`, which cannot tell the two shapes apart, so only a
+        // list assertion catches it.
+        $types = array_values(array_filter(
             $this->all(),
             fn (SiteType $type) => ($this->unavailable($type)['code'] ?? null) !== self::BLOCKED_STACK,
-        );
+        ));
 
         return array_map(function (SiteType $type) {
             $profile = $type->servingProfile();

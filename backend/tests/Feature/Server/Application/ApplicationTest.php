@@ -93,6 +93,30 @@ it('returns the site type catalog with field schemas', function () {
     expect($types['wordpress']['needs_database'])->toBeTrue();
 });
 
+it('sends the catalog as a JSON array, not an object keyed by position', function () {
+    // The assertion every other test in this file is structurally unable to
+    // make. They all read the payload through `collect(...)->keyBy('name')`,
+    // which treats a JSON array and a JSON object identically — so a catalog
+    // that came back as `{"20": {...}}` passed all of them while the create
+    // page showed "the server's answer was not the shape this page expects".
+    //
+    // The cause is `array_filter` preserving keys: this server hosts no
+    // containers, so the Docker types are dropped and the survivors start at a
+    // non-zero index. Asserted on a server that filters something, because one
+    // that filters nothing cannot fail.
+    capableServer();
+
+    $response = $this->withHeaders(appHeaders())->getJson('/api/site-types');
+
+    $response->assertOk();
+
+    // Both halves on purpose. `array_is_list` names the defect, and the raw
+    // body is what the frontend's `z.array()` actually parses — asserting only
+    // the decoded form would still pass if the encoding changed underneath.
+    expect(array_is_list($response->json('site_types')))->toBeTrue()
+        ->and($response->getContent())->toContain('"site_types":[');
+});
+
 it('greys out types this server cannot run, with a reason and what to install', function () {
     capableServer(php: false, node: true);
 
