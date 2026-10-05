@@ -1,3 +1,4 @@
+import { roleName, roleDescription } from "@/lib/roles/role-label";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-table/card-list";
@@ -15,7 +16,7 @@ export function RolesCards({ roles }) {
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span className="min-w-0 font-medium break-all">{role.name}</span>
+                <span className="min-w-0 font-medium break-all">{roleName(role, t)}</span>
                 {role.is_system ? (
                   <Badge variant="warning" className="font-normal">
                     {t("system")}
@@ -23,7 +24,7 @@ export function RolesCards({ roles }) {
                 ) : null}
               </div>
               <p className="line-clamp-2 text-xs text-muted-foreground">
-                {role.description || "—"}
+                {roleDescription(role, t) || "—"}
               </p>
             </div>
             <div className="-me-2 -mt-1 shrink-0">

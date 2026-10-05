@@ -423,7 +423,10 @@
       "updated": "Benutzer aktualisiert.",
       "deleted": "Benutzer gelöscht.",
       "passwordReset": "Passwort zurückgesetzt.",
-      "deleteFailed": "Dieser Benutzer konnte nicht gelöscht werden."
+      "deleteFailed": "Dieser Benutzer konnte nicht gelöscht werden.",
+      "createFailed": "Dieser Benutzer konnte nicht erstellt werden.",
+      "updateFailed": "Dieser Benutzer konnte nicht gespeichert werden.",
+      "resetFailed": "Das Passwort konnte nicht zurückgesetzt werden."
     },
     "impersonate": {
       "title": "Als dieser Benutzer anmelden?",
@@ -439,7 +442,7 @@
       "button": "Berechtigungen synchronisieren",
       "hint": "Lädt die Liste der verfügbaren Berechtigungen aus der App neu. Nach einem Update mit neuen Berechtigungen ausführen.",
       "title": "Berechtigungskatalog synchronisieren?",
-      "description": "Dies lädt alle verfügbaren Berechtigungen aus der App neu (führt den Seeder erneut aus) und stellt den vollen Zugriff der Administrator-Rolle wieder her. Ihre übrigen Rollen bleiben unverändert. Kann jederzeit gefahrlos ausgeführt werden.",
+      "description": "Dies lädt alle Berechtigungen des Panels neu und gibt der Administrator-Rolle wieder vollen Zugriff. Ihre anderen Rollen behalten ihre Auswahl. Jederzeit sicher ausführbar.",
       "cancel": "Abbrechen",
       "confirm": "Jetzt synchronisieren",
       "syncing": "Synchronisiert…",
@@ -543,7 +546,7 @@
     },
     "delete": {
       "title": "Rolle löschen?",
-      "description": "Dies löscht {name}. Benutzern mit dieser Rolle wird sie entzogen (ihre Konten bleiben bestehen). Dies kann nicht rückgängig gemacht werden.",
+      "description": "Dies löscht {name}. Wer auch andere Rollen hat, behält diese. Eine Rolle kann nicht gelöscht werden, solange sie die einzige Rolle von jemandem ist. Dies kann nicht rückgängig gemacht werden.",
       "confirm": "Löschen",
       "deleting": "Wird gelöscht…",
       "cancel": "Abbrechen"
@@ -552,10 +555,18 @@
       "created": "Rolle erstellt.",
       "updated": "Rolle aktualisiert.",
       "deleted": "Rolle gelöscht.",
-      "deleteFailed": "Diese Rolle konnte nicht gelöscht werden."
+      "deleteFailed": "Diese Rolle konnte nicht gelöscht werden.",
+      "createFailed": "Diese Rolle konnte nicht erstellt werden.",
+      "updateFailed": "Diese Rolle konnte nicht gespeichert werden."
     },
     "loadFailed": "Die Rollen konnten nicht geladen werden. Das bedeutet nicht, dass sie fehlen – versuchen Sie es gleich noch einmal.",
-    "catalogLoadFailed": "Die Liste der Berechtigungen konnte nicht geladen werden, daher lassen sich Rollen gerade nicht bearbeiten. Es wurde nichts geändert."
+    "catalogLoadFailed": "Die Liste der Berechtigungen konnte nicht geladen werden, daher lassen sich Rollen gerade nicht bearbeiten. Es wurde nichts geändert.",
+    "builtIn": {
+      "administrator": {
+        "name": "Administrator",
+        "description": "Voller Zugriff auf alle Berechtigungen. Vom System verwaltet."
+      }
+    }
   },
   "account": {
     "title": "Konto",

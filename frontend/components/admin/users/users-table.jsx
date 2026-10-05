@@ -1,5 +1,6 @@
 "use client";
 
+import { roleName } from "@/lib/roles/role-label";
 import { Plus, Users, SearchX } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
@@ -51,6 +52,7 @@ function AccountTypeCell({ row }) {
 }
 
 function RolesCell({ row }) {
+  const tr = useTranslations("roles");
   const userRoles = row.original.roles ?? [];
   if (!userRoles.length) {
     return <span className="text-muted-foreground">—</span>;
@@ -61,7 +63,7 @@ function RolesCell({ row }) {
     <div className="flex flex-wrap items-center gap-1">
       {shown.map((r) => (
         <Badge key={r.id} variant="outline" className="font-normal">
-          {r.name}
+          {roleName(r, tr)}
         </Badge>
       ))}
       {extra > 0 ? (

@@ -17,6 +17,7 @@ import { SyncPermissionsButton } from "@/components/admin/roles/sync-permissions
 import { RoleRowActions } from "@/components/admin/roles/role-row-actions";
 import { RolesCards } from "@/components/admin/roles/roles-cards";
 import { grantedCount } from "@/lib/roles/granted-count";
+import { roleName, roleDescription } from "@/lib/roles/role-label";
 
 /* Cells at module level: flexRender treats a cell function's identity as the
  * component type; inline cells would remount row dialogs on every keystroke. */
@@ -25,7 +26,7 @@ function NameCell({ row }) {
   const t = useTranslations("roles");
   return (
     <div className="flex items-center gap-2">
-      <span className="font-medium">{row.original.name}</span>
+      <span className="font-medium">{roleName(row.original, t)}</span>
       {row.original.is_system && (
         <Badge variant="warning" className="font-normal">
           {t("system")}
@@ -36,9 +37,10 @@ function NameCell({ row }) {
 }
 
 function DescriptionCell({ row }) {
+  const t = useTranslations("roles");
   return (
     <span className="line-clamp-1 max-w-sm text-muted-foreground">
-      {row.original.description || "—"}
+      {roleDescription(row.original, t) || "—"}
     </span>
   );
 }
@@ -98,7 +100,7 @@ function RolesList({ data, meta }) {
           <RefreshButton />
           <SyncPermissionsButton />
           <Button asChild>
-            <Link href="/admin/roles/new">
+            <Link href="/admin/roles/new" data-roles-add>
               <Plus className="size-4" />
               {t("addRole")}
             </Link>

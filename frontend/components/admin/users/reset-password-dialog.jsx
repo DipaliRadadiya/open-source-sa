@@ -37,7 +37,7 @@ export function ResetPasswordDialog({ user, open, onOpenChange }) {
       onOpenChange?.(false);
       form.reset();
     } catch (error) {
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: t("toast.resetFailed") });
     }
   }
 

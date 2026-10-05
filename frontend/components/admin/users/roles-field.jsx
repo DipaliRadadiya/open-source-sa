@@ -1,9 +1,11 @@
+import { roleName, roleDescription } from "@/lib/roles/role-label";
 import { useTranslations } from "next-intl";
 import { Checkbox } from "@/components/ui/checkbox";
 
 // `value` is an array of role ids; at least one is required (form schema).
 export function RolesField({ roles, value = [], onChange, failed = false }) {
   const t = useTranslations("users");
+  const tr = useTranslations("roles");
 
   function toggle(id, checked) {
     onChange(checked ? [...value, id] : value.filter((v) => v !== id));
@@ -41,11 +43,11 @@ export function RolesField({ roles, value = [], onChange, failed = false }) {
             />
             <div className="min-w-0 space-y-0.5">
               <div className="flex min-h-4 items-center text-sm font-medium leading-none">
-                {role.name}
+                {roleName(role, tr)}
               </div>
-              {role.description ? (
+              {roleDescription(role, tr) ? (
                 <p className="line-clamp-2 text-xs text-muted-foreground">
-                  {role.description}
+                  {roleDescription(role, tr)}
                 </p>
               ) : null}
             </div>

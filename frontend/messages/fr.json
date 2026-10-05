@@ -423,7 +423,10 @@
       "updated": "Utilisateur mis à jour.",
       "deleted": "Utilisateur supprimé.",
       "passwordReset": "Mot de passe réinitialisé.",
-      "deleteFailed": "Impossible de supprimer cet utilisateur."
+      "deleteFailed": "Impossible de supprimer cet utilisateur.",
+      "createFailed": "Impossible de créer cet utilisateur.",
+      "updateFailed": "Impossible d’enregistrer cet utilisateur.",
+      "resetFailed": "Impossible de réinitialiser le mot de passe."
     },
     "impersonate": {
       "title": "Se connecter avec cet utilisateur ?",
@@ -439,7 +442,7 @@
       "button": "Synchroniser les autorisations",
       "hint": "Recharge la liste des autorisations disponibles depuis l'application. Lancez ceci après une mise à jour qui ajoute de nouvelles autorisations.",
       "title": "Synchroniser le catalogue d'autorisations ?",
-      "description": "Ceci recharge toutes les autorisations disponibles depuis l'application (relance le seeder) et restaure l'accès complet du rôle Administrateur. Vos autres rôles ne sont pas modifiés. Sans danger à tout moment.",
+      "description": "Ceci recharge toutes les autorisations du panel et rend au rôle Administrateur son accès complet. Vos autres rôles gardent leurs choix. Sans danger à tout moment.",
       "cancel": "Annuler",
       "confirm": "Synchroniser maintenant",
       "syncing": "Synchronisation…",
@@ -543,7 +546,7 @@
     },
     "delete": {
       "title": "Supprimer le rôle ?",
-      "description": "Ceci supprime {name}. Les utilisateurs ayant ce rôle seront détachés (leurs comptes restent). Action irréversible.",
+      "description": "Ceci supprime {name}. Les personnes qui ont aussi d’autres rôles les gardent. Un rôle ne peut pas être supprimé tant qu’il est le seul rôle de quelqu’un. Cette action est irréversible.",
       "confirm": "Supprimer",
       "deleting": "Suppression…",
       "cancel": "Annuler"
@@ -552,10 +555,18 @@
       "created": "Rôle créé.",
       "updated": "Rôle mis à jour.",
       "deleted": "Rôle supprimé.",
-      "deleteFailed": "Impossible de supprimer ce rôle."
+      "deleteFailed": "Impossible de supprimer ce rôle.",
+      "createFailed": "Impossible de créer ce rôle.",
+      "updateFailed": "Impossible d’enregistrer ce rôle."
     },
     "loadFailed": "Les rôles n'ont pas pu être chargés. Cela ne signifie pas que le rôle est absent — réessayez dans un instant.",
-    "catalogLoadFailed": "La liste des permissions n'a pas pu être chargée, les rôles ne peuvent donc pas être modifiés pour le moment. Rien n'a été modifié."
+    "catalogLoadFailed": "La liste des permissions n'a pas pu être chargée, les rôles ne peuvent donc pas être modifiés pour le moment. Rien n'a été modifié.",
+    "builtIn": {
+      "administrator": {
+        "name": "Administrateur",
+        "description": "Accès complet à toutes les autorisations. Géré par le système."
+      }
+    }
   },
   "account": {
     "title": "Compte",

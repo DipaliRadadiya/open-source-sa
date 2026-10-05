@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "@/components/ui/app-link";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -16,6 +16,8 @@ import { DeleteRoleDialog } from "@/components/admin/roles/delete-role-dialog";
 export function RoleRowActions({ role }) {
   const t = useTranslations("roles");
   const [deleteOpen, setDeleteOpen] = useState(false);
+  // Escape or a click away returns focus to ⋯; only Delete (a dialog) keeps it off.
+  const openingDialog = useRef(false);
   // System roles are protected: the backend rejects edit/delete with a 422.
   const isSystem = role.is_system;
 
@@ -31,7 +33,11 @@ export function RoleRowActions({ role }) {
         <DropdownMenuContent
           align="end"
           className="w-40"
-          onCloseAutoFocus={(e) => e.preventDefault()}
+          onCloseAutoFocus={(e) => {
+            if (!openingDialog.current) return;
+            openingDialog.current = false;
+            e.preventDefault();
+          }}
         >
           {isSystem ? (
             <MenuItemHint hint={t("actions.systemHint")}>
@@ -53,7 +59,10 @@ export function RoleRowActions({ role }) {
             <DropdownMenuItem
               variant="destructive"
               disabled={isSystem}
-              onSelect={() => setDeleteOpen(true)}
+              onSelect={() => {
+                openingDialog.current = true;
+                setDeleteOpen(true);
+              }}
             >
               <Trash2 className="size-4" />
               {t("actions.delete")}

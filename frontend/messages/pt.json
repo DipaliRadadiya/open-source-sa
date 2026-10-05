@@ -423,7 +423,10 @@
       "updated": "Usuário atualizado.",
       "deleted": "Usuário excluído.",
       "passwordReset": "Senha redefinida.",
-      "deleteFailed": "Não foi possível excluir este usuário."
+      "deleteFailed": "Não foi possível excluir este usuário.",
+      "createFailed": "Não foi possível criar este usuário.",
+      "updateFailed": "Não foi possível salvar este usuário.",
+      "resetFailed": "Não foi possível redefinir a senha."
     },
     "impersonate": {
       "title": "Entrar como este usuário?",
@@ -439,7 +442,7 @@
       "button": "Sincronizar permissões",
       "hint": "Recarrega a lista de permissões disponíveis a partir da aplicação. Execute após uma atualização adicionar novas permissões.",
       "title": "Sincronizar catálogo de permissões?",
-      "description": "Isso recarrega todas as permissões disponíveis a partir da aplicação (executa o seeder novamente) e restaura o acesso completo do papel Administrator. Não altera as escolhas dos outros papéis. Pode executar a qualquer momento.",
+      "description": "Isso recarrega todas as permissões do painel e devolve ao papel Administrador o acesso total. Seus outros papéis mantêm as escolhas. Pode ser executado a qualquer momento.",
       "cancel": "Cancelar",
       "confirm": "Sincronizar agora",
       "syncing": "Sincronizando…",
@@ -543,7 +546,7 @@
     },
     "delete": {
       "title": "Excluir papel?",
-      "description": "Isso exclui {name}. Os usuários com este papel serão desatribuídos (as contas permanecem). Isso não pode ser desfeito.",
+      "description": "Isso exclui {name}. Quem também tem outros papéis os mantém. Um papel não pode ser excluído enquanto for o único papel de alguém. Isso não pode ser desfeito.",
       "confirm": "Excluir",
       "deleting": "Excluindo…",
       "cancel": "Cancelar"
@@ -552,10 +555,18 @@
       "created": "Papel criado.",
       "updated": "Papel atualizado.",
       "deleted": "Papel excluído.",
-      "deleteFailed": "Não foi possível excluir este papel."
+      "deleteFailed": "Não foi possível excluir este papel.",
+      "createFailed": "Não foi possível criar este papel.",
+      "updateFailed": "Não foi possível salvar este papel."
     },
     "loadFailed": "Os papéis não puderam ser carregados. Isso não significa que o papel esteja ausente — tente novamente em alguns instantes.",
-    "catalogLoadFailed": "Não foi possível carregar a lista de permissões, então os papéis não podem ser editados agora. Nada foi alterado."
+    "catalogLoadFailed": "Não foi possível carregar a lista de permissões, então os papéis não podem ser editados agora. Nada foi alterado.",
+    "builtIn": {
+      "administrator": {
+        "name": "Administrador",
+        "description": "Acesso total a todas as permissões. Gerenciado pelo sistema."
+      }
+    }
   },
   "account": {
     "title": "Conta",

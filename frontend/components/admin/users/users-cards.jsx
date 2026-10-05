@@ -1,3 +1,4 @@
+import { roleName } from "@/lib/roles/role-label";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -8,6 +9,7 @@ import { initials } from "@/lib/format/initials";
 // Roles are not capped here: a card wraps, so "+2" would only hide names.
 export function UsersCards({ users, roles = [], currentUserId }) {
   const t = useTranslations("users");
+  const tr = useTranslations("roles");
 
   return (
     <CardList>
@@ -48,7 +50,7 @@ export function UsersCards({ users, roles = [], currentUserId }) {
                   <div className="flex flex-wrap justify-end gap-1">
                     {userRoles.map((role) => (
                       <Badge key={role.id} variant="outline" className="font-normal">
-                        {role.name}
+                        {roleName(role, tr)}
                       </Badge>
                     ))}
                   </div>

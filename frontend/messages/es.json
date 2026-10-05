@@ -573,7 +573,10 @@
       "updated": "Usuario actualizado.",
       "deleted": "Usuario eliminado.",
       "passwordReset": "Contraseña restablecida.",
-      "deleteFailed": "No se pudo eliminar este usuario."
+      "deleteFailed": "No se pudo eliminar este usuario.",
+      "createFailed": "No se pudo crear este usuario.",
+      "updateFailed": "No se pudo guardar este usuario.",
+      "resetFailed": "No se pudo restablecer la contraseña."
     },
     "impersonate": {
       "title": "¿Iniciar sesión como este usuario?",
@@ -589,7 +592,7 @@
       "button": "Sincronizar permisos",
       "hint": "Recarga la lista de permisos disponibles desde la aplicación. Ejecuta esto después de que una actualización añada nuevos permisos.",
       "title": "¿Sincronizar el catálogo de permisos?",
-      "description": "Esto recarga todos los permisos disponibles desde la aplicación (vuelve a ejecutar el seeder) y restaura el acceso completo del rol Administrador. No cambia las elecciones de tus otros roles. Es seguro ejecutarlo en cualquier momento.",
+      "description": "Esto recarga todos los permisos que ofrece el panel y devuelve al rol Administrador el acceso completo. Tus otros roles mantienen sus opciones. Se puede ejecutar en cualquier momento.",
       "cancel": "Cancelar",
       "confirm": "Sincronizar ahora",
       "syncing": "Sincronizando…",
@@ -693,7 +696,7 @@
     },
     "delete": {
       "title": "¿Eliminar rol?",
-      "description": "Esto elimina {name}. Los usuarios con este rol quedarán sin asignar (sus cuentas se mantienen). Esta acción no se puede deshacer.",
+      "description": "Esto elimina {name}. Quienes tengan también otros roles los conservan. Un rol no se puede eliminar mientras sea el único rol de alguien. Esto no se puede deshacer.",
       "confirm": "Eliminar",
       "deleting": "Eliminando…",
       "cancel": "Cancelar"
@@ -702,10 +705,18 @@
       "created": "Rol creado.",
       "updated": "Rol actualizado.",
       "deleted": "Rol eliminado.",
-      "deleteFailed": "No se pudo eliminar este rol."
+      "deleteFailed": "No se pudo eliminar este rol.",
+      "createFailed": "No se pudo crear este rol.",
+      "updateFailed": "No se pudo guardar este rol."
     },
     "loadFailed": "No se pudieron cargar los roles. Esto no significa que el rol no exista: inténtalo de nuevo en un momento.",
-    "catalogLoadFailed": "No se pudo cargar la lista de permisos, así que ahora no se pueden editar roles. No se ha cambiado nada."
+    "catalogLoadFailed": "No se pudo cargar la lista de permisos, así que ahora no se pueden editar roles. No se ha cambiado nada.",
+    "builtIn": {
+      "administrator": {
+        "name": "Administrador",
+        "description": "Acceso completo a todos los permisos. Lo gestiona el sistema."
+      }
+    }
   },
   "systemUsers": {
     "title": "Usuarios del sistema",

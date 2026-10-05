@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   MoreHorizontal,
@@ -31,6 +31,13 @@ export function UserRowActions({ user, roles = [], rolesFailed = false, currentU
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [impersonateOpen, setImpersonateOpen] = useState(false);
   const [impersonating, setImpersonating] = useState(false);
+  // Only an item that opens a dialog keeps focus off ⋯ (the dialog takes it and hands
+  // it back); Escape or a click away must return it to ⋯, not the top of the page.
+  const openingDialog = useRef(false);
+  const open = (setter) => () => {
+    openingDialog.current = true;
+    setter(true);
+  };
   const isSelf = user.id === currentUserId;
   // Mirrors the backend: no impersonating yourself or another admin (422).
   const canImpersonate = !isSelf && !user.is_admin;
@@ -65,20 +72,24 @@ export function UserRowActions({ user, roles = [], rolesFailed = false, currentU
         <DropdownMenuContent
           align="end"
           className="w-44"
-          onCloseAutoFocus={(e) => e.preventDefault()}
+          onCloseAutoFocus={(e) => {
+            if (!openingDialog.current) return;
+            openingDialog.current = false;
+            e.preventDefault();
+          }}
         >
-          <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+          <DropdownMenuItem onSelect={open(setEditOpen)}>
             <Pencil className="size-4" />
             {t("actions.edit")}
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => setResetOpen(true)}>
+          <DropdownMenuItem onSelect={open(setResetOpen)}>
             <KeyRound className="size-4" />
             {t("actions.resetPassword")}
           </DropdownMenuItem>
           <MenuItemHint hint={impersonateHint}>
             <DropdownMenuItem
               disabled={!canImpersonate}
-              onSelect={() => setImpersonateOpen(true)}
+              onSelect={open(setImpersonateOpen)}
             >
               <UserRoundCog className="size-4" />
               {t("actions.impersonate")}
@@ -89,7 +100,7 @@ export function UserRowActions({ user, roles = [], rolesFailed = false, currentU
             <DropdownMenuItem
               variant="destructive"
               disabled={isSelf}
-              onSelect={() => setDeleteOpen(true)}
+              onSelect={open(setDeleteOpen)}
             >
               <Trash2 className="size-4" />
               {t("actions.delete")}

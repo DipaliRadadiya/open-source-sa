@@ -109,7 +109,7 @@ export function RoleForm({ mode = "create", role, catalog }) {
       await pushAndWait("/admin/roles");
       toast.success(isEdit ? t("toast.updated") : t("toast.created"));
     } catch (error) {
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: isEdit ? t("toast.updateFailed") : t("toast.createFailed") });
     }
   }
 

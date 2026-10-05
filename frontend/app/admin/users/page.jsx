@@ -25,6 +25,15 @@ export default async function AdminUsersPage({ searchParams }) {
     id: r.id,
     name: r.name,
     description: r.description,
+    slug: r.slug,
+    is_system: r.is_system,
+  }));
+  // A user's roles arrive as {id, name}; the built-in flag comes from the roles list
+  // so the Administrator role can be shown in the reader's language.
+  const roleById = new Map(roleOptions.map((r) => [r.id, r]));
+  const usersWithRoles = users.map((u) => ({
+    ...u,
+    roles: (u.roles ?? []).map((r) => ({ ...r, ...(roleById.get(r.id) ?? {}) })),
   }));
 
   const hasFilters = Boolean(sp.search || sp.is_admin);
@@ -45,7 +54,7 @@ export default async function AdminUsersPage({ searchParams }) {
       <UsersView roles={roleOptions} rolesFailed={rolesFailed}>
         <UsersToolbar />
         <UsersTable
-          data={users}
+          data={usersWithRoles}
           roles={roleOptions}
           rolesFailed={rolesFailed}
           currentUserId={user?.id}

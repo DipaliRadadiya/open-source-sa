@@ -97,7 +97,7 @@ export function UserFormDialog({
       onOpenChange?.(false);
       form.reset();
     } catch (error) {
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: isEdit ? t("toast.updateFailed") : t("toast.createFailed") });
     }
   }
 

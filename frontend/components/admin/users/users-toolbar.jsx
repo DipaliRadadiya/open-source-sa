@@ -33,7 +33,7 @@ export function UsersToolbar() {
             setQuery({ is_admin: v === "all" ? undefined : v }, { resetPage: true })
           }
         >
-          <SelectTrigger className="w-full sm:w-44">
+          <SelectTrigger className="w-full sm:w-44" aria-label={t("columns.accountType")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -46,7 +46,7 @@ export function UsersToolbar() {
 
       <div className="flex flex-wrap items-center gap-2">
         <RefreshButton />
-        <Button onClick={openCreate}>
+        <Button onClick={openCreate} data-users-add>
           <Plus className="size-4" />
           {t("addUser")}
         </Button>

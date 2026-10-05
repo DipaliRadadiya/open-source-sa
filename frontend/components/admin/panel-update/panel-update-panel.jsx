@@ -56,7 +56,16 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
   );
 
   const activeRunId = isActive(run) ? run.id : null;
-  const visibleRun = run?.status === "succeeded" && !successReady ? null : run;
+  // A failed run from another build (the panel was updated or redeployed since) says
+  // nothing about this one: on 5 Oct a 29 Sep "didn't finish" sat above "Up to date".
+  const staleRun =
+    Boolean(run) &&
+    !isActive(run) &&
+    run.status !== "succeeded" &&
+    Boolean(run.from_commit) &&
+    Boolean(state.installed?.commit_hash) &&
+    run.from_commit !== state.installed.commit_hash;
+  const visibleRun = staleRun || (run?.status === "succeeded" && !successReady) ? null : run;
 
   // A successful run remains latest_run after reloading into the new code; hide
   // the run already reloaded for, or it starts a fresh countdown forever.
