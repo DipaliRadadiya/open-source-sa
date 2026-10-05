@@ -85,7 +85,7 @@ class UpdateFirewallRule
                     ? ($enabled ? 'firewall.rule_enabled' : 'firewall.rule_disabled')
                     : 'firewall.rule_updated',
                 $rule,
-                ['ports' => $rule->portSpec().($rule->protocol !== 'all' ? '/'.$rule->protocol : '')],
+                ['ports' => $rule->summary()],
             );
 
             return $rule;

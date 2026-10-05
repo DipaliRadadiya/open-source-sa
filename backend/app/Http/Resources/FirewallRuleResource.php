@@ -26,23 +26,9 @@ class FirewallRuleResource extends JsonResource
             // Non-`user` rules are system-seeded and protected from deletion.
             'protected' => $this->isProtected(),
             // Localized plain-English row, e.g. "Allow 443/tcp from Anywhere".
-            'summary' => $this->summary(),
+            'summary' => $this->resource->summary(),
             'created_at' => $this->created_at?->format('d-m-Y H:i:s'),
             'created_at_human' => $this->created_at?->diffForHumans(),
         ];
-    }
-
-    private function summary(): string
-    {
-        $ports = $this->portSpec();
-        if ($this->protocol !== 'all') {
-            $ports .= '/'.$this->protocol;
-        }
-
-        return __('firewall.summary', [
-            'action' => __('firewall.actions.'.$this->action),
-            'ports' => $ports,
-            'source' => $this->source_ip ?: __('firewall.anywhere'),
-        ]);
     }
 }

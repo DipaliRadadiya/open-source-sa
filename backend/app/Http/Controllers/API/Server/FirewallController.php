@@ -12,12 +12,15 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Firewall\IndexFirewallRulesRequest;
 use App\Http\Requests\Server\Firewall\StoreFirewallRuleRequest;
 use App\Http\Requests\Server\Firewall\ToggleFirewallRequest;
+use App\Http\Requests\Server\Firewall\UnmanagedFirewallRuleRequest;
 use App\Http\Requests\Server\Firewall\UpdateFirewallRuleRequest;
 use App\Http\Resources\FirewallRuleResource;
 use App\Models\FirewallRule;
+use App\Services\ActivityLogger;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Firewall\ListeningPorts;
 use App\Services\Server\Firewall\RiskyPorts;
+use App\Services\Server\Sync\Discoverers\FirewallRuleDiscoverer;
 use App\Support\FirewallPresets;
 use App\Support\ListSearch;
 use App\Support\ListSort;
@@ -25,6 +28,7 @@ use App\Support\SshPort;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class FirewallController extends Controller
 {
@@ -36,6 +40,7 @@ class FirewallController extends Controller
         Firewall $firewall,
         ListeningPorts $listening,
         RiskyPorts $risky,
+        FirewallRuleDiscoverer $discoverer,
     ): JsonResponse {
         // `status()` throws when it cannot read ufw, and for every other
         // caller that is right: the guards decide whether a rule is safe to
@@ -81,7 +86,79 @@ class FirewallController extends Controller
             // nothing there.
             'listening' => $listening->all(),
             'risky_ports' => $risky->all(),
+            // Rules ufw enforces that were added outside the panel (FW-08),
+            // which this screen used to leave out entirely. `adoptable`
+            // false means the panel cannot hold it (LIMIT, outbound, an
+            // application profile) and `reason` says which. Null when ufw
+            // could not be read.
+            'unmanaged_rules' => $this->unmanagedRules($discoverer),
         ]);
+    }
+
+    /**
+     * Take a rule added outside the panel under the panel's management.
+     */
+    public function adoptUnmanaged(UnmanagedFirewallRuleRequest $request, FirewallRuleDiscoverer $discoverer, ActivityLogger $activity): JsonResponse
+    {
+        $rule = $this->adoptOrFail($request->key(), $discoverer);
+        $activity->log('firewall.rule_adopted', $rule, ['ports' => $rule->summary()]);
+
+        return response()->json(['rule' => FirewallRuleResource::make($rule)->resolve()], 201);
+    }
+
+    /**
+     * Remove a rule added outside the panel, through the same guards as any
+     * other: adopted first, so the SSH-lockout and protected-rule checks see
+     * it, and the row put back out again if they refuse.
+     */
+    public function destroyUnmanaged(UnmanagedFirewallRuleRequest $request, FirewallRuleDiscoverer $discoverer, DeleteFirewallRule $delete): JsonResponse
+    {
+        $rule = $this->adoptOrFail($request->key(), $discoverer);
+
+        try {
+            $delete->execute($rule);
+        } catch (\Throwable $e) {
+            $rule->exists && $rule->delete();
+
+            throw $e;
+        }
+
+        return response()->json(null, 204);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>|null
+     */
+    private function unmanagedRules(FirewallRuleDiscoverer $discoverer): ?array
+    {
+        $items = $discoverer->unmanaged();
+
+        if ($items === null) {
+            return null;
+        }
+
+        return array_map(fn (array $item): array => [
+            'key' => $item['key'],
+            'rule' => trim(($item['evidence']['to'] ?? '').' '.($item['evidence']['action'] ?? '').' from '.($item['evidence']['from'] ?? '')),
+            'adoptable' => ! isset($item['skip']),
+            'reason' => isset($item['skip']) ? __('sync.reasons.'.$item['skip']) : null,
+        ], $items);
+    }
+
+    private function adoptOrFail(string $key, FirewallRuleDiscoverer $discoverer): FirewallRule
+    {
+        $item = collect($discoverer->unmanaged() ?? [])->firstWhere('key', $key);
+
+        if ($item === null) {
+            throw ValidationException::withMessages(['key' => [__('errors/firewall.unmanaged_not_found')]]);
+        }
+
+        if (isset($item['skip'])) {
+            throw ValidationException::withMessages(['key' => [__('sync.reasons.'.$item['skip'])]]);
+        }
+
+        /** @var FirewallRule */
+        return $discoverer->adopt($item);
     }
 
     /**

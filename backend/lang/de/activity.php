@@ -82,6 +82,7 @@ return [
     'role.deleted' => 'Rolle :name gelöscht',
     'permission.synced' => 'Berechtigungskatalog synchronisiert (:count Berechtigungen)',
     'firewall.rule_added' => 'Firewall-Regel hinzugefügt (:ports)',
+    'firewall.rule_adopted' => 'Firewall-Regel :ports übernommen, die außerhalb des Panels angelegt wurde',
     'firewall.rule_updated' => 'Firewall-Regel :ports aktualisiert',
     'firewall.rule_enabled' => 'Firewall-Regel :ports aktiviert',
     'firewall.rule_disabled' => 'Firewall-Regel :ports deaktiviert',

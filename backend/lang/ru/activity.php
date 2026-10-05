@@ -82,6 +82,7 @@ return [
     'role.deleted' => 'Удалена роль :name',
     'permission.synced' => 'Синхронизирован каталог разрешений (:count разрешений)',
     'firewall.rule_added' => 'Добавлено правило брандмауэра (:ports)',
+    'firewall.rule_adopted' => 'Взято под управление правило брандмауэра :ports, добавленное вне панели',
     'firewall.rule_updated' => 'Обновил правило брандмауэра :ports',
     'firewall.rule_enabled' => 'Включил правило брандмауэра :ports',
     'firewall.rule_disabled' => 'Отключил правило брандмауэра :ports',

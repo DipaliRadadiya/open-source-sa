@@ -14,4 +14,7 @@ Route::get('/firewall/rules', [FirewallController::class, 'rules'])->middleware(
 Route::post('/firewall/rules', [FirewallController::class, 'store'])->middleware('permission:firewall,manage');
 Route::put('/firewall/rules/{firewallRule}', [FirewallController::class, 'update'])->middleware('permission:firewall,manage');
 Route::delete('/firewall/rules/{firewallRule}', [FirewallController::class, 'destroy'])->middleware('permission:firewall,manage');
+// Rules added outside the panel (FW-08): take one under management, or remove it.
+Route::post('/firewall/unmanaged/adopt', [FirewallController::class, 'adoptUnmanaged'])->middleware('permission:firewall,manage');
+Route::delete('/firewall/unmanaged', [FirewallController::class, 'destroyUnmanaged'])->middleware('permission:firewall,manage');
 Route::put('/firewall/toggle', [FirewallController::class, 'toggle'])->middleware('permission:firewall,manage');

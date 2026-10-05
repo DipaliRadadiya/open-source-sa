@@ -62,13 +62,8 @@ class CreateFirewallRule
             throw new FirewallOperationException($result->reference);
         }
 
-        $this->activityLogger->log('firewall.rule_added', $rule, ['ports' => $this->ports($rule)]);
+        $this->activityLogger->log('firewall.rule_added', $rule, ['ports' => $rule->summary()]);
 
         return $rule;
-    }
-
-    private function ports(FirewallRule $rule): string
-    {
-        return $rule->portSpec().($rule->protocol !== 'all' ? '/'.$rule->protocol : '');
     }
 }

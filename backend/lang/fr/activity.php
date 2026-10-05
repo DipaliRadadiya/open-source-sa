@@ -82,6 +82,7 @@ return [
     'role.deleted' => 'Rôle :name supprimé',
     'permission.synced' => 'A synchronisé le catalogue des permissions (:count permissions)',
     'firewall.rule_added' => 'A ajouté une règle de pare-feu (:ports)',
+    'firewall.rule_adopted' => 'Prise en charge de la règle de pare-feu :ports, ajoutée hors du panneau',
     'firewall.rule_updated' => 'A mis à jour la règle de pare-feu :ports',
     'firewall.rule_enabled' => 'A activé la règle de pare-feu :ports',
     'firewall.rule_disabled' => 'A désactivé la règle de pare-feu :ports',

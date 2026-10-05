@@ -88,6 +88,7 @@ return [
     'role.deleted' => 'Deleted role :name',
     'permission.synced' => 'Synced the permission catalog (:count permissions)',
     'firewall.rule_added' => 'Added a firewall rule (:ports)',
+    'firewall.rule_adopted' => 'Took over firewall rule :ports, added outside the panel',
     'firewall.rule_updated' => 'Updated firewall rule :ports',
     'firewall.rule_enabled' => 'Enabled firewall rule :ports',
     'firewall.rule_disabled' => 'Disabled firewall rule :ports',

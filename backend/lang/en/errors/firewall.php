@@ -8,4 +8,5 @@ return [
     'protected_rule_edit' => 'The rule for port :ports is managed by the panel — changing it could cut off access to this server. While the firewall is on, only its description can be changed. Turn the firewall off to edit it, or add your own rule alongside it.',
     'invalid_source' => 'The source must be a valid IP address or CIDR range.',
     'ssh_lockout' => 'This is the only rule allowing SSH on port :port. Removing it would lock you out of this server. Add another rule for that port first, or disable the firewall.',
+    'unmanaged_not_found' => 'That rule is no longer in the server\'s firewall. Refresh the page to see the current rules.',
 ];

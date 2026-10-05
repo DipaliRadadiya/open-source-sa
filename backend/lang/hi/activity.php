@@ -82,6 +82,7 @@ return [
     'role.deleted' => 'भूमिका :name हटाई',
     'permission.synced' => 'अनुमति सूची सिंक की (:count अनुमतियाँ)',
     'firewall.rule_added' => 'फ़ायरवॉल नियम जोड़ा (:ports)',
+    'firewall.rule_adopted' => 'पैनल के बाहर जोड़ा गया फ़ायरवॉल नियम :ports पैनल के प्रबंधन में लिया',
     'firewall.rule_updated' => 'फ़ायरवॉल नियम :ports अपडेट किया',
     'firewall.rule_enabled' => 'फ़ायरवॉल नियम :ports सक्षम किया',
     'firewall.rule_disabled' => 'फ़ायरवॉल नियम :ports अक्षम किया',

@@ -31,7 +31,7 @@ class DeleteFirewallRule
         // and fails this one.
         $this->sshLockoutGuard->assertSurvives($rule);
 
-        $ports = $rule->portSpec().($rule->protocol !== 'all' ? '/'.$rule->protocol : '');
+        $ports = $rule->summary();
 
         // Not wrapped in a transaction. `ufw` changes the running firewall the
         // moment it returns, so a rollback afterwards could only undo the row —

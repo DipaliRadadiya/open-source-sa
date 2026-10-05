@@ -82,6 +82,7 @@ return [
     'role.deleted' => 'ロール :name を削除しました',
     'permission.synced' => '権限カタログを同期しました（:count 件の権限）',
     'firewall.rule_added' => 'ファイアウォールルールを追加しました (:ports)',
+    'firewall.rule_adopted' => 'パネル外で追加されたファイアウォールルール :ports を管理対象にしました',
     'firewall.rule_updated' => 'ファイアウォールルール :ports を更新しました',
     'firewall.rule_enabled' => 'ファイアウォールルール :ports を有効にしました',
     'firewall.rule_disabled' => 'ファイアウォールルール :ports を無効にしました',

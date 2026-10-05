@@ -67,6 +67,22 @@ it('adds an allow rule for a port, applying it via ufw', function () {
     Process::assertRan(fn ($p) => $p->command === ['ufw', 'allow', '8080/tcp']);
 });
 
+it('says in the activity log whether a rule allows or denies, and from where (FW-09)', function () {
+    fakeUfw();
+
+    $id = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/firewall/rules', ['port_from' => 8080, 'protocol' => 'tcp', 'action' => 'deny', 'source_ip' => '203.0.113.9'])
+        ->assertCreated()->json('rule.id');
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")->deleteJson("/api/firewall/rules/{$id}")->assertSuccessful();
+
+    $added = ActivityLog::query()->where('action', 'rule_added')->latest('id')->first();
+    $removed = ActivityLog::query()->where('action', 'rule_removed')->latest('id')->first();
+
+    expect($added->properties['ports'])->toBe('Deny 8080/tcp from 203.0.113.9')
+        ->and($removed->properties['ports'])->toBe('Deny 8080/tcp from 203.0.113.9');
+});
+
 it('adds a rule with a CIDR source', function () {
     fakeUfw();
 
@@ -975,4 +991,114 @@ describe('where a rule lands', function () {
         Process::assertRan(fn ($p) => array_values(array_diff($p->command, ['sudo', '-n'])) === ['ufw', 'allow', '8080/tcp']);
         Process::assertNotRan(fn ($p) => in_array('insert', $p->command, true));
     });
+});
+
+/*
+| FW-08 (old QA list): rules added with the ufw CLI were not shown at all.
+*/
+
+/** ufw with the panel's own 22/80 plus two rules added by hand. */
+function fakeUfwWithHandRules(?ArrayObject $runs = null): void
+{
+    Process::fake(function ($process) use ($runs) {
+        $command = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        $runs?->append($command);
+
+        if (in_array('numbered', $command, true)) {
+            return Process::result(output: implode("\n", [
+                'Status: active',
+                '',
+                '     To                         Action      From',
+                '     --                         ------      ----',
+                '[ 1] 22/tcp                     ALLOW IN    Anywhere',
+                '[ 2] 80/tcp                     ALLOW IN    Anywhere',
+                '[ 3] 5555/tcp                   ALLOW IN    Anywhere',
+                '[ 4] 2222/tcp                   LIMIT IN    Anywhere',
+            ]));
+        }
+
+        if (in_array('status', $command, true)) {
+            return Process::result(output: "Status: active\nDefault: deny (incoming), allow (outgoing), disabled (routed)\n");
+        }
+
+        return Process::result(exitCode: 0);
+    });
+}
+
+it('lists rules added outside the panel, saying which it can take over', function () {
+    fakeUfwWithHandRules();
+    FirewallRule::create(['port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+    FirewallRule::create(['port_from' => 80, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+
+    $unmanaged = collect($this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/firewall')->assertOk()->json('unmanaged_rules'));
+
+    expect($unmanaged)->toHaveCount(2)
+        ->and($unmanaged->firstWhere('key', 'allow:5555:tcp:any')['adoptable'])->toBeTrue()
+        ->and($unmanaged->firstWhere('adoptable', false)['reason'])->toBe(__('sync.reasons.firewall_action_unsupported'));
+});
+
+it('takes a hand-added rule under the panel\'s management', function () {
+    fakeUfwWithHandRules();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/firewall/unmanaged/adopt', ['key' => 'allow:5555:tcp:any'])
+        ->assertCreated()
+        ->assertJsonPath('rule.port_from', 5555)
+        ->assertJsonPath('rule.origin', 'user');
+
+    expect(ActivityLog::query()->where('action', 'rule_adopted')->exists())->toBeTrue();
+});
+
+it('removes a hand-added rule from ufw and leaves no row behind', function () {
+    $runs = new ArrayObject;
+    fakeUfwWithHandRules($runs);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->deleteJson('/api/firewall/unmanaged', ['key' => 'allow:5555:tcp:any'])
+        ->assertNoContent();
+
+    expect(collect($runs)->contains(fn ($c) => ($c[0] ?? '') === 'ufw' && in_array('delete', $c, true) && in_array('5555/tcp', $c, true)))->toBeTrue()
+        ->and(FirewallRule::query()->where('port_from', 5555)->exists())->toBeFalse();
+});
+
+it('refuses a key ufw does not have, or a rule the panel cannot hold', function (string $key) {
+    fakeUfwWithHandRules();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/firewall/unmanaged/adopt', ['key' => $key])
+        ->assertJsonValidationErrors('key');
+
+    expect(FirewallRule::query()->count())->toBe(0);
+})->with(['allow:9999:tcp:any', '2222/tcp from Anywhere']);
+
+it('keeps the SSH lockout guard for a hand-added SSH rule, and puts the row back out', function () {
+    // The only rule allowing SSH, added by hand: removing it would lock the
+    // server out exactly as removing the panel's own would.
+    Process::fake(function ($process) {
+        $command = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        if (in_array('numbered', $command, true)) {
+            return Process::result(output: "Status: active\n\n[ 1] 22/tcp                     ALLOW IN    Anywhere\n");
+        }
+
+        return in_array('status', $command, true)
+            ? Process::result(output: "Status: active\nDefault: deny (incoming), allow (outgoing), disabled (routed)\n")
+            : Process::result();
+    });
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->deleteJson('/api/firewall/unmanaged', ['key' => 'allow:22:tcp:any'])
+        ->assertUnprocessable();
+
+    expect(FirewallRule::query()->count())->toBe(0);
+});
+
+it('needs manage on the firewall to take over or remove one', function () {
+    fakeUfwWithHandRules();
+    $viewer = User::factory()->create();
+    grantPermission($viewer, 'firewall', view: true, manage: false);
+
+    $this->actingAs($viewer)->postJson('/api/firewall/unmanaged/adopt', ['key' => 'allow:5555:tcp:any'])->assertForbidden();
+    $this->actingAs($viewer)->deleteJson('/api/firewall/unmanaged', ['key' => 'allow:5555:tcp:any'])->assertForbidden();
 });

@@ -86,6 +86,29 @@ class FirewallRule extends Model
     }
 
     /**
+     * The whole rule in a sentence — "Deny 80/tcp from 1.2.3.4".
+     *
+     * Shown on the rule row, and since FW-09 in the activity log too: that said
+     * "Added a firewall rule (80/tcp)", so a deny read the same as an allow and
+     * the source was nowhere. Written into the log's existing `:ports` value
+     * rather than a new placeholder, so older entries, which only have the
+     * ports, still read correctly.
+     */
+    public function summary(): string
+    {
+        $ports = $this->portSpec();
+        if ($this->protocol !== 'all') {
+            $ports .= '/'.$this->protocol;
+        }
+
+        return __('firewall.summary', [
+            'action' => __('firewall.actions.'.$this->action),
+            'ports' => $ports,
+            'source' => $this->source_ip ?: __('firewall.anywhere'),
+        ]);
+    }
+
+    /**
      * Whether this rule is system-seeded (protected from casual deletion).
      */
     public function isProtected(): bool

@@ -42,6 +42,22 @@ class FirewallRuleDiscoverer implements Discoverable
             return [];
         }
 
+        return $this->unmanaged() ?? [];
+    }
+
+    /**
+     * Rules ufw enforces that the panel has no row for — the same reading
+     * Server Sync adopts from, also shown on the Firewall screen (FW-08):
+     * a rule added with the ufw CLI was invisible there. Null when ufw could
+     * not be read, so "none" is never confused with "could not ask".
+     *
+     * Each item carries `attributes` when the panel can hold it, or a
+     * `reason` (LIMIT, outbound, an application profile) when it cannot.
+     *
+     * @return array<int, array<string, mixed>>|null
+     */
+    public function unmanaged(): ?array
+    {
         $result = $this->serverOps->run(
             ['ufw', 'status', 'numbered'],
             ['feature' => 'sync', 'op' => 'discover_firewall'],
@@ -49,7 +65,7 @@ class FirewallRuleDiscoverer implements Discoverable
         );
 
         if ($result->failed()) {
-            return [];
+            return null;
         }
 
         $existing = FirewallRule::query()->get();
