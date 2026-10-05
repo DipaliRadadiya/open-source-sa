@@ -8,6 +8,7 @@ use App\Http\Requests\Server\SystemUser\StoreSystemUserRequest;
 use App\Models\SyncRun;
 use App\Models\SystemUser;
 use App\Services\Server\ServerOps;
+use App\Services\Server\SystemUsers\SshUsersGroup;
 
 /**
  * Login accounts on the box that the panel does not know about.
@@ -69,6 +70,18 @@ class SystemUserDiscoverer implements Discoverable
 
         $sudoers ??= [];
 
+        // SYNC-01: SSH access is membership of the panel's own group, the one
+        // its toggle adds to and the one sshd's AllowGroups names. Read like
+        // sudo; null (the group does not exist yet, as on a server migrated
+        // in) means nobody is in it, and corrects nothing.
+        $sshUsers = $this->groupMembers(SshUsersGroup::NAME);
+
+        if ($sshUsers !== null && $run->mode === SyncMode::Apply) {
+            $this->correctTrackedSshAccess($sshUsers);
+        }
+
+        $sshUsers ??= [];
+
         $tracked = SystemUser::query()->pluck('username')->map('strtolower')->all();
         $home = rtrim((string) config('server.home_base', '/home'), '/');
         $found = [];
@@ -107,8 +120,8 @@ class SystemUserDiscoverer implements Discoverable
                 'key' => $username,
                 'label' => $username,
                 'confidence' => 100,
-                'evidence' => ['uid' => $uid, 'home_path' => $homePath, 'shell' => $shell, 'sudo' => in_array($username, $sudoers, true)],
-                'attributes' => ['username' => $username, 'home_path' => $homePath, 'shell' => $shell, 'sudo' => in_array($username, $sudoers, true)],
+                'evidence' => ['uid' => $uid, 'home_path' => $homePath, 'shell' => $shell, 'sudo' => in_array($username, $sudoers, true), 'ssh_access' => in_array($username, $sshUsers, true)],
+                'attributes' => ['username' => $username, 'home_path' => $homePath, 'shell' => $shell, 'sudo' => in_array($username, $sudoers, true), 'ssh_access' => in_array($username, $sshUsers, true)],
             ];
         }
 
@@ -165,6 +178,50 @@ class SystemUserDiscoverer implements Discoverable
     }
 
     /**
+     * Members of one group, or null when the group does not exist.
+     *
+     * @return array<int, string>|null
+     */
+    private function groupMembers(string $group): ?array
+    {
+        $result = $this->serverOps->run(
+            ['getent', 'group', $group],
+            ['feature' => 'sync', 'op' => 'discover_group_members', 'group' => $group],
+            timeout: 30,
+            // 2 = no such group: an answer, not a fault.
+            expectedExitCodes: [2],
+        );
+
+        // The output decides, not the exit code: `getent group a b` exits 2
+        // when either is missing and still prints the one that exists.
+        foreach (preg_split('/\r?\n/', trim($result->output())) ?: [] as $line) {
+            $parts = explode(':', trim($line));
+
+            if (count($parts) === 4 && $parts[0] === $group) {
+                return $parts[3] === '' ? [] : array_values(array_unique(explode(',', $parts[3])));
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Same as correctTrackedSudo(), for SSH access (SYNC-01).
+     *
+     * @param  array<int, string>  $members
+     */
+    private function correctTrackedSshAccess(array $members): void
+    {
+        SystemUser::query()->each(function (SystemUser $user) use ($members) {
+            $actual = in_array($user->username, $members, true);
+
+            if ($user->ssh_access !== $actual) {
+                $user->forceFill(['ssh_access' => $actual])->save();
+            }
+        });
+    }
+
+    /**
      * Bring the recorded sudo flag of accounts already in the panel back in
      * line with the server, when somebody changed it outside the panel.
      *
@@ -200,9 +257,10 @@ class SystemUserDiscoverer implements Discoverable
             // switching sudo "on and off again" to fix it would have removed
             // a grant somebody set up on purpose.
             'sudo' => (bool) ($attributes['sudo'] ?? false),
-            // Still false: SSH access here would claim an enforcement the
-            // panel does not yet apply.
-            'ssh_access' => false,
+            // Membership of the panel's SSH group, read from the server
+            // (SYNC-01) — it was hard-coded false, so an account that logged
+            // in with its key every day was listed as having no SSH access.
+            'ssh_access' => (bool) ($attributes['ssh_access'] ?? false),
         ]);
     }
 }

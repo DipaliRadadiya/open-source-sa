@@ -26,6 +26,7 @@ use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Php\PoolManager;
 use App\Services\Server\Sync\Discoverers\ApplicationDiscoverer;
 use App\Services\Server\Sync\ServerSync;
+use App\Services\Server\SystemUsers\SshUsersGroup;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
@@ -204,6 +205,40 @@ describe('what an imported account may do', function () {
         runSync(SyncMode::Apply);
 
         expect($user->fresh()->sudo)->toBeTrue();
+    });
+});
+
+describe('SSH access of system users (SYNC-01)', function () {
+    it('adopts an account with the SSH access it really has', function () {
+        // Hard-coded false before: an account that logged in with its key
+        // every day was listed as having no SSH access at all.
+        fakeServer(groups: "sudo:x:27:\n".SshUsersGroup::NAME.":x:1500:siteowner\n");
+
+        runSync(SyncMode::Apply);
+
+        expect(SystemUser::where('username', 'siteowner')->value('ssh_access'))->toBeTrue()
+            ->and(SystemUser::where('username', 'shopuser')->value('ssh_access'))->toBeFalse();
+    });
+
+    it('brings an account already in the panel back in line with the server', function () {
+        $granted = SystemUser::create(['username' => 'granted', 'home_path' => '/home/granted', 'ssh_access' => false]);
+        $revoked = SystemUser::create(['username' => 'revoked', 'home_path' => '/home/revoked', 'ssh_access' => true]);
+        fakeServer(groups: "sudo:x:27:\n".SshUsersGroup::NAME.":x:1500:granted\n");
+
+        runSync(SyncMode::Apply);
+
+        expect($granted->fresh()->ssh_access)->toBeTrue()
+            ->and($revoked->fresh()->ssh_access)->toBeFalse();
+    });
+
+    it('changes nothing when the panel\'s SSH group does not exist on the server', function () {
+        // A server migrated in from elsewhere has no such group yet.
+        $user = SystemUser::create(['username' => 'granted', 'home_path' => '/home/granted', 'ssh_access' => true]);
+        fakeServer(groups: "sudo:x:27:granted\n");
+
+        runSync(SyncMode::Apply);
+
+        expect($user->fresh()->ssh_access)->toBeTrue();
     });
 });
 
