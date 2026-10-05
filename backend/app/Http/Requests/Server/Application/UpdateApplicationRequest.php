@@ -55,7 +55,10 @@ class UpdateApplicationRequest extends FormRequest
      */
     public function messages(): array
     {
-        return ['name.prohibited' => __('validation.application_name_immutable')];
+        return [
+            'name.prohibited' => __('validation.application_name_immutable'),
+            'node_version.prohibited' => __('errors/node.change_use_endpoint'),
+        ];
     }
 
     /**
@@ -101,6 +104,10 @@ class UpdateApplicationRequest extends FormRequest
             // told this endpoint renames a site finds out that it does not.
             // {@see UpdateApplication} for what a rename used to do.
             'name' => ['prohibited'],
+            // Was silently dropped with a 200 (junior re-test #12), so callers
+            // believed the switch had happened. It is a restart and a check
+            // now: PUT /applications/{application}/node-version.
+            'node_version' => ['prohibited'],
             'domain' => ['sometimes', 'string', 'max:255', new Hostname],
             // See StoreApplicationRequest: this becomes a path used by root.
             'web_root' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9._\-\/]+$/', 'not_regex:/(^|\/)\.\.(\/|$)/'],

@@ -209,6 +209,8 @@ return [
     'application.ai_bot_policy_updated' => ':name のAIボットブロッカーポリシーを :policy に設定しました',
     'application.bot_rules_updated' => ':name のカスタムボットルールを更新しました（ブロック :blocked 件、許可 :allowed 件）',
     'application.web_root_changed' => ':name のウェブルートを :web_root に変更しました',
+    'application.node_version_changed' => ':name の Node.js バージョンを :from から :to に変更しました',
+    'application.node_version_change_failed' => ':name を Node.js :to に切り替えられませんでした。:from のままです',
     'application.site_type_changed' => ':name のタイプを :from から :to に変更しました',
     'application.waf_updated' => ':name のファイアウォール設定を更新しました',
     'application.staging_created' => ':name のステージングサイトを作成しました',

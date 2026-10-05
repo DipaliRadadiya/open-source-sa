@@ -209,6 +209,8 @@ return [
     'application.ai_bot_policy_updated' => 'Установил политику блокировки ИИ-ботов для :name на :policy',
     'application.bot_rules_updated' => 'Обновил пользовательские правила ботов для :name (заблокировано: :blocked, разрешено: :allowed)',
     'application.web_root_changed' => 'Изменил веб-корень :name на :web_root',
+    'application.node_version_changed' => 'Версия Node.js сайта :name изменена с :from на :to',
+    'application.node_version_change_failed' => 'Не удалось перевести :name на Node.js :to; остаётся на :from',
     'application.site_type_changed' => 'Тип :name изменён с :from на :to',
     'application.waf_updated' => 'Обновил настройки брандмауэра для :name',
     'application.staging_created' => 'Создал staging-сайт для :name',

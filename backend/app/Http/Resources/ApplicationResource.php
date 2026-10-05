@@ -172,6 +172,19 @@ class ApplicationResource extends JsonResource
 
             'php_version' => $this->php_version,
             'node_version' => $this->node_version,
+            // A switch under way (`status: switching`) or the last one that
+            // did not work (`failed`, with the reason the site was put back on
+            // `node_version`). Null when neither. See ChangeNodeVersion.
+            'node_version_change' => $this->node_version_target === null ? null : [
+                'target' => $this->node_version_target,
+                'status' => $this->node_version_failed_reason === null ? 'switching' : 'failed',
+                'reason' => $this->node_version_failed_reason,
+                'message' => $this->node_version_failed_reason === null ? null : __('errors/node.change_failed.'.$this->node_version_failed_reason, [
+                    'target' => $this->node_version_target,
+                    'current' => $this->node_version,
+                ]),
+                'reference' => $this->node_version_failed_reference,
+            ],
             'app_port' => $this->app_port,
             'web_root' => $this->web_root,
             'build_command' => $this->build_command,

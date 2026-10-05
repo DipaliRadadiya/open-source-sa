@@ -215,6 +215,8 @@ return [
     'application.ai_bot_policy_updated' => 'Set the AI Bot Blocker policy for :name to :policy',
     'application.bot_rules_updated' => 'Updated the custom bot rules for :name (:blocked blocked, :allowed allowed)',
     'application.web_root_changed' => 'Changed the web root of :name to :web_root',
+    'application.node_version_changed' => 'Changed the Node.js version of :name from :from to :to',
+    'application.node_version_change_failed' => 'Could not move :name to Node.js :to; it stays on :from',
     'application.site_type_changed' => 'Changed the type of :name from :from to :to',
     'application.waf_updated' => 'Updated the firewall settings for :name',
     'application.staging_created' => 'Created a staging site for :name',

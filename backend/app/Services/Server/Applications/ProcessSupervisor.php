@@ -276,6 +276,36 @@ class ProcessSupervisor
     }
 
     /**
+     * Write the unit for what the model says now and reload systemd — nothing
+     * else. No enable, no start, and on failure no removal.
+     *
+     * For changing one setting of a running application (its Node version,
+     * junior re-test #12), where the caller restarts, checks, and on failure
+     * writes the *previous* unit back with this same method. apply() is wrong
+     * there: a failed start makes it delete the unit, which turns "the new
+     * version did not work" into "the site is gone".
+     *
+     * @throws ProvisioningFailedException when PM2 cannot be installed into the version a clustered unit names
+     */
+    public function rewriteUnit(Application $application, string $documentRoot): ServerOpsResult
+    {
+        $this->ensureLogDirectory($application);
+        $this->ensurePm2($application);
+
+        $written = $this->files->put(
+            $this->unitPath($application),
+            $this->render($application, $documentRoot),
+            ['feature' => 'application', 'op' => 'unit_rewrite', 'application' => $application->id],
+        );
+
+        if ($written->failed()) {
+            return $written;
+        }
+
+        return $this->daemonReload();
+    }
+
+    /**
      * Release the application's cgroup slice.
      *
      * The slice outlives its units: systemd creates `sv-app-<id>.slice` on

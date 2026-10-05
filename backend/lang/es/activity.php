@@ -209,6 +209,8 @@ return [
     'application.ai_bot_policy_updated' => 'Estableció la política del bloqueador de bots de IA de :name en :policy',
     'application.bot_rules_updated' => 'Actualizó las reglas de bots personalizadas de :name (:blocked bloqueados, :allowed permitidos)',
     'application.web_root_changed' => 'Cambió la raíz web de :name a :web_root',
+    'application.node_version_changed' => 'Cambió la versión de Node.js de :name de :from a :to',
+    'application.node_version_change_failed' => 'No se pudo pasar :name a Node.js :to; sigue en :from',
     'application.site_type_changed' => 'Cambió el tipo de :name de :from a :to',
     'application.waf_updated' => 'Actualizó la configuración del firewall de :name',
     'application.staging_created' => 'Creó un sitio de staging para :name',

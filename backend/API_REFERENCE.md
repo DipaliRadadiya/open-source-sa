@@ -803,7 +803,7 @@ They are equal for fifteen of the seventeen site types, because most application
 
   "system_user": {"id": 1, "username": "siteowner"},
 
-  "php_version": "8.4", "node_version": null, "app_port": null,
+  "php_version": "8.4", "node_version": null, "node_version_change": null, "app_port": null,
   "web_root": "/", "build_command": null, "start_command": null,
 
   "has_process": false,
@@ -1089,6 +1089,23 @@ On OpenLiteSpeed the site type is rendered into the vhost (`.htaccess` support
 for LiteSpeed Cache), so the config is republished, tested and reloaded. A
 **disabled** site's vhost is left alone — republishing it would put the site
 back online as a side effect of a relabel.
+
+### PUT `/applications/{application}/node-version`
+**Permission:** `application` (manage) | **Throttle:** 10/min
+
+Move a Node site to another **installed** Node version (2026-10-05, junior re-test #12). Before this there was no way to: `node_version` on `PUT /applications/{application}` was silently ignored, so a version any site used could never be removed. That field is now a `422` there, pointing here.
+
+**Request:** `{"node_version": "22.22.0"}` — the full version, as listed by `GET /node`.
+
+**Response `202`:** `{"application": {...}}` with `node_version_change: {"target": "22.22.0", "status": "switching", ...}`. Poll `GET /applications/{application}` until `node_version_change` is `null` (it worked, `node_version` is the new one) or `status` is `failed`. The same version the site is already on is a `200` and does nothing.
+
+**What it does:** rewrites the site's service for the new Node, restarts it, and asks the application for a page (the same check a new site gets). If it does not answer, the previous version's service is written back and restarted, so the site keeps running as before. No file of the application is touched: measured on the nginx test server, every compiled part of n8n, Uptime Kuma, Node-RED and NodeBB loads unchanged on Node 22, 24 and 26. A stopped or disabled site gets the new service without being started. A site with no process (a static or client-rendered git site) only records the version its next build uses.
+
+**`node_version_change` on the application resource:** `null`, or `{"target", "status": "switching"|"failed", "reason", "message", "reference"}`. On `failed`, show `message` (translated); `node_version` is the version the site is on. `reason` is one of `did_not_start` (switched back, running as before), `rollback_failed` (switching back failed too: check the site), `unit_write`, `install_pm2`, `worker`. A failed switch can be tried again at once.
+
+**`422` on `node_version`** when it is not installed, outside what the site type runs on (`node_version_range` on `GET /site-types`), the site is not a Node site, it still runs under the previous panel's PM2 (convert it first), or a switch is already running.
+
+**Frontend:** offer the installed versions inside the type's range on the site's Node.js fact; after the change, the old version can be removed from the Node.js screen (its "in use" refusal now says to switch the sites first).
 
 ### PUT `/applications/{application}/web-root`
 **Permission:** `application` (manage) | **Throttle:** 10/min

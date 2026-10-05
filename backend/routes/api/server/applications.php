@@ -3,6 +3,7 @@
 use App\Http\Controllers\API\Server\ApplicationContainerController;
 use App\Http\Controllers\API\Server\ApplicationController;
 use App\Http\Controllers\API\Server\ApplicationDomainController;
+use App\Http\Controllers\API\Server\ApplicationNodeVersionController;
 use App\Http\Controllers\API\Server\ApplicationRootLockController;
 use App\Http\Controllers\API\Server\ApplicationSiteTypeController;
 use App\Http\Controllers\API\Server\ApplicationWebhookController;
@@ -79,6 +80,11 @@ Route::post('/applications/{application}/root-lock', [ApplicationRootLockControl
     ->middleware(['permission:application,manage', 'throttle:10,1']);
 
 Route::put('/applications/{application}/web-root', [ApplicationWebRootController::class, 'update'])
+    ->middleware(['permission:application,manage', 'throttle:10,1']);
+
+// Its own sub-resource and a 202: the switch restarts the site and waits for
+// it to answer on the new version, then switches back if it does not.
+Route::put('/applications/{application}/node-version', [ApplicationNodeVersionController::class, 'update'])
     ->middleware(['permission:application,manage', 'throttle:10,1']);
 
 // Container settings. Its own sub-resource for the same reason web-root is one:

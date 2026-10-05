@@ -209,6 +209,8 @@ return [
     'application.ai_bot_policy_updated' => 'AI-Bot-Blocker-Richtlinie für :name auf :policy gesetzt',
     'application.bot_rules_updated' => 'Eigene Bot-Regeln für :name aktualisiert (:blocked blockiert, :allowed erlaubt)',
     'application.web_root_changed' => 'Web-Root von :name auf :web_root geändert',
+    'application.node_version_changed' => 'Node.js-Version von :name von :from auf :to geändert',
+    'application.node_version_change_failed' => ':name konnte nicht auf Node.js :to umgestellt werden; bleibt auf :from',
     'application.site_type_changed' => 'Typ von :name von :from zu :to geändert',
     'application.waf_updated' => 'Firewall-Einstellungen für :name aktualisiert',
     'application.staging_created' => 'Staging-Site für :name erstellt',

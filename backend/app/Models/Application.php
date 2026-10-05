@@ -26,7 +26,8 @@ use Illuminate\Support\Str;
  */
 #[Fillable([
     'system_user_id', 'production_application_id', 'cloned_from_application_id', 'name', 'domain', 'site_type', 'serving_profile', 'status',
-    'php_version', 'node_version', 'app_port', 'rendering_type', 'web_root',
+    'php_version', 'node_version', 'node_version_target', 'node_version_failed_reason', 'node_version_failed_reference',
+    'app_port', 'rendering_type', 'web_root',
     // Containerised applications. `container_port` is the port INSIDE the
     // container; `app_port` is the loopback port on the host that nginx
     // proxies to, and conflating the two publishes a container on a port
