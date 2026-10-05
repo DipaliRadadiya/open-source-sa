@@ -58,6 +58,8 @@ return [
 
     'unavailable' => [
         'stack' => 'Ce serveur n\'exécute que des conteneurs ; il n\'héberge donc pas ce type d\'application.',
+        'stack_profile' => 'Ce serveur n\'est pas configuré pour héberger ce type d\'application.',
+        'profile' => 'Ce serveur ne sert pas de sites :profile ; ce type de rendu n\'est donc pas disponible ici. Choisissez-en un que ce serveur prend en charge.',
         'database' => 'Cette application nécessite :engines, absent de ce serveur.',
         'php' => 'PHP n\'est pas installé sur ce serveur.',
         'php_version_install' => 'Ce serveur n\'a aucune version de PHP sur laquelle :type fonctionne (:range). Installez d\'abord PHP :version depuis l\'écran PHP.',

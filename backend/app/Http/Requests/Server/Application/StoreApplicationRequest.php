@@ -13,6 +13,7 @@ use App\Rules\SingleLine;
 use App\Rules\StartCommand;
 use App\Rules\SupportedNodeVersion;
 use App\Rules\SupportedPhpVersion;
+use App\Services\Applications\ServingProfile;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Applications\ComposeValidator;
 use App\Services\Server\Applications\EngineVersionSupport;
@@ -372,6 +373,16 @@ class StoreApplicationRequest extends FormRequest
                 // did not show.
                 if (($blocked = $manager->unavailable($type)) !== null) {
                     $validator->errors()->add('site_type', $blocked['reason']);
+
+                    return;
+                }
+
+                // A type served more than one way (git) is offered when the
+                // server hosts any of them; the way this site would be served
+                // has to be one it hosts too.
+                if (count($type->servingProfiles()) > 1
+                    && ($refusal = $manager->unservedProfile(ServingProfile::resolve($type, $this->all()))) !== null) {
+                    $validator->errors()->add('rendering_type', $refusal);
                 }
             },
 

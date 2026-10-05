@@ -58,6 +58,8 @@ return [
 
     'unavailable' => [
         'stack' => 'Este servidor executa apenas contentores, pelo que não aloja este tipo de aplicação.',
+        'stack_profile' => 'Este servidor não está preparado para alojar este tipo de aplicação.',
+        'profile' => 'Este servidor não serve sites :profile, por isso este tipo de renderização não pode ser usado aqui. Escolha um que este servidor sirva.',
         'database' => 'Esta aplicação precisa de :engines, que este servidor não tem.',
         'php' => 'Este servidor não tem PHP instalado.',
         'php_version_install' => 'Este servidor não tem nenhuma versão do PHP em que :type funcione (:range). Instale primeiro o PHP :version na tela de PHP.',

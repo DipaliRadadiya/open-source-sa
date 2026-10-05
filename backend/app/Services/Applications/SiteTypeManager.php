@@ -121,10 +121,20 @@ class SiteTypeManager
         // these types, and `StoreApplicationRequest` still calls it, so the
         // endpoint refuses a filtered type exactly as before. This hides a card
         // whose endpoint says no — not a button whose endpoint works.
-        $types = array_filter(
+        //
+        // `array_values`, and it is load-bearing: `array_filter` preserves keys,
+        // and the filtered-out types are contiguous at one end of `all()`. The
+        // survivors therefore start at a non-zero index, `json_encode` emits a
+        // JSON *object* instead of an array, and the frontend's `z.array()`
+        // rejects the whole payload — which took the create page down to a
+        // "could not read this" card on every stack except the one whose types
+        // happen to sit first. Every test here reads the response through
+        // `keyBy('name')`, which cannot tell the two shapes apart, so only a
+        // list assertion catches it.
+        $types = array_values(array_filter(
             $this->all(),
             fn (SiteType $type) => ($this->unavailable($type)['code'] ?? null) !== self::BLOCKED_STACK,
-        );
+        ));
 
         return array_map(function (SiteType $type) {
             $profile = $type->servingProfile();
@@ -187,6 +197,31 @@ class SiteTypeManager
     }
 
     /**
+     * Why this server cannot serve a site the way it is about to be built, or
+     * null when it can.
+     *
+     * unavailable() answers for the type, and a git site's type is offered
+     * wherever any one of its profiles is hosted — so on MERN (node, static)
+     * the card is right, and a git site rendered as `php` was still created
+     * there, on a server not set up to serve PHP sites. This is the second
+     * half: the profile this particular request resolves to.
+     */
+    public function unservedProfile(string $profile): ?string
+    {
+        if ($this->capabilities->hosts($profile)) {
+            return null;
+        }
+
+        return __('application.unavailable.profile', [
+            'profile' => match ($profile) {
+                'php' => 'PHP',
+                'node' => 'Node.js',
+                default => $profile,
+            },
+        ]);
+    }
+
+    /**
      * Why this server cannot offer a site type, or null when it can.
      *
      * One method rather than two checks, because the card grid and the create
@@ -210,10 +245,25 @@ class SiteTypeManager
         // panel needs both — so the runtime check below passes cleanly for
         // WordPress, and the user would be shown a card that fails only once
         // they try to build a site with it.
-        if (! $this->capabilities->hosts($type->servingProfile())) {
+        // `servingProfiles()`, not `servingProfile()`: a type is blocked only
+        // when this server hosts NONE of the profiles it could be served by.
+        // Asked about the single declared profile, the git card — whose
+        // declared value is the `php` fallback and whose rendering type also
+        // produces node and static — was refused on every MERN server, the one
+        // stack built for running the user's own Node code.
+        $hosted = array_filter(
+            $type->servingProfiles(),
+            fn (string $profile): bool => $this->capabilities->hosts($profile),
+        );
+
+        if ($hosted === []) {
             return [
                 'code' => self::BLOCKED_STACK,
-                'reason' => __('application.unavailable.stack'),
+                // "Containers only" is true of a Docker server and of nothing
+                // else; it was shown on LEMP, LAMP, OLS and MERN as well.
+                'reason' => $this->capabilities->hosts('docker')
+                    ? __('application.unavailable.stack')
+                    : __('application.unavailable.stack_profile'),
                 // Nothing to install would change this, so the card must not
                 // offer to fix itself.
                 'runtime' => null,

@@ -50,9 +50,12 @@ it('keeps php installed and php sites unhosted, which are different answers', fu
 
 it('records the right profiles for every stack', function () {
     foreach ([
-        'lemp' => ['php', 'static'],
-        'lamp' => ['php', 'static'],
-        'ols' => ['php', 'static'],
+        // Node too: n8n, Node-RED, Uptime Kuma and NodeBB run on these stacks.
+        // The docker merge left it out, which hid all four from every
+        // non-MERN server.
+        'lemp' => ['php', 'node', 'static'],
+        'lamp' => ['php', 'node', 'static'],
+        'ols' => ['php', 'node', 'static'],
         'mern' => ['node', 'static'],
         'docker' => ['docker'],
     ] as $stack => $expected) {
@@ -131,6 +134,30 @@ it('still offers PHP site types on a PHP stack', function () {
     // on a stack that does host PHP.
     expect($wordpress)->not->toBeNull()
         ->and($wordpress['unavailable_code'])->not->toBe(SiteTypeManager::BLOCKED_STACK);
+});
+
+it('leaves the catalog a list on every stack, whichever end it filtered', function (string $stack) {
+    // The filter drops a contiguous run of types, and which end depends on the
+    // stack: a Docker box keeps the leading container types and stays a list by
+    // luck, while every other stack drops them and the survivors used to start
+    // at index 20. That asymmetry is why this is asserted per stack rather than
+    // once — the shape only broke on the stacks nobody tested it on, which was
+    // all of them except Docker.
+    //
+    // A gapped array is a JSON object, and the frontend parses this with
+    // `z.array()`, so the whole create page failed to read.
+    recordStack($stack);
+
+    expect(array_is_list(app(SiteTypeManager::class)->catalog()))->toBeTrue();
+})->with(['lemp', 'lamp', 'ols', 'mern', 'docker']);
+
+it('leaves the catalog a list on a server with no recorded stack', function () {
+    // The migrated-in box, which falls on `DEFAULT_PROFILES`. It hosts PHP and
+    // Node and no containers, so it filters the Docker types like a LEMP box
+    // does — and it is the shape the majority of real installs were serving.
+    ServerCapability::query()->delete();
+
+    expect(array_is_list(app(SiteTypeManager::class)->catalog()))->toBeTrue();
 });
 
 it('leaves the site-facing setup rows off a container-only server', function () {
@@ -353,3 +380,43 @@ it('offers the size fields in both modes, and not behind Advanced', function () 
     // not something anybody can act on without leaving the page.
     expect($fields->get('cpu_limit')['help'])->toContain((string) app(HostCpus::class)->count());
 });
+
+it('offers the one-click Node applications on LEMP, LAMP and OLS, and on no Docker server', function (string $stack, bool $offered) {
+    recordStack($stack);
+
+    $names = collect(app(SiteTypeManager::class)->catalog())->pluck('name');
+
+    foreach (['n8n', 'nodered', 'uptimekuma', 'nodebb'] as $type) {
+        expect($names->contains($type))->toBe($offered, "{$type} on {$stack}");
+    }
+})->with([
+    ['lemp', true], ['lamp', true], ['ols', true], ['mern', true], ['docker', false],
+]);
+
+it('sends the catalog as a JSON list on every stack', function (string $stack) {
+    // `array_filter` keeps keys; with the Docker types first in `all()` the
+    // survivors started at index 20 and json_encode wrote an object, which
+    // the create page cannot read.
+    recordStack($stack);
+
+    expect(array_is_list(app(SiteTypeManager::class)->catalog()))->toBeTrue();
+})->with(['lemp', 'lamp', 'ols', 'mern', 'docker']);
+
+it('says "containers only" on a Docker server and nowhere else', function () {
+    recordStack('docker');
+    $wordpress = app(SiteTypeManager::class)->find('wordpress');
+
+    expect(app(SiteTypeManager::class)->unavailable($wordpress)['reason'])->toBe(__('application.unavailable.stack'));
+
+    recordStack('mern');
+    app()->forgetInstance(ServerCapabilities::class);
+    app()->forgetInstance(SiteTypeManager::class);
+
+    expect(app(SiteTypeManager::class)->unavailable($wordpress)['reason'])->toBe(__('application.unavailable.stack_profile'));
+});
+
+it('has both refusals in every locale', function (string $locale) {
+    foreach (['stack_profile', 'profile'] as $key) {
+        expect(__("application.unavailable.{$key}", [], $locale))->not->toBe("application.unavailable.{$key}", "{$key} missing in {$locale}");
+    }
+})->with(['en', 'es', 'de', 'fr', 'pt', 'ja', 'ru', 'hi']);

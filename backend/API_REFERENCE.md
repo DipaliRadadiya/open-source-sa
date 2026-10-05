@@ -548,6 +548,8 @@ backend then mistakes for the user's own.
 
 One entry per installable site type. Each carries its own field schema — the frontend writes one generic form renderer.
 
+**Which types a server offers (fixed 2026-10-05).** `site_types` is always a JSON **array**. What a server hosts follows how it was installed: LEMP, LAMP and OLS serve PHP, Node.js and static sites (the four one-click Node apps included); MERN serves Node.js and static; Docker serves containers only. Types the server will never host are left out of the list. A git site is offered wherever any of its rendering types can be served, and the chosen `rendering_type` must be one the server serves: `php` on a MERN server is a `422` on `rendering_type`, on create and on `PUT /applications/{application}`. The refusal for a type the server does not host says "containers only" on a Docker server and "not set up to host this kind of application" elsewhere.
+
 ```json
 {"site_types": [{
   "name": "wordpress",

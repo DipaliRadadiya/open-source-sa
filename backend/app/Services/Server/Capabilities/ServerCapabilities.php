@@ -27,10 +27,14 @@ class ServerCapabilities
      * @var array<string, array{web_server: string, capabilities: array<string, bool>}>
      */
     private const STACKS = [
-        'lemp' => ['web_server' => 'nginx', 'capabilities' => ['php' => true, 'node' => false, 'serving_profiles' => ['php', 'static']]],
-        'lamp' => ['web_server' => 'apache', 'capabilities' => ['php' => true, 'node' => false, 'serving_profiles' => ['php', 'static']]],
-        'ols' => ['web_server' => 'openlitespeed', 'capabilities' => ['php' => true, 'node' => false, 'serving_profiles' => ['php', 'static']]],
+        'lemp' => ['web_server' => 'nginx', 'capabilities' => ['php' => true, 'node' => false, 'serving_profiles' => ['php', 'node', 'static']]],
+        'lamp' => ['web_server' => 'apache', 'capabilities' => ['php' => true, 'node' => false, 'serving_profiles' => ['php', 'node', 'static']]],
+        'ols' => ['web_server' => 'openlitespeed', 'capabilities' => ['php' => true, 'node' => false, 'serving_profiles' => ['php', 'node', 'static']]],
         'mern' => ['web_server' => 'nginx', 'capabilities' => ['php' => false, 'node' => true, 'serving_profiles' => ['node', 'static']]],
+        // lemp/lamp/ols serve Node sites as well as PHP ones: n8n, Node-RED,
+        // Uptime Kuma and NodeBB were installed and tested on them, and the
+        // docker merge left `node` out of this list by accident, which hid
+        // all four from every non-MERN server.
         // docker hosts containers and nothing else. `php => true` is still
         // honest and deliberate — PHP *is* installed, because the panel itself
         // is a Laravel application — but `serving_profiles` says the box will

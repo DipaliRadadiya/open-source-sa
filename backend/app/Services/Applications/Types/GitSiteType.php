@@ -31,9 +31,33 @@ class GitSiteType extends AbstractSiteType
         return 'git';
     }
 
+    /**
+     * The fallback only. A git site's real profile comes from the rendering
+     * type the user picks — see `ServingProfile::resolve()`, which maps `php`
+     * to php, `ssr` to node, and `csr`/`static` to static. This value is what
+     * that resolver falls back to when a payload carries neither a rendering
+     * type nor a start command.
+     */
     public function servingProfile(): string
     {
         return 'php';
+    }
+
+    /**
+     * All three, because the rendering type on this card chooses between them.
+     *
+     * This is why the set exists. Gating the card on `servingProfile()` alone
+     * read the fallback as the whole truth and so hid "deploy from git" from
+     * every MERN server — a stack that hosts node and static, exactly two of
+     * the three things this card can produce, and whose entire purpose is
+     * running the user's own Node code. The order matches
+     * `ServingProfile::resolve()`'s own branches.
+     *
+     * @return array<int, string>
+     */
+    public function servingProfiles(): array
+    {
+        return ['php', 'node', 'static'];
     }
 
     public function category(): string

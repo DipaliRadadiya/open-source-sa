@@ -7,6 +7,8 @@ use App\Models\Worker;
 use App\Rules\AvailablePort;
 use App\Rules\Hostname;
 use App\Rules\StartCommand;
+use App\Services\Applications\ServingProfile;
+use App\Services\Applications\SiteTypeManager;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -74,6 +76,28 @@ class UpdateApplicationRequest extends FormRequest
     public function after(): array
     {
         return [
+            // Re-rendering a git site as something this server does not serve
+            // (PHP on MERN) — the same refusal as creating it that way.
+            function (Validator $validator): void {
+                $application = $this->route('application');
+
+                if (! $this->has('rendering_type') || ! $application instanceof Application) {
+                    return;
+                }
+
+                $manager = app(SiteTypeManager::class);
+                $type = $manager->find((string) $application->site_type);
+
+                if ($type === null || count($type->servingProfiles()) < 2) {
+                    return;
+                }
+
+                $profile = ServingProfile::resolve($type, ['rendering_type' => (string) $this->input('rendering_type')]);
+
+                if (($refusal = $manager->unservedProfile($profile)) !== null) {
+                    $validator->errors()->add('rendering_type', $refusal);
+                }
+            },
             function (Validator $validator): void {
                 $instances = (int) $this->input('process_instances', 0);
 

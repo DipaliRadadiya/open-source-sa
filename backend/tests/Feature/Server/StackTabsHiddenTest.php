@@ -133,9 +133,10 @@ it('hides the Node.js tab on a Docker server', function () {
     expect(serverTabs())->not->toContain('node');
 });
 
-it('KEEPS the Node.js tab on a LEMP box, which hosts no Node sites', function () {
+it('KEEPS the Node.js tab on a LEMP box, even one recorded without Node sites', function () {
     // The assertion this whole rule was designed around. `hosts('node')` is false
-    // here — a LEMP box serves no Node applications — and hiding the screen on that
+    // for this row (a LEMP preset no longer looks like this — it hosts Node sites
+    // since 2026-10-05 — but a recorded row can), and hiding the screen on that
     // basis would take Node away from every Laravel site that builds its assets
     // with it. The panel's own build_command placeholder is `npm ci && npm run
     // build`. What makes a Docker box different is that it runs no sites at all.

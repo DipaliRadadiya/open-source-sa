@@ -63,6 +63,8 @@ return [
 
     'unavailable' => [
         'stack' => 'This server runs containers only, so it does not host this kind of application.',
+        'stack_profile' => 'This server is not set up to host this kind of application.',
+        'profile' => 'This server does not serve :profile sites, so this rendering type cannot be used here. Choose one this server serves.',
         'database' => 'This application needs :engines, which this server does not have.',
         'php' => 'This server does not have PHP installed.',
         'php_version_install' => 'This server has no PHP version :type runs on (:range). Install PHP :version from the PHP screen first.',

@@ -58,6 +58,8 @@ return [
 
     'unavailable' => [
         'stack' => 'Dieser Server führt ausschließlich Container aus und hostet diese Art von Anwendung daher nicht.',
+        'stack_profile' => 'Dieser Server ist nicht dafür eingerichtet, diese Art von Anwendung zu hosten.',
+        'profile' => 'Dieser Server liefert keine :profile-Websites aus, daher ist diese Darstellungsart hier nicht möglich. Wähle eine, die dieser Server unterstützt.',
         'database' => 'Diese Anwendung benötigt :engines, das auf diesem Server fehlt.',
         'php' => 'Auf diesem Server ist PHP nicht installiert.',
         'php_version_install' => 'Auf diesem Server gibt es keine PHP-Version, auf der :type läuft (:range). Installiere zuerst PHP :version im PHP-Bereich.',
