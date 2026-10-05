@@ -66,15 +66,22 @@ function webRootRecorder(): ArrayObject
     return $bag ??= new ArrayObject;
 }
 
-/** @param  bool  $testPasses  whether `nginx -t` succeeds. */
-function fakeWebRootServer(bool $testPasses = true): void
+/**
+ * @param  bool  $testPasses  whether `nginx -t` succeeds.
+ * @param  int  $folderTest  what `test -d` on the new web root answers: 0 there, 1 missing.
+ */
+function fakeWebRootServer(bool $testPasses = true, int $folderTest = 0): void
 {
     webRootRecorder()->exchangeArray([]);
 
-    Process::fake(function ($process) use ($testPasses) {
+    Process::fake(function ($process) use ($testPasses, $folderTest) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 
         webRootRecorder()->append($args);
+
+        if (($args[0] ?? '') === 'test' && ($args[1] ?? '') === '-d') {
+            return Process::result(exitCode: $folderTest);
+        }
 
         if (($args[0] ?? '') === 'nginx' && ($args[1] ?? '') === '-t') {
             return Process::result(exitCode: $testPasses ? 0 : 1, errorOutput: $testPasses ? '' : 'invalid');
@@ -125,6 +132,58 @@ it('creates the new directory, re-renders the vhost and reloads', function () {
         && in_array('/home/siteowner/blog/public_html/public', $args, true)))->toBeTrue();
 
     expect(webRootRan(fn ($args) => ($args[0] ?? '') === 'nginx' && ($args[1] ?? '') === '-t'))->toBeTrue();
+});
+
+it('refuses a folder that does not exist, and leaves the site alone', function () {
+    // Junior re-test #8: `/etc` was saved as public_html/etc, created empty,
+    // and the live site answered 403 with no warning.
+    fakeWebRootServer(folderTest: 1);
+
+    $this->withHeaders(webRootHeaders())
+        ->putJson(webRootUrl(), ['web_root' => 'etc'])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.web_root.0', __('validation.web_root_missing', ['path' => '/home/siteowner/blog/public_html/etc']));
+
+    expect($this->application->fresh()->web_root)->toBe('/')
+        ->and(webRootRan(fn ($args) => in_array($args[0] ?? '', ['mkdir', 'chown', 'tee'], true)))->toBeFalse()
+        ->and(webRootRan(fn ($args) => ($args[0] ?? '') === 'nginx'))->toBeFalse()
+        ->and(ActivityLog::query()->where('action', 'web_root_changed')->count())->toBe(0);
+});
+
+it('refuses it on the generic application update too', function () {
+    fakeWebRootServer(folderTest: 1);
+
+    $this->withHeaders(webRootHeaders())
+        ->putJson('/api/applications/'.$this->application->id, ['web_root' => 'etc'])
+        ->assertJsonValidationErrors('web_root');
+
+    expect($this->application->fresh()->web_root)->toBe('/');
+});
+
+it('does not read a check that could not run as "missing"', function () {
+    // A refused sudo or a timeout is a fault, not an answer.
+    fakeWebRootServer(folderTest: 2);
+
+    $this->withHeaders(webRootHeaders())
+        ->putJson(webRootUrl(), ['web_root' => 'public'])
+        ->assertStatus(500);
+
+    expect($this->application->fresh()->web_root)->toBe('/');
+});
+
+it('does not read a refused sudo as "missing" either', function () {
+    // sudo refusing the command exits 1 too — the same code as "not there".
+    config(['server.privilege.sudo' => true]);
+
+    Process::fake(fn ($process) => ($process->command[2] ?? '') === 'test'
+        ? Process::result(errorOutput: 'sudo: a password is required', exitCode: 1)
+        : Process::result());
+
+    $this->withHeaders(webRootHeaders())
+        ->putJson(webRootUrl(), ['web_root' => 'public'])
+        ->assertStatus(500);
+
+    expect($this->application->fresh()->web_root)->toBe('/');
 });
 
 it('puts the previous web root back when the config test fails', function () {

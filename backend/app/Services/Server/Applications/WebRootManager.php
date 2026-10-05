@@ -9,6 +9,7 @@ use App\Services\Server\Php\PoolManager;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use App\Services\Server\WebServers\WebServerManager;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Move which directory of a site is actually served.
@@ -45,6 +46,7 @@ class WebRootManager
 
     /**
      * @throws WebRootOperationException
+     * @throws ValidationException when a live site is pointed at a folder that is not there
      */
     public function apply(Application $application, ?string $webRoot): void
     {
@@ -74,9 +76,11 @@ class WebRootManager
 
         $documentRoot = $this->provisioner->documentRoot($application);
 
-        // The new directory has to exist and be owned before anything points
-        // at it: a vhost whose root is missing answers every request with a
-        // 403, which looks exactly like a permissions bug and is not one.
+        $this->refuseMissing($application, $documentRoot, $previous);
+
+        // Owned before anything points at it. `mkdir -p` stays as a no-op
+        // guard: refuseMissing() has just seen the folder, and a vhost whose
+        // root is missing answers every request with a 403.
         $this->prepareDirectory($application, $documentRoot);
 
         // The credential file no longer moves with the document root — it
@@ -131,6 +135,42 @@ class WebRootManager
         $this->republishPool($application);
         $this->applyVhost($application);
         $this->basicAuth->publish($application);
+    }
+
+    /**
+     * Refuse a web root that is not there yet (junior re-test #8, 2026-10-05).
+     *
+     * This used to create it — empty — and point the live site at it, so a
+     * typo (`/etc` became `public_html/etc`) took the site down with a 403 and
+     * no word of warning. An empty folder is never what someone moving a live
+     * site's web root meant: the files they want served are either already
+     * there or about to be uploaded, and the second case is a two-step job
+     * the user can see. The full path is in the message, so `/etc` reads as
+     * the site-relative path it really is.
+     *
+     * Live sites only: a pending site has nothing on disk yet, which is what
+     * apply() already handles above by storing the value alone.
+     */
+    private function refuseMissing(Application $application, string $documentRoot, string $previous): void
+    {
+        $exists = $this->serverOps->probe(['test', '-d', $documentRoot], $this->context($application, 'web_root_exists'));
+
+        if ($exists->ok) {
+            return;
+        }
+
+        $application->web_root = $previous;
+
+        // Anything but "not there" (a refused sudo, a timeout) is a fault, not
+        // an answer, and must not read as one.
+        // `denied` first: sudo refusing the command also exits 1.
+        if ($exists->denied || $exists->exitCode() !== 1) {
+            throw new WebRootOperationException($exists->reference);
+        }
+
+        throw ValidationException::withMessages([
+            'web_root' => [__('validation.web_root_missing', ['path' => $documentRoot])],
+        ]);
     }
 
     private function prepareDirectory(Application $application, string $documentRoot): void

@@ -237,6 +237,7 @@ return [
     'php_version_unsupported' => 'Die Anwendung :type läuft mit PHP :range. Wähle eine Version in diesem Bereich — außerhalb davon bricht die Installation mitten im Code der Anwendung ab und hinterlässt eine Seite, die aufgeräumt werden muss.',
     'php_version_default_unsupported' => 'Die Anwendung :type läuft mit PHP :range. Wird dieses Feld leer gelassen, gilt die Servervorgabe (:default) — die außerhalb dieses Bereichs liegt. Wähle stattdessen eine Version im Bereich.',
     'web_root_fixed' => ':type wird aus :web_root ausgeliefert und installiert sich um diesen Pfad herum, daher lässt sich der Web-Root hier nicht ändern. Jeder andere Wert macht die Seite unerreichbar und veröffentlicht ihren Quellcode.',
+    'web_root_missing' => 'Der Ordner :path existiert nicht, die Website hätte also nichts auszuliefern. Lege ihn an oder lade zuerst deine Dateien dorthin hoch und setze ihn dann als Web-Root.',
     'port_in_use' => 'Auf diesem Server lauscht bereits etwas auf Port :port. Wähle einen anderen oder beende, was ihn belegt.',
 
     'port_registered' => 'Port :port wird normalerweise von :service verwendet. Du kannst ihn trotzdem nutzen, wenn nichts auf diesem Server ihn belegt.',

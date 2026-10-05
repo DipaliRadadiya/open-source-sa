@@ -237,6 +237,7 @@ return [
     'php_version_unsupported' => 'L\'application :type fonctionne avec PHP :range. Choisissez une version dans cette plage : en dehors, l\'installation échoue à mi-parcours, dans le code de l\'application elle-même, et laisse un site à nettoyer.',
     'php_version_default_unsupported' => 'L\'application :type fonctionne avec PHP :range. Laisser ce champ vide utilise la valeur par défaut du serveur (:default), qui est hors de cette plage — choisissez plutôt une version dans la plage.',
     'web_root_fixed' => ':type est servi depuis :web_root et s\'installe autour de ce chemin : la racine web ne peut donc pas être modifiée ici. Toute autre valeur rend le site inaccessible et publie son code source.',
+    'web_root_missing' => 'Le dossier :path n\'existe pas : le site n\'aurait rien à servir. Créez-le ou envoyez-y d\'abord vos fichiers, puis définissez-le comme racine web.',
     'port_in_use' => 'Quelque chose écoute déjà sur le port :port de ce serveur. Choisissez-en un autre ou arrêtez ce qui l\'occupe.',
 
     'port_registered' => 'Le port :port est normalement utilisé par :service. Vous pouvez quand même l\'utiliser si rien sur ce serveur ne le fait.',
