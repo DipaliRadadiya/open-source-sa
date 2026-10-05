@@ -173,6 +173,62 @@ it('normalises Windows line endings in a deploy script', function () {
         ->not->toContain("\r");
 });
 
+/**
+ * Records what the installer actually writes for a MERN box.
+ *
+ * `beforeEach` above builds its row by hand and omits `serving_profiles`, so
+ * every test in this file falls on `ServerCapabilities::DEFAULT_PROFILES` —
+ * which contains `php`. That is why a file entirely about deploying Node code
+ * from git could not see the git card being refused on a real MERN server: the
+ * row it tests against is not the row a MERN server has.
+ *
+ * `php => true` is deliberate and not a contradiction. The stack preset says
+ * `false`, but `recordStack()` merges runtime detection over it and the panel
+ * is itself a PHP application, so PHP is installed on every box.
+ * `serving_profiles` answers the different question — what this box will
+ * *serve*.
+ */
+function recordRealMernStack(): void
+{
+    ServerCapability::query()->delete();
+    ServerCapability::query()->create([
+        'stack' => 'mern', 'web_server' => 'nginx',
+        'capabilities' => ['php' => true, 'node' => true, 'serving_profiles' => ['node', 'static']],
+        'source' => 'installer', 'verified_at' => now(),
+    ]);
+}
+
+it('deploys from git on a MERN server recorded by the installer', function () {
+    // The regression. `GitSiteType::servingProfile()` returns `php` as the
+    // resolver's fallback, the catalog gated on that one value, and a MERN box
+    // serves node and static — so "deploy from git" was refused on the single
+    // stack that exists to run the user's own Node code.
+    //
+    // Asserted through a real create rather than the card alone, because
+    // `StoreApplicationRequest` calls the same `unavailable()`: a card that
+    // returns while the endpoint still refuses is not a fix.
+    recordRealMernStack();
+
+    createRendered(['domain' => 'real-mern.test'])
+        ->assertCreated()
+        ->assertJsonPath('application.serving_profile', 'node')
+        ->assertJsonPath('application.has_process', true);
+});
+
+it('offers the git card on a real MERN server without letting the PHP types back in', function () {
+    // Both halves matter. The card has to come back, and the decision that a
+    // MERN box hosts no PHP sites has to survive the fix. The profile *set* is
+    // what separates them: git can be served three ways, WordPress one.
+    recordRealMernStack();
+
+    $names = collect(app(SiteTypeManager::class)->catalog())->pluck('name');
+
+    expect($names)->toContain('git')
+        ->and($names)->not->toContain('wordpress')
+        ->and($names)->not->toContain('php')
+        ->and($names)->not->toContain('phpmyadmin');
+});
+
 it('publishes the deploy script as a field on the git site type', function () {
     // The frontend renders this form from the API, so a field the schema does
     // not list is a field the user never sees.
