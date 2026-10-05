@@ -582,3 +582,57 @@ it('denies connecting and disconnecting with view-only access', function () {
 
     expect(GitAccount::count())->toBe(1);
 });
+
+/**
+ * A GitHub account with `$count` repositories, answered page by page the way
+ * /user/repos does: `per_page` and `page` decide the slice.
+ */
+function fakeGithubRepos(int $count): void
+{
+    $repos = array_map(fn (int $i) => [
+        'full_name' => "octocat/repo-{$i}", 'name' => "repo-{$i}", 'private' => false,
+        'default_branch' => 'main', 'html_url' => "https://github.com/octocat/repo-{$i}",
+    ], range(1, $count));
+
+    Http::fake([
+        'api.github.com/user/repos*' => function ($request) use ($repos) {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+            $perPage = (int) ($query['per_page'] ?? 30);
+            $page = (int) ($query['page'] ?? 1);
+
+            return Http::response(array_slice($repos, ($page - 1) * $perPage, $perPage), 200);
+        },
+    ]);
+}
+
+it('finds a GitHub repository that is not on the first page (junior re-test #15)', function () {
+    $account = connectGithub();
+    fakeGithubRepos(54);
+
+    // repo-50 sits on page 2 of 30; the search only ever looked at page 1.
+    $response = $this->withHeaders(asAdmin())
+        ->getJson("/api/integrations/git/accounts/{$account->id}/repositories?search=repo-50")
+        ->assertOk();
+
+    expect(collect($response->json('repositories'))->pluck('full_name')->all())->toBe(['octocat/repo-50'])
+        ->and($response->json('meta.has_more'))->toBeFalse();
+});
+
+it('searches past the first hundred and pages through the matches', function () {
+    $account = connectGithub();
+    fakeGithubRepos(150);
+
+    // "repo-1" matches repo-1, repo-10..19, repo-100..150: 62 names, over three pages of 30.
+    $first = $this->withHeaders(asAdmin())
+        ->getJson("/api/integrations/git/accounts/{$account->id}/repositories?search=repo-1")->assertOk();
+    $third = $this->withHeaders(asAdmin())
+        ->getJson("/api/integrations/git/accounts/{$account->id}/repositories?search=repo-1&page=3")->assertOk();
+
+    expect($first->json('repositories'))->toHaveCount(30)
+        ->and($first->json('meta.has_more'))->toBeTrue()
+        ->and(collect($third->json('repositories'))->pluck('full_name')->all())->toContain('octocat/repo-150')
+        ->and($third->json('meta.has_more'))->toBeFalse();
+
+    // Both requests share one walk of the list: two calls to GitHub, not four.
+    Http::assertSentCount(2);
+});

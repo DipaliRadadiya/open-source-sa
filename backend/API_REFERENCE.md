@@ -653,7 +653,7 @@ nothing installable fixes them, so a card must not offer a button that cannot wo
 | `page` | 1-based, standard Laravel paging |
 | `per_page` | default **10**, max 100 — `422` above that |
 | `search` | case-insensitive free text over **name and domain**, max 255 chars |
-| `filter[status]` | `pending` · `provisioning` · `active` · `failed` |
+| `filter[status]` | `pending` · `provisioning` · `active` · `failed` · `paused` — `active` (Running) leaves paused sites out; `paused` is the sites with `is_disabled: true` (2026-10-05, junior re-test #5) |
 | `filter[site_type]` | any name from `GET /site-types` |
 | `sort` | `created_at` · `name` · `domain` · `status` · `site_type` · `directory_size_bytes` — prefix `-` for descending, default `-created_at` |
 
@@ -5790,6 +5790,9 @@ Show `message` in the delete dialog. Nothing is deleted and nothing is logged.
   {"name": "shop", "full_name": "devuser/shop", "url": "https://github.com/devuser/shop", "default_branch": "main", "private": true}
 ], "meta": {"page": 1, "has_more": false}}
 ```
+
+
+**GitHub `search` covers every repository the account can see (2026-10-05, junior re-test #15),** not only the first page: the full list (up to 1,000, fetched 100 at a time) is filtered and paged through `page` / `meta.has_more`, and kept for 2 minutes per account so typing does not refetch it. Without `search`, paging works as before. GitLab and Bitbucket already search on their side.
 
 ---
 
