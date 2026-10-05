@@ -37,6 +37,8 @@ export function SetupBackupsDialog({
   // An existing configuration turns this into an edit, so the application page
   // reuses this form rather than keeping its own copy.
   target = null,
+  // How many backups retention would count now (null = unknown), for the prune warning.
+  keptCount = null,
   // Passed straight through to the fields: which sites have a database, so the
   // form can say when a database backup would hold nothing.
   databaseCounts = null,
@@ -125,6 +127,15 @@ export function SetupBackupsDialog({
         file_excludes: values.file_excludes,
         database_excludes: values.database_excludes,
       });
+
+      // An edit that keeps the same storage has nothing new to prove: close with a
+      // toast instead of the first-setup "Back up now" step. Edits come from the
+      // application page, where a refresh keeps this dialog mounted.
+      if (target && Number(values.storage_destination_id) === Number(target.storage_destination_id)) {
+        await finish();
+        toast.success(t("savedChanges"));
+        return;
+      }
 
       const application = applications.find(
         (candidate) => candidate.id === Number(values.application_id),
@@ -269,7 +280,8 @@ export function SetupBackupsDialog({
           </>
         }
       >
-        <p className="text-sm text-muted-foreground">{t("verifyHint")}</p>
+        {/* "Tonight's run" means nothing when nothing is scheduled. */}
+        <p className="text-sm text-muted-foreground">{saved.enabled ? t("verifyHint") : t("verifyHintManual")}</p>
       </FormModal>
     );
   }
@@ -316,6 +328,7 @@ export function SetupBackupsDialog({
           refreshingDestinations={refreshing}
           disabled={submitting}
           target={target}
+          keptCount={keptCount}
           databaseCounts={databaseCounts}
           databasesKnown={databasesKnown}
           siteTypes={siteTypes}

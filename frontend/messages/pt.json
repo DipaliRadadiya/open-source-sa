@@ -70,7 +70,9 @@
     },
     "serverNavigation": "Menu do servidor",
     "loadingPage": "Carregando a página…",
-    "close": "Fechar"
+    "close": "Fechar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar"
   },
   "systemUsers": {
     "title": "Usuários do sistema",
@@ -6173,8 +6175,8 @@
       "staging": "Staging",
       "unknownApplication": "Aplicação excluída",
       "allCovered": "Todas as aplicações estão com backup.",
-      "exposed": "{count, plural, one {# aplicação não está com backup} other {# aplicações não estão com backup}}",
-      "exposedHint": "Se este servidor for perdido, essas aplicações não poderão ser recuperadas. Configurar uma leva cerca de um minuto.",
+      "exposed": "{count, plural, one {# aplicação sem backup automático funcionando} other {# aplicações sem backup automático funcionando}}",
+      "exposedHint": "Se este servidor for perdido, tudo o que mudou desde o último backup delas não poderá ser recuperado. Configurar um leva cerca de um minuto.",
       "columns": {
         "site": "Aplicação",
         "status": "Backups",
@@ -6263,7 +6265,9 @@
       "discardTitle": "Descartar estas configurações de backup?",
       "discardDescription": "Suas alterações não foram salvas. Se fechar agora, elas serão perdidas.",
       "discardKeep": "Continuar editando",
-      "discardConfirm": "Descartar alterações"
+      "discardConfirm": "Descartar alterações",
+      "savedChanges": "Configurações de backup salvas.",
+      "verifyHintManual": "Execute um agora para verificar se as chaves de armazenamento funcionam."
     },
     "form": {
       "applicationPlaceholder": "Escolha uma aplicação",
@@ -6313,7 +6317,8 @@
       "warnings": {
         "narrower": "Os bancos de dados deixarão de ser copiados a partir da próxima execução. Os backups já feitos ainda os contêm.",
         "narrowerFiles": "Os arquivos deixarão de ser copiados a partir da próxima execução. Os backups já feitos ainda os contêm.",
-        "retentionDown": "{count, plural, one {O backup mais antigo será excluído} other {Os # backups mais antigos serão excluídos}} assim que você salvar."
+        "retentionDown": "{count, plural, one {O backup mais antigo será excluído} other {Os # backups mais antigos serão excluídos}} assim que você salvar.",
+        "retentionDownUnknown": "{keep, plural, one {Os backups além do mais recente} other {Os backups além dos # mais recentes}} serão excluídos assim que você salvar."
       },
       "destinationFailing": "O último teste de conexão com {name} falhou, então os backups enviados para lá não serão gravados até que seja corrigido.",
       "noDatabase": {
@@ -6433,7 +6438,7 @@
         "description": "Isto não repete a restauração. Cria uma cópia de segurança completamente nova de {name} e envia-a — o último arquivo tinha {size}, por isso numa ligação lenta pode demorar horas e ocupará esse espaço no destino.",
         "cancel": "Cancelar",
         "confirm": "Iniciar nova cópia",
-        "unknownSize": "um tamanho desconhecido"
+        "descriptionNoSize": "Isto não repete a restauração. Cria uma cópia de segurança completamente nova de {name} e envia-a. Em uma conexão lenta, uma aplicação grande pode demorar."
       }
     },
     "restore": {
@@ -6647,7 +6652,9 @@
       "failedBody": "Os backups enviados para {names} não podem ser gravados. Toda execução agendada falhará até que isso seja corrigido.",
       "untestedTitle": "{count, plural, one {Um destino de armazenamento nunca foi testado} other {# destinos de armazenamento nunca foram testados}}",
       "untestedBody": "Ninguém verificou se {names} funciona. Teste antes de precisar restaurar.",
-      "action": "Verificar armazenamento"
+      "action": "Verificar armazenamento",
+      "uploadFailedTitle": "{count, plural, one {O último backup para um destino de armazenamento não pôde ser enviado} other {Os últimos backups para # destinos de armazenamento não puderam ser enviados}}",
+      "uploadFailedBody": "O último backup enviado para {names} não pôde ser enviado. Teste este armazenamento para descobrir o motivo."
     },
     "restores": {
       "columns": {
@@ -6666,7 +6673,6 @@
       "unknownApplication": "Aplicação excluída",
       "unknownReason": "O motivo não foi registrado.",
       "noSafetyCopy": "Nenhuma disponível",
-      "findSafetyCopy": "Localizar cópia de segurança",
       "allApplications": "Todas as aplicações",
       "allStatuses": "Qualquer status",
       "allTypes": "Qualquer tipo de restauração",
@@ -6685,8 +6691,11 @@
         "title": "Nenhuma restauração corresponde a esses filtros",
         "description": "Tente uma aplicação ou status diferente."
       },
-      "notStarted": "Não iniciada"
-    }
+      "notStarted": "Não iniciada",
+      "undo": "Desfazer",
+      "safetyGone": "Essa cópia de segurança não é mais mantida. Só as duas mais recentes são."
+    },
+    "pausedFrequency": "Pausado: {frequency}"
   },
   "sync": {
     "title": "Sincronização do servidor",

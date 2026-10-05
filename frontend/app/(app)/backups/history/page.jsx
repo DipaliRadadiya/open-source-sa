@@ -8,12 +8,13 @@ import { DataTablePagination } from "@/components/data-table/data-table-paginati
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
+import { redirectUnknownApplication } from "@/lib/tables/redirect-unknown-application";
 
 export const dynamic = "force-dynamic";
 
 export default async function BackupsHistoryPage({ searchParams }) {
   const sp = await searchParams;
-  const [{ backups, meta, failed, status, failure, message }, { applications }, permissions, appPermissions, t] = await Promise.all([
+  const [{ backups, meta, failed, status, failure, message }, { applications, failed: applicationsFailed }, permissions, appPermissions, t] = await Promise.all([
     getBackups(sp),
     getAllApplications(),
     getPermissions(),
@@ -21,6 +22,8 @@ export default async function BackupsHistoryPage({ searchParams }) {
     getTranslations("backups"),
   ]);
 
+  // Only a refusal (422) can be the filter; anything else is a real failure.
+  if (failed && status === 422) redirectUnknownApplication("/backups/history", sp, applications, applicationsFailed);
   if (failed) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
 
   const counts = backupCounts(meta);

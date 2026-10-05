@@ -84,11 +84,19 @@ export default async function ApplicationBackupsPage({ params }) {
     settled ? getBackupTargetOptions() : Promise.resolve({ options: null }),
   ]);
 
-  // Turn off names every storage holding an archive, and the list above is only the newest five.
+  // The list above is only the newest five. Turn off names every storage holding an
+  // archive, and lowering "keep" must say how many it really deletes.
+  const everyBackup =
+    (canRestore || canManage) && !backupsFailed && meta.total > backups.length
+      ? (await getBackups({ application: id, per_page: 100 })).backups
+      : backups;
   const archiveDestinations =
-    canRestore && !backupsFailed && meta.total > backups.length
-      ? (await getBackups({ application: id, per_page: 100 })).backups.map((backup) => backup.storage_destination_name)
-      : [];
+    canRestore && meta.total > backups.length ? everyBackup.map((backup) => backup.storage_destination_name) : [];
+  // What retention counts (RetentionEnforcer): complete, non-safety copies. Null when unseen.
+  const keptCount =
+    backupsFailed || meta.total > everyBackup.length
+      ? null
+      : everyBackup.filter((backup) => backup.status === "verified" && !backup.is_safety).length;
 
   // Only site types that declare `needs_database` get the warning.
   const needsDatabase = siteNeedsDatabase(siteTypes.siteTypes, application.site_type);
@@ -111,6 +119,7 @@ export default async function ApplicationBackupsPage({ params }) {
           destinations={destinations}
           backups={backups}
           archiveDestinations={archiveDestinations}
+          keptCount={keptCount}
           total={meta.total}
           backupsFailed={backupsFailed}
           backupsForbidden={backupsFailed && backupsStatus === 403}

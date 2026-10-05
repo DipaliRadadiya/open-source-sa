@@ -2,7 +2,7 @@
 
 import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
-import { RotateCcw, Undo2 } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiDuration } from "@/lib/format/api-date";
 import { reasonText } from "@/lib/backups/reason";
@@ -13,7 +13,6 @@ import {
   RESTORE_STATUSES,
 } from "@/lib/schemas/backup";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { FacetSelect } from "@/components/data-table/facet-select";
@@ -22,6 +21,7 @@ import { EmptyState } from "@/components/data-table/empty-state";
 import { ClearFiltersButton } from "@/components/data-table/clear-filters-button";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { RESTORE_OUTCOME, outcomeOf } from "@/components/backups/status-meta";
+import { UndoRestoreButton } from "@/components/backups/undo-restore-button";
 
 // The key comes from the API and `t()` throws on a miss, so fall back to the raw status.
 function statusLabel(restore, t) {
@@ -30,7 +30,7 @@ function statusLabel(restore, t) {
   return t.has(key) ? t(key) : restore.status;
 }
 
-export function RestoresList({ restores, applications = [], hasFilters = false }) {
+export function RestoresList({ restores, applications = [], hasFilters = false, canRestore = false }) {
   const t = useTranslations("backups.restores");
 
   const running = restores.some((restore) => RESTORE_IN_FLIGHT.includes(restore.status));
@@ -48,36 +48,40 @@ export function RestoresList({ restores, applications = [], hasFilters = false }
       {running ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
 
       {/* Same filters, order and widths as the backup history tab; URL-driven, so a view is a link. */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <FacetSelect
           paramKey="application"
+          label={t("columns.site")}
           allLabel={t("allApplications")}
           options={applications.map((application) => ({
             value: String(application.id),
             label: application.name,
           }))}
-          className="w-full sm:w-56"
+          className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
         />
         <FacetSelect
           paramKey="status"
+          label={t("columns.status")}
           allLabel={t("allStatuses")}
           options={RESTORE_STATUSES.map((value) => ({ value, label: t(`statuses.${value}`) }))}
-          className="w-full sm:w-44"
+          className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
         />
         <FacetSelect
           paramKey="period"
+          label={t("columns.when")}
           allLabel={t("anyTime")}
           options={BACKUP_PERIODS.map((value) => ({
             value,
             label: t("lastDays", { count: Number(value) }),
           }))}
-          className="w-full sm:w-44"
+          className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
         />
         <FacetSelect
           paramKey="type"
+          label={t("columns.type")}
           allLabel={t("allTypes")}
           options={BACKUP_TYPES.map((value) => ({ value, label: t(`types.${value}`) }))}
-          className="w-full sm:w-48"
+          className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
         />
         <div className="sm:ml-auto">
           <RefreshButton />
@@ -93,14 +97,16 @@ export function RestoresList({ restores, applications = [], hasFilters = false }
           action={hasFilters ? <ClearFiltersButton keys={["application", "status", "period", "type", "search"]} /> : null}
         />
       ) : (
-        <>
-          <div className="lg:hidden">
-            <RestoreCards restores={restores} />
+        <div className="@container">
+          {/* From the widest locale: German needs ~990px of table (Actions "Wiederherstellen",
+              Restores "Was zurückgeholt wurde"), so the table starts at 1000px of content. */}
+          <div className="@min-[1000px]:hidden">
+            <RestoreCards restores={restores} canRestore={canRestore} />
           </div>
-          <div className="hidden lg:block">
-            <DataTable columns={columns} data={restores} emptyMessage={t("empty.title")} />
+          <div className="hidden @min-[1000px]:block">
+            <DataTable columns={columns} data={restores} emptyMessage={t("empty.title")} meta={{ canRestore }} />
           </div>
-        </>
+        </div>
       )}
     </div>
   );
@@ -175,8 +181,8 @@ function WhenCell({ row }) {
   );
 }
 
-// The safety copy is exempt from retention, so it does not age out.
-function UndoCell({ row }) {
+// Only the newest two safety copies are kept (the API then sends no id).
+function UndoCell({ row, table }) {
   const t = useTranslations("backups.restores");
   const restore = row.original;
 
@@ -184,17 +190,10 @@ function UndoCell({ row }) {
     return <span className="text-sm text-muted-foreground">{t("noSafetyCopy")}</span>;
   }
 
-  return (
-    <Button asChild variant="outline" size="sm">
-      <Link href={`/backups/history?application=${restore.application_id ?? ""}`}>
-        <Undo2 className="size-4" />
-        {t("findSafetyCopy")}
-      </Link>
-    </Button>
-  );
+  return <UndoRestoreButton restore={restore} canRestore={table.options.meta?.canRestore} />;
 }
 
-function RestoreCards({ restores }) {
+function RestoreCards({ restores, canRestore = false }) {
   const t = useTranslations("backups.restores");
 
   return (
@@ -246,6 +245,11 @@ function RestoreCards({ restores }) {
                 <p className="text-xs text-muted-foreground">
                   {reasonText(restore.reason_title, t("unknownReason"))}
                 </p>
+              ) : null}
+
+              {/* Cards had no way back at all; same action as the table's column. */}
+              {restore.safety_backup_id ? (
+                <UndoRestoreButton restore={restore} canRestore={canRestore} className="w-full sm:w-auto" />
               ) : null}
             </CardContent>
           </Card>

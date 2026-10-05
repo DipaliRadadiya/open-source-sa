@@ -19,6 +19,7 @@ export function BackupsEmptyState({
   backupOptions = null,
 }) {
   const t = useTranslations("backups.empty");
+  const th = useTranslations("backups.history");
   const [open, setOpen] = useState(false);
   const hasDestination = destinations.length > 0;
 
@@ -66,8 +67,14 @@ export function BackupsEmptyState({
             </div>
 
             {/* Storage is the prerequisite: with no destination, send them there. */}
-            {!canManage ? null : hasDestination ? (
-              <Button size="lg" onClick={() => setOpen(true)}>
+            {/* Viewers see the action, disabled with the reason. */}
+            {!canManage || hasDestination ? (
+              <Button
+                size="lg"
+                disabled={!canManage}
+                disabledReason={canManage ? null : th("noPermission")}
+                onClick={() => setOpen(true)}
+              >
                 <ShieldCheck className="size-4" />
                 {t("action")}
               </Button>

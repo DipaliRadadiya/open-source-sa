@@ -70,7 +70,9 @@
     },
     "serverNavigation": "Server-Menü",
     "loadingPage": "Seite wird geladen…",
-    "close": "Schließen"
+    "close": "Schließen",
+    "cancel": "Abbrechen",
+    "confirm": "Bestätigen"
   },
   "systemUsers": {
     "title": "Systembenutzer",
@@ -6173,8 +6175,8 @@
       "staging": "Staging",
       "unknownApplication": "Gelöschte Anwendung",
       "allCovered": "Jede Anwendung wird gesichert.",
-      "exposed": "{count, plural, one {# Anwendung wird nicht gesichert} other {# Anwendungen werden nicht gesichert}}",
-      "exposedHint": "Geht dieser Server verloren, lassen sich diese Anwendungen nicht zurückholen. Eine einzurichten dauert etwa eine Minute.",
+      "exposed": "{count, plural, one {# Anwendung hat keine funktionierende automatische Sicherung} other {# Anwendungen haben keine funktionierende automatische Sicherung}}",
+      "exposedHint": "Geht dieser Server verloren, lässt sich alles, was sich seit ihrer letzten Sicherung geändert hat, nicht zurückholen. Eine einzurichten dauert etwa eine Minute.",
       "columns": {
         "site": "Anwendung",
         "status": "Backups",
@@ -6263,7 +6265,9 @@
       "discardTitle": "Diese Backup-Einstellungen verwerfen?",
       "discardDescription": "Ihre Änderungen sind nicht gespeichert. Wenn Sie jetzt schließen, gehen sie verloren.",
       "discardKeep": "Weiter bearbeiten",
-      "discardConfirm": "Änderungen verwerfen"
+      "discardConfirm": "Änderungen verwerfen",
+      "savedChanges": "Backup-Einstellungen gespeichert.",
+      "verifyHintManual": "Führen Sie jetzt eines aus, um zu prüfen, ob die Speicherschlüssel funktionieren."
     },
     "form": {
       "applicationPlaceholder": "Anwendung auswählen",
@@ -6313,7 +6317,8 @@
       "warnings": {
         "narrower": "Ab dem nächsten Lauf werden Datenbanken nicht mehr gesichert. Bereits erstellte Backups enthalten sie weiterhin.",
         "narrowerFiles": "Ab dem nächsten Lauf werden Dateien nicht mehr gesichert. Bereits erstellte Backups enthalten sie weiterhin.",
-        "retentionDown": "{count, plural, one {Das älteste Backup wird beim Speichern sofort gelöscht} other {Die # ältesten Backups werden beim Speichern sofort gelöscht}}."
+        "retentionDown": "{count, plural, one {Das älteste Backup wird beim Speichern sofort gelöscht} other {Die # ältesten Backups werden beim Speichern sofort gelöscht}}.",
+        "retentionDownUnknown": "{keep, plural, one {Sicherungen außer der neuesten} other {Sicherungen außer den # neuesten}} werden beim Speichern sofort gelöscht."
       },
       "destinationFailing": "Der letzte Verbindungstest zu {name} ist fehlgeschlagen, dorthin gesendete Backups werden also nicht geschrieben, bis das behoben ist.",
       "noDatabase": {
@@ -6433,7 +6438,7 @@
         "description": "Dies wiederholt nicht die Wiederherstellung. Es erstellt eine völlig neue Sicherung von {name} und lädt sie hoch — das letzte Archiv war {size} groß, daher kann dies bei langsamer Verbindung Stunden dauern und belegt entsprechend Speicherplatz am Ziel.",
         "cancel": "Abbrechen",
         "confirm": "Neue Sicherung starten",
-        "unknownSize": "unbekannter Größe"
+        "descriptionNoSize": "Dies wiederholt nicht die Wiederherstellung. Es erstellt eine völlig neue Sicherung von {name} und lädt sie hoch. Bei langsamer Verbindung kann eine große Anwendung dauern."
       }
     },
     "restore": {
@@ -6647,7 +6652,9 @@
       "failedBody": "Backups an {names} können nicht geschrieben werden. Jeder geplante Lauf scheitert, bis das behoben ist.",
       "untestedTitle": "{count, plural, one {Ein Speicherziel wurde nie getestet} other {# Speicherziele wurden nie getestet}}",
       "untestedBody": "Niemand hat geprüft, ob {names} funktioniert. Testen Sie es, bevor Sie eine Wiederherstellung brauchen.",
-      "action": "Speicher prüfen"
+      "action": "Speicher prüfen",
+      "uploadFailedTitle": "{count, plural, one {Die letzte Sicherung an ein Speicherziel konnte nicht hochgeladen werden} other {Die letzten Sicherungen an # Speicherziele konnten nicht hochgeladen werden}}",
+      "uploadFailedBody": "Die letzte an {names} gesendete Sicherung konnte nicht hochgeladen werden. Testen Sie diesen Speicher, um den Grund zu erfahren."
     },
     "restores": {
       "columns": {
@@ -6666,7 +6673,6 @@
       "unknownApplication": "Gelöschte Anwendung",
       "unknownReason": "Der Grund wurde nicht aufgezeichnet.",
       "noSafetyCopy": "Nicht verfügbar",
-      "findSafetyCopy": "Sicherheitskopie finden",
       "allApplications": "Alle Anwendungen",
       "allStatuses": "Jeder Status",
       "allTypes": "Jede Art der Wiederherstellung",
@@ -6685,8 +6691,11 @@
         "title": "Keine Wiederherstellung passt zu diesen Filtern",
         "description": "Versuchen Sie eine andere Anwendung oder einen anderen Status."
       },
-      "notStarted": "Nicht gestartet"
-    }
+      "notStarted": "Nicht gestartet",
+      "undo": "Rückgängig",
+      "safetyGone": "Diese Sicherheitskopie wird nicht mehr aufbewahrt. Nur die zwei neuesten bleiben."
+    },
+    "pausedFrequency": "Pausiert: {frequency}"
   },
   "sync": {
     "title": "Server-Sync",

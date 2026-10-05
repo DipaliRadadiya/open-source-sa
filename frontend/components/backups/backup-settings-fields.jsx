@@ -79,6 +79,7 @@ export function BackupSettingsFields({
   disabled = false,
   // The saved configuration; only used to warn about changes that take something away.
   target = null,
+  keptCount = null,
   // How many databases each site has, and whether that answer is trustworthy.
   // Absent means unknown, which reads the same as "say nothing".
   databaseCounts = null,
@@ -177,10 +178,9 @@ export function BackupSettingsFields({
   }, [filesOnly, noDatabase, type, form, target, typePicked]);
   // Lowering retention prunes when the settings are SAVED (SaveBackupTarget
   // applies it in the same request), not on the next run.
-  const pruning =
-    target && Number(retention) > 0 && Number(retention) < target.retention_count
-      ? target.retention_count - Number(retention)
-      : 0;
+  // From the backups actually kept: "keep 3 → 1" with only 2 kept deletes one, not two.
+  const lowering = target && Number(retention) > 0 && Number(retention) < target.retention_count;
+  const pruning = !lowering ? 0 : keptCount === null ? null : Math.max(0, keptCount - Number(retention));
 
   return (
     <div className="space-y-6">
@@ -206,6 +206,7 @@ export function BackupSettingsFields({
                     placeholder={t("applicationPlaceholder")}
                     searchPlaceholder={t("applicationSearch")}
                     empty={t("applicationEmpty")}
+                    ariaLabel={t("groups.site")}
                   />
                 </FormControl>
                 <FormMessage />
@@ -422,7 +423,9 @@ export function BackupSettingsFields({
             />
           </div>
         ) : null}
-        {automatic && pruning > 0 ? (
+        {automatic && pruning === null ? (
+          <Caution>{t("warnings.retentionDownUnknown", { keep: Number(retention) })}</Caution>
+        ) : automatic && pruning > 0 ? (
           <Caution>{t("warnings.retentionDown", { count: pruning })}</Caution>
         ) : null}
       </Group>
@@ -499,6 +502,8 @@ export function BackupSettingsFields({
                       placeholder={t("destinationPlaceholder")}
                       searchPlaceholder={t("destinationSearch")}
                       empty={t("destinationEmpty")}
+                      // The group heading is not a <label>; without this the picker had no name.
+                      ariaLabel={t("groups.storage")}
                     />
                   </FormControl>
                 )}

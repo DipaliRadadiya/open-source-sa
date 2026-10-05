@@ -70,7 +70,9 @@
     },
     "serverNavigation": "Server menu",
     "loadingPage": "Loading page…",
-    "close": "Close"
+    "close": "Close",
+    "cancel": "Cancel",
+    "confirm": "Confirm"
   },
   "systemUsers": {
     "title": "System Users",
@@ -6173,8 +6175,8 @@
       "staging": "Staging",
       "unknownApplication": "Deleted application",
       "allCovered": "Every application is backed up.",
-      "exposed": "{count, plural, one {# application is not backed up} other {# applications are not backed up}}",
-      "exposedHint": "If this server is lost, those applications cannot be brought back. Setting one up takes about a minute.",
+      "exposed": "{count, plural, one {# application has no working automatic backup} other {# applications have no working automatic backup}}",
+      "exposedHint": "If this server is lost, anything changed since their last backup cannot be brought back. Setting one up takes about a minute.",
       "columns": {
         "site": "Application",
         "status": "Backups",
@@ -6263,7 +6265,9 @@
       "discardTitle": "Discard these backup settings?",
       "discardDescription": "Your changes haven't been saved. Closing now will lose them.",
       "discardKeep": "Keep editing",
-      "discardConfirm": "Discard changes"
+      "discardConfirm": "Discard changes",
+      "savedChanges": "Backup settings saved.",
+      "verifyHintManual": "Run one now to check the storage keys work."
     },
     "form": {
       "applicationPlaceholder": "Choose an application",
@@ -6313,7 +6317,8 @@
       "warnings": {
         "narrower": "Databases will stop being backed up from the next run. Backups already taken still contain them.",
         "narrowerFiles": "Files will stop being backed up from the next run. Backups already taken still contain them.",
-        "retentionDown": "{count, plural, one {The oldest backup will be deleted} other {The # oldest backups will be deleted}} as soon as you save."
+        "retentionDown": "{count, plural, one {The oldest backup will be deleted} other {The # oldest backups will be deleted}} as soon as you save.",
+        "retentionDownUnknown": "{keep, plural, one {Backups beyond the newest one} other {Backups beyond the newest #}} will be deleted as soon as you save."
       },
       "destinationFailing": "The last connection test to {name} failed, so backups sent there will not be written until it is fixed.",
       "noDatabase": {
@@ -6433,7 +6438,7 @@
         "description": "This does not retry the restore. It runs a completely new backup of {name} and uploads it — the last archive was {size}, so on a slow connection this can take hours and will use that much space at the destination.",
         "cancel": "Cancel",
         "confirm": "Start a new backup",
-        "unknownSize": "an unknown size"
+        "descriptionNoSize": "This does not retry the restore. It runs a completely new backup of {name} and uploads it. On a slow connection a large application can take a while."
       }
     },
     "restore": {
@@ -6647,7 +6652,9 @@
       "failedBody": "Backups sent to {names} cannot be written. Every scheduled run will fail until this is fixed.",
       "untestedTitle": "{count, plural, one {A storage destination has never been tested} other {# storage destinations have never been tested}}",
       "untestedBody": "Nobody has checked that {names} works. Test it before you need a restore.",
-      "action": "Check storage"
+      "action": "Check storage",
+      "uploadFailedTitle": "{count, plural, one {The last backup to a storage destination failed to upload} other {The last backups to # storage destinations failed to upload}}",
+      "uploadFailedBody": "The last backup sent to {names} could not be uploaded. Test this storage to find out why."
     },
     "restores": {
       "columns": {
@@ -6666,7 +6673,6 @@
       "unknownApplication": "Deleted application",
       "unknownReason": "The reason was not recorded.",
       "noSafetyCopy": "None available",
-      "findSafetyCopy": "Find safety copy",
       "allApplications": "All applications",
       "allStatuses": "Any status",
       "allTypes": "Any restore type",
@@ -6685,8 +6691,11 @@
         "title": "No restores match those filters",
         "description": "Try a different application or status."
       },
-      "notStarted": "Not started"
-    }
+      "notStarted": "Not started",
+      "undo": "Undo",
+      "safetyGone": "That safety copy is no longer kept. Only the newest two are."
+    },
+    "pausedFrequency": "Paused: {frequency}"
   },
   "sync": {
     "title": "Server Sync",

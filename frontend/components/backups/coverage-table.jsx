@@ -1,6 +1,7 @@
 import Link from "@/components/ui/app-link";
 import { useFormatter, useTranslations } from "next-intl";
 import { scheduleWhen } from "@/lib/backups/schedule-time";
+import { frequencyLabel } from "@/lib/backups/frequency";
 import { History, MoreHorizontal, PlayCircle, Settings2, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -85,6 +86,7 @@ function TypeCell({ row }) {
 
 function ScheduleCell({ row, options }) {
   const t = useTranslations("backups.coverage");
+  const tb = useTranslations("backups");
   const format = useFormatter();
   const { target } = row.original;
   if (!target) return <Placeholder>{t("placeholders.schedule")}</Placeholder>;
@@ -96,7 +98,7 @@ function ScheduleCell({ row, options }) {
 
   return (
     <div className="min-w-0">
-      <p className="truncate text-sm">{target.frequency_title ?? target.frequency}</p>
+      <p className="truncate text-sm">{frequencyLabel(target, (frequency) => tb("pausedFrequency", { frequency }))}</p>
       {time ? <p className="truncate text-xs tabular-nums">{time}</p> : null}
       <p className="truncate text-xs tabular-nums text-muted-foreground">
         {t("keeps", { count: target.retention_count })}
@@ -172,40 +174,55 @@ function BackupStatusDot({ status, label }) {
 function ActionsCell({ row, table }) {
   const t = useTranslations("backups.coverage");
   const tc = useTranslations("common");
-  const { canManage, onSetUp, onBackUpNow, busyIds = [] } = table.options.meta;
+  const th = useTranslations("backups.history");
+  const ta = useTranslations("backups.application");
+  const { canManage, onSetUp, onBackUpNow, busyIds = [], restoringId = null } = table.options.meta;
   const { application, target, state } = row.original;
 
+  // Viewers see the actions too, disabled with the reason.
   if (state === "unprotected") {
-    return canManage ? (
+    return (
       <div className="flex items-center justify-end gap-1">
-        <Button size="sm" variant="outline" onClick={() => onSetUp(application.id)}>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!canManage}
+          disabledReason={canManage ? null : th("noPermission")}
+          onClick={() => onSetUp(application.id)}
+        >
           <ShieldCheck className="size-4" />
           {t("setUpShort")}
         </Button>
         {/* Reserves the ⋯ space so all rows share one right edge. */}
         <span className="size-8 shrink-0" aria-hidden />
       </div>
-    ) : null;
+    );
   }
 
   // One button plus a menu for the occasional actions.
   return (
     <div className="flex items-center justify-end gap-1">
-      {canManage ? (
-        <ReasonTooltip
-          reason={!target && !busyIds.includes(application.id) ? tc("needsBackupTarget") : null}
+      <ReasonTooltip
+        reason={
+          !canManage
+            ? th("noPermission")
+            : restoringId === application.id
+              ? ta("restoreRunning")
+              : !target && !busyIds.includes(application.id)
+                ? tc("needsBackupTarget")
+                : null
+        }
+      >
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => onBackUpNow(application.id, application.name)}
+          disabled={!canManage || busyIds.includes(application.id) || !target || restoringId === application.id}
         >
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onBackUpNow(application.id, application.name)}
-            disabled={busyIds.includes(application.id) || !target}
-          >
-            <ActionIcon icon={PlayCircle} pending={busyIds.includes(application.id)} className="size-4" />
-            {t("runBackup")}
-          </Button>
-        </ReasonTooltip>
-      ) : null}
+          <ActionIcon icon={PlayCircle} pending={busyIds.includes(application.id)} className="size-4" />
+          {t("runBackup")}
+        </Button>
+      </ReasonTooltip>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="size-8" aria-label={t("moreActions")}>
@@ -231,7 +248,7 @@ function ActionsCell({ row, table }) {
   );
 }
 
-export function CoverageTable({ rows, options = null, canManage, onSetUp, onBackUpNow, busyIds = [] }) {
+export function CoverageTable({ rows, options = null, canManage, onSetUp, onBackUpNow, busyIds = [], restoringId = null }) {
   const t = useTranslations("backups.coverage");
 
   const columns = [
@@ -265,7 +282,7 @@ export function CoverageTable({ rows, options = null, canManage, onSetUp, onBack
         columns: ["type", "schedule", "storage", "runs"],
         render: (row) => (row.target ? null : <NotSetUp />),
       }}
-      meta={{ canManage, onSetUp, onBackUpNow, busyIds }}
+      meta={{ canManage, onSetUp, onBackUpNow, busyIds, restoringId }}
     />
   );
 }

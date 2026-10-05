@@ -201,41 +201,45 @@ export function BackupsHistory({
         <Tally label={t("counts.running")} value={counts.running} tone="text-primary" dot="bg-primary" />
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         {/* Searchable picker: `/backups` has no text search, so this is how a site is found. */}
         <FacetSelect
           paramKey="application"
+          label={t("columns.site")}
           allLabel={t("allApplications")}
           options={applications.map((application) => ({
             value: String(application.id),
             label: application.name,
           }))}
-          className="w-full sm:w-56"
+          className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
         />
         <FacetSelect
           paramKey="status"
+          label={t("columns.status")}
           allLabel={t("allStatuses")}
           options={BACKUP_STATUSES.map((value) => ({
             value,
             label: t(`statuses.${value}`),
           }))}
-          className="w-full sm:w-44"
+          className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
         />
         {/* Presets rather than a date picker. */}
         <FacetSelect
           paramKey="period"
+          label={t("columns.when")}
           allLabel={t("anyTime")}
           options={BACKUP_PERIODS.map((value) => ({
             value,
             label: t("lastDays", { count: Number(value) }),
           }))}
-          className="w-full sm:w-44"
+          className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
         />
         <FacetSelect
           paramKey="type"
+          label={t("columns.type")}
           allLabel={t("allTypes")}
           options={BACKUP_TYPES.map((value) => ({ value, label: t(`types.${value}`) }))}
-          className="w-full sm:w-48"
+          className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
         />
         <div className="sm:ml-auto">
           <RefreshButton />
@@ -251,31 +255,35 @@ export function BackupsHistory({
           action={hasFilters ? <ClearFiltersButton keys={["application", "status", "period", "type", "search"]} /> : null}
         />
       ) : (
-        <>
-          <div className="lg:hidden">
+        <div className="@container">
+          {/* From the widest locale: German needs ~990px of table (Actions "Wiederherstellen",
+              Restores "Was zurückgeholt wurde"), so the table starts at 1000px of content. */}
+          <div className="@min-[1000px]:hidden">
             <BackupsCards {...listProps} />
           </div>
-          <div className="hidden lg:block">
+          <div className="hidden @min-[1000px]:block">
             <BackupsHistoryTable {...listProps} />
           </div>
-        </>
+        </div>
       )}
 
       <ConfirmDialog
         open={Boolean(retrying)}
         onOpenChange={(open) => !busyId && setRetrying(open ? retrying : null)}
         icon={RotateCw}
-        title={t("retryConfirm.title")}
+        title={t("retryConfirm.title", { name: retrying?.application_name ?? t("unknownApplication") })}
         description={
-          retrying
-            ? t("retryConfirm.description", {
-                name: retrying.application_name ?? t("unknownApplication"),
-                // The archive size about to be rebuilt and re-uploaded.
-                size: retrying.size_bytes
-                  ? formatBytes(retrying.size_bytes, format)
-                  : t("retryConfirm.unknownSize"),
-              })
-            : ""
+          !retrying
+            ? ""
+            : retrying.size_bytes
+              ? t("retryConfirm.description", {
+                  name: retrying.application_name ?? t("unknownApplication"),
+                  // The archive size about to be rebuilt and re-uploaded.
+                  size: formatBytes(retrying.size_bytes, format),
+                })
+              : t("retryConfirm.descriptionNoSize", {
+                  name: retrying.application_name ?? t("unknownApplication"),
+                })
         }
         cancelLabel={t("retryConfirm.cancel")}
         confirmLabel={t("retryConfirm.confirm")}

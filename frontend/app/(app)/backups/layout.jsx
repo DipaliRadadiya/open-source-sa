@@ -1,8 +1,9 @@
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
-import { getRestores } from "@/lib/backups/get-backups";
-import { RESTORE_IN_FLIGHT } from "@/lib/schemas/backup";
+import { cookies } from "next/headers";
+import { getActiveRestore } from "@/lib/backups/get-backups";
+import { DISMISSED_RESTORES_COOKIE, parseDismissedRestores } from "@/lib/backups/dismissed-restores";
 import { BackupsTabs } from "@/components/backups/backups-tabs";
 import { RestoreWatch } from "@/components/backups/restore-watch";
 import { PageHeader } from "@/components/ui/page-header";
@@ -22,10 +23,12 @@ export default async function BackupsLayout({ children }) {
   ]);
 
   if (!can(permissions, "backup", "view")) return <PermissionDenied title={t("title")} />;
-  // An in-flight restore is shown on every tab; seeded from the server so it
-  // survives a reload and shows in other browsers.
-  const { restores } = await getRestores({ per_page: 5 });
-  const active = restores.find((restore) => RESTORE_IN_FLIGHT.includes(restore.status)) ?? null;
+  // Seeded from the server so it survives a reload and shows in other browsers. Same
+  // rule as the application page: a finished restore stays (with its Undo) until it
+  // is dismissed, instead of vanishing on the next refresh.
+  const active = await getActiveRestore(undefined, {
+    dismissed: parseDismissedRestores((await cookies()).get(DISMISSED_RESTORES_COOKIE)?.value),
+  });
 
   return (
     <div className="space-y-6">

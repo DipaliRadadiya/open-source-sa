@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { Loader2, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -26,8 +27,9 @@ export function ConfirmDialog({
   title,
   description,
   children,
-  cancelLabel = "Cancel",
-  confirmLabel = "Confirm",
+  // English defaults leaked into every locale where a caller left them out.
+  cancelLabel,
+  confirmLabel,
   confirmVariant,
   confirmDisabled = false,
   pending = false,
@@ -37,6 +39,9 @@ export function ConfirmDialog({
   className,
   onCloseAutoFocus,
 }) {
+  const tc = useTranslations("common");
+  cancelLabel ??= tc("cancel");
+  confirmLabel ??= tc("confirm");
   // Cannot be closed (e.g. by Escape) while the request is pending.
   function handleOpenChange(next) {
     if (!next && pending) return;

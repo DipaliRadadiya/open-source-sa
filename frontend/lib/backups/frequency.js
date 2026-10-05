@@ -56,3 +56,10 @@ export function orderedTypes(options) {
   const types = options?.types ?? [];
   return [...types.filter((t) => t.value === "full"), ...types.filter((t) => t.value !== "full")];
 }
+
+// A paused schedule keeps its frequency, so "Daily" beside a "Manual only" badge
+// reads as running; `paused` is the translated "Paused: {frequency}".
+export function frequencyLabel(target, paused) {
+  const title = target?.frequency_title ?? target?.frequency;
+  return target && target.enabled === false && target.frequency !== "manual" ? paused(title) : title;
+}

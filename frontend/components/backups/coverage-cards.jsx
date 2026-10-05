@@ -1,6 +1,9 @@
 import Link from "@/components/ui/app-link";
 import { useFormatter, useTranslations } from "next-intl";
 import { scheduleWhen } from "@/lib/backups/schedule-time";
+import { frequencyLabel } from "@/lib/backups/frequency";
+import { BACKUP_IN_FLIGHT } from "@/lib/schemas/backup";
+import { BackupStatusBadge } from "@/components/backups/backup-status-badge";
 import { History, PlayCircle, Settings2, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -14,8 +17,11 @@ import { COVERAGE_STATE } from "@/components/backups/status-meta";
 
 // Phone layout: a table would scroll sideways and hide the action button.
 
-export function CoverageCards({ rows, options = null, canManage, onSetUp, onBackUpNow, busyIds = [] }) {
+export function CoverageCards({ rows, options = null, canManage, onSetUp, onBackUpNow, busyIds = [], restoringId = null }) {
   const t = useTranslations("backups.coverage");
+  const tb = useTranslations("backups");
+  const ta = useTranslations("backups.application");
+  const th = useTranslations("backups.history");
   const tc = useTranslations("common");
   const format = useFormatter();
 
@@ -23,7 +29,7 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
   const scheduleFact = (target) => {
     const when = scheduleWhen(target, options, format);
     return [
-      target.frequency_title ?? target.frequency,
+      frequencyLabel(target, (frequency) => tb("pausedFrequency", { frequency })),
       when?.minute ? t("minutePast", { minute: when.minute }) : when?.time,
       t("keeps", { count: target.retention_count }),
     ]
@@ -93,6 +99,13 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
                 label={t("columns.lastRun")}
                 className={cn(!target && "text-muted-foreground")}
               >
+                {/* The table's status dot, as a badge: without it a run in progress or a
+                    failed one read as an ordinary "Last run". */}
+                {lastBackup && (BACKUP_IN_FLIGHT.includes(lastBackup.status) || lastBackup.status === "failed") ? (
+                  <span className="mb-1 block">
+                    <BackupStatusBadge backup={lastBackup} />
+                  </span>
+                ) : null}
                 <span className="block truncate">
                   {/* Same fallback as the table: a crashed run leaves last_run_at unset, so not "Never". */}
                   {target
@@ -105,29 +118,42 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
               </CardFact>
             </CardFacts>
 
-            {/* Skipped for an unprotected site without manage permission: only Set up would remain. */}
-            {state !== "unprotected" || canManage ? (
-              <div className="mt-auto flex flex-wrap justify-end gap-2">
+            {/* Viewers see the actions too, disabled with the reason. */}
+            <div className="mt-auto flex flex-wrap justify-end gap-2">
                 {state === "unprotected" ? (
-                  <Button size="sm" variant="outline" onClick={() => onSetUp(application.id)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!canManage}
+                    disabledReason={canManage ? null : th("noPermission")}
+                    onClick={() => onSetUp(application.id)}
+                  >
                     <ShieldCheck className="size-4" />
                     {t("setUpShort")}
                   </Button>
                 ) : (
                   <>
-                    {canManage ? (
-                      <ReasonTooltip reason={!target && !busyIds.includes(application.id) ? tc("needsBackupTarget") : null}>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={busyIds.includes(application.id) || !target}
-                          onClick={() => onBackUpNow(application.id, application.name)}
-                        >
-                          <ActionIcon icon={PlayCircle} pending={busyIds.includes(application.id)} className="size-4" />
-                          {t("runBackup")}
-                        </Button>
-                      </ReasonTooltip>
-                    ) : null}
+                    <ReasonTooltip
+                      reason={
+                        !canManage
+                          ? th("noPermission")
+                          : restoringId === application.id
+                            ? ta("restoreRunning")
+                            : !target && !busyIds.includes(application.id)
+                              ? tc("needsBackupTarget")
+                              : null
+                      }
+                    >
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!canManage || busyIds.includes(application.id) || !target || restoringId === application.id}
+                        onClick={() => onBackUpNow(application.id, application.name)}
+                      >
+                        <ActionIcon icon={PlayCircle} pending={busyIds.includes(application.id)} className="size-4" />
+                        {t("runBackup")}
+                      </Button>
+                    </ReasonTooltip>
                     <Button size="sm" variant="ghost" asChild>
                       <Link href={`/backups/history?application=${application.id}`} prefetch={false}>
                         <History className="size-4" />
@@ -143,8 +169,7 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
                     </Button>
                   </>
                 )}
-              </div>
-            ) : null}
+            </div>
           </CardListItem>
         );
       })}

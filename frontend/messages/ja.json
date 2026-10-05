@@ -70,7 +70,9 @@
     },
     "serverNavigation": "サーバーメニュー",
     "loadingPage": "ページを読み込んでいます…",
-    "close": "閉じる"
+    "close": "閉じる",
+    "cancel": "キャンセル",
+    "confirm": "確認"
   },
   "systemUsers": {
     "title": "システムユーザー",
@@ -6173,8 +6175,8 @@
       "staging": "ステージング",
       "unknownApplication": "削除済みアプリケーション",
       "allCovered": "すべてのアプリケーションがバックアップされています。",
-      "exposed": "{count, plural, one {# 件のアプリケーションがバックアップされていません} other {# 件のアプリケーションがバックアップされていません}}",
-      "exposedHint": "このサーバーを失った場合、それらのアプリケーションを復元できません。設定は約1分で完了します。",
+      "exposed": "{count, plural, one {# 件のアプリケーションに機能している自動バックアップがありません} other {# 件のアプリケーションに機能している自動バックアップがありません}}",
+      "exposedHint": "このサーバーを失った場合、前回のバックアップ以降の変更は復元できません。設定は約1分で完了します。",
       "columns": {
         "site": "アプリケーション",
         "status": "バックアップ",
@@ -6263,7 +6265,9 @@
       "discardTitle": "このバックアップ設定を破棄しますか？",
       "discardDescription": "変更は保存されていません。今閉じると失われます。",
       "discardKeep": "編集を続ける",
-      "discardConfirm": "変更を破棄"
+      "discardConfirm": "変更を破棄",
+      "savedChanges": "バックアップ設定を保存しました。",
+      "verifyHintManual": "ストレージキーが機能するか、今すぐ1回実行して確認しましょう。"
     },
     "form": {
       "applicationPlaceholder": "アプリケーションを選択",
@@ -6313,7 +6317,8 @@
       "warnings": {
         "narrower": "次回の実行以降、データベースはバックアップされなくなります。すでに取得済みのバックアップには引き続き含まれます。",
         "narrowerFiles": "次回の実行以降、ファイルはバックアップされなくなります。すでに取得済みのバックアップには引き続き含まれます。",
-        "retentionDown": "{count, plural, one {最も古いバックアップが削除されます} other {古い # 件のバックアップが削除されます}}。保存した時点で実施されます。"
+        "retentionDown": "{count, plural, one {最も古いバックアップが削除されます} other {古い # 件のバックアップが削除されます}}。保存した時点で実施されます。",
+        "retentionDownUnknown": "{keep, plural, one {最新の 1 件より古いバックアップ} other {最新の # 件より古いバックアップ}}は、保存した時点で削除されます。"
       },
       "destinationFailing": "{name} への最後の接続テストが失敗したため、修正されるまでそこに送られるバックアップは書き込まれません。",
       "noDatabase": {
@@ -6433,7 +6438,7 @@
         "description": "これは復元のやり直しではありません。{name} のまったく新しいバックアップを作成してアップロードします。前回のアーカイブは {size} でした。回線が遅い場合は数時間かかることがあり、保存先でも同じだけの容量を使用します。",
         "cancel": "キャンセル",
         "confirm": "新しいバックアップを開始",
-        "unknownSize": "不明なサイズ"
+        "descriptionNoSize": "これは復元のやり直しではありません。{name} のまったく新しいバックアップを作成してアップロードします。回線が遅い場合、大きなアプリケーションは時間がかかることがあります。"
       }
     },
     "restore": {
@@ -6647,7 +6652,9 @@
       "failedBody": "{names} に送られたバックアップは書き込めません。修正するまで、スケジュールされたすべての実行が失敗します。",
       "untestedTitle": "{count, plural, one {# 件のストレージ先は一度もテストされていません} other {# 件のストレージ先は一度もテストされていません}}",
       "untestedBody": "{names} が動作するか誰も確認していません。復元が必要となる前にテストしてください。",
-      "action": "ストレージを確認"
+      "action": "ストレージを確認",
+      "uploadFailedTitle": "{count, plural, one {ストレージ保存先への前回のバックアップをアップロードできませんでした} other {# 件のストレージ保存先への前回のバックアップをアップロードできませんでした}}",
+      "uploadFailedBody": "{names} に送った前回のバックアップをアップロードできませんでした。原因を確認するには、このストレージをテストしてください。"
     },
     "restores": {
       "columns": {
@@ -6666,7 +6673,6 @@
       "unknownApplication": "削除済みアプリケーション",
       "unknownReason": "理由は記録されていません。",
       "noSafetyCopy": "利用できません",
-      "findSafetyCopy": "safety copy を検索",
       "allApplications": "すべてのアプリケーション",
       "allStatuses": "すべての状態",
       "allTypes": "すべての復元種別",
@@ -6685,8 +6691,11 @@
         "title": "フィルター条件に一致する復元がありません",
         "description": "別のアプリケーションや状態をお試しください。"
       },
-      "notStarted": "未開始"
-    }
+      "notStarted": "未開始",
+      "undo": "元に戻す",
+      "safetyGone": "そのセーフティコピーはもう保持されていません。保持されるのは最新の 2 件だけです。"
+    },
+    "pausedFrequency": "一時停止中：{frequency}"
   },
   "sync": {
     "title": "サーバー同期",

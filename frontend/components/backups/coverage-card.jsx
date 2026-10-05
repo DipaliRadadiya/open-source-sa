@@ -6,7 +6,8 @@ import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Clock, SearchX, ShieldAlert, ShieldCheck } from "lucide-react";
-import { BACKUP_IN_FLIGHT, BACKUP_TYPES } from "@/lib/schemas/backup";
+import { BACKUP_IN_FLIGHT, BACKUP_TYPES, RESTORE_IN_FLIGHT } from "@/lib/schemas/backup";
+import { useRestoreWatch } from "@/components/backups/restore-watch";
 import { runBackupNow } from "@/lib/api/backups";
 import { backupStartedWithin } from "@/lib/backups/just-started";
 import { apiMessage } from "@/lib/api/error-message";
@@ -39,7 +40,12 @@ export function CoverageCard({
 }) {
   const t = useTranslations("backups.coverage");
   const tc = useTranslations("common");
+  const th = useTranslations("backups.history");
   const { refreshAndWait } = useRefresh();
+  // Run backup is refused for the site a restore is writing to: a copy taken mid-restore
+  // would be saved as Complete.
+  const { active } = useRestoreWatch();
+  const restoringId = RESTORE_IN_FLIGHT.includes(active?.status) ? active.application_id : null;
   const [setupFor, setSetupFor] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   // Runs are queued, so several can start at once; each row keeps its own spinner.
@@ -104,7 +110,7 @@ export function CoverageCard({
     return () => clearTimeout(id);
   }, [justStarted]);
 
-  const listProps = { rows, options: backupOptions, canManage, onSetUp: openSetup, onBackUpNow: backUpNow, busyIds: starting.pendingKeys };
+  const listProps = { rows, options: backupOptions, canManage, onSetUp: openSetup, onBackUpNow: backUpNow, busyIds: starting.pendingKeys, restoringId };
 
   // The Schedule column's timezone, only when every target agrees. An older
   // backend that sends none leaves the caption off rather than assuming UTC.
@@ -126,6 +132,9 @@ export function CoverageCard({
         <DestinationHealth
           destinations={destinations}
           inUse={coverage.rows.map((row) => row.target?.storage_destination_id).filter(Boolean)}
+          lastBackups={coverage.rows
+            .filter((row) => row.lastBackup)
+            .map((row) => ({ ...row.lastBackup, storage_destination_id: row.target?.storage_destination_id }))}
         />
 
         {/* Warning (amber), not danger: unprotected sites are a risk, not a breakage. */}
@@ -152,20 +161,19 @@ export function CoverageCard({
             </p>
           </div>
 
-          {canManage ? (
-            <Button
-              onClick={() => openSetup(null)}
-              disabled={destinations.length === 0}
-              disabledReason={t("needsDestination")}
-              className="w-full sm:w-auto"
-            >
-              <ShieldCheck className="size-4" />
-              {t("setUp")}
-            </Button>
-          ) : null}
+          <Button
+            onClick={() => openSetup(null)}
+            disabled={!canManage || destinations.length === 0}
+            disabledReason={!canManage ? th("noPermission") : t("needsDestination")}
+            className="w-full sm:w-auto"
+          >
+            <ShieldCheck className="size-4" />
+            {t("setUp")}
+          </Button>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        {/* Wraps rather than squeezing: at 768 the type filter lost most of its text. */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <ToggleGroup
             type="single"
             value={state}
@@ -187,7 +195,7 @@ export function CoverageCard({
             allLabel={t("filters.anyType")}
             label={t("columns.type")}
             options={BACKUP_TYPES.map((value) => ({ value, label: t(`types.${value}`) }))}
-            className="w-full sm:w-48"
+            className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
           />
 
           <span className="text-xs tabular-nums text-muted-foreground sm:ml-auto">

@@ -70,7 +70,9 @@
     },
     "serverNavigation": "Menu du serveur",
     "loadingPage": "Chargement de la page…",
-    "close": "Fermer"
+    "close": "Fermer",
+    "cancel": "Annuler",
+    "confirm": "Confirmer"
   },
   "systemUsers": {
     "title": "Utilisateurs système",
@@ -6173,8 +6175,8 @@
       "staging": "Préproduction",
       "unknownApplication": "Application supprimée",
       "allCovered": "Toutes les applications sont sauvegardées.",
-      "exposed": "{count, plural, one {# application n'est pas sauvegardée} other {# applications ne sont pas sauvegardées}}",
-      "exposedHint": "Si ce serveur est perdu, ces applications ne pourront pas être récupérées. En configurer une prend environ une minute.",
+      "exposed": "{count, plural, one {# application n’a aucune sauvegarde automatique qui fonctionne} other {# applications n’ont aucune sauvegarde automatique qui fonctionne}}",
+      "exposedHint": "Si ce serveur est perdu, tout ce qui a changé depuis leur dernière sauvegarde ne pourra pas être récupéré. En configurer une prend environ une minute.",
       "columns": {
         "site": "Application",
         "status": "Sauvegardes",
@@ -6263,7 +6265,9 @@
       "discardTitle": "Abandonner ces paramètres de sauvegarde ?",
       "discardDescription": "Vos modifications ne sont pas enregistrées. Si vous fermez maintenant, elles seront perdues.",
       "discardKeep": "Continuer à modifier",
-      "discardConfirm": "Abandonner les modifications"
+      "discardConfirm": "Abandonner les modifications",
+      "savedChanges": "Paramètres de sauvegarde enregistrés.",
+      "verifyHintManual": "Lancez-en une maintenant pour vérifier que les clés de stockage fonctionnent."
     },
     "form": {
       "applicationPlaceholder": "Choisissez une application",
@@ -6313,7 +6317,8 @@
       "warnings": {
         "narrower": "Les bases de données ne seront plus sauvegardées à partir de la prochaine exécution. Les sauvegardes déjà prises en contiennent toujours.",
         "narrowerFiles": "Les fichiers ne seront plus sauvegardés à partir de la prochaine exécution. Les sauvegardes déjà prises en contiennent toujours.",
-        "retentionDown": "{count, plural, one {La plus ancienne sauvegarde sera supprimée} other {Les # plus anciennes sauvegardes seront supprimées}} dès l'enregistrement."
+        "retentionDown": "{count, plural, one {La plus ancienne sauvegarde sera supprimée} other {Les # plus anciennes sauvegardes seront supprimées}} dès l'enregistrement.",
+        "retentionDownUnknown": "{keep, plural, one {Les sauvegardes au-delà de la plus récente} other {Les sauvegardes au-delà des # plus récentes}} seront supprimées dès l'enregistrement."
       },
       "destinationFailing": "Le dernier test de connexion vers {name} a échoué, les sauvegardes envoyées là-bas ne seront pas écrites tant que ce n'est pas corrigé.",
       "noDatabase": {
@@ -6433,7 +6438,7 @@
         "description": "Ceci ne relance pas la restauration. Une sauvegarde entièrement nouvelle de {name} est créée puis envoyée — la dernière archive faisait {size}, donc sur une connexion lente cela peut prendre des heures et occupera autant d'espace sur la destination.",
         "cancel": "Annuler",
         "confirm": "Lancer une nouvelle sauvegarde",
-        "unknownSize": "une taille inconnue"
+        "descriptionNoSize": "Ceci ne relance pas la restauration. Une sauvegarde entièrement nouvelle de {name} est créée puis envoyée. Sur une connexion lente, une application volumineuse peut prendre du temps."
       }
     },
     "restore": {
@@ -6647,7 +6652,9 @@
       "failedBody": "Les sauvegardes envoyées vers {names} ne peuvent pas être écrites. Chaque exécution planifiée échouera tant que ce n'est pas corrigé.",
       "untestedTitle": "{count, plural, one {Une destination de stockage n'a jamais été testée} other {# destinations de stockage n'ont jamais été testées}}",
       "untestedBody": "Personne n'a vérifié que {names} fonctionne. Testez-la avant d'avoir besoin d'une restauration.",
-      "action": "Vérifier le stockage"
+      "action": "Vérifier le stockage",
+      "uploadFailedTitle": "{count, plural, one {La dernière sauvegarde vers une destination de stockage n’a pas pu être envoyée} other {Les dernières sauvegardes vers # destinations de stockage n’ont pas pu être envoyées}}",
+      "uploadFailedBody": "La dernière sauvegarde envoyée vers {names} n’a pas pu être téléversée. Testez ce stockage pour savoir pourquoi."
     },
     "restores": {
       "columns": {
@@ -6666,7 +6673,6 @@
       "unknownApplication": "Application supprimée",
       "unknownReason": "La raison n'a pas été enregistrée.",
       "noSafetyCopy": "Aucune disponible",
-      "findSafetyCopy": "Trouver la copie de sécurité",
       "allApplications": "Toutes les applications",
       "allStatuses": "Tout statut",
       "allTypes": "Tout type de restauration",
@@ -6685,8 +6691,11 @@
         "title": "Aucune restauration ne correspond à ces filtres",
         "description": "Essayez une autre application ou un autre statut."
       },
-      "notStarted": "Non démarré"
-    }
+      "notStarted": "Non démarré",
+      "undo": "Annuler",
+      "safetyGone": "Cette copie de sécurité n’est plus conservée. Seules les deux plus récentes le sont."
+    },
+    "pausedFrequency": "En pause : {frequency}"
   },
   "sync": {
     "title": "Synchronisation du serveur",

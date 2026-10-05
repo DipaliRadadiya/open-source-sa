@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
+import { parseApiWallClock } from "@/lib/format/api-date";
 import { toast } from "sonner";
 import { CircleAlert, CircleCheck, EyeOff, Loader2, RefreshCw, TriangleAlert, Undo2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -39,6 +40,15 @@ export function RestoreProgress({
   const { refreshAndWait } = useRefresh();
   const router = useRouter();
   const [restore, setRestore] = useState(initial);
+  // Polling stops at success, so the API's "2 seconds ago" would stay frozen; the
+  // stamp is UTC wall-clock (app timezone), ticked here.
+  const format = useFormatter();
+  const now = useNow({ updateInterval: 30000 });
+  const finishedAt = parseApiWallClock(restore?.finished_at);
+  const finishedAgo = finishedAt
+    ? // At least a second back, so it never reads "Finished now."
+      format.relativeTime(Math.min(finishedAt.getTime(), now.getTime() - 1000), now)
+    : restore?.finished_at_human ?? null;
   const [undoBackup, setUndoBackup] = useState(null);
   // Whether this run put the safety copy back; otherwise the banner would offer to "undo" the undo.
   // Seeded from the prop for reloads mid-undo.
@@ -145,18 +155,19 @@ export function RestoreProgress({
             </span>
             <div className="space-y-1">
               <p className="font-medium">{wasUndo ? t("undone") : t("succeeded")}</p>
-              <p className="text-sm text-muted-foreground">
+              {/* Server and browser read the clock a moment apart. */}
+              <p className="text-sm text-muted-foreground" suppressHydrationWarning>
                 {wasUndo
                   ? t("undoneBody")
-                  : restore.finished_at_human
-                    ? t("succeededBody", { when: restore.finished_at_human })
+                  : finishedAgo
+                    ? t("succeededBody", { when: finishedAgo })
                     : t("succeededBodyPlain")}
               </p>
             </div>
           </div>
 
           {/* Undo and Dismiss share one size and style. */}
-          <div className="ml-14 flex flex-wrap gap-2">
+          <div className="sm:ml-14 flex flex-wrap gap-2">
             {restore.safety_backup_id && !wasUndo ? (
               <Button size="sm" onClick={openUndo} disabled={loadingUndo}>
                 {loadingUndo ? (
@@ -174,7 +185,7 @@ export function RestoreProgress({
           </div>
 
           {restore.safety_backup_id && !wasUndo ? (
-            <p className="ml-14 text-xs text-muted-foreground">{t("undoHint")}</p>
+            <p className="sm:ml-14 text-xs text-muted-foreground">{t("undoHint")}</p>
           ) : null}
         </div>
 
@@ -219,7 +230,7 @@ export function RestoreProgress({
             ) : null}
           </div>
         </div>
-        <Button variant="secondary" size="sm" onClick={onDismiss} className={cn("ml-14", NEUTRAL)}>
+        <Button variant="secondary" size="sm" onClick={onDismiss} className={cn("sm:ml-14", NEUTRAL)}>
           <X className="size-4" />
           {t("dismiss")}
         </Button>
@@ -249,7 +260,7 @@ export function RestoreProgress({
             ) : null}
           </div>
         </div>
-        <div className="ml-14 flex flex-wrap gap-2">
+        <div className="sm:ml-14 flex flex-wrap gap-2">
           <Button size="sm" onClick={checkAgain} disabled={checking}>
             <RefreshCw className={cn("size-4", checking && "animate-spin")} />
             {t("checkAgain")}
@@ -303,14 +314,14 @@ export function RestoreProgress({
         </Button>
       </div>
 
-      <div className="ml-14 space-y-1.5">
+      <div className="sm:ml-14 space-y-1.5">
         <Progress value={percent} className="h-1.5" />
         {total > 0 ? (
           <p className="text-xs text-muted-foreground">{t("step", { step, total })}</p>
         ) : null}
       </div>
 
-      <p className="ml-14 text-xs text-muted-foreground">{t("dontLeave")}</p>
+      <p className="sm:ml-14 text-xs text-muted-foreground">{t("dontLeave")}</p>
     </div>
   );
 }

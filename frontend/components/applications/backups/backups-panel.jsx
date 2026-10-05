@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { BACKUP_IN_FLIGHT, RESTORE_IN_FLIGHT } from "@/lib/schemas/backup";
 import { isBackupQueued, newestBackupId } from "@/lib/backups/queued";
 import { scheduleWhen } from "@/lib/backups/schedule-time";
+import { frequencyLabel } from "@/lib/backups/frequency";
 import { clearStuckBackup, retryBackup, runBackupNow } from "@/lib/api/backups";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,8 @@ export function BackupsPanel({
   destinations,
   backups,
   archiveDestinations = [],
+  // Complete, non-safety backups kept now; null when unknown.
+  keptCount = null,
   total = 0,
   activeRestore = null,
   canManage,
@@ -208,6 +211,7 @@ export function BackupsPanel({
       <DestinationHealth
         destinations={destinations}
         inUse={target?.storage_destination_id ? [target.storage_destination_id] : []}
+        lastBackups={backups.slice(0, 1)}
       />
 
       <ProtectionCard
@@ -274,6 +278,7 @@ export function BackupsPanel({
         destinations={destinations}
         applicationName={application.name}
         target={target}
+        keptCount={keptCount}
         databaseCounts={databaseCounts}
         databasesKnown={databasesKnown}
         siteTypes={siteTypes}
@@ -385,7 +390,8 @@ function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown 
 
   // The zone is shown with the time, otherwise it reads as the reader's own clock.
   const when = scheduleWhen(target, options, format);
-  const frequencyTitle = target?.frequency_title ?? target?.frequency;
+  const tb = useTranslations("backups");
+  const frequencyTitle = frequencyLabel(target, (frequency) => tb("pausedFrequency", { frequency }));
   const scheduleKey = when?.minute ? "summary.howOftenMinute" : "summary.howOftenAt";
   const schedule = when
     ? t(target.timezone ? `${scheduleKey}Zone` : scheduleKey, {

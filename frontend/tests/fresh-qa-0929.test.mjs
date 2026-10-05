@@ -405,6 +405,8 @@ test("Backups: the setup dialog keeps its saved step and the overview watches th
   const dialog = read("components/backups/setup-backups-dialog.jsx");
   const submit = dialog.slice(dialog.indexOf("async function onSubmit"), dialog.indexOf("async function backUpNow"));
   assert.doesNotMatch(submit, /router\.refresh\(\)|refreshAndWait\(\)/);
+  // An edit that keeps its storage skips the saved step (C4, 5 Oct): only that branch closes.
+  assert.match(submit, /if \(target && Number\(values\.storage_destination_id\) === Number\(target\.storage_destination_id\)\) \{\s*await finish\(\);/);
   assert.match(dialog, /await runBackupNow\(saved\.id\);\s*markBackupStarted\(\);\s*onStarted\?\.\(\);\s*await refreshAndWait\(\);/);
   assert.match(dialog, /async function finish\(\)/);
   const card = read("components/backups/coverage-card.jsx");
