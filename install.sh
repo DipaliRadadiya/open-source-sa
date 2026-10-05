@@ -2347,7 +2347,7 @@ scripthandler {
   add                     lsapi:${PANEL_SLUG}-lsphp php
 }
 
-# `context /api` and `context /sanctum` alongside the catch-all proxy: OLS
+# 'context /api' and 'context /sanctum' alongside the catch-all proxy: OLS
 # matches the most specific context, but Sanctum's CSRF route is top-level
 # rather than under /api, and without its own context the SPA's very first
 # request goes to Next, which 404s and login never starts. The same trap the
@@ -3115,7 +3115,7 @@ Type=simple
 User=${APP_USER}
 Group=${APP_USER}
 WorkingDirectory=${backend}
-# Reads `high` before `default`: still one job at a time, but a certificate
+# Reads 'high' before 'default': still one job at a time, but a certificate
 # waits for the job that is running rather than for every job queued. These
 # are the ONLY queues drained: a job sent anywhere else is accepted, stored
 # and never run -- no error, no failed_jobs row. Backups shipped that way and
