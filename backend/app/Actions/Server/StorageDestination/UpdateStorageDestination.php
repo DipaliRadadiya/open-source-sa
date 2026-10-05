@@ -26,6 +26,19 @@ class UpdateStorageDestination
         // not clear the password stored beside it — assigning the incoming
         // array wholesale would do exactly that, and the destination would
         // keep working until the next backup ran.
+        // FTP-01: trusting a renewed FTPS certificate forgets the pinned one;
+        // the next connection records whatever the server presents now. A
+        // flag, never stored.
+        $trusting = is_array($config) && (bool) ($config['trust_new_certificate'] ?? false);
+
+        if ($trusting) {
+            $destination->config = array_diff_key((array) $destination->config, ['tls_fingerprint' => true]);
+        }
+
+        if (is_array($config)) {
+            unset($config['trust_new_certificate']);
+        }
+
         if (is_array($config) && $config !== []) {
             $destination->mergeConfig($config);
         }
@@ -36,7 +49,7 @@ class UpdateStorageDestination
         // were probed. Change either and it describes nothing — keeping it
         // would show "Connected" for a key that was rotated out a moment
         // ago, which is worse than showing nothing at all.
-        if ($this->invalidatesTestResult($config)) {
+        if ($trusting || $this->invalidatesTestResult($config)) {
             $destination->forgetTestResult();
         }
 
@@ -67,6 +80,6 @@ class UpdateStorageDestination
             return false;
         }
 
-        return array_diff_key($config, array_flip(['host_fingerprint'])) !== [];
+        return array_diff_key($config, array_flip(['host_fingerprint', 'tls_fingerprint'])) !== [];
     }
 }

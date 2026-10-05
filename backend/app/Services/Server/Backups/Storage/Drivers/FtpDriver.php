@@ -3,7 +3,9 @@
 namespace App\Services\Server\Backups\Storage\Drivers;
 
 use App\Enums\StorageProvider;
+use App\Exceptions\Server\Storage\FtpsCertificateException;
 use App\Models\StorageDestination;
+use App\Services\Server\Backups\Storage\FtpsCertificate;
 use League\Flysystem\Ftp\UnableToAuthenticate;
 use League\Flysystem\Ftp\UnableToConnectToFtpHost;
 use League\Flysystem\Ftp\UnableToResolveConnectionRoot;
@@ -78,6 +80,9 @@ class FtpDriver extends RemoteHostDriver
             'config.password' => [...$secret, 'string', 'max:512'],
             'config.ssl' => ['nullable', 'boolean'],
             'config.passive' => ['nullable', 'boolean'],
+            // FTP-01: after a legitimate certificate renewal, forget the
+            // recorded fingerprint so the next connection records the new one.
+            'config.trust_new_certificate' => ['sometimes', 'boolean'],
         ]);
     }
 
@@ -101,7 +106,78 @@ class FtpDriver extends RemoteHostDriver
             'root' => $destination->configValue('root'),
             'ssl' => (bool) ($destination->configValue('ssl') ?? true),
             'passive' => (bool) ($destination->configValue('passive') ?? true),
+            // The certificate this destination is pinned to (FTP-01). Safe to
+            // show: a certificate fingerprint is public by definition.
+            'tls_fingerprint' => $destination->configValue('tls_fingerprint'),
         ];
+    }
+
+    /**
+     * Checked before every connection a backup, restore or test makes — the
+     * disk is built only after this runs (DestinationDisk::for).
+     *
+     * @throws FtpsCertificateException
+     */
+    public function heal(StorageDestination $destination): void
+    {
+        $this->verifyCertificate($destination);
+    }
+
+    public function preflight(StorageDestination $destination): ?string
+    {
+        if (($blocked = parent::preflight($destination)) !== null) {
+            return $blocked;
+        }
+
+        try {
+            $this->verifyCertificate($destination);
+        } catch (FtpsCertificateException $e) {
+            return $e->i18nKey;
+        }
+
+        return null;
+    }
+
+    /**
+     * Pin the FTPS certificate on first use and refuse a different one after
+     * (FTP-01), the same trust-on-first-use SFTP applies to its host key.
+     * Plain FTP has no certificate and nothing to check.
+     *
+     * @throws FtpsCertificateException
+     */
+    public function verifyCertificate(StorageDestination $destination): void
+    {
+        if (! (bool) ($destination->configValue('ssl') ?? true)) {
+            return;
+        }
+
+        $pinned = (string) ($destination->configValue('tls_fingerprint') ?? '');
+        $current = app(FtpsCertificate::class)->fingerprint(
+            (string) $destination->configValue('host', ''),
+            (int) ($destination->configValue('port') ?: self::DEFAULT_PORT),
+        );
+
+        if ($pinned === '') {
+            // First use. Nothing readable to record means the real connection
+            // will fail on its own, with its own reason.
+            if ($current !== null) {
+                $destination->mergeConfig(['tls_fingerprint' => $current]);
+
+                if ($destination->exists) {
+                    $destination->save();
+                }
+            }
+
+            return;
+        }
+
+        if ($current === null) {
+            throw new FtpsCertificateException('storage.test.tls_certificate_unreadable');
+        }
+
+        if (! hash_equals($pinned, $current)) {
+            throw new FtpsCertificateException('storage.test.tls_certificate_changed');
+        }
     }
 
     /**
@@ -116,6 +192,10 @@ class FtpDriver extends RemoteHostDriver
      */
     protected function categoryForType(Throwable $e): ?string
     {
+        if ($e instanceof FtpsCertificateException) {
+            return $e->i18nKey;
+        }
+
         if ($e instanceof UnableToAuthenticate) {
             return 'storage.test.invalid_credentials';
         }
@@ -207,6 +287,10 @@ class FtpDriver extends RemoteHostDriver
         $port = (int) ($destination->configValue('port') ?: self::DEFAULT_PORT);
         $ssl = (bool) ($destination->configValue('ssl') ?? true);
         $timeout = self::TRANSFER_TIMEOUT_SECONDS;
+
+        // This path opens its own connection rather than going through the
+        // disk, so it checks the certificate itself.
+        $this->verifyCertificate($destination);
 
         $connection = $ssl
             ? @ftp_ssl_connect($host, $port, $timeout)

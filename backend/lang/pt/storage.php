@@ -88,6 +88,8 @@ return [
         'invalid_endpoint' => 'Informe uma URL de endpoint https:// válida para o bucket.',
         'invalid_host' => 'Informe um nome de host ou endereço IP válido.',
         'host_key_mismatch' => 'O servidor apresentou uma chave de host diferente da registrada. A conexão foi interrompida.',
+        'tls_certificate_changed' => 'O servidor FTPS apresentou um certificado diferente do registado, por isso nada foi enviado. Se o certificado do servidor foi renovado, escolha "Confiar no novo certificado" neste destino.',
+        'tls_certificate_unreadable' => 'Não foi possível ler o certificado do servidor FTPS, por isso não foi possível compará-lo com o registado. Nada foi enviado.',
         'invalid_private_key' => 'Não foi possível ler a chave privada. Verifique se ela foi colada por inteiro.',
         'root_missing' => 'A pasta de destino não existe no servidor. Crie-a ou corrija o caminho da pasta.',
         'drive_personal' => 'Essa pasta está em um Drive pessoal. Uma conta de serviço não tem armazenamento lá, então os backups seriam recusados — use uma pasta de um Drive compartilhado.',

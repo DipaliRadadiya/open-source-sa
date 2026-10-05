@@ -92,6 +92,8 @@ return [
         'invalid_endpoint' => 'Enter a valid https:// endpoint URL for the bucket.',
         'invalid_host' => 'Enter a valid hostname or IP address.',
         'host_key_mismatch' => 'The server presented a different host key than the one recorded. The connection was stopped.',
+        'tls_certificate_changed' => 'The FTPS server presented a different certificate than the one recorded, so nothing was sent. If the server\'s certificate was renewed, choose "Trust the new certificate" on this destination.',
+        'tls_certificate_unreadable' => 'The FTPS server\'s certificate could not be read, so it could not be checked against the one recorded. Nothing was sent.',
         'invalid_private_key' => 'The private key could not be read. Check that it was pasted whole.',
         'root_missing' => 'The destination folder does not exist on the server. Create it, or correct the folder path.',
         'drive_personal' => 'That folder is on a personal Drive. A service account has no storage there, so backups would be refused — use a folder in a Shared Drive.',

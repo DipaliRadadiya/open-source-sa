@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\StorageProvider;
+use App\Exceptions\Server\Storage\FtpsCertificateException;
 use App\Models\ActivityLog;
 use App\Models\Application;
 use App\Models\Backup;
@@ -10,6 +11,7 @@ use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Backups\Storage\DestinationDisk;
 use App\Services\Server\Backups\Storage\Drivers\FtpDriver;
+use App\Services\Server\Backups\Storage\FtpsCertificate;
 use App\Services\Server\Backups\Storage\SftpHostKey;
 use App\Services\Server\Backups\Storage\StorageConnectionProber;
 use App\Services\Server\Backups\Storage\StorageDriverFactory;
@@ -1484,4 +1486,95 @@ it('still accepts a folder with dots in its names', function () {
     $this->withHeaders(storageAdminAuthHeader())
         ->postJson('/api/integrations/storage/destinations', s3Payload(['prefix' => 'site.v2/..backups/']))
         ->assertJsonMissingValidationErrors('prefix');
+});
+
+/*
+| FTP-01 (old QA list): FTPS destinations never checked the server's
+| certificate, so an impostor in between received the password and every
+| backup. Now pinned on first use, like an SFTP host key.
+*/
+
+/** The FTPS server presents this certificate fingerprint (null = unreadable). */
+function ftpsPresents(?string $fingerprint): void
+{
+    app()->instance(FtpsCertificate::class, new FtpsCertificate(fn (): ?string => $fingerprint));
+}
+
+function ftpsDestination(array $config = []): StorageDestination
+{
+    return StorageDestination::create([
+        'name' => 'NAS', 'provider' => StorageProvider::Ftp, 'prefix' => null,
+        'config' => array_merge(['host' => 'backup.example.com', 'username' => 'u', 'password' => 'p'], $config),
+    ]);
+}
+
+describe('FTPS certificate pinning (FTP-01)', function () {
+    it('records the certificate the first time and shows it', function () {
+        ftpsPresents('sha256:aa11');
+        $dest = ftpsDestination();
+
+        $this->withHeaders(storageAdminAuthHeader())
+            ->postJson("/api/integrations/storage/destinations/{$dest->id}/test")
+            ->assertOk()
+            ->assertJsonPath('test.success', true);
+
+        expect($dest->fresh()->configValue('tls_fingerprint'))->toBe('sha256:aa11');
+
+        $this->withHeaders(storageAdminAuthHeader())
+            ->getJson("/api/integrations/storage/destinations/{$dest->id}")
+            ->assertJsonPath('storage_destination.config.tls_fingerprint', 'sha256:aa11');
+    });
+
+    it('refuses a different certificate, on the test and before any backup connects', function () {
+        $dest = ftpsDestination(['tls_fingerprint' => 'sha256:aa11']);
+        ftpsPresents('sha256:bb22');
+
+        $this->withHeaders(storageAdminAuthHeader())
+            ->postJson("/api/integrations/storage/destinations/{$dest->id}/test")
+            ->assertOk()
+            ->assertJsonPath('test.success', false)
+            ->assertJsonPath('test.error_class', 'tls_certificate_changed');
+
+        // The disk every backup and restore uses is built only after this.
+        expect(fn () => app(DestinationDisk::class)->for($dest->fresh()))
+            ->toThrow(FtpsCertificateException::class);
+
+        // And the pin did not follow the impostor.
+        expect($dest->fresh()->configValue('tls_fingerprint'))->toBe('sha256:aa11');
+    });
+
+    it('refuses when the pinned server\'s certificate cannot be read', function () {
+        $dest = ftpsDestination(['tls_fingerprint' => 'sha256:aa11']);
+        ftpsPresents(null);
+
+        expect(fn () => app(DestinationDisk::class)->for($dest))
+            ->toThrow(FtpsCertificateException::class, 'storage.test.tls_certificate_unreadable');
+    });
+
+    it('trusts a renewed certificate when asked, and pins the new one', function () {
+        $dest = ftpsDestination(['tls_fingerprint' => 'sha256:aa11']);
+        ftpsPresents('sha256:bb22');
+
+        $this->withHeaders(storageAdminAuthHeader())
+            ->patchJson("/api/integrations/storage/destinations/{$dest->id}", ['config' => ['trust_new_certificate' => true]])
+            ->assertOk();
+
+        expect($dest->fresh()->configValue('tls_fingerprint'))->toBeNull()
+            ->and($dest->fresh()->configValue('trust_new_certificate'))->toBeNull();
+
+        $this->withHeaders(storageAdminAuthHeader())
+            ->postJson("/api/integrations/storage/destinations/{$dest->id}/test")
+            ->assertJsonPath('test.success', true);
+
+        expect($dest->fresh()->configValue('tls_fingerprint'))->toBe('sha256:bb22');
+    });
+
+    it('checks nothing for plain FTP, which has no certificate', function () {
+        $dest = ftpsDestination(['ssl' => false, 'tls_fingerprint' => 'sha256:aa11']);
+        ftpsPresents('sha256:bb22');
+
+        app(DestinationDisk::class)->for($dest);
+
+        expect(true)->toBeTrue();
+    });
 });

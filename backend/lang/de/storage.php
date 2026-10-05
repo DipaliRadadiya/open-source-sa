@@ -88,6 +88,8 @@ return [
         'invalid_endpoint' => 'Geben Sie eine gültige https://-Endpunkt-URL für den Bucket ein.',
         'invalid_host' => 'Geben Sie einen gültigen Hostnamen oder eine IP-Adresse ein.',
         'host_key_mismatch' => 'Der Server hat einen anderen Hostschlüssel vorgelegt als den aufgezeichneten. Die Verbindung wurde abgebrochen.',
+        'tls_certificate_changed' => 'Der FTPS-Server hat ein anderes Zertifikat als das gespeicherte vorgelegt, daher wurde nichts gesendet. Wenn das Zertifikat des Servers erneuert wurde, wähle bei diesem Ziel "Neuem Zertifikat vertrauen".',
+        'tls_certificate_unreadable' => 'Das Zertifikat des FTPS-Servers konnte nicht gelesen und daher nicht mit dem gespeicherten verglichen werden. Es wurde nichts gesendet.',
         'invalid_private_key' => 'Der private Schlüssel konnte nicht gelesen werden. Prüfen Sie, ob er vollständig eingefügt wurde.',
         'root_missing' => 'Der Zielordner existiert auf dem Server nicht. Legen Sie ihn an oder korrigieren Sie den Ordnerpfad.',
         'drive_personal' => 'Dieser Ordner liegt in einem persönlichen Drive. Ein Dienstkonto hat dort keinen Speicher, Sicherungen würden abgelehnt — verwenden Sie einen Ordner in einer geteilten Ablage.',

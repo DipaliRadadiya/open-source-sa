@@ -88,6 +88,8 @@ return [
         'invalid_endpoint' => 'Saisissez une URL de point de terminaison https:// valide pour le bucket.',
         'invalid_host' => 'Saisissez un nom d’hôte ou une adresse IP valide.',
         'host_key_mismatch' => 'Le serveur a présenté une clé d’hôte différente de celle enregistrée. La connexion a été interrompue.',
+        'tls_certificate_changed' => 'Le serveur FTPS a présenté un certificat différent de celui enregistré ; rien n\'a donc été envoyé. Si le certificat du serveur a été renouvelé, choisissez « Faire confiance au nouveau certificat » sur cette destination.',
+        'tls_certificate_unreadable' => 'Le certificat du serveur FTPS n\'a pas pu être lu, il n\'a donc pas pu être comparé à celui enregistré. Rien n\'a été envoyé.',
         'invalid_private_key' => 'La clé privée n’a pas pu être lue. Vérifiez qu’elle a été collée en entier.',
         'root_missing' => "Le dossier de destination n'existe pas sur le serveur. Créez-le ou corrigez le chemin du dossier.",
         'drive_personal' => 'Ce dossier est sur un Drive personnel. Un compte de service n’y a aucun stockage, les sauvegardes seraient refusées — utilisez un dossier d’un Drive partagé.',

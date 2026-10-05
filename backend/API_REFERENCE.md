@@ -4160,6 +4160,8 @@ Today: `slow_queries` is `null` on **PostgreSQL** (no counter without `pg_stat_s
 
 Paged. `?search=` case-insensitively matches the username; `?sort=created_at|username`, default `-created_at`; `?per_page=10|20|30|50|100`, default 10. Responds `meta{current_page, per_page, total, last_page, ssh_access_enforced}`.
 
+**Server Sync reads `ssh_access` from the server (2026-10-05, SYNC-01):** an imported account gets `ssh_access: true` when it is in the `ssh-users` group, and accounts already in the panel are corrected on apply, as `sudo` already was.
+
 `meta.ssh_access_enforced` — whether the `ssh_access` toggle actually keeps anyone out on this server: `true` once sshd's `AllowGroups` names `ssh-users` (written by saving **Settings → Security**), `false` before that, `null` if sshd could not be asked. **When it is `false`, users with `ssh_access: false` can still log in** — show that next to the toggle rather than presenting it as a control.
 
 ```json
@@ -4707,6 +4709,15 @@ Treat that as one rule in the UI: **disable the edit control and the enable/disa
 `risky_ports` — ports detected from installed database engines + config, to warn before opening them.
 
 **This endpoint can fail with `500`** (`{message, code, reference}`) when `ufw status` cannot be read. It used to answer `enabled: false` in that case, which is not "unknown" but a specific wrong answer — the screen reported an active firewall as off. Render the error rather than a disabled firewall.
+
+
+**`unmanaged_rules` (2026-10-05, FW-08):** rules `ufw` enforces that the panel has no row for (added with the ufw CLI). Each: `{"key", "rule", "adoptable", "reason"}` — `adoptable: false` means the panel cannot hold it (LIMIT/REJECT, outbound, an application profile) and `reason` says why. `null` when ufw could not be read. Show them under "Added outside the panel".
+
+- `POST /firewall/unmanaged/adopt` `{"key"}` → `201 {"rule": {...}}`: the panel manages it from now on.
+- `DELETE /firewall/unmanaged` `{"key"}` → `204`: removed from ufw, through the same SSH-lockout guard as any rule (the only rule allowing SSH is a `422`).
+- Both need `firewall` (manage); an unknown key or a non-adoptable rule is a `422` on `key`.
+
+**Activity entries (FW-09):** "Added/Removed a firewall rule" now carry the whole rule, e.g. "Deny 80/tcp from 1.2.3.4", the same sentence as the rule's `summary`.
 
 ---
 
@@ -5839,7 +5850,9 @@ The list response also carries **`google_oauth_redirect_uri`** at the top level:
 
 **`status` distinguishes three states, and the third one matters:** `never_tested` · `connected` · `failed`. `last_test_success` is deliberately nullable — never-asked is not the same as asked-and-failed, and rendering a red cross for an untested destination would be a lie. Drive the badge off `status`, not off the boolean.
 
-**The test result is cleared whenever the provider or *any* config key changes** (the one exception is `host_fingerprint`, which a successful probe records itself). A stored "connected" describes the credentials that were tested, not the ones now saved.
+**The test result is cleared whenever the provider or *any* config key changes** (the one exception is `host_fingerprint`, which a successful probe records itself).
+
+**FTPS certificate pinning (2026-10-05, FTP-01).** An FTPS destination (`ssl: true`) records the server certificate's fingerprint the first time it connects (`config.tls_fingerprint`, `sha256:<hex>`, safe to show) and refuses a different one before any test, backup or restore connects: `test.error_class` `tls_certificate_changed` (or `tls_certificate_unreadable` when it cannot be read). After a legitimate certificate renewal, send `PATCH … {"config": {"trust_new_certificate": true}}` — the pin is forgotten (and the test result cleared) and the next connection records the new one. Plain FTP has no certificate and nothing is checked. Limit: the check runs on its own connection just before the transfer, because PHP's FTP functions expose no certificate. A stored "connected" describes the credentials that were tested, not the ones now saved.
 
 `last_test_error` is a stable category, safe to branch on and to translate: `invalid_credentials` · `bucket_not_found` · `wrong_region` · `tls_failed` · `unreachable` · `host_key_mismatch` · `invalid_private_key` · `mismatch`. The raw exception is never echoed. (S3 only: before 2026-09-24 a wrong bucket, a wrong region and a broken TLS certificate were all reported as `invalid_credentials`. Backblaze B2 still answers a wrong-region endpoint with `invalid_credentials`, because B2 itself says "the key is not valid".)
 
@@ -6168,6 +6181,9 @@ A disabled webhook receiving a delivery **without** a valid signature, and an id
 `message` is the exception's own message, redacted and capped at 500 characters — **not** a fixed string. `file` is `path:line` relative to the install, and `trace` is up to five frames inside the application with vendor frames dropped. Entries written before this shipped have neither field.
 
 Server-operation records use `feature`, `operation`, `exit_code`, `command`, `duration_ms`, `attempts`, and a redacted, 1,000-character `error` summary to make a support reference actionable. `command` is the command line that failed, redacted where it was written rather than here. `attempts` and `duration_ms` separate a lock retried three times over twelve seconds from something that died once in 40ms — a distinction the timestamps cannot make. The summary uses non-empty stderr first and falls back to stdout because installers and other CLI tools often report failures there; it remains `null` when neither stream contains output. API failures use the existing fields. Validation, authentication, authorization, and not-found responses are excluded. Entries never expose request bodies, credentials, cookies, tokens, SQL bindings, unredacted command output, or stack traces. The log rotates automatically and retains 30 days by default.
+
+
+**Background failures (2026-10-05, ERR-02):** failed queued jobs and failed scheduled tasks are listed too — `operation` `job.failed` / `schedule.failed`, `message` "A background job failed." / "A scheduled task failed.", `command` the job class or the command, `exit_code` for a command, `error` the cause. An API 500 entry now uses the same `reference` the user was shown.
 
 ---
 
