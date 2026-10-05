@@ -25,8 +25,67 @@ class CentralTokenManager
     {
         $token = $this->generate();
 
+        $this->persist($token);
+
+        Log::info('central management enabled');
+
+        return [
+            'central_token' => $token,
+            'masked' => $this->mask($token),
+        ];
+    }
+
+    /**
+     * Store a token that was chosen elsewhere.
+     *
+     * The central panel mints the token before this server exists, hands it to
+     * `install.sh`, and registers the same value at its end — so unlike
+     * `enable()` the value is an input, not something to generate.
+     *
+     * Idempotent by construction: it writes the value it is given, so a re-run
+     * of the installer with the same token converges rather than rotating the
+     * credential out from under central. It does clear `central_token_used_at`,
+     * which is right — "central has used this key" is not a claim to carry
+     * across a reinstall.
+     *
+     * @throws \InvalidArgumentException when the token is blank. A silent no-op
+     *                                   would leave central management off while
+     *                                   the installer reported the token stored,
+     *                                   which is exactly what the old installer
+     *                                   did for every install it ran.
+     */
+    public function store(string $token): void
+    {
+        $token = trim($token);
+
+        if ($token === '') {
+            throw new \InvalidArgumentException('central token must not be empty');
+        }
+
+        $this->persist($token);
+
+        // The token value is never logged, here or anywhere else.
+        Log::info('central management token stored');
+    }
+
+    /**
+     * Upsert the token into the settings singleton.
+     *
+     * Shared by `enable()` and `store()` rather than written twice. The row may
+     * not exist yet — a fresh install stores a token before anything has ever
+     * saved settings — so both paths need the insert branch, and a second copy
+     * of it is a second place to get the `id = 1` singleton wrong.
+     *
+     * Note that `central_token_used_at` is cleared twice over: once by the
+     * `disable()` call and again in the update branch. Neither is load-bearing
+     * on its own — removing either leaves the behaviour intact, which a revert
+     * check confirmed — so do not read one as the guard and delete the other
+     * thinking it is dead.
+     */
+    private function persist(string $token): void
+    {
         DB::transaction(function () use ($token) {
-            // Wipe any previous token — a new enable replaces the old one.
+            // Wipe any previous token — a new one replaces the old.
             $this->disable();
 
             $setting = DB::table('settings')->where('id', 1)->first();
@@ -45,13 +104,6 @@ class CentralTokenManager
                 ]);
             }
         });
-
-        Log::info('central management enabled');
-
-        return [
-            'central_token' => $token,
-            'masked' => $this->mask($token),
-        ];
     }
 
     /**

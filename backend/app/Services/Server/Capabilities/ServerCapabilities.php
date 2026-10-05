@@ -191,6 +191,25 @@ class ServerCapabilities
     }
 
     /**
+     * The stack the installer recorded, or null if nothing has been recorded.
+     *
+     * Never detects, for the same reason as `recordedWebServer()`: the caller is
+     * asking "what was this box built as?" in order to decide whether a missing
+     * optional component matters, and a read like that must not trigger a
+     * box-wide probe as a side effect.
+     *
+     * Null is a usable answer. It means nobody told us — which is not the same
+     * as "not Docker", and callers must treat it as the benign case rather than
+     * guessing, since an un-recorded box is far more likely to be one this
+     * panel did not build than a Docker host.
+     */
+    public function recordedStack(): ?string
+    {
+        return $this->current?->stack
+            ?? ServerCapability::query()->value('stack');
+    }
+
+    /**
      * Record what the installer built. Called by `server:record-stack`, which
      * the install script runs; derives the web server and starting capabilities
      * from the stack so only one value is ever authored and they cannot
