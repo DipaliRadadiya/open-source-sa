@@ -80,6 +80,12 @@ WANT_SSL=1         # --no-ssl
 SCHEME="https"     # settled by configure_tls before any URL is written
 DRY_RUN=0          # --dry-run
 
+# --central-token=, or the environment variable, which is the better of the two:
+# an argument is readable in `ps` by every account on the box for the length of
+# the install, and this one is a credential. Read from the environment here so
+# that path keeps working, and never printed anywhere.
+CENTRAL_TOKEN="${CENTRAL_TOKEN:-}"
+
 # Which stack to build. Asked rather than assumed, because it decides the web
 # server — and the web server serves the panel itself, so it cannot be changed
 # from inside the panel later without the panel going down with it.
@@ -238,6 +244,7 @@ for arg in "$@"; do
         --repo=*)   REPO_URL="${arg#*=}" ;;
         --no-ssl)   WANT_SSL=0 ;;
         --dry-run)  DRY_RUN=1 ;;
+        --central-token=*) CENTRAL_TOKEN="${arg#*=}" ;;
         -h|--help)
             cat <<'USAGE'
 Control panel installer
@@ -259,6 +266,14 @@ Control panel installer
   --branch=main                Branch to install from.
   --no-ssl                     Serve plain HTTP. Fine behind another proxy.
   --dry-run                    Print the steps without touching anything.
+  --central-token=TOKEN        Register this server with a central panel that
+                               already holds the same token. Optional; nothing
+                               else needs it.
+                               Prefer the CENTRAL_TOKEN environment variable
+                               for automation: an argument is readable in `ps`
+                               by every account on this machine for as long as
+                               the install runs, and an environment variable is
+                               not.
 USAGE
             exit 0 ;;
         *) die "unknown option: $arg  (try --help)" ;;
@@ -1628,18 +1643,21 @@ setup_backend() {
     # flow when this server is being installed on behalf of an existing customer.
     # The token is stored server-side and the same value is registered with
     # central so it can call this server's API without any user session.
-    if [[ -n "${CENTRAL_TOKEN:-}" ]]; then
-        run sudo -u "$APP_USER" -H sh -c '
-            cd "$1" && php "$2" artisan tinker --execute="
-                \\
-                \$token = \"${CENTRAL_TOKEN}\";
-                \$settings = \\DB::table(\\'settings\\')->where(\\'id\\', 1)->first();
-                if (\$settings) {
-                    \\DB::table(\\'settings\\')->where(\\'id\\', 1)->update([\\'central_token\\' => \$token, \\'updated_at\\' => now()]);
-                } else {
-                    \\DB::table(\\'settings\\')->insert([\\'id\\' => 1, \\'central_token\\' => \$token, \\'created_at\\' => now(), \\'updated_at\\' => now()]);
-                }
-            "' -- "$dir" "${PANEL_PHP_BIN}"
+    #
+    # Handed to artisan on STDIN, never as an argument: an argument is readable
+    # by every account on the box via `ps` for as long as the command runs, and
+    # run() echoes a failing command into the log. A herestring is visible to
+    # neither, so nothing has to be redacted afterwards.
+    #
+    # The storing is a real artisan command rather than inline PHP. The previous
+    # version was `tinker --execute=` inside a single-quoted `sh -c`, which
+    # passed an empty token (no expansion inside single quotes, and sudo resets
+    # the environment regardless), invalid PHP (`\\'settings\\'` closes the
+    # quote instead of escaping), and ran `php "$2" artisan` where $2 is already
+    # the PHP binary. It had never once worked.
+    if [[ -n "$CENTRAL_TOKEN" ]]; then
+        run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan panel:central-token' \
+            -- "$dir" "${PANEL_PHP_BIN}" <<<"$CENTRAL_TOKEN"
         ok "central management token stored"
     fi
 }
