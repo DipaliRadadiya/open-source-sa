@@ -86,6 +86,11 @@ class RestoreVolumes implements RestoreStep
         // for one container's state.
         $this->containers->stop($context->application, $documentRoot);
 
+        // Recorded before the writes, so cleanup knows it owes a start. The
+        // flag is what `RestartProcess::cleanup()` reads, and both steps set it
+        // false once the site is up again, which makes running both harmless.
+        $context->processStopped = true;
+
         foreach ($tars as $tar) {
             $this->pour($context, $tar);
         }
@@ -173,5 +178,22 @@ class RestoreVolumes implements RestoreStep
     {
         // Nothing of its own on disk — the staged tars belong to the staging
         // directory the runner removes.
+        //
+        // But this step stops the containers, so a failure after that point owes
+        // the site a start: it was up when somebody pressed the button, and a
+        // failed restore that also leaves it down turns a recoverable mistake
+        // into an outage. `SwapFiles` and `RestartProcess` carry the same guard
+        // for the same reason, and the `processStopped` flag makes all three
+        // running harmless.
+        if (! $failed || ! $context->processStopped) {
+            return;
+        }
+
+        $this->containers->start(
+            $context->application,
+            $this->provisioner->documentRoot($context->application),
+        );
+
+        $context->processStopped = false;
     }
 }

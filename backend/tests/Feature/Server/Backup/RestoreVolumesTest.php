@@ -98,6 +98,10 @@ function spyingSupervisor(array &$stopped): ContainerSupervisor
             return new ServerOpsResult(ok: true, reference: 'r', answered: true);
         }
     );
+    // Cleanup starts them again when a restore failed after the stop.
+    $supervisor->shouldReceive('start')->andReturn(
+        new ServerOpsResult(ok: true, reference: 'r', answered: true)
+    );
 
     return $supervisor;
 }
@@ -282,3 +286,69 @@ it('applies only to a restore that includes volumes', function (string $type, bo
     ['config', false],
     ['full', false],
 ]);
+
+it('leaves the site running when a restore fails after the containers were stopped', function () {
+    // The site was up when somebody pressed the button. A failed restore that
+    // also leaves it down turns a recoverable mistake into an outage, which is
+    // the guard `SwapFiles` and `RestartProcess` already carry.
+    $stopped = [];
+    $started = 0;
+
+    $supervisor = Mockery::mock(ContainerSupervisor::class);
+    $supervisor->shouldReceive('stop')->andReturnUsing(function ($application, $root) use (&$stopped) {
+        $stopped[] = $application->id;
+
+        return new ServerOpsResult(ok: true, reference: 'r', answered: true);
+    });
+    $supervisor->shouldReceive('start')->andReturnUsing(function () use (&$started) {
+        $started++;
+
+        return new ServerOpsResult(ok: true, reference: 'r', answered: true);
+    });
+
+    $step = new RestoreVolumes(
+        restoreVolumeOps(['restore_volume' => new ServerOpsResult(ok: false, reference: 'r', answered: true)]),
+        $supervisor,
+        stubProvisioner(),
+    );
+
+    $context = restoreVolumeContext($this->application, $this->target, $this->tmp);
+
+    expect(fn () => $step->run($context))->toThrow(RuntimeException::class);
+
+    // The flag survives the throw, which is what tells cleanup it owes a start.
+    expect($context->processStopped)->toBeTrue();
+
+    $step->cleanup($context, failed: true);
+
+    expect($started)->toBe(1)
+        ->and($context->processStopped)->toBeFalse();
+});
+
+it('does not start anything when the restore succeeded', function () {
+    // `RestartProcess` owns the start on the happy path, after `SwapFiles` has
+    // put the restored compose file in place. Starting here as well would bring
+    // the containers up on the old definition first.
+    $stopped = [];
+    $started = 0;
+
+    $supervisor = Mockery::mock(ContainerSupervisor::class);
+    $supervisor->shouldReceive('stop')->andReturn(new ServerOpsResult(ok: true, reference: 'r', answered: true));
+    $supervisor->shouldReceive('start')->andReturnUsing(function () use (&$started) {
+        $started++;
+
+        return new ServerOpsResult(ok: true, reference: 'r', answered: true);
+    });
+
+    $step = new RestoreVolumes(
+        restoreVolumeOps(['restore_volume_in_use' => opsOutput('')]),
+        $supervisor,
+        stubProvisioner(),
+    );
+
+    $context = restoreVolumeContext($this->application, $this->target, $this->tmp);
+    $step->run($context);
+    $step->cleanup($context, failed: false);
+
+    expect($started)->toBe(0);
+});
