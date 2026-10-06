@@ -51,7 +51,7 @@
     "unsavedStay": "Permanecer nesta página",
     "unsavedLeave": "Sair e perder as alterações",
     "navTitles": {
-      "app_firewall": "Web Firewall"
+      "app_firewall": "Firewall web"
     },
     "autoRefresh": {
       "stopped": "O painel parou de verificar atualizações nesta página.",
@@ -3936,7 +3936,9 @@
         "removed": "{domain} removido.",
         "removeFailed": "Não foi possível remover o domínio.",
         "removedAlready": "{domain} já tinha sido removido.",
-        "updated": "{domain} atualizado."
+        "updated": "{domain} atualizado.",
+        "addFailed": "Não foi possível adicionar o domínio.",
+        "updateFailed": "Não foi possível salvar o domínio."
       },
       "ssl": {
         "sectionTitle": "Certificado SSL",
@@ -3959,6 +3961,7 @@
         "nameMissing": "não está neste certificado",
         "nameStale": "já não está nesta aplicação",
         "coverageGap": "Enquanto os nomes não coincidirem, este certificado deixará de se renovar automaticamente — incluindo para os que estão bem. Reemita-o para os alinhar.",
+        "coverageGapManual": "Quem acessa um nome que não está neste certificado vê um aviso de certificado. Emita-o novamente para cobri-lo.",
         "expired": "Este certificado expirou.",
         "expiredForcedHttps": "Todos os visitantes são redirecionados para HTTPS e o certificado que encontram expirou — por isso ninguém consegue aceder a esta aplicação. Desligue o redirecionamento para voltar a HTTP simples enquanto resolve o certificado.",
         "turnOffForceHttps": "Desligar o redirecionamento HTTPS",
@@ -4775,6 +4778,7 @@
       "nothingToSave": "Nada para salvar",
       "enabledToast": "A proteção por senha está ativada.",
       "disabledToast": "A proteção por senha está desativada — a aplicação está pública novamente.",
+      "saveFailed": "Não foi possível salvar a proteção por senha.",
       "savedCredentials": "Salve agora — não serão mostradas novamente:",
       "openSite": "Abrir aplicação",
       "showPassword": "Mostrar senha",
@@ -4868,7 +4872,7 @@
       }
     },
     "firewall": {
-      "pageTitle": "Web Firewall",
+      "pageTitle": "Firewall web",
       "pageSubtitle": "Bloqueie ataques comuns antes que cheguem a esta aplicação.",
       "loadFailed": "Não foi possível carregar isso.",
       "provisioning": "Esta aplicação ainda está sendo configurada. O firewall estará disponível quando terminar.",
@@ -4954,7 +4958,7 @@
           "ssl": "Certificado SSL (a cópia recebe o próprio)",
           "backups": "Backups",
           "cronJobs": "Tarefas cron",
-          "workers": "Queue workers",
+          "workers": "Workers de fila",
           "passwordProtection": "Proteção por senha",
           "deploys": "Deploy no push"
         }
@@ -5411,7 +5415,7 @@
       "title": "Segurança",
       "summary": "{on} de {total} ativas",
       "password": "Proteção por senha",
-      "firewall": "Web Firewall",
+      "firewall": "Firewall web",
       "fail2ban": "Proteção contra força bruta",
       "bots": "Bots de IA",
       "on": "Ligado",
@@ -5615,7 +5619,7 @@
     "siteTypeDetection": {
       "detectHint": "Verificar o que está instalado aqui",
       "reviewHint": "Revisar o que foi encontrado",
-      "detectFailed": "Não foi possível ler o diretório da aplicação.",
+      "detectFailed": "Não foi possível verificar o que está instalado.",
       "looksLike": "Parece {type}",
       "looksLikeBecause": "Parece {type} — {file} encontrado",
       "nothingFound": "Nada reconhecível encontrado na última verificação",

@@ -67,7 +67,7 @@ export function EditDomainDialog({ appId, domain, open, onOpenChange }) {
         onOpenChange?.(false);
       });
     } catch (error) {
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: t("toast.updateFailed") });
     }
   }
 
@@ -114,7 +114,11 @@ export function EditDomainDialog({ appId, domain, open, onOpenChange }) {
               <Select value={field.value} onValueChange={field.onChange}>
                 <FormControl>
                   <SelectTrigger className="w-full">
-                    <SelectValue />
+                    {/* The value box is flex, which defeats line-clamp: truncate the text itself so a long
+                        label ends in "…" instead of being cut. The open list still shows it in full. */}
+                    <SelectValue>
+                      <span className="min-w-0 truncate">{t(`type.${field.value}`)}</span>
+                    </SelectValue>
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>

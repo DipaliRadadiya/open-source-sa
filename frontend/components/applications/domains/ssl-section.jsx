@@ -309,10 +309,14 @@ export function SslSection({
     const expired = cert.expired;
     const servingStale = cert.serving_stale === true;
 
-    // One list: `domains` (covered), `missing_domains` (application names not
-    // on it), `stale_domains` (on it but dropped by the application).
+    // One list: `domains` (every name on the certificate), `missing_domains`
+    // (application names not on it), `stale_domains` (on it but dropped by the
+    // application). A stale name is also in `domains`, so it is listed once, as stale.
+    const stale = new Set(cert.stale_domains ?? []);
     const names = [
-      ...(cert.domains ?? []).map((domain) => ({ domain, state: "covered" })),
+      ...(cert.domains ?? [])
+        .filter((domain) => !stale.has(domain))
+        .map((domain) => ({ domain, state: "covered" })),
       ...(cert.missing_domains ?? []).map((domain) => ({ domain, state: "missing" })),
       ...(cert.stale_domains ?? []).map((domain) => ({ domain, state: "stale" })),
     ];
@@ -361,7 +365,11 @@ export function SslSection({
                   {t("ssl.namesTitle")}
                 </h4>
                 <span className="ml-auto text-xs text-muted-foreground tabular-nums">
-                  {t("ssl.namesCount", { secured, total: names.length })}
+                  {t("ssl.namesCount", {
+                    secured,
+                    // Out of the application's names; a stale one is not among them.
+                    total: names.filter((n) => n.state !== "stale").length,
+                  })}
                 </span>
               </div>
               <ul className="divide-y divide-border/60">
@@ -430,7 +438,8 @@ export function SslSection({
 
           {hasCoverageGap ? (
             <Note icon={AlertCircle}>
-              <p>{t("ssl.coverageGap")}</p>
+              {/* Only a renewing certificate is held back; an uploaded one just misses the name. */}
+              <p>{t(cert.renewable ? "ssl.coverageGap" : "ssl.coverageGapManual")}</p>
             </Note>
           ) : null}
 

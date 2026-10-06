@@ -3936,7 +3936,9 @@
         "removed": "{domain} を削除しました。",
         "removeFailed": "ドメインを削除できませんでした。",
         "removedAlready": "{domain} はすでに削除されています。",
-        "updated": "{domain} を更新しました。"
+        "updated": "{domain} を更新しました。",
+        "addFailed": "ドメインを追加できませんでした。",
+        "updateFailed": "ドメインを保存できませんでした。"
       },
       "ssl": {
         "sectionTitle": "SSL 証明書",
@@ -3959,6 +3961,7 @@
         "nameMissing": "この証明書に含まれていません",
         "nameStale": "このアプリケーションにはもうありません",
         "coverageGap": "すべての名前が一致するまで、この証明書は自動更新されなくなります — 問題のない名前についても同様です。再発行して揃えてください。",
+        "coverageGapManual": "この証明書に含まれていない名前にアクセスすると、証明書の警告が表示されます。対象に含めるには再発行してください。",
         "expired": "この証明書の有効期限が切れています。",
         "expiredForcedHttps": "すべての訪問者が HTTPS にリダイレクトされますが、その先の証明書は期限切れです — つまり誰もこのアプリケーションにアクセスできません。証明書を直すあいだ、リダイレクトをオフにして通常の HTTP に戻してください。",
         "turnOffForceHttps": "HTTPS リダイレクトをオフにする",
@@ -4775,6 +4778,7 @@
       "nothingToSave": "保存する内容がありません",
       "enabledToast": "パスワード保護が有効です。",
       "disabledToast": "パスワード保護が無効です。アプリケーションは再び公開されました。",
+      "saveFailed": "パスワード保護を保存できませんでした。",
       "savedCredentials": "今すぐ保存してください。二度と表示されません:",
       "openSite": "アプリケーションを開く",
       "showPassword": "パスワードを表示",
@@ -5615,7 +5619,7 @@
     "siteTypeDetection": {
       "detectHint": "ここに何がインストールされているか確認",
       "reviewHint": "検出結果を確認",
-      "detectFailed": "アプリケーションのディレクトリを読み取れませんでした。",
+      "detectFailed": "インストールされている内容を確認できませんでした。",
       "looksLike": "{type} のようです",
       "looksLikeBecause": "{type} のようです — {file} が見つかりました",
       "nothingFound": "前回の確認では認識できるものが見つかりませんでした",

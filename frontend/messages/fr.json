@@ -3936,7 +3936,9 @@
         "removed": "{domain} retiré.",
         "removeFailed": "Impossible de retirer le domaine.",
         "removedAlready": "{domain} avait déjà été supprimé.",
-        "updated": "{domain} mis à jour."
+        "updated": "{domain} mis à jour.",
+        "addFailed": "Impossible d’ajouter le domaine.",
+        "updateFailed": "Impossible d’enregistrer le domaine."
       },
       "ssl": {
         "sectionTitle": "Certificat SSL",
@@ -3959,6 +3961,7 @@
         "nameMissing": "absent de ce certificat",
         "nameStale": "plus rattaché à cette application",
         "coverageGap": "Tant que tous les noms ne correspondent pas, ce certificat cessera de se renouveler automatiquement — y compris pour ceux qui vont bien. Réémettez-le pour les remettre en accord.",
+        "coverageGapManual": "Les visiteurs d’un nom absent de ce certificat reçoivent un avertissement de certificat. Réémettez-le pour le couvrir.",
         "expired": "Ce certificat a expiré.",
         "expiredForcedHttps": "Tous les visiteurs sont redirigés vers HTTPS, et le certificat qu’ils trouvent a expiré — personne ne peut donc accéder à cette application. Désactivez la redirection pour repasser en HTTP simple le temps de régler le certificat.",
         "turnOffForceHttps": "Désactiver la redirection HTTPS",
@@ -4775,6 +4778,7 @@
       "nothingToSave": "Rien à enregistrer",
       "enabledToast": "La protection par mot de passe est activée.",
       "disabledToast": "La protection par mot de passe est désactivée — l'application est à nouveau publique.",
+      "saveFailed": "Impossible d’enregistrer la protection par mot de passe.",
       "savedCredentials": "Enregistrez-les maintenant — ils ne seront plus affichés :",
       "openSite": "Ouvrir l'application",
       "showPassword": "Afficher le mot de passe",
@@ -5615,7 +5619,7 @@
     "siteTypeDetection": {
       "detectHint": "Vérifier ce qui est installé ici",
       "reviewHint": "Examiner ce qui a été trouvé",
-      "detectFailed": "Impossible de lire le répertoire de l'application.",
+      "detectFailed": "Impossible de vérifier ce qui est installé.",
       "looksLike": "Ressemble à {type}",
       "looksLikeBecause": "Ressemble à {type} — {file} trouvé",
       "nothingFound": "Rien de reconnaissable trouvé lors de la dernière vérification",

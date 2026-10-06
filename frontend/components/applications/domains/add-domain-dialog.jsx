@@ -71,7 +71,7 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
         form.reset();
       });
     } catch (error) {
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: t("toast.addFailed") });
     }
   }
 
@@ -143,7 +143,11 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
                 <FormControl>
                   {/* w-full: SelectTrigger defaults to w-fit. */}
                   <SelectTrigger className="w-full">
-                    <SelectValue />
+                    {/* The value box is flex, which defeats line-clamp: truncate the text itself so a long
+                        label ends in "…" instead of being cut. The open list still shows it in full. */}
+                    <SelectValue>
+                      <span className="min-w-0 truncate">{t(`type.${field.value}`)}</span>
+                    </SelectValue>
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>

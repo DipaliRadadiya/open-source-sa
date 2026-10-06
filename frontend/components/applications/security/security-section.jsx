@@ -74,7 +74,7 @@ export function SecuritySection({ appId, application, domain, canManage }) {
       await refreshAndWait();
       toast.success(values.enabled ? t("enabledToast") : t("disabledToast"));
     } catch (error) {
-      handleValidationError(error, form);
+      handleValidationError(error, form, { fallback: t("saveFailed") });
     }
   }
 

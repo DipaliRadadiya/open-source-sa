@@ -3936,7 +3936,9 @@
         "removed": "{domain} eliminado.",
         "removeFailed": "No se pudo eliminar el dominio.",
         "removedAlready": "{domain} ya se había eliminado.",
-        "updated": "{domain} actualizado."
+        "updated": "{domain} actualizado.",
+        "addFailed": "No se pudo añadir el dominio.",
+        "updateFailed": "No se pudo guardar el dominio."
       },
       "ssl": {
         "sectionTitle": "Certificado SSL",
@@ -3959,6 +3961,7 @@
         "nameMissing": "no está en este certificado",
         "nameStale": "ya no está en esta aplicación",
         "coverageGap": "Hasta que todos los nombres coincidan, este certificado dejará de renovarse automáticamente, incluso para los que están bien. Reemítelo para alinearlos.",
+        "coverageGapManual": "Quien visite un nombre que no está en este certificado verá una advertencia de certificado. Reemítelo para cubrirlo.",
         "expired": "Este certificado ha caducado.",
         "expiredForcedHttps": "Se redirige a todos los visitantes a HTTPS y el certificado que encuentran ha caducado, así que nadie puede acceder a esta aplicación. Desactiva la redirección para volver a HTTP simple mientras resuelves el certificado.",
         "turnOffForceHttps": "Desactivar la redirección a HTTPS",
@@ -4775,6 +4778,7 @@
       "nothingToSave": "Nada que guardar",
       "enabledToast": "La protección con contraseña está activada.",
       "disabledToast": "La protección con contraseña está desactivada: la aplicación vuelve a ser pública.",
+      "saveFailed": "No se pudo guardar la protección con contraseña.",
       "savedCredentials": "Guarda esto ahora: no se volverá a mostrar:",
       "openSite": "Abrir aplicación",
       "showPassword": "Mostrar contraseña",
@@ -5615,7 +5619,7 @@
     "siteTypeDetection": {
       "detectHint": "Comprobar qué hay instalado aquí",
       "reviewHint": "Revisar lo que se encontró",
-      "detectFailed": "No se pudo leer el directorio de la aplicación.",
+      "detectFailed": "No se pudo comprobar qué está instalado.",
       "looksLike": "Parece {type}",
       "looksLikeBecause": "Parece {type} — se encontró {file}",
       "nothingFound": "No se encontró nada reconocible en la última comprobación",

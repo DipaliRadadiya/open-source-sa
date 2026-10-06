@@ -237,7 +237,8 @@ function HistoryRow({ appId, entry, canManage, onRestore }) {
             ) : null}
           </div>
 
-          <div className="flex shrink-0 flex-wrap gap-2">
+          {/* Shrinkable, so on a phone the second button wraps instead of overflowing. */}
+          <div className="flex min-w-0 flex-wrap gap-2">
             {canShowValues ? (
               <Button
                 type="button"

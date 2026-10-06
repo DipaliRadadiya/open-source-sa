@@ -3936,7 +3936,9 @@
         "removed": "{domain} entfernt.",
         "removeFailed": "Die Domain konnte nicht entfernt werden.",
         "removedAlready": "{domain} wurde bereits entfernt.",
-        "updated": "{domain} aktualisiert."
+        "updated": "{domain} aktualisiert.",
+        "addFailed": "Die Domain konnte nicht hinzugefügt werden.",
+        "updateFailed": "Die Domain konnte nicht gespeichert werden."
       },
       "ssl": {
         "sectionTitle": "SSL-Zertifikat",
@@ -3959,6 +3961,7 @@
         "nameMissing": "nicht auf diesem Zertifikat",
         "nameStale": "nicht mehr in dieser Anwendung",
         "coverageGap": "Solange nicht alle Namen übereinstimmen, erneuert sich dieses Zertifikat nicht mehr automatisch — auch nicht für die Namen, die in Ordnung sind. Stellen Sie es neu aus, um das zu beheben.",
+        "coverageGapManual": "Wer einen Namen aufruft, der nicht auf diesem Zertifikat steht, erhält eine Zertifikatswarnung. Stellen Sie es neu aus, um ihn abzudecken.",
         "expired": "Dieses Zertifikat ist abgelaufen.",
         "expiredForcedHttps": "Alle Besucher werden zu HTTPS umgeleitet, und das Zertifikat dort ist abgelaufen — niemand kann diese Anwendung also erreichen. Schalten Sie die Umleitung ab, um vorerst auf einfaches HTTP zurückzugehen, während Sie das Zertifikat in Ordnung bringen.",
         "turnOffForceHttps": "HTTPS-Umleitung abschalten",
@@ -4775,6 +4778,7 @@
       "nothingToSave": "Nichts zu speichern",
       "enabledToast": "Der Passwortschutz ist an.",
       "disabledToast": "Der Passwortschutz ist aus — die Anwendung ist wieder öffentlich.",
+      "saveFailed": "Der Passwortschutz konnte nicht gespeichert werden.",
       "savedCredentials": "Sichern Sie diese jetzt — sie werden nicht wieder angezeigt:",
       "openSite": "Anwendung öffnen",
       "showPassword": "Passwort anzeigen",
@@ -5615,7 +5619,7 @@
     "siteTypeDetection": {
       "detectHint": "Prüfen, was hier installiert ist",
       "reviewHint": "Gefundenes überprüfen",
-      "detectFailed": "Das Verzeichnis der Anwendung konnte nicht gelesen werden.",
+      "detectFailed": "Es konnte nicht geprüft werden, was installiert ist.",
       "looksLike": "Sieht aus wie {type}",
       "looksLikeBecause": "Sieht aus wie {type} — {file} gefunden",
       "nothingFound": "Bei der letzten Prüfung wurde nichts Erkennbares gefunden",

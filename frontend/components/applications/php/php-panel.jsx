@@ -1055,7 +1055,8 @@ function MemoryBudget({ budget, workers, limit }) {
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-sm font-medium tabular-nums">
           {t("equation", {
-            limit: limit || "—",
+            // Half-typed or invalid ("abc") reads as unknown, like an empty field.
+            limit: /^\d+\s*[KMG]?$/i.test(String(limit ?? "").trim()) ? limit : "—",
             workers: Number(workers) || 0,
             total: formatBytes(budget.thisSite),
           })}

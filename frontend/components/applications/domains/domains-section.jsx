@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -118,12 +118,14 @@ export function DomainsSection({
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [pending, setPending] = useState(false);
   const [verifying, setVerifying] = useState({});
+  // The removed row's ⋯ button is gone, so focus goes to Add domain instead.
+  const removed = useRef(false);
 
   const coverageOf = (domain) => certificateCoverage(certificate, domain);
 
   // Shared by the header and the empty state.
   const addButton = canManage ? (
-    <Button onClick={() => setAddOpen(true)}>
+    <Button onClick={() => setAddOpen(true)} data-domains-add>
       <Plus className="size-4" />
       {t("add.action")}
     </Button>
@@ -173,6 +175,7 @@ export function DomainsSection({
     try {
       await deleteDomain(appId, target);
       refreshThen(() => {
+        removed.current = true;
         toast.success(t("toast.removed", { domain: target }));
         setDeleteTarget(null);
       });
@@ -180,6 +183,7 @@ export function DomainsSection({
       // Already removed elsewhere: treat as success.
       if (error?.response?.status === 404) {
         refreshThen(() => {
+          removed.current = true;
           toast.info(t("toast.removedAlready", { domain: target }));
           setDeleteTarget(null);
         });
@@ -510,9 +514,15 @@ export function DomainsSection({
         confirmLabel={t("remove")}
         pending={pending || refreshing}
         onConfirm={confirmDelete}
+        onCloseAutoFocus={(event) => {
+          if (!removed.current) return;
+          removed.current = false;
+          event.preventDefault();
+          document.querySelector("[data-domains-add]")?.focus();
+        }}
       >
-        {/* certbot fails the whole renewal if any name is unreachable. */}
-        {deleteTarget && coverageOf(deleteTarget.domain) === "covered" ? (
+        {/* certbot fails the whole renewal if any name is unreachable; nothing renews an uploaded one. */}
+        {deleteTarget && certificate?.renewable && coverageOf(deleteTarget.domain) === "covered" ? (
           <Caution>
             {t("removeConfirm.onCertificate", { domain: deleteTarget.domain })}
           </Caution>

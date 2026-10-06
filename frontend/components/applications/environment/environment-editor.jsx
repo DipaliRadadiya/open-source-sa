@@ -296,7 +296,8 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
       {canManage ? (
         <CardFooter className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/30 py-4">
           <p className="text-xs text-muted-foreground">{footerNote}</p>
-          <div className="flex items-center gap-2">
+          {/* Wraps: "Save & restart" is long in some languages and was cut off on a phone. */}
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <ReasonTooltip reason={!dirty && !saving ? tc("nothingToRevert") : null}>
               <Button variant="ghost" onClick={revert} disabled={!dirty || saving}>
                 <Undo2 className="size-4" />

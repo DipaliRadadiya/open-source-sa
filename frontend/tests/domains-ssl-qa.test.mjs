@@ -62,9 +62,10 @@ test("removing a covered name warns that the certificate stops renewing", () => 
    * WHOLE renewal if any one of them cannot be reached. So removing a covered
    * name quietly stops the certificate renewing for the names that are still
    * fine, and nothing goes wrong until it expires. The dialog said only "the
-   * application will stop answering on this name".
+   * application will stop answering on this name". Only for a certificate
+   * that renews (5 Oct): nothing renews an uploaded one, so it would be false.
    */
-  assert.match(section, /deleteTarget && coverageOf\(deleteTarget\.domain\) === "covered"/);
+  assert.match(section, /deleteTarget && certificate\?\.renewable && coverageOf\(deleteTarget\.domain\) === "covered"/);
   assert.match(section, /removeConfirm\.onCertificate/);
 });
 
