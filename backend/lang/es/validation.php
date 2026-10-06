@@ -263,6 +263,7 @@ return [
     'php_version_default_unsupported' => 'La aplicación :type funciona con PHP :range. Dejar este campo vacío usa el valor predeterminado del servidor (:default), que está fuera de ese rango: elige una versión dentro del rango.',
     'web_root_fixed' => ':type se sirve desde :web_root y se instala en torno a esa ruta, así que la raíz web no se puede cambiar aquí. Cualquier otro valor deja el sitio inaccesible y publica su código fuente.',
     'web_root_missing' => 'La carpeta :path no existe, así que el sitio no tendría nada que servir. Créala o sube primero tus archivos allí y después establécela como raíz web.',
+    'web_root_symlink' => 'Parte de esa ruta, :path, es un enlace simbólico, así que el sitio podría acabar sirviendo archivos de otro lugar. Usa una carpeta real dentro del sitio.',
     'port_in_use' => 'Algo en este servidor ya está escuchando en el puerto :port. Elige otro o detén lo que lo usa.',
 
     'port_registered' => 'El puerto :port lo usa normalmente :service. Puedes usarlo igualmente si nada en este servidor lo hace.',

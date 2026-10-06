@@ -76,12 +76,15 @@ class WebRootManager
 
         $documentRoot = $this->provisioner->documentRoot($application);
 
+        $this->refuseLinks($application, $documentRoot, $previous);
         $this->refuseMissing($application, $documentRoot, $previous);
 
-        // Owned before anything points at it. `mkdir -p` stays as a no-op
-        // guard: refuseMissing() has just seen the folder, and a vhost whose
-        // root is missing answers every request with a 403.
-        $this->prepareDirectory($application, $documentRoot);
+        // No `mkdir` and no `chown` here any more (WR-01). Both ran as root on
+        // a path inside the site user's own public_html, and both follow
+        // symlinks: a link the user planted (public_html/pub -> /etc) handed
+        // the target to the user. They had stopped doing anything useful once
+        // the folder had to exist already (#8) — it is the user's folder, made
+        // by the user or by a deploy that runs as the user.
 
         // The credential file no longer moves with the document root — it
         // lives above it now — so this is only here to guarantee it exists
@@ -173,36 +176,42 @@ class WebRootManager
         ]);
     }
 
-    private function prepareDirectory(Application $application, string $documentRoot): void
+    /**
+     * Refuse a web root reached through a symlink (WR-01, old QA list).
+     *
+     * The site user owns public_html and can plant a link anywhere in it.
+     * Served through one, the site publishes whatever the link points at —
+     * /etc, another site's files — to the web. Every component from
+     * public_html down is checked, not only the last: `a/b` is just as far
+     * from home when `a` is the link.
+     */
+    private function refuseLinks(Application $application, string $documentRoot, string $previous): void
     {
-        $user = $application->systemUser?->username;
+        $base = rtrim($application->publicHtmlPath(), '/');
+        $paths = [$base];
 
-        // Just the document root now. `.panel/` used to be created here
-        // because the credential file lived inside it; it lives above the
-        // document root, so moving the root no longer moves it.
-        $created = $this->serverOps->run(
-            ['mkdir', '-p', $documentRoot],
-            $this->context($application, 'web_root_mkdir'),
-        );
-
-        if ($created->failed()) {
-            throw new WebRootOperationException($created->reference);
+        foreach (array_filter(explode('/', substr($documentRoot, strlen($base))), fn (string $part) => $part !== '') as $part) {
+            $paths[] = end($paths).'/'.$part;
         }
 
-        if ($user === null) {
-            return;
-        }
+        foreach ($paths as $path) {
+            // Exit 0 = it is a link; 1 = it is not (or is not there, which
+            // refuseMissing() answers next).
+            $link = $this->serverOps->probe(['test', '-L', $path], $this->context($application, 'web_root_link'));
 
-        // Not recursive: the target may already hold the user's files, and a
-        // `chown -R` over a directory this call did not create is a bigger
-        // claim than moving a web root should make.
-        $owned = $this->serverOps->run(
-            ['chown', "{$user}:{$user}", $documentRoot],
-            $this->context($application, 'web_root_chown'),
-        );
+            if ($link->ok) {
+                $application->web_root = $previous;
 
-        if ($owned->failed()) {
-            throw new WebRootOperationException($owned->reference);
+                throw ValidationException::withMessages([
+                    'web_root' => [__('validation.web_root_symlink', ['path' => $path])],
+                ]);
+            }
+
+            if ($link->denied || $link->exitCode() !== 1) {
+                $application->web_root = $previous;
+
+                throw new WebRootOperationException($link->reference);
+            }
         }
     }
 

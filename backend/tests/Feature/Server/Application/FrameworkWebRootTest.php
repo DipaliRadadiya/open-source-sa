@@ -50,6 +50,11 @@ function frameworkCheckout(Application $app, array $files): ArrayObject
             return Process::result(exitCode: in_array(substr($args[2], strlen($root) + 1), $files, true) ? 0 : 1);
         }
 
+        // No symlinks in this checkout (WR-01 refuses a web root behind one).
+        if (($args[0] ?? '') === 'test' && ($args[1] ?? '') === '-L') {
+            return Process::result(exitCode: 1);
+        }
+
         if (($args[0] ?? '') === 'tee') {
             $written->append((string) $process->input);
         }

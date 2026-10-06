@@ -273,6 +273,7 @@ return [
     'php_version_default_unsupported' => 'The :type application runs on PHP :range. Leaving this empty uses the server default (:default), which is outside that range — choose a version in the range instead.',
     'web_root_fixed' => ':type serves from :web_root and installs itself around that path, so the web root cannot be changed here. Any other value leaves the site unreachable and publishes its source.',
     'web_root_missing' => 'The folder :path does not exist, so the site would have nothing to serve. Create it or upload your files there first, then set it as the web root.',
+    'web_root_symlink' => 'Part of that path, :path, is a symbolic link, so the site could end up serving files from somewhere else. Use a real folder inside the site.',
     'port_in_use' => 'Something on this server is already listening on port :port. Pick another, or stop what is using it.',
 
     'port_registered' => 'Port :port is normally used by :service. You can still use it if nothing on this server does.',

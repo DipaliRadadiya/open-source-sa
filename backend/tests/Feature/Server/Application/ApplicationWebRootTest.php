@@ -70,17 +70,22 @@ function webRootRecorder(): ArrayObject
  * @param  bool  $testPasses  whether `nginx -t` succeeds.
  * @param  int  $folderTest  what `test -d` on the new web root answers: 0 there, 1 missing.
  */
-function fakeWebRootServer(bool $testPasses = true, int $folderTest = 0): void
+function fakeWebRootServer(bool $testPasses = true, int $folderTest = 0, ?string $linkAt = null): void
 {
     webRootRecorder()->exchangeArray([]);
 
-    Process::fake(function ($process) use ($testPasses, $folderTest) {
+    Process::fake(function ($process) use ($testPasses, $folderTest, $linkAt) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 
         webRootRecorder()->append($args);
 
         if (($args[0] ?? '') === 'test' && ($args[1] ?? '') === '-d') {
             return Process::result(exitCode: $folderTest);
+        }
+
+        // `test -L`: only the path named in $linkAt is a symlink.
+        if (($args[0] ?? '') === 'test' && ($args[1] ?? '') === '-L') {
+            return Process::result(exitCode: ($args[2] ?? '') === $linkAt ? 0 : 1);
         }
 
         if (($args[0] ?? '') === 'nginx' && ($args[1] ?? '') === '-t') {
@@ -108,7 +113,7 @@ function webRootRan(callable $matches): bool
     return false;
 }
 
-it('creates the new directory, re-renders the vhost and reloads', function () {
+it('switches to an existing folder, re-renders the vhost and reloads', function () {
     fakeWebRootServer();
 
     $this->withHeaders(webRootHeaders())
@@ -118,21 +123,34 @@ it('creates the new directory, re-renders the vhost and reloads', function () {
 
     expect($this->application->fresh()->web_root)->toBe('public');
 
-    // The directory has to exist before the vhost points at it — otherwise
-    // every request is a 403 that looks like a permissions bug.
-    // Slug-based and under public_html — the layout the provisioner has
-    // always written. These asserted `{home}/{domain}/{web_root}`, which is
-    // the string the PHP screen used to build and no directory that exists.
-    expect(webRootRan(fn ($args) => ($args[0] ?? '') === 'chown'
-        && in_array('/home/siteowner/blog/public_html/public', $args, true)))->toBeTrue();
-
-    // No `.panel` inside the new root: the panel's own files live above the
-    // document root now, so moving the root does not move them.
-    expect(webRootRan(fn ($args) => ($args[0] ?? '') === 'mkdir'
-        && in_array('/home/siteowner/blog/public_html/public', $args, true)))->toBeTrue();
+    // No mkdir or chown as root on the site user's path any more (WR-01):
+    // both followed symlinks the user planted. The folder must exist (#8).
+    // Nothing as root under public_html, which the site user controls; the
+    // panel's own folders beside it (logs, .panel) are root-owned and locked.
+    expect(webRootRan(fn ($args) => in_array($args[0] ?? '', ['mkdir', 'chown'], true)
+        && str_contains(implode(' ', $args), '/public_html')))->toBeFalse();
 
     expect(webRootRan(fn ($args) => ($args[0] ?? '') === 'nginx' && ($args[1] ?? '') === '-t'))->toBeTrue();
 });
+
+it('refuses a web root reached through a symlink, at any depth, and touches nothing (WR-01)', function (string $webRoot, string $link) {
+    // Old QA list WR-01: public_html/pub -> /opt/target, then web root "pub",
+    // made root chown /opt/target to the site user.
+    fakeWebRootServer(linkAt: $link);
+
+    $this->withHeaders(webRootHeaders())
+        ->putJson(webRootUrl(), ['web_root' => $webRoot])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.web_root.0', __('validation.web_root_symlink', ['path' => $link]));
+
+    expect($this->application->fresh()->web_root)->toBe('/')
+        ->and(webRootRan(fn ($args) => in_array($args[0] ?? '', ['mkdir', 'chown', 'tee'], true)))->toBeFalse()
+        ->and(webRootRan(fn ($args) => ($args[0] ?? '') === 'nginx'))->toBeFalse();
+})->with([
+    'the folder itself' => ['pub', '/home/siteowner/blog/public_html/pub'],
+    'a folder above it' => ['pub/inner', '/home/siteowner/blog/public_html/pub'],
+    'the last of two' => ['real/pub', '/home/siteowner/blog/public_html/real/pub'],
+]);
 
 it('refuses a folder that does not exist, and leaves the site alone', function () {
     // Junior re-test #8: `/etc` was saved as public_html/etc, created empty,
