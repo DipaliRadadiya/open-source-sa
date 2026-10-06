@@ -3859,6 +3859,7 @@
       "testDomain": "Domaine de test",
       "sslRow": {
         "secured": "Sécurisé",
+        "coveredNotPointing": "Présent sur le certificat, mais ce nom ne pointe pas ici",
         "notCovered": "Absent du certificat",
         "none": "Aucun certificat SSL"
       },

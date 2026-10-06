@@ -3859,6 +3859,7 @@
       "testDomain": "テストドメイン",
       "sslRow": {
         "secured": "保護済み",
+        "coveredNotPointing": "証明書に含まれていますが、この名前はこのサーバーを指していません",
         "notCovered": "証明書に含まれていません",
         "none": "SSL 証明書なし"
       },

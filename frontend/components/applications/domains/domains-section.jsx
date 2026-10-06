@@ -89,9 +89,14 @@ function certificateCoverage(certificate, domain) {
 }
 
 // Null while a certificate is issuing or failed; the SSL tab reports that once.
-function sslRowState(certificate, coverage) {
+// "Secured" only when visitors actually reach this server: a covered name whose DNS points
+// elsewhere is not served by this certificate (a Cloudflare-proxied name still is).
+function sslRowState(certificate, coverage, domain) {
   if (!certificate) return { key: "none", tone: "text-muted-foreground", icon: ShieldOff };
   if (certificate.status !== "active") return null;
+  if (coverage === "covered" && !domain.dns_verified && !domain.behind_proxy) {
+    return { key: "coveredNotPointing", tone: "text-muted-foreground", icon: ShieldCheck };
+  }
   if (coverage === "covered") return { key: "secured", tone: "text-success", icon: ShieldCheck };
   if (coverage === "uncovered") return { key: "notCovered", tone: "text-warning", icon: ShieldAlert };
   return null;
@@ -311,7 +316,7 @@ export function DomainsSection({
 
                     {/* HTTPS status for this name. */}
                     {(() => {
-                      const ssl = sslRowState(certificate, coverageOf(domain.domain));
+                      const ssl = sslRowState(certificate, coverageOf(domain.domain), domain);
                       if (!ssl) return null;
                       const SslIcon = ssl.icon;
                       return (
