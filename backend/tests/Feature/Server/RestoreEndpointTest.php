@@ -76,8 +76,13 @@ it('starts a restore when the domain is typed correctly', function () {
         ->postJson("/api/backups/{$backup->id}/restore", ['confirm' => 'endpoint.test'])
         ->assertStatus(202);
 
+    // Counted from the configured pipeline rather than written out, because the
+    // number is not the point and a literal here only records how many steps
+    // existed the day it was typed — it went stale the moment `RestoreVolumes`
+    // was added, failing a test about typing a domain name.
     expect($response->json('restore.status'))->toBe('pending')
-        ->and($response->json('restore.total_steps'))->toBe(7);
+        ->and($response->json('restore.total_steps'))
+        ->toBe(count((array) config('server.backups.restore_steps')));
 
     Queue::assertPushed(RunRestore::class);
 });

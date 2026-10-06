@@ -51,4 +51,24 @@ class RestoreContext
     {
         return in_array($this->restore->type->value, ['filesystem', 'full'], true);
     }
+
+    /**
+     * A container site's volumes. Mirrors `BackupContext::wantsVolumes()` — the
+     * two have to agree, or a restore reads for something the backup never
+     * wrote.
+     */
+    public function wantsVolumes(): bool
+    {
+        return in_array($this->restore->type->value, ['volumes', 'volumes_config'], true);
+    }
+
+    /**
+     * Its compose files and `.env`. They live in the document root, so
+     * `SwapFiles` is what moves them into place — the same rename it does for a
+     * hosted site's files. This is the question it asks for a container site.
+     */
+    public function wantsConfig(): bool
+    {
+        return in_array($this->restore->type->value, ['config', 'volumes_config'], true);
+    }
 }

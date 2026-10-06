@@ -86,12 +86,20 @@ class ExtractArchive implements RestoreStep
 
         $command = ['tar', '-xzf', $archive, '-C', $staging];
 
-        if (! $context->wantsFiles()) {
-            // Database-only: unpack just the dumps. Unpacking a multi-gigabyte
-            // site to read a 40 MB SQL file next to it wastes the disk the
-            // restore itself needs.
+        // A restore needing the site's own directory — a hosted site's files, or
+        // a container site's compose and `.env`, which live in that same
+        // directory — takes the whole archive. Everything else unpacks only the
+        // members it will read: unpacking a multi-gigabyte site to get at a
+        // 40 MB SQL file beside it wastes the disk the restore itself needs, and
+        // the same goes for volume tars.
+        if (! $context->wantsFiles() && ! $context->wantsConfig()) {
             $command[] = '--wildcards';
             $command[] = 'db-*.sql';
+
+            if ($context->wantsVolumes()) {
+                // Written by `ArchiveVolumes` as `volumes/<name>.tar`.
+                $command[] = 'volumes/*';
+            }
         }
 
         $result = $this->serverOps->run(
@@ -106,7 +114,7 @@ class ExtractArchive implements RestoreStep
             throw new RuntimeException('the archive could not be extracted');
         }
 
-        if ($context->wantsFiles() && ! is_dir($staging.'/'.basename($siteRoot))) {
+        if (($context->wantsFiles() || $context->wantsConfig()) && ! is_dir($staging.'/'.basename($siteRoot))) {
             // The archive holds the site under its directory name. If that is
             // missing, this artefact is not what we think it is — better to
             // stop than to swap an empty directory over a working site.

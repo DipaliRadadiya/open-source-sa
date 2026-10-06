@@ -41,7 +41,11 @@ class SwapFiles implements RestoreStep
 
     public function appliesTo(RestoreContext $context): bool
     {
-        return $context->wantsFiles();
+        // `wantsConfig()` too: a container site's compose files and `.env` sit in
+        // the same document root this step renames, so restoring its config is
+        // the same two renames. A volumes-only restore leaves the directory
+        // alone — `RestoreVolumes` is the step with work to do there.
+        return $context->wantsFiles() || $context->wantsConfig();
     }
 
     public function run(RestoreContext $context): void

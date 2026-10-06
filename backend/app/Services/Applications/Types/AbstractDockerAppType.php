@@ -227,19 +227,21 @@ abstract class AbstractDockerAppType extends AbstractSiteType
     }
 
     /**
-     * The same two screens a plain container site does not get, and for the same
-     * reasons: Clone copies served files, and a container's state is in its
-     * volumes; Backup archives the document root and a database, and a container
-     * has neither — the document root holds a compose file.
+     * No Clone: it copies served files, and a container's state is in its
+     * volumes, so a clone would produce a site pointing at the original's data.
      *
-     * Inherited from the reasoning in {@see DockerSiteType}, not duplicated: if
-     * volume backup lands, both want it at once.
+     * **Backup is kept**, as of the volume steps — `ArchiveVolumes` captures the
+     * volumes and `ArchiveFiles` the compose file beside them, which together
+     * are the whole of a container site. It was withheld while the pipeline
+     * could only archive a document root, because the honest description of that
+     * artefact was "one YAML file". The note in {@see DockerSiteType} said both
+     * types would want it at once, and they do.
      *
      * @return array<int, string>
      */
     public function features(): array
     {
-        return array_values(array_diff(parent::features(), ['app_clone', 'app_backup']));
+        return array_values(array_diff(parent::features(), ['app_clone']));
     }
 
     public function method(): string

@@ -217,3 +217,31 @@ it('rejects an application id that does not exist', function () {
         ->assertStatus(422)
         ->assertJsonValidationErrors('application_id');
 });
+
+it('offers backups to container sites, and still no cloning', function (string $siteType) {
+    // The pair is the point. Backups were withheld from container sites while
+    // the pipeline could only archive a document root and a database — a
+    // container site has neither, so the artefact would have been one compose
+    // file presented as a site. `ArchiveVolumes` captures the volumes and
+    // `ArchiveFiles` the compose file beside them, so the objection is answered
+    // and the screen is offered.
+    //
+    // Cloning is not, and must not be: it copies served files, so a clone of a
+    // container site would be a site pointing at the original's volumes.
+    //
+    // Asserted per type rather than once, because the two classes strip their
+    // features independently — `DockerSiteType` for the bring-your-own-image
+    // card and `AbstractDockerAppType` for all nineteen one-clicks — and the
+    // one-clicks were left without `app_container` once before by exactly this
+    // kind of divergence.
+    $sidebar = sidebarFor(makeFeatureApp($siteType, 'docker'));
+
+    expect($sidebar)->toContain('app_backup')
+        ->and($sidebar)->not->toContain('app_clone')
+        // Still a container site in every other respect.
+        ->and($sidebar)->toContain('app_container')
+        ->and($sidebar)->toContain('app_compose');
+})->with([
+    'bring-your-own image' => 'docker',
+    'a one-click app' => 'ghost',
+]);

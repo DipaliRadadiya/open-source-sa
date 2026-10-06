@@ -51,7 +51,11 @@ class ArchiveFiles implements BackupStep
         // Confirmed against GNU tar 1.35 before shipping.
         $command = ['tar', '--use-compress-program='.$this->compressor->program('server.backups'), '-cf', $archive];
 
-        if ($context->wantsFiles()) {
+        // `wantsConfig()` too: a container site's compose files and `.env` live
+        // in its document root, so "back up the config" is the same tar of the
+        // same directory — there is no second place to read them from. Only
+        // which sites ask for it differs.
+        if ($context->wantsFiles() || $context->wantsConfig()) {
             // The application's own directory, not the served one — see
             // {@see BackupRoot}. The kind is recorded in the same breath,
             // because the restore reads it back to know what this archive
@@ -106,6 +110,18 @@ class ArchiveFiles implements BackupStep
                 $command[] = dirname($artifact);
                 $command[] = basename($artifact);
             }
+        }
+
+        // Volume tars the same way, as one directory rather than one member
+        // each: `ArchiveVolumes` already named them, and adding the directory
+        // preserves the `volumes/<name>.tar` paths its manifest entries point
+        // at. One artefact stays the rule — half a backup restores to a broken
+        // site, and volumes that uploaded without their compose file is exactly
+        // that.
+        if (is_dir($context->workingDirectory.'/volumes')) {
+            $command[] = '-C';
+            $command[] = $context->workingDirectory;
+            $command[] = 'volumes';
         }
 
         $result = $this->serverOps->run(

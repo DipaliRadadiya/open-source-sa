@@ -92,11 +92,13 @@ class DockerSiteType extends AbstractSiteType
      *    up looking correct with none of the data. It arrives here by default
      *    because the default rule is `! needsDatabase()`, which is true of a
      *    container for a reason that has nothing to do with cloning.
-     *  - **Backup.** The panel backs up the document root and a database. A
-     *    container has neither — the document root holds a compose file, and
-     *    the data is in volumes the backup never sees. Offering it would hand
-     *    someone an archive they believe is their site. Volume backup is real
-     *    work and belongs in its own phase, not as a side effect of this list.
+     *  - **Backup is now offered**, and this is the phase that was meant. The
+     *    objection was never Docker, it was the artefact: the pipeline could
+     *    archive a document root and a database, a container site has neither,
+     *    and the honest description of the result was "one YAML file".
+     *    `ArchiveVolumes` captures the volumes and `ArchiveFiles` the compose
+     *    file beside them, so the archive is now the whole site. `BackupType`
+     *    records why nothing captures the container itself.
      *
      * @return array<int, string>
      */
@@ -106,7 +108,7 @@ class DockerSiteType extends AbstractSiteType
         // every container-served type, so the parent adds them on
         // `servingProfile() === 'docker'` — adding them here as well left the
         // fifteen one-click apps without them.
-        return array_values(array_diff(parent::features(), ['app_clone', 'app_backup']));
+        return array_values(array_diff(parent::features(), ['app_clone']));
     }
 
     /**

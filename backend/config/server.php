@@ -59,6 +59,7 @@ use App\Services\Server\Applications\Installers\StatamicInstaller;
 use App\Services\Server\Applications\Installers\UptimeKumaInstaller;
 use App\Services\Server\Applications\Installers\WordPressInstaller;
 use App\Services\Server\Backups\Steps\ArchiveFiles;
+use App\Services\Server\Backups\Steps\ArchiveVolumes;
 use App\Services\Server\Backups\Steps\DumpDatabase;
 use App\Services\Server\Backups\Steps\PruneOldBackups;
 use App\Services\Server\Backups\Steps\UploadArtifact;
@@ -97,6 +98,7 @@ use App\Services\Server\Restores\Steps\DownloadArtifact;
 use App\Services\Server\Restores\Steps\ExtractArchive;
 use App\Services\Server\Restores\Steps\RestartProcess;
 use App\Services\Server\Restores\Steps\RestoreDatabase;
+use App\Services\Server\Restores\Steps\RestoreVolumes;
 use App\Services\Server\Restores\Steps\SafetyBackup;
 use App\Services\Server\Restores\Steps\SwapFiles;
 use App\Services\Server\Restores\Steps\VerifyDownload;
@@ -361,6 +363,10 @@ return [
     'backups' => [
         'steps' => [
             DumpDatabase::class,
+            // Before ArchiveFiles, which folds the per-volume tars this writes
+            // into the one uploaded artefact — the same way it already folds in
+            // the database dumps.
+            ArchiveVolumes::class,
             ArchiveFiles::class,
             UploadArtifact::class,
             VerifyArtifact::class,
@@ -376,6 +382,12 @@ return [
             SafetyBackup::class,
             ExtractArchive::class,
             RestoreDatabase::class,
+            // After the archive is unpacked and before the compose file is
+            // swapped in: it stops the containers, replaces the volume
+            // contents, and leaves starting them to RestartProcess — so a
+            // volumes+config restore comes up on the restored definition rather
+            // than the old one.
+            RestoreVolumes::class,
             SwapFiles::class,
             RestartProcess::class,
         ],

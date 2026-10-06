@@ -20,7 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 #[Fillable([
     'application_id', 'storage_destination_id', 'type', 'retention_count',
-    'file_excludes', 'database_excludes', 'enabled', 'frequency', 'schedule_time', 'last_run_at',
+    'file_excludes', 'database_excludes', 'volume_scope', 'enabled', 'frequency', 'schedule_time', 'last_run_at',
 ])]
 class BackupTarget extends Model
 {
@@ -73,6 +73,11 @@ class BackupTarget extends Model
             'retention_count' => 'integer',
             'file_excludes' => 'array',
             'database_excludes' => 'array',
+            // Null is meaningful: every volume, including ones added later. An
+            // empty array reads the same way rather than as "none", because a
+            // target that captures nothing yet runs nightly and succeeds is the
+            // worst state this feature can be in.
+            'volume_scope' => 'array',
             'enabled' => 'boolean',
             'last_run_at' => 'datetime',
         ];
