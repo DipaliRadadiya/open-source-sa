@@ -107,7 +107,8 @@ it('writes the training bot names into the rendered vhost, not the search ones',
     Process::fake(function ($process) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 
-        if (($args[0] ?? '') === 'tee') {
+        // The vhost — not the logrotate policy written beside it (LOG-01).
+        if (($args[0] ?? '') === 'tee' && ! str_starts_with((string) end($args), '/etc/logrotate.d/')) {
             expect($process->input ?? '')->toContain('GPTBot')->not->toContain('OAI-SearchBot');
         }
 

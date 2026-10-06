@@ -160,6 +160,12 @@ class ApplicationArtifacts
             }
         });
 
+        $this->attempt($application, 'log_rotation', function () use ($application) {
+            // Left behind, it names files that are gone, and logrotate warns
+            // about it on every nightly run.
+            app(ApplicationLogRotation::class)->remove($application);
+        });
+
         $this->attempt($application, 'fail2ban', function () use ($application) {
             $this->fail2ban->disableForApp($application);
         });

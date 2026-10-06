@@ -47,6 +47,7 @@ class ApplicationLogDirectory
         private ServerOps $serverOps,
         private WebServerManager $webServers,
         private SiteRootLock $rootLock,
+        private ApplicationLogRotation $rotation,
     ) {}
 
     /**
@@ -87,6 +88,11 @@ class ApplicationLogDirectory
         ] as $command) {
             $this->serverOps->run($command, $context, timeout: 15);
         }
+
+        // Every site with a log directory gets a policy for it (LOG-01): this
+        // is the one place both the web server and a process site pass through,
+        // on create and on every `sites:resync`.
+        $this->rotation->write($application);
 
         return $this->admitLogWriter($application, $group);
     }

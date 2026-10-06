@@ -71,7 +71,8 @@ function fakeResyncServer(string $onDisk = 'stale config', bool $testPasses = tr
             return Process::result(output: $onDisk);
         }
 
-        if (($args[0] ?? '') === 'tee') {
+        // Site configs only — the logrotate policy is written beside them (LOG-01).
+        if (($args[0] ?? '') === 'tee' && ! str_starts_with((string) end($args), '/etc/logrotate.d/')) {
             $written->append((string) ($process->input ?? ''));
         }
 

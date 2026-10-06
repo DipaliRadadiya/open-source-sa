@@ -347,7 +347,8 @@ it('reads the detect log from the file the vhost was told to write', function ()
     // that was written — not recomputed here, which would only restate the
     // assumption instead of testing it.
     $vhost = collect($written)->pluck('input')->first(
-        fn (string $body): bool => str_contains($body, 'waf-detect.log'),
+        // `access_log`: the logrotate policy names the file too (LOG-01).
+        fn (string $body): bool => str_contains($body, 'access_log') && str_contains($body, 'waf-detect.log'),
     );
 
     preg_match('#access_log (\S*waf-detect\.log)#', (string) $vhost, $matches);
