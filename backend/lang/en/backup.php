@@ -20,6 +20,12 @@ return [
         'filesystem' => 'Files',
         'database' => 'Database',
         'full' => 'Files and database',
+        // Container sites. A container itself is not captured: it is an image
+        // plus a compose declaration, and its writable layer holds only what
+        // was written outside a volume.
+        'volumes' => 'Volumes',
+        'config' => 'Compose and config',
+        'volumes_config' => 'Volumes, compose and config',
     ],
     'frequency' => [
         'manual' => 'Manual only',
@@ -49,6 +55,10 @@ return [
         'restore_already_running' => 'A restore for this application is already running.',
         'restore_no_database' => 'This backup does not contain a database.',
         'target_no_database' => 'This site has no database to back up. Choose :files instead.',
+
+        'target_type_needs_container' => 'This server runs containers, so a backup here captures volumes and configuration. Choose one of those instead.',
+
+        'target_type_needs_hosted' => 'This site is served from a folder, so there are no volumes to back up. Choose files or database instead.',
         'restore_no_files' => 'This backup does not contain any files.',
         'download_no_artifact' => 'This backup never finished uploading, so there is no archive to download.',
         'download_no_destination' => 'The storage destination this backup was uploaded to no longer exists.',

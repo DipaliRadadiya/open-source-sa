@@ -20,6 +20,12 @@ return [
         'filesystem' => 'Fichiers',
         'database' => 'Base de données',
         'full' => 'Fichiers et base de données',
+        // Container sites. A container itself is not captured: it is an image
+        // plus a compose declaration, and its writable layer holds only what
+        // was written outside a volume.
+        'volumes' => 'Volumes',
+        'config' => 'Compose et configuration',
+        'volumes_config' => 'Volumes, Compose et configuration',
     ],
     'frequency' => [
         'manual' => 'Manuel uniquement',
@@ -49,6 +55,8 @@ return [
         'restore_already_running' => 'Une restauration est déjà en cours pour cette application.',
         'restore_no_database' => 'Cette sauvegarde ne contient aucune base de données.',
         'target_no_database' => 'Ce site n\'a aucune base de données à sauvegarder. Choisissez plutôt :files.',
+        'target_type_needs_container' => 'Ce serveur exécute des conteneurs ; une sauvegarde ici capture les volumes et la configuration. Choisissez l\'une de ces options.',
+        'target_type_needs_hosted' => 'Ce site est servi depuis un dossier, il n\'y a donc aucun volume à sauvegarder. Choisissez fichiers ou base de données.',
         'restore_no_files' => 'Cette sauvegarde ne contient aucun fichier.',
         'download_no_artifact' => 'Cette sauvegarde n’a jamais fini d’être téléversée, il n’y a donc aucune archive à télécharger.',
         'download_no_destination' => 'La destination de stockage vers laquelle cette sauvegarde a été téléversée n’existe plus.',

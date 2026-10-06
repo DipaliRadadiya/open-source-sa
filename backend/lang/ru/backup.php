@@ -20,6 +20,12 @@ return [
         'filesystem' => 'Файлы',
         'database' => 'База данных',
         'full' => 'Файлы и база данных',
+        // Container sites. A container itself is not captured: it is an image
+        // plus a compose declaration, and its writable layer holds only what
+        // was written outside a volume.
+        'volumes' => 'Томы',
+        'config' => 'Compose и конфигурация',
+        'volumes_config' => 'Томы, Compose и конфигурация',
     ],
     'frequency' => [
         'manual' => 'Только вручную',
@@ -49,6 +55,8 @@ return [
         'restore_already_running' => 'Восстановление этого приложения уже выполняется.',
         'restore_no_database' => 'В этой копии нет базы данных.',
         'target_no_database' => 'У этого сайта нет базы данных для резервного копирования. Выберите «:files».',
+        'target_type_needs_container' => 'Этот сервер работает с контейнерами, поэтому резервная копия здесь охватывает томы и конфигурацию. Выберите один из этих вариантов.',
+        'target_type_needs_hosted' => 'Этот сайт обслуживается из папки, поэтому томов для резервного копирования нет. Выберите файлы или базу данных.',
         'restore_no_files' => 'В этой копии нет файлов.',
         'download_no_artifact' => 'Загрузка этой резервной копии не была завершена, поэтому скачивать нечего.',
         'download_no_destination' => 'Хранилище, в которое была загружена эта резервная копия, больше не существует.',

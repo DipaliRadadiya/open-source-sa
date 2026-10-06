@@ -20,6 +20,12 @@ return [
         'filesystem' => 'ファイル',
         'database' => 'データベース',
         'full' => 'ファイルとデータベース',
+        // Container sites. A container itself is not captured: it is an image
+        // plus a compose declaration, and its writable layer holds only what
+        // was written outside a volume.
+        'volumes' => 'ボリューム',
+        'config' => 'Compose と設定',
+        'volumes_config' => 'ボリューム、Compose と設定',
     ],
     'frequency' => [
         'manual' => '手動のみ',
@@ -49,6 +55,8 @@ return [
         'restore_already_running' => 'このアプリケーションの復元はすでに実行中です。',
         'restore_no_database' => 'このバックアップにデータベースは含まれていません。',
         'target_no_database' => 'このサイトにはバックアップするデータベースがありません。代わりに「:files」を選んでください。',
+        'target_type_needs_container' => 'このサーバーはコンテナーを実行するため、ここでのバックアップはボリュームと設定を取得します。いずれかを選択してください。',
+        'target_type_needs_hosted' => 'このサイトはフォルダーから配信されるため、バックアップするボリュームがありません。ファイルまたはデータベースを選択してください。',
         'restore_no_files' => 'このバックアップにファイルは含まれていません。',
         'download_no_artifact' => 'このバックアップはアップロードが完了しなかったため、ダウンロードできるアーカイブがありません。',
         'download_no_destination' => 'このバックアップのアップロード先の保存先はすでに存在しません。',

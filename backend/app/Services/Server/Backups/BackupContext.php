@@ -66,4 +66,27 @@ class BackupContext
     {
         return in_array($this->target->type->value, ['filesystem', 'full'], true);
     }
+
+    /**
+     * A container site's volumes — the only part of it that cannot be recreated.
+     *
+     * `config` is deliberately excluded: someone who asked for the compose file
+     * before editing it does not want to wait for 20GB of Postgres data.
+     */
+    public function wantsVolumes(): bool
+    {
+        return in_array($this->target->type->value, ['volumes', 'volumes_config'], true);
+    }
+
+    /**
+     * Its compose files and `.env`.
+     *
+     * These live in the document root, so `ArchiveFiles` is what actually packs
+     * them — this answers whether it should, for a site where `wantsFiles()` is
+     * false because the type is a container type.
+     */
+    public function wantsConfig(): bool
+    {
+        return in_array($this->target->type->value, ['config', 'volumes_config'], true);
+    }
 }

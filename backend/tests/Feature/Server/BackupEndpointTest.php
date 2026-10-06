@@ -555,7 +555,11 @@ describe('the settings form options', function () {
             ->and(collect($options['frequencies'])->firstWhere('value', 'manual')['time'])->toBeNull()
             ->and(collect($options['frequencies'])->firstWhere('value', 'every_12_hours')['time'])->toBe('time')
             ->and($options['default_frequency'])->toBe('daily')
-            ->and(collect($options['types'])->pluck('value')->all())->toBe(['filesystem', 'database', 'full'])
+            // All six, both families. The form narrows them by the site's
+            // `serving_profile` using the `family` each type carries, because
+            // this endpoint has no application to scope itself to.
+            ->and(collect($options['types'])->pluck('value')->all())
+            ->toBe(['filesystem', 'database', 'full', 'volumes', 'config', 'volumes_config'])
             ->and($options['retention'])->toBe(['min' => 1, 'max' => 365])
             ->and($options['timezone'])->toBe(config('app.timezone'));
 
@@ -574,13 +578,34 @@ describe('the settings form options', function () {
         // refused on purpose (bug #33).
         Database::create(['name' => 'shop', 'engine' => 'mysql', 'application_id' => $this->application->id]);
 
-        foreach ($options['types'] as $type) {
+        // The hosted family only, because this fixture is a PHP site. The other
+        // three describe a container site and are refused here on purpose —
+        // `volumes` on a site with no volumes would upload an empty archive and
+        // report success. Filtered by the `family` the endpoint publishes, so
+        // this stays the same statement it always was: what the form offers for
+        // a given site, the save accepts.
+        $offered = collect($options['types'])->where('family', 'hosted')->pluck('value');
+
+        expect($offered->all())->toBe(['filesystem', 'database', 'full']);
+
+        foreach ($offered as $type) {
             $this->withHeaders(backupHeaders())
                 ->putJson(
                     "/api/applications/{$this->application->id}/backup-target",
-                    targetPayload(['type' => $type['value']]),
+                    targetPayload(['type' => $type]),
                 )
                 ->assertOk();
+        }
+
+        // And the container family is refused on this site, which is the other
+        // half of the same contract.
+        foreach (collect($options['types'])->where('family', 'container')->pluck('value') as $type) {
+            $this->withHeaders(backupHeaders())
+                ->putJson(
+                    "/api/applications/{$this->application->id}/backup-target",
+                    targetPayload(['type' => $type]),
+                )
+                ->assertJsonValidationErrors('type');
         }
     });
 
@@ -1046,4 +1071,23 @@ describe('a Database backup for a site with no database (bug #33)', function () 
             ->putJson("/api/applications/{$this->application->id}/backup-target", targetPayload(['type' => $type]))
             ->assertOk();
     })->with(['filesystem', 'full']);
+});
+
+it('tells the form which family each backup type belongs to', function () {
+    // Without this the form would offer six types where the API accepts three,
+    // on a screen whose own contract is that what it offers, the API takes.
+    $types = collect($this->withHeaders(backupHeaders())
+        ->getJson('/api/backup-targets/options')
+        ->assertOk()
+        ->json('types'))
+        ->keyBy('value');
+
+    expect($types['filesystem']['family'])->toBe('hosted')
+        ->and($types['database']['family'])->toBe('hosted')
+        ->and($types['full']['family'])->toBe('hosted')
+        ->and($types['volumes']['family'])->toBe('container')
+        ->and($types['config']['family'])->toBe('container')
+        ->and($types['volumes_config']['family'])->toBe('container')
+        // Labels are translated, not raw keys — a missing string shows as the key.
+        ->and($types['volumes_config']['label'])->not->toContain('backup.type');
 });

@@ -5,6 +5,7 @@ namespace App\Http\Requests\Server\Backup;
 use App\Enums\BackupType;
 use App\Models\Application;
 use App\Models\BackupTarget;
+use App\Rules\BackupTypeForSite;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -28,9 +29,19 @@ class SaveBackupTargetRequest extends FormRequest
      */
     public function rules(): array
     {
+        $application = $this->route('application');
+
         return [
             'storage_destination_id' => ['required', 'integer', Rule::exists('storage_destinations', 'id')],
-            'type' => ['required', Rule::enum(BackupType::class)],
+
+            // `BackupTypeForSite` as well as the enum: the enum says the value
+            // exists, the rule says it means something for *this* site. Without
+            // it, every case the enum gains is silently accepted everywhere.
+            'type' => array_filter([
+                'required',
+                Rule::enum(BackupType::class),
+                $application instanceof Application ? new BackupTypeForSite($application) : null,
+            ]),
 
             // At least one. Zero would mean every run prunes the backup it
             // just took, which reads as "backups silently do nothing".
@@ -67,6 +78,7 @@ class SaveBackupTargetRequest extends FormRequest
                 && ! $application->databases()->exists()) {
                 $validator->errors()->add('type', __('backup.errors.target_no_database', ['files' => __('backup.type.filesystem')]));
             }
+
         }];
     }
 }

@@ -111,9 +111,18 @@ class BackupController extends Controller
                 'hint' => __('backup.frequency_hint.'.$frequency),
             ], BackupTarget::FREQUENCIES),
             'default_frequency' => 'daily',
+            // `family` because this endpoint has no application to scope to, and
+            // the two families are not interchangeable: `volumes` on a WordPress
+            // site finds nothing and `filesystem` on a container site archives
+            // one compose file. `SaveBackupTargetRequest` refuses the mismatch,
+            // so without this the form would offer six types where the API
+            // accepts three — the exact divergence this method's docblock
+            // promises not to have. The caller already knows the site's
+            // `serving_profile` and filters on it.
             'types' => array_map(fn (BackupType $type): array => [
                 'value' => $type->value,
                 'label' => __('backup.type.'.$type->value),
+                'family' => $type->isContainer() ? 'container' : 'hosted',
             ], BackupType::cases()),
             'retention' => ['min' => BackupTarget::RETENTION_MIN, 'max' => BackupTarget::RETENTION_MAX],
             // The clock `schedule_time` is read in. See BackupTarget::scheduleTimezone().

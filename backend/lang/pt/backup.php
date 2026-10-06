@@ -20,6 +20,12 @@ return [
         'filesystem' => 'Ficheiros',
         'database' => 'Base de dados',
         'full' => 'Ficheiros e base de dados',
+        // Container sites. A container itself is not captured: it is an image
+        // plus a compose declaration, and its writable layer holds only what
+        // was written outside a volume.
+        'volumes' => 'Volumes',
+        'config' => 'Compose e configuração',
+        'volumes_config' => 'Volumes, Compose e configuração',
     ],
     'frequency' => [
         'manual' => 'Apenas manual',
@@ -49,6 +55,8 @@ return [
         'restore_already_running' => 'Já está a decorrer uma restauração para esta aplicação.',
         'restore_no_database' => 'Esta cópia não contém nenhuma base de dados.',
         'target_no_database' => 'Este site não tem banco de dados para fazer backup. Escolha :files.',
+        'target_type_needs_container' => 'Este servidor executa contentores, pelo que uma cópia aqui captura volumes e configuração. Escolha uma dessas opções.',
+        'target_type_needs_hosted' => 'Este site é servido a partir de uma pasta, pelo que não há volumes para copiar. Escolha ficheiros ou base de dados.',
         'restore_no_files' => 'Esta cópia não contém ficheiros.',
         'download_no_artifact' => 'Esta cópia de segurança nunca terminou de ser enviada, por isso não há nenhum arquivo para transferir.',
         'download_no_destination' => 'O destino de armazenamento para onde esta cópia foi enviada já não existe.',

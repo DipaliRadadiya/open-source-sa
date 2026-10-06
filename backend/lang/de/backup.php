@@ -20,6 +20,12 @@ return [
         'filesystem' => 'Dateien',
         'database' => 'Datenbank',
         'full' => 'Dateien und Datenbank',
+        // Container sites. A container itself is not captured: it is an image
+        // plus a compose declaration, and its writable layer holds only what
+        // was written outside a volume.
+        'volumes' => 'Volumes',
+        'config' => 'Compose und Konfiguration',
+        'volumes_config' => 'Volumes, Compose und Konfiguration',
     ],
     'frequency' => [
         'manual' => 'Nur manuell',
@@ -49,6 +55,10 @@ return [
         'restore_already_running' => 'Für diese Anwendung läuft bereits eine Wiederherstellung.',
         'restore_no_database' => 'Diese Sicherung enthält keine Datenbank.',
         'target_no_database' => 'Diese Website hat keine Datenbank, die gesichert werden kann. Wähle stattdessen :files.',
+
+        'target_type_needs_container' => 'Dieser Server betreibt Container, daher erfasst ein Backup hier Volumes und Konfiguration. Wählen Sie eine davon.',
+
+        'target_type_needs_hosted' => 'Diese Website wird aus einem Ordner bereitgestellt, es gibt also keine Volumes zum Sichern. Wählen Sie Dateien oder Datenbank.',
         'restore_no_files' => 'Diese Sicherung enthält keine Dateien.',
         'download_no_artifact' => 'Diese Sicherung wurde nie vollständig hochgeladen, daher gibt es kein Archiv zum Herunterladen.',
         'download_no_destination' => 'Das Speicherziel, in das diese Sicherung hochgeladen wurde, existiert nicht mehr.',

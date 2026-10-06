@@ -20,6 +20,12 @@ return [
         'filesystem' => 'फ़ाइलें',
         'database' => 'डेटाबेस',
         'full' => 'फ़ाइलें और डेटाबेस',
+        // Container sites. A container itself is not captured: it is an image
+        // plus a compose declaration, and its writable layer holds only what
+        // was written outside a volume.
+        'volumes' => 'वॉल्यूम',
+        'config' => 'Compose और कॉन्फ़िगरेशन',
+        'volumes_config' => 'वॉल्यूम, Compose और कॉन्फ़िगरेशन',
     ],
     'frequency' => [
         'manual' => 'केवल मैन्युअल',
@@ -49,6 +55,8 @@ return [
         'restore_already_running' => 'इस ऐप्लिकेशन की पुनर्स्थापना पहले से चल रही है।',
         'restore_no_database' => 'इस बैकअप में कोई डेटाबेस नहीं है।',
         'target_no_database' => 'इस साइट में बैकअप लेने के लिए कोई डेटाबेस नहीं है। इसके बजाय :files चुनें।',
+        'target_type_needs_container' => 'यह सर्वर कंटेनर चलाता है, इसलिए यहाँ बैकअप वॉल्यूम और कॉन्फ़िगरेशन कैप्चर करता है। इनमें से कोई चुनें।',
+        'target_type_needs_hosted' => 'यह साइट एक फ़ोल्डर से सर्व होती है, इसलिए बैकअप के लिए कोई वॉल्यूम नहीं है। फ़ाइलें या डेटाबेस चुनें।',
         'restore_no_files' => 'इस बैकअप में कोई फ़ाइल नहीं है।',
         'download_no_artifact' => 'इस बैकअप का अपलोड कभी पूरा नहीं हुआ, इसलिए डाउनलोड करने के लिए कोई संग्रह नहीं है।',
         'download_no_destination' => 'जिस स्टोरेज गंतव्य पर यह बैकअप अपलोड हुआ था, वह अब मौजूद नहीं है।',

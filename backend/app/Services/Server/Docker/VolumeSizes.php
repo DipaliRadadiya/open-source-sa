@@ -39,7 +39,7 @@ class VolumeSizes
      */
     public function forApplication(Application $application): int
     {
-        $mountpoints = $this->mountpoints($application);
+        $mountpoints = array_values($this->discover($application));
 
         if ($mountpoints === []) {
             return 0;
@@ -84,9 +84,14 @@ class VolumeSizes
      * call, and a name that no longer exists simply does not come back instead of
      * failing the whole measurement.
      *
-     * @return list<string>
+     * Returns **name => mountpoint**, not a bare list. The name is what a backup
+     * records and what a restore recreates; the mountpoint is what gets read.
+     * Measuring size only ever needed the values, which is why this used to
+     * return one column.
+     *
+     * @return array<string, string>
      */
-    private function mountpoints(Application $application): array
+    public function discover(Application $application): array
     {
         $result = $this->serverOps->run(
             ['docker', 'volume', 'ls', '--format', '{{.Name}}\t{{.Mountpoint}}'],
@@ -105,7 +110,7 @@ class VolumeSizes
             ->all();
 
         $prefix = 'sv-app-'.$application->id.'_';
-        $mountpoints = [];
+        $discovered = [];
 
         foreach (explode("\n", trim($result->output())) as $line) {
             $parts = explode("\t", trim($line), 2);
@@ -125,10 +130,13 @@ class VolumeSizes
             // missed row: site 2's volumes must never be counted against site 20,
             // and `sv-app-2_` is a prefix of nothing belonging to 20.
             if (in_array($name, $attached, true) || str_starts_with($name, $prefix)) {
-                $mountpoints[] = $mountpoint;
+                $discovered[$name] = $mountpoint;
             }
         }
 
-        return array_values(array_unique($mountpoints));
+        // Keyed by name, so duplicates collapse on their own — `array_unique`
+        // was only ever guarding against the same volume arriving from both
+        // sources, which a map does for free.
+        return $discovered;
     }
 }
