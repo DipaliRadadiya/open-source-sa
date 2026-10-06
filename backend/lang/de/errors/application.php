@@ -34,6 +34,7 @@ return [
     'invalid_domain' => 'Gib einen gültigen Domainnamen ein, z. B. example.com. Jeder Teil darf Buchstaben, Ziffern und Bindestriche enthalten, aber nicht mit einem Bindestrich beginnen oder enden und nicht leer sein.',
     'domain_taken_by' => 'Diese Domain wird bereits von der Anwendung „:application“ verwendet.',
     'domain_is_panel' => 'Unter dieser Adresse wird das Panel selbst ausgeliefert, daher kann eine Website sie nicht verwenden.',
+    'shop_name_characters' => 'Der Shopname darf keines dieser Zeichen enthalten: < > = { } | `',
     'redirect_target_invalid' => 'Das Weiterleitungsziel muss eine einfache Webadresse sein: https://, ein Host und optional ein Pfad – ohne Query-String, Leerzeichen oder Zeichen wie ; # $ &.',
     'unsupported_web_server' => 'Das Panel kann für :web_server keine Website-Konfiguration schreiben.',
     'no_web_server' => 'kein Webserver erkannt',

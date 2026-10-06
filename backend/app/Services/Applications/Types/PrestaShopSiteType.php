@@ -129,7 +129,14 @@ class PrestaShopSiteType extends AbstractSiteType
     public function rules(): array
     {
         return [
-            'shop_name' => ['required', 'string', 'max:64'],
+            // PR-01: `< > = { }` fail PrestaShop's own isGenericName, and its
+            // CLI parser drops any value holding `=`, `|` or a backtick, so the
+            // shop would be named "PrestaShop" without a word said about it.
+            'shop_name' => ['required', 'string', 'max:64', function (string $attribute, mixed $value, \Closure $fail): void {
+                if (is_string($value) && preg_match(PrestaShopInstaller::SHOP_NAME_FORBIDDEN, $value) === 1) {
+                    $fail(__('errors/application.shop_name_characters'));
+                }
+            }],
             'admin_first_name' => ['required', 'string', 'max:64'],
             'admin_last_name' => ['required', 'string', 'max:64'],
             'admin_email' => ['required', 'email', 'max:255'],

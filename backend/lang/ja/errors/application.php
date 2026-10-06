@@ -34,6 +34,7 @@ return [
     'invalid_domain' => 'example.com のような有効なドメイン名を入力してください。各部分には英字・数字・ハイフンを使えますが、ハイフンで始めたり終えたりすることはできず、空にもできません。',
     'domain_taken_by' => 'このドメインはアプリケーション「:application」で既に使用されています。',
     'domain_is_panel' => 'これはパネル自体が公開されているアドレスのため、サイトでは使用できません。',
+    'shop_name_characters' => 'ショップ名には次の文字を使用できません: < > = { } | `',
     'redirect_target_invalid' => 'リダイレクト先は https://、ホスト名、任意のパスだけのシンプルな URL にしてください。クエリ文字列、空白、; # $ & などの文字は使えません。',
     'unsupported_web_server' => ':web_server 用のサイト設定は作成できません。',
     'no_web_server' => 'ウェブサーバーが検出されません',

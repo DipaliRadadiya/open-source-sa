@@ -34,6 +34,7 @@ return [
     'invalid_domain' => 'Saisissez un nom de domaine valide, par exemple example.com. Chaque partie peut contenir des lettres, des chiffres et des tirets, mais ne peut ni commencer ni finir par un tiret, ni être vide.',
     'domain_taken_by' => 'Ce domaine est déjà utilisé par l’application « :application ».',
     'domain_is_panel' => 'C’est l’adresse sur laquelle le panneau lui-même est servi ; un site ne peut donc pas l’utiliser.',
+    'shop_name_characters' => 'Le nom de la boutique ne peut contenir aucun de ces caractères : < > = { } | `',
     'redirect_target_invalid' => 'La cible de la redirection doit être une adresse web simple : https://, un hôte et un chemin facultatif, sans chaîne de requête, espaces ni caractères comme ; # $ &.',
     'unsupported_web_server' => 'Le panneau ne peut pas écrire la configuration du site pour :web_server.',
     'no_web_server' => 'aucun serveur web détecté',

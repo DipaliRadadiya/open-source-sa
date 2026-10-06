@@ -33,6 +33,13 @@ use Illuminate\Support\Str;
  */
 class PrestaShopInstaller extends AbstractPhpInstaller
 {
+    /**
+     * Characters a shop name cannot carry through PrestaShop's CLI installer
+     * (PR-01): `< > = { }` fail its isGenericName check, and its argument
+     * parser drops a value containing `=`, `|` or a backtick.
+     */
+    public const SHOP_NAME_FORBIDDEN = '/[<>={}|`]/';
+
     public function siteType(): string
     {
         return 'prestashop';
@@ -77,7 +84,10 @@ class PrestaShopInstaller extends AbstractPhpInstaller
             '--password='.($settings['admin_password'] ?? ''),
             '--firstname='.($settings['admin_first_name'] ?? 'Admin'),
             '--lastname='.($settings['admin_last_name'] ?? 'User'),
-            '--shop_name='.($settings['shop_name'] ?? $application->name),
+            // `--name`, not `--shop_name` (PR-01): datas.php maps the
+            // `shop_name` setting to the option `name`, and ignores an option
+            // it does not know, so every shop was called "PrestaShop".
+            '--name='.$this->shopName($settings['shop_name'] ?? $application->name),
             '--country='.($settings['country'] ?? 'gb'),
             '--language='.($settings['language'] ?? 'en'),
             '--timezone='.($settings['timezone'] ?? 'UTC'),
@@ -377,5 +387,16 @@ class PrestaShopInstaller extends AbstractPhpInstaller
             exit(1);
         }
         PHP;
+    }
+
+    /**
+     * The form refuses these characters; the application's own name, used when
+     * no shop name was given, never went through that rule.
+     */
+    private function shopName(string $name): string
+    {
+        $clean = trim((string) preg_replace(self::SHOP_NAME_FORBIDDEN, '', $name));
+
+        return $clean !== '' ? $clean : 'Shop';
     }
 }

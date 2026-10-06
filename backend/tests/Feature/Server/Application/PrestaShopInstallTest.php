@@ -4,11 +4,13 @@ use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\Installers\PrestaShopInstaller;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Validator;
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -409,3 +411,51 @@ it('refuses a URL with no host rather than blanking the shop domain', function (
         ->syncUrl($this->application->fresh(['systemUser']), 'not-a-url'))
         ->toThrow(RuntimeException::class);
 });
+
+/*
+| PR-01: the shop name was passed as `--shop_name`, an option PrestaShop's CLI
+| does not have — datas.php maps the `shop_name` setting to `--name` and
+| ignores anything it does not know — so every shop was called "PrestaShop".
+*/
+it('names the shop with --name, the option PrestaShop actually reads', function () {
+    fakePrestaShopReleases();
+    $runs = installPrestaShop();
+    $command = collect($runs)
+        ->first(fn ($run) => in_array('install/index_cli.php', $run['command'], true))['command'];
+
+    expect($command)->toContain('--name=Acme Shop')
+        ->and(collect($command)->contains(fn ($a) => str_starts_with((string) $a, '--shop_name')))->toBeFalse();
+});
+
+it('cleans the site name it falls back to when no shop name was given', function () {
+    $this->application->forceFill([
+        'name' => 'Acme = {Best} Shop',
+        'settings' => ['admin_email' => 'shop@acme.test', 'admin_password' => 'ShopPass1234!'],
+    ])->save();
+
+    fakePrestaShopReleases();
+    $runs = installPrestaShop();
+    $command = collect($runs)
+        ->first(fn ($run) => in_array('install/index_cli.php', $run['command'], true))['command'];
+
+    expect($command)->toContain('--name=Acme  Best Shop');
+});
+
+it('refuses a shop name PrestaShop would drop or reject', function (string $name, bool $accepted) {
+    $rules = ['shop_name' => app(SiteTypeManager::class)->find('prestashop')->rules()['shop_name']];
+    $validator = Validator::make(['shop_name' => $name], $rules);
+
+    expect($validator->fails())->toBe(! $accepted);
+
+    if (! $accepted) {
+        expect($validator->errors()->first('shop_name'))->toBe(__('errors/application.shop_name_characters'));
+    }
+})->with([
+    'plain' => ['Acme Shop', true],
+    'accents and symbols PrestaShop allows' => ['Café & Co. — 100% «bio»', true],
+    'equals (dropped by the CLI parser)' => ['A=B', false],
+    'pipe (dropped by the CLI parser)' => ['A|B', false],
+    'backtick (dropped by the CLI parser)' => ['A`B', false],
+    'angle bracket (fails isGenericName)' => ['<b>Shop</b>', false],
+    'brace (fails isGenericName)' => ['Shop {1}', false],
+]);

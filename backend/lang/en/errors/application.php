@@ -34,6 +34,7 @@ return [
     'invalid_domain' => 'Enter a valid domain name, such as example.com. Each part may use letters, digits and hyphens, but cannot start or end with a hyphen or be empty.',
     'domain_taken_by' => 'This domain is already in use by the application “:application”.',
     'domain_is_panel' => 'This is the address the panel itself is served on, so a site cannot use it.',
+    'shop_name_characters' => 'The shop name cannot contain any of these characters: < > = { } | `',
     'redirect_target_invalid' => 'The redirect target must be a plain web address: https://, a host and an optional path — no query string, spaces or characters such as ; # $ &.',
     'unsupported_web_server' => 'The panel cannot write site configuration for :web_server.',
     'no_web_server' => 'no detected web server',
