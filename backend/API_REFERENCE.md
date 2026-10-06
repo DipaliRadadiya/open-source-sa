@@ -1120,6 +1120,8 @@ Change the served directory (rewrites vhost, tests + reloads).
 
 **The folder must already exist on a live site (2026-10-05, junior re-test #8).** A missing one is a `422` on `web_root` whose message names the full path (`/home/owner/shop/public_html/etc`), and nothing changes. It used to be created empty, and the site answered 403 at once. Sites not provisioned yet (and disabled ones) still just store the value. The same rule applies when `web_root` arrives on `PUT /applications/{application}`. A `500` with a `reference` means the check itself could not run, not that the folder is missing.
 
+**A folder reached through a symlink is refused (2026-10-06, WR-01).** If `public_html` or any folder between it and the new web root is a symlink, the answer is a `422` on `web_root` naming that path, and nothing changes. A link the site user planted (`public_html/pub -> /etc`) used to be served, and root `chown`ed its target to the user. The panel no longer runs `mkdir`/`chown` on this path at all.
+
 **`web_root` selects what the web server serves; it does not move the code.**
 A git checkout always lands at `{app_root}/public_html`, and the web root
 chooses a directory *inside* it. So a Laravel repository is deployed with
@@ -3119,6 +3121,8 @@ from `GET /permissions?application_id=…`, so the sidebar item does not render.
 Types that need no database (static, plain PHP, git, Statamic, n8n, Node-RED,
 Uptime Kuma) clone generically and are unaffected.
 
+**A git site's databases are copied too (2026-10-06, CLN-01).** Every database linked to the source (`databases.application_id`) is dumped into a new database and user of its own, linked to the clone. The clone's `.env` is then written from the source's, with values that are exactly the source's database name, user or password swapped for the copy's (`DB_DATABASE`, `PGDATABASE`, and so on). A connection URL (`DATABASE_URL=mysql://user:pass@host/db`) gets the same swap, and a URL whose host is the source's domain (`APP_URL`) gets the clone's domain. Every other line is left as it is. Before this, the clone ran on the source's live database. If the clone fails, a database made for it is dropped again.
+
 **Request:**
 ```json
 {"name": "shop-backup", "domain": "backup.example.com"}
@@ -4300,6 +4304,8 @@ Enable/disable SSH login for this system user.
 
 **Response `201`:** `{"ssh_key": {"id": 1, "name": "MacBook Pro", "fingerprint": "SHA256:abc123…"}}`
 
+**Keys added by hand on the server are kept (2026-10-06, SU-03).** The panel writes its keys between `# BEGIN panel-managed keys (edit outside this block)` and `# END panel-managed keys` in `~/.ssh/authorized_keys`, and leaves every other line alone. It used to write the whole file, so adding or removing a key here deleted any key put there by hand. On a file from before this change, the panel's own keys are moved into the block, and a key deleted here is removed wherever it is. If the file exists but cannot be read, nothing is written and the answer is a `500` with a `reference`.
+
 ---
 
 ### DELETE `/system-users/{systemUser}/ssh-keys/{sshKey}`
@@ -4558,7 +4564,7 @@ Stop a process.
 
 **Response `200`:** `{"process": {"pid": 1234, "command": "php-fpm: pool www", "user": "www-data", "signal": "TERM"}}`
 
-`404` — PID no longer running, or a number no process can have (above Linux's 4194304; was a `500` until 2026-10-04). `422` — PID 1, kernel threads, the panel's PHP, a database server, SSH, the panel's own units, the operating system's own services (dbus, cron, systemd-journald/logind/networkd/resolved/udevd/timesyncd, polkit, rsyslog, chrony — added 2026-10-04, bug #5), or protected service processes. `500` — signal failed.
+`404` — PID no longer running, or a number no process can have (above Linux's 4194304; was a `500` until 2026-10-04). `422` — PID 1, kernel threads, the panel's PHP, a database server, SSH, the panel's own units, the operating system's own services (dbus, cron, systemd-journald/logind/networkd/resolved/udevd/timesyncd, polkit, rsyslog, chrony — added 2026-10-04, bug #5), or protected service processes. Since 2026-10-06 (PK-01) also **fail2ban, supervisor, docker and containerd**: they are managed from the Services screen under its own permission, and a clean `TERM` left fail2ban down for good. `500` — signal failed.
 
 **`409` (2026-10-04, bug #6)** — the signal was delivered and the process is still running after 5 seconds. For `TERM` the message suggests Force stop (`{"signal": "KILL"}`); after `KILL` it says the process is stuck in the kernel and no signal can end it yet. Before this, Stop answered `200` without checking.
 
@@ -4899,6 +4905,8 @@ Ban an IP manually.
 **Request:** `{"ip": "203.0.113.50", "jail": "sshd"}`
 
 **Response `200`:** `{"banned": {"ip": "203.0.113.50", "jail": "sshd"}}`
+
+`422` when the address is your own, or is covered by the jail's `ignoreip` list. Since 2026-10-06 (F2B-01) addresses are compared the way fail2ban reads them: `::ffff:203.0.113.50` is `203.0.113.50`, and a range such as `10.0.0.0/8` in `ignoreip` covers every address in it. The ban is stored in that form too.
 
 ---
 

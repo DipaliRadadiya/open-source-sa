@@ -672,6 +672,115 @@ describe('cloning a git application', function () {
         });
     });
 
+    /**
+     * fakeCloneServer(), plus a source `.env` to read and the clone's write
+     * captured.
+     */
+    function fakeEnvCloneServer(string $sourceEnv): ArrayObject
+    {
+        $seen = new ArrayObject(['written' => null, 'commands' => []]);
+
+        Process::fake(function ($process) use ($sourceEnv, $seen) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            $args = ($args[0] ?? '') === 'runuser' ? array_slice($args, 4) : $args;
+            $seen['commands'] = [...$seen['commands'], $args];
+
+            if (($args[0] ?? '') === 'cat' && str_ends_with((string) end($args), '/shop-api/public_html/.env')) {
+                return Process::result(output: $sourceEnv);
+            }
+
+            if (($args[0] ?? '') === 'tee' && str_ends_with((string) end($args), '.env.panel-tmp')) {
+                $seen['written'] = [end($args), (string) $process->input];
+            }
+
+            if (in_array(($args[0] ?? ''), ['mysql', 'mariadb'], true)
+                && str_contains((string) $process->input, 'information_schema.schemata')) {
+                return Process::result(output: '1');
+            }
+
+            return Process::result();
+        });
+
+        return $seen;
+    }
+
+    it('gives the copy its own database and points its .env at it (CLN-01)', function () {
+        $seen = fakeEnvCloneServer(implode("\n", [
+            'APP_NAME="Shop API"',
+            'APP_URL=https://api.test',
+            'DB_DATABASE=shop_db',
+            'DB_USERNAME=shop_user',
+            "DB_PASSWORD='s3cret'",
+            'DATABASE_URL=mysql://shop_user:s3cret@127.0.0.1:3306/shop_db',
+            'MAIL_HOST=smtp.example.com',
+        ])."\n");
+
+        $source = gitSource();
+        $database = Database::create(['name' => 'shop_db', 'engine' => 'mysql', 'application_id' => $source->id]);
+        DatabaseUser::create(['database_id' => $database->id, 'username' => 'shop_user', 'password' => 's3cret', 'connection_preference' => 'localhost', 'host' => 'localhost']);
+
+        $record = runClone($source, 'api-clone.test');
+
+        expect($record->status->value)->toBe('completed');
+
+        $clone = Application::find($record->target_application_id);
+        $copy = Database::where('application_id', $clone->id)->with('users')->first();
+        $user = $copy?->users->first();
+
+        // A database of its own, and the source's untouched and still the source's.
+        expect($copy)->not->toBeNull()
+            ->and($copy->name)->not->toBe('shop_db')
+            ->and($database->fresh()->application_id)->toBe($source->id);
+
+        [$path, $written] = $seen['written'];
+
+        expect($path)->toBe($clone->codePath().'/.env.panel-tmp')
+            ->and($written)->toBe(implode("\n", [
+                'APP_NAME="Shop API"',
+                'APP_URL=https://api-clone.test',
+                "DB_DATABASE={$copy->name}",
+                "DB_USERNAME={$user->username}",
+                "DB_PASSWORD='{$user->password}'",
+                'DATABASE_URL=mysql://'.rawurlencode($user->username).':'.rawurlencode($user->password)."@127.0.0.1:3306/{$copy->name}",
+                'MAIL_HOST=smtp.example.com',
+            ])."\n");
+
+        expect(collect($seen['commands'])->contains(fn ($c) => ($c[0] ?? '') === 'mysqldump' && in_array('shop_db', $c, true)))->toBeTrue();
+    });
+
+    it('drops the database it made when the clone fails after it', function () {
+        Process::fake(function ($process) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            $args = ($args[0] ?? '') === 'runuser' ? array_slice($args, 4) : $args;
+
+            if (($args[0] ?? '') === 'tee' && str_ends_with((string) end($args), '.env.panel-tmp')) {
+                return Process::result(exitCode: 1, errorOutput: 'No space left on device');
+            }
+
+            if (in_array(($args[0] ?? ''), ['mysql', 'mariadb'], true)
+                && str_contains((string) $process->input, 'information_schema.schemata')) {
+                return Process::result(output: '1');
+            }
+
+            return Process::result();
+        });
+
+        $source = gitSource();
+        $database = Database::create(['name' => 'shop_db', 'engine' => 'mysql', 'application_id' => $source->id]);
+        DatabaseUser::create(['database_id' => $database->id, 'username' => 'shop_user', 'password' => 's3cret', 'connection_preference' => 'localhost', 'host' => 'localhost']);
+
+        expect(runClone($source, 'api-clone.test')->status->value)->toBe('failed')
+            ->and(Database::pluck('name')->all())->toBe(['shop_db']);
+    });
+
+    it('still points a copy with no database at its own address', function () {
+        $seen = fakeEnvCloneServer("APP_URL=https://api.test\nAPP_KEY=base64:abc\n");
+
+        expect(runClone(gitSource(), 'api-clone.test')->status->value)->toBe('completed')
+            ->and($seen['written'][1])->toBe("APP_URL=https://api-clone.test\nAPP_KEY=base64:abc\n")
+            ->and(Database::count())->toBe(0);
+    });
+
     it('keeps the checkout and its dependencies', function () {
         fakeCloneServer();
 

@@ -213,21 +213,26 @@ class ApplicationEnvironment
      * into one thing somebody can act on rather than two they have to match up
      * by eye.
      */
-    public function write(Application $application, string $contents): ?string
+    public function write(Application $application, string $contents, bool $keepPrevious = true): ?string
     {
         if (strlen($contents) > self::MAX_BYTES) {
             throw new RuntimeException('the environment file is too large');
         }
 
-        return $this->mutate($application, fn (): ?string => $this->replace($application, $contents));
+        return $this->mutate($application, fn (): ?string => $this->replace($application, $contents, $keepPrevious));
     }
 
-    private function replace(Application $application, string $contents): ?string
+    /**
+     * `$keepPrevious` is false only for a clone (CLN-01): the file it replaces
+     * is the source's, copied, and kept it would be one more copy of the
+     * source's credentials that nothing uses.
+     */
+    private function replace(Application $application, string $contents, bool $keepPrevious): ?string
     {
         $path = $this->path($application);
         $asRoot = ! $this->asUser($application);
 
-        $backup = $this->exists($application) ? $this->backup($application) : null;
+        $backup = $keepPrevious && $this->exists($application) ? $this->backup($application) : null;
 
         // Written beside the target and renamed. A half-written `.env` is an
         // application that will not boot at all, which is worse than any value

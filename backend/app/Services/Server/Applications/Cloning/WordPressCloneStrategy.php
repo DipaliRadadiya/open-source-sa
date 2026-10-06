@@ -2,21 +2,17 @@
 
 namespace App\Services\Server\Applications\Cloning;
 
-use App\Actions\Server\Database\CreateDatabase;
 use App\Contracts\CloneStrategy;
 use App\Exceptions\Server\Application\CloneOperationException;
 use App\Models\Application;
 use App\Models\Database;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\WordPressUrlVariants;
-use App\Services\Server\Databases\DatabaseIdentifier;
 use App\Services\Server\Databases\DatabaseManager;
-use App\Services\Server\Databases\DatabasePassword;
 use App\Services\Server\Php\RuntimeOwnership;
 use App\Services\Server\ServerOps;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
-use Throwable;
 
 /**
  * The database half of a WordPress clone: give it its own database (a copy
@@ -33,9 +29,8 @@ class WordPressCloneStrategy implements CloneStrategy
     public function __construct(
         private ApplicationProvisioner $provisioner,
         private DatabaseManager $databases,
-        private DatabaseIdentifier $databaseIdentifiers,
+        private DatabaseCopy $databaseCopy,
         private ServerOps $serverOps,
-        private CreateDatabase $createDatabase,
     ) {}
 
     public function clone(Application $source, Application $clone): void
@@ -46,17 +41,8 @@ class WordPressCloneStrategy implements CloneStrategy
             throw new CloneOperationException((string) Str::uuid());
         }
 
-        $engine = $this->databases->engine($sourceDatabase->engine);
         $connection = $this->databases->connection($sourceDatabase->engine);
-        $dumpPath = '/tmp/panel-clone-'.Str::uuid()->toString().'.sql';
-
-        $engine->dump($sourceDatabase->name, $dumpPath);
-
-        $cloneDatabase = $this->createCloneDatabase($source, $clone, $sourceDatabase->engine);
-
-        $engine->restore($cloneDatabase->name, $dumpPath);
-
-        $this->serverOps->run(['rm', '-f', $dumpPath], $this->context($clone, 'clone_dump_cleanup'));
+        $cloneDatabase = $this->databaseCopy->copy($sourceDatabase, $source, $clone);
 
         $documentRoot = $this->provisioner->documentRoot($clone);
 
@@ -71,27 +57,6 @@ class WordPressCloneStrategy implements CloneStrategy
             if ($search !== $replace) {
                 $this->searchReplace($clone, $documentRoot, $search, $replace, $variant[2] ?? false);
             }
-        }
-    }
-
-    private function createCloneDatabase(Application $source, Application $clone, string $engine): Database
-    {
-        $name = $this->databaseIdentifiers->generateAvailable($source->name, $engine, 'clone');
-        $password = DatabasePassword::generate();
-
-        try {
-            return $this->createDatabase->execute([
-                'name' => $name,
-                'engine' => $engine,
-                'application_id' => $clone->id,
-                'create_user' => [
-                    'username' => $name,
-                    'password' => $password,
-                    'connection_preference' => 'localhost',
-                ],
-            ]);
-        } catch (Throwable) {
-            throw new CloneOperationException((string) Str::uuid());
         }
     }
 

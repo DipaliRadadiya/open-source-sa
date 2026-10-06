@@ -3,12 +3,16 @@
 namespace App\Services\Server\Applications;
 
 use App\Actions\Server\Application\ConfigureApplicationWebhook;
+use App\Actions\Server\Database\DeleteDatabase;
 use App\Enums\DomainType;
 use App\Exceptions\Server\Application\CloneOperationException;
 use App\Models\Application;
 use App\Models\ApplicationDomain;
+use App\Models\Database;
 use App\Models\SiteClone;
 use App\Services\Applications\SiteTypeManager;
+use App\Services\Server\Applications\Cloning\CloneEnvironment;
+use App\Services\Server\Applications\Cloning\DatabaseCopy;
 use App\Services\Server\ServerOps;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -66,6 +70,9 @@ class CloneManager
         private PortAllocator $ports,
         private ServerOps $serverOps,
         private ConfigureApplicationWebhook $webhooks,
+        private DatabaseCopy $databaseCopy,
+        private ApplicationEnvironment $environment,
+        private DeleteDatabase $deleteDatabase,
     ) {}
 
     /**
@@ -266,6 +273,8 @@ class CloneManager
             if ($needsDatabase) {
                 $cloneRecord->update(['current_step' => 'cloning_database']);
                 $strategy->clone($source, $target);
+            } elseif ($siteType?->method() === 'git') {
+                $this->cloneLinkedDatabases($cloneRecord, $source, $target);
             }
 
             if ($this->supervisor->runs($target)) {
@@ -288,6 +297,57 @@ class CloneManager
         $cloneRecord->update(['target_application_id' => $target->id]);
 
         return $target->fresh();
+    }
+
+    /**
+     * A git site's databases, copied, and its `.env` pointed at the copies
+     * (CLN-01).
+     *
+     * A git site has no install recipe, so it never had a CloneStrategy, and
+     * the clone came up on its source's database with the source's `.env`:
+     * every change made "on the copy" was made on the live site. A database
+     * linked to the source is the panel's record of what the site uses, so
+     * each one is copied; the `.env` then has the source's database name, user
+     * and password swapped for the copy's, and its own domain for the clone's.
+     *
+     * The `.env` is written whether or not there is a database: one kept
+     * above the served directory is not inside what rsync copies, so without
+     * this the clone had no `.env` at all, and one that was copied still named
+     * the source's URL.
+     */
+    private function cloneLinkedDatabases(SiteClone $cloneRecord, Application $source, Application $target): void
+    {
+        $databases = Database::where('application_id', $source->id)->with('users')->get();
+        $replace = [];
+
+        if ($databases->isNotEmpty()) {
+            $cloneRecord->update(['current_step' => 'cloning_database']);
+        }
+
+        foreach ($databases as $database) {
+            $copy = $this->databaseCopy->copy($database, $source, $target);
+            $user = $copy->users->first();
+            $replace[$database->name] = $copy->name;
+
+            foreach ($database->users as $sourceUser) {
+                $replace[$sourceUser->username] = $user->username;
+
+                if ((string) $sourceUser->password !== '') {
+                    $replace[(string) $sourceUser->password] = (string) $user->password;
+                }
+            }
+        }
+
+        if (! $this->environment->exists($source)) {
+            return;
+        }
+
+        $this->environment->write($target, CloneEnvironment::rewrite(
+            $this->environment->read($source),
+            $replace,
+            (string) $source->domain,
+            (string) $target->domain,
+        ), keepPrevious: false);
     }
 
     /**
@@ -324,6 +384,22 @@ class CloneManager
      */
     private function discard(Application $application): void
     {
+        // A database made for the clone before it failed. Left behind it is
+        // a full copy of the source's data, linked to nothing.
+        foreach (Database::where('application_id', $application->id)->with('users')->get() as $database) {
+            try {
+                $this->deleteDatabase->execute($database);
+            } catch (Throwable $cleanupFailure) {
+                Log::channel('server-ops')->warning('could not drop a half-made clone\'s database', [
+                    'feature' => 'application',
+                    'op' => 'clone_discard_database',
+                    'application' => $application->id,
+                    'database' => $database->name,
+                    'detail' => $cleanupFailure->getMessage(),
+                ]);
+            }
+        }
+
         try {
             $this->provisioner->deprovision($application);
         } catch (Throwable $cleanupFailure) {
