@@ -7,6 +7,7 @@ use App\Models\BackupTarget;
 use App\Models\Restore;
 use App\Models\StorageDestination;
 use App\Models\SystemUser;
+use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\ContainerSupervisor;
 use App\Services\Server\Restores\RestoreContext;
 use App\Services\Server\Restores\Steps\RestoreVolumes;
@@ -86,17 +87,35 @@ function opsOutput(string $stdout, bool $answered = true, bool $ok = true): Serv
     return new ServerOpsResult(ok: $ok, reference: 'r', result: $process, answered: $answered);
 }
 
-/** Records whether the containers were asked to stop. */
+/** Records whether the containers were asked to stop, and with what root. */
 function spyingSupervisor(array &$stopped): ContainerSupervisor
 {
     $supervisor = Mockery::mock(ContainerSupervisor::class);
-    $supervisor->shouldReceive('stop')->andReturnUsing(function ($application) use (&$stopped) {
-        $stopped[] = $application->id;
+    $supervisor->shouldReceive('stop')->andReturnUsing(
+        function ($application, $documentRoot) use (&$stopped) {
+            $stopped[] = ['id' => $application->id, 'root' => $documentRoot];
 
-        return new ServerOpsResult(ok: true, reference: 'r', answered: true);
-    });
+            return new ServerOpsResult(ok: true, reference: 'r', answered: true);
+        }
+    );
 
     return $supervisor;
+}
+
+/**
+ * The resolver every other supervisor caller uses.
+ *
+ * Faked with a real-looking path because the *empty* case is the bug this guards
+ * against: `document_root` is a computed value for a container site, its column
+ * is blank, and stopping with a blank root finds no compose file and stops
+ * nothing.
+ */
+function stubProvisioner(string $root = '/home/vaultowner/vault/public_html'): ApplicationProvisioner
+{
+    $provisioner = Mockery::mock(ApplicationProvisioner::class);
+    $provisioner->shouldReceive('documentRoot')->andReturn($root);
+
+    return $provisioner;
 }
 
 /**
@@ -144,11 +163,16 @@ it('stops the containers before writing to a volume', function () {
     $step = new RestoreVolumes(
         restoreVolumeOps(['restore_volume_in_use' => opsOutput('')], $ran),
         spyingSupervisor($stopped),
+        stubProvisioner(),
     );
 
     $step->run(restoreVolumeContext($this->application, $this->target, $this->tmp));
 
-    expect($stopped)->toBe([$this->application->id]);
+    // The root matters as much as the fact of stopping: a blank one finds no
+    // compose file, stops nothing, and leaves the guard below to refuse.
+    expect($stopped)->toHaveCount(1)
+        ->and($stopped[0]['id'])->toBe($this->application->id)
+        ->and($stopped[0]['root'])->not->toBe('');
 
     // And the write really did happen, through a container rather than the host.
     $write = collect($ran)->firstWhere('op', 'restore_volume');
@@ -168,6 +192,7 @@ it('empties the volume including dotfiles before extracting', function () {
     (new RestoreVolumes(
         restoreVolumeOps(['restore_volume_in_use' => opsOutput('')], $ran),
         spyingSupervisor($stopped),
+        stubProvisioner(),
     ))->run(restoreVolumeContext($this->application, $this->target, $this->tmp));
 
     $script = collect($ran)->firstWhere('op', 'restore_volume')['command'];
@@ -188,6 +213,7 @@ it('refuses to overwrite a volume another container is using', function () {
     $step = new RestoreVolumes(
         restoreVolumeOps(['restore_volume_in_use' => opsOutput("other-site-app\n")], $ran),
         spyingSupervisor($stopped),
+        stubProvisioner(),
     );
 
     expect(fn () => $step->run(restoreVolumeContext($this->application, $this->target, $this->tmp)))
@@ -207,6 +233,7 @@ it('refuses when docker could not say whether the volume is in use', function ()
     $step = new RestoreVolumes(
         restoreVolumeOps(['restore_volume_in_use' => opsOutput('', answered: false)], $ran),
         spyingSupervisor($stopped),
+        stubProvisioner(),
     );
 
     expect(fn () => $step->run(restoreVolumeContext($this->application, $this->target, $this->tmp)))
@@ -222,7 +249,7 @@ it('refuses a volumes restore of an archive that holds no volumes', function () 
     // exists to avoid.
     File::deleteDirectory($this->tmp.'/staging/volumes');
 
-    $step = new RestoreVolumes(restoreVolumeOps([]), spyingSupervisor($unused));
+    $step = new RestoreVolumes(restoreVolumeOps([]), spyingSupervisor($unused), stubProvisioner());
 
     expect(fn () => $step->run(restoreVolumeContext($this->application, $this->target, $this->tmp)))
         ->toThrow(RuntimeException::class, 'contains no volumes');
@@ -238,6 +265,7 @@ it('leaves the containers down for RestartProcess to bring up', function () {
     (new RestoreVolumes(
         restoreVolumeOps(['restore_volume_in_use' => opsOutput('')], $ran),
         spyingSupervisor($stopped),
+        stubProvisioner(),
     ))->run(restoreVolumeContext($this->application, $this->target, $this->tmp));
 
     expect(collect($ran)->pluck('op')->all())->not->toContain('container_start');
@@ -245,7 +273,7 @@ it('leaves the containers down for RestartProcess to bring up', function () {
 
 it('applies only to a restore that includes volumes', function (string $type, bool $expected) {
     $unused = [];
-    $step = new RestoreVolumes(restoreVolumeOps([]), spyingSupervisor($unused));
+    $step = new RestoreVolumes(restoreVolumeOps([]), spyingSupervisor($unused), stubProvisioner());
 
     expect($step->appliesTo(restoreVolumeContext($this->application, $this->target, $this->tmp, $type)))->toBe($expected);
 })->with([

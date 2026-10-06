@@ -3,6 +3,7 @@
 namespace App\Services\Server\Restores\Steps;
 
 use App\Contracts\RestoreStep;
+use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\ContainerSupervisor;
 use App\Services\Server\Restores\RestoreContext;
 use App\Services\Server\ServerOps;
@@ -39,6 +40,7 @@ class RestoreVolumes implements RestoreStep
     public function __construct(
         private ServerOps $serverOps,
         private ContainerSupervisor $containers,
+        private ApplicationProvisioner $provisioner,
     ) {}
 
     public function key(): string
@@ -69,7 +71,15 @@ class RestoreVolumes implements RestoreStep
             throw new RuntimeException('this backup contains no volumes to restore');
         }
 
-        $documentRoot = (string) ($context->application->document_root ?? '');
+        // `ApplicationProvisioner::documentRoot()`, which is what every other
+        // caller of the supervisor uses — `ApplyVhost`, `PullContainerImage`,
+        // `UpdateContainerCompose` and the rest. The `document_root` *column* is
+        // empty for a container site; the value the API shows is computed. This
+        // step originally read the column, passed an empty string, and the stop
+        // then found no compose file and stopped nothing — the containers stayed
+        // up and the in-use guard below refused the restore, which is how the
+        // mistake surfaced rather than becoming a write into a live volume.
+        $documentRoot = $this->provisioner->documentRoot($context->application);
 
         // Stop before anything is written. `stop` on a site whose containers are
         // already down is not an error — compose answers for the project, not
