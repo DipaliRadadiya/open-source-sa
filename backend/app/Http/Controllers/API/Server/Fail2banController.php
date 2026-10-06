@@ -10,9 +10,11 @@ use App\Jobs\InstallFail2ban;
 use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Fail2ban\Fail2banManager;
+use App\Support\IpAddress;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Symfony\Component\HttpFoundation\IpUtils;
 
 class Fail2banController extends Controller
 {
@@ -150,7 +152,7 @@ class Fail2banController extends Controller
         // SSH, and the unban they would need runs through the panel. The
         // lockout guard on the settings form already reasons about the
         // caller's IP; a manual ban did not.
-        if ($ip === $request->ip()) {
+        if ($ip === IpAddress::canonical((string) $request->ip())) {
             return response()->json(['message' => __('errors/fail2ban.ip_your_address')], 422);
         }
 
@@ -158,7 +160,11 @@ class Fail2banController extends Controller
         // not because it would fail — a manual ban on an ignored address does
         // hold, verified on a live box across a fail2ban reload. The message
         // used to claim otherwise.
-        if (in_array($ip, $fail2ban->ignoreIps(), true)) {
+        // Matched as addresses and ranges, not strings: the list may hold a
+        // CIDR, and `in_array` let any address inside one through (F2B-01).
+        $ignored = array_map(IpAddress::canonical(...), $fail2ban->ignoreIps());
+
+        if ($ignored !== [] && IpUtils::checkIp($ip, $ignored)) {
             return response()->json(['message' => __('errors/fail2ban.ip_ignored')], 422);
         }
 

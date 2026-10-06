@@ -8,6 +8,7 @@ use App\Services\Server\ServerAddresses;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use App\Services\Server\ServerPublicIp;
+use App\Support\IpAddress;
 use App\Support\SshPort;
 use Symfony\Component\HttpFoundation\IpUtils;
 
@@ -281,6 +282,8 @@ class Fail2banManager
      */
     public function isOwnAddress(string $ip): bool
     {
+        $ip = IpAddress::canonical($ip);
+
         if (IpUtils::checkIp($ip, self::ALWAYS_IGNORED)) {
             return true;
         }

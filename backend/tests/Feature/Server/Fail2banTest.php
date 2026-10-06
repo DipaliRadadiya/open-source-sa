@@ -884,3 +884,51 @@ it('restarts only the jails that watch the SSH port, so their rule moves with it
     Process::assertRan(fn ($p) => array_slice($p->command, -3) === ['reload', '--restart', 'sshd']);
     Process::assertNotRan(fn ($p) => in_array('--restart', $p->command, true) && in_array('recidive', $p->command, true));
 });
+
+/*
+| F2B-01 (old QA list): `::ffff:<ip>` is the same host to fail2ban, which
+| converts it and bans the IPv4 address, and a different string to every
+| guard. Banning `::ffff:<own IP>` on sshd locked the caller out of SSH.
+*/
+
+it('sees through the IPv4-mapped form of the loopback address', function (string $ip) {
+    fakeFail2ban(bans: ['sshd' => [], 'recidive' => []]);
+
+    f2b('POST', '/api/fail2ban/bans', ['ip' => $ip, 'jail' => 'recidive'])
+        ->assertUnprocessable()
+        ->assertJsonPath('message', __('errors/fail2ban.ip_own_address'));
+
+    Process::assertNotRan(fn ($p) => in_array('banip', $p->command, true));
+})->with(['::ffff:127.0.0.1', '::FFFF:127.0.0.1', '::ffff:7f00:1']);
+
+it('sees through the IPv4-mapped form of the caller\'s own address', function () {
+    fakeFail2ban(bans: ['sshd' => []]);
+
+    test()->withServerVariables(['REMOTE_ADDR' => '203.0.113.9'])
+        ->withHeader('Authorization', 'Bearer '.test()->token)
+        ->postJson('/api/fail2ban/bans', ['ip' => '::ffff:203.0.113.9', 'jail' => 'sshd'])
+        ->assertUnprocessable()
+        ->assertJsonPath('message', __('errors/fail2ban.ip_your_address'));
+
+    Process::assertNotRan(fn ($p) => in_array('banip', $p->command, true));
+});
+
+it('sees through the mapped form, and through a range, on the ignore list', function (string $ip) {
+    fakeFail2ban(bans: ['sshd' => []]);
+    File::put(
+        "{$this->jailD}/jail.local",
+        Fail2banManager::MANAGED_HEADER."\n[DEFAULT]\nignoreip = 127.0.0.1/8 ::1 203.0.113.5 198.51.100.0/24\n",
+    );
+
+    f2b('POST', '/api/fail2ban/bans', ['ip' => $ip, 'jail' => 'sshd'])
+        ->assertUnprocessable()
+        ->assertJsonPath('message', __('errors/fail2ban.ip_ignored'));
+})->with(['::ffff:203.0.113.5', '198.51.100.77']);
+
+it('bans the address in the form fail2ban uses', function () {
+    $runs = fakeFail2ban(bans: ['sshd' => []]);
+
+    f2b('POST', '/api/fail2ban/bans', ['ip' => '::ffff:192.0.2.44', 'jail' => 'sshd'])->assertSuccessful();
+
+    expect(collect($runs)->pluck('command')->contains(fn ($c) => in_array('banip', $c, true) && in_array('192.0.2.44', $c, true)))->toBeTrue();
+});
