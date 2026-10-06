@@ -1,6 +1,6 @@
 # ServerAvatar OSS — API Reference
 
-**Base URL:** `https://sv-oss.167-233-229-184.nip.io/api`
+**Base URL:** `https://sv-oss.23-172-120-38.nip.io/api`
 
 **Auth:** Bearer token (Sanctum). Cookie-based session also supported for browser clients. Send `Accept-Language` for localised error messages.
 
@@ -510,7 +510,7 @@ What this server is and what it can run — drives which site types are offered.
   "capabilities": {"php": true, "node": false},
   "source": "installer",
   "verified_at": "29-07-2026 10:00:00",
-  "server_ip": "167.233.229.184",
+  "server_ip": "23.172.120.38",
   "temporary_domain_suffixes": ["nip.io"]
 }}
 ```
@@ -3607,7 +3607,9 @@ To go ahead, re-send the same request with **`restart_cluster: true`** (or `crea
 
 A cluster that already listens remotely — because the panel widened it earlier, or an operator configured it themselves — skips all of this and never returns `409`.
 
-**MySQL and MariaDB answer the same `409` (added 2026-09-26).** Ubuntu ships both with `bind-address = 127.0.0.1`, so a remote user used to be created and could never connect. The first remote user on an engine bound to loopback now gets the same `409` / `code: restart_required` (the message names the engine), and `restart_cluster: true` makes the panel write `bind-address = 0.0.0.0` to a drop-in (`/etc/mysql/mariadb.conf.d/99-panel-remote.cnf` or `/etc/mysql/mysql.conf.d/99-panel-remote.cnf`) and restart the engine. Same dialog, same consent, one code path on the client.
+**MySQL and MariaDB answer the same `409` (added 2026-09-26).** Ubuntu ships both with `bind-address = 127.0.0.1`, so a remote user used to be created and could never connect. The first remote user on an engine bound to loopback now gets the same `409` / `code: restart_required` (the message names the engine), and `restart_cluster: true` makes the panel write `bind-address = 0.0.0.0` to a drop-in (`/etc/mysql/mariadb.conf.d/99-panel-remote.cnf` or `/etc/mysql/mysql.conf.d/zz-panel-remote.cnf`) and restart the engine. Same dialog, same consent, one code path on the client.
+
+**MySQL's drop-in is `zz-panel-remote.cnf` since 2026-10-06 (MY-01).** It was `99-…`, which MySQL reads before Ubuntu's `mysqld.cnf`, so `bind-address = 127.0.0.1` won. The user was created and success reported, but 3306 stayed closed and every later remote user asked for another restart. A leftover `99-panel-remote.cnf` is removed the next time the panel opens MySQL. A firewall rule that ufw refuses is no longer left on the Firewall screen.
 
 **`connection_string` of a remote or anywhere user** now points at this server's public address (it used to print the user's own allowed host, i.e. the client's machine). Local users still get `127.0.0.1`.
 
@@ -4468,7 +4470,7 @@ Removes the `/etc/cron.d` file entry.
 {"facts": {
   "hostname": "srv1", "os": "Ubuntu 24.04 LTS", "kernel": "6.8.0-36-generic",
   "arch": "x86_64", "uptime": {"seconds": 1296000, "human": "15 days"},
-  "ip": "10.0.0.5", "public_ip": "167.233.229.184",
+  "ip": "10.0.0.5", "public_ip": "23.172.120.38",
   "cpu": {"model": "AMD EPYC 7282", "cores": 8},
   "memory_total": 8589934592, "memory_total_human": "8 GB",
   "disk_total": 107374182400, "disk_total_human": "100 GB",

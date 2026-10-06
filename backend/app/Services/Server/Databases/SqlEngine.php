@@ -57,6 +57,14 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
      * override sits in one obvious, removable place. Then a restart:
      * `bind_address` is read-only at runtime on both engines.
      *
+     * "After" is alphabetical, and digits sort before letters (MY-01). On
+     * MySQL the drop-in was `99-panel-remote.cnf`, read BEFORE `mysqld.cnf`,
+     * whose `bind-address = 127.0.0.1` then won: the panel reported success,
+     * 3306 stayed closed, and every later remote user asked for (and made)
+     * another restart. It is `zz-panel-remote.cnf` now. The old file never
+     * did anything, so it goes the next time this runs rather than in an
+     * update step — that is exactly when a server that has one needs this.
+     *
      * Binding is not granting: the account's host and the firewall rule the
      * panel opens are the other two locks.
      */
@@ -79,6 +87,19 @@ class SqlEngine implements DatabaseEngine, ListensRemotely
 
         if ($written->failed()) {
             throw new DatabaseOperationException($written->reference);
+        }
+
+        $legacy = array_values(array_filter(
+            (array) config("server.databases.engines.{$engine}.legacy_remote_bind_files", []),
+            fn ($path) => is_string($path) && $path !== '' && $path !== $dropIn,
+        ));
+
+        if ($legacy !== []) {
+            $removed = $this->serverOps->run(['rm', '-f', ...$legacy], $context);
+
+            if ($removed->failed()) {
+                throw new DatabaseOperationException($removed->reference);
+            }
         }
 
         $restart = $this->serverOps->run(['systemctl', 'restart', $service], $context, 120);

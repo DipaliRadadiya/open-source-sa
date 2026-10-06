@@ -130,3 +130,56 @@ it('still protects the panel\'s own seeded rules', function () {
 
     fwApi('DELETE', "/api/firewall/rules/{$ssh->id}")->assertUnprocessable();
 });
+
+it('leaves no rule behind when ufw refuses it (MY-01)', function () {
+    // The add-on to MY-01: the user was rolled back, the panel's row was not,
+    // and ufw — which never had the rule — refused to delete it, so it was
+    // stuck on the Firewall screen for good.
+    config(['server.transient.delay_ms' => 0]);
+    Process::fake(function ($process) {
+        if (($process->command[0] ?? '') === 'ufw') {
+            return in_array('status', $process->command, true)
+                ? Process::result(output: "Status: active\n")
+                : Process::result(exitCode: 1, errorOutput: 'ERROR: Bad source address');
+        }
+
+        return str_contains((string) $process->input, 'bind_address')
+            ? Process::result(output: "bind_address\t0.0.0.0")
+            : Process::result(output: '0');
+    });
+
+    $db = Database::create(['name' => 'shop', 'engine' => 'mariadb']);
+
+    fwApi('POST', "/api/databases/{$db->id}/users", [
+        'username' => 'shop_remote', 'password' => 'Remote-Pass-123',
+        'connection_preference' => 'remote', 'host' => '203.0.113.7', 'restart_cluster' => true,
+    ])->assertServerError();
+
+    expect(FirewallRule::query()->count())->toBe(0)
+        ->and($db->users()->count())->toBe(0);
+});
+
+it('keeps a rule another user already had when ufw refuses it again', function () {
+    $db = Database::create(['name' => 'shop', 'engine' => 'mariadb']);
+    remoteUser($db, 'shop_remote', '203.0.113.7');
+    config(['server.transient.delay_ms' => 0]);
+
+    Process::fake(function ($process) {
+        if (($process->command[0] ?? '') === 'ufw') {
+            return in_array('status', $process->command, true)
+                ? Process::result(output: "Status: active\n")
+                : Process::result(exitCode: 1, errorOutput: 'ERROR: busy');
+        }
+
+        return str_contains((string) $process->input, 'bind_address')
+            ? Process::result(output: "bind_address\t0.0.0.0")
+            : Process::result(output: '0');
+    });
+
+    fwApi('POST', "/api/databases/{$db->id}/users", [
+        'username' => 'shop_second', 'password' => 'Remote-Pass-123',
+        'connection_preference' => 'remote', 'host' => '203.0.113.7', 'restart_cluster' => true,
+    ])->assertServerError();
+
+    expect(FirewallRule::query()->where('port_from', 3306)->count())->toBe(1);
+});

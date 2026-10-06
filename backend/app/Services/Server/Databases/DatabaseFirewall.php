@@ -49,6 +49,13 @@ class DatabaseFirewall
         $result = $this->firewall->apply($rule);
 
         if ($result->failed()) {
+            // A row this call made for a rule ufw refused is a rule that
+            // exists nowhere but the Firewall screen — and, since ufw refuses
+            // to delete what it never had, one nobody could remove (MY-01).
+            if ($rule->wasRecentlyCreated) {
+                $rule->delete();
+            }
+
             throw new DatabaseOperationException($result->reference, $result->busy, $result->staleLock);
         }
     }

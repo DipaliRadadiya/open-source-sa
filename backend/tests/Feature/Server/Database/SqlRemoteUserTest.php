@@ -28,6 +28,7 @@ beforeEach(function () {
     $this->state = new stdClass;
     $this->state->bind = '127.0.0.1';
     $this->state->written = [];
+    $this->state->commands = [];
 });
 
 function fakeMariaDb(): void
@@ -35,6 +36,7 @@ function fakeMariaDb(): void
     Process::fake(function ($process) {
         $command = array_values(array_filter((array) $process->command, fn ($a) => ! in_array($a, ['sudo', '-n'], true)));
         $sql = (string) ($process->input ?? '');
+        test()->state->commands[] = $command;
 
         if (($command[0] ?? '') === 'tee') {
             test()->state->written[$command[1]] = $sql;
@@ -84,6 +86,46 @@ it('binds every interface and restarts once the restart is agreed', function () 
         ->and($this->state->written['/etc/mysql/mariadb.conf.d/99-panel-remote.cnf'])->toContain("[mysqld]\nbind-address = 0.0.0.0");
 
     Process::assertRan(fn ($p) => array_slice((array) $p->command, -3) === ['systemctl', 'restart', 'mariadb']);
+});
+
+it('names the MySQL drop-in so it loads after mysqld.cnf, and drops the old one (MY-01)', function () {
+    // Includes are read in name order and digits sort before letters, so
+    // `99-panel-remote.cnf` loaded BEFORE Ubuntu's `mysqld.cnf`, whose
+    // `bind-address = 127.0.0.1` won. Success was reported, 3306 stayed shut,
+    // and every later remote user restarted MySQL again.
+    fakeMariaDb();
+    $database = Database::create(['name' => 'shop', 'engine' => 'mysql']);
+
+    $this->withHeader('Authorization', 'Bearer '.$this->token)
+        ->postJson("/api/databases/{$database->id}/users", [
+            'username' => 'shop_user', 'password' => 'S3cretPass99',
+            'connection_preference' => 'remote', 'host' => '203.0.113.4', 'restart_cluster' => true,
+        ])->assertCreated();
+
+    $dropIn = collect(array_keys($this->state->written))->first(fn ($path) => str_starts_with($path, '/etc/mysql/mysql.conf.d/'));
+    $names = [basename((string) $dropIn), 'mysqld.cnf'];
+    $sorted = $names;
+    sort($sorted, SORT_STRING);
+
+    expect($dropIn)->toBe('/etc/mysql/mysql.conf.d/zz-panel-remote.cnf')
+        ->and($sorted)->toBe(['mysqld.cnf', 'zz-panel-remote.cnf']);
+
+    // The old file never did anything; it goes before the restart reads the directory.
+    $commands = collect($this->state->commands);
+    $removed = $commands->search(fn ($c) => $c === ['rm', '-f', '/etc/mysql/mysql.conf.d/99-panel-remote.cnf']);
+    $restarted = $commands->search(fn ($c) => $c === ['systemctl', 'restart', 'mysql']);
+
+    expect($removed)->not->toBeFalse()
+        ->and($restarted)->not->toBeFalse()
+        ->and($removed)->toBeLessThan($restarted);
+});
+
+it('removes nothing on MariaDB, whose drop-in already loaded last', function () {
+    fakeMariaDb();
+
+    mariaDbUser(['restart_cluster' => true])->assertCreated();
+
+    Process::assertNotRan(fn ($p) => in_array('rm', (array) $p->command, true));
 });
 
 it('does not restart an engine that already listens remotely', function () {
