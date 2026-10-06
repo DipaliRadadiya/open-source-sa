@@ -25,7 +25,9 @@ class RemoveSshKey
         DB::transaction(function () use ($systemUser, $key): void {
             $key->delete();
 
-            $this->keys->sync($systemUser);
+            // Named, so a file written before the panel's block existed loses
+            // this key too instead of keeping it as if added by hand (SU-03).
+            $this->keys->sync($systemUser, $key->public_key);
         });
 
         $this->activityLogger->log('system_user.ssh_key_removed', $systemUser, [

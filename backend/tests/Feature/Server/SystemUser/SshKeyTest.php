@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Process;
 const TEST_KEY = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH6m9k1QdummyBASE64keyForTestingPurposesXyz deploy@host';
 // Same valid base64 length as TEST_KEY, different content → different fingerprint.
 const TEST_KEY_2 = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH6m9k1QdummyBASE64keyForTestingPurposesXy0 backup@host';
+// A key put on the server by hand, never through the panel.
+const HAND_KEY = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH6m9k1QhandyBASE64keyForTestingPurposesXyz admin@laptop';
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -38,6 +40,11 @@ beforeEach(function () {
             File::ensureDirectoryExists(end($cmd), 0700);
 
             return Process::result(exitCode: 0);
+        }
+        if ($bin === 'cat') {
+            return File::exists($cmd[1])
+                ? Process::result(output: File::get($cmd[1]))
+                : Process::result(exitCode: 1, errorOutput: "cat: {$cmd[1]}: No such file or directory");
         }
         if ($bin === 'tee') {
             File::put($cmd[1], (string) $process->input);
@@ -214,4 +221,76 @@ it('keeps the key row when rewriting authorized_keys after a removal fails', fun
         ->assertStatus(500);
 
     expect(SshKey::find($key->id))->not->toBeNull();
+});
+
+/*
+| SU-03: sync() wrote the panel's keys over the whole file, so a key added by
+| hand on the server — often the one the admin logs in with — vanished the
+| next time a key was added or removed in the panel.
+*/
+
+function writeAuthorizedKeys(string $content): string
+{
+    $file = test()->su->home_path.'/.ssh/authorized_keys';
+    File::ensureDirectoryExists(dirname($file), 0700);
+    File::put($file, $content);
+
+    return $file;
+}
+
+function addKey(string $name, string $key)
+{
+    return test()->withHeader('Authorization', 'Bearer '.test()->token)
+        ->postJson('/api/system-users/'.test()->su->id.'/ssh-keys', ['name' => $name, 'public_key' => $key]);
+}
+
+it('keeps keys and lines added by hand when a key is added and removed', function () {
+    $file = writeAuthorizedKeys("# admin\n".HAND_KEY."\nfrom=\"10.0.0.1\" ".TEST_KEY_2."\n");
+
+    addKey('laptop', TEST_KEY)->assertCreated();
+
+    expect(File::get($file))->toContain(HAND_KEY)->toContain('# admin')->toContain('from="10.0.0.1"')
+        ->toContain(SshKeyManager::BLOCK_BEGIN."\n".TEST_KEY."\n".SshKeyManager::BLOCK_END);
+
+    $key = SshKey::where('name', 'laptop')->first();
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->deleteJson("/api/system-users/{$this->su->id}/ssh-keys/{$key->id}")
+        ->assertNoContent();
+
+    expect(File::get($file))->toBe("# admin\n".HAND_KEY."\nfrom=\"10.0.0.1\" ".TEST_KEY_2."\n");
+});
+
+it('removes a deleted key from a file written before the panel marked its block', function () {
+    // The old sync wrote bare lines: the panel's keys are indistinguishable
+    // from hand-added ones there, except by being the panel's.
+    $file = writeAuthorizedKeys(TEST_KEY."\n".TEST_KEY_2."\n".HAND_KEY."\n");
+
+    foreach ([['keep', TEST_KEY], ['drop', TEST_KEY_2]] as [$name, $key]) {
+        $this->su->sshKeys()->create(['name' => $name, 'public_key' => $key, 'fingerprint' => app(SshKeyManager::class)->fingerprint($key)]);
+    }
+    $drop = SshKey::where('name', 'drop')->first();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->deleteJson("/api/system-users/{$this->su->id}/ssh-keys/{$drop->id}")
+        ->assertNoContent();
+
+    expect(File::get($file))->toBe(HAND_KEY."\n\n".SshKeyManager::BLOCK_BEGIN."\n".TEST_KEY."\n".SshKeyManager::BLOCK_END."\n");
+});
+
+it('does not write over a file it could not read', function () {
+    $file = writeAuthorizedKeys(HAND_KEY."\n");
+
+    Process::fake(function ($process) {
+        $this->ran[] = $process->command;
+
+        return in_array('cat', $process->command, true)
+            ? Process::result(exitCode: 1, errorOutput: 'cat: authorized_keys: Permission denied')
+            : Process::result();
+    });
+
+    addKey('laptop', TEST_KEY)->assertStatus(500);
+
+    expect(collect($this->ran)->contains(fn ($c) => in_array('tee', $c, true)))->toBeFalse()
+        ->and(File::get($file))->toBe(HAND_KEY."\n")
+        ->and($this->su->sshKeys()->count())->toBe(0);
 });

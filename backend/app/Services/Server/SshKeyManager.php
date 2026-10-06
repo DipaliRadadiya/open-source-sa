@@ -90,22 +90,41 @@ class SshKeyManager
      * Through ServerOps, not PHP's File facade — the home is not the panel's,
      * and a raw write fails with a bare "Permission denied" and no reference.
      */
-    public function sync(SystemUser $systemUser): void
+    public function sync(SystemUser $systemUser, ?string $removedKey = null): void
     {
         $sshDir = rtrim($systemUser->home_path, '/').'/.ssh';
         $file = $sshDir.'/authorized_keys';
-        $keys = $systemUser->sshKeys()->pluck('public_key')->implode("\n");
         $context = ['feature' => 'system_user', 'op' => 'ssh_keys.sync', 'system_user' => $systemUser->username];
         $asUser = ['runuser', '-u', $systemUser->username, '--'];
+
+        $panelKeys = $systemUser->sshKeys()->pluck('public_key')->all();
 
         $steps = [
             fn () => $this->serverOps->run([...$asUser, 'mkdir', '-p', $sshDir], $context),
             fn () => $this->serverOps->run([...$asUser, 'chmod', '0700', $sshDir], $context),
-            fn () => $this->serverOps->run(
-                [...$asUser, 'tee', $file],
-                array_merge($context, ['path' => $file]),
-                input: $keys === '' ? '' : $keys."\n",
-            ),
+            function () use ($asUser, $file, $context, $panelKeys, $removedKey) {
+                // Read first (SU-03): this used to `tee` the panel's keys over
+                // the whole file, so a key added by hand on the server — often
+                // the one somebody logs in with — vanished the next time any
+                // key was added or removed here.
+                $current = $this->serverOps->run([...$asUser, 'cat', $file], $context, expectedExitCodes: [1]);
+
+                // Only a file that is not there may be read as empty. Anything
+                // else (a denial, an unreadable file) would turn into writing
+                // the panel's keys over whatever it holds — the very bug.
+                $missing = ! $current->denied && $current->exitCode() === 1
+                    && str_contains($current->errorOutput(), 'No such file');
+
+                if ($current->failed() && ! $missing) {
+                    return $current;
+                }
+
+                return $this->serverOps->run(
+                    [...$asUser, 'tee', $file],
+                    array_merge($context, ['path' => $file]),
+                    input: $this->merged($current->ok ? $current->output() : '', $panelKeys, $removedKey),
+                );
+            },
             fn () => $this->serverOps->run([...$asUser, 'chmod', '0600', $file], $context),
         ];
 
@@ -119,5 +138,63 @@ class SshKeyManager
                 throw new SystemUserSshFailedException($result->reference);
             }
         }
+    }
+
+    public const BLOCK_BEGIN = '# BEGIN panel-managed keys (edit outside this block)';
+
+    public const BLOCK_END = '# END panel-managed keys';
+
+    /**
+     * The file with the panel's keys in a block of their own and everything
+     * else exactly as it was (SU-03).
+     *
+     * Lines outside the block are the server's: kept, minus any that is one
+     * of the panel's keys (it lives in the block now) or the one just
+     * removed. The removed key matters on a file the panel wrote before the
+     * block existed: there, its keys sit outside any block, and a deleted one
+     * would otherwise read as hand-added and keep its access.
+     *
+     * @param  array<int, string>  $panelKeys
+     */
+    public function merged(string $current, array $panelKeys, ?string $removedKey = null): string
+    {
+        $managed = array_map(fn (string $key) => $this->fingerprint($key), [...$panelKeys, ...array_filter([$removedKey])]);
+        $kept = [];
+        $inBlock = false;
+
+        foreach (preg_split('/\r?\n/', $current) ?: [] as $line) {
+            if (trim($line) === self::BLOCK_BEGIN) {
+                $inBlock = true;
+
+                continue;
+            }
+
+            if (trim($line) === self::BLOCK_END) {
+                $inBlock = false;
+
+                continue;
+            }
+
+            if ($inBlock) {
+                continue;
+            }
+
+            if ($this->isValidPublicKey($line) && in_array($this->fingerprint($line), $managed, true)) {
+                continue;
+            }
+
+            $kept[] = $line;
+        }
+
+        $outside = rtrim(implode("\n", $kept));
+        $block = $panelKeys === []
+            ? ''
+            : self::BLOCK_BEGIN."\n".implode("\n", array_map('trim', $panelKeys))."\n".self::BLOCK_END."\n";
+
+        return match (true) {
+            $outside === '' => $block,
+            $block === '' => $outside."\n",
+            default => $outside."\n\n".$block,
+        };
     }
 }
