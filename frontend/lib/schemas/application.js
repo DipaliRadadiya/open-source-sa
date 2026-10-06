@@ -161,6 +161,17 @@ export const applicationSchema = z.object({
   system_user: systemUserOptionSchema.nullish(),
   php_version: z.string().nullish(),
   node_version: z.string().nullish(),
+  // A switch under way (`switching`) or the last one that did not work (`failed`;
+  // the site was put back on `node_version`). Null when neither.
+  node_version_change: z
+    .object({
+      target: z.string().nullish(),
+      status: z.enum(["switching", "failed"]).catch("switching"),
+      reason: z.string().nullish(),
+      message: z.string().nullish(),
+      reference: z.string().nullish(),
+    })
+    .nullish(),
   app_port: z.number().nullish(),
   web_root: z.string().nullish(),
   // The served directory; the deploy script's `{path}` expands to this, not to `path`.
@@ -184,6 +195,8 @@ export const applicationSchema = z.object({
   webhook: webhookSchema.nullish(),
   basic_auth_enabled: z.boolean().default(false),
   basic_auth_username: z.string().nullish(),
+  // On, and no certificate: the browser sends the password in plain text.
+  basic_auth_unencrypted: z.boolean().default(false),
   // False when the app uses the Authorization header, which Basic Auth would consume.
   basic_auth_supported: z.boolean().default(true),
   // OpenLiteSpeed has no equivalent of the nginx WAF rule set.

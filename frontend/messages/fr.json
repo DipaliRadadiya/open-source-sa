@@ -3393,6 +3393,7 @@
       "applyHint": "Cette application met sa configuration en cache — Enregistrer et appliquer vide le cache pour vous.",
       "readOnly": "Vous avez un accès en lecture seule à ce fichier.",
       "syntaxTitle": "Non enregistré — erreur de syntaxe",
+      "protectedTitle": "Non enregistré — un réglage géré par le panneau",
       "fixSet": "Définir {key}={value}",
       "cancel": "Annuler",
       "restore": {
@@ -4761,6 +4762,7 @@
       "whenToUseTitle": "Quand l'utiliser",
       "whenToUseBody": "Idéal pour une application de préproduction, une refonte en cours ou un aperçu client que vous ne voulez pas voir apparaître avant le lancement. Désactivez-le quand l'application est prête pour le public.",
       "warning": "Ceci protège toute l'application, pas seulement une zone admin — les moteurs de recherche, les outils de surveillance de disponibilité et toute intégration touchant ce domaine seront aussi bloqués tant qu'ils n'auront pas reçu les identifiants. Vous pouvez désactiver ceci ici à tout moment si cela pose problème.",
+      "unencrypted": "Cette application n’a pas de certificat SSL : le mot de passe est donc envoyé en clair. <link>Ajoutez un certificat</link> pour le protéger.",
       "credentialsNote": "Ceci crée un identifiant de connexion dédié à cette application — distinct de votre compte {brand}. Les visiteurs verront l'invite de connexion native du navigateur, pas une page stylée.",
       "disabledHint": "L'application est accessible publiquement — n'importe qui peut la consulter.",
       "unsupportedForType": "Cette application s'authentifie avec l'en-tête Authorization, que HTTP n'autorise qu'une seule fois par requête. La protection par mot de passe le consommerait et rendrait l'application inaccessible. Elle exige déjà ses propres identifiants.",
@@ -5409,6 +5411,7 @@
       "pending": "En attente",
       "provisioning": "Provisionnement",
       "active": "En exécution",
+      "paused": "En pause",
       "failed": "Échec"
     },
     "protection": {
@@ -5756,6 +5759,23 @@
       "copy": "Copier",
       "revert": "Rétablir",
       "unsaved": "Modifications non enregistrées"
+    },
+    "nodeVersion": {
+      "title": "Modifier la version de Node",
+      "description": "La version de Node.js sur laquelle tourne cette application.",
+      "current": "Actuellement <code>{version}</code>.",
+      "range": "Ce type d’application prend en charge Node {range}.",
+      "label": "Nouvelle version",
+      "placeholder": "Choisir une version",
+      "none": "Aucune autre version de Node n’est installée. Installez-en une d’abord sur la <link>page Node.js</link>.",
+      "noneInRange": "Aucune autre version de Node installée ne convient à cette application (Node {range}). Installez-en une d’abord sur la <link>page Node.js</link>.",
+      "loadFailed": "Impossible de lire les versions de Node installées.",
+      "restartNote": "L’application redémarre sur la nouvelle version. Si elle ne redémarre pas, l’ancienne version est rétablie automatiquement.",
+      "submit": "Changer de version",
+      "cancel": "Annuler",
+      "switching": "Passage à Node {target}…",
+      "already": "Cette application utilise déjà Node {version}.",
+      "failed": "Impossible de changer la version de Node."
     }
   },
   "panelUpdate": {

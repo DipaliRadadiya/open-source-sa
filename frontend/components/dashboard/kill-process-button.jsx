@@ -24,6 +24,12 @@ export function KillProcessButton({ process, canManage }) {
   // Only offered once TERM has been tried and the process is still there.
   const [offerForce, setOfferForce] = useState(false);
   const engine = databaseEngine(process.command);
+  // The server refuses some processes outright; say so before the click.
+  const refusal = !canManage
+    ? t("kill.noPermission")
+    : process.stoppable === false
+      ? process.reason || t("kill.refused")
+      : null;
 
   async function run(signal) {
     setPending(true);
@@ -73,7 +79,7 @@ export function KillProcessButton({ process, canManage }) {
       size="icon"
       // Same red stop styling the Services page uses.
       className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-      disabled={!canManage}
+      disabled={Boolean(refusal)}
       onClick={() => {
         setOfferForce(false);
         setConfirming(true);
@@ -88,13 +94,13 @@ export function KillProcessButton({ process, canManage }) {
   return (
     <>
       {/* ReasonTooltip also opens on tap and supplies the reason, so the Button adds no second tooltip. */}
-      {canManage ? (
+      {refusal ? (
+        <ReasonTooltip reason={refusal}>{stopButton}</ReasonTooltip>
+      ) : (
         <Tooltip>
           <TooltipTrigger asChild>{stopButton}</TooltipTrigger>
           <TooltipContent>{t("kill.action")}</TooltipContent>
         </Tooltip>
-      ) : (
-        <ReasonTooltip reason={t("kill.noPermission")}>{stopButton}</ReasonTooltip>
       )}
 
       <ConfirmDialog

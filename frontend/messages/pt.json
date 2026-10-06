@@ -3393,6 +3393,7 @@
       "applyHint": "Esta aplicação armazena o config em cache — Salvar e aplicar limpa o cache para você.",
       "readOnly": "Você tem acesso somente leitura a este arquivo.",
       "syntaxTitle": "Não salvo — erro de sintaxe",
+      "protectedTitle": "Não salvo — uma configuração gerenciada pelo painel",
       "fixSet": "Definir {key}={value}",
       "cancel": "Cancelar",
       "restore": {
@@ -4761,6 +4762,7 @@
       "whenToUseTitle": "Quando usar isso",
       "whenToUseBody": "Bom para uma aplicação de staging, um redesign em andamento ou uma prévia de cliente que você não quer que seja encontrada antes do lançamento. Desative quando a aplicação estiver pronta para o público.",
       "warning": "Isso protege a aplicação inteira, não apenas uma área administrativa — mecanismos de busca, monitores de uptime e qualquer integração que acesse este domínio também serão bloqueados até receberem as credenciais. Você pode desativar aqui a qualquer momento, se isso causar algum problema.",
+      "unencrypted": "Esta aplicação não tem certificado SSL, então a senha é enviada sem criptografia. <link>Adicione um certificado</link> para protegê-la.",
       "credentialsNote": "Isso cria um novo login apenas para esta aplicação — separado da sua conta {brand}. Os visitantes verão o prompt de login nativo do próprio navegador, e não uma página estilizada.",
       "disabledHint": "A aplicação está publicamente acessível — qualquer pessoa pode visualizá-la.",
       "unsupportedForType": "Esta aplicação faz login pelo cabeçalho Authorization, que o HTTP permite apenas uma vez por requisição. A proteção por senha o consumiria e tornaria a aplicação inacessível. Ela já exige suas próprias credenciais.",
@@ -5409,6 +5411,7 @@
       "pending": "Pendente",
       "provisioning": "Provisionando",
       "active": "Em execução",
+      "paused": "Em pausa",
       "failed": "Falhou"
     },
     "protection": {
@@ -5756,6 +5759,23 @@
       "copy": "Copiar",
       "revert": "Reverter",
       "unsaved": "Alterações não salvas"
+    },
+    "nodeVersion": {
+      "title": "Alterar a versão do Node",
+      "description": "A versão do Node.js em que esta aplicação roda.",
+      "current": "Agora em <code>{version}</code>.",
+      "range": "Este tipo de aplicação suporta Node {range}.",
+      "label": "Nova versão",
+      "placeholder": "Escolha uma versão",
+      "none": "Nenhuma outra versão do Node está instalada. Instale uma primeiro na <link>página do Node.js</link>.",
+      "noneInRange": "Nenhuma outra versão do Node instalada serve para esta aplicação (Node {range}). Instale uma primeiro na <link>página do Node.js</link>.",
+      "loadFailed": "Não foi possível ler as versões do Node instaladas.",
+      "restartNote": "A aplicação reinicia na nova versão. Se ela não voltar, a versão anterior é restaurada automaticamente.",
+      "submit": "Alterar versão",
+      "cancel": "Cancelar",
+      "switching": "Mudando para o Node {target}…",
+      "already": "Esta aplicação já usa o Node {version}.",
+      "failed": "Não foi possível alterar a versão do Node."
     }
   },
   "panelUpdate": {

@@ -6,6 +6,7 @@ import { getSystemUserOptions } from "@/lib/system-users/get-system-users";
 import { getGitAccounts } from "@/lib/git/get-git";
 import { getPhp } from "@/lib/php/get-php";
 import { getNode } from "@/lib/node/get-node";
+import { installedNodeVersions } from "@/lib/node/installed-node-versions";
 import { getTimezones } from "@/lib/settings/get-timezones";
 import { getEngines } from "@/lib/databases/get-databases";
 import { engineInstalling, noDatabaseEngine } from "@/lib/applications/database-readiness";
@@ -44,16 +45,7 @@ export default async function CreateApplicationPage({ searchParams }) {
   ]);
 
   const phpVersions = (php.data?.versions ?? []).filter((version) => !version.status || version.status === "ready");
-  // Offer the system Node only when the panel does not already manage that
-  // version: duplicate values make Radix render every match into the trigger.
-  const managedNode = (node.data?.versions ?? []).filter(
-    (version) => !version.status || version.status === "ready",
-  );
-  const systemNode =
-    node.data?.system && !managedNode.some((v) => v.version === node.data.system.version)
-      ? [{ ...node.data.system, status: "ready" }]
-      : [];
-  const nodeVersions = [...managedNode, ...systemNode];
+  const nodeVersions = installedNodeVersions(node.data);
 
   // Explain instead of redirecting, so a view-only reader learns why.
   if (!can(permissions, "application", "manage")) {

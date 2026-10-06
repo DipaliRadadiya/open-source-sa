@@ -76,6 +76,8 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
   const [contents, setContents] = useState(editable(initialEnv.raw));
   const [saving, setSaving] = useState(false);
   const [syntaxError, setSyntaxError] = useState(null);
+  // errors.raw also carries "N8N_PORT cannot be changed here": a protected key, not a syntax error.
+  const [rawRefusal, setRawRefusal] = useState(false);
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [guarded, setGuarded] = useState([]);
 
@@ -144,7 +146,9 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
       // Syntax errors come back verbatim under errors.raw; nothing was written.
       const raw = error.response?.data?.errors?.raw;
       if (raw) {
-        setSyntaxError(Array.isArray(raw) ? raw.join("\n") : String(raw));
+        const text = Array.isArray(raw) ? raw.join("\n") : String(raw);
+        setRawRefusal(guardedChanges(env.raw, sent).some((key) => text.includes(key)));
+        setSyntaxError(text);
       } else {
         toast.error(apiMessage(error, t("saveFailed")));
       }
@@ -285,7 +289,7 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
           <NotSaved title={t("tooLargeTitle")}>{t("tooLarge")}</NotSaved>
         ) : syntaxError ? (
           // Nothing was written; show the backend's own message.
-          <NotSaved title={t("syntaxTitle")}>{syntaxError}</NotSaved>
+          <NotSaved title={t(rawRefusal ? "protectedTitle" : "syntaxTitle")}>{syntaxError}</NotSaved>
         ) : null}
 
         {!canManage ? (

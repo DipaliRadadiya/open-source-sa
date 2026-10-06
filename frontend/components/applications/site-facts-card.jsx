@@ -42,6 +42,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { WebRootDialog } from "@/components/applications/web-root-dialog";
+import { NodeVersionDialog } from "@/components/applications/node-version-dialog";
+import { AutoRefresh } from "@/components/ui/auto-refresh";
 
 // Facts that do not apply to the site type are left out, not shown as "—".
 // Full class strings for Tailwind; 3 or 4 columns keeps the last row full (6 or 8 facts).
@@ -53,7 +55,7 @@ function factColumns(count) {
   return FACT_COLUMNS[4];
 }
 
-function Fact({ icon: Icon, label, value, mono, copy, onEdit, editLabel, action, note, menu, menuLabel, menuBusy = false }) {
+function Fact({ icon: Icon, label, value, mono, copy, onEdit, editLabel, action, note, noteTone, menu, menuLabel, menuBusy = false }) {
   return (
     // min-w-0: a grid item defaults to min-width:auto, so `truncate` would never fire.
     <div className="flex min-w-0 items-center gap-2.5 rounded-lg border bg-muted/30 px-3 py-2.5">
@@ -66,7 +68,11 @@ function Fact({ icon: Icon, label, value, mono, copy, onEdit, editLabel, action,
           {value}
         </p>
         {/* Not truncated: a filename or refusal is the content. */}
-        {note ? <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{note}</p> : null}
+        {note ? (
+          <p className={`mt-0.5 text-xs leading-snug ${noteTone === "warning" ? "text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:text-warning" : "text-muted-foreground"}`}>
+            {note}
+          </p>
+        ) : null}
       </div>
       {copy ? <CopyButton value={String(value)} /> : null}
       {/* One menu when the tile has several actions (probe, set type by hand). */}
@@ -156,10 +162,14 @@ function Fact({ icon: Icon, label, value, mono, copy, onEdit, editLabel, action,
   );
 }
 
-export function SiteFactsCard({ application, canManage = false, siteTypes = [], className }) {
+export function SiteFactsCard({ application, canManage = false, siteTypes = [], nodeVersions = [], nodeVersionsFailed = false, className }) {
   const t = useTranslations("applications");
   const format = useFormatter();
   const [editingWebRoot, setEditingWebRoot] = useState(false);
+  const [editingNode, setEditingNode] = useState(false);
+  const nodeChange = application.node_version_change ?? null;
+  const nodeSwitching = nodeChange?.status === "switching";
+  const nodeRange = siteTypes.find((type) => type.name === application.site_type)?.node_version_range ?? null;
   const [measuring, setMeasuring] = useState(false);
   const [detecting, setDetecting] = useState(false);
   const [refreshing, startRefresh] = useTransition();
@@ -332,7 +342,22 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
       value: !application.serving_profile || application.serving_profile === "php" ? application.php_version : null,
       mono: true,
     },
-    { icon: Hexagon, label: t("facts.node"), value: application.node_version, mono: true },
+    {
+      icon: Hexagon,
+      label: t("facts.node"),
+      value: application.node_version,
+      mono: true,
+      // The failure message arrives translated; the site was put back and still runs.
+      note: nodeSwitching
+        ? t("nodeVersion.switching", { target: nodeChange.target ?? "" })
+        : nodeChange?.status === "failed"
+          ? nodeChange.message
+          : null,
+      noteTone: nodeChange?.status === "failed" ? "warning" : null,
+      action: nodeSwitching ? { busy: true, label: t("nodeVersion.switching", { target: nodeChange.target ?? "" }), icon: Hexagon } : null,
+      onEdit: canManage && !nodeSwitching ? () => setEditingNode(true) : null,
+      editLabel: t("nodeVersion.title"),
+    },
     { icon: Plug, label: t("facts.port"), value: application.app_port, mono: true, copy: true },
     {
       icon: HardDrive,
@@ -360,9 +385,23 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
       </CardHeader>
       <CardContent className={`grid gap-2 sm:grid-cols-2 ${factColumns(facts.length)}`}>
         {facts.map((fact) => (
-          <Fact key={fact.label} {...fact} editLabel={t("webRoot.title")} />
+          <Fact key={fact.label} editLabel={t("webRoot.title")} {...fact} />
         ))}
       </CardContent>
+
+      {/* Until the switch settles: `node_version_change` goes back to null, or to failed. */}
+      {nodeSwitching ? <AutoRefresh intervalMs={3000} stopAfterMs={600000} /> : null}
+
+      {application.node_version ? (
+        <NodeVersionDialog
+          application={application}
+          range={nodeRange}
+          versions={nodeVersions}
+          versionsFailed={nodeVersionsFailed}
+          open={editingNode}
+          onOpenChange={setEditingNode}
+        />
+      ) : null}
 
       <WebRootDialog
         application={application}

@@ -10,13 +10,16 @@ import { Badge } from "@/components/ui/badge";
 /* Kept out of `applications-table.jsx` so the sidebar does not pull DataTable into the shell bundle. */
 // The statuses `filter[status]` accepts, in API order. Fixed rather than derived
 // from the current page's rows, which would only offer statuses on that page.
-export const APPLICATION_STATUSES = ["pending", "provisioning", "active", "failed"];
+// `paused` is a filter value, not a stored status: a paused site stays `active` (is_disabled).
+export const APPLICATION_STATUSES = ["pending", "provisioning", "active", "paused", "failed"];
 
 export const STATUS_VARIANTS = {
   active: "success",
   failed: "destructive",
   provisioning: "warning",
   pending: "muted",
+  // Same amber as the Paused badge.
+  paused: "warning",
 };
 
 // `status` is setup state ("active" = set up), not whether the app runs. An app with a

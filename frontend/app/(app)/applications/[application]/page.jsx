@@ -4,6 +4,8 @@ import { ExternalLink } from "lucide-react";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { getApplicationDatabases, getEngines, getUnattachedDatabases } from "@/lib/databases/get-databases";
 import { getSiteTypes } from "@/lib/applications/get-applications";
+import { getNode } from "@/lib/node/get-node";
+import { installedNodeVersions } from "@/lib/node/installed-node-versions";
 import { siteNeedsDatabase } from "@/lib/backups/database-availability";
 import { can } from "@/lib/permissions/can";
 import { getApplication, getApplicationIssues } from "@/lib/applications/get-applications";
@@ -105,7 +107,7 @@ export default async function ApplicationDetailPage({ params }) {
   // Attaching and creating need manage; viewers get the card without buttons.
   const canManageDatabases = can(permissions, "database", "manage");
 
-  const [domainList, certificate, backup, backupRuns, siteDatabases, siteTypes, spareDatabases, engineList, rootLock, latestDeploy] = await Promise.all([
+  const [domainList, certificate, backup, backupRuns, siteDatabases, siteTypes, spareDatabases, engineList, rootLock, latestDeploy, node] = await Promise.all([
     settled && canSeeDomains
       ? getApplicationDomains(id)
       : Promise.resolve({ domains: [], failed: false }),
@@ -137,6 +139,10 @@ export default async function ApplicationDetailPage({ params }) {
     settled && isGit && canSeeDeployment
       ? getLatestDeployment(id)
       : Promise.resolve({ latest: null, failed: false }),
+    // For the Node.js fact's version picker; only someone who can change it needs the list.
+    settled && canManage && application.node_version
+      ? getNode().catch(() => ({ data: null, failed: true }))
+      : Promise.resolve({ data: null, failed: false }),
   ]);
   const folderStatus = rootLock.rootLock?.status ?? null;
 
@@ -346,6 +352,8 @@ export default async function ApplicationDetailPage({ params }) {
             canManage={canManage}
             // Type titles arrive translated on the catalog, not from the message files.
             siteTypes={siteTypes.siteTypes}
+            nodeVersions={installedNodeVersions(node.data)}
+            nodeVersionsFailed={node.failed}
             className="lg:col-span-2 xl:col-span-3"
           />
           <ProtectionCard application={application} items={protectionItems} />

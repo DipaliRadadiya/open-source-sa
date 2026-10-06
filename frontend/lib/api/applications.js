@@ -159,3 +159,8 @@ export async function getApplicationStatus(id) {
   const res = await api.get(`/applications/${id}`);
   return res.data?.application?.status ?? null;
 }
+
+/** 202 while it switches (follow `node_version_change`), 200 if already on that version. */
+export function updateNodeVersion(id, nodeVersion) {
+  return api.put(`/applications/${id}/node-version`, { node_version: nodeVersion });
+}

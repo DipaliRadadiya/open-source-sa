@@ -9,6 +9,7 @@ import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
+import Link from "@/components/ui/app-link";
 import { Eye, EyeOff, Lightbulb, Lock, Sparkles, TriangleAlert, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Note } from "@/components/ui/note";
@@ -92,6 +93,10 @@ export function SecuritySection({ appId, application, domain, canManage }) {
   const conflicts = application.basic_auth_supported === false;
   // Our last save's state until the refreshed server value agrees.
   const serverProtected = application.basic_auth_enabled ?? false;
+  // The server's word once saved; before that, about to turn it on over plain http.
+  const unencrypted =
+    application.basic_auth_unencrypted ||
+    (enabled && Boolean(application.url?.startsWith("http://")));
   const [savedProtected, setSavedProtected] = useState(null);
   if (savedProtected !== null && savedProtected === serverProtected) setSavedProtected(null);
   const alreadyProtected = savedProtected ?? serverProtected;
@@ -161,6 +166,25 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                   </FormItem>
                 )}
               />
+
+              {unencrypted ? (
+                <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+                  <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+                  <p>
+                    {t.rich("unencrypted", {
+                      link: (chunks) => (
+                        <Link
+                          href={`/applications/${appId}/domains?tab=ssl`}
+                          prefetch={false}
+                          className="font-medium underline underline-offset-2"
+                        >
+                          {chunks}
+                        </Link>
+                      ),
+                    })}
+                  </p>
+                </div>
+              ) : null}
 
               {/* Already protected despite the conflict: explains why to turn it off. */}
               {conflicts && alreadyProtected ? (

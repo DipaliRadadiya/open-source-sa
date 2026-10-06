@@ -3393,6 +3393,7 @@
       "applyHint": "Diese Anwendung cacht ihre Konfiguration — „Speichern & anwenden“ leert den Cache für Sie.",
       "readOnly": "Sie haben auf diese Datei nur Lesezugriff.",
       "syntaxTitle": "Nicht gespeichert — Syntaxfehler",
+      "protectedTitle": "Nicht gespeichert — eine vom Panel verwaltete Einstellung",
       "fixSet": "{key}={value} setzen",
       "cancel": "Abbrechen",
       "restore": {
@@ -4761,6 +4762,7 @@
       "whenToUseTitle": "Wann Sie das nutzen",
       "whenToUseBody": "Gut für eine Staging-Anwendung, ein laufendes Redesign oder eine Kundenvorschau, die vor dem Start nicht gefunden werden soll. Schalten Sie es ab, sobald die Anwendung für die Öffentlichkeit bereit ist.",
       "warning": "Das schützt die ganze Anwendung, nicht nur einen Adminbereich — Suchmaschinen, Uptime-Monitore und jede Integration auf dieser Domain werden ebenfalls blockiert, bis sie die Zugangsdaten haben. Wenn das Probleme macht, können Sie es hier jederzeit ausschalten.",
+      "unencrypted": "Diese Anwendung hat kein SSL-Zertifikat, daher wird das Passwort unverschlüsselt übertragen. <link>Fügen Sie ein Zertifikat hinzu</link>, um es zu schützen.",
       "credentialsNote": "Das erstellt einen neuen Login nur für diese Anwendung — getrennt von Ihrem {brand}-Konto. Besucher sehen die schlichte Anmeldeaufforderung ihres Browsers, keine gestaltete Seite.",
       "disabledHint": "Die Anwendung ist öffentlich erreichbar — jeder kann sie ansehen.",
       "unsupportedForType": "Diese Anwendung meldet sich über den Authorization-Header an, den HTTP nur einmal pro Anfrage erlaubt. Der Passwortschutz würde ihn belegen und die Anwendung unerreichbar machen. Sie verlangt bereits eigene Zugangsdaten.",
@@ -5409,6 +5411,7 @@
       "pending": "Ausstehend",
       "provisioning": "Wird eingerichtet",
       "active": "Läuft",
+      "paused": "Pausiert",
       "failed": "Fehlgeschlagen"
     },
     "protection": {
@@ -5756,6 +5759,23 @@
       "copy": "Kopieren",
       "revert": "Zurücksetzen",
       "unsaved": "Nicht gespeicherte Änderungen"
+    },
+    "nodeVersion": {
+      "title": "Node-Version ändern",
+      "description": "Die Node.js-Version, mit der diese Anwendung läuft.",
+      "current": "Derzeit <code>{version}</code>.",
+      "range": "Dieser Anwendungstyp unterstützt Node {range}.",
+      "label": "Neue Version",
+      "placeholder": "Version wählen",
+      "none": "Keine andere Node-Version ist installiert. Installieren Sie zuerst eine auf der <link>Node.js-Seite</link>.",
+      "noneInRange": "Keine andere installierte Node-Version passt zu dieser Anwendung (Node {range}). Installieren Sie zuerst eine auf der <link>Node.js-Seite</link>.",
+      "loadFailed": "Die installierten Node-Versionen konnten nicht gelesen werden.",
+      "restartNote": "Die Anwendung startet mit der neuen Version neu. Kommt sie nicht wieder hoch, wird automatisch zurückgewechselt.",
+      "submit": "Version ändern",
+      "cancel": "Abbrechen",
+      "switching": "Wechsel zu Node {target}…",
+      "already": "Diese Anwendung läuft bereits mit Node {version}.",
+      "failed": "Die Node-Version konnte nicht geändert werden."
     }
   },
   "panelUpdate": {

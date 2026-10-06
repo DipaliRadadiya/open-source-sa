@@ -93,4 +93,7 @@ export const processSchema = z.object({
   cpu: nullableNumber,
   memory: nullableNumber,
   command: nullableString,
+  // False for PID 1, kernel threads and protected services; `reason` says why.
+  stoppable: z.boolean().default(true),
+  reason: nullableString,
 });

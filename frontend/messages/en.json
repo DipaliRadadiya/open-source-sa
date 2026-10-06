@@ -3393,6 +3393,7 @@
       "applyHint": "This application caches its config — Save & apply clears the cache for you.",
       "readOnly": "You have read-only access to this file.",
       "syntaxTitle": "Not saved — syntax error",
+      "protectedTitle": "Not saved — a setting the panel manages",
       "fixSet": "Set {key}={value}",
       "cancel": "Cancel",
       "restore": {
@@ -4761,6 +4762,7 @@
       "whenToUseTitle": "When to use this",
       "whenToUseBody": "Good for a staging application, a work-in-progress redesign, or a client preview you don't want found before launch. Turn it off once the application is ready for the public.",
       "warning": "This protects the whole application, not just an admin area — search engines, uptime monitors and any integration hitting this domain will also be blocked until they're given the credentials. You can turn this off here at any time if that causes a problem.",
+      "unencrypted": "This application has no SSL certificate, so the password is sent unencrypted. <link>Add a certificate</link> to protect it.",
       "credentialsNote": "This creates a new login just for this application — separate from your {brand} account. Visitors will see their browser's own plain sign-in prompt, not a styled page.",
       "disabledHint": "The application is publicly reachable — anyone can view it.",
       "unsupportedForType": "This application signs in with the Authorization header, which HTTP allows only once per request. Password protection would consume it and make the application unreachable. It already requires its own credentials.",
@@ -5409,6 +5411,7 @@
       "pending": "Pending",
       "provisioning": "Provisioning",
       "active": "Running",
+      "paused": "Paused",
       "failed": "Failed"
     },
     "protection": {
@@ -5756,6 +5759,23 @@
       "copy": "Copy",
       "revert": "Revert",
       "unsaved": "Unsaved changes"
+    },
+    "nodeVersion": {
+      "title": "Change Node version",
+      "description": "The Node.js version this application runs on.",
+      "current": "Now on <code>{version}</code>.",
+      "range": "This application type supports Node {range}.",
+      "label": "New version",
+      "placeholder": "Choose a version",
+      "none": "No other Node version is installed. Install one on the <link>Node.js page</link> first.",
+      "noneInRange": "No other installed Node version fits this application (Node {range}). Install one on the <link>Node.js page</link> first.",
+      "loadFailed": "The installed Node versions could not be read.",
+      "restartNote": "The application restarts on the new version. If it does not come back up, it is switched back automatically.",
+      "submit": "Change version",
+      "cancel": "Cancel",
+      "switching": "Switching to Node {target}…",
+      "already": "This application already runs Node {version}.",
+      "failed": "The Node version could not be changed."
     }
   },
   "panelUpdate": {

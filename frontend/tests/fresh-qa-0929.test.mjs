@@ -121,7 +121,9 @@ test("B2: a Node git app shows no PHP version", async () => {
 test("B3: stopping a process announces once the list no longer shows it; view-only reason opens on tap", () => {
   const src = read("components/dashboard/kill-process-button.jsx");
   assert.match(src, /refreshThen\(\(\) => \{\s*toast\.success\(t\("kill\.stopped"/);
-  assert.match(src, /<ReasonTooltip reason=\{t\("kill\.noPermission"\)\}>/);
+  // The reason also covers processes the server will not stop (backend junior bug #4, 6 Oct).
+  assert.match(src, /<ReasonTooltip reason=\{refusal\}>/);
+  assert.match(src, /\? t\("kill\.noPermission"\)/);
 });
 
 test("B3: the attention chip counts applications, not findings", () => {
