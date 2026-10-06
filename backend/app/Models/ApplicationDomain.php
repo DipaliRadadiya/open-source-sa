@@ -31,6 +31,21 @@ class ApplicationDomain extends Model
      */
     public const REDIRECT_TARGET_PATTERN = '/^https?:\/\/[^\s;#$&?"\'`\\\\{}<>]+$/i';
 
+    /**
+     * The target as the vhost uses it: without a trailing slash (DOM-01).
+     *
+     * Every template appends the request path, which starts with `/`, so a
+     * target saved as `https://new.example/` sent visitors to
+     * `https://new.example//page`. Saves strip it now; this covers the rows
+     * saved before that, the next time their vhost is written.
+     */
+    public function redirectTarget(): ?string
+    {
+        $target = rtrim((string) $this->redirect_to, '/');
+
+        return $target === '' ? null : $target;
+    }
+
     protected function casts(): array
     {
         return [

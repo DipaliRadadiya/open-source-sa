@@ -81,6 +81,12 @@ class StoreApplicationDomainRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        // No trailing slash: every vhost appends the request path, which
+        // brings its own (DOM-01).
+        if (is_string($this->input('redirect_to'))) {
+            $this->merge(['redirect_to' => rtrim(trim($this->input('redirect_to')), '/')]);
+        }
+
         if ($this->has('domain')) {
             $this->merge(['domain' => strtolower(trim((string) $this->input('domain')))]);
         }

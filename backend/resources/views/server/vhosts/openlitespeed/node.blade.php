@@ -176,7 +176,7 @@ rewrite {
      error and the redirect never fired. --}}
 @foreach ($redirects as $redirect)
   RewriteCond %{HTTP_HOST} ^{{ preg_quote($redirect->domain, '/') }}$ [NC]
-  RewriteRule ^/?(.*)$ {{ $redirect->redirect_to ?: $canonicalUrl }}/$1 [R={{ $redirect->redirect_status }},L]
+  RewriteRule ^/?(.*)$ {{ $redirect->redirectTarget() ?: $canonicalUrl }}/$1 [R={{ $redirect->redirect_status }},L]
 @endforeach
 @if ($forceHttps)
   {{-- Force HTTPS. The ACME exclusion is not optional: without it renewal

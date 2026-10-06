@@ -547,3 +547,48 @@ it('still takes a sibling of the panel host', function () {
         ->postJson("/api/applications/{$this->application->id}/domains", ['domain' => 'shop.panel.example.org'])
         ->assertCreated();
 });
+
+/*
+| DOM-01: every template appends the request path to the target, and the path
+| brings its own `/`, so `https://new.example/` sent visitors to
+| `https://new.example//page`.
+*/
+it('saves a redirect target without its trailing slash', function () {
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/domains", [
+            'domain' => 'old-shop.example.com', 'type' => 'redirect',
+            'redirect_to' => 'https://new.example.com/blog//', 'redirect_status' => 301,
+        ])
+        ->assertCreated()
+        ->assertJsonPath('domain.redirect_to', 'https://new.example.com/blog');
+
+    $domain = ApplicationDomain::where('domain', 'old-shop.example.com')->sole();
+
+    $this->actingAs($this->admin)
+        ->putJson("/api/applications/{$this->application->id}/domains/{$domain->id}", ['redirect_to' => 'https://new.example.com/'])
+        ->assertOk()
+        ->assertJsonPath('domain.redirect_to', 'https://new.example.com');
+});
+
+it('never writes a double slash into the redirect, on any web server', function (string $driver, string $expected) {
+    // Saved before the fix: the row still carries the slash, and the vhost
+    // must not.
+    $this->application->domains()->create([
+        'domain' => 'old-shop.example.com', 'type' => DomainType::Redirect,
+        'redirect_to' => 'https://new.example.com/', 'redirect_status' => 301,
+    ]);
+    config(['server.web_server' => $driver]);
+
+    $config = app((string) config("server.web_server_drivers.{$driver}.driver"))->renderConfig(
+        $this->application->fresh(['domains', 'systemUser']),
+        app(ApplicationProvisioner::class)->documentRoot($this->application),
+    );
+
+    expect($config)->toContain($expected)
+        ->not->toContain('https://new.example.com//')
+        ->not->toContain('https://new.example.com/$request_uri');
+})->with([
+    'nginx' => ['nginx', 'return 301 https://new.example.com$request_uri;'],
+    'apache' => ['apache', 'https://new.example.com/$1'],
+    'openlitespeed' => ['openlitespeed', 'RewriteRule ^/?(.*)$ https://new.example.com/$1 [R=301,L]'],
+]);
