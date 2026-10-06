@@ -289,6 +289,22 @@ describe('the operating system\'s own services (bug #5)', function () {
         ['systemd-resolve', 'systemd-resolved.service'],
         ['rsyslogd', 'rsyslog.service'],
     ]);
+
+    // PK-01 (old QA list): a Dashboard-only role killed fail2ban-server, which
+    // the Services screen had refused it, and fail2ban stayed down.
+    it('refuses the services that guard or run everything else', function (string $command, string $unit) {
+        $runs = fakeProcessInUnit($command, $unit);
+
+        killPid(6000)->assertUnprocessable()
+            ->assertJsonPath('message', __('errors/process.protected'));
+
+        expect(collect($runs)->contains(fn ($c) => $c[0] === 'kill'))->toBeFalse();
+    })->with([
+        ['fail2ban-server', 'fail2ban.service'],
+        ['supervisord', 'supervisor.service'],
+        ['dockerd', 'docker.service'],
+        ['containerd', 'containerd.service'],
+    ]);
 });
 
 describe('a process that does not exit (bug #6)', function () {

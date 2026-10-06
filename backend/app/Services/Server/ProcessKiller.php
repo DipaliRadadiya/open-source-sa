@@ -67,6 +67,20 @@ class ProcessKiller
     ];
 
     /**
+     * Services that guard or run everything else (PK-01, old QA list).
+     *
+     * A role with only Dashboard "manage" killed fail2ban-server from the
+     * process list — the Services screen had refused the same user with 403 —
+     * and fail2ban stayed down: `Restart=on-failure` does not restart after a
+     * clean TERM. Same for supervisor (every queued worker of every site) and
+     * Docker's daemons (every container). They are managed from the Services
+     * screen, under its own permission, and never killed from here.
+     *
+     * @var array<int, string>
+     */
+    public const MANAGED_UNITS = ['fail2ban', 'supervisor', 'docker', 'containerd'];
+
+    /**
      * The largest PID Linux can hand out (`PID_MAX_LIMIT` on 64-bit). Anything
      * above it cannot be running, so it is "not found" rather than an integer
      * the rest of the stack has to survive (bug #8).
@@ -328,6 +342,7 @@ class ProcessKiller
             ...app(ServiceManager::class)->protectedUnits(),
             'ssh', 'sshd',
             ...self::CORE_UNITS,
+            ...self::MANAGED_UNITS,
             ...array_values((array) config('panel_update.services', [])),
         ];
 
