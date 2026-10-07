@@ -218,10 +218,17 @@ class ImageTags
      */
     private function recommended(array $tags): ?string
     {
-        // `rank()` already put the newest, most specific version first.
-        foreach ($tags as $tag) {
-            if ($tag['stable'] && ($this->version($tag['name'])['pure'] ?? false)) {
-                return $tag['name'];
+        // `rank()` already put the newest, most specific version first. A bare
+        // number is tried last: it is usually an alias, not a release, and
+        // ranked numerically it beats every dotted one — code-server's `39`
+        // (its Fedora 39 build) sorted above `4.140.0`.
+        foreach ([2, 1] as $minParts) {
+            foreach ($tags as $tag) {
+                $version = $tag['stable'] ? $this->version($tag['name']) : null;
+
+                if (($version['pure'] ?? false) && count($version['parts']) >= $minParts) {
+                    return $tag['name'];
+                }
             }
         }
 

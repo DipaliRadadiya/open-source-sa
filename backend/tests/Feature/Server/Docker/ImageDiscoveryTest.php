@@ -290,6 +290,26 @@ it('guesses from the known-ports table, and says so, when an image declares noth
         ->and($silent->json('warnings'))->toContain(__('docker.image.warning_no_port'));
 });
 
+it('adds the known-volumes table to what an image declares, so its data gets a volume', function () {
+    config(['server.docker.images.known_volumes' => ['acme/kuma' => ['/app/data'], 'acme/both' => ['/data']]]);
+    imgRegistry([
+        // Uptime Kuma 2.x: its data lives in /app/data and no VOLUME says so.
+        'docker.io/acme/kuma:2' => imgConfig(['ExposedPorts' => ['3001/tcp' => []]]),
+        'docker.io/acme/both:1' => imgConfig(['Volumes' => ['/data' => [], '/config' => []]]),
+        'docker.io/acme/other:1' => imgConfig([]),
+    ]);
+
+    $kuma = $this->withHeaders(imgAs())->getJson('/api/docker/images/inspect?image=acme/kuma:2')->assertOk();
+    $both = $this->withHeaders(imgAs())->getJson('/api/docker/images/inspect?image=acme/both:1')->assertOk();
+    $other = $this->withHeaders(imgAs())->getJson('/api/docker/images/inspect?image=acme/other:1')->assertOk();
+
+    expect($kuma->json('volumes'))->toBe(['/app/data'])
+        ->and(array_column($kuma->json('suggested_volumes'), 'path'))->toBe(['/app/data'])
+        // Declared and known at once: listed once.
+        ->and($both->json('volumes'))->toBe(['/config', '/data'])
+        ->and($other->json('volumes'))->toBe([]);
+});
+
 /*
  * Settings. An image cannot declare a required setting, so none is guessed.
  */
@@ -585,6 +605,25 @@ it('ranks Hub tags: exact versions first, newest first, then variants, then movi
         ->and($response->json('tags.4.stable'))->toBeFalse();
 });
 
+it('recommends a dotted release over a bare number that only outranks it numerically', function () {
+    // The real codercom/code-server tag list, newest first (2026-10-07).
+    Http::fake(['hub.docker.com/v2/repositories/codercom/code-server/tags*' => Http::response(['results' => array_map(
+        fn (string $name): array => ['name' => $name, 'last_updated' => '2026-10-02T00:00:00Z', 'tag_status' => 'active'],
+        ['4.140.0-39', '39', '4.140.0-fedora', 'fedora', '4.140.0-trixie', 'trixie', '4.140.0', 'latest'],
+    )])]);
+
+    $this->withHeaders(imgAs())->getJson('/api/docker/images/tags?image=codercom/code-server')
+        ->assertOk()->assertJsonPath('recommended', '4.140.0');
+
+    // An image that only publishes bare numbers still gets its newest one.
+    Http::fake(['hub.docker.com/v2/repositories/acme/counted/tags*' => Http::response(['results' => [
+        ['name' => '7', 'tag_status' => 'active'], ['name' => '12', 'tag_status' => 'active'], ['name' => 'latest', 'tag_status' => 'active'],
+    ]])]);
+
+    $this->withHeaders(imgAs())->getJson('/api/docker/images/tags?image=acme/counted')
+        ->assertOk()->assertJsonPath('recommended', '12');
+});
+
 it('lists GHCR tags from the registry, following pagination', function () {
     Http::fake(function (Request $r) {
         if (str_contains($r->url(), '/token')) {
@@ -657,6 +696,29 @@ it('ranks search results official first, then by pulls', function () {
     // Cached: the same search again asks Hub nothing.
     $this->withHeaders(imgAs())->getJson('/api/docker/images/search?q=memos')->assertOk();
     Http::assertSentCount(1);
+});
+
+it('puts the exact name typed first, and the project\'s own publisher above a busier repackage', function () {
+    // Hub's real answers on 2026-10-07, pull counts included.
+    Http::fake([
+        'hub.docker.com/v2/search/repositories/?query=umami*' => Http::response(['results' => [
+            ['repo_name' => 'elestio/umami', 'pull_count' => 56242, 'is_official' => false],
+            ['repo_name' => 'umamisoftware/umami', 'pull_count' => 180849, 'is_official' => false],
+            ['repo_name' => 'pabloszx/umami', 'pull_count' => 605359, 'is_official' => false],
+            ['repo_name' => 'umami/docker-caddy', 'pull_count' => 1647, 'is_official' => false],
+        ]]),
+        'hub.docker.com/v2/search/repositories/?query=linuxserver*' => Http::response(['results' => [
+            ['repo_name' => 'linuxserver/radarr', 'pull_count' => 900000000, 'is_official' => false],
+            ['repo_name' => 'linuxserver/heimdall', 'pull_count' => 50000000, 'is_official' => false],
+        ]]),
+    ]);
+
+    $umami = $this->withHeaders(imgAs())->getJson('/api/docker/images/search?q=umami')->assertOk();
+    $heimdall = $this->withHeaders(imgAs())->getJson('/api/docker/images/search?q=linuxserver/heimdall')->assertOk();
+
+    // `umami/docker-caddy` has the name in its namespace only: no boost.
+    expect(array_column($umami->json('results'), 'image'))->toBe(['umamisoftware/umami', 'pabloszx/umami', 'elestio/umami', 'umami/docker-caddy'])
+        ->and($heimdall->json('results.0.image'))->toBe('linuxserver/heimdall');
 });
 
 it('returns an empty list marked offline when Hub cannot be reached', function () {

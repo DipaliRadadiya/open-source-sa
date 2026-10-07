@@ -149,7 +149,9 @@ class ImageInspector
         $ports = $this->exposedPorts((array) ($runtime['ExposedPorts'] ?? []));
         [$port, $confidence] = $this->suggestedPort($image, $ports);
 
-        $volumes = array_values(array_filter(array_keys((array) ($runtime['Volumes'] ?? [])), 'is_string'));
+        $volumes = array_filter(array_keys((array) ($runtime['Volumes'] ?? [])), 'is_string');
+        $known = (array) config('server.docker.images.known_volumes', []);
+        $volumes = array_values(array_unique([...$volumes, ...(array) ($known[$image->name()] ?? [])]));
         sort($volumes);
 
         $env = $this->environment($image, (array) ($runtime['Env'] ?? []));

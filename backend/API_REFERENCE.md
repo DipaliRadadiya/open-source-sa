@@ -6059,7 +6059,7 @@ Throttle: 30/min. `limit` 1–100. Tags are ordered like this:
 2. Variants such as `1.31.6-alpine`.
 3. Everything else, such as `latest`, `edge`, `sha-…` and pre-releases (`-rc1`, `-beta`), most recently updated first.
 
-`stable` is `true` for groups 1 and 2. `recommended` is the newest plain version. If there is none, it is `latest`, and failing that the first tag. Docker Hub images and `lscr.io/linuxserver/*` are read from Hub's API, which gives `updated_at`. Other registries are read from `tags/list`, so `updated_at` is `null`.
+`stable` is `true` for groups 1 and 2. `recommended` is the newest plain version, a dotted one (`4.140.0`) before a bare number (`39`, code-server's Fedora build). If there is none, it is `latest`, and failing that the first tag. Docker Hub images and `lscr.io/linuxserver/*` are read from Hub's API, which gives `updated_at`. Other registries are read from `tags/list`, so `updated_at` is `null`.
 ```json
 { "image": "ghcr.io/usememos/memos", "recommended": "0.31.0",
   "tags": [ { "name": "0.31.0", "updated_at": null, "stable": true }, { "name": "0.31", "updated_at": null, "stable": true } ] }
@@ -6085,7 +6085,8 @@ The image is resolved for **this server's architecture**. A manifest list is nar
   - None declared → the `server.docker.images.known_ports` table gives a port marked `guessed`; otherwise `null` with `none`, and **the UI must ask**.
 - `env`: the image's `ENV` without build plumbing (`PATH`, `*_VERSION`, checksums …; see `server.docker.images.hidden_env`).
 - **`required` is never inferred.** Images cannot declare a mandatory setting, and an empty `ENV` is not one: changedetection.io ships `LOGGER_LEVEL=` and starts fine without it. `required: true` comes only from `server.docker.images.required_env`, for example `postgres` → `POSTGRES_PASSWORD`. Empty values produce a softer warning instead.
-- `suggested_volumes`: one named volume per `VOLUME`. One volume is named `<project>-data`; several are named `<project>-<last path segment>`.
+- `volumes`: the image's `VOLUME`s, plus the folders `server.docker.images.known_volumes` lists for images that keep data without declaring it (Uptime Kuma 2.x `/app/data`, n8n, Open WebUI, Homepage).
+- `suggested_volumes`: one named volume per entry in `volumes`. One volume is named `<project>-data`; several are named `<project>-<last path segment>`.
 - `uses_app_dir`: whether the image keeps its program in `/app`, read from WORKDIR, entrypoint and build history. A `COPY --from` whose *source* is `/app` does not count, and neither does an empty `mkdir /app`.
 - `size_bytes`: the compressed download size for this architecture.
 - `warnings`: localised sentences:

@@ -1900,6 +1900,18 @@ return [
                 'n8nio/n8n' => 5678,
             ],
 
+            // Folders an image keeps its data in without declaring them
+            // (no VOLUME), by repository. Added to the declared ones, so the
+            // data survives the container being recreated on an update.
+            // Measured 2026-10-07: Uptime Kuma 1.x declared /app/data, 2.x no
+            // longer does; the rest are from each image's own documentation.
+            'known_volumes' => [
+                'louislam/uptime-kuma' => ['/app/data'],
+                'n8nio/n8n' => ['/home/node/.n8n'],
+                'ghcr.io/open-webui/open-webui' => ['/app/backend/data'],
+                'ghcr.io/gethomepage/homepage' => ['/app/config'],
+            ],
+
             // Read the image while creating a site from it (DS-03): the port
             // when none was typed, a warning when the typed one is not one the
             // image declares, and its VOLUMEs as the default volumes. Off in
