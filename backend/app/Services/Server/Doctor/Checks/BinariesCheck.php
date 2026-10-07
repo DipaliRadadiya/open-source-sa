@@ -3,6 +3,7 @@
 namespace App\Services\Server\Doctor\Checks;
 
 use App\Contracts\DoctorCheck;
+use App\Contracts\PhpStack;
 use App\Services\Server\ServerOps;
 
 /**
@@ -58,7 +59,22 @@ class BinariesCheck implements DoctorCheck
         'g++' => 'building native Node modules (n8n, NodeBB)',
     ];
 
-    public function __construct(private ServerOps $serverOps) {}
+    /**
+     * Tools only one PHP stack shells out to, keyed like OPTIONAL.
+     *
+     * `phpenmod` is Debian's and only understands `/etc/php`. LSPHP never
+     * calls it — its toggle is install/remove, see
+     * `LsphpPhpStack::extensionToggleCommand()` — and on Ubuntu 26.04 the OLS
+     * install does not pull in `php-common`, so every fresh OpenLiteSpeed box
+     * there warned about a tool for a feature it does not have. 24.04 only
+     * looked healthy because something else happened to install the package.
+     */
+    private const TOGGLE_TOOLS = ['phpenmod'];
+
+    public function __construct(
+        private ServerOps $serverOps,
+        private PhpStack $stack,
+    ) {}
 
     public function key(): string
     {
@@ -82,7 +98,7 @@ class BinariesCheck implements DoctorCheck
 
         $missingOptional = [];
 
-        foreach (self::OPTIONAL as $binary => $feature) {
+        foreach ($this->optional() as $binary => $feature) {
             if (! $this->exists($binary)) {
                 $missingOptional[] = $binary.' ('.$feature.')';
             }
@@ -98,9 +114,23 @@ class BinariesCheck implements DoctorCheck
 
         return [
             'status' => 'pass',
-            'detail' => count(self::REQUIRED) + count(self::OPTIONAL).' tools present',
+            'detail' => count(self::REQUIRED) + count($this->optional()).' tools present',
             'fix' => null,
         ];
+    }
+
+    /**
+     * The optional tools this server's PHP stack actually uses.
+     *
+     * @return array<string, string>
+     */
+    private function optional(): array
+    {
+        if ($this->stack->togglesExtensions()) {
+            return self::OPTIONAL;
+        }
+
+        return array_diff_key(self::OPTIONAL, array_flip(self::TOGGLE_TOOLS));
     }
 
     /**

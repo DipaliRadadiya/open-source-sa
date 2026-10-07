@@ -303,6 +303,54 @@ describe('the checks added for "routes error after setup"', function () {
             ->and($report['healthy'])->toBeTrue();
     });
 
+    it('does not ask an OpenLiteSpeed box for phpenmod, which LSPHP never calls', function () {
+        // DS-06: every fresh OLS install on Ubuntu 26.04 warned "phpenmod (PHP
+        // extension toggles)". LSPHP has no toggle — install is enable — so
+        // the warning named a feature the box does not have, for a tool
+        // nothing on that stack runs.
+        ServerCapability::query()->delete();
+        ServerCapability::query()->create([
+            'stack' => 'ols', 'web_server' => 'openlitespeed',
+            'capabilities' => [], 'source' => 'installer', 'verified_at' => now(),
+        ]);
+
+        $asked = [];
+
+        Process::fake(function ($process) use (&$asked) {
+            $asked[] = implode(' ', $process->command);
+
+            return str_contains(implode(' ', $process->command), 'phpenmod')
+                ? Process::result(exitCode: 1)
+                : Process::result(output: '/usr/bin/thing', exitCode: 0);
+        });
+
+        config()->set('server.doctor.checks', [BinariesCheck::class]);
+        $report = app(Doctor::class)->run();
+
+        expect($report['checks'][0]['status'])->toBe('pass')
+            ->and(implode("\n", $asked))->not->toContain('phpenmod');
+    });
+
+    it('still warns about a missing phpenmod on a PHP-FPM box, where the toggle uses it', function () {
+        ServerCapability::query()->delete();
+        ServerCapability::query()->create([
+            'stack' => 'lemp', 'web_server' => 'nginx',
+            'capabilities' => [], 'source' => 'installer', 'verified_at' => now(),
+        ]);
+
+        Process::fake(function ($process) {
+            return str_contains(implode(' ', $process->command), 'phpenmod')
+                ? Process::result(exitCode: 1)
+                : Process::result(output: '/usr/bin/thing', exitCode: 0);
+        });
+
+        config()->set('server.doctor.checks', [BinariesCheck::class]);
+        $report = app(Doctor::class)->run();
+
+        expect($report['checks'][0]['status'])->toBe('warn')
+            ->and($report['checks'][0]['detail'])->toContain('phpenmod (PHP extension toggles)');
+    });
+
     it('fails when a required tool is missing', function () {
         Process::fake(function ($process) {
             return str_contains(implode(' ', $process->command), 'systemctl')
