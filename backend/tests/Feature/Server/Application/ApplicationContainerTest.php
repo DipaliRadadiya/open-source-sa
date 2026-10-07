@@ -306,6 +306,42 @@ it('refuses a mount over the site\'s own files', function () {
     expect($this->application->fresh()->volume_mounts)->toBeNull();
 });
 
+it('lets a site created since the fix keep data under /app', function () {
+    // Gotify's `/app/data`. `/app` is no longer where a new site's own files are,
+    // so refusing it would refuse a real image's only data directory.
+    fakeDockerBoxWithVolumes();
+    $this->application->forceFill(['site_mount_path' => '/panel-site'])->save();
+
+    foreach (['/app', '/app/data'] as $path) {
+        $this->withHeaders(containerHeaders())
+            ->putJson(containerUrl(), ['volume_mounts' => [['volume' => 'shop-db', 'path' => $path]]])
+            ->assertOk()
+            ->assertJsonPath('application.site_mount_path', '/panel-site');
+    }
+});
+
+it('refuses a mount over a new site\'s own files, at their new path', function () {
+    fakeDockerBoxWithVolumes();
+    $this->application->forceFill(['site_mount_path' => '/panel-site'])->save();
+
+    foreach (['/panel-site', '/panel-site/', '/panel-site/uploads', '/etc', '/'] as $path) {
+        $this->withHeaders(containerHeaders())
+            ->putJson(containerUrl(), ['volume_mounts' => [['volume' => 'shop-db', 'path' => $path]]])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('volume_mounts.0.path');
+    }
+
+    expect($this->application->fresh()->volume_mounts)->toBeNull();
+});
+
+it('names the site mount of an existing site as /app', function () {
+    // Null in the column, `/app` in the answer — what its compose file says.
+    $this->withHeaders(containerHeaders())
+        ->getJson('/api/applications/'.$this->application->id)
+        ->assertOk()
+        ->assertJsonPath('application.site_mount_path', '/app');
+});
+
 it('refuses a mount over the image itself', function () {
     fakeDockerBoxWithVolumes();
 

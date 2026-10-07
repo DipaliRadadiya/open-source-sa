@@ -1,0 +1,48 @@
+name: sv-app-1
+
+services:
+  app:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+
+    
+    ports:
+      - "127.0.0.1:20001:80"
+
+    
+    networks:
+      shop-net:
+        
+        aliases:
+          - shop
+
+    
+    volumes:
+      - /home/shop/shop/public_html:/app
+      - shop-db:/var/lib/mysql
+
+    
+    env_file:
+      - /home/shop/shop/.env
+
+    
+    mem_limit: 1g
+
+    cpus: 1.5
+
+    
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+
+networks:
+  shop-net:
+    external: true
+
+
+volumes:
+  shop-db:
+    external: true

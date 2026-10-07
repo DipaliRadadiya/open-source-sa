@@ -364,6 +364,7 @@ class ContainerSupervisor
             'appPort' => (int) $application->app_port,
             'containerPort' => (int) ($application->container_port ?: 80),
             'documentRoot' => rtrim($documentRoot, '/'),
+            'siteMount' => $application->siteMountPath(),
             'envPath' => $application->envPath(),
             'memoryLimit' => (string) ($application->memory_limit
                 ?: config('server.docker.default_memory_limit', '512m')),

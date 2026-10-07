@@ -50,9 +50,15 @@ services:
          one field that makes every other control cosmetic: `- /:/host` hands
          over the machine, and the site user does not have to be clever about
          it. Confined here, and validated again on save — a rule that only
-         exists in a template is a rule the next code path forgets. --}}
+         exists in a template is a rule the next code path forgets.
+
+         Mounted at `$siteMount`, never at a fixed `/app`: that is where a
+         quarter of popular images keep their program, and the site's empty
+         directory bound over it hid the program and crash-looped the
+         container. Sites made before the fix keep `/app` so their file does
+         not change; see `Application::siteMountPath()`. --}}
     volumes:
-      - {{ $documentRoot }}:/app
+      - {{ $documentRoot }}:{{ $siteMount }}
 @foreach ($mounts as $mount)
       - {{ $mount['volume'] }}:{{ $mount['path'] }}
 @endforeach

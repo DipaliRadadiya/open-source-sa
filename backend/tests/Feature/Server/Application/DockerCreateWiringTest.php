@@ -164,14 +164,15 @@ it('refuses half a volume', function () {
 });
 
 it('refuses a volume path over the site\'s own files at create time too', function () {
-    // The same rule the Container card enforces. A volume at `/app` hides the
-    // site's files rather than deleting them, which reads as data loss.
+    // The same rule the Container card enforces. A volume over the site mount
+    // hides the site's files rather than deleting them, which reads as data
+    // loss. `/panel-site` since DS-01 — `/app` is a legal volume path now.
     fakeDockerBoxFor();
 
     $this->withHeaders(dockerCreateHeaders())
         ->postJson('/api/applications', dockerCreatePayload([
             'volume_new' => 'ghost-content',
-            'volume_path' => '/app/content',
+            'volume_path' => '/panel-site/content',
         ]))
         ->assertStatus(422)
         ->assertJsonValidationErrors('volume_path');
@@ -390,4 +391,27 @@ it('refuses a memory limit the container could not start with', function () {
         ->postJson('/api/applications', dockerCreatePayload(['memory_limit' => '512']))
         ->assertStatus(422)
         ->assertJsonValidationErrors('memory_limit');
+});
+
+/*
+ * DS-01: a new site's own directory is mounted at /panel-site, not /app, where a
+ * quarter of popular images keep their program.
+ */
+
+it('creates a site whose directory is mounted away from /app', function () {
+    fakeDockerBoxFor();
+
+    $this->withHeaders(dockerCreateHeaders())
+        ->postJson('/api/applications', dockerCreatePayload([
+            'image' => 'gotify/server:3.1.1',
+            'container_port' => 80,
+            'volume_new' => 'gotify-data',
+            'volume_path' => '/app/data',
+        ]))
+        ->assertCreated();
+
+    $application = Application::where('name', 'Shop')->first();
+
+    expect($application->site_mount_path)->toBe('/panel-site')
+        ->and($application->volume_mounts)->toBe([['volume' => 'gotify-data', 'path' => '/app/data']]);
 });

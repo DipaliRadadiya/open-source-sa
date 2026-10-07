@@ -1,0 +1,29 @@
+name: sv-app-1
+
+services:
+  app:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+
+    
+    ports:
+      - "127.0.0.1:20001:80"
+
+    
+    volumes:
+      - /home/shop/shop/public_html:/app
+
+    
+    env_file:
+      - /home/shop/shop/.env
+
+    
+    mem_limit: 512m
+
+
+    
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

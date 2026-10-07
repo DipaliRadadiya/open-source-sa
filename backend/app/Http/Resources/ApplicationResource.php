@@ -203,6 +203,14 @@ class ApplicationResource extends JsonResource
             'cpu_limit' => $this->cpu_limit,
             'docker_network' => $this->docker_network,
             'volume_mounts' => $this->volume_mounts ?? [],
+            // Where the container sees the site's own files: `/app` for a site
+            // created before 2026-10-07, `/panel-site` since. A volume cannot
+            // mount there, so a form can say why instead of letting it fail.
+            // Null when there is no such mount: not a container, or a container
+            // run from its own compose file (pasted, or a one-click app).
+            'site_mount_path' => $this->serving_profile === 'docker' && trim((string) $this->compose) === ''
+                ? $this->siteMountPath()
+                : null,
             // Which stored credential pulls this image, if any. The id for the
             // form, and the name so a page can say "pulls with GHCR" without a
             // second request — but never anything from the credential itself.

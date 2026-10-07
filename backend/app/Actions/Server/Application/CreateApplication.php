@@ -10,6 +10,7 @@ use App\Jobs\ProvisionApplication;
 use App\Models\Application;
 use App\Models\ApplicationDomain;
 use App\Models\SystemUser;
+use App\Rules\ContainerMountPath;
 use App\Rules\SupportedNodeVersion;
 use App\Services\ActivityLogger;
 use App\Services\Applications\ServingProfile;
@@ -127,6 +128,13 @@ class CreateApplication
                     // both. The objects themselves are created on the box at
                     // provision time; this records the intent.
                     ...$this->containerWiring($data),
+                    // Where the container sees the site's directory. Stored
+                    // rather than left null, because null is the `/app` every
+                    // older site was given — and `/app` is where a quarter of
+                    // popular images keep their program. Only the Docker type:
+                    // a one-click app ships its own compose file, which has no
+                    // site mount at all.
+                    'site_mount_path' => $type->name() === 'docker' ? ContainerMountPath::SITE_MOUNT : null,
                     'name' => $data['name'],
                     'domain' => $data['domain'],
                     // A blank version is the server default, resolved and

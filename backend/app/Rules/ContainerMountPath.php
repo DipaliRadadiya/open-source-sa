@@ -10,8 +10,10 @@ use Illuminate\Contracts\Validation\ValidationRule;
  *
  * Three refusals, and the first is the one that matters.
  *
- *  - **`/app`, or anything containing it.** That is where the generated compose
- *    file bind-mounts the site's own directory. A volume mounted there SHADOWS
+ *  - **The site mount, or anything under it.** That is where the generated
+ *    compose file bind-mounts the site's own directory — `/app` for sites created
+ *    before 2026-10-07, {@see SITE_MOUNT} for every site since, so the rule is
+ *    given the path of the site it is validating. A volume mounted there SHADOWS
  *    it: the site's files are still on the host, still in the backup, and
  *    completely invisible to the running container — which serves an empty
  *    volume instead. It looks exactly like the files were deleted, and the
@@ -33,8 +35,37 @@ use Illuminate\Contracts\Validation\ValidationRule;
  */
 class ContainerMountPath implements ValidationRule
 {
-    /** The site's own directory, from `compose.blade.php`. */
-    public const SITE_MOUNT = '/app';
+    /**
+     * Where a NEW simple-mode site sees its own directory.
+     *
+     * A top-level directory of the panel's own, rather than `/srv/site` or
+     * anything under a conventional root: File Browser serves `/srv` to its
+     * users and Caddy works from it, so a site mounted there would put the
+     * site's `.env` in front of whoever uses the app. No image ships content
+     * at `/panel-site` — a registry survey of 45 popular images found none.
+     */
+    public const SITE_MOUNT = '/panel-site';
+
+    /**
+     * Where sites created before 2026-10-07 see it, and still do.
+     *
+     * Also where roughly a quarter of popular images keep their program, which
+     * is why it stopped being the default: an empty `public_html` bound over it
+     * hid changedetection.io, Gotify, Actual and every linuxserver.io image.
+     * Kept for those sites so their compose file never changes underneath them.
+     */
+    public const LEGACY_SITE_MOUNT = '/app';
+
+    private readonly string $siteMount;
+
+    /**
+     * @param  string|null  $siteMount  The site mount of the application being
+     *                                  edited; null for a site being created.
+     */
+    public function __construct(?string $siteMount = null)
+    {
+        $this->siteMount = rtrim($siteMount ?: self::SITE_MOUNT, '/');
+    }
 
     /** An empty volume over any of these is a container that cannot boot. */
     private const RESERVED = ['/etc', '/bin', '/sbin', '/usr', '/lib', '/lib64', '/proc', '/sys', '/dev', '/boot', '/run'];
@@ -55,8 +86,8 @@ class ContainerMountPath implements ValidationRule
             return;
         }
 
-        if ($path === self::SITE_MOUNT || str_starts_with($path.'/', self::SITE_MOUNT.'/')) {
-            $fail(__('validation.docker_mount_site_root', ['path' => self::SITE_MOUNT]));
+        if ($path === $this->siteMount || str_starts_with($path.'/', $this->siteMount.'/')) {
+            $fail(__('validation.docker_mount_site_root', ['path' => $this->siteMount]));
 
             return;
         }

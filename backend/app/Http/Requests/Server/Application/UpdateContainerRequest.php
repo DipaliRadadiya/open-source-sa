@@ -96,7 +96,10 @@ class UpdateContainerRequest extends FormRequest
                 // would be — but it still reaches a compose file, and a target
                 // nobody can predict is a target nobody can review.
                 'not_regex:/(^|\/)\.\.(\/|$)/',
-                new ContainerMountPath,
+                // This site's own mount, not a constant: `/app` is the site's
+                // directory on a site created before 2026-10-07 and a perfectly
+                // good volume path (Gotify's `/app/data`) on one created since.
+                new ContainerMountPath($this->route('application')?->siteMountPath()),
             ],
         ];
     }

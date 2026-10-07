@@ -3,6 +3,7 @@
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Models\SystemUser;
+use App\Rules\ContainerMountPath;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Applications\ComposeValidator;
 use App\Services\Server\Applications\ContainerSupervisor;
@@ -1142,4 +1143,89 @@ it('still writes an override for a genuinely hand-written file', function () {
         ->apply($application, '/home/shop/shop/public_html');
 
     expect(overrideWritten())->toContain('mem_limit: 256m');
+});
+
+/*
+ * Where the site's own directory is mounted (DS-01).
+ *
+ * Every simple-mode container used to get `public_html` bound over `/app`, which
+ * is where changedetection.io, Gotify, Actual, Umami and every linuxserver.io
+ * image keep their program. The empty directory hid it, the container
+ * crash-looped, and the site showed "Setup failed".
+ *
+ * The goldens under tests/Fixtures/docker were rendered by the code BEFORE this
+ * change. A site created before it has no `site_mount_path`, and its file must
+ * stay byte-for-byte what it was — a "changed" compose file on the next deploy
+ * is a diff nobody can tell from a real one.
+ */
+
+it('renders an existing site byte-for-byte as before the fix', function () {
+    [$ops, $files] = containerDeps();
+    $supervisor = new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops));
+    $application = containerApp();
+
+    expect($application->site_mount_path)->toBeNull()
+        ->and($supervisor->generated($application, '/home/shop/shop/public_html'))
+        ->toBe(file_get_contents(base_path('tests/Fixtures/docker/legacy-compose.yml')));
+
+    // Every optional block switched on, so the guard is not only about the
+    // smallest file.
+    $application->forceFill([
+        'volume_mounts' => [['volume' => 'shop-db', 'path' => '/var/lib/mysql']],
+        'docker_network' => 'shop-net',
+        'cpu_limit' => '1.5',
+        'memory_limit' => '1g',
+    ])->save();
+
+    expect($supervisor->generated($application->fresh(), '/home/shop/shop/public_html'))
+        ->toBe(file_get_contents(base_path('tests/Fixtures/docker/legacy-compose-wired.yml')));
+});
+
+it('never mounts a new site over /app', function () {
+    [$ops, $files] = containerDeps();
+    $supervisor = new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops));
+
+    $application = containerApp();
+    $application->forceFill([
+        'site_mount_path' => ContainerMountPath::SITE_MOUNT,
+        // Gotify keeps its data here. Refused before the fix; a volume now.
+        'volume_mounts' => [['volume' => 'gotify-data', 'path' => '/app/data']],
+    ])->save();
+
+    $written = $supervisor->generated($application->fresh(), '/home/shop/shop/public_html');
+
+    expect($written)->toContain('- /home/shop/shop/public_html:/panel-site')
+        ->and($written)->not->toContain('public_html:/app')
+        // The only `/app` left is the user's own volume, under it.
+        ->and(substr_count($written, ':/app'))->toBe(1)
+        ->and($written)->toContain('- gotify-data:/app/data');
+});
+
+it('leaves a pasted compose file alone, whatever the site mount', function () {
+    // Pasted-compose mode never had the site mount, and must not gain one.
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        'compose_validate' => fn () => new ServerOpsResult(
+            ok: true, reference: 'r', result: processResult(json_encode([
+                'services' => ['web' => [
+                    'image' => 'nginx:1.27-alpine',
+                    'ports' => [['published' => '20001', 'target' => 80, 'host_ip' => '127.0.0.1']],
+                ]],
+            ])), answered: true,
+        ),
+        'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+    ], $ran, $written);
+
+    $application = containerApp();
+    $application->forceFill([
+        'site_mount_path' => ContainerMountPath::SITE_MOUNT,
+        'compose' => "services:\n  web:\n    image: nginx:1.27-alpine\n    ports:\n      - \"20001:80\"\n",
+    ])->save();
+
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
+        ->apply($application->fresh(), '/home/shop/shop/public_html');
+
+    expect($written)->not->toContain('/panel-site')
+        ->and($written)->not->toContain(':/app');
 });

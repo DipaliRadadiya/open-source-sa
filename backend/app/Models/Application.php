@@ -10,6 +10,7 @@ use App\Enums\SupervisorMode;
 use App\Enums\WafCategory;
 use App\Enums\WafMode;
 use App\Exceptions\Server\Application\SystemUserMissingException;
+use App\Rules\ContainerMountPath;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\WebServers\WebServerManager;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -32,7 +33,7 @@ use Illuminate\Support\Str;
     // container; `app_port` is the loopback port on the host that nginx
     // proxies to, and conflating the two publishes a container on a port
     // another application already holds.
-    'image', 'registry_id', 'container_port', 'memory_limit', 'cpu_limit', 'compose', 'docker_network', 'volume_mounts', 'docker_secrets', 'credentials_seen_at',
+    'image', 'registry_id', 'container_port', 'memory_limit', 'cpu_limit', 'compose', 'docker_network', 'volume_mounts', 'site_mount_path', 'docker_secrets', 'credentials_seen_at',
     'build_command', 'deploy_script', 'start_command', 'package_manager', 'process_instances', 'supervisor_mode', 'pm2_process_name',
     'git_account_id', 'repository', 'repository_url', 'branch', 'settings', 'install_secrets',
     'steps', 'failed_step', 'failed_reason', 'provisioning_started_at', 'reference', 'last_commit', 'last_deployed_at', 'directory_size_bytes', 'volume_size_bytes', 'directory_size_updated_at',
@@ -683,6 +684,19 @@ class Application extends Model
      * pointed, so changing `web_root` moved the code along with it and the
      * front controller was never at the root being served.
      */
+    /**
+     * Where a simple-mode container sees this site's own directory.
+     *
+     * Null is `/app`, what every site created before the column existed was
+     * given — so its compose file renders exactly as it always has. New sites
+     * store {@see ContainerMountPath::SITE_MOUNT}, a path no image ships content
+     * in; `/app` hid the program of roughly a quarter of popular images.
+     */
+    public function siteMountPath(): string
+    {
+        return $this->site_mount_path ?: ContainerMountPath::LEGACY_SITE_MOUNT;
+    }
+
     public function publicHtmlPath(): string
     {
         return $this->rootPath().'/public_html';
