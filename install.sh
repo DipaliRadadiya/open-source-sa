@@ -1152,6 +1152,10 @@ install_packages() {
             # is what stops nginx and Apache being the odd ones out: the two
             # lists are now identical, and PhpRuntimeTest fails if they drift.
             "php${PHP_VERSION}-soap"
+            # What v7 installs as well (operator, 2026-10-07): imagick for
+            # WordPress's image editor, imap for Mautic, gmp for Nextcloud.
+            # Measured on 24.04 and 26.04 for every PHP 7.4–8.5.
+            "php${PHP_VERSION}-imagick" "php${PHP_VERSION}-imap" "php${PHP_VERSION}-gmp"
         )
     fi
     # Only the chosen web server. Installing both would have them fight over
@@ -1233,12 +1237,21 @@ install_node() {
     # alias alone did not, so a fresh server had a default Node and no `npm`
     # on anyone's PATH, and a Node-RED install died on
     # `npm: No such file or directory`. Re-run safe: -sfn replaces a link.
+    #
+    # Not over a Node the server already has. A server that comes from v7 runs
+    # its sites on v7's Node (nodesource, /usr/bin/node); /usr/local/bin comes
+    # first on PATH, so a link here would move every one of them to this
+    # version without a word (operator, 2026-10-07: keep v7's Node).
     local node_bin_dir
     node_bin_dir=$(dirname "$NODE_BIN")
-    for bin in node npm npx; do
-        run ln -sfn "${node_bin_dir}/${bin}" "/usr/local/bin/${bin}"
-    done
-    ok "node, npm and npx linked into /usr/local/bin"
+    if [[ -x /usr/bin/node ]]; then
+        skip "node already on this server ($(/usr/bin/node -v 2>/dev/null)) — not shadowed"
+    else
+        for bin in node npm npx; do
+            run ln -sfn "${node_bin_dir}/${bin}" "/usr/local/bin/${bin}"
+        done
+        ok "node, npm and npx linked into /usr/local/bin"
+    fi
 
     # The installer runs as root under umask 077, but the frontend build and
     # the panel's runtime manager execute Node as the panel account. Without
@@ -1430,6 +1443,42 @@ set_env() {
 
 # ─── Redis ───────────────────────────────────────────────────────────────────
 
+# Local mail, as v7 sets a server up (operator, 2026-10-07). Without an MTA
+# PHP's mail() fails, so WordPress password resets, contact forms and every
+# notification an application sends go nowhere, with no error on screen.
+#
+# Postfix as v7 has it ("Internet Site", relaying only for this machine), but
+# listening on loopback only: the sites need to send, nothing needs to
+# receive, and v7's listener on every interface was kept closed only by the
+# firewall. Never fatal — a panel without local mail still works.
+configure_mail() {
+    step "Setting up local mail (Postfix)"
+
+    if (( DRY_RUN )); then
+        run apt-get install -y postfix
+        return
+    fi
+
+    if dpkg-query -W -f='${Status}' postfix 2>/dev/null | grep -q "install ok installed"; then
+        skip "Postfix already installed — its configuration is left as it is"
+        return
+    fi
+
+    local mailname
+    mailname=$(hostname -f 2>/dev/null || hostname)
+    printf 'postfix postfix/main_mailer_type select Internet Site\npostfix postfix/mailname string %s\n' "$mailname" \
+        | debconf-set-selections >>"$LOG_FILE" 2>&1 || true
+
+    if ! DEBIAN_FRONTEND=noninteractive apt-get install -y postfix >>"$LOG_FILE" 2>&1; then
+        warn "could not install Postfix — sites will not be able to send mail"
+        return
+    fi
+
+    postconf -e 'inet_interfaces = loopback-only' >>"$LOG_FILE" 2>&1 || true
+    systemctl restart postfix >>"$LOG_FILE" 2>&1 || true
+    ok "Postfix sends mail for this server (listening on loopback only)"
+}
+
 configure_redis() {
     step "Securing Redis"
 
@@ -1454,6 +1503,15 @@ configure_redis() {
         REDIS_PASSWORD=${REDIS_PASSWORD:0:32}
         printf '\n# Added by the Control panel installer\nrequirepass %s\n' "$REDIS_PASSWORD" >>"$conf"
         ok "generated a Redis password"
+    fi
+
+    # Bounded like v7 (operator, 2026-10-07): 256 MB, least-recently-used
+    # keys go first. Without it Redis grows until the kernel kills something,
+    # and with `noeviction` a full cache makes every write fail. Left alone
+    # when the operator already set one.
+    if ! grep -qE '^maxmemory ' "$conf"; then
+        printf '\n# Added by the Control panel installer\nmaxmemory 256mb\nmaxmemory-policy allkeys-lru\n' >>"$conf"
+        ok "Redis memory capped at 256 MB (allkeys-lru)"
     fi
 
     run systemctl enable --now redis-server
@@ -2281,6 +2339,14 @@ install_ols_packages() {
         "${lsphp}-redis" "${lsphp}-igbinary" "${lsphp}-opcache" >>"$LOG_FILE" 2>&1; then
         warn "could not install all of ${lsphp} — hosted PHP sites may be missing extensions"
         warn "check with: apt-cache search lsphp"
+    fi
+
+    # imagick and imap, as v7 installs them (operator, 2026-10-07). A call of
+    # their own and optional: LiteSpeed packages them from 8.2 up only, and in
+    # the call above one missing name would take the panel's own PHP down with
+    # it. gmp needs nothing — LiteSpeed compiles it in.
+    if ! apt-get install -y "${lsphp}-imagick" "${lsphp}-imap" >>"$LOG_FILE" 2>&1; then
+        warn "${lsphp} has no imagick/imap package — sites on it run without them"
     fi
 }
 
@@ -3708,6 +3774,7 @@ main() {
     install_node
     fetch_source
     configure_redis
+    configure_mail
     configure_fpm
     # nginx and TLS come before the two things that bake URLs in: the backend's
     # .env and the frontend's build. Next inlines NEXT_PUBLIC_* at build time, so

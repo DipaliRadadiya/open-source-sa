@@ -438,6 +438,19 @@ class NodeRuntime implements Runtime
             return null;
         }
 
+        // Not in front of a Node the server already had. A server that comes
+        // from v7 runs its sites on v7's Node (nodesource, /usr/bin/node), and
+        // /usr/local/bin comes first on PATH: a link here moves every one of
+        // them to this version without a word (operator, 2026-10-07). Links
+        // this panel made before are taken back; anything else in
+        // /usr/local/bin is left alone. Choosing a default on the Node screen
+        // ({@see setDefault()}) still links — that is the user deciding.
+        if ($this->systemNodePresent()) {
+            $this->unlinkOwnLinks();
+
+            return null;
+        }
+
         $this->assertBinaries($default);
         $this->linkBinaries($default);
 
@@ -468,6 +481,33 @@ class NodeRuntime implements Runtime
             $this->restoreDefault($previous, $version);
 
             throw $e;
+        }
+    }
+
+    /**
+     * A Node installed outside fnm — v7's nodesource package, or the distro's.
+     */
+    public function systemNodePresent(): bool
+    {
+        return $this->serverOps->probe(
+            ['test', '-x', (string) config('server.runtimes.node.outside_binary', '/usr/bin/node')],
+            ['feature' => 'runtime', 'op' => 'system_node_check'],
+        )->ok;
+    }
+
+    /**
+     * Remove node/npm/npx from /usr/local/bin only where they are this
+     * panel's links into the fnm directory.
+     */
+    private function unlinkOwnLinks(): void
+    {
+        $dir = rtrim((string) config('server.runtimes.node.dir', '/opt/fnm'), '/');
+
+        foreach (['node', 'npm', 'npx'] as $binary) {
+            $this->warnOnFailure($this->serverOps->run(
+                ['find', '/usr/local/bin', '-maxdepth', '1', '-name', $binary, '-type', 'l', '-lname', "{$dir}/*", '-delete'],
+                ['feature' => 'runtime', 'op' => 'unlink_default', 'binary' => $binary],
+            ));
         }
     }
 

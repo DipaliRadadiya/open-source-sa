@@ -2442,7 +2442,11 @@ return [
             | would have built, and that set is the one proven on hardware.
             | OpenLiteSpeedTest asserts the two stay in step.
             */
-            'base_packages' => ['common', 'mysql', 'pgsql', 'curl', 'intl', 'sqlite3', 'redis', 'igbinary', 'opcache'],
+            // imagick and imap as v7 has them (operator, 2026-10-07); LiteSpeed
+            // packages them from 8.2 up and compiles gmp in. A version with no
+            // package for one is installed without it — the runtime drops an
+            // extension the index does not have rather than failing.
+            'base_packages' => ['common', 'mysql', 'pgsql', 'curl', 'intl', 'sqlite3', 'redis', 'igbinary', 'opcache', 'imagick', 'imap'],
         ],
     ],
 
@@ -2829,6 +2833,9 @@ return [
             // Whatever Node was already on the box. Detected and reported so
             // a migrated server keeps working; never modified.
             'system_binary' => env('SERVER_NODE_BINARY', 'node'),
+            // A Node installed outside fnm (v7's nodesource package). While it
+            // is there the panel does not link its default in front of it.
+            'outside_binary' => env('SERVER_NODE_OUTSIDE_BINARY', '/usr/bin/node'),
             // Newest patch of this many majors, so the picker is a list
             // somebody can read rather than every release ever made.
             'installable_majors' => (int) env('SERVER_NODE_INSTALLABLE_MAJORS', 6),
@@ -2946,7 +2953,7 @@ return [
                 // OpenLiteSpeed never had this because OlsInstallerTest has
                 // asserted the same parity since its own drift caused an
                 // install of nothing. PhpRuntimeTest now does the same here.
-                'fpm,cli,common,mysql,pgsql,curl,mbstring,xml,zip,gd,intl,bcmath,soap,sqlite3,redis,igbinary,opcache'
+                'fpm,cli,common,mysql,pgsql,curl,mbstring,xml,zip,gd,intl,bcmath,soap,sqlite3,redis,igbinary,opcache,imagick,imap,gmp'
             )))),
             'install_timeout' => (int) env('SERVER_PHP_INSTALL_TIMEOUT', 900),
 

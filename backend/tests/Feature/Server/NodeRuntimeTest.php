@@ -658,6 +658,40 @@ describe('found on a real server, 2026-09-23', function () {
         Process::assertNotRan(fn ($process) => $process->command[0] === 'chown');
     });
 
+    it('keeps the server\'s own Node in front, as on a server from v7', function () {
+        // v7 installs Node from nodesource at /usr/bin/node and runs its sites
+        // on it. /usr/local/bin comes first on PATH, so linking the default
+        // there moved them all to another version (operator, 2026-10-07).
+        $runs = fakeNode(installed: ['24.1.0'], default: '24.1.0');
+        Process::fake(function ($process) use ($runs) {
+            $runs[] = ['command' => $process->command];
+            $command = $process->command;
+
+            if ($command[0] === 'stat') {
+                return Process::result(output: "panel:panel\n");
+            }
+
+            if (str_ends_with((string) $command[0], 'fnm')) {
+                return in_array('list', $command, true)
+                    ? Process::result(output: "* v24.1.0 default\n")
+                    : Process::result();
+            }
+
+            return Process::result(output: "/usr/local/bin/fnm\n");
+        });
+
+        $this->artisan('runtimes:repair-node')->assertSuccessful();
+
+        $commands = collect($runs)->map(fn ($r) => implode(' ', $r['command']));
+
+        expect($commands->contains(fn ($c) => str_starts_with($c, 'ln -sfn') && str_contains($c, '/usr/local/bin/node')))->toBeFalse();
+
+        // Only this panel's own links are taken back, nothing else in /usr/local/bin.
+        foreach (['node', 'npm', 'npx'] as $bin) {
+            expect($commands)->toContain("find /usr/local/bin -maxdepth 1 -name {$bin} -type l -lname /opt/fnm/* -delete");
+        }
+    });
+
     it('repairs an existing server: links the default and adopts every version', function () {
         $runs = fakeNode(installed: ['22.11.0', '24.1.0'], default: '24.1.0');
         Process::fake(function ($process) use ($runs) {
@@ -666,6 +700,11 @@ describe('found on a real server, 2026-09-23', function () {
 
             if ($command[0] === 'stat') {
                 return Process::result(output: "panel:panel\n");
+            }
+
+            // No Node outside fnm on this server.
+            if (in_array('test', $command, true) && in_array('/usr/bin/node', $command, true)) {
+                return Process::result(exitCode: 1);
             }
 
             if (str_ends_with((string) $command[0], 'fnm')) {
