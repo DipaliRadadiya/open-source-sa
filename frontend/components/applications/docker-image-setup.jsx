@@ -22,7 +22,6 @@ import {
   searchDockerImages,
 } from "@/lib/api/docker";
 import {
-  ENV_KEY_PATTERN,
   imageInspectResponseSchema,
   imageSearchResponseSchema,
   imageTagsResponseSchema,
@@ -33,6 +32,7 @@ import {
   splitImageRef,
   volumeNameFor,
 } from "@/lib/docker/image-ref";
+import { DOCKER_LIMITS, envRowProblem } from "@/lib/docker/create-request";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,7 @@ import { Caution } from "@/components/ui/caution";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Note } from "@/components/ui/note";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -95,13 +96,14 @@ function volumeRowsFrom(inspection) {
  * image itself declares (port, folders to keep, settings) instead of typing it.
  *
  * Writes `image`, `container_port` and `registry_id`, plus `docker_volumes`,
- * `docker_env` and `docker_image_state`, which the create form turns into the
- * request.
+ * `docker_env`, `docker_required_env` and `docker_image_state`, which the create
+ * form turns into the request.
  */
 export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
   const t = useTranslations("applications.dockerImage");
   const format = useFormatter();
   const listId = useId();
+  const versionId = useId();
   const image = useWatch({ control: form.control, name: "image" }) ?? "";
   const registryId = useWatch({ control: form.control, name: "registry_id" }) ?? "";
   const appName = useWatch({ control: form.control, name: "name" }) ?? "";
@@ -112,7 +114,8 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
   const initial = splitImageRef(image);
   const [repository, setRepository] = useState(initial.repository);
   const [query, setQuery] = useState(initial.repository);
-  const [search, setSearch] = useState({ state: "idle", results: [] });
+  // Tagged with its query: an answer for an earlier query is never shown for this one.
+  const [search, setSearch] = useState({ query: "", state: "idle", results: [] });
   const [active, setActive] = useState(-1);
   const [tags, setTags] = useState({ state: "idle", list: [], recommended: "" });
   const [tag, setTag] = useState(initial.tag);
@@ -123,18 +126,21 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
 
   const chosen = Boolean(repository);
   const typed = query.trim();
+  const answered = search.query === typed;
+  const searchState = answered ? search.state : "loading";
+  const searchResults = useMemo(() => (answered ? search.results : []), [answered, search.results]);
 
   // Search as the user types, only while nothing is chosen.
   useEffect(() => {
     if (chosen || typed.length < 2) return undefined;
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      setSearch((current) => ({ ...current, state: "loading" }));
       searchDockerImages(typed, { signal: controller.signal })
         .then(({ data }) => {
           const parsed = imageSearchResponseSchema.safeParse(data);
-          if (!parsed.success) return setSearch({ state: "unavailable", results: [] });
+          if (!parsed.success) return setSearch({ query: typed, state: "unavailable", results: [] });
           setSearch({
+            query: typed,
             state: parsed.data.offline ? "offline" : parsed.data.results.length ? "ready" : "empty",
             results: parsed.data.results,
           });
@@ -142,7 +148,7 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
         })
         .catch((error) => {
           const state = requestState(error);
-          if (state) setSearch({ state, results: [] });
+          if (state) setSearch({ query: typed, state, results: [] });
         });
     }, 300);
     return () => {
@@ -222,7 +228,13 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
             { shouldDirty: true, shouldValidate: false },
           );
           form.setValue("docker_volumes", volumeRowsFrom(result), { shouldDirty: true });
-          form.setValue("docker_env", envRowsFrom(result), { shouldDirty: true });
+          const rows = envRowsFrom(result);
+          form.setValue("docker_env", rows, { shouldDirty: true });
+          form.setValue(
+            "docker_required_env",
+            rows.filter((row) => row.required).map((row) => row.key),
+            { shouldDirty: false },
+          );
         })
         .catch((error) => {
           if (!requestState(error)) return;
@@ -232,6 +244,7 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
           form.setValue("container_port", "", { shouldDirty: true });
           form.setValue("docker_volumes", [], { shouldDirty: true });
           form.setValue("docker_env", [], { shouldDirty: true });
+          form.setValue("docker_required_env", [], { shouldDirty: false });
         });
     }, 0);
     return () => {
@@ -242,7 +255,7 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
 
   function choose(value) {
     const { repository: repo, tag: typedTag } = splitImageRef(value);
-    if (!repo || !looksLikeImageRef(value)) return;
+    if (!repo || !looksLikeImageRef(value) || value.length > DOCKER_LIMITS.image) return;
     setQuery(repo);
     setTag(typedTag);
     setRepository(repo);
@@ -257,20 +270,23 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
     form.setValue("container_port", "", { shouldDirty: true });
     form.setValue("docker_volumes", [], { shouldDirty: true });
     form.setValue("docker_env", [], { shouldDirty: true });
+    form.setValue("docker_required_env", [], { shouldDirty: false });
+    form.clearErrors(["docker_env", "docker_env_list", "docker_volumes", "docker_volumes_list"]);
     requestAnimationFrame(() => inputRef.current?.focus());
   }
 
   // A pasted reference is offered as its own row, ahead of the matches.
   const showTyped =
     looksLikeImageRef(typed) &&
-    !search.results.some((result) => result.image === typed) &&
-    (/[/:.@]/.test(typed) || ["offline", "unavailable", "empty"].includes(search.state));
+    typed.length <= DOCKER_LIMITS.image &&
+    !searchResults.some((result) => result.image === typed) &&
+    (/[/:.@]/.test(typed) || ["offline", "unavailable", "empty"].includes(searchState));
   const options = useMemo(
     () => [
       ...(showTyped ? [{ image: typed, typed: true }] : []),
-      ...(search.state === "ready" ? search.results : []),
+      ...(searchState === "ready" ? searchResults : []),
     ],
-    [showTyped, typed, search],
+    [showTyped, typed, searchState, searchResults],
   );
   const listOpen = !chosen && typed.length >= 2;
 
@@ -297,28 +313,33 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
   const portDiffers =
     detected?.suggested_port && String(port ?? "") !== "" && Number(port) !== detected.suggested_port;
   const otherPorts = (detected?.exposed_ports ?? []).filter((item) => item !== detected?.suggested_port);
-  const serverErrors = ["volume_new", "volume_path", "volume_mounts", "env"]
-    .flatMap((key) =>
-      Object.entries(errors)
-        .filter(([name]) => name === key || name.startsWith(`${key}.`))
-        .map(([, error]) => error?.message),
-    )
-    .filter(Boolean);
+  // Server errors placed by the create form (see dockerServerErrors).
+  const envListError = errors.docker_env_list?.message;
+  const volumeListError = errors.docker_volumes_list?.message;
+  const checkedVolumes = volumes.filter((volume) => volume.checked).length;
+  const envFull = envRows.length >= DOCKER_LIMITS.envRows;
 
   function updateEnv(index, patch) {
     const next = envRows.map((row, i) => (i === index ? { ...row, ...patch } : row));
     form.setValue("docker_env", next, { shouldDirty: true });
+    form.clearErrors([`docker_env.${index}`, "docker_env_list"]);
   }
 
+  // A setting the image requires stays: without it the app crash-loops on start.
   function removeEnv(index) {
+    const row = envRows[index];
+    if (!row || (row.fromImage && row.required)) return;
     form.setValue(
       "docker_env",
       envRows.filter((_, i) => i !== index),
       { shouldDirty: true },
     );
+    // Row errors are by position, which just shifted.
+    form.clearErrors(["docker_env", "docker_env_list"]);
   }
 
   function addEnv() {
+    if (envFull) return;
     form.setValue(
       "docker_env",
       [...envRows, { id: `user-${Date.now()}`, key: "", value: "", original: "", required: false, fromImage: false }],
@@ -367,6 +388,7 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
                       spellCheck={false}
                       className="ps-8"
                       placeholder={t("searchPlaceholder")}
+                      maxLength={DOCKER_LIMITS.image}
                       value={query}
                       onChange={(event) => setQuery(event.target.value)}
                       onKeyDown={onSearchKeyDown}
@@ -375,12 +397,23 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
                 </div>
                 {listOpen ? (
                   <div className="rounded-lg border bg-card">
-                    {search.state === "loading" && !options.length ? (
-                      <p className="flex items-center gap-2 px-3 py-2.5 text-sm text-muted-foreground">
-                        <Loader2 className="size-3.5 animate-spin" aria-hidden />
-                        {t("searching")}
-                      </p>
-                    ) : null}
+                    {/* Announced as it changes: a screen reader is otherwise never told results arrived. */}
+                    <div role="status" aria-live="polite" className={cn(options.length && "[&>p:not(.sr-only)]:border-b")}>
+                      {searchState === "loading" ? (
+                        <p className="flex items-center gap-2 px-3 py-2.5 text-sm text-muted-foreground">
+                          <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                          {t("searching")}
+                        </p>
+                      ) : searchState === "empty" ? (
+                        <p className="px-3 py-2.5 text-sm text-muted-foreground">{t("noResults", { query: typed })}</p>
+                      ) : searchState === "offline" ? (
+                        <p className="px-3 py-2.5 text-sm text-muted-foreground">{t("offline")}</p>
+                      ) : searchState === "unavailable" ? (
+                        <p className="px-3 py-2.5 text-sm text-muted-foreground">{t("searchUnavailable")}</p>
+                      ) : searchState === "ready" ? (
+                        <p className="sr-only">{t("resultsFound", { count: searchResults.length })}</p>
+                      ) : null}
+                    </div>
                     <ul id={listId} role="listbox" aria-label={t("resultsLabel")} className="max-h-80 overflow-y-auto">
                       {options.map((option, index) => (
                         <li
@@ -429,13 +462,6 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
                         </li>
                       ))}
                     </ul>
-                    {search.state === "empty" ? (
-                      <p className="px-3 py-2.5 text-sm text-muted-foreground">{t("noResults", { query: typed })}</p>
-                    ) : search.state === "offline" ? (
-                      <p className="px-3 py-2.5 text-sm text-muted-foreground">{t("offline")}</p>
-                    ) : search.state === "unavailable" ? (
-                      <p className="px-3 py-2.5 text-sm text-muted-foreground">{t("searchUnavailable")}</p>
-                    ) : null}
                   </div>
                 ) : (
                   <FormDescription className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
@@ -464,12 +490,12 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
       {/* 2. The version */}
       {chosen ? (
         <div data-field-name="image_tag" className="space-y-2">
-          <FormLabel hint={t("versionHint")}>{t("versionLabel")}</FormLabel>
+          <Label htmlFor={versionId} hint={t("versionHint")}>{t("versionLabel")}</Label>
           {tags.state === "loading" ? (
             <Skeleton className="h-9 w-full sm:w-72" />
           ) : tags.state === "ready" ? (
             <Select value={tag} onValueChange={setTag}>
-              <SelectTrigger className="w-full sm:w-72" aria-label={t("versionLabel")}>
+              <SelectTrigger id={versionId} className="w-full sm:w-72">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="max-h-64">
@@ -486,10 +512,11 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
             </Select>
           ) : (
             <Input
+              id={versionId}
               className="w-full font-mono sm:w-72"
               value={tag}
+              maxLength={128}
               spellCheck={false}
-              aria-label={t("versionLabel")}
               onChange={(event) => setTag(event.target.value.trim())}
             />
           )}
@@ -615,19 +642,23 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
                         const id = `docker-volume-${index}`;
                         // Named in the same order as the request, so the label is the volume created.
                         const name = volume.checked ? volumeName(volume.path) : null;
+                        const rowError = errors.docker_volumes?.[index]?.message;
                         return (
                           <li key={volume.path} className="flex items-start gap-2.5">
                             <Checkbox
                               id={id}
                               className="mt-0.5"
                               checked={volume.checked}
-                              onCheckedChange={(checked) =>
+                              aria-invalid={rowError ? true : undefined}
+                              aria-describedby={rowError ? `${id}-error` : undefined}
+                              onCheckedChange={(checked) => {
                                 form.setValue(
                                   "docker_volumes",
                                   volumes.map((item, i) => (i === index ? { ...item, checked: Boolean(checked) } : item)),
                                   { shouldDirty: true },
-                                )
-                              }
+                                );
+                                form.clearErrors([`docker_volumes.${index}`, "docker_volumes_list"]);
+                              }}
                             />
                             <label htmlFor={id} className="min-w-0 text-sm">
                               {t.rich("storageKeep", {
@@ -639,6 +670,9 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
                                   ? t("storageVolume", { name })
                                   : t("storageOff")}
                               </span>
+                              {rowError ? (
+                                <span id={`${id}-error`} className="block text-xs text-destructive">{rowError}</span>
+                              ) : null}
                             </label>
                           </li>
                         );
@@ -647,6 +681,12 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
                   ) : (
                     <p className="text-sm text-muted-foreground">{t("storageNone")}</p>
                   )}
+                  {checkedVolumes > DOCKER_LIMITS.volumes ? (
+                    <p className="text-xs text-destructive">{t("storageLimit", { max: DOCKER_LIMITS.volumes })}</p>
+                  ) : null}
+                  {volumeListError ? (
+                    <p className="text-xs text-destructive" data-form-error>{volumeListError}</p>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -661,8 +701,14 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
                   {envRows.length ? (
                     <ul className="space-y-2">
                       {envRows.map((row, index) => {
-                        const missing = row.required && !String(row.value).trim();
-                        const badKey = Boolean(row.key) && !ENV_KEY_PATTERN.test(row.key);
+                        const problem = envRowProblem(row);
+                        const missing = problem === "required";
+                        const badKey = problem === "badKey";
+                        const keyError = errors.docker_env?.[index]?.key?.message;
+                        const valueError = errors.docker_env?.[index]?.value?.message;
+                        const messageId = `${listId}-env-${index}`;
+                        const describedBy = keyError || valueError || missing || badKey ? messageId : undefined;
+                        const locked = row.fromImage && row.required;
                         return (
                           <li key={row.id} className="space-y-1">
                             {/* Phone: name and remove on one line, value below. Placed by `order`, not row/column starts, which leak across breakpoints. */}
@@ -673,7 +719,9 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
                                 className="order-1 font-mono text-xs"
                                 spellCheck={false}
                                 readOnly={row.fromImage}
-                                aria-invalid={badKey || undefined}
+                                maxLength={DOCKER_LIMITS.envKey}
+                                aria-invalid={badKey || keyError ? true : undefined}
+                                aria-describedby={badKey || keyError ? describedBy : undefined}
                                 value={row.key}
                                 onChange={(event) => updateEnv(index, { key: event.target.value })}
                               />
@@ -682,25 +730,34 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
                                 placeholder={row.required ? t("envRequiredPlaceholder") : t("envValuePlaceholder")}
                                 className={cn("order-3 col-span-2 font-mono text-xs sm:order-2 sm:col-span-1", missing && "border-warning")}
                                 spellCheck={false}
-                                aria-invalid={missing || undefined}
+                                maxLength={DOCKER_LIMITS.envValue}
+                                aria-invalid={missing || valueError ? true : undefined}
+                                aria-describedby={missing || valueError ? describedBy : undefined}
                                 value={row.value}
                                 onChange={(event) => updateEnv(index, { value: event.target.value })}
                               />
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="order-2 sm:order-3"
-                                aria-label={t("envRemove", { key: row.key || "…" })}
-                                onClick={() => removeEnv(index)}
-                              >
-                                <Trash2 className="size-4" aria-hidden />
-                              </Button>
+                              {locked ? (
+                                // Keeps the value column the width of its neighbours.
+                                <span className="order-2 size-9 sm:order-3" aria-hidden />
+                              ) : (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="order-2 sm:order-3"
+                                  aria-label={t("envRemove", { key: row.key || "…" })}
+                                  onClick={() => removeEnv(index)}
+                                >
+                                  <Trash2 className="size-4" aria-hidden />
+                                </Button>
+                              )}
                             </div>
-                            {missing ? (
-                              <p className="text-xs text-warning">{t("envRequired")}</p>
+                            {keyError || valueError ? (
+                              <p id={messageId} className="text-xs text-destructive">{keyError || valueError}</p>
+                            ) : missing ? (
+                              <p id={messageId} className="text-xs text-warning">{t("envRequired")}</p>
                             ) : badKey ? (
-                              <p className="text-xs text-destructive">{t("envKeyInvalid")}</p>
+                              <p id={messageId} className="text-xs text-destructive">{t("envKeyInvalid")}</p>
                             ) : null}
                           </li>
                         );
@@ -709,10 +766,17 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
                   ) : (
                     <p className="text-sm text-muted-foreground">{t("settingsNone")}</p>
                   )}
-                  <Button type="button" variant="outline" size="sm" onClick={addEnv}>
-                    <Plus className="size-3.5" aria-hidden />
-                    {t("envAdd")}
-                  </Button>
+                  {envListError ? (
+                    <p className="text-xs text-destructive" data-form-error>{envListError}</p>
+                  ) : null}
+                  {envFull ? (
+                    <p className="text-xs text-muted-foreground">{t("envLimit", { max: DOCKER_LIMITS.envRows })}</p>
+                  ) : (
+                    <Button type="button" variant="outline" size="sm" onClick={addEnv}>
+                      <Plus className="size-3.5" aria-hidden />
+                      {t("envAdd")}
+                    </Button>
+                  )}
                 </div>
               ) : null}
 
@@ -727,15 +791,6 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
                 </Caution>
               ) : null}
 
-              {serverErrors.length ? (
-                <Caution tone="destructive" size="md">
-                  <ul className="space-y-0.5">
-                    {serverErrors.map((message) => (
-                      <li key={message}>{message}</li>
-                    ))}
-                  </ul>
-                </Caution>
-              ) : null}
             </>
           )}
         </section>

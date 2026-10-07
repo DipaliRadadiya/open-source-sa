@@ -68,10 +68,10 @@ test("the create form no longer defaults a container to port 80", () => {
   assert.match(form, /selected\.name === "docker" && field\.name === "container_port"/);
 });
 
-test("one volume goes out as the original pair so today's API keeps it", () => {
-  assert.match(form, /mounts\.length === 1\)[\s\S]{0,200}payload\.volume_new = mounts\[0\]\.volume/);
-  assert.match(form, /payload\.volume_mounts = mounts/);
-  assert.match(form, /if \(env\.length\) payload\.env = env/);
+// The payload rules themselves are behaviour-tested in docker-create-request.test.mjs.
+test("the create request takes its volumes and env from dockerCreateFields", () => {
+  assert.match(form, /dockerSent = dockerCreateFields\(/);
+  assert.match(form, /Object\.assign\(payload, dockerSent\.fields\)/);
 });
 
 test("every string the picker renders exists in every locale", () => {

@@ -97,8 +97,13 @@ import {
 } from "@/lib/applications/form-reset";
 import { CreateReadinessPanel } from "@/components/applications/create-readiness-panel";
 import { DockerImageSetup } from "@/components/applications/docker-image-setup";
-import { dockerCreateExtras } from "@/lib/docker/image-ref";
-import { ENV_KEY_PATTERN } from "@/lib/schemas/docker";
+import {
+  DOCKER_LIMITS,
+  dockerCreateFields,
+  dockerEnvProblem,
+  dockerServerErrors,
+  dockerVolumeProblem,
+} from "@/lib/docker/create-request";
 import { createSystemUser, deleteSystemUser } from "@/lib/api/system-users";
 import { fallbackSystemUsername, suggestSystemUsername } from "@/lib/applications/system-username";
 
@@ -859,6 +864,8 @@ export function CreateApplicationForm({
   const isDockerSimple = isDocker && (dockerMode || "simple") === "simple";
   const dockerImageState = useWatch({ control: form.control, name: "docker_image_state" });
   const dockerEnv = useWatch({ control: form.control, name: "docker_env" });
+  const dockerRequiredEnv = useWatch({ control: form.control, name: "docker_required_env" });
+  const dockerVolumes = useWatch({ control: form.control, name: "docker_volumes" });
   const typeFields = (selected?.fields ?? []).filter(
     (config) =>
       !COMMON_FIELD_NAMES.has(config.name),
@@ -911,14 +918,8 @@ export function CreateApplicationForm({
   const formAdvancedFields = advancedFields.filter(renderedByForm);
   const registryOptions =
     selected?.fields?.find((config) => config.name === "registry_id")?.options ?? [];
-  const dockerEnvProblem =
-    isDockerSimple &&
-    (dockerEnv ?? []).some(
-      (row) =>
-        (row.required && !String(row.value ?? "").trim()) ||
-        (row.key && !ENV_KEY_PATTERN.test(row.key)) ||
-        (!row.key && String(row.value ?? "").trim()),
-    );
+  const dockerEnvBlocked = isDockerSimple && dockerEnvProblem(dockerEnv, dockerRequiredEnv);
+  const dockerVolumesBlocked = isDockerSimple && dockerVolumeProblem(dockerVolumes);
   const advancedFieldNames = new Set(advancedFields.map((config) => config.name));
   const advancedErrorCount = advancedFields.filter(
     (config) => form.formState.errors[config.name],
@@ -942,13 +943,14 @@ export function CreateApplicationForm({
       // The image is only ready once the registry has confirmed it exists.
       if (isDockerSimple && config.name === "image" && hasConfigValue(config, value)) {
         const imageState = dockerImageState || "checking";
+        const tooLong = String(value).length > DOCKER_LIMITS.image;
         return {
           key: `configuration-${config.name}`,
           target: config.name,
           label: fieldLabel(config),
           value: imageState === "checking" ? t("dockerImage.checking") : String(value),
-          ready: imageState === "ok" || imageState === "unknown",
-          invalid: imageState === "notfound",
+          ready: (imageState === "ok" || imageState === "unknown") && !tooLong,
+          invalid: imageState === "notfound" || tooLong,
         };
       }
       return {
@@ -1044,13 +1046,24 @@ export function CreateApplicationForm({
         ]
       : []),
     ...configurationSummaryItems,
-    ...(dockerEnvProblem
+    ...(dockerEnvBlocked
       ? [
           {
             key: "docker-env",
             target: "docker_env",
             label: t("dockerImage.settingsLabel"),
             value: t("dockerImage.settingsIncomplete"),
+            ready: false,
+          },
+        ]
+      : []),
+    ...(dockerVolumesBlocked
+      ? [
+          {
+            key: "docker-volumes",
+            target: "docker_volumes",
+            label: t("dockerImage.storageLabel"),
+            value: t("dockerImage.storageLimit", { max: DOCKER_LIMITS.volumes }),
             ready: false,
           },
         ]
@@ -1417,26 +1430,16 @@ export function CreateApplicationForm({
       if (value === undefined || value === "") continue;
       payload[config.name] = config.type === "number" ? Number(value) : value;
     }
+    let dockerSent = null;
     if (isDockerSimple) {
-      // Only what differs from the image: its own defaults already apply.
-      const changedEnv = (values.docker_env ?? []).filter(
-        (row) => !row.fromImage || row.required || row.value !== row.original,
-      );
-      const { mounts, env } = dockerCreateExtras({
+      dockerSent = dockerCreateFields({
         applicationName: values.name,
         volumes: values.docker_volumes ?? [],
-        env: changedEnv,
+        envRows: values.docker_env ?? [],
       });
       delete payload.volume_new;
       delete payload.volume_path;
-      // One volume uses the original pair, which every backend version accepts.
-      if (mounts.length === 1) {
-        payload.volume_new = mounts[0].volume;
-        payload.volume_path = mounts[0].path;
-      } else if (mounts.length > 1) {
-        payload.volume_mounts = mounts;
-      }
-      if (env.length) payload.env = env;
+      Object.assign(payload, dockerSent.fields);
     }
     if (isGit) {
       payload.git_source = gitSource;
@@ -1507,9 +1510,25 @@ export function CreateApplicationForm({
           router.refresh();
         }
       }
-      handleValidationError(error, form);
+      const errors = error.response?.data?.errors;
+      // Settings and volumes are not site-type fields, so their errors are placed
+      // beside the row they came from rather than in a toast.
+      const docker = dockerSent && errors
+        ? dockerServerErrors(errors, {
+            ...dockerSent,
+            envRows: values.docker_env ?? [],
+            volumes: values.docker_volumes ?? [],
+          })
+        : null;
+      docker?.set.forEach(([name, message]) => form.setError(name, { type: "server", message }));
+      if (!docker?.set.length || Object.keys(docker.rest).length) {
+        handleValidationError(
+          docker ? { ...error, response: { ...error.response, data: { ...error.response.data, errors: docker.rest } } } : error,
+          form,
+        );
+      }
       // Surface backend field errors too, including inside the Advanced section.
-      revealErrors(Object.keys(error.response?.data?.errors ?? {}));
+      revealErrors(Object.keys(errors ?? {}));
     }
   }
 
