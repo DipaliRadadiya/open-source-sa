@@ -1834,6 +1834,72 @@ return [
         // The endpoint is throttled as well — a slow registry must not become a
         // way to occupy the panel's workers.
         'login_timeout' => (int) env('DOCKER_LOGIN_TIMEOUT', 30),
+
+        /*
+        | Image discovery (DS-02): reading an image from its registry without
+        | pulling it. Every call is a request to somebody else's server while a
+        | user waits on a form, so the timeouts are short and the answers cached.
+        */
+        'images' => [
+            'connect_timeout' => (int) env('DOCKER_IMAGES_CONNECT_TIMEOUT', 5),
+            'timeout' => (int) env('DOCKER_IMAGES_TIMEOUT', 10),
+
+            // A tag can be re-pushed, so its answer is cached briefly; a config
+            // blob is content-addressed and never changes, so it is kept longer.
+            'inspect_cache_minutes' => 10,
+            'config_cache_minutes' => 60,
+            'tags_cache_minutes' => 10,
+            'search_cache_minutes' => 10,
+
+            // Pages of `tags/list` followed at most. Images that tag every
+            // commit (`sha-…`) have thousands; a picker needs the recent ones.
+            'max_tag_pages' => 5,
+
+            // "This image is X GB" from this size up.
+            'large_bytes' => 1024 ** 3,
+
+            // Null = the panel's own machine type, which is the server Docker
+            // runs on. Set only to inspect for a different architecture.
+            'architecture' => env('DOCKER_IMAGES_ARCHITECTURE'),
+
+            // ENV keys that are build plumbing, not settings — hidden from the
+            // form. `Str::is` patterns. Changing `NGINX_VERSION` does not change
+            // the nginx in the image; changing `PATH` breaks it.
+            'hidden_env' => [
+                'PATH', 'HOME', 'HOSTNAME', 'TERM', 'SHELL', 'USER', 'PWD',
+                'LANG', 'LANGUAGE', 'LC_*', 'container', 'DEBIAN_FRONTEND',
+                'GPG_KEY', 'GPG_KEYS', '*_VERSION', '*_SHA256', '*_SHA512', '*_SHA1', '*_CHECKSUM',
+                '*_DOWNLOAD_URL', '*_DOWNLOAD_SHA256', 'PYTHON_*', 'PIP_*', 'PYTHONDONTWRITEBYTECODE',
+                'PYTHONUNBUFFERED', 'VIRTUAL_ENV', 'NODE_VERSION', 'YARN_VERSION', 'JAVA_HOME',
+                'S6_*', 'LSIO_*', 'VERSION', 'BUILD_DATE', 'PHPIZE_DEPS', 'PHP_INI_DIR', 'PHP_*FLAGS',
+                'PHP_URL', 'PHP_ASC_URL', 'PHP_SHA256', 'PHP_EXTRA_*', 'NGINX_*', 'NJS_*', 'PKG_RELEASE',
+                'DYNPKG_RELEASE', 'GOSU_*', 'PG_MAJOR', 'PGDATA', 'LD_*', 'SSL_CERT_*',
+                'NVIDIA_*', 'MALLOC_*', 'XDG_*', 'PS1', 'PHP_INI_SCAN_DIR', 'NODE_PATH', 'NPM_CONFIG_*',
+                'PYTHONPATH', 'UV_*',
+            ],
+
+            // Settings an image will not start without, by repository. Images
+            // cannot declare this, so it is never guessed (see
+            // ImageInspector::environment()); each entry is from the image's
+            // own documentation.
+            'required_env' => [
+                'postgres' => ['POSTGRES_PASSWORD'],
+                'mysql' => ['MYSQL_ROOT_PASSWORD'],
+                'mariadb' => ['MARIADB_ROOT_PASSWORD'],
+            ],
+
+            // Images that listen on a port without declaring it (no EXPOSE),
+            // by repository as users write it. Reported as `guessed`.
+            'known_ports' => [
+                'ghcr.io/open-webui/open-webui' => 8080,
+                'ghcr.io/umami-software/umami' => 3000,
+                'ghcr.io/gethomepage/homepage' => 3000,
+                'ghcr.io/mealie-recipes/mealie' => 9000,
+                'outlinewiki/outline' => 3000,
+                'requarks/wiki' => 3000,
+                'n8nio/n8n' => 5678,
+            ],
+        ],
     ],
 
     /*

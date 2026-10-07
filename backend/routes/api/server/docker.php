@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\API\Server\DockerDatabaseController;
+use App\Http\Controllers\API\Server\DockerImageController;
 use App\Http\Controllers\API\Server\DockerResourceController;
 use Illuminate\Support\Facades\Route;
 
@@ -79,4 +80,27 @@ Route::middleware('hosts-containers')->group(function (): void {
 
     Route::delete('/docker/databases/{dockerDatabase}', [DockerDatabaseController::class, 'destroy'])
         ->middleware(['permission:docker,manage', 'throttle:20,1']);
+
+    /*
+    | Image discovery for the create form (DS-02). Read from registry APIs and
+    | never pulled, so nothing lands on the box until the user deploys.
+    |
+    | `application` (view), not `docker`: the form these feed is the
+    | create-application form, and somebody who may create a container site
+    | must be able to find its image. A stored registry credential additionally
+    | needs `registry` (view) — checked in the request, because it depends on a
+    | parameter.
+    |
+    | Every call is an outbound request, so each is throttled per user. Search
+    | is called while the user types, hence the higher ceiling; answers are
+    | cached, so the throttle protects the registries more than the panel.
+    */
+    Route::get('/docker/images/search', [DockerImageController::class, 'search'])
+        ->middleware(['permission:application', 'throttle:60,1']);
+
+    Route::get('/docker/images/tags', [DockerImageController::class, 'tags'])
+        ->middleware(['permission:application', 'throttle:30,1']);
+
+    Route::get('/docker/images/inspect', [DockerImageController::class, 'inspect'])
+        ->middleware(['permission:application', 'throttle:30,1']);
 });

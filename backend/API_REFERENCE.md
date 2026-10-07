@@ -6033,6 +6033,82 @@ Always `200` — the request itself succeeded, `test.success` carries the verdic
 
 ---
 
+## Docker — Image discovery (search, versions, inspect)
+
+Added 2026-10-07 (DS-02). These three endpoints let the Docker create form fill itself in. They read registry APIs and **never pull**: nothing lands on the server until the user deploys. They are only on Docker servers (`409` elsewhere). Each needs `application` (view). Passing `registry_id` also needs `registry` (view).
+
+Two kinds of "no" are kept apart:
+- **An answer about the image** ("no such image", "no such version", "the credential cannot read it") comes back `200` with `found: false` (inspect) or an empty list (tags).
+- **"We could not ask the registry"** (no internet, timeout, 5xx, Docker Hub rate limit) is not a verdict. Search and tags return empty lists with `offline: true`. Inspect returns `503`, and the form should then ask the user for the port.
+
+### `GET /docker/images/search?q=<text>&limit=10`
+Throttle: 60/min. `q` 2–100 chars, `limit` 1–50. Searches Docker Hub and re-ranks: official images first, then most pulled. Cached 10 min.
+```json
+{ "results": [ { "image": "neosmemo/memos", "registry": "docker.io", "description": "A privacy-first, lightweight note-taking service.",
+  "stars": 233, "pulls": 11672941, "official": false, "verified_publisher": false } ] }
+```
+Offline: `{"results": [], "offline": true}`. `verified_publisher` is always `false` today, because Hub's search API does not report that badge. It stays in the contract so the shape does not change later.
+
+### `GET /docker/images/tags?image=<ref>&limit=20[&registry_id=]`
+Throttle: 30/min. `limit` 1–100. Tags are ordered like this:
+1. Plain version numbers, newest first. `0.31.0` comes before `0.31`.
+2. Variants such as `1.31.6-alpine`.
+3. Everything else, such as `latest`, `edge`, `sha-…` and pre-releases (`-rc1`, `-beta`), most recently updated first.
+
+`stable` is `true` for groups 1 and 2. `recommended` is the newest plain version. If there is none, it is `latest`, and failing that the first tag. Docker Hub images and `lscr.io/linuxserver/*` are read from Hub's API, which gives `updated_at`. Other registries are read from `tags/list`, so `updated_at` is `null`.
+```json
+{ "image": "ghcr.io/usememos/memos", "recommended": "0.31.0",
+  "tags": [ { "name": "0.31.0", "updated_at": null, "stable": true }, { "name": "0.31", "updated_at": null, "stable": true } ] }
+```
+Unknown image: `tags: []`, `recommended: null`. Registry unreachable: the same, plus `"offline": true`.
+
+### `GET /docker/images/inspect?image=<ref>[&registry_id=]`
+Throttle: 30/min. `image` is any reference Docker accepts (`nginx`, `usememos/memos:0.31.0`, `ghcr.io/o/a@sha256:…`, `registry.example.com:5000/a`). No tag means `latest`. A reference Docker would refuse, for example an uppercase repository, is a `422` on `image`.
+
+The image is resolved for **this server's architecture**. A manifest list is narrowed to the server's platform before the config is read. Answers are cached 10 min per reference; config blobs are cached 1 h by digest.
+```json
+{ "image": "neosmemo/memos:0.31.0", "digest": "sha256:…", "found": true,
+  "exposed_ports": [5230], "suggested_port": 5230, "port_confidence": "declared",
+  "volumes": ["/var/opt/memos"], "suggested_volumes": [ { "path": "/var/opt/memos", "name": "memos-data" } ],
+  "env": [ { "key": "TZ", "default": "UTC", "required": false }, { "key": "MEMOS_PORT", "default": "5230", "required": false } ],
+  "workdir": "/var/opt/memos", "user": "", "size_bytes": 26239339, "architectures": ["arm64", "amd64", "arm/v7"],
+  "uses_app_dir": false, "warnings": [] }
+```
+- `exposed_ports`: TCP ports from `EXPOSE`. UDP is left out because nginx cannot proxy to it.
+- `suggested_port` and `port_confidence`:
+  - One declared port → that port, `declared`.
+  - Several → a web port is preferred (80, 8080, 3000, 5000, 8000, …), and 443/8443 are never chosen; still `declared`, with a warning naming them all.
+  - None declared → the `server.docker.images.known_ports` table gives a port marked `guessed`; otherwise `null` with `none`, and **the UI must ask**.
+- `env`: the image's `ENV` without build plumbing (`PATH`, `*_VERSION`, checksums …; see `server.docker.images.hidden_env`).
+- **`required` is never inferred.** Images cannot declare a mandatory setting, and an empty `ENV` is not one: changedetection.io ships `LOGGER_LEVEL=` and starts fine without it. `required: true` comes only from `server.docker.images.required_env`, for example `postgres` → `POSTGRES_PASSWORD`. Empty values produce a softer warning instead.
+- `suggested_volumes`: one named volume per `VOLUME`. One volume is named `<project>-data`; several are named `<project>-<last path segment>`.
+- `uses_app_dir`: whether the image keeps its program in `/app`, read from WORKDIR, entrypoint and build history. A `COPY --from` whose *source* is `/app` does not count, and neither does an empty `mkdir /app`.
+- `size_bytes`: the compressed download size for this architecture.
+- `warnings`: localised sentences:
+  - required settings
+  - empty settings
+  - no build for this server's architecture
+  - a download of 1 GB or more
+  - no declared port
+  - several ports
+
+Not found, `200`:
+```json
+{ "image": "nginx:nosuchtag", "found": false, "reason": "tag_not_found", "message": "The image nginx has no version nosuchtag. Pick one from the version list." }
+```
+`reason` is one of:
+- `not_found`: the repository does not exist, or it is private and no credential was sent. The registry answers both the same way.
+- `tag_not_found`
+- `credential_rejected`: a credential was sent and refused.
+
+Errors:
+- `503` `{message, reason: "unreachable"|"rate_limited"}`
+- `422` on `image` when the registry host is loopback or link-local. The panel never connects there, and the token realm and every redirect are checked the same way.
+
+**Credentials:** `registry_id` is sent only to the registry it was saved for. A GHCR token is never sent to Quay, even when asked to. It goes to the registry's token endpoint as basic auth and never appears in a response.
+
+---
+
 ## Utility
 
 ### GET `/basic-info`
