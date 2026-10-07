@@ -89,8 +89,12 @@ class UpdateContainerRequest extends FormRequest
                 'string',
                 'max:255',
                 // Absolute, because a relative mount target is not a path
-                // Docker will accept and the error it gives says so badly.
-                'regex:/^\//',
+                // Docker will accept and the error it gives says so badly —
+                // and one line of plain characters, because the value is
+                // written into the compose file as YAML: a newline in it was a
+                // new key (`privileged: true`, a bind of `/`).
+                new SingleLine,
+                'regex:'.ContainerMountPath::PATTERN,
                 // No traversal. The value is a path inside the container rather
                 // than on the host, so this is not the same hole a bind mount
                 // would be — but it still reaches a compose file, and a target

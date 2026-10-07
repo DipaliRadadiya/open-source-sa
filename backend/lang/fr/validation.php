@@ -229,6 +229,7 @@ return [
     'docker_mount_root' => 'Choisissez un chemin à l\'intérieur du conteneur, par exemple /var/lib/mysql.',
     'docker_mount_site_root' => 'C\'est à ce chemin que les fichiers du site sont montés (:path). Un volume ici les masque au conteneur : les fichiers restent sur le serveur, mais le site sert un volume vide.',
     'docker_mount_reserved' => ':path fait partie de l\'image avec laquelle le conteneur démarre. Un volume vide par-dessus donne un conteneur incapable de démarrer.',
+    'docker_mount_characters' => 'Utilisez uniquement des lettres, des chiffres, des points, des tirets, des tirets bas et des barres obliques, en commençant par /, par exemple /var/lib/mysql.',
 
     // A name the panel is about to create, so the inverse rule: not taken.
     'docker_network_taken' => 'Un réseau nommé \':name\' existe déjà sur ce serveur. Sélectionnez-le dans la liste ci-dessus plutôt que d\'en créer un second.',

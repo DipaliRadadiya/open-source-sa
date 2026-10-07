@@ -143,7 +143,11 @@ it('names the port the image really listens on when nothing answers', function (
     expect($fresh->container_status)->toBe('not_answering')
         ->and($fresh->last_failure['reason'])->toBe('container_port_mismatch')
         ->and($fresh->last_failure['params'])->toMatchArray(['port' => 8082, 'image_ports' => '5230'])
-        ->and($fresh->last_failure['log'])->toContain('Server running on port 5230');
+        ->and($fresh->last_failure['log'])->toContain('Server running on port 5230')
+        // Encrypted at rest (DS-08): a first boot prints connection strings,
+        // and the row is in every database dump and panel backup.
+        ->and((string) $fresh->getRawOriginal('last_failure'))->not->toContain('Server running')
+        ->and((string) $fresh->getRawOriginal('last_failure'))->not->toContain('container_port_mismatch');
 
     $admin = User::factory()->admin()->create();
     $request = Request::create('/');

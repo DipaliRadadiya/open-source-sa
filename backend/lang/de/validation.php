@@ -229,6 +229,7 @@ return [
     'docker_mount_root' => 'Wählen Sie einen Pfad innerhalb des Containers, zum Beispiel /var/lib/mysql.',
     'docker_mount_site_root' => 'Unter diesem Pfad sind die eigenen Dateien der Website eingebunden (:path). Ein Volume dort verbirgt sie vor dem Container — die Dateien bleiben auf dem Server, die Website liefert aber ein leeres Volume aus.',
     'docker_mount_reserved' => ':path ist Teil des Images, mit dem der Container startet. Ein leeres Volume darüber führt zu einem Container, der nicht starten kann.',
+    'docker_mount_characters' => 'Verwenden Sie nur Buchstaben, Ziffern, Punkte, Bindestriche, Unterstriche und Schrägstriche, beginnend mit /, zum Beispiel /var/lib/mysql.',
 
     // A name the panel is about to create, so the inverse rule: not taken.
     'docker_network_taken' => 'Ein Netzwerk namens \':name\' existiert auf diesem Server bereits. Wählen Sie es oben aus der Liste, statt ein zweites zu erstellen.',

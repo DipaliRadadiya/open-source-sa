@@ -737,3 +737,20 @@ it('says a site has unacknowledged credentials in its payload', function () {
         // And never the value itself.
         ->and(json_encode($payload->json()))->not->toContain('hunter2');
 });
+
+it('refuses a mount path that would write new keys into the compose file (DS-08)', function (string $path) {
+    // The update half of the review's exploit: `app_container` manage was
+    // enough to make the container privileged with the host's `/` mounted.
+    fakeDockerBoxWithVolumes();
+
+    $this->withHeaders(containerHeaders())
+        ->putJson(containerUrl(), ['volume_mounts' => [['volume' => 'shop-db', 'path' => $path]]])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('volume_mounts.0.path');
+
+    expect($this->application->fresh()->volume_mounts)->toBeNull();
+})->with([
+    'review exploit' => "/data\n      - /:/hostfs:rw\n    privileged: true",
+    'carriage return' => "/data\r    privileged: true",
+    'yaml comment' => '/data #x',
+]);

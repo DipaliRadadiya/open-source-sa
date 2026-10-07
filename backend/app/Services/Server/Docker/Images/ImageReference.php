@@ -3,6 +3,7 @@
 namespace App\Services\Server\Docker\Images;
 
 use App\Models\Registry;
+use App\Support\RemoteHost;
 
 /**
  * An image reference taken apart the way Docker takes it apart.
@@ -41,7 +42,7 @@ final class ImageReference
         $value = trim($value);
 
         if ($value === '' || strlen($value) > 255
-            || preg_match('/^[A-Za-z0-9][A-Za-z0-9._\/:@-]*$/', $value) !== 1) {
+            || preg_match('/^[A-Za-z0-9][A-Za-z0-9._\/:@-]*$/D', $value) !== 1) {
             return null;
         }
 
@@ -50,7 +51,7 @@ final class ImageReference
         if (str_contains($value, '@')) {
             [$value, $digest] = explode('@', $value, 2);
 
-            if (preg_match('/^sha256:[a-f0-9]{64}$/', $digest) !== 1) {
+            if (preg_match('/^sha256:[a-f0-9]{64}$/D', $digest) !== 1) {
                 return null;
             }
         }
@@ -65,7 +66,7 @@ final class ImageReference
             $tag = substr($value, $colon + 1);
             $value = substr($value, 0, $colon);
 
-            if (preg_match('/^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$/', $tag) !== 1) {
+            if (preg_match('/^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$/D', $tag) !== 1) {
                 return null;
             }
         }
@@ -77,6 +78,14 @@ final class ImageReference
             $registry = strtolower(array_shift($parts));
         }
 
+        // The host is connected to, so it is read the way every other host
+        // the panel connects to is: `0x7f.0.0.1` and `127.0x1` are loopback to
+        // libcurl and a name to the resolver, which finds nothing and so
+        // checks nothing. Refused here as not a reference at all.
+        if ($registry !== self::HUB && RemoteHost::isUninterpretable((string) preg_replace('/:\d{1,5}$/D', '', $registry))) {
+            return null;
+        }
+
         if (in_array($registry, self::HUB_ALIASES, true)) {
             $registry = self::HUB;
         }
@@ -86,7 +95,7 @@ final class ImageReference
         }
 
         foreach ($parts as $part) {
-            if (preg_match('/^[a-z0-9]+(?:(?:[._]|__|-+)[a-z0-9]+)*$/', $part) !== 1) {
+            if (preg_match('/^[a-z0-9]+(?:(?:[._]|__|-+)[a-z0-9]+)*$/D', $part) !== 1) {
                 return null;
             }
         }

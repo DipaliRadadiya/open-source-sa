@@ -7,6 +7,7 @@ use App\Rules\ContainerMemoryLimit;
 use App\Rules\ContainerMountPath;
 use App\Rules\ExistingDockerNetwork;
 use App\Rules\NewDockerName;
+use App\Rules\SingleLine;
 use App\Rules\WithinHostCpus;
 use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Docker\DockerResources;
@@ -308,7 +309,7 @@ class DockerSiteType extends AbstractSiteType
             // legal, and a regex tight enough to be useful here is tight
             // enough to reject something real. What is refused is whitespace
             // and shell metacharacters, because the value reaches a command.
-            'image' => ['required_without:compose', 'nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9][A-Za-z0-9._\/:@-]*$/'],
+            'image' => ['required_without:compose', 'nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9][A-Za-z0-9._\/:@-]*$/D'],
             // Not required: StoreApplicationRequest fills it from the image, and
             // refuses only when the image does not say (DS-03).
             'container_port' => ['nullable', 'integer', 'min:1', 'max:65535'],
@@ -318,7 +319,7 @@ class DockerSiteType extends AbstractSiteType
             // first start. Kept encrypted until then, never in `settings`.
             // Values may be multi-line; keys are what a shell and Compose accept.
             'env' => ['nullable', 'array', 'max:100'],
-            'env.*.key' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z_][A-Za-z0-9_]*$/'],
+            'env.*.key' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z_][A-Za-z0-9_]*$/D'],
             'env.*.value' => ['nullable', 'string', 'max:65535'],
 
             // Any number of volumes at create, the shape the Container card
@@ -326,8 +327,11 @@ class DockerSiteType extends AbstractSiteType
             // `<site>-<last path segment>`. An existing name is mounted as is.
             // Absent altogether, the image's own VOLUMEs are used.
             'volume_mounts' => ['nullable', 'array', 'max:20'],
-            'volume_mounts.*.volume' => ['nullable', 'string', 'max:128', 'regex:/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/'],
-            'volume_mounts.*.path' => ['required', 'string', 'max:255', 'regex:/^\//', 'not_regex:/(^|\/)\.\.(\/|$)/', new ContainerMountPath],
+            'volume_mounts.*.volume' => ['nullable', 'string', 'max:128', 'regex:/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/D'],
+            // `SingleLine` and the positive pattern because the path is written
+            // into the generated compose file, which no validator reads after
+            // this: a newline in it was a new YAML key (`privileged: true`).
+            'volume_mounts.*.path' => ['required', 'string', 'max:255', new SingleLine, 'regex:'.ContainerMountPath::PATTERN, 'not_regex:/(^|\/)\.\.(\/|$)/', new ContainerMountPath],
             // The same two rules the Container settings screen uses, because a
             // limit refused after the site exists and accepted while creating it
             // would be one form contradicting the other. `WithinHostCpus` matters
@@ -363,7 +367,7 @@ class DockerSiteType extends AbstractSiteType
             'docker_network_new' => ['nullable', 'string', 'max:255', 'prohibits:docker_network', new NewDockerName('network')],
 
             'volume_new' => ['nullable', 'string', 'max:255', 'required_with:volume_path', new NewDockerName('volume')],
-            'volume_path' => ['nullable', 'string', 'max:255', 'required_with:volume_new', 'regex:/^\//', 'not_regex:/(^|\/)\.\.(\/|$)/', new ContainerMountPath],
+            'volume_path' => ['nullable', 'string', 'max:255', 'required_with:volume_new', new SingleLine, 'regex:'.ContainerMountPath::PATTERN, 'not_regex:/(^|\/)\.\.(\/|$)/', new ContainerMountPath],
         ];
     }
 

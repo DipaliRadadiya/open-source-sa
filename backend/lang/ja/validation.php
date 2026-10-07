@@ -229,6 +229,7 @@ return [
     'docker_mount_root' => 'コンテナ内のパスを指定してください。例: /var/lib/mysql',
     'docker_mount_site_root' => 'そのパスにはサイト自身のファイルがマウントされています (:path)。ここにボリュームを置くとコンテナから見えなくなります。ファイルはサーバー上に残りますが、サイトは空のボリュームを配信します。',
     'docker_mount_reserved' => ':path はコンテナが起動するイメージの一部です。空のボリュームで覆うと、コンテナは起動できません。',
+    'docker_mount_characters' => '英字、数字、ドット、ハイフン、アンダースコア、スラッシュのみを使い、/ で始めてください。例: /var/lib/mysql',
 
     // A name the panel is about to create, so the inverse rule: not taken.
     'docker_network_taken' => '\':name\' という名前のネットワークはこのサーバーに既に存在します。2つ目を作成せず、上のリストから選択してください。',

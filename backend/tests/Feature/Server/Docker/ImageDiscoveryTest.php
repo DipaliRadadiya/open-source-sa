@@ -6,8 +6,10 @@ use App\Models\Role;
 use App\Models\ServerCapability;
 use App\Models\User;
 use App\Services\Server\Docker\Images\ImageReference;
+use App\Support\RemoteHost;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 /*
@@ -31,6 +33,10 @@ beforeEach(function () {
     ]);
 
     config(['server.docker.images.architecture' => 'amd64']);
+
+    // Every name resolves to a public address unless a test says otherwise:
+    // since DS-08 a name the panel cannot resolve is not connected to at all.
+    RemoteHost::resolveUsing(fn (string $host): array => ['203.0.113.10']);
 });
 
 function imgAs(?User $user = null): array
@@ -787,4 +793,138 @@ it('is not offered on a server that hosts no containers', function () {
     $this->withHeaders(imgAs())->getJson('/api/docker/images/search?q=memos')->assertStatus(409);
 
     Http::assertNothingSent();
+});
+
+/*
+ * DS-08: what a user-chosen registry can make the panel do.
+ */
+
+/**
+ * One registry answering anonymously, with a manifest naming `$configDigest`
+ * and whatever `$blob` says for the blob request.
+ */
+function imgHostile(string $host, string $configDigest, Closure $blob): void
+{
+    Http::fake(function (Request $request) use ($host, $configDigest, $blob) {
+        $url = parse_url($request->url());
+
+        if ($url['host'] === $host && str_contains($url['path'], '/manifests/')) {
+            $body = json_encode([
+                'schemaVersion' => 2,
+                'mediaType' => 'application/vnd.docker.distribution.manifest.v2+json',
+                'config' => ['mediaType' => 'application/vnd.docker.container.image.v1+json', 'digest' => $configDigest, 'size' => 100],
+                'layers' => [],
+            ]);
+
+            return Http::response($body, 200, ['Docker-Content-Digest' => 'sha256:'.hash('sha256', $body)]);
+        }
+
+        return $blob($request);
+    });
+}
+
+it('refuses registry hosts curl reads as loopback and the resolver does not', function (string $image) {
+    Http::fake();
+
+    $this->withHeaders(imgAs())->getJson('/api/docker/images/inspect?image='.urlencode($image))->assertStatus(422);
+    $this->withHeaders(imgAs())->getJson('/api/docker/images/tags?image='.urlencode($image))->assertStatus(422);
+
+    Http::assertNothingSent();
+})->with(['0x7f.0.0.1/foo/bar', '127.0x1/foo/bar', '0x7f000001:443/foo/bar', '2130706433:443/foo/bar', '0177.0.0.1/foo/bar']);
+
+it('does not connect to a registry name it cannot resolve itself', function () {
+    // Unpinned, curl would resolve it on its own — and read spellings PHP does not.
+    RemoteHost::resolveUsing(fn (string $host): array => []);
+    Http::fake();
+
+    $this->withHeaders(imgAs())->getJson('/api/docker/images/inspect?image=nowhere.example/acme/app:1')
+        ->assertStatus(503)->assertJsonPath('reason', 'unreachable');
+
+    Http::assertNothingSent();
+});
+
+it('refuses a redirect to a name that resolves to loopback, without connecting to it', function () {
+    RemoteHost::resolveUsing(fn (string $host): array => $host === 'cdn.evil.example' ? ['127.0.0.1'] : ['203.0.113.10']);
+    $config = json_encode(imgConfig(['ExposedPorts' => ['80/tcp' => (object) []]]));
+
+    imgHostile('registry.example.com', 'sha256:'.hash('sha256', $config), fn () => Http::response('', 307, ['Location' => 'https://cdn.evil.example/blob']));
+
+    $this->withHeaders(imgAs())->getJson('/api/docker/images/inspect?image=registry.example.com/acme/app:1')->assertStatus(422);
+
+    Http::assertNotSent(fn (Request $r): bool => str_contains($r->url(), 'cdn.evil.example'));
+});
+
+it('follows a blob redirect to a CDN, without the registry token', function () {
+    // Hub and GHCR both answer a blob request with a redirect to a CDN. The
+    // registry's bearer token is for the registry; the CDN gets a signed URL.
+    $config = json_encode(imgConfig(['ExposedPorts' => ['8080/tcp' => (object) []]]));
+    $digest = 'sha256:'.hash('sha256', $config);
+    $manifest = json_encode(['schemaVersion' => 2, 'mediaType' => 'application/vnd.docker.distribution.manifest.v2+json',
+        'config' => ['mediaType' => 'application/vnd.docker.container.image.v1+json', 'digest' => $digest, 'size' => 100], 'layers' => []]);
+
+    Http::fake(function (Request $r) use ($config, $manifest) {
+        $url = parse_url($r->url());
+
+        return match (true) {
+            $url['host'] === 'cdn.example.net' => Http::response($config),
+            $url['path'] === '/token' => Http::response(['token' => 'reg-token']),
+            ! $r->hasHeader('Authorization') => Http::response('', 401, ['WWW-Authenticate' => 'Bearer realm="https://registry.example.com/token",service="registry.example.com"']),
+            str_contains($url['path'], '/manifests/') => Http::response($manifest, 200, ['Docker-Content-Digest' => 'sha256:'.hash('sha256', $manifest)]),
+            default => Http::response('', 307, ['Location' => 'https://cdn.example.net/blob?sig=1']),
+        };
+    });
+
+    $this->withHeaders(imgAs())->getJson('/api/docker/images/inspect?image=registry.example.com/acme/app:1')
+        ->assertOk()->assertJsonPath('suggested_port', 8080);
+
+    Http::assertSent(fn (Request $r): bool => str_contains($r->url(), '/blobs/') && $r->hasHeader('Authorization', 'Bearer reg-token'));
+    Http::assertSent(fn (Request $r): bool => str_contains($r->url(), 'cdn.example.net'));
+    Http::assertNotSent(fn (Request $r): bool => str_contains($r->url(), 'cdn.example.net') && $r->hasHeader('Authorization'));
+});
+
+it('refuses a config blob that does not match its digest, and caches nothing for that digest', function () {
+    // The review's poisoning: an attacker's registry names the digest of a
+    // real image's config and serves its own blob under it. Whoever inspects
+    // the real image next must not read the attacker's ports and volumes.
+    $real = imgConfig(['ExposedPorts' => ['80/tcp' => (object) []], 'Volumes' => ['/usr/share/nginx/html' => (object) []]]);
+    $realDigest = imgDigest(json_encode($real));
+    $evil = json_encode(imgConfig(['ExposedPorts' => ['9999/tcp' => (object) []], 'Volumes' => ["/data\n      - /:/hostfs" => (object) []]]));
+
+    imgHostile('attacker.example', $realDigest, fn () => Http::response($evil));
+
+    $this->withHeaders(imgAs())->getJson('/api/docker/images/inspect?image=attacker.example/x:1')
+        ->assertStatus(503)->assertJsonPath('reason', 'unreachable');
+
+    expect(Cache::has('docker-image-config:attacker.example:'.$realDigest))->toBeFalse()
+        ->and(Cache::has('docker-image-config:'.$realDigest))->toBeFalse();
+
+});
+
+it('refuses a manifest whose config digest is not a sha256 digest', function (string $digest) {
+    imgHostile('registry.example.com', $digest, fn () => Http::response(json_encode(imgConfig([]))));
+
+    $this->withHeaders(imgAs())->getJson('/api/docker/images/inspect?image=registry.example.com/acme/app:1')
+        ->assertStatus(503)->assertJsonPath('reason', 'unreachable');
+
+    Http::assertNotSent(fn (Request $r): bool => str_contains($r->url(), '/blobs/'));
+})->with(['sha256:../../manifests/x', 'md5:abc', 'sha256:'.str_repeat('a', 64)."\n"]);
+
+it('refuses an answer larger than any registry document', function () {
+    config(['server.docker.images.max_response_bytes' => 4096]);
+    $config = json_encode(imgConfig(['Env' => ['PAD='.str_repeat('x', 8000)]]));
+
+    imgHostile('registry.example.com', 'sha256:'.hash('sha256', $config), fn () => Http::response($config));
+
+    $this->withHeaders(imgAs())->getJson('/api/docker/images/inspect?image=registry.example.com/acme/app:1')
+        ->assertStatus(503)->assertJsonPath('reason', 'unreachable');
+});
+
+it('throttles tags and inspect harder than search', function () {
+    imgRegistry(['docker.io/library/nginx:1.27' => imgConfig([])]);
+
+    foreach (range(1, 20) as $i) {
+        $this->withHeaders(imgAs())->getJson('/api/docker/images/inspect?image=nginx:1.27')->assertOk();
+    }
+
+    $this->withHeaders(imgAs())->getJson('/api/docker/images/inspect?image=nginx:1.27')->assertStatus(429);
 });

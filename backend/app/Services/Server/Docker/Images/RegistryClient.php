@@ -5,8 +5,12 @@ namespace App\Services\Server\Docker\Images;
 use App\Exceptions\BlockedHostException;
 use App\Models\Registry;
 use App\Support\RemoteHost;
+use GuzzleHttp\Exception\TransferException;
+use GuzzleHttp\Psr7\Uri;
+use GuzzleHttp\Psr7\UriResolver;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 
@@ -28,8 +32,8 @@ use Illuminate\Support\Facades\Http;
  * realm is named by the registry, so both are checked the way every other
  * outbound connection in the panel is: loopback and link-local refused, the
  * resolved address pinned so a second DNS answer cannot redirect the request,
- * and every redirect checked again. Blob downloads redirect to a CDN, so the
- * redirect check is not decoration.
+ * and every redirect checked and pinned again. Blob downloads redirect to a
+ * CDN, so the redirect check is not decoration.
  *
  * Measured on 2026-10-07 against Hub, GHCR and Quay: a missing tag is a `404`
  * with `MANIFEST_UNKNOWN` on all three, while a missing repository is a `401`
@@ -64,7 +68,7 @@ class RegistryClient
 
         $digest = (string) $response->header('Docker-Content-Digest');
 
-        if (preg_match('/^sha256:[a-f0-9]{64}$/', $digest) !== 1) {
+        if (preg_match('/^sha256:[a-f0-9]{64}$/D', $digest) !== 1) {
             $digest = 'sha256:'.hash('sha256', $response->body());
         }
 
@@ -78,7 +82,17 @@ class RegistryClient
      */
     public function blob(ImageReference $image, string $digest, ?Registry $credential): array
     {
-        $blob = $this->get($image, '/blobs/'.$digest, ['Accept' => '*/*'], $credential)->json();
+        $response = $this->get($image, '/blobs/'.$digest, ['Accept' => '*/*'], $credential);
+
+        // A blob IS its digest. One whose bytes hash to something else is not
+        // the blob that was asked for, whatever the registry says — and its
+        // answer is cached under that digest, so believing it would hand it to
+        // everyone who asks for the real one.
+        if (! hash_equals($digest, 'sha256:'.hash('sha256', $response->body()))) {
+            throw new ImageLookupException(ImageLookupException::UNREACHABLE, 'config blob does not match its digest');
+        }
+
+        $blob = $response->json();
 
         if (! is_array($blob)) {
             throw new ImageLookupException(ImageLookupException::UNREACHABLE, 'config blob is not JSON');
@@ -179,13 +193,9 @@ class RegistryClient
             $request = $request->withBasicAuth((string) $credential->username, (string) $credential->configValue('token', ''));
         }
 
-        try {
-            $response = $request->withOptions($this->pinned($realm))->get($realm, $query);
-        } catch (ConnectionException $e) {
-            throw new ImageLookupException(ImageLookupException::UNREACHABLE, 'token endpoint: '.$e->getMessage());
-        } catch (BlockedHostException $e) {
-            throw new ImageLookupException(ImageLookupException::BLOCKED_HOST, $e->getMessage());
-        }
+        // Not redirected: a token endpoint that sends the credential elsewhere
+        // is not one to follow.
+        $response = $this->fetch($request, $realm, $query);
 
         if (in_array($response->status(), [401, 403], true)) {
             throw $this->denied($credential);
@@ -252,54 +262,136 @@ class RegistryClient
     }
 
     /**
+     * A GET, following at most three redirects by hand.
+     *
+     * By hand because each hop is a new host — blob downloads go to a CDN — and
+     * each host has to be checked AND pinned before it is connected to. Guzzle's
+     * own redirect hook can only check: the connection that follows resolves
+     * the name again, which is exactly the second answer pinning exists to
+     * stop. The registry's token never follows a redirect to another host.
+     *
      * @param  array<string, string>  $headers
      */
     private function send(string $url, array $headers): Response
     {
-        try {
-            return $this->client()->withHeaders($headers)->withOptions($this->pinned($url))->get($url);
-        } catch (ConnectionException $e) {
-            throw new ImageLookupException(ImageLookupException::UNREACHABLE, $e->getMessage());
-        } catch (BlockedHostException $e) {
-            // Thrown by the redirect check, mid-request.
-            throw new ImageLookupException(ImageLookupException::BLOCKED_HOST, $e->getMessage());
+        $origin = strtolower((string) parse_url($url, PHP_URL_HOST));
+
+        for ($hop = 0; ; $hop++) {
+            $response = $this->fetch($this->client()->withHeaders($headers), $url);
+            $location = (string) $response->header('Location');
+
+            if (! $response->redirect() || $location === '') {
+                return $response;
+            }
+
+            if ($hop >= 3) {
+                throw new ImageLookupException(ImageLookupException::UNREACHABLE, 'too many redirects');
+            }
+
+            $url = (string) UriResolver::resolve(new Uri($url), new Uri($location));
+
+            if (! str_starts_with(strtolower($url), 'https://')) {
+                throw new ImageLookupException(ImageLookupException::BLOCKED_HOST, 'redirect away from https');
+            }
+
+            if (strtolower((string) parse_url($url, PHP_URL_HOST)) !== $origin) {
+                unset($headers['Authorization']);
+            }
         }
     }
 
+    /**
+     * One pinned, size-capped GET, with every transport failure turned into a
+     * lookup failure.
+     *
+     * @param  array<string, mixed>  $query
+     */
+    private function fetch(PendingRequest $request, string $url, array $query = []): Response
+    {
+        try {
+            // Only when there is one: an empty `query` option replaces the
+            // query string already in the URL — the next page of tags.
+            $request = $request->withOptions($this->pinned($url));
+            $response = $query === [] ? $request->get($url) : $request->get($url, $query);
+        } catch (ConnectionException|RequestException|TransferException $e) {
+            // A transfer cut off by the size cap lands here too.
+            throw new ImageLookupException(ImageLookupException::UNREACHABLE, $e->getMessage());
+        }
+
+        // The transfer is cut off at the cap already (see `client()`); this is
+        // the check that holds whatever delivered the body.
+        if (strlen($response->body()) > $this->maxBytes()) {
+            throw new ImageLookupException(ImageLookupException::UNREACHABLE, 'response too large');
+        }
+
+        return $response;
+    }
+
+    /**
+     * Far past any registry document the panel reads — a config blob is tens of
+     * KB, a page of a thousand tags well under one MB.
+     */
+    private function maxBytes(): int
+    {
+        return (int) config('server.docker.images.max_response_bytes', 2 * 1024 * 1024);
+    }
+
+    /**
+     * Every request made here: short timeouts, and a transfer cut off once it
+     * passes the size cap. The registry is chosen by the user, and every answer
+     * is decoded whole, so one that streamed for the full timeout would fill the
+     * worker's memory.
+     */
     private function client(): PendingRequest
     {
+        $max = $this->maxBytes();
+
         return Http::connectTimeout((int) config('server.docker.images.connect_timeout', 5))
             ->timeout((int) config('server.docker.images.timeout', 10))
             // Not a product name: it is sent to third-party registries, and the
             // panel is white-labelled.
-            ->withUserAgent('control-panel');
+            ->withUserAgent('control-panel')
+            ->withOptions(['curl' => [
+                CURLOPT_NOPROGRESS => false,
+                // Non-zero aborts the transfer. Counted as it arrives, because a
+                // chunked body declares no length.
+                CURLOPT_XFERINFOFUNCTION => fn ($handle, int $total, int $received): int => ($total > $max || $received > $max) ? 1 : 0,
+            ]]);
     }
 
     /**
-     * Guzzle options pinning the host to a checked address, and checking any
-     * redirect the same way. A blocked host is a refusal, not a network error.
+     * Guzzle options pinning the host to an address that was just checked.
+     *
+     * Fails closed. A host the panel will not interpret is refused, and so is a
+     * name it cannot resolve itself: curl reads some spellings PHP's resolver
+     * does not — `0x7f.0.0.1` is nothing to `gethostbynamel()` and 127.0.0.1 to
+     * curl — so an unpinned name is a name whose address nobody checked.
+     * Redirects are never followed here; `send()` follows them one pinned hop
+     * at a time.
      *
      * @return array<string, mixed>
      */
     private function pinned(string $url): array
     {
+        $host = RemoteHost::canonical((string) parse_url($url, PHP_URL_HOST));
+
+        if (RemoteHost::isUninterpretable($host)) {
+            throw new ImageLookupException(ImageLookupException::BLOCKED_HOST, $host);
+        }
+
         try {
             $pin = RemoteHost::pin($url);
         } catch (BlockedHostException $e) {
             throw new ImageLookupException(ImageLookupException::BLOCKED_HOST, $e->getMessage());
         }
 
+        if ($pin === null && filter_var($host, FILTER_VALIDATE_IP) === false) {
+            throw new ImageLookupException(ImageLookupException::UNREACHABLE, 'host does not resolve: '.$host);
+        }
+
         return [
             ...($pin !== null ? ['curl' => [CURLOPT_RESOLVE => [$pin]]] : []),
-            'allow_redirects' => [
-                'max' => 3,
-                'protocols' => ['https'],
-                'on_redirect' => function ($request, $response, $uri): void {
-                    if (RemoteHost::resolvesToBlocked($uri->getHost())) {
-                        throw new BlockedHostException($uri->getHost());
-                    }
-                },
-            ],
+            'allow_redirects' => false,
         ];
     }
 

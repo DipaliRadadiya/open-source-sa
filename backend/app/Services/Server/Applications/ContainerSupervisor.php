@@ -8,7 +8,9 @@ use App\Services\Server\Docker\RegistryAuth;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Str;
 
 /**
  * Runs an application that is a container.
@@ -384,7 +386,7 @@ class ContainerSupervisor
      */
     public function generated(Application $application, string $documentRoot): string
     {
-        return View::make('server.docker.compose', [
+        $values = [
             'project' => $this->project($application),
             'image' => (string) $application->image,
             'appPort' => (int) $application->app_port,
@@ -419,7 +421,53 @@ class ContainerSupervisor
                     && ($mount['volume'] ?? '') !== ''
                     && ($mount['path'] ?? '') !== '',
             )),
-        ])->render();
+        ];
+
+        $this->refuseLineBreaks($application, $values);
+
+        return View::make('server.docker.compose', $values)->render();
+    }
+
+    /**
+     * Refuse to render a value that would start a new line of the file.
+     *
+     * The template writes every value as a bare YAML scalar, and Blade's escaping
+     * leaves newlines alone, so a value with a line break in it is not one value:
+     * the text after the break is a new key — `privileged: true`, a bind of `/` —
+     * in a file nothing validates after this point. Each field is validated where
+     * it is accepted; this is the one check every field passes through, so a
+     * field added later, or a row written by something other than a request,
+     * cannot reopen it. Byte-for-byte the same output for every legitimate site.
+     *
+     * @param  array<string, mixed>  $values
+     *
+     * @throws ProvisioningFailedException
+     */
+    private function refuseLineBreaks(Application $application, array $values): void
+    {
+        $scalars = [];
+
+        array_walk_recursive($values, function (mixed $value, int|string $key) use (&$scalars): void {
+            if (is_string($value)) {
+                $scalars[] = [$key, $value];
+            }
+        });
+
+        foreach ($scalars as [$key, $value]) {
+            if (preg_match('/[\r\n]/', $value) === 1) {
+                $reference = (string) Str::uuid();
+
+                Log::channel('server-ops')->error('Refused to render a compose file: a value contains a line break', [
+                    'reference' => $reference,
+                    'feature' => 'application',
+                    'op' => 'compose_render',
+                    'application' => $application->id,
+                    'field' => $key,
+                ]);
+
+                throw new ProvisioningFailedException('compose_write', $reference);
+            }
+        }
     }
 
     /**

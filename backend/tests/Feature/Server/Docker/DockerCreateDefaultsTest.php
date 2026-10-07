@@ -2,9 +2,13 @@
 
 use App\Jobs\ProvisionApplication;
 use App\Models\Application;
+use App\Models\Permission;
+use App\Models\Registry;
+use App\Models\Role;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Rules\ContainerMountPath;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Docker\Images\ImageInspector;
 use App\Services\Server\Docker\Images\ImageLookupException;
@@ -289,3 +293,81 @@ it('quotes env values so Compose reads back exactly what was typed', function (s
     'backslash and double quote' => ["a\\\"b'", 'K="a\\\\\\"b\'"'],
     'empty' => ['', "K=''"],
 ]);
+
+/*
+ * DS-08: a mount path is written into the generated compose file as YAML, and
+ * nothing validates that file after it is rendered. A newline in a path was a
+ * new key — the payloads below are the exact ones from the security review.
+ */
+
+it('refuses a volume path that would write new keys into the compose file', function (string $path) {
+    imageSays(['exposed_ports' => [80], 'suggested_port' => 80]);
+
+    createDocker(['image' => 'alpine:3', 'container_port' => 80, 'volume_mounts' => [['path' => $path]]])
+        ->assertStatus(422)->assertJsonValidationErrors('volume_mounts.0.path');
+
+    expect(Application::count())->toBe(0);
+})->with([
+    'review exploit' => "/data\n      - /:/hostfs:rw\n    privileged: true",
+    'carriage return' => "/data\r    privileged: true",
+    'yaml comment' => '/data #x',
+    'yaml mapping' => '/data: {privileged: true}',
+    'space' => '/my data',
+]);
+
+it('refuses a trailing newline in the rule itself, where TrimStrings does not reach', function () {
+    // A request trims it away; an image's VOLUME and a row written by code do
+    // not pass through middleware. PCRE's `$` alone accepts one trailing `\n`.
+    $failed = false;
+    (new ContainerMountPath)->validate('path', "/data\n", function () use (&$failed): void {
+        $failed = true;
+    });
+
+    expect($failed)->toBeTrue()
+        ->and(preg_match(ContainerMountPath::PATTERN, "/data\n"))->toBe(0)
+        ->and(preg_match(ContainerMountPath::PATTERN, '/var/lib/my-app_2.0'))->toBe(1);
+});
+
+it('refuses the same payload in the single volume field', function () {
+    imageSays(['exposed_ports' => [80], 'suggested_port' => 80]);
+
+    createDocker(['container_port' => 80, 'volume_new' => 'memos-data', 'volume_path' => "/data\n    privileged: true"])
+        ->assertStatus(422)->assertJsonValidationErrors('volume_path');
+});
+
+it('drops an image VOLUME that would write new keys into the compose file', function () {
+    // No request field needed: the panel used to insert the registry's text
+    // itself. Dropped rather than refused — the user did not type it.
+    imageSays(['exposed_ports' => [80], 'suggested_port' => 80, 'volumes' => [
+        "/data\n      - /:/hostfs",
+        '/config',
+    ]]);
+
+    createDocker(['image' => 'myregistry.example/evil:1'])->assertCreated();
+
+    expect(Application::firstWhere('name', 'Memos')->volume_mounts)->toBe([
+        ['volume' => 'memos-config', 'path' => '/config'],
+    ]);
+});
+
+it('refuses a stored registry credential to a user who cannot view registries', function () {
+    imageSays(['exposed_ports' => [80], 'suggested_port' => 80]);
+    $registry = Registry::forceCreate([
+        'name' => 'GHCR', 'registry' => 'ghcr.io', 'username' => 'deploy', 'config' => ['token' => 'x'],
+    ]);
+
+    $role = Role::create(['name' => 'Deployer', 'slug' => 'deployer']);
+    $role->permissions()->attach(Permission::where('name', 'application')->sole()->id, ['view' => true, 'manage' => true]);
+    $user = User::factory()->create();
+    $user->roles()->attach($role);
+
+    $as = fn (User $u) => ['Authorization' => 'Bearer '.$u->createToken('t')->plainTextToken];
+    $body = ['name' => 'Memos', 'domain' => 'memos.example.com', 'system_user_id' => $this->systemUser->id,
+        'site_type' => 'docker', 'image' => 'ghcr.io/acme/app:1', 'container_port' => 80];
+
+    $this->withHeaders($as($user))->postJson('/api/applications', $body + ['registry_id' => $registry->id])->assertForbidden();
+    expect(Application::count())->toBe(0);
+
+    // The same user may create without one.
+    $this->withHeaders($as($user))->postJson('/api/applications', $body)->assertCreated();
+});

@@ -101,6 +101,11 @@ class CreateDefaults
      * card would accept. One it would refuse (the site mount, a reserved
      * path) is left to Docker's anonymous volume, as before.
      *
+     * The paths come from a config blob served by whatever registry the user
+     * named, so they are input like any other and get the same rule — dropped,
+     * not refused, because the user did not type them. A `VOLUME` containing a
+     * newline would otherwise be written into the compose file as new keys.
+     *
      * @param  array<int, mixed>  $paths
      * @return list<array{path: string}>
      */

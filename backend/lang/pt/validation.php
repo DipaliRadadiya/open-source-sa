@@ -231,6 +231,7 @@ return [
     'docker_mount_root' => 'Escolha um caminho dentro do contentor, por exemplo /var/lib/mysql.',
     'docker_mount_site_root' => 'É nesse caminho que os ficheiros do próprio site são montados (:path). Um volume aí esconde-os do contentor — os ficheiros ficam no servidor, mas o site serve um volume vazio.',
     'docker_mount_reserved' => ':path faz parte da imagem com que o contentor arranca. Um volume vazio por cima deixa um contentor que não consegue arrancar.',
+    'docker_mount_characters' => 'Use apenas letras, algarismos, pontos, hífenes, sublinhados e barras, começando por /, por exemplo /var/lib/mysql.',
 
     // A name the panel is about to create, so the inverse rule: not taken.
     'docker_network_taken' => 'Já existe uma rede chamada \':name\' neste servidor. Escolha-a na lista acima em vez de criar uma segunda.',

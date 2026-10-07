@@ -1229,3 +1229,24 @@ it('leaves a pasted compose file alone, whatever the site mount', function () {
     expect($written)->not->toContain('/panel-site')
         ->and($written)->not->toContain(':/app');
 });
+
+it('refuses to render a compose file from a value with a line break in it (DS-08)', function (array $attributes) {
+    // Every field is validated where it is accepted; this is the check every
+    // field passes through on the way into the file, so a field added later —
+    // or a row written by something other than a request — cannot reopen it.
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([], $ran, $written);
+
+    $application = containerApp();
+    $application->forceFill($attributes)->save();
+
+    expect(fn () => (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
+        ->generated($application->fresh(), '/home/shop/shop/public_html'))
+        ->toThrow(ProvisioningFailedException::class);
+})->with([
+    'mount path' => [['volume_mounts' => [['volume' => 'shop-db', 'path' => "/data\n      - /:/hostfs:rw\n    privileged: true"]]]],
+    'second mount' => [['volume_mounts' => [['volume' => 'a', 'path' => '/a'], ['volume' => "b\n    privileged: true", 'path' => '/b']]]],
+    'image' => [['image' => "nginx\n    privileged: true"]],
+    'memory limit' => [['memory_limit' => "512m\n    privileged: true"]],
+]);

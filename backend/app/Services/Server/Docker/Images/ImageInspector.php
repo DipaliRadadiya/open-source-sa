@@ -115,10 +115,21 @@ class ImageInspector
             throw new ImageLookupException(ImageLookupException::TAG_NOT_FOUND, 'manifest has no config');
         }
 
+        // The digest is the cache key, and it came from a manifest served by a
+        // host the user chose — so it is checked for shape here and the blob is
+        // checked against it in `blob()`. Without both, one user's registry
+        // could answer with another image's digest and a blob of its own, and
+        // everyone inspecting that image for the next hour would read it.
+        if (preg_match('/^sha256:[a-f0-9]{64}$/D', $configDigest) !== 1) {
+            throw new ImageLookupException(ImageLookupException::UNREACHABLE, 'manifest config digest is malformed');
+        }
+
         // A config blob is content-addressed, so it can be cached for as long
-        // as we like; an hour keeps the cache from growing without bound.
+        // as we like; an hour keeps the cache from growing without bound. Keyed
+        // by registry too: content addressing is only as good as the host
+        // vouching for it.
         $config = Cache::remember(
-            'docker-image-config:'.$configDigest,
+            'docker-image-config:'.$image->apiHost().':'.$configDigest,
             now()->addMinutes((int) config('server.docker.images.config_cache_minutes', 60)),
             fn (): array => $this->registry->blob($image, $configDigest, $credential),
         );
@@ -295,7 +306,7 @@ class ImageInspector
 
             [$key, $value] = explode('=', $line, 2);
 
-            if (preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $key) !== 1 || Str::is($hidden, $key)) {
+            if (preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/D', $key) !== 1 || Str::is($hidden, $key)) {
                 continue;
             }
 

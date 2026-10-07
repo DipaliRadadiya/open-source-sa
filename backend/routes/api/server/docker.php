@@ -94,13 +94,18 @@ Route::middleware('hosts-containers')->group(function (): void {
     | Every call is an outbound request, so each is throttled per user. Search
     | is called while the user types, hence the higher ceiling; answers are
     | cached, so the throttle protects the registries more than the panel.
+    |
+    | Tags and inspect reach a registry the user names, which can be made to
+    | answer as slowly as the timeout allows: each call holds a PHP worker for
+    | up to three requests of 10 s. 20 a minute is far past what the picker
+    | sends and keeps one token from occupying the workers (DS-08).
     */
     Route::get('/docker/images/search', [DockerImageController::class, 'search'])
         ->middleware(['permission:application', 'throttle:60,1']);
 
     Route::get('/docker/images/tags', [DockerImageController::class, 'tags'])
-        ->middleware(['permission:application', 'throttle:30,1']);
+        ->middleware(['permission:application', 'throttle:20,1']);
 
     Route::get('/docker/images/inspect', [DockerImageController::class, 'inspect'])
-        ->middleware(['permission:application', 'throttle:30,1']);
+        ->middleware(['permission:application', 'throttle:20,1']);
 });

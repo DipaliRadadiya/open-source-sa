@@ -83,7 +83,17 @@ class StoreApplicationRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return $this->user()?->canManage('application') ?? false;
+        $user = $this->user();
+
+        if ($user === null || ! $user->canManage('application')) {
+            return false;
+        }
+
+        // A stored registry credential is used at create — to inspect the
+        // image and then to pull it — so choosing one needs what choosing one
+        // on the inspect endpoint needs (`DockerImageRequest`): `registry`
+        // (view). Otherwise its id is an oracle for someone else's credential.
+        return ! $this->filled('registry_id') || $user->canView('registry');
     }
 
     /**

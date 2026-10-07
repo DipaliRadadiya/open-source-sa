@@ -97,7 +97,10 @@ class Application extends Model
             'waf_mode' => WafMode::class,
             'waf_categories' => 'array',
             'volume_mounts' => 'array',
-            'last_failure' => 'array',
+            // Carries the last lines of the container's own log, which is where
+            // a first boot prints its connection strings. Encrypted like the
+            // secrets beside it; the API shows it to `app_log` viewers only.
+            'last_failure' => 'encrypted:array',
             // Live database credentials for a one-click container app. Encrypted
             // for the same reason `webhook_secret` is: it grants access.
             'docker_secrets' => 'encrypted:array',

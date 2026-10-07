@@ -1855,6 +1855,11 @@ return [
             // commit (`sha-…`) have thousands; a picker needs the recent ones.
             'max_tag_pages' => 5,
 
+            // The largest answer read from a registry, in bytes. A config blob
+            // is tens of KB and a page of a thousand tags well under one MB;
+            // the registry is user-chosen and every answer is decoded whole.
+            'max_response_bytes' => 2 * 1024 * 1024,
+
             // "This image is X GB" from this size up.
             'large_bytes' => 1024 ** 3,
 
