@@ -6085,7 +6085,7 @@ The image is resolved for **this server's architecture**. A manifest list is nar
   - None declared → the `server.docker.images.known_ports` table gives a port marked `guessed`; otherwise `null` with `none`, and **the UI must ask**.
 - `env`: the image's `ENV` without build plumbing (`PATH`, `*_VERSION`, checksums …; see `server.docker.images.hidden_env`).
 - **`required` is never inferred.** Images cannot declare a mandatory setting, and an empty `ENV` is not one: changedetection.io ships `LOGGER_LEVEL=` and starts fine without it. `required: true` comes only from `server.docker.images.required_env`, for example `postgres` → `POSTGRES_PASSWORD`. Empty values produce a softer warning instead.
-- `volumes`: the image's `VOLUME`s, plus the folders `server.docker.images.known_volumes` lists for images that keep data without declaring it (Uptime Kuma 2.x `/app/data`, n8n, Open WebUI, Homepage).
+- `volumes`: the image's `VOLUME`s, plus the folders `server.docker.images.known_volumes` lists for images that keep data without declaring it (Uptime Kuma 2.x `/app/data`, changedetection.io, Gotify, Actual, code-server, n8n, Open WebUI, Homepage). An image in neither keeps nothing across an update unless the user adds storage.
 - `suggested_volumes`: one named volume per entry in `volumes`. One volume is named `<project>-data`; several are named `<project>-<last path segment>`.
 - `uses_app_dir`: whether the image keeps its program in `/app`, read from WORKDIR, entrypoint and build history. A `COPY --from` whose *source* is `/app` does not count, and neither does an empty `mkdir /app`.
 - `size_bytes`: the compressed download size for this architecture.

@@ -1886,6 +1886,9 @@ return [
                 'postgres' => ['POSTGRES_PASSWORD'],
                 'mysql' => ['MYSQL_ROOT_PASSWORD'],
                 'mariadb' => ['MARIADB_ROOT_PASSWORD'],
+                // Crash-loops on `TypeError: Invalid URL` without it (DS-07).
+                'umamisoftware/umami' => ['DATABASE_URL'],
+                'ghcr.io/umami-software/umami' => ['DATABASE_URL'],
             ],
 
             // Images that listen on a port without declaring it (no EXPOSE),
@@ -1904,9 +1907,16 @@ return [
             // (no VOLUME), by repository. Added to the declared ones, so the
             // data survives the container being recreated on an update.
             // Measured 2026-10-07: Uptime Kuma 1.x declared /app/data, 2.x no
-            // longer does; the rest are from each image's own documentation.
+            // longer does, and changedetection.io, Gotify, Actual and
+            // code-server declare nothing; the paths are from each image's
+            // own documentation.
             'known_volumes' => [
                 'louislam/uptime-kuma' => ['/app/data'],
+                'dgtlmoon/changedetection.io' => ['/datastore'],
+                'ghcr.io/dgtlmoon/changedetection.io' => ['/datastore'],
+                'gotify/server' => ['/app/data'],
+                'actualbudget/actual-server' => ['/data'],
+                'codercom/code-server' => ['/home/coder'],
                 'n8nio/n8n' => ['/home/node/.n8n'],
                 'ghcr.io/open-webui/open-webui' => ['/app/backend/data'],
                 'ghcr.io/gethomepage/homepage' => ['/app/config'],
