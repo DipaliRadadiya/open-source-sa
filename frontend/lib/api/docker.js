@@ -113,3 +113,23 @@ export function getContainerSecrets(id) {
 export function acknowledgeContainerSecrets(id) {
   return api.post(`/applications/${id}/container/secrets/acknowledge`);
 }
+
+/**
+ * Image discovery (DS-02). All three read the registry without pulling, so
+ * they are safe to call while the user types; `signal` lets a newer keystroke
+ * abandon an older request.
+ */
+export function searchDockerImages(q, { limit = 10, signal } = {}) {
+  return api.get("/docker/images/search", { params: { q, limit }, signal });
+}
+
+export function getDockerImageTags(image, { limit = 20, signal } = {}) {
+  return api.get("/docker/images/tags", { params: { image, limit }, signal });
+}
+
+export function inspectDockerImage(image, { registryId, signal } = {}) {
+  return api.get("/docker/images/inspect", {
+    params: { image, ...(registryId ? { registry_id: registryId } : {}) },
+    signal,
+  });
+}

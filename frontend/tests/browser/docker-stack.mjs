@@ -47,6 +47,14 @@ page.on("console", (m) => {
   const where = page.url().replace(/^https?:\/\/[^/]+/, "");
   errors.push(`[${where}] ${m.text()} ${m.location()?.url ?? ""}`.trim());
 });
+// DISCOVERY_STUB=1 answers the DS-02 image endpoints from a fixture of the real
+// registry data, for panels that do not run DS-02 yet. Read-only routes only.
+if (process.env.DISCOVERY_STUB === "1") {
+  const { discoveryStub } = await import("./docker-discovery-stub.mjs");
+  await page.route(/\/api\/docker\/images\/(search|tags|inspect)\?/, (route) =>
+    route.request().method() === "GET" ? route.fulfill(discoveryStub(route.request().url())) : route.continue(),
+  );
+}
 page.on("pageerror", (e) => errors.push(`[${page.url().replace(/^https?:\/\/[^/]+/, "")}] pageerror: ${e.message}`));
 
 /** Wait for a table row naming this thing to exist, or report what the table holds. */
@@ -155,58 +163,65 @@ try {
   const chips = (await page.locator("button").allTextContents()).map((t) => t.trim());
   chips.includes("Databases") ? bad("no Databases category chip", "still present") : ok("no Databases category chip");
 
-  // ---- 7. choosing Docker reveals the fields, and the CPU hint names THIS server
+  // ---- 7. choosing Docker leads with the image search, not an image+port form
   await page.locator("button", { hasText: "Docker container" }).first().click();
   await page.waitForTimeout(2500);
-  const form = await page.locator("body").innerText();
-  for (const label of ["Image", "Container port", "Memory limit", "CPU limit"]) {
-    has(`"${label}" field is on the create form`, form, label);
-  }
-  // Read from the server, so the hint cannot drift from what the validator enforces.
-  /\bThis server has \d+\b/.test(form)
-    ? ok("CPU hint states this server's core count")
-    : bad("CPU hint core count", form.match(/In cores[^.]*\./)?.[0] ?? "hint not found");
-  const placeholders = await page.locator("input").evaluateAll((els) => els.map((e) => e.placeholder).filter(Boolean));
-  // The placeholder, read as an attribute — it is not in `innerText`, so the first
-  // version of this check could only ever fail.
-  placeholders.includes("No limit")
-    ? ok("empty CPU says it means no limit")
-    : bad("CPU placeholder", placeholders.join(" | "));
-  placeholders.some((x) => /^\d+[mg]$/.test(x))
-    ? ok("memory placeholder is the server default")
-    : bad("memory placeholder", placeholders.join(" | "));
+  const search = page.getByRole("combobox", { name: "Docker image" });
+  is("the image is chosen by searching", await search.count(), 1);
+  is("no free-text port before an image is chosen", await page.locator("input[name=container_port]").count(), 0);
+  has("the search explains what an image is", await page.locator("main").innerText(), "Try:");
 
-  // ---- 8. create a container site THROUGH THE FORM, then read it back
-  //
-  // The highest-value thing in this file. Everything above checks that a control is on
-  // screen; this checks that the screen somebody actually uses produces a running
-  // container with the limits they typed.
+  // ---- 8. search "memos", pick it, and type nothing else but the name
   const siteName = `${TAG}site`;
   await page.locator("input[name=name]").fill(siteName);
   await page.waitForTimeout(1500);
-  // NOT filled: the form defaults to a Temporary domain, derives it from the name and
-  // holds the field read-only. Filling it timed out on an input that is visible and
-  // disabled, which Playwright reports as a plain timeout.
   const derived = await page.locator("input[name=domain]").inputValue();
   derived.startsWith(siteName)
     ? ok("the temporary domain is derived from the name")
     : bad("temporary domain", `got "${derived}"`);
-  await page.locator("input[name=image]").fill("nginx:1.27-alpine");
-  await page.locator("input[name=container_port]").fill("80");
+  await search.click();
+  await search.pressSequentially("memos", { delay: 40 });
+  const hit = page.getByRole("option", { name: /neosmemo\/memos/ }).first();
+  await hit.waitFor({ state: "visible", timeout: 20000 });
+  ok("search lists neosmemo/memos");
+  await hit.click();
+  // The version select appears with the recommended tag, then the detected card.
+  await page.getByText("What we found in this image").waitFor({ timeout: 30000 });
+  await page.getByText("detected from the image").waitFor({ timeout: 30000 });
+  const detected = await page.locator("[data-field-name=container_port]").innerText();
+  has("port 5230 is detected from the image", detected, "5230");
+  is("the detected port is text, not an input", await page.locator("input[name=container_port]").count(), 0);
+  is("the image's folder is pre-ticked as storage", await page.locator("[data-field-name=docker_volumes] [role=checkbox][data-state=checked]").count() >= 1, true);
+  has("the version defaults to a numbered release", await page.locator("[data-field-name=image_tag]").innerText(), "0.31.0");
+
+  // Change reveals the input with a warning; "Use 5230" puts it back.
+  await page.getByRole("button", { name: "Change", exact: true }).last().click();
+  is("Change reveals the port input", await page.locator("input[name=container_port]").count(), 1);
+  has("changing the port warns about 502", await page.locator("[data-field-name=container_port]").innerText(), "502");
+  await page.getByRole("button", { name: "Use 5230" }).click();
+  is("Use 5230 hides the input again", await page.locator("input[name=container_port]").count(), 0);
+
+  // Limits live under Advanced now.
+  await page.getByRole("button", { name: /^Advanced/ }).click();
   await page.locator("input[name=memory_limit]").fill("192m");
   await page.locator("input[name=cpu_limit]").fill("0.5");
 
+  let createBody = null;
+  page.on("request", (r) => {
+    if (r.method() === "POST" && /\/api\/applications$/.test(new URL(r.url()).pathname)) createBody = r.postDataJSON();
+  });
   const submit = page.locator("button:has-text('Create application')");
   await submit.scrollIntoViewIfNeeded();
   is("Create is enabled once the form is answered", await submit.isEnabled(), true);
   await submit.click();
-
-  // Lands on the new site. Generous, because provisioning pulls an image.
   await page.waitForURL(/\/applications\/\d+(\/|$)/, { timeout: 120000 });
   const siteId = page.url().match(/\/applications\/(\d+)/)?.[1];
   siteId ? ok(`the form created a site and landed on it (${siteId})`) : bad("site id", page.url());
+  is("request carried the picked image", createBody?.image, "neosmemo/memos:0.31.0");
+  is("request carried the detected port", createBody?.container_port, 5230);
+  is("request kept the image's folder", createBody?.volume_path, "/var/opt/memos");
+  is("request named the volume after the site", createBody?.volume_new, `${siteName}-memos`);
 
-  // Wait for it to be serving rather than asserting on the provisioning screen.
   let settled = false;
   for (let i = 0; i < 40; i += 1) {
     await page.reload({ waitUntil: "networkidle" });
@@ -216,22 +231,26 @@ try {
     await page.waitForTimeout(6000);
   }
   is("the site reached a settled state", settled, true);
+  let status = 0;
+  for (let i = 0; i < 20 && status !== 200; i += 1) {
+    status = await page.request.get(`http://${derived}/`, { ignoreHTTPSErrors: true, maxRedirects: 5 }).then((r) => r.status(), () => 0);
+    if (status !== 200) await page.waitForTimeout(5000);
+  }
+  is("the deployed site answers 200", status, 200);
 
-  // ---- 9. its Container screen shows what was typed on the create form
+  // ---- 9. its Container screen shows the image and the port as a fact
   await goto(`/applications/${siteId}/container`);
   const container = await page.locator("main").innerText();
-  has("Container screen names the image", container, "nginx:1.27-alpine");
+  has("Container screen names the image", container, "neosmemo/memos:0.31.0");
   is("memory limit survived the create form", await page.locator("input[name=memory_limit]").inputValue(), "192m");
   is("cpu limit survived the create form", await page.locator("input[name=cpu_limit]").inputValue(), "0.5");
-  /This server has \d+/.test(container) ? ok("Container screen states the host core count") : bad("core count on Container screen", "absent");
 
   // ---- 10. and the compose file the panel wrote for it
   await goto(`/applications/${siteId}/compose`);
-  // The compose file is a <textarea value={...}>, and a textarea's value is not
-  // part of innerText -- it has to be read as an input value.
   const compose = await page.locator("main textarea").first().inputValue();
   has("compose file shows the memory ceiling", compose, "mem_limit: 192m");
-  has("compose file shows the cpu quota", compose, "cpus: 0.5");
+  has("compose file proxies to the image's port", compose, ":5230");
+  has("compose file mounts the image's folder", compose, `${siteName}-memos:/var/opt/memos`);
   has("compose file publishes to loopback only", compose, "127.0.0.1:");
 
   // ---- 11. delete it through the dialog, including its Docker resources

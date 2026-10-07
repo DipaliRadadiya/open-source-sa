@@ -19,6 +19,7 @@ import { Note } from "@/components/ui/note";
 import { Button } from "@/components/ui/button";
 import { ContainerVolumes } from "@/components/applications/container-volumes";
 import { ContainerCredentials } from "@/components/applications/container-credentials";
+import { useImageInspection } from "@/lib/docker/use-image-inspection";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import {
   Select,
@@ -86,6 +87,13 @@ export function ContainerCard({
   className,
 }) {
   const t = useTranslations("applications.container");
+  const tImage = useTranslations("applications.dockerImage");
+  const [portEditing, setPortEditing] = useState(false);
+  const inspected = useImageInspection(application.image, application.registry_id);
+  const detectedPort =
+    inspected?.found && inspected.port_confidence !== "none"
+      ? inspected.suggested_port ?? null
+      : null;
   const { refreshAndWait } = useRefresh();
   const [saving, setSaving] = useState(false);
   const [pulling, setPulling] = useState(false);
@@ -363,21 +371,64 @@ export function ContainerCard({
                 <FormField
                   control={form.control}
                   name="container_port"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("containerPort")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          inputMode="numeric"
-                          disabled={!canManage}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>{t("containerPortHint")}</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  render={({ field }) => {
+                    // Matching what the image declares: shown as a fact, editable on request.
+                    const matches =
+                      detectedPort && Number(field.value) === detectedPort;
+                    return (
+                      <FormItem>
+                        <FormLabel hint={tImage("portHint")}>{t("containerPort")}</FormLabel>
+                        {matches && !portEditing ? (
+                          <p className="flex min-h-9 flex-wrap items-center gap-x-2 text-sm">
+                            <span className="font-mono text-base font-medium">{field.value}</span>
+                            <span className="text-muted-foreground">{tImage("portDetected")}</span>
+                            {canManage ? (
+                              <Button
+                                type="button"
+                                variant="link"
+                                className="h-auto p-0 text-sm"
+                                onClick={() => setPortEditing(true)}
+                              >
+                                {tImage("portChange")}
+                              </Button>
+                            ) : null}
+                          </p>
+                        ) : (
+                          <FormControl>
+                            <Input
+                              type="number"
+                              inputMode="numeric"
+                              disabled={!canManage}
+                              {...field}
+                            />
+                          </FormControl>
+                        )}
+                        {detectedPort && !matches ? (
+                          <FormDescription className="flex flex-wrap items-center gap-x-2 text-warning">
+                            <span>{tImage("portDiffers", { port: detectedPort })}</span>
+                            {canManage ? (
+                              <Button
+                                type="button"
+                                variant="link"
+                                className="h-auto p-0 text-xs"
+                                onClick={() =>
+                                  form.setValue("container_port", detectedPort, {
+                                    shouldDirty: true,
+                                    shouldValidate: true,
+                                  })
+                                }
+                              >
+                                {tImage("portUseDetected", { port: detectedPort })}
+                              </Button>
+                            ) : null}
+                          </FormDescription>
+                        ) : (
+                          <FormDescription>{t("containerPortHint")}</FormDescription>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
                 <FormField
                   control={form.control}

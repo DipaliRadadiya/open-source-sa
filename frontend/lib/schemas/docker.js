@@ -239,3 +239,67 @@ export const volumeMountSchema = z.object({
     .regex(/^\//)
     .refine((path) => !/(^|\/)\.\.(\/|$)/.test(path)),
 });
+
+/**
+ * Image discovery responses (DS-02 contract). Lenient on the optional parts:
+ * one missing count must not reject a whole result list.
+ */
+export const imageSearchResponseSchema = z.object({
+  results: z
+    .array(
+      z.object({
+        image: z.string(),
+        registry: z.string().nullish(),
+        description: z.string().nullish(),
+        stars: z.number().nullish(),
+        pulls: z.number().nullish(),
+        official: z.boolean().default(false),
+        verified_publisher: z.boolean().default(false),
+      }),
+    )
+    .default([]),
+  offline: z.boolean().default(false),
+});
+
+export const imageTagsResponseSchema = z.object({
+  image: z.string().nullish(),
+  recommended: z.string().nullish(),
+  tags: z
+    .array(
+      z.object({
+        name: z.string(),
+        updated_at: z.string().nullish(),
+        stable: z.boolean().default(false),
+      }),
+    )
+    .default([]),
+});
+
+export const imageInspectResponseSchema = z.object({
+  image: z.string().nullish(),
+  found: z.boolean(),
+  message: z.string().nullish(),
+  exposed_ports: z.array(z.number()).default([]),
+  suggested_port: z.number().int().nullish(),
+  port_confidence: z.enum(["declared", "guessed", "none"]).catch("none"),
+  volumes: z.array(z.string()).default([]),
+  suggested_volumes: z
+    .array(z.object({ path: z.string(), name: z.string().nullish() }))
+    .default([]),
+  env: z
+    .array(
+      z.object({
+        key: z.string(),
+        default: z.string().nullish(),
+        required: z.boolean().default(false),
+      }),
+    )
+    .default([]),
+  size_bytes: z.number().nullish(),
+  architectures: z.array(z.string()).default([]),
+  uses_app_dir: z.boolean().default(false),
+  warnings: z.array(z.string()).default([]),
+});
+
+/** Matches DS-03's create rule for env keys. */
+export const ENV_KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
