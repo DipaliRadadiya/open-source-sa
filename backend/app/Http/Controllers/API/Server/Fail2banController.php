@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\Server;
 
+use App\Enums\InstallStatus;
 use App\Exceptions\Server\Fail2ban\Fail2banException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Fail2ban\BanIpRequest;
@@ -78,6 +79,12 @@ class Fail2banController extends Controller
     {
         if ($fail2ban->installed()) {
             return response()->json(['message' => __('errors/fail2ban.already_installed')], 422);
+        }
+
+        // One at a time. A reload mid-install brought the Install button back
+        // and a second apt run could be queued behind the first (FS-A5).
+        if ($installs->versions(InstallFail2ban::RUNTIME)->get(InstallFail2ban::VERSION)?->status === InstallStatus::Installing) {
+            return response()->json(['message' => __('errors/fail2ban.already_installing')], 409);
         }
 
         // Before dispatch, not inside the job: otherwise there is a window

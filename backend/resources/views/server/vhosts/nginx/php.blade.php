@@ -111,11 +111,23 @@ server {
     set $waf_exception "0";
     set $waf_reason "-";
 @foreach ($waf['exceptions'] as $exception)
-    {{-- `$uri`, the path without its query (bug #82): matched against the
-         query string or the user agent, an exception was a password anyone
-         could type. --}}
-    if ($uri ~* "{!! $exception !!}") { set $waf_exception "1"; }
+    {{-- The path the visitor asked for — never the query (bug #82: matched
+         against the query string or the user agent, an exception was a
+         password anyone could type). `$request_uri`, not `$uri`: on a front
+         controller `try_files` redirects internally to /index.php, this
+         block runs again with `$uri` = /index.php, the exception no longer
+         matched and the request was blocked anyway — so an exception never
+         helped WordPress /wp-json/ or a Laravel route, the cases it exists
+         for (frontend QA FS-C43). `^[^?]*` keeps the match in the path. --}}
+    if ($request_uri ~* "^[^?]*{!! $exception !!}") { set $waf_exception "1"; }
 @endforeach
+@if ($waf['exceptions'] !== [])
+    {{-- `$request_uri` is the path as sent, before nginx resolves `..`:
+         `/allowed/../wp-login.php` would carry the exception to a page it
+         was never meant for. No exception for a path with dot segments or
+         doubled slashes, encoded or not. --}}
+    if ($request_uri ~* "^[^?]*(/\.\.|%2e%2e|\.%2e|%2e\.|//|%2f)") { set $waf_exception "0"; }
+@endif
 @if (in_array('query_string', $waf['categories'], true))
     if ($bad_querystring_ng) { set $waf_block "1"; set $waf_reason "query_string"; }
 @endif

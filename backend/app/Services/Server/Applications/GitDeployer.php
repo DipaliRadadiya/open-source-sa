@@ -11,6 +11,7 @@ use App\Services\Server\Runtimes\NodeRuntime;
 use App\Services\Server\Runtimes\PhpRuntime;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use App\Services\Server\WebServers\WebServerManager;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Throwable;
@@ -46,6 +47,7 @@ class GitDeployer
         private DeploymentRecorder $recorder,
         private PhpShim $shim,
         private SecretFilePrivacy $secretPrivacy,
+        private WebServerManager $webServers,
     ) {}
 
     /**
@@ -207,6 +209,13 @@ class GitDeployer
             // that changed it rather than the one after.
             if ($this->supervisor->runs($application)) {
                 $this->supervisor->apply($application, $documentRoot);
+
+                // The proxy has to point where the process now listens. A port
+                // changed in the settings reached the unit on this deploy but
+                // not the vhost, so every visitor got 502 (frontend QA FS-C41).
+                if ($application->app_port) {
+                    $this->republishVhost($application, $documentRoot);
+                }
 
                 $this->progress->record('restart_app');
             }
@@ -1022,5 +1031,27 @@ class GitDeployer
         }
 
         return $workers->count();
+    }
+
+    /**
+     * Rewrite the application's vhost and reload, refusing a config the web
+     * server rejects rather than reloading into it.
+     */
+    private function republishVhost(Application $application, string $documentRoot): void
+    {
+        $driver = $this->webServers->driver();
+        $written = $driver->apply($application, $documentRoot);
+
+        if ($written->failed()) {
+            throw new ProvisioningFailedException('write_vhost', $written->reference);
+        }
+
+        $tested = $driver->test();
+
+        if ($tested->failed()) {
+            throw new ProvisioningFailedException('test_config', $tested->reference);
+        }
+
+        $driver->reload();
     }
 }

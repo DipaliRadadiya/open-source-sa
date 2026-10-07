@@ -7,6 +7,7 @@ use App\Models\Application;
 use App\Models\SystemUser;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\View;
 
 /**
@@ -57,23 +58,66 @@ class LegacyHandover
      */
     public function complete(): array
     {
-        $retired = $this->retireAgent();
+        $agent = $this->retireAgent();
+        $users = [];
 
-        $users = SystemUser::query()
+        foreach ($this->pm2Users() as $user) {
+            $users[] = [
+                'username' => $user->username,
+                'boot_unit' => $this->ensureBootPersistence($user),
+                'log_rotation' => $this->ensureLogRotation($user) ? 'ok' : 'failed',
+            ];
+        }
+
+        // Every step checked, and a failure says which. It used to answer the
+        // same "done" whatever happened — the agent still running and boot
+        // persistence still broken read exactly like success (FS-C27).
+        $ok = ($agent === null || ($agent['stopped'] && $agent['disabled']))
+            && collect($users)->every(fn (array $u) => $u['boot_unit'] !== 'failed' && $u['log_rotation'] === 'ok');
+
+        return ['ok' => $ok, 'agent' => $agent, 'users' => $users];
+    }
+
+    /**
+     * Whether a handover is needed, and what is already in place — the same
+     * checks {@see complete()} acts on, without acting (FS-C26).
+     *
+     * @return array{needed: bool, agent: array{unit: ?string, running: bool}, users: list<array{username: string, boot_unit_healthy: bool, log_rotation: bool}>}
+     */
+    public function status(): array
+    {
+        $found = $this->agent->describe();
+        $users = [];
+
+        foreach ($this->pm2Users() as $user) {
+            $users[] = [
+                'username' => $user->username,
+                'boot_unit_healthy' => $this->bootUnitHealthy($user),
+                'log_rotation' => $this->serverOps->probe(
+                    ['test', '-f', $this->logrotatePath($user)],
+                    ['feature' => 'application', 'op' => 'pm2_logrotate_present', 'user' => $user->username],
+                )->ok,
+            ];
+        }
+
+        $needed = (bool) $found['running']
+            || collect($users)->contains(fn (array $u) => ! $u['boot_unit_healthy'] || ! $u['log_rotation']);
+
+        return [
+            'needed' => $needed,
+            'agent' => ['unit' => $found['unit'], 'running' => (bool) $found['running']],
+            'users' => $users,
+        ];
+    }
+
+    /** @return Collection<int, SystemUser> */
+    private function pm2Users()
+    {
+        return SystemUser::query()
             ->whereIn('id', Application::query()
                 ->where('supervisor_mode', SupervisorMode::Pm2)
                 ->select('system_user_id'))
             ->get();
-
-        foreach ($users as $user) {
-            $this->ensureBootPersistence($user);
-            $this->ensureLogRotation($user);
-        }
-
-        return [
-            'agent' => $retired,
-            'users' => $users->pluck('username')->all(),
-        ];
     }
 
     /**
@@ -83,7 +127,10 @@ class LegacyHandover
      * which is the normal case on a server that was never migrated, and not an
      * error.
      */
-    public function retireAgent(): ?string
+    /**
+     * @return array{unit: string, stopped: bool, disabled: bool, reference: ?string}|null
+     */
+    public function retireAgent(): ?array
     {
         $found = $this->agent->describe();
         $unit = $found['unit'];
@@ -94,10 +141,15 @@ class LegacyHandover
 
         $context = ['feature' => 'application', 'op' => 'legacy_agent_retire', 'unit' => $unit];
 
-        $this->serverOps->run(['systemctl', 'stop', $unit], $context);
-        $this->serverOps->run(['systemctl', 'disable', $unit], $context);
+        $stopped = $this->serverOps->run(['systemctl', 'stop', $unit], $context);
+        $disabled = $this->serverOps->run(['systemctl', 'disable', $unit], $context);
 
-        return $unit;
+        return [
+            'unit' => $unit,
+            'stopped' => $stopped->ok,
+            'disabled' => $disabled->ok,
+            'reference' => $stopped->failed() ? $stopped->reference : ($disabled->failed() ? $disabled->reference : null),
+        ];
     }
 
     /**
@@ -108,25 +160,29 @@ class LegacyHandover
      * its `pm2` is gone, which is what a Node upgrade through `n` does to a
      * unit written before it.
      */
-    public function ensureBootPersistence(SystemUser $user): bool
+    /**
+     * @return 'healthy'|'written'|'failed'
+     */
+    public function ensureBootPersistence(SystemUser $user): string
     {
         if ($this->bootUnitHealthy($user)) {
-            return false;
+            return 'healthy';
         }
 
         $context = ['feature' => 'application', 'op' => 'pm2_boot_unit', 'user' => $user->username];
 
-        $this->files->put($this->bootUnitPath($user), $this->renderBootUnit($user), $context);
-
-        $this->serverOps->run(['systemctl', 'daemon-reload'], $context);
-        $this->serverOps->run(['systemctl', 'enable', $this->bootUnit($user)], $context);
+        if ($this->files->put($this->bootUnitPath($user), $this->renderBootUnit($user), $context)->failed()
+            || $this->serverOps->run(['systemctl', 'daemon-reload'], $context)->failed()
+            || $this->serverOps->run(['systemctl', 'enable', $this->bootUnit($user)], $context)->failed()) {
+            return 'failed';
+        }
 
         // Deliberately not started. The daemon is already running — that is
         // what is serving the customer's sites — and `pm2 resurrect` against a
         // live daemon would start a second copy of every application in the
         // dump. Enabling is the whole job; the unit takes effect at the next
         // boot, which is the moment it is for.
-        return true;
+        return 'written';
     }
 
     /**
@@ -136,13 +192,13 @@ class LegacyHandover
      * daemon, so a rename would leave it writing to an unreachable inode — the
      * same reason the applications' own policy uses it.
      */
-    public function ensureLogRotation(SystemUser $user): void
+    public function ensureLogRotation(SystemUser $user): bool
     {
-        $this->files->put(
+        return $this->files->put(
             $this->logrotatePath($user),
             $this->renderLogRotation($user),
             ['feature' => 'application', 'op' => 'pm2_logrotate', 'user' => $user->username],
-        );
+        )->ok;
     }
 
     public function bootUnit(SystemUser $user): string

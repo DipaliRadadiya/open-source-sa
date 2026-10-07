@@ -9,4 +9,5 @@ return [
     'invalid_source' => 'El origen debe ser una dirección IP o un rango CIDR válido.',
     'ssh_lockout' => 'Esta es la única regla que permite SSH en el puerto :port. Eliminarla le bloquearía el acceso a este servidor. Añada primero otra regla para ese puerto o desactive el firewall.',
     'unmanaged_not_found' => 'Esa regla ya no está en el firewall del servidor. Actualiza la página para ver las reglas actuales.',
+    'range_needs_protocol' => 'Un rango de puertos necesita un solo protocolo. Elija TCP o UDP, o añada dos reglas.',
 ];

@@ -21,7 +21,7 @@ class UpdateUserRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'username' => ['required', 'string', 'alpha_dash', 'max:255', Rule::unique('users', 'username')->ignore($this->route('user'))],
+            'username' => ['required', 'string', 'alpha_dash:ascii', 'max:255', Rule::unique('users', 'username')->ignore($this->route('user'))],
             'is_admin' => ['required', 'boolean'],
         ];
     }
@@ -42,6 +42,15 @@ class UpdateUserRequest extends FormRequest
                 $target = $this->route('user');
 
                 if (! $target instanceof User || ! $target->is_admin || $this->boolean('is_admin')) {
+                    return;
+                }
+
+                // Your own admin rights are not yours to drop from here: the
+                // same request then syncs roles as a non-admin and 403s
+                // half-way, and the frontend's locked checkbox is only a hint.
+                if ($target->is($this->user())) {
+                    $validator->errors()->add('is_admin', __('user.cannot_demote_self'));
+
                     return;
                 }
 

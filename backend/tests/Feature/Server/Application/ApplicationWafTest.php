@@ -486,7 +486,7 @@ describe('exceptions and custom rules as written into the config', function () {
         // HTML-encoded, `&` became `&amp;` and the exception never matched.
         expect($config)->not->toContain('&amp;')->not->toContain('&quot;')->not->toContain('&#039;');
 
-        preg_match('/if \(\$uri ~\* "((?:[^"\\\\]|\\\\.)*)"\) \{ set \$waf_exception "1"; \}/', $config, $m);
+        preg_match('/if \(\$request_uri ~\* "\^\[\^\?\]\*((?:[^"\\\\]|\\\\.)*)"\) \{ set \$waf_exception "1"; \}/', $config, $m);
 
         expect($m)->not->toBeEmpty()
             ->and(nginxMatches($m[1], 'a=b&'.$value))->toBeTrue()
@@ -495,7 +495,7 @@ describe('exceptions and custom rules as written into the config', function () {
 
     it('matches the text literally on nginx, backslashes and regex symbols included', function (string $value, string $hit, string $miss) {
         $config = wafVhost(NginxDriver::class, [$value]);
-        preg_match('/if \(\$uri ~\* "((?:[^"\\\\]|\\\\.)*)"\) \{ set \$waf_exception "1"; \}/', $config, $m);
+        preg_match('/if \(\$request_uri ~\* "\^\[\^\?\]\*((?:[^"\\\\]|\\\\.)*)"\) \{ set \$waf_exception "1"; \}/', $config, $m);
 
         expect(nginxMatches($m[1], $hit))->toBeTrue()
             ->and(nginxMatches($m[1], $miss))->toBeFalse();
@@ -555,7 +555,8 @@ describe('exceptions (bug #82)', function () {
         $config = wafVhost($driver, ['mobiquo']);
 
         expect($config)->toContain('mobiquo')
-            ->not->toMatch('/(\$args|\$http_user_agent|\$request_uri|QUERY_STRING\}|HTTP_USER_AGENT\}) [^\n]*mobiquo/');
+            // `$request_uri` only in its path-only form (FS-C43).
+            ->not->toMatch('/(\$args|\$http_user_agent|\$request_uri(?! ~\* "\^\[\^\?\]\*)|QUERY_STRING\}|HTTP_USER_AGENT\}) [^\n]*mobiquo/');
     })->with([NginxDriver::class, ApacheDriver::class, OlsDriver::class])->with(['php', 'static', 'node']);
 
     it('refuses one shorter than four characters', function (string $short) {
@@ -569,7 +570,7 @@ describe('exceptions (bug #82)', function () {
     it('leaves a short one saved before the limit out of the config', function () {
         $config = wafVhost(NginxDriver::class, ['/', 'mobiquo']);
 
-        expect($config)->toContain('"mobiquo"')->not->toContain('$uri ~* "/"');
+        expect($config)->toContain('^[^?]*mobiquo"')->not->toContain('^[^?]*/"');
     });
 });
 
@@ -621,4 +622,28 @@ describe('the firewall log (bug #84)', function () {
         expect(collect($runs)->contains(fn (array $c) => in_array('truncate', $c, true)
             && in_array($this->application->wafDetectLogPath(), $c, true)))->toBeTrue();
     });
+});
+
+describe('exceptions on front-controller routes (frontend QA FS-C43)', function () {
+    it('matches the requested path, which survives the internal redirect to index.php', function (string $profile) {
+        $this->application->forceFill(['serving_profile' => $profile, 'app_port' => 3000])->save();
+        $config = wafVhost(NginxDriver::class, ['/wp-json/']);
+
+        expect($config)->toContain('if ($request_uri ~* "^[^?]*/wp\-json/") { set $waf_exception "1"; }')
+            ->not->toContain('if ($uri ~* "/wp\-json/")')
+            // A dot segment or doubled slash must not carry the exception to
+            // another path.
+            ->toContain('if ($request_uri ~* "^[^?]*(/\.\.|%2e%2e|\.%2e|%2e\.|//|%2f)") { set $waf_exception "0"; }');
+
+        // The dot-segment guard comes after the exceptions, so it wins.
+        expect(strpos($config, '{ set $waf_exception "0"; }', strpos($config, '/wp\-json/')))->not->toBeFalse();
+    })->with(['php', 'static', 'node']);
+
+    it('refuses an exception with .. or ?', function (string $value) {
+        fakeWafWebServer();
+
+        $this->withHeaders(wafHeaders())->putJson("/api/applications/{$this->application->id}/waf", [
+            'enabled' => true, 'mode' => 'enforce', 'exceptions' => [$value],
+        ])->assertStatus(422)->assertJsonValidationErrors('exceptions.0');
+    })->with(['../wp-admin', '/page?x=1']);
 });

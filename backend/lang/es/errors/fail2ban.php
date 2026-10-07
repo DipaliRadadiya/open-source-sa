@@ -3,6 +3,7 @@
 return [
     'not_installed' => 'fail2ban no está instalado en este servidor.',
     'already_installed' => 'fail2ban ya está instalado.',
+    'already_installing' => 'fail2ban ya se está instalando. Espere a que termine esa instalación.',
     'not_running' => 'fail2ban está instalado pero no se está ejecutando.',
     'foreign_jail_local' => 'El panel no escribió :path, así que no lo sobrescribirá. Fail2ban ya está configurado ahí a mano o por otro panel: mueve o elimina ese archivo si quieres que el panel gestione estos ajustes.',
     'jail_not_active' => 'La cárcel :jail no está activa.',

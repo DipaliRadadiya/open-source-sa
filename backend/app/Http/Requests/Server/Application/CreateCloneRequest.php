@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Server\Application;
 
+use App\Enums\CloneStatus;
 use App\Rules\Hostname;
 use App\Rules\NotPanelHost;
 use Illuminate\Foundation\Http\FormRequest;
@@ -33,6 +34,10 @@ class CreateCloneRequest extends FormRequest
                 // alias of another site passed the check above and then failed
                 // on insert.
                 Rule::unique('application_domains', 'domain'),
+                // A clone still being made has no application row yet, so its
+                // domain passed both checks above and was accepted twice
+                // (CL-B1).
+                Rule::unique('clones', 'domain')->where(fn ($query) => $query->whereIn('status', [CloneStatus::Pending->value, CloneStatus::Running->value])),
                 new NotPanelHost,
             ],
         ];

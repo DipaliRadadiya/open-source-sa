@@ -20,7 +20,7 @@ class ToggleFirewall
      * rules (SSH + the panel/web ports) so the box is never locked out, then
      * turns UFW on. Disabling leaves the DB rules intact (re-enable restores).
      *
-     * @return array{enabled: bool, default_policy: array{incoming: string, outgoing: string}}
+     * @return array{enabled: bool, default_policy: array{incoming: ?string, outgoing: ?string}}
      */
     public function execute(bool $enabled): array
     {

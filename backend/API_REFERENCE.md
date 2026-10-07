@@ -2700,14 +2700,16 @@ Evidence for the policy decision: which bots hit this site recently, and whether
 
 **Response `200`:**
 ```json
-{"bot_traffic": {
-  "period_days": 7, "total_requests": 4821,
-  "bots": [
-    {"user_agent": "ClaudeBot/2.0", "requests": 142, "blocked": true, "policy_result": "blocked"},
-    {"user_agent": "Googlebot/2.1", "requests": 891, "blocked": false, "policy_result": "allowed"}
-  ]
-}}
+{"status": "ok", "days": 7, "scanned_lines": 4821, "since": "30-09-2026 10:00:00",
+ "bots": [
+   {"bot": "GPTBot", "hits": 142, "category": "training", "blocked": true,
+    "blocked_hits": 120, "last_status": 403,
+    "last_seen": "07-10-2026 09:12:44", "last_seen_human": "3 hours ago"}
+ ],
+ "totals": {"bots": 1, "hits": 142, "blocked_hits": 120}}
 ```
+
+`blocked` is what the **current settings** would do to that bot. `blocked_hits` (per bot and in `totals`) is what the server **really refused** — the 403 lines in the access log — and `last_status` is the status its latest hit got (2026-10-07, AB-B: the count used to come from the current settings, so 200s and hits from before a block existed read as blocked).
 
 Gated on `app_log` (not `app_bot_blocker`) because it reads the site's access log — prevents widening the bot-blocker permission into log access.
 
@@ -3129,6 +3131,10 @@ Uptime Kuma) clone generically and are unaffected.
 ```json
 {"name": "shop-backup", "domain": "backup.example.com"}
 ```
+
+**One clone of a site at a time (2026-10-07, CL-B1).** While a clone of the same source is `pending` or `running` the request answers **`409`** (`clone.errors.already_running`) — it used to be accepted and its job silently dropped, leaving the row `pending` forever. A `pending` clone that never started within an hour is marked `failed` with reason `abandoned` first. The domain of a clone still being made counts as taken (`422` on `domain`).
+
+**A failed clone carries a reason code and a reference, never the exception text** (CL-B2): `reason` is one of `setup_failed`, `copy_failed`, `failed`, `crashed`, `abandoned`, with `reason_title` translated and `reference` to quote. A copy left half-made by a job killed at its time limit is removed (CL-B4). WordPress copies (and staging) keep the source's own `$table_prefix` (CL-B5).
 
 Only `name` and `domain`. The clone always lands under the **source site's own system user** — a `system_user_id` or `site_user_password` sent here is not accepted and has no effect (it used to be documented, and was silently dropped).
 
@@ -3893,6 +3899,31 @@ Poll on **`finished`** rather than comparing `status` against a list of terminal
 **Permission:** `sync` (view / manage)
 
 Dismissed items stop appearing in later runs entirely. `POST {"resource_type", "resource_key", "note"}`; re-posting the same pair is the same decision, not an error. Pass `include_ignored: true` on a run to see them again.
+
+---
+
+### POST `/server/sync/handover` · GET `/server/sync/handover`
+**Permission:** `sync` (manage for POST, throttle 5/min; view for GET)
+
+The server-side half of taking over from the old panel: stop and disable its agent, make PM2 start at boot for every account with an adopted `pm2` application, and give PM2's logs a rotation policy. Nothing here restarts an application. Adopted applications carry `supervisor_mode: "pm2"`, and Sync reports such processes with the resource type `pm2_process`.
+
+**POST** runs the steps and reports each one (2026-10-07, FS-C27 — it used to answer the same "done" whatever happened):
+
+```json
+{"ok": true,
+ "agent": {"unit": "sureshcloud.service", "stopped": true, "disabled": true, "reference": null},
+ "users": [{"username": "appuser", "boot_unit": "written", "log_rotation": "ok"}]}
+```
+
+`agent` is `null` when no old agent was found. `boot_unit` is `healthy` (already in place), `written` or `failed`; `log_rotation` is `ok` or `failed`. **`500` with the same body when any step failed** (`ok: false`) — the steps that worked are not undone.
+
+**GET** answers whether a handover is needed, without changing anything (FS-C26):
+
+```json
+{"needed": true,
+ "agent": {"unit": "sureshcloud.service", "running": true},
+ "users": [{"username": "appuser", "boot_unit_healthy": false, "log_rotation": false}]}
+```
 
 ---
 
@@ -4808,7 +4839,7 @@ Enable or disable the firewall entirely.
 
 **Request:** `{"enabled": false}`
 
-**Response `200`:** flat, no wrapper — `{"enabled": false, "default_policy": {"incoming": "deny", "outgoing": "allow"}}`
+**Response `200`:** flat, no wrapper — `{"enabled": false, "default_policy": {"incoming": null, "outgoing": null}}`. `default_policy` values are `null` when ufw does not state them (an inactive ufw prints none) — no longer a guessed "deny/allow" (OLD-1).
 
 Enabling seeds allow rules for the web ports and for **the port SSH is actually listening on**, read from the live sshd configuration rather than from a stored default. If any of those cannot be applied, enabling is refused with a `500` rather than leaving the box behind a deny-incoming policy with no way in.
 

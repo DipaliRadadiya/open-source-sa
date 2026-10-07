@@ -47,6 +47,26 @@ class ApplicationCloneController extends Controller
      */
     public function store(CreateCloneRequest $request, Application $application): JsonResponse
     {
+        // One clone of a site at a time. RunClone is unique per source, so a
+        // second one was accepted with 202 and its job silently dropped: the
+        // row sat at `pending` forever (CL-B1). A pending row whose job never
+        // started is released first, so an old stuck one cannot block a site
+        // for good.
+        SiteClone::query()
+            ->where('source_application_id', $application->id)
+            ->where('status', CloneStatus::Pending)
+            ->where('created_at', '<', now()->subMinutes(60))
+            ->update(['status' => CloneStatus::Failed, 'reason' => 'abandoned', 'finished_at' => now()]);
+
+        abort_if(
+            SiteClone::query()
+                ->where('source_application_id', $application->id)
+                ->whereIn('status', [CloneStatus::Pending, CloneStatus::Running])
+                ->exists(),
+            409,
+            __('clone.errors.already_running'),
+        );
+
         $clone = SiteClone::create([
             'source_application_id' => $application->id,
             'user_id' => $request->user()?->id,

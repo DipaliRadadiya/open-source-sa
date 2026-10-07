@@ -61,11 +61,21 @@ function handoverFake(array $options = []): array
     $agentRunning = $options['agent'] ?? true;
     $bootEnabled = $options['boot_enabled'] ?? false;
     $pm2Present = $options['pm2_present'] ?? true;
+    $fail = $options['fail'] ?? null;
+    $logrotate = $options['logrotate'] ?? false;
 
-    Process::fake(function ($p) use ($ran, $written, $agentRunning, $bootEnabled, $pm2Present) {
+    Process::fake(function ($p) use ($ran, $written, $agentRunning, $bootEnabled, $pm2Present, $fail, $logrotate) {
         $args = ($p->command[0] ?? '') === 'sudo' ? array_slice((array) $p->command, 2) : (array) $p->command;
         $line = implode(' ', $args);
         $ran[] = $line;
+
+        if ($fail !== null && str_contains($line, $fail)) {
+            return Process::result(exitCode: 1, errorOutput: 'refused');
+        }
+
+        if (($args[0] ?? '') === 'test' && ($args[1] ?? '') === '-f') {
+            return Process::result(exitCode: $logrotate ? 0 : 1);
+        }
 
         if (($args[0] ?? '') === 'tee') {
             $written[] = (string) $p->input;
@@ -109,7 +119,7 @@ it('stops the old agent without going through the old agent', function () {
 
     $result = app(LegacyHandover::class)->complete();
 
-    expect($result['agent'])->toBe('sureshcloud.service')
+    expect($result['agent']['unit'])->toBe('sureshcloud.service')
         ->and(collect($f['ran'])->contains(fn (string $c) => $c === 'systemctl stop sureshcloud.service'))->toBeTrue()
         ->and(collect($f['ran'])->contains(fn (string $c) => $c === 'systemctl disable sureshcloud.service'))->toBeTrue();
 
@@ -221,7 +231,7 @@ it('touches only accounts that actually have an adopted application', function (
 
     $result = app(LegacyHandover::class)->complete();
 
-    expect($result['users'])->toBe(['appuser']);
+    expect(array_column($result['users'], 'username'))->toBe(['appuser']);
     expect(collect($f['ran'])->contains(fn (string $c) => str_contains($c, 'unrelated')))->toBeFalse();
 });
 
@@ -241,8 +251,8 @@ it('is reachable by someone who can manage sync', function () {
     $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
         ->postJson('/api/server/sync/handover')
         ->assertOk()
-        ->assertJsonPath('agent', 'sureshcloud.service')
-        ->assertJsonPath('users', ['appuser']);
+        ->assertJsonPath('agent.unit', 'sureshcloud.service')
+        ->assertJsonPath('users.0.username', 'appuser');
 });
 
 it('is refused to someone who cannot', function () {
@@ -276,4 +286,70 @@ it('leaves an activity entry with a sentence, not its key', function () {
 
     expect($entry)->not->toBeNull()
         ->and($entry['description'])->not->toStartWith('activity.');
+});
+
+describe('honest results (frontend QA FS-C26, FS-C27)', function () {
+    function handoverHeaders(): array
+    {
+        $admin = User::factory()->admin()->create();
+
+        return ['Authorization' => 'Bearer '.$admin->createToken('t')->plainTextToken];
+    }
+
+    it('answers 500 with the failed step when the old agent will not stop', function () {
+        handoverFake(['fail' => 'systemctl stop sureshcloud']);
+        adopted();
+
+        $this->withHeaders(handoverHeaders())
+            ->postJson('/api/server/sync/handover')
+            ->assertStatus(500)
+            ->assertJsonPath('ok', false)
+            ->assertJsonPath('agent.stopped', false)
+            ->assertJsonPath('agent.disabled', true);
+    });
+
+    it('reports a boot unit that could not be enabled, per user', function () {
+        handoverFake(['fail' => 'systemctl enable pm2-appuser']);
+        adopted();
+
+        $this->withHeaders(handoverHeaders())
+            ->postJson('/api/server/sync/handover')
+            ->assertStatus(500)
+            ->assertJsonPath('users.0.username', 'appuser')
+            ->assertJsonPath('users.0.boot_unit', 'failed')
+            ->assertJsonPath('users.0.log_rotation', 'ok');
+    });
+
+    it('answers 200 with every step when all of them worked', function () {
+        handoverFake();
+        adopted();
+
+        $this->withHeaders(handoverHeaders())
+            ->postJson('/api/server/sync/handover')
+            ->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('users.0.boot_unit', 'written');
+    });
+
+    it('says whether a handover is still needed, without changing anything', function () {
+        $f = handoverFake();
+        adopted();
+
+        $this->withHeaders(handoverHeaders())
+            ->getJson('/api/server/sync/handover')
+            ->assertOk()
+            ->assertJsonPath('needed', true)
+            ->assertJsonPath('agent.running', true)
+            ->assertJsonPath('users.0.boot_unit_healthy', false)
+            ->assertJsonPath('users.0.log_rotation', false);
+
+        expect(collect($f['ran'])->contains(fn (string $c) => str_contains($c, 'systemctl stop') || str_contains($c, 'systemctl enable')))->toBeFalse()
+            ->and($f['written'])->toHaveCount(0);
+
+        handoverFake(['agent' => false, 'boot_enabled' => true, 'logrotate' => true]);
+
+        $this->withHeaders(handoverHeaders())
+            ->getJson('/api/server/sync/handover')
+            ->assertJsonPath('needed', false);
+    });
 });

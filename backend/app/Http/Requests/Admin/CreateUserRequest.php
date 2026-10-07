@@ -19,7 +19,7 @@ class CreateUserRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'username' => ['required', 'string', 'alpha_dash', 'max:255', 'unique:users,username'],
+            'username' => ['required', 'string', 'alpha_dash:ascii', 'max:255', 'unique:users,username'],
             'password' => ['required', 'confirmed', Password::defaults()],
             'is_admin' => ['required', 'boolean'],
             // Every user must have at least one role.

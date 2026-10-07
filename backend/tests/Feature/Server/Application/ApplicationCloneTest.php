@@ -1005,3 +1005,122 @@ it('fails the clone when the app dies right after starting, instead of calling i
 
     expect($record->status->value)->toBe('failed');
 });
+
+describe('frontend QA 2026-09-26 (CL-B1, CL-B2, CL-B4, CL-B5)', function () {
+    function staticSource(): Application
+    {
+        return Application::forceCreate([
+            'system_user_id' => test()->systemUser->id,
+            'name' => 'Docs', 'slug' => 'docs', 'domain' => 'docs.test', 'site_type' => 'static',
+            'serving_profile' => 'static', 'status' => 'active', 'web_root' => '/',
+        ]);
+    }
+
+    it('refuses a second clone of a site while one is still being made', function () {
+        $source = staticSource();
+        SiteClone::create(['source_application_id' => $source->id, 'domain' => 'first.test', 'status' => 'running']);
+
+        $this->withHeaders(cloneHeaders())
+            ->postJson("/api/applications/{$source->id}/clone", ['domain' => 'second.test'])
+            ->assertStatus(409)
+            ->assertJsonPath('message', __('clone.errors.already_running'));
+
+        expect(SiteClone::count())->toBe(1);
+    });
+
+    it('treats the domain of a clone still being made as taken', function () {
+        $other = staticSource();
+        $source = Application::forceCreate([
+            'system_user_id' => $this->systemUser->id, 'name' => 'Blog', 'slug' => 'blog', 'domain' => 'blog.test',
+            'site_type' => 'static', 'serving_profile' => 'static', 'status' => 'active', 'web_root' => '/',
+        ]);
+        SiteClone::create(['source_application_id' => $other->id, 'domain' => 'copy.test', 'status' => 'pending']);
+
+        $this->withHeaders(cloneHeaders())
+            ->postJson("/api/applications/{$source->id}/clone", ['domain' => 'copy.test'])
+            ->assertJsonValidationErrors('domain');
+    });
+
+    it('releases a clone that never started, so it cannot block the site for good', function () {
+        $source = staticSource();
+        $stuck = SiteClone::create(['source_application_id' => $source->id, 'domain' => 'old.test', 'status' => 'pending']);
+        $stuck->forceFill(['created_at' => now()->subHours(2)])->save();
+        fakeCloneServer();
+
+        $this->withHeaders(cloneHeaders())
+            ->postJson("/api/applications/{$source->id}/clone", ['domain' => 'fresh.test'])
+            ->assertAccepted();
+
+        expect($stuck->fresh()->status->value)->toBe('failed')
+            ->and($stuck->fresh()->reason)->toBe('abandoned');
+    });
+
+    it('stores a reason code and a reference, never the exception text', function () {
+        // The raw message reached the screen as SQL with the database path.
+        fakeCloneServer(testPasses: false);
+
+        $record = runClone(staticSource(), 'docs-clone.test');
+
+        expect($record->status->value)->toBe('failed')
+            ->and($record->reason)->toBeIn(['setup_failed', 'copy_failed', 'failed'])
+            ->and($record->reference)->not->toBeEmpty();
+
+        $this->withHeaders(cloneHeaders())
+            ->getJson("/api/clones/{$record->id}")
+            ->assertJsonPath('clone.reason_title', __('clone.cloning_errors.'.$record->reason));
+    });
+
+    it('gives the job more time than the copy it runs', function () {
+        expect((new RunClone(1, 1))->timeout)->toBeGreaterThan((int) config('server.clone.rsync_timeout', 900) + 300);
+    });
+
+    it('removes the half-made copy when the job dies before its own cleanup', function () {
+        fakeCloneServer();
+        $source = staticSource();
+        $clone = SiteClone::create(['source_application_id' => $source->id, 'domain' => 'half.test', 'status' => 'running']);
+        $half = Application::forceCreate([
+            'system_user_id' => $this->systemUser->id, 'name' => 'Docs (Clone)', 'slug' => 'docs-clone',
+            'domain' => 'half.test', 'site_type' => 'static', 'serving_profile' => 'static',
+            'status' => 'pending', 'web_root' => '/', 'cloned_from_application_id' => $source->id,
+        ]);
+
+        (new RunClone($clone->id, $source->id))->failed(new RuntimeException('timed out'));
+
+        expect(Application::find($half->id))->toBeNull()
+            ->and($clone->fresh()->status->value)->toBe('failed')
+            ->and($clone->fresh()->reason)->toBe('crashed');
+    });
+
+    it('writes the source site\'s own table prefix into the copy\'s wp-config.php', function () {
+        $written = new ArrayObject;
+        Process::fake(function ($process) use ($written) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            if (($args[0] ?? '') === 'cat' && str_ends_with($args[1] ?? '', 'wp-config.php')) {
+                return Process::result(output: "<?php\n\$table_prefix = 'shop7_';\n");
+            }
+            if (in_array('tee', $args, true) && str_ends_with((string) end($args), 'wp-config.php')) {
+                $written[] = (string) $process->input;
+            }
+            if (in_array(($args[0] ?? ''), ['mysql', 'mariadb'], true)
+                && str_contains((string) $process->input, 'information_schema.schemata')) {
+                return Process::result(output: '1');
+            }
+
+            return Process::result();
+        });
+
+        $source = Application::forceCreate([
+            'system_user_id' => $this->systemUser->id, 'name' => 'Shop', 'slug' => 'shop', 'domain' => 'shop.test',
+            'site_type' => 'wordpress', 'serving_profile' => 'php', 'status' => 'active', 'web_root' => '/', 'php_version' => '8.4',
+        ]);
+        $database = Database::create(['name' => 'shop_db', 'engine' => 'mysql', 'application_id' => $source->id]);
+        DatabaseUser::create(['database_id' => $database->id, 'username' => 'shop_user', 'password' => 'secret', 'connection_preference' => 'localhost', 'host' => 'localhost']);
+
+        expect(runClone($source, 'shop-copy.test')->status->value)->toBe('completed');
+
+        $config = collect($written)->first();
+        expect($config)->toContain("\$table_prefix = 'shop7_';")
+            ->not->toContain("\$table_prefix = 'wp_';");
+    });
+});

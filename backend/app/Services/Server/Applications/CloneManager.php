@@ -382,6 +382,25 @@ class CloneManager
      * The cleanup's own failure is logged and swallowed: the caller is about
      * to report why the clone failed, and that is the message worth keeping.
      */
+    /**
+     * Undo the half-made copy of a clone whose job died before its own
+     * cleanup could run — killed at the job's time limit mid-copy (CL-B4).
+     * Found by what the copy is, not by `target_application_id`, which is
+     * only recorded once the copy is finished.
+     */
+    public function discardAbandoned(SiteClone $cloneRecord): void
+    {
+        $target = Application::query()
+            ->where('cloned_from_application_id', $cloneRecord->source_application_id)
+            ->where('domain', $cloneRecord->domain)
+            ->where('status', '!=', 'active')
+            ->first();
+
+        if ($target !== null) {
+            $this->discard($target);
+        }
+    }
+
     private function discard(Application $application): void
     {
         // A database made for the clone before it failed. Left behind it is

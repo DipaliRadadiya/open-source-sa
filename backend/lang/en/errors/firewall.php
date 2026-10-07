@@ -9,4 +9,5 @@ return [
     'invalid_source' => 'The source must be a valid IP address or CIDR range.',
     'ssh_lockout' => 'This is the only rule allowing SSH on port :port. Removing it would lock you out of this server. Add another rule for that port first, or disable the firewall.',
     'unmanaged_not_found' => 'That rule is no longer in the server\'s firewall. Refresh the page to see the current rules.',
+    'range_needs_protocol' => 'A range of ports needs one protocol. Choose TCP or UDP, or add two rules.',
 ];

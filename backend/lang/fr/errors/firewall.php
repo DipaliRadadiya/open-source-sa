@@ -9,4 +9,5 @@ return [
     'invalid_source' => 'La source doit être une adresse IP ou une plage CIDR valide.',
     'ssh_lockout' => "C'est la seule règle autorisant SSH sur le port :port. La supprimer vous couperait l'accès à ce serveur. Ajoutez d'abord une autre règle pour ce port ou désactivez le pare-feu.",
     'unmanaged_not_found' => 'Cette règle n\'est plus dans le pare-feu du serveur. Actualisez la page pour voir les règles actuelles.',
+    'range_needs_protocol' => 'Une plage de ports nécessite un seul protocole. Choisissez TCP ou UDP, ou ajoutez deux règles.',
 ];

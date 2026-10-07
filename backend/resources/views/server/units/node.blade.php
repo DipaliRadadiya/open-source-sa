@@ -54,7 +54,12 @@ Environment=PM2_HOME={{ $pm2Home }}
 Environment=PORT={{ $application->app_port }}
 @endif
 
-ExecStart={{ $exec }}
+{{-- PORT is also set on the command itself. systemd lets an EnvironmentFile
+     override Environment= whatever their order, so a `PORT=3000` in the app's
+     own .env won: the app listened there, the proxy pointed at the panel's
+     port, and the site answered 502 (frontend QA FS-B2). `env` runs last, so
+     the panel's port is the one the process sees. --}}
+ExecStart={{ $application->app_port ? '/usr/bin/env PORT='.$application->app_port.' ' : '' }}{{ $exec }}
 
 {{-- Always, not on-failure: a Node process that exits cleanly because of an
      unhandled rejection has still taken the site down. --}}

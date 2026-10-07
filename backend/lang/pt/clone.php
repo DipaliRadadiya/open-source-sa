@@ -17,5 +17,13 @@ return [
 
     'cloning_errors' => [
         'crashed' => 'A clonagem parou inesperadamente.',
+        'failed' => 'A clonagem falhou. Indique a referência ao suporte.',
+        'abandoned' => 'Esta clonagem nunca começou e foi libertada. Inicie-a novamente.',
+        'copy_failed' => 'A cópia da aplicação falhou no servidor. Indique a referência ao suporte.',
+        'setup_failed' => 'Não foi possível preparar a cópia no servidor. Indique a referência ao suporte.',
+    ],
+
+    'errors' => [
+        'already_running' => 'Esta aplicação já está a ser clonada. Aguarde até terminar e depois inicie outra.',
     ],
 ];

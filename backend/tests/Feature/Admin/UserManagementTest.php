@@ -227,13 +227,37 @@ it('refuses to remove the last administrator', function () {
     expect($admin->fresh()->is_admin)->toBeTrue();
 });
 
-it('lets an administrator step down when another remains', function () {
+it('refuses an administrator removing their own rights, even when another remains', function () {
+    // The frontend locks its own checkbox, but the API allowed it, and the
+    // dialog's second request (role sync) then 403s as a non-admin
+    // (frontend QA FS-C1, 2026-09-29). Another administrator can do it.
     $admin = User::factory()->admin()->create(['username' => 'steppingdown']);
-    User::factory()->admin()->create();
+    $other = User::factory()->admin()->create();
 
     $this->actingAs($admin)
+        ->putJson("/api/admin/users/{$admin->id}", ['name' => $admin->name, 'username' => $admin->username, 'is_admin' => false])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['is_admin' => __('user.cannot_demote_self')]);
+
+    expect($admin->fresh()->is_admin)->toBeTrue();
+
+    $this->actingAs($other)
         ->putJson("/api/admin/users/{$admin->id}", ['name' => $admin->name, 'username' => $admin->username, 'is_admin' => false])
         ->assertOk();
 
     expect($admin->fresh()->is_admin)->toBeFalse();
+});
+
+it('refuses usernames with letters outside ASCII', function () {
+    // `alpha_dash` alone accepts `qäadmin`, which the form then refuses to
+    // show back as valid (frontend QA FS-A6).
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)
+        ->putJson("/api/admin/users/{$admin->id}", ['name' => 'x', 'username' => 'qäadmin', 'is_admin' => true])
+        ->assertJsonValidationErrors('username');
+
+    $this->actingAs($admin)
+        ->putJson('/api/auth/profile', ['name' => 'x', 'username' => 'qäadmin'])
+        ->assertJsonValidationErrors('username');
 });

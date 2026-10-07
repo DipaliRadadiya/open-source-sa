@@ -80,6 +80,13 @@ class PortAllocator
             return null;
         }
 
+        // Nor is the port its unit is running on right now. A port changed
+        // and not yet deployed made the old one look taken — by this same app
+        // — so going back to it was refused (frontend QA FS-C41).
+        if ($except?->exists && $this->runningPort($except) === $port) {
+            return null;
+        }
+
         $taken = Application::query()
             ->whereNotNull('app_port')
             ->when($except?->exists, fn ($query) => $query->whereKeyNot($except->getKey()))
@@ -208,5 +215,23 @@ class PortAllocator
         preg_match_all('/\s\S*:(\d+)\s/', $result->output(), $matches);
 
         return array_map('intval', array_unique($matches[1] ?? []));
+    }
+
+    /**
+     * The PORT the application's systemd unit was last written with, or null.
+     * Read from the unit file itself: it is what the running process got,
+     * whatever the row says now.
+     */
+    private function runningPort(Application $application): ?int
+    {
+        $path = app(ProcessSupervisor::class)->unitPath($application);
+
+        if (! is_readable($path)) {
+            return null;
+        }
+
+        return preg_match('/^Environment=PORT=(\d+)$/m', (string) file_get_contents($path), $match) === 1
+            ? (int) $match[1]
+            : null;
     }
 }

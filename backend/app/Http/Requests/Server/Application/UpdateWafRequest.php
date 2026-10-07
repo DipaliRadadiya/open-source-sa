@@ -34,7 +34,9 @@ class UpdateWafRequest extends FormRequest
             // only ever broke the config test (a 500) — refused here instead.
             // Bug #82: an exception skips every check for a path containing
             // it, so `a` or `/` switched the firewall off for the whole site.
-            'exceptions.*' => ['string', 'min:'.ApplicationWafRule::EXCEPTION_MIN_LENGTH, 'max:255', 'not_regex:/[\x00-\x1F\x7F]/'],
+            // Nor `..` or `?`: an exception is matched against the path as
+            // sent, so neither can ever be part of a real one (FS-C43).
+            'exceptions.*' => ['string', 'min:'.ApplicationWafRule::EXCEPTION_MIN_LENGTH, 'max:255', 'not_regex:/[\x00-\x1F\x7F]/', 'not_regex:/\.\.|\?/'],
             'custom_rules' => ['array', 'max:50'],
             'custom_rules.*' => ['string', 'min:1', 'max:255', 'not_regex:/[\x00-\x1F\x7F]/'],
         ];

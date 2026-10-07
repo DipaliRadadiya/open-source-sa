@@ -3,6 +3,8 @@
 namespace App\Jobs;
 
 use App\Enums\CloneStatus;
+use App\Exceptions\Server\Application\ProvisioningFailedException;
+use App\Exceptions\Server\ServerOperationException;
 use App\Jobs\Concerns\ExpiresUniqueLock;
 use App\Models\SiteClone;
 use App\Services\ActivityLogger;
@@ -11,6 +13,7 @@ use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -31,8 +34,12 @@ class RunClone implements ShouldBeUnique, ShouldQueue
 
     public int $tries = 1;
 
-    /** 10 minutes — rsync is the slow part for a large site. */
-    public int $timeout = 600;
+    /**
+     * Above the copy's own limit (server.clone.rsync_timeout, 900 s) plus the
+     * database copy and setup around it. At 600 s a large site was killed in
+     * the middle of the rsync the job itself allowed 900 s for (CL-B4).
+     */
+    public int $timeout = 1800;
 
     public function __construct(
         public int $cloneId,
@@ -88,12 +95,37 @@ class RunClone implements ShouldBeUnique, ShouldQueue
                 'detail' => $e->getMessage(),
             ]);
 
+            // A reason *code* and a reference, never the exception text: it
+            // reached the screen as raw SQL with the database file's path
+            // (CL-B2). The text stays in the log line above, under the same
+            // reference.
+            [$reason, $reference] = self::classify($e);
+
+            Log::channel('server-ops')->error('clone failed: reference', [
+                'clone' => $this->cloneId,
+                'reference' => $reference,
+                'detail' => $e->getMessage(),
+            ]);
+
             $clone->update([
                 'status' => CloneStatus::Failed,
-                'reason' => $clone->reason ?: ($e instanceof Throwable ? substr($e->getMessage(), 0, 255) : 'failed'),
+                'reason' => $reason,
+                'reference' => $reference,
                 'finished_at' => now(),
             ]);
         }
+    }
+
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private static function classify(Throwable $e): array
+    {
+        return match (true) {
+            $e instanceof ProvisioningFailedException => ['setup_failed', $e->reference],
+            $e instanceof ServerOperationException => ['copy_failed', $e->reference],
+            default => ['failed', (string) Str::uuid()],
+        };
     }
 
     public function failed(?Throwable $e): void
@@ -105,12 +137,31 @@ class RunClone implements ShouldBeUnique, ShouldQueue
             'detail' => $e?->getMessage(),
         ]);
 
+        $clone = SiteClone::query()
+            ->whereKey($this->cloneId)
+            ->whereIn('status', [CloneStatus::Pending->value, CloneStatus::Running->value])
+            ->first();
+
+        if ($clone === null) {
+            return;
+        }
+
+        try {
+            app(CloneManager::class)->discardAbandoned($clone);
+        } catch (Throwable $cleanupFailure) {
+            Log::channel('server-ops')->warning('could not discard an abandoned clone', [
+                'clone' => $this->cloneId,
+                'detail' => $cleanupFailure->getMessage(),
+            ]);
+        }
+
         SiteClone::query()
             ->whereKey($this->cloneId)
             ->whereIn('status', [CloneStatus::Pending->value, CloneStatus::Running->value])
             ->update([
                 'status' => CloneStatus::Failed->value,
                 'reason' => 'crashed',
+                'reference' => (string) Str::uuid(),
                 'finished_at' => now(),
             ]);
     }

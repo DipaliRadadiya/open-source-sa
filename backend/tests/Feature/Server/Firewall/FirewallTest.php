@@ -1102,3 +1102,48 @@ it('needs manage on the firewall to take over or remove one', function () {
     $this->actingAs($viewer)->postJson('/api/firewall/unmanaged/adopt', ['key' => 'allow:5555:tcp:any'])->assertForbidden();
     $this->actingAs($viewer)->deleteJson('/api/firewall/unmanaged', ['key' => 'allow:5555:tcp:any'])->assertForbidden();
 });
+
+it('lets a protected rule be switched back on while the firewall is enforcing, and still refuses switching it off', function () {
+    // FS-C3: once switched off (firewall down), there was no way back on.
+    fakeUfw('active');
+    $rule = FirewallRule::create(['port_from' => 443, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default', 'enabled' => false]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/firewall/rules/{$rule->id}", ['enabled' => true])
+        ->assertOk();
+
+    expect($rule->fresh()->enabled)->toBeTrue();
+    Process::assertRan(fn ($p) => $p->command === ['ufw', 'allow', '443/tcp']);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/firewall/rules/{$rule->id}", ['enabled' => false])
+        ->assertUnprocessable();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/firewall/rules/{$rule->id}", ['enabled' => true, 'port_from' => 444])
+        ->assertUnprocessable();
+});
+
+it('refuses a port range with both protocols, which ufw cannot express', function () {
+    // FS-C22: ufw answers "Must specify 'tcp' or 'udp' with multiple ports",
+    // which the panel turned into a 500.
+    fakeUfw('active');
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/firewall/rules', ['port_from' => 45160, 'port_to' => 45161, 'protocol' => 'all', 'action' => 'allow'])
+        ->assertJsonValidationErrors(['protocol' => __('errors/firewall.range_needs_protocol')]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/firewall/rules', ['port_from' => 45160, 'port_to' => 45160, 'protocol' => 'all', 'action' => 'allow'])
+        ->assertCreated();
+
+    $id = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/firewall/rules', ['port_from' => 45170, 'port_to' => 45171, 'protocol' => 'tcp', 'action' => 'allow'])
+        ->assertCreated()->json('rule.id');
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/firewall/rules/{$id}", ['protocol' => 'all'])
+        ->assertJsonValidationErrors('protocol');
+
+    Process::assertNotRan(fn ($p) => in_array('45160:45161', $p->command, true));
+});

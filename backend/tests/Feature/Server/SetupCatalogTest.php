@@ -220,3 +220,40 @@ it('offers wp-cli only where PHP sites are hosted', function () {
 
     expect(collect(fetchSetup()['components'])->pluck('key'))->not->toContain('wp_cli');
 });
+
+it('shows a fail2ban or build-tools install in flight or failed, not as pending (FS-A7)', function (string $key, string $runtime) {
+    fakeBareServer();
+
+    RuntimeInstall::create([
+        'runtime' => $runtime, 'version' => 'latest', 'extension' => '',
+        'status' => 'installing', 'started_at' => now(),
+    ]);
+
+    expect(collect(fetchSetup()['components'])->firstWhere('key', $key)['state'])->toBe('installing');
+
+    RuntimeInstall::query()->update(['status' => 'failed', 'reason' => 'network']);
+
+    $row = collect(fetchSetup()['components'])->firstWhere('key', $key);
+
+    expect($row['state'])->toBe('failed')
+        ->and($row['reason'])->toBe('network')
+        ->and($row['message'])->not->toBeEmpty()
+        ->and($row['retryable'])->toBeTrue();
+})->with([
+    'fail2ban' => ['fail2ban', 'fail2ban'],
+    'build tools' => ['build_tools', 'build_tools'],
+]);
+
+it('refuses a second install while one is still running (FS-A5)', function (string $endpoint, string $runtime, string $message) {
+    fakeBareServer();
+    RuntimeInstall::create(['runtime' => $runtime, 'version' => 'latest', 'extension' => '', 'status' => 'installing', 'started_at' => now()]);
+
+    $this->withHeaders(setupHeaders())->postJson($endpoint)
+        ->assertStatus(409)
+        ->assertJsonPath('message', __($message));
+
+    expect(RuntimeInstall::where('runtime', $runtime)->count())->toBe(1);
+})->with([
+    'fail2ban' => ['/api/fail2ban/install', 'fail2ban', 'errors/fail2ban.already_installing'],
+    'build tools' => ['/api/build-tools/install', 'build_tools', 'errors/build-tools.already_installing'],
+]);

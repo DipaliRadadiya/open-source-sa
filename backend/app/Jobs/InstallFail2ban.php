@@ -2,12 +2,14 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Concerns\ExpiresUniqueLock;
 use App\Jobs\Concerns\TracksActor;
 use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallFailureClassifier;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Fail2ban\Fail2banManager;
 use App\Services\Server\ServerOps;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
@@ -21,8 +23,9 @@ use Throwable;
  * Only the SSH jail is enabled here, as Debian's own package and v7 do
  * (bug #3); every other jail stays a deliberate click.
  */
-class InstallFail2ban implements ShouldQueue
+class InstallFail2ban implements ShouldBeUnique, ShouldQueue
 {
+    use ExpiresUniqueLock;
     use Queueable;
     use TracksActor;
 

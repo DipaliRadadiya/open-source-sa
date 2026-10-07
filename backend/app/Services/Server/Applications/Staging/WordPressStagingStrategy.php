@@ -8,6 +8,7 @@ use App\Exceptions\Server\Application\StagingOperationException;
 use App\Models\Application;
 use App\Models\Database;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\WordPressTablePrefix;
 use App\Services\Server\Applications\WordPressUrlVariants;
 use App\Services\Server\Databases\DatabaseIdentifier;
 use App\Services\Server\Databases\DatabaseManager;
@@ -37,6 +38,7 @@ class WordPressStagingStrategy implements StagingStrategy
         private DatabaseIdentifier $databaseIdentifiers,
         private CreateDatabase $createDatabase,
         private ServerOps $serverOps,
+        private WordPressTablePrefix $tablePrefix,
     ) {}
 
     public function create(Application $production, Application $staging): void
@@ -64,7 +66,7 @@ class WordPressStagingStrategy implements StagingStrategy
 
         $stagingDocumentRoot = $this->provisioner->documentRoot($staging);
 
-        $this->writeWpConfig($staging, $stagingDocumentRoot, $stagingDatabase, "{$connection->host}:{$connection->port}");
+        $this->writeWpConfig($staging, $this->tablePrefix->of($production), $stagingDocumentRoot, $stagingDatabase, "{$connection->host}:{$connection->port}");
 
         // Every spelling, not just the one URL (bug #92): a link saved as
         // http:// or in the block editor's escaped form otherwise still points
@@ -353,7 +355,7 @@ class WordPressStagingStrategy implements StagingStrategy
         }
     }
 
-    private function writeWpConfig(Application $staging, string $documentRoot, Database $database, string $host): void
+    private function writeWpConfig(Application $staging, string $prefix, string $documentRoot, Database $database, string $host): void
     {
         $user = $database->users->first();
 
@@ -362,7 +364,8 @@ class WordPressStagingStrategy implements StagingStrategy
             'username' => $user->username,
             'password' => $user->password,
             'host' => $host,
-            'prefix' => 'wp_',
+            // The source's own prefix: the tables were copied as they are.
+            'prefix' => $prefix,
             'salts' => $this->salts(),
             'home' => $staging->url(),
             'environmentType' => 'staging',

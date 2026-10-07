@@ -481,14 +481,26 @@ class SecuritySettings implements SettingGroup
      * with the values it already had (reproduced 2026-09-23).
      *
      * Now, through ServerOps so the answer is root's:
-     *  - a key the panel itself recorded;
+     *  - a key the panel itself recorded, for a user who can still log in;
      *  - a key for any member of `sudo` — the account a cloud image hands you;
      *  - root's own key, but only while root login is allowed, because a key
      *    for an account sshd refuses is no way back in.
      */
     private function hasSshKey(string $permitRootLogin): bool
     {
-        if (SshKey::query()->exists()) {
+        // Only a key whose owner sshd will still let in. The same save writes
+        // `AllowGroups ssh-users sudo root`, so a key for a System User with
+        // SSH access off (not in ssh-users, not in sudo) or with a no-login
+        // shell is no way back — counting it let "root login off + keys
+        // only" pass with nobody able to log in (frontend QA FS-C5).
+        $usableKey = SshKey::query()
+            ->whereHas('systemUser', fn ($user) => $user
+                ->where(fn ($access) => $access->where('ssh_access', true)->orWhere('sudo', true))
+                ->where(fn ($shell) => $shell->whereNull('shell')
+                    ->orWhere(fn ($real) => $real->where('shell', 'not like', '%nologin')->where('shell', 'not like', '%/false'))))
+            ->exists();
+
+        if ($usableKey) {
             return true;
         }
 

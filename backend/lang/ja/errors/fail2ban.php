@@ -3,6 +3,7 @@
 return [
     'not_installed' => 'このサーバーに fail2ban はインストールされていません。',
     'already_installed' => 'fail2ban は既にインストールされています。',
+    'already_installing' => 'fail2ban は既にインストール中です。そのインストールが終わるまでお待ちください。',
     'not_running' => 'fail2ban はインストールされていますが実行されていません。',
     'foreign_jail_local' => ':path はパネルが書き込んだファイルではないため、上書きしません。fail2ban は手動または別のパネルによってそこで設定済みです。パネルに管理させたい場合は、そのファイルを移動または削除してください。',
     'jail_not_active' => ':jail の jail は有効ではありません。',

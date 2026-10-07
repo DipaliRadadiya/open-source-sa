@@ -74,7 +74,6 @@ function fakeFacts(array $overrides = []): void
             return Process::result(exitCode: 1);
         }
 
-
         if ($bin === 'tee') {
             File::put($cmd[1], (string) $process->input);
 
@@ -240,6 +239,17 @@ it('reports whether the server has any ssh key', function () {
         'fingerprint' => 'SHA256:abc',
     ]);
 
+    // Its owner has SSH access off: the save writes AllowGroups ssh-users
+    // sudo root, so this key would let nobody in (FS-C5).
+    readSettings()->assertJsonPath('settings.security.has_ssh_key', false);
+
+    $systemUser->update(['ssh_access' => true]);
+    readSettings()->assertJsonPath('settings.security.has_ssh_key', true);
+
+    $systemUser->update(['shell' => '/usr/sbin/nologin']);
+    readSettings()->assertJsonPath('settings.security.has_ssh_key', false);
+
+    $systemUser->update(['shell' => '/bin/bash', 'ssh_access' => false, 'sudo' => true]);
     readSettings()->assertJsonPath('settings.security.has_ssh_key', true);
 });
 

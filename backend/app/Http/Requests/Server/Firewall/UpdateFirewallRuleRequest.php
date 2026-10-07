@@ -35,6 +35,7 @@ class UpdateFirewallRuleRequest extends FormRequest
         $this->merge([
             'port_from' => $this->input('port_from', $rule->port_from),
             'port_to' => $this->has('port_to') ? $this->input('port_to') : $rule->port_to,
+            'protocol' => $this->input('protocol', $rule->protocol),
         ]);
     }
 
@@ -46,7 +47,7 @@ class UpdateFirewallRuleRequest extends FormRequest
         return [
             'port_from' => ['sometimes', 'integer', 'min:'.FirewallRule::PORT_MIN, 'max:'.FirewallRule::PORT_MAX],
             'port_to' => ['sometimes', 'nullable', 'integer', 'min:'.FirewallRule::PORT_MIN, 'max:'.FirewallRule::PORT_MAX, 'gte:port_from'],
-            'protocol' => ['sometimes', Rule::in(['all', 'tcp', 'udp'])],
+            'protocol' => ['sometimes', Rule::in(['all', 'tcp', 'udp']), $this->rangeNeedsOneProtocol()],
             'action' => ['sometimes', Rule::in(['allow', 'deny'])],
             'source_ip' => ['sometimes', 'nullable', 'string', new IpOrCidr],
             'description' => ['sometimes', 'nullable', 'string', 'max:255'],
@@ -54,5 +55,22 @@ class UpdateFirewallRuleRequest extends FormRequest
             // should not mean deleting it and hoping it is retyped correctly.
             'enabled' => ['sometimes', 'boolean'],
         ];
+    }
+
+    /**
+     * ufw refuses a port range without a protocol ("Must specify 'tcp' or
+     * 'udp' with multiple ports"), and the panel answered that with a 500
+     * (frontend QA FS-C22). Refused here with a reason instead.
+     */
+    private function rangeNeedsOneProtocol(): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail): void {
+            $from = $this->input('port_from');
+            $to = $this->input('port_to');
+
+            if ($value === 'all' && $to !== null && (int) $to !== (int) $from) {
+                $fail(__('errors/firewall.range_needs_protocol'));
+            }
+        };
     }
 }

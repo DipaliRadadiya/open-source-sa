@@ -504,3 +504,50 @@ it('gives the checked-out branch an upstream so a bare git pull works', function
         ->and($upstream)->not->toBeFalse()
         ->and($upstream)->toBeGreaterThan($reset);
 });
+
+it('points the vhost at the port the app now listens on, on the same deploy (FS-C41)', function () {
+    // A port changed in the settings reached the systemd unit on deploy but
+    // not the proxy, so every visitor got 502.
+    $ran = new ArrayObject;
+    Process::fake(function ($process) use ($ran) {
+        $ran[] = ['command' => $process->command, 'input' => (string) $process->input];
+
+        return match (true) {
+            $process->command[0] === 'test' => Process::result(exitCode: 1),
+            in_array('rev-parse', $process->command, true) => Process::result(output: "abc123def456\n"),
+            $process->command[0] === 'curl' => Process::result(output: '200'),
+            default => Process::result(exitCode: 0),
+        };
+    });
+
+    $app = gitApp(['serving_profile' => 'node', 'php_version' => null, 'node_version' => '20.11.0', 'app_port' => 3015, 'start_command' => 'node server.js']);
+    runDeploy($app);
+
+    $lines = collect($ran);
+    $vhost = $lines->first(fn ($r) => ($r['command'][0] ?? '') === 'tee' && str_contains($r['command'][1] ?? '', 'sites-available'));
+
+    expect($vhost)->not->toBeNull()
+        ->and($vhost['input'])->toContain('127.0.0.1:3015');
+
+    $test = $lines->search(fn ($r) => $r['command'] === ['nginx', '-t']);
+    $reload = $lines->search(fn ($r) => in_array('reload', $r['command'], true) && in_array('nginx', $r['command'], true));
+
+    expect($test)->not->toBeFalse()
+        ->and($reload)->not->toBeFalse()
+        ->and($test)->toBeLessThan($reload);
+});
+
+it('does not reload into a vhost the web server rejects', function () {
+    Process::fake(fn ($process) => match (true) {
+        $process->command[0] === 'test' => Process::result(exitCode: 1),
+        in_array('rev-parse', $process->command, true) => Process::result(output: "abc123def456\n"),
+        $process->command === ['nginx', '-t'] => Process::result(errorOutput: 'bad', exitCode: 1),
+        default => Process::result(exitCode: 0),
+    });
+
+    $app = gitApp(['serving_profile' => 'node', 'php_version' => null, 'node_version' => '20.11.0', 'app_port' => 3015, 'start_command' => 'node server.js']);
+    runDeploy($app);
+
+    expect($app->fresh()->failed_step)->toBe('test_config');
+    Process::assertNotRan(fn ($p) => in_array('reload', $p->command, true) && in_array('nginx', $p->command, true));
+});

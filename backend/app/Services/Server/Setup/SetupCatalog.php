@@ -4,6 +4,8 @@ namespace App\Services\Server\Setup;
 
 use App\Contracts\SetupComponent;
 use App\Enums\InstallStatus;
+use App\Jobs\InstallBuildTools;
+use App\Jobs\InstallFail2ban;
 use App\Jobs\InstallWpCli;
 use App\Services\Runtime\DatabaseInstallProgress;
 use App\Services\Runtime\InstallTracker;
@@ -142,6 +144,10 @@ class SetupCatalog
             'php' => 'php',
             'node' => 'node',
             'wp_cli' => InstallWpCli::RUNTIME,
+            // Both were missing, so a failed install read as "pending" with a
+            // plain Install button and no reason (FS-A7).
+            'fail2ban' => InstallFail2ban::RUNTIME,
+            'build_tools' => InstallBuildTools::RUNTIME,
             default => null,
         };
 

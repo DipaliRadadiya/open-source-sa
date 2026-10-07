@@ -92,9 +92,19 @@ class ServerSyncController extends Controller
     {
         $result = $handover->complete();
 
-        $activity->log('sync.legacy_handover', null, $result);
+        $activity->log('sync.legacy_handover', null, [
+            'agent' => $result['agent']['unit'] ?? null,
+            'users' => array_column($result['users'], 'username'),
+        ]);
 
-        return response()->json($result);
+        // 500 with the per-step results when anything failed, so a screen
+        // cannot read a half-done handover as "Done".
+        return response()->json($result, $result['ok'] ? 200 : 500);
+    }
+
+    public function handoverStatus(LegacyHandover $handover): JsonResponse
+    {
+        return response()->json($handover->status());
     }
 
     public function show(Request $request, SyncRun $run): JsonResponse

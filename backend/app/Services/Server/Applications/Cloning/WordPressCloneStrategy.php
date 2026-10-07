@@ -7,6 +7,7 @@ use App\Exceptions\Server\Application\CloneOperationException;
 use App\Models\Application;
 use App\Models\Database;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\WordPressTablePrefix;
 use App\Services\Server\Applications\WordPressUrlVariants;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Php\RuntimeOwnership;
@@ -31,6 +32,7 @@ class WordPressCloneStrategy implements CloneStrategy
         private DatabaseManager $databases,
         private DatabaseCopy $databaseCopy,
         private ServerOps $serverOps,
+        private WordPressTablePrefix $tablePrefix,
     ) {}
 
     public function clone(Application $source, Application $clone): void
@@ -46,7 +48,7 @@ class WordPressCloneStrategy implements CloneStrategy
 
         $documentRoot = $this->provisioner->documentRoot($clone);
 
-        $this->writeWpConfig($clone, $documentRoot, $cloneDatabase, "{$connection->host}:{$connection->port}");
+        $this->writeWpConfig($clone, $this->tablePrefix->of($source), $documentRoot, $cloneDatabase, "{$connection->host}:{$connection->port}");
 
         // Every spelling of the source's address, not just its current URL
         // (bug #92): a link saved as http://, in the block editor's escaped
@@ -60,7 +62,7 @@ class WordPressCloneStrategy implements CloneStrategy
         }
     }
 
-    private function writeWpConfig(Application $clone, string $documentRoot, Database $database, string $host): void
+    private function writeWpConfig(Application $clone, string $prefix, string $documentRoot, Database $database, string $host): void
     {
         $user = $database->users->first();
 
@@ -69,7 +71,8 @@ class WordPressCloneStrategy implements CloneStrategy
             'username' => $user->username,
             'password' => $user->password,
             'host' => $host,
-            'prefix' => 'wp_',
+            // The source's own prefix: the tables were copied as they are.
+            'prefix' => $prefix,
             'salts' => $this->salts(),
             // No `home`/`environmentType`/`disableCron` — a clone is a real
             // independent site, not a staging sandbox.

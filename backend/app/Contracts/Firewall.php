@@ -14,7 +14,7 @@ interface Firewall
     /**
      * Live state read from the engine (detect-don't-trust — no stored flag).
      *
-     * @return array{enabled: bool, default_policy: array{incoming: string, outgoing: string}}
+     * @return array{enabled: bool, default_policy: array{incoming: ?string, outgoing: ?string}}
      */
     public function status(): array;
 

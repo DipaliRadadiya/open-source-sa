@@ -7,6 +7,10 @@ use App\Exceptions\Server\Firewall\FirewallOperationException;
 use App\Models\FirewallRule;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * UFW (Uncomplicated Firewall) engine. Rules are always applied/removed by
@@ -38,8 +42,11 @@ class UfwFirewall implements Firewall
 
         $output = $result->output();
 
-        $incoming = 'deny';
-        $outgoing = 'allow';
+        // Null when ufw does not say. An inactive ufw prints no `Default:`
+        // line, and "deny incoming / allow outgoing" was a guess shown as
+        // fact (OLD-1).
+        $incoming = null;
+        $outgoing = null;
         if (preg_match('/Default:\s*(\w+)\s*\(incoming\),\s*(\w+)\s*\(outgoing\)/i', $output, $m)) {
             $incoming = strtolower($m[1]);
             $outgoing = strtolower($m[2]);
@@ -52,6 +59,38 @@ class UfwFirewall implements Firewall
     }
 
     public function apply(FirewallRule $rule): ServerOpsResult
+    {
+        return $this->exclusively(fn () => $this->applyNow($rule));
+    }
+
+    /**
+     * One ufw change at a time, panel-wide.
+     *
+     * ufw rewrites its rules file on every change and has no lock of its own
+     * worth relying on: two rules switched off at the same moment both
+     * answered 200 and one stayed in ufw — the port open while the panel said
+     * closed (frontend QA FS-C24, reproduced 3 of 3 on Ubuntu 26.04). A
+     * position read for `insert` and the insert itself also belong together.
+     */
+    private function exclusively(callable $change): ServerOpsResult
+    {
+        $ttl = max(1, (int) config('server.firewall.lock_ttl', 300));
+        $wait = max(1, (int) config('server.firewall.lock_wait', 60));
+
+        try {
+            return Cache::lock('firewall:ufw', $ttl)->block($wait, $change);
+        } catch (LockTimeoutException) {
+            $reference = (string) Str::uuid();
+            Log::channel('server-ops')->warning('firewall lock: wait timed out', [
+                'reference' => $reference,
+                'waited_seconds' => $wait,
+            ]);
+
+            throw new FirewallOperationException($reference, busy: true);
+        }
+    }
+
+    private function applyNow(FirewallRule $rule): ServerOpsResult
     {
         $context = ['feature' => 'firewall', 'op' => 'apply', 'rule' => $rule->id];
 
@@ -107,10 +146,10 @@ class UfwFirewall implements Firewall
 
     public function remove(FirewallRule $rule): ServerOpsResult
     {
-        return $this->serverOps->run(
+        return $this->exclusively(fn () => $this->serverOps->run(
             array_merge(['ufw', 'delete'], $this->ruleArgs($rule)),
             ['feature' => 'firewall', 'op' => 'remove', 'rule' => $rule->id],
-        );
+        ));
     }
 
     public function enable(): ServerOpsResult
@@ -125,21 +164,23 @@ class UfwFirewall implements Firewall
             ['ufw', '--force', 'enable'],
         ];
 
-        $result = null;
-        foreach ($commands as $command) {
-            $result = $this->serverOps->run($command, ['feature' => 'firewall', 'op' => 'enable']);
+        return $this->exclusively(function () use ($commands) {
+            $result = null;
+            foreach ($commands as $command) {
+                $result = $this->serverOps->run($command, ['feature' => 'firewall', 'op' => 'enable']);
 
-            if ($result->failed()) {
-                return $result;
+                if ($result->failed()) {
+                    return $result;
+                }
             }
-        }
 
-        return $result;
+            return $result;
+        });
     }
 
     public function disable(): ServerOpsResult
     {
-        return $this->serverOps->run(['ufw', 'disable'], ['feature' => 'firewall', 'op' => 'disable']);
+        return $this->exclusively(fn () => $this->serverOps->run(['ufw', 'disable'], ['feature' => 'firewall', 'op' => 'disable']));
     }
 
     /**

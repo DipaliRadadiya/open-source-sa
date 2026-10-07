@@ -66,6 +66,14 @@ class ProtectedRuleGuard
             return;
         }
 
+        // Switching a protected rule back ON only restores what the panel
+        // seeded — it can cut nobody off — and refusing it left no way back
+        // once the rule had been switched off with the firewall down
+        // (frontend QA FS-C3).
+        if (array_values(array_intersect(self::LOCKED, array_keys($rule->getDirty()))) === ['enabled'] && $rule->enabled) {
+            return;
+        }
+
         $this->assertUnlocked($rule, 'protected_rule_edit');
     }
 

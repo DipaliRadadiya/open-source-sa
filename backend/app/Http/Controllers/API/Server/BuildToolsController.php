@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\Server;
 
+use App\Enums\InstallStatus;
 use App\Http\Controllers\Controller;
 use App\Jobs\InstallBuildTools;
 use App\Services\ActivityLogger;
@@ -41,6 +42,12 @@ class BuildToolsController extends Controller
     {
         if ($buildTools->installed()) {
             return response()->json(['message' => __('errors/build-tools.already_installed')], 422);
+        }
+
+        // One at a time. A reload mid-install brought the Install button back
+        // and a second apt run could be queued behind the first (FS-A5).
+        if ($installs->versions(InstallBuildTools::RUNTIME)->get(InstallBuildTools::VERSION)?->status === InstallStatus::Installing) {
+            return response()->json(['message' => __('errors/build-tools.already_installing')], 409);
         }
 
         // Before dispatch, not inside the job: otherwise there is a window

@@ -74,7 +74,9 @@ class BotTrafficReporter
         $since = now()->subDays($days);
 
         $counts = [];
+        $refused = [];
         $lastSeen = [];
+        $lastStatus = [];
         $scanned = 0;
 
         foreach ($lines as $line) {
@@ -104,8 +106,21 @@ class BotTrafficReporter
 
             $counts[$bot] = ($counts[$bot] ?? 0) + 1;
 
+            // What the server actually answered, from the log line itself. The
+            // count used to come from the *current* settings, so hits that got
+            // a 200 — or arrived before the block existed — read as blocked
+            // (frontend QA AB-B).
+            $status = $this->status($line);
+
+            if ($status === 403) {
+                $refused[$bot] = ($refused[$bot] ?? 0) + 1;
+            }
+
             if ($stamp !== null && (! isset($lastSeen[$bot]) || $stamp->gt($lastSeen[$bot]))) {
                 $lastSeen[$bot] = $stamp;
+                $lastStatus[$bot] = $status;
+            } elseif (! array_key_exists($bot, $lastStatus)) {
+                $lastStatus[$bot] = $status;
             }
         }
 
@@ -122,6 +137,9 @@ class BotTrafficReporter
                 // can show "this one is getting through" next to the count
                 // rather than making the user cross-reference two lists.
                 'blocked' => in_array(mb_strtolower($name), $blockedNow, true),
+                // Real refusals in the window, and what the latest hit got.
+                'blocked_hits' => $refused[$name] ?? 0,
+                'last_status' => $lastStatus[$name] ?? null,
                 'last_seen' => $lastSeen[$name]?->format('d-m-Y H:i:s'),
                 'last_seen_human' => $lastSeen[$name]?->diffForHumans(),
             ];
@@ -138,10 +156,7 @@ class BotTrafficReporter
             'totals' => [
                 'bots' => count($bots),
                 'hits' => array_sum($counts),
-                'blocked_hits' => array_sum(array_map(
-                    fn (array $bot) => $bot['blocked'] ? $bot['hits'] : 0,
-                    $bots,
-                )),
+                'blocked_hits' => array_sum($refused),
             ],
         ];
     }
@@ -278,5 +293,14 @@ class BotTrafficReporter
         $content = rtrim(str_replace("\r\n", "\n", $content), "\n");
 
         return $content === '' ? [] : explode("\n", $content);
+    }
+
+    /**
+     * The status code of a combined/common-format log line — the number right
+     * after the quoted request — or null when the line has none.
+     */
+    private function status(string $line): ?int
+    {
+        return preg_match('/"[^"]*" (\d{3}) /', $line, $match) === 1 ? (int) $match[1] : null;
     }
 }

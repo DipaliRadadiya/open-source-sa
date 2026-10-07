@@ -190,3 +190,22 @@ it('refuses a user without log access', function () {
         ->getJson(botTrafficUrl())
         ->assertForbidden();
 });
+
+it('counts what the server really refused, not what the settings say now (AB-B)', function () {
+    // Blocked by the current settings, but three of its hits got a 200 —
+    // before the block existed. Only the 403 is a refusal.
+    $this->application->forceFill(['ai_bot_policy' => 'block_training'])->save();
+    $line = fn (int $status, int $daysAgo) => str_replace('" 200 ', "\" {$status} ", accessLine('GPTBot/1.0', $daysAgo));
+
+    fakeAccessLog([$line(200, 3), $line(200, 2), $line(200, 2), $line(403, 0)]);
+
+    $response = $this->withHeaders(botTrafficHeaders())->getJson(botTrafficUrl())->assertOk();
+    $bot = collect($response->json('bot_traffic.bots') ?? $response->json('bots'))->firstWhere('bot', 'GPTBot');
+
+    expect($bot['hits'])->toBe(4)
+        ->and($bot['blocked'])->toBeTrue()
+        ->and($bot['blocked_hits'])->toBe(1)
+        ->and($bot['last_status'])->toBe(403);
+
+    expect($response->json('bot_traffic.totals.blocked_hits') ?? $response->json('totals.blocked_hits'))->toBe(1);
+});

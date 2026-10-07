@@ -110,7 +110,7 @@ describe('the unit', function () {
             ->toContain('Environment=PORT=3000')
             // The pinned version must reach run time, not just build time.
             ->toContain('/opt/fnm/node-versions/v20.11.0/installation/bin')
-            ->toContain('ExecStart=/opt/fnm/node-versions/v20.11.0/installation/bin/node server.js')
+            ->toContain('ExecStart=/usr/bin/env PORT=3000 /opt/fnm/node-versions/v20.11.0/installation/bin/node server.js')
             // A crash loop that restarts forever buries its own cause.
             ->toContain('StartLimitBurst=5')
             ->toContain('MemoryMax=512M');
@@ -229,7 +229,7 @@ describe('the unit', function () {
     it('runs node directly when the application wants one process', function () {
         $unit = renderedUnit(nodeApp());
 
-        expect($unit)->toContain('ExecStart=/opt/fnm/node-versions/v20.11.0/installation/bin/node server.js')
+        expect($unit)->toContain('ExecStart=/usr/bin/env PORT=3000 /opt/fnm/node-versions/v20.11.0/installation/bin/node server.js')
             ->and($unit)->not->toContain('pm2-runtime')
             // No PM2, so no state directory and no widened crash window.
             ->and($unit)->not->toContain('PM2_HOME')
@@ -242,7 +242,7 @@ describe('the unit', function () {
         // The script, not the interpreter: PM2 forks a JavaScript file through
         // Node's cluster module. Given `node` it would have nothing to fork.
         expect($unit)->toContain(
-            'ExecStart=/opt/fnm/node-versions/v20.11.0/installation/bin/pm2-runtime start server.js'
+            'ExecStart=/usr/bin/env PORT=3000 /opt/fnm/node-versions/v20.11.0/installation/bin/pm2-runtime start server.js'
             .' --interpreter /opt/fnm/node-versions/v20.11.0/installation/bin/node'
             .' -i 4 --name sv-app-1 --raw'
         );
@@ -855,4 +855,22 @@ it('labels a systemd application as one, and admits what it cannot count', funct
         'online' => null,
         'supervisor' => 'systemd',
     ]);
+});
+
+it('lets an application go back to the port its unit is still running on (FS-C41)', function () {
+    // Port changed to 3015 and not yet deployed: 3005 is held by this same
+    // app's process, and going back to it was refused as "already in use".
+    $dir = sys_get_temp_dir().'/units-'.uniqid();
+    mkdir($dir);
+    config(['server.applications.systemd_dir' => $dir]);
+
+    $app = nodeApp(['app_port' => 3015]);
+    file_put_contents($dir.'/'.app(ProcessSupervisor::class)->unit($app), "[Service]\nEnvironment=PORT=3005\n");
+
+    Process::fake(fn ($p) => in_array('ss', $p->command, true) || ($p->command[0] ?? '') === 'ss'
+        ? Process::result(output: "LISTEN 0 511 127.0.0.1:3005 0.0.0.0:*\n")
+        : Process::result());
+
+    expect(app(PortAllocator::class)->conflict(3005, $app))->toBeNull()
+        ->and(app(PortAllocator::class)->conflict(3005, nodeApp(['name' => 'Other', 'domain' => 'o.test', 'app_port' => 3020])))->toBe('in_use');
 });
