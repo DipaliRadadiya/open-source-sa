@@ -83,14 +83,23 @@ render() {
 
 render > "$out.new"
 
-if [ -f "$out" ] && cmp -s "$out" "$out.new"; then
+# Nobody banned: no file at all. OpenLiteSpeed refuses an empty included
+# rewrite file as an error (measured), and nginx/Apache lose nothing.
+if [ ! -s "$out.new" ]; then
     rm -f "$out.new"
-    exit 0
-fi
+    [ -f "$out" ] || exit 0
+    cp -p "$out" "$out.prev"
+    rm -f "$out"
+else
+    if [ -f "$out" ] && cmp -s "$out" "$out.new"; then
+        rm -f "$out.new"
+        exit 0
+    fi
 
-[ -f "$out" ] && cp -p "$out" "$out.prev"
-mv -f "$out.new" "$out"
-chmod 0644 "$out"
+    [ -f "$out" ] && cp -p "$out" "$out.prev"
+    mv -f "$out.new" "$out"
+    chmod 0644 "$out"
+fi
 
 @if ($webServer === 'openlitespeed')
 # The same reading the panel gives `openlitespeed -t` (OlsConfigCheck): its

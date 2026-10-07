@@ -87,13 +87,20 @@ it('writes OpenLiteSpeed one rewrite rule for all banned addresses', function ()
         ->toContain("RewriteCond %{REMOTE_ADDR} =203.0.113.9 [OR]\nRewriteCond %{REMOTE_ADDR} =198.51.100.4\nRewriteRule ^ - [F,L]");
 });
 
-it('empties the file on flush, and leaves nothing to deny', function () {
-    $script = banScript('nginx', $this->root);
+it('removes the file once nobody is banned, and reloads', function (string $action) {
+    // An empty included rewrite file is an error to OpenLiteSpeed (measured),
+    // which kept the last ban in place forever.
+    $script = banScript('openlitespeed', $this->root);
     runBan($script, 'ban', 'shop', '203.0.113.9');
-    runBan($script, 'flush', 'shop');
 
-    expect(trim(file_get_contents($this->root.'/rules/shop/panel-fail2ban.conf')))->toBe('');
-});
+    expect(runBan($script, ...($action === 'flush' ? ['flush', 'shop'] : ['unban', 'shop', '203.0.113.9'])))->toBe(0)
+        ->and(file_exists($this->root.'/rules/shop/panel-fail2ban.conf'))->toBeFalse()
+        ->and(substr_count(file_get_contents($this->root.'/reloads'), 'reloaded'))->toBe(2);
+
+    // Nothing banned and no file: nothing to do, no reload.
+    runBan($script, 'flush', 'shop');
+    expect(substr_count(file_get_contents($this->root.'/reloads'), 'reloaded'))->toBe(2);
+})->with(['flush', 'unban']);
 
 it('puts the previous file back when the web server rejects the new one', function () {
     banScript('nginx', $this->root);
