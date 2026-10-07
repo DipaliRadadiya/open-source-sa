@@ -254,6 +254,19 @@ export const applicationSchema = z.object({
   memory_limit: z.string().nullish(),
   cpu_limit: z.string().nullish(),
   registry_id: z.number().nullish(),
+  // The last deploy's readiness check; null when none ran (one-click apps, older sites).
+  container_status: z.string().nullish(),
+  // `log` and `last_line` are null for someone without `app_log`.
+  last_failure: z
+    .object({
+      reason: z.string().catch(""),
+      message: z.string().nullish(),
+      last_line: z.string().nullish(),
+      log: z.string().nullish(),
+      at: z.string().nullish(),
+    })
+    .nullish()
+    .catch(null),
   // Shown in the sites list; must be declared or Zod strips them.
   directory_size_bytes: z.number().nullish(),
   // The volumes' share of the total. Nullish is meaningful: absent means the site

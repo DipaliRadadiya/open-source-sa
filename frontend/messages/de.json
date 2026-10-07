@@ -5843,6 +5843,42 @@
       "composeMode": "Sie schreiben Ihre eigene Compose-Datei.",
       "useImage": "Stattdessen ein einzelnes Image bereitstellen",
       "checking": "Wird geprüft…"
+    },
+    "containerState": {
+      "starting": "Wird gestartet",
+      "restarting": "Startet neu"
+    },
+    "containerFailure": {
+      "title": "Der Container antwortet nicht",
+      "titleRestarting": "Der Container startet ständig neu",
+      "lead": "Beheben Sie die Ursache und rollen Sie neu aus. Bis dahin zeigt die Site einen Fehler.",
+      "noReason": "Das letzte Deployment ist nicht hochgefahren. Prüfen Sie das Protokoll des Containers.",
+      "checkedAt": "Geprüft {time}",
+      "logTitle": "Letzte Protokollzeilen",
+      "logEmpty": "Der Container hat nichts in sein Protokoll geschrieben.",
+      "copyLog": "Protokoll kopieren",
+      "usePort": "Port {port} verwenden",
+      "applying": "Wird auf Port {port} ausgerollt…",
+      "changePort": "Port ändern",
+      "editEnv": "Umgebungsvariablen bearbeiten",
+      "viewLogs": "Alle Protokolle ansehen",
+      "redeploy": "Neu ausrollen",
+      "redeploying": "Wird neu ausgerollt…",
+      "waitNote": "Warten auf eine Antwort der App. Das kann bis zu anderthalb Minuten dauern.",
+      "fixed": "Der Container antwortet jetzt.",
+      "queued": "Wird erneut ausgerollt. Diese Seite aktualisiert sich, wenn es fertig ist.",
+      "queuedPort": "Port auf {port} gesetzt. Wird erneut ausgerollt; diese Seite aktualisiert sich, wenn es fertig ist.",
+      "stillFailing": "Er antwortet immer noch nicht. Der Grund auf dieser Seite ist aktualisiert.",
+      "portDialog": {
+        "title": "Container-Port ändern",
+        "description": "Der Port, auf dem die App in ihrem Container lauscht. Es ist kein Port Ihres Servers.",
+        "descriptionDetected": "Der Port, auf dem die App in ihrem Container lauscht. Dieses Image gibt {port} an.",
+        "label": "Container-Port",
+        "hint": "Beim Speichern wird der Container auf diesem Port neu ausgerollt.",
+        "save": "Speichern und neu ausrollen",
+        "cancel": "Abbrechen",
+        "invalid": "Geben Sie einen Port von 1 bis 65535 ein."
+      }
     }
   },
   "panelUpdate": {

@@ -5843,6 +5843,42 @@
       "composeMode": "Vous écrivez votre propre fichier compose.",
       "useImage": "Déployer plutôt une seule image",
       "checking": "Vérification…"
+    },
+    "containerState": {
+      "starting": "Démarrage",
+      "restarting": "Redémarre en boucle"
+    },
+    "containerFailure": {
+      "title": "Le conteneur ne répond pas",
+      "titleRestarting": "Le conteneur redémarre en boucle",
+      "lead": "Corrigez la cause, puis redéployez. D'ici là, le site affiche une erreur.",
+      "noReason": "Le dernier déploiement n'a pas démarré. Consultez le journal du conteneur.",
+      "checkedAt": "Vérifié {time}",
+      "logTitle": "Dernières lignes du journal",
+      "logEmpty": "Le conteneur n'a rien écrit dans son journal.",
+      "copyLog": "Copier le journal",
+      "usePort": "Utiliser le port {port}",
+      "applying": "Déploiement sur le port {port}…",
+      "changePort": "Changer le port",
+      "editEnv": "Modifier les variables d'environnement",
+      "viewLogs": "Voir tous les journaux",
+      "redeploy": "Redéployer",
+      "redeploying": "Redéploiement…",
+      "waitNote": "En attente d'une réponse de l'application. Cela peut prendre jusqu'à une minute et demie.",
+      "fixed": "Le conteneur répond maintenant.",
+      "queued": "Nouveau déploiement en cours. Cette page se met à jour une fois terminé.",
+      "queuedPort": "Port défini sur {port}. Nouveau déploiement en cours ; cette page se met à jour une fois terminé.",
+      "stillFailing": "Il ne répond toujours pas. La raison affichée sur cette page est à jour.",
+      "portDialog": {
+        "title": "Changer le port du conteneur",
+        "description": "Le port sur lequel l'application écoute dans son conteneur. Ce n'est pas un port de votre serveur.",
+        "descriptionDetected": "Le port sur lequel l'application écoute dans son conteneur. Cette image indique {port}.",
+        "label": "Port du conteneur",
+        "hint": "L'enregistrement redéploie le conteneur sur ce port.",
+        "save": "Enregistrer et redéployer",
+        "cancel": "Annuler",
+        "invalid": "Saisissez un port entre 1 et 65535."
+      }
     }
   },
   "panelUpdate": {

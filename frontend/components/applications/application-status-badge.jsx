@@ -5,6 +5,7 @@ import { CircleAlert, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PROVISION_STEPS, provisionStepLabel } from "@/lib/applications/provision-steps";
 import { isRedeploying } from "@/lib/applications/settled";
+import { containerState } from "@/lib/applications/container-state";
 import { Badge } from "@/components/ui/badge";
 
 /* Kept out of `applications-table.jsx` so the sidebar does not pull DataTable into the shell bundle. */
@@ -35,6 +36,13 @@ export function isProcessDown(application) {
   );
 }
 
+// Container states that differ from `status`; `running` reads the same as `active`.
+const CONTAINER_BADGES = {
+  starting: { variant: "warning", key: "containerState.starting" },
+  restarting: { variant: "destructive", key: "containerState.restarting" },
+  failed: { variant: "destructive", key: "status.failed" },
+};
+
 // Badge and notes are split because the card and table place them differently.
 export function ApplicationStatusBadge({ application }) {
   const t = useTranslations("applications");
@@ -55,6 +63,18 @@ export function ApplicationStatusBadge({ application }) {
     return (
       <Badge variant="warning" className="font-normal">
         {t("deploying")}
+      </Badge>
+    );
+  }
+
+  // An `active` container site can still be down: a failed PUT /container or
+  // Pull leaves `status` alone and records the failure beside it.
+  const container = containerState(application);
+  if (CONTAINER_BADGES[container]) {
+    const { variant, key } = CONTAINER_BADGES[container];
+    return (
+      <Badge variant={variant} className="font-normal">
+        {t(key)}
       </Badge>
     );
   }
@@ -90,19 +110,22 @@ export function ApplicationStatusDot({ application, className }) {
   const t = useTranslations("applications");
   const paused = Boolean(application.is_disabled);
   const redeploying = isRedeploying(application);
-  const down = !paused && !redeploying && isProcessDown(application);
+  const container = !paused && !redeploying ? CONTAINER_BADGES[containerState(application)] : null;
+  const down = !paused && !redeploying && !container && isProcessDown(application);
   const variant = paused || down ? "warning" : (STATUS_VARIANTS[application.status] ?? "secondary");
   const label = paused
     ? t("paused")
     : redeploying
       ? t("deploying")
-      : down
-        ? t("processStoppedBadge")
-        : (t(`status.${application.status}`) ?? application.status_title ?? application.status);
+      : container
+        ? t(container.key)
+        : down
+          ? t("processStoppedBadge")
+          : (t(`status.${application.status}`) ?? application.status_title ?? application.status);
 
   return (
     <span className={cn("flex min-w-0 items-center gap-1.5", className)}>
-      <span className={cn("size-1.5 shrink-0 rounded-full", DOT_TONES[variant] ?? DOT_TONES.secondary)} />
+      <span className={cn("size-1.5 shrink-0 rounded-full", DOT_TONES[container?.variant ?? variant] ?? DOT_TONES.secondary)} />
       <span className="truncate text-xs text-muted-foreground">{label}</span>
     </span>
   );

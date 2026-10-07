@@ -5843,6 +5843,42 @@
       "composeMode": "Estás escribiendo tu propio archivo compose.",
       "useImage": "Desplegar una sola imagen",
       "checking": "Comprobando…"
+    },
+    "containerState": {
+      "starting": "Iniciando",
+      "restarting": "Reiniciándose"
+    },
+    "containerFailure": {
+      "title": "El contenedor no responde",
+      "titleRestarting": "El contenedor se reinicia sin parar",
+      "lead": "Corrige la causa y vuelve a desplegar. Hasta entonces, el sitio muestra un error.",
+      "noReason": "El último despliegue no arrancó. Revisa el registro del contenedor.",
+      "checkedAt": "Comprobado {time}",
+      "logTitle": "Últimas líneas del registro",
+      "logEmpty": "El contenedor no escribió nada en su registro.",
+      "copyLog": "Copiar registro",
+      "usePort": "Usar el puerto {port}",
+      "applying": "Desplegando en el puerto {port}…",
+      "changePort": "Cambiar puerto",
+      "editEnv": "Editar variables de entorno",
+      "viewLogs": "Ver todos los registros",
+      "redeploy": "Volver a desplegar",
+      "redeploying": "Volviendo a desplegar…",
+      "waitNote": "Esperando a que la aplicación responda. Puede tardar hasta un minuto y medio.",
+      "fixed": "El contenedor ya responde.",
+      "queued": "Desplegando de nuevo. Esta página se actualiza al terminar.",
+      "queuedPort": "Puerto cambiado a {port}. Desplegando de nuevo; esta página se actualiza al terminar.",
+      "stillFailing": "Sigue sin responder. El motivo en esta página está actualizado.",
+      "portDialog": {
+        "title": "Cambiar el puerto del contenedor",
+        "description": "El puerto en el que escucha la aplicación dentro de su contenedor. No es un puerto de tu servidor.",
+        "descriptionDetected": "El puerto en el que escucha la aplicación dentro de su contenedor. Esta imagen indica {port}.",
+        "label": "Puerto del contenedor",
+        "hint": "Al guardar, el contenedor se despliega de nuevo en este puerto.",
+        "save": "Guardar y volver a desplegar",
+        "cancel": "Cancelar",
+        "invalid": "Introduce un puerto entre 1 y 65535."
+      }
     }
   },
   "panelUpdate": {

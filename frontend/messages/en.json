@@ -5843,6 +5843,42 @@
       "composeMode": "You are writing your own compose file.",
       "useImage": "Deploy a single image instead",
       "checking": "Checking…"
+    },
+    "containerState": {
+      "starting": "Starting",
+      "restarting": "Restarting"
+    },
+    "containerFailure": {
+      "title": "The container isn't answering",
+      "titleRestarting": "The container keeps restarting",
+      "lead": "Fix the cause, then deploy again. The site shows an error until then.",
+      "noReason": "The last deploy did not come up. Check the container's log.",
+      "checkedAt": "Checked {time}",
+      "logTitle": "Last log lines",
+      "logEmpty": "The container wrote nothing to its log.",
+      "copyLog": "Copy log",
+      "usePort": "Use port {port}",
+      "applying": "Deploying on port {port}…",
+      "changePort": "Change port",
+      "editEnv": "Edit environment variables",
+      "viewLogs": "View full logs",
+      "redeploy": "Redeploy",
+      "redeploying": "Redeploying…",
+      "waitNote": "Waiting for the app to answer. This can take up to a minute and a half.",
+      "fixed": "The container is answering now.",
+      "queued": "Deploying again. This page updates when it's done.",
+      "queuedPort": "Port set to {port}. Deploying again; this page updates when it's done.",
+      "stillFailing": "It still isn't answering. The reason on this page is updated.",
+      "portDialog": {
+        "title": "Change the container port",
+        "description": "The port the app listens on inside its container. It is not a port on your server.",
+        "descriptionDetected": "The port the app listens on inside its container. This image says {port}.",
+        "label": "Container port",
+        "hint": "Saving deploys the container again on this port.",
+        "save": "Save and redeploy",
+        "cancel": "Cancel",
+        "invalid": "Enter a port from 1 to 65535."
+      }
     }
   },
   "panelUpdate": {

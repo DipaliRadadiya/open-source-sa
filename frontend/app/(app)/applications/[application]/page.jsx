@@ -19,6 +19,8 @@ import {
   getApplicationCertificate,
 } from "@/lib/applications/get-application-domains";
 import { ProvisioningCard } from "@/components/applications/provisioning-card";
+import { ContainerFailurePanel } from "@/components/applications/container-failure-panel";
+import { hasContainerFailure } from "@/lib/applications/container-state";
 import { FirstRunCredentials } from "@/components/applications/first-run-credentials";
 import { ApplicationRowActions } from "@/components/applications/application-row-actions";
 import { SiteFactsCard } from "@/components/applications/site-facts-card";
@@ -85,6 +87,17 @@ export default async function ApplicationDetailPage({ params }) {
   const canSeeBackups = can(appPermissions, "app_backup", "view", "application");
   const canRunBackup = can(appPermissions, "app_backup", "manage", "application");
   const isGit = Boolean(application.repository || application.repository_url);
+  const containerFailed = hasContainerFailure(application);
+  const containerFailure = containerFailed ? (
+    <ContainerFailurePanel
+      application={application}
+      canManageContainer={can(appPermissions, "app_container", "manage", "application")}
+      canRetry={canManage}
+      canSeeLogs={can(appPermissions, "app_log", "view", "application")}
+      canEditEnv={can(appPermissions, "app_environment", "view", "application")}
+      className="lg:col-span-2 xl:col-span-3"
+    />
+  ) : null;
   // Only a serving site has domains, a certificate or a running process.
   const settled = isSettled(application);
 
@@ -296,6 +309,12 @@ export default async function ApplicationDetailPage({ params }) {
               )}
               <CopyButton value={application.domain} />
             </div>
+            {/* The container's own words for why it is down; the fixes are in the panel below. */}
+            {containerFailed ? (
+              <p className="max-w-prose text-sm break-words text-destructive">
+                {application.last_failure.message || t("containerFailure.noReason")}
+              </p>
+            ) : null}
           </div>
           </div>
 
@@ -334,10 +353,18 @@ export default async function ApplicationDetailPage({ params }) {
 
       {/* Until it is serving, the provisioning card is the whole page. */}
       {!settled ? (
-        <ProvisioningCard application={application} canManage={canManage} />
+        <div className="space-y-4">
+          {containerFailure}
+          {/* The panel's Redeploy is the same Retry; one button for one action. */}
+          <ProvisioningCard
+            application={application}
+            canManage={canManage && !containerFailed}
+          />
+        </div>
       ) : (
         /* Cards are direct grid children so each row shares a height. */
         <div className="grid items-stretch gap-6 lg:grid-cols-2 xl:grid-cols-3">
+          {containerFailure}
           {/* Above the facts, once, full width. It disappears for good once somebody
               says they have saved them, and these cannot be rotated from the panel. */}
           {showFirstRunCredentials ? (

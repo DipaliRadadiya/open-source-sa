@@ -5843,6 +5843,42 @@
       "composeMode": "Você está escrevendo seu próprio arquivo compose.",
       "useImage": "Implantar uma única imagem",
       "checking": "Verificando…"
+    },
+    "containerState": {
+      "starting": "Iniciando",
+      "restarting": "Reiniciando"
+    },
+    "containerFailure": {
+      "title": "O contentor não está respondendo",
+      "titleRestarting": "O contentor continua reiniciando",
+      "lead": "Corrija a causa e faça o deploy de novo. Até lá, o site mostra um erro.",
+      "noReason": "O último deploy não subiu. Veja o log do contentor.",
+      "checkedAt": "Verificado {time}",
+      "logTitle": "Últimas linhas do log",
+      "logEmpty": "O contentor não escreveu nada no log.",
+      "copyLog": "Copiar log",
+      "usePort": "Usar a porta {port}",
+      "applying": "Fazendo deploy na porta {port}…",
+      "changePort": "Alterar porta",
+      "editEnv": "Editar variáveis de ambiente",
+      "viewLogs": "Ver todos os logs",
+      "redeploy": "Reimplantar",
+      "redeploying": "Reimplantando…",
+      "waitNote": "Aguardando a resposta da aplicação. Isso pode levar até um minuto e meio.",
+      "fixed": "O contentor está respondendo agora.",
+      "queued": "Fazendo deploy de novo. Esta página é atualizada quando terminar.",
+      "queuedPort": "Porta definida como {port}. Fazendo deploy de novo; esta página é atualizada quando terminar.",
+      "stillFailing": "Ainda não está respondendo. O motivo nesta página foi atualizado.",
+      "portDialog": {
+        "title": "Alterar a porta do contentor",
+        "description": "A porta em que a aplicação escuta dentro do contentor. Não é uma porta do seu servidor.",
+        "descriptionDetected": "A porta em que a aplicação escuta dentro do contentor. Esta imagem indica {port}.",
+        "label": "Porta do contentor",
+        "hint": "Ao salvar, o contentor é reimplantado nesta porta.",
+        "save": "Salvar e reimplantar",
+        "cancel": "Cancelar",
+        "invalid": "Insira uma porta de 1 a 65535."
+      }
     }
   },
   "panelUpdate": {

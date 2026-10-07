@@ -1482,6 +1482,11 @@ export function CreateApplicationForm({
           : "/applications",
       );
       toast.success(t("created"));
+      // E.g. a typed port the image does not declare. Kept on screen: the deploy is
+      // still running and this is the likely reason if it fails.
+      for (const warning of Array.isArray(data?.warnings) ? data.warnings : []) {
+        if (typeof warning === "string" && warning) toast.warning(warning, { duration: 20000 });
+      }
     } catch (error) {
       // Rolled back only when the server refused (4xx). After a 5xx or no answer the
       // application may exist, and removing its system user would break it; the user
