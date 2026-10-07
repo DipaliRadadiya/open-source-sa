@@ -1490,11 +1490,26 @@ configure_redis() {
         return
     fi
 
-    local existing
+    # The password Redis really has may not be the `requirepass` line. The
+    # panel's Redis settings change it with CONFIG SET + CONFIG REWRITE, which
+    # on current Redis writes an ACL `user default ... #<hash>` line and leaves
+    # the installer's old `requirepass` behind — the ACL line wins. The panel
+    # keeps the live one in its own .env, so on a re-run that is tried first,
+    # then the `requirepass` line, and whichever Redis accepts is used below.
+    # Using the stale one silently moved the panel's cache to the database.
+    local existing panel_env="${APP_DIR}/backend/.env" from_panel=""
     existing=$(awk '/^requirepass / {print $2; exit}' "$conf" 2>/dev/null || true)
+    if [[ -f "$panel_env" ]]; then
+        from_panel=$(awk -F= '/^REDIS_PASSWORD=/ {sub(/^REDIS_PASSWORD=/, ""); print; exit}' "$panel_env" 2>/dev/null || true)
+        from_panel=${from_panel#\"}; from_panel=${from_panel%\"}
+        [[ "$from_panel" == "null" ]] && from_panel=""
+    fi
+    local candidates=()
+    [[ -n "$from_panel" ]] && candidates+=("$from_panel")
+    [[ -n "$existing" && "$existing" != "$from_panel" ]] && candidates+=("$existing")
 
-    if [[ -n "$existing" ]]; then
-        REDIS_PASSWORD="$existing"
+    if [[ -n "$existing" ]] || grep -qE '^user default .*[#>]' "$conf"; then
+        REDIS_PASSWORD="${candidates[0]:-}"
         skip "Redis already has a password"
     else
         # No trailing `head -c`: it closes the pipe early and SIGPIPEs tr, which
@@ -1520,7 +1535,15 @@ configure_redis() {
     # Proven, not assumed: if Redis cannot be reached with this credential the
     # panel must not be configured to depend on it, or the first request 500s
     # with NOAUTH and the screen you would fix it from is behind that failure.
-    if redis-cli -a "$REDIS_PASSWORD" --no-auth-warning ping 2>/dev/null | grep -q PONG; then
+    local candidate
+    for candidate in "${candidates[@]}"; do
+        if redis-cli -a "$candidate" --no-auth-warning ping 2>/dev/null | grep -q PONG; then
+            REDIS_PASSWORD="$candidate"
+            break
+        fi
+    done
+
+    if [[ -n "$REDIS_PASSWORD" ]] && redis-cli -a "$REDIS_PASSWORD" --no-auth-warning ping 2>/dev/null | grep -q PONG; then
         ok "Redis reachable"
         CACHE_STORE="redis"
     else
