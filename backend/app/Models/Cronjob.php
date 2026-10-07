@@ -31,10 +31,15 @@ class Cronjob extends Model
      * A stable, unique slug from the name — the key for the cron.d filename.
      * Suffixes `-2`, `-3`, … on collision. Migration-safe (stored, not derived
      * from the auto-increment id).
+     *
+     * Never longer than {@see MAX_SLUG_LENGTH}, suffix included. The name may
+     * be 255 characters, and a cron.d file named after all of it crashed cron
+     * itself (measured on Ubuntu 26.04: 251 → core dump, every job on the
+     * server stopped; 140 was still read fine).
      */
     public static function uniqueSlug(string $name, ?int $ignoreId = null): string
     {
-        $base = Str::slug($name) ?: 'cronjob';
+        $base = self::fit(Str::slug($name) ?: 'cronjob', '');
         $slug = $base;
         $suffix = 2;
         $own = $ignoreId ? static::query()->find($ignoreId) : null;
@@ -45,10 +50,24 @@ class Cronjob extends Model
             ->exists()
             || ($suffix <= self::MAX_SLUG_PROBES && static::foreignFileAt($slug, $own))
         ) {
-            $slug = $base.'-'.$suffix++;
+            $slug = self::fit($base, '-'.$suffix++);
         }
 
         return $slug;
+    }
+
+    /**
+     * The longest cron.d file name (and log name) a job is given. Well under
+     * the length that crashed cron, and short enough to read in a listing.
+     */
+    public const MAX_SLUG_LENGTH = 64;
+
+    /** `$base` cut so that `$base.$suffix` fits, without a dangling hyphen. */
+    private static function fit(string $base, string $suffix): string
+    {
+        $room = self::MAX_SLUG_LENGTH - strlen($suffix);
+
+        return (rtrim(substr($base, 0, $room), '-') ?: 'cronjob').$suffix;
     }
 
     /**

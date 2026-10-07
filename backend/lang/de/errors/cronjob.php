@@ -6,7 +6,7 @@ return [
     // `sync_failed`, so a full disk and a missing group read the same.
     'step' => [
         'log_dir' => 'Das Protokollverzeichnis für Cronjobs konnte nicht erstellt werden. Prüfen Sie freien Speicherplatz und ob /var/log beschreibbar ist.',
-        'log_touch' => 'Die Protokolldatei des Cronjobs konnte nicht erstellt werden. Meist ist die Festplatte voll.',
+        'log_touch' => 'Die Protokolldatei des Cronjobs konnte in /var/log/cronjobs nicht erstellt werden. Prüfen Sie, ob genügend Speicherplatz frei ist und der Ordner beschreibbar ist.',
         'log_chown' => 'Die Protokolldatei konnte dem ausführenden Konto nicht übergeben werden. Prüfen Sie, ob dieses Konto noch existiert.',
         'log_chmod' => 'Die Berechtigungen der Protokolldatei konnten nicht gesetzt werden.',
         'rotation' => 'Die Rotationsrichtlinie konnte nicht installiert werden, daher wurde der Job nicht eingeplant — seine Ausgabe würde unbegrenzt wachsen.',
@@ -22,4 +22,5 @@ return [
     'unresolved_placeholder' => 'Der Befehl enthält noch den Platzhalter {path} — ersetzen Sie ihn durch das Anwendungsverzeichnis.',
     'no_newline' => 'Dieser Wert darf keine Zeilenumbrüche enthalten.',
     'reserved_name' => 'Dieser Name ist reserviert und kann nicht verwendet werden.',
+    'shell_comment' => 'Der Befehl enthält einen Shell-Kommentar (ein # am Anfang eines Wortes). Cron würde die Zeile dort abschneiden und der Job liefe nicht richtig. Entfernen Sie den Kommentar oder setzen Sie das # in Anführungszeichen.',
 ];

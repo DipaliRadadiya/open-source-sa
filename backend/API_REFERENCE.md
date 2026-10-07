@@ -4372,8 +4372,15 @@ Paginated, filterable. Filters: `filter[system_user_id]`, `filter[application_id
   "log_key": "cron-laravel-scheduler",
   "next_run_at": "29-07-2026 10:00:00", "next_run_at_human": "in 4 minutes",
   "created_at": "25-07-2026 14:30:00", "created_at_human": "2 weeks ago"
-}], "meta": {"current_page": 1, "per_page": 10, "total": 3, "last_page": 1}}
+}], "meta": {"current_page": 1, "per_page": 10, "total": 3, "last_page": 1,
+  "usernames": ["root", "siteowner", "www-data"], "cron_running": true}}
 ```
+
+Newest first; jobs created in the same second are ordered by `id` (newest first), so paging is stable.
+
+`meta.usernames` is every account a job runs as, **across all pages** (sorted) — what the "Runs as" filter offers, so an account whose jobs are on another page (root, www-data, …) is still offered.
+
+`meta.cron_running` is whether the cron daemon itself is running (`systemctl is-active cron`): `false` means **no job runs at all**, the panel's own scheduler included, whatever `next_run_at` says — show it. `null` means it could not be told.
 
 The account is `username` (a plain string, always present), not `user`. `system_user` is the linked record and is **absent unless the endpoint loads it**, and null for a job whose account is not a panel-managed system user — a job adopted from an existing crontab is the normal case.
 
@@ -4397,7 +4404,11 @@ There is **no `human` field** (render the expression client-side or use the sche
 
 **The account is one of two fields, not one:** send `system_user_id` to target a panel-managed System User, or `username` for a raw OS account that the panel does not manage (the normal case on a migrated server). `username` is `required_without:system_user_id`, so a request carrying neither is a `422` — there is no `user_id` field.
 
-`command` must be a single line, max 1000 chars, and may not still contain the `{path}` placeholder from a command preset — an unresolved placeholder is rejected rather than written to cron as literal text. `expression` is validated as a real cron expression.
+`command` must be a single line, max 1000 chars, and may not still contain the `{path}` placeholder from a command preset — an unresolved placeholder is rejected rather than written to cron as literal text. **A shell comment is refused** (`errors/cronjob.shell_comment`): a `#` at the start of a word outside quotes (`echo hi # note`) would cut off the panel's log redirect on the cron line. `echo "#tag"`, `a#b`, `$#` and URL fragments are fine.
+
+`expression` must be one **Linux cron reads**: five fields of numbers, `*`, ranges, lists, steps and month/day names (`mon-fri`, `jan`), or one of `@yearly @annually @monthly @weekly @daily @midnight @hourly`. Quartz extensions (`L`, `W`, `?`, `#`) are refused — cron ignores the whole file for them — and so is `@reboot` (it has no next run).
+
+`name` may be up to 255 characters, but the **`slug` (file name) is at most 64**: a cron.d file named after a 251-character name crashed cron on Ubuntu 26.04. A cut name gets `-2`, `-3`, … within the same 64 when it clashes.
 
 **`application_id` scopes the job to a site.** Optional; null (or omitted) is a server-level job. Send it when the job is created from a site's own Cronjobs screen — `filter[application_id]` on the list endpoint then returns it, which it could not before, because nothing was able to set the column.
 

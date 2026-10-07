@@ -6,7 +6,7 @@ return [
     // `sync_failed`, so a full disk and a missing group read the same.
     'step' => [
         'log_dir' => "Le répertoire de journaux des tâches cron n'a pas pu être créé. Vérifiez l'espace disque et que /var/log est accessible en écriture.",
-        'log_touch' => "Le fichier journal de la tâche cron n'a pas pu être créé. En général le disque est plein.",
+        'log_touch' => 'Le fichier journal de la tâche cron n\'a pas pu être créé dans /var/log/cronjobs. Vérifiez qu\'il reste de l\'espace disque et que le dossier est accessible en écriture.',
         'log_chown' => "Le fichier journal n'a pas pu être attribué au compte qui exécute la tâche. Vérifiez que ce compte existe toujours.",
         'log_chmod' => "Les permissions du fichier journal n'ont pas pu être définies.",
         'rotation' => "La politique de rotation des journaux n'a pas pu être installée, la tâche n'a donc pas été planifiée : sa sortie grandirait sans limite.",
@@ -22,4 +22,5 @@ return [
     'unresolved_placeholder' => "La commande contient encore le marqueur {path} — remplacez-le par le répertoire de l'application.",
     'no_newline' => 'Cette valeur ne peut pas contenir de sauts de ligne.',
     'reserved_name' => 'Ce nom est réservé et ne peut pas être utilisé.',
+    'shell_comment' => 'La commande contient un commentaire shell (un # au début d\'un mot). Cron couperait la ligne à cet endroit et la tâche ne s\'exécuterait pas correctement. Supprimez le commentaire ou placez le # entre guillemets.',
 ];

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Server\Cronjob;
 
 use App\Http\Requests\Server\Cronjob\Concerns\ConfinesRunAs;
+use App\Rules\NoShellComment;
 use App\Rules\NotReservedCronFile;
 use App\Rules\SingleLine;
 use App\Rules\ValidCronExpression;
@@ -32,7 +33,7 @@ class UpdateCronjobRequest extends FormRequest
             // a panel System User, or a raw OS account.
             'system_user_id' => ['sometimes', 'nullable', 'exists:system_users,id'],
             'username' => ['sometimes', 'nullable', 'string', 'regex:/^[a-z_][a-z0-9_-]{0,31}$/'],
-            'command' => ['sometimes', 'required', 'string', 'max:1000', new SingleLine, 'not_regex:/\{path\}/'],
+            'command' => ['sometimes', 'required', 'string', 'max:1000', new SingleLine, new NoShellComment, 'not_regex:/\{path\}/'],
             'expression' => ['sometimes', 'required', 'string', new ValidCronExpression],
             'active' => ['sometimes', 'boolean'],
         ];

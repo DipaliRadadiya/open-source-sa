@@ -6,7 +6,7 @@ return [
     // `sync_failed`, so a full disk and a missing group read the same.
     'step' => [
         'log_dir' => 'The cron job log directory could not be created. Check there is free disk space and that /var/log is writable.',
-        'log_touch' => "The cron job's log file could not be created. Usually the disk is full.",
+        'log_touch' => 'The cron job\'s log file could not be created in /var/log/cronjobs. Check there is free disk space and that the folder is writable.',
         'log_chown' => 'The log file could not be handed to the account this job runs as. Check that account still exists.',
         'log_chmod' => "The log file's permissions could not be set.",
         'rotation' => 'The log rotation policy could not be installed, so the job was not scheduled — its output would grow without limit.',
@@ -22,4 +22,5 @@ return [
     'unresolved_placeholder' => 'The command still contains the {path} placeholder — replace it with the application directory.',
     'no_newline' => 'This value may not contain line breaks.',
     'reserved_name' => 'This name is reserved and cannot be used.',
+    'shell_comment' => 'The command contains a shell comment (a # at the start of a word). Cron would cut the line there and the job would not run properly. Remove the comment, or put the # inside quotes.',
 ];

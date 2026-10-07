@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Server\Cronjob;
 
 use App\Http\Requests\Server\Cronjob\Concerns\ConfinesRunAs;
+use App\Rules\NoShellComment;
 use App\Rules\NotReservedCronFile;
 use App\Rules\SingleLine;
 use App\Rules\ValidCronExpression;
@@ -36,7 +37,7 @@ class StoreCronjobRequest extends FormRequest
             // before this rule did, so that filter could only ever answer with
             // an empty list.
             'application_id' => ['sometimes', 'nullable', 'exists:applications,id'],
-            'command' => ['required', 'string', 'max:1000', new SingleLine, 'not_regex:/\{path\}/'],
+            'command' => ['required', 'string', 'max:1000', new SingleLine, new NoShellComment, 'not_regex:/\{path\}/'],
             'expression' => ['required', 'string', new ValidCronExpression],
             'active' => ['sometimes', 'boolean'],
         ];

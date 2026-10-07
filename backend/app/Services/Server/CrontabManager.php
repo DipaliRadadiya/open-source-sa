@@ -23,6 +23,32 @@ class CrontabManager
     public function __construct(private ServerOps $serverOps) {}
 
     /**
+     * Whether the cron daemon is running — null when that could not be told.
+     *
+     * When it is not, no job runs, including the panel's own scheduler, while
+     * every job still shows a next run. A stopped cron used to be visible
+     * nowhere: a cron.d file it could not read crashed it on a test server and
+     * the job list looked exactly as before.
+     */
+    public function serviceRunning(): ?bool
+    {
+        // is-active answers 0 for active and 3 for inactive/failed; both are
+        // answers, not errors.
+        $state = trim($this->serverOps->run(
+            ['systemctl', 'is-active', (string) config('server.cron_unit', 'cron')],
+            ['feature' => 'cronjob', 'op' => 'service_state'],
+            timeout: 15,
+            expectedExitCodes: [3],
+        )->output());
+
+        return match ($state) {
+            'active', 'reloading', 'activating' => true,
+            'inactive', 'failed', 'deactivating' => false,
+            default => null,
+        };
+    }
+
+    /**
      * Absolute path of the managed cron.d file for a job. The basename is the
      * job's stored slug (easy to identify with `ls`, stable across data
      * migration) and is run-parts-safe ([a-z0-9-], no dots) or cron ignores it.

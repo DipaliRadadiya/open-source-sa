@@ -6,7 +6,7 @@ return [
     // `sync_failed`, so a full disk and a missing group read the same.
     'step' => [
         'log_dir' => 'No se pudo crear el directorio de registros de tareas cron. Compruebe que haya espacio libre en disco y que /var/log sea escribible.',
-        'log_touch' => 'No se pudo crear el archivo de registro de la tarea cron. Normalmente el disco está lleno.',
+        'log_touch' => 'No se pudo crear el archivo de registro de la tarea cron en /var/log/cronjobs. Compruebe que hay espacio libre en disco y que la carpeta admite escritura.',
         'log_chown' => 'No se pudo asignar el archivo de registro a la cuenta con la que se ejecuta la tarea. Compruebe que esa cuenta siga existiendo.',
         'log_chmod' => 'No se pudieron establecer los permisos del archivo de registro.',
         'rotation' => 'No se pudo instalar la política de rotación de registros, así que la tarea no se programó: su salida crecería sin límite.',
@@ -22,4 +22,5 @@ return [
     'unresolved_placeholder' => 'El comando aún contiene el marcador {path}; reemplázalo por el directorio de la aplicación.',
     'no_newline' => 'Este valor no puede contener saltos de línea.',
     'reserved_name' => 'Este nombre está reservado y no se puede usar.',
+    'shell_comment' => 'El comando contiene un comentario de shell (un # al principio de una palabra). Cron cortaría la línea ahí y la tarea no se ejecutaría bien. Quite el comentario o ponga el # entre comillas.',
 ];

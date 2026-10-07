@@ -6,7 +6,7 @@ return [
     // `sync_failed`, so a full disk and a missing group read the same.
     'step' => [
         'log_dir' => 'Não foi possível criar o diretório de registos das tarefas cron. Verifique o espaço livre em disco e se /var/log é gravável.',
-        'log_touch' => 'Não foi possível criar o ficheiro de registo da tarefa cron. Normalmente o disco está cheio.',
+        'log_touch' => 'Não foi possível criar o ficheiro de registo da tarefa cron em /var/log/cronjobs. Verifique se há espaço livre em disco e se a pasta permite escrita.',
         'log_chown' => 'Não foi possível atribuir o ficheiro de registo à conta que executa a tarefa. Verifique se essa conta ainda existe.',
         'log_chmod' => 'Não foi possível definir as permissões do ficheiro de registo.',
         'rotation' => 'Não foi possível instalar a política de rotação de registos, por isso a tarefa não foi agendada — a sua saída cresceria sem limite.',
@@ -22,4 +22,5 @@ return [
     'unresolved_placeholder' => 'O comando ainda contém o marcador {path} — substitua-o pelo diretório da aplicação.',
     'no_newline' => 'Este valor não pode conter quebras de linha.',
     'reserved_name' => 'Este nome é reservado e não pode ser usado.',
+    'shell_comment' => 'O comando contém um comentário de shell (um # no início de uma palavra). O cron cortaria a linha aí e a tarefa não funcionaria corretamente. Remova o comentário ou coloque o # entre aspas.',
 ];

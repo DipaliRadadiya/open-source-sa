@@ -749,6 +749,10 @@ return [
 
     'cron_d' => env('SERVER_CRON_D', '/etc/cron.d'),
 
+    // The systemd unit of the cron daemon that reads cron_d. The Cron Jobs
+    // list reports whether it is running.
+    'cron_unit' => env('SERVER_CRON_UNIT', 'cron'),
+
     /*
     |--------------------------------------------------------------------------
     | Per-site web server rules

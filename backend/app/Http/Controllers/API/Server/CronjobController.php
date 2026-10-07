@@ -10,6 +10,7 @@ use App\Http\Requests\Server\Cronjob\StoreCronjobRequest;
 use App\Http\Requests\Server\Cronjob\UpdateCronjobRequest;
 use App\Http\Resources\CronjobResource;
 use App\Models\Cronjob;
+use App\Services\Server\CrontabManager;
 use App\Support\CronCommandPresets;
 use App\Support\CronSchedulePresets;
 use Illuminate\Http\JsonResponse;
@@ -17,9 +18,12 @@ use Illuminate\Http\Request;
 
 class CronjobController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, CrontabManager $crontab): JsonResponse
     {
-        $query = Cronjob::query()->with('systemUser:id,username')->latest();
+        // `id` breaks ties: created_at has one-second resolution, and jobs
+        // made in the same second (a Sync adopting many at once) otherwise
+        // come back in any order — one could appear on two pages or on none.
+        $query = Cronjob::query()->with('systemUser:id,username')->latest()->orderByDesc('id');
 
         if ($systemUserId = $request->input('filter.system_user_id')) {
             $query->where('system_user_id', $systemUserId);
@@ -48,6 +52,13 @@ class CronjobController extends Controller
                 'per_page' => $paginator->perPage(),
                 'total' => $paginator->total(),
                 'last_page' => $paginator->lastPage(),
+                // Every account a job runs as, across all pages, so the
+                // "Runs as" filter can offer accounts whose jobs are on
+                // another page (root, www-data, …), not only System Users.
+                'usernames' => Cronjob::query()->distinct()->orderBy('username')->pluck('username')->filter()->values(),
+                // False when the cron daemon is stopped — then no job runs,
+                // whatever the list says. Null when it could not be told.
+                'cron_running' => $crontab->serviceRunning(),
             ],
         ]);
     }
