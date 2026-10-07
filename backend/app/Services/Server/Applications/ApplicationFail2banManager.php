@@ -183,6 +183,7 @@ class ApplicationFail2banManager
                 'rulesRootQuoted' => escapeshellarg(rtrim((string) config('server.site_rules_root'), '/')),
                 'test' => implode(' ', array_map('escapeshellarg', $driver->testCommandForHook())),
                 'reload' => implode(' ', array_map('escapeshellarg', $driver->reloadCommandForHook())),
+                'olsTmpQuoted' => escapeshellarg(rtrim((string) config('server.web_server_drivers.openlitespeed.tmp_dir', '/tmp/lshttpd'), '/')),
             ])->render(), '0755'],
             rtrim((string) config('server.fail2ban_apps.action_d', '/etc/fail2ban/action.d'), '/').'/'.self::BAN_ACTION.'.conf' => [
                 View::make('server.fail2ban.site-ban-action', ['script' => $script])->render(), '0644',

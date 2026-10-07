@@ -92,7 +92,21 @@ fi
 mv -f "$out.new" "$out"
 chmod 0644 "$out"
 
-if {!! $test !!} >/dev/null 2>&1; then
+@if ($webServer === 'openlitespeed')
+# The same reading the panel gives `openlitespeed -t` (OlsConfigCheck): its
+# exit code comes from a log in a directory test mode does not create, 1 means
+# warnings only — an unrelated site's missing folder is enough — and 2 errors.
+# Taken as a failure, a warning threw every ban away (measured on OLS).
+mkdir -p {!! $olsTmpQuoted !!}
+err=$({!! $test !!} 2>&1 >/dev/null)
+rc=$?
+[ "$rc" -eq 0 ] || { [ "$rc" -eq 1 ] && [ -z "$err" ]; }
+@else
+{!! $test !!} >/dev/null 2>&1
+@endif
+tested=$?
+
+if [ "$tested" -eq 0 ]; then
     rm -f "$out.prev"
     {!! $reload !!}
 else

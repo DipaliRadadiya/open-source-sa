@@ -25,15 +25,16 @@ afterEach(function () {
 });
 
 /** Render the ban script for a web server, with a stand-in test and reload. */
-function banScript(string $webServer, string $root, bool $testPasses = true): string
+function banScript(string $webServer, string $root, bool $testPasses = true, ?string $test = null): string
 {
     $path = $root.'/panel-site-ban';
     file_put_contents($path, View::make('server.fail2ban.site-ban-script', [
         'webServer' => $webServer,
         'self' => $path,
         'rulesRootQuoted' => escapeshellarg($root.'/rules'),
-        'test' => $testPasses ? 'true' : 'false',
+        'test' => $test ?? ($testPasses ? 'true' : 'false'),
         'reload' => 'echo reloaded >> '.escapeshellarg($root.'/reloads'),
+        'olsTmpQuoted' => escapeshellarg($root.'/lshttpd'),
     ])->render());
     chmod($path, 0755);
 
@@ -161,4 +162,20 @@ it('includes the site\'s ban file in every vhost kind on every web server', func
     'ols php' => ['openlitespeed', 'php', 'include {rules}/*.conf'],
     'ols node' => ['openlitespeed', 'node', 'include {rules}/panel-fail2ban*.conf'],
     'ols static' => ['openlitespeed', 'static', 'include {rules}/panel-fail2ban*.conf'],
+]);
+
+it('reads OpenLiteSpeed\'s config test the way the panel does: warnings pass, errors do not', function (string $test, bool $applied) {
+    // `openlitespeed -t` exits 1 for warnings only — an unrelated site's
+    // missing folder is enough — and 2 for errors. Taken as a failure, every
+    // ban was thrown away (measured on the OLS test box).
+    $script = banScript('openlitespeed', $this->root, test: $test);
+
+    runBan($script, 'ban', 'shop', '203.0.113.9');
+
+    expect(str_contains((string) @file_get_contents($this->root.'/rules/shop/panel-fail2ban.conf'), '203.0.113.9'))->toBe($applied);
+})->with([
+    'clean' => ['sh -c "exit 0"', true],
+    'warnings only' => ['sh -c "echo warn; exit 1"', true],
+    'warning that came with stderr' => ['sh -c "echo oops >&2; exit 1"', false],
+    'errors' => ['sh -c "exit 2"', false],
 ]);

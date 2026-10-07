@@ -3,6 +3,7 @@
 namespace App\Services\Server\Fail2ban;
 
 use App\Exceptions\Server\Fail2ban\Fail2banException;
+use App\Services\Server\Applications\ApplicationFail2banManager;
 use App\Services\Server\Applications\DnsVerifier;
 use App\Services\Server\ServerAddresses;
 use App\Services\Server\ServerOps;
@@ -333,6 +334,8 @@ class Fail2banManager
             }
         }
 
+        $this->ensureRecidiveFilter();
+
         $path = $this->dropInPath();
 
         // Whose file is this? Answered before a single byte is written, and
@@ -367,6 +370,39 @@ class Fail2banManager
             // ServerOps, while the original reference remains user-visible.
             $this->client(['reload']);
             throw $exception;
+        }
+    }
+
+    /**
+     * fail2ban's own `recidive` filter, minus the per-site jails.
+     *
+     * `recidive` bans on every port for a week after three bans from any jail
+     * in a day. A site jail bans an address for that one site; counted here,
+     * three wrong-password streaks on a WordPress site turned into the whole
+     * server — panel and SSH — going dark for that address (measured on the
+     * OLS test box, 2026-10-07). `_jailname` is the jail recidive's regex
+     * already leaves out; it lives in `[DEFAULT]` there, so it is overridden
+     * there here (a `[Definition]` override was measured to change nothing).
+     */
+    private function ensureRecidiveFilter(): void
+    {
+        $path = rtrim((string) config('server.fail2ban_apps.filter_d', '/etc/fail2ban/filter.d'), '/').'/panel-recidive.conf';
+        $body = self::MANAGED_HEADER."\n"
+            ."[INCLUDES]\n"
+            ."before = recidive.conf\n\n"
+            ."[DEFAULT]\n"
+            .'_jailname = (?:recidive|'.preg_quote(ApplicationFail2banManager::NAME_PREFIX, '/').'[^\]]+)'."\n";
+
+        $current = $this->serverOps->probe(['cat', $path], ['feature' => 'fail2ban', 'op' => 'recidive_filter_read'], timeout: 15);
+
+        if ($current->ok && $current->output() === $body) {
+            return;
+        }
+
+        $written = $this->serverOps->run(['tee', $path], ['feature' => 'fail2ban', 'op' => 'recidive_filter_write'], input: $body);
+
+        if ($written->failed()) {
+            throw Fail2banException::operationFailed($written->reference);
         }
     }
 

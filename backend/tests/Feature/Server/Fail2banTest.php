@@ -25,6 +25,7 @@ beforeEach(function () {
     config([
         'server.fail2ban.jail_d' => $this->jailD,
         'server.fail2ban.jail_local' => $this->jailD.'/jail.local',
+        'server.fail2ban_apps.filter_d' => $this->jailD,
     ]);
 });
 
@@ -931,4 +932,33 @@ it('bans the address in the form fail2ban uses', function () {
     f2b('POST', '/api/fail2ban/bans', ['ip' => '::ffff:192.0.2.44', 'jail' => 'sshd'])->assertSuccessful();
 
     expect(collect($runs)->pluck('command')->contains(fn ($c) => in_array('banip', $c, true) && in_array('192.0.2.44', $c, true)))->toBeTrue();
+});
+
+it('keeps the per-site jails\' bans out of recidive (FB-K)', function () {
+    // recidive bans on every port for a week after three bans in a day from
+    // any jail. A site jail bans for one site; counted, three of them took
+    // the whole server — panel and SSH — away from that address (seen live).
+    fakeFail2ban(bans: []);
+
+    f2b('PUT', '/api/fail2ban', ['bantime' => 7200, 'findtime' => 900, 'maxretry' => 3])->assertOk();
+
+    $recidive = substr(dropIn(), (int) strpos(dropIn(), '[recidive]'));
+    $filter = (string) @file_get_contents($this->jailD.'/panel-recidive.conf');
+
+    expect($recidive)->toContain('filter = panel-recidive')
+        ->and($filter)->toContain('before = recidive.conf')
+        // [DEFAULT], where fail2ban's own recidive.conf sets it — a
+        // [Definition] override was measured to change nothing.
+        ->and($filter)->toContain("[DEFAULT]\n_jailname = (?:recidive|panel\\-site\\-[^\\]]+)");
+
+    // The exclusion really is a regex that leaves out site jails and keeps
+    // every other one, the way recidive's failregex uses it: `[(?!X\])`.
+    preg_match('/_jailname = (.+)$/m', $filter, $m);
+    $line = fn (string $jail) => "NOTICE  [{$jail}] Ban 203.0.113.9";
+    $counted = fn (string $jail) => preg_match('/NOTICE\s+\[(?!'.$m[1].'\])(?:.*)\]\s+Ban\s+/', $line($jail)) === 1;
+
+    expect($counted('panel-site-wordpress'))->toBeFalse()
+        ->and($counted('recidive'))->toBeFalse()
+        ->and($counted('sshd'))->toBeTrue()
+        ->and($counted('panel-app-generic'))->toBeTrue();
 });

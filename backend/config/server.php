@@ -2262,6 +2262,12 @@ return [
                 'label' => 'Repeat offenders',
                 'lockout_risk' => false,
                 'options' => [
+                    // The panel's copy of fail2ban's own filter, which also
+                    // leaves out the per-site jails' bans. Those are for one
+                    // site only; counted here, three of them in a day became
+                    // a week-long ban on every port of the server — the panel
+                    // and SSH included (found live 2026-10-07, FB-K).
+                    'filter' => 'panel-recidive',
                     'logpath' => '/var/log/fail2ban.log',
                     'bantime' => 604800,  // a week
                     'findtime' => 86400,
