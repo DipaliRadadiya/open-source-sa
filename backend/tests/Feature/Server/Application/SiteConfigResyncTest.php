@@ -1,6 +1,9 @@
 <?php
 
+use App\Enums\CertificateStatus;
+use App\Enums\CertificateType;
 use App\Models\Application;
+use App\Models\Certificate;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Services\Panel\UpdateScript;
@@ -68,7 +71,11 @@ function fakeResyncServer(string $onDisk = 'stale config', bool $testPasses = tr
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 
         if (($args[0] ?? '') === 'cat') {
-            return Process::result(output: $onDisk);
+            // The site's own file. Its HTTPS file (v7 layout, B1) exists only
+            // for a site with a certificate, which none of these have.
+            return str_ends_with((string) end($args), '-ssl.conf')
+                ? Process::result(exitCode: 1, errorOutput: 'No such file or directory')
+                : Process::result(output: $onDisk);
         }
 
         // Site configs only — the logrotate policy is written beside them (LOG-01).
@@ -299,7 +306,11 @@ function fakeOlsResync(string $onDisk, bool $alreadyMember): ArrayObject
         }
 
         if (($args[0] ?? '') === 'cat') {
-            return Process::result(output: $onDisk);
+            // The site's own file. Its HTTPS file (v7 layout, B1) exists only
+            // for a site with a certificate, which none of these have.
+            return str_ends_with((string) end($args), '-ssl.conf')
+                ? Process::result(exitCode: 1, errorOutput: 'No such file or directory')
+                : Process::result(output: $onDisk);
         }
 
         if (($args[0] ?? '') === 'id') {
@@ -363,4 +374,39 @@ it('does not restart the web server when the account is already in the group', f
 
     expect($joined)->toContain('id -nG nobody')
         ->and($joined)->not->toContain('gpasswd');
+});
+
+it('splits a site written as one file into v7\'s two, and links the new one', function () {
+    // A site written before step B1 holds its HTTPS server block in
+    // `{slug}.conf`. The resync moves it to `{slug}-le-ssl.conf`, as v7 lays
+    // a site out, and makes that file live.
+    $site = makeSite('one.test');
+    Certificate::create([
+        'application_id' => $site->id, 'type' => CertificateType::LetsEncrypt, 'status' => CertificateStatus::Active,
+        'domains' => ['one.test'], 'certificate_path' => '/etc/letsencrypt/live/one/fullchain.pem',
+        'private_key_path' => '/etc/letsencrypt/live/one/privkey.pem', 'issued_at' => now(), 'expires_at' => now()->addDays(80),
+    ]);
+
+    $ran = new ArrayObject;
+    Process::fake(function ($process) use ($ran) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        $ran->append($args);
+
+        if (($args[0] ?? '') === 'cat') {
+            return str_ends_with((string) end($args), '-ssl.conf')
+                ? Process::result(exitCode: 1, errorOutput: 'No such file or directory')
+                : Process::result(output: "server {\n    listen 443 ssl;\n    listen 80;\n}\n");
+        }
+
+        return Process::result();
+    });
+
+    $result = app(SiteConfigResyncer::class)->run();
+    $lines = collect($ran)->map(fn ($c) => implode(' ', $c));
+    $driver = app(WebServerManager::class)->driver();
+    [$letsEncrypt] = $driver->sslConfigPaths($site->fresh());
+
+    expect($result['updated'])->toBe(1)
+        ->and($lines)->toContain("tee {$letsEncrypt}")
+        ->and($lines->contains(fn ($l) => str_starts_with($l, 'ln ') && str_contains($l, $driver->enabledPathFor($letsEncrypt))))->toBeTrue();
 });

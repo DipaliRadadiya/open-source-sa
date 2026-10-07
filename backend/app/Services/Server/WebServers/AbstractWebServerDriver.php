@@ -4,6 +4,7 @@ namespace App\Services\Server\WebServers;
 
 use App\Contracts\WebServerDriver;
 use App\Enums\AiBotPolicy;
+use App\Enums\CertificateType;
 use App\Enums\DomainType;
 use App\Enums\WafMode;
 use App\Models\Application;
@@ -33,11 +34,14 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     ) {}
 
     /**
-     * One file in a directory, which is true for nginx and Apache: written to
-     * sites-available, then symlinked from sites-enabled — the same layout
-     * install.sh itself uses for the panel's own vhost. A driver whose
-     * configuration is not one file, or has no such split (OpenLiteSpeed),
+     * The site's files in sites-available, each symlinked from sites-enabled —
+     * the same layout install.sh itself uses for the panel's own vhost. A
+     * driver whose configuration is not files in such a pair (OpenLiteSpeed)
      * overrides this.
+     *
+     * Two files on nginx and Apache, as v7 writes them ({@see configFiles()}):
+     * a file that should not exist is removed, link first, so the web server
+     * never reads a link to nothing.
      */
     public function apply(Application $application, string $documentRoot): ServerOpsResult
     {
@@ -49,21 +53,125 @@ abstract class AbstractWebServerDriver implements WebServerDriver
 
         $this->ensureDirectories($application);
 
-        $written = $this->files->put(
-            $this->configPath($application),
-            $this->renderConfig($application, $documentRoot),
-            ['feature' => 'application', 'op' => 'write_config', 'application' => $application->id],
-        );
+        $context = ['feature' => 'application', 'application' => $application->id];
+        $result = new ServerOpsResult(true, 'config-applied');
 
-        if ($written->failed()) {
-            return $written;
+        foreach ($this->configFiles($application, $documentRoot) as $path => $contents) {
+            if ($contents === null) {
+                $this->files->delete($this->enabledPathFor($path), $context + ['op' => 'remove_config']);
+                $this->files->delete($path, $context + ['op' => 'remove_config']);
+
+                continue;
+            }
+
+            $written = $this->files->put($path, $contents, $context + ['op' => 'write_config']);
+
+            if ($written->failed()) {
+                return $written;
+            }
+
+            $result = $this->link($path, $context + ['op' => 'enable_config']);
+
+            if ($result->failed()) {
+                return $result;
+            }
         }
 
-        return $this->files->symlink(
-            $this->configPath($application),
-            $this->enabledPath($application),
-            ['feature' => 'application', 'op' => 'enable_config', 'application' => $application->id],
-        );
+        return $result;
+    }
+
+    /**
+     * Every config file this site has, by path in sites-available, with what it
+     * should hold — or null for a file that must not exist.
+     *
+     * **v7's layout (v8 follows it, step B1).** v7 writes a site as
+     * `{name}.conf` for plain HTTP and a second file for HTTPS:
+     * `{name}-le-ssl.conf` with a Let's Encrypt certificate, `{name}-ssl.conf`
+     * with any other. A server moved from v7 already has those files, and v8
+     * writing everything into `{name}.conf` left v7's SSL file beside it: two
+     * server blocks for the same name on 443. Writing the same two files under
+     * the same names replaces v7's in place.
+     *
+     * A driver that does not split (OpenLiteSpeed, whose layout already is
+     * v7's) has one file.
+     *
+     * @return array<string, ?string>
+     */
+    public function configFiles(Application $application, string $documentRoot): array
+    {
+        if (! $this->splitsSsl()) {
+            return [$this->configPath($application) => $this->renderConfig($application, $documentRoot)];
+        }
+
+        $files = [$this->configPath($application) => $this->renderSection($application, $documentRoot, 'main')];
+        $active = $this->activeSslPath($application);
+
+        foreach ($this->sslConfigPaths($application) as $path) {
+            $files[$path] = $path === $active ? $this->renderSection($application, $documentRoot, 'ssl') : null;
+        }
+
+        return $files;
+    }
+
+    /**
+     * Both names the HTTPS file can have — v7's — so the one that is not in
+     * use can be removed when the certificate changes type.
+     *
+     * @return array{0: string, 1: string} [Let's Encrypt, any other]
+     */
+    public function sslConfigPaths(Application $application): array
+    {
+        $directory = rtrim((string) config("server.web_server_drivers.{$this->name()}.sites_available_dir"), '/');
+        $name = $this->fileName($application);
+
+        return ["{$directory}/{$name}-le-ssl.conf", "{$directory}/{$name}-ssl.conf"];
+    }
+
+    /**
+     * The sites-enabled link for a file in sites-available.
+     */
+    public function enabledPathFor(string $availablePath): string
+    {
+        $directory = rtrim((string) config("server.web_server_drivers.{$this->name()}.sites_dir"), '/');
+
+        return $directory.'/'.basename($availablePath);
+    }
+
+    /**
+     * Make a written file live. A symlink from sites-enabled on nginx and
+     * Apache; nothing to do for a driver that does not split.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    public function link(string $availablePath, array $context = []): ServerOpsResult
+    {
+        if (! $this->splitsSsl()) {
+            return new ServerOpsResult(true, 'no-link-required');
+        }
+
+        return $this->files->symlink($availablePath, $this->enabledPathFor($availablePath), $context);
+    }
+
+    /**
+     * Whether this web server keeps a site's HTTPS in a file of its own (v7's
+     * nginx and Apache layout).
+     */
+    protected function splitsSsl(): bool
+    {
+        return true;
+    }
+
+    private function activeSslPath(Application $application): ?string
+    {
+        $certificate = $application->certificate;
+
+        if (! $certificate?->servable()) {
+            return null;
+        }
+
+        [$letsEncrypt, $other] = $this->sslConfigPaths($application);
+
+        return $certificate->type === CertificateType::LetsEncrypt ? $letsEncrypt : $other;
     }
 
     /**
@@ -251,17 +359,21 @@ abstract class AbstractWebServerDriver implements WebServerDriver
      */
     public function remove(Application $application): ServerOpsResult
     {
-        $unlinked = $this->files->delete(
-            $this->enabledPath($application),
-            ['feature' => 'application', 'op' => 'remove_config', 'application' => $application->id],
-        );
+        $context = ['feature' => 'application', 'op' => 'remove_config', 'application' => $application->id];
+        $first = null;
+        $last = new ServerOpsResult(true, 'nothing-to-remove');
 
-        $deleted = $this->files->delete(
-            $this->configPath($application),
-            ['feature' => 'application', 'op' => 'remove_config', 'application' => $application->id],
-        );
+        // Every file the site can have — the HTTPS file under either of its
+        // names too — each link before its file.
+        foreach ([$this->configPath($application), ...($this->splitsSsl() ? $this->sslConfigPaths($application) : [])] as $path) {
+            foreach ([$this->enabledPathFor($path), $path] as $target) {
+                $result = $this->files->delete($target, $context);
+                $first ??= $result->failed() ? $result : null;
+                $last = $result;
+            }
+        }
 
-        return $unlinked->failed() ? $unlinked : $deleted;
+        return $first ?? $last;
     }
 
     /**
@@ -324,7 +436,25 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         'docker' => 'node',
     ];
 
+    /**
+     * Everything the site's files hold, in one string — what tests and any
+     * reader that wants "the site's configuration" look at. Written to disk
+     * it is {@see configFiles()}, one file per part.
+     */
     public function renderConfig(Application $application, string $documentRoot): string
+    {
+        if (! $this->splitsSsl()) {
+            return $this->renderSection($application, $documentRoot, null);
+        }
+
+        return implode("\n", array_filter($this->configFiles($application, $documentRoot), fn (?string $contents) => $contents !== null));
+    }
+
+    /**
+     * One file's worth: `main` (plain HTTP, and the no-certificate reject on
+     * 443) or `ssl` (HTTPS). Null for a template that is not split.
+     */
+    protected function renderSection(Application $application, string $documentRoot, ?string $section): string
     {
         $profile = (string) $application->serving_profile;
         $profile = self::VHOST_PROFILE_ALIASES[$profile] ?? $profile;
@@ -333,7 +463,7 @@ abstract class AbstractWebServerDriver implements WebServerDriver
 
         abort_unless(View::exists($view), 500);
 
-        return View::make($view, $this->viewData($application, $documentRoot))->render();
+        return View::make($view, $this->viewData($application, $documentRoot) + ['section' => $section])->render();
     }
 
     /**

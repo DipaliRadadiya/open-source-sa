@@ -1,11 +1,15 @@
-{{-- Managed by the panel. Manual edits are overwritten on the next deploy. --}}
-@if ($waf)
+{{-- Managed by the panel. Manual edits are overwritten on the next deploy.
+     Rendered twice, as v7 lays a site out (step B1): `main` → {name}.conf (port
+     80, and the no-certificate reject on 443), `ssl` → {name}-le-ssl.conf or
+     {name}-ssl.conf (port 443). Null renders both. The firewall's log_format
+     goes in whichever file nginx loads first: `-le-ssl` sorts before `.conf`. --}}
+@if ($waf && ($section === null || $section === ($certificate ? 'ssl' : 'main')))
 {{-- The firewall log's format, which nginx only accepts at http level: a site
      file is included there, so each site declares its own, under its own name.
      Combined, plus which rule matched and what was done (bug #84). --}}
 log_format {{ $waf['logFormat'] }} '$remote_addr - $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent" waf=$waf_reason action={{ $waf['mode'] === 'enforce' ? 'blocked' : 'detected' }}';
 @endif
-@if ($forceHttps)
+@if ($forceHttps && $section !== 'ssl')
 {{-- Plain HTTP exists only to send visitors to HTTPS — with one exception, and
      it is not optional: the ACME challenge has to stay reachable on port 80 or
      renewal stops working, and the redirect goes on pointing confidently at a
@@ -45,8 +49,9 @@ server {
 }
 @endif
 
+@if ($section === null || ($section === 'ssl' ? $certificate : (! $certificate || ! $forceHttps)))
 server {
-@if ($certificate)
+@if ($certificate && $section !== 'main')
     {{-- `http2 on;` where this nginx has it (1.25.1+), `listen ... http2`
          elsewhere — chosen by NginxDriver::supportsHttp2Directive(). The new
          form is a hard error before 1.25 (Ubuntu 24.04 ships 1.24), and a
@@ -79,7 +84,7 @@ server {
          session it ever issued, which is the property TLS 1.3 exists to
          remove. --}}
     ssl_session_tickets off;
-@else
+@elseif (! $certificate)
     {{-- Own this SNI name even without a certificate, so nginx rejects the
          handshake instead of falling through to another application's first
          SSL vhost. --}}
@@ -87,7 +92,7 @@ server {
     listen [::]:443 ssl;
     ssl_reject_handshake on;
 @endif
-@if (! $forceHttps)
+@if (! $forceHttps && $section !== 'ssl')
     listen 80;
     listen [::]:80;
 @endif
@@ -201,13 +206,16 @@ server {
         deny all;
     }
 }
+@endif
 
 {{-- Redirects get their own server block. Serving the same content under a
      second name splits its search ranking between the two; a 301 keeps the
      authority on one. --}}
 @foreach ($redirects as $redirect)
+@php($redirectTls = $certificate && in_array($redirect->domain, $certificate->domains ?? [], true))
+@if ($section !== 'ssl' || $redirectTls)
 server {
-@if ($certificate && in_array($redirect->domain, $certificate->domains ?? [], true))
+@if ($redirectTls && $section !== 'main')
     {{-- A redirect needs its own HTTPS listener. `http://old` → `https://new`
          looks like it needs no certificate, but a browser that has seen HSTS
          for `old` refuses the plaintext hop and never reaches the redirect. --}}
@@ -224,8 +232,10 @@ server {
     ssl_certificate_key {{ $certificate->private_key_path }};
     ssl_protocols TLSv1.2 TLSv1.3;
 @endif
+@if ($section !== 'ssl')
     listen 80;
     listen [::]:80;
+@endif
 
     server_name {{ $redirect->domain }};
 
@@ -247,4 +257,5 @@ server {
         return {{ $redirect->redirect_status }} {{ $redirect->redirectTarget() ?: $canonicalUrl }}$request_uri;
     }
 }
+@endif
 @endforeach

@@ -1,4 +1,8 @@
-{{-- Managed by the panel. Manual edits are overwritten on the next deploy. --}}
+{{-- Managed by the panel. Manual edits are overwritten on the next deploy.
+     Rendered twice, as v7 lays a site out (step B1): `main` → {name}.conf (port
+     80, and the no-certificate reject on 443), `ssl` → {name}-le-ssl.conf or
+     {name}-ssl.conf (port 443). Null renders both. --}}
+@if ($section !== 'ssl')
 @if ($forceHttps)
 {{-- Plain HTTP exists only to send visitors to HTTPS — with one exception,
      and it is not optional: the ACME challenge has to stay reachable on
@@ -30,8 +34,10 @@
 @include('server.vhosts.apache._static-body')
 </VirtualHost>
 @endif
+@endif
 
 @if ($certificate)
+@if ($section !== 'main')
 <VirtualHost *:443>
     SSLEngine on
     SSLCertificateFile    {{ $certificate->certificate_path }}
@@ -48,7 +54,8 @@
 
 @include('server.vhosts.apache._static-body')
 </VirtualHost>
-@else
+@endif
+@elseif ($section !== 'ssl')
 @include('server.vhosts.apache._tls-reject')
 @endif
 
@@ -56,6 +63,7 @@
      second name splits its search ranking between the two; a 301 keeps the
      authority on one. --}}
 @foreach ($redirects as $redirect)
+@if ($section !== 'ssl')
 <VirtualHost *:80>
     ServerName {{ $redirect->domain }}
     Alias /.well-known/acme-challenge {{ $challengeRoot }}/.well-known/acme-challenge
@@ -68,7 +76,8 @@
 
     RedirectMatch {{ $redirect->redirect_status }} ^/(?!\.well-known/acme-challenge/)(.*)$ {{ $redirect->redirectTarget() ?: $canonicalUrl }}/$1
 </VirtualHost>
-@if ($certificate && in_array($redirect->domain, $certificate->domains ?? [], true))
+@endif
+@if ($section !== 'main' && $certificate && in_array($redirect->domain, $certificate->domains ?? [], true))
 {{-- A redirect needs its own HTTPS listener. `http://old` → `https://new` looks
      like it needs no certificate of its own, but a browser that has ever seen
      HSTS for `old` refuses the plaintext hop and never reaches the redirect at

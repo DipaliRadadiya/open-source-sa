@@ -24,6 +24,24 @@ interface WebServerDriver
     public function configPath(Application $application): string;
 
     /**
+     * Every config file the site has, by path, with what it should hold — null
+     * for a file that must not exist (v7's split HTTPS file, step B1).
+     *
+     * @return array<string, ?string>
+     */
+    public function configFiles(Application $application, string $documentRoot): array;
+
+    /** The live (sites-enabled) path for a written file. */
+    public function enabledPathFor(string $availablePath): string;
+
+    /**
+     * Make a written file live.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    public function link(string $availablePath, array $context = []): ServerOpsResult;
+
+    /**
      * Put the site's configuration in place.
      *
      * A driver owns this rather than the provisioner writing a file itself,

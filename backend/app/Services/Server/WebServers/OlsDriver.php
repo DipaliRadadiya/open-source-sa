@@ -209,6 +209,15 @@ class OlsDriver extends AbstractWebServerDriver
     }
 
     /**
+     * OpenLiteSpeed already keeps v7's layout ({@see OlsVhostLayout}): one
+     * site, its own files, no separate HTTPS file to add.
+     */
+    protected function splitsSsl(): bool
+    {
+        return false;
+    }
+
+    /**
      * Per-site directory, unlike the single file the other drivers write.
      *
      * Both halves come from the server rather than from config, because a

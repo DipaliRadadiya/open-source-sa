@@ -8,6 +8,7 @@ use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
+use App\Services\Server\ServerOpsResult;
 use App\Services\Server\WebServers\WebServerManager;
 
 /**
@@ -101,10 +102,16 @@ class SiteConfigResyncer
             // from the user.
             $this->basicAuth->publish($application);
 
-            $path = $driver->configPath($application);
-            $previous = $this->read($path);
+            // Every file the site has, not one: on nginx and Apache a site with a
+            // certificate is two files, as v7 lays it out (step B1), and a file
+            // that must no longer exist (an HTTPS file after the certificate
+            // went, or under the other name) is null here.
+            $files = $driver->configFiles($application, $this->provisioner->documentRoot($application));
+            $previous = [];
 
-            $rendered = $driver->renderConfig($application, $this->provisioner->documentRoot($application));
+            foreach (array_keys($files) as $path) {
+                $previous[$path] = $this->read($path);
+            }
 
             // The directories the config about to be written names. This class
             // writes the file itself rather than going through `apply()` — so
@@ -140,15 +147,25 @@ class SiteConfigResyncer
 
             // Nothing shipped changed for this site. Skipping keeps a routine
             // update from rewriting forty files to identical content.
-            if ($previous !== null && $this->normalize($previous) === $this->normalize($rendered)) {
+            $changed = array_filter(
+                $files,
+                fn (?string $contents, string $path) => $contents === null
+                    ? $previous[$path] !== null
+                    : $previous[$path] === null || $this->normalize($previous[$path]) !== $this->normalize($contents),
+                ARRAY_FILTER_USE_BOTH,
+            );
+
+            if ($changed === []) {
                 $unchanged++;
 
                 continue;
             }
 
-            $written = $this->files->put($path, $rendered, $this->context($application, 'resync_write'));
+            $written = $this->publish($driver, $application, $changed);
 
             if ($written->failed()) {
+                $this->rollback($driver, $application, $changed, $previous);
+
                 $failed[] = $this->failure($application, $written->reference);
 
                 continue;
@@ -157,7 +174,7 @@ class SiteConfigResyncer
             $test = $driver->test();
 
             if ($test->failed()) {
-                $this->rollback($application, $path, $previous);
+                $this->rollback($driver, $application, $changed, $previous);
 
                 $failed[] = $this->failure($application, $test->reference);
 
@@ -190,19 +207,64 @@ class SiteConfigResyncer
         ];
     }
 
-    private function rollback(Application $application, string $path, ?string $previous): void
+    /**
+     * Write (and link) or remove each changed file.
+     *
+     * @param  array<string, ?string>  $changed
+     */
+    private function publish(WebServerDriver $driver, Application $application, array $changed): ServerOpsResult
     {
-        if ($previous === null) {
+        $result = new ServerOpsResult(true, 'resync-nothing-written');
+
+        foreach ($changed as $path => $contents) {
+            if ($contents === null) {
+                $this->files->delete($driver->enabledPathFor($path), $this->context($application, 'resync_remove'));
+                $result = $this->files->delete($path, $this->context($application, 'resync_remove'));
+            } else {
+                $result = $this->files->put($path, $contents, $this->context($application, 'resync_write'));
+
+                if ($result->ok) {
+                    $result = $driver->link($path, $this->context($application, 'resync_link'));
+                }
+            }
+
+            if ($result->failed()) {
+                return $result;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Put every changed file back as it was.
+     *
+     * @param  array<string, ?string>  $changed
+     * @param  array<string, ?string>  $previous
+     */
+    private function rollback(WebServerDriver $driver, Application $application, array $changed, array $previous): void
+    {
+        if (array_filter($previous, fn (?string $contents) => $contents !== null) === []) {
             // There was no file before this run, so removing ours is the
             // restore — via the driver, because on a web server whose site
             // lives partly in a shared file, deleting only the per-site file
             // leaves the shared one pointing at something gone.
-            $this->webServers->driver()->remove($application);
+            $driver->remove($application);
 
             return;
         }
 
-        $this->files->put($path, $previous, $this->context($application, 'resync_rollback'));
+        foreach (array_keys($changed) as $path) {
+            if ($previous[$path] === null) {
+                $this->files->delete($driver->enabledPathFor($path), $this->context($application, 'resync_rollback'));
+                $this->files->delete($path, $this->context($application, 'resync_rollback'));
+
+                continue;
+            }
+
+            $this->files->put($path, $previous[$path], $this->context($application, 'resync_rollback'));
+            $driver->link($path, $this->context($application, 'resync_rollback'));
+        }
     }
 
     /**
