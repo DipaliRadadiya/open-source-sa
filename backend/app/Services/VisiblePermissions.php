@@ -74,9 +74,12 @@ class VisiblePermissions
         // both by design — refusing a working migrated box its screens because
         // nobody wrote a capability row is far worse than an extra tab.
         //
-        // Docker is deliberately absent: its screens are already refused on a LEMP
-        // box, but nobody has asked for that tab to go and hiding it is a decision
-        // about a different stack. One line here when it is wanted.
+        // Docker was deliberately absent here until somebody asked for that tab to
+        // go. They have. It was the one entry whose omission was visible rather
+        // than merely untidy: `EnsureServerHostsContainers` already answers 409 on
+        // all seventeen Docker routes off a container stack, so the menu offered a
+        // page whose every request failed — a button whose only outcome is an
+        // error, which is worse than no button.
         if ($level === 'server' || $level === null) {
             $capabilities = app(ServerCapabilities::class);
 
@@ -90,6 +93,11 @@ class VisiblePermissions
                 // whose sites build their assets with npm.
                 'node' => ! $capabilities->runsHostApplications(),
                 'database' => ! $capabilities->managesDatabases(),
+                // Networks, volumes and containerised databases — all of it is
+                // about containers, and a box that serves none has none to show.
+                // Same capability the middleware refuses on, so the tab and the
+                // routes cannot disagree.
+                'docker' => ! $capabilities->hosts('docker'),
                 // The mirror of the three above: a credential for pulling container
                 // images is nothing on a box that runs no containers. Its endpoints
                 // are gated on the same capability, so the tab and the routes agree.

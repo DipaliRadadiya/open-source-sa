@@ -3,6 +3,7 @@
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\PermissionCatalog;
 use Database\Seeders\PermissionSeeder;
 
 it('creates the Administrator system role with every permission, idempotently', function () {
@@ -104,12 +105,24 @@ it('shows an admin every permission with full view+manage access', function () {
     $response = $this->withHeader('Authorization', "Bearer {$token}")
         ->getJson('/api/permissions');
 
-    // 37 in the catalog, 36 here: `registry` is gated on the server hosting
+    // Derived, not written down. A literal here was wrong before anyone noticed
+    // — it said "37 in the catalog, 36 here" while asserting 37, against a
+    // catalog of 38 — and it goes stale the moment a permission is added, which
+    // is a test about admin access failing for a reason that has nothing to do
+    // with admin access.
+    //
+    // Two are withheld: `docker` and `registry` are gated on the server hosting
     // containers, and a test with no capability row falls back to
-    // `ServerCapabilities::DEFAULT_PROFILES`, which is php/node/static. That is the
-    // same answer the Docker endpoints have always given on an unknown box, so it
-    // is the consistent one rather than a gap.
-    $response->assertOk()->assertJsonCount(37, 'permissions');
+    // `ServerCapabilities::DEFAULT_PROFILES` — php/node/static, no docker. That
+    // is the same answer the Docker endpoints have always given on an unknown
+    // box, so it is consistent rather than a gap.
+    $withheldOffAContainerStack = ['docker', 'registry'];
+    $expected = count(app(PermissionCatalog::class)->items()) - count($withheldOffAContainerStack);
+
+    $response->assertOk()->assertJsonCount($expected, 'permissions');
+
+    expect(collect($response->json('permissions'))->pluck('name'))
+        ->not->toContain(...$withheldOffAContainerStack);
     foreach ($response->json('permissions') as $permission) {
         expect($permission['permissions']['view'])->toBeTrue();
         expect($permission['permissions']['manage'])->toBeTrue();
@@ -165,8 +178,14 @@ it('filters the check endpoint by level', function () {
     $response = $this->withHeader('Authorization', "Bearer {$token}")
         ->getJson('/api/permissions/check?level=server');
 
-    // level=server spans both sub-levels — the grouping is a display concern
-    $response->assertOk()->assertJsonCount(19, 'permissions');
+    // level=server spans both sub-levels — the grouping is a display concern.
+    //
+    // 18 rather than 19 since `docker` joined `registry` behind the
+    // hosts-containers gate: both are server-level, and a test box has no
+    // capability row so neither is offered. A literal here rather than the
+    // catalog arithmetic above, because deriving the server-level subset would
+    // mean reimplementing the filter inside the test that checks it.
+    $response->assertOk()->assertJsonCount(18, 'permissions');
 
     // …and level=application returns the sidebar rendered *inside* an app.
     // Each level is its own sidebar; this filter is what separates them.

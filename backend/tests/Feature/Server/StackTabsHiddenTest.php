@@ -165,14 +165,12 @@ it('refuses the Node endpoints on a Docker server', function () {
     }
 });
 
-it('leaves the tab nobody asked about alone', function () {
-    // Docker on a LEMP box is the same argument and is deliberately still shown:
-    // hiding it is a decision about a different stack, and nobody has asked.
-    // Asserted so it reads as a decision rather than an oversight.
-    dockerStackAs('lemp', ['php', 'static']);
-
-    expect(serverTabs())->toContain('docker');
-});
+// The test that used to live here asserted the opposite — that the Docker tab
+// stayed on a LEMP box, because hiding it was "a decision about a different
+// stack and nobody has asked". Somebody asked (2026-10-07), so the decision
+// changed and the assertion moved with it, down with the other three stack
+// filters. Recorded rather than quietly deleted: it was a deliberate choice,
+// not an oversight, and the next person to wonder why should find the answer.
 
 it('has the Node refusal translated in every locale', function () {
     foreach (['en', 'es', 'de', 'fr', 'pt', 'ja', 'ru', 'hi'] as $locale) {
@@ -303,4 +301,51 @@ it('has the sidebar label translated in every locale', function () {
 
         expect($line)->not->toBe('nav.registry')->and($line)->not->toBeEmpty();
     }
+});
+
+it('hides the Docker tab on every stack that serves no containers', function (string $stack, array $profiles) {
+    // The last of the four, and the one that was visibly wrong rather than
+    // merely pointless: `EnsureServerHostsContainers` already answered 409 on
+    // all seventeen Docker routes off a container stack, so the menu offered a
+    // page whose every request failed. Networks, volumes and containerised
+    // databases are all about containers; a box with none has nothing to show.
+    dockerStackAs($stack, $profiles);
+
+    expect(serverTabs())->not->toContain('docker');
+})->with([
+    ['lemp', ['php', 'static']],
+    ['lamp', ['php', 'static']],
+    ['ols', ['php', 'static']],
+    ['mern', ['node', 'static']],
+]);
+
+it('keeps the Docker tab on a Docker server', function () {
+    dockerStackAs('docker', ['docker']);
+
+    expect(serverTabs())->toContain('docker')
+        // And its registry companion, which was already gated on the same answer.
+        ->and(serverTabs())->toContain('registry');
+});
+
+it('keeps the Docker tab on a server with no recorded capabilities', function () {
+    // The migrated-in box again. `DEFAULT_PROFILES` does not include `docker`,
+    // so this one genuinely does hide — unlike PHP above, where the permissive
+    // default is the whole point. Asserted so the difference is deliberate and
+    // not a surprise later: a box with no row is not a Docker box, and the
+    // endpoints would 409 for it too.
+    ServerCapability::query()->delete();
+
+    expect(serverTabs())->not->toContain('docker');
+});
+
+it('hides the Docker tab from the unfiltered menu too', function () {
+    // Same reason as the PHP case: the sidebar asks with a level, other callers
+    // do not, and a filter that applied to only one would hide the tab while
+    // every page gate still said the user may view it.
+    dockerStackAs('lemp', ['php', 'static']);
+
+    $response = $this->withHeaders(phpTabHeaders())->getJson('/api/permissions');
+
+    expect(collect($response->json('permissions'))->contains(fn (array $item) => $item['name'] === 'docker'))
+        ->toBeFalse();
 });
