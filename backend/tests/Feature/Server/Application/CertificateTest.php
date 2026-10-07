@@ -126,7 +126,8 @@ it('issues, records the paths and puts TLS into the vhost', function () {
     $certificate->refresh();
 
     expect($certificate->status)->toBe(CertificateStatus::Active)
-        ->and($certificate->certificate_path)->toBe('/etc/letsencrypt/live/shop.example.com/fullchain.pem')
+        // Named after the site, as v7 names it (v7 layout B3).
+        ->and($certificate->certificate_path)->toBe("/etc/letsencrypt/live/{$this->application->slug}/fullchain.pem")
         ->and($certificate->expires_at?->format('Y-m-d'))->toBe('2030-01-01')
         ->and($this->application->fresh()->url())->toBe('https://shop.example.com');
 
@@ -137,7 +138,7 @@ it('issues, records the paths and puts TLS into the vhost', function () {
     $config = renderedCertVhost($this->application);
 
     expect($config)->toContain('listen 443 ssl')
-        ->and($config)->toContain('/etc/letsencrypt/live/shop.example.com/fullchain.pem');
+        ->and($config)->toContain("/etc/letsencrypt/live/{$this->application->slug}/fullchain.pem");
 
     $this->assertDatabaseHas('activity_logs', ['type' => 'application', 'action' => 'certificate_issued']);
 });
@@ -170,7 +171,8 @@ it('keeps the lineage when Let\'s Encrypt reissues it under the same name', func
 
     fakeCertbotSuccess();
 
-    runIssueJob(new IssueCertificate($certificate->id, null, 'shop.example.com'));
+    // The lineage is the site's name, as v7 names it (v7 layout B3).
+    runIssueJob(new IssueCertificate($certificate->id, null, $this->application->slug));
 
     Process::assertNotRan(fn ($process) => in_array('delete', $process->command, true));
 });
@@ -1122,4 +1124,27 @@ it('does not force https for a site without a password when Force HTTPS is off',
     activeCertificate($this->application);
 
     expect(renderedCertVhost($this->application->fresh(), 'nginx'))->not->toContain('return 301 https://$host$request_uri;');
+});
+
+it('issues under the site\'s name and removes a lineage named after the domain (v7 layout B3)', function () {
+    // v7 names a lineage after the site. One issued under v8's old rule (the
+    // first domain) is replaced by the site-named one, then removed so it does
+    // not go on renewing a name nothing serves.
+    $certificate = Certificate::create([
+        'application_id' => $this->application->id,
+        'type' => CertificateType::LetsEncrypt,
+        'status' => CertificateStatus::Pending,
+        'domains' => ['shop.example.com'],
+    ]);
+
+    fakeCertbotSuccess();
+
+    runIssueJob(new IssueCertificate($certificate->id, null, 'shop.example.com'));
+
+    $slug = $this->application->slug;
+
+    Process::assertRan(fn ($p) => in_array('certonly', $p->command, true)
+        && $p->command[array_search('--cert-name', $p->command, true) + 1] === $slug);
+    Process::assertRan(fn ($p) => in_array('delete', $p->command, true) && in_array('shop.example.com', $p->command, true));
+    expect($certificate->fresh()->lineageName())->toBe($slug);
 });

@@ -1375,7 +1375,11 @@ return [
         // vhost templates. Per-site document roots would not work for the node
         // and proxy profiles, which serve nothing from disk — there is no
         // directory for certbot to drop the token in.
-        'challenge_root' => env('SV_ACME_CHALLENGE_ROOT', '/var/www/.well-known-acme'),
+        // v7's webroot (v7 layout B3). A v7 certificate renews with
+        // `webroot_path = /var/www/html` in its renewal file, so a challenge
+        // served from anywhere else makes every v7 certificate stop renewing
+        // once v8 writes the site's vhost.
+        'challenge_root' => env('SV_ACME_CHALLENGE_ROOT', '/var/www/html'),
 
         'live_dir' => env('SV_LETSENCRYPT_LIVE_DIR', '/etc/letsencrypt/live'),
 

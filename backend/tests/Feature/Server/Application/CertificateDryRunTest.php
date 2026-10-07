@@ -281,7 +281,7 @@ it('builds the dry-run command from the same certonly invocation as a real issue
     $client = app(CertbotClient::class);
 
     $reflection = new ReflectionMethod($client, 'certonly');
-    $command = $reflection->invoke($client, ['shop.example.com', 'www.shop.example.com'], 'ops@example.com', ['--dry-run', '--force-renewal']);
+    $command = $reflection->invoke($client, ['shop.example.com', 'www.shop.example.com'], 'ops@example.com', 'shop', ['--dry-run', '--force-renewal']);
 
     // A simulation that drifts from the real command simulates nothing.
     expect($command)->toContain('certonly')
@@ -293,6 +293,7 @@ it('builds the dry-run command from the same certonly invocation as a real issue
         ->and($command)->toContain('--force-renewal')
         ->and($command)->not->toContain('--keep-until-expiring');
 
-    // --cert-name pins the lineage to the primary, exactly as issuing does.
-    expect($command[array_search('--cert-name', $command, true) + 1])->toBe('shop.example.com');
+    // --cert-name pins the lineage to the site's name, exactly as issuing does
+    // (v7 layout B3).
+    expect($command[array_search('--cert-name', $command, true) + 1])->toBe('shop');
 });

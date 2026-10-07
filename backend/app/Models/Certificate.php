@@ -50,6 +50,26 @@ class Certificate extends Model
      * at a path that is not there fails the config test and takes the site down
      * with it.
      */
+    /**
+     * The certbot lineage this certificate lives in, read from where its files
+     * are — not rebuilt from a name rule. v7 names a lineage after the site
+     * (as v8 does now, v7 layout B3), and certificates issued under an older
+     * rule keep the name they were issued under; the path is the one fact that
+     * is right for all of them. Null for a certificate certbot does not manage.
+     */
+    public function lineageName(): ?string
+    {
+        if ($this->type !== CertificateType::LetsEncrypt) {
+            return null;
+        }
+
+        // No files recorded (an issue that never finished): the name it would
+        // have had, so a removal still stops whatever certbot did create.
+        $name = blank($this->certificate_path) ? '' : basename(dirname((string) $this->certificate_path));
+
+        return $name === '' || $name === '.' ? ($this->application?->slug ?: null) : $name;
+    }
+
     public function servable(): bool
     {
         return $this->status === CertificateStatus::Active

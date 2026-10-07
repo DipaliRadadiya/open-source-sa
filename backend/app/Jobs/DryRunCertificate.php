@@ -108,6 +108,7 @@ class DryRunCertificate implements ShouldQueue
             $passed,
             (string) config('mail.from.address', ''),
             $application->id,
+            (string) $application->slug,
         );
 
         $output = $result->output().$result->errorOutput();

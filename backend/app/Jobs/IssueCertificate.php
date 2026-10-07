@@ -145,7 +145,7 @@ class IssueCertificate implements ShouldQueue
         // replaced by a self-signed certificate. Same lineage name and still
         // Let's Encrypt means certbot reused it, and it is the one in use.
         if ($this->previousCertName !== null
-            && ($certificate->type !== CertificateType::LetsEncrypt || $this->previousCertName !== $domains[0])) {
+            && ($certificate->type !== CertificateType::LetsEncrypt || $this->previousCertName !== $certificate->application->slug)) {
             $certbot->revoke($this->previousCertName, $certificate->application_id);
         }
 
@@ -178,10 +178,16 @@ class IssueCertificate implements ShouldQueue
     {
         $certbot->ensureChallengeRoot();
 
+        // Named after the site, as v7 names it (v7 layout B3): a lineage named
+        // after a domain changed name with the primary domain, and a server
+        // moved from v7 already has its certificates under the site's name.
+        $certName = (string) $certificate->application->slug;
+
         $result = $certbot->issue(
             $domains,
             (string) config('mail.from.address', ''),
             $certificate->application_id,
+            $certName,
         );
 
         if ($result->failed()) {
@@ -194,7 +200,7 @@ class IssueCertificate implements ShouldQueue
             return null;
         }
 
-        return $certbot->paths($domains[0]);
+        return $certbot->paths($certName);
     }
 
     /**

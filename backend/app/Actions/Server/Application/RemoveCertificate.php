@@ -34,7 +34,6 @@ class RemoveCertificate
     {
         $application = $certificate->application;
         $type = $certificate->type;
-        $domains = $certificate->domains ?? [];
         $previousStatus = $certificate->status;
         $previousUrl = $application->fresh(['certificate'])->url();
 
@@ -82,9 +81,9 @@ class RemoveCertificate
         // remove only part of a key pair or lineage before failing. Retaining
         // the pending row gives the same endpoint enough state to retry.
         $cleanup = match ($type) {
-            CertificateType::LetsEncrypt => $domains === []
+            CertificateType::LetsEncrypt => ($lineage = $certificate->lineageName()) === null
                 ? null
-                : $this->certbot->revoke($domains[0], $application->id),
+                : $this->certbot->revoke($lineage, $application->id),
             CertificateType::Custom, CertificateType::SelfSigned => $this->files->remove($files, $application->id),
         };
 

@@ -26,10 +26,13 @@ class CertbotClient
      *
      * @param  array<int, string>  $domains
      */
-    public function issue(array $domains, string $email, int $applicationId): ServerOpsResult
+    /**
+     * @param  string  $certName  the lineage: the site's name, as v7 names it (v7 layout B3)
+     */
+    public function issue(array $domains, string $email, int $applicationId, string $certName): ServerOpsResult
     {
         return $this->serverOps->run(
-            $this->certonly($domains, $email, [
+            $this->certonly($domains, $email, $certName, [
                 // Renew rather than reissue when there is still time. Reissuing
                 // spends the weekly duplicate-certificate limit for no gain — five
                 // per identical name set per week, and a user clicking a button
@@ -67,10 +70,10 @@ class CertbotClient
      *
      * @param  array<int, string>  $domains
      */
-    public function dryRun(array $domains, string $email, int $applicationId): ServerOpsResult
+    public function dryRun(array $domains, string $email, int $applicationId, string $certName): ServerOpsResult
     {
         return $this->serverOps->run(
-            $this->certonly($domains, $email, ['--dry-run', '--force-renewal']),
+            $this->certonly($domains, $email, $certName, ['--dry-run', '--force-renewal']),
             ['feature' => 'certificate', 'op' => 'dry_run', 'application' => $applicationId],
             timeout: (int) config('server.certificates.timeout'),
         );
@@ -99,7 +102,7 @@ class CertbotClient
      * @param  array<int, string>  $extra
      * @return array<int, string>
      */
-    private function certonly(array $domains, string $email, array $extra): array
+    private function certonly(array $domains, string $email, string $certName, array $extra): array
     {
         $command = [
             (string) config('server.certificates.certbot'),
@@ -112,7 +115,7 @@ class CertbotClient
             // primary. Pinned rather than left to certbot, which otherwise
             // appends -0001 to a name it has seen before and puts the files
             // somewhere the vhost is not looking.
-            '--cert-name', $domains[0],
+            '--cert-name', $certName,
             // Adding a name to an existing certificate has to replace it, not
             // create a second one beside it.
             '--expand',

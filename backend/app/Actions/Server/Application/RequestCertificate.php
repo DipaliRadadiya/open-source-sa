@@ -62,9 +62,7 @@ class RequestCertificate
         // removes it once the replacement is actually working.
         $existing = Certificate::where('application_id', $application->id)->first();
 
-        $previousCertName = $existing?->type === CertificateType::LetsEncrypt
-            ? ($existing->domains[0] ?? null)
-            : null;
+        $previousCertName = $existing?->lineageName();
 
         // Same reasoning for an uploaded or self-signed pair: the job removes
         // it once the replacement is serving.

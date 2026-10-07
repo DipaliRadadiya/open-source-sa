@@ -177,11 +177,10 @@ class ApplicationArtifacts
                 return;
             }
 
-            $domains = $certificate->domains ?? [];
             $result = match ($certificate->type) {
-                CertificateType::LetsEncrypt => $domains === []
+                CertificateType::LetsEncrypt => ($lineage = $certificate->lineageName()) === null
                     ? null
-                    : $this->certbot->revoke($domains[0], $application->id),
+                    : $this->certbot->revoke($lineage, $application->id),
                 CertificateType::Custom, CertificateType::SelfSigned => $this->certificateFiles->remove([
                     $certificate->certificate_path,
                     $certificate->private_key_path,

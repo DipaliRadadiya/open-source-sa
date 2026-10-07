@@ -108,11 +108,11 @@ it('stops the certificate renewing', function () {
     // RemoveCertificate has always known what happens otherwise — "the renewal
     // keeps running forever, keeps spending rate limit, and eventually emails
     // the user about a site they removed" — it was just never called from the
-    // path where sites actually go away. The lineage is named after the first
-    // domain.
+    // path where sites actually go away. The lineage is named after the site,
+    // as v7 names it (v7 layout B3).
     expect(ranCommand($ran, fn (array $c) => in_array('delete', $c, true)
         && in_array('--cert-name', $c, true)
-        && in_array('shop.example.com', $c, true)))->toBeTrue();
+        && in_array($this->application->slug, $c, true)))->toBeTrue();
 });
 
 it('removes self-signed certificate files without calling certbot', function () {
