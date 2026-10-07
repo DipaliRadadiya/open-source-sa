@@ -5,6 +5,7 @@ namespace App\Services\Server\Applications;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Services\Server\ServerOps;
+use Illuminate\Support\Sleep;
 
 /**
  * After `compose up`, wait for the site to actually answer (DS-03).
@@ -27,9 +28,31 @@ use App\Services\Server\ServerOps;
  */
 class ContainerReadinessCheck
 {
+    /**
+     * The longest wait, whatever is configured: `PUT /container` and `pull`
+     * run this inside a request the panel's vhost cuts off at 300 s, after a
+     * pull and a `compose up` that take their own share of it.
+     */
+    public const MAX_TIMEOUT = 150;
+
     public function __construct(private ServerOps $serverOps) {}
 
     /**
+     * Wait — against the clock, not a count of tries — for the site to answer.
+     *
+     * A deadline, because the tries were never free (DS-09): each one is a
+     * `compose ps`, a `docker inspect` per container and a curl that can sit
+     * on a hung port for its full timeout, so "90 seconds" waited up to ~258.
+     * `PUT /container` and `pull` wait for this synchronously, behind the
+     * panel's own 300 s FastCGI timeout, and past it the user got a 504
+     * instead of the reason. The configured value is capped well under it.
+     *
+     * An answer always wins. A restart is only a failure once it has gone on
+     * for `restart_grace` seconds with nothing answering — and in a pasted
+     * file, never before the deadline: there, one service exiting once while
+     * its database starts is how a healthy stack boots, and a single sighting
+     * failed it (DS-09). The restart is still what the failure names.
+     *
      * @throws ProvisioningFailedException
      */
     public function verify(Application $application, string $documentRoot, ContainerSupervisor $containers): void
@@ -40,37 +63,71 @@ class ContainerReadinessCheck
             return;
         }
 
-        $timeout = max(1, (int) config('server.docker.readiness.timeout', 90));
+        $timeout = min(self::MAX_TIMEOUT, max(1, (int) config('server.docker.readiness.timeout', 90)));
         $interval = max(0, (int) config('server.docker.readiness.interval', 3));
-        $attempts = max(1, intdiv($timeout, max(1, $interval)));
+        $grace = max(0, (int) config('server.docker.readiness.restart_grace', 30));
+        // With no interval between tries (the test suite) nothing guarantees
+        // the clock moves, so there the tries are counted instead.
+        $attempts = $interval > 0 ? PHP_INT_MAX : $timeout;
+        $pasted = trim((string) $application->compose) !== '';
+
+        $started = now();
+        $deadline = $started->copy()->addSeconds($timeout);
+        $loopingSince = null;
+        $looping = false;
 
         for ($attempt = 1; $attempt <= $attempts; $attempt++) {
-            if ($containers->crashLooping($application, $documentRoot)) {
-                $this->fail($application, $documentRoot, $containers, 'restarting', 'container_restarting');
-            }
+            $remaining = (int) ceil(now()->diffInSeconds($deadline, false));
+            $status = $this->probe($application, $port, max(1, min(5, $remaining)));
 
-            if (! $containers->running($application, $documentRoot)) {
-                $this->fail($application, $documentRoot, $containers, 'exited', 'container_exited');
-            }
-
-            $status = $this->probe($application, $port);
-
-            // curl wrote nothing: the probe did not happen, so nothing was
-            // measured. Calling the site broken on that would be a guess — the
-            // same rule as HttpReadinessCheck.
-            if ($status === null || $status > 0) {
+            if ($status !== null && $status > 0) {
                 $this->passed($application);
 
                 return;
             }
 
-            if ($attempt < $attempts && $interval > 0) {
-                sleep($interval);
+            $looping = $containers->crashLooping($application, $documentRoot);
+
+            if ($looping) {
+                $loopingSince ??= now();
+
+                if (! $pasted && $loopingSince->diffInSeconds(now()) >= $grace) {
+                    $this->fail($application, $documentRoot, $containers, 'restarting', 'container_restarting');
+                }
+            } else {
+                $loopingSince = null;
+
+                if (! $containers->running($application, $documentRoot)) {
+                    $this->fail($application, $documentRoot, $containers, 'exited', 'container_exited');
+                }
+
+                // curl wrote nothing: the probe did not happen, so nothing was
+                // measured. With the container up and not bouncing, calling the
+                // site broken on that would be a guess — the same rule as
+                // HttpReadinessCheck.
+                if ($status === null) {
+                    $this->passed($application);
+
+                    return;
+                }
             }
+
+            if ($attempt === $attempts || now()->greaterThanOrEqualTo($deadline)) {
+                break;
+            }
+
+            if ($interval > 0) {
+                Sleep::for(min($interval, max(1, (int) ceil(now()->diffInSeconds($deadline, false)))))->seconds();
+            }
+        }
+
+        if ($looping) {
+            $this->fail($application, $documentRoot, $containers, 'restarting', 'container_restarting');
         }
 
         $declared = $this->declaredPorts($application);
         $containerPort = (int) ($application->container_port ?: 0);
+        $waited = (int) round($started->diffInSeconds(now()));
 
         if ($containerPort > 0 && $declared !== [] && ! in_array($containerPort, $declared, true)) {
             $this->fail($application, $documentRoot, $containers, 'not_answering', 'container_port_mismatch', [
@@ -79,9 +136,12 @@ class ContainerReadinessCheck
             ]);
         }
 
+        // No container port to name — a pasted file publishes its own — and
+        // `app_port` is the panel's loopback port on the HOST, which the
+        // sentence would have sent the user off to set as the container's.
         $this->fail($application, $documentRoot, $containers, 'not_answering', 'container_not_answering', [
-            'port' => $containerPort > 0 ? $containerPort : $port,
-            'seconds' => $timeout,
+            ...($containerPort > 0 && ! $pasted ? ['port' => $containerPort] : []),
+            'seconds' => $waited,
         ]);
     }
 
@@ -207,13 +267,13 @@ class ContainerReadinessCheck
      * The HTTP status on the loopback port, 0 for no answer, null when curl
      * printed nothing at all.
      */
-    private function probe(Application $application, int $port): ?int
+    private function probe(Application $application, int $port, int $maxTime): ?int
     {
         $result = $this->serverOps->run(
             [
                 'curl', '--silent', '--output', '/dev/null',
                 '--write-out', '%{http_code}',
-                '--max-time', '5',
+                '--max-time', (string) $maxTime,
                 "http://127.0.0.1:{$port}/",
             ],
             [

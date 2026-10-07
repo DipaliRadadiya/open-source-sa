@@ -15,6 +15,10 @@ use App\Rules\ContainerMountPath;
  *   because some images listen on a port they never EXPOSE, but said.
  * - **Its VOLUMEs**, as the site's volumes, when the request named none at all.
  *   `volume_mounts: []` means "none" and is respected.
+ * - **Settings it will not start without** (`required_env`), refused when
+ *   missing or empty (DS-09). The form holds Deploy on them, but the form is
+ *   not the only client — and deleting the row got past it: Umami was created
+ *   without `DATABASE_URL` and crash-looped on `TypeError: Invalid URL`.
  *
  * Read from the registry, never pulled. A registry that cannot be asked only
  * matters when the port is missing; otherwise the site is created as typed.
@@ -25,11 +29,19 @@ class CreateDefaults
 
     /**
      * @param  array<string, mixed>  $input  the create request
-     * @return array{container_port: int|null, volume_mounts: list<array{path: string}>|null, warnings: list<string>, error: string|null}
+     * @return array{container_port: int|null, volume_mounts: list<array{path: string}>|null, warnings: list<string>, error: string|null, env_error: string|null}
      */
     public function resolve(array $input): array
     {
-        $answer = ['container_port' => null, 'volume_mounts' => null, 'warnings' => [], 'error' => null];
+        $answer = ['container_port' => null, 'volume_mounts' => null, 'warnings' => [], 'error' => null, 'env_error' => null];
+
+        // From config, not the registry: answered even when the registry
+        // cannot be asked, and before anything that may return early.
+        $missing = $this->missingEnv($input);
+
+        if ($missing !== []) {
+            $answer['env_error'] = __('application.docker_create.env_required', ['keys' => implode(', ', $missing)]);
+        }
 
         $port = filled($input['container_port'] ?? null) ? (int) $input['container_port'] : null;
         $wantsVolumes = ! array_key_exists('volume_mounts', $input) && blank($input['volume_new'] ?? null);
@@ -66,6 +78,33 @@ class CreateDefaults
         }
 
         return $answer;
+    }
+
+    /**
+     * The settings this image is known not to start without that the request
+     * leaves out or leaves empty.
+     *
+     * @param  array<string, mixed>  $input
+     * @return list<string>
+     */
+    private function missingEnv(array $input): array
+    {
+        $image = ImageReference::parse((string) ($input['image'] ?? ''));
+
+        if ($image === null) {
+            return [];
+        }
+
+        $required = (array) (config('server.docker.images.required_env', [])[$image->name()] ?? []);
+        $given = [];
+
+        foreach ((array) ($input['env'] ?? []) as $row) {
+            if (is_array($row) && trim((string) ($row['value'] ?? '')) !== '') {
+                $given[trim((string) ($row['key'] ?? ''))] = true;
+            }
+        }
+
+        return array_values(array_filter($required, fn ($key): bool => ! isset($given[(string) $key])));
     }
 
     /**

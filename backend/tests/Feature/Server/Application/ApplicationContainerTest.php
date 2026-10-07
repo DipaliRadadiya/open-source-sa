@@ -132,6 +132,20 @@ it('saves the network and brings the container up on it', function () {
         ->toBeTrue();
 });
 
+it('refuses an empty container port rather than rendering port 80 (DS-09)', function () {
+    // Saved, null rendered as `127.0.0.1:{app_port}:80` — a port nothing in
+    // the image listens on, so every request was a 502.
+    fakeDockerBox();
+
+    $this->withHeaders(containerHeaders())
+        ->putJson(containerUrl(), ['container_port' => null])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('container_port');
+
+    expect($this->application->fresh()->container_port)->toBe(2368)
+        ->and(dockerRan(fn (array $args): bool => ($args[1] ?? '') === 'compose'))->toBeFalse();
+});
+
 it('refuses a network that is not on this server', function () {
     // `external: true` makes Compose look the name up, so a name that is not
     // there is a container that will not start — and the refusal has to arrive

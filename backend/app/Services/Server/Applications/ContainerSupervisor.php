@@ -632,23 +632,39 @@ class ContainerSupervisor
         // correct on disk and this is a read of the record, not of the container.
         $this->contents($application, $documentRoot);
 
-        return $this->compose(
+        return $this->forgetReadiness($application, $this->compose(
             $application,
             $documentRoot,
             ['up', '-d'],
             'compose_up',
             $this->writeOverride($application, $documentRoot, $context),
-        );
+        ));
     }
 
     public function stop(Application $application, string $documentRoot): ServerOpsResult
     {
-        return $this->compose($application, $documentRoot, ['stop'], 'compose_stop');
+        return $this->forgetReadiness($application, $this->compose($application, $documentRoot, ['stop'], 'compose_stop'));
     }
 
     public function restart(Application $application, string $documentRoot): ServerOpsResult
     {
-        return $this->compose($application, $documentRoot, ['restart'], 'compose_restart');
+        return $this->forgetReadiness($application, $this->compose($application, $documentRoot, ['restart'], 'compose_restart'));
+    }
+
+    /**
+     * Drop what the last readiness check saw once the containers have been
+     * started, stopped or restarted without one (DS-09). `running` from the
+     * deploy before a Stop is a green badge over a 502; no check at all is
+     * what these paths have, and null says exactly that. A failure stays: it
+     * is still the last thing known to have gone wrong.
+     */
+    private function forgetReadiness(Application $application, ServerOpsResult $result): ServerOpsResult
+    {
+        if ($application->container_status === 'running') {
+            $application->forceFill(['container_status' => null])->save();
+        }
+
+        return $result;
     }
 
     /**

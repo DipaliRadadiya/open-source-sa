@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\Http;
  * Somebody who wants Memos types `memos`, not `neosmemo/memos`. Hub's search
  * answers in its own relevance order, which on 2026-10-07 put a third-party
  * repackage with 0.1M pulls above the project's own image with 11M — so the
- * results are re-ranked: the exact name typed, official images, the
- * project's own publisher, then by pulls.
+ * results are re-ranked: the exact name typed, official images, then by
+ * pulls — with the project's own publisher's pulls counted several times over.
  *
  * Hub's v2 search does not report the "Verified Publisher" badge (its only
  * flags are `is_official` and `is_automated`), so `verified_publisher` is
@@ -25,6 +25,12 @@ use Illuminate\Support\Facades\Http;
  */
 class ImageSearch
 {
+    /** How much more a pull of the project's own publisher counts. */
+    private const PUBLISHER_WEIGHT = 5;
+
+    /** Pulls below which a matching publisher gets no weight at all. */
+    private const BOOST_FLOOR = 10_000;
+
     /**
      * @return array{results: list<array<string, mixed>>, offline?: bool}
      */
@@ -93,8 +99,7 @@ class ImageSearch
             strtolower($row['image']) === strtolower($query),
             $row['official'],
             $row['verified_publisher'],
-            $this->publisherMatches($row['image'], $query),
-            $row['pulls'],
+            $this->popularity($row, $query),
         ];
 
         usort($results, fn (array $a, array $b): int => $rank($b) <=> $rank($a));
@@ -103,11 +108,32 @@ class ImageSearch
     }
 
     /**
+     * Pulls, with a publisher that looks like the project weighted up.
+     *
+     * A weight, never a rank of its own (DS-09). As a rank above pulls it let
+     * anybody who registered `kavitaatdesign/kavita` — a handful of pulls —
+     * take the preselected first place from `jvmilazz0/kavita` with 11.9M, and
+     * the form deploys the first place in one click. Weighted, the project's
+     * own image still wins where it is in the same league (Umami: 181k × 5
+     * beats a 605k repackage), and a repository below the floor gets no boost
+     * at all, so registering a matching name buys nothing.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function popularity(array $row, string $query): int
+    {
+        $pulls = (int) $row['pulls'];
+
+        if ($pulls < self::BOOST_FLOOR || ! $this->publisherMatches((string) $row['image'], $query)) {
+            return $pulls;
+        }
+
+        return $pulls * self::PUBLISHER_WEIGHT;
+    }
+
+    /**
      * Whether the publisher looks like the project: the name searched for is
      * in both the namespace and the repository, as in `umamisoftware/umami`.
-     * Measured 2026-10-07: "umami" put a repackage with 605k pulls above the
-     * project's own image with 181k; of 30 popular searches it is the only
-     * one this reorders.
      */
     private function publisherMatches(string $image, string $query): bool
     {

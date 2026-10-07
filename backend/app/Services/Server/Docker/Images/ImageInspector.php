@@ -246,21 +246,25 @@ class ImageInspector
      */
     private function suggestedPort(ImageReference $image, array $ports): array
     {
-        if (count($ports) === 1) {
-            return [$ports[0], 'declared'];
+        // 443 is never the one to proxy plain HTTP to — and that holds for an
+        // image that declares nothing else (DS-09). Suggested, it was probed
+        // over HTTP, answered 400 (which counts as answering), and the site
+        // served "plain HTTP request sent to HTTPS port" to every visitor.
+        // With only TLS ports the image has said nothing usable: ask.
+        $plain = array_values(array_diff($ports, [443, 8443]));
+
+        if (count($plain) === 1) {
+            return [$plain[0], 'declared'];
         }
 
-        if ($ports !== []) {
+        if ($plain !== []) {
             foreach (self::PREFERRED_PORTS as $preferred) {
-                if (in_array($preferred, $ports, true)) {
+                if (in_array($preferred, $plain, true)) {
                     return [$preferred, 'declared'];
                 }
             }
 
-            // Lowest, except that 443 is never the one to proxy plain HTTP to.
-            $plain = array_values(array_diff($ports, [443, 8443]));
-
-            return [$plain[0] ?? $ports[0], 'declared'];
+            return [$plain[0], 'declared'];
         }
 
         // Images that listen on a port without declaring it. Keyed by the

@@ -41,7 +41,7 @@ class StoreApplicationRequest extends FormRequest
     /**
      * What the image filled in (DS-03), set by `after()` for a Docker site.
      *
-     * @var array{container_port: int|null, volume_mounts: list<array{path: string}>|null, warnings: list<string>, error: string|null}|null
+     * @var array{container_port: int|null, volume_mounts: list<array{path: string}>|null, warnings: list<string>, error: string|null, env_error: string|null}|null
      */
     private ?array $dockerDefaults = null;
 
@@ -527,6 +527,10 @@ class StoreApplicationRequest extends FormRequest
 
                 if ($this->dockerDefaults['error'] !== null) {
                     $validator->errors()->add('container_port', $this->dockerDefaults['error']);
+                }
+
+                if ($this->dockerDefaults['env_error'] !== null) {
+                    $validator->errors()->add('env', $this->dockerDefaults['env_error']);
                 }
             },
 

@@ -22,8 +22,26 @@ use Illuminate\Support\Facades\Http;
  */
 class ImageTags
 {
-    /** Words that make a version-looking tag a pre-release or a moving target. */
-    private const UNSTABLE = '/(alpha|beta|rc|dev|pre|preview|nightly|snapshot|canary|test|edge|unstable|next|insider)/i';
+    /**
+     * Words that make a version-looking tag a pre-release or a moving target.
+     *
+     * Whole words only (DS-09): unanchored, `3.2.1-nextcloud` read as "next"
+     * and `-devuan` as "dev", and real stable variants were listed as
+     * pre-releases. A number may follow directly — `rc1`, `beta2`.
+     */
+    private const UNSTABLE = '/(?:^|[-_.+])(?:alpha|beta|rc|dev|devel|pre|preview|nightly|snapshot|canary|test|edge|unstable|next|insider)(?=\d|[-_.+]|$)/i';
+
+    /** Moving tags worth recommending when an image publishes no version, best first. */
+    private const STABLE_NAMES = ['latest', 'stable', 'release', 'lts'];
+
+    /**
+     * Versions read as dates (`2021.11.28`) that lost to a plain version on
+     * the same image — see `rank()`. Kept apart so `recommended()` can try
+     * them last without them leaking into the response.
+     *
+     * @var array<string, true>
+     */
+    private array $demoted = [];
 
     public function __construct(private RegistryClient $registry) {}
 
@@ -58,11 +76,25 @@ class ImageTags
         }
 
         $tags = $this->rank($raw);
+        $recommended = $this->recommended($tags);
+        $shown = array_slice($tags, 0, $limit);
+
+        // The preselected version has to be one the picker can show. It can
+        // rank past the limit — bare-number aliases sort above dotted
+        // releases, and `recommended()` skips them — so it takes the last
+        // place rather than going missing (DS-09).
+        if ($recommended !== null && ! in_array($recommended, array_column($shown, 'name'), true)) {
+            $match = array_values(array_filter($tags, fn (array $tag): bool => $tag['name'] === $recommended));
+
+            if ($match !== []) {
+                $shown = [...array_slice($shown, 0, max(0, $limit - 1)), $match[0]];
+            }
+        }
 
         return [
             'image' => $image->name(),
-            'recommended' => $this->recommended($tags),
-            'tags' => array_slice($tags, 0, $limit),
+            'recommended' => $recommended,
+            'tags' => $shown,
         ];
     }
 
@@ -177,11 +209,70 @@ class ImageTags
             return $a['index'] <=> $b['index'];
         });
 
+        $this->demoted = [];
+
+        foreach ($this->datedLosers($versioned) as $name) {
+            $this->demoted[$name] = true;
+        }
+
         // Plain numbers before variants: `1.31.6-trixie-perl` is a real
         // version, but eight variants of one release would fill the picker.
-        usort($versioned, fn (array $a, array $b): int => $b['pure'] <=> $a['pure']);
+        // And a date that lost to a version after both.
+        $current = fn (array $entry): bool => ! isset($this->demoted[$entry['tag']['name']]);
+
+        usort($versioned, fn (array $a, array $b): int => [$b['pure'], $current($b)] <=> [$a['pure'], $current($a)]);
 
         return [...array_column($versioned, 'tag'), ...$rest];
+    }
+
+    /**
+     * Tags that look like a date rather than a release, on an image that
+     * also publishes releases — when the dates are not the newer of the two.
+     *
+     * Numerically `2021.11.28` beats `2.8.3`, and on an image that once used
+     * CalVer that preselected a five-year-old build (DS-09). Which scheme is
+     * current is answered by when each was last pushed, where the registry
+     * says (Hub does); without dates the plain version wins, because a date
+     * tag beside real versions is far more often a leftover than the future.
+     * An image that only publishes dates — Home Assistant — is left alone.
+     *
+     * @param  list<array{tag: array{name: string, updated_at: string|null, stable: bool}, parts: list<int>, pure: bool, index: int}>  $versioned
+     * @return list<string>
+     */
+    private function datedLosers(array $versioned): array
+    {
+        $dated = [];
+        $plain = [];
+
+        foreach ($versioned as $entry) {
+            $isDate = count($entry['parts']) >= 2 && $entry['parts'][0] >= 1900 && $entry['parts'][0] <= 2100;
+
+            if ($isDate) {
+                $dated[] = $entry['tag'];
+            } elseif ($entry['pure']) {
+                $plain[] = $entry['tag'];
+            }
+        }
+
+        if ($dated === [] || $plain === []) {
+            return [];
+        }
+
+        $newest = fn (array $tags): ?int => array_reduce(
+            $tags,
+            fn (?int $carry, array $tag): ?int => ($time = strtotime((string) $tag['updated_at'])) === false
+                ? $carry
+                : max($carry ?? $time, $time),
+        );
+
+        $datedAt = $newest($dated);
+        $plainAt = $newest($plain);
+
+        if ($datedAt !== null && $plainAt !== null && $datedAt > $plainAt) {
+            return [];
+        }
+
+        return array_column($dated, 'name');
     }
 
     /**
@@ -212,7 +303,8 @@ class ImageTags
     /**
      * The newest exact version — `0.31.0` over `0.31` over `0`, so a user
      * pinned to it gets the release they saw, not whatever the alias points
-     * at next month. Falls back to `latest`, then to the first tag.
+     * at next month. Falls back to `latest`/`stable`, then to Hub's most
+     * recently pushed tag, then to nothing.
      *
      * @param  list<array{name: string, updated_at: string|null, stable: bool}>  $tags
      */
@@ -222,18 +314,41 @@ class ImageTags
         // number is tried last: it is usually an alias, not a release, and
         // ranked numerically it beats every dotted one — code-server's `39`
         // (its Fedora 39 build) sorted above `4.140.0`.
-        foreach ([2, 1] as $minParts) {
-            foreach ($tags as $tag) {
-                $version = $tag['stable'] ? $this->version($tag['name']) : null;
+        foreach ([false, true] as $demoted) {
+            foreach ([2, 1] as $minParts) {
+                foreach ($tags as $tag) {
+                    if (isset($this->demoted[$tag['name']]) !== $demoted) {
+                        continue;
+                    }
 
-                if (($version['pure'] ?? false) && count($version['parts']) >= $minParts) {
-                    return $tag['name'];
+                    $version = $tag['stable'] ? $this->version($tag['name']) : null;
+
+                    if (($version['pure'] ?? false) && count($version['parts']) >= $minParts) {
+                        return $tag['name'];
+                    }
                 }
             }
         }
 
         $names = array_column($tags, 'name');
 
-        return in_array('latest', $names, true) ? 'latest' : ($names[0] ?? null);
+        foreach (self::STABLE_NAMES as $name) {
+            if (in_array($name, $names, true)) {
+                return $name;
+            }
+        }
+
+        // Nothing is a version and nothing says it is the stable one. Hub
+        // lists the most recently pushed first, which is a reasonable guess
+        // unless it is a pre-release; a registry's `tags/list` is sorted by
+        // NAME, and the alphabetically first tag is no recommendation at all —
+        // it put `alpha` above `stable` (DS-09). The picker then asks.
+        $first = $tags[0] ?? null;
+
+        if ($first === null || $first['updated_at'] === null || preg_match(self::UNSTABLE, '-'.$first['name']) === 1) {
+            return null;
+        }
+
+        return $first['name'];
     }
 }

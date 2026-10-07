@@ -284,6 +284,8 @@ return [
         'container_exited' => 'The container stopped right after starting.',
         'container_port_mismatch' => 'Nothing answers on container port :port — the image listens on :image_ports. Set the container port to :image_ports and deploy again.',
         'container_not_answering' => 'Nothing answered on container port :port within :seconds seconds.',
+        // DS-09: a pasted compose file has no single container port to name.
+        'container_not_answering_no_port' => 'Nothing answered on this site\'s port within :seconds seconds.',
         'last_line' => 'Last log line: :line',
     ],
 
@@ -295,6 +297,7 @@ return [
         'port_mismatch' => 'The image listens on :image_ports, not :port. The site will not answer unless the application really listens on :port.',
         'env_key_invalid' => 'Use letters, digits and underscores only, not starting with a digit.',
         'env_key_duplicate' => 'The variable :key is set twice.',
+        'env_required' => 'This image will not start without :keys. Add a value for each before creating the site.',
     ],
 
     'port_free' => 'Port :port is free.',

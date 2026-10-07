@@ -6,6 +6,7 @@ use App\Models\Application;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Applications\SiteTypeSuggestion;
 use App\Services\Git\Webhooks\WebhookManager;
+use App\Services\Server\Applications\ContainerLiveness;
 use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\Server\WebServers\WebServerManager;
 use Illuminate\Http\Request;
@@ -233,7 +234,11 @@ class ApplicationResource extends JsonResource
             // `restarting`, `exited` or `not_answering`. Null when no check has
             // run — every site deployed before it existed, and every one-click
             // app, whose installer does its own waiting.
-            'container_status' => $this->container_status,
+            //
+            // A stored `running` is asked of Docker first (DS-09): nothing
+            // reports a container that stops after the deploy, and a green
+            // badge over a 502 is what this field exists to prevent.
+            'container_status' => $this->liveContainerStatus(),
             // Why the last deploy failed, in words, with the container's own last
             // log lines. Cleared by the next deploy that answers. The log only
             // for someone who may read this site's logs (`app_log`), the same
@@ -390,6 +395,21 @@ class ApplicationResource extends JsonResource
     }
 
     /**
+     * The stored readiness status, except that a `running` Docker says is not
+     * running reads `exited` (DS-09). Docker unreachable: the stored value.
+     */
+    private function liveContainerStatus(): ?string
+    {
+        $stored = $this->container_status;
+
+        if ($stored !== 'running') {
+            return $stored;
+        }
+
+        return app(ContainerLiveness::class)->running($this->resource) === false ? 'exited' : $stored;
+    }
+
+    /**
      * `{reason, message, last_line, log, at}`, the message titled in the
      * viewer's locale from the stored reason and its values.
      *
@@ -405,7 +425,12 @@ class ApplicationResource extends JsonResource
 
         $params = (array) ($failure['params'] ?? []);
         $lastLine = (string) ($params['last_line'] ?? '');
-        $message = __('application.container_failure.'.$failure['reason'], $params);
+        // A failure with no container port to name — a pasted compose file —
+        // says so rather than naming the panel's host port as the container's.
+        $key = $failure['reason'] === 'container_not_answering' && ! isset($params['port'])
+            ? 'container_not_answering_no_port'
+            : $failure['reason'];
+        $message = __('application.container_failure.'.$key, $params);
         $readsLogs = $request->user()?->canView('app_log') ?? false;
 
         if ($readsLogs && $lastLine !== '') {

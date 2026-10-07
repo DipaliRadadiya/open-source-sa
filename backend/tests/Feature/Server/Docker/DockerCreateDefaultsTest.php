@@ -371,3 +371,42 @@ it('refuses a stored registry credential to a user who cannot view registries', 
     // The same user may create without one.
     $this->withHeaders($as($user))->postJson('/api/applications', $body)->assertCreated();
 });
+
+/*
+ * DS-09: a setting the image will not start without is checked here, not only
+ * in the form. Deleting the row in the form got past it, and Umami was created
+ * without DATABASE_URL and crash-looped on `TypeError: Invalid URL`.
+ */
+
+it('refuses an image created without a setting it cannot start without', function (array $env) {
+    imageSays(['exposed_ports' => [3000], 'suggested_port' => 3000]);
+
+    createDocker(['image' => 'ghcr.io/umami-software/umami:postgresql-latest', 'env' => $env])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['env' => 'will not start without DATABASE_URL']);
+
+    expect(Application::count())->toBe(0);
+})->with([
+    'row deleted' => [[['key' => 'APP_SECRET', 'value' => 'x']]],
+    'no env at all' => [[]],
+    'left empty' => [[['key' => 'DATABASE_URL', 'value' => '   ']]],
+]);
+
+it('asks for it even when the registry cannot be read', function () {
+    // The table is config: it needs no registry, and a port typed by hand
+    // must not be the way round it.
+    config(['server.docker.images.inspect_on_create' => false]);
+
+    createDocker(['image' => 'umamisoftware/umami:latest', 'container_port' => 3000])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('env');
+});
+
+it('creates the site once the setting is given', function () {
+    imageSays(['exposed_ports' => [3000], 'suggested_port' => 3000]);
+
+    createDocker([
+        'image' => 'ghcr.io/umami-software/umami:postgresql-latest',
+        'env' => [['key' => 'DATABASE_URL', 'value' => 'postgresql://umami:pw@db:5432/umami']],
+    ])->assertCreated();
+});

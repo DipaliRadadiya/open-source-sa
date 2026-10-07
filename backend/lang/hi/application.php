@@ -274,6 +274,8 @@ return [
         'container_exited' => 'कंटेनर शुरू होते ही बंद हो गया।',
         'container_port_mismatch' => 'कंटेनर पोर्ट :port पर कुछ जवाब नहीं देता — इमेज :image_ports पर सुनती है। कंटेनर पोर्ट :image_ports करें और फिर से डिप्लॉय करें।',
         'container_not_answering' => 'कंटेनर पोर्ट :port पर :seconds सेकंड में कोई जवाब नहीं आया।',
+        // DS-09: a pasted compose file has no single container port to name.
+        'container_not_answering_no_port' => 'इस साइट के पोर्ट पर :seconds सेकंड में कोई जवाब नहीं आया।',
         'last_line' => 'लॉग की आख़िरी पंक्ति: :line',
     ],
 
@@ -285,6 +287,7 @@ return [
         'port_mismatch' => 'इमेज :image_ports पर सुनती है, :port पर नहीं। साइट तभी जवाब देगी जब ऐप्लिकेशन सच में :port पर सुने।',
         'env_key_invalid' => 'केवल अक्षर, अंक और अंडरस्कोर, और शुरुआत अंक से नहीं।',
         'env_key_duplicate' => 'वेरिएबल :key दो बार सेट है।',
+        'env_required' => 'यह इमेज :keys के बिना शुरू नहीं होती। साइट बनाने से पहले हर एक के लिए मान दर्ज करें।',
     ],
 
     'port_free' => 'पोर्ट :port खाली है।',

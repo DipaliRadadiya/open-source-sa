@@ -274,6 +274,8 @@ return [
         'container_exited' => 'O contêiner parou logo após iniciar.',
         'container_port_mismatch' => 'Nada responde na porta do contêiner :port — a imagem escuta em :image_ports. Defina a porta do contêiner como :image_ports e implante novamente.',
         'container_not_answering' => 'Nada respondeu na porta do contêiner :port em :seconds segundos.',
+        // DS-09: a pasted compose file has no single container port to name.
+        'container_not_answering_no_port' => 'Nada respondeu na porta deste site em :seconds segundos.',
         'last_line' => 'Última linha do log: :line',
     ],
 
@@ -285,6 +287,7 @@ return [
         'port_mismatch' => 'A imagem escuta em :image_ports, não em :port. O site só responderá se a aplicação realmente escutar em :port.',
         'env_key_invalid' => 'Use apenas letras, dígitos e sublinhados, sem começar com dígito.',
         'env_key_duplicate' => 'A variável :key foi definida duas vezes.',
+        'env_required' => 'Esta imagem não inicia sem :keys. Informe um valor para cada uma antes de criar o site.',
     ],
 
     'port_free' => 'A porta :port está livre.',

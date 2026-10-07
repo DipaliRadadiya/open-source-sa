@@ -274,6 +274,8 @@ return [
         'container_exited' => 'Der Container wurde direkt nach dem Start beendet.',
         'container_port_mismatch' => 'Auf Container-Port :port antwortet nichts — das Image lauscht auf :image_ports. Setze den Container-Port auf :image_ports und deploye erneut.',
         'container_not_answering' => 'Auf Container-Port :port hat innerhalb von :seconds Sekunden nichts geantwortet.',
+        // DS-09: a pasted compose file has no single container port to name.
+        'container_not_answering_no_port' => 'Auf dem Port dieser Website hat innerhalb von :seconds Sekunden nichts geantwortet.',
         'last_line' => 'Letzte Logzeile: :line',
     ],
 
@@ -285,6 +287,7 @@ return [
         'port_mismatch' => 'Das Image lauscht auf :image_ports, nicht auf :port. Die Website antwortet nur, wenn die Anwendung wirklich auf :port lauscht.',
         'env_key_invalid' => 'Nur Buchstaben, Ziffern und Unterstriche, nicht mit einer Ziffer beginnend.',
         'env_key_duplicate' => 'Die Variable :key ist doppelt gesetzt.',
+        'env_required' => 'Dieses Image startet nicht ohne :keys. Geben Sie für jede Variable einen Wert an, bevor Sie die Website erstellen.',
     ],
 
     'port_free' => 'Port :port ist frei.',

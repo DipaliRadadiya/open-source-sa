@@ -43,7 +43,12 @@ class UpdateContainerRequest extends FormRequest
             // to. Not `app_port`: that is the host-side port the panel
             // allocated, and conflating the two publishes a container on a
             // port another site already holds.
-            'container_port' => ['sometimes', 'nullable', 'integer', 'between:1,65535'],
+            //
+            // Optional, never null (DS-09). Since DS-03 null means "read it from
+            // the image", which only the create path can do; here it was saved,
+            // rendered as port 80, and the site proxied to a port nothing in
+            // the image listens on. Leave the key out to keep the current port.
+            'container_port' => ['sometimes', 'required', 'integer', 'between:1,65535'],
 
             // A ceiling, never absent — null here falls back to the configured
             // default at render time rather than to no limit at all.

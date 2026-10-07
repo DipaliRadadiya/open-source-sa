@@ -6046,7 +6046,7 @@ Two kinds of "no" are kept apart:
 - **"We could not ask the registry"** (no internet, timeout, 5xx, Docker Hub rate limit) is not a verdict. Search and tags return empty lists with `offline: true`. Inspect returns `503`, and the form should then ask the user for the port.
 
 ### `GET /docker/images/search?q=<text>&limit=10`
-Throttle: 60/min. `q` 2–100 chars, `limit` 1–50. Searches Docker Hub and re-ranks: official images first, then most pulled. Cached 10 min.
+Throttle: 60/min. `q` 2–100 chars, `limit` 1–50. Searches Docker Hub and re-ranks: the exact name typed first, then official images, then most pulled. A repository whose namespace and name both contain the search term (`umamisoftware/umami`) counts its pulls five times, but only from 10,000 pulls up, so a near-empty look-alike never takes first place (DS-09). Cached 10 min.
 ```json
 { "results": [ { "image": "neosmemo/memos", "registry": "docker.io", "description": "A privacy-first, lightweight note-taking service.",
   "stars": 233, "pulls": 11672941, "official": false, "verified_publisher": false } ] }
@@ -6056,10 +6056,12 @@ Offline: `{"results": [], "offline": true}`. `verified_publisher` is always `fal
 ### `GET /docker/images/tags?image=<ref>&limit=20[&registry_id=]`
 Throttle: 30/min. `limit` 1–100. Tags are ordered like this:
 1. Plain version numbers, newest first. `0.31.0` comes before `0.31`.
-2. Variants such as `1.31.6-alpine`.
-3. Everything else, such as `latest`, `edge`, `sha-…` and pre-releases (`-rc1`, `-beta`), most recently updated first.
+2. Variants such as `1.31.6-alpine`, `3.2.1-nextcloud`.
+3. Everything else, such as `latest`, `edge`, `sha-…` and pre-releases (`-rc1`, `-beta`, `-devel` — whole words only), most recently updated first.
 
-`stable` is `true` for groups 1 and 2. `recommended` is the newest plain version, a dotted one (`4.140.0`) before a bare number (`39`, code-server's Fedora build). If there is none, it is `latest`, and failing that the first tag. Docker Hub images and `lscr.io/linuxserver/*` are read from Hub's API, which gives `updated_at`. Other registries are read from `tags/list`, so `updated_at` is `null`.
+A date-shaped version (`2021.11.28`) beside plain ones is ranked after them, unless the registry's dates show the date tags are the newer scheme. An image that only publishes dates (Home Assistant) is ranked normally.
+
+`stable` is `true` for groups 1 and 2. `recommended` is the newest plain version, a dotted one (`4.140.0`) before a bare number (`39`, code-server's Fedora build). If there is none, it is `latest`, `stable`, `release` or `lts`, then Hub's most recently pushed tag unless it is a pre-release, and otherwise **`null`** (the form asks). `recommended` is always one of the returned `tags`, even when it ranks past `limit`. Docker Hub images and `lscr.io/linuxserver/*` are read from Hub's API, which gives `updated_at`. Other registries are read from `tags/list`, so `updated_at` is `null`.
 ```json
 { "image": "ghcr.io/usememos/memos", "recommended": "0.31.0",
   "tags": [ { "name": "0.31.0", "updated_at": null, "stable": true }, { "name": "0.31", "updated_at": null, "stable": true } ] }
@@ -6080,8 +6082,9 @@ The image is resolved for **this server's architecture**. A manifest list is nar
 ```
 - `exposed_ports`: TCP ports from `EXPOSE`. UDP is left out because nginx cannot proxy to it.
 - `suggested_port` and `port_confidence`:
-  - One declared port → that port, `declared`.
-  - Several → a web port is preferred (80, 8080, 3000, 5000, 8000, …), and 443/8443 are never chosen; still `declared`, with a warning naming them all.
+  - 443 and 8443 are never suggested: the panel proxies plain HTTP. An image that declares only those is treated as declaring none.
+  - One other declared port → that port, `declared`.
+  - Several → a web port is preferred (80, 8080, 3000, 5000, 8000, …); still `declared`, with a warning naming them all.
   - None declared → the `server.docker.images.known_ports` table gives a port marked `guessed`; otherwise `null` with `none`, and **the UI must ask**.
 - `env`: the image's `ENV` without build plumbing (`PATH`, `*_VERSION`, checksums …; see `server.docker.images.hidden_env`).
 - **`required` is never inferred.** Images cannot declare a mandatory setting, and an empty `ENV` is not one: changedetection.io ships `LOGGER_LEVEL=` and starts fine without it. `required: true` comes only from `server.docker.images.required_env`, for example `postgres` → `POSTGRES_PASSWORD`. Empty values produce a softer warning instead.
@@ -6121,21 +6124,23 @@ Errors:
 | Field | |
 |---|---|
 | `image` | Required. |
-| `container_port` | **Optional.** Empty → read from the image's `EXPOSE` (the `suggested_port` of `/docker/images/inspect`). An image that declares none, one that cannot be found, or a registry that cannot be reached is a `422` on `container_port` asking for it. There is no default of 80 any more (rows created before keep theirs). A port the image does not declare is accepted with a warning. |
+| `container_port` | **Optional.** Empty → read from the image's `EXPOSE` (the `suggested_port` of `/docker/images/inspect`). An image that declares none, one that cannot be found, or a registry that cannot be reached is a `422` on `container_port` asking for it. There is no default of 80 any more (rows created before keep theirs). A port the image does not declare is accepted with a warning. On `PUT …/container` leave it out to keep the current port; `null` there is a `422` (DS-09). |
 | `env` | Optional, max 100: `[{key, value}]`. `key` matches `^[A-Za-z_][A-Za-z0-9_]*$`, unique; `value` may be multi-line. Written to the site's env file (the one `GET/PUT …/environment` edits) when it is provisioned, quoted so Compose reads it back literally (`$`, `#` and quotes included). Kept encrypted until then and never returned. |
 | `volume_mounts` | Optional, max 20: `[{path, volume?}]`, the same shape as `PUT …/container`. A missing `volume` is named `<site slug>-<last path segment>`, with `-2`, `-3`… if taken. An existing volume name is mounted as is; a new one is created. **Absent** (and no `volume_new`) → the image's own `VOLUME`s are used; `[]` means none. `volume_new` + `volume_path` still work and come first. |
 
 `env` and `volume_mounts` are refused (`422`) alongside a pasted `compose`, which says its own.
+
+An image listed in `server.docker.images.required_env` (e.g. Umami → `DATABASE_URL`) is refused with a `422` on `env` when any of those keys is missing or empty: *"This image will not start without DATABASE_URL. …"* (DS-09). Checked from config, so it applies even when the registry cannot be read.
 
 Response `201`: `{ application, warnings: [] }`. `warnings` is always a list of sentences, e.g.
 `"The image listens on 5230, not 8082. The site will not answer unless the application really listens on 8082."`
 
 ### Readiness check, `container_status`, `last_failure`
 
-After `compose up`, a simple-mode or pasted-compose site (not the one-click apps, whose installers wait themselves) is checked for up to `DOCKER_READINESS_TIMEOUT` seconds (90): the container must be running and not restarting, then anything must answer HTTP on `127.0.0.1:<app_port>` — **any status counts**. The same check runs on `PUT …/container` and on Pull and redeploy, and a pass clears the previous failure.
+After `compose up`, a simple-mode or pasted-compose site (not the one-click apps, whose installers wait themselves) is checked until anything answers HTTP on `127.0.0.1:<app_port>` — **any status counts** — or until `DOCKER_READINESS_TIMEOUT` seconds (90) of wall-clock time have passed, capped at 150 so the synchronous `PUT …/container` and Pull stay inside the panel's 300 s request timeout (DS-09). A container that exits fails at once. One that keeps restarting with nothing answering fails after `DOCKER_READINESS_RESTART_GRACE` seconds (30) — except in a pasted compose file, whose services may restart while they wait for each other: there it fails only at the deadline. The same check runs on `PUT …/container` and on Pull and redeploy, and a pass clears the previous failure. `seconds` in a `container_not_answering` failure is the time actually waited. A pasted compose file has no single container port, so its message names none rather than the host port.
 
 On the application:
-- `container_status`: `running` | `restarting` | `exited` | `not_answering` | `null` (never checked).
+- `container_status`: `running` | `restarting` | `exited` | `not_answering` | `null` (never checked). A stored `running` is checked against Docker on every read (one `docker ps` per request): a container that has stopped since is reported as `exited`. Starting, stopping or restarting the containers without a new check resets `running` to `null` (DS-09).
 - `last_failure`: `null`, or
 ```json
 { "reason": "container_port_mismatch",

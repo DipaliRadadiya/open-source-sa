@@ -1941,8 +1941,14 @@ return [
         | first boot that runs migrations can take a minute, hence 90 s.
         */
         'readiness' => [
+            // A wall-clock deadline (DS-09), capped at
+            // ContainerReadinessCheck::MAX_TIMEOUT whatever is set here.
             'timeout' => (int) env('DOCKER_READINESS_TIMEOUT', 90),
             'interval' => (int) env('DOCKER_READINESS_INTERVAL', 3),
+            // How long a single-image site may keep restarting, with nothing
+            // answering, before the deploy stops early. A pasted compose file
+            // is never stopped early: its services wait on each other.
+            'restart_grace' => (int) env('DOCKER_READINESS_RESTART_GRACE', 30),
             // Log lines kept on the application beside a failure.
             'log_lines' => 50,
         ],

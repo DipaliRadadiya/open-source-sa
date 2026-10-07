@@ -41,7 +41,15 @@
         <env name="SERVER_APP_SETTLE_SECONDS" value="0"/>
         <env name="SV_AUTO_ISSUE_RETRY_SECONDS" value="0"/>
         <env name="PANEL_UPDATE_LAUNCH" value="false"/>
+        <!-- Creating a Docker site reads its image from the registry, which is
+             ON in production (DS-03). Off here so no create test reaches a real
+             registry; DockerCreateDefaultsTest turns it back on with the
+             inspector mocked. -->
         <env name="DOCKER_INSPECT_ON_CREATE" value="false"/>
+        <!-- The readiness check after `compose up` (DS-03). No sleep between
+             tries, and with no interval it counts tries instead of watching the
+             clock, so a failing check is three instant tries. Tests about the
+             deadline set an interval and fake Sleep (ContainerReadinessTest). -->
         <env name="DOCKER_READINESS_INTERVAL" value="0"/>
         <env name="DOCKER_READINESS_TIMEOUT" value="3"/>
         <!-- A version counts as installed only when its FPM binary is really

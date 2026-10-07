@@ -274,6 +274,8 @@ return [
         'container_exited' => 'Контейнер остановился сразу после запуска.',
         'container_port_mismatch' => 'На порту контейнера :port ничего не отвечает — образ слушает :image_ports. Укажите порт контейнера :image_ports и разверните снова.',
         'container_not_answering' => 'На порту контейнера :port ничего не ответило за :seconds секунд.',
+        // DS-09: a pasted compose file has no single container port to name.
+        'container_not_answering_no_port' => 'На порту этого сайта ничего не ответило за :seconds секунд.',
         'last_line' => 'Последняя строка журнала: :line',
     ],
 
@@ -285,6 +287,7 @@ return [
         'port_mismatch' => 'Образ слушает :image_ports, а не :port. Сайт не ответит, если приложение на самом деле не слушает :port.',
         'env_key_invalid' => 'Только буквы, цифры и подчёркивания, без цифры в начале.',
         'env_key_duplicate' => 'Переменная :key задана дважды.',
+        'env_required' => 'Этот образ не запускается без :keys. Укажите значение для каждой переменной перед созданием сайта.',
     ],
 
     'port_free' => 'Порт :port свободен.',

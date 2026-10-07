@@ -274,6 +274,8 @@ return [
         'container_exited' => 'Le conteneur s\'est arrêté juste après son démarrage.',
         'container_port_mismatch' => 'Rien ne répond sur le port du conteneur :port — l\'image écoute sur :image_ports. Réglez le port du conteneur sur :image_ports et redéployez.',
         'container_not_answering' => 'Rien n\'a répondu sur le port du conteneur :port en :seconds secondes.',
+        // DS-09: a pasted compose file has no single container port to name.
+        'container_not_answering_no_port' => 'Rien n\'a répondu sur le port de ce site en :seconds secondes.',
         'last_line' => 'Dernière ligne du journal : :line',
     ],
 
@@ -285,6 +287,7 @@ return [
         'port_mismatch' => 'L\'image écoute sur :image_ports, pas sur :port. Le site ne répondra que si l\'application écoute vraiment sur :port.',
         'env_key_invalid' => 'Lettres, chiffres et tirets bas uniquement, sans commencer par un chiffre.',
         'env_key_duplicate' => 'La variable :key est définie deux fois.',
+        'env_required' => 'Cette image ne démarre pas sans :keys. Renseignez une valeur pour chacune avant de créer le site.',
     ],
 
     'port_free' => 'Le port :port est libre.',

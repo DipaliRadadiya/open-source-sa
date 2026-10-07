@@ -278,6 +278,22 @@ it('prefers a web port among several and falls back to the lowest plain one', fu
         ->and($odd->json('suggested_port'))->toBe(7001);
 });
 
+it('never suggests a TLS port, even when it is the only one declared (DS-09)', function () {
+    // Proxied over plain HTTP, 443 answers 400 — which the readiness check
+    // counts as answering — and every visitor gets that 400.
+    imgRegistry([
+        'docker.io/acme/tlsonly:1' => imgConfig(['ExposedPorts' => ['443/tcp' => []]]),
+        'docker.io/acme/tlsboth:1' => imgConfig(['ExposedPorts' => ['443/tcp' => [], '8443/tcp' => []]]),
+    ]);
+
+    foreach (['acme/tlsonly:1', 'acme/tlsboth:1'] as $image) {
+        $response = $this->withHeaders(imgAs())->getJson('/api/docker/images/inspect?image='.$image)->assertOk();
+
+        expect($response->json('suggested_port'))->toBeNull()
+            ->and($response->json('port_confidence'))->toBe('none');
+    }
+});
+
 it('guesses from the known-ports table, and says so, when an image declares nothing', function () {
     config(['server.docker.images.known_ports' => ['acme/quiet' => 4321]]);
     imgRegistry([
@@ -630,6 +646,112 @@ it('recommends a dotted release over a bare number that only outranks it numeric
         ->assertOk()->assertJsonPath('recommended', '12');
 });
 
+/**
+ * GHCR repositories answering `tags/list` with these names, in the order the
+ * registry sorts them, and Hub repositories answering with these tag rows.
+ * One fake for both: Laravel keeps the first fake that matches, so a second
+ * call in the same test would never be reached.
+ *
+ * @param  array<string, list<string>>  $ghcr
+ * @param  array<string, list<array<string, string>>>  $hub
+ */
+function imgTagSources(array $ghcr, array $hub = []): void
+{
+    Http::fake(function (Request $r) use ($ghcr, $hub) {
+        foreach ($hub as $repository => $rows) {
+            if (str_contains($r->url(), 'hub.docker.com/v2/repositories/'.$repository.'/tags')) {
+                return Http::response(['results' => $rows]);
+            }
+        }
+
+        if (str_contains($r->url(), '/token')) {
+            return Http::response(['token' => 't']);
+        }
+
+        if (! $r->hasHeader('Authorization')) {
+            return Http::response('', 401, ['WWW-Authenticate' => 'Bearer realm="https://ghcr.io/token",service="ghcr.io"']);
+        }
+
+        foreach ($ghcr as $repository => $tags) {
+            if (str_contains($r->url(), '/v2/'.$repository.'/tags/list')) {
+                return Http::response(['name' => $repository, 'tags' => $tags]);
+            }
+        }
+
+        return Http::response('', 404);
+    });
+}
+
+it('does not recommend a leftover date tag over the current version (DS-09)', function () {
+    // tags/list carries no dates: a date-shaped tag beside real versions is
+    // a leftover, and numerically it beat them.
+    imgTagSources([
+        'acme/heimdall' => ['2.8.2', '2.8.3', '2021.11.28', 'latest'],
+        'home-assistant/home-assistant' => ['2026.10.1', '2026.9.4', 'beta', 'stable'],
+    ], [
+        'acme/calver' => [
+            ['name' => '2026.10.1', 'last_updated' => '2026-10-01T00:00:00Z', 'tag_status' => 'active'],
+            ['name' => '1.9.0', 'last_updated' => '2023-01-01T00:00:00Z', 'tag_status' => 'active'],
+        ],
+    ]);
+
+    $response = $this->withHeaders(imgAs())->getJson('/api/docker/images/tags?image=ghcr.io/acme/heimdall')->assertOk();
+
+    expect($response->json('recommended'))->toBe('2.8.3')
+        ->and(array_column($response->json('tags'), 'name'))->toBe(['2.8.3', '2.8.2', '2021.11.28', 'latest']);
+
+    // On Hub the dates say which scheme is current. Here the date tags are
+    // the newer ones — a project that moved to CalVer — so they win.
+    $this->withHeaders(imgAs())->getJson('/api/docker/images/tags?image=acme/calver')
+        ->assertOk()->assertJsonPath('recommended', '2026.10.1');
+
+    // And an image that only publishes dates is left alone.
+    $this->withHeaders(imgAs())->getJson('/api/docker/images/tags?image=ghcr.io/home-assistant/home-assistant')
+        ->assertOk()->assertJsonPath('recommended', '2026.10.1');
+});
+
+it('prefers a tag that says it is stable over the alphabetically first one, and otherwise asks (DS-09)', function () {
+    imgTagSources(['acme/branches' => ['alpha', 'main', 'stable'], 'acme/guess' => ['beta', 'prod']]);
+
+    $this->withHeaders(imgAs())->getJson('/api/docker/images/tags?image=ghcr.io/acme/branches')
+        ->assertOk()->assertJsonPath('recommended', 'stable');
+
+    // Nothing to go on, and tags/list is sorted by name: no guess.
+    $this->withHeaders(imgAs())->getJson('/api/docker/images/tags?image=ghcr.io/acme/guess')
+        ->assertOk()->assertJsonPath('recommended', null);
+});
+
+it('always lists the version it recommends (DS-09)', function () {
+    // Thirty bare-number aliases rank above the one dotted release, and the
+    // recommendation skips them — it was at ranked index 31 of a list of 20.
+    Http::fake(['hub.docker.com/v2/repositories/acme/aliases/tags*' => Http::response(['results' => array_map(
+        fn (string $name): array => ['name' => $name, 'last_updated' => '2026-10-02T00:00:00Z', 'tag_status' => 'active'],
+        [...array_map('strval', range(60, 30)), '4.104.1', 'latest'],
+    )])]);
+
+    $response = $this->withHeaders(imgAs())->getJson('/api/docker/images/tags?image=acme/aliases&limit=20')->assertOk();
+
+    expect($response->json('recommended'))->toBe('4.104.1')
+        ->and($response->json('tags'))->toHaveCount(20)
+        ->and(array_column($response->json('tags'), 'name'))->toContain('4.104.1');
+});
+
+it('reads only whole words as pre-release markers (DS-09)', function () {
+    Http::fake(['hub.docker.com/v2/repositories/acme/variants/tags*' => Http::response(['results' => array_map(
+        fn (string $name): array => ['name' => $name, 'last_updated' => '2026-10-02T00:00:00Z', 'tag_status' => 'active'],
+        ['3.2.1-nextcloud', '3.2.1-devuan', '3.2.1-rc1', '3.2.1-beta', '3.2.1-devel', '3.2.1'],
+    )])]);
+
+    $tags = collect($this->withHeaders(imgAs())->getJson('/api/docker/images/tags?image=acme/variants')->assertOk()->json('tags'))
+        ->pluck('stable', 'name');
+
+    expect($tags['3.2.1-nextcloud'])->toBeTrue()
+        ->and($tags['3.2.1-devuan'])->toBeTrue()
+        ->and($tags['3.2.1-rc1'])->toBeFalse()
+        ->and($tags['3.2.1-beta'])->toBeFalse()
+        ->and($tags['3.2.1-devel'])->toBeFalse();
+});
+
 it('lists GHCR tags from the registry, following pagination', function () {
     Http::fake(function (Request $r) {
         if (str_contains($r->url(), '/token')) {
@@ -726,6 +848,27 @@ it('puts the exact name typed first, and the project\'s own publisher above a bu
     expect(array_column($umami->json('results'), 'image'))->toBe(['umamisoftware/umami', 'pabloszx/umami', 'elestio/umami', 'umami/docker-caddy'])
         ->and($heimdall->json('results.0.image'))->toBe('linuxserver/heimdall');
 });
+
+it('never lets a matching publisher with almost no pulls outrank the image people use', function (string $query, array $results, string $first) {
+    // Hub's real answers on 2026-10-07 (DS-09). Ranked publisher-first, each
+    // of these preselected the near-empty repository, and the form deploys
+    // the preselected one in one click.
+    Http::fake(['hub.docker.com/v2/search/repositories/*' => Http::response(['results' => array_map(
+        fn (array $row): array => ['repo_name' => $row[0], 'pull_count' => $row[1], 'is_official' => false],
+        $results,
+    )])]);
+
+    $response = $this->withHeaders(imgAs())->getJson('/api/docker/images/search?q='.$query)->assertOk();
+
+    expect($response->json('results.0.image'))->toBe($first);
+})->with([
+    'kavita' => ['kavita', [['kavitaatdesign/kavita', 57], ['kizaing/kavita', 4817680], ['jvmilazz0/kavita', 11860769], ['linuxserver/kavita', 809855]], 'jvmilazz0/kavita'],
+    'shiori' => ['shiori', [['shioriapp/shiori', 483], ['shioriex/shiori', 140], ['nicholaswilde/shiori', 166639], ['radhifadlillah/shiori', 3639784]], 'radhifadlillah/shiori'],
+    'jupyter' => ['jupyter', [['jupyter/cdn.jupyter.org', 1345], ['jupyter/tensorflow-notebook', 75390823], ['jupyter/scipy-notebook', 93201063]], 'jupyter/scipy-notebook'],
+    // A registered look-alike well past the floor still needs a fifth of
+    // the real image's pulls to win.
+    'busy squatter' => ['memos', [['memosapp/memos', 1000000], ['neosmemo/memos', 11672941]], 'neosmemo/memos'],
+]);
 
 it('returns an empty list marked offline when Hub cannot be reached', function () {
     Http::fake(fn () => Http::failedConnection());

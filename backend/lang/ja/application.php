@@ -274,6 +274,8 @@ return [
         'container_exited' => 'コンテナが起動直後に停止しました。',
         'container_port_mismatch' => 'コンテナポート :port で何も応答しません — イメージは :image_ports で待ち受けています。コンテナポートを :image_ports にして再度デプロイしてください。',
         'container_not_answering' => 'コンテナポート :port で :seconds 秒以内に応答がありませんでした。',
+        // DS-09: a pasted compose file has no single container port to name.
+        'container_not_answering_no_port' => 'このサイトのポートで :seconds 秒以内に応答がありませんでした。',
         'last_line' => 'ログの最終行: :line',
     ],
 
@@ -285,6 +287,7 @@ return [
         'port_mismatch' => 'イメージは :port ではなく :image_ports で待ち受けています。アプリケーションが実際に :port で待ち受けない限り、サイトは応答しません。',
         'env_key_invalid' => '英字・数字・アンダースコアのみ使用でき、数字で始めることはできません。',
         'env_key_duplicate' => '変数 :key が2回設定されています。',
+        'env_required' => 'このイメージは :keys がないと起動しません。サイトを作成する前に、それぞれに値を入力してください。',
     ],
 
     'port_free' => 'ポート :port は空いています。',

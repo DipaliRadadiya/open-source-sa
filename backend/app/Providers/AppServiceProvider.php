@@ -7,6 +7,7 @@ use App\Contracts\PhpStack;
 use App\Models\User;
 use App\Services\Admin\ApiErrorLogWriter;
 use App\Services\Runtime\InstallTracker;
+use App\Services\Server\Applications\ContainerLiveness;
 use App\Services\Server\Applications\DeploymentRecorder;
 use App\Services\Server\Applications\ProvisionProgress;
 use App\Services\Server\Backups\Storage\GoogleHttpClient;
@@ -96,6 +97,10 @@ class AppServiceProvider extends ServiceProvider
         // on a box with no record yet the first read shells out to detect —
         // a fresh instance per consumer turns that into one detection each.
         $this->app->scoped(ServerCapabilities::class);
+
+        // One `docker ps` per request, however many container sites a list
+        // shows (DS-09).
+        $this->app->scoped(ContainerLiveness::class);
 
         // Asked once per type by the site-type catalog; one answer per request.
         $this->app->scoped(ServerDefaultPhp::class);

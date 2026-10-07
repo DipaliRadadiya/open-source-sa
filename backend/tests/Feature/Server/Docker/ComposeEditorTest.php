@@ -342,6 +342,54 @@ it('re-renders the vhost when the published port moved', function () {
     expect($wroteVhost)->toBeTrue()->and($reloaded)->toBeTrue();
 });
 
+it('rolls the file and the vhost back when the new vhost fails its test (DS-09)', function () {
+    // Written and reloaded with neither result read, a vhost that failed
+    // `nginx -t` left the old one proxying to the old port behind a save that
+    // said OK — the 502 the reconcile above exists to prevent.
+    $working = validCompose();
+    $this->application->forceFill(['compose' => $working])->save();
+
+    $ran = [];
+    Process::fake(function ($process) use (&$ran) {
+        $args = $process->command;
+        while (in_array($args[0] ?? '', ['sudo', '-n', 'env'], true) || str_contains($args[0] ?? '', '=')) {
+            array_shift($args);
+        }
+        $ran[] = ['args' => $args, 'input' => (string) $process->input];
+
+        if (($args[0] ?? '') === 'docker' && in_array('config', $args, true)) {
+            // The new file publishes 30500 until it has been put back.
+            $back = $this->application->fresh()->compose === validCompose();
+
+            return Process::result(output: resolvedCompose($back ? 20001 : 30500));
+        }
+        if (($args[0] ?? '') === 'docker' && in_array('ps', $args, true)) {
+            return Process::result(output: "abc123\n");
+        }
+        // The config test fails while the vhost proxies to the new port.
+        if (($args[0] ?? '') === 'nginx' && ($args[1] ?? '') === '-t' && $this->application->fresh()->app_port === 30500) {
+            return Process::result(errorOutput: 'nginx: [emerg] unexpected "}"', exitCode: 1);
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->withHeaders(composeHeaders())
+        ->putJson(composeUrl(), ['compose' => validCompose(30500)])
+        ->assertStatus(422)
+        ->assertJsonPath('step', 'test_config')
+        ->assertJsonPath('rolled_back', true);
+
+    $fresh = $this->application->fresh();
+    $vhosts = collect($ran)->filter(fn (array $run) => ($run['args'][0] ?? '') === 'tee' && str_contains($run['args'][1] ?? '', 'nginx'));
+
+    expect($fresh->compose)->toBe($working)
+        ->and($fresh->app_port)->toBe(20001)
+        // The last vhost written proxies to the port the site runs on again.
+        ->and($vhosts->last()['input'])->toContain('127.0.0.1:20001')
+        ->and($vhosts->last()['input'])->not->toContain('30500');
+});
+
 it('leaves the vhost alone when the port did not move', function () {
     // The inverse, and it matters: reloading nginx on every compose save is a
     // needless hiccup for every site on the box.

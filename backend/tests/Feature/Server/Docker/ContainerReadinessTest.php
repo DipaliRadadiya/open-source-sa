@@ -11,6 +11,7 @@ use App\Services\Server\Applications\ContainerSupervisor;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Sleep;
 
 /**
  * DS-03: after `compose up`, wait for the site to answer, and say why when it
@@ -162,14 +163,165 @@ it('names the port the image really listens on when nothing answers', function (
 
 it('says nothing answered in time when the port is the declared one', function () {
     $this->application->forceFill(['container_port' => 5230])->save();
+    config(['server.docker.readiness.timeout' => 12, 'server.docker.readiness.interval' => 3]);
+    $this->freezeTime();
+    Sleep::fake(syncWithCarbon: true);
     fakeReadinessBox(['curl' => '000', 'exposed' => '{"5230/tcp":{}}']);
 
+    // The seconds actually waited, not the configured number.
     expect(applyMemos()->reason)->toBe('container_not_answering')
-        ->and($this->application->fresh()->last_failure['params'])->toMatchArray(['port' => 5230, 'seconds' => 3]);
+        ->and($this->application->fresh()->last_failure['params'])->toMatchArray(['port' => 5230, 'seconds' => 12]);
+});
+
+it('waits against the clock, not a count of tries (DS-09)', function () {
+    // A port that accepts and then hangs: each probe burns curl's whole
+    // --max-time. Counted as 30 tries of 3 s, "90 seconds" waited ~258, past
+    // the panel's own 300 s FastCGI timeout on the synchronous PUT /container.
+    config(['server.docker.readiness.timeout' => 90, 'server.docker.readiness.interval' => 3]);
+    $this->freezeTime();
+    Sleep::fake(syncWithCarbon: true);
+    $started = now();
+    $maxTimes = [];
+
+    Process::fake(function ($process) use (&$maxTimes) {
+        $args = $process->command;
+
+        if (in_array('curl', $args, true)) {
+            $maxTime = (int) $args[array_search('--max-time', $args, true) + 1];
+            $maxTimes[] = $maxTime;
+            $this->travel($maxTime)->seconds();
+
+            return Process::result(output: '000');
+        }
+
+        if (in_array('--status', $args, true)) {
+            return Process::result(output: "abc123\n");
+        }
+
+        if (in_array('--format', $args, true) && in_array('json', $args, true)) {
+            return Process::result(output: json_encode(['Name' => 'sv-app-1-app-1', 'State' => 'running']));
+        }
+
+        return Process::result(output: in_array('inspect', $args, true) ? '0 '.now()->subMinutes(10)->toIso8601ZuluString() : '');
+    });
+
+    $e = applyMemos();
+    $waited = $started->diffInSeconds(now());
+
+    expect($e->reason)->toBe('container_not_answering')
+        // The last probe is cut to the time left.
+        ->and($waited)->toBeLessThanOrEqual(90)
+        ->and($waited)->toBeGreaterThanOrEqual(86)
+        ->and(max($maxTimes))->toBeLessThanOrEqual(5)
+        ->and($this->application->fresh()->last_failure['params']['seconds'])->toBe((int) round($waited));
+});
+
+it('caps a configured wait well under the request timeout (DS-09)', function () {
+    config(['server.docker.readiness.timeout' => 600, 'server.docker.readiness.interval' => 3]);
+    $this->freezeTime();
+    Sleep::fake(syncWithCarbon: true);
+    $started = now();
+    fakeReadinessBox(['curl' => '000']);
+
+    applyMemos();
+
+    expect($started->diffInSeconds(now()))->toBeLessThanOrEqual(ContainerReadinessCheck::MAX_TIMEOUT)
+        ->and(ContainerReadinessCheck::MAX_TIMEOUT)->toBeLessThan(300);
+});
+
+/**
+ * A supervisor whose containers report the given restart-loop samples in
+ * turn, the last one repeating. Everything else is the real check.
+ *
+ * @param  list<bool>  $looping
+ */
+function readinessContainers(array $looping): ContainerSupervisor
+{
+    $containers = Mockery::mock(ContainerSupervisor::class);
+    $containers->shouldReceive('crashLooping')->andReturnUsing(function () use (&$looping) {
+        return count($looping) > 1 ? array_shift($looping) : $looping[0];
+    });
+    $containers->shouldReceive('running')->andReturnTrue();
+    $containers->shouldReceive('logs')->andReturn("app-1  | Error: connect ECONNREFUSED 127.0.0.1:5432\n");
+
+    return $containers;
+}
+
+it('lets a stack whose app restarts while its database starts come up (DS-09)', function (bool $pasted) {
+    // The common shape of a pasted file — app + postgres, restart:
+    // unless-stopped. The app exits once on ECONNREFUSED, is restarted, and
+    // answers. One sighting of that restart used to fail the deploy.
+    if ($pasted) {
+        $this->application->forceFill(['compose' => "services:\n  app:\n    image: ghcr.io/umami-software/umami\n  db:\n    image: postgres:16\n", 'container_port' => null])->save();
+    }
+
+    config(['server.docker.readiness.timeout' => 90, 'server.docker.readiness.interval' => 3]);
+    $this->freezeTime();
+    Sleep::fake(syncWithCarbon: true);
+    fakeReadinessBox(['curl' => ['000', '000', '000', '200']]);
+
+    app(ContainerReadinessCheck::class)->verify($this->application->fresh(), '/home/memos/memos/public_html', readinessContainers([true, true, true, false]));
+
+    expect($this->application->fresh()->container_status)->toBe('running');
+})->with(['generated' => false, 'pasted' => true]);
+
+it('still stops a single image that keeps restarting, before the deadline (DS-09)', function () {
+    config(['server.docker.readiness.timeout' => 90, 'server.docker.readiness.interval' => 3, 'server.docker.readiness.restart_grace' => 30]);
+    $this->freezeTime();
+    Sleep::fake(syncWithCarbon: true);
+    $started = now();
+    fakeReadinessBox(['curl' => '000']);
+
+    try {
+        app(ContainerReadinessCheck::class)->verify($this->application->fresh(), '/home/memos/memos/public_html', readinessContainers([true]));
+        $this->fail('a container that never stops restarting must fail');
+    } catch (ProvisioningFailedException $e) {
+        expect($e->reason)->toBe('container_restarting')
+            ->and($started->diffInSeconds(now()))->toBeLessThan(40);
+    }
+});
+
+it('waits out the deadline on a pasted file, then names the restart (DS-09)', function () {
+    $this->application->forceFill(['compose' => "services:\n  app:\n    image: nginx\n", 'container_port' => null])->save();
+    config(['server.docker.readiness.timeout' => 90, 'server.docker.readiness.interval' => 3]);
+    $this->freezeTime();
+    Sleep::fake(syncWithCarbon: true);
+    $started = now();
+    fakeReadinessBox(['curl' => '000']);
+
+    try {
+        app(ContainerReadinessCheck::class)->verify($this->application->fresh(), '/home/memos/memos/public_html', readinessContainers([true]));
+        $this->fail('a stack that never comes up must fail');
+    } catch (ProvisioningFailedException $e) {
+        expect($e->reason)->toBe('container_restarting')
+            ->and($started->diffInSeconds(now()))->toBeGreaterThanOrEqual(85);
+    }
+});
+
+it('does not name the host port as the container port (DS-09)', function () {
+    // A pasted file has no single container port; app_port 3001 is the
+    // panel's loopback port on the host.
+    $this->application->forceFill(['compose' => "services:\n  app:\n    image: nginx\n", 'container_port' => null])->save();
+    fakeReadinessBox(['curl' => '000']);
+
+    try {
+        app(ContainerReadinessCheck::class)->verify($this->application->fresh(), '/home/memos/memos/public_html', readinessContainers([false]));
+    } catch (ProvisioningFailedException) {
+    }
+
+    $fresh = $this->application->fresh();
+    $request = Request::create('/');
+    $request->setUserResolver(fn () => User::factory()->admin()->create());
+    $message = ApplicationResource::make($fresh)->toArray($request)['last_failure']['message'];
+
+    expect($fresh->last_failure['params'])->not->toHaveKey('port')
+        ->and($message)->not->toContain('3001')
+        ->and($message)->toContain("Nothing answered on this site's port within");
 });
 
 it('stops at a restart loop with the container\'s last words', function () {
-    fakeReadinessBox(['state' => 'restarting', 'logs' => "app-1  | python: can't open file '/app/./changedetection.py'\n"]);
+    // Nothing answers on a container that keeps dying: curl prints 000.
+    fakeReadinessBox(['curl' => '000', 'state' => 'restarting', 'logs' => "app-1  | python: can't open file '/app/./changedetection.py'\n"]);
 
     $e = applyMemos();
 
@@ -181,7 +333,7 @@ it('stops at a restart loop with the container\'s last words', function () {
 });
 
 it('stops at a container that exited', function () {
-    fakeReadinessBox(['running' => false]);
+    fakeReadinessBox(['curl' => '000', 'running' => false]);
 
     $e = applyMemos();
 
@@ -229,4 +381,83 @@ it('hides the log from someone who may not read this site\'s logs', function () 
 it('strips the compose prefix from the last log line', function () {
     expect(ContainerReadinessCheck::lastLine("app-1  | one\napp-1  | two\n\n"))->toBe('two')
         ->and(ContainerReadinessCheck::lastLine(''))->toBe('');
+});
+
+/*
+ * DS-09: a stored `running` is not a running container.
+ */
+
+/** `docker ps` answering with these compose projects running; null makes it fail. */
+function fakeLiveProjects(?array $projects): ArrayObject
+{
+    $ran = new ArrayObject;
+
+    Process::fake(function ($process) use ($projects, $ran) {
+        $ran[] = $process->command;
+
+        if (in_array('ps', $process->command, true) && in_array('status=running', $process->command, true)) {
+            return $projects === null
+                ? Process::result(errorOutput: 'Cannot connect to the Docker daemon', exitCode: 1)
+                : Process::result(output: implode("\n", $projects)."\n");
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    return $ran;
+}
+
+function readinessResource(Application $application): array
+{
+    $request = Request::create('/');
+    $request->setUserResolver(fn () => User::factory()->admin()->create());
+
+    return ApplicationResource::make($application)->toArray($request);
+}
+
+it('does not show Running for a container that has stopped since the deploy', function () {
+    $this->application->forceFill(['container_status' => 'running'])->save();
+
+    fakeLiveProjects(['sv-app-999']);
+    expect(readinessResource($this->application->fresh())['container_status'])->toBe('exited');
+
+    app()->forgetScopedInstances();
+    fakeLiveProjects(['sv-app-'.$this->application->id]);
+    expect(readinessResource($this->application->fresh())['container_status'])->toBe('running');
+
+    // Docker could not be asked: that is not a stopped container.
+    app()->forgetScopedInstances();
+    fakeLiveProjects(null);
+    expect(readinessResource($this->application->fresh())['container_status'])->toBe('running');
+});
+
+it('asks Docker once per request, however many sites are listed', function () {
+    $this->application->forceFill(['container_status' => 'running'])->save();
+    $other = $this->application->replicate();
+    $other->forceFill(['name' => 'Memos 2', 'slug' => 'memos2', 'app_port' => 3002, 'domain' => 'memos2.test', 'container_status' => 'running'])->save();
+
+    $ran = fakeLiveProjects([]);
+
+    readinessResource($this->application->fresh());
+    readinessResource($other->fresh());
+
+    expect(collect($ran)->filter(fn ($args) => in_array('status=running', $args, true))->count())->toBe(1);
+});
+
+it('forgets a passed readiness check once the containers are stopped, started or restarted', function (string $action) {
+    $this->application->forceFill(['container_status' => 'running'])->save();
+    fakeReadinessBox();
+
+    app(ContainerSupervisor::class)->{$action}($this->application, '/home/memos/memos/public_html');
+
+    expect($this->application->fresh()->container_status)->toBeNull();
+})->with(['stop', 'start', 'restart']);
+
+it('keeps a stored failure when the containers are restarted', function () {
+    $this->application->forceFill(['container_status' => 'not_answering'])->save();
+    fakeReadinessBox();
+
+    app(ContainerSupervisor::class)->restart($this->application, '/home/memos/memos/public_html');
+
+    expect($this->application->fresh()->container_status)->toBe('not_answering');
 });
