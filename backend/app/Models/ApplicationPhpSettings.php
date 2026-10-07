@@ -63,6 +63,22 @@ class ApplicationPhpSettings extends Model
         .'socket_accept,socket_bind,socket_clear_error,socket_close,socket_connect,socket_listen,'
         .'socket_create_listen,socket_read,socket_create_pair';
 
+    /**
+     * The strict list for one site type: Nextcloud needs `posix_getuid` and
+     * `posix_getpwuid` (its cron and occ compare the running user with the
+     * data directory's owner), so — as v7 does — they are left out for it.
+     */
+    public static function strictDisabledFunctionsFor(string $siteType): string
+    {
+        $functions = explode(',', self::STRICT_DISABLED_FUNCTIONS);
+
+        if ($siteType === 'nextcloud') {
+            $functions = array_diff($functions, ['posix_getuid', 'posix_getpwuid']);
+        }
+
+        return implode(',', $functions);
+    }
+
     protected $table = 'application_php_settings';
 
     /**
@@ -99,19 +115,24 @@ class ApplicationPhpSettings extends Model
     public static function defaults(): array
     {
         return [
+            // v7's defaults (operator, 2026-10-07): v8 follows v7 so a site
+            // behaves the same on either, and a migrated one is not suddenly
+            // capped lower than it was.
             'memory_limit' => '256M',
-            'upload_max_filesize' => '64M',
-            'post_max_size' => '64M',
-            'max_execution_time' => 30,
+            'upload_max_filesize' => '128M',
+            'post_max_size' => '128M',
+            'max_execution_time' => 60,
             'max_input_time' => 60,
-            'max_input_vars' => 1000,
+            'max_input_vars' => 1600,
             'session_gc_maxlifetime' => 1440,
             'pm_type' => 'ondemand',
-            'pm_max_children' => 5,
+            'pm_max_children' => 20,
             // Without this a slow leak grows a worker until the kernel kills
             // something. With it, the leak is bounded to 500 requests.
             'pm_max_requests' => 500,
-            'open_basedir_enabled' => false,
+            // On by default, as v7 has it: the site's own folder, its sessions
+            // and /tmp ({@see PoolManager::openBasedir()}).
+            'open_basedir_enabled' => true,
             'open_basedir_paths' => null,
             'disable_functions' => null,
             'allow_url_fopen' => true,

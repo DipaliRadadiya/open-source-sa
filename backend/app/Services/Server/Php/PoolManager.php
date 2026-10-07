@@ -557,6 +557,19 @@ class PoolManager
         $live = $this->liveOpenBasedir($application);
 
         if ($live === null) {
+            // A pool that was already there and restricted nothing stays
+            // unrestricted, recorded as a choice. open_basedir is on by
+            // default now (as v7 has it), and switching it on while taking
+            // over a working site is a surprise that breaks it — the default
+            // is for sites this panel creates.
+            $existing = $this->livePoolPath($application);
+
+            if ($existing !== null && $this->read($existing) !== null) {
+                $settings->open_basedir_enabled = false;
+                $settings->application_id = $application->id;
+                $settings->save();
+            }
+
             return $none;
         }
 

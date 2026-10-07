@@ -368,7 +368,7 @@ class ApplicationProvisioner
                 // set by somebody who meant it. Treating that as unset would
                 // re-harden the one site whose owner had explicitly said no.
                 if ($settings->disable_functions === null) {
-                    $settings->disable_functions = ApplicationPhpSettings::STRICT_DISABLED_FUNCTIONS;
+                    $settings->disable_functions = ApplicationPhpSettings::strictDisabledFunctionsFor((string) $application->site_type);
                 }
 
                 $settings->save();

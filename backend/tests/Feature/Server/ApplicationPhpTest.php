@@ -519,7 +519,9 @@ describe('settings', function () {
             ->assertSuccessful();
 
         expect(PoolFake::$files[$path])
-            ->toBe(app(PoolManager::class)->render($this->application->load('systemUser'), $settings))
+            // Fresh: the pool was already there and restricted nothing, so the
+            // takeover recorded open_basedir as off for it.
+            ->toBe(app(PoolManager::class)->render($this->application->load('systemUser'), $settings->fresh()))
             ->not->toMatch('/^listen = \/tmp\/other\.sock/m');
 
         // The saved text is unchanged, so only the file can say it is done:
@@ -605,9 +607,9 @@ describe('memory budget', function () {
 
         $memory = $this->actingAs($this->admin)->getJson(phpUrl())->json('php.memory');
 
-        // 256M × 5 workers. The number every panel lets you set and none of
-        // them show you.
-        expect($memory['this_site'])->toBe(256 * 1024 * 1024 * 5)
+        // 256M × 20 workers (v7's defaults). The number every panel lets you
+        // set and none of them show you.
+        expect($memory['this_site'])->toBe(256 * 1024 * 1024 * 20)
             ->and($memory['total'])->toBeGreaterThan(0);
     });
 
@@ -1027,6 +1029,7 @@ describe('open_basedir', function () {
     it('is left out entirely when the setting is off', function () {
         fakePhpServer();
         $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+        $this->actingAs($this->admin)->putJson(phpUrl(), ['open_basedir_enabled' => false])->assertOk();
 
         // Absent, not empty: an empty value would forbid everything, where the
         // user asked for no restriction at all.
@@ -1149,6 +1152,7 @@ describe('open_basedir, as reported', function () {
     it('recommends the base paths when the setting is off', function () {
         fakePhpServer();
         $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+        $this->actingAs($this->admin)->putJson(phpUrl(), ['open_basedir_enabled' => false])->assertOk();
 
         $php = $this->actingAs($this->admin)->getJson(phpUrl())->json('php');
 

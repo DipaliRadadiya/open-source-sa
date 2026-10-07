@@ -75,14 +75,14 @@ it('carries the size the user actually set', function () {
 });
 
 it('falls back to the panel default for a site that set nothing', function () {
-    // 64 MiB — the same number `ApplicationPhpSettings::defaults()` writes into
+    // 128 MiB (v7's default) — the same number `ApplicationPhpSettings::defaults()` writes into
     // the pool, so the two layers agree without either being told about the
     // other.
     $rendered = renderedVhosts(bodyLimitSite());
 
-    expect($rendered['nginx'])->toContain('client_max_body_size 67108864;')
-        ->and($rendered['apache'])->toContain('LimitRequestBody 67108864')
-        ->and($rendered['openlitespeed'])->toContain('maxReqBodySize            67108864');
+    expect($rendered['nginx'])->toContain('client_max_body_size 134217728;')
+        ->and($rendered['apache'])->toContain('LimitRequestBody 134217728')
+        ->and($rendered['openlitespeed'])->toContain('maxReqBodySize            134217728');
 });
 
 it('is a real number even when PHP says unlimited', function () {

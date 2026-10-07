@@ -31,7 +31,7 @@ pm.start_servers = {{ $pmStartServers }}
 pm.min_spare_servers = {{ $pmMinSpare }}
 pm.max_spare_servers = {{ $pmMaxSpare }}
 @elseif ($pmType === 'ondemand')
-pm.process_idle_timeout = 10s
+pm.process_idle_timeout = 30s
 @endif
 ; Recycles a worker after this many requests, so a slow leak is bounded to one
 ; worker's lifetime instead of growing until the kernel kills something.
@@ -42,13 +42,17 @@ pm.max_requests = {{ $pmMaxRequests }}
 ; its own sessions, and every login on the site breaks with no obvious cause.
 php_admin_value[session.save_path] = {{ $sessionPath }}
 
-php_admin_value[memory_limit] = {{ $memoryLimit }}
-php_admin_value[upload_max_filesize] = {{ $uploadMaxFilesize }}
-php_admin_value[post_max_size] = {{ $postMaxSize }}
-php_admin_value[max_execution_time] = {{ $maxExecutionTime }}
-php_admin_value[max_input_time] = {{ $maxInputTime }}
-php_admin_value[max_input_vars] = {{ $maxInputVars }}
-php_admin_value[session.gc_maxlifetime] = {{ $sessionGcMaxlifetime }}
+; Limits a site may raise itself (ini_set, .user.ini), as v7 sets them:
+; `php_value`, not `php_admin_value`. WordPress raising its own memory limit
+; for an import is the everyday case. The security settings below stay
+; `php_admin_value`, which a script cannot change.
+php_value[memory_limit] = {{ $memoryLimit }}
+php_value[upload_max_filesize] = {{ $uploadMaxFilesize }}
+php_value[post_max_size] = {{ $postMaxSize }}
+php_value[max_execution_time] = {{ $maxExecutionTime }}
+php_value[max_input_time] = {{ $maxInputTime }}
+php_value[max_input_vars] = {{ $maxInputVars }}
+php_value[session.gc_maxlifetime] = {{ $sessionGcMaxlifetime }}
 @if ($phpTimezone)
 php_admin_value[date.timezone] = {{ $phpTimezone }}
 @endif
