@@ -371,6 +371,15 @@ class ApplicationProvisioner
                     $settings->disable_functions = ApplicationPhpSettings::strictDisabledFunctionsFor((string) $application->site_type);
                 }
 
+                // open_basedir on for a site the panel creates, as v7 does
+                // (operator, 2026-10-07). Here and not as a column default:
+                // the column says off for every existing row, and a clone
+                // arrives with its source's row already saved — `exists` is
+                // what tells the two apart.
+                if (! $settings->exists) {
+                    $settings->open_basedir_enabled = true;
+                }
+
                 $settings->save();
 
                 // The relation was loaded before the row existed; the pool

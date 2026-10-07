@@ -371,6 +371,22 @@ it('disables the strict function list on a new PHP site', function () {
         ->toBe(ApplicationPhpSettings::STRICT_DISABLED_FUNCTIONS);
 });
 
+it('turns open_basedir on for a new PHP site, as v7 does', function () {
+    // The column defaults to off, so the model's default alone never reached
+    // a real site — caught on a live server, not by a unit test.
+    expect(provisionApp()->phpSettings->open_basedir_enabled)->toBeTrue();
+});
+
+it('keeps the open_basedir a site already had (a clone, a re-provision)', function () {
+    $app = makeApp();
+    ApplicationPhpSettings::forceCreate(['application_id' => $app->id, 'open_basedir_enabled' => false]);
+
+    Process::fake();
+    (new ProvisionApplication($app->id))->handle(app(ApplicationProvisioner::class), app(ActivityLogger::class));
+
+    expect($app->fresh(['phpSettings'])->phpSettings->open_basedir_enabled)->toBeFalse();
+});
+
 it('disables it before the config that carries it is written', function () {
     // FPM renders these into the pool and OpenLiteSpeed into the site's ini.
     // Written after either, a new site would ship its first config without the
