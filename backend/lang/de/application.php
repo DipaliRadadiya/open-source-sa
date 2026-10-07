@@ -218,6 +218,7 @@ return [
         'write_config' => 'Website-Konfiguration wird geschrieben',
         'test_config' => 'Konfiguration wird geprüft',
         'reload' => 'Webserver wird neu geladen',
+        'write_env' => 'Umgebungsvariablen werden geschrieben',
         'start_app' => 'Anwendung wird gestartet',
         'write_unit' => 'Dienst wird vorbereitet',
         'restart_app' => 'Anwendung wird neu gestartet',
@@ -262,6 +263,28 @@ return [
         'script_git_auth' => 'Ihr Deploy-Skript führt einen Git-Befehl aus (meist git pull), der sich am Repository anmelden muss. Das Skript hat keine Zugangsdaten und scheitert daher bei einem privaten Repository. Sie brauchen ihn nicht: Das Panel lädt den neuesten Code mit dem verbundenen Konto herunter, bevor Ihr Skript läuft. Entfernen Sie diese Zeile aus dem Deploy-Skript und deployen Sie erneut.',
         'script_php_missing' => 'Ihr Deploy-Skript verwendet eine {PHPxx}-Variable für eine PHP-Version, die auf diesem Server nicht installiert ist. Installieren Sie diese Version auf der PHP-Seite oder verwenden Sie {php} für die eigene Version der Website, und deployen Sie erneut.',
         'composer_dependencies_missing' => 'Dieses Projekt benötigt Composer-Abhängigkeiten, es wurden aber keine installiert. Der Anwendung fehlt daher vendor/autoload.php und jede Anfrage schlägt fehl. Fügen Sie dem Deploy-Skript einen Schritt mit composer install hinzu und deployen Sie erneut.',
+        'container_exited' => 'Der Container wurde direkt nach dem Start beendet, daher kann die Website nichts ausliefern. Sein eigenes Log nennt den Grund.',
+        'container_port_mismatch' => 'Auf dem Container-Port, an den diese Website weiterleitet, antwortet nichts, und das Image lauscht auf einem anderen. Stelle den Container-Port auf den vom Image angegebenen und deploye erneut.',
+        'container_not_answering' => 'Der Container läuft, aber auf seinem Port hat nichts geantwortet. Prüfe sein Log und ob der Container-Port der ist, auf dem die Anwendung lauscht.',
+    ],
+
+    // DS-03: why a container site's last deploy failed, with its values.
+    'container_failure' => [
+        'container_restarting' => 'Der Container startet immer wieder neu.',
+        'container_exited' => 'Der Container wurde direkt nach dem Start beendet.',
+        'container_port_mismatch' => 'Auf Container-Port :port antwortet nichts — das Image lauscht auf :image_ports. Setze den Container-Port auf :image_ports und deploye erneut.',
+        'container_not_answering' => 'Auf Container-Port :port hat innerhalb von :seconds Sekunden nichts geantwortet.',
+        'last_line' => 'Letzte Logzeile: :line',
+    ],
+
+    // DS-03: creating a site from a Docker image.
+    'docker_create' => [
+        'port_required' => 'Dieses Image gibt nicht an, auf welchem Port es lauscht. Gib den Container-Port ein — den Port, auf dem die Anwendung im Container lauscht.',
+        'image_not_found' => 'Dieses Image wurde nicht gefunden, daher kann sein Port nicht gelesen werden. Prüfe Name und Tag oder gib den Container-Port selbst ein.',
+        'image_unreadable' => 'Die Registry war nicht erreichbar, um den Port dieses Images zu lesen. Gib den Container-Port selbst ein.',
+        'port_mismatch' => 'Das Image lauscht auf :image_ports, nicht auf :port. Die Website antwortet nur, wenn die Anwendung wirklich auf :port lauscht.',
+        'env_key_invalid' => 'Nur Buchstaben, Ziffern und Unterstriche, nicht mit einer Ziffer beginnend.',
+        'env_key_duplicate' => 'Die Variable :key ist doppelt gesetzt.',
     ],
 
     'port_free' => 'Port :port ist frei.',

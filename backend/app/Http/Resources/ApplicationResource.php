@@ -229,6 +229,17 @@ class ApplicationResource extends JsonResource
             // and never acknowledged still answers false, deliberately.
             'credentials_acknowledged' => $this->credentials_seen_at !== null,
 
+            // What the last deploy's readiness check saw (DS-03): `running`,
+            // `restarting`, `exited` or `not_answering`. Null when no check has
+            // run — every site deployed before it existed, and every one-click
+            // app, whose installer does its own waiting.
+            'container_status' => $this->container_status,
+            // Why the last deploy failed, in words, with the container's own last
+            // log lines. Cleared by the next deploy that answers. The log only
+            // for someone who may read this site's logs (`app_log`), the same
+            // bar as the Logs screen it is a copy of.
+            'last_failure' => $this->lastFailure($request),
+
             // Whether this application runs a process of its own, and what
             // systemd says about it *right now*. Null for PHP and static sites,
             // which have nothing to run — render no controls for those rather
@@ -375,6 +386,38 @@ class ApplicationResource extends JsonResource
 
             'created_at' => $this->created_at?->format('d-m-Y H:i:s'),
             'created_at_human' => $this->created_at?->diffForHumans(),
+        ];
+    }
+
+    /**
+     * `{reason, message, last_line, log, at}`, the message titled in the
+     * viewer's locale from the stored reason and its values.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function lastFailure(Request $request): ?array
+    {
+        $failure = $this->last_failure;
+
+        if (! is_array($failure) || ! isset($failure['reason'])) {
+            return null;
+        }
+
+        $params = (array) ($failure['params'] ?? []);
+        $lastLine = (string) ($params['last_line'] ?? '');
+        $message = __('application.container_failure.'.$failure['reason'], $params);
+        $readsLogs = $request->user()?->canView('app_log') ?? false;
+
+        if ($readsLogs && $lastLine !== '') {
+            $message .= ' '.__('application.container_failure.last_line', ['line' => $lastLine]);
+        }
+
+        return [
+            'reason' => (string) $failure['reason'],
+            'message' => $message,
+            'last_line' => $readsLogs ? $lastLine : null,
+            'log' => $readsLogs ? (string) ($failure['log'] ?? '') : null,
+            'at' => $failure['at'] ?? null,
         ];
     }
 }

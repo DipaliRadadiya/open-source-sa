@@ -502,6 +502,10 @@ class ApplicationProvisioner
             // with "make a new network" has nothing on the box yet at this point.
             app(DockerResources::class)->ensureFor($application);
 
+            // The env vars the site was created with, into the file compose
+            // reads, before the container first reads it (DS-03).
+            $this->writeContainerEnv($application);
+
             $this->containers->apply($application, $documentRoot);
             $this->progress->record('start_app');
 
@@ -561,6 +565,63 @@ class ApplicationProvisioner
             // not be Active for a moment while a stranger can still do that.
             $this->installers->afterStart($application, $documentRoot);
         }
+    }
+
+    /**
+     * Write a container site's create-time env vars to its env file, once.
+     *
+     * The same file the Environment screen edits, so what was typed on the
+     * create form is there to change afterwards. Removed from the encrypted
+     * column as soon as it is on disk: a Retry after a failed start must not
+     * overwrite whatever the user has since fixed on that screen.
+     *
+     * @throws ProvisioningFailedException
+     */
+    private function writeContainerEnv(Application $application): void
+    {
+        $secrets = (array) ($application->install_secrets ?? []);
+        $pairs = (array) ($secrets[Application::CONTAINER_ENV_SECRET] ?? []);
+
+        if ($pairs === []) {
+            return;
+        }
+
+        $lines = array_map(
+            fn ($pair): string => self::envLine((string) ($pair[0] ?? ''), (string) ($pair[1] ?? '')),
+            $pairs,
+        );
+
+        try {
+            app(ApplicationEnvironment::class)->write($application, implode("\n", $lines)."\n", keepPrevious: false);
+        } catch (\RuntimeException) {
+            // The value never reaches the log; the step name is the answer.
+            throw new ProvisioningFailedException('write_env', '');
+        }
+
+        unset($secrets[Application::CONTAINER_ENV_SECRET]);
+
+        $application->forceFill(['install_secrets' => $secrets === [] ? null : $secrets])->save();
+
+        $this->progress->record('write_env');
+    }
+
+    /**
+     * One `KEY=value` line Compose reads back as exactly the value typed.
+     *
+     * Compose interpolates `$` in env files and reads quotes and `#`, so a
+     * value is never written bare. Single quotes are literal; a value that
+     * holds one, or a line break, goes in double quotes with the escapes
+     * Compose's dotenv parser undoes (`\\`, `\"`, `\n`, `\$`).
+     */
+    public static function envLine(string $key, string $value): string
+    {
+        $value = str_replace("\r\n", "\n", $value);
+
+        if (! str_contains($value, "'") && ! str_contains($value, "\n")) {
+            return $key."='".$value."'";
+        }
+
+        return $key.'="'.strtr($value, ['\\' => '\\\\', '"' => '\\"', "\n" => '\\n', '$' => '\\$']).'"';
     }
 
     /**

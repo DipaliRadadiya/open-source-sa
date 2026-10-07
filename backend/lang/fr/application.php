@@ -218,6 +218,7 @@ return [
         'write_config' => 'Écriture de la configuration du site',
         'test_config' => 'Test de la configuration',
         'reload' => 'Rechargement du serveur web',
+        'write_env' => 'Écriture des variables d\'environnement',
         'start_app' => 'Démarrage de l\'application',
         'write_unit' => 'Préparation du service',
         'restart_app' => 'Redémarrage de l\'application',
@@ -262,6 +263,28 @@ return [
         'script_git_auth' => 'Votre script de déploiement exécute une commande git (généralement git pull) qui doit se connecter au dépôt, et le script n’a pas d’identifiants : elle échoue donc sur un dépôt privé. Elle est inutile : le panneau télécharge déjà le code le plus récent avec le compte connecté avant l’exécution de votre script. Supprimez cette ligne du script de déploiement et redéployez.',
         'script_php_missing' => 'Votre script de déploiement utilise une variable {PHPxx} pour une version de PHP qui n’est pas installée sur ce serveur. Installez cette version depuis l’écran PHP, ou utilisez {php} pour la version propre au site, puis redéployez.',
         'composer_dependencies_missing' => 'Ce projet nécessite des dépendances Composer et aucune n’a été installée : l’application n’a pas de vendor/autoload.php et toutes les requêtes échoueront. Ajoutez une étape composer install au script de déploiement, puis redéployez.',
+        'container_exited' => 'Le conteneur s\'est arrêté juste après son démarrage, le site ne peut donc pas répondre. Son propre journal dit pourquoi.',
+        'container_port_mismatch' => 'Rien ne répond sur le port du conteneur vers lequel ce site redirige, et l\'image écoute sur un autre. Réglez le port du conteneur sur celui que déclare l\'image et redéployez.',
+        'container_not_answering' => 'Le conteneur tourne mais rien n\'a répondu sur son port. Vérifiez son journal, et que le port du conteneur est bien celui sur lequel l\'application écoute.',
+    ],
+
+    // DS-03: why a container site's last deploy failed, with its values.
+    'container_failure' => [
+        'container_restarting' => 'Le conteneur redémarre sans cesse.',
+        'container_exited' => 'Le conteneur s\'est arrêté juste après son démarrage.',
+        'container_port_mismatch' => 'Rien ne répond sur le port du conteneur :port — l\'image écoute sur :image_ports. Réglez le port du conteneur sur :image_ports et redéployez.',
+        'container_not_answering' => 'Rien n\'a répondu sur le port du conteneur :port en :seconds secondes.',
+        'last_line' => 'Dernière ligne du journal : :line',
+    ],
+
+    // DS-03: creating a site from a Docker image.
+    'docker_create' => [
+        'port_required' => 'Cette image n\'indique pas sur quel port elle écoute. Saisissez le port du conteneur — le port sur lequel l\'application écoute dans le conteneur.',
+        'image_not_found' => 'Cette image est introuvable, son port ne peut donc pas être lu. Vérifiez le nom et le tag, ou saisissez vous-même le port du conteneur.',
+        'image_unreadable' => 'Le registre n\'a pas pu être joint pour lire le port de cette image. Saisissez vous-même le port du conteneur.',
+        'port_mismatch' => 'L\'image écoute sur :image_ports, pas sur :port. Le site ne répondra que si l\'application écoute vraiment sur :port.',
+        'env_key_invalid' => 'Lettres, chiffres et tirets bas uniquement, sans commencer par un chiffre.',
+        'env_key_duplicate' => 'La variable :key est définie deux fois.',
     ],
 
     'port_free' => 'Le port :port est libre.',

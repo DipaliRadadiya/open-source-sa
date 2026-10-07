@@ -218,6 +218,7 @@ return [
         'write_config' => 'Gravando a configuração do site',
         'test_config' => 'Testando a configuração',
         'reload' => 'Recarregando o servidor web',
+        'write_env' => 'A escrever as variáveis de ambiente',
         'start_app' => 'Iniciando a aplicação',
         'write_unit' => 'Preparando o serviço',
         'restart_app' => 'Reiniciando a aplicação',
@@ -262,6 +263,28 @@ return [
         'script_git_auth' => 'O seu script de deploy executa um comando git (normalmente git pull) que precisa de iniciar sessão no repositório, e o script não tem credenciais, por isso falha num repositório privado. Não precisa dele: o painel já descarrega o código mais recente com a conta ligada antes de o seu script ser executado. Remova essa linha do script de deploy e faça o deploy novamente.',
         'script_php_missing' => 'O seu script de deploy usa uma variável {PHPxx} de uma versão de PHP que não está instalada neste servidor. Instale essa versão na tela de PHP ou use {php} para a versão do próprio site e faça o deploy novamente.',
         'composer_dependencies_missing' => 'Este projeto precisa de dependências do Composer e nenhuma foi instalada, pelo que a aplicação não tem vendor/autoload.php e todos os pedidos irão falhar. Acrescente ao script de implantação um passo que execute composer install e implante novamente.',
+        'container_exited' => 'O contêiner parou logo após iniciar, então o site não pode responder. O próprio log dele diz o porquê.',
+        'container_port_mismatch' => 'Nada responde na porta do contêiner para a qual este site encaminha, e a imagem escuta em outra. Altere a porta do contêiner para a que a imagem declara e implante novamente.',
+        'container_not_answering' => 'O contêiner está rodando, mas nada respondeu na porta dele. Verifique o log e se a porta do contêiner é aquela em que a aplicação escuta.',
+    ],
+
+    // DS-03: why a container site's last deploy failed, with its values.
+    'container_failure' => [
+        'container_restarting' => 'O contêiner reinicia sem parar.',
+        'container_exited' => 'O contêiner parou logo após iniciar.',
+        'container_port_mismatch' => 'Nada responde na porta do contêiner :port — a imagem escuta em :image_ports. Defina a porta do contêiner como :image_ports e implante novamente.',
+        'container_not_answering' => 'Nada respondeu na porta do contêiner :port em :seconds segundos.',
+        'last_line' => 'Última linha do log: :line',
+    ],
+
+    // DS-03: creating a site from a Docker image.
+    'docker_create' => [
+        'port_required' => 'Esta imagem não informa em qual porta escuta. Informe a porta do contêiner — a porta em que a aplicação escuta dentro do contêiner.',
+        'image_not_found' => 'Esta imagem não foi encontrada, então a porta dela não pode ser lida. Verifique o nome e a tag, ou informe você mesmo a porta do contêiner.',
+        'image_unreadable' => 'Não foi possível acessar o registro para ler a porta desta imagem. Informe você mesmo a porta do contêiner.',
+        'port_mismatch' => 'A imagem escuta em :image_ports, não em :port. O site só responderá se a aplicação realmente escutar em :port.',
+        'env_key_invalid' => 'Use apenas letras, dígitos e sublinhados, sem começar com dígito.',
+        'env_key_duplicate' => 'A variável :key foi definida duas vezes.',
     ],
 
     'port_free' => 'A porta :port está livre.',

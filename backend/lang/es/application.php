@@ -218,6 +218,7 @@ return [
         'write_config' => 'Escribiendo la configuración del sitio',
         'test_config' => 'Probando la configuración',
         'reload' => 'Recargando el servidor web',
+        'write_env' => 'Escribiendo las variables de entorno',
         'start_app' => 'Iniciando la aplicación',
         'write_unit' => 'Preparando el servicio',
         'restart_app' => 'Reiniciando la aplicación',
@@ -262,6 +263,28 @@ return [
         'script_git_auth' => 'Tu script de despliegue ejecuta un comando de git (normalmente git pull) que necesita iniciar sesión en el repositorio, y el script no tiene credenciales, así que falla con un repositorio privado. No lo necesitas: el panel ya descarga el código más reciente con la cuenta conectada antes de que se ejecute tu script. Quita esa línea del script de despliegue y vuelve a desplegar.',
         'script_php_missing' => 'Tu script de despliegue usa una variable {PHPxx} de una versión de PHP que no está instalada en este servidor. Instala esa versión en la pantalla de PHP o usa {php} para la versión del propio sitio, y vuelve a desplegar.',
         'composer_dependencies_missing' => 'Este proyecto necesita dependencias de Composer y no se instaló ninguna, por lo que la aplicación no tiene vendor/autoload.php y todas las peticiones fallarán. Añada al script de despliegue un paso que ejecute composer install y vuelva a desplegar.',
+        'container_exited' => 'El contenedor se detuvo justo después de arrancar, así que el sitio no puede servir. Su propio registro dice por qué.',
+        'container_port_mismatch' => 'Nada responde en el puerto del contenedor al que este sitio redirige, y la imagen escucha en otro. Cambia el puerto del contenedor al que declara la imagen y despliega de nuevo.',
+        'container_not_answering' => 'El contenedor está en marcha pero nada respondió en su puerto. Revisa su registro y que el puerto del contenedor sea en el que escucha la aplicación.',
+    ],
+
+    // DS-03: why a container site's last deploy failed, with its values.
+    'container_failure' => [
+        'container_restarting' => 'El contenedor se reinicia una y otra vez.',
+        'container_exited' => 'El contenedor se detuvo justo después de arrancar.',
+        'container_port_mismatch' => 'Nada responde en el puerto del contenedor :port — la imagen escucha en :image_ports. Pon el puerto del contenedor en :image_ports y despliega de nuevo.',
+        'container_not_answering' => 'Nada respondió en el puerto del contenedor :port en :seconds segundos.',
+        'last_line' => 'Última línea del registro: :line',
+    ],
+
+    // DS-03: creating a site from a Docker image.
+    'docker_create' => [
+        'port_required' => 'Esta imagen no indica en qué puerto escucha. Introduce el puerto del contenedor: el puerto en el que escucha la aplicación dentro del contenedor.',
+        'image_not_found' => 'No se encontró esta imagen, así que no se puede leer su puerto. Revisa el nombre y la etiqueta, o introduce tú el puerto del contenedor.',
+        'image_unreadable' => 'No se pudo contactar con el registro para leer el puerto de esta imagen. Introduce tú el puerto del contenedor.',
+        'port_mismatch' => 'La imagen escucha en :image_ports, no en :port. El sitio no responderá a menos que la aplicación escuche realmente en :port.',
+        'env_key_invalid' => 'Usa solo letras, dígitos y guiones bajos, sin empezar por un dígito.',
+        'env_key_duplicate' => 'La variable :key está definida dos veces.',
     ],
 
     'port_free' => 'El puerto :port está libre.',

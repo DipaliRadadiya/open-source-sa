@@ -1899,6 +1899,25 @@ return [
                 'requarks/wiki' => 3000,
                 'n8nio/n8n' => 5678,
             ],
+
+            // Read the image while creating a site from it (DS-03): the port
+            // when none was typed, a warning when the typed one is not one the
+            // image declares, and its VOLUMEs as the default volumes. Off in
+            // the test suite, which must not reach Docker Hub.
+            'inspect_on_create' => (bool) env('DOCKER_INSPECT_ON_CREATE', true),
+        ],
+
+        /*
+        | After `compose up`, how long the panel waits for the site to answer
+        | (DS-03). The container has to be running — not restarting — and
+        | something has to answer HTTP on its loopback port, any status. A
+        | first boot that runs migrations can take a minute, hence 90 s.
+        */
+        'readiness' => [
+            'timeout' => (int) env('DOCKER_READINESS_TIMEOUT', 90),
+            'interval' => (int) env('DOCKER_READINESS_INTERVAL', 3),
+            // Log lines kept on the application beside a failure.
+            'log_lines' => 50,
         ],
     ],
 

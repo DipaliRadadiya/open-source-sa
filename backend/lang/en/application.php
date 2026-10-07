@@ -223,6 +223,7 @@ return [
         'write_config' => 'Writing the site config',
         'test_config' => 'Testing the config',
         'reload' => 'Reloading the web server',
+        'write_env' => 'Writing the environment variables',
         'start_app' => 'Starting the application',
         'write_unit' => 'Preparing the service',
         'restart_app' => 'Restarting the application',
@@ -272,6 +273,28 @@ return [
         'script_git_auth' => 'Your deploy script runs a git command (usually git pull) that needs to log in to the repository, and the script has no login, so it fails on a private repository. You do not need it: the panel already downloads the latest code with the connected account before your script runs. Remove that line from the deploy script and deploy again.',
         'script_php_missing' => 'Your deploy script uses a {PHPxx} variable for a PHP version that is not installed on this server. Install that version on the PHP screen, or use {php} for the site\'s own version, then deploy again.',
         'composer_dependencies_missing' => 'This project requires Composer dependencies and none were installed, so the application has no vendor/autoload.php and every request to it will fail. Add a build step that runs composer install to the deployment script, then deploy again.',
+        'container_exited' => 'The container stopped right after starting, so the site cannot serve. Its own log says why.',
+        'container_port_mismatch' => 'Nothing answers on the container port this site proxies to, and the image listens on a different one. Change the container port to the one the image declares and deploy again.',
+        'container_not_answering' => 'The container is running but nothing answered on its port. Check its log, and that the container port is the one the application listens on.',
+    ],
+
+    // DS-03: why a container site's last deploy failed, with its values.
+    'container_failure' => [
+        'container_restarting' => 'The container keeps restarting.',
+        'container_exited' => 'The container stopped right after starting.',
+        'container_port_mismatch' => 'Nothing answers on container port :port — the image listens on :image_ports. Set the container port to :image_ports and deploy again.',
+        'container_not_answering' => 'Nothing answered on container port :port within :seconds seconds.',
+        'last_line' => 'Last log line: :line',
+    ],
+
+    // DS-03: creating a site from a Docker image.
+    'docker_create' => [
+        'port_required' => 'This image does not say which port it listens on. Enter the container port — the port the application listens on inside the container.',
+        'image_not_found' => 'This image could not be found, so its port cannot be read. Check the name and tag, or enter the container port yourself.',
+        'image_unreadable' => 'The registry could not be reached to read this image\'s port. Enter the container port yourself.',
+        'port_mismatch' => 'The image listens on :image_ports, not :port. The site will not answer unless the application really listens on :port.',
+        'env_key_invalid' => 'Use letters, digits and underscores only, not starting with a digit.',
+        'env_key_duplicate' => 'The variable :key is set twice.',
     ],
 
     'port_free' => 'Port :port is free.',

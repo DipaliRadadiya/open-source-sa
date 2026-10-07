@@ -852,6 +852,10 @@ and fall back to `failed_step` + `reference` when it is `null`.
 | `script_php_missing` | The deploy script uses a `{PHPxx}` variable for a PHP version not installed on this server; nothing ran. Install it on the PHP screen or use `{php}`. |
 | `script_git_auth` | The deploy script ran a git command (usually `git pull`) that needed a login; the script has none, so it fails on a private repository. The panel already fetches the branch before the script runs — remove the line. Only on the `script` step (since 2026-10-01). |
 | `composer_dependencies_missing` | The project requires Composer packages and none were installed, so there is no `vendor/autoload.php` and every request to the site would fail. Raised at the new `dependencies` step, **before** the site is curled. |
+| `container_restarting` | A Docker site's container keeps restarting. See `last_failure` for its last log lines. |
+| `container_exited` | A Docker site's container stopped right after starting. |
+| `container_port_mismatch` | Nothing answered on the container port, and the image declares a different one (DS-03). `last_failure.message` names both. |
+| `container_not_answering` | The container is running but nothing answered on its port within the readiness timeout (90 s). |
 
 The last two come from the `verify_serving` step, which is the final step of
 provisioning for any application that runs a process of its own. **Being
@@ -6106,6 +6110,38 @@ Errors:
 - `422` on `image` when the registry host is loopback or link-local. The panel never connects there, and the token realm and every redirect are checked the same way.
 
 **Credentials:** `registry_id` is sent only to the registry it was saved for. A GHCR token is never sent to Quay, even when asked to. It goes to the registry's token endpoint as basic auth and never appears in a response.
+
+---
+
+## Docker — creating a site from an image (DS-03)
+
+`POST /applications` with `site_type: "docker"` (simple mode, no `compose`):
+
+| Field | |
+|---|---|
+| `image` | Required. |
+| `container_port` | **Optional.** Empty → read from the image's `EXPOSE` (the `suggested_port` of `/docker/images/inspect`). An image that declares none, one that cannot be found, or a registry that cannot be reached is a `422` on `container_port` asking for it. There is no default of 80 any more (rows created before keep theirs). A port the image does not declare is accepted with a warning. |
+| `env` | Optional, max 100: `[{key, value}]`. `key` matches `^[A-Za-z_][A-Za-z0-9_]*$`, unique; `value` may be multi-line. Written to the site's env file (the one `GET/PUT …/environment` edits) when it is provisioned, quoted so Compose reads it back literally (`$`, `#` and quotes included). Kept encrypted until then and never returned. |
+| `volume_mounts` | Optional, max 20: `[{path, volume?}]`, the same shape as `PUT …/container`. A missing `volume` is named `<site slug>-<last path segment>`, with `-2`, `-3`… if taken. An existing volume name is mounted as is; a new one is created. **Absent** (and no `volume_new`) → the image's own `VOLUME`s are used; `[]` means none. `volume_new` + `volume_path` still work and come first. |
+
+`env` and `volume_mounts` are refused (`422`) alongside a pasted `compose`, which says its own.
+
+Response `201`: `{ application, warnings: [] }`. `warnings` is always a list of sentences, e.g.
+`"The image listens on 5230, not 8082. The site will not answer unless the application really listens on 8082."`
+
+### Readiness check, `container_status`, `last_failure`
+
+After `compose up`, a simple-mode or pasted-compose site (not the one-click apps, whose installers wait themselves) is checked for up to `DOCKER_READINESS_TIMEOUT` seconds (90): the container must be running and not restarting, then anything must answer HTTP on `127.0.0.1:<app_port>` — **any status counts**. The same check runs on `PUT …/container` and on Pull and redeploy, and a pass clears the previous failure.
+
+On the application:
+- `container_status`: `running` | `restarting` | `exited` | `not_answering` | `null` (never checked).
+- `last_failure`: `null`, or
+```json
+{ "reason": "container_port_mismatch",
+  "message": "Nothing answers on container port 8082 — the image listens on 5230. Set the container port to 5230 and deploy again. Last log line: …",
+  "last_line": "…", "log": "<last 50 lines>", "at": "2026-10-07T18:40:00+00:00" }
+```
+`message` is in the viewer's locale. `log` and `last_line` (and the last line in `message`) only for users with `app_log` view; otherwise `null`. The failure is also on `failed_step` / `failed_reason` (see the table above).
 
 ---
 

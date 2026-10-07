@@ -98,10 +98,13 @@ class ApplicationController extends Controller
 
     public function store(StoreApplicationRequest $request, CreateApplication $action): JsonResponse
     {
-        $application = $action->execute($request->validated());
+        $application = $action->execute($request->creation());
 
         return response()->json([
             'application' => ApplicationResource::make($application)->resolve(),
+            // Created, but with something the user should know — a container
+            // port the image does not declare (DS-03). Always a list.
+            'warnings' => $request->warnings(),
         ], 201);
     }
 

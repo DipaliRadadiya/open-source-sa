@@ -430,7 +430,7 @@ it('persists the type fields that are columns', function () {
 
     // And it is CALLED, not merely written — the failure mode this whole file
     // exists to catch.
-    expect($create)->toContain('...$this->containerWiring($data)');
+    expect($create)->toContain('...$this->containerWiring($data, $slug, $takenVolumes)');
 
     foreach ($docker->fields() as $field) {
         $name = $field['name'];

@@ -41,6 +41,9 @@
         <env name="SERVER_APP_SETTLE_SECONDS" value="0"/>
         <env name="SV_AUTO_ISSUE_RETRY_SECONDS" value="0"/>
         <env name="PANEL_UPDATE_LAUNCH" value="false"/>
+        <env name="DOCKER_INSPECT_ON_CREATE" value="false"/>
+        <env name="DOCKER_READINESS_INTERVAL" value="0"/>
+        <env name="DOCKER_READINESS_TIMEOUT" value="3"/>
         <!-- A version counts as installed only when its FPM binary is really
              there, which is what stops a removed version lingering on the PHP
              screen. Every suite that fakes `php_dir` invents versions this

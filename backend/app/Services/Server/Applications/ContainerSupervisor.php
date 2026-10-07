@@ -31,6 +31,9 @@ class ContainerSupervisor
         private ManagedFile $files,
         private ComposeValidator $validator,
         private RegistryAuth $registryAuth,
+        // Optional so a supervisor built by hand still works; it then checks
+        // through its own ServerOps, never a second one from the container.
+        private ?ContainerReadinessCheck $readiness = null,
     ) {}
 
     /**
@@ -110,6 +113,16 @@ class ContainerSupervisor
             throw ProvisioningFailedException::fromResult('container_start', $result);
         }
 
+        // A site the user described — an image, or a pasted file — waits until
+        // it answers on its port (DS-03), and a failure is stored on the site
+        // with the reason and the container's log. One-click apps keep the
+        // checks below: their installers wait for first boot themselves.
+        if (! $this->panelRendered($application) && (int) $application->app_port > 0) {
+            $this->readiness()->verify($application, $documentRoot, $this);
+
+            return;
+        }
+
         // `up` succeeding is not the container running. Asked separately, and
         // this is the check the whole class exists for.
         if (! $this->running($application, $documentRoot)) {
@@ -127,6 +140,11 @@ class ContainerSupervisor
         if ($this->crashLooping($application, $documentRoot)) {
             throw new ProvisioningFailedException('container_restarting', $result->reference, 'container_restarting');
         }
+    }
+
+    private function readiness(): ContainerReadinessCheck
+    {
+        return $this->readiness ??= new ContainerReadinessCheck($this->serverOps);
     }
 
     /**
@@ -150,7 +168,7 @@ class ContainerSupervisor
      * failing a deploy because a status query did not parse would turn a working
      * site into a reported failure — the opposite of the mistake it exists to stop.
      */
-    private function crashLooping(Application $application, string $documentRoot): bool
+    public function crashLooping(Application $application, string $documentRoot): bool
     {
         $result = $this->compose($application, $documentRoot, ['ps', '--format', 'json'], 'compose_ps_state');
 
@@ -268,6 +286,14 @@ class ContainerSupervisor
                 throw ProvisioningFailedException::fromResult('container_start', $started);
             }
         });
+
+        // A redeploy is where a fixed port or env is proved, so it gets the
+        // same readiness check as the first deploy, and clears its failure.
+        if (! $this->panelRendered($application) && (int) $application->app_port > 0) {
+            $this->readiness()->verify($application, $documentRoot, $this);
+
+            return;
+        }
 
         // Asked after the credential window closes, because it needs no
         // credential and the window should be as short as the work requires.

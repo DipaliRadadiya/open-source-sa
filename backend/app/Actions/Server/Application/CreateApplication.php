@@ -16,6 +16,7 @@ use App\Services\ActivityLogger;
 use App\Services\Applications\ServingProfile;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Applications\PortAllocator;
+use App\Services\Server\Docker\DockerResources;
 use App\Services\Server\Php\ServerDefaultPhp;
 use App\Services\Server\Runtimes\NodeRuntime;
 use App\Services\Server\SystemUsers\SystemUsernameGenerator;
@@ -65,12 +66,15 @@ class CreateApplication
         // Before the transaction for the same reason: it asks fnm.
         $data['node_version'] = $this->nodeVersion($data, $type, $servingProfile);
 
+        // And this asks Docker — only when a volume needs a name made up.
+        $takenVolumes = $this->takenVolumeNames($data);
+
         try {
             // The application and its primary hostname are one record from the
             // caller's point of view. If the hostname loses a uniqueness race,
             // rolling both back avoids an invisible half-created application
             // that then blocks the same name on retry.
-            $application = DB::transaction(function () use ($data, $type, $servingProfile, $origin, $generatedUsername): Application {
+            $application = DB::transaction(function () use ($data, $type, $servingProfile, $origin, $generatedUsername, $takenVolumes): Application {
                 // In the transaction with the application, so a site and its
                 // owner are one fact rather than two. If anything below fails,
                 // the rollback takes the account row with it and there is no
@@ -86,11 +90,13 @@ class CreateApplication
                     ])->id;
                 }
 
+                // Derived here, not accepted from the client: it names the
+                // web-server config file, and a caller choosing that is a caller
+                // choosing which file the panel overwrites.
+                $slug = Application::uniqueSlug((string) $data['name']);
+
                 $application = Application::forceCreate([
-                    // Derived here, not accepted from the client: it names the
-                    // web-server config file, and a caller choosing that is a caller
-                    // choosing which file the panel overwrites.
-                    'slug' => Application::uniqueSlug((string) $data['name']),
+                    'slug' => $slug,
                     'site_type' => $type->name(),
                     // Derived, never taken from the client — from the rendering type
                     // the user chose, or the site type where there is none. See the
@@ -127,7 +133,7 @@ class CreateApplication
                     // fact, and the compose renderer would have to know about
                     // both. The objects themselves are created on the box at
                     // provision time; this records the intent.
-                    ...$this->containerWiring($data),
+                    ...$this->containerWiring($data, $slug, $takenVolumes),
                     // Where the container sees the site's directory. Stored
                     // rather than left null, because null is the `/app` every
                     // older site was given — and `/app` is where a quarter of
@@ -166,7 +172,7 @@ class CreateApplication
                     'repository' => $data['repository'] ?? null,
                     'repository_url' => $data['repository_url'] ?? null,
                     'branch' => $data['branch'] ?? null,
-                    ...$this->splitSecrets($this->typeSettings($type->fields(), $data)),
+                    ...$this->splitSecrets($this->typeSettings($type->fields(), $data), $this->containerEnv($data)),
                 ]);
 
                 // The domains table is the list the Domains screen reads, and until now
@@ -226,14 +232,65 @@ class CreateApplication
      * @param  array<string, mixed>  $settings
      * @return array{settings: array<string, mixed>, install_secrets: array<string, mixed>|null}
      */
-    private function splitSecrets(array $settings): array
+    private function splitSecrets(array $settings, array $containerEnv = []): array
     {
         $secrets = array_intersect_key($settings, array_flip(Application::INSTALL_SECRET_KEYS));
+        $settings = array_diff_key($settings, $secrets);
+
+        // A container's env vars travel the same way: encrypted, never
+        // serialised, and gone once provisioning has written them to the
+        // site's env file. See ApplicationProvisioner::writeContainerEnv().
+        if ($containerEnv !== []) {
+            $secrets[Application::CONTAINER_ENV_SECRET] = $containerEnv;
+        }
 
         return [
-            'settings' => array_diff_key($settings, $secrets),
+            'settings' => $settings,
             'install_secrets' => $secrets === [] ? null : $secrets,
         ];
+    }
+
+    /**
+     * The env vars a container site was created with, as `[key, value]` pairs.
+     *
+     * @param  array<string, mixed>  $data
+     * @return list<array{0: string, 1: string}>
+     */
+    private function containerEnv(array $data): array
+    {
+        $pairs = [];
+
+        $rows = (array) ($data['env'] ?? []);
+        ksort($rows);
+
+        foreach ($rows as $row) {
+            $key = (string) ($row['key'] ?? '');
+
+            if ($key !== '') {
+                $pairs[] = [$key, (string) ($row['value'] ?? '')];
+            }
+        }
+
+        return $pairs;
+    }
+
+    /**
+     * Docker volume names already on the box, when a mount needs a name made
+     * up — and only then, because asking is a shell-out.
+     *
+     * @param  array<string, mixed>  $data
+     * @return list<string>
+     */
+    private function takenVolumeNames(array $data): array
+    {
+        $unnamed = collect((array) ($data['volume_mounts'] ?? []))
+            ->contains(fn ($mount): bool => is_array($mount) && blank($mount['volume'] ?? null));
+
+        if (! $unnamed) {
+            return [];
+        }
+
+        return collect(app(DockerResources::class)->volumes())->pluck('name')->map(fn ($name): string => (string) $name)->all();
     }
 
     /**
@@ -276,7 +333,7 @@ class CreateApplication
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
-    private function containerWiring(array $data): array
+    private function containerWiring(array $data, string $slug, array $takenVolumes): array
     {
         $wiring = [];
 
@@ -288,14 +345,67 @@ class CreateApplication
             $wiring['docker_network'] = $network;
         }
 
+        $mounts = [];
         $volume = trim((string) ($data['volume_new'] ?? ''));
         $path = trim((string) ($data['volume_path'] ?? ''));
 
         if ($volume !== '' && $path !== '') {
-            $wiring['volume_mounts'] = [['volume' => $volume, 'path' => $path]];
+            $mounts[] = ['volume' => $volume, 'path' => $path];
+        }
+
+        // Any number more (DS-03), named or not. Every typed name is reserved
+        // before any is made up, so a made-up name never takes one the user
+        // typed further down the list. `sortKeys()`: validated() rebuilds the
+        // list rule by rule, so a row with a `volume` comes back ahead of rows
+        // without one.
+        $rows = collect((array) ($data['volume_mounts'] ?? []))
+            ->sortKeys()
+            ->filter(fn ($mount): bool => is_array($mount) && trim((string) ($mount['path'] ?? '')) !== '')
+            ->map(fn (array $mount): array => [
+                'volume' => trim((string) ($mount['volume'] ?? '')),
+                'path' => rtrim(trim((string) $mount['path']), '/'),
+            ])
+            ->values();
+
+        $taken = array_merge($takenVolumes, array_column($mounts, 'volume'), $rows->pluck('volume')->filter()->all());
+
+        foreach ($rows as $row) {
+            if ($row['volume'] === '') {
+                $row['volume'] = $this->volumeName($slug, $row['path'], $taken);
+                $taken[] = $row['volume'];
+            }
+
+            $mounts[] = $row;
+        }
+
+        if ($mounts !== []) {
+            $wiring['volume_mounts'] = $mounts;
         }
 
         return $wiring;
+    }
+
+    /**
+     * `<site>-<last path segment>`, made unique against what the box and this
+     * request already use: `memos-opt-memos` for /var/opt/memos would be
+     * clearer, but the spec asks for the short form and a suffix settles the
+     * rare clash (`jellyfin-config`, `jellyfin-config-2`).
+     *
+     * @param  list<string>  $taken
+     */
+    private function volumeName(string $slug, string $path, array $taken): string
+    {
+        $segment = (string) preg_replace('/[^a-zA-Z0-9_.-]+/', '-', basename($path));
+        $base = trim(substr(trim($slug.'-'.trim($segment, '-.'), '-'), 0, 120), '-.');
+        $base = DockerResources::validName($base) ? $base : 'site-'.substr(sha1($slug.$path), 0, 8);
+
+        $name = $base;
+
+        for ($suffix = 2; in_array($name, $taken, true); $suffix++) {
+            $name = $base.'-'.$suffix;
+        }
+
+        return $name;
     }
 
     private function typeColumns(array $fields, array $data): array

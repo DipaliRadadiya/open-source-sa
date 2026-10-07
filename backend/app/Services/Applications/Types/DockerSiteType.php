@@ -169,11 +169,14 @@ class DockerSiteType extends AbstractSiteType
             // Same, and for a second reason: with a compose file the panel
             // reads the published port out of the resolved document instead,
             // so asking would let the two disagree.
+            //
+            // Optional since DS-03, and no default: left empty it is read from
+            // the image's EXPOSE, and an image that declares none is refused
+            // with a question rather than given 80. The 80 that used to sit
+            // here is how Memos ended up proxied to a port nothing listened on.
             $this->field('container_port', 'number', extra: [
                 'depends_on' => 'docker_mode:simple',
-                'default' => 80,
                 'help' => __('application.help.container_port'),
-                'required_without' => 'compose',
             ]),
 
             // How big this container is allowed to be.
@@ -306,7 +309,25 @@ class DockerSiteType extends AbstractSiteType
             // enough to reject something real. What is refused is whitespace
             // and shell metacharacters, because the value reaches a command.
             'image' => ['required_without:compose', 'nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9][A-Za-z0-9._\/:@-]*$/'],
-            'container_port' => ['required_without:compose', 'nullable', 'integer', 'min:1', 'max:65535'],
+            // Not required: StoreApplicationRequest fills it from the image, and
+            // refuses only when the image does not say (DS-03).
+            'container_port' => ['nullable', 'integer', 'min:1', 'max:65535'],
+
+            // Environment variables for the container, written to the site's
+            // env file — the one the Environment screen edits — before the
+            // first start. Kept encrypted until then, never in `settings`.
+            // Values may be multi-line; keys are what a shell and Compose accept.
+            'env' => ['nullable', 'array', 'max:100'],
+            'env.*.key' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z_][A-Za-z0-9_]*$/'],
+            'env.*.value' => ['nullable', 'string', 'max:65535'],
+
+            // Any number of volumes at create, the shape the Container card
+            // edits. `volume` may be left out: the panel names it
+            // `<site>-<last path segment>`. An existing name is mounted as is.
+            // Absent altogether, the image's own VOLUMEs are used.
+            'volume_mounts' => ['nullable', 'array', 'max:20'],
+            'volume_mounts.*.volume' => ['nullable', 'string', 'max:128', 'regex:/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/'],
+            'volume_mounts.*.path' => ['required', 'string', 'max:255', 'regex:/^\//', 'not_regex:/(^|\/)\.\.(\/|$)/', new ContainerMountPath],
             // The same two rules the Container settings screen uses, because a
             // limit refused after the site exists and accepted while creating it
             // would be one form contradicting the other. `WithinHostCpus` matters

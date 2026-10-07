@@ -33,7 +33,7 @@ use Illuminate\Support\Str;
     // container; `app_port` is the loopback port on the host that nginx
     // proxies to, and conflating the two publishes a container on a port
     // another application already holds.
-    'image', 'registry_id', 'container_port', 'memory_limit', 'cpu_limit', 'compose', 'docker_network', 'volume_mounts', 'site_mount_path', 'docker_secrets', 'credentials_seen_at',
+    'image', 'registry_id', 'container_port', 'memory_limit', 'cpu_limit', 'compose', 'docker_network', 'volume_mounts', 'site_mount_path', 'docker_secrets', 'credentials_seen_at', 'container_status', 'last_failure',
     'build_command', 'deploy_script', 'start_command', 'package_manager', 'process_instances', 'supervisor_mode', 'pm2_process_name',
     'git_account_id', 'repository', 'repository_url', 'branch', 'settings', 'install_secrets',
     'steps', 'failed_step', 'failed_reason', 'provisioning_started_at', 'reference', 'last_commit', 'last_deployed_at', 'directory_size_bytes', 'volume_size_bytes', 'directory_size_updated_at',
@@ -59,6 +59,13 @@ class Application extends Model
      * here.
      */
     public const INSTALL_SECRET_KEYS = ['admin_password', 'mailer_password'];
+
+    /**
+     * Where a container site's create-time env vars wait, encrypted, until
+     * provisioning writes them to its env file (DS-03). Not an install secret
+     * of the form: never accepted from `settings`, never sent back.
+     */
+    public const CONTAINER_ENV_SECRET = 'container_env';
 
     /**
      * Settings the installer records about what it installed. Read-only to the
@@ -90,6 +97,7 @@ class Application extends Model
             'waf_mode' => WafMode::class,
             'waf_categories' => 'array',
             'volume_mounts' => 'array',
+            'last_failure' => 'array',
             // Live database credentials for a one-click container app. Encrypted
             // for the same reason `webhook_secret` is: it grants access.
             'docker_secrets' => 'encrypted:array',
