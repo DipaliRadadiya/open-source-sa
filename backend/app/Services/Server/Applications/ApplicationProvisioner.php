@@ -442,7 +442,33 @@ class ApplicationProvisioner
             // and a git application has no code at all until its first deploy —
             // `systemctl start` succeeds, the process dies immediately, and
             // provisioning fails on a site that is otherwise fine.
+            $allocatedPort = $application->app_port;
+
             $this->startProcess($application, $documentRoot);
+
+            // A pasted compose file publishes its own port, and starting it moves
+            // `app_port` there — after write_config proxied to the allocated one.
+            // Measured 2026-10-07: nginx on 3014, the container on 3992, the site
+            // `active` + `running` and a 502 for good when the domain was not
+            // pointed here yet (the certificate step, which would have rewritten
+            // the vhost, declined). Same reconcile as UpdateContainerCompose.
+            $port = $application->fresh()?->app_port;
+
+            if ($port !== $allocatedPort) {
+                $application->app_port = $port;
+
+                $this->step('write_config', fn () => $driver->apply($application, $documentRoot));
+
+                $test = $driver->test();
+
+                if ($test->failed()) {
+                    $driver->remove($application);
+
+                    throw new ProvisioningFailedException('test_config', $test->reference);
+                }
+
+                $this->step('reload', fn () => $driver->reload());
+            }
 
             // After everything that may write a `.env` — installers and the
             // first-start step alike. Several leave it 0644.
