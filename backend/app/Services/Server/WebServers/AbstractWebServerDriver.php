@@ -791,6 +791,17 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     }
 
     /**
+     * Exposed for the per-site fail2ban ban script, which reloads the web
+     * server itself and must test the config first, as every panel write does.
+     *
+     * @return array<int, string>
+     */
+    public function testCommandForHook(): array
+    {
+        return $this->testCommand();
+    }
+
+    /**
      * @return array<int, string>
      */
     abstract protected function testCommand(): array;

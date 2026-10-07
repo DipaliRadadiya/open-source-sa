@@ -19,6 +19,10 @@ server {
     listen [::]:80;
 
     server_name {{ implode(' ', $serverNames) }};
+    {{-- Addresses this site's fail2ban jail banned — for this site only, not
+         at the firewall (frontend QA FB-K). A glob, so a missing file is not
+         an error. --}}
+    include {{ $siteRules }}/panel-fail2ban[.]conf;
 
     {{-- Served from one shared directory rather than the site's own document
          root: node and proxy sites serve nothing from disk, so there would be
@@ -98,6 +102,10 @@ server {
 @endif
 
     server_name {{ implode(' ', $serverNames) }};
+    {{-- Addresses this site's fail2ban jail banned — for this site only, not
+         at the firewall (frontend QA FB-K). A glob, so a missing file is not
+         an error. --}}
+    include {{ $siteRules }}/panel-fail2ban[.]conf;
 @if ($waf)
     {{-- 8G Firewall: checked before the AI bot block and Basic Auth — a
          request that looks like an exploit attempt should get a flat 403

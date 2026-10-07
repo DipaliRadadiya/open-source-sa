@@ -124,9 +124,12 @@ websocket / {
      HTTPS-force, or an active bot policy. OLS routes redirect names here as
      aliases, so they must be sent on explicitly or they would serve the
      site under a second name. --}}
-@if (! $certificate || $redirects->isNotEmpty() || $forceHttps || $botBlock || $waf)
+{{-- Always present: the site's fail2ban jail bans an address for this site
+     by writing a rule into the file included first below (frontend QA FB-K),
+     and the jail can be switched on long after this file was written. --}}
 rewrite {
   enable                  1
+  include {{ $siteRules }}/panel-fail2ban*.conf
 @if (! $certificate)
   RewriteCond %{HTTPS} =on
   RewriteRule ^ - [F,L]
@@ -196,4 +199,3 @@ rewrite {
   RewriteRule ^/?(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 @endif
 }
-@endif

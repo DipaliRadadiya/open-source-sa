@@ -22,6 +22,10 @@
     ServerAlias {{ implode(' ', array_slice($serverNames, 1)) }}
 @endif
 
+    {{-- Addresses this site's fail2ban jail banned — for this site only, not
+         at the firewall (frontend QA FB-K). --}}
+    IncludeOptional {{ $siteRules }}/panel-fail2ban.conf
+
     ErrorLog  {{ $logDir }}/error.log
     CustomLog {{ $logDir }}/access.log combined
 

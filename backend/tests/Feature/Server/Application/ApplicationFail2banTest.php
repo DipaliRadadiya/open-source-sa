@@ -350,7 +350,9 @@ it('refuses a broken config because it tests the config it was given', function 
         ->toContain(['rm', '-rf', $stage]);
 
     // Nothing reached the live files, nothing was reloaded, nothing saved.
-    expect(collect(array_keys($writes))->filter(fn (string $p) => ! str_starts_with($p, $stage.'/')))->toBeEmpty()
+    // (The shared ban action and its script are the server's, not the
+    // site's, and are written before the test that needs them.)
+    expect(collect(array_keys($writes))->filter(fn (string $p) => ! str_starts_with($p, $stage.'/') && ! banTool($p)))->toBeEmpty()
         ->and($commands->contains(fn (array $c) => ($c[1] ?? '') === 'reload'))->toBeFalse()
         ->and($this->application->fresh()->fail2ban_jail_content)->toBeNull();
 });
@@ -657,7 +659,7 @@ it('writes a site called sshd under its own prefixed name, never over fail2ban\'
         ])
         ->assertOk();
 
-    $live = collect(array_keys($writes))->reject(fn (string $path) => str_contains($path, 'panel-f2b-test-'));
+    $live = collect(array_keys($writes))->reject(fn (string $path) => str_contains($path, 'panel-f2b-test-') || banTool($path));
 
     expect($live->values()->all())->toEqualCanonicalizing([
         $this->jailD.'/panel-site-sshd.conf',
@@ -931,3 +933,10 @@ it('moves a site still on the previous default to the failed-login rule on fail2
 
     expect($this->application->fresh()->fail2ban_filter_content)->toBe(app(ApplicationFail2banManager::class)->defaultFilterContent());
 });
+
+/** The shared ban action and the script it runs (FB-K). */
+function banTool(string $path): bool
+{
+    return $path === config('server.fail2ban_apps.ban_script')
+        || $path === rtrim((string) config('server.fail2ban_apps.action_d'), '/').'/panel-site-ban.conf';
+}

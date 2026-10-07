@@ -20,6 +20,10 @@
 @if (count($serverNames) > 1)
     ServerAlias {{ implode(' ', array_slice($serverNames, 1)) }}
 @endif
+
+    {{-- Addresses this site's fail2ban jail banned — for this site only, not
+         at the firewall (frontend QA FB-K). --}}
+    IncludeOptional {{ $siteRules }}/panel-fail2ban.conf
     DocumentRoot {{ $documentRoot }}
 @if ($disabled)
     {{-- Disabled: every path answers 503 with the unavailable page. It was a

@@ -2309,6 +2309,10 @@ return [
     */
     'fail2ban_apps' => [
         'jail_d' => env('SERVER_FAIL2BAN_JAIL_D', '/etc/fail2ban/jail.d'),
+        // A site jail bans for that site only, in its own web-server config:
+        // the action fail2ban calls, and the script it runs (FB-K).
+        'action_d' => env('SERVER_FAIL2BAN_ACTION_D', '/etc/fail2ban/action.d'),
+        'ban_script' => env('SERVER_FAIL2BAN_BAN_SCRIPT', '/usr/local/sbin/panel-site-ban'),
         'drop_in' => env('SERVER_FAIL2BAN_APPS_DROP_IN', 'panel-apps.local'),
         'filter_d' => env('SERVER_FAIL2BAN_FILTER_D', '/etc/fail2ban/filter.d'),
 

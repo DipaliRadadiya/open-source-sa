@@ -8,6 +8,7 @@ use App\Models\Application;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use App\Services\Server\WebServers\WebServerManager;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -133,7 +134,7 @@ class ApplicationFail2banManager
      *
      * @return array<string, string>
      */
-    public function renderConfigs(Application $application, string $jailContent, string $filterContent): array
+    public function renderConfigs(Application $application, string $jailContent, string $filterContent, bool $withBanAction = false): array
     {
         $slug = $this->slug($application);
         $logpath = $this->getLogPath($application);
@@ -147,9 +148,57 @@ class ApplicationFail2banManager
         ];
 
         return [
-            'jail' => strtr($jailContent, $replace),
+            // The ban itself is the panel's, never the jail author's: for this
+            // site only, in its own web-server config. The server's default
+            // action banned at the firewall on 80/443, which took the address
+            // off every site and off the panel (frontend QA FB-K). `action`
+            // is not an allowed jail key, so this is the only one.
+            'jail' => $withBanAction
+                ? rtrim(strtr($jailContent, $replace))."\n".'action   = '.self::BAN_ACTION.'[slug="'.basename($application->siteRulesPath()).'"]'."\n"
+                // What the form shows and saves: without the panel's own
+                // line, which the form may not set.
+                : strtr($jailContent, $replace),
             'filter' => strtr($filterContent, $replace),
         ];
+    }
+
+    /** The fail2ban action every site jail bans with. */
+    public const BAN_ACTION = 'panel-site-ban';
+
+    /**
+     * Write the ban action and the script it calls, when either differs from
+     * what the panel would write. Both are the server's, shared by every site
+     * jail, and rendered for the web server this server runs.
+     */
+    public function ensureBanTools(): void
+    {
+        $driver = $this->webServers->driver();
+        $script = (string) config('server.fail2ban_apps.ban_script', '/usr/local/sbin/panel-site-ban');
+        $context = ['feature' => 'application', 'op' => 'fail2ban_ban_tools'];
+
+        $files = [
+            $script => [View::make('server.fail2ban.site-ban-script', [
+                'webServer' => $driver->name(),
+                'self' => $script,
+                'rulesRootQuoted' => escapeshellarg(rtrim((string) config('server.site_rules_root'), '/')),
+                'test' => implode(' ', array_map('escapeshellarg', $driver->testCommandForHook())),
+                'reload' => implode(' ', array_map('escapeshellarg', $driver->reloadCommandForHook())),
+            ])->render(), '0755'],
+            rtrim((string) config('server.fail2ban_apps.action_d', '/etc/fail2ban/action.d'), '/').'/'.self::BAN_ACTION.'.conf' => [
+                View::make('server.fail2ban.site-ban-action', ['script' => $script])->render(), '0644',
+            ],
+        ];
+
+        foreach ($files as $path => [$contents, $mode]) {
+            $current = $this->serverOps->probe(['cat', $path], $context + ['path' => $path]);
+
+            if ($current->ok && $current->output() === $contents) {
+                continue;
+            }
+
+            $this->must($this->serverOps->run(['tee', $path], $context + ['path' => $path], input: $contents));
+            $this->must($this->serverOps->run(['chmod', $mode, $path], $context + ['path' => $path]));
+        }
     }
 
     /**
@@ -341,7 +390,10 @@ class ApplicationFail2banManager
      */
     public function testConfigs(Application $application, string $jailContent, string $filterContent): array
     {
-        $configs = $this->renderConfigs($application, $jailContent, $filterContent);
+        // The jail names the ban action, so the test needs it in the tree.
+        $this->ensureBanTools();
+
+        $configs = $this->renderConfigs($application, $jailContent, $filterContent, withBanAction: true);
         $root = $this->configRoot();
         $stage = sys_get_temp_dir().'/panel-f2b-test-'.Str::uuid();
         $context = ['feature' => 'application', 'application' => $application->id];
@@ -403,7 +455,9 @@ class ApplicationFail2banManager
             ])]);
         }
 
-        $configs = $this->renderConfigs($application, $jailContent, $filterContent);
+        $this->ensureBanTools();
+
+        $configs = $this->renderConfigs($application, $jailContent, $filterContent, withBanAction: true);
         $files = [
             $this->getJailPath($application) => $configs['jail'],
             $this->getFilterPath($application) => $configs['filter'],
