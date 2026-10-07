@@ -85,7 +85,7 @@ it('enables protection, hashes the password, and writes the credentials file', f
         ->and(ActivityLog::where('type', 'application')->where('action', 'basic_auth_enabled')->exists())->toBeTrue();
 
     Process::assertRan(fn ($p) => ($p->command[0] ?? '') === 'tee'
-        && str_ends_with($p->command[1] ?? '', '.panel/.htpasswd'));
+        && str_ends_with($p->command[1] ?? '', 'conf/nginx/.htpasswd'));
 
     Process::assertRan(fn ($p) => ($p->command[0] ?? '') === 'nginx' && ($p->command[1] ?? '') === '-t');
 });
@@ -119,7 +119,7 @@ it('disables protection and removes the credentials file', function () {
 
     Process::assertRan(fn ($p) => ($p->command[0] ?? '') === 'rm'
         && in_array('-f', $p->command, true)
-        && str_ends_with($p->command[array_key_last($p->command)] ?? '', '.panel/.htpasswd'));
+        && str_ends_with($p->command[array_key_last($p->command)] ?? '', 'conf/nginx/.htpasswd'));
 });
 
 it('requires username and password when enabling', function () {

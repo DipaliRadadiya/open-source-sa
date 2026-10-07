@@ -762,9 +762,16 @@ class Application extends Model
      * it read this, because they each built the string themselves and would
      * otherwise have to be changed in lockstep forever.
      */
+    /**
+     * Where v7 keeps it (v7 layout B4): `{site}/conf/{web server}/.htpasswd`,
+     * the folder named after the web server — nginx, apache, openlitespeed,
+     * which are exactly v8's driver names. A server moved from v7 already has
+     * its credential there; writing it anywhere else meant a second copy and
+     * a vhost pointing at one of them.
+     */
     public function basicAuthPath(): string
     {
-        return $this->panelPath().'/.htpasswd';
+        return $this->rootPath().'/conf/'.app(WebServerManager::class)->driver()->name().'/.htpasswd';
     }
 
     /**

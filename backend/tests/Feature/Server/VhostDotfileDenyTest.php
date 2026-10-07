@@ -145,7 +145,9 @@ it('keeps everything the panel writes outside the served directory', function ()
 
     expect($this->application->panelPath())->not->toStartWith($documentRoot)
         ->and($this->application->basicAuthPath())->not->toStartWith($documentRoot)
-        ->and($this->application->basicAuthPath())->toStartWith($this->application->panelPath())
+        // Where v7 keeps it (v7 layout B4): `conf/{web server}/`, a sibling of
+        // the served directory, not inside it.
+        ->and($this->application->basicAuthPath())->toStartWith($this->application->rootPath().'/conf/')
         // Still the site's own directory — above the webroot, not outside
         // the site.
         ->and($this->application->panelPath())->toStartWith($this->application->rootPath());

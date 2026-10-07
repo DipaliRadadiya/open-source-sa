@@ -588,7 +588,7 @@ describe('the driver', function () {
         expect($vhost)->not->toMatch('/^\s*userNameSeparator/mi')
             ->and($vhost)->toMatch('/^\s*realm\s+'.$realm.'$/m')
             ->and($vhost)->toMatch('/^\s*authName\s+Restricted$/m')
-            ->and($vhost)->toMatch('/^realm '.$realm.' \{\n  userDB \{\n    location\s+\/home\/shopuser\/shop\/\.panel\/\.htpasswd\n  \}\n\}/m');
+            ->and($vhost)->toMatch('/^realm '.$realm.' \{\n  userDB \{\n    location\s+\/home\/shopuser\/shop\/conf\/openlitespeed\/\.htpasswd\n  \}\n\}/m');
     })->with(['php', 'static', 'node']);
 
     it('writes nothing for a site whose name is one of the server\'s own vhosts', function () {
