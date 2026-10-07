@@ -44,7 +44,7 @@ function onStack(string $stack, string $webServer): void
 
 function policyFor(Application $site): string
 {
-    return (string) (test()->written['/etc/logrotate.d/sv-site-'.$site->id] ?? '');
+    return (string) (test()->written['/etc/logrotate.d/'.$site->slug.'-webserver-logs'] ?? '');
 }
 
 it('gives every site a policy for its logs, run as root', function () {
@@ -82,12 +82,16 @@ it('removes the old Node policy that failed the nightly run', function () {
     app(ApplicationLogDirectory::class)->ensure($this->site);
 
     $commands = collect($this->ran)->map(fn ($c) => implode(' ', $c))->values();
-    $written = $commands->search(fn ($c) => $c === 'tee /etc/logrotate.d/sv-site-'.$this->site->id);
-    $removed = $commands->search(fn ($c) => $c === 'rm -f /etc/logrotate.d/sv-app-'.$this->site->id);
+    $written = $commands->search(fn ($c) => $c === 'tee /etc/logrotate.d/shop-webserver-logs');
 
-    expect($written)->not->toBeFalse()
-        ->and($removed)->not->toBeFalse()
-        ->and($removed)->toBeGreaterThan($written);
+    expect($written)->not->toBeFalse();
+
+    // Both names this policy had before go, after the current one is in place.
+    foreach (['sv-app-', 'sv-site-'] as $old) {
+        $removed = $commands->search(fn ($c) => $c === 'rm -f /etc/logrotate.d/'.$old.$this->site->id);
+
+        expect($removed)->not->toBeFalse()->and($removed)->toBeGreaterThan($written);
+    }
 });
 
 it('keeps the old policy when the new one could not be written', function () {
@@ -98,7 +102,9 @@ it('keeps the old policy when the new one could not be written', function () {
 
     app(ApplicationLogRotation::class)->write($this->site);
 
-    Process::assertNotRan(fn ($process) => in_array('/etc/logrotate.d/sv-app-'.$this->site->id, $process->command, true));
+    foreach (['sv-app-', 'sv-site-'] as $old) {
+        Process::assertNotRan(fn ($process) => in_array('/etc/logrotate.d/'.$old.$this->site->id, $process->command, true));
+    }
 });
 
 it('removes the policy with the site', function () {
@@ -108,6 +114,21 @@ it('removes the policy with the site', function () {
 
     $commands = collect($this->ran)->map(fn ($c) => implode(' ', $c));
 
-    expect($commands)->toContain('rm -f /etc/logrotate.d/sv-site-'.$this->site->id)
+    expect($commands)->toContain('rm -f /etc/logrotate.d/shop-webserver-logs')
+        ->toContain('rm -f /etc/logrotate.d/sv-site-'.$this->site->id)
         ->toContain('rm -f /etc/logrotate.d/sv-app-'.$this->site->id);
+});
+
+it('writes over the policy v7 left for the site, under the same name', function () {
+    // v7 names it `{site}-webserver-logs` and globs `logs/*.log`. Two policies
+    // naming one log fail logrotate's whole nightly run, so v8 uses v7's name
+    // and the file is replaced, never joined by a second one.
+    onStack('lemp', 'nginx');
+
+    app(ApplicationLogRotation::class)->write($this->site);
+
+    $tees = collect($this->ran)->filter(fn ($c) => ($c[0] ?? '') === 'tee' && str_starts_with((string) end($c), '/etc/logrotate.d/'))
+        ->map(fn ($c) => end($c))->values()->all();
+
+    expect($tees)->toBe(['/etc/logrotate.d/shop-webserver-logs']);
 });

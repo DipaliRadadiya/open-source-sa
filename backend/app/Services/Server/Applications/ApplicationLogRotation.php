@@ -46,20 +46,31 @@ class ApplicationLogRotation
         private WebServerManager $webServers,
     ) {}
 
+    /**
+     * v7's own name for this file (`{name}-webserver-logs`), so a server that
+     * comes from v7 has its policy replaced in place rather than joined by a
+     * second one over the same logs — two policies naming one file fail the
+     * whole nightly run (v7 file layout, step B2).
+     */
     public function path(Application $application): string
     {
-        return '/etc/logrotate.d/sv-site-'.$application->id;
+        return '/etc/logrotate.d/'.$application->slug.'-webserver-logs';
     }
 
     /**
-     * The policy `ProcessSupervisor` used to write for Node sites — the one
-     * that failed the nightly run. Removed wherever the new one is written:
-     * left in place it would still fail, and it names `app.log` a second
-     * time, which logrotate rejects on its own.
+     * Names this policy had before, removed wherever the current one is
+     * written: `sv-app-{id}` (Node sites only, ran as the site user and failed
+     * the nightly run) and `sv-site-{id}` (LOG-01, 2026-10-06). Either one
+     * left beside the current file names the same logs a second time.
+     *
+     * @return list<string>
      */
-    public function legacyPath(Application $application): string
+    public function legacyPaths(Application $application): array
     {
-        return '/etc/logrotate.d/sv-app-'.$application->id;
+        return [
+            '/etc/logrotate.d/sv-app-'.$application->id,
+            '/etc/logrotate.d/sv-site-'.$application->id,
+        ];
     }
 
     /**
@@ -74,7 +85,9 @@ class ApplicationLogRotation
         $written = $this->files->put($this->path($application), $this->render($application), $context);
 
         if ($written->ok) {
-            $this->files->delete($this->legacyPath($application), $context);
+            foreach ($this->legacyPaths($application) as $legacy) {
+                $this->files->delete($legacy, $context);
+            }
         }
     }
 
@@ -82,8 +95,9 @@ class ApplicationLogRotation
     {
         $context = ['feature' => 'application', 'op' => 'log_rotation_remove', 'application' => $application->id];
 
-        $this->files->delete($this->path($application), $context);
-        $this->files->delete($this->legacyPath($application), $context);
+        foreach ([$this->path($application), ...$this->legacyPaths($application)] as $path) {
+            $this->files->delete($path, $context);
+        }
     }
 
     public function render(Application $application): string
