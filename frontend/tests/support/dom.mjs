@@ -25,6 +25,10 @@ export function installDom() {
     });
   }
   Object.defineProperty(globalThis, "navigator", { configurable: true, value: window.navigator });
+  // Node ships its own Event/CustomEvent; jsdom's dispatchEvent refuses those (Radix FocusScope).
+  for (const key of ["Event", "CustomEvent"]) {
+    Object.defineProperty(globalThis, key, { configurable: true, writable: true, value: window[key] });
+  }
   // Radix measures and captures pointers; jsdom implements neither.
   globalThis.ResizeObserver = class {
     observe() {}
@@ -46,7 +50,7 @@ export function installDom() {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 }
 
-/** Bundles `entry` (relative to the frontend root); `stubs` maps an import to a file. */
+/** Bundles `entry` (relative to the frontend root); `stubs` maps an import (`@/…` or bare) to a file. */
 export async function loadComponent(entry, stubs = {}) {
   const outfile = join(ROOT, "node_modules/.cache/component-tests", `${entry.replace(/[^\w]+/g, "_")}.mjs`);
   mkdirSync(dirname(outfile), { recursive: true });
@@ -63,6 +67,12 @@ export async function loadComponent(entry, stubs = {}) {
       {
         name: "app-paths",
         setup(builder) {
+          // Bare specifiers (e.g. `next/navigation`) can be stubbed too, by exact name.
+          for (const [specifier, file] of Object.entries(stubs)) {
+            if (specifier.startsWith("@/")) continue;
+            const exact = new RegExp(`^${specifier.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")}$`);
+            builder.onResolve({ filter: exact }, () => ({ path: join(ROOT, file) }));
+          }
           builder.onResolve({ filter: /^@\// }, (args) => {
             if (stubs[args.path]) return { path: join(ROOT, stubs[args.path]) };
             return builder.resolve(`./${args.path.slice(2)}`, { resolveDir: ROOT, kind: args.kind });

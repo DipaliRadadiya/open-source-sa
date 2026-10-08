@@ -230,10 +230,12 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
           form.setValue("docker_volumes", volumeRowsFrom(result), { shouldDirty: true });
           const rows = envRowsFrom(result);
           form.setValue("docker_env", rows, { shouldDirty: true });
+          // Dirty like `docker_env`: a reset that keeps dirty values must keep the
+          // required keys with their rows, or the required-env gate opens.
           form.setValue(
             "docker_required_env",
             rows.filter((row) => row.required).map((row) => row.key),
-            { shouldDirty: false },
+            { shouldDirty: true },
           );
         })
         .catch((error) => {
@@ -244,7 +246,7 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
           form.setValue("container_port", "", { shouldDirty: true });
           form.setValue("docker_volumes", [], { shouldDirty: true });
           form.setValue("docker_env", [], { shouldDirty: true });
-          form.setValue("docker_required_env", [], { shouldDirty: false });
+          form.setValue("docker_required_env", [], { shouldDirty: true });
         });
     }, 0);
     return () => {
@@ -270,7 +272,7 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
     form.setValue("container_port", "", { shouldDirty: true });
     form.setValue("docker_volumes", [], { shouldDirty: true });
     form.setValue("docker_env", [], { shouldDirty: true });
-    form.setValue("docker_required_env", [], { shouldDirty: false });
+    form.setValue("docker_required_env", [], { shouldDirty: true });
     form.clearErrors(["docker_env", "docker_env_list", "docker_volumes", "docker_volumes_list"]);
     requestAnimationFrame(() => inputRef.current?.focus());
   }

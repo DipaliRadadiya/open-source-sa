@@ -13,7 +13,7 @@ import { installDom, loadComponent } from "./support/dom.mjs";
 
 installDom();
 const { createElement } = await import("react");
-const { act, cleanup, fireEvent, render, screen, waitFor } = await import("@testing-library/react");
+const { act, cleanup, fireEvent, render, screen, waitFor, within } = await import("@testing-library/react");
 const { dockerCreateFields, dockerEnvProblem } = await import("../lib/docker/create-request.js");
 
 const messages = JSON.parse(readFileSync("messages/en.json", "utf8"));
@@ -165,4 +165,61 @@ test("the settings list stops at the API's 100 rows", async () => {
   act(() => form().setValue("docker_env", rows));
   await waitFor(() => assert.equal(Boolean(screen.queryByRole("button", { name: "Add variable" })), false));
   assert.ok(screen.getByText("You can add up to 100 variables."));
+});
+
+test("a declared port is shown as a fact; Change opens an input and Use puts it back", async () => {
+  stubApi({ inspect: UMAMI });
+  const form = await renderPicker({ name: "umami", image: "ghcr.io/umami-software/umami:1.0" });
+  await screen.findByText("detected from the image");
+  const portField = within(document.querySelector('[data-field-name="container_port"]'));
+  const change = portField.getByRole("button", { name: "Change" });
+  assert.equal(screen.queryAllByRole("spinbutton").length, 0);
+  assert.equal(form().getValues("container_port"), "3000");
+
+  fireEvent.click(change);
+  const input = screen.getByRole("spinbutton", { name: /Port/ });
+  assert.equal(input.value, "3000");
+  fireEvent.change(input, { target: { value: "8082" } });
+  assert.equal(form().getValues("container_port"), "8082");
+
+  fireEvent.click(screen.getByRole("button", { name: "Use 3000" }));
+  assert.equal(form().getValues("container_port"), "3000");
+  assert.equal(screen.queryAllByRole("spinbutton").length, 0);
+});
+
+test("an image that declares no port asks for one, with no Change link", async () => {
+  stubApi({ inspect: { found: true, suggested_port: null, port_confidence: "none" } });
+  const form = await renderPicker({ image: "example/app:1.0" });
+  const input = await screen.findByRole("spinbutton", { name: /Port/ });
+  assert.equal(input.value, "");
+  const portField = within(document.querySelector('[data-field-name="container_port"]'));
+  assert.equal(Boolean(portField.queryByRole("button", { name: "Change" })), false);
+  assert.equal(form().getValues("docker_image_state"), "ok");
+});
+
+test("a failed inspect is 'we could not ask', never 'the image declares nothing'", async () => {
+  stubApi({ inspect: UMAMI });
+  globalThis.__dockerApi.inspect = async () => {
+    throw Object.assign(new Error("Network Error"), { code: "ERR_NETWORK" });
+  };
+  const form = await renderPicker({ image: "example/app:1.0", container_port: "80" });
+  assert.ok(await screen.findByText(messages.applications.dockerImage.inspectUnavailableTitle));
+  const input = screen.getByRole("spinbutton", { name: /Port/ });
+  assert.equal(input.value, "");
+  assert.equal(form().getValues("docker_image_state"), "unknown");
+  assert.deepEqual(form().getValues("docker_required_env"), []);
+});
+
+test("a reset that keeps dirty values keeps the required keys with their rows", async () => {
+  stubApi({ inspect: UMAMI });
+  const form = await renderPicker({ name: "umami", image: "ghcr.io/umami-software/umami:1.0" });
+  await screen.findByRole("textbox", { name: "Value for DATABASE_URL" });
+  act(() =>
+    form().reset(
+      { name: "umami", docker_env: [], docker_volumes: [], docker_required_env: [] },
+      { keepDirtyValues: true },
+    ),
+  );
+  assert.deepEqual(form().getValues("docker_required_env"), ["DATABASE_URL"]);
+  assert.equal(dockerEnvProblem(form().getValues("docker_env"), form().getValues("docker_required_env")), true);
 });

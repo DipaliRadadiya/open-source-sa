@@ -54,26 +54,8 @@ test("only ticked folders become mounts; blank env rows are dropped", () => {
   assert.deepEqual(env, [{ key: "TZ", value: "UTC" }]);
 });
 
-test("the detected port is text with a Change link, not an input", () => {
-  // The input exists only when asked for (no declared port) or after Change.
-  assert.match(picker, /portAsked \|\| portEditing \?/);
-  assert.match(picker, /t\("portDetected"\)/);
-  assert.match(picker, /onClick=\{\(\) => setPortEditing\(true\)\}/);
-  // A failed inspect is "we could not ask", never a declared-nothing answer.
-  assert.match(picker, /state: "unavailable", data: null/);
-  assert.match(card, /matches && !portEditing/);
-});
-
-test("the create form no longer defaults a container to port 80", () => {
-  assert.match(form, /selected\.name === "docker" && field\.name === "container_port"/);
-});
-
-// The payload rules themselves are behaviour-tested in docker-create-request.test.mjs.
-test("the create request takes its volumes and env from dockerCreateFields", () => {
-  assert.match(form, /dockerSent = dockerCreateFields\(/);
-  assert.match(form, /Object\.assign\(payload, dockerSent\.fields\)/);
-});
-
+// The port display, the failed-inspect state and the create request are rendered and
+// driven in docker-picker.test.mjs, container-card-port.test.mjs and docker-create-form.test.mjs.
 test("every string the picker renders exists in every locale", () => {
   const keys = new Set([
     ...[...picker.matchAll(/\bt(?:\.rich)?\("([a-zA-Z]+)"/g)].map((m) => m[1]),
