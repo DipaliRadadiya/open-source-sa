@@ -23,6 +23,12 @@ test("the four states", () => {
   assert.equal(containerState(docker({ container_status: "exited" })), "failed");
 });
 
+test("the image's own healthcheck reaches the badge (DS-14)", () => {
+  assert.equal(containerState(docker({ container_status: "starting" })), "starting");
+  // Live from Docker, so it can be unhealthy with no stored failure.
+  assert.equal(containerState(docker({ container_status: "unhealthy" })), "failed");
+});
+
 test("an active site with a failure is failed, not Running", () => {
   // PUT /container or Pull failing leaves `status: active` — and a 502.
   const app = docker({ container_status: "not_answering", last_failure: mismatch });

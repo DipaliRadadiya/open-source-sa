@@ -2,11 +2,13 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\CertificateStatus;
 use App\Models\Application;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Applications\SiteTypeSuggestion;
 use App\Services\Git\Webhooks\WebhookManager;
 use App\Services\Server\Applications\ContainerLiveness;
+use App\Services\Server\Applications\ContainerSupervisor;
 use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\Server\WebServers\WebServerManager;
 use Illuminate\Http\Request;
@@ -42,6 +44,17 @@ class ApplicationResource extends JsonResource
             // on every site that has no certificate yet — and every site has
             // no certificate for the first few minutes of its life.
             'url' => $this->resource->url(),
+            // A certificate has been asked for and is not serving yet (DS-14).
+            // A new site goes active before its Let's Encrypt job has run, and
+            // for those 10–60 s `https://` fails the TLS handshake — `url` is
+            // still http, but a user typing https sees a broken site. True
+            // while the certificate is pending or issuing, so the UI can say
+            // "HTTPS is on its way" instead.
+            'certificate_pending' => in_array(
+                $this->resource->certificate?->status,
+                [CertificateStatus::Pending, CertificateStatus::Issuing],
+                true,
+            ),
             // Where the site is on disk. Two fields because they are two
             // different directories on Craft and Statamic, and a cron job
             // pointed at the wrong one runs a file that is not there and
@@ -231,9 +244,10 @@ class ApplicationResource extends JsonResource
             'credentials_acknowledged' => $this->credentials_seen_at !== null,
 
             // What the last deploy's readiness check saw (DS-03): `running`,
-            // `restarting`, `exited` or `not_answering`. Null when no check has
-            // run — every site deployed before it existed, and every one-click
-            // app, whose installer does its own waiting.
+            // `restarting`, `exited` or `not_answering`, and for an image with
+            // its own HEALTHCHECK `starting` or `unhealthy` (DS-14). Null when
+            // no check has run — every site deployed before it existed. A
+            // one-click container app reports what Docker says (DS-14).
             //
             // A stored `running` is asked of Docker first (DS-09): nothing
             // reports a container that stops after the deploy, and a green
@@ -404,9 +418,45 @@ class ApplicationResource extends JsonResource
     private function liveContainerStatus(): ?string
     {
         $stored = $this->container_status;
+        $liveness = app(ContainerLiveness::class);
 
-        if ($stored === 'running') {
-            return app(ContainerLiveness::class)->running($this->resource) === false ? 'exited' : $stored;
+        // The image's own healthcheck, read live (DS-14): `starting` until it
+        // has a verdict, `unhealthy` once it fails — a running container that
+        // serves an error page is not Running.
+        if (in_array($stored, ['running', 'starting'], true)) {
+            $running = $liveness->running($this->resource);
+
+            if ($running === false) {
+                return 'exited';
+            }
+
+            return match ($running ? $liveness->health($this->resource) : null) {
+                'unhealthy' => 'unhealthy',
+                'starting' => 'starting',
+                'healthy' => 'running',
+                default => $stored,
+            };
+        }
+
+        if ($this->healthRecovered()) {
+            return 'running';
+        }
+
+        // A one-click app's status is set by its deploy and dropped by a Start
+        // or Restart, which check nothing (DS-14). Its deploy check is only
+        // "running and not bouncing", so Docker answers it as well as the
+        // stored value would — and the API stops saying nothing while the
+        // panel page says Running. Only an `up` answer: a stopped one-click
+        // was most likely stopped on purpose.
+        if ($stored === null
+            && $this->serving_profile === 'docker'
+            && app(ContainerSupervisor::class)->panelRendered($this->resource)
+            && $liveness->running($this->resource) === true) {
+            return match ($liveness->health($this->resource)) {
+                'unhealthy' => 'unhealthy',
+                'starting' => 'starting',
+                default => 'running',
+            };
         }
 
         // Null, not `running`: something has started the container since the
@@ -427,8 +477,20 @@ class ApplicationResource extends JsonResource
      */
     private function restarted(): bool
     {
-        return $this->container_status === 'exited'
-            && app(ContainerLiveness::class)->running($this->resource) === true;
+        return ($this->container_status === 'exited'
+            && app(ContainerLiveness::class)->running($this->resource) === true)
+            || $this->healthRecovered();
+    }
+
+    /**
+     * A deploy failed because the image's healthcheck said unhealthy, and the
+     * same check says healthy now (DS-14). The check is a real verdict, so
+     * unlike a bare restart this proves the site was fixed.
+     */
+    private function healthRecovered(): bool
+    {
+        return $this->container_status === 'unhealthy'
+            && app(ContainerLiveness::class)->health($this->resource) === 'healthy';
     }
 
     /**
@@ -454,6 +516,14 @@ class ApplicationResource extends JsonResource
             : $failure['reason'];
         $message = __('application.container_failure.'.$key, $params);
         $readsLogs = $request->user()?->canView('app_log') ?? false;
+
+        // What the image's own healthcheck printed (DS-14) is output from
+        // inside the container, so it gets the log's bar too.
+        $check = (string) ($params['check'] ?? '');
+
+        if ($readsLogs && $check !== '') {
+            $message .= ' '.__('application.container_failure.health_check', ['output' => $check]);
+        }
 
         if ($readsLogs && $lastLine !== '') {
             $message .= ' '.__('application.container_failure.last_line', ['line' => $lastLine]);

@@ -267,6 +267,7 @@ return [
         'container_exited' => 'Le conteneur s\'est arrêté juste après son démarrage, le site ne peut donc pas répondre. Son propre journal dit pourquoi.',
         'container_port_mismatch' => 'Rien ne répond sur le port du conteneur vers lequel ce site redirige, et l\'image écoute sur un autre. Réglez le port du conteneur sur celui que déclare l\'image et redéployez.',
         'container_not_answering' => 'Le conteneur tourne mais rien n\'a répondu sur son port. Vérifiez son journal, et que le port du conteneur est bien celui sur lequel l\'application écoute.',
+        'container_unhealthy' => 'Le conteneur tourne, mais le contrôle de santé de l\'image elle-même indique qu\'il ne fonctionne pas. Son journal et la sortie du contrôle affichée ici expliquent pourquoi.',
     ],
 
     // DS-03: why a container site's last deploy failed, with its values.
@@ -277,6 +278,9 @@ return [
         'container_not_answering' => 'Rien n\'a répondu sur le port du conteneur :port en :seconds secondes.',
         // DS-09: a pasted compose file has no single container port to name.
         'container_not_answering_no_port' => 'Rien n\'a répondu sur le port de ce site en :seconds secondes.',
+        // DS-14: the image's own HEALTHCHECK failed.
+        'container_unhealthy' => 'Docker signale ce conteneur comme défaillant : le contrôle de santé de l\'image elle-même échoue.',
+        'health_check' => 'Le contrôle de santé a répondu : :output',
         'last_line' => 'Dernière ligne du journal : :line',
     ],
 

@@ -277,6 +277,7 @@ return [
         'container_exited' => 'The container stopped right after starting, so the site cannot serve. Its own log says why.',
         'container_port_mismatch' => 'Nothing answers on the container port this site proxies to, and the image listens on a different one. Change the container port to the one the image declares and deploy again.',
         'container_not_answering' => 'The container is running but nothing answered on its port. Check its log, and that the container port is the one the application listens on.',
+        'container_unhealthy' => 'The container is running, but the image\'s own health check says it is not working. Its log, and the health check output shown here, say why.',
     ],
 
     // DS-03: why a container site's last deploy failed, with its values.
@@ -287,6 +288,9 @@ return [
         'container_not_answering' => 'Nothing answered on container port :port within :seconds seconds.',
         // DS-09: a pasted compose file has no single container port to name.
         'container_not_answering_no_port' => 'Nothing answered on this site\'s port within :seconds seconds.',
+        // DS-14: the image's own HEALTHCHECK failed.
+        'container_unhealthy' => 'Docker reports this container as unhealthy: the image\'s own health check fails.',
+        'health_check' => 'Health check said: :output',
         'last_line' => 'Last log line: :line',
     ],
 

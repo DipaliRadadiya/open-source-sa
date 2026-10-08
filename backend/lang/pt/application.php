@@ -267,6 +267,7 @@ return [
         'container_exited' => 'O contêiner parou logo após iniciar, então o site não pode responder. O próprio log dele diz o porquê.',
         'container_port_mismatch' => 'Nada responde na porta do contêiner para a qual este site encaminha, e a imagem escuta em outra. Altere a porta do contêiner para a que a imagem declara e implante novamente.',
         'container_not_answering' => 'O contêiner está rodando, mas nada respondeu na porta dele. Verifique o log e se a porta do contêiner é aquela em que a aplicação escuta.',
+        'container_unhealthy' => 'O contêiner está em execução, mas a verificação de integridade da própria imagem diz que ele não está funcionando. O log dele e a saída da verificação mostrada aqui dizem o porquê.',
     ],
 
     // DS-03: why a container site's last deploy failed, with its values.
@@ -277,6 +278,9 @@ return [
         'container_not_answering' => 'Nada respondeu na porta do contêiner :port em :seconds segundos.',
         // DS-09: a pasted compose file has no single container port to name.
         'container_not_answering_no_port' => 'Nada respondeu na porta deste site em :seconds segundos.',
+        // DS-14: the image's own HEALTHCHECK failed.
+        'container_unhealthy' => 'O Docker informa que este contêiner não está íntegro: a verificação de integridade da própria imagem falha.',
+        'health_check' => 'A verificação de integridade disse: :output',
         'last_line' => 'Última linha do log: :line',
     ],
 

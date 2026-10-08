@@ -766,6 +766,8 @@ Never send the raw field list — `GET /site-types` publishes the fields for eac
 
 Full application record. Poll this while `status` is `provisioning` or `deploying`.
 
+**`certificate_pending` is `true` while a certificate has been requested and is not serving yet** (status `pending` or `issuing`, DS-14). A new site turns `active` before its Let's Encrypt job runs, and for those 10–60 s `https://<domain>` fails the TLS handshake ("unrecognized name"). `url` is still `http://…` then; show "HTTPS is being set up" rather than letting the user try https and see a broken site. Poll the application until it turns `false`.
+
 **Link to `url`, never build one from `domain`.** `url` is `http://…` until the site has a servable certificate and `https://…` afterwards. Assembling `https://${domain}` in the client — which three screens used to do — produces a dead link for every site that has not been issued a certificate yet, which is every site for the first few minutes of its life.
 
 **`fail2ban_enabled` means "this site has a jail configured"** — it is derived from the same jail this resource's sibling endpoint reports, so a dashboard card and the site's fail2ban screen can no longer disagree. It went the other way until 2026-08-22: the field came from a stored boolean whose only writer was unreachable, so it read `false` for every site on the server, including ones with a jail actively running. **Do not read the `fail2ban_enabled` column directly** — it is orphaned and stays only because dropping it needs a schema change.
@@ -856,6 +858,7 @@ and fall back to `failed_step` + `reference` when it is `null`.
 | `container_exited` | A Docker site's container stopped right after starting. |
 | `container_port_mismatch` | Nothing answered on the container port, and the image declares a different one (DS-03). `last_failure.message` names both. |
 | `container_not_answering` | The container is running but nothing answered on its port within the readiness timeout (90 s). |
+| `container_unhealthy` | The image's own `HEALTHCHECK` reports the container unhealthy (DS-14). `last_failure.message` carries the check's last output for users with `app_log` view. |
 
 The last two come from the `verify_serving` step, which is the final step of
 provisioning for any application that runs a process of its own. **Being
@@ -6139,8 +6142,11 @@ Response `201`: `{ application, warnings: [] }`. `warnings` is always a list of 
 
 After `compose up`, a simple-mode or pasted-compose site (not the one-click apps, whose installers wait themselves) is checked until anything answers HTTP on `127.0.0.1:<app_port>` — **any status counts** — or until `DOCKER_READINESS_TIMEOUT` seconds (90) of wall-clock time have passed, capped at 150 (DS-09). The cap bounds the check, not the request: the wait and the diagnostics after it (`compose ps`/`logs`, at most 30 s each) stay inside the panel's 300 s request timeout, but the `compose up` and pull before it may take up to `DOCKER_COMMAND_TIMEOUT` (600 s) because an image can be gigabytes — so on a slow pull the synchronous `PUT …/container` or Pull can still end in a gateway timeout. PHP normally carries on past the gateway and stores the outcome on the site, so re-read the application rather than treating a timeout as a failure (DS-12). A container that exits fails at once. One that keeps restarting with nothing answering fails after `DOCKER_READINESS_RESTART_GRACE` seconds (30) — except in a pasted compose file, whose services may restart while they wait for each other: there it fails only at the deadline. The same check runs on `PUT …/container` and on Pull and redeploy, and a pass clears the previous failure. `seconds` in a `container_not_answering` failure is the time actually waited. A pasted compose file has no single container port, so its message names none rather than the host port.
 
+**An image with its own `HEALTHCHECK` is judged by it instead (DS-14).** `healthy` passes, `unhealthy` fails at once with `container_unhealthy`, and while Docker still says `starting` the panel does not request `/` at all — Docker's check is already asking, and a second requester during a first boot is what left Kanboard's lazy migration half applied (DS-11). If the check is still `starting` at the deadline, one request to `/` decides: an answer passes the deploy with `container_status: starting`, which the live read below turns into `running` or `unhealthy` once Docker has a verdict. Images without a healthcheck are checked exactly as before.
+
 On the application:
-- `container_status`: `running` | `restarting` | `exited` | `not_answering` | `null` (never checked). A stored `running` is checked against Docker on every read (one `docker ps` per request): a container that has stopped since is reported as `exited`. Starting, stopping or restarting the containers without a new check resets `running` to `null` (DS-09).
+- `container_status`: `running` | `starting` | `unhealthy` | `restarting` | `exited` | `not_answering` | `null` (never checked). A stored `running` or `starting` is checked against Docker on every read (one `docker ps` per request): a container that has stopped since is reported as `exited`, and for an image with a healthcheck its live verdict is reported — `starting`, `unhealthy` (serving, but its own check fails: show it as failed) or `running`. A stored `unhealthy` whose check now says healthy reads `running` and its `last_failure` is dropped. Starting, stopping or restarting the containers without a new check resets `running` to `null` (DS-09).
+- **One-click container apps** (Ghost, Vaultwarden, …) store `running` when their deploy's check (container up, not restarting) passes, and with nothing stored report what Docker says while the container is up — `running`, `starting` or `unhealthy` — so the API agrees with the page (DS-14). A stopped one-click reads `null`.
 - `last_failure`: `null`, or
 ```json
 { "reason": "container_port_mismatch",

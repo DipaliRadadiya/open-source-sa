@@ -21,7 +21,12 @@ use App\Services\Server\ServerOps;
  */
 class ContainerLiveness
 {
-    /** @var array<string, true>|false|null projects with a running container; false when Docker did not answer */
+    /**
+     * Projects with a running container, each with the worst health Docker
+     * reports for them (null: no healthcheck); false when Docker did not answer.
+     *
+     * @var array<string, string|null>|false|null
+     */
     private array|false|null $running = null;
 
     public function __construct(private ServerOps $serverOps) {}
@@ -34,16 +39,33 @@ class ContainerLiveness
             return null;
         }
 
-        return isset($this->running[app(ContainerSupervisor::class)->project($application)]);
+        return array_key_exists(app(ContainerSupervisor::class)->project($application), $this->running);
     }
 
     /**
-     * @return array<string, true>|false
+     * The image's HEALTHCHECK verdict for a running site right now (DS-14):
+     * `healthy`, `starting` or `unhealthy`, the worst of its containers. Null
+     * when nothing runs, the image has no healthcheck, or Docker did not answer.
+     * Read from the same single `docker ps` as {@see running()}.
+     */
+    public function health(Application $application): ?string
+    {
+        $this->running ??= $this->read();
+
+        if ($this->running === false) {
+            return null;
+        }
+
+        return $this->running[app(ContainerSupervisor::class)->project($application)] ?? null;
+    }
+
+    /**
+     * @return array<string, string|null>|false
      */
     private function read(): array|false
     {
         $result = $this->serverOps->run(
-            ['docker', 'ps', '--filter', 'status=running', '--format', '{{.Label "com.docker.compose.project"}}'],
+            ['docker', 'ps', '--filter', 'status=running', '--format', '{{.Label "com.docker.compose.project"}}\t{{.Status}}'],
             ['feature' => 'application', 'op' => 'container_liveness'],
             timeout: 15,
         );
@@ -53,10 +75,27 @@ class ContainerLiveness
         }
 
         $projects = [];
+        $rank = ['healthy' => 1, 'starting' => 2, 'unhealthy' => 3];
 
         foreach (preg_split('/\R/', trim($result->output())) ?: [] as $line) {
-            if (($line = trim($line)) !== '') {
-                $projects[$line] = true;
+            [$project, $status] = array_pad(explode("\t", rtrim($line), 2), 2, '');
+
+            if (($project = trim($project)) === '') {
+                continue;
+            }
+
+            // `Up 7 minutes (unhealthy)`, `Up 5 seconds (health: starting)`.
+            $health = match (true) {
+                str_contains($status, '(unhealthy)') => 'unhealthy',
+                str_contains($status, 'health: starting') => 'starting',
+                str_contains($status, '(healthy)') => 'healthy',
+                default => null,
+            };
+
+            $current = $projects[$project] ?? null;
+
+            if (! array_key_exists($project, $projects) || ($rank[$health ?? ''] ?? 0) > ($rank[$current ?? ''] ?? 0)) {
+                $projects[$project] = $health;
             }
         }
 

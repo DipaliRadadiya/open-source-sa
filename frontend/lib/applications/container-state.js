@@ -12,9 +12,12 @@ export function containerState(application) {
   if (application.status === "pending" || application.status === "provisioning") return "starting";
   const checked = application.container_status;
   if (checked === "restarting") return "restarting";
-  if (application.last_failure || checked === "exited" || checked === "not_answering") return "failed";
+  // `unhealthy`: the image's own HEALTHCHECK fails (DS-14).
+  if (application.last_failure || checked === "exited" || checked === "not_answering" || checked === "unhealthy") return "failed";
   if (application.status === "failed") return "failed";
   if (checked === "running") return "running";
+  // The image's HEALTHCHECK has no verdict yet (DS-14).
+  if (checked === "starting") return "starting";
   return null;
 }
 

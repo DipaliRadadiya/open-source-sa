@@ -267,6 +267,7 @@ return [
         'container_exited' => 'El contenedor se detuvo justo después de arrancar, así que el sitio no puede servir. Su propio registro dice por qué.',
         'container_port_mismatch' => 'Nada responde en el puerto del contenedor al que este sitio redirige, y la imagen escucha en otro. Cambia el puerto del contenedor al que declara la imagen y despliega de nuevo.',
         'container_not_answering' => 'El contenedor está en marcha pero nada respondió en su puerto. Revisa su registro y que el puerto del contenedor sea en el que escucha la aplicación.',
+        'container_unhealthy' => 'El contenedor está en marcha, pero la comprobación de estado de la propia imagen dice que no funciona. Su registro y la salida de la comprobación que se muestra aquí indican por qué.',
     ],
 
     // DS-03: why a container site's last deploy failed, with its values.
@@ -277,6 +278,9 @@ return [
         'container_not_answering' => 'Nada respondió en el puerto del contenedor :port en :seconds segundos.',
         // DS-09: a pasted compose file has no single container port to name.
         'container_not_answering_no_port' => 'Nada respondió en el puerto de este sitio en :seconds segundos.',
+        // DS-14: the image's own HEALTHCHECK failed.
+        'container_unhealthy' => 'Docker informa de que este contenedor no está sano: la comprobación de estado de la propia imagen falla.',
+        'health_check' => 'La comprobación de estado dijo: :output',
         'last_line' => 'Última línea del registro: :line',
     ],
 

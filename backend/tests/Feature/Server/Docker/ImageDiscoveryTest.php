@@ -647,6 +647,28 @@ it('recommends a dotted release over a bare number that only outranks it numeric
         ->assertOk()->assertJsonPath('recommended', '12');
 });
 
+it('recommends a dated release pinned to its commit over latest (DS-14)', function () {
+    // The real corentinth/it-tools list: no plain version, only date-commit
+    // releases. `latest` was recommended beside a "pick a numbered version"
+    // warning while numbered versions were listed.
+    Http::fake(['hub.docker.com/v2/repositories/corentinth/it-tools/tags*' => Http::response(['results' => array_map(
+        fn (string $name): array => ['name' => $name, 'last_updated' => '2024-10-22T00:00:00Z', 'tag_status' => 'active'],
+        ['latest', '2024.10.22-7ca5933', '2024.5.13-a0bc346', '2023.12.21-5ed3693', 'nightly'],
+    )])]);
+
+    $this->withHeaders(imgAs())->getJson('/api/docker/images/tags?image=corentinth/it-tools')
+        ->assertOk()->assertJsonPath('recommended', '2024.10.22-7ca5933');
+
+    // Any other variant is a different build, not a release pinned: still latest.
+    Http::fake(['hub.docker.com/v2/repositories/acme/variants/tags*' => Http::response(['results' => array_map(
+        fn (string $name): array => ['name' => $name, 'last_updated' => '2026-10-01T00:00:00Z', 'tag_status' => 'active'],
+        ['latest', '1.4.2-alpine', '1.4.2-1234567'],
+    )])]);
+
+    $this->withHeaders(imgAs())->getJson('/api/docker/images/tags?image=acme/variants')
+        ->assertOk()->assertJsonPath('recommended', 'latest');
+});
+
 /**
  * GHCR repositories answering `tags/list` with these names, in the order the
  * registry sorts them, and Hub repositories answering with these tag rows.

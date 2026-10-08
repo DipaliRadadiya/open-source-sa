@@ -302,6 +302,16 @@ class ImageTags
     }
 
     /**
+     * A dotted version followed only by a commit hash: `2024.10.22-7ca5933`,
+     * `1.4.2-g3f9c2ab`, `v2.1.0+a1b2c3d4`.
+     */
+    private function commitPinned(string $tag): bool
+    {
+        return preg_match('/^v?\d{1,4}(?:\.\d+){1,3}[-_.+]g?[0-9a-f]{7,40}$/i', $tag) === 1
+            && preg_match('/[a-f]/i', (string) preg_replace('/^.*?[-_.+]g?(?=[0-9a-f]{7,40}$)/i', '', $tag)) === 1;
+    }
+
+    /**
      * The newest exact version — `0.31.0` over `0.31` over `0`, so a user
      * pinned to it gets the release they saw, not whatever the alias points
      * at next month. Falls back to `latest`/`stable`, then to Hub's most
@@ -328,6 +338,20 @@ class ImageTags
                     if (($version['pure'] ?? false) && count($version['parts']) >= $minParts) {
                         return $tag['name'];
                     }
+                }
+            }
+        }
+
+        // A release whose tag carries the commit it was built from —
+        // it-tools publishes only `2024.10.22-7ca5933` — is still a release,
+        // and a better pick than the `latest` the picker then warns about
+        // (DS-14). `rank()` has the newest first. Any other variant
+        // (`-alpine`) is a different build, not this one pinned, so it is
+        // still not chosen for the user.
+        foreach ([false, true] as $last) {
+            foreach ($tags as $tag) {
+                if (isset($demoted[$tag['name']]) === $last && $tag['stable'] && $this->commitPinned($tag['name'])) {
+                    return $tag['name'];
                 }
             }
         }

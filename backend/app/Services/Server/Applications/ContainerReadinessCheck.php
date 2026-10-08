@@ -22,6 +22,11 @@ use Illuminate\Support\Sleep;
  * because a container app that answers 500 on its first boot is usually still
  * migrating, and the user can see that in its log, which is now kept.
  *
+ * An image with its own HEALTHCHECK is asked that instead (DS-14): its
+ * author's idea of ready beats a GET of `/`, and the panel had said Running
+ * over a Kanboard that served a 200 error page while Docker called it
+ * unhealthy. Those sites can also read `starting` and `unhealthy`.
+ *
  * On failure the reason is stored on the application in words a person can act
  * on — "Nothing answers on container port 8082 — the image listens on 5230" —
  * with the last lines of the container's own log beside it.
@@ -86,9 +91,31 @@ class ContainerReadinessCheck
         $loopingSince = null;
         $looping = false;
 
+        $health = null;
+
         for ($attempt = 1; $attempt <= $attempts; $attempt++) {
             $remaining = (int) ceil(now()->diffInSeconds($deadline, false));
-            $status = $this->probe($application, $port, max(1, min(5, $remaining)));
+
+            // The image's own HEALTHCHECK, when it has one, decides (DS-14):
+            // healthy passes, unhealthy fails with the check's own output.
+            // While it is starting, `/` is not asked at all — Docker is already
+            // asking, and a second requester during a first boot is what left
+            // Kanboard's lazy migration half applied.
+            $health = $containers->health($application, $documentRoot);
+
+            if ($health === 'healthy') {
+                $this->passed($application);
+
+                return;
+            }
+
+            if ($health === 'unhealthy') {
+                $this->fail($application, $documentRoot, $containers, 'unhealthy', 'container_unhealthy', [
+                    'check' => self::lastLine($containers->healthOutput($application, $documentRoot)),
+                ]);
+            }
+
+            $status = $health === 'starting' ? 0 : $this->probe($application, $port, max(1, min(5, $remaining)));
 
             if ($status !== null && $status > 0) {
                 $this->passed($application);
@@ -135,6 +162,20 @@ class ContainerReadinessCheck
             $this->fail($application, $documentRoot, $containers, 'restarting', 'container_restarting');
         }
 
+        // Still starting at the deadline. Some images give their check minutes
+        // of start period, and holding a deploy that long is worse than saying
+        // so: one request to `/` now, and an answer passes as `starting` —
+        // the live status turns it into running or unhealthy once Docker has.
+        if ($health === 'starting') {
+            $status = $this->probe($application, $port, 5);
+
+            if ($status !== null && $status > 0) {
+                $this->passed($application, 'starting');
+
+                return;
+            }
+        }
+
         $declared = $this->declaredPorts($application);
         $containerPort = (int) ($application->container_port ?: 0);
         $waited = (int) round($started->diffInSeconds(now()));
@@ -155,10 +196,10 @@ class ContainerReadinessCheck
         ]);
     }
 
-    private function passed(Application $application): void
+    private function passed(Application $application, string $status = 'running'): void
     {
         $application->forceFill([
-            'container_status' => 'running',
+            'container_status' => $status,
             'last_failure' => null,
         ])->save();
     }

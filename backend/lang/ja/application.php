@@ -267,6 +267,7 @@ return [
         'container_exited' => 'コンテナが起動直後に停止したため、サイトを配信できません。理由はコンテナ自身のログに記録されています。',
         'container_port_mismatch' => 'このサイトの転送先のコンテナポートで何も応答せず、イメージは別のポートで待ち受けています。コンテナポートをイメージが宣言しているポートに変更して、再度デプロイしてください。',
         'container_not_answering' => 'コンテナは動作していますが、そのポートで何も応答しませんでした。ログと、コンテナポートがアプリケーションの待ち受けポートと一致しているかを確認してください。',
+        'container_unhealthy' => 'コンテナは動作していますが、イメージ自身のヘルスチェックが正常に動作していないと報告しています。理由はコンテナのログと、ここに表示されるヘルスチェックの出力で確認できます。',
     ],
 
     // DS-03: why a container site's last deploy failed, with its values.
@@ -277,6 +278,9 @@ return [
         'container_not_answering' => 'コンテナポート :port で :seconds 秒以内に応答がありませんでした。',
         // DS-09: a pasted compose file has no single container port to name.
         'container_not_answering_no_port' => 'このサイトのポートで :seconds 秒以内に応答がありませんでした。',
+        // DS-14: the image's own HEALTHCHECK failed.
+        'container_unhealthy' => 'Docker はこのコンテナを unhealthy と報告しています。イメージ自身のヘルスチェックが失敗しています。',
+        'health_check' => 'ヘルスチェックの出力: :output',
         'last_line' => 'ログの最終行: :line',
     ],
 

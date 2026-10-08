@@ -45,14 +45,18 @@ beforeEach(function () {
 });
 
 /**
- * @param  array{curl?: string|list<string>, state?: string, running?: bool, exposed?: string, logs?: string}  $box
+ * `health` is what the image's HEALTHCHECK reports, one value per ask, the
+ * last repeating; '' (the default) is an image without one.
+ *
+ * @param  array{curl?: string|list<string>, state?: string, running?: bool, exposed?: string, logs?: string, health?: string|list<string>, health_log?: string}  $box
  */
 function fakeReadinessBox(array $box = []): ArrayObject
 {
     $ran = new ArrayObject;
     $curls = (array) ($box['curl'] ?? '200');
+    $healths = (array) ($box['health'] ?? '');
 
-    Process::fake(function ($process) use ($box, &$curls, $ran) {
+    Process::fake(function ($process) use ($box, &$curls, &$healths, $ran) {
         $args = $process->command;
 
         while (in_array($args[0] ?? '', ['sudo', '-n', 'env'], true) || str_contains($args[0] ?? '', '=')) {
@@ -69,6 +73,10 @@ function fakeReadinessBox(array $box = []): ArrayObject
             return Process::result(output: $box['exposed'] ?? 'null');
         }
 
+        if (($args[0] ?? '') === 'docker' && ($args[1] ?? '') === 'inspect' && in_array('{{json .State.Health.Log}}', $args, true)) {
+            return Process::result(output: $box['health_log'] ?? 'null');
+        }
+
         if (($args[0] ?? '') === 'docker' && ($args[1] ?? '') === 'inspect') {
             return Process::result(output: '0 '.now()->subSeconds(5)->toIso8601ZuluString());
         }
@@ -81,8 +89,12 @@ function fakeReadinessBox(array $box = []): ArrayObject
             return Process::result(output: ($box['running'] ?? true) ? "abc123\n" : '');
         }
 
+        // Every `ps --format json` takes the next health value: the check
+        // asks once for the health and once more for the restart state.
         if (in_array('--format', $args, true) && in_array('json', $args, true)) {
-            return Process::result(output: json_encode(['Name' => 'sv-app-1-app-1', 'State' => $box['state'] ?? 'running']));
+            $health = count($healths) > 1 ? array_shift($healths) : $healths[0];
+
+            return Process::result(output: json_encode(['Name' => 'sv-app-1-app-1', 'State' => $box['state'] ?? 'running', 'Health' => $health]));
         }
 
         return Process::result(exitCode: 0);
@@ -242,6 +254,7 @@ function readinessContainers(array $looping): ContainerSupervisor
         return count($looping) > 1 ? array_shift($looping) : $looping[0];
     });
     $containers->shouldReceive('running')->andReturnTrue();
+    $containers->shouldReceive('health')->andReturnNull();
     $containers->shouldReceive('logs')->andReturn("app-1  | Error: connect ECONNREFUSED 127.0.0.1:5432\n");
 
     return $containers;
@@ -349,15 +362,17 @@ it('does not fail a site on a probe that never ran', function () {
     expect(applyMemos())->toBeNull();
 });
 
-it('leaves one-click apps to their installers', function () {
+it('leaves one-click apps to their installers, and reports them running (DS-14)', function () {
     // The file's origin is what decides, not its text: a ghost row is a one-click.
+    // Its check is running + not bouncing, and passing it is now said: the API
+    // used to answer null while the panel page said Running.
     $this->application->forceFill(['site_type' => 'ghost'])->save();
     $ran = fakeReadinessBox(['curl' => '000']);
 
     app(ContainerSupervisor::class)->apply($this->application->fresh(), '/home/memos/memos/public_html');
 
     expect(collect($ran)->contains(fn ($args) => $args[0] === 'curl'))->toBeFalse()
-        ->and($this->application->fresh()->container_status)->toBeNull();
+        ->and($this->application->fresh()->container_status)->toBe('running');
 });
 
 it('hides the log from someone who may not read this site\'s logs', function () {
@@ -548,4 +563,113 @@ it('asks its docker questions under a short ceiling, not the pull timeout', func
         // What the check can spend after its deadline: one more sample and
         // the diagnostics, still inside the 300 s request.
         ->and(ContainerReadinessCheck::MAX_TIMEOUT + 3 * ContainerSupervisor::QUERY_TIMEOUT)->toBeLessThan(300);
+});
+
+/*
+ * DS-14: the image's own HEALTHCHECK, one-click status.
+ */
+
+it('passes on the image\'s own healthcheck without asking / at all', function () {
+    $ran = fakeReadinessBox(['curl' => '000', 'health' => 'healthy']);
+
+    expect(applyMemos())->toBeNull()
+        ->and($this->application->fresh()->container_status)->toBe('running')
+        ->and(collect($ran)->contains(fn ($args) => $args[0] === 'curl'))->toBeFalse();
+});
+
+it('fails an unhealthy container that answers /, with the healthcheck\'s own words', function () {
+    // Kanboard on 26.04: `/` answered 200 with a migration error page, Docker
+    // said unhealthy, and the panel said Running.
+    fakeReadinessBox([
+        'curl' => '200',
+        'health' => 'unhealthy',
+        'health_log' => json_encode([
+            ['ExitCode' => 0, 'Output' => 'ok'],
+            ['ExitCode' => 22, 'Output' => "curl: (22) The requested URL returned error: 500\n"],
+        ]),
+    ]);
+
+    $e = applyMemos();
+    $fresh = $this->application->fresh();
+
+    expect($e)->not->toBeNull()
+        ->and($e->step)->toBe('verify_serving')
+        ->and($e->reason)->toBe('container_unhealthy')
+        ->and($fresh->container_status)->toBe('unhealthy')
+        ->and($fresh->last_failure['params']['check'])->toBe('curl: (22) The requested URL returned error: 500');
+
+    fakeLiveProjects(['sv-app-'.$this->application->id."\tUp 1 minute (unhealthy)"]);
+    $shown = readinessResource($fresh);
+
+    expect($shown['container_status'])->toBe('unhealthy')
+        ->and($shown['last_failure']['message'])->toContain('health check fails')
+        ->and($shown['last_failure']['message'])->toContain('returned error: 500');
+});
+
+it('does not ask / while the healthcheck is still starting, then passes on healthy', function () {
+    config(['server.docker.readiness.timeout' => 90, 'server.docker.readiness.interval' => 3]);
+    $this->freezeTime();
+    Sleep::fake(syncWithCarbon: true);
+    // Two asks per try (health, then the restart state): starting for two tries.
+    $ran = fakeReadinessBox(['curl' => '200', 'health' => ['starting', 'starting', 'starting', 'starting', 'healthy']]);
+
+    expect(applyMemos())->toBeNull()
+        ->and($this->application->fresh()->container_status)->toBe('running')
+        ->and(collect($ran)->contains(fn ($args) => $args[0] === 'curl'))->toBeFalse();
+});
+
+it('passes as starting when the healthcheck has no verdict by the deadline but / answers', function () {
+    config(['server.docker.readiness.timeout' => 9, 'server.docker.readiness.interval' => 3]);
+    $this->freezeTime();
+    Sleep::fake(syncWithCarbon: true);
+    $ran = fakeReadinessBox(['curl' => '302', 'health' => 'starting']);
+
+    expect(applyMemos())->toBeNull()
+        ->and($this->application->fresh()->container_status)->toBe('starting')
+        ->and(collect($ran)->filter(fn ($args) => $args[0] === 'curl')->count())->toBe(1);
+});
+
+it('reports the live healthcheck over a stored running', function (string $status, string $shown) {
+    $this->application->forceFill(['container_status' => 'running'])->save();
+
+    fakeLiveProjects(['sv-app-'.$this->application->id."\t".$status, "sv-app-999\tUp 2 hours (unhealthy)"]);
+
+    expect(readinessResource($this->application->fresh())['container_status'])->toBe($shown);
+})->with([
+    ['Up 7 minutes (unhealthy)', 'unhealthy'],
+    ['Up 5 seconds (health: starting)', 'starting'],
+    ['Up 3 minutes (healthy)', 'running'],
+    ['Up 3 minutes', 'running'],
+]);
+
+it('clears an unhealthy failure once the healthcheck passes', function () {
+    $this->application->forceFill([
+        'container_status' => 'unhealthy',
+        'last_failure' => ['reason' => 'container_unhealthy', 'params' => ['check' => 'x'], 'log' => 'x'],
+    ])->save();
+
+    fakeLiveProjects(['sv-app-'.$this->application->id."\tUp 9 minutes (healthy)"]);
+    $shown = readinessResource($this->application->fresh());
+
+    expect($shown['container_status'])->toBe('running')
+        ->and($shown['last_failure'])->toBeNull();
+});
+
+it('reports a one-click container app as Docker sees it, not null', function () {
+    // Ghost on both DS-11 servers: container_status null while the page said Running.
+    $this->application->forceFill(['site_type' => 'ghost', 'container_status' => null])->save();
+
+    fakeLiveProjects(['sv-app-'.$this->application->id."\tUp 4 minutes"]);
+    expect(readinessResource($this->application->fresh())['container_status'])->toBe('running');
+
+    // Stopped (most likely on purpose): nothing is claimed.
+    app()->forgetScopedInstances();
+    fakeLiveProjects([]);
+    expect(readinessResource($this->application->fresh())['container_status'])->toBeNull();
+
+    // An image site with no check stays null: "up" is not "answering".
+    app()->forgetScopedInstances();
+    $this->application->forceFill(['site_type' => 'docker'])->save();
+    fakeLiveProjects(['sv-app-'.$this->application->id."\tUp 4 minutes"]);
+    expect(readinessResource($this->application->fresh())['container_status'])->toBeNull();
 });

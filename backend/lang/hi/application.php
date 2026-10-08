@@ -267,6 +267,7 @@ return [
         'container_exited' => 'कंटेनर शुरू होते ही बंद हो गया, इसलिए साइट जवाब नहीं दे सकती। कारण उसके अपने लॉग में है।',
         'container_port_mismatch' => 'जिस कंटेनर पोर्ट पर यह साइट भेजती है वहाँ कुछ जवाब नहीं देता, और इमेज किसी दूसरे पोर्ट पर सुनती है। कंटेनर पोर्ट को इमेज के बताए पोर्ट पर बदलें और फिर से डिप्लॉय करें।',
         'container_not_answering' => 'कंटेनर चल रहा है लेकिन उसके पोर्ट पर कुछ जवाब नहीं आया। उसका लॉग देखें, और जाँचें कि कंटेनर पोर्ट वही है जिस पर ऐप्लिकेशन सुनती है।',
+        'container_unhealthy' => 'कंटेनर चल रहा है, लेकिन इमेज की अपनी हेल्थ चेक कहती है कि यह काम नहीं कर रहा है। इसका लॉग और यहाँ दिखाया गया हेल्थ चेक का आउटपुट बताते हैं कि क्यों।',
     ],
 
     // DS-03: why a container site's last deploy failed, with its values.
@@ -277,6 +278,9 @@ return [
         'container_not_answering' => 'कंटेनर पोर्ट :port पर :seconds सेकंड में कोई जवाब नहीं आया।',
         // DS-09: a pasted compose file has no single container port to name.
         'container_not_answering_no_port' => 'इस साइट के पोर्ट पर :seconds सेकंड में कोई जवाब नहीं आया।',
+        // DS-14: the image's own HEALTHCHECK failed.
+        'container_unhealthy' => 'Docker इस कंटेनर को अस्वस्थ (unhealthy) बताता है: इमेज की अपनी हेल्थ चेक विफल हो रही है।',
+        'health_check' => 'हेल्थ चेक ने कहा: :output',
         'last_line' => 'लॉग की आख़िरी पंक्ति: :line',
     ],
 

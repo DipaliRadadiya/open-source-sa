@@ -151,6 +151,23 @@ class ContainerSupervisor
         if ($this->crashLooping($application, $documentRoot)) {
             throw new ProvisioningFailedException('container_restarting', $result->reference, 'container_restarting');
         }
+
+        $this->recordUp($application);
+    }
+
+    /**
+     * A container that passed the checks above — a one-click app, whose
+     * installer does its own first-boot waiting after this — reports
+     * `running`, the word an image site's readiness check stores (DS-14). It
+     * was left null, so the API said nothing while the panel page said
+     * Running.
+     */
+    private function recordUp(Application $application): void
+    {
+        $application->forceFill([
+            'container_status' => 'running',
+            'last_failure' => null,
+        ])->save();
     }
 
     private function readiness(): ContainerReadinessCheck
@@ -215,6 +232,101 @@ class ContainerSupervisor
         }
 
         return false;
+    }
+
+    /**
+     * What the image's own HEALTHCHECK says, across this project (DS-14).
+     *
+     * `unhealthy` if any container is, then `starting` if any still is, then
+     * `healthy` — or null when no container has a healthcheck at all, or the
+     * question could not be answered. Null is "Docker has no opinion", never
+     * "fine": the caller falls back to asking the port.
+     *
+     * The image's author knows what "ready" means for it far better than a
+     * GET of `/` does. Kanboard answered `/` with a 200 error page while its
+     * own check had already called it unhealthy, and the panel said Running.
+     */
+    public function health(Application $application, string $documentRoot): ?string
+    {
+        $seen = [];
+
+        foreach ($this->psRows($application, $documentRoot) as $row) {
+            $health = strtolower((string) ($row['Health'] ?? ''));
+
+            if (in_array($health, ['healthy', 'starting', 'unhealthy'], true)) {
+                $seen[$health] = true;
+            }
+        }
+
+        foreach (['unhealthy', 'starting', 'healthy'] as $health) {
+            if (isset($seen[$health])) {
+                return $health;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The last thing a failing healthcheck printed, from the first unhealthy
+     * container — the reason in the image's own words. Empty when unreadable:
+     * a diagnostic must never be the thing that fails.
+     */
+    public function healthOutput(Application $application, string $documentRoot): string
+    {
+        foreach ($this->psRows($application, $documentRoot) as $row) {
+            $name = (string) ($row['Name'] ?? '');
+
+            if (strtolower((string) ($row['Health'] ?? '')) !== 'unhealthy' || $name === '') {
+                continue;
+            }
+
+            $inspect = $this->serverOps->run(
+                ['docker', 'inspect', '--format', '{{json .State.Health.Log}}', $name],
+                ['feature' => 'application', 'op' => 'container_health'],
+                timeout: 20,
+            );
+
+            $log = json_decode(trim($inspect->output()), true);
+            $last = is_array($log) && $log !== [] ? end($log) : null;
+
+            return is_array($last) ? trim((string) ($last['Output'] ?? '')) : '';
+        }
+
+        return '';
+    }
+
+    /**
+     * `compose ps --format json`, one decoded row per container. Compose
+     * prints one object per line; older releases printed one array.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function psRows(Application $application, string $documentRoot): array
+    {
+        $result = $this->compose($application, $documentRoot, ['ps', '--format', 'json'], 'compose_ps_health', timeout: self::QUERY_TIMEOUT);
+
+        if (! $result->answered) {
+            return [];
+        }
+
+        $rows = [];
+
+        foreach (preg_split('/\r?\n/', trim($result->output())) ?: [] as $line) {
+            $decoded = json_decode(trim($line), true);
+
+            if (! is_array($decoded)) {
+                continue;
+            }
+
+            foreach (array_is_list($decoded) ? $decoded : [$decoded] as $row) {
+                if (is_array($row)) {
+                    $rows[] = $row;
+                }
+            }
+        }
+
+        return $rows;
     }
 
     /**
@@ -311,6 +423,8 @@ class ContainerSupervisor
         if (! $this->running($application, $documentRoot)) {
             throw new ProvisioningFailedException('container_exited', '');
         }
+
+        $this->recordUp($application);
     }
 
     /**
@@ -528,7 +642,7 @@ class ContainerSupervisor
      * and the two cannot drift: a new one-click has to be registered there or it
      * has no image.
      */
-    private function panelRendered(Application $application): bool
+    public function panelRendered(Application $application): bool
     {
         return config("server.docker_apps.{$application->site_type}") !== null;
     }
