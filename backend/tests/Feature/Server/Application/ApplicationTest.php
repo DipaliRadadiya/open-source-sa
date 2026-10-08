@@ -728,3 +728,18 @@ it('refuses a Joomla table prefix that does not start with a letter (bug #13)', 
         'table_prefix' => '1abc_',
     ])->assertStatus(422)->assertJsonValidationErrors('table_prefix');
 });
+
+it('names the password rule an admin password misses (FS-B6)', function () {
+    capableServer();
+
+    // n8n: lowercase, uppercase, number — no symbol rule.
+    $this->withHeaders(appHeaders())->postJson('/api/applications', [
+        'site_type' => 'n8n',
+        'name' => 'Flows',
+        'domain' => 'flows.example.com',
+        'system_user_id' => test()->su->id,
+        'admin_email' => 'owner@example.com',
+        'admin_password' => 'flows-pass-2026',
+    ])->assertStatus(422)
+        ->assertJsonValidationErrors(['admin_password' => __('validation.admin_password_strength_no_symbol')]);
+});

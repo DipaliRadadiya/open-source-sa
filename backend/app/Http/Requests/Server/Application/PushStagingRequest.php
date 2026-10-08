@@ -20,9 +20,10 @@ class PushStagingRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // 'files' is the default the create form should pre-select — it
-            // is the only mode that cannot lose data, so it is what a click
-            // without a second thought should do.
+            // 'files' is the default the create form should pre-select: it
+            // leaves the live database alone. It is not lossless — it deletes
+            // files that exist only on the live site (ST-B4) — and 'database'
+            // and 'full' replace the live database, which is saved first.
             'mode' => ['required', Rule::in(['files', 'database', 'full'])],
         ];
     }

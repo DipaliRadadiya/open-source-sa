@@ -47,6 +47,12 @@ class GitProviderException extends Exception
         return new self(self::UNREACHABLE, 'errors/git.provider_unreachable', 502, $reference, ['provider' => $provider]);
     }
 
+    /** A self-hosted address that did not answer at all (FS-C39). */
+    public static function hostUnreachable(string $host, string $reference): self
+    {
+        return new self(self::UNREACHABLE, 'errors/git.host_unreachable', 502, $reference, ['host' => $host]);
+    }
+
     public static function unsupportedProvider(string $provider): self
     {
         return new self(self::UNSUPPORTED_PROVIDER, 'errors/git.unsupported_provider', 422, replace: ['provider' => $provider]);

@@ -257,6 +257,7 @@ return [
     | the cause; most failures carry the step and reference instead.
     */
     'failure_reason' => [
+        'verify_http' => 'After the deploy the application answered with a server error (HTTP 5xx) instead of a page. Check its log — the deployment log has the exact status.',
         'attached_database_engine_mismatch' => 'This application already has a database attached, but it runs on an engine this application cannot use. Detach it, or attach one on a supported engine, and try again.',
         'serving_error' => 'The application started but answers every request with an error. Its assets were most likely not built completely — check the application log for details.',
         'not_answering' => 'The application started but never answered a request. Check the application log for why it is not listening.',

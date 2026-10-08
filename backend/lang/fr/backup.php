@@ -66,7 +66,7 @@ return [
         'delete_running' => 'Cette sauvegarde est encore en cours : elle ne peut pas être supprimée pour l\'instant. Attendez qu\'elle se termine ou échoue.',
         'delete_artifact' => 'L\'archive n\'a pas pu être supprimée de la destination de stockage, donc rien n\'a été supprimé. Vérifiez que la destination est joignable et réessayez.',
         'delete_target_running' => 'Une sauvegarde de cette application est encore en cours. Attendez la fin avant de désactiver les sauvegardes.',
-        'delete_target_has_backups' => 'Cette application a encore :count sauvegarde(s). Confirmez qu\'elles doivent être supprimées aussi, ou supprimez-les d\'abord.',
+        'delete_target_has_backups' => 'Cette application a encore des sauvegardes (:count). Confirmez qu\'elles doivent être supprimées aussi, ou supprimez-les d\'abord.',
         'already_running' => 'Une sauvegarde est déjà en cours pour cette application.',
         'dump_database' => 'La base de données n’a pas pu être exportée, rien n’a donc été envoyé.',
         'archive_files' => 'L’archive n’a pas pu être créée — le serveur manque généralement d’espace disque.',

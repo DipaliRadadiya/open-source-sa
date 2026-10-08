@@ -42,6 +42,19 @@ class UpdateWafRequest extends FormRequest
         ];
     }
 
+    /**
+     * Sentences rather than "The exceptions.0 format is invalid." (i18n-v).
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'exceptions.*.not_regex' => __('validation.waf_exception_characters'),
+            'custom_rules.*.not_regex' => __('validation.waf_rule_characters'),
+        ];
+    }
+
     public function enabled(): bool
     {
         return $this->boolean('enabled');

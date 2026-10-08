@@ -2,6 +2,7 @@
 
 namespace App\Services\Panel;
 
+use App\Support\Bytes;
 use Illuminate\Support\Facades\Process;
 
 /**
@@ -145,7 +146,7 @@ class UpdatePreflight
         $free = @disk_free_space($this->installed->repositoryPath());
 
         if ($free === false) {
-            return ['key' => 'free_disk', 'passed' => false, 'detail' => 'unknown'];
+            return ['key' => 'free_disk', 'passed' => false, 'detail' => 'unknown', 'values' => null, 'message' => __('panel_update.preflight_detail.unknown')];
         }
 
         $freeMb = (int) floor($free / 1048576);
@@ -154,6 +155,13 @@ class UpdatePreflight
             'key' => 'free_disk',
             'passed' => $freeMb >= $required,
             'detail' => $freeMb.'MB free, '.$required.'MB required',
+            // OLD-19: the numbers, and a sentence in the viewer's language —
+            // `detail` above stays for the screen that parses it today.
+            'values' => ['free_mb' => $freeMb, 'required_mb' => $required],
+            'message' => __('panel_update.preflight_detail.free_disk', [
+                'free' => Bytes::human($freeMb * 1048576),
+                'required' => Bytes::human($required * 1048576),
+            ]),
         ];
     }
 
@@ -183,7 +191,7 @@ class UpdatePreflight
         $availableMb = $this->availableMemoryMb();
 
         if ($availableMb === null) {
-            return ['key' => 'free_memory', 'passed' => false, 'detail' => 'unknown', 'advisory' => true];
+            return ['key' => 'free_memory', 'passed' => false, 'detail' => 'unknown', 'advisory' => true, 'values' => null, 'message' => __('panel_update.preflight_detail.unknown')];
         }
 
         return $this->memoryVerdict($availableMb, $this->freeSwapMb(), $required);
@@ -210,6 +218,12 @@ class UpdatePreflight
             // cannot parse falls back to raw English megabytes.
             'detail' => $availableMb.'MB available + '.$swapMb.'MB swap, '.$requiredMb.'MB required',
             'advisory' => true,
+            'values' => ['available_mb' => $availableMb, 'swap_mb' => $swapMb, 'required_mb' => $requiredMb],
+            'message' => __('panel_update.preflight_detail.free_memory', [
+                'available' => Bytes::human($availableMb * 1048576),
+                'swap' => Bytes::human($swapMb * 1048576),
+                'required' => Bytes::human($requiredMb * 1048576),
+            ]),
         ];
     }
 

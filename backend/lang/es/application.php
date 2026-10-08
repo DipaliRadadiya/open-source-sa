@@ -247,6 +247,8 @@ return [
     ],
 
     'failure_reason' => [
+
+        'verify_http' => 'Tras el despliegue, la aplicación respondió con un error del servidor (HTTP 5xx) en lugar de una página. Revise su registro: el registro del despliegue tiene el estado exacto.',
         'attached_database_engine_mismatch' => 'Esta aplicación ya tiene una base de datos asociada, pero funciona con un motor que esta aplicación no puede usar. Desvincúlela, o asocie una en un motor compatible, e inténtelo de nuevo.',
         'serving_error' => 'La aplicación se inició pero responde a cada solicitud con un error. Lo más probable es que sus recursos no se compilaran por completo; consulte el registro de la aplicación.',
         'not_answering' => 'La aplicación se inició pero nunca respondió a una solicitud. Consulte el registro de la aplicación para ver por qué no está escuchando.',

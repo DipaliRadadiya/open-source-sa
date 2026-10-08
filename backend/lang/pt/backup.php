@@ -66,7 +66,7 @@ return [
         'delete_running' => 'Esta cópia ainda está a decorrer, por isso ainda não pode ser eliminada. Aguarde que termine ou falhe.',
         'delete_artifact' => 'Não foi possível remover o arquivo do destino de armazenamento, por isso nada foi eliminado. Verifique se o destino está acessível e tente novamente.',
         'delete_target_running' => 'Ainda está a decorrer uma cópia desta aplicação. Aguarde que termine antes de desativar as cópias.',
-        'delete_target_has_backups' => 'Esta aplicação ainda tem :count cópia(s). Confirme que também devem ser eliminadas, ou elimine-as primeiro.',
+        'delete_target_has_backups' => 'Esta aplicação ainda tem cópias de segurança (:count). Confirme que também devem ser eliminadas, ou elimine-as primeiro.',
         'already_running' => 'Já existe uma cópia de segurança em curso para esta aplicação.',
         'dump_database' => 'Não foi possível exportar a base de dados, por isso nada foi enviado.',
         'archive_files' => 'Não foi possível criar o arquivo — normalmente o servidor ficou sem espaço em disco.',

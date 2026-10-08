@@ -204,12 +204,27 @@ return [
         ],
     ],
 
+    // i18n-v: the web firewall's own words for what it refuses.
+    'waf_exception_characters' => 'Une exception est une partie de chemin, comme /wp-json/. Elle ne peut contenir ni « .. », ni « ? », ni saut de ligne.',
+    'waf_rule_characters' => 'Une règle personnalisée doit tenir sur une ligne, sans caractère de contrôle.',
+
+    // FS-B6: an application admin password's policy, named.
+    'admin_password_strength' => 'Le mot de passe doit contenir une minuscule, une majuscule, un chiffre et un symbole.',
+    'admin_password_strength_no_symbol' => 'Le mot de passe doit contenir une minuscule, une majuscule et un chiffre.',
+
     'attributes' => [
         'name' => 'nom',
         'username' => 'nom d’utilisateur',
         'password' => 'mot de passe',
         'current_password' => 'mot de passe actuel',
         'role' => 'rôle',
+        'label' => 'libellé',
+        'exceptions.*' => 'exception',
+        'custom_rules.*' => 'règle personnalisée',
+        'create_user.username' => 'nom de l’utilisateur de la base de données',
+        'create_user.password' => 'mot de passe de l’utilisateur de la base de données',
+        'create_user.host' => 'adresse distante',
+        'create_user.connection_preference' => 'type de connexion',
     ],
 
     'start_command_shell' => 'La commande de démarrage ne peut pas contenir « :token » : elle est exécutée directement, pas via un shell.',

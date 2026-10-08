@@ -76,7 +76,7 @@ class CreateSystemUser
                 ]);
 
                 if (! empty($data['public_key'])) {
-                    $this->addSshKey->execute($systemUser, ['name' => 'default', 'public_key' => $data['public_key']]);
+                    $this->addSshKey->execute($systemUser, ['name' => $this->keyName((string) $data['public_key']), 'public_key' => $data['public_key']]);
                 }
 
                 if (! empty($data['password'])) {
@@ -251,5 +251,17 @@ class CreateSystemUser
         }
 
         $systemUser->update(['password' => $password]);
+    }
+
+    /**
+     * The key's own comment (`user@laptop`) as its label (FS-C30), rather than
+     * "default" in English in every language. The key type when it has none.
+     */
+    private function keyName(string $publicKey): string
+    {
+        $parts = preg_split('/\s+/', trim($publicKey), 3) ?: [];
+        $comment = trim((string) ($parts[2] ?? ''));
+
+        return mb_substr($comment !== '' ? $comment : (string) ($parts[0] ?? 'ssh-key'), 0, 255);
     }
 }

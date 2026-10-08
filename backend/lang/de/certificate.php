@@ -30,7 +30,7 @@ return [
     // thing the user would have to change, or says plainly that nothing can
     // be changed and points at the option that does work.
     'unavailable' => [
-        'dns_unverified' => 'Noch keine Domain dieser Website zeigt auf diesen Server. Lege einen DNS-A-Eintrag an, warte auf die Verbreitung und versuche es erneut.',
+        'dns_unverified' => 'Noch keine Domain dieser Anwendung zeigt auf diesen Server. Legen Sie einen DNS-A-Eintrag an, warten Sie auf die Verbreitung und versuchen Sie es erneut.',
         'self_signed_warning' => 'Verschlüsselt den Datenverkehr sofort und funktioniert mit jeder Domain, auch mit Test- und internen Domains. Browser zeigen eine Warnung, da niemand außerhalb dieses Servers dafür bürgt.',
     ],
 

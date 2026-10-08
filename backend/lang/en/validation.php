@@ -237,12 +237,27 @@ return [
     |
     */
 
+    // i18n-v: the web firewall's own words for what it refuses.
+    'waf_exception_characters' => 'An exception is part of a path, such as /wp-json/. It cannot contain “..”, “?” or a line break.',
+    'waf_rule_characters' => 'A custom rule must be one line, with no control characters.',
+
+    // FS-B6: an application admin password's policy, named.
+    'admin_password_strength' => 'The password needs a lowercase letter, an uppercase letter, a number and a symbol.',
+    'admin_password_strength_no_symbol' => 'The password needs a lowercase letter, an uppercase letter and a number.',
+
     'attributes' => [
         'name' => 'name',
         'username' => 'username',
         'password' => 'password',
         'current_password' => 'current password',
         'role' => 'role',
+        'label' => 'label',
+        'exceptions.*' => 'exception',
+        'custom_rules.*' => 'custom rule',
+        'create_user.username' => 'database user name',
+        'create_user.password' => 'database user password',
+        'create_user.host' => 'remote address',
+        'create_user.connection_preference' => 'connection type',
     ],
 
     'start_command_shell' => 'The start command cannot contain ":token" — it is run directly, not through a shell.',

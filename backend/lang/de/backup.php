@@ -55,7 +55,7 @@ return [
         'restore_confirm' => 'Geben Sie die Domain der Anwendung exakt ein, um die Wiederherstellung zu bestätigen.',
         'restore_already_running' => 'Für diese Anwendung läuft bereits eine Wiederherstellung.',
         'restore_no_database' => 'Diese Sicherung enthält keine Datenbank.',
-        'target_no_database' => 'Diese Website hat keine Datenbank, die gesichert werden kann. Wähle stattdessen :files.',
+        'target_no_database' => 'Diese Anwendung hat keine Datenbank, die gesichert werden kann. Wählen Sie stattdessen :files.',
 
         'target_type_needs_container' => 'Dieser Server betreibt Container, daher erfasst ein Backup hier Volumes und Konfiguration. Wählen Sie eine davon.',
 
@@ -68,7 +68,7 @@ return [
         'delete_running' => 'Dieses Backup läuft noch und kann daher nicht gelöscht werden. Warten Sie, bis es abgeschlossen ist oder fehlschlägt.',
         'delete_artifact' => 'Das Archiv konnte nicht vom Speicherziel entfernt werden, daher wurde nichts gelöscht. Prüfen Sie, ob das Ziel erreichbar ist, und versuchen Sie es erneut.',
         'delete_target_running' => 'Für diese Anwendung läuft noch ein Backup. Warten Sie dessen Ende ab, bevor Sie Backups deaktivieren.',
-        'delete_target_has_backups' => 'Diese Anwendung hat noch :count Backup(s). Bestätigen Sie, dass diese ebenfalls gelöscht werden sollen, oder löschen Sie sie zuerst.',
+        'delete_target_has_backups' => 'Diese Anwendung hat noch Backups (:count). Bestätigen Sie, dass diese ebenfalls gelöscht werden sollen, oder löschen Sie sie zuerst.',
         'already_running' => 'Für diese Anwendung läuft bereits eine Sicherung.',
         'dump_database' => 'Die Datenbank konnte nicht exportiert werden, daher wurde nichts hochgeladen.',
         'archive_files' => 'Das Archiv konnte nicht erstellt werden — meist ist kein Speicherplatz mehr frei.',
@@ -80,7 +80,7 @@ return [
         'unknown' => 'Die Sicherung schlug aus unbekanntem Grund fehl.',
         'crashed' => 'Die Sicherung wurde unerwartet beendet — der Prozess wurde abgebrochen, bevor er fertig war. Meist ging dem Server der Arbeitsspeicher aus oder der Worker wurde mittendrin neu gestartet.',
         'abandoned' => 'Diese Sicherung hat sich nie zurückgemeldet und wurde abgeschlossen. Ihr Worker existiert nicht mehr, es wurde nichts hochgeladen.',
-        'restore_in_progress' => 'Nicht erstellt: Eine Wiederherstellung dieser Website begann, bevor diese Sicherung laufen konnte. Starte sie erneut, sobald die Wiederherstellung abgeschlossen ist.',
+        'restore_in_progress' => 'Nicht erstellt: Eine Wiederherstellung dieser Anwendung begann, bevor diese Sicherung laufen konnte. Starten Sie sie erneut, sobald die Wiederherstellung abgeschlossen ist.',
         'clear_not_running' => 'Diese Sicherung läuft nicht, es gibt nichts zu bereinigen.',
         'clear_too_soon' => 'Diese Sicherung läuft möglicherweise noch. Sie wird :minutes Minuten nach dem Start automatisch abgeschlossen, wenn sich der Worker nicht meldet.',
         'prune_old_backups' => 'Alte Sicherungen konnten nicht entfernt werden. Die neue Sicherung ist unversehrt; im Speicher liegen möglicherweise mehr Kopien als eingestellt.',

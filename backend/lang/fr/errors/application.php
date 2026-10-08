@@ -70,7 +70,7 @@ return [
     'bot_agent_robots_only' => 'Ce nom ne fonctionne que dans robots.txt : aucun robot ne visite avec lui, le bloquer ne ferait rien. Utilisez plutôt les lignes robots.txt indiquées ci-dessus.',
     'web_root_failed' => 'La modification de la racine web a échoué sur le serveur.',
     'web_root_not_found' => 'Le répertoire racine web est introuvable sur le serveur. Vérifiez la racine web dans les paramètres de l\'application et reprovisionnez-la si elle n\'a jamais été créée.',
-    'waf_unsupported' => 'Le pare-feu 8G n\'est pas encore disponible sur :server.',
+    'waf_unsupported' => 'Le pare-feu web n\'est pas encore disponible sur :server.',
     'waf_failed' => 'La modification des paramètres du pare-feu a échoué sur le serveur.',
     'staging_failed' => 'L\'opération de staging a échoué sur le serveur.',
     'staging_exists' => 'Ce site a déjà une copie de staging. Publiez-la ou supprimez-la d’abord.',

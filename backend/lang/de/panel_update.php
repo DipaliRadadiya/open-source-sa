@@ -98,4 +98,11 @@ return [
         'sqlite_not_found' => 'Die konfigurierte SQLite-Datenbankdatei existiert nicht.',
         'root_not_writable' => 'Das Panel-Verzeichnis ist nicht beschreibbar; als root ausführen.',
     ],
+
+    // OLD-19: preflight figures as sentences, in the viewer's language.
+    'preflight_detail' => [
+        'free_disk' => ':free frei, :required benötigt.',
+        'free_memory' => ':available Arbeitsspeicher verfügbar plus :swap Swap, :required benötigt.',
+        'unknown' => 'Konnte nicht gemessen werden.',
+    ],
 ];

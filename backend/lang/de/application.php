@@ -59,10 +59,10 @@ return [
     'unavailable' => [
         'stack' => 'Dieser Server führt ausschließlich Container aus und hostet diese Art von Anwendung daher nicht.',
         'stack_profile' => 'Dieser Server ist nicht dafür eingerichtet, diese Art von Anwendung zu hosten.',
-        'profile' => 'Dieser Server liefert keine :profile-Websites aus, daher ist diese Darstellungsart hier nicht möglich. Wähle eine, die dieser Server unterstützt.',
+        'profile' => 'Dieser Server liefert keine :profile-Anwendungen aus, daher ist diese Darstellungsart hier nicht möglich. Wählen Sie eine, die dieser Server unterstützt.',
         'database' => 'Diese Anwendung benötigt :engines, das auf diesem Server fehlt.',
         'php' => 'Auf diesem Server ist PHP nicht installiert.',
-        'php_version_install' => 'Auf diesem Server gibt es keine PHP-Version, auf der :type läuft (:range). Installiere zuerst PHP :version im PHP-Bereich.',
+        'php_version_install' => 'Auf diesem Server gibt es keine PHP-Version, auf der :type läuft (:range). Installieren Sie zuerst PHP :version im PHP-Bereich.',
         'php_version_none' => 'Auf diesem Server gibt es keine PHP-Version, auf der :type läuft (:range), und keine dieser Versionen lässt sich aus dem Paket-Repository des Servers installieren.',
         'node' => 'Auf diesem Server ist Node.js nicht installiert.',
         'web_server' => 'Diese Anwendung ist auf :web_server-Servern noch nicht verfügbar.',
@@ -154,12 +154,12 @@ return [
         'company_name' => 'Meine Firma',
         'short_name' => 'meineseite',
         'mailer_name' => 'Meine Website',
-        'admin_email' => 'du@beispiel.de',
-        'company_email' => 'du@beispiel.de',
+        'admin_email' => 'sie@beispiel.de',
+        'company_email' => 'sie@beispiel.de',
         'mailer_email' => 'no-reply@beispiel.de',
         'mailer_username' => 'no-reply@beispiel.de',
         'timezone' => 'Europe/Berlin',
-        'repository_url' => 'https://github.com/du/repo.git',
+        'repository_url' => 'https://github.com/ihr-name/repo.git',
         'build_command' => 'npm ci && npm run build',
         'start_command' => 'node server.js',
     ],
@@ -191,11 +191,11 @@ return [
         'table_prefix_optional' => 'Optional. Wird das Feld geleert, werden die Tabellen ganz ohne Präfix angelegt.',
         'start_command' => 'Die Einstiegsdatei, z. B. „node server.js“. Nicht „npm start“ – ein Paketmanager forkt den eigentlichen Prozess, sodass Shutdown-Signale ihn nie erreichen.',
         'app_port' => 'Leer gelassen wählt das Panel einen freien Port.',
-        'rendering_type' => 'Server-Rendering führt deine App aus und leitet an sie weiter. Die anderen beiden bauen Dateien, die der Webserver direkt ausliefert – schneller, und nichts muss laufen.',
+        'rendering_type' => 'Server-Rendering führt Ihre App aus und leitet an sie weiter. Die übrigen Arten liefern PHP oder fertig gebaute Dateien direkt über den Webserver aus – schneller, und nichts muss laufen.',
         'repository_url' => 'Ein öffentliches Repository — kein Konto nötig. Muss eine https://-Adresse sein.',
         'build_command' => 'Läuft nach dem Abrufen des Codes, z. B. composer install --no-dev',
         'deploy_script' => 'Läuft nach dem Abrufen des Codes, als Ihr Site-Benutzer und mit der PHP-Version dieser Site. Leer lassen, um den Build-Befehl zu verwenden.',
-        'package_manager' => 'Was deine Abhängigkeiten installiert und baut. Füllt den Build-Befehl unten aus – danach frei bearbeitbar.',
+        'package_manager' => 'Was Ihre Abhängigkeiten installiert und baut. Füllt den Build-Befehl unten aus – danach frei bearbeitbar.',
     ],
 
     'steps' => [
@@ -239,14 +239,16 @@ return [
     */
     'site_type_change' => [
         'git_cannot_change' => 'Diese Site wird aus einem Git-Repository bereitgestellt, daher kann ihr Typ nicht geändert werden. Die Bildschirme für Deployments, Worker und Umgebungsdatei existieren wegen dieses Typs, und sie zu entfernen würde weder die Hintergrund-Worker anhalten noch verhindern, dass der Deploy-Webhook Pushes annimmt – es würde nur die Bildschirme entfernen, die sie verwalten.',
-        'git_not_a_target' => 'Eine Site kann nicht in ein Git-Deployment umgewandelt werden. Dafür braucht es ein Repository, einen Branch und ein Deploy-Skript, die das Panel verwaltet, und das lässt sich nicht aus den Dateien erzeugen, die schon auf dem Server liegen. Erstelle stattdessen eine Git-Anwendung.',
+        'git_not_a_target' => 'Eine Anwendung kann nicht in ein Git-Deployment umgewandelt werden. Dafür braucht es ein Repository, einen Branch und ein Deploy-Skript, die das Panel verwaltet, und das lässt sich nicht aus den Dateien erzeugen, die schon auf dem Server liegen. Erstellen Sie stattdessen eine Git-Anwendung.',
         'unchanged' => 'Diese Site ist bereits auf diesen Typ gesetzt.',
         'not_suggestable' => 'Diese Site kann nicht auf diesen Typ geändert werden. Nur Anwendungen, die das Panel auf der Festplatte erkennen kann, lassen sich neu kennzeichnen – alles andere würde Funktionen beanspruchen, die die Site nicht nutzen kann.',
         'only_from_generic' => 'Nur eine Custom-PHP- oder statische Site kann als anderer Anwendungstyp gekennzeichnet werden. Diese Site ist bereits auf eine bestimmte Anwendung gesetzt, und eine Anwendung in eine andere zu verwandeln kann eine Kennzeichnung nicht leisten.',
-        'no_evidence' => 'Nichts auf dieser Site sieht nach :type aus. Lade zuerst die Anwendung hoch und führe Erkennen erneut aus – das Panel ändert den Typ einer Site nur, wenn es die Anwendung im Verzeichnis der Site sehen kann.',
+        'no_evidence' => 'Nichts in dieser Anwendung sieht nach :type aus. Laden Sie zuerst die Anwendung hoch und führen Sie „Erkennen“ erneut aus – das Panel ändert den Typ einer Anwendung nur, wenn es sie in ihrem Verzeichnis sehen kann.',
     ],
 
     'failure_reason' => [
+
+        'verify_http' => 'Nach dem Deployment hat die Anwendung mit einem Serverfehler (HTTP 5xx) statt mit einer Seite geantwortet. Prüfen Sie ihr Log — das Deployment-Log enthält den genauen Status.',
         'attached_database_engine_mismatch' => 'Diese Anwendung hat bereits eine Datenbank, die jedoch auf einer Engine läuft, die diese Anwendung nicht verwenden kann. Trennen Sie sie, oder verknüpfen Sie eine auf einer unterstützten Engine, und versuchen Sie es erneut.',
         'serving_error' => 'Die Anwendung wurde gestartet, beantwortet aber jede Anfrage mit einem Fehler. Wahrscheinlich wurden ihre Assets nicht vollständig gebaut — Einzelheiten im Anwendungsprotokoll.',
         'not_answering' => 'Die Anwendung wurde gestartet, hat aber nie auf eine Anfrage geantwortet. Im Anwendungsprotokoll steht, warum sie nicht lauscht.',
@@ -307,22 +309,22 @@ return [
     // A deploy that failed after its checkout left the new code live.
     // See Application::codeOnDisk().
     'code_on_disk' => [
-        'incomplete' => 'Das letzte Deployment ist fehlgeschlagen, nachdem der neue Code bereits eingespielt war. Die Website läuft daher mit Commit :commit, der nicht vollständig bereitgestellt ist. Behebe das Problem und deploye erneut.',
+        'incomplete' => 'Das letzte Deployment ist fehlgeschlagen, nachdem der neue Code bereits eingespielt war. Die Anwendung läuft daher mit Commit :commit, der nicht vollständig bereitgestellt ist. Beheben Sie das Problem und deployen Sie erneut.',
     ],
 
     // A delivery for a site whose deploy-on-push is switched off. See
     // ApplicationWebhookController::receive().
     'webhook_delivery' => [
-        'disabled' => 'Deploy bei Push ist für diese Website im Panel ausgeschaltet, deshalb wurde nichts bereitgestellt. Schalte es im Panel wieder ein oder lösche diesen Webhook.',
+        'disabled' => 'Deploy bei Push ist für diese Anwendung im Panel ausgeschaltet, deshalb wurde nichts bereitgestellt. Schalten Sie es im Panel wieder ein oder löschen Sie diesen Webhook.',
     ],
 
     // Why deploy-on-push still needs the webhook added by hand. See
     // WebhookRegistrar.
     'webhook_registration' => [
-        'no_account' => 'Diese Website wird von einer öffentlichen URL bereitgestellt, nicht über ein verbundenes Git-Konto, daher kann das Panel den Webhook nicht für dich anlegen. Lege ihn in den Repository-Einstellungen mit der URL und dem Secret unten an.',
-        'signing_token' => 'GitLab erstellt Signatur-Tokens selbst, daher kann das Panel diesen Webhook nicht für dich anlegen. Lege ihn in den Webhook-Einstellungen des Repositorys mit der URL unten und deinem Signatur-Token an.',
-        'not_public' => 'Die Adresse des Panels ist aus dem Internet nicht erreichbar, daher könnten GitHub, GitLab oder Bitbucket nichts zustellen. Gib dem Panel eine öffentliche Adresse oder lege den Webhook danach von Hand an.',
-        'provider_refused' => 'Der Git-Anbieter hat dem Panel nicht erlaubt, den Webhook anzulegen. Wahrscheinlich fehlt dem verbundenen Token die Berechtigung, Webhooks in diesem Repository zu verwalten. Lege ihn von Hand mit der URL und dem Secret unten an oder verbinde das Konto mit dieser Berechtigung neu.',
-        'removal_refused' => 'Deploy bei Push ist aus, aber der Git-Anbieter hat dem Panel nicht erlaubt, den angelegten Webhook zu entfernen. Wahrscheinlich fehlt dem verbundenen Token die Berechtigung, Webhooks zu löschen. Pushes werden weiter gesendet und abgewiesen, bis du den Webhook in den Einstellungen des Repositorys löschst.',
+        'no_account' => 'Diese Anwendung wird von einer öffentlichen URL bereitgestellt, nicht über ein verbundenes Git-Konto, daher kann das Panel den Webhook nicht für Sie anlegen. Legen Sie ihn in den Repository-Einstellungen mit der URL und dem Secret unten an.',
+        'signing_token' => 'GitLab erstellt Signatur-Tokens selbst, daher kann das Panel diesen Webhook nicht für Sie anlegen. Legen Sie ihn in den Webhook-Einstellungen des Repositorys mit der URL unten und Ihrem Signatur-Token an.',
+        'not_public' => 'Die Adresse des Panels ist aus dem Internet nicht erreichbar, daher könnten GitHub, GitLab oder Bitbucket nichts zustellen. Geben Sie dem Panel eine öffentliche Adresse oder legen Sie den Webhook danach von Hand an.',
+        'provider_refused' => 'Der Git-Anbieter hat dem Panel nicht erlaubt, den Webhook anzulegen. Wahrscheinlich fehlt dem verbundenen Token die Berechtigung, Webhooks in diesem Repository zu verwalten. Legen Sie ihn von Hand mit der URL und dem Secret unten an oder verbinden Sie das Konto mit dieser Berechtigung neu.',
+        'removal_refused' => 'Deploy bei Push ist aus, aber der Git-Anbieter hat dem Panel nicht erlaubt, den angelegten Webhook zu entfernen. Wahrscheinlich fehlt dem verbundenen Token die Berechtigung, Webhooks zu löschen. Pushes werden weiter gesendet und abgewiesen, bis Sie den Webhook in den Einstellungen des Repositorys löschen.',
     ],
 ];

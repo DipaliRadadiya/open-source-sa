@@ -18,20 +18,20 @@ return [
     ],
     'database_engine_not_used' => 'Diese Anwendung verwendet keine Datenbank.',
     'database_engine_unsupported' => 'Diese Anwendung kann diese Datenbank-Engine nicht verwenden. :application unterstützt eine andere.',
-    'database_engine_unavailable' => 'Diese Datenbank-Engine läuft auf diesem Server nicht. Installiere oder starte sie zuerst.',
-    'database_engine_too_old' => 'Das :engine auf diesem Server ist zu alt für :application, das :minimum oder neuer benötigt. Aktualisiere es oder wähle eine andere Datenbank-Engine.',
+    'database_engine_unavailable' => 'Diese Datenbank-Engine läuft auf diesem Server nicht. Installieren oder starten Sie sie zuerst.',
+    'database_engine_too_old' => 'Das :engine auf diesem Server ist zu alt für :application, das :minimum oder neuer benötigt. Aktualisieren Sie es oder wählen Sie eine andere Datenbank-Engine.',
 
     // Deleting a site can take its databases with it (`remove_databases`).
     // The first refusal is the caller lacking `database` manage; the second
     // is the honest half-success — the site went, a database did not.
-    'database_removal_not_permitted' => 'Du kannst diese Website löschen, aber nicht ihre Datenbanken. Bitte einen Administrator um Datenbankzugriff oder lösche die Website, ohne sie zu entfernen.',
-    'databases_not_removed' => 'Die Website wurde gelöscht, aber diese Datenbanken sind noch auf dem Server: :databases. Entferne sie auf der Datenbank-Seite oder nenne dem Support die Referenz.',
+    'database_removal_not_permitted' => 'Sie können diese Anwendung löschen, aber nicht ihre Datenbanken. Bitten Sie einen Administrator um Datenbankzugriff oder löschen Sie die Anwendung, ohne die Datenbanken zu entfernen.',
+    'databases_not_removed' => 'Die Anwendung wurde gelöscht, aber diese Datenbanken sind noch auf dem Server: :databases. Entfernen Sie sie auf der Datenbank-Seite oder nennen Sie dem Support die Referenz.',
 
     'primary_domain_not_removable' => 'Die primäre Domain kann nicht entfernt werden. Machen Sie zuerst eine andere Domain zur primären.',
-    'primary_domain_not_editable' => 'Eine primäre Domain kann nicht bearbeitet werden. Mache zuerst eine andere Domain zur primären.',
+    'primary_domain_not_editable' => 'Eine primäre Domain kann nicht bearbeitet werden. Machen Sie zuerst eine andere Domain zur primären.',
     'domain_taken' => 'Diese Domain wird auf diesem Server bereits verwendet.',
     'domain_is_ip' => 'Geben Sie einen Domainnamen ein, keine IP-Adresse.',
-    'invalid_domain' => 'Gib einen gültigen Domainnamen ein, z. B. example.com. Jeder Teil darf Buchstaben, Ziffern und Bindestriche enthalten, aber nicht mit einem Bindestrich beginnen oder enden und nicht leer sein.',
+    'invalid_domain' => 'Geben Sie einen gültigen Domainnamen ein, z. B. example.com. Jeder Teil darf Buchstaben, Ziffern und Bindestriche enthalten, aber nicht mit einem Bindestrich beginnen oder enden und nicht leer sein.',
     'domain_taken_by' => 'Diese Domain wird bereits von der Anwendung „:application“ verwendet.',
     'domain_is_panel' => 'Unter dieser Adresse wird das Panel selbst ausgeliefert, daher kann eine Website sie nicht verwenden.',
     'shop_name_characters' => 'Der Shopname darf keines dieser Zeichen enthalten: < > = { } | `',
@@ -46,14 +46,14 @@ return [
     'container_apply_failed' => 'Die Einstellungen wurden gespeichert, der Container konnte damit aber nicht gestartet werden. Referenz :reference.',
     'compose_apply_failed' => 'Die Compose-Datei konnte nicht angewendet werden, daher läuft die Site wieder mit der vorherigen. Referenz :reference.',
     'docker_removal_not_permitted' => 'Sie haben keine Berechtigung, Docker-Netzwerke oder -Volumes zu löschen. Entfernen Sie die Website ohne sie, oder fragen Sie jemanden mit Docker-Zugriff.',
-    'no_database_engine' => 'Keine Datenbank-Engine verfügbar. Installiere und konfiguriere MySQL oder MariaDB, bevor du diese Anwendung anlegst.',
+    'no_database_engine' => 'Keine Datenbank-Engine verfügbar. Installieren und konfigurieren Sie MySQL oder MariaDB, bevor Sie diese Anwendung anlegen.',
     'no_process' => '„:name“ führt keinen eigenen Prozess aus.',
     'not_adopted' => '„:name“ läuft bereits unter einer systemd-Unit.',
     'convert_no_entrypoint' => 'Legen Sie einen Startbefehl fest, der ein Skript benennt – zum Beispiel „node server.js“ –, bevor Sie „:name“ auf eine systemd-Unit umstellen. Das alte Panel hat keinen aufgezeichnet, der sich direkt ausführen lässt.',
     'convert_failed' => '„:name“ konnte nicht auf eine systemd-Unit umgestellt werden. Die Anwendung läuft wieder unter PM2. Geben Sie dem Support die Referenz an.',
     'process_failed' => 'Die Anwendung konnte nicht :action werden. Nenne dem Support die Referenz.',
     'system_user_missing' => 'Der Systembenutzer von :name fehlt, daher kann das Panel nicht mit den Dateien dieser Anwendung arbeiten. Sie können die Anwendung weiterhin löschen.',
-    'no_port_available' => 'Kein freier Port zwischen :from und :to. Gib einen frei oder erweitere den Bereich.',
+    'no_port_available' => 'Kein freier Port zwischen :from und :to. Geben Sie einen frei oder erweitern Sie den Bereich.',
 
     'webhook_not_a_git_application' => 'Deploy-on-Push ist nur für Anwendungen verfügbar, die aus einem Git-Repository bereitgestellt werden.',
 
@@ -67,17 +67,17 @@ return [
     'bot_agent_too_broad' => 'Das ist zu allgemein – damit würden auch Suchmaschinen wie Google und Bing blockiert. Verwenden Sie den vollständigen Bot-Namen.',
     'bot_agent_search_engine' => 'Das ist eine Suchmaschine, kein KI-Crawler. Eine Blockierung würde Ihre Website aus den Suchergebnissen entfernen.',
     'bot_agent_matches_visitors' => 'Das kommt auch im User-Agent von :agent vor und würde echte Besucher blockieren. Verwenden Sie stattdessen den eigenen Namen des Crawlers.',
-    'bot_agent_robots_only' => 'Dieser Name funktioniert nur in der robots.txt – kein Bot besucht mit ihm, eine Sperre würde also nichts bewirken. Nutze stattdessen die oben gezeigten robots.txt-Zeilen.',
+    'bot_agent_robots_only' => 'Dieser Name funktioniert nur in der robots.txt – kein Bot besucht mit ihm, eine Sperre würde also nichts bewirken. Nutzen Sie stattdessen die oben gezeigten robots.txt-Zeilen.',
     'web_root_failed' => 'Das Ändern des Web-Roots ist auf dem Server fehlgeschlagen.',
     'web_root_not_found' => 'Das Web-Root-Verzeichnis wurde auf dem Server nicht gefunden. Prüfen Sie den Web-Root in den Anwendungseinstellungen und stellen Sie die Anwendung erneut bereit, falls sie nie erstellt wurde.',
-    'waf_unsupported' => 'Die 8G-Firewall ist auf :server noch nicht verfügbar.',
+    'waf_unsupported' => 'Die Web-Firewall ist auf :server noch nicht verfügbar.',
     'waf_failed' => 'Das Ändern der Firewall-Einstellungen ist auf dem Server fehlgeschlagen.',
     'staging_failed' => 'Der Staging-Vorgang ist auf dem Server fehlgeschlagen.',
-    'staging_exists' => 'Diese Website hat bereits eine Staging-Kopie. Übertrage oder lösche sie zuerst.',
-    'staging_of_staging' => 'Dies ist eine Staging-Kopie. Erstelle Staging-Kopien von der Live-Website aus.',
+    'staging_exists' => 'Diese Anwendung hat bereits eine Staging-Kopie. Übertragen oder löschen Sie sie zuerst.',
+    'staging_of_staging' => 'Dies ist eine Staging-Kopie. Erstellen Sie Staging-Kopien von der Live-Anwendung aus.',
     'staging_missing' => 'Diese Website hat keine Staging-Kopie, die übertragen werden kann.',
     'staging_rollback_failed' => 'Der Staging-Push ist fehlgeschlagen und die Produktionswebsite konnte nicht wiederhergestellt werden. Die Website bleibt deaktiviert. Nennen Sie dem Support die Referenz.',
-    'staging_push_running' => 'Für diese Website läuft bereits eine Übertragung. Warte, bis sie abgeschlossen ist.',
+    'staging_push_running' => 'Für diese Anwendung läuft bereits eine Übertragung. Warten Sie, bis sie abgeschlossen ist.',
     'clone_failed' => 'Der Klonvorgang ist auf dem Server fehlgeschlagen.',
     'fail2ban_failed' => 'Der Fail2ban-Vorgang ist auf dem Server fehlgeschlagen.',
 
@@ -137,13 +137,13 @@ return [
     // The Lock button for a site folder the panel did not create; see
     // SiteRootLock::adopt(). Keyed by its result.
     'root_lock' => [
-        'unsafe' => 'Der Website-Ordner :path ist kein normaler Ordner oder hat sich während der Prüfung geändert und wurde daher nicht angetastet. Prüfe ihn auf dem Server, bevor du es erneut versuchst.',
+        'unsafe' => 'Der Anwendungsordner :path ist kein normaler Ordner oder hat sich während der Prüfung geändert und wurde daher nicht angetastet. Prüfen Sie ihn auf dem Server, bevor Sie es erneut versuchen.',
         'missing' => 'Der Website-Ordner :path existiert auf dem Server nicht.',
         'failed' => 'Der Server konnte den Website-Ordner nicht sperren. Es wurde nichts geändert. Details stehen im Server-Log.',
         'unsupported' => 'Das Dateisystem dieses Servers unterstützt die Ordnersperre nicht, daher wurde der Website-Ordner unverändert gelassen.',
-        'foreign_owner' => 'Der Website-Ordner :path gehört einem anderen Konto, nicht dem Benutzer dieser Website, und wurde daher nicht angetastet. Prüfe, wem er gehören sollte, bevor du ihn sperrst.',
-        'writable' => 'Andere Konten können in den Website-Ordner :path schreiben, daher würde eine Sperre nicht halten. Entferne die Schreibrechte für Gruppe und Alle (zum Beispiel `chmod 755`) und versuche es erneut.',
-        'locks_out_user' => 'Das Sperren des Website-Ordners :path würde den Benutzer dieser Website aussperren: Seine Rechte geben ihm nur als Eigentümer Zugriff. Gib der Gruppe des Ordners Lese- und Öffnungsrechte (zum Beispiel `chmod 750`), stelle sicher, dass der Benutzer in dieser Gruppe ist, und versuche es erneut.',
+        'foreign_owner' => 'Der Anwendungsordner :path gehört einem anderen Konto, nicht dem Benutzer dieser Anwendung, und wurde daher nicht angetastet. Prüfen Sie, wem er gehören sollte, bevor Sie ihn sperren.',
+        'writable' => 'Andere Konten können in den Anwendungsordner :path schreiben, daher würde eine Sperre nicht halten. Entfernen Sie die Schreibrechte für Gruppe und Alle (zum Beispiel `chmod 755`) und versuchen Sie es erneut.',
+        'locks_out_user' => 'Das Sperren des Anwendungsordners :path würde den Benutzer dieser Anwendung aussperren: Seine Rechte geben ihm nur als Eigentümer Zugriff. Geben Sie der Gruppe des Ordners Lese- und Öffnungsrechte (zum Beispiel `chmod 750`), stellen Sie sicher, dass der Benutzer in dieser Gruppe ist, und versuchen Sie es erneut.',
     ],
 
     // A git site whose account was disconnected: no credential, no URL.

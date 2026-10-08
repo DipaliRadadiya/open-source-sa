@@ -226,7 +226,7 @@ it('pushes files-only without dumping the production database', function () {
         ->assertOk();
 
     expect($dumps)->toBeEmpty()
-        ->and(ActivityLog::where('action', 'staging_pushed')->latest()->first()->properties['mode'] ?? null)->toBe('files');
+        ->and(ActivityLog::where('action', 'staging_pushed_files')->exists())->toBeTrue();
 
     expect($this->production->fresh()->disabled_at)->toBeNull();
 });

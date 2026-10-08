@@ -496,7 +496,10 @@ describe('the post-deploy health check', function () {
 
         runDeploy($app);
 
-        expect($app->fresh()->failed_step)->toBe('verify');
+        expect($app->fresh()->failed_step)->toBe('verify')
+            // A code with a sentence, not "curl … returned HTTP 500" (FS-C40).
+            ->and($app->fresh()->failed_reason)->toBe('verify_http')
+            ->and(__('application.failure_reason.verify_http'))->not->toBe('application.failure_reason.verify_http');
     });
 });
 

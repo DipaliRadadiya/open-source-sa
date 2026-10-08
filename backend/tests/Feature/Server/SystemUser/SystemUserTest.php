@@ -166,6 +166,20 @@ it('removes the OS account and panel row when SSH-key setup fails', function () 
         && in_array('deploy', $process->command, true));
 });
 
+it('labels the first key with its own comment, not "default" (FS-C30)', function () {
+    Process::fake();
+    $admin = User::factory()->admin()->create();
+
+    $this->withHeader('Authorization', 'Bearer '.$admin->createToken('t')->plainTextToken)
+        ->postJson('/api/system-users', [
+            'username' => 'deploy',
+            'public_key' => 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC2jl2RaIM4z9e4xdFQkCOWCbJkF8PqwX5IaDLbPbIGW dipali@laptop',
+        ])
+        ->assertCreated();
+
+    expect(SystemUser::where('username', 'deploy')->first()->sshKeys()->value('name'))->toBe('dipali@laptop');
+});
+
 it('rejects reserved usernames', function () {
     Process::fake();
     $admin = User::factory()->admin()->create();

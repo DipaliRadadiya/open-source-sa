@@ -247,6 +247,8 @@ return [
     ],
 
     'failure_reason' => [
+
+        'verify_http' => 'Após a implementação, a aplicação respondeu com um erro de servidor (HTTP 5xx) em vez de uma página. Verifique o registo — o registo da implementação tem o estado exato.',
         'attached_database_engine_mismatch' => 'Esta aplicação já tem uma base de dados associada, mas funciona num motor que esta aplicação não consegue usar. Desassocie-a, ou associe uma num motor suportado, e tente novamente.',
         'serving_error' => 'A aplicação iniciou mas responde a todos os pedidos com um erro. Os seus recursos provavelmente não foram totalmente construídos — consulte o registo da aplicação.',
         'not_answering' => 'A aplicação iniciou mas nunca respondeu a um pedido. Consulte o registo da aplicação para saber porque não está à escuta.',

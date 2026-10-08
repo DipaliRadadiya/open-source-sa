@@ -204,12 +204,27 @@ return [
         ],
     ],
 
+    // i18n-v: the web firewall's own words for what it refuses.
+    'waf_exception_characters' => '例外は /wp-json/ のようなパスの一部です。「..」「?」や改行は使えません。',
+    'waf_rule_characters' => 'カスタムルールは制御文字を含まない 1 行で指定してください。',
+
+    // FS-B6: an application admin password's policy, named.
+    'admin_password_strength' => 'パスワードには小文字、大文字、数字、記号をそれぞれ含めてください。',
+    'admin_password_strength_no_symbol' => 'パスワードには小文字、大文字、数字をそれぞれ含めてください。',
+
     'attributes' => [
         'name' => '名前',
         'username' => 'ユーザー名',
         'password' => 'パスワード',
         'current_password' => '現在のパスワード',
         'role' => 'ロール',
+        'label' => 'ラベル',
+        'exceptions.*' => '例外',
+        'custom_rules.*' => 'カスタムルール',
+        'create_user.username' => 'データベースユーザー名',
+        'create_user.password' => 'データベースユーザーのパスワード',
+        'create_user.host' => 'リモートアドレス',
+        'create_user.connection_preference' => '接続の種類',
     ],
 
     'start_command_shell' => '起動コマンドに「:token」は使えません。シェルを介さず直接実行されます。',

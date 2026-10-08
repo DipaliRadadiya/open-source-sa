@@ -3,7 +3,7 @@
 return [
     'operation_failed' => 'Die Änderung der Einstellungen ist auf dem Server fehlgeschlagen.',
     'group_unavailable' => 'Diese Einstellungsgruppe ist auf diesem Server nicht verfügbar.',
-    'security_updates_unavailable' => 'unattended-upgrades ist auf diesem Server nicht installiert, das Panel hat also nichts auszuführen. Installiere das Paket unattended-upgrades und versuche es erneut.',
+    'security_updates_unavailable' => 'unattended-upgrades ist auf diesem Server nicht installiert, das Panel hat also nichts auszuführen. Installieren Sie das Paket unattended-upgrades und versuchen Sie es erneut.',
     'security_updates_in_progress' => 'Ein Sicherheitsupdate läuft bereits.',
     'no_ssh_key' => 'Fügen Sie einen SSH-Schlüssel hinzu, bevor Sie die Passwort-Authentifizierung deaktivieren, sonst sperren Sie sich möglicherweise aus.',
     'ssh_port_in_use' => 'Port :port wird auf diesem Server bereits verwendet, daher könnte SSH dort nicht lauschen. Wählen Sie einen freien Port.',

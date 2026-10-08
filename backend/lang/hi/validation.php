@@ -204,12 +204,27 @@ return [
         ],
     ],
 
+    // i18n-v: the web firewall's own words for what it refuses.
+    'waf_exception_characters' => 'अपवाद किसी पाथ का हिस्सा होता है, जैसे /wp-json/। इसमें “..”, “?” या नई पंक्ति नहीं हो सकती।',
+    'waf_rule_characters' => 'कस्टम नियम एक ही पंक्ति में होना चाहिए, बिना कंट्रोल कैरेक्टर के।',
+
+    // FS-B6: an application admin password's policy, named.
+    'admin_password_strength' => 'पासवर्ड में एक छोटा अक्षर, एक बड़ा अक्षर, एक अंक और एक चिह्न होना चाहिए।',
+    'admin_password_strength_no_symbol' => 'पासवर्ड में एक छोटा अक्षर, एक बड़ा अक्षर और एक अंक होना चाहिए।',
+
     'attributes' => [
         'name' => 'नाम',
         'username' => 'उपयोगकर्ता नाम',
         'password' => 'पासवर्ड',
         'current_password' => 'वर्तमान पासवर्ड',
         'role' => 'भूमिका',
+        'label' => 'लेबल',
+        'exceptions.*' => 'अपवाद',
+        'custom_rules.*' => 'कस्टम नियम',
+        'create_user.username' => 'डेटाबेस उपयोगकर्ता नाम',
+        'create_user.password' => 'डेटाबेस उपयोगकर्ता पासवर्ड',
+        'create_user.host' => 'रिमोट पता',
+        'create_user.connection_preference' => 'कनेक्शन का प्रकार',
     ],
 
     'start_command_shell' => 'स्टार्ट कमांड में ":token" नहीं हो सकता — यह सीधे चलता है, शेल के माध्यम से नहीं।',

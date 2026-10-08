@@ -10,4 +10,5 @@ return [
     // Disconnecting an account that applications still deploy with.
     'in_use' => 'Невозможно отключить :name — учётная запись всё ещё используется: :applications. Сначала привяжите эти приложения к другой учётной записи.',
     'and_more' => 'ещё :count',
+    'host_unreachable' => 'Не удалось связаться с :host. Проверьте адрес вашего собственного сервера.',
 ];

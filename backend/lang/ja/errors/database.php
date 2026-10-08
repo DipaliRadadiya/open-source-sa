@@ -16,7 +16,7 @@ return [
     'remote_users_unsupported' => ':engine ではリモートアクセスを利用できません。アカウントがホストに紐づかないためです。localhost を使用してください。',
     // 409, not 422: the request is fine, the cluster is not ready. The
     // client re-sends with restart_cluster as explicit consent.
-    'remote_access_restart_required' => 'リモート接続を許可するには :engine の再起動が必要です。待ち受けアドレスは起動時にしか変更できないためです。このデータベースを使用しているアプリケーションは一時的に接続を失います。続行するには restart_cluster を付けて再送信してください。',
+    'remote_access_restart_required' => 'リモート接続を許可するには :engine の再起動が必要です。待ち受けアドレスは起動時にしか変更できないためです。このデータベースを使うアプリケーションは一瞬接続が切れます。再起動して続行するには確認してください。',
     'phpmyadmin_not_selectable' => '選択されたサイトは有効な phpMyAdmin インストールではありません。',
     'phpmyadmin_user_not_found' => '指定されたデータベースユーザーはこのデータベースに属していません。',
     'phpmyadmin_not_isolated' => 'このphpMyAdminサイトはサーバー全体のPHPプールを共有しているため、サインインリンクが他のすべてのサイトから読み取れてしまいます。専用のPHPプールを割り当てるか、phpMyAdminを開いてデータベースの認証情報でサインインしてください。',

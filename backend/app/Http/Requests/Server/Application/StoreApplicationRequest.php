@@ -341,11 +341,18 @@ class StoreApplicationRequest extends FormRequest
         $type = app(SiteTypeManager::class)->find((string) $this->input('site_type'));
         $fixed = $type?->fixedWebRoot();
 
+        // FS-B6: a password policy written as four regexes answered "format
+        // is invalid" for a missing symbol — name the rule instead.
+        // n8n's policy has no symbol rule; Moodle's does.
+        $messages = ['admin_password.regex' => __($type?->name() === 'n8n'
+            ? 'validation.admin_password_strength_no_symbol'
+            : 'validation.admin_password_strength')];
+
         if ($fixed === null) {
-            return [];
+            return $messages;
         }
 
-        return [
+        return $messages + [
             'web_root.in' => __('validation.web_root_fixed', [
                 'type' => __("application.types.{$type->name()}.title"),
                 'web_root' => $fixed,

@@ -68,7 +68,7 @@ return [
         'delete_running' => 'This backup is still running, so it cannot be deleted yet. Wait for it to finish or fail.',
         'delete_artifact' => 'The archive could not be removed from the storage destination, so nothing was deleted. Check the destination is reachable and try again.',
         'delete_target_running' => 'A backup for this application is still running. Wait for it to finish before turning backups off.',
-        'delete_target_has_backups' => 'This application still has :count backup(s). Confirm that they should be deleted too, or delete them first.',
+        'delete_target_has_backups' => 'This application still has backups (:count). Confirm that they should be deleted too, or delete them first.',
         'already_running' => 'A backup for this application is already running.',
         'dump_database' => 'The database could not be dumped, so nothing was uploaded.',
         'archive_files' => 'The archive could not be created — usually the server is out of disk space.',

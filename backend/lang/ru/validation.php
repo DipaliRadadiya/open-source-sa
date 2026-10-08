@@ -204,12 +204,27 @@ return [
         ],
     ],
 
+    // i18n-v: the web firewall's own words for what it refuses.
+    'waf_exception_characters' => 'Исключение — это часть пути, например /wp-json/. В нём не может быть «..», «?» или переноса строки.',
+    'waf_rule_characters' => 'Своё правило должно быть одной строкой без управляющих символов.',
+
+    // FS-B6: an application admin password's policy, named.
+    'admin_password_strength' => 'Пароль должен содержать строчную и заглавную буквы, цифру и символ.',
+    'admin_password_strength_no_symbol' => 'Пароль должен содержать строчную и заглавную буквы и цифру.',
+
     'attributes' => [
         'name' => 'имя',
         'username' => 'имя пользователя',
         'password' => 'пароль',
         'current_password' => 'текущий пароль',
         'role' => 'роль',
+        'label' => 'метка',
+        'exceptions.*' => 'исключение',
+        'custom_rules.*' => 'своё правило',
+        'create_user.username' => 'имя пользователя базы данных',
+        'create_user.password' => 'пароль пользователя базы данных',
+        'create_user.host' => 'удалённый адрес',
+        'create_user.connection_preference' => 'тип подключения',
     ],
 
     'start_command_shell' => 'Команда запуска не может содержать «:token» — она выполняется напрямую, без оболочки.',

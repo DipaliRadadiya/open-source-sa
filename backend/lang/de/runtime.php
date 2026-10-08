@@ -10,14 +10,14 @@ return [
 
     'install_failed' => [
         'package_not_found' => 'In den Paketquellen dieses Servers gibt es kein Paket für :version.',
-        'apt_lock' => 'Es läuft bereits ein anderer Paketvorgang. Versuche es gleich noch einmal.',
+        'apt_lock' => 'Es läuft bereits ein anderer Paketvorgang. Versuchen Sie es gleich noch einmal.',
         // ServerOps already knew: the grant is older than the panel.
         // Naming the repair beats "contact support" for a failure with
         // a one-command fix.
-        'sudo_denied' => 'Die sudo-Berechtigung dieses Servers ist älter als das darauf laufende Panel, deshalb wurde die Installation abgelehnt, bevor sie begann. Es wurde nichts geändert, und ein erneuter Versuch hilft nicht. Führe auf dem Server `sudo php artisan panel:sudoers` aus, um die Berechtigung aus der Liste des Panels neu zu schreiben, und versuche es dann erneut.',
-        'network' => 'Das Paket-Repository war nicht erreichbar. Prüfe die Netzwerkverbindung des Servers.',
+        'sudo_denied' => 'Die sudo-Berechtigung dieses Servers ist älter als das darauf laufende Panel, deshalb wurde die Installation abgelehnt, bevor sie begann. Es wurde nichts geändert, und ein erneuter Versuch hilft nicht. Führen Sie auf dem Server `sudo php artisan panel:sudoers` aus, um die Berechtigung aus der Liste des Panels neu zu schreiben, und versuchen Sie es dann erneut.',
+        'network' => 'Das Paket-Repository war nicht erreichbar. Prüfen Sie die Netzwerkverbindung des Servers.',
         'no_space' => 'Auf dem Server ist kein Speicherplatz mehr frei.',
-        'worker' => 'Die Installation wurde unerwartet beendet. Möglicherweise ein Timeout — versuche es erneut.',
+        'worker' => 'Die Installation wurde unerwartet beendet. Möglicherweise ein Timeout — versuchen Sie es erneut.',
         'unknown' => 'Die Installation ist fehlgeschlagen. Nenne dem Support die untenstehende Referenz.',
         'dpkg_broken' => 'Die Paketdatenbank dieses Servers muss repariert werden, bevor etwas anderes installiert werden kann.',
         'port_in_use_by_mysql' => 'MySQL ist bereits installiert und belegt diesen Port. Entfernen Sie es zuerst, oder nutzen Sie es weiter.',
@@ -34,23 +34,23 @@ return [
 
     'uninstall_failed' => [
         'failed' => 'PHP :version konnte nicht entfernt werden. Nenne dem Support die untenstehende Referenz.',
-        'worker' => 'Das Entfernen von PHP :version wurde unerwartet beendet. Möglicherweise ein Timeout — versuche es erneut.',
+        'worker' => 'Das Entfernen von PHP :version wurde unerwartet beendet. Möglicherweise ein Timeout — versuchen Sie es erneut.',
         'unknown' => 'PHP :version konnte nicht entfernt werden. Nenne dem Support die untenstehende Referenz.',
     ],
 
     'extension_install_failed' => [
         'package_not_found' => 'Kein Paket für :extension unter PHP :version. Für diese Version existiert es möglicherweise nicht.',
-        'apt_lock' => 'Es läuft bereits ein anderer Paketvorgang. Versuche es gleich noch einmal.',
+        'apt_lock' => 'Es läuft bereits ein anderer Paketvorgang. Versuchen Sie es gleich noch einmal.',
         // ServerOps already knew: the grant is older than the panel.
         // Naming the repair beats "contact support" for a failure with
         // a one-command fix.
-        'sudo_denied' => 'Die sudo-Berechtigung dieses Servers ist älter als das darauf laufende Panel, deshalb wurde die Installation abgelehnt, bevor sie begann. Es wurde nichts geändert, und ein erneuter Versuch hilft nicht. Führe auf dem Server `sudo php artisan panel:sudoers` aus, um die Berechtigung aus der Liste des Panels neu zu schreiben, und versuche es dann erneut.',
-        'network' => 'Das Paket-Repository war nicht erreichbar. Prüfe die Netzwerkverbindung des Servers.',
+        'sudo_denied' => 'Die sudo-Berechtigung dieses Servers ist älter als das darauf laufende Panel, deshalb wurde die Installation abgelehnt, bevor sie begann. Es wurde nichts geändert, und ein erneuter Versuch hilft nicht. Führen Sie auf dem Server `sudo php artisan panel:sudoers` aus, um die Berechtigung aus der Liste des Panels neu zu schreiben, und versuchen Sie es dann erneut.',
+        'network' => 'Das Paket-Repository war nicht erreichbar. Prüfen Sie die Netzwerkverbindung des Servers.',
         'no_space' => 'Auf dem Server ist kein Speicherplatz mehr frei.',
-        'worker' => 'Die Installation von :extension wurde unerwartet beendet. Möglicherweise ein Timeout — versuche es erneut.',
+        'worker' => 'Die Installation von :extension wurde unerwartet beendet. Möglicherweise ein Timeout — versuchen Sie es erneut.',
         'unknown' => 'Die Installation von :extension ist fehlgeschlagen. Nenne dem Support die untenstehende Referenz.',
         'reload_failed' => ':extension wurde installiert, aber PHP konnte nicht neu geladen werden und ist daher noch nicht aktiv. Nennen Sie dem Support die Referenz unten.',
-        'enable_failed' => ':extension wurde installiert, konnte aber nicht aktiviert werden. Versuche den Schalter erneut.',
+        'enable_failed' => ':extension wurde installiert, konnte aber nicht aktiviert werden. Betätigen Sie den Schalter erneut.',
     ],
 
     'fail2ban_install_failed' => [
@@ -73,11 +73,11 @@ return [
     */
 
     'php_install_failed' => [
-        'package_not_found' => 'Kein Paket für :version. Prüfe, ob das PHP-Repository konfiguriert und erreichbar ist.',
+        'package_not_found' => 'Kein Paket für :version. Prüfen Sie, ob das PHP-Repository konfiguriert und erreichbar ist.',
     ],
 
     'node_install_failed' => [
-        'package_not_found' => 'Node :version wurde nicht gefunden. Prüfe die Versionsnummer oder wähle eine aus der Liste.',
+        'package_not_found' => 'Node :version wurde nicht gefunden. Prüfen Sie die Versionsnummer oder wählen Sie eine aus der Liste.',
     ],
 
     'wp_cli_install_failed' => [
@@ -86,10 +86,10 @@ return [
     ],
 
     'database_install_failed' => [
-        'package_not_found' => 'Für :version gibt es auf diesem Server kein Paket. Prüfe, ob dessen Paket-Repository konfiguriert und erreichbar ist.',
+        'package_not_found' => 'Für :version gibt es auf diesem Server kein Paket. Prüfen Sie, ob dessen Paket-Repository konfiguriert und erreichbar ist.',
         // The repository was added and its index fetched successfully;
         // the engine simply has no build for this Ubuntu release.
-        'os_unsupported' => ':version veröffentlicht noch keine Pakete für :os. Mit diesem Server ist alles in Ordnung — das Panel unterstützt :os, aber :version hat dafür noch keinen Build veröffentlicht. Nutze eine andere Datenbank-Engine oder versuche es später erneut.',
+        'os_unsupported' => ':version veröffentlicht noch keine Pakete für :os. Mit diesem Server ist alles in Ordnung — das Panel unterstützt :os, aber :version hat dafür noch keinen Build veröffentlicht. Nutzen Sie eine andere Datenbank-Engine oder versuchen Sie es später erneut.',
     ],
 
     // Used for :os when /etc/os-release cannot be read.

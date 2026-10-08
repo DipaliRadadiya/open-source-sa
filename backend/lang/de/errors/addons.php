@@ -13,7 +13,7 @@ return [
     'option_required' => ':option ist für diesen Bericht erforderlich.',
     'redis_unavailable' => 'Redis läuft auf diesem Server nicht, daher kann Object Cache Pro nicht eingerichtet werden.',
     'redis_too_old' => 'Object Cache Pro braucht Redis 6 oder neuer für einen eigenen Zugang pro Website; dieser Server hat Redis :version.',
-    'redis_no_password' => 'Lege zuerst ein Redis-Passwort fest: ohne könnte jede Website den Cache aller anderen lesen.',
+    'redis_no_password' => 'Legen Sie zuerst ein Redis-Passwort fest: ohne könnte jede Anwendung den Cache aller anderen lesen.',
     'redis_failed' => 'Redis konnte den Zugang der Website nicht anlegen.',
     'object_cache_not_enabled' => 'Object Cache Pro ist auf dieser Website nicht aktiviert.',
 ];

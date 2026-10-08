@@ -98,4 +98,11 @@ return [
         'sqlite_not_found' => 'कॉन्फ़िगर की गई SQLite डेटाबेस फ़ाइल मौजूद नहीं है।',
         'root_not_writable' => 'पैनल निर्देशिका लिखने योग्य नहीं है; इसे root के रूप में चलाएँ।',
     ],
+
+    // OLD-19: preflight figures as sentences, in the viewer's language.
+    'preflight_detail' => [
+        'free_disk' => ':free खाली, :required चाहिए।',
+        'free_memory' => ':available मेमोरी उपलब्ध और :swap स्वैप, :required चाहिए।',
+        'unknown' => 'मापा नहीं जा सका।',
+    ],
 ];

@@ -8,6 +8,7 @@ use App\Services\Panel\AvailableRelease;
 use App\Services\Panel\InstalledPanelInfo;
 use App\Services\Panel\UpdatePreflight;
 use App\Services\Panel\UpdateScript;
+use App\Support\Bytes;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
@@ -222,6 +223,23 @@ it('reports memory and swap separately so the fix is obvious', function () {
 
     expect($preflight->memoryVerdict(700, 300, 2560)['detail'])
         ->toBe('700MB available + 300MB swap, 2560MB required');
+});
+
+it('gives the numbers and a sentence in the viewer\'s language, not English megabytes (OLD-19)', function () {
+    $preflight = new UpdatePreflight(Mockery::mock(InstalledPanelInfo::class)->makePartial());
+    app()->setLocale('de');
+
+    $verdict = $preflight->memoryVerdict(700, 300, 2560);
+
+    expect($verdict['values'])->toBe(['available_mb' => 700, 'swap_mb' => 300, 'required_mb' => 2560])
+        ->and($verdict['message'])->toBe(__('panel_update.preflight_detail.free_memory', [
+            'available' => Bytes::human(700 * 1048576),
+            'swap' => Bytes::human(300 * 1048576),
+            'required' => Bytes::human(2560 * 1048576),
+        ]))
+        ->and($verdict['message'])->toContain('benötigt');
+
+    app()->setLocale('en');
 });
 
 it('treats a kernel with no swap support as having no swap', function () {

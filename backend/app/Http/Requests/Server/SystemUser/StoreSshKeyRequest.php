@@ -30,4 +30,15 @@ class StoreSshKeyRequest extends FormRequest
             ],
         ];
     }
+
+    /**
+     * The form calls `name` "Label" (SU-B2): "The name field must not be
+     * greater than 255 characters" named a field nobody can see.
+     *
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return ['name' => __('validation.attributes.label')];
+    }
 }

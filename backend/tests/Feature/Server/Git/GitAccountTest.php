@@ -6,6 +6,7 @@ use App\Models\SystemUser;
 use App\Models\User;
 use Carbon\Carbon;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
@@ -182,6 +183,22 @@ it('accepts a self-hosted gitlab instance and calls it instead of gitlab.com', f
     ])->assertCreated();
 
     Http::assertSent(fn ($request) => str_starts_with($request->url(), 'https://git.example.com/api/v4/user'));
+});
+
+it('names the provider as people write it (FS-C38)', function () {
+    Http::fake(['api.github.com/*' => Http::response(['message' => 'Bad credentials'], 401)]);
+
+    $this->withHeaders(asAdmin())->postJson('/api/integrations/git/accounts', [
+        'provider' => 'github', 'label' => 'Broken', 'token' => 'nope',
+    ])->assertStatus(422)->assertJsonPath('message', __('errors/git.invalid_credentials', ['provider' => 'GitHub']));
+});
+
+it('says to check the address when a self-hosted instance does not answer (FS-C39)', function () {
+    Http::fake(fn () => throw new ConnectionException('cURL error 6: Could not resolve host: git.example.com'));
+
+    $this->withHeaders(asAdmin())->postJson('/api/integrations/git/accounts', [
+        'provider' => 'gitlab', 'label' => 'Self hosted', 'token' => 'glpat_x', 'host' => 'https://git.example.com',
+    ])->assertStatus(502)->assertJsonPath('message', __('errors/git.host_unreachable', ['host' => 'git.example.com']));
 });
 
 it('maps only allow-listed repository fields from the provider', function () {

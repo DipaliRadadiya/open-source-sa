@@ -71,7 +71,7 @@ return [
     'bot_agent_robots_only' => 'Ese nombre solo funciona en robots.txt: ningún bot visita con él, así que bloquearlo no haría nada. Usa en su lugar las líneas de robots.txt indicadas arriba.',
     'web_root_failed' => 'No se pudo cambiar la raíz web en el servidor.',
     'web_root_not_found' => 'No se encontró el directorio raíz web en el servidor. Revisa la raíz web en la configuración de la aplicación y vuelve a aprovisionarla si nunca se creó.',
-    'waf_unsupported' => 'El Firewall 8G aún no está disponible en :server.',
+    'waf_unsupported' => 'El firewall web aún no está disponible en :server.',
     'waf_failed' => 'No se pudo cambiar la configuración del firewall en el servidor.',
     'staging_failed' => 'La operación de staging falló en el servidor.',
     'staging_exists' => 'Este sitio ya tiene una copia de staging. Publícala o elimínala primero.',

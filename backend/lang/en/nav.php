@@ -37,10 +37,10 @@ return [
     'app_backup' => 'Backups',
     'app_php' => 'PHP Settings',
     'app_security' => 'Password Protection',
-    'app_firewall' => '8G Firewall',
+    'app_firewall' => 'Web Firewall',
     'app_bot_blocker' => 'AI Bot Blocker',
     'app_fail2ban' => 'Fail2ban',
     'app_staging' => 'Staging Area',
-    'app_clone' => 'Site Clone',
+    'app_clone' => 'Application Clone',
     'app_magic_login' => 'Magic Login',
 ];

@@ -8,7 +8,7 @@ return [
     'network_built_in' => ':name é uma das redes do próprio Docker. O Docker recria-a ao reiniciar, e removê-la quebraria todos os contentores deste servidor.',
     'network_in_use' => 'A rede :name ainda tem contentores ligados: :containers. Pare-os ou desligue-os primeiro.',
     'network_used_by_sites' => 'Estes sites estão configurados para se juntar à rede :name: :sites. Altere primeiro a rede deles — removê-la agora impediria que arrancassem.',
-    'volume_in_use' => 'O volume :name ainda é usado por :count contentor(es). Pare-os primeiro — remover um volume em uso apaga dados que algo ainda está a escrever.',
+    'volume_in_use' => 'O volume :name ainda é usado por contentores (:count). Pare-os primeiro — remover um volume em uso apaga dados que algo ainda está a escrever.',
     'volume_in_use_by' => 'O volume :name ainda é usado por :containers. Pare-os primeiro — remover um volume em uso apaga dados que algo está a escrever.',
     'volume_used_by_sites' => 'Estes sites montam o volume :name: :sites. Remova primeiro a montagem — apagá-lo agora destrói os dados que lá guardam.',
     'network_create_failed' => 'Não foi possível criar a rede. Referência :reference.',

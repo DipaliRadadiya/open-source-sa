@@ -9,19 +9,19 @@ return [
     'engine_not_installable' => 'Das Panel kann diese Datenbank-Engine noch nicht installieren. Installieren Sie sie selbst, das Panel erkennt sie dann.',
     // The vendor publishes nothing for this Ubuntu release. Refused
     // before the install rather than discovered two minutes into apt.
-    'engine_os_unsupported' => ':engine veröffentlicht noch keine Pakete für :os, deshalb kann das Panel es hier nicht installieren. Mit diesem Server ist alles in Ordnung — das Panel unterstützt :os, aber :engine hat dafür noch keinen Build veröffentlicht. Nutze eine andere Datenbank-Engine oder versuche es später erneut.',
+    'engine_os_unsupported' => ':engine veröffentlicht noch keine Pakete für :os, deshalb kann das Panel es hier nicht installieren. Mit diesem Server ist alles in Ordnung — das Panel unterstützt :os, aber :engine hat dafür noch keinen Build veröffentlicht. Nutzen Sie eine andere Datenbank-Engine oder versuchen Sie es später erneut.',
     'phpmyadmin_engine_not_supported' => 'phpMyAdmin unterstützt keine :engine-Datenbanken.',
     'phpmyadmin_not_deployed' => 'Keine phpMyAdmin-Site ist auf diesem Server installiert.',
     'phpmyadmin_no_users' => 'Erstellen Sie einen Datenbankbenutzer, bevor Sie auf phpMyAdmin zugreifen.',
     'remote_users_unsupported' => 'Fernzugriff ist für :engine nicht verfügbar – seine Konten sind nicht an einen Host gebunden. Verwende localhost.',
     // 409, not 422: the request is fine, the cluster is not ready. The
     // client re-sends with restart_cluster as explicit consent.
-    'remote_access_restart_required' => 'Für Remote-Verbindungen muss :engine neu gestartet werden, da die Adresse, auf der es lauscht, nur beim Start geändert werden kann. Anwendungen, die diese Datenbank nutzen, verlieren kurz ihre Verbindung. Sende die Anfrage mit restart_cluster erneut, um fortzufahren.',
+    'remote_access_restart_required' => 'Für Remote-Verbindungen muss :engine neu gestartet werden, weil die Adresse, auf der es lauscht, nur beim Start geändert werden kann. Anwendungen, die diese Datenbank nutzen, verlieren kurz ihre Verbindung. Bestätigen Sie, um neu zu starten und fortzufahren.',
     'phpmyadmin_not_selectable' => 'Die ausgewählte Website ist keine aktive phpMyAdmin-Installation.',
     'phpmyadmin_user_not_found' => 'Der angegebene Datenbankbenutzer gehört nicht zu dieser Datenbank.',
     'phpmyadmin_not_isolated' => 'Diese phpMyAdmin-Site nutzt den serverweiten PHP-Pool, sodass ein Anmeldelink für jede andere Site lesbar wäre. Geben Sie ihr einen eigenen PHP-Pool, oder öffnen Sie phpMyAdmin und melden Sie sich mit den Datenbank-Zugangsdaten an.',
-    'phpmyadmin_requires_https' => 'Diese phpMyAdmin-Website hat kein HTTPS, daher würden der Anmeldelink und die Datenbanksitzung unverschlüsselt übertragen. Stelle zuerst ein SSL-Zertifikat dafür aus.',
-    'user_exists' => 'Ein Datenbankbenutzer namens „:username“ existiert bereits. Wähle einen anderen Namen.',
+    'phpmyadmin_requires_https' => 'Diese phpMyAdmin-Anwendung hat kein HTTPS, daher würden der Anmeldelink und die Datenbanksitzung unverschlüsselt übertragen. Stellen Sie zuerst ein SSL-Zertifikat dafür aus.',
+    'user_exists' => 'Ein Datenbankbenutzer namens „:username“ existiert bereits. Wählen Sie einen anderen Namen.',
     'phpmyadmin_sso_unavailable' => 'Der Anmeldelink konnte auf der phpMyAdmin-Site nicht vorbereitet werden.',
     'remote_host_invalid' => 'Geben Sie eine IPv4-Adresse oder einen Bereich ein, z. B. 203.0.113.5 oder 203.0.113.0/24.',
     'remote_host_not_remote' => 'Diese Adresse ist keine entfernte. Verwenden Sie „Lokal“ für diesen Server oder „Überall“ für alle Adressen.',

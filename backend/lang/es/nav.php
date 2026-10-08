@@ -37,10 +37,10 @@ return [
     'app_backup' => 'Copias de seguridad',
     'app_php' => 'Ajustes de PHP',
     'app_security' => 'Protección con contraseña',
-    'app_firewall' => 'Firewall 8G',
+    'app_firewall' => 'Firewall web',
     'app_bot_blocker' => 'Bloqueador de bots de IA',
     'app_fail2ban' => 'Fail2ban',
     'app_staging' => 'Área de pruebas',
-    'app_clone' => 'Clonar sitio',
+    'app_clone' => 'Clonar aplicación',
     'app_magic_login' => 'Inicio de sesión directo',
 ];

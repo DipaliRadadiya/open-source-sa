@@ -79,11 +79,18 @@ abstract class AbstractGitProvider implements GitProvider
                 'message' => $e->getMessage(),
             ]);
 
-            throw GitProviderException::unreachable($this->key(), $reference);
+            // FS-C39: a self-hosted address that does not answer at all is
+            // most likely a wrong address — "try again in a moment" sent
+            // people to wait for something waiting would not fix.
+            if (filled($account->host)) {
+                throw GitProviderException::hostUnreachable((string) parse_url((string) $account->host, PHP_URL_HOST) ?: (string) $account->host, $reference);
+            }
+
+            throw GitProviderException::unreachable($this->displayName(), $reference);
         }
 
         if ($response->status() === 401 || $response->status() === 403) {
-            throw GitProviderException::invalidCredentials($this->key());
+            throw GitProviderException::invalidCredentials($this->displayName());
         }
 
         if ($missingOk && $response->status() === 404) {
@@ -98,7 +105,7 @@ abstract class AbstractGitProvider implements GitProvider
                 'status' => $response->status(),
             ]);
 
-            throw GitProviderException::unreachable($this->key(), $reference);
+            throw GitProviderException::unreachable($this->displayName(), $reference);
         }
 
         return $response;
@@ -166,5 +173,19 @@ abstract class AbstractGitProvider implements GitProvider
     protected function perPage(): int
     {
         return (int) config('server.git.per_page', 30);
+    }
+
+    /**
+     * The provider as people write it (FS-C38): "GitHub", not the `github`
+     * id — "The github token was rejected" read like a typo.
+     */
+    protected function displayName(): string
+    {
+        return match ($this->key()) {
+            'github' => 'GitHub',
+            'gitlab' => 'GitLab',
+            'bitbucket' => 'Bitbucket',
+            default => ucfirst($this->key()),
+        };
     }
 }

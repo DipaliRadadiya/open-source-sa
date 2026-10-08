@@ -37,10 +37,10 @@ return [
     'app_backup' => 'バックアップ',
     'app_php' => 'PHP設定',
     'app_security' => 'パスワード保護',
-    'app_firewall' => '8G ファイアウォール',
+    'app_firewall' => 'Web ファイアウォール',
     'app_bot_blocker' => 'AIボットブロッカー',
     'app_fail2ban' => 'Fail2ban',
     'app_staging' => 'ステージング',
-    'app_clone' => 'サイト複製',
+    'app_clone' => 'アプリケーションの複製',
     'app_magic_login' => 'ワンクリックログイン',
 ];

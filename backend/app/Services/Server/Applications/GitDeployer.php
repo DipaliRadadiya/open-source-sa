@@ -340,11 +340,11 @@ class GitDeployer
             'reference' => $result->reference,
         ]);
 
-        throw new ProvisioningFailedException(
-            'verify',
-            $result->reference,
-            "curl {$url} returned HTTP {$code}",
-        );
+        // A reason code, never free text (FS-C40): the reason becomes a
+        // translation key, and "curl … returned HTTP 502" showed as a raw
+        // `application.failure_reason.curl …` key in every language. The URL
+        // and status are in the deployment's own log under the reference.
+        throw new ProvisioningFailedException('verify', $result->reference, 'verify_http');
     }
 
     /**

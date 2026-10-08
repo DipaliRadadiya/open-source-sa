@@ -98,4 +98,11 @@ return [
         'sqlite_not_found' => '設定された SQLite データベースファイルが存在しません。',
         'root_not_writable' => 'パネルディレクトリに書き込めません。root で実行してください。',
     ],
+
+    // OLD-19: preflight figures as sentences, in the viewer's language.
+    'preflight_detail' => [
+        'free_disk' => '空き :free、必要 :required。',
+        'free_memory' => '利用可能メモリ :available ＋ スワップ :swap、必要 :required。',
+        'unknown' => '測定できませんでした。',
+    ],
 ];

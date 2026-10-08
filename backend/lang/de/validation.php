@@ -204,17 +204,32 @@ return [
         ],
     ],
 
+    // i18n-v: the web firewall's own words for what it refuses.
+    'waf_exception_characters' => 'Eine Ausnahme ist ein Teil eines Pfads, etwa /wp-json/. Sie darf kein „..“, kein „?“ und keinen Zeilenumbruch enthalten.',
+    'waf_rule_characters' => 'Eine eigene Regel muss eine einzelne Zeile ohne Steuerzeichen sein.',
+
+    // FS-B6: an application admin password's policy, named.
+    'admin_password_strength' => 'Das Passwort braucht einen Klein- und einen Großbuchstaben, eine Ziffer und ein Sonderzeichen.',
+    'admin_password_strength_no_symbol' => 'Das Passwort braucht einen Klein- und einen Großbuchstaben und eine Ziffer.',
+
     'attributes' => [
         'name' => 'Name',
         'username' => 'Benutzername',
         'password' => 'Passwort',
         'current_password' => 'aktuelles Passwort',
         'role' => 'Rolle',
+        'label' => 'Bezeichnung',
+        'exceptions.*' => 'Ausnahme',
+        'custom_rules.*' => 'eigene Regel',
+        'create_user.username' => 'Name des Datenbankbenutzers',
+        'create_user.password' => 'Passwort des Datenbankbenutzers',
+        'create_user.host' => 'Remote-Adresse',
+        'create_user.connection_preference' => 'Verbindungsart',
     ],
 
     'start_command_shell' => 'Der Startbefehl darf „:token“ nicht enthalten – er wird direkt ausgeführt, nicht über eine Shell.',
     'process_instances_entrypoint' => 'Um mehr als einen Prozess auszuführen, muss der Startbefehl ein Skript benennen – zum Beispiel „node server.js“. PM2 clustert, indem es diese Datei forkt; mit etwas anderem läuft stillschweigend nur ein einzelner Prozess.',
-    'start_command_wrapper' => 'Starte die App mit ihrer Einstiegsdatei, z. B. „node server.js“, nicht mit :binary. Ein Paketmanager forkt den eigentlichen Prozess, sodass Signale ihn nie erreichen.',
+    'start_command_wrapper' => 'Starten Sie die App mit ihrer Einstiegsdatei, z. B. „node server.js“, nicht mit :binary. Ein Paketmanager forkt den eigentlichen Prozess, sodass Signale ihn nie erreichen.',
 
     'port_in_use_by_app' => 'Port :port wird bereits von einer anderen Anwendung auf diesem Server verwendet.',
 
@@ -233,13 +248,13 @@ return [
     // A name the panel is about to create, so the inverse rule: not taken.
     'docker_network_taken' => 'Ein Netzwerk namens \':name\' existiert auf diesem Server bereits. Wählen Sie es oben aus der Liste, statt ein zweites zu erstellen.',
     'docker_volume_taken' => 'Ein Volume namens \':name\' existiert auf diesem Server bereits. Binden Sie das vorhandene über die Container-Karte der Website ein, statt ein zweites zu erstellen.',
-    'node_version_unsupported' => 'Die Anwendung :type läuft mit Node :range. Wähle eine Version in diesem Bereich — außerhalb davon startet die Anwendung nicht und die Seite liefert nichts aus.',
-    'php_version_unsupported' => 'Die Anwendung :type läuft mit PHP :range. Wähle eine Version in diesem Bereich — außerhalb davon bricht die Installation mitten im Code der Anwendung ab und hinterlässt eine Seite, die aufgeräumt werden muss.',
-    'php_version_default_unsupported' => 'Die Anwendung :type läuft mit PHP :range. Wird dieses Feld leer gelassen, gilt die Servervorgabe (:default) — die außerhalb dieses Bereichs liegt. Wähle stattdessen eine Version im Bereich.',
+    'node_version_unsupported' => 'Die Anwendung :type läuft mit Node :range. Wählen Sie eine Version in diesem Bereich — außerhalb davon startet die Anwendung nicht und liefert nichts aus.',
+    'php_version_unsupported' => 'Die Anwendung :type läuft mit PHP :range. Wählen Sie eine Version in diesem Bereich — außerhalb davon bricht die Installation mitten im Code der Anwendung ab und hinterlässt eine Anwendung, die aufgeräumt werden muss.',
+    'php_version_default_unsupported' => 'Die Anwendung :type läuft mit PHP :range. Wird dieses Feld leer gelassen, gilt die Servervorgabe (:default) — die außerhalb dieses Bereichs liegt. Wählen Sie stattdessen eine Version im Bereich.',
     'web_root_fixed' => ':type wird aus :web_root ausgeliefert und installiert sich um diesen Pfad herum, daher lässt sich der Web-Root hier nicht ändern. Jeder andere Wert macht die Seite unerreichbar und veröffentlicht ihren Quellcode.',
-    'web_root_missing' => 'Der Ordner :path existiert nicht, die Website hätte also nichts auszuliefern. Lege ihn an oder lade zuerst deine Dateien dorthin hoch und setze ihn dann als Web-Root.',
+    'web_root_missing' => 'Der Ordner :path existiert nicht, die Anwendung hätte also nichts auszuliefern. Legen Sie ihn an oder laden Sie zuerst Ihre Dateien dorthin hoch und setzen Sie ihn dann als Web-Root.',
     'web_root_symlink' => 'Ein Teil dieses Pfads, :path, ist ein symbolischer Link, sodass die Website Dateien von einem anderen Ort ausliefern könnte. Verwende einen echten Ordner innerhalb der Website.',
-    'port_in_use' => 'Auf diesem Server lauscht bereits etwas auf Port :port. Wähle einen anderen oder beende, was ihn belegt.',
+    'port_in_use' => 'Auf diesem Server lauscht bereits etwas auf Port :port. Wählen Sie einen anderen oder beenden Sie, was ihn belegt.',
 
     'port_registered' => 'Port :port wird normalerweise von :service verwendet. Du kannst ihn trotzdem nutzen, wenn nichts auf diesem Server ihn belegt.',
     'application_name_immutable' => 'Der Name einer Website steht nach dem Anlegen fest — er benennt ihre Konfigurationsdateien auf dem Server. Legen Sie eine neue Website an, wenn Sie einen anderen Namen brauchen.',
@@ -265,7 +280,7 @@ return [
     'filter_content_max' => 'Die Filter-Konfiguration ist zu groß (max. 65535 Zeichen).',
     'basic_auth_conflicts' => 'Passwortschutz kann nicht mit :type verwendet werden. Dessen eigene Oberfläche meldet sich über den Authorization-Header an, den HTTP nur einmal pro Anfrage erlaubt — Basic Auth würde ihn belegen und die Anwendung unerreichbar machen. :type verlangt bereits eigene Zugangsdaten.',
     'basic_auth_username' => 'Der Benutzername darf nur englische Buchstaben, Ziffern und Symbole enthalten, ohne Leerzeichen und ohne Doppelpunkt (:). Browser können andere Zeichen nicht zuverlässig senden.',
-    'git_repository_unreachable' => 'Das Repository war nicht erreichbar. Prüfe die Adresse und ob das Konto (oder das Repository, falls öffentlich) den Zugriff erlaubt.',
-    'git_host_unreachable' => 'Der Server konnte den Git-Host nicht erreichen. Prüfe seine Netzwerkverbindung und versuche es erneut.',
+    'git_repository_unreachable' => 'Das Repository war nicht erreichbar. Prüfen Sie die Adresse und ob das Konto (oder das Repository, falls öffentlich) den Zugriff erlaubt.',
+    'git_host_unreachable' => 'Der Server konnte den Git-Host nicht erreichen. Prüfen Sie seine Netzwerkverbindung und versuchen Sie es erneut.',
     'git_branch_missing' => 'Der Branch ":branch" existiert in diesem Repository nicht.',
 ];

@@ -14,8 +14,8 @@ return [
 
     // The panel must not record access the server will not grant: sshd
     // authenticates, then a non-login shell exits and the session closes.
-    'ssh_needs_login_shell' => 'SSH-Zugriff braucht eine Shell, mit der sich der Benutzer anmelden kann. Die Shell dieses Benutzers verweigert die Anmeldung, SSH würde sich also verbinden und sofort wieder trennen. Wähle zuerst eine Anmelde-Shell.',
-    'shell_needs_ssh_off' => 'Dieser Benutzer hat SSH-Zugriff und die gewählte Shell verweigert die Anmeldung – SSH würde sich verbinden und sofort wieder trennen. Schalte zuerst den SSH-Zugriff ab oder wähle eine Anmelde-Shell.',
+    'ssh_needs_login_shell' => 'SSH-Zugriff braucht eine Shell, mit der sich der Benutzer anmelden kann. Die Shell dieses Benutzers verweigert die Anmeldung, SSH würde sich also verbinden und sofort wieder trennen. Wählen Sie zuerst eine Anmelde-Shell.',
+    'shell_needs_ssh_off' => 'Dieser Benutzer hat SSH-Zugriff und die gewählte Shell verweigert die Anmeldung – SSH würde sich verbinden und sofort wieder trennen. Schalten Sie zuerst den SSH-Zugriff ab oder wählen Sie eine Anmelde-Shell.',
 
     'password_control_characters' => 'Das Passwort darf keine Zeilenumbrüche oder andere Steuerzeichen enthalten.',
     'shell_not_installed' => 'Die Shell :shell ist auf diesem Server nicht installiert. Installieren Sie sie zuerst oder wählen Sie eine andere Shell.',

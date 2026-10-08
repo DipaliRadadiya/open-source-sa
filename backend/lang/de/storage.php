@@ -82,13 +82,13 @@ return [
         'bucket_not_found' => 'Es gibt keinen Bucket mit diesem Namen. Prüfen Sie den Bucket-Namen – Groß- und Kleinschreibung wird beachtet.',
         'wrong_region' => 'Der Bucket liegt in einer anderen Region. Geben Sie die Region an, in der der Bucket erstellt wurde.',
         'tls_failed' => 'Es konnte keine sichere (TLS-)Verbindung zum Endpunkt aufgebaut werden. Das Zertifikat des Servers fehlt, ist nicht vertrauenswürdig oder defekt – prüfen Sie die Endpunkt-URL und das Zertifikat des Servers.',
-        'ftp_no_tls' => 'Dieser FTP-Server unterstützt keine Verschlüsselung (FTPS), daher wurde die verschlüsselte Anmeldung abgelehnt. Aktiviere TLS auf dem Server oder schalte „TLS verwenden (FTPS)“ aus, wenn eine unverschlüsselte Verbindung akzeptabel ist.',
+        'ftp_no_tls' => 'Dieser FTP-Server unterstützt keine Verschlüsselung (FTPS), daher wurde die verschlüsselte Anmeldung abgelehnt. Aktivieren Sie TLS auf dem Server oder schalten Sie „TLS verwenden (FTPS)“ aus, wenn eine unverschlüsselte Verbindung akzeptabel ist.',
         'mismatch' => 'Das Ziel hat andere Bytes zurückgelesen als geschrieben.',
         'forbidden_host' => 'Diese Endpunkt-Adresse ist nicht zulässig.',
         'invalid_endpoint' => 'Geben Sie eine gültige https://-Endpunkt-URL für den Bucket ein.',
         'invalid_host' => 'Geben Sie einen gültigen Hostnamen oder eine IP-Adresse ein.',
         'host_key_mismatch' => 'Der Server hat einen anderen Hostschlüssel vorgelegt als den aufgezeichneten. Die Verbindung wurde abgebrochen.',
-        'tls_certificate_changed' => 'Der FTPS-Server hat ein anderes Zertifikat als das gespeicherte vorgelegt, daher wurde nichts gesendet. Wenn das Zertifikat des Servers erneuert wurde, wähle bei diesem Ziel "Neuem Zertifikat vertrauen".',
+        'tls_certificate_changed' => 'Der FTPS-Server hat ein anderes Zertifikat als das gespeicherte vorgelegt, daher wurde nichts gesendet. Wenn das Zertifikat des Servers erneuert wurde, wählen Sie bei diesem Ziel „Neuem Zertifikat vertrauen“.',
         'tls_certificate_unreadable' => 'Das Zertifikat des FTPS-Servers konnte nicht gelesen und daher nicht mit dem gespeicherten verglichen werden. Es wurde nichts gesendet.',
         'invalid_private_key' => 'Der private Schlüssel konnte nicht gelesen werden. Prüfen Sie, ob er vollständig eingefügt wurde.',
         'root_missing' => 'Der Zielordner existiert auf dem Server nicht. Legen Sie ihn an oder korrigieren Sie den Ordnerpfad.',
@@ -103,7 +103,7 @@ return [
 
     'delete' => [
         'in_use' => ':name kann nicht gelöscht werden — es wird noch von :applications verwendet. Entfernen oder ändern Sie diese Backup-Ziele zuerst.',
-        'holds_backups' => ':name kann nicht gelöscht werden — es enthält noch :count Backup(s). Löschen Sie zuerst diese Backups, damit ihre Archive auch aus dem Speicher entfernt werden.',
+        'holds_backups' => ':name kann nicht gelöscht werden — es enthält noch Backups (:count). Löschen Sie zuerst diese Backups, damit ihre Archive auch aus dem Speicher entfernt werden.',
         'and_more' => ':count weitere',
     ],
 

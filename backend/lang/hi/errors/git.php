@@ -10,4 +10,5 @@ return [
     // Disconnecting an account that applications still deploy with.
     'in_use' => ':name को डिस्कनेक्ट नहीं किया जा सकता — इसका उपयोग अभी भी :applications द्वारा किया जा रहा है। पहले उन एप्लिकेशन को किसी दूसरे खाते से जोड़ें।',
     'and_more' => ':count और',
+    'host_unreachable' => ':host तक नहीं पहुँचा जा सका। अपने सेल्फ़-होस्टेड इंस्टेंस का पता जाँचें।',
 ];

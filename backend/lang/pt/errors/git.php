@@ -10,4 +10,5 @@ return [
     // Disconnecting an account that applications still deploy with.
     'in_use' => 'Não é possível desconectar :name — ainda é usada por :applications. Vincule essas aplicações a outra conta primeiro.',
     'and_more' => 'mais :count',
+    'host_unreachable' => 'Não foi possível aceder a :host. Verifique o endereço da sua instância auto-alojada.',
 ];

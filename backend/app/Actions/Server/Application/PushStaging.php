@@ -17,9 +17,11 @@ class PushStaging
     {
         $this->staging->push($production, $mode);
 
-        $this->activityLogger->log('application.staging_pushed', $production, [
+        // One sentence per mode (ST-B4): the mode was a raw code inside the
+        // sentence — "Pushed staging to my-blog (full)" — in every language.
+        // `staging_pushed` stays for rows written before.
+        $this->activityLogger->log('application.staging_pushed_'.$mode, $production, [
             'name' => $production->name,
-            'mode' => $mode,
         ]);
     }
 }

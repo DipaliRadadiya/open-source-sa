@@ -98,4 +98,11 @@ return [
         'sqlite_not_found' => 'Le fichier de base de données SQLite configuré n’existe pas.',
         'root_not_writable' => 'Le répertoire du panneau n’est pas accessible en écriture ; exécutez ceci en root.',
     ],
+
+    // OLD-19: preflight figures as sentences, in the viewer's language.
+    'preflight_detail' => [
+        'free_disk' => ':free libres, :required nécessaires.',
+        'free_memory' => ':available de mémoire disponibles plus :swap de swap, :required nécessaires.',
+        'unknown' => 'Impossible à mesurer.',
+    ],
 ];

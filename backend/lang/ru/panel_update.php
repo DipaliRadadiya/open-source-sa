@@ -98,4 +98,11 @@ return [
         'sqlite_not_found' => 'Указанный файл базы данных SQLite не существует.',
         'root_not_writable' => 'Каталог панели недоступен для записи; запустите это от root.',
     ],
+
+    // OLD-19: preflight figures as sentences, in the viewer's language.
+    'preflight_detail' => [
+        'free_disk' => 'Свободно :free, нужно :required.',
+        'free_memory' => 'Доступно памяти :available и подкачки :swap, нужно :required.',
+        'unknown' => 'Не удалось измерить.',
+    ],
 ];

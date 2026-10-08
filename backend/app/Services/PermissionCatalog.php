@@ -169,11 +169,11 @@ class PermissionCatalog
             // Title only — the `app_firewall` NAME is what roles are granted
             // against and what hasAbility() matches, so renaming it would
             // revoke this screen from every existing role.
-            ['name' => 'app_firewall', 'title' => '8G Firewall', 'icon' => 'shield', 'url' => '/firewall'],
+            ['name' => 'app_firewall', 'title' => 'Web Firewall', 'icon' => 'shield', 'url' => '/firewall'],
             ['name' => 'app_bot_blocker', 'title' => 'AI Bot Blocker', 'icon' => 'bot', 'url' => '/bot-blocker'],
             ['name' => 'app_fail2ban', 'title' => 'Fail2ban', 'icon' => 'ban', 'url' => '/fail2ban'],
             ['name' => 'app_staging', 'title' => 'Staging Area', 'icon' => 'flask-conical', 'url' => '/staging'],
-            ['name' => 'app_clone', 'title' => 'Site Clone', 'icon' => 'copy', 'url' => '/clone'],
+            ['name' => 'app_clone', 'title' => 'Application Clone', 'icon' => 'copy', 'url' => '/clone'],
             // The first permission that is NOT a nav entry: `url` is null
             // because Magic Login is a button on the Dashboard, not a screen.
             // The sidebar skips null-url rows; the role editor still lists it,
