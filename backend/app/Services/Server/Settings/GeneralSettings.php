@@ -34,14 +34,20 @@ class GeneralSettings implements SettingGroup
      */
     public function read(): array
     {
+        // OLD-3: when timedatectl does not answer, the three clock fields
+        // are null — "unknown" — not "Etc/UTC, NTP off, clock not synced",
+        // which the screen reported as fact about a clock nobody had read.
+        $timezone = $this->timedatectl('Timezone');
+        $known = $timezone !== '';
+
         return [
-            'timezone' => $this->timedatectl('Timezone') ?: 'Etc/UTC',
-            'ntp' => $this->timedatectl('NTP') === 'yes',
+            'timezone' => $known ? $timezone : null,
+            'ntp' => $known ? $this->timedatectl('NTP') === 'yes' : null,
             // Whether the clock has actually reached a time server, which is a
             // different question from whether the daemon is switched on.
             // Enabled-but-not-syncing fails silently: cron fires late and every
             // log timestamp is wrong, with nothing anywhere reporting a fault.
-            'clock_synchronized' => $this->timedatectl('NTPSynchronized') === 'yes',
+            'clock_synchronized' => $known ? $this->timedatectl('NTPSynchronized') === 'yes' : null,
             'hostname' => $this->hostname(),
         ];
     }

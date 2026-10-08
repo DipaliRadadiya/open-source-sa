@@ -347,7 +347,7 @@ class LogManager
      * cursor, or the last N lines. Assumes existence/readability were already
      * checked by the caller. Returns null for an unknown/missing source.
      *
-     * @return array{lines: array<int, string>, cursor: int, truncated: bool}|null
+     * @return array{lines: array<int, string>, cursor: int, truncated: bool, search_window_capped: bool}|null
      */
     public function read(string $key, int $lines, ?string $filter = null, ?int $after = null): ?array
     {
@@ -373,7 +373,8 @@ class LogManager
         if ($filter !== null && $filter !== '') {
             $match = $this->grep($path, $filter, $lines);
 
-            return ['lines' => $match['lines'], 'cursor' => $size, 'truncated' => $match['truncated']];
+            // The whole file is searched, never a window of it.
+            return ['lines' => $match['lines'], 'cursor' => $size, 'truncated' => $match['truncated'], 'search_window_capped' => false];
         }
 
         // Incremental follow: bytes appended since `after`. If the file is now
@@ -381,13 +382,13 @@ class LogManager
         if ($after !== null && $after <= $size) {
             $result = $this->range($path, $after);
 
-            return ['lines' => $result['lines'], 'cursor' => $size, 'truncated' => $result['truncated']];
+            return ['lines' => $result['lines'], 'cursor' => $size, 'truncated' => $result['truncated'], 'search_window_capped' => false];
         }
 
         // Initial load (or post-rotation): last N lines.
         $tail = $this->tail($path, $lines);
 
-        return ['lines' => $tail['lines'], 'cursor' => $size, 'truncated' => $tail['truncated']];
+        return ['lines' => $tail['lines'], 'cursor' => $size, 'truncated' => $tail['truncated'], 'search_window_capped' => false];
     }
 
     /**
@@ -439,8 +440,14 @@ class LogManager
         }
 
         $all = $this->split($result->output());
+        $filtering = $filter !== null && $filter !== '';
+        // OLD-15: a search here covers the last PRIVILEGED_WINDOW lines only.
+        // A full window means there was more log above it, which the search
+        // never saw — "no results" is then "not in the last N lines", and the
+        // screen has to be able to say so. Same field the app logs carry.
+        $capped = $filtering && count($all) >= $window;
 
-        if ($filter !== null && $filter !== '') {
+        if ($filtering) {
             $all = array_values(array_filter(
                 $all,
                 fn (string $line): bool => stripos($line, $filter) !== false,
@@ -453,6 +460,7 @@ class LogManager
             'lines' => $truncated ? array_slice($all, -$lines) : $all,
             'cursor' => null,
             'truncated' => $truncated,
+            'search_window_capped' => $capped,
         ];
     }
 

@@ -31,6 +31,9 @@ class PanelUpdateResource extends JsonResource
             // without hardcoding the step list.
             'step_number' => $this->stepNumber(),
             'total_steps' => app(UpdateSteps::class)->total(),
+            // A rehearsal (FS-C2): nothing was changed, and `to_version` is
+            // null because nothing was moved to.
+            'dry_run' => (bool) $this->dry_run,
             'from_version' => $this->from_version,
             'to_version' => $this->to_version,
             'from_commit' => $this->from_commit,

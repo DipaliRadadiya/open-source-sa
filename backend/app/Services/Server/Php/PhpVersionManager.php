@@ -96,7 +96,9 @@ class PhpVersionManager
             input: $contents,
         ), $version);
 
-        if ($this->test($version)->failed()) {
+        $test = $this->test($version);
+
+        if ($test->failed()) {
             // Put the working file back before the next reload — by us or by
             // anything else — can pick up the broken one.
             $this->serverOps->run(
@@ -104,7 +106,7 @@ class PhpVersionManager
                 ['feature' => 'php', 'op' => 'restore_ini', 'version' => $version],
             );
 
-            throw PhpConfigException::invalid($version);
+            throw PhpConfigException::invalid($version, $this->complaints($test));
         }
 
         $this->must('reload', $this->stack->reload($version), $version);
@@ -188,6 +190,24 @@ class PhpVersionManager
     public function test(string $version): ServerOpsResult
     {
         return $this->stack->configTest($version);
+    }
+
+    /**
+     * What PHP said about the file: its error and warning lines, at most ten.
+     * `PHP:  syntax error, unexpected '=' in /etc/php/8.3/fpm/php.ini on line
+     * 912` is the line that lets someone fix it.
+     *
+     * @return array<int, string>
+     */
+    private function complaints(ServerOpsResult $test): array
+    {
+        $lines = preg_split('/\r?\n/', $test->output()."\n".$test->errorOutput()) ?: [];
+
+        return array_slice(array_values(array_unique(array_filter(
+            array_map('trim', $lines),
+            fn (string $line): bool => preg_match('/(syntax error|Error parsing|error|warning|unable|unknown)/i', $line) === 1
+                && ! str_contains($line, 'test is successful'),
+        ))), 0, 10);
     }
 
     private function must(string $step, ServerOpsResult $result, string $version): void

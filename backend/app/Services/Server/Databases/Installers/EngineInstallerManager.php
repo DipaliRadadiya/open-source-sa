@@ -95,4 +95,34 @@ class EngineInstallerManager
         /** @var class-string<EngineInstaller> $class */
         return app($class);
     }
+
+    /**
+     * MySQL and MariaDB cannot share a server: apt removes one to install the
+     * other. The install job already refused it, but only once it ran — so the
+     * list offered "Install MySQL" beside a working MariaDB and the job then
+     * failed (Apache test server). Said up front, in the words the job used.
+     * An engine that is installed itself is never blocked by this: installing
+     * it again is how its panel account is repaired.
+     *
+     * @param  array<string, bool>  $installed
+     * @return array{code: string, reason: string}|null
+     */
+    public function conflictReason(string $engine, array $installed): ?array
+    {
+        if (($installed[$engine] ?? false) || ! $this->canInstall($engine)) {
+            return null;
+        }
+
+        $installer = $this->installer($engine);
+
+        if (! $installer instanceof AbstractSqlEngineInstaller) {
+            return null;
+        }
+
+        $other = $installer->conflictingEngine();
+
+        return ($installed[$other] ?? false)
+            ? ['code' => 'engine_conflict', 'reason' => __('runtime.install_failed.port_in_use_by_'.$other)]
+            : null;
+    }
 }

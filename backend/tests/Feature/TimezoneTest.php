@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Requests\Server\Application\SavePhpSettingsRequest;
 use App\Http\Requests\Server\Setting\GeneralSettingsRequest;
 use App\Models\User;
 use App\Services\Server\Settings\SettingsManager;
@@ -189,4 +190,19 @@ it('writes nothing at all when nothing changed', function () {
 
     // Saving a form you opened and did not edit must not be able to fail.
     expect(collect($runs)->filter(fn (array $c) => str_contains(implode(' ', $c), 'set-'))->all())->toBe([]);
+});
+
+it('offers the PHP settings only zones PHP accepts, and accepts every one (FS-B8)', function () {
+    // The OS list carries names PHP's date.timezone refuses (US/Eastern) and
+    // PHP's canonical list misses ones it accepts (Etc/UTC).
+    Process::fake(fn () => Process::result(output: "Etc/UTC\nUS/Eastern\nEurope/Berlin\nEtc/GMT+5\n"));
+
+    $offered = collect(($this->get)('/api/timezones?for=php')->assertOk()->json('timezones'))
+        ->flatMap(fn (array $group) => collect($group['zones'])->pluck('value'))
+        ->values();
+
+    $rule = (new SavePhpSettingsRequest)->rules()['php_timezone'];
+
+    expect($offered->sort()->values()->all())->toBe(['Etc/GMT+5', 'Etc/UTC', 'Europe/Berlin'])
+        ->and($offered->reject(fn ($zone) => Validator::make(['php_timezone' => $zone], ['php_timezone' => $rule])->passes())->all())->toBe([]);
 });

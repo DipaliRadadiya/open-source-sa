@@ -93,9 +93,19 @@ class DatabaseComponent implements SetupComponent
      */
     public function options(): array
     {
-        return array_map(function (string $name) {
-            $version = $this->databases->detectedVersions()[$name] ?? null;
-            $installable = $this->installers->canInstall($name);
+        $versions = $this->databases->detectedVersions();
+        // From the versions already detected, not a package question per
+        // engine: this page is held to one probe each.
+        $installed = array_map(fn ($version) => $version !== null, $versions);
+
+        return array_map(function (string $name) use ($versions, $installed) {
+            $version = $versions[$name] ?? null;
+            // OLD-28: why an engine is not offered, in the words the
+            // Databases screen already uses — the vendor has no build for
+            // this release, or MySQL and MariaDB cannot share a server.
+            $unavailable = $this->installers->unavailableReason($name)
+                ?? $this->installers->conflictReason($name, $installed);
+            $installable = $this->installers->canInstall($name) && $unavailable === null;
 
             return [
                 'value' => $name,
@@ -103,6 +113,7 @@ class DatabaseComponent implements SetupComponent
                 'installed' => $version !== null,
                 'version' => $version,
                 'installable' => $installable,
+                'unavailable' => $unavailable,
                 // MariaDB first, and pre-selected: it is what Ubuntu packages
                 // directly, so there is no third-party repository to add and no
                 // version that falls out of support with the release.

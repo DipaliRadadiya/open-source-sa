@@ -98,6 +98,25 @@ it('offers one engine choice per database, with MariaDB recommended', function (
     expect($options['mongodb']['recommended'])->toBeFalse();
 });
 
+it('says why an engine is not offered (OLD-28)', function () {
+    // MariaDB answers; MySQL cannot go on beside it.
+    Process::fake(fn ($process) => match (true) {
+        str_contains((string) $process->input, 'VERSION()') && ($process->command[0] ?? '') === 'mariadb' => Process::result(output: '11.4.2-MariaDB'),
+        ($process->command[0] ?? '') === 'mysql' => Process::result(errorOutput: "can't connect", exitCode: 1),
+        ($process->command[0] ?? '') === 'which' => Process::result(exitCode: 1),
+        default => Process::result(exitCode: 0),
+    });
+    config(['server.databases.engines.mysql.unsupported_codenames' => []]);
+
+    $database = collect(fetchSetup()['components'])->firstWhere('key', 'database');
+    $options = collect($database['options'])->keyBy('value');
+
+    expect($options['mysql']['installable'])->toBeFalse()
+        ->and($options['mysql']['unavailable']['code'] ?? null)->toBe('engine_conflict')
+        ->and($options['mysql']['unavailable']['reason'])->toBe(__('runtime.install_failed.port_in_use_by_mariadb'))
+        ->and($options['mariadb']['unavailable'])->toBeNull();
+});
+
 it('says Redis cannot be installed from here rather than offering a dead button', function () {
     fakeBareServer();
 

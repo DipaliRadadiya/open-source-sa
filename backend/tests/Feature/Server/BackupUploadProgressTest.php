@@ -1,8 +1,10 @@
 <?php
 
+use App\Contracts\BackupStep;
 use App\Contracts\StorageDriver;
 use App\Enums\BackupStatus;
 use App\Exceptions\UploadStalled;
+use App\Http\Resources\BackupResource;
 use App\Jobs\RunBackup;
 use App\Jobs\RunRestore;
 use App\Models\Application;
@@ -340,4 +342,59 @@ it('never lowers a ceiling the host already set higher', function () {
 it('leaves an unlimited host unlimited', function () {
     expect(ceilingSeenDuringUpload(baseline: '-1', configured: '768M')['during'])
         ->toBe('-1');
+});
+
+/*
+ * FS-C33: a failed backup said only which step stopped — `upload_artifact` —
+ * while the storage had said exactly why. The destination test's categories,
+ * from the same driver.
+ */
+class BackupErrorClassUploadStep implements BackupStep
+{
+    public function key(): string
+    {
+        return 'upload_artifact';
+    }
+
+    public function appliesTo(BackupContext $context): bool
+    {
+        return true;
+    }
+
+    public function run(BackupContext $context): void
+    {
+        throw new RuntimeException('Error executing "PutObject": 403 Forbidden (client): InvalidAccessKeyId - The AWS Access Key Id you provided does not exist in our records.');
+    }
+
+    public function cleanup(BackupContext $context): void {}
+}
+
+class BackupErrorClassDumpStep extends BackupErrorClassUploadStep
+{
+    public function key(): string
+    {
+        return 'dump_database';
+    }
+}
+
+it('says why the storage refused a backup, not only where it stopped', function () {
+    config(['server.backups.steps' => [BackupErrorClassUploadStep::class]]);
+    $target = progressBackup()->target;
+
+    $backup = (new BackupRunner)->run($target);
+
+    expect($backup->status)->toBe(BackupStatus::Failed)
+        ->and($backup->reason)->toBe('upload_artifact')
+        ->and($backup->error_class)->toBe('invalid_credentials')
+        ->and(BackupResource::make($backup)->resolve()['error_class_title'])->toBe(__('storage.test.invalid_credentials'));
+});
+
+it('names no storage cause for a step that never reached the storage', function () {
+    config(['server.backups.steps' => [BackupErrorClassDumpStep::class]]);
+    $target = progressBackup()->target;
+
+    $backup = (new BackupRunner)->run($target);
+
+    expect($backup->reason)->toBe('dump_database')
+        ->and($backup->error_class)->toBeNull();
 });

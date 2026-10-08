@@ -23,4 +23,7 @@ return [
         'install_pm2' => 'PM2 n\'a pas pu être installé dans Node :target, dont ce site a besoin pour plusieurs processus. Rien n\'a changé ; il reste sur Node :current.',
         'worker' => 'Le passage à Node :target s\'est arrêté avant la fin. Le site est enregistré sur Node :current ; vérifiez qu\'il fonctionne, puis réessayez.',
     ],
+    'remove_failed' => 'Node :version n’a pas pu être supprimé. Communiquez la référence ci-dessous au support.',
+    'remove_failed_said' => 'Node :version n’a pas pu être supprimé. fnm a indiqué : « :output »',
+    'install_in_progress' => 'Node :version est déjà en cours d’installation. Attendez la fin de cette installation.',
 ];

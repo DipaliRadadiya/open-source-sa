@@ -62,7 +62,8 @@ class ServerMetrics
             'cpu_percent' => $rates['cpu_percent'],
             'memory_percent' => $memory['percent'],
             'swap_percent' => $swap['percent'],
-            'disk_percent' => $disk['percent'],
+            // The history chart needs a number; an unread disk is a gap at 0.
+            'disk_percent' => $disk['percent'] ?? 0,
             'load_1' => $load1,
             'load_5' => $load5,
             'load_15' => $load15,
@@ -158,8 +159,9 @@ class ServerMetrics
             'memory_total' => $memory['total'],
             'memory_total_human' => Bytes::human((int) $memory['total']),
             'disk_total' => $disk['total'],
-            'disk_total_human' => Bytes::human((int) $disk['total']),
-            'timezone' => $this->cmd(['timedatectl', 'show', '--property=Timezone', '--value']) ?: 'Etc/UTC',
+            'disk_total_human' => $disk['total'] === null ? null : Bytes::human((int) $disk['total']),
+            // Null when timedatectl does not answer (OLD-3), not a guessed UTC.
+            'timezone' => $this->cmd(['timedatectl', 'show', '--property=Timezone', '--value']) ?: null,
             'reboot_required' => is_file((string) config('server.reboot_required_file', '/var/run/reboot-required')),
             'runtimes' => $this->runtimes(),
         ];
@@ -341,17 +343,27 @@ class ServerMetrics
     /**
      * @return array{total: int, used: int, free: int, percent: float}
      */
+    /**
+     * Null fields when `df` did not answer (OLD-6): the disk showed 0 B of
+     * 0 B, 0 % used — a full disk and an unread one looked the same.
+     *
+     * @return array{total: ?int, used: ?int, free: ?int, percent: ?float}
+     */
     private function diskUsage(): array
     {
-        $output = $this->serverOps->run(
+        $result = $this->serverOps->run(
             ['df', '-B1', '-P', (string) config('server.disk_path', '/')],
             ['feature' => 'dashboard', 'op' => 'disk'],
-        )->output();
+        );
 
-        $lines = array_values(array_filter(preg_split('/\r?\n/', trim($output)) ?: []));
+        $lines = array_values(array_filter(preg_split('/\r?\n/', trim($result->output())) ?: []));
         $row = preg_split('/\s+/', trim((string) end($lines))) ?: [];
 
-        return $this->usage((int) ($row[1] ?? 0), (int) ($row[2] ?? 0), (int) ($row[3] ?? 0));
+        if ($result->failed() || ! ctype_digit((string) ($row[1] ?? '')) || (int) $row[1] === 0) {
+            return ['total' => null, 'used' => null, 'free' => null, 'percent' => null];
+        }
+
+        return $this->usage((int) $row[1], (int) ($row[2] ?? 0), (int) ($row[3] ?? 0));
     }
 
     /**
@@ -375,9 +387,9 @@ class ServerMetrics
     {
         return [
             ...$usage,
-            'total_human' => Bytes::human($usage['total']),
-            'used_human' => Bytes::human($usage['used']),
-            'free_human' => Bytes::human($usage['free']),
+            'total_human' => $usage['total'] === null ? null : Bytes::human($usage['total']),
+            'used_human' => $usage['used'] === null ? null : Bytes::human($usage['used']),
+            'free_human' => $usage['free'] === null ? null : Bytes::human($usage['free']),
         ];
     }
 

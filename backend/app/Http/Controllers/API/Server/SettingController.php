@@ -22,6 +22,8 @@ use App\Services\Server\Settings\SecurityUpdateTracker;
 use App\Services\Server\Settings\SettingChangeLog;
 use App\Services\Server\Settings\SettingsManager;
 use App\Support\ProbeCache;
+use App\Support\ServerTimezone;
+use Carbon\CarbonInterface;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
@@ -229,7 +231,12 @@ class SettingController extends Controller
                 // on the one number where being wrong means someone schedules
                 // a restart for the wrong hour. `shutdown` obeys this clock,
                 // so this clock is the one that answers.
-                'at' => now()->addMinutes($delay)->format('d-m-Y H:i:s'),
+                //
+                // In the server's timezone (FS-C7), the clock the reboot
+                // schedule beside it already uses — it was UTC, so the two
+                // read an hour apart on a server set to Europe/Berlin.
+                // `at_iso` carries the offset for a client that converts.
+                ...$this->rebootMoment(now()->addMinutes($delay)),
                 // How long is left, measured here rather than derived there.
                 // A client counting down from `at` has to parse a string with
                 // no offset in it and subtract its own clock — the same drift
@@ -264,7 +271,7 @@ class SettingController extends Controller
         // any server whose grant was out of date. The cheapest way to not
         // mishandle a permission is not to need one.
         if (! is_file($path)) {
-            return response()->json(['reboot' => ['scheduled' => false, 'at' => null, 'seconds_remaining' => null]]);
+            return response()->json(['reboot' => ['scheduled' => false, 'at' => null, 'at_iso' => null, 'timezone' => ServerTimezone::get(), 'seconds_remaining' => null]]);
         }
 
         preg_match('/^USEC=(\d+)/m', (string) @file_get_contents($path), $matches);
@@ -277,7 +284,7 @@ class SettingController extends Controller
         return response()->json([
             'reboot' => [
                 'scheduled' => true,
-                'at' => $at?->format('d-m-Y H:i:s'),
+                ...($at === null ? ['at' => null, 'at_iso' => null, 'timezone' => ServerTimezone::get()] : $this->rebootMoment($at)),
                 // Rounded up, not truncated. systemd's USEC is a whole second
                 // and this request lands a fraction after it, so a 15-minute
                 // restart is 899.4 seconds away by the time it is measured --
@@ -330,5 +337,22 @@ class SettingController extends Controller
         $log->log('setting.updated', null, ['group' => $key]);
 
         return response()->json([$key => $group->read()]);
+    }
+
+    /**
+     * A reboot time in the server's own timezone, with the offset (FS-C7).
+     *
+     * @return array{at: string, at_iso: string, timezone: string}
+     */
+    private function rebootMoment(CarbonInterface $moment): array
+    {
+        $zone = ServerTimezone::get();
+        $local = $moment->copy()->setTimezone($zone);
+
+        return [
+            'at' => $local->format('d-m-Y H:i:s'),
+            'at_iso' => $local->toIso8601String(),
+            'timezone' => $zone,
+        ];
     }
 }

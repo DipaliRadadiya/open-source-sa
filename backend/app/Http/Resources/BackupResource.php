@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\Backup;
+use App\Services\Server\Backups\StaleBackupReaper;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -51,6 +52,12 @@ class BackupResource extends JsonResource
             // is exempt from retention so it will not quietly disappear.
             'is_safety' => (bool) $this->is_safety,
             'status' => $this->status->value,
+            // Whether `POST /backups/{id}/clear` would accept this row (BK-B):
+            // in flight, and past the point where anything can still be
+            // working on it. The frontend copied the reaper's rule to decide
+            // when to show the button; one copy is how the two drift.
+            'is_stale' => $stale = app(StaleBackupReaper::class)->isStale($this->resource),
+            'clearable' => $stale,
             'status_title' => __('backup.status.'.$this->status->value),
             'type_title' => __('backup.type.'.$this->type->value),
             // `reason` carries the step that failed — a stable key. The title
@@ -59,6 +66,12 @@ class BackupResource extends JsonResource
             'reason_title' => $this->reason === null
                 ? null
                 : __('backup.errors.'.$this->reason),
+            // Why the storage refused (FS-C33), in the destination test's
+            // own categories and words: `invalid_credentials` → "The access
+            // key or secret was rejected." Null when the step was not a
+            // storage one, or the cause could not be told.
+            'error_class' => $this->error_class,
+            'error_class_title' => $this->error_class === null ? null : __('storage.test.'.$this->error_class),
             'size_bytes' => $this->size_bytes,
 
             // How far the upload has actually got.
@@ -83,7 +96,9 @@ class BackupResource extends JsonResource
             // this go stale can say so before the reaper gets there.
             'progress_at' => $this->progress_at?->format('d-m-Y H:i:s'),
             'reason' => $this->reason,
-            'log_key' => $this->log_key,
+            // No `log_key` (OLD-10): it addressed a line in the server-ops
+            // log, which no screen can open. `reference` below finds the same
+            // failure in Admin → Error log, and is what support asks for.
             'reference' => $this->reference,
             'started_at' => $this->started_at?->format('d-m-Y H:i:s'),
             'finished_at' => $this->finished_at?->format('d-m-Y H:i:s'),

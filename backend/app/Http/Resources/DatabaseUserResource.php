@@ -43,6 +43,14 @@ class DatabaseUserResource extends JsonResource
             // than none — it moves the confusion to somewhere much harder to
             // debug than this screen.
             'connection_string' => $database && $secret ? $this->connectionString() : null,
+            // Where to connect, for every role that may see the user (FS-B11).
+            // Not secrets — and a view-only screen lost them along with the
+            // connection string they used to be read out of.
+            'connection' => $database ? [
+                'host' => $this->connectHost(),
+                'port' => (int) config("server.databases.engines.{$this->database->engine}.default_port"),
+                'database' => $this->database->name,
+            ] : null,
             'created_at' => $this->created_at?->format('d-m-Y H:i:s'),
             'created_at_human' => $this->created_at?->diffForHumans(),
         ];
@@ -53,15 +61,7 @@ class DatabaseUserResource extends JsonResource
         $engine = $this->database->engine;
         $scheme = (string) config("server.databases.engines.{$engine}.uri_scheme");
         $port = (int) config("server.databases.engines.{$engine}.default_port");
-        // The address to connect TO. A remote user's `host` is where it may
-        // connect FROM, and printing that here (as this used to) handed
-        // someone a string pointing at their own machine. A local user
-        // connects over loopback; anyone else needs this server's public
-        // address, and when that cannot be found out, loopback is the
-        // honest fallback — it is at least this server.
-        $host = $this->connection_preference === 'localhost'
-            ? '127.0.0.1'
-            : (app(ServerPublicIp::class)->detect(fn () => app(DnsVerifier::class)->serverIp()) ?? '127.0.0.1');
+        $host = $this->connectHost();
 
         return sprintf(
             '%s://%s:%s@%s:%d/%s',
@@ -72,5 +72,19 @@ class DatabaseUserResource extends JsonResource
             $port,
             $this->database->name,
         );
+    }
+
+    /**
+     * The address to connect TO. A remote user's `host` is where it may
+     * connect FROM, and printing that handed someone an address pointing at
+     * their own machine. Local users connect over loopback; anyone else needs
+     * this server's public address, and loopback is the honest fallback when
+     * that cannot be found out — it is at least this server.
+     */
+    private function connectHost(): string
+    {
+        return $this->connection_preference === 'localhost'
+            ? '127.0.0.1'
+            : (app(ServerPublicIp::class)->detect(fn () => app(DnsVerifier::class)->serverIp()) ?? '127.0.0.1');
     }
 }

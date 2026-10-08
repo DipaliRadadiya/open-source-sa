@@ -1164,3 +1164,20 @@ describe('one application\'s own backups (BK-K)', function () {
             ->assertJsonCount(1, 'backups');
     });
 });
+
+it('does not count a paused or manual-only target as protected (OLD-9)', function () {
+    BackupTarget::create(['application_id' => $this->application->id, 'storage_destination_id' => $this->destination->id, 'type' => 'full', 'retention_count' => 7, 'frequency' => 'daily', 'enabled' => false]);
+    $blog = Application::forceCreate([
+        'system_user_id' => $this->application->system_user_id, 'name' => 'Blog', 'slug' => 'blog', 'domain' => 'blog.example.test',
+        'site_type' => 'php', 'serving_profile' => 'php', 'status' => 'active',
+    ]);
+    BackupTarget::create(['application_id' => $blog->id, 'storage_destination_id' => $this->destination->id, 'type' => 'full', 'retention_count' => 7, 'frequency' => 'manual', 'enabled' => true]);
+
+    $this->withHeaders(backupHeaders())->getJson('/api/backup-targets')
+        ->assertJsonPath('meta.protected', 0)
+        ->assertJsonPath('meta.configured', 2)
+        ->assertJsonPath('meta.unprotected', 2);
+
+    $this->withHeaders(backupHeaders())->getJson('/api/backup-targets?filter[protected]=0')
+        ->assertJsonCount(2, 'backup_targets');
+});

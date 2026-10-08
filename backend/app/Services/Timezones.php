@@ -36,9 +36,16 @@ class Timezones
      *
      * @return array<int, array{region: string, zones: array<int, array{value: string, label: string, offset: string, offset_minutes: int}>}>
      */
-    public function grouped(): array
+    public function grouped(bool $phpOnly = false): array
     {
-        return collect($this->identifiers())
+        // PHP's date.timezone knows fewer names than the OS (FS-B8):
+        // `US/Eastern` is in `timedatectl list-timezones` and PHP refuses it.
+        // The PHP settings picker asks for the ones both know.
+        $identifiers = $phpOnly
+            ? array_values(array_intersect($this->identifiers(), DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC)))
+            : $this->identifiers();
+
+        return collect($identifiers)
             ->map(fn (string $identifier) => $this->describe($identifier))
             ->filter()
             ->groupBy('region')

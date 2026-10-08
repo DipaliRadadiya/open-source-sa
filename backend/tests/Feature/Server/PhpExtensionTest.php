@@ -54,12 +54,12 @@ beforeEach(function () {
 afterEach(fn () => File::deleteDirectory($this->phpDir));
 
 /** @param  (callable(array<int, string>): ?FakeProcessResult)|null  $override */
-function fakeExtensions(?callable $override = null): ArrayObject
+function fakeExtensions(?callable $override = null, string $startupWarning = ''): ArrayObject
 {
     $runs = new ArrayObject;
     $soDir = test()->soDir;
 
-    Process::fake(function ($process) use ($runs, $soDir, $override) {
+    Process::fake(function ($process) use ($runs, $soDir, $override, $startupWarning) {
         $runs[] = $process->command;
 
         if ($override !== null && ($result = $override($process->command)) !== null) {
@@ -128,7 +128,7 @@ function fakeExtensions(?callable $override = null): ArrayObject
 
         // `php -r 'echo ini_get("extension_dir");'`
         if (in_array('-r', $command, true)) {
-            return Process::result(output: $soDir);
+            return Process::result(output: $startupWarning.$soDir);
         }
 
         // `php -m` — the loaded set, including things compiled in.
@@ -152,6 +152,16 @@ function catalogFor(string $version): Collection
     return collect(extCall('GET', "/api/php/versions/{$version}/extensions")->json('extensions'))
         ->keyBy('name');
 }
+
+it('still finds installed extensions when PHP prints a startup warning first (OLD-5)', function () {
+    fakeExtensions(startupWarning: "PHP Warning:  Module \"redis\" is already loaded in Unknown on line 0\n");
+
+    // One package, three modules: only readable from the extension dir.
+    $catalog = catalogFor($this->panel);
+
+    expect($catalog['mysql']['installed'])->toBeTrue()
+        ->and($catalog['mysql']['modules'])->toContain('mysqli');
+});
 
 it('lists what apt offers, not just what is installed', function () {
     fakeExtensions();

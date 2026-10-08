@@ -69,6 +69,9 @@ class NodeOverview
             'versions' => $progress['versions'],
             'system' => $this->node->system(),
             'installable' => $progress['installable'],
+            // `unreachable` when the version list could not be fetched — say
+            // "could not reach nodejs.org", not "nothing to install" (FS-C20).
+            'installable_error' => $this->node->installableError(),
             // So the frontend knows the difference between "this version has
             // no lifecycle data" and "we have no lifecycle data at all" — the
             // second is a box with no egress, and the badges should stay off

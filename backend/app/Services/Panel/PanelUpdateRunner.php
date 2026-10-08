@@ -182,7 +182,7 @@ class PanelUpdateRunner
             // update is long gone, so this is the sole opportunity to put the
             // result somewhere a person can find it without knowing to query
             // the panel_updates table directly.
-            $this->activity->log('panel_update.succeeded', $update, [
+            $this->activity->log($update->dry_run ? 'panel_update.dry_run_succeeded' : 'panel_update.succeeded', $update, [
                 'from_version' => $update->from_version,
                 'to_version' => $update->to_version,
             ], actor: $update->user);
@@ -199,7 +199,7 @@ class PanelUpdateRunner
             // rollback trap, so true is the compatible fallback.
             $attributes['rolled_back'] = (bool) ($state['rolled_back'] ?? true);
 
-            $this->activity->log('panel_update.failed', $update, [
+            $this->activity->log($update->dry_run ? 'panel_update.dry_run_failed' : 'panel_update.failed', $update, [
                 'from_version' => $update->from_version,
                 'to_version' => $update->to_version,
                 'reason' => $attributes['reason'],

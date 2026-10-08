@@ -1834,7 +1834,7 @@ All of this comes from **one read** of the file. A raw endpoint plus a parsed en
 
 `checks` are lint results on the file's contents, each with a `code`, a `severity`, the offending `key`/`value`, and a localised `title`/`detail`.
 
-`backups` — timestamped automatic snapshots before each save, newest first, five kept. Each is `{name, created_at}`: `name` is the on-disk filename (`.env.bak-YYYYMMDD-HHMMSS`) and is what the restore endpoint takes; `created_at` is the same instant formatted for display. Sorting by name sorts by time, so the list costs no `stat` per file.
+`backups` — timestamped automatic snapshots before each save, newest first, **20 kept** (`ApplicationEnvironment::KEEP_BACKUPS`; this said five until 2026-10-08, ENV-2). Each is `{name, created_at}`: `name` is the on-disk filename (`.env.bak-YYYYMMDD-HHMMSS`) and is what the restore endpoint takes; `created_at` is the same instant formatted for display. Sorting by name sorts by time, so the list costs no `stat` per file.
 
 ---
 
@@ -3258,8 +3258,10 @@ Paged. `?search=` case-insensitively matches application name and domain; **`?fi
     "backup_target": null,
     "last_backup": null
   }
-], "meta": {"total": 7, "protected": 4, "unprotected": 3}}
+], "meta": {"total": 7, "protected": 4, "unprotected": 3, "configured": 5}}
 ```
+
+**`protected` means backed up on a schedule** (since 2026-10-08, OLD-9): a target that is switched off, or `manual`, does not count, and `filter[protected]` uses the same rule. `configured` is how many sites have backup settings at all.
 
 There is no `configured` flag — `backup_target === null` is the unprotected state. `backup_target` and `last_backup` are the full objects documented below.
 
@@ -3425,7 +3427,6 @@ Every backup across every application — paginated, filterable.
   "status": "verified", "status_title": "Complete",
   "size_bytes": 52428800,
   "reason": null, "reason_title": null,
-  "log_key": "a1b2c3d4-e5f6-4890-abcd-ef1234567890",
   "reference": "9f8e7d6c-5b4a-4321-9876-0fedcba98765",
   "started_at": "28-07-2026 02:00:00",
   "finished_at": "28-07-2026 02:04:00",
@@ -3444,7 +3445,7 @@ The application is flattened as `application_name` / `application_domain` — th
 
 Note the label: `status: "verified"` renders as **"Complete"**, not "Verified" — `status_title` is written for the person reading the screen. Render it; do not build your own map from the raw value.
 
-`reason` is a classified failure code with `reason_title` its localised sentence; both null unless `status` is `failed`. `log_key` and `reference` are both **UUIDs assigned when the run starts** — never null, on any status. `log_key` addresses this run's log through the logs endpoints; `reference` is the id to quote to support.
+`reason` is a classified failure code with `reason_title` its localised sentence; both null unless `status` is `failed`. `reference` is a **UUID assigned when the run starts** — never null, on any status — and the id to quote to support; a failure is in Admin → Error log under it. There is **no `log_key`** since 2026-10-08 (OLD-10): it pointed at a server log no screen can open. `error_class` / `error_class_title` (FS-C33) say why the storage refused, for a failure in `upload_artifact`, `verify_artifact` or `prune_old_backups` — the destination test's categories (`invalid_credentials`, `bucket_not_found`, `unreachable`…); null otherwise. `is_stale` / `clearable` (BK-B) say whether `POST /backups/{id}/clear` would accept the row.
 
 `is_safety: true` marks the automatic pre-restore snapshot rather than a backup anyone scheduled — worth distinguishing in the list so it does not read as a stray extra run. The newest **two** per site are kept; each restore removes older ones, **archive included** (until 2026-09-24 only the row was removed, so every restore from the third on left a full-site archive in the bucket that the panel could no longer see). An archive that cannot be removed keeps its row and is retried by the next restore.
 
@@ -3558,6 +3559,7 @@ Restore history — what was restored, when, and by whom. Paginated.
   "safety_backup_id": 16,
   "rollback_path": "/home/siteowner/.rollback-3",
   "reference": "3c2b1a09-8f7e-4d6c-5b4a-392817465fed",
+  "created_at": "28-07-2026 09:59:58", "created_at_human": "3 days ago",
   "started_at": "28-07-2026 10:00:00", "started_at_human": "3 days ago",
   "finished_at": "28-07-2026 10:05:00", "finished_at_human": "3 days ago"
 }], "meta": {"current_page": 1, "per_page": 20, "total": 3, "last_page": 1}}
@@ -3821,6 +3823,8 @@ Paged. `?search=` case-insensitively matches the database name; `?filter[engine]
 
 `size_bytes` is stored and refreshed every 10 minutes by a scheduled command.
 
+
+`sort` also accepts **`size_bytes`** (`-size_bytes` for largest first; added 2026-10-08, OLD-13).
 ---
 
 ### POST `/databases`
@@ -4860,6 +4864,8 @@ Treat that as one rule in the UI: **disable the edit control and the enable/disa
 
 **Activity entries (FW-09):** "Added/Removed a firewall rule" now carry the whole rule, e.g. "Deny 80/tcp from 1.2.3.4", the same sentence as the rule's `summary`.
 
+
+**`?rules=0`** (added 2026-10-08, OLD-12) leaves the unpaged `rules` list out (`"rules": null`). Page the rules through `GET /firewall/rules` and send it; the default still includes them for the current screen.
 ---
 
 ### GET `/firewall/rules`
@@ -5165,6 +5171,8 @@ applies.
 
 For live tail: poll with `?after=<cursor>`.
 
+
+**`search_window_capped`** (added 2026-10-08, OLD-15): `true` when a `grep` searched only the last 5,000 lines of a source read through sudo and there was more log above them — an empty result then means "not in the last 5,000 lines", not "not in the log". Always `false` for a plain file, which is searched whole. Same field the application logs carry.
 ---
 
 ### GET `/logs/{key}/download`
@@ -6148,6 +6156,8 @@ Unauthenticated.
 {"timezones": [{"value": "UTC", "label": "UTC"}, {"value": "Europe/London", "label": "London (GMT+1)"}, …]}
 ```
 
+
+**`?for=php`** (added 2026-10-08, FS-B8): only the zones PHP's `date.timezone` accepts — use it for the PHP settings timezone field. The OS list has names PHP refuses (`US/Eastern`); the PHP field validates against PHP's own list including its backward-compatible names (`Etc/UTC`, `Etc/GMT+5`, `EST`), which it used to refuse.
 ---
 
 ### GET `/health`

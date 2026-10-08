@@ -165,6 +165,8 @@ return [
     'php.ini_updated' => 'Konfiguration von PHP :version aktualisiert',
     'panel_update.started' => 'Panel-Update von :from_version auf :to_version gestartet',
     'panel_update.failed' => 'Panel-Update fehlgeschlagen (:reason)',
+    'panel_update.dry_run_succeeded' => 'Testlauf eines Panel-Updates von :from_version erfolgreich',
+    'panel_update.dry_run_failed' => 'Testlauf eines Panel-Updates fehlgeschlagen (:reason)',
     'backup.configured' => 'Sicherungen für :name eingerichtet (:frequency)',
     'backup.updated' => 'Sicherungseinstellungen für :name aktualisiert',
     'backup.deleted' => 'Ein Backup von :name gelöscht',

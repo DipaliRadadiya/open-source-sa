@@ -1548,3 +1548,20 @@ describe('values that are the right shape but wrong (bug #61)', function () {
             ->assertOk();
     });
 });
+
+it('does not call a value changed when it is the default (PHP-ob)', function () {
+    fakePhpServer();
+    // As a new site is provisioned: open_basedir written explicitly as the
+    // default, true.
+    ApplicationPhpSettings::updateOrCreate(['application_id' => $this->application->id], ['open_basedir_enabled' => true, 'memory_limit' => '256M']);
+
+    $this->actingAs($this->admin)->getJson(phpUrl())
+        ->assertJsonPath('php.overridden.open_basedir_enabled', false)
+        ->assertJsonPath('php.overridden.memory_limit', false);
+
+    ApplicationPhpSettings::where('application_id', $this->application->id)->update(['open_basedir_enabled' => false, 'memory_limit' => '512M']);
+
+    $this->actingAs($this->admin)->getJson(phpUrl())
+        ->assertJsonPath('php.overridden.open_basedir_enabled', true)
+        ->assertJsonPath('php.overridden.memory_limit', true);
+});

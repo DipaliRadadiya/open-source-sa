@@ -241,6 +241,10 @@ it('publishes the deploy script as a field on the git site type', function () {
         ->firstWhere('name', 'git');
 
     expect(collect($git['fields'])->pluck('name'))->toContain('deploy_script');
+
+    // OLD-22: the schema says what the rules require, so the form can too.
+    expect(collect($git['fields'])->firstWhere('name', 'start_command')['required_if'] ?? null)
+        ->toBe(['rendering_type' => ['ssr']]);
 });
 
 it('refuses a git site rendered as PHP on a MERN server, which serves no PHP sites', function () {

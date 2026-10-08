@@ -42,7 +42,10 @@ class CertificateResource extends JsonResource
             'issued_at' => $this->issued_at?->format('d-m-Y H:i:s'),
             'issued_at_human' => $this->issued_at?->diffForHumans(),
             'expires_at' => $this->expires_at?->format('d-m-Y H:i:s'),
-            'expires_at_human' => $this->expires_at?->diffForHumans(),
+            // In days, not Carbon's rounded "1 month" for 59 (APP-2): an
+            // expiry date is read to the day, and the warning threshold is in
+            // days. Day-level precision always, months never.
+            'expires_at_human' => $this->expiresInWords(),
             // What the web server is actually presenting, as opposed to what
             // is on disk. They agree on a healthy site; when they do not, the
             // file renewed and the running server never picked it up, so the
@@ -70,5 +73,27 @@ class CertificateResource extends JsonResource
             'message' => $this->message(),
             'reference' => $this->when($this->status === CertificateStatus::Failed, $this->reference),
         ];
+    }
+
+    /**
+     * The expiry in days, the same number as `days_remaining` (APP-2).
+     *
+     * Carbon's single-unit sentence said "1 month" for anything from 45 to
+     * 60 days, which is the whole band where somebody decides whether to act;
+     * and its floor, read a moment after `now`, said 44 for a 45 the field
+     * beside it reported. Built from the days so the two cannot disagree.
+     */
+    private function expiresInWords(): ?string
+    {
+        $days = $this->resource->daysRemaining();
+
+        if ($days === null) {
+            return null;
+        }
+
+        // A minute past the whole day, so the floor lands on it.
+        $at = $days >= 0 ? now()->addDays($days)->addMinute() : now()->addDays($days)->subMinute();
+
+        return $at->diffForHumans(['parts' => 1, 'minimumUnit' => 'day', 'skip' => ['y', 'month', 'week']]);
     }
 }

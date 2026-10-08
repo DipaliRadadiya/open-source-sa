@@ -392,6 +392,27 @@ class WorkerSupervisor
      * turned that into a file without moving the reader. A second copy of this
      * expression is exactly how they drifted the first time.
      */
+    /**
+     * The worker's last words, for a start that failed (APP-1/FS-C44).
+     *
+     * stderr goes to the same file (`redirect_stderr`), so a command that
+     * dies at once leaves its reason here — `php -v` printing and exiting, a
+     * missing file. Null when there is nothing to quote.
+     */
+    public function lastOutput(Worker $worker): ?string
+    {
+        $tail = $this->serverOps->run(
+            ['tail', '-n', '20', $this->logFile($worker)],
+            $this->context($worker, 'worker_last_output'),
+            // Exit 1: no such log yet — the program never wrote one.
+            expectedExitCodes: [1],
+        );
+
+        $lines = array_values(array_filter(array_map('trim', preg_split('/\r?\n/', $tail->output()) ?: [])));
+
+        return $lines === [] ? null : mb_strimwidth((string) end($lines), 0, 300, '…');
+    }
+
     public function logFile(Worker $worker): string
     {
         return $worker->log_file

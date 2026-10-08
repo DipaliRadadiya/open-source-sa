@@ -127,6 +127,16 @@ class AvailableRelease
             return false;
         }
 
+        // FS-C36: newer by name, but the code here may already be that
+        // release — the local tags just have not been fetched.
+        // Asked about the commit the caller says is installed — no commit,
+        // no question.
+        $commit = $installed['commit_hash'] ?? null;
+
+        if (is_string($commit) && app(InstalledPanelInfo::class)->alreadyContains((string) $available['version'], $commit) === true) {
+            return false;
+        }
+
         $fromFile = in_array($installed['source'] ?? null, ['file', 'unknown'], true);
         $committed = strtotime((string) ($installed['committed_at'] ?? ''));
         $published = strtotime((string) ($available['published_at'] ?? ''));

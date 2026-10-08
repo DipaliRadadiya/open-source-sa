@@ -116,7 +116,10 @@ it('restores the previous ini when php exits 0 but could not parse it', function
     $this->withHeaders(phpHeaders())->putJson('/api/php/versions/8.4/ini', [
         'contents' => "memory_limit = 512M\nfoo = \"bar\nmax_input_vars = 3000\n",
         'acknowledged' => true,
-    ])->assertStatus(422)->assertJsonPath('message', 'PHP rejected that configuration, so the previous one was restored. Nothing was reloaded.');
+    ])->assertStatus(422)->assertJsonPath('message', 'PHP rejected that configuration, so the previous one was restored. Nothing was reloaded.')
+        // FS-C17: PHP's own line, so the editor can say where — not the
+        // "test is successful" line printed beside it.
+        ->assertJsonPath('php_errors', ["PHP:  syntax error, unexpected end of file, expecting TC_DOLLAR_CURLY or TC_QUOTED_STRING or '\"' in /etc/php/8.4/fpm/php.ini on line 4"]);
 
     $ini = "{$this->phpDir}/8.4/fpm/php.ini";
 

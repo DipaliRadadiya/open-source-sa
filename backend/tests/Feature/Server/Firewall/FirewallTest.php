@@ -53,6 +53,17 @@ it('reports live status and rules', function () {
         ->assertJsonPath('rules.0.protected', true);
 });
 
+it('leaves the full rule list out for a client that pages it (OLD-12)', function () {
+    fakeUfw('active');
+    FirewallRule::create(['port_from' => 80, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/firewall?rules=0')
+        ->assertOk()
+        ->assertJsonPath('rules', null)
+        ->assertJsonPath('enabled', true);
+});
+
 it('adds an allow rule for a port, applying it via ufw', function () {
     fakeUfw();
 

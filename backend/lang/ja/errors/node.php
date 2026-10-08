@@ -23,4 +23,7 @@ return [
         'install_pm2' => 'このサイトが複数プロセスで動作するために必要な PM2 を Node :target にインストールできませんでした。何も変更されておらず、Node :current のままです。',
         'worker' => 'Node :target への切り替えが完了前に停止しました。サイトは Node :current として記録されています。動作していることを確認してから、もう一度お試しください。',
     ],
+    'remove_failed' => 'Node :version を削除できませんでした。サポートに下の参照番号をお伝えください。',
+    'remove_failed_said' => 'Node :version を削除できませんでした。fnm のメッセージ:「:output」',
+    'install_in_progress' => 'Node :version はすでにインストール中です。そのインストールが終わるまでお待ちください。',
 ];

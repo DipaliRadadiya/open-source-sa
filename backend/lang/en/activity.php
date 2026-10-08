@@ -171,6 +171,8 @@ return [
     'php.ini_updated' => 'Updated the PHP :version configuration',
     'panel_update.started' => 'Started a panel update from :from_version to :to_version',
     'panel_update.failed' => 'Panel update failed (:reason)',
+    'panel_update.dry_run_succeeded' => 'Dry run of a panel update from :from_version passed',
+    'panel_update.dry_run_failed' => 'Dry run of a panel update failed (:reason)',
     'backup.configured' => 'Set up backups for :name (:frequency)',
     'backup.updated' => 'Updated the backup settings for :name',
     'backup.deleted' => 'Deleted a backup of :name',

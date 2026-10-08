@@ -330,6 +330,23 @@ describe('sources the panel cannot open itself', function () {
             ->and($logs['journal']['modified'])->toBeNull();
     });
 
+    it('says when a search only covered the last part of the log (OLD-15)', function () {
+        // A full window: there was more log above it that the search never saw.
+        fakePrivilegedLogs(str_repeat("certbot: noise\n", 5000));
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/logs/letsencrypt?grep=renewal-failed')
+            ->assertOk()
+            ->assertJsonPath('log.lines', [])
+            ->assertJsonPath('log.search_window_capped', true);
+
+        fakePrivilegedLogs("certbot: renewal-failed\n");
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/logs/letsencrypt?grep=renewal-failed')
+            ->assertJsonPath('log.search_window_capped', false);
+    });
+
     it('reads them through the system', function () {
         fakePrivilegedLogs("certbot: renewing\ncertbot: done\n");
 

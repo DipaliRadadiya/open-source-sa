@@ -3,6 +3,7 @@
 namespace App\Services\Server\Runtimes;
 
 use App\Contracts\Runtime;
+use App\Exceptions\Server\Runtime\NodeRemovalException;
 use App\Exceptions\Server\Runtime\RuntimeInstallException;
 use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Services\Runtime\InstallFailureClassifier;
@@ -34,6 +35,8 @@ use Illuminate\Support\Facades\Log;
  */
 class NodeRuntime implements Runtime
 {
+    private ?string $installableError = null;
+
     public function __construct(
         private ServerOps $serverOps,
         private InstallFailureClassifier $classifier,
@@ -177,13 +180,35 @@ class NodeRuntime implements Runtime
      *
      * @return array<int, string>
      */
+    /**
+     * Why the last installable() came back empty when it was not asked a
+     * question it could answer — `unreachable` — or null.
+     */
+    public function installableError(): ?string
+    {
+        return $this->installableError;
+    }
+
     public function installable(): array
     {
+        $this->installableError = null;
+
         if (! $this->fnmInstalled()) {
             return [];
         }
 
-        $remote = collect(preg_split('/\r?\n/', trim($this->fnm(['list-remote'])->output())) ?: [])
+        $listed = $this->fnm(['list-remote']);
+
+        // FS-C20: a catalogue that could not be fetched (nodejs.org blocked,
+        // no egress) answered `[]` — the same as "there is nothing to
+        // install" — and the screen could only guess which.
+        if ($listed->failed() || trim($listed->output()) === '') {
+            $this->installableError = 'unreachable';
+
+            return [];
+        }
+
+        $remote = collect(preg_split('/\r?\n/', trim($listed->output())) ?: [])
             ->map(fn (string $line) => $this->parseVersion($line))
             ->filter();
 
@@ -569,9 +594,24 @@ class NodeRuntime implements Runtime
     /**
      * @throws SettingOperationException
      */
+    /**
+     * @throws NodeRemovalException with fnm's own reason (FS-C21) — this
+     *                              used to say "the settings change failed"
+     */
     public function uninstall(string $version): void
     {
-        $this->must($this->fnm(['uninstall', $version]));
+        $result = $this->fnm(['uninstall', $version]);
+
+        if ($result->failed()) {
+            throw new NodeRemovalException($version, $result->reference, self::lastLine($result->errorOutput()."\n".$result->output()));
+        }
+    }
+
+    private static function lastLine(string $text): ?string
+    {
+        $lines = array_values(array_filter(array_map('trim', preg_split('/\r?\n/', $text) ?: [])));
+
+        return $lines === [] ? null : mb_strimwidth((string) end($lines), 0, 300, '…');
     }
 
     /**

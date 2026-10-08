@@ -105,14 +105,14 @@ function fakeFacts(array $overrides = []): void
                 return Process::result(output: 'yes');
             }
 
-            return Process::result(output: 'Etc/UTC');
+            return $overrides['timezone'] ?? Process::result(output: 'Etc/UTC');
         }
 
         if ($bin === 'hostnamectl') {
             return Process::result(output: 'server.example');
         }
         if ($bin === 'sshd' && ($cmd[1] ?? '') === '-T') {
-            return Process::result(output: "port 22\npermitrootlogin prohibit-password\npasswordauthentication yes\n");
+            return Process::result(output: "port 22\npermitrootlogin prohibit-password\npasswordauthentication yes\n".($overrides['sshd_extra'] ?? ''));
         }
         if ($bin === 'ufw') {
             return Process::result(output: "Status: inactive\n");
@@ -251,6 +251,28 @@ it('reports whether the server has any ssh key', function () {
 
     $systemUser->update(['shell' => '/bin/bash', 'ssh_access' => false, 'sudo' => true]);
     readSettings()->assertJsonPath('settings.security.has_ssh_key', true);
+});
+
+it('says whether a save will start enforcing SSH access (FS-C6)', function () {
+    fakeFacts();
+    readSettings()->assertJsonPath('settings.security.save_enforces_ssh_access', true);
+
+    // Already written by an earlier save: nothing new happens.
+    fakeFacts(['sshd_extra' => "allowgroups ssh-users\nallowgroups sudo\nallowgroups root\n"]);
+    readSettings()->assertJsonPath('settings.security.save_enforces_ssh_access', false);
+
+    // AllowUsers in charge: the panel writes no AllowGroups at all.
+    fakeFacts(['sshd_extra' => "allowusers admin\n"]);
+    readSettings()->assertJsonPath('settings.security.save_enforces_ssh_access', false);
+});
+
+it('says the clock is unknown when timedatectl does not answer (OLD-3)', function () {
+    fakeFacts(['timezone' => Process::result(exitCode: 1, errorOutput: 'Failed to connect to bus')]);
+
+    readSettings()
+        ->assertJsonPath('settings.general.timezone', null)
+        ->assertJsonPath('settings.general.ntp', null)
+        ->assertJsonPath('settings.general.clock_synchronized', null);
 });
 
 it('distinguishes a synchronised clock from an enabled ntp daemon', function () {

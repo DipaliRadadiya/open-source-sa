@@ -165,6 +165,8 @@ return [
     'php.ini_updated' => 'PHP :version की कॉन्फ़िगरेशन अपडेट की',
     'panel_update.started' => ':from_version से :to_version तक पैनल अद्यतन शुरू किया',
     'panel_update.failed' => 'पैनल अद्यतन विफल (:reason)',
+    'panel_update.dry_run_succeeded' => ':from_version से पैनल अपडेट का ड्राई रन सफल रहा',
+    'panel_update.dry_run_failed' => 'पैनल अपडेट का ड्राई रन विफल रहा (:reason)',
     'backup.configured' => ':name के लिए बैकअप सेट किया (:frequency)',
     'backup.updated' => ':name की बैकअप सेटिंग्स अद्यतन कीं',
     'backup.deleted' => ':name का एक बैकअप हटाया',

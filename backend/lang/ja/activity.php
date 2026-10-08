@@ -165,6 +165,8 @@ return [
     'php.ini_updated' => 'PHP :version の設定を更新しました',
     'panel_update.started' => ':from_version から :to_version へのパネル更新を開始しました',
     'panel_update.failed' => 'パネルの更新に失敗しました (:reason)',
+    'panel_update.dry_run_succeeded' => ':from_version からのパネル更新のドライランに成功しました',
+    'panel_update.dry_run_failed' => 'パネル更新のドライランに失敗しました（:reason）',
     'backup.configured' => ':name のバックアップを設定しました (:frequency)',
     'backup.updated' => ':name のバックアップ設定を更新しました',
     'backup.deleted' => ':name のバックアップを削除しました',

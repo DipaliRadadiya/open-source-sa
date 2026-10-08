@@ -50,6 +50,10 @@ class RestoreResource extends JsonResource
             'safety_backup_id' => $this->resource->safety_backup_id,
             'rollback_path' => $this->resource->rollback_path,
             'reference' => $this->resource->reference,
+            // When it was asked for (OLD-8): a restore still queued has no
+            // start time, and the row had no time at all.
+            'created_at' => $this->resource->created_at?->format('d-m-Y H:i:s'),
+            'created_at_human' => $this->resource->created_at?->diffForHumans(),
             'started_at' => $this->resource->started_at?->format('d-m-Y H:i:s'),
             'started_at_human' => $this->resource->started_at?->diffForHumans(),
             'finished_at' => $this->resource->finished_at?->format('d-m-Y H:i:s'),

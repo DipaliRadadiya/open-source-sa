@@ -165,6 +165,8 @@ return [
     'php.ini_updated' => 'A mis à jour la configuration de PHP :version',
     'panel_update.started' => 'A lancé une mise à jour du panneau de :from_version vers :to_version',
     'panel_update.failed' => 'Échec de la mise à jour du panneau (:reason)',
+    'panel_update.dry_run_succeeded' => 'Simulation d’une mise à jour du panneau depuis :from_version réussie',
+    'panel_update.dry_run_failed' => 'Simulation d’une mise à jour du panneau échouée (:reason)',
     'backup.configured' => 'A configuré les sauvegardes de :name (:frequency)',
     'backup.updated' => 'A mis à jour les réglages de sauvegarde de :name',
     'backup.deleted' => 'Suppression d\'une sauvegarde de :name',

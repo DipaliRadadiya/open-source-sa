@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\Server;
 
 use App\Enums\InstallStatus;
+use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Exceptions\Server\ServerOperationException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\SaveWorkerRequest;
@@ -16,6 +17,7 @@ use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Applications\WorkerPresets;
 use App\Services\Server\Applications\WorkerSupervisor;
 use App\Support\ListSort;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -187,7 +189,7 @@ class WorkerController extends Controller
 
             $worker->delete();
 
-            throw $e;
+            throw $this->explainStart($e, $worker, $supervisor);
         }
 
         $activity->log('application.worker_created', $application, [
@@ -237,7 +239,7 @@ class WorkerController extends Controller
                 }
             }
 
-            throw $e;
+            throw $this->explainStart($e, $worker, $supervisor);
         }
 
         $activity->log('application.worker_updated', $application, [
@@ -271,6 +273,35 @@ class WorkerController extends Controller
         $worker->delete();
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * A program that would not start is the user's command, not a server
+     * fault (APP-1/FS-C44): it was a bare 500 with no reason and no
+     * reference. Answered 422 with what the program last printed — the
+     * output a command that exits at once leaves in its log.
+     */
+    private function explainStart(Throwable $e, Worker $worker, WorkerSupervisor $supervisor): Throwable
+    {
+        if (! $e instanceof ProvisioningFailedException || $e->step !== 'start_worker') {
+            return $e;
+        }
+
+        try {
+            $said = $supervisor->lastOutput($worker);
+        } catch (Throwable) {
+            $said = null;
+        }
+
+        return new HttpResponseException(response()->json([
+            'message' => $said === null
+                ? __('worker.errors.did_not_start', ['reference' => $e->reference])
+                : __('worker.errors.did_not_start_said', ['output' => $said, 'reference' => $e->reference]),
+            'reason' => 'worker_did_not_start',
+            'output' => $said,
+            'reference' => $e->reference,
+            'errors' => ['command' => [__('worker.errors.did_not_start_field')]],
+        ], 422));
     }
 
     /**

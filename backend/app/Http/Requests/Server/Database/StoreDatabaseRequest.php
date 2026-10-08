@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Server\Database;
 
+use App\Http\Requests\Server\Database\Concerns\ChecksApplicationPairing;
+use App\Models\Application;
 use App\Rules\RemoteDatabaseHost;
 use App\Rules\SupportsRemoteDatabaseUsers;
 use App\Services\Server\Databases\DatabaseManager;
@@ -11,6 +13,8 @@ use Illuminate\Validation\Validator;
 
 class StoreDatabaseRequest extends FormRequest
 {
+    use ChecksApplicationPairing;
+
     public function authorize(): bool
     {
         return $this->user()?->canManage('database') ?? false;
@@ -75,6 +79,15 @@ class StoreDatabaseRequest extends FormRequest
                 if (! in_array($collation, $allowed, true)) {
                     $validator->errors()->add('collation', __('errors/database.collation_mismatch'));
                 }
+            }
+
+            // FS-C13: the attach screen's rules, for a database made for an
+            // application.
+            $application = $this->input('application_id') ? Application::find($this->input('application_id')) : null;
+
+            if ($application !== null) {
+                $this->refuseSecondDatabase($validator, $application);
+                $this->refuseUnusableEngine($validator, $application, (string) $this->input('engine'));
             }
         });
     }

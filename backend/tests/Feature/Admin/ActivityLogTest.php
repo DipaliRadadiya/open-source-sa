@@ -174,7 +174,7 @@ it('returns the known distinct types and actions for filter dropdowns', function
     expect($response->json('actions.database'))->toContain('created', 'deleted', 'user_created', 'user_deleted', 'password_reset', 'imported', 'connection_updated');
     expect($response->json('actions.system_user'))->toContain('created', 'ssh_key_added', 'password_set', 'sudo_enabled', 'shell_changed', 'ssh_enabled', 'ssh_disabled')->not->toContain('registered');
     expect($response->json('actions.role'))->toEqual(['created', 'deleted', 'updated']);
-    expect($response->json('actions.panel_update'))->toEqual(['failed', 'started', 'succeeded']);
+    expect($response->json('actions.panel_update'))->toEqual(['dry_run_failed', 'dry_run_succeeded', 'failed', 'started', 'succeeded']);
     expect($response->json('actions.git_account'))->toEqual(['connected', 'disconnected', 'updated']);
 });
 

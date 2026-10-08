@@ -40,7 +40,11 @@ describe('database users', function () {
         $this->actingAs($this->user)->getJson("/api/databases/{$this->database->id}/users")
             ->assertJsonPath('users.0.password', null)
             ->assertJsonPath('users.0.password_known', true)
-            ->assertJsonPath('users.0.connection_string', null);
+            ->assertJsonPath('users.0.connection_string', null)
+            // Where to connect is not a secret, and a read-only screen lost it
+            // with the connection string (FS-B11).
+            ->assertJsonPath('users.0.connection.port', 3306)
+            ->assertJsonPath('users.0.connection.database', $this->database->name);
     });
 
     it('still gives them to a role that may manage databases', function () {

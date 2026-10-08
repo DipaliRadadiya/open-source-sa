@@ -185,6 +185,19 @@ describe('a run stranded in flight', function () {
 
 describe('POST /backups/{backup}/clear', function () {
 
+    it('tells the screen which rows the button will accept (BK-B)', function () {
+        grantPermission($this->user, 'backup');
+        $stale = stuckRun(BackupStatus::Running, 24 * 60);
+        $live = stuckRun(BackupStatus::Running, 5);
+
+        $this->getJson("/api/backups/{$stale->id}")
+            ->assertJsonPath('backup.is_stale', true)
+            ->assertJsonPath('backup.clearable', true);
+        $this->getJson("/api/backups/{$live->id}")
+            ->assertJsonPath('backup.is_stale', false)
+            ->assertJsonPath('backup.clearable', false);
+    });
+
     it('closes a stranded run on demand rather than after an hour', function () {
         $stale = stuckRun(BackupStatus::Running, 24 * 60);
 

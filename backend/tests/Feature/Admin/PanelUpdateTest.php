@@ -700,3 +700,35 @@ it('updates the panel\'s privileges before anything that uses them', function ()
     $steps = UpdateScript::STEPS;
     expect(array_search('sync_privileges', $steps, true))->toBeLessThan(array_search('resync_site_configs', $steps, true));
 });
+
+it('knows the code here already is a release whose tag was never fetched (FS-C36)', function () {
+    // The release is tagged upstream on the very commit installed here; the
+    // server's own clone has no tags. By name it looks like an update.
+    $origin = sys_get_temp_dir().'/panel-origin-'.bin2hex(random_bytes(4));
+    $repo = sys_get_temp_dir().'/panel-clone-'.bin2hex(random_bytes(4));
+    mkdir($origin, 0755, true);
+
+    $git = fn (string $dir, array $args) => Process::path($dir)->run(array_merge(['git', '-c', 'user.email=t@t', '-c', 'user.name=t'], $args));
+    $git($origin, ['init', '-q']);
+    $git($origin, ['commit', '-q', '--allow-empty', '-m', 'r1']);
+    Process::run(['git', 'clone', '-q', '--no-tags', $origin, $repo]);
+    $git($origin, ['tag', '-a', 'v7.0.18', '-m', 'release']);
+    $git($origin, ['commit', '-q', '--allow-empty', '-m', 'r2']);
+    $git($origin, ['tag', 'v7.0.19']);
+
+    $info = Mockery::mock(InstalledPanelInfo::class)->makePartial();
+    $info->shouldReceive('repositoryPath')->andReturn($repo);
+
+    app()->instance(InstalledPanelInfo::class, $info);
+    $head = trim(Process::path($repo)->run(['git', 'rev-parse', 'HEAD'])->output());
+
+    expect($info->alreadyContains('7.0.18'))->toBeTrue()
+        // So the screen offers no update for it…
+        ->and(app(AvailableRelease::class)->isUpdate(['version' => '1.0.17', 'source' => 'tag', 'commit_hash' => $head], ['version' => '7.0.18']))->toBeFalse()
+        // …and still offers the real one.
+        ->and(app(AvailableRelease::class)->isUpdate(['version' => '1.0.17', 'source' => 'tag', 'commit_hash' => $head], ['version' => '7.0.19']))->toBeTrue()
+        // A real update: the commit is not in this clone at all.
+        ->and($info->alreadyContains('7.0.19'))->not->toBeTrue();
+
+    Process::run(['rm', '-rf', $origin, $repo]);
+});

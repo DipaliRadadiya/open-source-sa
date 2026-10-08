@@ -2,6 +2,8 @@
 
 namespace App\Services\Panel;
 
+use Illuminate\Contracts\Process\ProcessResult;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Process;
 
 /**
@@ -81,6 +83,70 @@ class InstalledPanelInfo
      * a shallow clone with no tags fetched yet, or a git that refuses the
      * directory. All of those mean "no tag here", and the file answers.
      */
+    /**
+     * Whether the code checked out already contains release `$version`
+     * (FS-C36).
+     *
+     * The installed version is read from the server's *local* tags, so a
+     * release tagged on the very commit installed here read as an update until
+     * someone fetched tags — "Update available" on a panel that had it, ending
+     * in `target_not_newer`. Asked of git by commit instead: the release's
+     * commit is an ancestor of HEAD, or it is not. Local tag first, then the
+     * remote's. Null when git cannot tell; remembered per HEAD for an hour,
+     * as this runs on the admin dashboard.
+     */
+    public function alreadyContains(string $version, ?string $head = null): ?bool
+    {
+        $path = $this->repositoryPath();
+
+        if (! is_dir($path.'/.git') || preg_match('/^\d+(\.\d+){0,3}$/', $version) !== 1) {
+            return null;
+        }
+
+        $git = fn (array $args, int $timeout = 10) => Process::path($path)->timeout($timeout)
+            ->run(['git', '-c', 'safe.directory='.$path, ...$args]);
+
+        $head ??= trim($git(['rev-parse', 'HEAD'])->output());
+
+        if (preg_match('/^[0-9a-f]{40}$/', $head) !== 1) {
+            return null;
+        }
+
+        // Boxed: the cache treats a stored null as a miss, and "cannot tell"
+        // on a box with no egress must not re-run a 15 s ls-remote per load.
+        return Cache::remember("panel_update.contains.{$head}.{$version}", now()->addHour(), fn (): array => ['answer' => $this->askContains($git, $version, $head)])['answer'];
+    }
+
+    /**
+     * @param  \Closure(array<int, string>, int=): ProcessResult  $git
+     */
+    private function askContains(\Closure $git, string $version, string $head): ?bool
+    {
+        $commit = trim($git(['rev-parse', '--verify', '--quiet', "refs/tags/v{$version}^{commit}"])->output());
+
+        if ($commit === '') {
+            $remote = $git(['ls-remote', '--tags', 'origin', "refs/tags/v{$version}", "refs/tags/v{$version}^{}"], 15)->output();
+            // The peeled line (`^{}`) is the commit an annotated tag wraps.
+            preg_match_all('/^([0-9a-f]{40})\s+refs\/tags\/v'.preg_quote($version, '/').'(\^\{\})?$/m', $remote, $m, PREG_SET_ORDER);
+            $peeled = collect($m)->first(fn ($row) => ($row[2] ?? '') !== '') ?? ($m[0] ?? null);
+            $commit = $peeled[1] ?? '';
+        }
+
+        if ($commit === '') {
+            return null;
+        }
+
+        $exit = $git(['merge-base', '--is-ancestor', $commit, $head])->exitCode();
+
+        // 0 contains it, 1 does not; anything else (the commit is not in
+        // this clone at all) is "cannot tell".
+        return match ($exit) {
+            0 => true,
+            1 => false,
+            default => null,
+        };
+    }
+
     private function exactTag(): ?string
     {
         $path = $this->repositoryPath();

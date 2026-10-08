@@ -165,6 +165,8 @@ return [
     'php.ini_updated' => 'Обновлена конфигурация PHP :version',
     'panel_update.started' => 'Запустил обновление панели с :from_version до :to_version',
     'panel_update.failed' => 'Обновление панели не удалось (:reason)',
+    'panel_update.dry_run_succeeded' => 'Пробный запуск обновления панели с :from_version прошёл успешно',
+    'panel_update.dry_run_failed' => 'Пробный запуск обновления панели не удался (:reason)',
     'backup.configured' => 'Настроил резервное копирование для :name (:frequency)',
     'backup.updated' => 'Обновил настройки резервного копирования :name',
     'backup.deleted' => 'Удалена резервная копия :name',

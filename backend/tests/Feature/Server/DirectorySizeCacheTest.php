@@ -86,6 +86,17 @@ function fakeDu(int $bytes): void
 }
 
 describe('measuring on demand', function () {
+    it('needs manage, not view (AD-B3)', function () {
+        fakeDu(42);
+        $viewer = User::factory()->create();
+        grantPermission($viewer, 'application', view: true, manage: false);
+        Sanctum::actingAs($viewer);
+
+        $this->postJson("/api/applications/{$this->application->id}/directory-size")->assertForbidden();
+
+        expect($this->application->fresh()->directory_size_bytes)->not->toBe(42);
+    });
+
     it('measures the site root and remembers when', function () {
         fakeDu(5242880);
 

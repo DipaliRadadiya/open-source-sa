@@ -71,7 +71,14 @@ class FirewallController extends Controller
             // Present only when the state could not be read, so the screen can
             // show a reference alongside the banner.
             'status_reference' => $reference,
-            'rules' => FirewallRuleResource::collection(FirewallRule::query()->latest()->get())->resolve(),
+            // Every rule, unpaged (OLD-12): `GET /firewall/rules` pages them,
+            // and this list made that saving nothing. Left on by default
+            // because the current screen still reads it for its overlap and
+            // reachability checks; `?rules=0` leaves it out, and a client that
+            // pages should send that.
+            'rules' => $request->query('rules') === '0'
+                ? null
+                : FirewallRuleResource::collection(FirewallRule::query()->latest()->get())->resolve(),
             // The caller's own address, so "only my IP" is one click. Without
             // it people leave ports open to everyone rather than go and look
             // their address up.

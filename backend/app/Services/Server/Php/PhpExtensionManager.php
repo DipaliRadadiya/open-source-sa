@@ -540,12 +540,20 @@ class PhpExtensionManager
      */
     private function extensionDir(string $version): ?string
     {
+        // OLD-5: a startup warning ("Module 'redis' is already loaded") is
+        // printed on stdout before the answer, and read as part of the path
+        // it made every installed extension show "not installed". Startup
+        // output off, and the answer read as the last line that is a path.
         $result = $this->serverOps->run(
-            [$this->binary($version), '-r', 'echo ini_get("extension_dir");'],
+            [$this->binary($version), '-d', 'display_startup_errors=0', '-d', 'display_errors=0', '-r', 'echo "\n", ini_get("extension_dir");'],
             ['feature' => 'php', 'op' => 'extension_dir', 'version' => $version],
         );
 
-        $dir = trim($result->output());
+        $paths = array_values(array_filter(
+            array_map('trim', preg_split('/\r?\n/', $result->output()) ?: []),
+            fn (string $line): bool => str_starts_with($line, '/'),
+        ));
+        $dir = (string) end($paths);
 
         return $result->ok && $dir !== '' && is_dir($dir) ? $dir : null;
     }

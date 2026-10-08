@@ -1115,8 +1115,10 @@ it('distinguishes expiry dates that diffForHumans renders identically', function
     $laterRendered = CertificateResource::make($later->fresh())->resolve();
 
     // One is comfortable, the other is inside Let's Encrypt's own renewal
-    // window — and the sentence calls them the same thing.
-    expect($soonRendered['expires_at_human'])->toBe($laterRendered['expires_at_human'])
+    // window. The sentence used to call both "1 month"; it now counts days,
+    // the same number as days_remaining (APP-2).
+    expect($soonRendered['expires_at_human'])->toBe('45 days from now')
+        ->and($laterRendered['expires_at_human'])->toBe('59 days from now')
         ->and($soonRendered['days_remaining'])->toBe(45)
         ->and($laterRendered['days_remaining'])->toBe(59);
 });

@@ -65,6 +65,15 @@ class NodeController extends Controller
             return response()->json(['message' => __('node.already_installed', ['version' => $version])], 200);
         }
 
+        // FS-C25: a second click or a second tab. Both used to answer 202 and
+        // run two installs of the same version.
+        if (in_array($installs->current('node', $version)?->status, [InstallStatus::Installing, InstallStatus::Removing], true)) {
+            return response()->json([
+                'message' => __('errors/node.install_in_progress', ['version' => $version]),
+                'reason' => 'install_in_progress',
+            ], 409);
+        }
+
         // Before dispatch: a client polling straight after this 202 must see
         // the version, and the worker may not have started yet.
         $installs->start('node', $version);

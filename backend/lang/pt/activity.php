@@ -165,6 +165,8 @@ return [
     'php.ini_updated' => 'Atualizou a configuração do PHP :version',
     'panel_update.started' => 'Iniciou uma atualização do painel de :from_version para :to_version',
     'panel_update.failed' => 'A atualização do painel falhou (:reason)',
+    'panel_update.dry_run_succeeded' => 'O teste de atualização do painel a partir de :from_version passou',
+    'panel_update.dry_run_failed' => 'O teste de atualização do painel falhou (:reason)',
     'backup.configured' => 'Configurou as cópias de segurança de :name (:frequency)',
     'backup.updated' => 'Atualizou as definições de cópia de :name',
     'backup.deleted' => 'Eliminou uma cópia de segurança de :name',

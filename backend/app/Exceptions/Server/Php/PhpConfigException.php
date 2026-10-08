@@ -14,6 +14,8 @@ class PhpConfigException extends Exception
         public readonly ?string $reference = null,
         /** @var array<string, mixed> */
         private readonly array $replace = [],
+        /** @var array<int, string> PHP's own words about what it refused (FS-C17) */
+        public readonly array $phpErrors = [],
     ) {
         parent::__construct();
     }
@@ -32,9 +34,12 @@ class PhpConfigException extends Exception
      * The submitted configuration failed PHP's own validation, so it was
      * rolled back. The user's mistake to fix, hence 422 and no reference.
      */
-    public static function invalid(string $version): self
+    /**
+     * @param  array<int, string>  $phpErrors  the lines PHP printed about it — which line, what is wrong
+     */
+    public static function invalid(string $version, array $phpErrors = []): self
     {
-        return new self('errors/php.invalid_ini', 422, replace: ['version' => $version]);
+        return new self('errors/php.invalid_ini', 422, replace: ['version' => $version], phpErrors: $phpErrors);
     }
 
     /**
@@ -199,6 +204,11 @@ class PhpConfigException extends Exception
 
         if ($this->reference !== null) {
             $payload['reference'] = $this->reference;
+        }
+
+        // FS-C17: the user was told the file was wrong and not where.
+        if ($this->phpErrors !== []) {
+            $payload['php_errors'] = $this->phpErrors;
         }
 
         return response()->json($payload, $this->status);

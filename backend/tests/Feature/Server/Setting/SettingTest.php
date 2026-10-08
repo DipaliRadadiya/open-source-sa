@@ -4,6 +4,7 @@ use App\Models\ActivityLog;
 use App\Models\FirewallRule;
 use App\Models\User;
 use App\Services\Server\Fail2ban\Fail2banManager;
+use App\Support\ServerTimezone;
 use App\Support\SshPort;
 use Carbon\Carbon;
 use Database\Seeders\PermissionSeeder;
@@ -935,6 +936,25 @@ describe('a scheduled restart', function () {
         expect($response->json('reboot.delay_minutes'))->toBe(30)
             ->and($response->json('reboot.at'))
             ->toBe(now()->addMinutes(30)->format('d-m-Y H:i:s'));
+    });
+
+    it('says the time in the server\'s timezone, as the reboot schedule does (FS-C7)', function () {
+        fakeSettings();
+        File::put($this->dir.'/timezone', "Europe/Berlin\n");
+        config(['server.timezone_file' => $this->dir.'/timezone']);
+        ServerTimezone::forget();
+
+        $response = $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->postJson('/api/settings/reboot', ['delay_minutes' => 30])
+            ->assertStatus(202);
+
+        $expected = now()->addMinutes(30)->setTimezone('Europe/Berlin');
+
+        expect($response->json('reboot.timezone'))->toBe('Europe/Berlin')
+            ->and($response->json('reboot.at'))->toBe($expected->format('d-m-Y H:i:s'))
+            ->and($response->json('reboot.at_iso'))->toBe($expected->toIso8601String());
+
+        ServerTimezone::forget();
     });
 
     it('reports one that is already pending, read from systemd', function () {

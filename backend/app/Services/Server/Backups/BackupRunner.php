@@ -7,6 +7,7 @@ use App\Enums\BackupStatus;
 use App\Exceptions\UploadStalled;
 use App\Models\Backup;
 use App\Models\BackupTarget;
+use App\Services\Server\Backups\Storage\StorageDriverFactory;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -132,6 +133,7 @@ class BackupRunner
                 // operator whether to go and fix something or to wait for the
                 // next run.
                 'reason' => $e instanceof UploadStalled ? UploadStalled::REASON : $backup->reason,
+                'error_class' => $this->storageErrorClass($backup, $e),
                 'finished_at' => now(),
             ]);
 
@@ -143,6 +145,33 @@ class BackupRunner
             return $backup->refresh();
         } finally {
             $this->cleanup($ran, $context);
+        }
+    }
+
+    /**
+     * Why the storage refused, when a storage step is what failed (FS-C33):
+     * `invalid_credentials`, `bucket_not_found`, `unreachable`… — the
+     * categories the destination test reports, from the same driver.
+     *
+     * Only for the steps that talk to the storage. The classifier's honest
+     * default is "unreachable", and a database dump that failed is not that.
+     */
+    private function storageErrorClass(Backup $backup, Throwable $e): ?string
+    {
+        if (! in_array($backup->reason, ['upload_artifact', 'verify_artifact', 'prune_old_backups'], true) || $e instanceof UploadStalled) {
+            return null;
+        }
+
+        $destination = $backup->destination();
+
+        if ($destination === null) {
+            return null;
+        }
+
+        try {
+            return Str::after(app(StorageDriverFactory::class)->for($destination)->classify($e), 'storage.test.');
+        } catch (Throwable) {
+            return null;
         }
     }
 

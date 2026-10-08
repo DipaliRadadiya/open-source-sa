@@ -31,6 +31,7 @@ use App\Support\ListSort;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
@@ -170,10 +171,14 @@ class BackupController extends Controller
             // The filter this screen exists for: which sites are unprotected.
             // array_key_exists rather than `??`, so `filter[protected]=0` is
             // read as a request for the unprotected ones and not as absent.
+            // "Protected" means backed up on a schedule (OLD-9): a target that
+            // is paused, or manual-only, takes no backup unless somebody
+            // remembers to press the button, and counting it as protected
+            // told the user a site was covered when it was not.
             ->when(array_key_exists('protected', $filter) && $filter['protected'] !== null,
                 fn ($query) => $filter['protected']
-                    ? $query->whereHas('backupTarget')
-                    : $query->whereDoesntHave('backupTarget'))
+                    ? $query->whereHas('backupTarget', $this->scheduled(...))
+                    : $query->whereDoesntHave('backupTarget', $this->scheduled(...)))
             ->when($search !== '', fn ($query) => ListSearch::apply($query, $search, ['name', 'domain']));
 
         $applications = ListSort::apply(
@@ -188,7 +193,8 @@ class BackupController extends Controller
         // each; loading every application to call ->filter() on it would undo
         // the paging this method just did.
         $total = Application::query()->count();
-        $protected = Application::query()->whereHas('backupTarget')->count();
+        $protected = Application::query()->whereHas('backupTarget', $this->scheduled(...))->count();
+        $configured = Application::query()->whereHas('backupTarget')->count();
 
         return response()->json([
             'backup_targets' => ApplicationBackupResource::collection($applications->items())->resolve(),
@@ -196,6 +202,8 @@ class BackupController extends Controller
                 'total' => $total,
                 'protected' => $protected,
                 'unprotected' => $total - $protected,
+                // Has backup settings at all, scheduled or not.
+                'configured' => $configured,
                 'current_page' => $applications->currentPage(),
                 'per_page' => $applications->perPage(),
                 // How many rows the current search and filter match, which is
@@ -543,5 +551,11 @@ class BackupController extends Controller
         return response()->json([
             'backup' => BackupResource::make($backup->fresh())->resolve(),
         ]);
+    }
+
+    /** A backup target that will actually run on its own. */
+    private function scheduled(Builder $query): void
+    {
+        $query->where('enabled', true)->where('frequency', '!=', 'manual');
     }
 }

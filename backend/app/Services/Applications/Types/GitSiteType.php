@@ -143,6 +143,7 @@ class GitSiteType extends AbstractSiteType
             // files), not just the ssr-only fields below it.
             $this->field('package_manager', 'select', extra: [
                 'depends_on' => 'node_rendering',
+                'required_if' => ['rendering_type' => ['ssr', 'csr']],
                 'default' => 'npm',
                 'options' => [
                     ['value' => 'npm', 'label' => __('application.package_manager.npm')],
@@ -175,6 +176,9 @@ class GitSiteType extends AbstractSiteType
             // that would then be refused.
             $this->field('start_command', 'text', extra: [
                 'depends_on' => 'rendering_type',
+                // OLD-22: required for SSR, as the rules below say — the form
+                // could not know until the save came back 422.
+                'required_if' => ['rendering_type' => ['ssr']],
                 'help' => __('application.help.start_command'),
             ]),
             $this->field('app_port', 'number', extra: [

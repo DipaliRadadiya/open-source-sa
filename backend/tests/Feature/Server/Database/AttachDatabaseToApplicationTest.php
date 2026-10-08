@@ -5,6 +5,7 @@ use App\Models\Database;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Process;
 
 uses(RefreshDatabase::class);
 
@@ -180,4 +181,27 @@ it('lists only unattached databases for the attach picker', function () {
         ->assertOk()
         ->assertJsonCount(1, 'databases')
         ->assertJsonPath('databases.0.name', 'taken');
+});
+
+describe('creating a database for an application (FS-C13)', function () {
+    it('refuses a second database for an application that has one', function () {
+        $this->db->update(['application_id' => $this->site->id]);
+        Process::fake();
+
+        $this->postJson('/api/databases', ['name' => 'shop_two', 'engine' => 'mysql', 'application_id' => $this->site->id])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['application_id' => __('errors/database.application_already_attached', ['application' => 'Shop', 'database' => 'shop'])]);
+
+        expect(Database::count())->toBe(1);
+        Process::assertNotRan(fn ($p) => str_contains((string) $p->input, 'CREATE DATABASE'));
+    });
+
+    it('refuses an engine the application cannot use', function () {
+        $wordpress = Application::factory()->create(['name' => 'Blog', 'site_type' => 'wordpress']);
+        Process::fake();
+
+        $this->postJson('/api/databases', ['name' => 'blog', 'engine' => 'mongodb', 'application_id' => $wordpress->id])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('application_id');
+    });
 });

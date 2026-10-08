@@ -26,7 +26,6 @@ use App\Services\Runtime\DatabaseInstallProgress;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\DatabaseSizes;
-use App\Services\Server\Databases\Installers\AbstractSqlEngineInstaller;
 use App\Services\Server\Databases\Installers\EngineInstallerManager;
 use App\Support\ListSearch;
 use App\Support\ListSort;
@@ -69,7 +68,7 @@ class DatabaseController extends Controller
             // Read from the detection above rather than asked again: the
             // engine list must not cost a package-manager question per row.
             $unavailable = $installers->unavailableReason($name)
-                ?? $this->engineConflict($installers, $name, $installed);
+                ?? $installers->conflictReason($name, $installed);
 
             return $engine + [
                 'system_schemas' => $manager->systemSchemas($name),
@@ -94,36 +93,6 @@ class DatabaseController extends Controller
     }
 
     /**
-     * MySQL and MariaDB cannot share a server: apt removes one to install the
-     * other. The install job already refused it, but only once it ran — so the
-     * list offered "Install MySQL" beside a working MariaDB and the job then
-     * failed (Apache test server). Said up front, in the words the job used.
-     * An engine that is installed itself is never blocked by this: installing
-     * it again is how its panel account is repaired.
-     *
-     * @param  array<string, bool>  $installed
-     * @return array{code: string, reason: string}|null
-     */
-    private function engineConflict(EngineInstallerManager $installers, string $engine, array $installed): ?array
-    {
-        if (($installed[$engine] ?? false) || ! $installers->canInstall($engine)) {
-            return null;
-        }
-
-        $installer = $installers->installer($engine);
-
-        if (! $installer instanceof AbstractSqlEngineInstaller) {
-            return null;
-        }
-
-        $other = $installer->conflictingEngine();
-
-        return ($installed[$other] ?? false)
-            ? ['code' => 'engine_conflict', 'reason' => __('runtime.install_failed.port_in_use_by_'.$other)]
-            : null;
-    }
-
-    /**
      * Install an engine. `202` — the work is queued; poll `GET /databases/engines`
      * and drive the UI from `install_status`.
      */
@@ -143,7 +112,7 @@ class DatabaseController extends Controller
             abort(422, $unavailable['reason']);
         }
 
-        if (($conflict = $this->engineConflict($installers, $engine, array_column($manager->capabilities(), 'installed', 'engine'))) !== null) {
+        if (($conflict = $installers->conflictReason($engine, array_column($manager->capabilities(), 'installed', 'engine'))) !== null) {
             abort(422, $conflict['reason']);
         }
 

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
-    'user_id', 'status', 'current_step',
+    'user_id', 'status', 'dry_run', 'current_step',
     'from_version', 'from_commit', 'to_version', 'to_commit',
     'reason', 'reference', 'rolled_back', 'started_at', 'finished_at',
 ])]
@@ -22,6 +22,7 @@ class PanelUpdate extends Model
         return [
             'status' => PanelUpdateStatus::class,
             'rolled_back' => 'boolean',
+            'dry_run' => 'boolean',
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
         ];

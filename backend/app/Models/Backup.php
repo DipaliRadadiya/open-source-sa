@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
-#[Fillable(['backup_target_id', 'application_id', 'user_id', 'type', 'is_safety', 'status', 'manifest', 'reason', 'reference', 'log_key', 'size_bytes', 'started_at', 'finished_at', 'verified_at'])]
+#[Fillable(['backup_target_id', 'application_id', 'user_id', 'type', 'is_safety', 'status', 'manifest', 'reason', 'error_class', 'reference', 'log_key', 'size_bytes', 'started_at', 'finished_at', 'verified_at'])]
 class Backup extends Model
 {
     protected function casts(): array

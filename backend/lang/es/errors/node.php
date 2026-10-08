@@ -23,4 +23,7 @@ return [
         'install_pm2' => 'No se pudo instalar PM2 en Node :target, que este sitio necesita para varios procesos. No cambió nada; sigue en Node :current.',
         'worker' => 'El cambio a Node :target se detuvo antes de terminar. El sitio consta como Node :current; comprueba que funciona y vuelve a intentarlo.',
     ],
+    'remove_failed' => 'No se pudo eliminar Node :version. Indique la referencia de abajo al soporte.',
+    'remove_failed_said' => 'No se pudo eliminar Node :version. fnm indicó: «:output»',
+    'install_in_progress' => 'Node :version ya se está instalando. Espere a que termine esa instalación.',
 ];

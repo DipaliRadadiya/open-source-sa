@@ -268,8 +268,11 @@ Route::put('/applications/{application}/git-account', [DeploymentController::cla
     ->middleware(['permission:app_deployment,manage', 'throttle:30,1']);
 
 // Measuring is a read, but an expensive one — `du` walks every inode on the
-// site — so it is gated by view permission and throttled harder than the
-// screen around it. Nothing else recomputes this: not the listing, not a
-// schedule. The size the panel shows is the one somebody last asked for.
+// site — so it is throttled harder than the screen around it. Nothing else
+// recomputes this: not the listing, not a schedule. The size the panel shows
+// is the one somebody last asked for.
+//
+// Manage, not view (AD-B3): it stores a new size and spends the server's
+// disk time, which is acting on the server rather than reading what is there.
 Route::post('/applications/{application}/directory-size', [ApplicationController::class, 'measureDirectorySize'])
-    ->middleware(['permission:application', 'throttle:10,1']);
+    ->middleware(['permission:application,manage', 'throttle:10,1']);

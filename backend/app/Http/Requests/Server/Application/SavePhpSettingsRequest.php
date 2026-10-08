@@ -126,7 +126,12 @@ class SavePhpSettingsRequest extends FormRequest
             // function name has no business being here.
             'disable_functions' => ['sometimes', 'nullable', 'string', 'max:2000', 'regex:/^[A-Za-z0-9_,\s]*$/'],
             'allow_url_fopen' => ['sometimes', 'nullable', 'boolean'],
-            'php_timezone' => ['sometimes', 'nullable', 'timezone'],
+            // `all_with_bc` (FS-B8): plain `timezone` is PHP's canonical list
+            // only, and refused 79 zones the form offers from the OS list —
+            // `Etc/UTC`, every `Etc/GMT±N`, `EST` — all of which PHP's
+            // date.timezone accepts. Still PHP's own list, so nothing PHP
+            // would reject at start-up gets in.
+            'php_timezone' => ['sometimes', 'nullable', 'timezone:all_with_bc'],
             'auto_prepend_file' => ['sometimes', 'nullable', 'string', 'max:255', 'not_regex:/\.\./', $this->prependInsideSiteRule()],
 
             // The escape hatch, and the only free-text field. Newlines are

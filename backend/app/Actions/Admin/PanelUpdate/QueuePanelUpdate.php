@@ -96,9 +96,12 @@ class QueuePanelUpdate
             $update = PanelUpdate::create([
                 'user_id' => $actor->id,
                 'status' => PanelUpdateStatus::Pending,
+                // FS-C2: a dry run changes nothing, so it names no version it
+                // moved to — a finished one read as "Updated to …".
+                'dry_run' => $dryRun,
                 'from_version' => $current['version'],
                 'from_commit' => $current['commit_hash'],
-                'to_version' => $latest['version'],
+                'to_version' => $dryRun ? null : $latest['version'],
                 'started_at' => now(),
             ]);
 

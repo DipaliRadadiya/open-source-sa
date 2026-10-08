@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\PanelUpdateStatus;
+use App\Http\Resources\PanelUpdateResource;
 use App\Models\ActivityLog;
 use App\Models\PanelUpdate;
 use App\Models\User;
@@ -449,6 +450,29 @@ describe('progress reconciliation', function () {
             ->and($log->user_id)->toBe($this->admin->id)
             ->and($log->subject_id)->toBe($update->id)
             ->and($log->properties['to_version'])->toBe('99.0.0');
+
+        @unlink($path);
+    });
+
+    it('keeps a finished dry run from reading as an update (FS-C2)', function () {
+        $update = PanelUpdate::create([
+            'user_id' => $this->admin->id,
+            'status' => PanelUpdateStatus::Running,
+            'dry_run' => true,
+            'from_version' => '1.0.0',
+            'to_version' => null,
+        ]);
+
+        $path = app(UpdateScript::class)->statePath($update);
+        @mkdir(dirname($path), 0750, true);
+        file_put_contents($path, json_encode(['step' => 'health_check', 'status' => 'succeeded']));
+
+        $reconciled = app(PanelUpdateRunner::class)->reconcile($update);
+
+        expect(PanelUpdateResource::make($reconciled)->resolve())
+            ->toMatchArray(['dry_run' => true, 'to_version' => null, 'status' => 'succeeded'])
+            ->and(ActivityLog::where('type', 'panel_update')->where('action', 'dry_run_succeeded')->exists())->toBeTrue()
+            ->and(ActivityLog::where('type', 'panel_update')->where('action', 'succeeded')->exists())->toBeFalse();
 
         @unlink($path);
     });

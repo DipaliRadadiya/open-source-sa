@@ -36,7 +36,10 @@ return [
 
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => [],
+    // Readable by the frontend, which is on another origin: without this the
+    // browser hides them. Retry-After says how long a throttled upload waits
+    // (CORS issue from the frontend list, 2026-10-08).
+    'exposed_headers' => ['Retry-After', 'X-RateLimit-Limit', 'X-RateLimit-Remaining'],
 
     'max_age' => 0,
 

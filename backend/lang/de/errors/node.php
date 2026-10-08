@@ -23,4 +23,7 @@ return [
         'install_pm2' => 'PM2 konnte nicht in Node :target installiert werden, was diese Website für mehrere Prozesse braucht. Nichts wurde geändert; sie läuft weiter mit Node :current.',
         'worker' => 'Die Umstellung auf Node :target wurde vor dem Ende abgebrochen. Die Website ist als Node :current erfasst; prüfe, ob sie läuft, und versuche es erneut.',
     ],
+    'remove_failed' => 'Node :version konnte nicht entfernt werden. Nennen Sie dem Support die Referenz unten.',
+    'remove_failed_said' => 'Node :version konnte nicht entfernt werden. fnm meldete: „:output“',
+    'install_in_progress' => 'Node :version wird bereits installiert. Warten Sie, bis diese Installation abgeschlossen ist.',
 ];

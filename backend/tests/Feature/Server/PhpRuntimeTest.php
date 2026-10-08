@@ -814,3 +814,20 @@ it('leaves the default alone when an install does not move it', function () {
 
     expect(collect($runs)->contains(fn ($r) => ($r['command'][0] ?? '') === 'update-alternatives' && ($r['command'][1] ?? '') === '--set'))->toBeFalse();
 });
+
+it('lets a failed install be dismissed, not only retried (OLD-7)', function () {
+    fakePhp(absent: ['8.2']);
+    $tracker = app(InstallTracker::class);
+    $tracker->start('php', '8.2');
+    $tracker->fail('php', '8.2', null, 'network');
+
+    phpCall('DELETE', '/api/php/versions/8.2')->assertNoContent();
+
+    expect(RuntimeInstall::query()->where('version', '8.2')->exists())->toBeFalse();
+});
+
+it('still answers 404 for a version that is neither installed nor failed', function () {
+    fakePhp(absent: ['8.2']);
+
+    phpCall('DELETE', '/api/php/versions/8.2')->assertNotFound();
+});

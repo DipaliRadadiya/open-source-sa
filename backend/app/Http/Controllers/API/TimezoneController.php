@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Services\Timezones;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class TimezoneController extends Controller
 {
@@ -16,8 +17,9 @@ class TimezoneController extends Controller
      * all need it, and gating it on any one of those permissions would hide
      * it from the others.
      */
-    public function index(Timezones $timezones): JsonResponse
+    public function index(Request $request, Timezones $timezones): JsonResponse
     {
-        return response()->json(['timezones' => $timezones->grouped()]);
+        // `?for=php`: only the zones PHP's date.timezone accepts (FS-B8).
+        return response()->json(['timezones' => $timezones->grouped($request->query('for') === 'php')]);
     }
 }

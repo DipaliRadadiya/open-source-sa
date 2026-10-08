@@ -76,6 +76,14 @@ class SecuritySettings implements SettingGroup
             // refusing it — and because there is one function, the greyed-out
             // control and the 422 can never disagree about why.
             'has_ssh_key' => $this->hasSshKey($effective['permitrootlogin'] ?? 'prohibit-password'),
+            // FS-C6: whether pressing Save, for any change on this screen,
+            // will also start enforcing the System Users' SSH access switch —
+            // it writes `AllowGroups` (see allowGroupsLine()), and from then
+            // on an account not in ssh-users, sudo or root cannot log in.
+            // Said up front so the confirmation can say so; nothing changes
+            // when this is false.
+            'save_enforces_ssh_access' => ($effective['allowusers'] ?? '') === ''
+                && ! in_array('ssh-users', preg_split('/\s+/', trim((string) ($effective['allowgroups'] ?? ''))) ?: [], true),
         ];
     }
 

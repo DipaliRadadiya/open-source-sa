@@ -419,9 +419,32 @@ it('refuses a worker whose unit will not stay up', function () {
         return Process::result(exitCode: ($args[1] ?? '') === 'is-active' ? 1 : 0);
     });
 
+    // A command that will not run is the user's to fix, not a server fault
+    // (APP-1/FS-C44): 422 with a reason and the reference, not a bare 500.
     $this->actingAs($this->admin)
         ->postJson(workerUrl(), workerPayload())
-        ->assertStatus(500);
+        ->assertStatus(422)
+        ->assertJsonPath('reason', 'worker_did_not_start')
+        ->assertJsonStructure(['reference', 'output', 'errors' => ['command']]);
+});
+
+it('quotes what a worker printed before it died', function () {
+    Process::fake(function ($process) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        return match (true) {
+            ($args[0] ?? '') === 'tail' => Process::result(output: "PHP 8.4.1 (cli)\nCould not open input file: artisan\n"),
+            ($args[1] ?? '') === 'is-active' => Process::result(exitCode: 1),
+            default => Process::result(exitCode: 0),
+        };
+    });
+
+    $this->actingAs($this->admin)
+        ->postJson(workerUrl(), workerPayload())
+        ->assertStatus(422)
+        ->assertJsonPath('output', 'Could not open input file: artisan');
+
+    expect(Worker::count())->toBe(0);
 });
 
 describe('restarting', function () {
@@ -1332,7 +1355,8 @@ describe('an edit that will not start (W-edit)', function () {
 
         $this->actingAs($this->admin)
             ->putJson(workerUrl('/'.$worker->id), workerPayload(['command' => 'no-such-binary --work']))
-            ->assertStatus(500);
+            ->assertStatus(422)
+            ->assertJsonPath('reason', 'worker_did_not_start');
 
         expect($worker->fresh()->command)->toBe('php8.4 artisan queue:work --sleep=3 --tries=3')
             ->and(WorkerFake::$running[$program] ?? 0)->toBe(1)

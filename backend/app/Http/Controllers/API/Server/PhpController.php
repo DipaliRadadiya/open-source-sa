@@ -92,7 +92,18 @@ class PhpController extends Controller
      */
     public function destroy(string $version, PhpRuntime $php, ActivityLogger $log, InstallTracker $installs): JsonResponse
     {
-        abort_unless($php->installed($version), 404);
+        if (! $php->installed($version)) {
+            // OLD-7: a failed install leaves an entry with nothing installed
+            // behind it, which Remove answered 404 for — so it could only be
+            // retried, never dismissed. Clearing it is what Remove means here,
+            // as it already does for Node (bug #31).
+            $failed = $installs->current('php', $version);
+            abort_unless($failed?->status === InstallStatus::Failed, 404);
+
+            $failed->delete();
+
+            return response()->json(null, 204);
+        }
 
         if ($version === $php->panelVersion()) {
             return response()->json(['message' => __('errors/php.version_runs_panel', ['version' => $version])], 422);

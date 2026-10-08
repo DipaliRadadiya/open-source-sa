@@ -33,7 +33,7 @@ class IndexDatabasesRequest extends FormRequest
      * Newest first is the default because a database somebody just created is
      * the one they are looking for.
      */
-    public const SORTS = ['created_at', 'name', 'engine', 'users_count'];
+    public const SORTS = ['created_at', 'name', 'engine', 'users_count', 'size_bytes'];
 
     public function authorize(): bool
     {

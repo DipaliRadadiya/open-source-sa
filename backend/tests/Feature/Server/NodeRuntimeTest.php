@@ -273,6 +273,50 @@ it('queues an install, once per version however many times it is clicked', funct
         ->not->toBe((new InstallNodeVersion('22.11.0'))->uniqueId());
 });
 
+it('answers 409 to a second install of a version already queued (FS-C25)', function () {
+    Queue::fake();
+    fakeNode();
+
+    nodeCall('POST', '/api/node/versions', ['version' => '20.11.0'])->assertStatus(202);
+    nodeCall('POST', '/api/node/versions', ['version' => '20.11.0'])
+        ->assertStatus(409)
+        ->assertJsonPath('reason', 'install_in_progress');
+
+    Queue::assertPushed(InstallNodeVersion::class, 1);
+});
+
+it('says the catalogue could not be reached rather than that there is nothing to install (FS-C20)', function () {
+    fakeNode();
+    Process::fake([
+        '*list-remote*' => Process::result(errorOutput: 'error sending request for url (https://nodejs.org/dist/index.json)', exitCode: 1),
+        '*which*fnm*' => Process::result(output: "/usr/local/bin/fnm\n"),
+        '*' => Process::result(),
+    ]);
+
+    nodeCall('GET', '/api/node')->assertOk()
+        ->assertJsonPath('node.installable', [])
+        ->assertJsonPath('node.installable_error', 'unreachable');
+});
+
+it('names fnm\'s reason when a removal fails (FS-C21)', function () {
+    Process::fake(function ($process) {
+        $command = $process->command;
+
+        return match (true) {
+            $command[0] === 'which' => Process::result(output: "/usr/local/bin/fnm\n"),
+            in_array('uninstall', $command, true) => Process::result(errorOutput: "error: Can't delete Node.js version: Operation not permitted (os error 1)\n", exitCode: 1),
+            in_array('list', $command, true) => Process::result(output: "* v18.20.4\n* v20.11.0 default\n"),
+            default => Process::result(),
+        };
+    });
+
+    nodeCall('DELETE', '/api/node/versions/18.20.4')
+        ->assertStatus(500)
+        ->assertJsonPath('reason', 'remove_failed')
+        ->assertJsonPath('output', "error: Can't delete Node.js version: Operation not permitted (os error 1)")
+        ->assertJsonPath('message', __('errors/node.remove_failed_said', ['version' => '18.20.4', 'output' => "error: Can't delete Node.js version: Operation not permitted (os error 1)"]));
+});
+
 it('treats installing an already-present version as done, not as an error', function () {
     Queue::fake();
     fakeNode(installed: ['20.11.0']);
