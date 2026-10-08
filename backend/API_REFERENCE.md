@@ -1433,6 +1433,8 @@ OR
 
 The upload fields are `certificate` and `private_key` — not `cert`/`key`. Both are required when `type` is `custom`, must start with `-----BEGIN`, and are checked as a **pair before anything is written**: a mismatched certificate and key are accepted by the filesystem, fail the web server's config test, and take the site down over a copy-paste. `chain` is optional.
 
+**Where the files go (v7's layout, since 2026-10-08):** an uploaded or self-signed pair is written to `/etc/ssl/certs/{application slug}.crt` and `/etc/ssl/private/{application slug}.key` (key `0600 root`), named after the application rather than its domain. Those are the server's own directories, so a file already there that is not this application's certificate — the trust store's `ca-certificates.crt`, the distro's `ssl-cert-snakeoil.key` — is never overwritten: `custom` answers **422** on `certificate`, `self_signed` answers **422** on `type`, with `certificate.file_taken` naming the path. Certificates made before that date stay in `/etc/ssl/sv-oss/` and are still removed from there.
+
 There is **no `domains` field**. A Let's Encrypt request covers the application's own domains — add or remove domains first, then issue. See `certifiable` and `missing_domains` on the certificate object for which of them made it in.
 
 `force` skips the reachability dry run. Don't default it on: the dry run is what stops a doomed attempt from spending one of the five authorisation failures per hour Let's Encrypt allows. The one legitimate use is a server behind NAT whose public address does not answer to itself — the dry run fails there, but the real challenge arrives from outside and would succeed.

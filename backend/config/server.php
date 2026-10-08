@@ -1401,8 +1401,17 @@ return [
         // memory until something happens to reload it.
         'renewal_hook_dir' => env('SV_LETSENCRYPT_HOOK_DIR', '/etc/letsencrypt/renewal-hooks/deploy'),
 
-        // Uploaded and self-signed certificates. Not under /etc/letsencrypt —
-        // certbot owns that tree and prunes what it does not recognise.
+        // Uploaded and self-signed certificates go where v7 put them (operator,
+        // 2026-10-08): `{certs_dir}/{site}.crt` and `{keys_dir}/{site}.key`,
+        // named after the application, so a server moved from v7 keeps working
+        // with the same files. Not under /etc/letsencrypt — certbot owns that
+        // tree and prunes what it does not recognise.
+        'certs_dir' => env('SV_CUSTOM_CERT_CERTS_DIR', '/etc/ssl/certs'),
+        'keys_dir' => env('SV_CUSTOM_CERT_KEYS_DIR', '/etc/ssl/private'),
+
+        // The panel's own directory: the shared TLS-reject pair, and every
+        // uploaded/self-signed certificate made before 2026-10-08 (still
+        // removable from here).
         'custom_dir' => env('SV_CUSTOM_CERT_DIR', '/etc/ssl/sv-oss'),
 
         // certbot can sit through two DNS lookups, an HTTP round trip and a

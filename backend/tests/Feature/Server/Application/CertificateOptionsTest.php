@@ -31,7 +31,7 @@ beforeEach(function () {
         'php_version' => '8.4', 'web_root' => '/', 'status' => 'active',
     ]);
 
-    Process::fake(fn () => Process::result(exitCode: 0));
+    Process::fake(fn ($process) => Process::result(exitCode: certPathProbe($process) ? 1 : 0));
     Queue::fake();
 });
 

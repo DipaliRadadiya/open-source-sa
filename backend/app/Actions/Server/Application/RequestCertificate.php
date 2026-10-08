@@ -11,6 +11,7 @@ use App\Models\Certificate;
 use App\Services\ActivityLogger;
 use App\Services\Panel\QueueWorker;
 use App\Services\Server\Certificates\AcmeReachabilityCheck;
+use App\Services\Server\Certificates\CertificateFiles;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
@@ -37,6 +38,7 @@ class RequestCertificate
     public function __construct(
         private ActivityLogger $activityLogger,
         private AcmeReachabilityCheck $reachability,
+        private CertificateFiles $files,
     ) {}
 
     /**
@@ -69,6 +71,16 @@ class RequestCertificate
         $previousFiles = $existing !== null && $existing->type !== CertificateType::LetsEncrypt
             ? array_values(array_filter([$existing->certificate_path, $existing->private_key_path]))
             : [];
+
+        // A self-signed pair goes into the server's own /etc/ssl tree (v7's
+        // layout). Refused here, while nothing has changed, when either file
+        // is already something else's — the job checks again before writing.
+        if ($type === CertificateType::SelfSigned
+            && ($taken = $this->files->conflict($application->slug, $previousFiles)) !== null) {
+            throw ValidationException::withMessages([
+                'type' => [__('certificate.file_taken', ['path' => $taken])],
+            ]);
+        }
 
         $certificate = Certificate::updateOrCreate(
             ['application_id' => $application->id],

@@ -185,7 +185,7 @@ class ApplicationArtifacts
                     $certificate->certificate_path,
                     $certificate->private_key_path,
                     $certificate->chain_path,
-                ], $application->id),
+                ], $application->slug, $application->id),
             };
 
             if ($result?->failed()) {

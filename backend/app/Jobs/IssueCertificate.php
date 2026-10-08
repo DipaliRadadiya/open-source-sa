@@ -162,7 +162,7 @@ class IssueCertificate implements ShouldQueue
 
         if ($staleFiles !== []) {
             try {
-                $files->remove($staleFiles, $certificate->application_id);
+                $files->remove($staleFiles, (string) $certificate->application->slug, $certificate->application_id);
             } catch (Throwable) {
                 // A path outside the certificate directory is refused and left
                 // alone. The new certificate is already serving; tidying up the
@@ -215,7 +215,17 @@ class IssueCertificate implements ShouldQueue
      */
     private function selfSign(Certificate $certificate, CertificateFiles $files, array $domains): ?array
     {
-        $result = $files->selfSign($domains, $certificate->application_id);
+        $name = (string) $certificate->application->slug;
+
+        // Asked again here, not only when it was requested: the queue may have
+        // held the job while something else took the name in /etc/ssl.
+        if ($files->conflict($name, $this->previousFiles) !== null) {
+            $this->fail($certificate, 'file_taken');
+
+            return null;
+        }
+
+        $result = $files->selfSign($domains, $name, $certificate->application_id);
 
         if ($result->failed()) {
             $this->fail($certificate, 'self_sign_failed', $result->reference);
@@ -223,7 +233,7 @@ class IssueCertificate implements ShouldQueue
             return null;
         }
 
-        return $files->paths($domains[0]);
+        return $files->paths($name);
     }
 
     private function fail(Certificate $certificate, string $reason, ?string $reference = null): void

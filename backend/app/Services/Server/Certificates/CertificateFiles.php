@@ -22,18 +22,61 @@ class CertificateFiles
     ) {}
 
     /**
+     * Where an application's uploaded or self-signed pair lives.
+     *
+     * v7's layout (operator, 2026-10-08): `/etc/ssl/certs/{site}.crt` and
+     * `/etc/ssl/private/{site}.key`, named after the application rather than
+     * its domain — so a server moved from v7 keeps its files, and changing the
+     * primary domain no longer moves them. The slug is `[a-z0-9-]` and cannot
+     * introduce a path separator.
+     *
      * @return array{certificate: string, private_key: string}
      */
-    public function paths(string $domain): array
+    public function paths(string $name): array
     {
-        $dir = rtrim((string) config('server.certificates.custom_dir'), '/');
-
-        // The domain is validated to a hostname charset long before here, so it
-        // cannot introduce a path separator.
         return [
-            'certificate' => "{$dir}/{$domain}.crt",
-            'private_key' => "{$dir}/{$domain}.key",
+            'certificate' => $this->certsDir()."/{$name}.crt",
+            'private_key' => $this->keysDir()."/{$name}.key",
         ];
+    }
+
+    /**
+     * The first of this application's two paths that already holds something
+     * that is not its own certificate, or null when both are free to write.
+     *
+     * 🔴 `/etc/ssl/certs` is the server's trust store, not a panel directory:
+     * an application named `ca-certificates` would otherwise overwrite
+     * `ca-certificates.crt` and break HTTPS for curl, apt and git server-wide,
+     * and one named `ssl-cert-snakeoil` would replace the distro's key. So a
+     * file is only ever written over when it is the one this application's
+     * certificate row already points at — asked of the disk, not of a list of
+     * names someone thought of (the same rule as {@see SlugConflict}).
+     *
+     * @param  array<int, string|null>  $owned  paths the application's certificate row holds
+     */
+    public function conflict(string $name, array $owned): ?string
+    {
+        foreach ($this->paths($name) as $path) {
+            if (in_array($path, $owned, true)) {
+                continue;
+            }
+
+            // Exit 1: nothing there — the answer we want. Anything that exists,
+            // a symlink included, is somebody else's.
+            $probe = $this->serverOps->run(
+                ['test', '-e', $path, '-o', '-L', $path],
+                ['feature' => 'certificate', 'op' => 'check_cert_path'],
+                expectedExitCodes: [1],
+            );
+
+            // Not asked is not "free": a refused sudo also exits 1, and a
+            // guard that reads that as "nothing there" overwrites the file.
+            if ($probe->ok || ! $probe->answered) {
+                return $path;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -117,11 +160,11 @@ class CertificateFiles
      *
      * @param  array<int, string>  $domains
      */
-    public function selfSign(array $domains, int $applicationId): ServerOpsResult
+    public function selfSign(array $domains, string $name, int $applicationId): ServerOpsResult
     {
-        $paths = $this->paths($domains[0]);
+        $paths = $this->paths($name);
 
-        $ensured = $this->ensureDirectory();
+        $ensured = $this->ensureKeyFile($paths['private_key'], $applicationId);
 
         if ($ensured->failed()) {
             return $ensured;
@@ -151,11 +194,11 @@ class CertificateFiles
      * Both go over stdin through ManagedFile, so the private key never appears
      * in a command line and therefore never in `ps` or the server-ops log.
      */
-    public function install(string $domain, string $certificate, string $privateKey, ?string $chain, int $applicationId): ServerOpsResult
+    public function install(string $name, string $certificate, string $privateKey, ?string $chain, int $applicationId): ServerOpsResult
     {
-        $paths = $this->paths($domain);
+        $paths = $this->paths($name);
 
-        $ensured = $this->ensureDirectory();
+        $ensured = $this->ensureKeyFile($paths['private_key'], $applicationId);
 
         if ($ensured->failed()) {
             return $ensured;
@@ -201,9 +244,9 @@ class CertificateFiles
      *
      * @param  array<int, string|null>  $paths
      */
-    public function remove(array $paths, int $applicationId): ServerOpsResult
+    public function remove(array $paths, string $name, int $applicationId): ServerOpsResult
     {
-        $files = $this->managedFiles($paths);
+        $files = $this->managedFiles($paths, $name);
 
         if ($files === []) {
             return new ServerOpsResult(true, 'certificate-files-already-absent');
@@ -216,8 +259,14 @@ class CertificateFiles
     }
 
     /**
-     * The filled paths, each confirmed to be a direct child of the private
-     * certificate directory. Aborts otherwise.
+     * The filled paths, each confirmed to be one the panel wrote. Aborts
+     * otherwise.
+     *
+     * Two shapes are ours: a direct child of the panel's own directory (every
+     * certificate made before 2026-10-08), or exactly this application's own
+     * `{certs_dir}/{name}.crt` / `{keys_dir}/{name}.key`. Never "anything in
+     * /etc/ssl/certs" — that is the server's trust store, and a corrupted row
+     * pointing at `ca-certificates.crt` must not become a broken server.
      *
      * Public so a caller can run the same check *before* it changes anything:
      * refusing only at the `rm` would leave a site already taken off HTTPS
@@ -226,16 +275,17 @@ class CertificateFiles
      * @param  array<int, string|null>  $paths
      * @return array<int, string>
      */
-    public function managedFiles(array $paths): array
+    public function managedFiles(array $paths, string $name): array
     {
         $directory = rtrim((string) config('server.certificates.custom_dir'), '/');
+        $own = array_values($this->paths($name));
         $files = array_values(array_unique(array_filter($paths, fn (?string $path): bool => filled($path))));
 
         foreach ($files as $path) {
             // These files are always direct children. Prefix-only validation
             // would accept `/custom/../../etc/passwd`, so compare the lexical
             // parent too; the path need not exist for a retry-safe removal.
-            abort_unless(dirname($path) === $directory, 500);
+            abort_unless(dirname($path) === $directory || in_array($path, $own, true), 500);
         }
 
         return $files;
@@ -332,5 +382,32 @@ class CertificateFiles
             ['install', '-d', '-m', '0700', rtrim((string) config('server.certificates.custom_dir'), '/')],
             ['feature' => 'certificate', 'op' => 'ensure_cert_dir'],
         );
+    }
+
+    /**
+     * Create the key file 0600 before anything is written into it.
+     *
+     * `tee` and `openssl -keyout` both keep the mode of a file that already
+     * exists, so the key is never readable by anyone else — not even for the
+     * moment between writing it and a chmod. The two directories are the
+     * distro's own and are never created or re-moded here: `install -d -m`
+     * on an existing /etc/ssl/certs would chmod the trust store.
+     */
+    private function ensureKeyFile(string $path, int $applicationId): ServerOpsResult
+    {
+        return $this->serverOps->run(
+            ['install', '-m', '0600', '/dev/null', $path],
+            ['feature' => 'certificate', 'op' => 'create_private_key', 'application' => $applicationId],
+        );
+    }
+
+    private function certsDir(): string
+    {
+        return rtrim((string) config('server.certificates.certs_dir', '/etc/ssl/certs'), '/');
+    }
+
+    private function keysDir(): string
+    {
+        return rtrim((string) config('server.certificates.keys_dir', '/etc/ssl/private'), '/');
     }
 }

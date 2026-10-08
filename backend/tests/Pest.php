@@ -355,3 +355,16 @@ function tarArchivePath(array $command): ?string
 
     return null;
 }
+
+/**
+ * `test -e` on a custom-certificate path. A blanket fake answers 0 by
+ * default, which to the guard means "something is already there" — so the
+ * probe answers "nothing there" unless a test says otherwise.
+ */
+function certPathProbe($process): bool
+{
+    $command = (array) $process->command;
+
+    return ($command[0] ?? null) === 'test' && in_array('-e', $command, true)
+        && str_starts_with((string) ($command[2] ?? ''), '/etc/ssl/');
+}

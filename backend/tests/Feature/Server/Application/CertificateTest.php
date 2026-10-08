@@ -56,7 +56,7 @@ beforeEach(function () {
         'dns_resolved_ip' => '203.0.113.10',
     ]);
 
-    Process::fake(fn () => Process::result(exitCode: 0));
+    Process::fake(fn ($process) => Process::result(exitCode: certPathProbe($process) ? 1 : 0));
 });
 
 it('uses HTTPS only when an active certificate covers the primary hostname', function () {
@@ -252,7 +252,7 @@ it('removes an uploaded key once Let\'s Encrypt replaces it', function () {
     Queue::assertPushed(IssueCertificate::class, function (IssueCertificate $job) use (&$pushed) {
         $pushed = $job;
 
-        return $job->previousFiles === ['/etc/ssl/sv-oss/shop.example.com.crt', '/etc/ssl/sv-oss/shop.example.com.key'];
+        return $job->previousFiles === ['/etc/ssl/certs/shop.crt', '/etc/ssl/private/shop.key'];
     });
 
     fakeCertbotSuccess();
@@ -264,7 +264,7 @@ it('removes an uploaded key once Let\'s Encrypt replaces it', function () {
         ->and($certificate->uploaded_private_key)->toBeNull();
 
     Process::assertRan(fn ($process) => in_array('rm', $process->command, true)
-        && in_array('/etc/ssl/sv-oss/shop.example.com.key', $process->command, true));
+        && in_array('/etc/ssl/private/shop.key', $process->command, true));
 });
 
 it('removes the Let\'s Encrypt lineage an uploaded certificate replaced', function () {
@@ -690,7 +690,7 @@ it('refuses a stored certificate path that escapes the private certificate direc
 
     expect(fn () => app(CertificateFiles::class)->remove([
         '/etc/ssl/sv-oss/../../etc/passwd',
-    ], $this->application->id))->toThrow(HttpException::class);
+    ], 'shop', $this->application->id))->toThrow(HttpException::class);
 
     Process::assertNotRan(fn ($process) => in_array('rm', $process->command, true));
 });
@@ -1039,7 +1039,7 @@ function fakeCertbotSuccess(): void
             return Process::result(output: 'notAfter=Jan  1 00:00:00 2030 GMT');
         }
 
-        return Process::result(exitCode: 0);
+        return Process::result(exitCode: certPathProbe($process) ? 1 : 0);
     });
 }
 
@@ -1205,4 +1205,231 @@ it('issues under the site\'s name and removes a lineage named after the domain (
         && $p->command[array_search('--cert-name', $p->command, true) + 1] === $slug);
     Process::assertRan(fn ($p) => in_array('delete', $p->command, true) && in_array('shop.example.com', $p->command, true));
     expect($certificate->fresh()->lineageName())->toBe($slug);
+});
+
+describe('custom certificates in v7\'s layout (operator, 2026-10-08)', function () {
+    /** A fake where the named paths already exist on the box. */
+    function certPathsTaken(array $taken): void
+    {
+        Process::fake(function ($process) use ($taken) {
+            if (in_array('-enddate', (array) $process->command, true)) {
+                return Process::result(output: 'notAfter=Jan  1 00:00:00 2030 GMT');
+            }
+
+            if (certPathProbe($process)) {
+                return Process::result(exitCode: in_array($process->command[2], $taken, true) ? 0 : 1);
+            }
+
+            return Process::result(exitCode: 0);
+        });
+    }
+
+    function uploadShopCertificate($test, ?Application $application = null)
+    {
+        $application ??= $test->application;
+        [$pem, $key] = generateKeyPair($application->domain);
+
+        return $test->actingAs($test->admin)
+            ->postJson("/api/applications/{$application->id}/certificate", [
+                'type' => 'custom', 'certificate' => $pem, 'private_key' => $key,
+            ]);
+    }
+
+    it('writes an uploaded pair to /etc/ssl/certs/{app}.crt and /etc/ssl/private/{app}.key', function () {
+        uploadShopCertificate($this)->assertCreated();
+
+        $certificate = $this->application->fresh()->certificate;
+        expect($certificate->certificate_path)->toBe('/etc/ssl/certs/shop.crt')
+            ->and($certificate->private_key_path)->toBe('/etc/ssl/private/shop.key');
+
+        Process::assertRan(fn ($process) => $process->command === ['tee', '/etc/ssl/certs/shop.crt']);
+        Process::assertRan(fn ($process) => $process->command === ['tee', '/etc/ssl/private/shop.key']);
+    });
+
+    it('creates the key file 0600 before the key is written into it', function () {
+        $commands = [];
+        Process::fake(function ($process) use (&$commands) {
+            $commands[] = (array) $process->command;
+
+            return Process::result(exitCode: certPathProbe($process) ? 1 : 0);
+        });
+
+        uploadShopCertificate($this)->assertCreated();
+
+        $ran = collect($commands);
+        $created = $ran->search(['install', '-m', '0600', '/dev/null', '/etc/ssl/private/shop.key']);
+        $written = $ran->search(['tee', '/etc/ssl/private/shop.key']);
+
+        expect($created)->not->toBeFalse()
+            ->and($written)->not->toBeFalse()
+            ->and($created)->toBeLessThan($written);
+    });
+
+    it('never re-modes the distro\'s own /etc/ssl directories', function () {
+        uploadShopCertificate($this)->assertCreated();
+
+        Process::assertNotRan(fn ($process) => ($process->command[0] ?? null) === 'install'
+            && in_array('-d', (array) $process->command, true)
+            && collect((array) $process->command)->contains(fn ($part) => in_array($part, ['/etc/ssl/certs', '/etc/ssl/private'], true)));
+    });
+
+    it('refuses to overwrite a file that is not this application\'s, and writes nothing', function () {
+        certPathsTaken(['/etc/ssl/certs/shop.crt']);
+
+        uploadShopCertificate($this)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('certificate')
+            ->assertJsonPath('errors.certificate.0', __('certificate.file_taken', ['path' => '/etc/ssl/certs/shop.crt']));
+
+        Process::assertNotRan(fn ($process) => in_array('tee', (array) $process->command, true));
+        Process::assertNotRan(fn ($process) => ($process->command[0] ?? null) === 'install');
+        expect($this->application->fresh()->certificate)->toBeNull();
+    });
+
+    it('refuses rather than writes when it could not ask whether the file is there', function () {
+        Process::fake(fn ($process) => certPathProbe($process)
+            ? Process::result(errorOutput: 'sudo: a password is required', exitCode: 1)
+            : Process::result(exitCode: 0));
+
+        uploadShopCertificate($this)->assertUnprocessable();
+
+        Process::assertNotRan(fn ($process) => in_array('tee', (array) $process->command, true));
+    });
+
+    it('will not let an application named ca-certificates replace the server\'s trust store', function () {
+        $application = Application::forceCreate([
+            'system_user_id' => $this->application->system_user_id,
+            'name' => 'ca-certificates',
+            'slug' => 'ca-certificates',
+            'domain' => 'ca.example.com',
+            'site_type' => 'wordpress',
+            'serving_profile' => 'php',
+            'php_version' => '8.4',
+            'web_root' => '/',
+            'status' => 'active',
+        ]);
+        $application->domains()->create(['domain' => 'ca.example.com', 'type' => DomainType::Primary, 'dns_verified_at' => now()]);
+        certPathsTaken(['/etc/ssl/certs/ca-certificates.crt']);
+
+        uploadShopCertificate($this, $application)
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.certificate.0', __('certificate.file_taken', ['path' => '/etc/ssl/certs/ca-certificates.crt']));
+
+        Process::assertNotRan(fn ($process) => in_array('/etc/ssl/certs/ca-certificates.crt', (array) $process->command, true)
+            && ($process->command[0] ?? null) !== 'test');
+    });
+
+    it('replaces its own uploaded certificate in place', function () {
+        Certificate::create([
+            'application_id' => $this->application->id,
+            'type' => CertificateType::Custom,
+            'status' => CertificateStatus::Active,
+            'domains' => ['shop.example.com'],
+            'certificate_path' => '/etc/ssl/certs/shop.crt',
+            'private_key_path' => '/etc/ssl/private/shop.key',
+        ]);
+        // Both exist — they are this application's own.
+        certPathsTaken(['/etc/ssl/certs/shop.crt', '/etc/ssl/private/shop.key']);
+
+        uploadShopCertificate($this)->assertCreated();
+
+        Process::assertRan(fn ($process) => $process->command === ['tee', '/etc/ssl/certs/shop.crt']);
+        // Same paths, so nothing is "replaced" and no certificate file is removed.
+        Process::assertNotRan(fn ($process) => ($process->command[0] ?? null) === 'rm'
+            && collect((array) $process->command)->contains(fn ($part) => str_starts_with((string) $part, '/etc/ssl/')));
+    });
+
+    it('removes a pre-2026-10-08 pair from the panel directory once the upload serves', function () {
+        Certificate::create([
+            'application_id' => $this->application->id,
+            'type' => CertificateType::Custom,
+            'status' => CertificateStatus::Active,
+            'domains' => ['shop.example.com'],
+            'certificate_path' => '/etc/ssl/sv-oss/shop.example.com.crt',
+            'private_key_path' => '/etc/ssl/sv-oss/shop.example.com.key',
+        ]);
+
+        uploadShopCertificate($this)->assertCreated();
+
+        Process::assertRan(fn ($process) => ($process->command[0] ?? null) === 'rm'
+            && in_array('/etc/ssl/sv-oss/shop.example.com.key', (array) $process->command, true));
+    });
+
+    it('revokes the lineage an upload replaced by its real name, the site\'s (B3)', function () {
+        Certificate::create([
+            'application_id' => $this->application->id,
+            'type' => CertificateType::LetsEncrypt,
+            'status' => CertificateStatus::Active,
+            'domains' => ['shop.example.com'],
+            'certificate_path' => '/etc/letsencrypt/live/shop/fullchain.pem',
+            'private_key_path' => '/etc/letsencrypt/live/shop/privkey.pem',
+        ]);
+
+        uploadShopCertificate($this)->assertCreated();
+
+        Process::assertRan(fn ($process) => in_array('delete', (array) $process->command, true)
+            && in_array('--cert-name', (array) $process->command, true)
+            && in_array('shop', (array) $process->command, true));
+    });
+
+    it('writes a self-signed pair to the same v7 paths', function () {
+        $certificate = Certificate::create([
+            'application_id' => $this->application->id,
+            'type' => CertificateType::SelfSigned,
+            'status' => CertificateStatus::Pending,
+            'domains' => ['shop.example.com'],
+        ]);
+        fakeCertbotSuccess();
+
+        runIssueJob(new IssueCertificate($certificate->id));
+
+        expect($certificate->fresh()->status)->toBe(CertificateStatus::Active)
+            ->and($certificate->fresh()->certificate_path)->toBe('/etc/ssl/certs/shop.crt')
+            ->and($certificate->fresh()->private_key_path)->toBe('/etc/ssl/private/shop.key');
+        Process::assertRan(fn ($process) => in_array('-keyout', (array) $process->command, true)
+            && in_array('/etc/ssl/private/shop.key', (array) $process->command, true));
+    });
+
+    it('refuses a self-signed request while the file is someone else\'s', function () {
+        certPathsTaken(['/etc/ssl/private/shop.key']);
+        Queue::fake();
+
+        $this->actingAs($this->admin)
+            ->postJson("/api/applications/{$this->application->id}/certificate", ['type' => 'self_signed'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('type');
+
+        Queue::assertNothingPushed();
+    });
+
+    it('fails a queued self-signed job when the file was taken meanwhile', function () {
+        $certificate = Certificate::create([
+            'application_id' => $this->application->id,
+            'type' => CertificateType::SelfSigned,
+            'status' => CertificateStatus::Pending,
+            'domains' => ['shop.example.com'],
+        ]);
+        certPathsTaken(['/etc/ssl/certs/shop.crt']);
+
+        runIssueJob(new IssueCertificate($certificate->id));
+
+        expect($certificate->fresh()->status)->toBe(CertificateStatus::Failed)
+            ->and($certificate->fresh()->reason)->toBe('file_taken');
+        Process::assertNotRan(fn ($process) => in_array('-keyout', (array) $process->command, true));
+    });
+
+    it('only ever deletes the application\'s own two files in /etc/ssl', function () {
+        Process::fake();
+        $files = app(CertificateFiles::class);
+
+        expect($files->managedFiles(['/etc/ssl/certs/shop.crt', '/etc/ssl/private/shop.key'], 'shop'))
+            ->toBe(['/etc/ssl/certs/shop.crt', '/etc/ssl/private/shop.key']);
+
+        // Another application's, the trust store, the distro's key: never.
+        foreach (['/etc/ssl/certs/blog.crt', '/etc/ssl/certs/ca-certificates.crt', '/etc/ssl/private/ssl-cert-snakeoil.key', '/etc/ssl/certs/shop.key'] as $path) {
+            expect(fn () => $files->remove([$path], 'shop', $this->application->id))->toThrow(HttpException::class);
+        }
+
+        Process::assertNotRan(fn ($process) => ($process->command[0] ?? null) === 'rm');
+    });
 });

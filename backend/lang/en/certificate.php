@@ -21,6 +21,7 @@ return [
         'certbot_missing' => 'certbot is not installed on this server.',
         'no_certifiable_domains' => 'None of this application\'s domains are ready for a certificate. Verify DNS first.',
         'self_sign_failed' => 'The self-signed certificate could not be generated.',
+        'file_taken' => 'This application\'s certificate file name is already used by another file on this server, so nothing was overwritten.',
         'file_missing' => 'The certificate file is missing from this server. Reissue it.',
         'dry_run_skipped' => 'certbot decided the existing certificate did not need renewing, so nothing was validated. This run proved nothing — it is a bug, not a verdict on your domain.',
         'unknown' => 'The certificate could not be issued.',
@@ -33,5 +34,9 @@ return [
         'dns_unverified' => 'None of this application\'s domains point at this server yet. Add a DNS A record for one, wait for it to propagate, then try again.',
         'self_signed_warning' => 'Encrypts traffic immediately and works on any domain, including test and internal ones. Browsers will show a warning, because nothing outside this server vouches for it.',
     ],
+
+    // A custom certificate goes to /etc/ssl/certs/{app}.crt (v7's layout);
+    // refused when that file is already something else's.
+    'file_taken' => 'The certificate would be saved as :path, but that file already exists on this server and is not this application\'s certificate, so nothing was overwritten.',
 
 ];

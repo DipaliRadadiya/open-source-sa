@@ -12,6 +12,7 @@ use App\Services\Server\Applications\InstallerManager;
 use App\Services\Server\Certificates\CertbotClient;
 use App\Services\Server\Certificates\CertificateExpiry;
 use App\Services\Server\Certificates\CertificateFiles;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 /**
@@ -49,8 +50,22 @@ class UploadCertificate
             'issued_at', 'expires_at', 'reason', 'reference',
         ]);
 
+        // Before a byte is written: the pair goes into the server's own
+        // /etc/ssl tree (v7's layout), where a file this application does not
+        // own is somebody else's — the trust store, the distro's snakeoil key.
+        $taken = $this->files->conflict($application->slug, [
+            $previousCertificate['certificate_path'] ?? null,
+            $previousCertificate['private_key_path'] ?? null,
+        ]);
+
+        if ($taken !== null) {
+            throw ValidationException::withMessages([
+                'certificate' => __('certificate.file_taken', ['path' => $taken]),
+            ]);
+        }
+
         $result = $this->files->install(
-            $application->domain,
+            $application->slug,
             (string) $data['certificate'],
             (string) $data['private_key'],
             $data['chain'] ?? null,
@@ -61,7 +76,7 @@ class UploadCertificate
             throw new ProvisioningFailedException('write_certificate', $result->reference);
         }
 
-        $paths = $this->files->paths($application->domain);
+        $paths = $this->files->paths($application->slug);
         $domains = $this->files->subjectNames((string) $data['certificate']) ?: [$application->domain];
         $candidate = new Certificate(['domains' => $domains]);
         $targetUrl = ($candidate->covers((string) $application->domain) ? 'https://' : 'http://').$application->domain;
@@ -132,7 +147,7 @@ class UploadCertificate
             throw $exception;
         }
 
-        $this->removeReplaced($previousCertificate, $paths, $application->id);
+        $this->removeReplaced($previousCertificate, $paths, $application);
 
         $this->activityLogger->log('application.certificate_uploaded', $application, [
             'domain' => $application->domain,
@@ -153,7 +168,7 @@ class UploadCertificate
      * @param  array<string, mixed>|null  $previous
      * @param  array{certificate: string, private_key: string}  $paths
      */
-    private function removeReplaced(?array $previous, array $paths, int $applicationId): void
+    private function removeReplaced(?array $previous, array $paths, Application $application): void
     {
         if ($previous === null) {
             return;
@@ -161,10 +176,16 @@ class UploadCertificate
 
         try {
             if ($previous['type'] === CertificateType::LetsEncrypt) {
-                $lineage = $previous['domains'][0] ?? null;
+                // The lineage the files are in (`--cert-name {site}` since
+                // 63c204e0, the first domain before it) — never re-derived from
+                // the domains, which named the wrong lineage after B3.
+                $lineage = (new Certificate([
+                    'type' => CertificateType::LetsEncrypt,
+                    'certificate_path' => $previous['certificate_path'] ?? null,
+                ]))->setRelation('application', $application)->lineageName();
 
                 if ($lineage !== null) {
-                    $this->certbot->revoke($lineage, $applicationId);
+                    $this->certbot->revoke($lineage, $application->id);
                 }
 
                 return;
@@ -176,7 +197,7 @@ class UploadCertificate
             ));
 
             if ($stale !== []) {
-                $this->files->remove($stale, $applicationId);
+                $this->files->remove($stale, $application->slug, $application->id);
             }
         } catch (Throwable) {
             // See above: never fail a live upload over the old certificate.

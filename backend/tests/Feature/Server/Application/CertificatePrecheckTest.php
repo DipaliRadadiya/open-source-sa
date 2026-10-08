@@ -54,7 +54,7 @@ beforeEach(function () {
     $this->serverIp = '203.0.113.10';
     Cache::put('server.public_ip', $this->serverIp, now()->addHour());
 
-    Process::fake(fn () => Process::result(exitCode: 0));
+    Process::fake(fn ($process) => Process::result(exitCode: certPathProbe($process) ? 1 : 0));
     Queue::fake();
 });
 

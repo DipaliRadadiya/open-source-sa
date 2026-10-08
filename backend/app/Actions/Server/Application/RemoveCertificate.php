@@ -44,7 +44,7 @@ class RemoveCertificate
         // HTTPS was already off. Checked here, before anything changes.
         $files = $type === CertificateType::LetsEncrypt
             ? []
-            : $this->files->managedFiles([$certificate->certificate_path, $certificate->private_key_path]);
+            : $this->files->managedFiles([$certificate->certificate_path, $certificate->private_key_path], $application->slug);
 
         try {
             // Change the application's own canonical URL first. `syncUrl()` is
@@ -84,7 +84,7 @@ class RemoveCertificate
             CertificateType::LetsEncrypt => ($lineage = $certificate->lineageName()) === null
                 ? null
                 : $this->certbot->revoke($lineage, $application->id),
-            CertificateType::Custom, CertificateType::SelfSigned => $this->files->remove($files, $application->id),
+            CertificateType::Custom, CertificateType::SelfSigned => $this->files->remove($files, $application->slug, $application->id),
         };
 
         if ($cleanup?->failed()) {
