@@ -153,4 +153,10 @@ return [
     'chmod_mode_invalid' => 'Utilisez trois chiffres, comme 755, ou quatre avec un 1 (sticky) ou un 2 (setgid) en tête, comme 1777 ou 2775. Les modes setuid ne sont pas autorisés.',
     'chmod_setgid_file' => 'Le setgid (un 2 ou 3 en tête) ne peut être appliqué qu\'à un dossier.',
     'file_changed_on_disk' => 'Quelqu\'un d\'autre a modifié ce fichier après son ouverture. Rechargez-le pour voir ses modifications, puis refaites la vôtre.',
+    'system_user_removal_not_permitted' => 'Vous pouvez supprimer cette application, mais pas son utilisateur système. Demandez à un administrateur l’accès à Utilisateurs système, ou supprimez l’application en gardant l’utilisateur.',
+    'system_user_needs_generate' => 'Un nom et un mot de passe d’utilisateur système ne peuvent être donnés qu’avec « créer un nouvel utilisateur système ».',
+    'staging_backup_failed' => 'La sauvegarde avant l’envoi ne s’est pas terminée, rien n’a donc été envoyé. Ouvrez la sauvegarde pour voir pourquoi.',
+    'staging_backup_not_permitted' => 'Vous pouvez envoyer, mais pas sauvegarder cette application. Demandez à un administrateur l’accès aux Sauvegardes, ou envoyez sans sauvegarde.',
+    'staging_safety_copy_missing' => 'Cette copie de la base de données n’est plus sur le serveur. Rechargez la liste.',
+    'staging_safety_copy_no_database' => 'Aucune base de données n’est liée à cette application, il n’y a donc rien où rétablir la copie.',
 ];

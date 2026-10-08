@@ -27,6 +27,48 @@ return [
         'application.php_unisolated',
     ],
 
+    /*
+    | Security events (OLD-18): who got in or failed to, who was given or lost
+    | access, and what opened the server or a credential. `filter[security]=1`
+    | on any activity log, and `is_security` on each row. A test asserts every
+    | key here is a real event, so a renamed action cannot fall out silently.
+    */
+    'security' => [
+        'user.logged_in',
+        'user.login_failed',
+        'user.login_failed_unknown',
+        'user.password_changed',
+        'user.password_reset_by_admin',
+        'user.created',
+        'user.deleted',
+        'user.permissions_updated',
+        'user.role_assigned',
+        'user.impersonation_started',
+        'user.impersonation_stopped',
+        'role.created',
+        'role.updated',
+        'role.deleted',
+        'central.connected',
+        'central.disconnected',
+        'firewall.enabled',
+        'firewall.disabled',
+        'firewall.rule_added',
+        'firewall.rule_updated',
+        'firewall.rule_removed',
+        'fail2ban.settings_updated',
+        'system_user.ssh_key_added',
+        'system_user.ssh_key_removed',
+        'system_user.password_set',
+        'system_user.sudo_enabled',
+        'system_user.sudo_disabled',
+        'system_user.ssh_enabled',
+        'system_user.ssh_disabled',
+        'database.phpmyadmin_signed_in',
+        'application.magic_login',
+        'application.container_secrets_viewed',
+        'docker_database.credentials_viewed',
+    ],
+
     'scopes' => [
         'account' => [
             'user',

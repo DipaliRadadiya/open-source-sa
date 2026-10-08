@@ -11,6 +11,8 @@ return [
     ],
 
     'errors' => [
+
+        'not_downloadable' => 'Ce journal n\'est pas un fichier : la sortie d\'un conteneur est conservée par Docker. Consultez-la à l\'écran.',
         'unknown_source' => 'Ce journal n\'existe pas pour cette application.',
         'clear_shared' => 'Sous OpenLiteSpeed, les détections du pare-feu font partie du journal d\'accès du site. Videz plutôt le journal d\'accès.',
     ],

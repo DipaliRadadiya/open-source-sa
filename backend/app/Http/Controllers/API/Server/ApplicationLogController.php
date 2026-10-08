@@ -8,6 +8,7 @@ use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationLogManager;
 use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * A site's own logs — access, error, and for a supervised application the
@@ -73,6 +74,49 @@ class ApplicationLogController extends Controller
                 'kind' => $source['kind'],
                 'exists' => true,
             ], $content),
+        ]);
+    }
+
+    /**
+     * Download one log whole (LOG-dl) — the screen shows the last lines only.
+     */
+    public function download(
+        Application $application,
+        string $key,
+        ApplicationLogManager $logs,
+        ActivityLogger $activity,
+    ): StreamedResponse|JsonResponse {
+        $file = $logs->download($application, $key);
+
+        if ($file === false) {
+            return response()->json([
+                'message' => __('app_log.errors.not_downloadable'),
+                'reason' => 'not_downloadable',
+            ], 422);
+        }
+
+        abort_if($file === null, 404, __('app_log.errors.unknown_source'));
+
+        $activity->log('application.log_downloaded', $application, [
+            'name' => $application->name,
+            'log' => __('app_log.sources.'.$key),
+        ]);
+
+        return response()->stream(function () use ($file): void {
+            foreach ($file['chunks'] as $chunk) {
+                echo $chunk;
+
+                if (ob_get_level() > 0) {
+                    ob_flush();
+                }
+
+                flush();
+            }
+        }, 200, [
+            'Content-Type' => 'text/plain; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="'.$file['filename'].'"',
+            'X-Content-Type-Options' => 'nosniff',
+            'X-Accel-Buffering' => 'no',
         ]);
     }
 

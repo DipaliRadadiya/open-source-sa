@@ -58,8 +58,10 @@ class CreateApplication
         // the account here is what the first version of this feature did, and
         // it put a useradd in the one place the class docblock promises there
         // is none.
+        // The name the create form chose, when it chose one (FS-B9); the
+        // request has already made sure it is free.
         $generatedUsername = ($data['generate_system_user'] ?? false)
-            ? $this->usernames->forApplication((string) $data['name'])
+            ? (($data['system_user']['username'] ?? null) ?: $this->usernames->forApplication((string) $data['name']))
             : null;
 
         // Before the transaction for the same reason: it asks fnm.
@@ -83,6 +85,9 @@ class CreateApplication
                         'shell' => '/bin/bash',
                         'sudo' => false,
                         'ssh_access' => false,
+                        // Set on the account when provisioning creates it
+                        // (CreateSystemUser::ensureOnServer()).
+                        'password' => ($data['system_user']['password'] ?? null) ?: null,
                     ])->id;
                 }
 

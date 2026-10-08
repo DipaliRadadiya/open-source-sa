@@ -153,4 +153,10 @@ return [
     'chmod_mode_invalid' => 'Verwenden Sie drei Ziffern wie 755 oder vier mit einer führenden 1 (Sticky) oder 2 (Setgid) wie 1777 oder 2775. Setuid-Modi sind nicht erlaubt.',
     'chmod_setgid_file' => 'Setgid (eine führende 2 oder 3) kann nur für einen Ordner gesetzt werden.',
     'file_changed_on_disk' => 'Jemand anderes hat diese Datei geändert, nachdem Sie sie geöffnet haben. Laden Sie sie neu, um die Änderungen zu sehen, und nehmen Sie Ihre Änderung erneut vor.',
+    'system_user_removal_not_permitted' => 'Sie können diese Anwendung löschen, aber nicht ihren Systembenutzer. Bitten Sie einen Administrator um Zugriff auf „Systembenutzer“ oder löschen Sie die Anwendung und behalten Sie den Benutzer.',
+    'system_user_needs_generate' => 'Name und Passwort eines Systembenutzers können nur mit „Neuen Systembenutzer anlegen“ angegeben werden.',
+    'staging_backup_failed' => 'Die Sicherung vor dem Übertragen wurde nicht abgeschlossen, daher wurde nichts übertragen. Öffnen Sie die Sicherung, um den Grund zu sehen.',
+    'staging_backup_not_permitted' => 'Sie können übertragen, aber keine Sicherung dieser Anwendung erstellen. Bitten Sie einen Administrator um Zugriff auf „Sicherungen“ oder übertragen Sie ohne Sicherung.',
+    'staging_safety_copy_missing' => 'Diese Kopie der Datenbank ist nicht mehr auf dem Server. Laden Sie die Liste neu.',
+    'staging_safety_copy_no_database' => 'Mit dieser Anwendung ist keine Datenbank verknüpft, daher gibt es nichts, in das die Kopie zurückgespielt werden kann.',
 ];

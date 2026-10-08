@@ -331,4 +331,12 @@ return [
         'provider_refused' => 'O fornecedor Git não deixou o painel adicionar o webhook. Provavelmente o token ligado não tem permissão para gerir webhooks neste repositório. Adicione-o à mão com o URL e o segredo abaixo, ou volte a ligar a conta com essa permissão.',
         'removal_refused' => 'O deploy ao fazer push está desligado, mas o fornecedor Git não deixou o painel remover o webhook que adicionou. Provavelmente o token ligado não tem permissão para apagar webhooks. Os push continuarão a ser enviados e recusados até apagar o webhook nas definições do repositório.',
     ],
+
+    // OLD-20: what became of the site's system user when asked to remove it.
+    'system_user_removal' => [
+        'removed' => 'O utilizador de sistema :username também foi removido.',
+        'still_used' => 'O utilizador de sistema :username foi mantido: ainda é dono de outras aplicações.',
+        'has_processes' => 'O utilizador de sistema :username foi mantido: ainda tem sessão iniciada ou algo em execução. Remova-o em Utilizadores de sistema quando terminar.',
+        'failed' => 'Não foi possível remover o utilizador de sistema :username. Remova-o em Utilizadores de sistema.',
+    ],
 ];

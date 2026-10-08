@@ -331,4 +331,12 @@ return [
         'provider_refused' => 'Git プロバイダーがパネルによる Webhook の追加を許可しませんでした。接続中のトークンにこのリポジトリの Webhook を管理する権限がない可能性があります。下の URL とシークレットで手動で追加するか、その権限でアカウントを再接続してください。',
         'removal_refused' => 'プッシュ時のデプロイはオフになりましたが、Git プロバイダーがパネルによる Webhook の削除を許可しませんでした。接続中のトークンに Webhook を削除する権限がない可能性があります。リポジトリの設定で Webhook を削除するまで、プッシュは送信され続け、拒否されます。',
     ],
+
+    // OLD-20: what became of the site's system user when asked to remove it.
+    'system_user_removal' => [
+        'removed' => 'システムユーザー :username も削除しました。',
+        'still_used' => 'システムユーザー :username は残しました。ほかのアプリケーションをまだ所有しています。',
+        'has_processes' => 'システムユーザー :username は残しました。まだサインイン中か、何かを実行中です。終了後にシステムユーザーから削除してください。',
+        'failed' => 'システムユーザー :username を削除できませんでした。システムユーザーから削除してください。',
+    ],
 ];

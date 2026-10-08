@@ -16,5 +16,9 @@ use Illuminate\Support\Facades\Route;
 | self-only log at api/activity-log.
 */
 
+// FS-C11: static route before the collection.
+Route::get('/server/activity-log/filters', [ActivityLogController::class, 'serverFilters'])
+    ->middleware('permission:activity_log');
+
 Route::get('/server/activity-log', [ActivityLogController::class, 'serverIndex'])
     ->middleware('permission:activity_log');

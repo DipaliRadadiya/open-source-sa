@@ -331,4 +331,12 @@ return [
         'provider_refused' => 'El proveedor de Git no permitió que el panel añadiera el webhook. Probablemente el token conectado no tiene permiso para gestionar webhooks en este repositorio. Añádelo a mano con la URL y el secreto de abajo, o vuelve a conectar la cuenta con ese permiso.',
         'removal_refused' => 'El despliegue al hacer push está desactivado, pero el proveedor de Git no permitió que el panel eliminara el webhook que añadió. Probablemente el token conectado no tiene permiso para borrar webhooks. Los push se seguirán enviando y rechazando hasta que borres el webhook en la configuración del repositorio.',
     ],
+
+    // OLD-20: what became of the site's system user when asked to remove it.
+    'system_user_removal' => [
+        'removed' => 'También se eliminó el usuario del sistema :username.',
+        'still_used' => 'Se conservó el usuario del sistema :username: todavía es dueño de otras aplicaciones.',
+        'has_processes' => 'Se conservó el usuario del sistema :username: sigue conectado o ejecutando algo. Elimínelo en Usuarios del sistema cuando termine.',
+        'failed' => 'No se pudo eliminar el usuario del sistema :username. Elimínelo en Usuarios del sistema.',
+    ],
 ];

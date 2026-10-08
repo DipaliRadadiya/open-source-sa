@@ -4,8 +4,10 @@ use App\Models\ActivityLog;
 use App\Models\Application;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Server\CommandPipe;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
+use Tests\Support\FakeCommandPipe;
 
 /*
  * Reading a site's own logs. Every read shells out, because these files live
@@ -435,4 +437,41 @@ it('reports a failed truncate rather than claiming the log is empty', function (
         ->deleteJson(logUrl('/access'))
         ->assertStatus(500)
         ->assertJsonStructure(['message', 'reference']);
+});
+
+describe('downloading a whole log (LOG-dl)', function () {
+    beforeEach(function () {
+        FakeCommandPipe::reset();
+        FakeCommandPipe::$resolver = function (array $command): array {
+            $path = (string) end($command);
+
+            return array_key_exists($path, test()->files) ? [test()->files[$path], 0] : ['', 1];
+        };
+        app()->instance(CommandPipe::class, new FakeCommandPipe);
+    });
+
+    it('streams the file as an attachment and records who took it', function () {
+        fakeLogs();
+
+        $response = $this->actingAs($this->admin)->get(logUrl('/access/download'))->assertOk();
+
+        expect($response->streamedContent())->toBe("GET / 200\nGET /about 200\nGET /missing 404\n")
+            ->and($response->headers->get('Content-Disposition'))->toBe('attachment; filename="logged-site-access.log"')
+            ->and(ActivityLog::where('action', 'log_downloaded')->exists())->toBeTrue()
+            ->and(implode(' ', FakeCommandPipe::$opened))->toContain('cat /home/logowner/logged-site/logs/access.log');
+    });
+
+    it('answers 404 for a log that is not there yet, and for a source this site does not have', function () {
+        fakeLogs();
+        unset($this->files['/home/logowner/logged-site/logs/access.log']);
+
+        $this->actingAs($this->admin)->getJson(logUrl('/access/download'))->assertNotFound();
+        $this->actingAs($this->admin)->getJson(logUrl('/nope/download'))->assertNotFound();
+    });
+
+    it('needs the application log permission', function () {
+        fakeLogs();
+
+        $this->actingAs(User::factory()->create())->getJson(logUrl('/access/download'))->assertForbidden();
+    });
 });

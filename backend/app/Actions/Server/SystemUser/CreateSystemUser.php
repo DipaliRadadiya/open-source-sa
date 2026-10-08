@@ -162,6 +162,12 @@ class CreateSystemUser
                 $groups,
             );
 
+            // A password chosen on the create-application form (FS-B9) is
+            // set as the account comes into being — the row carried it here.
+            if (filled($systemUser->password)) {
+                $this->setPassword($systemUser, (string) $systemUser->password);
+            }
+
             $this->activityLogger->log('system_user.created', $systemUser, ['username' => $systemUser->username]);
 
             // Asked again rather than assuming. The caller is a provisioning

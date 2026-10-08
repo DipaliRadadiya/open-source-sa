@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\ActivityKinds;
 use App\Services\ActivityScopes;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -46,7 +47,14 @@ class ActivityLogResource extends JsonResource
             // Deliberately not solved by writing an admin's id onto system
             // actions: that would make the audit log name someone who was not
             // there, and put machine activity in their personal history.
-            'is_system' => $this->user_id === null && $this->user_name === null,
+            //
+            // A sign-in attempt on a name that matches no account has no
+            // person to name either, but the system did not do it.
+            'is_system' => $this->user_id === null && $this->user_name === null
+                && ! ($this->type === 'user' && $this->action === 'login_failed_unknown'),
+            // FS-C15 / OLD-18: the same classification the filters use.
+            'kind' => app(ActivityKinds::class)->of($this->action),
+            'is_security' => app(ActivityKinds::class)->isSecurity($this->type, $this->action),
             'created_at' => $this->created_at?->format('d-m-Y H:i:s'),
             'created_at_human' => $this->created_at?->diffForHumans(),
         ];

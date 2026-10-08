@@ -17,6 +17,10 @@ use Illuminate\Support\Facades\Route;
 Route::get('/applications/{application}/logs', [ApplicationLogController::class, 'index'])
     ->middleware('permission:app_log');
 
+// LOG-dl: the whole file. Throttled hard — a log can be gigabytes.
+Route::get('/applications/{application}/logs/{key}/download', [ApplicationLogController::class, 'download'])
+    ->middleware(['permission:app_log', 'throttle:6,1']);
+
 Route::get('/applications/{application}/logs/{key}', [ApplicationLogController::class, 'show'])
     ->middleware(['permission:app_log', 'throttle:120,1']);
 

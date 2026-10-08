@@ -270,3 +270,55 @@ it('rejects a flag that is not a boolean', function () {
     expect(Application::find($app->id))->not->toBeNull();
     Process::assertNothingRan();
 });
+
+describe('removing the system user with the application (OLD-20)', function () {
+    it('removes the account when it owns nothing else', function () {
+        Process::fake();
+        $site = siteForDeletion();
+
+        $this->withHeaders(siteDeleteHeaders())
+            ->deleteJson("/api/applications/{$site->id}?remove_system_user=true")
+            ->assertOk()
+            ->assertJsonPath('system_user.outcome', 'removed')
+            ->assertJsonPath('system_user.username', 'deploy');
+
+        expect(SystemUser::find($this->su->id))->toBeNull();
+        Process::assertRan(fn ($p) => in_array('userdel', $p->command, true) && in_array('deploy', $p->command, true));
+    });
+
+    it('keeps an account that owns other applications', function () {
+        Process::fake();
+        $site = siteForDeletion();
+        siteForDeletion(['name' => 'Blog', 'slug' => 'blog', 'domain' => 'blog.example.com']);
+
+        $this->withHeaders(siteDeleteHeaders())
+            ->deleteJson("/api/applications/{$site->id}?remove_system_user=1")
+            ->assertOk()
+            ->assertJsonPath('system_user.outcome', 'still_used');
+
+        expect(SystemUser::find($this->su->id))->not->toBeNull();
+        Process::assertNotRan(fn ($p) => in_array('userdel', $p->command, true));
+    });
+
+    it('needs the system user permission, and refuses before deleting anything', function () {
+        Process::fake();
+        $site = siteForDeletion();
+        $member = User::factory()->create();
+        grantPermission($member, 'application', view: true, manage: true);
+
+        $this->actingAs($member)->deleteJson("/api/applications/{$site->id}?remove_system_user=1")->assertForbidden();
+
+        expect(Application::find($site->id))->not->toBeNull();
+    });
+
+    it('leaves the account alone when not asked', function () {
+        Process::fake();
+        $site = siteForDeletion();
+
+        $this->withHeaders(siteDeleteHeaders())->deleteJson("/api/applications/{$site->id}")
+            ->assertOk()
+            ->assertJsonMissingPath('system_user');
+
+        expect(SystemUser::find($this->su->id))->not->toBeNull();
+    });
+});

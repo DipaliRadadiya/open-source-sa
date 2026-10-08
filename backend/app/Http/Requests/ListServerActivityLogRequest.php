@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Services\ActivityKinds;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -27,6 +28,9 @@ class ListServerActivityLogRequest extends FormRequest
             'filter' => ['sometimes', 'array'],
             'filter.action' => ['sometimes', 'string', 'max:255'],
             'filter.type' => ['sometimes', 'string', 'max:255'],
+            // FS-C15 / OLD-18: what kind of event, and security events only.
+            'filter.kind' => ['sometimes', 'string', Rule::in(ActivityKinds::KINDS)],
+            'filter.security' => ['sometimes', 'boolean'],
             'search' => ['sometimes', 'string', 'max:255'],
             'per_page' => ['sometimes', Rule::in([10, 20, 50, 100])],
         ];

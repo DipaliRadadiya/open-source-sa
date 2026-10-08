@@ -12,6 +12,7 @@ use App\Actions\Server\Application\DisableApplication;
 use App\Actions\Server\Application\EnableApplication;
 use App\Actions\Server\Application\RunApplicationProcess;
 use App\Actions\Server\Application\UpdateApplication;
+use App\Actions\Server\SystemUser\DeleteSystemUser;
 use App\Enums\ApplicationStatus;
 use App\Enums\DeploymentTrigger;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
@@ -26,6 +27,7 @@ use App\Jobs\MeasureApplicationSize;
 use App\Jobs\ProvisionApplication;
 use App\Models\Application;
 use App\Models\Permission;
+use App\Models\SystemUser;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\DeployQueue;
 use App\Services\Server\Applications\FileBrowser;
@@ -37,6 +39,8 @@ use App\Support\ListSort;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class ApplicationController extends Controller
 {
@@ -368,6 +372,9 @@ class ApplicationController extends Controller
         // The Docker opt-in reaches `compose down` as `--volumes`. Without it a
         // pasted compose file's own named volumes survive the delete they were
         // explicitly included in — found on a real box, see ContainerSupervisor.
+        // Read before the row goes, as the databases are.
+        $owner = $request->boolean('remove_system_user') ? $application->systemUser : null;
+
         $deprovision->execute(
             $application,
             $request->boolean('remove_files'),
@@ -386,7 +393,39 @@ class ApplicationController extends Controller
             ? null
             : $databases->execute($attached, $application->id);
 
-        return response()->json(['deleted' => true] + ($outcome?->toArray() ?? []));
+        return response()->json(['deleted' => true]
+            + ($outcome?->toArray() ?? [])
+            + ($owner === null ? [] : ['system_user' => $this->removeOwner($owner)]));
+    }
+
+    /**
+     * OLD-20: the site's Linux account, when it owns nothing else. After the
+     * site, never before — and never failing the delete that already
+     * happened: the answer says what became of the account instead.
+     *
+     * @return array{username: string, outcome: string, message: string}
+     */
+    private function removeOwner(SystemUser $owner): array
+    {
+        $outcome = 'removed';
+
+        if ($owner->applications()->exists()) {
+            $outcome = 'still_used';
+        } else {
+            try {
+                app(DeleteSystemUser::class)->execute($owner);
+            } catch (ValidationException) {
+                $outcome = 'has_processes';
+            } catch (Throwable) {
+                $outcome = 'failed';
+            }
+        }
+
+        return [
+            'username' => $owner->username,
+            'outcome' => $outcome,
+            'message' => __('application.system_user_removal.'.$outcome, ['username' => $owner->username]),
+        ];
     }
 
     /**

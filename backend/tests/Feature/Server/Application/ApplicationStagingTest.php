@@ -1,17 +1,22 @@
 <?php
 
+use App\Enums\BackupStatus;
 use App\Enums\DomainType;
 use App\Enums\RestoreStatus;
 use App\Models\ActivityLog;
 use App\Models\Application;
+use App\Models\Backup;
+use App\Models\BackupTarget;
 use App\Models\Database;
 use App\Models\DatabaseUser;
 use App\Models\Restore;
 use App\Models\ServerCapability;
+use App\Models\StorageDestination;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\StagingManager;
+use App\Services\Server\Backups\BackupRunner;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Process;
@@ -1417,4 +1422,183 @@ it('refuses a staging domain that is already another site name or the panel host
     }
 
     expect(Application::where('production_application_id', $this->production->id)->count())->toBe(0);
+});
+
+describe('a backup before the push (FS-B10)', function () {
+    beforeEach(function () {
+        fakeStagingServer();
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+        $destination = StorageDestination::create([
+            'name' => 'Offsite', 'provider' => 's3',
+            'config' => ['endpoint' => '', 'region' => 'us-east-1', 'bucket' => 'b', 'access_key' => 'k', 'secret_key' => 's'],
+        ]);
+        $this->target = BackupTarget::create([
+            'application_id' => $this->production->id, 'storage_destination_id' => $destination->id,
+            'type' => 'full', 'retention_count' => 7, 'frequency' => 'daily', 'enabled' => true,
+        ]);
+    });
+
+    function stagingBackupRunner(BackupStatus $status): void
+    {
+        $runner = Mockery::mock(BackupRunner::class);
+        $runner->shouldReceive('run')->once()->andReturnUsing(fn (BackupTarget $target, ?int $actor) => Backup::create([
+            'backup_target_id' => $target->id, 'application_id' => $target->application_id, 'user_id' => $actor,
+            'type' => 'full', 'is_safety' => false, 'status' => $status,
+            'reason' => $status === BackupStatus::Failed ? 'upload_failed' : null,
+        ]));
+        app()->instance(BackupRunner::class, $runner);
+    }
+
+    it('takes a backup first and names it in the answer', function () {
+        stagingBackupRunner(BackupStatus::Verified);
+
+        $response = $this->withHeaders(stagingHeaders())
+            ->postJson(stagingUrl().'/push', ['mode' => 'files', 'backup' => true])
+            ->assertOk();
+
+        expect($response->json('backup.id'))->toBe(Backup::sole()->id)
+            ->and(ActivityLog::where('action', 'completed')->where('type', 'backup')->exists())->toBeTrue()
+            ->and(ActivityLog::where('action', 'staging_pushed_files')->exists())->toBeTrue();
+    });
+
+    it('does not push when the backup failed', function () {
+        stagingBackupRunner(BackupStatus::Failed);
+
+        $this->withHeaders(stagingHeaders())
+            ->postJson(stagingUrl().'/push', ['mode' => 'files', 'backup' => true])
+            ->assertStatus(409)
+            ->assertJsonPath('reason', 'backup_failed')
+            ->assertJsonPath('backup_id', Backup::sole()->id)
+            ->assertJsonPath('backup_reason', 'upload_failed');
+
+        // Never even taken offline for the push.
+        expect(ActivityLog::where('action', 'staging_pushed_files')->exists())->toBeFalse()
+            ->and(StagingManager::pushInProgress($this->production->id))->toBeFalse()
+            ->and($this->production->fresh()->disabled_at)->toBeNull();
+    });
+
+    it('answers null without one, and runs no backup', function () {
+        app()->instance(BackupRunner::class, Mockery::mock(BackupRunner::class)->shouldNotReceive('run')->getMock());
+
+        $this->withHeaders(stagingHeaders())
+            ->postJson(stagingUrl().'/push', ['mode' => 'files'])
+            ->assertOk()
+            ->assertJsonPath('backup', null);
+    });
+
+    it('refuses before pushing when backups are not set up', function () {
+        $this->target->delete();
+
+        $this->withHeaders(stagingHeaders())
+            ->postJson(stagingUrl().'/push', ['mode' => 'files', 'backup' => true])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('backup');
+
+        expect(ActivityLog::where('action', 'staging_pushed_files')->exists())->toBeFalse();
+    });
+
+    it('needs the backup permission as well as staging', function () {
+        $user = User::factory()->create();
+        grantPermission($user, 'app_staging', manage: true);
+
+        $this->actingAs($user)
+            ->postJson(stagingUrl().'/push', ['mode' => 'files', 'backup' => true])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('backup');
+
+        expect(Backup::count())->toBe(0);
+    });
+});
+
+describe('the database copies a push saves first (ST-B3)', function () {
+    function fakeSafetyCopies(array &$restores, array &$dumps, array $names): void
+    {
+        Process::fake(function ($process) use (&$restores, &$dumps, $names) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            if (($args[0] ?? '') === 'find' && in_array('%f\t%s\t%T@\n', $args, true)) {
+                return Process::result(output: implode('', array_map(fn ($n) => "{$n}\t2048\t1791460800.5\n", $names)));
+            }
+
+            if (($args[0] ?? '') === 'mysqldump') {
+                $dumps[] = $args;
+            }
+
+            if (in_array(($args[0] ?? ''), ['mysql', 'mariadb'], true) && in_array('-e', $args, true)) {
+                $restores[] = (string) ($args[array_search('-e', $args, true) + 1] ?? '');
+            }
+
+            return Process::result();
+        });
+    }
+
+    beforeEach(function () {
+        $this->copies = ['pre-push-20261001-101500-abc123.sql', 'pre-push-20261003-090000-zzz999.sql', 'notes.txt'];
+    });
+
+    it('lists them newest first, and nothing that is not one', function () {
+        $restores = $dumps = [];
+        fakeSafetyCopies($restores, $dumps, $this->copies);
+
+        $this->withHeaders(stagingHeaders())->getJson(stagingUrl().'/safety-copies')
+            ->assertOk()
+            ->assertJsonCount(2, 'safety_copies')
+            ->assertJsonPath('safety_copies.0.name', 'pre-push-20261003-090000-zzz999.sql')
+            ->assertJsonPath('safety_copies.0.size_bytes', 2048)
+            ->assertJsonPath('kept', StagingManager::KEEP_PRE_PUSH_DUMPS);
+    });
+
+    it('puts one back, saving the database as it is now first', function () {
+        $restores = $dumps = [];
+        fakeSafetyCopies($restores, $dumps, $this->copies);
+
+        $this->withHeaders(stagingHeaders())
+            ->postJson(stagingUrl().'/safety-copies/pre-push-20261001-101500-abc123.sql/restore')
+            ->assertOk()
+            ->assertJsonPath('restored', 'pre-push-20261001-101500-abc123.sql');
+
+        expect($dumps)->toHaveCount(1)
+            ->and($restores)->toHaveCount(1)
+            ->and($restores[0])->toContain('/staging-backups/pre-push-20261001-101500-abc123.sql')
+            ->and(ActivityLog::where('action', 'staging_safety_copy_restored')->exists())->toBeTrue();
+    });
+
+    it('refuses a name that is not one of them, or a path', function (string $name) {
+        $restores = $dumps = [];
+        fakeSafetyCopies($restores, $dumps, $this->copies);
+
+        $this->withHeaders(stagingHeaders())
+            ->postJson(stagingUrl().'/safety-copies/'.rawurlencode($name).'/restore')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('name');
+
+        expect($restores)->toBeEmpty()->and($dumps)->toBeEmpty();
+    })->with(['pre-push-20260101-000000-gone00.sql', 'notes.txt', '..%2F..%2Fetc%2Fshadow']);
+
+    it('refuses while a push is running', function () {
+        $restores = $dumps = [];
+        fakeSafetyCopies($restores, $dumps, $this->copies);
+        $lock = Cache::lock('staging-push:'.$this->production->id, 60);
+        $lock->get();
+
+        $this->withHeaders(stagingHeaders())
+            ->postJson(stagingUrl().'/safety-copies/pre-push-20261001-101500-abc123.sql/restore')
+            ->assertUnprocessable();
+
+        $lock->release();
+        expect($restores)->toBeEmpty();
+    });
+
+    it('lets a viewer list but not restore', function () {
+        $restores = $dumps = [];
+        fakeSafetyCopies($restores, $dumps, $this->copies);
+        $viewer = User::factory()->create();
+        grantPermission($viewer, 'app_staging');
+
+        $this->actingAs($viewer)->getJson(stagingUrl().'/safety-copies')->assertOk();
+        $this->actingAs($viewer)->postJson(stagingUrl().'/safety-copies/pre-push-20261001-101500-abc123.sql/restore')->assertForbidden();
+
+        expect($restores)->toBeEmpty();
+    });
 });

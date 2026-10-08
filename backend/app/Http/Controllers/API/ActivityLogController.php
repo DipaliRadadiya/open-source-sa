@@ -7,6 +7,8 @@ use App\Http\Requests\ListMyActivityLogRequest;
 use App\Http\Requests\ListServerActivityLogRequest;
 use App\Http\Resources\ActivityLogResource;
 use App\Models\ActivityLog;
+use App\Services\ActivityCatalog;
+use App\Services\ActivityKinds;
 use App\Services\ActivityScopes;
 use Illuminate\Http\JsonResponse;
 
@@ -29,7 +31,7 @@ class ActivityLogController extends Controller
      *
      * Shape matches the admin endpoint so the frontend reuses one component.
      */
-    public function filters(ListMyActivityLogRequest $request, ActivityScopes $scopes): JsonResponse
+    public function filters(ListMyActivityLogRequest $request, ActivityScopes $scopes, ActivityKinds $kinds): JsonResponse
     {
         $pairs = ActivityLog::query()
             ->where('user_id', $request->user()->id)
@@ -53,6 +55,7 @@ class ActivityLogController extends Controller
             'scopes' => $scopes->options(
                 $types->map(fn (string $type) => $scopes->for($type))->filter()->unique()->all(),
             ),
+            'kinds' => $kinds->options(),
         ]);
     }
 
@@ -64,7 +67,7 @@ class ActivityLogController extends Controller
      * ActivityLogResource's whenLoaded('user', ...) drops the key when
      * it's not loaded).
      */
-    public function index(ListMyActivityLogRequest $request, ActivityScopes $scopes): JsonResponse
+    public function index(ListMyActivityLogRequest $request, ActivityScopes $scopes, ActivityKinds $kinds): JsonResponse
     {
         // The self-scope is applied first and unconditionally — no filter
         // combination can widen it to another user's rows.
@@ -85,6 +88,15 @@ class ActivityLogController extends Controller
 
         if ($action = $request->input('filter.action')) {
             $query->where('action', $action);
+        }
+
+        // FS-C15 / OLD-18.
+        if ($kind = $request->input('filter.kind')) {
+            $kinds->apply($query, $kind);
+        }
+
+        if ($request->boolean('filter.security')) {
+            $kinds->applySecurity($query);
         }
 
         // Unlike the admin log there is no actor to search — every row here
@@ -108,6 +120,19 @@ class ActivityLogController extends Controller
     }
 
     /**
+     * FS-C11: filter options for the server log, for someone with the
+     * `activity_log` permission but no admin access — the admin endpoint was
+     * the only one that listed them. The catalog, limited to the server
+     * scope, so an option is never one this log cannot show.
+     */
+    public function serverFilters(ActivityCatalog $catalog, ActivityScopes $scopes, ActivityKinds $kinds): JsonResponse
+    {
+        return response()->json($catalog->shape($catalog->keys($scopes->types('server'))) + [
+            'kinds' => $kinds->options(),
+        ]);
+    }
+
+    /**
      * The server's events — everything in the `server` scope of
      * config/activity.php, sites and databases included.
      *
@@ -120,7 +145,7 @@ class ActivityLogController extends Controller
      * Requires `activity_log` permission — different from `access-admin`
      * which gates the admin-wide log.
      */
-    public function serverIndex(ListServerActivityLogRequest $request, ActivityScopes $scopes): JsonResponse
+    public function serverIndex(ListServerActivityLogRequest $request, ActivityScopes $scopes, ActivityKinds $kinds): JsonResponse
     {
         $query = ActivityLog::with('user:id,username')
             ->whereIn('type', $scopes->types('server'))
@@ -132,6 +157,15 @@ class ActivityLogController extends Controller
 
         if ($action = $request->input('filter.action')) {
             $query->where('action', $action);
+        }
+
+        // FS-C15 / OLD-18.
+        if ($kind = $request->input('filter.kind')) {
+            $kinds->apply($query, $kind);
+        }
+
+        if ($request->boolean('filter.security')) {
+            $kinds->applySecurity($query);
         }
 
         if ($search = $request->string('search')->trim()->value()) {

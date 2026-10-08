@@ -281,3 +281,43 @@ describe('the generated name', function () {
             ->toThrow(ValidationException::class);
     });
 });
+
+describe('the name and password the form chose (FS-B9)', function () {
+    it('creates the site and its account in one request, with that name', function () {
+        $response = $this->actingAs($this->admin)
+            ->postJson('/api/applications', createPayload(['system_user' => ['username' => 'blogowner', 'password' => 'Strong-Pass-2026!x']]))
+            ->assertCreated();
+
+        $user = Application::find($response->json('application.id'))->systemUser;
+
+        expect($user->username)->toBe('blogowner');
+
+        app(CreateSystemUser::class)->ensureOnServer($user);
+
+        // The password is set as the account is made, over stdin.
+        Process::assertRan(fn ($process) => str_contains(commandOf($process), 'chpasswd')
+            && str_contains((string) $process->input, 'blogowner:Strong-Pass-2026!x'));
+    });
+
+    it('refuses a chosen name without generate_system_user', function () {
+        $this->actingAs($this->admin)
+            ->postJson('/api/applications', createPayload([
+                'generate_system_user' => false,
+                'system_user_id' => SystemUser::create(['username' => 'existing', 'home_path' => '/home/existing'])->id,
+                'system_user' => ['username' => 'blogowner'],
+            ]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('system_user');
+    });
+
+    it('refuses a name the server already has', function () {
+        Process::fake(fn () => Process::result(output: "blogowner:x:1001:1001::/home/blogowner:/bin/bash\n"));
+
+        $this->actingAs($this->admin)
+            ->postJson('/api/applications', createPayload(['system_user' => ['username' => 'blogowner']]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['system_user.username' => __('errors/system-user.username_taken_on_server')]);
+
+        expect(SystemUser::where('username', 'blogowner')->exists())->toBeFalse();
+    });
+});

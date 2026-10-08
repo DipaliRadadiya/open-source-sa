@@ -6,11 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ListActivityLogRequest;
 use App\Http\Resources\ActivityLogResource;
 use App\Models\ActivityLog;
+use App\Services\ActivityCatalog;
+use App\Services\ActivityKinds;
 use App\Services\ActivityScopes;
 use App\Support\ListSearch;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Lang;
-use Illuminate\Support\Str;
 
 class ActivityLogController extends Controller
 {
@@ -21,34 +21,17 @@ class ActivityLogController extends Controller
      * activity_log table, so the dropdown is fully populated even on a
      * fresh install with no activity yet.
      */
-    public function filters(ActivityScopes $scopes): JsonResponse
+    public function filters(ActivityCatalog $catalog, ActivityScopes $scopes, ActivityKinds $kinds): JsonResponse
     {
-        // Minus the retired ones: their sentences stay so old rows still read
-        // properly, but a feature that is gone can never produce a new row,
-        // and an option that always returns nothing is a broken filter.
-        $keys = collect(Lang::get('activity'))->keys()
-            ->reject(fn (string $key) => in_array($key, (array) config('activity.retired', []), true));
-
-        $types = $keys->map(fn (string $key) => Str::before($key, '.'))->unique()->sort()->values();
-
-        // actions grouped per type for dependent dropdowns, plus an `all`
-        // deduped list for the initial "any type" view (no frontend merge).
-        $perType = $keys
-            ->groupBy(fn (string $key) => Str::before($key, '.'))
-            ->map(fn ($group) => $group->map(fn (string $key) => Str::after($key, '.'))->unique()->sort()->values()->all());
-
-        $all = $keys->map(fn (string $key) => Str::after($key, '.'))->unique()->sort()->values()->all();
-
-        return response()->json([
-            'types' => $types->all(),
-            'actions' => ['all' => $all] + $perType->all(),
+        return response()->json($catalog->shape($catalog->keys()) + [
             // Both, always — the admin log is the whole catalog, so an option
             // with no rows behind it today is still the right option to offer.
             'scopes' => $scopes->options(),
+            'kinds' => $kinds->options(),
         ]);
     }
 
-    public function index(ListActivityLogRequest $request, ActivityScopes $scopes): JsonResponse
+    public function index(ListActivityLogRequest $request, ActivityScopes $scopes, ActivityKinds $kinds): JsonResponse
     {
         $query = ActivityLog::query()->with('user')->latest('created_at');
 
@@ -67,6 +50,15 @@ class ActivityLogController extends Controller
 
         if ($type = $request->input('filter.type')) {
             $query->where('type', $type);
+        }
+
+        // FS-C15 / OLD-18.
+        if ($kind = $request->input('filter.kind')) {
+            $kinds->apply($query, $kind);
+        }
+
+        if ($request->boolean('filter.security')) {
+            $kinds->applySecurity($query);
         }
 
         if ($search = $request->string('search')->trim()->value()) {

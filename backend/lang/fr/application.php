@@ -331,4 +331,12 @@ return [
         'provider_refused' => 'Le fournisseur Git n\'a pas permis au panneau d\'ajouter le webhook. Le jeton connecté n\'a probablement pas le droit de gérer les webhooks de ce dépôt. Ajoutez-le à la main avec l\'URL et le secret ci-dessous, ou reconnectez le compte avec ce droit.',
         'removal_refused' => 'Le déploiement au push est désactivé, mais le fournisseur Git n\'a pas permis au panneau de supprimer le webhook qu\'il avait ajouté. Le jeton connecté n\'a probablement pas le droit de supprimer des webhooks. Les push continueront d\'être envoyés et refusés jusqu\'à ce que vous supprimiez le webhook dans les paramètres du dépôt.',
     ],
+
+    // OLD-20: what became of the site's system user when asked to remove it.
+    'system_user_removal' => [
+        'removed' => 'L’utilisateur système :username a aussi été supprimé.',
+        'still_used' => 'L’utilisateur système :username a été conservé : il possède encore d’autres applications.',
+        'has_processes' => 'L’utilisateur système :username a été conservé : il est encore connecté ou exécute quelque chose. Supprimez-le depuis Utilisateurs système une fois terminé.',
+        'failed' => 'L’utilisateur système :username n’a pas pu être supprimé. Supprimez-le depuis Utilisateurs système.',
+    ],
 ];

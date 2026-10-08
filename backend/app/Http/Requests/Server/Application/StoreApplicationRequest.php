@@ -4,6 +4,7 @@ namespace App\Http\Requests\Server\Application;
 
 use App\Contracts\SiteType;
 use App\Enums\DomainOrigin;
+use App\Http\Requests\Server\SystemUser\StoreSystemUserRequest;
 use App\Models\Application;
 use App\Rules\AvailablePort;
 use App\Rules\AvailableSiteName;
@@ -23,11 +24,14 @@ use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Php\PhpVersionManager;
 use App\Services\Server\Php\ServerDefaultPhp;
 use App\Services\Server\Runtimes\NodeRuntime;
+use App\Services\Server\SystemUsers\ChpasswdLine;
+use App\Services\Server\SystemUsers\SystemUsernameGenerator;
 use Closure;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
+use Illuminate\Validation\Rules\Password;
 
 /**
  * Validation is driven by the chosen site type's own field schema, so the form
@@ -96,6 +100,20 @@ class StoreApplicationRequest extends FormRequest
                     }
                 },
             ],
+
+            // FS-B9: the generated account's name and password, chosen on the
+            // create form, in this same request — it was a POST /system-users
+            // and then this, with the client deleting the user if this failed.
+            // Only beside `generate_system_user`; the same rules as creating a
+            // system user on its own.
+            'system_user' => ['sometimes', 'array'],
+            'system_user.username' => [
+                'required_with:system_user', 'string',
+                'regex:/^[a-z_][a-z0-9_-]{0,31}$/',
+                'unique:system_users,username',
+                Rule::notIn(StoreSystemUserRequest::RESERVED),
+            ],
+            'system_user.password' => ['sometimes', 'nullable', 'string', Password::defaults(), 'not_regex:'.ChpasswdLine::FORBIDDEN],
 
             // Required only when the caller is choosing one. `exclude_if` would
             // be wrong: a client that sends both a generate flag and an id is
@@ -367,6 +385,26 @@ class StoreApplicationRequest extends FormRequest
     public function after(): array
     {
         return [
+            // FS-B9: a chosen name only for a generated account, and one the
+            // server does not already have (a hand-made account is in
+            // /etc/passwd with no row here).
+            function (Validator $validator) {
+                if (! $this->has('system_user') || $validator->errors()->isNotEmpty()) {
+                    return;
+                }
+
+                if (! $this->boolean('generate_system_user')) {
+                    $validator->errors()->add('system_user', __('errors/application.system_user_needs_generate'));
+
+                    return;
+                }
+
+                $username = (string) $this->input('system_user.username');
+
+                if (! app(SystemUsernameGenerator::class)->available($username)) {
+                    $validator->errors()->add('system_user.username', __('errors/system-user.username_taken_on_server'));
+                }
+            },
             function (Validator $validator) {
                 $manager = app(SiteTypeManager::class);
                 $type = $manager->find((string) $this->input('site_type'));

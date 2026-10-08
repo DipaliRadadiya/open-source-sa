@@ -44,6 +44,12 @@ class DestroyApplicationRequest extends FormRequest
             return false;
         }
 
+        // OLD-20: removing the site's Linux account is the System Users
+        // permission's to grant, not the site's.
+        if ($this->boolean('remove_system_user') && ! ($this->user()?->canManage('system_user') ?? false)) {
+            return false;
+        }
+
         if (! $this->boolean('remove_databases')) {
             return true;
         }
@@ -58,9 +64,11 @@ class DestroyApplicationRequest extends FormRequest
     protected function failedAuthorization(): void
     {
         throw new AuthorizationException(__(
-            $this->boolean('remove_docker_resources')
-                ? 'errors/application.docker_removal_not_permitted'
-                : 'errors/application.database_removal_not_permitted'
+            match (true) {
+                $this->boolean('remove_docker_resources') && ! ($this->user()?->canManage('docker') ?? false) => 'errors/application.docker_removal_not_permitted',
+                $this->boolean('remove_system_user') && ! ($this->user()?->canManage('system_user') ?? false) => 'errors/application.system_user_removal_not_permitted',
+                default => 'errors/application.database_removal_not_permitted',
+            }
         ));
     }
 
@@ -76,7 +84,7 @@ class DestroyApplicationRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        foreach (['remove_files', 'remove_databases', 'remove_docker_resources'] as $flag) {
+        foreach (['remove_files', 'remove_databases', 'remove_docker_resources', 'remove_system_user'] as $flag) {
             if (! $this->has($flag)) {
                 continue;
             }
@@ -99,6 +107,7 @@ class DestroyApplicationRequest extends FormRequest
             'remove_files' => ['sometimes', 'boolean'],
             'remove_databases' => ['sometimes', 'boolean'],
             'remove_docker_resources' => ['sometimes', 'boolean'],
+            'remove_system_user' => ['sometimes', 'boolean'],
         ];
     }
 }

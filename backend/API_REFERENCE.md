@@ -188,6 +188,8 @@ Paginated. `?search=` case-insensitively matches name and username; `?filter[is_
 
 ---
 
+
+**`last_login_at`, `last_login_at_human`, `last_login_ip`** (added 2026-10-08, OLD-17) on every user: when and from where they last signed in. Null until their next sign-in — there is nothing to fill it from for older ones.
 ### POST `/admin/users`
 **Permission:** `access-admin` (manage)
 
@@ -345,6 +347,12 @@ Paginated (**`per_page` defaults to 10**, not 20). Filters: `filter[user_id]`, `
 ```
 
 `description` is built at read time from `__('activity.'.$type.'.'.$action, $properties)` in the viewer's locale — not stored. **The `properties` bag itself is not returned** on any activity endpoint: it is the input to that sentence, not a field to read values out of.
+
+**`filter[kind]`** (added 2026-10-08, FS-C15, **all three logs**) ∈ `created | changed | removed | failed`; anything else is `422`. Each row carries `kind` too, and every `…/filters` answer carries `kinds: [{value, label}]` (labels translated). The kind is read from the action name (`…_failed` → failed, `deleted`/`removed`/`uninstalled`/`detached`/`disconnected` → removed, `created`/`added`/`installed`/`connected`/… → created, the rest → changed).
+
+**`filter[security]=1`** (added 2026-10-08, OLD-18, all three logs) — security events only: sign-ins and failed sign-ins, password and role changes, impersonation, firewall and fail2ban settings, SSH keys / sudo / SSH access of system users, phpMyAdmin and WordPress magic sign-ins, viewed credentials. The list is `config/activity.php` `security`. Each row carries `is_security`.
+
+**Failed sign-ins are recorded** (added 2026-10-08, OLD-16): `user.login_failed` on the account the password was tried against (it shows in that user's own history, with the IP), and `user.login_failed_unknown` for a name that matches no account — the typed name is **not** stored, people type passwords into it. That row has no user and `is_system: false`.
 
 `scope` is which half of the panel the row is about — `account` (users, roles, permissions, central consent) or `server` (everything operational) — so the frontend can badge or group without keeping its own copy of the type→scope map. It is null for a type not yet in the map.
 
@@ -759,6 +767,8 @@ Never send the raw field list — `GET /site-types` publishes the fields for eac
 
 **No other site type deploys after creation.** The ten marketplace PHP types and four marketplace Node types install during provisioning; `php` and `static` sites start from a placeholder. Only `git` has `app_deployment` in its feature list at all.
 
+
+**`system_user: {"username": "blogowner", "password": "…"}`** (added 2026-10-08, FS-B9), beside `generate_system_user: true`: the new account's name (same rules as `POST /system-users`, and free on the server too) and an optional password, in the same request as the application — no separate `POST /system-users` to undo if the application is refused. The account is created with that password when provisioning makes it. Without `generate_system_user` it is `422` on `system_user`.
 ---
 
 ### GET `/applications/{application}`
@@ -1217,6 +1227,8 @@ case, deliberately: the site really is gone, and an error status would tell the
 panel nothing happened when most of it did. `reference` correlates to the raw
 failure in the server-ops log.
 
+
+**`?remove_system_user=1`** (added 2026-10-08, OLD-20) also removes the site's Linux account when it owns no other application; needs `system_user` (manage) as well, or the whole request is `403` before anything is deleted. The application is deleted first, and the answer says what became of the account: `"system_user": {"username": "deploy", "outcome": "removed" | "still_used" | "has_processes" | "failed", "message": "…"}`. Only `removed` deleted it; for the others the account is still there and the message says why.
 ---
 
 ### GET `/applications/port-check`
@@ -2686,7 +2698,13 @@ Push staging changes back to production.
 
 Before either mode changes production, the panel creates a temporary private file snapshot. If the push fails, it restores the files (and the database for `full`) before bringing production back online. A successful push or successful recovery removes the temporary file snapshot; the pre-push SQL dump is retained.
 
-**Response `200`:** `{"application": {...updated production record...}}`
+**Response `200`:** `{"application": {...updated production record...}, "backup": null}`
+
+**`"backup": true`** (added 2026-10-08, FS-B10) — take a backup of the live site through its own backup setup (Backups → target) **before** the push, and push only if it verified. Needs `app_backup` (manage) too, and a backup target on the application; otherwise `422` on `errors.backup` (not permitted / *"Backups are not set up for this application yet."* / a backup already running). The push request waits for the backup — on a large site that is the long part. On success `backup` is the backup row (same shape as `GET /backups`). If the backup did not verify, **nothing is pushed** and the answer is:
+```json
+{"message":"The backup before the push did not finish, so nothing was pushed. Open the backup to see why.","reason":"backup_failed","backup_id":42,"backup_reason":"upload_failed"}
+```
+with status `409`.
 
 **Response `422`** (added 2026-10-03, bug #88; was a generic `500`) — no staging copy exists: `errors.application` = *"This site has no staging copy to push."*
 
@@ -2698,6 +2716,22 @@ Before either mode changes production, the panel creates a temporary private fil
 When recovery itself fails, production deliberately remains disabled and the private recovery files are preserved. The `reference` correlates with the server-operations log.
 
 ---
+
+### GET `/applications/{application}/staging/safety-copies`
+**Permission:** `app_staging` (view) — added 2026-10-08 (ST-B3)
+
+The copies of the live database a `database`/`full` push saves before replacing it (kept on the server, above the web root, newest **3** kept). Newest first:
+```json
+{"safety_copies": [{"name": "pre-push-20261008-101500-abc123.sql", "size_bytes": 2048, "created_at": "2026-10-08T10:15:00+00:00"}], "kept": 3}
+```
+Empty list when the site never pushed its database.
+
+### POST `/applications/{application}/staging/safety-copies/{name}/restore`
+**Permission:** `app_staging` (manage) | **Throttle:** 5/min — added 2026-10-08 (ST-B3)
+
+Puts that copy back into the live database. The database **as it is now** is saved first as a new copy, so this can be undone from the same list (the oldest beyond 3 is removed). Refused with `422` on `errors.name` when the name is not one of the listed copies, the application has no database, a push or a backup restore is running.
+
+**Response `200`:** `{"restored": "pre-push-….sql", "safety_copies": [...]}`. Activity: `application.staging_safety_copy_restored`.
 
 ## Application — AI Bot Blocker
 
@@ -3008,6 +3042,13 @@ Read a log source — the **last** N lines of it.
 - **`search_window_capped: true`** — only meaningful with `grep`. A search only ever covers the last **5,000** lines, so this says the match may exist earlier in the file and was not looked at. **Surface it.** Without it, an empty result reads as *"this is not in your log"* when the truthful answer is *"I only looked at the end of it"*.
 
 There is **no cursor and no `?after=`**. This reference described cursor-based tailing that was never implemented — poll the endpoint and diff client-side if you need a live tail.
+
+---
+
+### GET `/applications/{application}/logs/{key}/download`
+**Permission:** `app_log` (view) | **Throttle:** 6/min — added 2026-10-08 (LOG-dl)
+
+The whole log as a file (`Content-Disposition: attachment; filename="{slug}-{key}.log"`), streamed — the screen shows only the last lines. `404` when the log does not exist yet or the site has no such source; `422` `reason: not_downloadable` for a container's output, which Docker keeps rather than a file. Recorded in the activity log.
 
 ---
 
@@ -5070,6 +5111,11 @@ Unban every address from every jail.
 ---
 
 ## Server — Activity Log
+
+### GET `/server/activity-log/filters`
+**Permission:** `activity_log` (view) — added 2026-10-08 (FS-C11)
+
+The filter options for this log, for someone without admin access: the same `types` / `actions` shape as `/admin/activity-log/filters`, limited to the server scope, plus `kinds`.
 
 ### GET `/server/activity-log`
 **Permission:** `activity_log` (view)

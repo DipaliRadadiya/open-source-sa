@@ -338,4 +338,12 @@ return [
         'provider_refused' => 'The Git provider did not let the panel add the webhook. The connected token probably lacks permission to manage webhooks on this repository. Add it by hand with the URL and secret below, or reconnect the account with that permission.',
         'removal_refused' => 'Deploy on push is off, but the Git provider did not let the panel remove the webhook it added. The connected token probably lacks permission to delete webhooks. Pushes will still be sent and refused until you delete the webhook in the repository\'s settings.',
     ],
+
+    // OLD-20: what became of the site's system user when asked to remove it.
+    'system_user_removal' => [
+        'removed' => 'The system user :username was removed too.',
+        'still_used' => 'The system user :username was kept: it still owns other applications.',
+        'has_processes' => 'The system user :username was kept: it is still signed in or running something. Remove it from System Users once that has ended.',
+        'failed' => 'The system user :username could not be removed. Remove it from System Users.',
+    ],
 ];

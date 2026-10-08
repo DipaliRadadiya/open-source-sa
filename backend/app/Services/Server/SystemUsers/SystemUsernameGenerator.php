@@ -112,7 +112,7 @@ class SystemUsernameGenerator
      * table would hand out a name `useradd` then refuses, turning a solvable
      * collision into a failed application.
      */
-    private function available(string $username): bool
+    public function available(string $username): bool
     {
         if (SystemUser::where('username', $username)->exists()) {
             return false;

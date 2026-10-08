@@ -331,4 +331,12 @@ return [
         'provider_refused' => 'Der Git-Anbieter hat dem Panel nicht erlaubt, den Webhook anzulegen. Wahrscheinlich fehlt dem verbundenen Token die Berechtigung, Webhooks in diesem Repository zu verwalten. Legen Sie ihn von Hand mit der URL und dem Secret unten an oder verbinden Sie das Konto mit dieser Berechtigung neu.',
         'removal_refused' => 'Deploy bei Push ist aus, aber der Git-Anbieter hat dem Panel nicht erlaubt, den angelegten Webhook zu entfernen. Wahrscheinlich fehlt dem verbundenen Token die Berechtigung, Webhooks zu löschen. Pushes werden weiter gesendet und abgewiesen, bis Sie den Webhook in den Einstellungen des Repositorys löschen.',
     ],
+
+    // OLD-20: what became of the site's system user when asked to remove it.
+    'system_user_removal' => [
+        'removed' => 'Der Systembenutzer :username wurde ebenfalls entfernt.',
+        'still_used' => 'Der Systembenutzer :username wurde behalten: Ihm gehören noch andere Anwendungen.',
+        'has_processes' => 'Der Systembenutzer :username wurde behalten: Er ist noch angemeldet oder führt etwas aus. Entfernen Sie ihn unter „Systembenutzer“, sobald das beendet ist.',
+        'failed' => 'Der Systembenutzer :username konnte nicht entfernt werden. Entfernen Sie ihn unter „Systembenutzer“.',
+    ],
 ];

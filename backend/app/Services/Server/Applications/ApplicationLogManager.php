@@ -143,6 +143,43 @@ class ApplicationLogManager
     /**
      * @return array{key: string, kind: string, path: string}|null
      */
+    /**
+     * The whole log, streamed (LOG-dl). Null when the source has nothing on
+     * disk yet; `false` for a source with no file to hand over (a container's
+     * output lives in Docker, not in a file).
+     *
+     * Through ServerOps' stream, as the file manager's download is: a log can
+     * be gigabytes, and reading it into memory to send it is the outage.
+     *
+     * @return array{filename: string, chunks: \Generator<int, string>}|false|null
+     */
+    public function download(Application $application, string $key): array|false|null
+    {
+        $source = $this->find($application, $key);
+
+        if ($source === null || $source['kind'] === 'container') {
+            return $source === null ? null : false;
+        }
+
+        $filename = "{$application->slug}-{$key}.log";
+
+        if ($source['kind'] === 'journal') {
+            return ['filename' => $filename, 'chunks' => $this->serverOps->stream(
+                ['journalctl', '-u', $this->processes->unit($application), '--no-pager'],
+                $this->context($application, 'app_log_download'),
+            )];
+        }
+
+        if (! $this->fileExists($application, $source['path'])) {
+            return null;
+        }
+
+        return ['filename' => $filename, 'chunks' => $this->serverOps->stream(
+            ['cat', $source['path']],
+            $this->context($application, 'app_log_download'),
+        )];
+    }
+
     public function find(Application $application, string $key): ?array
     {
         foreach ($this->catalog($application) as $source) {

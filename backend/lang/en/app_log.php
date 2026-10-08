@@ -19,6 +19,8 @@ return [
     ],
 
     'errors' => [
+
+        'not_downloadable' => 'This log is not a file — a container\'s output is kept by Docker. Read it on screen instead.',
         'unknown_source' => 'That log does not exist for this application.',
         'clear_shared' => 'On OpenLiteSpeed the firewall detections are part of this site\'s access log. Clear the access log instead.',
     ],

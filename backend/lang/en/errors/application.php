@@ -154,4 +154,10 @@ return [
     'chmod_mode_invalid' => 'Use three digits, such as 755, or four with a leading 1 (sticky) or 2 (setgid), such as 1777 or 2775. Setuid modes are not allowed.',
     'chmod_setgid_file' => 'Setgid (a leading 2 or 3) can only be set on a folder.',
     'file_changed_on_disk' => 'Someone else changed this file after you opened it. Reload it to see their changes, then make your edit again.',
+    'system_user_removal_not_permitted' => 'You can delete this application, but not its system user. Ask an administrator for System Users access, or delete the application and keep the user.',
+    'system_user_needs_generate' => 'A system user name and password can only be given with “create a new system user”.',
+    'staging_backup_failed' => 'The backup before the push did not finish, so nothing was pushed. Open the backup to see why.',
+    'staging_backup_not_permitted' => 'You can push, but not take a backup of this application. Ask an administrator for Backups access, or push without a backup.',
+    'staging_safety_copy_missing' => 'That copy of the database is not on the server any more. Reload the list.',
+    'staging_safety_copy_no_database' => 'This application has no database linked to it, so there is nothing to put the copy back into.',
 ];

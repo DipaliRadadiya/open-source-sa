@@ -14,6 +14,7 @@ use App\Models\Restore;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\ServerOps;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -205,6 +206,107 @@ class StagingManager
         }
 
         $this->pruneSafetyDumps($production);
+    }
+
+    /**
+     * ST-B3: the pre-push copies of the live database, newest first.
+     *
+     * Each push that replaces the database writes one, and three are kept —
+     * but nothing could list them, so the way back existed only for someone
+     * with a shell on the server.
+     *
+     * @return list<array{name: string, size_bytes: int, created_at: string}>
+     */
+    public function safetyDumps(Application $production): array
+    {
+        $listed = $this->serverOps->run(
+            ['find', $production->panelPath().'/staging-backups', '-mindepth', '1', '-maxdepth', '1', '-type', 'f', '-name', 'pre-push-*.sql', '-printf', '%f\t%s\t%T@\n'],
+            ['feature' => 'application', 'op' => 'staging_dump_list', 'application' => $production->id],
+            timeout: 30,
+        );
+
+        // No directory yet is no copies, not an error: a site that never
+        // pushed its database has none.
+        if ($listed->failed()) {
+            return [];
+        }
+
+        $dumps = [];
+
+        foreach (explode("\n", $listed->output()) as $line) {
+            $fields = explode("\t", trim($line));
+
+            if (count($fields) !== 3 || ! self::isSafetyDumpName($fields[0])) {
+                continue;
+            }
+
+            $dumps[] = [
+                'name' => $fields[0],
+                'size_bytes' => (int) $fields[1],
+                'created_at' => Carbon::createFromTimestamp((int) $fields[2])->toIso8601String(),
+            ];
+        }
+
+        usort($dumps, fn (array $a, array $b) => strcmp($b['name'], $a['name']));
+
+        return $dumps;
+    }
+
+    /**
+     * ST-B3: put one pre-push copy back into the live database.
+     *
+     * Under the push lock, so it cannot run while a push is replacing the same
+     * database, and refused during a backup restore. The database as it is now
+     * is dumped first, the same safety copy a push takes, so this is undoable
+     * from the same list.
+     */
+    public function restoreSafetyDump(Application $production, string $name): void
+    {
+        if (! self::isSafetyDumpName($name) || ! in_array($name, array_column($this->safetyDumps($production), 'name'), true)) {
+            throw ValidationException::withMessages([
+                'name' => [__('errors/application.staging_safety_copy_missing')],
+            ]);
+        }
+
+        $database = Database::where('application_id', $production->id)->first();
+
+        if ($database === null) {
+            throw ValidationException::withMessages([
+                'name' => [__('errors/application.staging_safety_copy_no_database')],
+            ]);
+        }
+
+        if (Restore::inProgressFor($production->id)) {
+            throw ValidationException::withMessages([
+                'name' => [__('backup.errors.restore_already_running')],
+            ]);
+        }
+
+        $lock = Cache::lock(self::lockKey($production->id), 3600);
+
+        if (! $lock->get()) {
+            throw ValidationException::withMessages([
+                'name' => [__('errors/application.staging_push_running')],
+            ]);
+        }
+
+        Cache::put(self::markerKey($production->id), true, 3600);
+
+        try {
+            $this->safetyDump($production);
+            $this->databases->engine($database->engine)->restore($database->name, $production->panelPath().'/staging-backups/'.$name);
+        } finally {
+            Cache::forget(self::markerKey($production->id));
+            $lock->release();
+        }
+
+        $this->pruneSafetyDumps($production);
+    }
+
+    /** What `safetyDump()` writes, and nothing else — the name reaches a path. */
+    public static function isSafetyDumpName(string $name): bool
+    {
+        return preg_match('/\Apre-push-\d{8}-\d{6}-[a-z0-9]{6}\.sql\z/', $name) === 1;
     }
 
     public static function pushInProgress(int $applicationId): bool
