@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications;
 
 use App\Enums\FileArchiveStatus;
 use App\Exceptions\Server\Application\FileOperationException;
+use App\Exceptions\Server\Application\FileRefusedException;
 use App\Jobs\MeasureApplicationSize;
 use App\Jobs\RunFileArchive;
 use App\Models\Application;
@@ -612,8 +613,11 @@ class FileBrowser
         return [
             'name' => $name,
             'type' => $entryType,
-            'size' => (int) $size,
-            'size_human' => Bytes::human((int) $size),
+            // Null for a folder (APP-5): what find reports there is the
+            // directory entry's own block, 4096 whatever it holds. Its real
+            // size is `folder-size`'s job.
+            'size' => $entryType === 'dir' ? null : (int) $size,
+            'size_human' => $entryType === 'dir' ? null : Bytes::human((int) $size),
             'modified_at' => $modifiedAt->format('d-m-Y H:i:s'),
             'modified_at_human' => $modifiedAt->diffForHumans(),
             'mode' => $isSymlink ? null : $mode,
@@ -638,7 +642,12 @@ class FileBrowser
     }
 
     /**
-     * @return array{content: string, size: int, binary: bool, backups: array<int, array{name: string, created_at: string}>}
+     * `version` is a hash of the content, sent back on save to catch two
+     * people editing one file (OLD-27). A hash rather than the mtime: two
+     * saves inside one second share an mtime, and `touch` moves it without
+     * changing a byte.
+     *
+     * @return array{content: string, size: int, binary: bool, version: string, backups: array<int, array{name: string, created_at: string}>}
      */
     public function read(Application $application, string $path): array
     {
@@ -646,7 +655,9 @@ class FileBrowser
         $target = $this->resolve($application, $path);
         $size = $this->assertType($application, $target, 'f');
 
-        abort_if($size > self::MAX_BYTES, 422, __('errors/application.file_too_large'));
+        if ($size > self::MAX_BYTES) {
+            throw FileRefusedException::because('path', 'too_large', 'errors/application.file_too_large');
+        }
 
         $content = $this->run($application, ['cat', $target], 'read')->output();
 
@@ -654,6 +665,7 @@ class FileBrowser
             'content' => $content,
             'size' => $size,
             'binary' => str_contains(substr($content, 0, self::BINARY_SNIFF_BYTES), "\0"),
+            'version' => sha1($content),
             'backups' => $this->backups($application, $target),
         ];
     }
@@ -727,7 +739,9 @@ class FileBrowser
 
         $max = (int) config('server.applications.preview_max_bytes', self::PREVIEW_MAX_BYTES);
 
-        abort_if($size > $max, 422, __('errors/application.file_too_large_to_preview'));
+        if ($size > $max) {
+            throw FileRefusedException::because('path', 'too_large', 'errors/application.file_too_large_to_preview');
+        }
 
         $head = $this->run($application, ['head', '-c', (string) self::PREVIEW_SNIFF_BYTES, $target], 'preview_sniff')->output();
 
@@ -738,9 +752,11 @@ class FileBrowser
             // happen to spell `<svg` is still a PNG. The SVG question is only
             // ever a way to explain a file that is *not* one of the formats
             // above, never a way to reject one that is.
-            abort_if($this->looksLikeSvg($head), 422, __('errors/application.file_svg_not_previewable'));
+            if ($this->looksLikeSvg($head)) {
+                throw FileRefusedException::because('path', 'svg_not_previewable', 'errors/application.file_svg_not_previewable');
+            }
 
-            abort(422, __('errors/application.file_not_previewable'));
+            throw FileRefusedException::because('path', 'not_image', 'errors/application.file_not_previewable');
         }
 
         return [
@@ -805,7 +821,7 @@ class FileBrowser
      * safety story for "edit", and a save that silently skipped the copy
      * would be the one time that promise mattered.
      */
-    public function write(Application $application, string $path, string $content): void
+    public function write(Application $application, string $path, string $content, ?string $expectedVersion = null): string
     {
         $target = $this->resolve($application, $path);
         // Editing, not creating: a path that does not already resolve to a
@@ -813,11 +829,20 @@ class FileBrowser
         // everywhere else in the panel.
         $this->assertType($application, $target, 'f');
 
+        // OLD-27: someone else saved since this editor opened the file.
+        // Overwriting would throw their change away with nothing to say so.
+        if ($expectedVersion !== null
+            && ! hash_equals($expectedVersion, sha1($this->run($application, ['cat', $target], 'read')->output()))) {
+            throw FileRefusedException::because('version', 'changed_on_disk', 'errors/application.file_changed_on_disk', status: 409);
+        }
+
         $this->backup($application, $target);
 
         $this->run($application, ['tee', $target], 'write', input: $content);
 
         $this->sizeChanged($application);
+
+        return sha1($content);
     }
 
     /**
@@ -844,7 +869,10 @@ class FileBrowser
      * Puts a previous save back — taking a backup of the current content
      * first, so restoring the wrong one is itself undoable.
      */
-    public function restoreBackup(Application $application, string $path, string $name): void
+    /**
+     * @return array{content: string, version: string} what the file now holds (APP-5)
+     */
+    public function restoreBackup(Application $application, string $path, string $name): array
     {
         $target = $this->resolve($application, $path);
         $this->assertType($application, $target, 'f');
@@ -866,9 +894,11 @@ class FileBrowser
 
         $content = $this->run($application, ['cat', $source], 'read_backup')->output();
 
-        $this->write($application, $path, $content);
+        $version = $this->write($application, $path, $content);
 
         $this->sizeChanged($application);
+
+        return ['content' => $content, 'version' => $version];
     }
 
     /**
@@ -1017,7 +1047,7 @@ class FileBrowser
         // The directory has to already exist — no implicit `mkdir`, the same
         // restraint the rest of this feature keeps. The file itself is what
         // upload is allowed to create; the folder structure is not.
-        $this->assertType($application, $directory, 'd');
+        $this->assertDestination($application, $directory, 'path', dirname($path));
 
         // Refused rather than overwritten. An upload that lands on an existing
         // file destroys it with no undo and no trace — the panel keeps a copy
@@ -1029,11 +1059,9 @@ class FileBrowser
         // Same shape as createDirectory below: refuse, and name what is in the
         // way. Deleting the file first is the deliberate act that makes the
         // replacement intentional.
-        abort_if(
-            $this->stat($application, $target) !== null,
-            422,
-            __('errors/application.upload_exists', ['name' => basename($target)]),
-        );
+        if ($this->stat($application, $target) !== null) {
+            throw FileRefusedException::because('path', 'path_exists', 'errors/application.upload_exists', ['name' => basename($target)]);
+        }
 
         $this->run($application, ['tee', $target], 'upload', input: $contents);
 
@@ -1049,14 +1077,13 @@ class FileBrowser
     public function createDirectory(Application $application, string $path): void
     {
         $target = $this->resolve($application, $path);
-        $this->assertType($application, dirname($target), 'd');
+        $this->assertDestination($application, dirname($target), 'path', dirname($path));
 
-        $existing = $this->stat($application, $target);
-
-        if ($existing !== null) {
-            abort_if($existing['type'] !== 'd', 422, __('errors/application.path_exists'));
-
-            return;
+        // FI-9: refused, not a silent "OK". Someone creating a folder that is
+        // already there has the wrong name or the wrong place in mind, and an
+        // OK told them neither.
+        if ($this->stat($application, $target) !== null) {
+            throw FileRefusedException::because('path', 'path_exists', 'errors/application.path_exists');
         }
 
         $this->run($application, ['mkdir', $target], 'mkdir');
@@ -1080,8 +1107,8 @@ class FileBrowser
         abort_if($sourceStat === null || ! in_array($sourceStat['type'], ['f', 'd'], true), 404);
 
         $target = $this->resolve($application, $targetPath);
-        abort_if($this->stat($application, $target) !== null, 422, __('errors/application.path_exists'));
-        $this->assertType($application, dirname($target), 'd');
+        $this->assertDestination($application, dirname($target), 'target', dirname($targetPath));
+        $this->refuseExisting($application, $target, 'target');
 
         $this->run($application, ['mv', $source, $target], 'rename');
         // Nothing added or removed, but a move changes which folder holds it.
@@ -1103,8 +1130,8 @@ class FileBrowser
         abort_if($sourceStat === null || ! in_array($sourceStat['type'], ['f', 'd'], true), 404);
 
         $target = $this->resolve($application, $targetPath);
-        abort_if($this->stat($application, $target) !== null, 422, __('errors/application.path_exists'));
-        $this->assertType($application, dirname($target), 'd');
+        $this->assertDestination($application, dirname($target), 'target', dirname($targetPath));
+        $this->refuseExisting($application, $target, 'target');
 
         $this->run($application, ['cp', '-r', $source, $target], 'copy');
 
@@ -1133,10 +1160,12 @@ class FileBrowser
         // Decided by the same function `extract()` reads, so the formats the
         // panel can write and the formats it can open cannot drift apart.
         $format = $this->archiveFormat($targetPath);
-        abort_if($format === null, 422, __('errors/application.target_not_archive'));
+        if ($format === null) {
+            throw FileRefusedException::because('target', 'not_archive', 'errors/application.target_not_archive');
+        }
 
         $target = $this->resolve($application, $targetPath);
-        abort_if($this->stat($application, $target) !== null, 422, __('errors/application.path_exists'));
+        $this->refuseExisting($application, $target, 'target');
         $this->assertType($application, dirname($target), 'd');
 
         return $this->queue($application, 'compress', [$path], $targetPath);
@@ -1450,7 +1479,7 @@ class FileBrowser
         abort_if($this->stat($application, $source) === null, 404);
 
         $target = $this->resolve($application, $path);
-        abort_if($this->stat($application, $target) !== null, 422, __('errors/application.path_exists'));
+        $this->refuseExisting($application, $target, 'path');
 
         $this->run($application, ['mkdir', '-p', dirname($target)], 'trash_restore_dir');
         $this->run($application, ['mv', $source, $target], 'trash_restore');
@@ -1567,19 +1596,20 @@ class FileBrowser
      * `PermissionFixer::fix()`'s whole-site reset, for the one-off case of
      * "this one file needs to be different".
      *
-     * Exactly 3 octal digits (owner/group/other rwx), nothing else: no
-     * setuid/setgid/sticky bit. Not because a site's own user setting those
-     * on their own file is some grave danger, but because a plain three-digit
-     * mode is the entire vocabulary every other permissions surface in this
-     * panel uses (`0755`/`0644`/`0600`/`0700`) — a fourth digit would be a
-     * new kind of input this feature alone accepts, for a case nobody asked
-     * for.
+     * Three octal digits, or four with a sticky or setgid first digit
+     * (OLD-26: 1777 and 2775 are ordinary folder modes, and refusing them
+     * sent people to SSH). Setuid is never accepted, and setgid only on a
+     * folder — on a file both let whoever runs it act as the site.
      */
     public function chmod(Application $application, string $path, string $mode): void
     {
         $target = $this->resolve($application, $path);
         $stat = $this->stat($application, $target);
         abort_if($stat === null || ! in_array($stat['type'], ['f', 'd'], true), 404);
+
+        if ($stat['type'] === 'f' && self::setsGroupId($mode)) {
+            throw FileRefusedException::because('mode', 'setgid_file', 'errors/application.chmod_setgid_file');
+        }
 
         $this->run($application, ['chmod', $mode, $target], 'chmod');
     }
@@ -1607,10 +1637,13 @@ class FileBrowser
         $this->assertType($application, $archive, 'f');
 
         $format = $this->archiveFormat($path);
-        abort_if($format === null, 422, __('errors/application.file_not_archive'));
+
+        if ($format === null) {
+            throw FileRefusedException::because('path', 'not_archive', 'errors/application.file_not_archive');
+        }
 
         $target = $this->resolve($application, $targetPath);
-        $this->assertType($application, $target, 'd');
+        $this->assertDestination($application, $target, 'target', $targetPath);
 
         $entries = $format === 'zip'
             ? $this->listZipEntries($application, $archive)
@@ -1959,6 +1992,44 @@ class FileBrowser
     }
 
     /**
+     * The folder something is going into must exist (FI-B).
+     *
+     * A 404 "item could not be found" here read as if the *file* being
+     * copied had gone — the one thing that was fine. Refused instead, under
+     * the field that names the folder, and naming it.
+     */
+    private function assertDestination(Application $application, string $directory, string $field, string $shown): void
+    {
+        $stat = $this->stat($application, $directory);
+
+        if ($stat !== null && $stat['type'] === 'd') {
+            return;
+        }
+
+        $shown = trim($shown, '/.');
+
+        throw FileRefusedException::because(
+            $field,
+            $stat === null ? 'destination_missing' : 'destination_not_directory',
+            $stat === null ? 'errors/application.destination_missing' : 'errors/application.destination_not_directory',
+            ['path' => '/'.$shown],
+        );
+    }
+
+    /** A four-digit mode whose first digit carries the setgid bit (2 or 3). */
+    private static function setsGroupId(string $mode): bool
+    {
+        return strlen($mode) === 4 && in_array($mode[0], ['2', '3'], true);
+    }
+
+    private function refuseExisting(Application $application, string $target, string $field): void
+    {
+        if ($this->stat($application, $target) !== null) {
+            throw FileRefusedException::because($field, 'path_exists', 'errors/application.path_exists');
+        }
+    }
+
+    /**
      * Confirms the path exists and is the expected type, without treating
      * "does not exist" as a server-operation failure — that is a 404 for the
      * caller, not something needing a support reference.
@@ -2170,7 +2241,7 @@ class FileBrowser
         $this->assertRootExists($application);
 
         $destination = $this->resolve($application, $targetDirectory);
-        $this->assertType($application, $destination, 'd');
+        $this->assertDestination($application, $destination, 'target_directory', $targetDirectory);
 
         $found = $this->statMany($application, $paths);
         $failed = $this->missing($paths, $found);
@@ -2235,6 +2306,17 @@ class FileBrowser
         $found = $this->statMany($application, $paths);
         $failed = $this->missing($paths, $found);
 
+        // Setgid on a file runs it as the site's group for whoever starts
+        // it; only folders take it (OLD-26).
+        if (self::setsGroupId($mode)) {
+            foreach ($found as $relative => $entry) {
+                if (($entry['type'] ?? '') !== 'd') {
+                    $failed[] = ['path' => $relative, 'reason' => 'setgid_file'];
+                    unset($found[$relative]);
+                }
+            }
+        }
+
         $targets = array_map(
             fn (string $relative): string => $this->resolve($application, $relative),
             array_keys($found),
@@ -2278,7 +2360,9 @@ class FileBrowser
         $this->assertRootExists($application);
 
         $format = $this->archiveFormat($targetPath);
-        abort_if($format === null, 422, __('errors/application.target_not_archive'));
+        if ($format === null) {
+            throw FileRefusedException::because('target', 'not_archive', 'errors/application.target_not_archive');
+        }
 
         $parents = array_unique(array_map(
             fn (string $path): string => trim(dirname('/'.$path), '/'),
@@ -2292,7 +2376,7 @@ class FileBrowser
         abort_if(count($found) !== count(array_unique($paths)), 404);
 
         $target = $this->resolve($application, $targetPath);
-        abort_if($this->stat($application, $target) !== null, 422, __('errors/application.path_exists'));
+        $this->refuseExisting($application, $target, 'target');
         $this->assertType($application, dirname($target), 'd');
 
         return $this->queue($application, 'compress', array_values($paths), $targetPath);

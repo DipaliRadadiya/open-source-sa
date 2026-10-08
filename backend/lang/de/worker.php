@@ -38,6 +38,7 @@ return [
     'errors' => [
         'queue_conflict' => 'Diese Anwendung hat bereits die andere Art von Queue-Worker. Horizon überwacht eigene Worker, sodass bei beidem jeder Job doppelt verarbeitet wird.',
         'extra_config_user' => 'Legen Sie das Konto unter „Ausführen als“ fest, nicht in der Zusatzkonfiguration.',
+        'extra_config_environment' => 'Das Panel legt die Umgebung dieses Workers bereits fest. Entfernen Sie die Zeile environment= aus der Zusatzkonfiguration.',
         'user_not_allowed' => 'Worker können nur mit dem Konto der Website (:user) laufen. Nur der Panel-Administrator kann ein anderes Konto wählen.',
         'directory_outside_home' => 'Das Verzeichnis muss im Home-Ordner der Website liegen (:home).',
         'log_outside_logs' => 'Die Logdatei muss im Log-Ordner der Website liegen (:path).',

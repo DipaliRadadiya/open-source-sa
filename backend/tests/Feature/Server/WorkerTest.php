@@ -1272,7 +1272,7 @@ describe('who a worker may run as', function () {
         $this->actingAs($this->member)->postJson(workerUrl(), workerPayload([
             'directory' => '/home/workerowner/queued-site',
             'log_file' => $this->application->logsPath().'/queue.log',
-            'extra_config' => "environment=APP_ENV=\"production\"\n",
+            'extra_config' => "startsecs=5\n",
         ]))->assertCreated();
     });
 
@@ -1282,6 +1282,61 @@ describe('who a worker may run as', function () {
         $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload(['extra_config' => "  User = root\n"]))
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['extra_config' => __('worker.errors.extra_config_user')]);
+    });
+
+    it('refuses environment= in extra config even for the admin (W12)', function () {
+        // The template writes its own environment= line, and supervisord will
+        // not load a program that has two.
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload(['extra_config' => "startsecs=5\n Environment = APP_ENV=\"production\"\n"]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['extra_config' => __('worker.errors.extra_config_environment')]);
+    });
+});
+
+describe('an edit that will not start (W-edit)', function () {
+    it('keeps the old command and brings the old worker back up', function () {
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload())->assertCreated();
+        $worker = Worker::query()->sole();
+        $program = 'sv-worker-'.$worker->slug;
+
+        // From here on, any program whose command is the new one dies at
+        // start, as a mistyped binary does.
+        Process::fake(function ($process) use ($program) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            WorkerFake::$ran[] = implode(' ', $args);
+
+            if ($args[0] === 'tee') {
+                WorkerFake::$env = (string) $process->input;
+            }
+
+            if ($args[0] === 'supervisorctl' && ($args[1] ?? '') === 'status') {
+                $output = WorkerFake::statusOutput($program);
+
+                return Process::result(output: $output, exitCode: $output === '' ? 3 : 0);
+            }
+
+            if ($args[0] === 'supervisorctl' && in_array($args[1] ?? '', ['start', 'restart'], true)) {
+                WorkerFake::$running[$program] = str_contains(WorkerFake::$env, 'no-such-binary') ? 0 : 1;
+            }
+
+            if ($args[0] === 'supervisorctl' && ($args[1] ?? '') === 'stop') {
+                unset(WorkerFake::$running[$program]);
+            }
+
+            return Process::result(exitCode: $args[0] === 'which' ? 0 : 0);
+        });
+
+        $this->actingAs($this->admin)
+            ->putJson(workerUrl('/'.$worker->id), workerPayload(['command' => 'no-such-binary --work']))
+            ->assertStatus(500);
+
+        expect($worker->fresh()->command)->toBe('php8.4 artisan queue:work --sleep=3 --tries=3')
+            ->and(WorkerFake::$running[$program] ?? 0)->toBe(1)
+            ->and(WorkerFake::$env)->not->toContain('no-such-binary');
     });
 });
 

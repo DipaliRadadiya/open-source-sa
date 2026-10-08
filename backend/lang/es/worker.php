@@ -38,6 +38,7 @@ return [
     'errors' => [
         'queue_conflict' => 'Esta aplicación ya tiene el otro tipo de worker de cola. Horizon supervisa sus propios workers, así que ejecutar ambos hace que cada trabajo se procese dos veces.',
         'extra_config_user' => 'Indique la cuenta en «Ejecutar como», no en la configuración adicional.',
+        'extra_config_environment' => 'El panel ya define el entorno de este proceso. Quite la línea environment= de la configuración adicional.',
         'user_not_allowed' => 'Los workers solo pueden ejecutarse con la cuenta del sitio (:user). Solo el administrador del panel puede elegir otra cuenta.',
         'directory_outside_home' => 'El directorio debe estar dentro de la carpeta personal del sitio (:home).',
         'log_outside_logs' => 'El archivo de registro debe estar en la carpeta de registros del sitio (:path).',

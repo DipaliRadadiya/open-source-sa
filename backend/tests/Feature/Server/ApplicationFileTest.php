@@ -859,6 +859,16 @@ describe('browsing', function () {
             ->and($response->json('files.2.type'))->toBe('symlink');
     });
 
+    it('gives a folder no size rather than its 4096-byte entry (APP-5)', function () {
+        fakeFileBrowserServer();
+
+        $response = $this->actingAs($this->admin)->getJson(filesUrl())->assertOk();
+
+        expect($response->json('files.0.size'))->toBeNull()
+            ->and($response->json('files.0.size_human'))->toBeNull()
+            ->and($response->json('files.1.size'))->toBeInt();
+    });
+
     it('lists dotfiles by default, as this screen always has', function () {
         // The browser has never filtered them: `find -mindepth 1` returns
         // everything one level deep. A new option must not change what an
@@ -1111,6 +1121,47 @@ describe('browsing', function () {
             ->assertOk();
 
         expect(FileBrowserFake::$fs['index.php']['content'])->toBe($content);
+    });
+
+    it('saves an empty file (OLD-25)', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/content'), ['path' => 'index.php', 'content' => ''])
+            ->assertOk();
+
+        expect(FileBrowserFake::$fs['index.php']['content'])->toBe('');
+    });
+
+    it('refuses to save over a change someone else made since it was opened (OLD-27)', function () {
+        fakeFileBrowserServer();
+
+        $version = $this->actingAs($this->admin)->getJson(filesUrl('/content?path=index.php'))
+            ->assertOk()->json('version');
+        expect($version)->toBeString()->toHaveLength(40);
+
+        // Someone else saves in between.
+        FileBrowserFake::$fs['index.php']['content'] = '<?php echo "theirs";';
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/content'), ['path' => 'index.php', 'content' => 'mine', 'version' => $version])
+            ->assertStatus(409)
+            ->assertJsonPath('reason', 'changed_on_disk');
+
+        expect(FileBrowserFake::$fs['index.php']['content'])->toBe('<?php echo "theirs";');
+    });
+
+    it('saves when the file is as it was opened, and hands back the new version', function () {
+        fakeFileBrowserServer();
+
+        $version = $this->actingAs($this->admin)->getJson(filesUrl('/content?path=index.php'))->json('version');
+
+        $saved = $this->actingAs($this->admin)
+            ->putJson(filesUrl('/content'), ['path' => 'index.php', 'content' => 'mine', 'version' => $version])
+            ->assertOk();
+
+        expect(FileBrowserFake::$fs['index.php']['content'])->toBe('mine')
+            ->and($saved->json('version'))->toBe(sha1('mine'));
     });
 
     it('refuses to edit a path that does not exist — this is edit, not create', function () {
@@ -1443,8 +1494,10 @@ describe('uploading', function () {
         $file = UploadedFile::fake()->createWithContent('thing.zip', 'x');
 
         $this->actingAs($this->admin)
-            ->post(filesUrl('/upload'), ['path' => 'no-such-dir/thing.zip', 'file' => $file])
-            ->assertNotFound();
+            ->post(filesUrl('/upload'), ['path' => 'no-such-dir/thing.zip', 'file' => $file], ['Accept' => 'application/json'])
+            ->assertUnprocessable()
+            ->assertJsonPath('reason', 'destination_missing')
+            ->assertJsonValidationErrors(['path' => __('errors/application.destination_missing', ['path' => '/no-such-dir'])]);
     });
 
     it('refuses to upload onto a file that is already there', function () {
@@ -1649,7 +1702,7 @@ describe('extracting', function () {
             ->assertStatus(422);
     });
 
-    it('404s when the target directory does not exist', function () {
+    it('names the target folder when it does not exist (FI-B)', function () {
         fakeFileBrowserServer();
         FileBrowserFake::$archives['wp-content/plugins/thing.zip'] = [
             ['type' => '-', 'size' => 4, 'name' => 'file.txt'],
@@ -1657,7 +1710,9 @@ describe('extracting', function () {
 
         $this->actingAs($this->admin)
             ->postJson(filesUrl('/extract'), extractPayload(target: 'no-such-dir'))
-            ->assertNotFound();
+            ->assertUnprocessable()
+            ->assertJsonPath('reason', 'destination_missing')
+            ->assertJsonValidationErrors(['target' => __('errors/application.destination_missing', ['path' => '/no-such-dir'])]);
     });
 
     it('rejects a target path that escapes the site root', function () {
@@ -1737,13 +1792,15 @@ describe('creating a directory', function () {
             ->and(ActivityLog::where('action', 'directory_created')->exists())->toBeTrue();
     });
 
-    it('is a no-op if the directory already exists', function () {
+    it('refuses a folder that already exists (FI-9)', function () {
         fakeFileBrowserServer();
         FileBrowserFake::$fs['wp-content/uploads'] = ['type' => 'd'];
 
         $this->actingAs($this->admin)
             ->postJson(filesUrl('/directories'), ['path' => 'wp-content/uploads'])
-            ->assertOk();
+            ->assertUnprocessable()
+            ->assertJsonPath('reason', 'path_exists')
+            ->assertJsonValidationErrors(['path']);
     });
 
     it('refuses when a file already sits at that path', function () {
@@ -1760,7 +1817,8 @@ describe('creating a directory', function () {
 
         $this->actingAs($this->admin)
             ->postJson(filesUrl('/directories'), ['path' => 'no-such-dir/uploads'])
-            ->assertNotFound();
+            ->assertUnprocessable()
+            ->assertJsonPath('reason', 'destination_missing');
     });
 
     it('refuses a viewer who cannot manage', function () {
@@ -1839,6 +1897,37 @@ describe('copying', function () {
         FileBrowserFake::reset();
         FileBrowserFake::$fs['old.txt'] = ['type' => 'f', 'content' => 'hello'];
         FileBrowserFake::$fs['wp-content'] = ['type' => 'd'];
+    });
+
+    it('names the folder that does not exist, not the file (FI-B)', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/copy'), ['path' => 'old.txt', 'target' => 'missing/new.txt'])
+            ->assertUnprocessable()
+            ->assertJsonPath('reason', 'destination_missing')
+            ->assertJsonValidationErrors(['target' => __('errors/application.destination_missing', ['path' => '/missing'])]);
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/copy'), ['paths' => ['old.txt'], 'target_directory' => 'missing'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['target_directory']);
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/rename'), ['path' => 'old.txt', 'target' => 'missing/new.txt'])
+            ->assertUnprocessable()
+            ->assertJsonPath('reason', 'destination_missing');
+    });
+
+    it('marks an occupied target with the field and a reason', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$fs['taken.txt'] = ['type' => 'f', 'content' => 'x'];
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/copy'), ['path' => 'old.txt', 'target' => 'taken.txt'])
+            ->assertUnprocessable()
+            ->assertJsonPath('reason', 'path_exists')
+            ->assertJsonValidationErrors(['target']);
     });
 
     it('copies a file as the site\'s own user, keeping the original', function () {
@@ -2089,12 +2178,16 @@ describe('restoring a backup', function () {
 
         $this->actingAs($this->admin)
             ->postJson(filesUrl('/content/restore'), ['path' => 'index.php', 'backup' => 'index.php.bak-20260805-090000'])
-            ->assertOk();
+            ->assertOk()
+            ->assertJsonPath('content', "v1\n")
+            ->assertJsonPath('version', sha1("v1\n"));
 
         // The fake's `cat` normalises output to end with one newline, same
         // as everywhere else this file asserts on read-then-write content.
         expect(FileBrowserFake::$fs['index.php']['content'])->toBe("v1\n")
             ->and(ActivityLog::where('action', 'file_restored')->exists())->toBeTrue();
+
+        // APP-5: the restored content comes back, so the editor need not ask.
 
         // Restoring is itself a write, so it backs up what "v2" was before
         // being replaced — restoring the wrong one is itself undoable. The new
@@ -2173,13 +2266,34 @@ describe('setting permissions on one file', function () {
         expect(FileBrowserFake::$fs['wp-content']['mode'])->toBe('755');
     });
 
-    it('refuses a mode with a fourth digit', function () {
+    it('refuses a setuid mode', function () {
         fakeFileBrowserServer();
 
         $this->actingAs($this->admin)
             ->putJson(filesUrl('/permissions'), ['path' => 'index.php', 'mode' => '4755'])
             ->assertStatus(422)
             ->assertJsonValidationErrors('mode');
+    });
+
+    it('accepts sticky and setgid modes on a folder (OLD-26)', function (string $mode) {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/permissions'), ['path' => 'wp-content', 'mode' => $mode])
+            ->assertOk();
+
+        expect(FileBrowserFake::$fs['wp-content']['mode'])->toBe($mode);
+    })->with(['1777', '2775', '0755']);
+
+    it('refuses setgid on a file', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/permissions'), ['path' => 'index.php', 'mode' => '2755'])
+            ->assertUnprocessable()
+            ->assertJsonPath('reason', 'setgid_file');
+
+        expect(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_contains($c, 'chmod 2755')))->toBeFalse();
     });
 
     it('refuses a mode with an out-of-range digit', function () {

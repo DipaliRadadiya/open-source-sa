@@ -148,4 +148,9 @@ return [
 
     // A git site whose account was disconnected: no credential, no URL.
     'git_account_missing' => 'Dieses Git-Konto ist nicht mehr verbunden, daher gibt es nichts zum Bereitstellen. Verbinden Sie es auf der Seite „Bereitstellung“ erneut und stellen Sie dann erneut bereit.',
+    'destination_missing' => 'Der Ordner :path existiert nicht. Legen Sie ihn zuerst an oder wählen Sie einen anderen Ordner.',
+    'destination_not_directory' => ':path ist eine Datei, kein Ordner. Wählen Sie einen Zielordner.',
+    'chmod_mode_invalid' => 'Verwenden Sie drei Ziffern wie 755 oder vier mit einer führenden 1 (Sticky) oder 2 (Setgid) wie 1777 oder 2775. Setuid-Modi sind nicht erlaubt.',
+    'chmod_setgid_file' => 'Setgid (eine führende 2 oder 3) kann nur für einen Ordner gesetzt werden.',
+    'file_changed_on_disk' => 'Jemand anderes hat diese Datei geändert, nachdem Sie sie geöffnet haben. Laden Sie sie neu, um die Änderungen zu sehen, und nehmen Sie Ihre Änderung erneut vor.',
 ];

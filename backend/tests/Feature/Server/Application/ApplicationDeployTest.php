@@ -477,6 +477,27 @@ describe('the post-deploy health check', function () {
 
         expect($app->fresh()->steps)->toContain('verify');
     });
+
+    it('counts any answer below 500 as a working site', function (string $code) {
+        // FS-C42: an API with no route at `/` answers 404 and could never
+        // deploy, because only a 2xx counted.
+        fakeGitWarmingUp(failFirst: 0, then: $code);
+        $app = gitApp();
+
+        runDeploy($app);
+
+        expect($app->fresh()->failed_step)->toBeNull()
+            ->and($app->fresh()->status->value)->toBe('active');
+    })->with(['404', '401', '302', '200']);
+
+    it('still fails a deploy whose site answers 500', function () {
+        fakeGitWarmingUp(failFirst: 0, then: '500');
+        $app = gitApp();
+
+        runDeploy($app);
+
+        expect($app->fresh()->failed_step)->toBe('verify');
+    });
 });
 
 it('gives the checked-out branch an upstream so a bare git pull works', function () {

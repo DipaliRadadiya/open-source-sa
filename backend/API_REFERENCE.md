@@ -1880,6 +1880,28 @@ A backup whose locked key (see PUT above) differs from the current file's is a `
 
 Every operation runs as the site's own Linux user (not root). All paths are relative to the site's root.
 
+**Refusals you can act on carry a field and a reason** (updated 2026-10-08, APP-3/4/6). They are shaped like a validation error, plus a `reason` code, so the screen can put the message under the right field:
+
+```json
+{"message": "The folder /missing does not exist. Create it first, or choose another folder.",
+ "reason": "destination_missing",
+ "errors": {"target": ["The folder /missing does not exist. Create it first, or choose another folder."]}}
+```
+
+| `reason` | Status | When |
+|---|---|---|
+| `destination_missing` | 422 | The folder something is going into does not exist (copy, move, extract, upload, new folder). Before 2026-10-08 this was a `404` "item could not be found" (FI-B). |
+| `destination_not_directory` | 422 | That "folder" is a file. |
+| `path_exists` | 422 | Something is already at the target (also creating a folder that exists — this was a silent `200` until 2026-10-08, FI-9). |
+| `not_archive` | 422 | Extract: the file is not `.zip`/`.tar.gz`/`.tgz`. Compress: the target's name does not end in one. |
+| `too_large` | 422 | Too large to open in the editor (download it instead). |
+| `not_text` | 422 | Not a text file. |
+| `not_image` / `svg_not_previewable` | 422 | Preview: not an image, or an SVG (never shown, it can carry code). |
+| `setgid_file` | 422 | A setgid mode (leading `2`/`3`) on a file. |
+| `changed_on_disk` | **409** | Save: the file changed since it was opened (see `version`). |
+
+A **missing source** (the file being copied/moved is gone) is still `404`.
+
 ### POST `/applications/{application}/fix-permissions`
 **Permission:** `app_file` (manage) | **Throttle:** 5/min
 
@@ -1901,7 +1923,7 @@ Browse a directory.
 **Response `200`:**
 ```json
 {"path": "wp-content/plugins", "files": [
-  {"name": "seo-pack", "type": "dir", "size": 4096, "size_human": "4 KB",
+  {"name": "seo-pack", "type": "dir", "size": null, "size_human": null,
    "modified_at": "27-07-2026 10:00:00", "modified_at_human": "2 weeks ago",
    "mode": "drwxr-xr-x", "owner": "siteowner", "group": "siteowner",
    "link_target": null, "link_broken": null},
@@ -1917,6 +1939,8 @@ Browse a directory.
 ```
 
 `type` is `file`, `dir` or `symlink` — note `dir`, not `directory`.
+
+A **folder's `size` is `null`** (since 2026-10-08, APP-5): what the server reports there is the folder entry's own block, 4096 bytes whatever it holds. Use `GET …/files/sizes` for real folder sizes.
 
 `mode` is the **octal** permission bits as a string (`"644"`, `"755"`) — the same three digits `PUT …/files/permissions` takes (corrected 2026-09-29: this said an `ls -l` string, which the API has not returned). `owner` and `group` are separate fields.
 
@@ -1992,10 +2016,12 @@ Read a file.
 
 **Response `200`:**
 ```json
-{"path": "wp-config.php", "content": "<?php\ndefine('DB_NAME', 'shop');\n…", "size": 4096, "backups": [{"name": "wp-config.php.bak-20260728-141530", "created_at": "28-07-2026 14:15:30"}]}
+{"path": "wp-config.php", "content": "<?php\ndefine('DB_NAME', 'shop');\n…", "size": 4096, "version": "3f786850e387550fdab836ed7e6dc881de23001b", "backups": [{"name": "wp-config.php.bak-20260728-141530", "created_at": "28-07-2026 14:15:30"}]}
 ```
 
-Binary files return `422`.
+Binary files return `422` (`reason: not_text`); files over the editor limit `422` (`reason: too_large`).
+
+`version` (added 2026-10-08, OLD-27) is a hash of the content. Send it back on save.
 
 ---
 
@@ -2004,9 +2030,12 @@ Binary files return `422`.
 
 Edit an **existing** file (`404` if there is none — create files with `POST …/files/upload`). The previous version is kept as an automatic backup first.
 
-**Request:** `{"path": "wp-config.php", "content": "<?php\n…"}`
+**Request:** `{"path": "wp-config.php", "content": "<?php\n…", "version": "3f78…"}`
 
-**Response `200`:** `{"saved": true}`
+- `content` may be **empty** (`""`) to empty the file (refused until 2026-10-08, OLD-25).
+- `version` is optional: the `version` from `GET …/files/content`. When it is sent and the file has changed since (someone else saved), the save is refused with **`409`**, `reason: changed_on_disk`, and nothing is written. Reload and edit again.
+
+**Response `200`:** `{"saved": true, "version": "…"}` — the new version, for the next save.
 
 ---
 
@@ -2017,7 +2046,7 @@ Restore a file from an automatic backup.
 
 **Request:** `{"path": "wp-config.php", "backup": "wp-config.php.bak-20260728-141530"}` — `backup` is a `name` from the `backups` list, verbatim. The current content is backed up before restoring, so a restore is itself undoable.
 
-**Response `200`:** `{"restored": true}`
+**Response `200`:** `{"restored": true, "content": "…", "version": "…"}` — what the file now holds (added 2026-10-08, APP-5), so the editor can show it without asking again.
 
 ---
 
@@ -2143,7 +2172,7 @@ Extract a **`.zip`, `.tar.gz` or `.tgz`** archive already in the site. Guarded
 against zip bombs: refused above 250 MB uncompressed or 10,000 entries, and
 any entry that is a symlink or escapes the destination.
 
-**Request:** `{"path": "plugin.zip", "target": "wp-content/plugins"}` — `target` must already exist.
+**Request:** `{"path": "plugin.zip", "target": "wp-content/plugins"}` — `target` must already exist (`422`, `reason: destination_missing`, otherwise).
 
 **Response `202`:** `{"job": {"id": 5, "operation": "extract", "target": "wp-content/plugins", "status": "queued", …}}` — runs in the background; follow it on `GET …/files/archive-jobs` (`status`: `queued` → `running` → `completed` / `failed`, with `message` and `reference` on failure). Corrected 2026-09-29: this said `200 {"extracted": true}`.
 
@@ -2152,7 +2181,7 @@ any entry that is a symlink or escapes the destination.
 ### POST `/applications/{application}/files/directories`
 **Permission:** `app_file` (manage) | **Throttle:** 20/min
 
-Create one directory. The parent must already exist.
+Create one directory. The parent must already exist (`422`, `reason: destination_missing`). A folder that already exists is `422`, `reason: path_exists`.
 
 **Request:** `{"path": "wp-content/uploads/2026"}`
 
@@ -2181,8 +2210,9 @@ The two are not the same operation:
  "failed": [{"path": "cache/gone.txt", "reason": "not_found"}]}
 ```
 
-`reason` is `not_found`, `exists` (something is already at the destination) or
-`failed`. A batch can partly succeed — show the failures rather than treating
+`reason` is `not_found`, `exists` (something is already at the destination),
+`setgid_file` (permissions only) or `failed`. A `target_directory` that does not
+exist refuses the whole request (`422`, `reason: destination_missing`). A batch can partly succeed — show the failures rather than treating
 the call as failed.
 
 **Limits:** at most **250** paths per request (`422` above that — an argument
@@ -2247,8 +2277,10 @@ spread across the tree. Disable the button when a selection spans folders.
 ### PUT `/applications/{application}/files/permissions`
 **Permission:** `app_file` (manage) | **Throttle:** 20/min
 
-Change the mode. **Exactly three octal digits** — `644`, not `0644`. A fourth
-digit (setuid/setgid/sticky) is refused with `422`.
+Change the mode. **Three octal digits** (`644`), or **four with a leading `0`,
+`1` (sticky) or `2`/`3` (setgid)** — `1777`, `2775` (since 2026-10-08, OLD-26).
+Setuid (`4`–`7`) is refused with `422`; setgid is accepted on folders only
+(`422` `reason: setgid_file` on a file, a `setgid_file` failure in a bulk call).
 
 **Single:** `{"path": "wp-config.php", "mode": "644"}`
 **Bulk:** `{"paths": ["cache/a.txt", "cache/b.txt"], "mode": "600"}`
@@ -3222,6 +3254,7 @@ Backup settings for one application.
   "file_excludes": ["storage/framework/cache", "node_modules"],
   "database_excludes": ["sessions", "cache"],
   "last_run_at": "28-07-2026 02:00:00", "last_run_at_human": "3 days ago",
+  "last_backup_at": "28-07-2026 02:03:41", "last_backup_at_human": "3 days ago",
   "next_run_at": "29-07-2026 02:00:00", "next_run_at_human": "in 20 hours",
   "timezone": "UTC",
   "is_due": false,
@@ -3229,6 +3262,8 @@ Backup settings for one application.
   "updated_at": "28-07-2026 02:00:05"
 }}
 ```
+
+**Show `last_backup_at` as "Last backup"** (added 2026-10-08, BK-A): when the newest verified backup that still exists finished, `null` once every backup is deleted. `last_run_at` is when the scheduler last ran the target; it stays after the backups are deleted, because the schedule needs it.
 
 There is no `schedule` or `retention` field — they are **`frequency`** and **`retention_count`**. There is no nested `storage_destination` object either: only `storage_destination_id` plus a flat `storage_destination_name` (and that name is present only when the endpoint loads the relation — it does here and on save).
 

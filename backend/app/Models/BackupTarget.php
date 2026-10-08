@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\BackupStatus;
 use App\Enums\BackupType;
 use Cron\CronExpression;
 use DateTimeInterface;
@@ -9,6 +10,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * What to back up for one application, where to, how often, and how many to
@@ -96,6 +98,22 @@ class BackupTarget extends Model
     public function backups(): HasMany
     {
         return $this->hasMany(Backup::class);
+    }
+
+    /**
+     * The newest good backup that still exists — what "last backup" means to
+     * a user (BK-A).
+     *
+     * Not `last_run_at`: that is when the scheduler last ran this target, and
+     * it has to survive deleting the backups, or `isDue()` would read null as
+     * "never ran" and take a new one on the next tick.
+     */
+    public function latestKeptBackup(): HasOne
+    {
+        return $this->hasOne(Backup::class)->ofMany(
+            ['id' => 'max'],
+            fn ($query) => $query->where('status', BackupStatus::Verified),
+        );
     }
 
     /**

@@ -2,6 +2,9 @@
 
 use App\Models\DatabaseConnection;
 use App\Models\User;
+use App\Services\Server\Databases\Installers\MariaDbInstaller;
+use App\Services\Server\Databases\Installers\MySqlInstaller;
+use App\Services\Server\Databases\Installers\PostgresInstaller;
 use App\Services\Server\Databases\MongoEngine;
 use App\Services\Server\Databases\SqlEngine;
 use App\Services\Server\ServerOps;
@@ -91,3 +94,19 @@ it('does not run mongosh, and so log a refused sudo, where MongoDB is not instal
         ->and(collect($runs)->contains(fn (array $c) => in_array('--nodb', $c, true)))->toBeFalse()
         ->and(dashboardErrors())->toBe([]);
 });
+
+// FS-C34: "is MySQL/MariaDB/PostgreSQL installed?" answered no logged an error
+// every time — 605 lines in one day on a test server.
+it('does not put "is this engine installed?" answered no on the dashboard', function (string $installer) {
+    Process::fake(fn () => Process::result(
+        errorOutput: "dpkg-query: no packages found matching mysql-server\n",
+        exitCode: 1,
+    ));
+
+    expect(app($installer)->installed())->toBeFalse()
+        ->and(dashboardErrors())->toBe([]);
+})->with([
+    'mysql' => MySqlInstaller::class,
+    'mariadb' => MariaDbInstaller::class,
+    'postgresql' => PostgresInstaller::class,
+]);

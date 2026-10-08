@@ -2,6 +2,7 @@
 
 use App\Enums\FileArchiveStatus;
 use App\Exceptions\Server\Application\FileOperationException;
+use App\Exceptions\Server\Application\FileRefusedException;
 use App\Jobs\RunFileArchive;
 use App\Models\Application;
 use App\Models\FileArchiveJob;
@@ -17,7 +18,6 @@ use Illuminate\Process\Exceptions\ProcessTimedOutException;
 use Illuminate\Process\ProcessResult;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 
 uses(RefreshDatabase::class);
 
@@ -222,7 +222,7 @@ it('refuses an invalid target before any job exists', function () {
     $seen = [];
 
     expect(fn () => archiveBrowser(archiveOps($seen))->compress(archiveApplication(), 'wp-content', 'out.txt'))
-        ->toThrow(HttpException::class);
+        ->toThrow(FileRefusedException::class);
 
     expect(FileArchiveJob::count())->toBe(0);
     Queue::assertNothingPushed();
@@ -238,7 +238,7 @@ it('refuses to overwrite an archive that already exists, before queueing', funct
     ]);
 
     expect(fn () => archiveBrowser($ops)->compress(archiveApplication(), 'wp-content', 'out.tar.gz'))
-        ->toThrow(HttpException::class);
+        ->toThrow(FileRefusedException::class);
 
     expect(FileArchiveJob::count())->toBe(0);
 });

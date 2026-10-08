@@ -38,6 +38,7 @@ return [
     'errors' => [
         'queue_conflict' => 'Cette application a déjà l\'autre type de worker de file. Horizon supervise ses propres workers : exécuter les deux fait traiter chaque tâche deux fois.',
         'extra_config_user' => 'Définissez le compte dans « Exécuter en tant que », pas dans la configuration supplémentaire.',
+        'extra_config_environment' => 'Le panneau définit déjà l\'environnement de ce processus. Supprimez la ligne environment= de la configuration supplémentaire.',
         'user_not_allowed' => 'Les workers ne peuvent s\'exécuter qu\'avec le compte du site (:user). Seul l\'administrateur du panneau peut choisir un autre compte.',
         'directory_outside_home' => 'Le répertoire doit se trouver dans le dossier personnel du site (:home).',
         'log_outside_logs' => 'Le fichier journal doit se trouver dans le dossier des journaux du site (:path).',

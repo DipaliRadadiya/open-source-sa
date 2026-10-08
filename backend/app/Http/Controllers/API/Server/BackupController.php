@@ -152,7 +152,7 @@ class BackupController extends Controller
         $filter = (array) $request->validated('filter', []);
 
         $applications = Application::query()
-            ->with(['backupTarget.storageDestination', 'latestBackup'])
+            ->with(['backupTarget.storageDestination', 'backupTarget.latestKeptBackup', 'latestBackup'])
             // The filter this screen exists for: which sites are unprotected.
             // array_key_exists rather than `??`, so `filter[protected]=0` is
             // read as a request for the unprotected ones and not as absent.

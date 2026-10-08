@@ -39,6 +39,11 @@ class BackupTargetResource extends JsonResource
             'database_excludes' => $this->database_excludes ?? [],
             'last_run_at' => $this->last_run_at?->format('d-m-Y H:i:s'),
             'last_run_at_human' => $this->last_run_at?->diffForHumans(),
+            // The newest good backup still kept, null once every one is
+            // deleted (BK-A). `last_run_at` above is the scheduler's own
+            // record and deliberately outlives the backups.
+            'last_backup_at' => $this->latestKeptBackup?->finished_at?->format('d-m-Y H:i:s'),
+            'last_backup_at_human' => $this->latestKeptBackup?->finished_at?->diffForHumans(),
             // Computed, never a cron string: the schedule is one constant in
             // the model and stays there. Null when the target is manual or
             // disabled — there is no next run to promise.

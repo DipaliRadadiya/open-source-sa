@@ -25,4 +25,5 @@ return [
     'phpmyadmin_sso_unavailable' => 'phpMyAdminサイトでサインインリンクを準備できませんでした。',
     'remote_host_invalid' => '203.0.113.5 や 203.0.113.0/24 のような IPv4 アドレスまたは範囲を入力してください。',
     'remote_host_not_remote' => 'そのアドレスはリモートではありません。このサーバーには「ローカル」、すべてのアドレスには「どこからでも」を使ってください。',
+    'engine_unreachable' => ':engine が応答しないため、このデータベースを読み取れません。サービス画面で :engine を起動してから、もう一度お試しください。',
 ];

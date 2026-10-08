@@ -87,6 +87,8 @@ class PostgresInstaller implements EngineInstaller
         $status = trim($this->serverOps->run(
             ['dpkg-query', '-W', '-f=${Status}', $this->serverPackage()],
             $this->context('detect'),
+            // Exit 1: not installed — an answer, not a failure (FS-C34).
+            expectedExitCodes: [1],
         )->output());
 
         return str_contains($status, 'install ok installed');

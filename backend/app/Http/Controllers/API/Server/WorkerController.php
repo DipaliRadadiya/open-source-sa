@@ -209,9 +209,36 @@ class WorkerController extends Controller
     ): JsonResponse {
         $this->assertBelongsTo($worker, $application);
 
+        $before = $worker->only(array_keys($request->validated()));
+
         $worker->update($request->validated());
 
-        $supervisor->apply($worker->load('application.systemUser'));
+        // W-edit: a change that will not start used to leave the worker
+        // removed from supervisord (apply() cleans up a program that died)
+        // with the bad command saved — the panel showed a worker that no
+        // longer existed. Put the row back and bring the old program up
+        // again; the error still reaches the user unchanged.
+        try {
+            $supervisor->apply($worker->load('application.systemUser'));
+        } catch (Throwable $e) {
+            $worker->forceFill($before)->save();
+
+            if (! ($e instanceof ServerOperationException && $e->denied)) {
+                try {
+                    $supervisor->apply($worker->refresh()->load('application.systemUser'));
+                } catch (Throwable $restoreException) {
+                    Log::warning('restoring a worker after a failed edit also failed', [
+                        'feature' => 'application',
+                        'op' => 'worker_update_restore',
+                        'worker' => $worker->id,
+                        'application' => $application->id,
+                        'exception' => $restoreException::class,
+                    ]);
+                }
+            }
+
+            throw $e;
+        }
 
         $activity->log('application.worker_updated', $application, [
             'name' => $application->name,

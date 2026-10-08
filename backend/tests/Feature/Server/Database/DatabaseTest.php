@@ -685,6 +685,26 @@ it('lists tables in a database with rows and size', function () {
         ->assertJsonPath('tables.0.size_bytes', 8192);
 });
 
+it('says the engine is not answering rather than listing no tables (FS-C12)', function () {
+    $db = Database::create(['name' => 'shop', 'engine' => 'mysql']);
+    Process::fake(fn () => Process::result(errorOutput: "ERROR 2002 (HY000): Can't connect to local server\n", exitCode: 1));
+
+    test()->withHeaders(dbAuth())->getJson("/api/databases/{$db->id}/tables")
+        ->assertStatus(503)
+        ->assertJsonPath('reason', 'engine_unreachable');
+});
+
+it('still lists no tables for an empty database on a running engine', function () {
+    $db = Database::create(['name' => 'empty', 'engine' => 'mysql']);
+    Process::fake(fn ($process) => str_contains((string) $process->input, 'SELECT table_name')
+        ? Process::result(output: '')
+        : Process::result(output: "8.0.36\n"));
+
+    test()->withHeaders(dbAuth())->getJson("/api/databases/{$db->id}/tables")
+        ->assertOk()
+        ->assertJsonPath('tables', []);
+});
+
 it('no longer offers to optimize or repair', function () {
     // Removed 2026-09-08 rather than hidden, so the endpoints have to be gone
     // and not merely unlinked from the interface. `REPAIR TABLE` on InnoDB is

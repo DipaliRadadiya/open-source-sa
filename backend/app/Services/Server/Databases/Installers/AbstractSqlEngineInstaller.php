@@ -82,6 +82,10 @@ abstract class AbstractSqlEngineInstaller implements EngineInstaller
         $status = trim($this->serverOps->run(
             ['dpkg-query', '-W', '-f=${Status}', $this->packages()[0]],
             ['feature' => 'database', 'engine' => $this->engine(), 'op' => 'detect'],
+            // Exit 1: not installed — an answer, not a failure (FS-C34; the
+            // same as MongoDB's bug #48). Logged as an error it filled the
+            // Error Log with hundreds of lines a day.
+            expectedExitCodes: [1],
         )->output());
 
         return str_contains($status, 'install ok installed');

@@ -149,4 +149,9 @@ return [
 
     // A git site whose account was disconnected: no credential, no URL.
     'git_account_missing' => 'This git account is no longer connected, so there is nothing to deploy from. Reconnect it on the Deployment screen, then deploy again.',
+    'destination_missing' => 'The folder :path does not exist. Create it first, or choose another folder.',
+    'destination_not_directory' => ':path is a file, not a folder. Choose a folder to put this in.',
+    'chmod_mode_invalid' => 'Use three digits, such as 755, or four with a leading 1 (sticky) or 2 (setgid), such as 1777 or 2775. Setuid modes are not allowed.',
+    'chmod_setgid_file' => 'Setgid (a leading 2 or 3) can only be set on a folder.',
+    'file_changed_on_disk' => 'Someone else changed this file after you opened it. Reload it to see their changes, then make your edit again.',
 ];

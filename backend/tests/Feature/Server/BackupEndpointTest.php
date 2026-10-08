@@ -1091,3 +1091,35 @@ it('tells the form which family each backup type belongs to', function () {
         // Labels are translated, not raw keys — a missing string shows as the key.
         ->and($types['volumes_config']['label'])->not->toContain('backup.type');
 });
+
+describe('the last backup', function () {
+    // BK-A: "Last backup" showed `last_run_at`, which kept a time after every
+    // backup was deleted. `last_run_at` has to stay (the schedule reads it);
+    // `last_backup_at` follows the backups that still exist.
+    it('names the newest good backup still kept, and clears once none is', function () {
+        $good = seedBackupWithDestination('Offsite');
+        $good->update(['finished_at' => Carbon::parse('2026-10-01 02:03:41')]);
+        $good->target->update(['last_run_at' => Carbon::parse('2026-10-02 02:00:00')]);
+        Backup::create([
+            'backup_target_id' => $good->backup_target_id,
+            'application_id' => $this->application->id,
+            'type' => 'full',
+            'status' => BackupStatus::Failed->value,
+            'finished_at' => Carbon::parse('2026-10-02 02:01:00'),
+        ]);
+
+        $url = "/api/applications/{$this->application->id}/backup-target";
+
+        $this->withHeaders(backupHeaders())->getJson($url)
+            ->assertJsonPath('backup_target.last_backup_at', '01-10-2026 02:03:41');
+        $this->withHeaders(backupHeaders())->getJson('/api/backup-targets')
+            ->assertJsonPath('backup_targets.0.backup_target.last_backup_at', '01-10-2026 02:03:41');
+
+        $good->delete();
+
+        $this->withHeaders(backupHeaders())->getJson($url)
+            ->assertJsonPath('backup_target.last_backup_at', null)
+            ->assertJsonPath('backup_target.last_backup_at_human', null)
+            ->assertJsonPath('backup_target.last_run_at', '02-10-2026 02:00:00');
+    });
+});

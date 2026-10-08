@@ -148,4 +148,9 @@ return [
 
     // A git site whose account was disconnected: no credential, no URL.
     'git_account_missing' => 'この Git アカウントは接続されていないため、デプロイ元がありません。デプロイ画面で再接続してから、もう一度デプロイしてください。',
+    'destination_missing' => 'フォルダー :path は存在しません。先に作成するか、別のフォルダーを選んでください。',
+    'destination_not_directory' => ':path はフォルダーではなくファイルです。移動先のフォルダーを選んでください。',
+    'chmod_mode_invalid' => '755 のような3桁、または 1777 や 2775 のように先頭が 1（スティッキー）か 2（setgid）の4桁で指定してください。setuid は使用できません。',
+    'chmod_setgid_file' => 'setgid（先頭が 2 または 3）はフォルダーにのみ設定できます。',
+    'file_changed_on_disk' => 'このファイルは、開いた後に別のユーザーが変更しました。再読み込みして変更内容を確認してから、もう一度編集してください。',
 ];

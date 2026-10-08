@@ -149,4 +149,9 @@ return [
 
     // A git site whose account was disconnected: no credential, no URL.
     'git_account_missing' => 'Esta conta git não está mais conectada, então não há de onde implantar. Reconecte-a na tela de Implantação e implante novamente.',
+    'destination_missing' => 'A pasta :path não existe. Crie-a primeiro ou escolha outra pasta.',
+    'destination_not_directory' => ':path é um ficheiro, não uma pasta. Escolha uma pasta de destino.',
+    'chmod_mode_invalid' => 'Use três dígitos, como 755, ou quatro com um 1 (sticky) ou 2 (setgid) à frente, como 1777 ou 2775. Modos setuid não são permitidos.',
+    'chmod_setgid_file' => 'Setgid (um 2 ou 3 à frente) só pode ser aplicado a uma pasta.',
+    'file_changed_on_disk' => 'Outra pessoa alterou este ficheiro depois de o abrir. Recarregue-o para ver as alterações e volte a fazer a sua edição.',
 ];

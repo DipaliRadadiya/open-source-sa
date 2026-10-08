@@ -145,6 +145,13 @@ class SaveWorkerRequest extends FormRequest
             $validator->errors()->add('extra_config', __('worker.errors.extra_config_user'));
         }
 
+        // W12: the panel writes its own `environment=` line (PATH),
+        // and supervisord refuses a program with two — the worker never
+        // starts again. Not even for the admin, for the same reason.
+        if (preg_match('/^\s*environment\s*=/mi', $extra) === 1) {
+            $validator->errors()->add('extra_config', __('worker.errors.extra_config_environment'));
+        }
+
         if ($this->user()?->is_admin) {
             return;
         }

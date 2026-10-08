@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\Server;
 
 use App\Enums\FileArchiveStatus;
+use App\Exceptions\Server\Application\FileRefusedException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\BrowseFilesRequest;
 use App\Http\Requests\Server\Application\ChmodFileRequest;
@@ -106,13 +107,14 @@ class ApplicationFileController extends Controller
         $file = $files->read($application, $request->targetPath());
 
         if ($file['binary']) {
-            abort(422, __('errors/application.file_not_text'));
+            throw FileRefusedException::because('path', 'not_text', 'errors/application.file_not_text');
         }
 
         return response()->json([
             'path' => $request->targetPath(),
             'content' => $file['content'],
             'size' => $file['size'],
+            'version' => $file['version'],
             'backups' => $file['backups'],
         ]);
     }
@@ -123,14 +125,14 @@ class ApplicationFileController extends Controller
         FileBrowser $files,
         ActivityLogger $activity,
     ): JsonResponse {
-        $files->write($application, $request->targetPath(), (string) $request->validated('content'));
+        $version = $files->write($application, $request->targetPath(), (string) $request->validated('content'), $request->expectedVersion());
 
         $activity->log('application.file_edited', $application, [
             'name' => $application->name,
             'path' => $request->targetPath(),
         ]);
 
-        return response()->json(['saved' => true]);
+        return response()->json(['saved' => true, 'version' => $version]);
     }
 
     public function restoreBackup(
@@ -139,14 +141,16 @@ class ApplicationFileController extends Controller
         FileBrowser $files,
         ActivityLogger $activity,
     ): JsonResponse {
-        $files->restoreBackup($application, $request->targetPath(), $request->backupName());
+        $restored = $files->restoreBackup($application, $request->targetPath(), $request->backupName());
 
         $activity->log('application.file_restored', $application, [
             'name' => $application->name,
             'path' => $request->targetPath(),
         ]);
 
-        return response()->json(['restored' => true]);
+        // The content too (APP-5), so the editor shows what is now on disk
+        // without a second request.
+        return response()->json(['restored' => true, ...$restored]);
     }
 
     public function upload(

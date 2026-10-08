@@ -317,8 +317,24 @@ class DatabaseController extends Controller
      */
     public function tables(Database $database, DatabaseManager $manager): JsonResponse
     {
+        $engine = $manager->engine($database->engine);
+        $tables = $engine->tables($database->name);
+
+        // FS-C12: a stopped engine answered `[]`, which the screen showed as
+        // "0 tables, 0 bytes" — an empty database, not an unreachable one.
+        // Asked only when the list came back empty, so a working engine pays
+        // nothing extra.
+        if ($tables === [] && ! $engine->available()) {
+            return response()->json([
+                'message' => __('errors/database.engine_unreachable', [
+                    'engine' => (string) config("server.databases.engines.{$database->engine}.label", $database->engine),
+                ]),
+                'reason' => 'engine_unreachable',
+            ], 503);
+        }
+
         return response()->json([
-            'tables' => $manager->engine($database->engine)->tables($database->name),
+            'tables' => $tables,
         ]);
     }
 

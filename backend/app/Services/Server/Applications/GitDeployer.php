@@ -230,7 +230,7 @@ class GitDeployer
             }
 
             // The script and all restarts succeeded — but the site itself might still
-            // be broken. Curl the deployed URL and treat a non-2xx as a failed deploy,
+            // be broken. Curl the deployed URL and treat a 5xx as a failed deploy,
             // because to the user "deployed" and "working" are the same thing.
             // Skip for types that have no reachable URL yet.
             if ($application->domain !== null) {
@@ -269,9 +269,9 @@ class GitDeployer
     }
 
     /**
-     * Curl the deployed site to confirm it responds with a 2xx.
+     * Curl the deployed site to confirm it responds below 500.
      *
-     * A non-2xx means the deploy — however clean its script exit code — left the
+     * A 5xx means the deploy — however clean its script exit code — left the
      * site broken. The user sees "deployed" and "broken" as the same event, so
      * the panel should too.
      *
@@ -310,7 +310,11 @@ class GitDeployer
             $result = $this->probe($url, $application);
             $code = (int) trim($result->output());
 
-            if ($code >= 200 && $code < 300) {
+            // Any answer below 500 is a working site (FS-C42): an API with no
+            // route at `/` answers 404, an app behind a login 302 or 401.
+            // Only a 5xx says the deploy left it broken — the same rule
+            // HttpReadinessCheck applies to installs.
+            if ($code >= 100 && $code < 500) {
                 $this->recorder->step('verify', $result);
                 $this->progress->record('verify');
 

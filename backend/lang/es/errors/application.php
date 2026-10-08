@@ -149,4 +149,9 @@ return [
 
     // A git site whose account was disconnected: no credential, no URL.
     'git_account_missing' => 'Esta cuenta de git ya no está conectada, así que no hay desde dónde desplegar. Vuelve a conectarla en la pantalla de Despliegue y despliega de nuevo.',
+    'destination_missing' => 'La carpeta :path no existe. Créela primero o elija otra carpeta.',
+    'destination_not_directory' => ':path es un archivo, no una carpeta. Elija una carpeta de destino.',
+    'chmod_mode_invalid' => 'Use tres dígitos, como 755, o cuatro con un 1 (sticky) o un 2 (setgid) delante, como 1777 o 2775. No se permiten modos setuid.',
+    'chmod_setgid_file' => 'Setgid (un 2 o 3 delante) solo se puede aplicar a una carpeta.',
+    'file_changed_on_disk' => 'Otra persona cambió este archivo después de que usted lo abriera. Vuelva a cargarlo para ver sus cambios y repita su edición.',
 ];

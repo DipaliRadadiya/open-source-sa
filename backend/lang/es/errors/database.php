@@ -25,4 +25,5 @@ return [
     'phpmyadmin_sso_unavailable' => 'No se pudo preparar el enlace de inicio de sesión en el sitio phpMyAdmin.',
     'remote_host_invalid' => 'Introduzca una dirección o un rango IPv4, por ejemplo 203.0.113.5 o 203.0.113.0/24.',
     'remote_host_not_remote' => 'Esa dirección no es remota. Use «Local» para este servidor o «Cualquiera» para todas las direcciones.',
+    'engine_unreachable' => ':engine no responde, así que el panel no puede leer esta base de datos. Inicie :engine en la página Servicios y vuelva a intentarlo.',
 ];

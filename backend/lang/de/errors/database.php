@@ -25,4 +25,5 @@ return [
     'phpmyadmin_sso_unavailable' => 'Der Anmeldelink konnte auf der phpMyAdmin-Site nicht vorbereitet werden.',
     'remote_host_invalid' => 'Geben Sie eine IPv4-Adresse oder einen Bereich ein, z. B. 203.0.113.5 oder 203.0.113.0/24.',
     'remote_host_not_remote' => 'Diese Adresse ist keine entfernte. Verwenden Sie „Lokal“ für diesen Server oder „Überall“ für alle Adressen.',
+    'engine_unreachable' => ':engine antwortet nicht, daher kann das Panel diese Datenbank nicht lesen. Starten Sie :engine auf der Seite „Dienste“ und versuchen Sie es erneut.',
 ];
