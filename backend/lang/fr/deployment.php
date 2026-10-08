@@ -19,6 +19,6 @@ return [
         'initial' => 'Premier déploiement',
     ],
 
-    'script_php_missing' => 'Votre script de déploiement utilise :variables, mais PHP :versions n’est pas installé sur ce serveur. Installez-le depuis l’écran PHP, ou utilisez {php} pour la version propre au site.',
+    'script_php_missing' => 'Votre script de déploiement utilise :variables, mais PHP :versions n’est pas installé sur ce serveur. Installez-le depuis l’écran PHP, ou utilisez {php} pour la version propre à l’application.',
 
 ];

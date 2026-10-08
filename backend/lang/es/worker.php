@@ -42,9 +42,9 @@ return [
         'did_not_start' => 'El proceso no siguió en ejecución, así que no se añadió. Revise el comando. Referencia: :reference',
         'did_not_start_said' => 'El proceso no siguió en ejecución, así que no se añadió. Mostró: «:output» (referencia :reference)',
         'did_not_start_field' => 'Este comando termina enseguida en lugar de seguir ejecutándose.',
-        'user_not_allowed' => 'Los workers solo pueden ejecutarse con la cuenta del sitio (:user). Solo el administrador del panel puede elegir otra cuenta.',
-        'directory_outside_home' => 'El directorio debe estar dentro de la carpeta personal del sitio (:home).',
-        'log_outside_logs' => 'El archivo de registro debe estar en la carpeta de registros del sitio (:path).',
+        'user_not_allowed' => 'Los workers solo pueden ejecutarse con la cuenta de la aplicación (:user). Solo el administrador del panel puede elegir otra cuenta.',
+        'directory_outside_home' => 'El directorio debe estar dentro de la carpeta personal de la aplicación (:home).',
+        'log_outside_logs' => 'El archivo de registro debe estar en la carpeta de registros de la aplicación (:path).',
         'extra_config_key' => 'La configuración adicional no puede definir «:key». Solo el administrador del panel puede cambiarlo.',
     ],
 ];

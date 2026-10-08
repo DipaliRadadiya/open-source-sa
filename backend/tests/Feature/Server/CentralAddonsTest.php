@@ -291,7 +291,7 @@ it('asks for registration before any report', function () {
         ->getJson("/api/central/addons/applications/{$this->site->id}/log-monitoring/bandwidth/summary")
         ->assertStatus(409)
         ->assertJsonPath('code', 'addon_site_not_registered')
-        ->assertJsonPath('message', 'This site is not registered with Log Monitoring Suite yet.');
+        ->assertJsonPath('message', 'This application is not registered with Log Monitoring Suite yet.');
 });
 
 it('registers a site under the panel key, from its own working directory', function () {

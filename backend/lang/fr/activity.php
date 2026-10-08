@@ -211,7 +211,7 @@ return [
     'application.php_settings_updated' => 'A mis à jour les réglages PHP de :name',
     'application.basic_auth_enabled' => 'A activé la protection par mot de passe de :name',
     'application.basic_auth_disabled' => 'A désactivé la protection par mot de passe de :name',
-    'application.root_locked' => 'A verrouillé le dossier du site de :name',
+    'application.root_locked' => 'A verrouillé le dossier de l’application de :name',
     'application.ai_bot_policy_updated' => 'A défini la politique du bloqueur de robots IA de :name sur :policy',
     'application.bot_rules_updated' => 'A mis à jour les règles de robots personnalisées de :name (:blocked bloqués, :allowed autorisés)',
     'application.web_root_changed' => 'A changé la racine web de :name en :web_root',
@@ -242,7 +242,7 @@ return [
 
     'registry.created' => 'Identifiants de registre :name ajoutés pour :registry',
     'registry.updated' => 'Identifiants de registre :name mis à jour pour :registry',
-    'registry.deleted' => 'Identifiants de registre :name supprimés pour :registry (:applications_detached sites détachés)',
+    'registry.deleted' => 'Identifiants de registre :name supprimés pour :registry (:applications_detached applications détachées)',
     'registry.tested' => 'Identifiants de registre :name testés pour :registry',
     'application.container_pulled' => ':image récupérée de nouveau et conteneur de :name recréé',
     'application.compose_updated' => 'Fichier compose de :name mis à jour',

@@ -11,18 +11,18 @@ return [
     // before the install rather than discovered two minutes into apt.
     'engine_os_unsupported' => ':engine ne publie pas encore de paquets pour :os, le panneau ne peut donc pas l\'installer ici. Ce serveur n\'a aucun problème : le panneau prend en charge :os, mais :engine n\'a pas encore publié de version pour ce système. Utilisez un autre moteur de base de données, ou réessayez lorsqu\'elle sera disponible.',
     'phpmyadmin_engine_not_supported' => 'phpMyAdmin ne prend pas en charge les bases de données :engine.',
-    'phpmyadmin_not_deployed' => 'Aucun site phpMyAdmin n\'est installé sur ce serveur.',
+    'phpmyadmin_not_deployed' => 'Aucune application phpMyAdmin n\'est installée sur ce serveur.',
     'phpmyadmin_no_users' => 'Créez un utilisateur de base de données avant d\'accéder à phpMyAdmin.',
     'remote_users_unsupported' => 'L\'accès distant n\'est pas disponible pour :engine — ses comptes ne sont pas liés à un hôte. Utilisez localhost.',
     // 409, not 422: the request is fine, the cluster is not ready. The
     // client re-sends with restart_cluster as explicit consent.
     'remote_access_restart_required' => 'Autoriser les connexions distantes nécessite de redémarrer :engine, car l’adresse d’écoute ne peut être changée qu’au démarrage. Les applications qui utilisent cette base de données perdent leur connexion un instant. Confirmez pour le redémarrer et continuer.',
-    'phpmyadmin_not_selectable' => 'Le site sélectionné n\'est pas une installation phpMyAdmin active.',
+    'phpmyadmin_not_selectable' => 'L’application sélectionnée n\'est pas une installation phpMyAdmin active.',
     'phpmyadmin_user_not_found' => 'L\'utilisateur de base de données spécifié n\'appartient pas à cette base de données.',
-    'phpmyadmin_not_isolated' => 'Ce site phpMyAdmin partage le pool PHP de tout le serveur : un lien de connexion serait donc lisible par tous les autres sites. Attribuez-lui son propre pool PHP, ou ouvrez phpMyAdmin et connectez-vous avec les identifiants de la base de données.',
-    'phpmyadmin_requires_https' => 'Ce site phpMyAdmin n’a pas de HTTPS : le lien de connexion et la session de base de données circuleraient sans chiffrement. Émettez d’abord un certificat SSL pour ce site.',
+    'phpmyadmin_not_isolated' => 'Cette application phpMyAdmin partage le pool PHP de tout le serveur : un lien de connexion serait donc lisible par toutes les autres applications. Attribuez-lui son propre pool PHP, ou ouvrez phpMyAdmin et connectez-vous avec les identifiants de la base de données.',
+    'phpmyadmin_requires_https' => 'Cette application phpMyAdmin n’a pas de HTTPS : le lien de connexion et la session de base de données circuleraient sans chiffrement. Émettez d’abord un certificat SSL pour cette application.',
     'user_exists' => 'Un utilisateur de base de données nommé « :username » existe déjà. Choisissez un autre nom.',
-    'phpmyadmin_sso_unavailable' => 'Le lien de connexion n\'a pas pu être préparé sur le site phpMyAdmin.',
+    'phpmyadmin_sso_unavailable' => 'Le lien de connexion n\'a pas pu être préparé sur l’application phpMyAdmin.',
     'remote_host_invalid' => 'Saisissez une adresse ou une plage IPv4, par exemple 203.0.113.5 ou 203.0.113.0/24.',
     'remote_host_not_remote' => 'Cette adresse n\'est pas distante. Utilisez « Local » pour ce serveur ou « Partout » pour toutes les adresses.',
     'engine_unreachable' => ':engine ne répond pas, le panneau ne peut donc pas lire cette base de données. Démarrez :engine depuis la page Services, puis réessayez.',

@@ -22,7 +22,7 @@ return [
     ],
     'nologin' => [
         'title' => 'Pas de connexion',
-        'description' => 'L\'utilisateur possède ses fichiers et fait tourner le site, mais ne peut pas se connecter. Recommandé pour les sites sans besoin d\'accès shell.',
+        'description' => 'L\'utilisateur possède ses fichiers et fait tourner l’application, mais ne peut pas se connecter. Recommandé pour les applications sans besoin d\'accès shell.',
     ],
     'false' => [
         'title' => 'Pas de connexion (ancien)',

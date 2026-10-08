@@ -211,7 +211,7 @@ return [
     'application.php_settings_updated' => 'Actualizó la configuración de PHP de :name',
     'application.basic_auth_enabled' => 'Habilitó la protección con contraseña de :name',
     'application.basic_auth_disabled' => 'Deshabilitó la protección con contraseña de :name',
-    'application.root_locked' => 'Bloqueó la carpeta del sitio de :name',
+    'application.root_locked' => 'Bloqueó la carpeta de la aplicación de :name',
     'application.ai_bot_policy_updated' => 'Estableció la política del bloqueador de bots de IA de :name en :policy',
     'application.bot_rules_updated' => 'Actualizó las reglas de bots personalizadas de :name (:blocked bloqueados, :allowed permitidos)',
     'application.web_root_changed' => 'Cambió la raíz web de :name a :web_root',
@@ -242,7 +242,7 @@ return [
 
     'registry.created' => 'Añadió la credencial de registro :name para :registry',
     'registry.updated' => 'Actualizó la credencial de registro :name para :registry',
-    'registry.deleted' => 'Eliminó la credencial de registro :name para :registry (:applications_detached sitios desvinculados)',
+    'registry.deleted' => 'Eliminó la credencial de registro :name para :registry (:applications_detached aplicaciones desvinculadas)',
     'registry.tested' => 'Probó la credencial de registro :name para :registry',
     'application.container_pulled' => 'Descargó :image de nuevo y recreó el contenedor de :name',
     'application.compose_updated' => 'Actualizó el archivo compose de :name',

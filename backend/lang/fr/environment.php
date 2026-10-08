@@ -15,15 +15,15 @@ return [
     'checks' => [
         'file_exposed' => [
             'title' => 'Le fichier d’environnement est accessible depuis le web',
-            'detail' => 'Ce site sert le répertoire où se trouve son .env : le fichier est donc à une URL près, et Apache ne refuse pas les fichiers cachés par leur nom. Définissez une racine web (une app Laravel sert public/), ce qui place le répertoire servi sous le fichier.',
+            'detail' => 'Cette application sert le répertoire où se trouve son .env : le fichier est donc à une URL près, et Apache ne refuse pas les fichiers cachés par leur nom. Définissez une racine web (une app Laravel sert public/), ce qui place le répertoire servi sous le fichier.',
         ],
         'app_debug_on' => [
             'title' => 'Le mode débogage est activé',
-            'detail' => 'Quiconque déclenche une erreur voit la trace complète, y compris les identifiants de base de données. Mettez APP_DEBUG à false sur un site en production.',
+            'detail' => 'Quiconque déclenche une erreur voit la trace complète, y compris les identifiants de base de données. Mettez APP_DEBUG à false sur une application en production.',
         ],
         'app_env_local' => [
-            'title' => 'Le site tourne dans un environnement de développement',
-            'detail' => 'APP_ENV a une valeur de développement, ce qui change le comportement des erreurs, du cache et des e-mails. Mettez-le à production sur un site en ligne.',
+            'title' => 'L’application tourne dans un environnement de développement',
+            'detail' => 'APP_ENV a une valeur de développement, ce qui change le comportement des erreurs, du cache et des e-mails. Mettez-le à production sur une application en ligne.',
         ],
         'app_key_missing' => [
             'title' => 'APP_KEY est absente',

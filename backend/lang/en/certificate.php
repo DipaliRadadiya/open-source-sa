@@ -17,9 +17,9 @@ return [
         'rate_limited_failures' => 'Too many failed attempts for this domain in the last hour. Let\'s Encrypt allows five; wait an hour before trying again.',
         'unreachable' => 'The validation request never reached this server. Check that port 80 is open and that nothing else is answering on it.',
         'dns_not_pointing' => 'The domain does not resolve to this server. Point its DNS record here, wait for it to propagate, then try again.',
-        'challenge_not_served' => 'The validation file was not served correctly. The site may be redirecting or rewriting /.well-known — or a proxy such as Cloudflare is answering instead of this server.',
+        'challenge_not_served' => 'The validation file was not served correctly. The application may be redirecting or rewriting /.well-known — or a proxy such as Cloudflare is answering instead of this server.',
         'certbot_missing' => 'certbot is not installed on this server.',
-        'no_certifiable_domains' => 'None of this site\'s domains are ready for a certificate. Verify DNS first.',
+        'no_certifiable_domains' => 'None of this application\'s domains are ready for a certificate. Verify DNS first.',
         'self_sign_failed' => 'The self-signed certificate could not be generated.',
         'file_missing' => 'The certificate file is missing from this server. Reissue it.',
         'dry_run_skipped' => 'certbot decided the existing certificate did not need renewing, so nothing was validated. This run proved nothing — it is a bug, not a verdict on your domain.',
@@ -30,7 +30,7 @@ return [
     // thing the user would have to change, or says plainly that nothing can
     // be changed and points at the option that does work.
     'unavailable' => [
-        'dns_unverified' => 'None of this site\'s domains point at this server yet. Add a DNS A record for one, wait for it to propagate, then try again.',
+        'dns_unverified' => 'None of this application\'s domains point at this server yet. Add a DNS A record for one, wait for it to propagate, then try again.',
         'self_signed_warning' => 'Encrypts traffic immediately and works on any domain, including test and internal ones. Browsers will show a warning, because nothing outside this server vouches for it.',
     ],
 

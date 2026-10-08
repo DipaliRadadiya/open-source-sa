@@ -3,11 +3,11 @@
 return [
 
     'no_certifiable_domains' => 'このアプリケーションに証明書を発行できるドメインがありません。まず DNS を確認してください。',
-    'force_https_without_certificate' => '有効な証明書なしに HTTPS を強制することはできません。サイトが応答しなくなります。',
+    'force_https_without_certificate' => '有効な証明書なしに HTTPS を強制することはできません。アプリケーションが応答しなくなります。',
     'not_pem' => 'PEM ファイルではないようです。-----BEGIN で始まる必要があります。',
     'key_mismatch' => '秘密鍵が証明書と一致しません。',
     'not_certificate' => 'これは証明書ではありません。ここには証明書（-----BEGIN CERTIFICATE-----）を、秘密鍵は専用の欄に貼り付けてください。',
-    'domain_not_covered' => 'この証明書はこのサイトのどのドメインも対象にしていません（:domains）。',
+    'domain_not_covered' => 'この証明書はこのアプリケーションのどのドメインも対象にしていません（:domains）。',
     'expired' => 'この証明書はすでに期限切れです。',
     'not_yet_valid' => 'この証明書はまだ有効になっていません。',
     'invalid_chain' => 'チェーンには証明書（-----BEGIN CERTIFICATE----- ブロック）のみを含めてください。',
@@ -27,7 +27,7 @@ return [
         'blocked_ip' => ':domain は :ip を指しています。証明書を発行できる公開アドレスではありません。',
         'unreachable' => ':domain のポート 80 で応答がありませんでした。ファイアウォールがポート 80 を許可し、ウェブサーバーが稼働しているか確認してください。',
         'challenge_redirected' => ':domain は検証リクエストに応答せずリダイレクトしています。証明書が発行されるまで HTTP から HTTPS へのリダイレクトを無効にしてください。',
-        'challenge_not_served' => ':domain は応答しましたが、検証ファイルではありませんでした。サイトが /.well-known/ を書き換えている可能性が高いため、リライトルールを確認してください。',
+        'challenge_not_served' => ':domain は応答しましたが、検証ファイルではありませんでした。アプリケーションが /.well-known/ を書き換えている可能性が高いため、リライトルールを確認してください。',
         'precheck_failed' => 'このサーバーに検証ファイルを書き込めなかったため、:domain を確認できませんでした。',
     ],
 
@@ -35,6 +35,6 @@ return [
     // run never happened, and saying so plainly stops the user reading
     // a refusal as a DNS problem.
     'dry_run' => [
-        'issue_in_flight' => 'このサイトの証明書を現在発行中です。完了までお待ちください。certbot は一度に 1 つの処理しか実行できないため、今ドライランを開始しても競合が報告されるだけです。',
+        'issue_in_flight' => 'このアプリケーションの証明書を現在発行中です。完了までお待ちください。certbot は一度に 1 つの処理しか実行できないため、今ドライランを開始しても競合が報告されるだけです。',
     ],
 ];

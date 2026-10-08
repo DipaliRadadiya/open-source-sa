@@ -22,6 +22,6 @@ return [
     ],
 
     'robots_txt' => [
-        'note' => 'Google (Gemini) y Apple entrenan su IA con las páginas que obtienen sus rastreadores de búsqueda normales, así que ningún bloqueo de bots puede impedirlo sin sacarte también de los resultados de búsqueda. Para excluirte de su entrenamiento de IA, añade estas líneas al robots.txt de tu sitio:',
+        'note' => 'Google (Gemini) y Apple entrenan su IA con las páginas que obtienen sus rastreadores de búsqueda normales, así que ningún bloqueo de bots puede impedirlo sin sacarte también de los resultados de búsqueda. Para excluirte de su entrenamiento de IA, añade estas líneas al robots.txt de tu aplicación:',
     ],
 ];

@@ -15,11 +15,11 @@ return [
         ],
         'php' => [
             'title' => 'PHP',
-            'description' => 'サイトが必要とする場合は別のバージョンを追加できます。',
+            'description' => 'アプリケーションが必要とする場合は別のバージョンを追加できます。',
         ],
         'node' => [
             'title' => 'Node.js',
-            'description' => 'fnm で管理するため、サイトごとにバージョンを固定できます。',
+            'description' => 'fnm で管理するため、アプリケーションごとにバージョンを固定できます。',
         ],
         'redis' => [
             'title' => 'Redis',
@@ -27,7 +27,7 @@ return [
         ],
         'fail2ban' => [
             'title' => 'fail2ban',
-            'description' => 'SSH やサイトへの繰り返しのログイン失敗をブロックします。',
+            'description' => 'SSH やアプリケーションへの繰り返しのログイン失敗をブロックします。',
         ],
         'build_tools' => [
             'title' => 'ビルドツール',
@@ -35,7 +35,7 @@ return [
         ],
         'wp_cli' => [
             'title' => 'WP-CLI',
-            'description' => 'WordPress のコマンドラインツールです。パネルはすべての WordPress 操作に使用し、ない場合は最初の WordPress サイト作成時に取得します。',
+            'description' => 'WordPress のコマンドラインツールです。パネルはすべての WordPress 操作に使用し、ない場合は最初の WordPress アプリケーション作成時に取得します。',
         ],
     ],
 

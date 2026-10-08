@@ -324,6 +324,42 @@ describe('removing the system user with the application (OLD-20)', function () {
             ->and(Application::find($site->id))->toBeNull();
     });
 
+    it('ends the deleted site\'s own PHP workers, and only those', function (string $ps, bool $killed, string $outcome) {
+        Sleep::fake();
+        $deleted = false;
+        Process::fake(function ($p) use (&$deleted, $ps) {
+            $command = implode(' ', (array) $p->command);
+
+            if (str_contains($command, 'userdel')) {
+                return $deleted ? Process::result() : Process::result(exitCode: 8);
+            }
+
+            if (str_contains($command, 'pid=,comm=')) {
+                return Process::result(output: $ps);
+            }
+
+            if (str_contains($command, 'kill -KILL')) {
+                $deleted = true;
+            }
+
+            return Process::result();
+        });
+        $site = siteForDeletion();
+
+        $this->withHeaders(siteDeleteHeaders())
+            ->deleteJson("/api/applications/{$site->id}?remove_system_user=1")
+            ->assertOk()
+            ->assertJsonPath('system_user.outcome', $outcome);
+
+        $killed
+            ? Process::assertRan(fn ($p) => str_contains(implode(' ', (array) $p->command), 'kill -KILL 4242'))
+            : Process::assertNotRan(fn ($p) => str_contains(implode(' ', (array) $p->command), 'kill'));
+    })->with([
+        'OpenLiteSpeed lsphp' => ["  4242 lsphp\n", true, 'removed'],
+        'a PHP-FPM worker' => ["  4242 php-fpm8.4\n", true, 'removed'],
+        'a person signed in' => ["  4242 lsphp\n  4243 bash\n", false, 'has_processes'],
+    ]);
+
     it('keeps an account that owns other applications', function () {
         Process::fake();
         $site = siteForDeletion();

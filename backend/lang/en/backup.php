@@ -55,11 +55,11 @@ return [
         'restore_confirm' => 'Type the application domain exactly to confirm the restore.',
         'restore_already_running' => 'A restore for this application is already running.',
         'restore_no_database' => 'This backup does not contain a database.',
-        'target_no_database' => 'This site has no database to back up. Choose :files instead.',
+        'target_no_database' => 'This application has no database to back up. Choose :files instead.',
 
         'target_type_needs_container' => 'This server runs containers, so a backup here captures volumes and configuration. Choose one of those instead.',
 
-        'target_type_needs_hosted' => 'This site is served from a folder, so there are no volumes to back up. Choose files or database instead.',
+        'target_type_needs_hosted' => 'This application is served from a folder, so there are no volumes to back up. Choose files or database instead.',
         'restore_no_files' => 'This backup does not contain any files.',
         'download_no_artifact' => 'This backup never finished uploading, so there is no archive to download.',
         'download_no_destination' => 'The storage destination this backup was uploaded to no longer exists.',
@@ -80,7 +80,7 @@ return [
         'unknown' => 'The backup failed for an unknown reason.',
         'crashed' => 'The backup stopped unexpectedly — the process was killed before it could finish. Usually the server ran out of memory, or the worker was restarted mid-backup.',
         'abandoned' => 'This backup never reported back and has been closed out. Its worker is gone, so nothing was uploaded.',
-        'restore_in_progress' => 'Not taken: a restore of this site started before this backup could run. Start it again once the restore has finished.',
+        'restore_in_progress' => 'Not taken: a restore of this application started before this backup could run. Start it again once the restore has finished.',
         'clear_not_running' => 'This backup is not in progress, so there is nothing to clear.',
         'clear_too_soon' => 'This backup may still be running. It clears itself :minutes minutes after it started if the worker never reports back.',
         'prune_old_backups' => 'Old backups could not be removed. The new backup is safe; storage may just be holding more copies than the retention setting.',
@@ -107,7 +107,7 @@ return [
     ],
 
     'cloning' => [
-        'provisioning' => 'Creating the site',
+        'provisioning' => 'Creating the application',
         'copying_files' => 'Copying files',
         'cloning_database' => 'Cloning the database',
         'starting_process' => 'Starting the application',
@@ -125,8 +125,8 @@ return [
         'safety_backup' => 'A backup of the current state could not be taken, so the restore was stopped. Nothing was overwritten.',
         'extract_archive' => 'The backup could not be unpacked. Nothing on the server was changed.',
         'restore_database' => 'The database could not be restored. The safety backup taken beforehand holds the previous state.',
-        'restore_volumes' => 'The volumes could not be restored. The containers were stopped and the site has not been started again; nothing was written to a volume another site is using.',
-        'swap_files' => 'The files could not be put in place. The previous site directory was restored.',
+        'restore_volumes' => 'The volumes could not be restored. The containers were stopped and the application has not been started again; nothing was written to a volume another application is using.',
+        'swap_files' => 'The files could not be put in place. The previous application directory was restored.',
         'restart_process' => 'The files and database were restored but the application would not start. Check its logs.',
         'missing_backup' => 'The backup was removed before the restore could start.',
         'crashed' => 'The restore stopped unexpectedly. Check the safety backup before trying again.',

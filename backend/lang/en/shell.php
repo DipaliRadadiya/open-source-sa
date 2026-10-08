@@ -22,7 +22,7 @@ return [
     ],
     'nologin' => [
         'title' => 'No login',
-        'description' => 'The user owns its files and runs the site, but cannot log in. Recommended for sites that nobody needs shell access to.',
+        'description' => 'The user owns its files and runs the application, but cannot log in. Recommended for applications that nobody needs shell access to.',
     ],
     'false' => [
         'title' => 'No login (legacy)',

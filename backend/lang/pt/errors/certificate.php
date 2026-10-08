@@ -3,11 +3,11 @@
 return [
 
     'no_certifiable_domains' => 'Nenhum domínio desta aplicação está pronto para um certificado. Verifique primeiro o DNS.',
-    'force_https_without_certificate' => 'Não é possível forçar HTTPS sem um certificado ativo — o site deixaria de responder.',
+    'force_https_without_certificate' => 'Não é possível forçar HTTPS sem um certificado ativo — a aplicação deixaria de responder.',
     'not_pem' => 'Isto não parece um ficheiro PEM. Deve começar por -----BEGIN.',
     'key_mismatch' => 'A chave privada não corresponde ao certificado.',
     'not_certificate' => 'Isto não é um certificado. Cole aqui o certificado (-----BEGIN CERTIFICATE-----) e a chave privada no campo próprio.',
-    'domain_not_covered' => 'Este certificado não cobre nenhum domínio deste site (:domains).',
+    'domain_not_covered' => 'Este certificado não cobre nenhum domínio desta aplicação (:domains).',
     'expired' => 'Este certificado já expirou.',
     'not_yet_valid' => 'Este certificado ainda não é válido.',
     'invalid_chain' => 'A cadeia deve conter apenas certificados (blocos -----BEGIN CERTIFICATE-----).',
@@ -27,7 +27,7 @@ return [
         'blocked_ip' => ':domain aponta para :ip, que não é um endereço público para o qual se possa emitir um certificado.',
         'unreachable' => 'Nada respondeu na porta 80 para :domain. Verifique se a firewall permite a porta 80 e se o servidor web está a correr.',
         'challenge_redirected' => ':domain redireciona o pedido de validação em vez de o responder. Desative o redirecionamento de HTTP para HTTPS até o certificado ser emitido.',
-        'challenge_not_served' => ':domain respondeu, mas não com o ficheiro de validação. O site está provavelmente a reescrever /.well-known/ — verifique as regras de reescrita.',
+        'challenge_not_served' => ':domain respondeu, mas não com o ficheiro de validação. A aplicação está provavelmente a reescrever /.well-known/ — verifique as regras de reescrita.',
         'precheck_failed' => 'Não foi possível escrever o ficheiro de validação neste servidor, por isso :domain não pôde ser verificado.',
     ],
 
@@ -35,6 +35,6 @@ return [
     // run never happened, and saying so plainly stops the user reading
     // a refusal as a DNS problem.
     'dry_run' => [
-        'issue_in_flight' => 'Está a ser emitido um certificado para este site neste momento. Aguarde que termine: o certbot executa uma tarefa de cada vez, pelo que uma simulação iniciada agora só comunicaria o conflito.',
+        'issue_in_flight' => 'Está a ser emitido um certificado para esta aplicação neste momento. Aguarde que termine: o certbot executa uma tarefa de cada vez, pelo que uma simulação iniciada agora só comunicaria o conflito.',
     ],
 ];

@@ -24,9 +24,9 @@ return [
         'filter_content_required' => 'La configuración del filtro es obligatoria.',
         'filter_content_string' => 'La configuración del filtro debe ser texto.',
         'filter_content_max' => 'La configuración del filtro es demasiado grande (máx. 65535 caracteres).',
-        'foreign_jail' => 'Este jail solo puede configurar el jail propio de este sitio. Sustituya [:section] por [{name}] (se convierte en :name).',
-        'foreign_filter' => 'Este jail solo puede usar el filtro propio de este sitio. Sustituya filter = :filter por filter = {filter} (se convierte en :name).',
-        'disallowed_setting' => 'El ajuste ":setting" no está permitido en la jaula de un sitio. Permitidos: :allowed.',
+        'foreign_jail' => 'Este jail solo puede configurar el jail propio de esta aplicación. Sustituya [:section] por [{name}] (se convierte en :name).',
+        'foreign_filter' => 'Este jail solo puede usar el filtro propio de esta aplicación. Sustituya filter = :filter por filter = {filter} (se convierte en :name).',
+        'disallowed_setting' => 'El ajuste ":setting" no está permitido en la jaula de una aplicación. Permitidos: :allowed.',
     ],
     // FB-wp: the default filter is WordPress's.
     'app_default_filter_wordpress_only' => 'Las reglas predeterminadas solo detectan inicios de sesión fallidos de WordPress. :type aún no tiene reglas así, por lo que esta jaula no bloquea a nadie hasta que añada una regla para la página de inicio de sesión de esta aplicación.',

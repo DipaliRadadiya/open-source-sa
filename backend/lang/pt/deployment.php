@@ -19,6 +19,6 @@ return [
         'initial' => 'Primeira implementação',
     ],
 
-    'script_php_missing' => 'O seu script de deploy usa :variables, mas o PHP :versions não está instalado neste servidor. Instale-o na tela de PHP ou use {php} para a versão do próprio site.',
+    'script_php_missing' => 'O seu script de deploy usa :variables, mas o PHP :versions não está instalado neste servidor. Instale-o na tela de PHP ou use {php} para a versão da própria aplicação.',
 
 ];

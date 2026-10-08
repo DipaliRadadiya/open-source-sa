@@ -11,18 +11,18 @@ return [
     // before the install rather than discovered two minutes into apt.
     'engine_os_unsupported' => ':engine ने अभी :os के लिए पैकेज प्रकाशित नहीं किए हैं, इसलिए पैनल इसे यहाँ इंस्टॉल नहीं कर सकता। इस सर्वर में कोई गड़बड़ी नहीं है — पैनल :os को सपोर्ट करता है, पर :engine ने इसके लिए बिल्ड जारी नहीं किया है। कोई दूसरा डेटाबेस इंजन चुनें, या बाद में दोबारा कोशिश करें।',
     'phpmyadmin_engine_not_supported' => 'phpMyAdmin :engine डेटाबेस का समर्थन नहीं करता।',
-    'phpmyadmin_not_deployed' => 'इस सर्वर पर कोई phpMyAdmin साइट इंस्टॉल नहीं है।',
+    'phpmyadmin_not_deployed' => 'इस सर्वर पर कोई phpMyAdmin एप्लिकेशन इंस्टॉल नहीं है।',
     'phpmyadmin_no_users' => 'phpMyAdmin एक्सेस करने से पहले एक डेटाबेस उपयोगकर्ता बनाएं।',
     'remote_users_unsupported' => ':engine के लिए रिमोट एक्सेस उपलब्ध नहीं है — इसके खाते किसी होस्ट से बंधे नहीं होते। localhost का उपयोग करें।',
     // 409, not 422: the request is fine, the cluster is not ready. The
     // client re-sends with restart_cluster as explicit consent.
     'remote_access_restart_required' => 'रिमोट कनेक्शन चालू करने के लिए :engine को रीस्टार्ट करना होगा, क्योंकि जिस पते पर यह सुनता है वह केवल शुरू होते समय बदला जा सकता है। इस डेटाबेस का उपयोग करने वाले एप्लिकेशन कुछ पल के लिए कनेक्शन खो देंगे। रीस्टार्ट करके आगे बढ़ने के लिए पुष्टि करें।',
-    'phpmyadmin_not_selectable' => 'चयनित साइट एक सक्रिय phpMyAdmin इंस्टॉलेशन नहीं है।',
+    'phpmyadmin_not_selectable' => 'चयनित एप्लिकेशन एक सक्रिय phpMyAdmin इंस्टॉलेशन नहीं है।',
     'phpmyadmin_user_not_found' => 'निर्दिष्ट डेटाबेस उपयोगकर्ता इस डेटाबेस से संबंधित नहीं है।',
-    'phpmyadmin_not_isolated' => 'यह phpMyAdmin साइट सर्वर-व्यापी PHP पूल साझा करती है, इसलिए साइन-इन लिंक हर दूसरी साइट पढ़ सकेगी। इसे अपना PHP पूल दें, या phpMyAdmin खोलकर डेटाबेस क्रेडेंशियल से साइन इन करें।',
-    'phpmyadmin_requires_https' => 'इस phpMyAdmin साइट पर HTTPS नहीं है, इसलिए साइन-इन लिंक और डेटाबेस सत्र बिना एन्क्रिप्शन के भेजे जाएँगे। पहले इसके लिए SSL प्रमाणपत्र जारी करें।',
+    'phpmyadmin_not_isolated' => 'यह phpMyAdmin एप्लिकेशन सर्वर-व्यापी PHP पूल साझा करती है, इसलिए साइन-इन लिंक हर दूसरी एप्लिकेशन पढ़ सकेगी। इसे अपना PHP पूल दें, या phpMyAdmin खोलकर डेटाबेस क्रेडेंशियल से साइन इन करें।',
+    'phpmyadmin_requires_https' => 'इस phpMyAdmin एप्लिकेशन पर HTTPS नहीं है, इसलिए साइन-इन लिंक और डेटाबेस सत्र बिना एन्क्रिप्शन के भेजे जाएँगे। पहले इसके लिए SSL प्रमाणपत्र जारी करें।',
     'user_exists' => '":username" नाम का डेटाबेस उपयोगकर्ता पहले से मौजूद है। कोई दूसरा नाम चुनें।',
-    'phpmyadmin_sso_unavailable' => 'phpMyAdmin साइट पर साइन-इन लिंक तैयार नहीं किया जा सका।',
+    'phpmyadmin_sso_unavailable' => 'phpMyAdmin एप्लिकेशन पर साइन-इन लिंक तैयार नहीं किया जा सका।',
     'remote_host_invalid' => 'IPv4 पता या रेंज दर्ज करें, जैसे 203.0.113.5 या 203.0.113.0/24।',
     'remote_host_not_remote' => 'यह पता दूरस्थ नहीं है। इस सर्वर के लिए “लोकल” या सभी पतों के लिए “कहीं से भी” चुनें।',
     'engine_unreachable' => ':engine जवाब नहीं दे रहा है, इसलिए पैनल यह डेटाबेस नहीं पढ़ सकता। सेवाएँ पेज पर :engine शुरू करें और फिर से कोशिश करें।',

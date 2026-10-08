@@ -13,7 +13,7 @@ return [
     'presets' => [
         'low' => [
             'title' => 'Low traffic',
-            'description' => 'A couple of workers. Right for most small sites, and the kindest to a small server.',
+            'description' => 'A couple of workers. Right for most small applications, and the kindest to a small server.',
         ],
         'balanced' => [
             'title' => 'Balanced',
@@ -21,45 +21,45 @@ return [
         ],
         'high' => [
             'title' => 'High traffic',
-            'description' => 'Keeps workers warm. Use when the site is genuinely busy — it reserves memory whether it is used or not.',
+            'description' => 'Keeps workers warm. Use when the application is genuinely busy — it reserves memory whether it is used or not.',
         ],
     ],
 
     'disable_functions_presets' => [
         'safe' => [
             'title' => 'Recommended',
-            'description' => 'Blocks every way to run a program from inside PHP — what a web shell needs, and what a normal site almost never does.',
+            'description' => 'Blocks every way to run a program from inside PHP — what a web shell needs, and what a normal application almost never does.',
         ],
         'strict' => [
             'title' => 'Strict',
-            'description' => 'Adds process, user and socket inspection on top of the recommended list. Matches typical shared-hosting hardening, and may break a site that uses the sockets extension.',
+            'description' => 'Adds process, user and socket inspection on top of the recommended list. Matches typical shared-hosting hardening, and may break an application that uses the sockets extension.',
         ],
     ],
 
     'errors' => [
-        'missing_account' => 'The Linux account this site runs as does not exist on the server, so no PHP pool was written. PHP-FPM refuses to start at all with a pool it cannot resolve a user for.',
+        'missing_account' => 'The Linux account this application runs as does not exist on the server, so no PHP pool was written. PHP-FPM refuses to start at all with a pool it cannot resolve a user for.',
         'version_not_installed' => 'PHP :version is not installed on this server. Install it first, then select it here.',
         'version_busy' => 'PHP :version is still being installed or removed. Wait for that to finish, then change the version.',
         'directive_invalid' => '":line" is not a PHP setting. Use one setting per line, like display_errors = Off.',
         'directive_managed' => '":line" sets :name, which the panel manages, so it cannot be set here. If this screen has a field for it, use that.',
         'directive_extension' => '":line" loads a PHP extension. Use the PHP Extensions screen instead.',
         'unsupported_stack' => 'This server runs OpenLiteSpeed, which does not use PHP-FPM pools.',
-        'not_php_site' => 'This site does not serve PHP, so there is no pool to give it. Change how it is served first.',
-        'already_isolated' => 'This site already has its own PHP pool.',
-        'not_isolated' => 'This site is not isolated.',
-        'needs_isolation' => 'This site does not have its own PHP pool yet, so these limits could not be enforced. Give it one first, then save.',
+        'not_php_site' => 'This application does not serve PHP, so there is no pool to give it. Change how it is served first.',
+        'already_isolated' => 'This application already has its own PHP pool.',
+        'not_isolated' => 'This application is not isolated.',
+        'needs_isolation' => 'This application does not have its own PHP pool yet, so these limits could not be enforced. Give it one first, then save.',
         'basedir_absolute' => 'Every path must be absolute, starting with /. “:path” is not.',
         'basedir_root' => '“/” allows the whole filesystem, which would leave open_basedir switched on but enforcing nothing. Turn the setting off instead.',
         'basedir_traversal' => '“:path” is not allowed — paths cannot contain “..”.',
         'write_failed' => 'The pool configuration could not be written. Nothing was changed.',
-        'config_test_failed' => 'PHP-FPM rejected the configuration, so it was not applied and nothing was reloaded. The site is still being served exactly as before.',
+        'config_test_failed' => 'PHP-FPM rejected the configuration, so it was not applied and nothing was reloaded. The application is still being served exactly as before.',
         'reload_failed' => 'PHP-FPM would not reload, so the previous configuration was restored.',
         'no_sections' => 'Section headers are not allowed here — they would start a second pool inside this one.',
         'function_list' => 'This must be a comma-separated list of function names.',
-        'memory_unlimited' => 'Unlimited memory (-1) is not allowed: one site could use all of the server\'s memory and take every other site down with it. Enter a limit, like 512M.',
+        'memory_unlimited' => 'Unlimited memory (-1) is not allowed: one application could use all of the server\'s memory and take every other application down with it. Enter a limit, like 512M.',
         'memory_over_ram' => 'This is more memory than the server has (:ram). Enter a smaller limit.',
-        'memory_too_low' => 'That is too little memory: PHP reads a number without a unit as bytes, so the site could not start. Enter at least 32M — for example :suggestion.',
+        'memory_too_low' => 'That is too little memory: PHP reads a number without a unit as bytes, so the application could not start. Enter at least 32M — for example :suggestion.',
         'post_below_upload' => 'The maximum POST size (:post) must be at least the maximum upload size (:upload). An upload is sent inside the request, so otherwise larger uploads fail with no error.',
-        'prepend_outside_site' => 'The file must be inside this site\'s folder (:root/…).',
+        'prepend_outside_site' => 'The file must be inside this application\'s folder (:root/…).',
     ],
 ];

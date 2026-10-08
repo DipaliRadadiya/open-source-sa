@@ -42,9 +42,9 @@ return [
         'did_not_start' => 'Le processus ne s’est pas maintenu, il n’a donc pas été ajouté. Vérifiez la commande. Référence : :reference',
         'did_not_start_said' => 'Le processus ne s’est pas maintenu, il n’a donc pas été ajouté. Il a affiché : « :output » (référence :reference)',
         'did_not_start_field' => 'Cette commande se termine tout de suite au lieu de continuer à tourner.',
-        'user_not_allowed' => 'Les workers ne peuvent s\'exécuter qu\'avec le compte du site (:user). Seul l\'administrateur du panneau peut choisir un autre compte.',
-        'directory_outside_home' => 'Le répertoire doit se trouver dans le dossier personnel du site (:home).',
-        'log_outside_logs' => 'Le fichier journal doit se trouver dans le dossier des journaux du site (:path).',
+        'user_not_allowed' => 'Les workers ne peuvent s\'exécuter qu\'avec le compte de l’application (:user). Seul l\'administrateur du panneau peut choisir un autre compte.',
+        'directory_outside_home' => 'Le répertoire doit se trouver dans le dossier personnel de l’application (:home).',
+        'log_outside_logs' => 'Le fichier journal doit se trouver dans le dossier des journaux de l’application (:path).',
         'extra_config_key' => 'La configuration supplémentaire ne peut pas définir « :key ». Seul l\'administrateur du panneau peut le modifier.',
     ],
 ];

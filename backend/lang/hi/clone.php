@@ -9,7 +9,7 @@ return [
     ],
 
     'current_step' => [
-        'provisioning' => 'साइट बनाई जा रही है',
+        'provisioning' => 'एप्लिकेशन बनाई जा रही है',
         'copying_files' => 'फ़ाइलें कॉपी की जा रही हैं',
         'cloning_database' => 'डेटाबेस क्लोन किया जा रहा है',
         'starting_process' => 'एप्लिकेशन शुरू किया जा रहा है',

@@ -50,9 +50,9 @@ return [
         'did_not_start' => 'The worker did not stay running, so it was not added. Check the command. Reference: :reference',
         'did_not_start_said' => 'The worker did not stay running, so it was not added. It printed: “:output” (reference :reference)',
         'did_not_start_field' => 'This command exits straight away instead of running.',
-        'user_not_allowed' => 'Workers can only run as the site\'s own account (:user). Only the panel administrator can choose another account.',
-        'directory_outside_home' => 'The directory must be inside the site\'s home folder (:home).',
-        'log_outside_logs' => 'The log file must be in the site\'s logs folder (:path).',
+        'user_not_allowed' => 'Workers can only run as the application\'s own account (:user). Only the panel administrator can choose another account.',
+        'directory_outside_home' => 'The directory must be inside the application\'s home folder (:home).',
+        'log_outside_logs' => 'The log file must be in the application\'s logs folder (:path).',
         'extra_config_key' => 'Extra config cannot set “:key”. Only the panel administrator can change it.',
     ],
 ];

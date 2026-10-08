@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'compose_port_ambiguous' => 'Ce fichier compose publie plusieurs ports : le panel ne peut pas savoir lequel sert le site. Renseignez « Port du conteneur » avec le port interne à mandater.',
+    'compose_port_ambiguous' => 'Ce fichier compose publie plusieurs ports : le panel ne peut pas savoir lequel sert l’application. Renseignez « Port du conteneur » avec le port interne à mandater.',
     'compose_unparsable' => 'Docker n\'a pas pu lire ce fichier compose. Vérifiez l\'indentation et les guillemets ; l\'erreur de Docker figure dans le journal des opérations serveur.',
     'compose_no_services' => 'Ce fichier compose ne définit aucun service : il n\'y aurait rien à exécuter.',
     'compose_bind_outside' => 'Le service :service monte :path, hors du répertoire propre à cette application. Un conteneur ne peut monter que ses propres fichiers.',
@@ -24,8 +24,8 @@ return [
     // Deleting a site can take its databases with it (`remove_databases`).
     // The first refusal is the caller lacking `database` manage; the second
     // is the honest half-success — the site went, a database did not.
-    'database_removal_not_permitted' => 'Vous pouvez supprimer ce site, mais pas ses bases de données. Demandez un accès aux bases de données à un administrateur, ou supprimez le site sans les effacer.',
-    'databases_not_removed' => 'Le site a été supprimé, mais ces bases de données sont toujours sur le serveur : :databases. Supprimez-les depuis l\'écran Bases de données, ou communiquez la référence au support.',
+    'database_removal_not_permitted' => 'Vous pouvez supprimer cette application, mais pas ses bases de données. Demandez un accès aux bases de données à un administrateur, ou supprimez l’application sans les effacer.',
+    'databases_not_removed' => 'L’application a été supprimée, mais ces bases de données sont toujours sur le serveur : :databases. Supprimez-les depuis l\'écran Bases de données, ou communiquez la référence au support.',
 
     'primary_domain_not_removable' => 'Le domaine principal ne peut pas être supprimé. Définissez d\'abord un autre domaine comme principal.',
     'primary_domain_not_editable' => 'Un domaine principal ne peut pas être modifié. Définissez d’abord un autre domaine comme principal.',
@@ -33,19 +33,19 @@ return [
     'domain_is_ip' => 'Saisissez un nom de domaine, pas une adresse IP.',
     'invalid_domain' => 'Saisissez un nom de domaine valide, par exemple example.com. Chaque partie peut contenir des lettres, des chiffres et des tirets, mais ne peut ni commencer ni finir par un tiret, ni être vide.',
     'domain_taken_by' => 'Ce domaine est déjà utilisé par l’application « :application ».',
-    'domain_is_panel' => 'C’est l’adresse sur laquelle le panneau lui-même est servi ; un site ne peut donc pas l’utiliser.',
+    'domain_is_panel' => 'C’est l’adresse sur laquelle le panneau lui-même est servi ; une application ne peut donc pas l’utiliser.',
     'shop_name_characters' => 'Le nom de la boutique ne peut contenir aucun de ces caractères : < > = { } | `',
     'redirect_target_invalid' => 'La cible de la redirection doit être une adresse web simple : https://, un hôte et un chemin facultatif, sans chaîne de requête, espaces ni caractères comme ; # $ &.',
-    'unsupported_web_server' => 'Le panneau ne peut pas écrire la configuration du site pour :web_server.',
+    'unsupported_web_server' => 'Le panneau ne peut pas écrire la configuration de l’application pour :web_server.',
     'no_web_server' => 'aucun serveur web détecté',
-    'provision_failed' => 'La configuration du site a échoué à l\'étape « :step ».',
+    'provision_failed' => 'La configuration de l’application a échoué à l\'étape « :step ».',
     'not_a_git_application' => 'Cette application n\'est pas un déploiement git : il n\'y a rien à récupérer.',
     'not_a_container' => 'Cette application ne s\'exécute pas dans un conteneur : elle n\'a donc pas de paramètres de conteneur.',
-    'container_not_running' => 'Ce conteneur n’est pas en cours d’exécution, il n’y a donc rien à mettre à jour. Provisionnez ou activez d’abord le site.',
+    'container_not_running' => 'Ce conteneur n’est pas en cours d’exécution, il n’y a donc rien à mettre à jour. Provisionnez ou activez d’abord l’application.',
     'container_pull_failed' => 'L’image n’a pas pu être récupérée. Référence :reference.',
     'container_apply_failed' => 'Les réglages ont été enregistrés, mais le conteneur n’a pas pu être démarré avec eux. Référence :reference.',
-    'compose_apply_failed' => 'Le fichier compose n’a pas pu être appliqué ; le site a été remis sur celui qu’il utilisait auparavant. Référence :reference.',
-    'docker_removal_not_permitted' => 'Vous n\'avez pas la permission de supprimer des réseaux ou des volumes Docker. Supprimez le site sans eux, ou demandez à quelqu\'un ayant accès à Docker.',
+    'compose_apply_failed' => 'Le fichier compose n’a pas pu être appliqué ; l’application a été remise sur celui qu’elle utilisait auparavant. Référence :reference.',
+    'docker_removal_not_permitted' => 'Vous n\'avez pas la permission de supprimer des réseaux ou des volumes Docker. Supprimez l’application sans eux, ou demandez à quelqu\'un ayant accès à Docker.',
     'no_database_engine' => 'Aucun moteur de base de données disponible. Installez et configurez MySQL ou MariaDB avant de créer cette application.',
     'no_process' => '« :name » n\'exécute pas de processus propre.',
     'not_adopted' => '« :name » tourne déjà sous une unité systemd.',
@@ -65,7 +65,7 @@ return [
     'bot_blocker_failed' => 'La modification de la politique du bloqueur de robots IA a échoué sur le serveur.',
     'bot_agent_invalid' => 'Saisissez un seul nom de robot, comme GPTBot ou SemrushBot — lettres, chiffres, points et tirets uniquement.',
     'bot_agent_too_broad' => 'C\'est trop général — cela bloquerait aussi des moteurs de recherche comme Google et Bing. Utilisez le nom complet du robot.',
-    'bot_agent_search_engine' => 'C\'est un moteur de recherche, pas un robot d\'IA. Le bloquer retirerait votre site des résultats de recherche.',
+    'bot_agent_search_engine' => 'C\'est un moteur de recherche, pas un robot d\'IA. Le bloquer retirerait votre application des résultats de recherche.',
     'bot_agent_matches_visitors' => 'Cela apparaît aussi dans l\'agent utilisateur de :agent et bloquerait donc de vrais visiteurs. Utilisez plutôt le nom du robot lui-même.',
     'bot_agent_robots_only' => 'Ce nom ne fonctionne que dans robots.txt : aucun robot ne visite avec lui, le bloquer ne ferait rien. Utilisez plutôt les lignes robots.txt indiquées ci-dessus.',
     'web_root_failed' => 'La modification de la racine web a échoué sur le serveur.',
@@ -73,11 +73,11 @@ return [
     'waf_unsupported' => 'Le pare-feu web n\'est pas encore disponible sur :server.',
     'waf_failed' => 'La modification des paramètres du pare-feu a échoué sur le serveur.',
     'staging_failed' => 'L\'opération de staging a échoué sur le serveur.',
-    'staging_exists' => 'Ce site a déjà une copie de staging. Publiez-la ou supprimez-la d’abord.',
-    'staging_of_staging' => 'Ceci est une copie de staging. Créez les copies de staging à partir du site en production.',
-    'staging_missing' => 'Ce site n’a pas de copie de staging à publier.',
-    'staging_rollback_failed' => 'La publication depuis le staging a échoué et la production n\'a pas pu être restaurée. Le site reste désactivé. Communiquez la référence au support.',
-    'staging_push_running' => 'Un envoi vers ce site est déjà en cours. Attendez qu’il se termine.',
+    'staging_exists' => 'Cette application a déjà une copie de staging. Publiez-la ou supprimez-la d’abord.',
+    'staging_of_staging' => 'Ceci est une copie de staging. Créez les copies de staging à partir de l’application en production.',
+    'staging_missing' => 'Cette application n’a pas de copie de staging à publier.',
+    'staging_rollback_failed' => 'La publication depuis le staging a échoué et la production n\'a pas pu être restaurée. L’application reste désactivée. Communiquez la référence au support.',
+    'staging_push_running' => 'Un envoi vers cette application est déjà en cours. Attendez qu’il se termine.',
     'clone_failed' => 'L\'opération de clonage a échoué sur le serveur.',
     'fail2ban_failed' => 'L\'opération fail2ban a échoué sur le serveur.',
 
@@ -93,7 +93,7 @@ return [
     'archive_failed' => [
         'timed_out' => 'L\'archive a pris plus de temps que le serveur ne l\'autorise et a été arrêtée. Essayez une sélection plus petite.',
         'command_failed' => 'Le serveur n\'a pas pu terminer l\'archive. Rien n\'a été laissé à moitié écrit.',
-        'application_missing' => 'Le site a été supprimé avant que l\'archive puisse être créée.',
+        'application_missing' => 'L’application a été supprimée avant que l\'archive puisse être créée.',
         'worker' => 'Le traitement s\'est arrêté de façon inattendue sur le serveur et ne s\'est pas terminé.',
         'unknown' => 'L\'archive ne s\'est pas terminée.',
     ],
@@ -110,40 +110,40 @@ return [
     'upload_exists' => '« :name » existe déjà ici. Supprimez-le d’abord pour le remplacer : un envoi n’écrase jamais un fichier.',
 
     'path_exists' => 'Quelque chose existe déjà à ce chemin.',
-    'cannot_delete_root' => 'Le dossier racine du site ne peut pas être supprimé.',
+    'cannot_delete_root' => 'Le dossier racine de l’application ne peut pas être supprimé.',
     'target_not_archive' => 'Le nom de la nouvelle archive doit se terminer par .zip, .tar.gz ou .tgz.',
     'unknown_backup' => 'Ce n\'est pas une sauvegarde connue de ce fichier.',
     'environment_key_locked' => ':key ne peut pas être modifiée ni supprimée ici. L\'application chiffre ses données enregistrées avec elle, et une clé différente rendrait ces données illisibles.',
     'environment_key_locked_backup' => 'Cette sauvegarde a une :key différente. La restaurer rendrait illisibles les données que l\'application a chiffrées depuis.',
-    'environment_key_managed' => ':key ne peut pas être modifié ni supprimé ici. Le panneau l\'a défini et le site en dépend : une autre valeur empêcherait le site de fonctionner après son prochain redémarrage.',
-    'environment_key_managed_backup' => 'Cette sauvegarde a un :key différent. Le panneau l\'a défini et le site en dépend : la restaurer empêcherait le site de fonctionner après son prochain redémarrage.',
+    'environment_key_managed' => ':key ne peut pas être modifié ni supprimé ici. Le panneau l\'a défini et l’application en dépend : une autre valeur empêcherait l’application de fonctionner après son prochain redémarrage.',
+    'environment_key_managed_backup' => 'Cette sauvegarde a un :key différent. Le panneau l\'a défini et l’application en dépend : la restaurer empêcherait l’application de fonctionner après son prochain redémarrage.',
 
     'upload_directory_missing' => 'Le dossier de destination de cet envoi n\'existe plus.',
     'upload_insufficient_space' => 'Le serveur ne dispose pas d\'assez d\'espace disque libre pour cet envoi.',
 
     'bulk_count_mismatch' => 'Le nombre que vous avez confirmé ne correspond pas au nombre d\'éléments sélectionnés.',
     'sources_not_in_one_directory' => 'Tous les éléments à compresser doivent se trouver dans le même dossier.',
-    'release_failed' => "Le répertoire du site n'a pas pu être créé sur le serveur.",
+    'release_failed' => 'Le répertoire de l’application n\'a pas pu être créé sur le serveur.',
     'supervisor_missing' => 'Les workers nécessitent supervisord, qui n\'est pas installé sur ce serveur. Installez-le avec `apt-get install supervisor`, puis recréez le worker.',
     'supervisor_already_installed' => 'Supervisor est déjà installé sur ce serveur.',
     'worker_control_failed' => 'Le worker n’a pas pu être piloté sur le serveur.',
 
     // Which system account a new site runs as. Generating one creates a
     // real Linux account, which is why it needs its own permission.
-    'generate_system_user_forbidden' => 'Vous n\'avez pas l\'autorisation de créer des utilisateurs système, un nouveau ne peut donc pas être généré pour ce site. Choisissez plutôt un utilisateur système existant.',
+    'generate_system_user_forbidden' => 'Vous n\'avez pas l\'autorisation de créer des utilisateurs système, un nouveau ne peut donc pas être généré pour cette application. Choisissez plutôt un utilisateur système existant.',
     'system_user_conflict' => 'Choisissez soit un nouvel utilisateur système, soit un utilisateur existant, pas les deux.',
-    'system_user_name_unavailable' => 'Impossible de réserver un nom d\'utilisateur système pour ce site : le serveur n\'a pas pu indiquer quels noms sont déjà utilisés. Réessayez ou choisissez un utilisateur système existant.',
+    'system_user_name_unavailable' => 'Impossible de réserver un nom d\'utilisateur système pour cette application : le serveur n\'a pas pu indiquer quels noms sont déjà utilisés. Réessayez ou choisissez un utilisateur système existant.',
 
     // The Lock button for a site folder the panel did not create; see
     // SiteRootLock::adopt(). Keyed by its result.
     'root_lock' => [
-        'unsafe' => 'Le dossier du site :path n\'est pas un dossier ordinaire, ou il a changé pendant la vérification ; il n\'a donc pas été modifié. Vérifiez-le sur le serveur avant de réessayer.',
-        'missing' => 'Le dossier du site :path n\'existe pas sur le serveur.',
-        'failed' => 'Le serveur n\'a pas pu verrouiller le dossier du site. Rien n\'a été modifié. Consultez le journal du serveur pour plus de détails.',
-        'unsupported' => 'Le disque de ce serveur ne prend pas en charge le verrouillage des dossiers ; le dossier du site a donc été laissé tel quel.',
-        'foreign_owner' => 'Le dossier du site :path appartient à un autre compte, pas à l\'utilisateur de ce site ; il n\'a donc pas été modifié. Vérifiez qui doit en être propriétaire avant de le verrouiller.',
-        'writable' => 'D\'autres comptes peuvent écrire dans le dossier du site :path, un verrou ne tiendrait donc pas. Retirez le droit d\'écriture du groupe et de tous (par exemple `chmod 755`), puis réessayez.',
-        'locks_out_user' => 'Verrouiller le dossier du site :path empêcherait l\'utilisateur de ce site de l\'ouvrir : ses permissions ne lui donnent accès qu\'en tant que propriétaire. Donnez au groupe du dossier le droit de lecture et d\'ouverture (par exemple `chmod 750`), vérifiez que l\'utilisateur fait partie de ce groupe, puis réessayez.',
+        'unsafe' => 'Le dossier de l’application :path n\'est pas un dossier ordinaire, ou il a changé pendant la vérification ; il n\'a donc pas été modifié. Vérifiez-le sur le serveur avant de réessayer.',
+        'missing' => 'Le dossier de l’application :path n\'existe pas sur le serveur.',
+        'failed' => 'Le serveur n\'a pas pu verrouiller le dossier de l’application. Rien n\'a été modifié. Consultez le journal du serveur pour plus de détails.',
+        'unsupported' => 'Le disque de ce serveur ne prend pas en charge le verrouillage des dossiers ; le dossier de l’application a donc été laissé tel quel.',
+        'foreign_owner' => 'Le dossier de l’application :path appartient à un autre compte, pas à l\'utilisateur de cette application ; il n\'a donc pas été modifié. Vérifiez qui doit en être propriétaire avant de le verrouiller.',
+        'writable' => 'D\'autres comptes peuvent écrire dans le dossier de l’application :path, un verrou ne tiendrait donc pas. Retirez le droit d\'écriture du groupe et de tous (par exemple `chmod 755`), puis réessayez.',
+        'locks_out_user' => 'Verrouiller le dossier de l’application :path empêcherait l\'utilisateur de cette application de l\'ouvrir : ses permissions ne lui donnent accès qu\'en tant que propriétaire. Donnez au groupe du dossier le droit de lecture et d\'ouverture (par exemple `chmod 750`), vérifiez que l\'utilisateur fait partie de ce groupe, puis réessayez.',
     ],
 
     // A git site whose account was disconnected: no credential, no URL.

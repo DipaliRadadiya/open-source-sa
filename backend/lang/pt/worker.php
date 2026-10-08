@@ -42,9 +42,9 @@ return [
         'did_not_start' => 'O processo não continuou em execução, por isso não foi adicionado. Verifique o comando. Referência: :reference',
         'did_not_start_said' => 'O processo não continuou em execução, por isso não foi adicionado. Mostrou: «:output» (referência :reference)',
         'did_not_start_field' => 'Este comando termina imediatamente em vez de continuar a correr.',
-        'user_not_allowed' => 'Os workers só podem ser executados com a conta do site (:user). Apenas o administrador do painel pode escolher outra conta.',
-        'directory_outside_home' => 'O diretório tem de estar dentro da pasta pessoal do site (:home).',
-        'log_outside_logs' => 'O ficheiro de registo tem de estar na pasta de registos do site (:path).',
+        'user_not_allowed' => 'Os workers só podem ser executados com a conta da aplicação (:user). Apenas o administrador do painel pode escolher outra conta.',
+        'directory_outside_home' => 'O diretório tem de estar dentro da pasta pessoal da aplicação (:home).',
+        'log_outside_logs' => 'O ficheiro de registo tem de estar na pasta de registos da aplicação (:path).',
         'extra_config_key' => 'A configuração extra não pode definir «:key». Apenas o administrador do painel pode alterá-lo.',
     ],
 ];

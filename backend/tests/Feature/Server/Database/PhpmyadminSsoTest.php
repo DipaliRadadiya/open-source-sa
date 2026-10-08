@@ -393,7 +393,7 @@ describe('POST /databases/{database}/phpmyadmin-sso', function () {
         $response = $this->postJson("/api/databases/{$this->database->id}/phpmyadmin-sso");
 
         $response->assertStatus(422)
-            ->assertJsonFragment(['message' => 'No phpMyAdmin site is installed on this server.']);
+            ->assertJsonFragment(['message' => 'No phpMyAdmin application is installed on this server.']);
     });
 
     it('returns 422 when the database has no users', function () {
@@ -527,7 +527,7 @@ it('refuses a site that is not an active phpMyAdmin', function () {
     $this->postJson(
         "/api/databases/{$this->database->id}/phpmyadmin-sso?application_id={$wordpress->id}"
     )->assertStatus(422)
-        ->assertJsonFragment(['message' => 'The selected site is not an active phpMyAdmin installation.']);
+        ->assertJsonFragment(['message' => 'The selected application is not an active phpMyAdmin installation.']);
 });
 
 it('falls back to the same installation every time when none is named', function () {

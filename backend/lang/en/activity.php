@@ -217,7 +217,7 @@ return [
     'application.php_settings_updated' => 'Updated the PHP settings for :name',
     'application.basic_auth_enabled' => 'Enabled password protection for :name',
     'application.basic_auth_disabled' => 'Disabled password protection for :name',
-    'application.root_locked' => 'Locked the site folder of :name',
+    'application.root_locked' => 'Locked the application folder of :name',
     'application.ai_bot_policy_updated' => 'Set the AI Bot Blocker policy for :name to :policy',
     'application.bot_rules_updated' => 'Updated the custom bot rules for :name (:blocked blocked, :allowed allowed)',
     'application.web_root_changed' => 'Changed the web root of :name to :web_root',
@@ -260,7 +260,7 @@ return [
     */
     'registry.created' => 'Added the registry credential :name for :registry',
     'registry.updated' => 'Updated the registry credential :name for :registry',
-    'registry.deleted' => 'Deleted the registry credential :name for :registry (:applications_detached sites detached)',
+    'registry.deleted' => 'Deleted the registry credential :name for :registry (:applications_detached applications detached)',
     'registry.tested' => 'Tested the registry credential :name for :registry',
     'application.container_pulled' => 'Pulled :image again and recreated the container for :name',
     'application.compose_updated' => 'Updated the compose file for :name',

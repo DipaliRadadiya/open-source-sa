@@ -9,7 +9,7 @@ return [
     ],
 
     'current_step' => [
-        'provisioning' => 'サイトを作成しています',
+        'provisioning' => 'アプリケーションを作成しています',
         'copying_files' => 'ファイルをコピーしています',
         'cloning_database' => 'データベースを複製しています',
         'starting_process' => 'アプリケーションを起動しています',

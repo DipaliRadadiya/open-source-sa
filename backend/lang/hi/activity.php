@@ -211,7 +211,7 @@ return [
     'application.php_settings_updated' => ':name की PHP सेटिंग्स अद्यतन कीं',
     'application.basic_auth_enabled' => ':name के लिए पासवर्ड सुरक्षा सक्षम की',
     'application.basic_auth_disabled' => ':name के लिए पासवर्ड सुरक्षा अक्षम की',
-    'application.root_locked' => ':name का साइट फ़ोल्डर लॉक किया',
+    'application.root_locked' => ':name का एप्लिकेशन फ़ोल्डर लॉक किया',
     'application.ai_bot_policy_updated' => ':name के लिए AI बॉट ब्लॉकर नीति को :policy पर सेट किया',
     'application.bot_rules_updated' => ':name के लिए कस्टम बॉट नियम अपडेट किए (:blocked ब्लॉक, :allowed अनुमत)',
     'application.web_root_changed' => ':name का वेब रूट :web_root में बदला',
@@ -242,7 +242,7 @@ return [
 
     'registry.created' => ':registry के लिए रजिस्ट्री क्रेडेंशियल :name जोड़ा',
     'registry.updated' => ':registry के लिए रजिस्ट्री क्रेडेंशियल :name अपडेट किया',
-    'registry.deleted' => ':registry के लिए रजिस्ट्री क्रेडेंशियल :name हटाया (:applications_detached साइटें अलग की गईं)',
+    'registry.deleted' => ':registry के लिए रजिस्ट्री क्रेडेंशियल :name हटाया (:applications_detached एप्लिकेशन अलग की गईं)',
     'registry.tested' => ':registry के लिए रजिस्ट्री क्रेडेंशियल :name जाँचा',
     'application.container_pulled' => ':image दोबारा खींचा और :name का कंटेनर फिर बनाया',
     'application.compose_updated' => ':name की compose फ़ाइल अपडेट की',

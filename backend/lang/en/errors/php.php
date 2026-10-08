@@ -16,7 +16,7 @@ return [
     'ini_extension_outside_dir' => 'Extensions can only be loaded from PHP\'s own extension folder (:directory). Remove or change this line: :line',
     'reload_failed' => 'The change was made, but PHP :version could not be reloaded, so it is not active yet. Quote the reference to support.',
     'operation_failed' => 'The PHP :version configuration could not be updated.',
-    'version_in_use' => 'PHP :version is used by :apps. Change those sites first.',
+    'version_in_use' => 'PHP :version is used by :apps. Change those applications first.',
     'version_is_default' => 'This is the default version. Choose another default first.',
     'version_runs_panel' => 'Removing PHP :version would take the panel offline — it is the version the panel itself runs on.',
     'extension_builtin' => ':extension is compiled into PHP. It cannot be turned off.',
@@ -40,5 +40,5 @@ return [
     'ioncube_reload_failed' => 'PHP could not be reloaded. The changes may not yet be active. Any recovery copies have been retained.',
     'ioncube_rollback_failed' => 'Rollback failed; any recovery copies have been retained. Manual recovery is required.',
     'ioncube_config_test_failed' => 'PHP configuration validation failed. The previous configuration files were restored and PHP was not reloaded.',
-    'not_a_php_server' => 'This server hosts containers, so it serves no PHP sites and has no PHP versions to manage. PHP is still installed for the panel itself, and its service can be restarted from Services.',
+    'not_a_php_server' => 'This server hosts containers, so it serves no PHP applications and has no PHP versions to manage. PHP is still installed for the panel itself, and its service can be restarted from Services.',
 ];

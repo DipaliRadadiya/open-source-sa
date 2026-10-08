@@ -86,6 +86,44 @@ class DeleteSystemUser
     }
 
     /**
+     * End the account's PHP workers, and nothing else (OLD-20).
+     *
+     * Asked when the account's application has just been deleted: its PHP
+     * workers then serve a site that is gone. True when only such workers were
+     * running (now ended) or nothing was; false when the account runs anything
+     * else — a person's SSH session or shell is not the panel's to end.
+     */
+    public function endPhpWorkers(string $username): bool
+    {
+        $context = ['feature' => 'system_user', 'op' => 'end_php_workers', 'system_user' => $username];
+
+        // Exit 1: the account has no processes — an answer.
+        $listed = $this->serverOps->run(['ps', '-o', 'pid=,comm=', '-u', $username], $context, expectedExitCodes: [1]);
+
+        $workers = [];
+
+        foreach (array_filter(array_map('trim', explode("\n", $listed->output()))) as $line) {
+            [$pid, $command] = array_pad(preg_split('/\s+/', $line, 2) ?: [], 2, '');
+
+            if (! ctype_digit($pid) || (int) $pid <= 1) {
+                continue;
+            }
+
+            if (preg_match('/\A(lsphp|php-fpm|php)[\w.-]*\z/', $command) !== 1) {
+                return false;
+            }
+
+            $workers[] = $pid;
+        }
+
+        if ($workers !== []) {
+            $this->serverOps->run(['kill', '-KILL', ...$workers], $context, expectedExitCodes: [1]);
+        }
+
+        return true;
+    }
+
+    /**
      * Kill every process the account owns.
      *
      * `ps` then `kill`, both already granted, rather than `pkill`/`loginctl`

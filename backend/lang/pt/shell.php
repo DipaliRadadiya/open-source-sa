@@ -22,7 +22,7 @@ return [
     ],
     'nologin' => [
         'title' => 'Sem início de sessão',
-        'description' => 'O utilizador é dono dos ficheiros e executa o site, mas não pode iniciar sessão. Recomendado para sites que não precisam de acesso por shell.',
+        'description' => 'O utilizador é dono dos ficheiros e executa a aplicação, mas não pode iniciar sessão. Recomendado para aplicações que não precisam de acesso por shell.',
     ],
     'false' => [
         'title' => 'Sem início de sessão (legado)',

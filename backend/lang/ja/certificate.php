@@ -17,9 +17,9 @@ return [
         'rate_limited_failures' => 'この 1 時間でこのドメインの失敗が多すぎます。Let\'s Encrypt の上限は 5 回です。1 時間お待ちください。',
         'unreachable' => '検証リクエストがこのサーバーに届きませんでした。ポート 80 が開いており、他のものが応答していないか確認してください。',
         'dns_not_pointing' => 'ドメインがこのサーバーを指していません。DNS レコードをこのサーバーに向け、反映を待ってから再試行してください。',
-        'challenge_not_served' => '検証ファイルが正しく配信されませんでした。サイトが /.well-known をリダイレクトしているか、Cloudflare などのプロキシがこのサーバーの代わりに応答しています。',
+        'challenge_not_served' => '検証ファイルが正しく配信されませんでした。アプリケーションが /.well-known をリダイレクトしているか、Cloudflare などのプロキシがこのサーバーの代わりに応答しています。',
         'certbot_missing' => 'このサーバーに certbot がインストールされていません。',
-        'no_certifiable_domains' => 'このサイトに証明書を発行できるドメインがありません。まず DNS を確認してください。',
+        'no_certifiable_domains' => 'このアプリケーションに証明書を発行できるドメインがありません。まず DNS を確認してください。',
         'self_sign_failed' => '自己署名証明書を生成できませんでした。',
         'file_missing' => 'このサーバーに証明書ファイルがありません。再発行してください。',
         'dry_run_skipped' => '既存の証明書は更新不要と certbot が判断したため、何も検証されませんでした。この実行は何も証明していません。ドメインの問題ではなく、パネル側の不具合です。',
@@ -30,7 +30,7 @@ return [
     // thing the user would have to change, or says plainly that nothing can
     // be changed and points at the option that does work.
     'unavailable' => [
-        'dns_unverified' => 'このサイトのドメインはまだどれもこのサーバーを指していません。DNS の A レコードを追加し、反映を待ってから再試行してください。',
+        'dns_unverified' => 'このアプリケーションのドメインはまだどれもこのサーバーを指していません。DNS の A レコードを追加し、反映を待ってから再試行してください。',
         'self_signed_warning' => 'すぐにトラフィックを暗号化し、テスト用や内部用を含むあらゆるドメインで機能します。このサーバー以外の誰も保証しないため、ブラウザーは警告を表示します。',
     ],
 

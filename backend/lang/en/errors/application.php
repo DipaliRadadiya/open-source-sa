@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'compose_port_ambiguous' => 'This compose file publishes more than one port, so the panel cannot tell which one serves the site. Set Container port to the port inside the container that should be proxied.',
+    'compose_port_ambiguous' => 'This compose file publishes more than one port, so the panel cannot tell which one serves the application. Set Container port to the port inside the container that should be proxied.',
     'compose_unparsable' => 'Docker could not read this compose file. Check the indentation and quoting — the error from Docker itself is in the server operations log.',
     'compose_no_services' => 'This compose file defines no services, so there would be nothing to run.',
     'compose_bind_outside' => 'Service :service mounts :path, which is outside this application\'s own directory. A container may only mount its own files.',
@@ -24,8 +24,8 @@ return [
     // Deleting a site can take its databases with it (`remove_databases`).
     // The first refusal is the caller lacking `database` manage; the second
     // is the honest half-success — the site went, a database did not.
-    'database_removal_not_permitted' => 'You can delete this site, but not its databases. Ask an administrator for database access, or delete the site without removing them.',
-    'databases_not_removed' => 'The site was deleted, but these databases are still on the server: :databases. Remove them from the Databases screen, or quote the reference to support.',
+    'database_removal_not_permitted' => 'You can delete this application, but not its databases. Ask an administrator for database access, or delete the application without removing them.',
+    'databases_not_removed' => 'The application was deleted, but these databases are still on the server: :databases. Remove them from the Databases screen, or quote the reference to support.',
 
     'primary_domain_not_removable' => 'A primary domain cannot be removed. Make another domain primary first.',
     'primary_domain_not_editable' => 'A primary domain cannot be edited. Make another domain primary first.',
@@ -33,19 +33,19 @@ return [
     'domain_is_ip' => 'Enter a domain name, not an IP address.',
     'invalid_domain' => 'Enter a valid domain name, such as example.com. Each part may use letters, digits and hyphens, but cannot start or end with a hyphen or be empty.',
     'domain_taken_by' => 'This domain is already in use by the application “:application”.',
-    'domain_is_panel' => 'This is the address the panel itself is served on, so a site cannot use it.',
+    'domain_is_panel' => 'This is the address the panel itself is served on, so an application cannot use it.',
     'shop_name_characters' => 'The shop name cannot contain any of these characters: < > = { } | `',
     'redirect_target_invalid' => 'The redirect target must be a plain web address: https://, a host and an optional path — no query string, spaces or characters such as ; # $ &.',
-    'unsupported_web_server' => 'The panel cannot write site configuration for :web_server.',
+    'unsupported_web_server' => 'The panel cannot write application configuration for :web_server.',
     'no_web_server' => 'no detected web server',
-    'provision_failed' => 'Setting up the site failed at the ":step" step.',
+    'provision_failed' => 'Setting up the application failed at the ":step" step.',
     'not_a_git_application' => 'The application is not a git deployment, so there is nothing to fetch.',
     'not_a_container' => 'This application does not run in a container, so it has no container settings.',
-    'container_not_running' => 'This container is not running, so there is nothing to update. Provision or enable the site first.',
+    'container_not_running' => 'This container is not running, so there is nothing to update. Provision or enable the application first.',
     'container_pull_failed' => 'The image could not be pulled. Reference :reference.',
     'container_apply_failed' => 'The settings were saved, but the container could not be brought up on them. Reference :reference.',
-    'compose_apply_failed' => 'The compose file could not be applied, so the site was put back on the one it was running before. Reference :reference.',
-    'docker_removal_not_permitted' => 'You don\'t have permission to delete Docker networks or volumes. Remove the site without them, or ask someone with Docker access.',
+    'compose_apply_failed' => 'The compose file could not be applied, so the application was put back on the one it was running before. Reference :reference.',
+    'docker_removal_not_permitted' => 'You don\'t have permission to delete Docker networks or volumes. Remove the application without them, or ask someone with Docker access.',
     'no_database_engine' => 'No database engine is available. Install and configure MySQL or MariaDB before creating this application.',
     'no_process' => '":name" does not run a process of its own.',
     'no_process' => '":name" does not run a process of its own.',
@@ -66,7 +66,7 @@ return [
     'bot_blocker_failed' => 'Changing the AI Bot Blocker policy failed on the server.',
     'bot_agent_invalid' => 'Enter a single bot name, like GPTBot or SemrushBot — letters, numbers, dots and dashes only.',
     'bot_agent_too_broad' => 'That is too general — it would also block search engines like Google and Bing. Use the bot\'s full name.',
-    'bot_agent_search_engine' => 'That is a search engine, not an AI crawler. Blocking it would remove your site from search results.',
+    'bot_agent_search_engine' => 'That is a search engine, not an AI crawler. Blocking it would remove your application from search results.',
     'bot_agent_matches_visitors' => 'That also appears in the user agent of :agent, so it would block real visitors. Use the crawler\'s own name instead.',
     'bot_agent_robots_only' => 'That name only works in robots.txt — no bot visits with it, so blocking it would do nothing. Use the robots.txt lines shown above instead.',
     'web_root_failed' => 'Changing the web root failed on the server.',
@@ -74,11 +74,11 @@ return [
     'waf_unsupported' => 'The Web Firewall is not available on :server yet.',
     'waf_failed' => 'Changing the firewall settings failed on the server.',
     'staging_failed' => 'The staging operation failed on the server.',
-    'staging_exists' => 'This site already has a staging copy. Push it or delete it first.',
-    'staging_of_staging' => 'This is a staging copy. Make staging copies from the live site.',
-    'staging_missing' => 'This site has no staging copy to push.',
-    'staging_rollback_failed' => 'The staging push failed and production could not be restored. The site remains disabled. Quote the reference to support.',
-    'staging_push_running' => 'A push to this site is already running. Wait for it to finish.',
+    'staging_exists' => 'This application already has a staging copy. Push it or delete it first.',
+    'staging_of_staging' => 'This is a staging copy. Make staging copies from the live application.',
+    'staging_missing' => 'This application has no staging copy to push.',
+    'staging_rollback_failed' => 'The staging push failed and production could not be restored. The application remains disabled. Quote the reference to support.',
+    'staging_push_running' => 'A push to this application is already running. Wait for it to finish.',
     'clone_failed' => 'The clone operation failed on the server.',
     'fail2ban_failed' => 'The fail2ban operation failed on the server.',
 
@@ -94,7 +94,7 @@ return [
     'archive_failed' => [
         'timed_out' => 'The archive took longer than the server allows and was stopped. Try a smaller selection.',
         'command_failed' => 'The server could not finish the archive. Nothing was left half-written.',
-        'application_missing' => 'The site was removed before the archive could be built.',
+        'application_missing' => 'The application was removed before the archive could be built.',
         'worker' => 'The archive stopped unexpectedly on the server and did not finish.',
         'unknown' => 'The archive did not finish.',
     ],
@@ -111,40 +111,40 @@ return [
     'upload_exists' => '‘:name’ already exists here. Delete it first if you mean to replace it — an upload will not overwrite a file.',
 
     'path_exists' => 'Something already exists at that path.',
-    'cannot_delete_root' => 'The site\'s own root folder cannot be deleted.',
+    'cannot_delete_root' => 'The application\'s own root folder cannot be deleted.',
     'target_not_archive' => 'The new archive\'s name must end in .zip, .tar.gz or .tgz.',
     'unknown_backup' => 'That is not a known backup of this file.',
     'environment_key_locked' => ':key cannot be changed or removed here. The application encrypts its stored data with it, and a different key would make that data unreadable.',
     'environment_key_locked_backup' => 'This backup has a different :key. Restoring it would make the data the application has encrypted since then unreadable.',
-    'environment_key_managed' => ':key cannot be changed or removed here. The panel set it and the site depends on it: a different value would stop the site working after its next restart.',
-    'environment_key_managed_backup' => 'This backup has a different :key. The panel set it and the site depends on it, so restoring this backup would stop the site working after its next restart.',
+    'environment_key_managed' => ':key cannot be changed or removed here. The panel set it and the application depends on it: a different value would stop the application working after its next restart.',
+    'environment_key_managed_backup' => 'This backup has a different :key. The panel set it and the application depends on it, so restoring this backup would stop the application working after its next restart.',
 
     'upload_directory_missing' => 'The folder this upload was going to no longer exists.',
     'upload_insufficient_space' => 'The server does not have enough free disk space for this upload.',
 
     'bulk_count_mismatch' => 'The number you confirmed does not match how many items are selected.',
     'sources_not_in_one_directory' => 'All the items to compress must be in the same folder.',
-    'release_failed' => 'The site directory could not be created on the server.',
+    'release_failed' => 'The application directory could not be created on the server.',
     'supervisor_missing' => 'Workers need supervisord, which is not installed on this server. Install it with `apt-get install supervisor`, then create the worker again.',
     'supervisor_already_installed' => 'Supervisor is already installed on this server.',
     'worker_control_failed' => 'Could not control the worker on the server.',
 
     // Which system account a new site runs as. Generating one creates a
     // real Linux account, which is why it needs its own permission.
-    'generate_system_user_forbidden' => 'You do not have permission to create system users, so a new one cannot be generated for this site. Choose an existing system user instead.',
+    'generate_system_user_forbidden' => 'You do not have permission to create system users, so a new one cannot be generated for this application. Choose an existing system user instead.',
     'system_user_conflict' => 'Choose either a new system user or an existing one, not both.',
-    'system_user_name_unavailable' => 'A system username could not be reserved for this site — the server could not be asked which names are already in use. Try again, or choose an existing system user.',
+    'system_user_name_unavailable' => 'A system username could not be reserved for this application — the server could not be asked which names are already in use. Try again, or choose an existing system user.',
 
     // The Lock button for a site folder the panel did not create; see
     // SiteRootLock::adopt(). Keyed by its result.
     'root_lock' => [
-        'unsafe' => 'The site folder :path is not a plain folder, or it changed while it was being checked, so it was left alone. Check it on the server before trying again.',
-        'missing' => 'The site folder :path does not exist on the server.',
-        'failed' => 'The server could not lock the site folder. Nothing was changed. See the server log for details.',
-        'unsupported' => 'This server\'s disk does not support the folder lock, so the site folder was left as it was.',
-        'foreign_owner' => 'The site folder :path belongs to another account, not to this site\'s user, so it was left alone. Check who should own it before locking it.',
-        'writable' => 'The site folder :path can be written to by other accounts, so a lock would not hold. Remove the group and public write permission (for example `chmod 755`), then try again.',
-        'locks_out_user' => 'Locking the site folder :path would stop this site\'s user from opening it: its permissions give the user access only as its owner. Give the folder\'s group read and open permission (for example `chmod 750`) and make sure the user is in that group, then try again.',
+        'unsafe' => 'The application folder :path is not a plain folder, or it changed while it was being checked, so it was left alone. Check it on the server before trying again.',
+        'missing' => 'The application folder :path does not exist on the server.',
+        'failed' => 'The server could not lock the application folder. Nothing was changed. See the server log for details.',
+        'unsupported' => 'This server\'s disk does not support the folder lock, so the application folder was left as it was.',
+        'foreign_owner' => 'The application folder :path belongs to another account, not to this application\'s user, so it was left alone. Check who should own it before locking it.',
+        'writable' => 'The application folder :path can be written to by other accounts, so a lock would not hold. Remove the group and public write permission (for example `chmod 755`), then try again.',
+        'locks_out_user' => 'Locking the application folder :path would stop this application\'s user from opening it: its permissions give the user access only as its owner. Give the folder\'s group read and open permission (for example `chmod 750`) and make sure the user is in that group, then try again.',
     ],
 
     // A git site whose account was disconnected: no credential, no URL.

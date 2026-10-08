@@ -9,7 +9,7 @@ return [
     ],
 
     'current_step' => [
-        'provisioning' => 'Создание сайта',
+        'provisioning' => 'Создание приложения',
         'copying_files' => 'Копирование файлов',
         'cloning_database' => 'Клонирование базы данных',
         'starting_process' => 'Запуск приложения',

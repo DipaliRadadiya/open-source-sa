@@ -25,9 +25,9 @@ return [
         'filter_content_required' => 'The filter configuration is required.',
         'filter_content_string' => 'The filter configuration must be a text string.',
         'filter_content_max' => 'The filter configuration is too large (max 65535 characters).',
-        'foreign_jail' => 'This jail may only configure this site\'s own jail. Replace [:section] with [{name}] (it becomes :name).',
-        'foreign_filter' => 'This jail may only use this site\'s own filter. Replace filter = :filter with filter = {filter} (it becomes :name).',
-        'disallowed_setting' => 'The setting ":setting" is not allowed in a site jail. Allowed: :allowed.',
+        'foreign_jail' => 'This jail may only configure this application\'s own jail. Replace [:section] with [{name}] (it becomes :name).',
+        'foreign_filter' => 'This jail may only use this application\'s own filter. Replace filter = :filter with filter = {filter} (it becomes :name).',
+        'disallowed_setting' => 'The setting ":setting" is not allowed in an application jail. Allowed: :allowed.',
     ],
     // FB-wp: the default filter is WordPress's.
     'app_default_filter_wordpress_only' => 'The default rules only catch failed WordPress logins. :type has no such rules yet, so this jail bans nobody until you add a rule for this application’s own login page.',

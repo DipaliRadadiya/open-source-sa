@@ -55,11 +55,11 @@ return [
         'restore_confirm' => 'Escribe el dominio de la aplicación exactamente para confirmar la restauración.',
         'restore_already_running' => 'Ya hay una restauración en curso para esta aplicación.',
         'restore_no_database' => 'Esta copia no contiene ninguna base de datos.',
-        'target_no_database' => 'Este sitio no tiene ninguna base de datos que respaldar. Elige :files.',
+        'target_no_database' => 'Esta aplicación no tiene ninguna base de datos que respaldar. Elige :files.',
 
         'target_type_needs_container' => 'Este servidor ejecuta contenedores, por lo que una copia aquí captura volúmenes y configuración. Elija una de esas opciones.',
 
-        'target_type_needs_hosted' => 'Este sitio se sirve desde una carpeta, así que no hay volúmenes que copiar. Elija archivos o base de datos.',
+        'target_type_needs_hosted' => 'Esta aplicación se sirve desde una carpeta, así que no hay volúmenes que copiar. Elija archivos o base de datos.',
         'restore_no_files' => 'Esta copia no contiene archivos.',
         'download_no_artifact' => 'Esta copia de seguridad nunca terminó de subirse, así que no hay ningún archivo para descargar.',
         'download_no_destination' => 'El destino de almacenamiento al que se subió esta copia de seguridad ya no existe.',
@@ -80,7 +80,7 @@ return [
         'unknown' => 'La copia de seguridad falló por un motivo desconocido.',
         'crashed' => 'La copia de seguridad se detuvo inesperadamente: el proceso terminó antes de completarse. Normalmente el servidor se quedó sin memoria o el worker se reinició a mitad.',
         'abandoned' => 'Esta copia de seguridad nunca respondió y se ha cerrado. Su worker ya no existe, así que no se subió nada.',
-        'restore_in_progress' => 'No se realizó: una restauración de este sitio empezó antes de que esta copia pudiera ejecutarse. Vuelve a iniciarla cuando termine la restauración.',
+        'restore_in_progress' => 'No se realizó: una restauración de esta aplicación empezó antes de que esta copia pudiera ejecutarse. Vuelve a iniciarla cuando termine la restauración.',
         'clear_not_running' => 'Esta copia de seguridad no está en curso, así que no hay nada que limpiar.',
         'clear_too_soon' => 'Esta copia de seguridad puede seguir ejecutándose. Se cierra sola :minutes minutos después de comenzar si el worker no responde.',
         'prune_old_backups' => 'No se pudieron eliminar las copias antiguas. La nueva copia está a salvo; el almacenamiento puede tener más copias de las configuradas.',
@@ -110,8 +110,8 @@ return [
         'safety_backup' => 'No se pudo copiar el estado actual, así que se detuvo la restauración. No se sobrescribió nada.',
         'extract_archive' => 'No se pudo descomprimir la copia. No se cambió nada en el servidor.',
         'restore_database' => 'No se pudo restaurar la base de datos. La copia de seguridad previa conserva el estado anterior.',
-        'restore_volumes' => 'No se pudieron restaurar los volúmenes. Los contenedores se detuvieron y el sitio no se ha vuelto a iniciar; no se escribió nada en un volumen que use otro sitio.',
-        'swap_files' => 'No se pudieron colocar los archivos. Se restauró el directorio anterior del sitio.',
+        'restore_volumes' => 'No se pudieron restaurar los volúmenes. Los contenedores se detuvieron y la aplicación no se ha vuelto a iniciar; no se escribió nada en un volumen que use otra aplicación.',
+        'swap_files' => 'No se pudieron colocar los archivos. Se restauró el directorio anterior de la aplicación.',
         'restart_process' => 'Se restauraron los archivos y la base de datos, pero la aplicación no arrancó. Revisa sus registros.',
         'missing_backup' => 'La copia se eliminó antes de que pudiera empezar la restauración.',
         'crashed' => 'La restauración se detuvo inesperadamente. Revisa la copia de seguridad antes de reintentar.',
@@ -119,7 +119,7 @@ return [
     ],
 
     'cloning' => [
-        'provisioning' => 'Creando el sitio',
+        'provisioning' => 'Creando la aplicación',
         'copying_files' => 'Copiando archivos',
         'cloning_database' => 'Clonando la base de datos',
         'starting_process' => 'Iniciando la aplicación',

@@ -15,11 +15,11 @@ return [
         ],
         'php' => [
             'title' => 'PHP',
-            'description' => 'Add another version when a site needs one.',
+            'description' => 'Add another version when an application needs one.',
         ],
         'node' => [
             'title' => 'Node.js',
-            'description' => 'Managed with fnm, so sites can pin their own version.',
+            'description' => 'Managed with fnm, so applications can pin their own version.',
         ],
         'redis' => [
             'title' => 'Redis',
@@ -27,7 +27,7 @@ return [
         ],
         'fail2ban' => [
             'title' => 'fail2ban',
-            'description' => 'Blocks repeated failed logins against SSH and your sites.',
+            'description' => 'Blocks repeated failed logins against SSH and your applications.',
         ],
         'build_tools' => [
             'title' => 'Build tools',
@@ -35,7 +35,7 @@ return [
         ],
         'wp_cli' => [
             'title' => 'WP-CLI',
-            'description' => 'WordPress\'s command-line tool. The panel uses it for every WordPress task, and fetches it with the first WordPress site if it\'s missing.',
+            'description' => 'WordPress\'s command-line tool. The panel uses it for every WordPress task, and fetches it with the first WordPress application if it\'s missing.',
         ],
     ],
 

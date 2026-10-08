@@ -211,7 +211,7 @@ return [
     'application.php_settings_updated' => 'Обновил настройки PHP для :name',
     'application.basic_auth_enabled' => 'Включил защиту паролем для :name',
     'application.basic_auth_disabled' => 'Отключил защиту паролем для :name',
-    'application.root_locked' => 'Заблокировал папку сайта :name',
+    'application.root_locked' => 'Заблокировал папку приложения :name',
     'application.ai_bot_policy_updated' => 'Установил политику блокировки ИИ-ботов для :name на :policy',
     'application.bot_rules_updated' => 'Обновил пользовательские правила ботов для :name (заблокировано: :blocked, разрешено: :allowed)',
     'application.web_root_changed' => 'Изменил веб-корень :name на :web_root',
@@ -242,7 +242,7 @@ return [
 
     'registry.created' => 'Добавлены учётные данные реестра :name для :registry',
     'registry.updated' => 'Обновлены учётные данные реестра :name для :registry',
-    'registry.deleted' => 'Удалены учётные данные реестра :name для :registry (отвязано сайтов: :applications_detached)',
+    'registry.deleted' => 'Удалены учётные данные реестра :name для :registry (отвязано приложений: :applications_detached)',
     'registry.tested' => 'Проверены учётные данные реестра :name для :registry',
     'application.container_pulled' => 'Образ :image загружен заново, контейнер сайта :name пересоздан',
     'application.compose_updated' => 'Обновлён файл compose для :name',

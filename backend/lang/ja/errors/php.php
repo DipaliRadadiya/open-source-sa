@@ -16,7 +16,7 @@ return [
     'ini_extension_outside_dir' => '拡張機能は PHP 自身の拡張機能フォルダー (:directory) からのみ読み込めます。この行を削除または変更してください: :line',
     'reload_failed' => '変更は適用されましたが、PHP :version を再読み込みできなかったため、まだ有効になっていません。サポートに参照番号をお伝えください。',
     'operation_failed' => 'PHP :version の設定を更新できませんでした。',
-    'version_in_use' => 'PHP :version は :apps が使用しています。先にそれらのサイトを変更してください。',
+    'version_in_use' => 'PHP :version は :apps が使用しています。先にそれらのアプリケーションを変更してください。',
     'version_is_default' => 'これは既定のバージョンです。先に別のものを選んでください。',
     'version_runs_panel' => 'PHP :version を削除するとパネルが停止します。パネル自身がこのバージョンで動作しています。',
     'extension_builtin' => ':extension は PHP に組み込まれているため、無効にできません。',
@@ -40,5 +40,5 @@ return [
     'ioncube_reload_failed' => 'PHP を再読み込みできませんでした。変更はまだ有効になっていない可能性があります。リカバリーコピーはすべて保持されています。',
     'ioncube_rollback_failed' => 'ロールバックに失敗しました。リカバリーコピーはすべて保持されています。手動での復旧が必要です。',
     'ioncube_config_test_failed' => 'PHP 設定の検証に失敗しました。以前の設定ファイルは復元され、PHP は再読み込みされていません。',
-    'not_a_php_server' => 'このサーバーはコンテナをホストしているため、PHP サイトは配信せず、管理する PHP バージョンもありません。パネル自体のために PHP はインストールされたままで、そのサービスは「サービス」から再起動できます。',
+    'not_a_php_server' => 'このサーバーはコンテナをホストしているため、PHP アプリケーションは配信せず、管理する PHP バージョンもありません。パネル自体のために PHP はインストールされたままで、そのサービスは「サービス」から再起動できます。',
 ];

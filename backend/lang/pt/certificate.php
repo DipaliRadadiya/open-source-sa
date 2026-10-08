@@ -17,9 +17,9 @@ return [
         'rate_limited_failures' => 'Tentativas falhadas demais para este domínio na última hora. O Let\'s Encrypt permite cinco; aguarde uma hora.',
         'unreachable' => 'O pedido de validação nunca chegou a este servidor. Verifique se a porta 80 está aberta e se nada mais responde nela.',
         'dns_not_pointing' => 'O domínio não aponta para este servidor. Configure o registo DNS aqui, aguarde a propagação e tente de novo.',
-        'challenge_not_served' => 'O ficheiro de validação não foi servido corretamente. O site pode estar a redirecionar /.well-known, ou um proxy como a Cloudflare responde em vez deste servidor.',
+        'challenge_not_served' => 'O ficheiro de validação não foi servido corretamente. A aplicação pode estar a redirecionar /.well-known, ou um proxy como a Cloudflare responde em vez deste servidor.',
         'certbot_missing' => 'O certbot não está instalado neste servidor.',
-        'no_certifiable_domains' => 'Nenhum domínio deste site está pronto para um certificado. Verifique primeiro o DNS.',
+        'no_certifiable_domains' => 'Nenhum domínio desta aplicação está pronto para um certificado. Verifique primeiro o DNS.',
         'self_sign_failed' => 'Não foi possível gerar o certificado autoassinado.',
         'file_missing' => 'O ficheiro do certificado não existe neste servidor. Emita-o de novo.',
         'dry_run_skipped' => 'O certbot decidiu que o certificado existente não precisava de renovação, pelo que nada foi validado. Esta execução não prova nada — é um erro, não um veredicto sobre o seu domínio.',
@@ -30,7 +30,7 @@ return [
     // thing the user would have to change, or says plainly that nothing can
     // be changed and points at the option that does work.
     'unavailable' => [
-        'dns_unverified' => 'Nenhum domínio deste site aponta ainda para este servidor. Adicione um registo DNS A, aguarde a propagação e tente novamente.',
+        'dns_unverified' => 'Nenhum domínio desta aplicação aponta ainda para este servidor. Adicione um registo DNS A, aguarde a propagação e tente novamente.',
         'self_signed_warning' => 'Cifra o tráfego de imediato e funciona em qualquer domínio, incluindo de teste e internos. Os navegadores mostrarão um aviso, porque nada fora deste servidor o garante.',
     ],
 

@@ -24,9 +24,9 @@ return [
         'filter_content_required' => 'フィルター設定は必須です。',
         'filter_content_string' => 'フィルター設定はテキストである必要があります。',
         'filter_content_max' => 'フィルター設定が大きすぎます（最大 65535 文字）。',
-        'foreign_jail' => 'このジェイルで設定できるのはこのサイト自身のジェイルだけです。[:section] を [{name}] に置き換えてください（:name になります）。',
-        'foreign_filter' => 'このジェイルで使えるのはこのサイト自身のフィルターだけです。filter = :filter を filter = {filter} に置き換えてください（:name になります）。',
-        'disallowed_setting' => 'サイトの jail では設定「:setting」は使用できません。使用可能: :allowed。',
+        'foreign_jail' => 'このジェイルで設定できるのはこのアプリケーション自身のジェイルだけです。[:section] を [{name}] に置き換えてください（:name になります）。',
+        'foreign_filter' => 'このジェイルで使えるのはこのアプリケーション自身のフィルターだけです。filter = :filter を filter = {filter} に置き換えてください（:name になります）。',
+        'disallowed_setting' => 'アプリケーションの jail では設定「:setting」は使用できません。使用可能: :allowed。',
     ],
     // FB-wp: the default filter is WordPress's.
     'app_default_filter_wordpress_only' => '既定のルールは WordPress のログイン失敗だけを検出します。:type にはまだそのようなルールがないため、このアプリのログインページ用のルールを追加するまで、この jail は誰もブロックしません。',

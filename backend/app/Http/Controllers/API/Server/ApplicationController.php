@@ -413,25 +413,28 @@ class ApplicationController extends Controller
         if ($owner->applications()->exists()) {
             $outcome = 'still_used';
         } else {
-            // The site's own PHP workers can outlive its vhost by a few
-            // seconds — measured on OpenLiteSpeed, where the account's lsphp
-            // was still running when the delete reached userdel, and gone a
-            // moment later. So "still running something" is asked again for
-            // a short while before it is the answer.
+            // The site's own PHP workers can outlive its vhost — measured on
+            // OpenLiteSpeed, where the account's lsphp kept running for half
+            // a minute after the delete reached userdel. Those serve a site
+            // that no longer exists, so they are ended; anything else the
+            // account runs (an SSH session, a shell) is left alone and
+            // answered as "still running something".
+            $deleter = app(DeleteSystemUser::class);
+
             for ($attempt = 0; ; $attempt++) {
                 try {
-                    app(DeleteSystemUser::class)->execute($owner);
+                    $deleter->execute($owner);
                     $outcome = 'removed';
 
                     break;
                 } catch (ValidationException) {
                     $outcome = 'has_processes';
 
-                    if ($attempt >= 4) {
+                    if ($attempt >= 4 || ! $deleter->endPhpWorkers($owner->username)) {
                         break;
                     }
 
-                    Sleep::for(2)->seconds();
+                    Sleep::for(1)->seconds();
                 } catch (Throwable) {
                     $outcome = 'failed';
 

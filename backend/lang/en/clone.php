@@ -9,7 +9,7 @@ return [
     ],
 
     'current_step' => [
-        'provisioning' => 'Creating the site',
+        'provisioning' => 'Creating the application',
         'copying_files' => 'Copying files',
         'cloning_database' => 'Cloning the database',
         'starting_process' => 'Starting the application',

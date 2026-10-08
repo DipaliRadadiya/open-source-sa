@@ -24,9 +24,9 @@ return [
         'filter_content_required' => 'Конфигурация фильтра обязательна.',
         'filter_content_string' => 'Конфигурация фильтра должна быть текстом.',
         'filter_content_max' => 'Конфигурация фильтра слишком большая (макс. 65535 символов).',
-        'foreign_jail' => 'Этот jail может настраивать только собственный jail этого сайта. Замените [:section] на [{name}] (станет :name).',
-        'foreign_filter' => 'Этот jail может использовать только собственный фильтр этого сайта. Замените filter = :filter на filter = {filter} (станет :name).',
-        'disallowed_setting' => 'Параметр «:setting» недопустим в jail сайта. Разрешены: :allowed.',
+        'foreign_jail' => 'Этот jail может настраивать только собственный jail этого приложения. Замените [:section] на [{name}] (станет :name).',
+        'foreign_filter' => 'Этот jail может использовать только собственный фильтр этого приложения. Замените filter = :filter на filter = {filter} (станет :name).',
+        'disallowed_setting' => 'Параметр «:setting» недопустим в jail приложения. Разрешены: :allowed.',
     ],
     // FB-wp: the default filter is WordPress's.
     'app_default_filter_wordpress_only' => 'Правила по умолчанию отслеживают только неудачные входы в WordPress. Для :type таких правил пока нет, поэтому этот jail никого не блокирует, пока вы не добавите правило для страницы входа этого приложения.',

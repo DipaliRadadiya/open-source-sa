@@ -24,9 +24,9 @@ return [
         'filter_content_required' => 'फ़िल्टर कॉन्फ़िगरेशन आवश्यक है।',
         'filter_content_string' => 'फ़िल्टर कॉन्फ़िगरेशन टेक्स्ट होना चाहिए।',
         'filter_content_max' => 'फ़िल्टर कॉन्फ़िगरेशन बहुत बड़ा है (अधिकतम 65535 अक्षर)।',
-        'foreign_jail' => 'यह जेल केवल इसी साइट का अपना जेल कॉन्फ़िगर कर सकता है। [:section] को [{name}] से बदलें (यह :name बन जाएगा)।',
-        'foreign_filter' => 'यह जेल केवल इसी साइट का अपना फ़िल्टर इस्तेमाल कर सकता है। filter = :filter को filter = {filter} से बदलें (यह :name बन जाएगा)।',
-        'disallowed_setting' => 'साइट jail में ":setting" सेटिंग की अनुमति नहीं है। अनुमत: :allowed।',
+        'foreign_jail' => 'यह जेल केवल इसी एप्लिकेशन का अपना जेल कॉन्फ़िगर कर सकता है। [:section] को [{name}] से बदलें (यह :name बन जाएगा)।',
+        'foreign_filter' => 'यह जेल केवल इसी एप्लिकेशन का अपना फ़िल्टर इस्तेमाल कर सकता है। filter = :filter को filter = {filter} से बदलें (यह :name बन जाएगा)।',
+        'disallowed_setting' => 'एप्लिकेशन jail में ":setting" सेटिंग की अनुमति नहीं है। अनुमत: :allowed।',
     ],
     // FB-wp: the default filter is WordPress's.
     'app_default_filter_wordpress_only' => 'डिफ़ॉल्ट नियम केवल WordPress के विफल लॉगिन पकड़ते हैं। :type के लिए अभी ऐसे नियम नहीं हैं, इसलिए जब तक आप इस एप्लिकेशन के लॉगिन पेज के लिए नियम नहीं जोड़ते, यह jail किसी को बैन नहीं करता।',

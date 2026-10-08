@@ -267,7 +267,7 @@ it('refuses to remove a version a site is pinned to, naming the site', function 
 
     phpCall('DELETE', '/api/php/versions/8.3')
         ->assertUnprocessable()
-        ->assertJsonFragment(['message' => 'PHP 8.3 is used by Legacy shop. Change those sites first.']);
+        ->assertJsonFragment(['message' => 'PHP 8.3 is used by Legacy shop. Change those applications first.']);
 });
 
 it('queues the removal instead of purging inside the request', function () {

@@ -16,7 +16,7 @@ return [
     'ini_extension_outside_dir' => 'As extensões só podem ser carregadas da pasta de extensões do próprio PHP (:directory). Remova ou altere esta linha: :line',
     'reload_failed' => 'A alteração foi feita, mas o PHP :version não pôde ser recarregado, então ainda não está ativa. Informe a referência ao suporte.',
     'operation_failed' => 'Não foi possível atualizar a configuração do PHP :version.',
-    'version_in_use' => 'O PHP :version é usado por :apps. Altere primeiro esses sites.',
+    'version_in_use' => 'O PHP :version é usado por :apps. Altere primeiro essas aplicações.',
     'version_is_default' => 'Esta é a versão predefinida. Escolha outra primeiro.',
     'version_runs_panel' => 'Remover o PHP :version deixaria o painel offline — é a versão em que o próprio painel corre.',
     'extension_builtin' => 'A extensão :extension está compilada no PHP. Não pode ser desativada.',
@@ -40,5 +40,5 @@ return [
     'ioncube_reload_failed' => 'Não foi possível recarregar o PHP. As alterações podem ainda não estar ativas. Todas as cópias de recuperação foram mantidas.',
     'ioncube_rollback_failed' => 'A reversão falhou; todas as cópias de recuperação foram mantidas. É necessária uma recuperação manual.',
     'ioncube_config_test_failed' => 'A validação da configuração do PHP falhou. Os ficheiros de configuração anteriores foram restaurados e o PHP não foi recarregado.',
-    'not_a_php_server' => 'Este servidor aloja contentores, por isso não serve sites PHP nem tem versões de PHP para gerir. O PHP continua instalado para o próprio painel, e o seu serviço pode ser reiniciado em Serviços.',
+    'not_a_php_server' => 'Este servidor aloja contentores, por isso não serve aplicações PHP nem tem versões de PHP para gerir. O PHP continua instalado para o próprio painel, e o seu serviço pode ser reiniciado em Serviços.',
 ];

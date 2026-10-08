@@ -22,7 +22,7 @@ return [
     ],
     'nologin' => [
         'title' => 'Sin inicio de sesión',
-        'description' => 'El usuario posee sus archivos y ejecuta el sitio, pero no puede iniciar sesión. Recomendado para sitios que no necesitan acceso por shell.',
+        'description' => 'El usuario posee sus archivos y ejecuta la aplicación, pero no puede iniciar sesión. Recomendado para aplicaciones que no necesitan acceso por shell.',
     ],
     'false' => [
         'title' => 'Sin inicio de sesión (heredado)',
