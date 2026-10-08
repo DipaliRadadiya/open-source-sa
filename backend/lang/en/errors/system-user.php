@@ -20,5 +20,5 @@ return [
     'password_control_characters' => 'The password cannot contain line breaks or other control characters.',
     'shell_not_installed' => 'The :shell shell is not installed on this server. Install it first, or choose another shell.',
     'username_taken_on_server' => 'A user or group with this name already exists on the server. Choose a different username.',
-    'has_processes' => 'This user still has running processes (for example an open SSH session or a running job). End them, then try again.',
+    'has_processes' => ':username is still signed in or running something (for example an open SSH session or a running job). Sign them out or wait for it to finish — or delete again with “End sessions” on, which ends them first.',
 ];

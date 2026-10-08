@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\Server;
 use App\Actions\Server\SystemUser\CreateSystemUser;
 use App\Actions\Server\SystemUser\DeleteSystemUser;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Server\SystemUser\DeleteSystemUserRequest;
 use App\Http\Requests\Server\SystemUser\IndexSystemUsersRequest;
 use App\Http\Requests\Server\SystemUser\StoreSystemUserRequest;
 use App\Http\Resources\SystemUserResource;
@@ -61,9 +62,9 @@ class SystemUserController extends Controller
         ]);
     }
 
-    public function destroy(SystemUser $systemUser, DeleteSystemUser $action): JsonResponse
+    public function destroy(DeleteSystemUserRequest $request, SystemUser $systemUser, DeleteSystemUser $action): JsonResponse
     {
-        $action->execute($systemUser);
+        $action->execute($systemUser, $request->boolean('end_sessions'));
 
         return response()->json(null, 204);
     }

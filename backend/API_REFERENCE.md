@@ -1838,6 +1838,17 @@ All of this comes from **one read** of the file. A raw endpoint plus a parsed en
 
 ---
 
+### POST `/applications/{application}/environment/check`
+**Permission:** `app_environment` (**manage**) | **Throttle:** 60/min — added 2026-10-08 (ENV-1)
+
+The save's own checks, with nothing written. Send the editor's text before saving so warnings (an `export` line a Node service will not read, debug on, a duplicate key) show while the user can still change it — they used to appear only after the file was saved and the service restarted on it.
+
+**Request:** `{"raw": "APP_ENV=production\n…"}`
+
+**Response `200`:** `{"checks": […same shape as GET's checks…], "refused": ["…"], "saveable": true}` — `refused` lists what a `PUT` of this text would be refused for (a line that cannot be parsed, a locked key changed); empty means it saves.
+
+---
+
 ### PUT `/applications/{application}/environment`
 **Permission:** `app_environment` (manage) | **Throttle:** 20/min
 
@@ -2893,6 +2904,25 @@ ignoreregex =
 
 **Names are always prefixed `panel-site-`** (since 2026-09-26): `{name}` and `{filter}` resolve to `panel-site-{slug}`, and the files are `/etc/fail2ban/jail.d/panel-site-{slug}.conf` and `filter.d/panel-site-{slug}.conf`. Before, they were the bare slug, so a site called `sshd` or `recidive` overwrote fail2ban's own filter and replaced the server's jail. Existing jails are moved by `artisan fail2ban:resync` (run on every panel update).
 
+
+**`filter_scope` / `filter_note`** (added 2026-10-08, FB-wp): the default filter catches failed WordPress logins and XML-RPC only. On WordPress `filter_scope` is `wordpress` and `filter_note` is `null`; on every other site type `filter_scope` is `wordpress_only` and `filter_note` is a translated sentence saying the jail bans nobody until a rule for that application's own login page is added — show it above the form. There is no per-type default yet on purpose: a rule has to tell a failed login from a successful one by what the access log records, and that has not been measured for each type — a guessed rule bans the site's own users, as the old WordPress one did.
+---
+
+### GET `/applications/{application}/fail2ban/bans`
+**Permission:** `app_fail2ban` (view) — added 2026-10-08 (FS-C45)
+
+What this application's own jail has banned. `{"jail": "panel-site-shop", "banned": ["203.0.113.9"]}`; `jail` is `null` and `banned` empty when fail2ban is not running a jail for it (protection off, or fail2ban stopped). Other jails — SSH, other sites — never appear here.
+
+### POST `/applications/{application}/fail2ban/bans`
+**Permission:** `app_fail2ban` (manage) | **Throttle:** 20/min
+
+**Request:** `{"ip": "198.51.100.20"}` → `200 {"ban": {"ip": "…", "jail": "panel-site-shop"}}`. Blocks that address at this site only (FB-K), never at the firewall. `422` for the server's own address or the caller's own; `409` `reason: jail_not_enabled` when the jail is not running.
+
+### DELETE `/applications/{application}/fail2ban/bans/{ip}`
+**Permission:** `app_fail2ban` (manage) | **Throttle:** 20/min
+
+Release an address from this application's jail → `200 {"unbanned": {"ip": "…", "jail": "…"}}`. `404` when this jail has not banned it (an address banned by another jail is not released here), `409` `reason: jail_not_enabled`.
+
 ---
 
 ### POST `/applications/{application}/fail2ban`
@@ -3417,6 +3447,13 @@ Note the label: `status: "verified"` renders as **"Complete"**, not "Verified" �
 `reason` is a classified failure code with `reason_title` its localised sentence; both null unless `status` is `failed`. `log_key` and `reference` are both **UUIDs assigned when the run starts** — never null, on any status. `log_key` addresses this run's log through the logs endpoints; `reference` is the id to quote to support.
 
 `is_safety: true` marks the automatic pre-restore snapshot rather than a backup anyone scheduled — worth distinguishing in the list so it does not read as a stray extra run. The newest **two** per site are kept; each restore removes older ones, **archive included** (until 2026-09-24 only the row was removed, so every restore from the third on left a full-site archive in the bucket that the panel could no longer see). An archive that cannot be removed keeps its row and is retried by the next restore.
+
+---
+
+### GET `/applications/{application}/backups`
+**Permission:** `app_backup` (view) — added 2026-10-08 (BK-K)
+
+One application's backups, for the application's own Backups tab. Same response, filters (`filter[status|type|from|to]`, `per_page`) and `meta.counts` as `GET /backups`, always limited to this application. `GET /backups` needs the server-wide `backup` permission, which shows every site; a role with only `app_backup` gets `403` there and should use this.
 
 ---
 
@@ -4303,6 +4340,8 @@ Everything but `username` is optional. `shell` defaults to `/bin/bash`; `sudo` a
 **Permission:** `system_user` (manage)
 
 `422` if the user owns any applications, or still has running processes (an open SSH session, a running job) — nothing is removed; end them and retry.
+
+**`?end_sessions=1`** (added 2026-10-08, FS-C31) ends every process the account has first — an open SSH session, a shell, a running job — and then deletes it. Offer it as an "End sessions and delete" option on the dialog after the `422`; without it nobody is signed out behind their back.
 
 **Response `204`:**
 

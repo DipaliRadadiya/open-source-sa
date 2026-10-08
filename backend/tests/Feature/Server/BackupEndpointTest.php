@@ -1123,3 +1123,44 @@ describe('the last backup', function () {
             ->assertJsonPath('backup_target.last_run_at', '02-10-2026 02:00:00');
     });
 });
+
+describe('one application\'s own backups (BK-K)', function () {
+    it('lists them under the application\'s backup permission alone', function () {
+        $mine = seedBackupWithDestination('Offsite');
+
+        $other = Application::forceCreate([
+            'system_user_id' => $this->application->system_user_id,
+            'name' => 'Blog', 'slug' => 'blog', 'domain' => 'blog.example.test',
+            'site_type' => 'php', 'serving_profile' => 'php', 'status' => 'active',
+        ]);
+        $otherTarget = BackupTarget::create(['application_id' => $other->id, 'storage_destination_id' => $this->destination->id, 'type' => 'full', 'retention_count' => 7, 'frequency' => 'daily', 'enabled' => true]);
+        Backup::create(['backup_target_id' => $otherTarget->id, 'application_id' => $other->id, 'type' => 'full', 'status' => BackupStatus::Verified->value]);
+
+        $user = User::factory()->create();
+        grantPermission($user, 'app_backup');
+
+        $this->actingAs($user)->getJson("/api/applications/{$this->application->id}/backups")
+            ->assertOk()
+            ->assertJsonCount(1, 'backups')
+            ->assertJsonPath('backups.0.id', $mine->id)
+            ->assertJsonPath('meta.counts.total', 1);
+
+        // The server-wide list still needs the server permission.
+        $this->actingAs($user)->getJson('/api/backups')->assertForbidden();
+    });
+
+    it('refuses someone without the application\'s backup permission', function () {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->getJson("/api/applications/{$this->application->id}/backups")->assertForbidden();
+    });
+
+    it('ignores an application filter that points elsewhere', function () {
+        seedBackupWithDestination('Offsite');
+
+        $this->withHeaders(backupHeaders())
+            ->getJson("/api/applications/{$this->application->id}/backups?filter[application_id]=999")
+            ->assertOk()
+            ->assertJsonCount(1, 'backups');
+    });
+});

@@ -21,6 +21,7 @@ use App\Services\Server\Settings\SecurityUpdateRunner;
 use App\Services\Server\Settings\SecurityUpdateTracker;
 use App\Services\Server\Settings\SettingChangeLog;
 use App\Services\Server\Settings\SettingsManager;
+use App\Support\ProbeCache;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
@@ -38,7 +39,9 @@ class SettingController extends Controller
      */
     public function index(SettingsManager $settings, SettingChangeLog $changes): JsonResponse
     {
-        $values = $settings->all();
+        // FS-C46: every group asks the server (sshd, apt, swap, timedatectl);
+        // 1.4–1.9 s a load. Forgotten by every change made here.
+        $values = ProbeCache::remember('settings', fn (): array => $settings->all());
 
         return response()->json([
             'settings' => $values,
@@ -122,6 +125,7 @@ class SettingController extends Controller
     {
         $group = $settings->find('reboot_schedule');
         $group->apply($request->validated());
+        ProbeCache::flush();
 
         $values = $group->read();
 
@@ -150,6 +154,8 @@ class SettingController extends Controller
         SecurityUpdateTracker $runs,
         ActivityLogger $log,
     ): JsonResponse {
+        ProbeCache::flush();
+
         // Asked before queueing: a job that fails a minute later because the
         // package is absent gives an operator a red card and no way to connect
         // it to a missing package.
@@ -200,6 +206,8 @@ class SettingController extends Controller
      */
     public function reboot(RebootServerRequest $request, ServerOps $ops, ActivityLogger $log): JsonResponse
     {
+        ProbeCache::flush();
+
         $delay = (int) ($request->validated()['delay_minutes'] ?? 0);
         $when = $delay > 0 ? "+{$delay}" : 'now';
 
@@ -295,6 +303,8 @@ class SettingController extends Controller
      */
     public function cancelReboot(ServerOps $ops, ActivityLogger $log): JsonResponse
     {
+        ProbeCache::flush();
+
         $result = $ops->run(['shutdown', '-c'], ['feature' => 'setting', 'group' => 'reboot', 'op' => 'reboot_cancel']);
 
         if ($result->failed()) {
@@ -315,6 +325,7 @@ class SettingController extends Controller
         }
 
         $group->apply($request->validated());
+        ProbeCache::flush();
 
         $log->log('setting.updated', null, ['group' => $key]);
 

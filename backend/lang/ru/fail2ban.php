@@ -28,4 +28,6 @@ return [
         'foreign_filter' => 'Этот jail может использовать только собственный фильтр этого сайта. Замените filter = :filter на filter = {filter} (станет :name).',
         'disallowed_setting' => 'Параметр «:setting» недопустим в jail сайта. Разрешены: :allowed.',
     ],
+    // FB-wp: the default filter is WordPress's.
+    'app_default_filter_wordpress_only' => 'Правила по умолчанию отслеживают только неудачные входы в WordPress. Для :type таких правил пока нет, поэтому этот jail никого не блокирует, пока вы не добавите правило для страницы входа этого приложения.',
 ];

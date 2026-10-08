@@ -211,6 +211,24 @@ it('returns null fail2ban with templates for a never-configured application', fu
         ->assertJsonStructure(['fail2ban', 'jail_template', 'filter_template']);
 });
 
+it('says the default filter is WordPress\'s on any other site type (FB-wp)', function () {
+    $this->application = createFail2banApp('Shop', 'shop.test', 'joomla');
+
+    $this->withHeaders(appFail2banHeaders())->getJson(appFail2banUrl())
+        ->assertOk()
+        ->assertJsonPath('filter_scope', 'wordpress_only')
+        ->assertJsonPath('filter_note', __('fail2ban.app_default_filter_wordpress_only', ['type' => __('application.types.joomla.title')]));
+});
+
+it('has nothing to warn about on WordPress', function () {
+    $this->application = createFail2banApp('Shop', 'shop.test', 'wordpress');
+
+    $this->withHeaders(appFail2banHeaders())->getJson(appFail2banUrl())
+        ->assertOk()
+        ->assertJsonPath('filter_scope', 'wordpress')
+        ->assertJsonPath('filter_note', null);
+});
+
 it('hands the form a filled-in template, not one full of placeholders', function () {
     // This endpoint returned `defaultJailContent()` raw, so the form was
     // pre-filled with `[{name}]`, `filter = {filter}` and `logpath =

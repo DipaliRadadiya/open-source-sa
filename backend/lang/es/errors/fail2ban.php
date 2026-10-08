@@ -14,4 +14,6 @@ return [
     'ip_your_address' => 'Esa es la dirección desde la que está conectado. Bloquearla le dejaría fuera de este servidor, y en la cárcel recidive también de este panel, por lo que no se puede bloquear desde aquí.',
     'operation_failed' => 'La operación de fail2ban falló.',
     'bantime_too_short' => 'El tiempo de bloqueo debe ser de al menos 60 segundos, o -1 para un bloqueo permanente.',
+    // FS-C45: the application's own ban list, ban and unban.
+    'app_jail_not_enabled' => 'Fail2ban no está ejecutando una jaula para esta aplicación. Active primero su protección fail2ban.',
 ];

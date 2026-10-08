@@ -43,6 +43,44 @@ class ApplicationEnvironmentController extends Controller
     }
 
     /**
+     * Check a file before it is saved (ENV-1).
+     *
+     * The warnings — an `export` line a Node service will not read, a debug
+     * flag, a duplicate key — only appeared after saving, by which point the
+     * file was in place and the service restarted on it. Same checks, same
+     * refusals as a save, nothing written.
+     */
+    public function check(
+        SaveEnvironmentRequest $request,
+        Application $application,
+        ApplicationEnvironment $files,
+        EnvironmentInspector $inspector,
+        EnvironmentKeyLock $lock,
+        FrameworkDetector $detector,
+    ): JsonResponse {
+        $raw = (string) $request->validated('raw');
+        $checks = $inspector->checks($raw, $detector->detect($application));
+
+        $refused = array_values(array_map(
+            fn (array $check): string => $check['detail'],
+            array_filter($checks, fn (array $check): bool => $check['severity'] === 'error' && str_starts_with($check['code'], 'syntax_')),
+        ));
+
+        $before = $files->exists($application) ? $files->read($application) : '';
+
+        if (($key = $lock->violation($application, $before, $raw)) !== null) {
+            $refused[] = $lock->message($application, $key);
+        }
+
+        return response()->json([
+            'checks' => $checks,
+            // What a save of this text would be refused for. Empty: it saves.
+            'refused' => $refused,
+            'saveable' => $refused === [],
+        ]);
+    }
+
+    /**
      * Replace the file.
      *
      * Then do whatever that framework needs for the change to actually take

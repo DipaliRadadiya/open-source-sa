@@ -343,9 +343,38 @@ it('says the user still has processes when userdel exits 8, and keeps the row', 
     $this->withHeader('Authorization', 'Bearer '.$admin->createToken('t')->plainTextToken)
         ->deleteJson("/api/system-users/{$su->id}")
         ->assertUnprocessable()
-        ->assertJsonPath('errors.system_user.0', __('errors/system-user.has_processes'));
+        ->assertJsonPath('errors.system_user.0', __('errors/system-user.has_processes', ['username' => 'deploy']));
 
     expect(SystemUser::find($su->id))->not->toBeNull();
+    // Not asked to: nobody's session is ended behind their back.
+    Process::assertNotRan(fn ($p) => in_array('kill', $p->command, true));
+});
+
+it('ends the account\'s sessions first when asked, then deletes it (FS-C31)', function () {
+    $alive = new ArrayObject(['4101', '4102']);
+
+    Process::fake(function ($p) use ($alive) {
+        $command = array_values(array_filter($p->command, fn ($a) => ! in_array($a, ['sudo', '-n'], true)));
+
+        return match ($command[0] ?? '') {
+            'ps' => $alive->count() > 0 ? Process::result(output: implode("\n", $alive->getArrayCopy())."\n") : Process::result(exitCode: 1),
+            'kill' => tap(Process::result(), fn () => $alive->exchangeArray([])),
+            'userdel' => $alive->count() > 0
+                ? Process::result(errorOutput: 'userdel: user deploy is currently used by process 4101', exitCode: 8)
+                : Process::result(),
+            default => Process::result(),
+        };
+    });
+    $admin = User::factory()->admin()->create();
+    $su = SystemUser::create(['username' => 'deploy', 'home_path' => '/home/deploy', 'shell' => '/bin/bash']);
+
+    $this->withHeader('Authorization', 'Bearer '.$admin->createToken('t')->plainTextToken)
+        ->deleteJson("/api/system-users/{$su->id}?end_sessions=1")
+        ->assertNoContent();
+
+    expect(SystemUser::find($su->id))->toBeNull();
+    Process::assertRan(fn ($p) => in_array('kill', $p->command, true) && in_array('-KILL', $p->command, true)
+        && in_array('4101', $p->command, true) && in_array('4102', $p->command, true));
 });
 
 describe('a user already removed from the server (bug #26)', function () {

@@ -20,5 +20,5 @@ return [
     'password_control_characters' => 'A senha não pode conter quebras de linha nem outros caracteres de controle.',
     'shell_not_installed' => 'O shell :shell não está instalado neste servidor. Instale-o primeiro ou escolha outro shell.',
     'username_taken_on_server' => 'Já existe no servidor um usuário ou grupo com este nome. Escolha outro nome de usuário.',
-    'has_processes' => 'Este usuário ainda tem processos em execução (por exemplo, uma sessão SSH aberta ou uma tarefa em andamento). Encerre-os e tente novamente.',
+    'has_processes' => ':username ainda tem sessão iniciada ou algo em execução (por exemplo, uma sessão SSH aberta ou uma tarefa em curso). Termine a sessão ou aguarde que acabe — ou elimine novamente com «Terminar sessões» ativado, que as termina primeiro.',
 ];

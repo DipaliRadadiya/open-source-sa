@@ -219,6 +219,8 @@ return [
     'application.cloned' => ':name を :domain に複製しました',
     'application.fail2ban_enabled' => ':name の fail2ban を有効にしました',
     'application.fail2ban_disabled' => ':name の fail2ban を無効にしました',
+    'application.fail2ban_ip_banned' => ':name の fail2ban jail で :ip をブロックしました',
+    'application.fail2ban_ip_unbanned' => ':name の fail2ban jail で :ip のブロックを解除しました',
     'sync.started' => 'サーバー同期を開始しました (:mode)',
     'sync.ignored' => 'サーバー同期から :resource_key を除外しました',
     'sync.unignored' => 'サーバー同期に :resource_key を戻しました',

@@ -29,4 +29,6 @@ return [
         'foreign_filter' => 'This jail may only use this site\'s own filter. Replace filter = :filter with filter = {filter} (it becomes :name).',
         'disallowed_setting' => 'The setting ":setting" is not allowed in a site jail. Allowed: :allowed.',
     ],
+    // FB-wp: the default filter is WordPress's.
+    'app_default_filter_wordpress_only' => 'The default rules only catch failed WordPress logins. :type has no such rules yet, so this jail bans nobody until you add a rule for this application’s own login page.',
 ];

@@ -212,6 +212,43 @@ it('saves a file with warnings, because they are the user\'s business', function
     expect($this->written)->toContain('APP_DEBUG=true');
 });
 
+describe('checking before saving (ENV-1)', function () {
+    it('reports the warnings a save would leave, and writes nothing', function () {
+        fakeSite();
+
+        $response = $this->actingAs($this->admin)
+            ->postJson(envUrl('/check'), ['raw' => "APP_ENV=production\nAPP_KEY=base64:abc\nAPP_DEBUG=true\n"])
+            ->assertOk()
+            ->assertJsonPath('saveable', true)
+            ->assertJsonPath('refused', []);
+
+        expect(collect($response->json('checks'))->pluck('code'))->not->toBeEmpty()
+            ->and($this->written)->toBeNull();
+    });
+
+    it('says what a save would be refused for', function () {
+        fakeSite();
+
+        $this->actingAs($this->admin)
+            ->postJson(envUrl('/check'), ['raw' => "APP_ENV=production\nTHIS LINE IS BROKEN\n"])
+            ->assertOk()
+            ->assertJsonPath('saveable', false)
+            ->assertJsonCount(1, 'refused');
+
+        expect($this->written)->toBeNull();
+    });
+
+    it('needs the right to edit the file', function () {
+        fakeSite();
+        $viewer = User::factory()->create();
+        grantPermission($viewer, 'app_environment', view: true, manage: false);
+
+        $this->actingAs($viewer)
+            ->postJson(envUrl('/check'), ['raw' => "APP_ENV=production\n"])
+            ->assertForbidden();
+    });
+});
+
 describe('site types that keep no .env', function () {
     beforeEach(function () {
         $this->wordpress = Application::forceCreate([

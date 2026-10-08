@@ -121,6 +121,19 @@ class ServerMetrics
      *
      * @return array<string, mixed>
      */
+    /**
+     * The facts that move between two loads of the dashboard.
+     *
+     * @return array{uptime: mixed, reboot_required: bool}
+     */
+    public function volatileFacts(): array
+    {
+        return [
+            'uptime' => $this->uptime(),
+            'reboot_required' => is_file((string) config('server.reboot_required_file', '/var/run/reboot-required')),
+        ];
+    }
+
     public function facts(): array
     {
         $memory = $this->memoryUsage();

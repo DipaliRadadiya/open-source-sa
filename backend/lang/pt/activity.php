@@ -219,6 +219,8 @@ return [
     'application.cloned' => 'Clonou :name para :domain',
     'application.fail2ban_enabled' => 'Ativou o fail2ban para :name',
     'application.fail2ban_disabled' => 'Desativou o fail2ban para :name',
+    'application.fail2ban_ip_banned' => 'Baniu :ip na jail fail2ban de :name',
+    'application.fail2ban_ip_unbanned' => 'Removeu o banimento de :ip da jail fail2ban de :name',
     'sync.started' => 'Iniciou uma sincronização do servidor (:mode)',
     'sync.ignored' => 'Dispensou :resource_key da sincronização do servidor',
     'sync.unignored' => 'Repôs :resource_key na sincronização do servidor',

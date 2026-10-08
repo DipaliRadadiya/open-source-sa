@@ -20,5 +20,5 @@ return [
     'password_control_characters' => 'Das Passwort darf keine Zeilenumbrüche oder andere Steuerzeichen enthalten.',
     'shell_not_installed' => 'Die Shell :shell ist auf diesem Server nicht installiert. Installieren Sie sie zuerst oder wählen Sie eine andere Shell.',
     'username_taken_on_server' => 'Auf dem Server gibt es bereits einen Benutzer oder eine Gruppe mit diesem Namen. Wählen Sie einen anderen Benutzernamen.',
-    'has_processes' => 'Dieser Benutzer hat noch laufende Prozesse (zum Beispiel eine offene SSH-Sitzung oder einen laufenden Job). Beenden Sie sie und versuchen Sie es erneut.',
+    'has_processes' => ':username ist noch angemeldet oder führt etwas aus (zum Beispiel eine offene SSH-Sitzung oder einen laufenden Job). Melden Sie ihn ab oder warten Sie, bis es fertig ist – oder löschen Sie erneut mit aktiviertem „Sitzungen beenden“, das sie zuerst beendet.',
 ];

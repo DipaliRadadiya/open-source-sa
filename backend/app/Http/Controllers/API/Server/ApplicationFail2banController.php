@@ -62,6 +62,7 @@ class ApplicationFail2banController extends Controller
                 'fail2ban' => null,
                 'jail_template' => $templates['jail'],
                 'filter_template' => $templates['filter'],
+                ...$this->filterScope($application),
             ]);
         }
 
@@ -88,7 +89,34 @@ class ApplicationFail2banController extends Controller
             // resolved, so what is shown is what would be written.
             'jail_template' => $saved['jail'],
             'filter_template' => $saved['filter'],
+            ...$this->filterScope($application),
         ]);
+    }
+
+    /**
+     * What the default filter protects (FB-wp).
+     *
+     * It catches failed WordPress logins and XML-RPC, and nothing else — on
+     * any other site type it is a jail that never bans. Said, rather than
+     * guessed at with a filter per type: a rule has to tell a failed login
+     * from a good one by what the access log records, which has not been
+     * measured per type — and a guessed rule bans the site's own users, as
+     * the old WordPress `wp-admin` rule did.
+     *
+     * @return array{filter_scope: string, filter_note: ?string}
+     */
+    private function filterScope(Application $application): array
+    {
+        if ($application->site_type === 'wordpress') {
+            return ['filter_scope' => 'wordpress', 'filter_note' => null];
+        }
+
+        return [
+            'filter_scope' => 'wordpress_only',
+            'filter_note' => __('fail2ban.app_default_filter_wordpress_only', [
+                'type' => __('application.types.'.$application->site_type.'.title'),
+            ]),
+        ];
     }
 
     /**

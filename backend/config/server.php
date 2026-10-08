@@ -109,6 +109,14 @@ use App\Services\Server\WebServers\OlsDriver;
 return [
 
     /*
+     * How long a read-only screen that asks the server keeps its answer
+     * (FS-C46) — Settings, the dashboard facts, the database engine list.
+     * Every change the panel makes clears it at once; this only bounds how
+     * long a change made by hand on the box takes to show. 0 turns it off.
+     */
+    'probe_cache_seconds' => (int) env('SERVER_PROBE_CACHE_SECONDS', 30),
+
+    /*
      * The wildcard-DNS services behind the temporary hostname a new site can be
      * given before its real domain points here. Both resolve
      * `<anything>.<ip>.<suffix>` to that address with no DNS setup at all, and

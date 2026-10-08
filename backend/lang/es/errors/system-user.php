@@ -20,5 +20,5 @@ return [
     'password_control_characters' => 'La contraseña no puede contener saltos de línea ni otros caracteres de control.',
     'shell_not_installed' => 'El shell :shell no está instalado en este servidor. Instálalo primero o elige otro shell.',
     'username_taken_on_server' => 'Ya existe en el servidor un usuario o grupo con este nombre. Elige otro nombre de usuario.',
-    'has_processes' => 'Este usuario todavía tiene procesos en ejecución (por ejemplo, una sesión SSH abierta o una tarea en curso). Finalízalos y vuelve a intentarlo.',
+    'has_processes' => ':username sigue conectado o ejecutando algo (por ejemplo, una sesión SSH abierta o un trabajo en curso). Cierre su sesión o espere a que termine, o vuelva a eliminarlo con «Terminar sesiones» activado, que las termina primero.',
 ];

@@ -28,4 +28,6 @@ return [
         'foreign_filter' => 'Cette jail ne peut utiliser que le filtre propre à ce site. Remplacez filter = :filter par filter = {filter} (devient :name).',
         'disallowed_setting' => 'Le réglage « :setting » n\'est pas autorisé dans la jail d\'un site. Autorisés : :allowed.',
     ],
+    // FB-wp: the default filter is WordPress's.
+    'app_default_filter_wordpress_only' => 'Les règles par défaut ne détectent que les connexions WordPress échouées. :type n’a pas encore de telles règles : cette prison ne bannit donc personne tant que vous n’ajoutez pas de règle pour la page de connexion de cette application.',
 ];

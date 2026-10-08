@@ -14,4 +14,6 @@ return [
     'ip_your_address' => 'これは現在あなたが接続しているアドレスです。禁止するとこのサーバーに、recidive ジェイルではこのパネルにも接続できなくなるため、ここからは禁止できません。',
     'operation_failed' => 'fail2ban の操作に失敗しました。',
     'bantime_too_short' => 'ブロック時間は 60 秒以上、または無期限の場合は -1 を指定してください。',
+    // FS-C45: the application's own ban list, ban and unban.
+    'app_jail_not_enabled' => 'このアプリの fail2ban jail は動作していません。先に fail2ban の保護をオンにしてください。',
 ];

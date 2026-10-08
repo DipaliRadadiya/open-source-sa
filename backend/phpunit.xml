@@ -38,6 +38,8 @@
              prefix on every one of them would assert the prefix instead.
              ServerOpsPrivilegeTest enables it and covers the prefixing. -->
         <env name="SERVER_OPS_SUDO" value="false"/>
+        <!-- Off in tests: a cached probe would carry one test's fake server into the next request. ProbeCacheTest turns it on. -->
+        <env name="SERVER_PROBE_CACHE_SECONDS" value="0"/>
         <env name="SERVER_APP_SETTLE_SECONDS" value="0"/>
         <env name="SV_AUTO_ISSUE_RETRY_SECONDS" value="0"/>
         <env name="PANEL_UPDATE_LAUNCH" value="false"/>

@@ -121,6 +121,11 @@ Route::get('/backup-targets/options', [BackupController::class, 'options'])
     ->middleware('permission:app_backup');
 
 // Per-application settings and manual runs.
+// BK-K: an application's own backups under its own permission. The list
+// above is server-wide and needs `backup`, which shows every site.
+Route::get('/applications/{application}/backups', [BackupController::class, 'indexForApplication'])
+    ->middleware('permission:app_backup');
+
 Route::get('/applications/{application}/backup-target', [BackupController::class, 'showTarget'])
     ->middleware('permission:app_backup');
 

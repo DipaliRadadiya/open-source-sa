@@ -219,6 +219,8 @@ return [
     'application.cloned' => ':name nach :domain geklont',
     'application.fail2ban_enabled' => 'Fail2ban für :name aktiviert',
     'application.fail2ban_disabled' => 'Fail2ban für :name deaktiviert',
+    'application.fail2ban_ip_banned' => ':ip im Fail2ban-Jail von :name gesperrt',
+    'application.fail2ban_ip_unbanned' => ':ip im Fail2ban-Jail von :name entsperrt',
     'sync.started' => 'Server-Synchronisierung gestartet (:mode)',
     'sync.ignored' => ':resource_key aus der Server-Synchronisierung ausgeblendet',
     'sync.unignored' => ':resource_key wieder in die Server-Synchronisierung aufgenommen',

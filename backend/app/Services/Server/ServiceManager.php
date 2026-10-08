@@ -6,6 +6,7 @@ use App\Contracts\PhpStack;
 use App\Enums\InstallStatus;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Capabilities\ServerCapabilities;
+use App\Support\ProbeCache;
 
 /**
  * Manages system services via systemctl. No DB — state is read live from
@@ -280,6 +281,10 @@ class ServiceManager
      */
     public function runService(array $service, string $action): ServerOpsResult
     {
+        // Starting or stopping an engine changes what the Databases screen
+        // says is running (FS-C46).
+        ProbeCache::flush();
+
         $result = $this->run($service['unit'], $action);
 
         if ($result->failed() || ! isset($service['instances']) || ! in_array($action, ['enable', 'disable'], true)) {

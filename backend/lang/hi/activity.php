@@ -219,6 +219,8 @@ return [
     'application.cloned' => ':name को :domain पर क्लोन किया',
     'application.fail2ban_enabled' => ':name के लिए fail2ban सक्षम किया',
     'application.fail2ban_disabled' => ':name के लिए fail2ban अक्षम किया',
+    'application.fail2ban_ip_banned' => ':name की fail2ban jail में :ip को बैन किया',
+    'application.fail2ban_ip_unbanned' => ':name की fail2ban jail से :ip का बैन हटाया',
     'sync.started' => 'सर्वर सिंक शुरू किया (:mode)',
     'sync.ignored' => 'सर्वर सिंक से :resource_key हटाया',
     'sync.unignored' => 'सर्वर सिंक में :resource_key वापस जोड़ा',

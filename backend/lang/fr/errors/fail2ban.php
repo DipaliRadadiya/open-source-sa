@@ -14,4 +14,6 @@ return [
     'ip_your_address' => 'C\'est l\'adresse depuis laquelle vous êtes connecté. La bannir vous couperait l\'accès à ce serveur, et avec la prison recidive à ce panneau aussi ; elle ne peut donc pas être bannie d\'ici.',
     'operation_failed' => 'L\'opération fail2ban a échoué.',
     'bantime_too_short' => 'La durée de bannissement doit être d\'au moins 60 secondes, ou -1 pour un bannissement permanent.',
+    // FS-C45: the application's own ban list, ban and unban.
+    'app_jail_not_enabled' => 'Fail2ban n’exécute aucune prison pour cette application. Activez d’abord sa protection fail2ban.',
 ];

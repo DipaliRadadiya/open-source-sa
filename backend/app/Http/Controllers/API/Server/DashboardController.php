@@ -12,6 +12,7 @@ use App\Services\ActivityLogger;
 use App\Services\Server\Applications\AppIssueDetector;
 use App\Services\Server\Metrics\ServerMetrics;
 use App\Services\Server\ProcessKiller;
+use App\Support\ProbeCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Date;
 
@@ -22,7 +23,12 @@ class DashboardController extends Controller
      */
     public function facts(ServerMetrics $metrics): JsonResponse
     {
-        return response()->json(['facts' => $metrics->facts()]);
+        // FS-C46: hostname, OS, CPU, runtimes… are a dozen commands, 0.5–0.8 s.
+        // Uptime and the reboot flag are read fresh: they are why the
+        // dashboard is reloaded.
+        $facts = ProbeCache::remember('server-facts', fn (): array => $metrics->facts());
+
+        return response()->json(['facts' => array_merge($facts, $metrics->volatileFacts())]);
     }
 
     /**

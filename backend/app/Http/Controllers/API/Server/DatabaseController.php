@@ -30,6 +30,7 @@ use App\Services\Server\Databases\Installers\AbstractSqlEngineInstaller;
 use App\Services\Server\Databases\Installers\EngineInstallerManager;
 use App\Support\ListSearch;
 use App\Support\ListSort;
+use App\Support\ProbeCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -57,7 +58,9 @@ class DatabaseController extends Controller
     public function engines(DatabaseManager $manager, EngineInstallerManager $installers): JsonResponse
     {
         $progress = app(InstallTracker::class)->versions('database')->keyBy('version');
-        $capabilities = $manager->capabilities();
+        // FS-C46: a version query and a package question per engine, ~0.8 s.
+        // Install progress below is read fresh; only detection is kept.
+        $capabilities = ProbeCache::remember('database-engines', fn (): array => $manager->capabilities());
         $installed = array_column($capabilities, 'installed', 'engine');
 
         $engines = array_map(function (array $engine) use ($manager, $installers, $progress, $installed) {

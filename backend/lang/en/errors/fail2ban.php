@@ -14,4 +14,6 @@ return [
     'ip_your_address' => 'That is the address you are connected from. Banning it would lock you out of this server, and on the recidive jail out of this panel too, so it cannot be banned from here.',
     'operation_failed' => 'The fail2ban operation failed.',
     'bantime_too_short' => 'Ban time must be at least 60 seconds, or -1 for a permanent ban.',
+    // FS-C45: the application's own ban list, ban and unban.
+    'app_jail_not_enabled' => 'Fail2ban is not running a jail for this application. Turn its fail2ban protection on first.',
 ];

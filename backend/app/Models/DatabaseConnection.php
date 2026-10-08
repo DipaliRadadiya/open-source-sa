@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\ProbeCache;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 
@@ -12,6 +13,12 @@ use Illuminate\Database\Eloquent\Model;
 #[Fillable(['engine', 'connection_type', 'host', 'port', 'socket', 'username', 'password', 'options'])]
 class DatabaseConnection extends Model
 {
+    /** A changed connection changes what the engine list can see (FS-C46). */
+    protected static function booted(): void
+    {
+        static::saved(fn () => ProbeCache::flush());
+    }
+
     /**
      * @return array<string, string>
      */

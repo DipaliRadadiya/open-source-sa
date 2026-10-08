@@ -19,7 +19,7 @@ class DeleteSystemUser
         private AccountLock $accountLock,
     ) {}
 
-    public function execute(SystemUser $systemUser): void
+    public function execute(SystemUser $systemUser, bool $endSessions = false): void
     {
         // Can't orphan running applications.
         if ($systemUser->applications()->exists()) {
@@ -29,8 +29,16 @@ class DeleteSystemUser
         }
 
         // Serialize with every other account command (global /etc/passwd lock).
-        $this->accountLock->run(function () use ($systemUser) {
+        $this->accountLock->run(function () use ($systemUser, $endSessions) {
             $this->emptyOwnGroup($systemUser->username);
+
+            // FS-C31: asked for, the account's processes are ended first — an
+            // open SSH session, a shell left running — because userdel will
+            // not remove an account that has any, and the panel had no other
+            // way to end them. Only when asked: it signs a person out.
+            if ($endSessions) {
+                $this->endProcesses($systemUser->username);
+            }
 
             $result = $this->serverOps->run(
                 ['userdel', '-r', $systemUser->username],
@@ -42,7 +50,7 @@ class DeleteSystemUser
             // broken and nothing was removed; the person can end it and retry.
             if ($result->exitCode() === 8) {
                 throw ValidationException::withMessages([
-                    'system_user' => [__('errors/system-user.has_processes')],
+                    'system_user' => [__('errors/system-user.has_processes', ['username' => $systemUser->username])],
                 ]);
             }
 
@@ -75,6 +83,33 @@ class DeleteSystemUser
 
             $systemUser->delete();
         });
+    }
+
+    /**
+     * Kill every process the account owns.
+     *
+     * `ps` then `kill`, both already granted, rather than `pkill`/`loginctl`
+     * and a new sudo grant for one button. KILL rather than TERM: a shell
+     * ignores TERM, and the account is about to stop existing.
+     */
+    private function endProcesses(string $username): void
+    {
+        $context = ['feature' => 'system_user', 'op' => 'end_sessions', 'system_user' => $username];
+
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            // Exit 1: the account has no processes — an answer.
+            $pids = array_values(array_filter(
+                preg_split('/\s+/', trim($this->serverOps->run(['ps', '-o', 'pid=', '-u', $username], $context, expectedExitCodes: [1])->output())) ?: [],
+                fn (string $pid): bool => ctype_digit($pid) && (int) $pid > 1,
+            ));
+
+            if ($pids === []) {
+                return;
+            }
+
+            $this->serverOps->run(['kill', '-KILL', ...$pids], $context, expectedExitCodes: [1]);
+            usleep(200_000);
+        }
     }
 
     private function goneFromServer(string $username): bool

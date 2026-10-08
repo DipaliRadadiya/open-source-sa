@@ -4,6 +4,7 @@ namespace App\Services\Runtime;
 
 use App\Enums\InstallStatus;
 use App\Models\RuntimeInstall;
+use App\Support\ProbeCache;
 use Illuminate\Support\Collection;
 
 /**
@@ -69,6 +70,9 @@ class InstallTracker
 
         $row = $this->query($runtime, $version, $extension)->firstOrFail();
 
+        // Installs change what the cached server screens report (FS-C46).
+        ProbeCache::flush();
+
         // An upsert that updated an existing row skipped the column above, so
         // a row from before this existed — or one whose first attempt never
         // recorded an answer — still gets one rather than staying unknown
@@ -122,10 +126,13 @@ class InstallTracker
     public function succeed(string $runtime, string $version, ?string $extension = null): void
     {
         $this->query($runtime, $version, $extension)->delete();
+        ProbeCache::flush();
     }
 
     public function fail(string $runtime, string $version, ?string $extension, string $reason, ?string $reference = null): void
     {
+        ProbeCache::flush();
+
         $this->query($runtime, $version, $extension)->update([
             'status' => InstallStatus::Failed,
             'reason' => $reason,

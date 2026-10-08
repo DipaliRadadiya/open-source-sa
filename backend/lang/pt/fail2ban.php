@@ -28,4 +28,6 @@ return [
         'foreign_filter' => 'Esta jail só pode usar o filtro deste site. Substitua filter = :filter por filter = {filter} (torna-se :name).',
         'disallowed_setting' => 'A definição ":setting" não é permitida na jail de um site. Permitidas: :allowed.',
     ],
+    // FB-wp: the default filter is WordPress's.
+    'app_default_filter_wordpress_only' => 'As regras predefinidas só detetam inícios de sessão falhados do WordPress. :type ainda não tem regras assim, por isso esta jail não bane ninguém até adicionar uma regra para a página de início de sessão desta aplicação.',
 ];

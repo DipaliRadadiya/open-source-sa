@@ -225,6 +225,8 @@ return [
     'application.cloned' => 'Cloned :name to :domain',
     'application.fail2ban_enabled' => 'Enabled fail2ban for :name',
     'application.fail2ban_disabled' => 'Disabled fail2ban for :name',
+    'application.fail2ban_ip_banned' => 'Banned :ip in the fail2ban jail of :name',
+    'application.fail2ban_ip_unbanned' => 'Unbanned :ip from the fail2ban jail of :name',
     'sync.started' => 'Started a server sync (:mode)',
     'sync.ignored' => 'Dismissed :resource_key from server sync',
     'sync.unignored' => 'Restored :resource_key to server sync',

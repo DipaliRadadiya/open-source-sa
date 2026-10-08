@@ -4,6 +4,7 @@ namespace App\Services\Server\Capabilities;
 
 use App\Models\ServerCapability;
 use App\Services\Server\ServerOps;
+use App\Support\ProbeCache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 
@@ -249,6 +250,8 @@ class ServerCapabilities
      */
     public function refresh(): ServerCapability
     {
+        ProbeCache::flush();
+
         $record = $this->current();
 
         return $this->store([

@@ -20,5 +20,5 @@ return [
     'password_control_characters' => 'Le mot de passe ne peut pas contenir de sauts de ligne ni d\'autres caractères de contrôle.',
     'shell_not_installed' => 'Le shell :shell n\'est pas installé sur ce serveur. Installez-le d\'abord ou choisissez un autre shell.',
     'username_taken_on_server' => 'Un utilisateur ou un groupe portant ce nom existe déjà sur le serveur. Choisissez un autre nom d\'utilisateur.',
-    'has_processes' => 'Cet utilisateur a encore des processus en cours (par exemple une session SSH ouverte ou une tâche en cours). Arrêtez-les, puis réessayez.',
+    'has_processes' => ':username est toujours connecté ou exécute quelque chose (par exemple une session SSH ouverte ou une tâche en cours). Déconnectez-le ou attendez la fin, ou supprimez-le à nouveau avec « Terminer les sessions » activé, qui les termine d’abord.',
 ];

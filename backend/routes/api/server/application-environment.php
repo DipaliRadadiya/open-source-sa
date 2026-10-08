@@ -20,6 +20,11 @@ use Illuminate\Support\Facades\Route;
 Route::get('/applications/{application}/environment', [ApplicationEnvironmentController::class, 'show'])
     ->middleware('permission:app_environment,manage');
 
+// ENV-1: the save's own checks, before saving. Manage, like the save: the
+// body is the whole file, secrets included.
+Route::post('/applications/{application}/environment/check', [ApplicationEnvironmentController::class, 'check'])
+    ->middleware(['permission:app_environment,manage', 'throttle:60,1']);
+
 Route::put('/applications/{application}/environment', [ApplicationEnvironmentController::class, 'update'])
     ->middleware(['permission:app_environment,manage', 'throttle:20,1']);
 

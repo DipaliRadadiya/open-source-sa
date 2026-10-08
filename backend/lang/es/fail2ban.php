@@ -28,4 +28,6 @@ return [
         'foreign_filter' => 'Este jail solo puede usar el filtro propio de este sitio. Sustituya filter = :filter por filter = {filter} (se convierte en :name).',
         'disallowed_setting' => 'El ajuste ":setting" no está permitido en la jaula de un sitio. Permitidos: :allowed.',
     ],
+    // FB-wp: the default filter is WordPress's.
+    'app_default_filter_wordpress_only' => 'Las reglas predeterminadas solo detectan inicios de sesión fallidos de WordPress. :type aún no tiene reglas así, por lo que esta jaula no bloquea a nadie hasta que añada una regla para la página de inicio de sesión de esta aplicación.',
 ];

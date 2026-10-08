@@ -14,4 +14,6 @@ return [
     'ip_your_address' => 'यह वही पता है जिससे आप जुड़े हैं। इसे प्रतिबंधित करने से आप इस सर्वर से, और recidive जेल में इस पैनल से भी, बाहर हो जाएँगे, इसलिए इसे यहाँ से प्रतिबंधित नहीं किया जा सकता।',
     'operation_failed' => 'fail2ban का संचालन विफल रहा।',
     'bantime_too_short' => 'अवरोध समय कम से कम 60 सेकंड होना चाहिए, या स्थायी अवरोध के लिए -1।',
+    // FS-C45: the application's own ban list, ban and unban.
+    'app_jail_not_enabled' => 'Fail2ban इस एप्लिकेशन के लिए कोई jail नहीं चला रहा है। पहले इसकी fail2ban सुरक्षा चालू करें।',
 ];

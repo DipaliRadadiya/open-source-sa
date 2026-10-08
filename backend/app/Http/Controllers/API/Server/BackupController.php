@@ -10,6 +10,7 @@ use App\Enums\BackupStatus;
 use App\Enums\BackupType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Backup\BulkDeleteBackupsRequest;
+use App\Http\Requests\Server\Backup\IndexApplicationBackupsRequest;
 use App\Http\Requests\Server\Backup\IndexBackupsRequest;
 use App\Http\Requests\Server\Backup\IndexBackupTargetsRequest;
 use App\Http\Requests\Server\Backup\SaveBackupTargetRequest;
@@ -45,7 +46,20 @@ class BackupController extends Controller
      */
     public function index(IndexBackupsRequest $request): JsonResponse
     {
-        $filter = $request->validated('filter', []);
+        return $this->listBackups($request, $request->validated('filter.application_id'));
+    }
+
+    /**
+     * One application's backups, same shape as the list above (BK-K).
+     */
+    public function indexForApplication(IndexApplicationBackupsRequest $request, Application $application): JsonResponse
+    {
+        return $this->listBackups($request, $application->id);
+    }
+
+    private function listBackups(IndexBackupsRequest $request, mixed $applicationId): JsonResponse
+    {
+        $filter = ['application_id' => $applicationId] + $request->validated('filter', []);
 
         $backups = Backup::query()
             // The destination comes through the target, and this list is

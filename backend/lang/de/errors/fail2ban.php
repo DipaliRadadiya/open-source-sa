@@ -14,4 +14,6 @@ return [
     'ip_your_address' => 'Das ist die Adresse, von der aus Sie verbunden sind. Eine Sperre würde Sie von diesem Server aussperren, beim recidive-Jail auch von diesem Panel, daher kann sie hier nicht gesperrt werden.',
     'operation_failed' => 'Der fail2ban-Vorgang ist fehlgeschlagen.',
     'bantime_too_short' => 'Die Sperrdauer muss mindestens 60 Sekunden betragen, oder -1 für eine dauerhafte Sperre.',
+    // FS-C45: the application's own ban list, ban and unban.
+    'app_jail_not_enabled' => 'Fail2ban führt für diese Anwendung kein Jail aus. Aktivieren Sie zuerst ihren Fail2ban-Schutz.',
 ];
