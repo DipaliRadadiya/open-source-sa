@@ -28,6 +28,15 @@ use Illuminate\Support\Str;
  */
 class ContainerSupervisor
 {
+    /**
+     * The ceiling for a question about containers that already exist —
+     * `ps`, `logs` — as opposed to `up`/`pull`, which may download gigabytes
+     * and get `server.docker.command_timeout`. The readiness check asks these
+     * on every try and once more after its deadline, and a `compose ps` that
+     * has not answered in half a minute is not going to (DS-12).
+     */
+    public const QUERY_TIMEOUT = 30;
+
     public function __construct(
         private ServerOps $serverOps,
         private ManagedFile $files,
@@ -172,7 +181,7 @@ class ContainerSupervisor
      */
     public function crashLooping(Application $application, string $documentRoot): bool
     {
-        $result = $this->compose($application, $documentRoot, ['ps', '--format', 'json'], 'compose_ps_state');
+        $result = $this->compose($application, $documentRoot, ['ps', '--format', 'json'], 'compose_ps_state', timeout: self::QUERY_TIMEOUT);
 
         if (! $result->answered) {
             return false;
@@ -386,11 +395,21 @@ class ContainerSupervisor
      */
     public function generated(Application $application, string $documentRoot): string
     {
+        // No port, no file — never a default (DS-12). `?: 80` rendered a
+        // site with no container port as one listening on 80, and nginx
+        // proxied to a port nothing in the image listened on while the panel
+        // said Running. Create and `PUT /container` both refuse a missing
+        // port now; this is the weld behind them, for a row that arrives
+        // without one by any other route.
+        if ((int) $application->container_port <= 0) {
+            throw new ProvisioningFailedException('compose_no_port', '', 'container_port_missing');
+        }
+
         $values = [
             'project' => $this->project($application),
             'image' => (string) $application->image,
             'appPort' => (int) $application->app_port,
-            'containerPort' => (int) ($application->container_port ?: 80),
+            'containerPort' => (int) $application->container_port,
             'documentRoot' => rtrim($documentRoot, '/'),
             'siteMount' => $application->siteMountPath(),
             'envPath' => $application->envPath(),
@@ -616,6 +635,7 @@ class ContainerSupervisor
             $documentRoot,
             ['ps', '--status', 'running', '--quiet'],
             'compose_ps',
+            timeout: self::QUERY_TIMEOUT,
         );
 
         return $result->answered && trim($result->output()) !== '';
@@ -711,6 +731,7 @@ class ContainerSupervisor
             $documentRoot,
             ['logs', '--tail', (string) $lines, '--no-color'],
             'compose_logs',
+            timeout: self::QUERY_TIMEOUT,
         );
 
         return $this->plain($result->output() !== '' ? $result->output() : $result->errorOutput());
@@ -784,6 +805,7 @@ class ContainerSupervisor
         string $op,
         ?string $override = null,
         ?string $auth = null,
+        ?int $timeout = null,
     ): ServerOpsResult {
         // The override is passed only where it matters, which is container
         // CREATION — `up`. `down`, `logs`, `ps`, `stop` and `restart` do not read
@@ -812,7 +834,7 @@ class ContainerSupervisor
                 '-p', $this->project($application),
             ], $arguments),
             ['feature' => 'application', 'op' => $op, 'application' => $application->id],
-            timeout: (int) config('server.docker.command_timeout', 600),
+            timeout: $timeout ?? (int) config('server.docker.command_timeout', 600),
         );
     }
 }

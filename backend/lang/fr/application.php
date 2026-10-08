@@ -248,6 +248,7 @@ return [
     ],
 
     'failure_reason' => [
+        'container_port_missing' => 'Ce site n\'a pas de port de conteneur : le panneau ne peut donc pas savoir vers quel port du conteneur rediriger. Indiquez dans Port du conteneur le port sur lequel l\'application écoute, puis enregistrez.',
         'attached_database_engine_mismatch' => 'Cette application a déjà une base de données associée, mais elle fonctionne sur un moteur que cette application ne peut pas utiliser. Détachez-la, ou associez-en une sur un moteur pris en charge, puis réessayez.',
         'serving_error' => 'L\'application a démarré mais répond à chaque requête par une erreur. Ses ressources n\'ont probablement pas été entièrement construites — voir le journal de l\'application.',
         'not_answering' => 'L\'application a démarré mais n\'a jamais répondu à une requête. Consultez le journal de l\'application pour savoir pourquoi elle n\'écoute pas.',

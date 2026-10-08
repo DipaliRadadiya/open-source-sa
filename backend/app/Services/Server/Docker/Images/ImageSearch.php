@@ -25,11 +25,17 @@ use Illuminate\Support\Facades\Http;
  */
 class ImageSearch
 {
-    /** How much more a pull of the project's own publisher counts. */
+    /** How much more a pull of the project's own publisher counts, at most. */
     private const PUBLISHER_WEIGHT = 5;
 
-    /** Pulls below which a matching publisher gets no weight at all. */
-    private const BOOST_FLOOR = 10_000;
+    /**
+     * The ramp the weight climbs: none at or below the first, all of it from
+     * the second. A ramp, not a step (DS-12) — a floor at 10k let an
+     * unrelated 10,001-pull repackage beat the project's own 9,999.
+     */
+    private const BOOST_FROM = 1_000;
+
+    private const BOOST_FULL = 50_000;
 
     /**
      * @return array{results: list<array<string, mixed>>, offline?: bool}
@@ -115,8 +121,12 @@ class ImageSearch
      * take the preselected first place from `jvmilazz0/kavita` with 11.9M, and
      * the form deploys the first place in one click. Weighted, the project's
      * own image still wins where it is in the same league (Umami: 181k × 5
-     * beats a 605k repackage), and a repository below the floor gets no boost
-     * at all, so registering a matching name buys nothing.
+     * beats a 605k repackage), and a repository with next to no pulls gets
+     * next to no boost, so registering a matching name buys nothing.
+     *
+     * The weight grows with the pulls between BOOST_FROM and BOOST_FULL, so
+     * the result still grows with every pull and there is no count at which
+     * one more pull jumps a repository past another.
      *
      * @param  array<string, mixed>  $row
      */
@@ -124,16 +134,22 @@ class ImageSearch
     {
         $pulls = (int) $row['pulls'];
 
-        if ($pulls < self::BOOST_FLOOR || ! $this->publisherMatches((string) $row['image'], $query)) {
+        if ($pulls <= self::BOOST_FROM || ! $this->publisherMatches((string) $row['image'], $query)) {
             return $pulls;
         }
 
-        return $pulls * self::PUBLISHER_WEIGHT;
+        $share = min(1.0, ($pulls - self::BOOST_FROM) / (self::BOOST_FULL - self::BOOST_FROM));
+
+        return (int) round($pulls * (1 + (self::PUBLISHER_WEIGHT - 1) * $share));
     }
 
     /**
      * Whether the publisher looks like the project: the name searched for is
-     * in both the namespace and the repository, as in `umamisoftware/umami`.
+     * in the namespace and IS the repository, as in `umamisoftware/umami`.
+     *
+     * The repository is matched whole (DS-12). Matched as a substring, every
+     * accessory the vendor publishes was weighted as the project:
+     * `grafana/grafana-image-renderer` reached third place on "grafana".
      */
     private function publisherMatches(string $image, string $query): bool
     {
@@ -146,6 +162,6 @@ class ImageSearch
 
         [$namespace, $repository] = explode('/', $image, 2);
 
-        return str_contains($plain($namespace), $term) && str_contains($plain($repository), $term);
+        return str_contains($plain($namespace), $term) && $plain($repository) === $term;
     }
 }

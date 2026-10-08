@@ -258,6 +258,7 @@ return [
     | the cause; most failures carry the step and reference instead.
     */
     'failure_reason' => [
+        'container_port_missing' => 'This site has no container port, so the panel cannot tell which port inside the container to proxy to. Set Container port to the port the application listens on and save.',
         'attached_database_engine_mismatch' => 'This application already has a database attached, but it runs on an engine this application cannot use. Detach it, or attach one on a supported engine, and try again.',
         'serving_error' => 'The application started but answers every request with an error. Its assets were most likely not built completely — check the application log for details.',
         'not_answering' => 'The application started but never answered a request. Check the application log for why it is not listening.',

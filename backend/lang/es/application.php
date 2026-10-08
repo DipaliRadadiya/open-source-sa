@@ -248,6 +248,7 @@ return [
     ],
 
     'failure_reason' => [
+        'container_port_missing' => 'Este sitio no tiene puerto de contenedor, así que el panel no puede saber a qué puerto dentro del contenedor redirigir. Indica en Puerto del contenedor el puerto en el que escucha la aplicación y guarda.',
         'attached_database_engine_mismatch' => 'Esta aplicación ya tiene una base de datos asociada, pero funciona con un motor que esta aplicación no puede usar. Desvincúlela, o asocie una en un motor compatible, e inténtelo de nuevo.',
         'serving_error' => 'La aplicación se inició pero responde a cada solicitud con un error. Lo más probable es que sus recursos no se compilaran por completo; consulte el registro de la aplicación.',
         'not_answering' => 'La aplicación se inició pero nunca respondió a una solicitud. Consulte el registro de la aplicación para ver por qué no está escuchando.',

@@ -247,21 +247,22 @@ it('bounds the log read', function () {
     expect(collect($ran)->firstWhere('op', 'compose_logs')['command'])->toContain('--tail');
 });
 
-it('does not offer clone or backup, which would appear to work', function () {
-    // Both arrive in the default feature set and both would succeed while
-    // doing the wrong thing, which is worse than their absence: a missing
-    // screen prompts a question, one that succeeds without doing the job
-    // does not.
+it('does not offer clone, which would appear to work — and offers backup, which now does', function () {
+    // Clone arrives in the default feature set and would succeed while doing
+    // the wrong thing, which is worse than its absence: a missing screen
+    // prompts a question, one that succeeds without doing the job does not.
+    // It copies the served files — a container's are in its image and its
+    // state is in its volumes.
     //
-    // Clone copies the served files — a container's are in its image and its
-    // state is in its volumes. Backup takes the document root and a database —
-    // a container has a compose file and volumes the backup never sees.
+    // Backup was refused for the same reason until c3913c27 taught the
+    // pipeline to archive a container site's volumes and compose file; this
+    // test still said it was missing (DS-12).
     $docker = collect(app(SiteTypeManager::class)->all())
         ->first(fn ($type) => $type->name() === 'docker');
 
     expect($docker)->not->toBeNull()
         ->and($docker->features())->not->toContain('app_clone')
-        ->and($docker->features())->not->toContain('app_backup')
+        ->and($docker->features())->toContain('app_backup')
         // The ones it does keep, so this is a statement about two features
         // rather than an empty set.
         ->and($docker->features())->toContain('app_log')

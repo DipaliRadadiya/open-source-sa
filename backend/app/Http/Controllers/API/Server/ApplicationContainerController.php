@@ -114,10 +114,21 @@ class ApplicationContainerController extends Controller
         $stored = (string) $application->compose;
         $generated = trim($stored) === '';
 
-        return response()->json([
-            'compose' => $generated
+        try {
+            $compose = $generated
                 ? $containers->generated($application, $provisioner->documentRoot($application))
-                : $stored,
+                : $stored;
+        } catch (ProvisioningFailedException $e) {
+            // No container port: there is no file to show, and the reason is
+            // the user's to fix rather than a server fault (DS-12).
+            return response()->json([
+                'message' => __('application.failure_reason.'.$e->reason),
+                'reason' => $e->reason,
+            ], 422);
+        }
+
+        return response()->json([
+            'compose' => $compose,
             // Which of the two the user is looking at, so the editor can warn that
             // saving takes the file over instead of quietly converting the site.
             'generated' => $generated,

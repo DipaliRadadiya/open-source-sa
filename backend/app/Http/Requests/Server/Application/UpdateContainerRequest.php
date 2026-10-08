@@ -30,7 +30,28 @@ class UpdateContainerRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->canManage('app_container') ?? false;
+        $user = $this->user();
+
+        if ($user === null || ! $user->canManage('app_container')) {
+            return false;
+        }
+
+        // Pointing the site at a stored registry credential needs what
+        // choosing one at create needs (`StoreApplicationRequest`, DS-08):
+        // `registry` (view) — otherwise its id is an oracle for somebody
+        // else's credential (DS-12). Only a CHANGE: the form sends the site's
+        // current registry back on every save, and keeping the credential the
+        // site already pulls with is no new power.
+        $registry = $this->input('registry_id');
+
+        // Nothing chosen, or not an id at all — the rules refuse the latter.
+        if ($registry === null || $registry === '' || ! is_scalar($registry)) {
+            return true;
+        }
+
+        $current = $this->route('application')?->registry_id;
+
+        return (string) $registry === (string) $current || $user->canView('registry');
     }
 
     /**

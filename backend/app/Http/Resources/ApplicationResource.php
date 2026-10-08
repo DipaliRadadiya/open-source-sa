@@ -237,13 +237,15 @@ class ApplicationResource extends JsonResource
             //
             // A stored `running` is asked of Docker first (DS-09): nothing
             // reports a container that stops after the deploy, and a green
-            // badge over a 502 is what this field exists to prevent.
+            // badge over a 502 is what this field exists to prevent. A stored
+            // `exited` is asked too, the other way round (DS-12).
             'container_status' => $this->liveContainerStatus(),
             // Why the last deploy failed, in words, with the container's own last
-            // log lines. Cleared by the next deploy that answers. The log only
+            // log lines. Cleared by the next deploy that answers, and not shown
+            // once a container that had exited is running again. The log only
             // for someone who may read this site's logs (`app_log`), the same
             // bar as the Logs screen it is a copy of.
-            'last_failure' => $this->lastFailure($request),
+            'last_failure' => $this->restarted() ? null : $this->lastFailure($request),
 
             // Whether this application runs a process of its own, and what
             // systemd says about it *right now*. Null for PHP and static sites,
@@ -396,17 +398,37 @@ class ApplicationResource extends JsonResource
 
     /**
      * The stored readiness status, except that a `running` Docker says is not
-     * running reads `exited` (DS-09). Docker unreachable: the stored value.
+     * running reads `exited` (DS-09), and an `exited` Docker says is running
+     * again reads null (DS-12). Docker unreachable: the stored value.
      */
     private function liveContainerStatus(): ?string
     {
         $stored = $this->container_status;
 
-        if ($stored !== 'running') {
-            return $stored;
+        if ($stored === 'running') {
+            return app(ContainerLiveness::class)->running($this->resource) === false ? 'exited' : $stored;
         }
 
-        return app(ContainerLiveness::class)->running($this->resource) === false ? 'exited' : $stored;
+        // Null, not `running`: something has started the container since the
+        // check failed — a Start, which runs no check — and "up" is not
+        // "answering", so this says what `forgetReadiness()` says after a
+        // Start: nothing has been checked since.
+        return $this->restarted() ? null : $stored;
+    }
+
+    /**
+     * Whether the last check saw the container exit and Docker now has it
+     * running again (DS-12). Without this the badge only ever moved one way:
+     * a site fixed and started kept its red "failed" until the next deploy.
+     *
+     * Only `exited`. `not_answering` is a running container already, and
+     * `restarting` spends part of every bounce in the running state, so for
+     * either a running container says nothing about whether it was fixed.
+     */
+    private function restarted(): bool
+    {
+        return $this->container_status === 'exited'
+            && app(ContainerLiveness::class)->running($this->resource) === true;
     }
 
     /**

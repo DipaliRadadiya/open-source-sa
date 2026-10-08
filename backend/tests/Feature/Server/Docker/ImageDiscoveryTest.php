@@ -6,6 +6,7 @@ use App\Models\Role;
 use App\Models\ServerCapability;
 use App\Models\User;
 use App\Services\Server\Docker\Images\ImageReference;
+use App\Services\Server\Docker\Images\ImageTags;
 use App\Support\RemoteHost;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Http\Client\Request;
@@ -752,6 +753,34 @@ it('reads only whole words as pre-release markers (DS-09)', function () {
         ->and($tags['3.2.1-devel'])->toBeFalse();
 });
 
+it('still reads -prerelease and -testing as pre-releases (DS-12)', function () {
+    // Anchored as whole words, `pre` and `test` stopped at the next letter.
+    Http::fake(['hub.docker.com/v2/repositories/acme/prerelease/tags*' => Http::response(['results' => array_map(
+        fn (string $name): array => ['name' => $name, 'last_updated' => '2026-10-02T00:00:00Z', 'tag_status' => 'active'],
+        ['1.2.3-prerelease', '1.2.3-testing', '1.2.3-testing2', '1.2.3-trixie'],
+    )])]);
+
+    $tags = collect($this->withHeaders(imgAs())->getJson('/api/docker/images/tags?image=acme/prerelease')->assertOk()->json('tags'))
+        ->pluck('stable', 'name');
+
+    expect($tags['1.2.3-prerelease'])->toBeFalse()
+        ->and($tags['1.2.3-testing'])->toBeFalse()
+        ->and($tags['1.2.3-testing2'])->toBeFalse()
+        ->and($tags['1.2.3-trixie'])->toBeTrue();
+});
+
+it('keeps no state between images on one ImageTags (DS-12)', function () {
+    // The demoted date tags lived on the instance, shared by rank() and
+    // recommended(). Correct while every call ran both in order; wrong the
+    // day the class is a singleton or recommended() gains a second caller.
+    $state = array_filter(
+        (new ReflectionClass(ImageTags::class))->getProperties(),
+        fn (ReflectionProperty $property): bool => ! $property->isPromoted() && ! $property->isStatic(),
+    );
+
+    expect(array_map(fn (ReflectionProperty $p): string => $p->getName(), $state))->toBe([]);
+});
+
 it('lists GHCR tags from the registry, following pagination', function () {
     Http::fake(function (Request $r) {
         if (str_contains($r->url(), '/token')) {
@@ -869,6 +898,36 @@ it('never lets a matching publisher with almost no pulls outrank the image peopl
     // the real image's pulls to win.
     'busy squatter' => ['memos', [['memosapp/memos', 1000000], ['neosmemo/memos', 11672941]], 'neosmemo/memos'],
 ]);
+
+it('weights a matching publisher on a ramp, not a step (DS-12)', function (array $results, string $first) {
+    // With a 10k floor, one pull either side of it decided the order: the
+    // project's own image at 9,999 lost to an unrelated 10,001.
+    Http::fake(['hub.docker.com/v2/search/repositories/*' => Http::response(['results' => array_map(
+        fn (array $row): array => ['repo_name' => $row[0], 'pull_count' => $row[1], 'is_official' => false],
+        $results,
+    )])]);
+
+    expect($this->withHeaders(imgAs())->getJson('/api/docker/images/search?q=newapp')->assertOk()->json('results.0.image'))
+        ->toBe($first);
+})->with([
+    'just under the old floor' => [[['someone/newapp', 10001], ['newapp/newapp', 9999]], 'newapp/newapp'],
+    'just over it' => [[['someone/newapp', 10001], ['newapp/newapp', 10000]], 'newapp/newapp'],
+    // Still nothing for a name registered and never used.
+    'no pulls to speak of' => [[['newapp/newapp', 900], ['someone/newapp', 901]], 'someone/newapp'],
+]);
+
+it('weights the project, not every repository its publisher owns (DS-12)', function () {
+    // Hub's real pull counts, 2026-10-08. Matched as a substring, the
+    // renderer plugin took third place from promtail on a "grafana" search.
+    Http::fake(['hub.docker.com/v2/search/repositories/*' => Http::response(['results' => [
+        ['repo_name' => 'grafana/grafana-image-renderer', 'pull_count' => 899000000, 'is_official' => false],
+        ['repo_name' => 'grafana/promtail', 'pull_count' => 2913000000, 'is_official' => false],
+        ['repo_name' => 'grafana/grafana', 'pull_count' => 5347000000, 'is_official' => false],
+    ]])]);
+
+    expect(array_column($this->withHeaders(imgAs())->getJson('/api/docker/images/search?q=grafana')->assertOk()->json('results'), 'image'))
+        ->toBe(['grafana/grafana', 'grafana/promtail', 'grafana/grafana-image-renderer']);
+});
 
 it('returns an empty list marked offline when Hub cannot be reached', function () {
     Http::fake(fn () => Http::failedConnection());

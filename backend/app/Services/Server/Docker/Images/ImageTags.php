@@ -27,21 +27,14 @@ class ImageTags
      *
      * Whole words only (DS-09): unanchored, `3.2.1-nextcloud` read as "next"
      * and `-devuan` as "dev", and real stable variants were listed as
-     * pre-releases. A number may follow directly — `rc1`, `beta2`.
+     * pre-releases. A number may follow directly — `rc1`, `beta2`. The longer
+     * forms are words of their own (DS-12): anchored, `pre` and `test` no
+     * longer reached `-prerelease` and `-testing`.
      */
-    private const UNSTABLE = '/(?:^|[-_.+])(?:alpha|beta|rc|dev|devel|pre|preview|nightly|snapshot|canary|test|edge|unstable|next|insider)(?=\d|[-_.+]|$)/i';
+    private const UNSTABLE = '/(?:^|[-_.+])(?:alpha|beta|rc|dev|devel|pre|prerelease|preview|nightly|snapshot|canary|test|testing|edge|unstable|next|insider)(?=\d|[-_.+]|$)/i';
 
     /** Moving tags worth recommending when an image publishes no version, best first. */
     private const STABLE_NAMES = ['latest', 'stable', 'release', 'lts'];
-
-    /**
-     * Versions read as dates (`2021.11.28`) that lost to a plain version on
-     * the same image — see `rank()`. Kept apart so `recommended()` can try
-     * them last without them leaking into the response.
-     *
-     * @var array<string, true>
-     */
-    private array $demoted = [];
 
     public function __construct(private RegistryClient $registry) {}
 
@@ -75,8 +68,12 @@ class ImageTags
                 + ($e->isAboutTheImage() ? [] : ['offline' => true]);
         }
 
-        $tags = $this->rank($raw);
-        $recommended = $this->recommended($tags);
+        // `$demoted` is handed from one to the other rather than kept on the
+        // instance (DS-12): as a property it was state a second caller of
+        // `recommended()`, or this class bound as a singleton, would read
+        // from somebody else's image.
+        [$tags, $demoted] = $this->rank($raw);
+        $recommended = $this->recommended($tags, $demoted);
         $shown = array_slice($tags, 0, $limit);
 
         // The preselected version has to be one the picker can show. It can
@@ -172,8 +169,12 @@ class ImageTags
      * newest first; then everything else in the order it came (Hub: most
      * recently updated first).
      *
+     * Returned beside the list: the versions read as dates (`2021.11.28`)
+     * that lost to a plain version on the same image, so `recommended()` can
+     * try them last without them leaking into the response.
+     *
      * @param  list<array{name: string, updated_at: string|null}>  $raw
-     * @return list<array{name: string, updated_at: string|null, stable: bool}>
+     * @return array{0: list<array{name: string, updated_at: string|null, stable: bool}>, 1: array<string, true>}
      */
     private function rank(array $raw): array
     {
@@ -209,20 +210,20 @@ class ImageTags
             return $a['index'] <=> $b['index'];
         });
 
-        $this->demoted = [];
+        $demoted = [];
 
         foreach ($this->datedLosers($versioned) as $name) {
-            $this->demoted[$name] = true;
+            $demoted[$name] = true;
         }
 
         // Plain numbers before variants: `1.31.6-trixie-perl` is a real
         // version, but eight variants of one release would fill the picker.
         // And a date that lost to a version after both.
-        $current = fn (array $entry): bool => ! isset($this->demoted[$entry['tag']['name']]);
+        $current = fn (array $entry): bool => ! isset($demoted[$entry['tag']['name']]);
 
         usort($versioned, fn (array $a, array $b): int => [$b['pure'], $current($b)] <=> [$a['pure'], $current($a)]);
 
-        return [...array_column($versioned, 'tag'), ...$rest];
+        return [[...array_column($versioned, 'tag'), ...$rest], $demoted];
     }
 
     /**
@@ -307,17 +308,18 @@ class ImageTags
      * recently pushed tag, then to nothing.
      *
      * @param  list<array{name: string, updated_at: string|null, stable: bool}>  $tags
+     * @param  array<string, true>  $demoted  from `rank()`
      */
-    private function recommended(array $tags): ?string
+    private function recommended(array $tags, array $demoted): ?string
     {
         // `rank()` already put the newest, most specific version first. A bare
         // number is tried last: it is usually an alias, not a release, and
         // ranked numerically it beats every dotted one — code-server's `39`
         // (its Fedora 39 build) sorted above `4.140.0`.
-        foreach ([false, true] as $demoted) {
+        foreach ([false, true] as $last) {
             foreach ([2, 1] as $minParts) {
                 foreach ($tags as $tag) {
-                    if (isset($this->demoted[$tag['name']]) !== $demoted) {
+                    if (isset($demoted[$tag['name']]) !== $last) {
                         continue;
                     }
 

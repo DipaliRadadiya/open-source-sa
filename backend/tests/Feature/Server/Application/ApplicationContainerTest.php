@@ -1,11 +1,15 @@
 <?php
 
+use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\ActivityLog;
 use App\Models\Application;
+use App\Models\Permission;
+use App\Models\Registry;
 use App\Models\Role;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Server\Applications\ContainerSupervisor;
 use App\Services\Server\HostCpus;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
@@ -144,6 +148,66 @@ it('refuses an empty container port rather than rendering port 80 (DS-09)', func
 
     expect($this->application->fresh()->container_port)->toBe(2368)
         ->and(dockerRan(fn (array $args): bool => ($args[1] ?? '') === 'compose'))->toBeFalse();
+});
+
+it('renders no compose file for a site with no container port, rather than one on port 80 (DS-12)', function () {
+    // Create and PUT both refuse a missing port now. This is the weld behind
+    // them: `?: 80` turned a row with none into a container proxied on a
+    // port nothing in the image listens on.
+    fakeDockerBox();
+    $this->application->forceFill(['container_port' => null])->save();
+
+    $e = null;
+
+    try {
+        app(ContainerSupervisor::class)->apply($this->application, '/home/ghost/ghost/public_html');
+    } catch (ProvisioningFailedException $caught) {
+        $e = $caught;
+    }
+
+    expect($e?->reason)->toBe('container_port_missing')
+        ->and(dockerRan(fn (array $args): bool => ($args[1] ?? '') === 'compose'))->toBeFalse();
+
+    // The compose editor says why instead of a 500.
+    $this->withHeaders(containerHeaders())
+        ->getJson('/api/applications/'.$this->application->id.'/container/compose')
+        ->assertStatus(422)
+        ->assertJsonPath('reason', 'container_port_missing')
+        ->assertJsonPath('message', __('application.failure_reason.container_port_missing'));
+});
+
+it('lets only someone who may view registries point a site at another credential (DS-12)', function () {
+    // Gated at create by DS-08 and not here, so a stored credential's id was
+    // still an oracle through the update path.
+    fakeDockerBox();
+    $credential = fn (string $name): Registry => Registry::forceCreate([
+        'name' => $name, 'registry' => 'ghcr.io', 'username' => 'deploy', 'config' => ['token' => 'x'],
+    ]);
+    $current = $credential('Current');
+    $other = $credential('Other');
+    $this->application->forceFill(['registry_id' => $current->id])->save();
+
+    $role = Role::create(['name' => 'Deployer', 'slug' => 'deployer']);
+    foreach (['application', 'app_container'] as $permission) {
+        $role->permissions()->attach(Permission::where('name', $permission)->sole()->id, ['view' => true, 'manage' => true]);
+    }
+    $deployer = User::factory()->create();
+    $deployer->roles()->attach($role);
+    $as = ['Authorization' => 'Bearer '.$deployer->createToken('t')->plainTextToken];
+
+    $this->withHeaders($as)->putJson(containerUrl(), ['registry_id' => $other->id])->assertForbidden();
+    expect($this->application->fresh()->registry_id)->toBe($current->id);
+
+    // The form sends the current one back on every save: no new power.
+    $this->withHeaders($as)->putJson(containerUrl(), ['registry_id' => $current->id, 'container_port' => 2368])->assertOk();
+    // Nor is pulling anonymously.
+    $this->withHeaders($as)->putJson(containerUrl(), ['registry_id' => null])->assertOk();
+
+    // And someone who may view registries may choose one. The guard keeps
+    // the first user it resolved for the rest of the test unless told.
+    app('auth')->forgetGuards();
+    $this->withHeaders(containerHeaders())->putJson(containerUrl(), ['registry_id' => $other->id])->assertOk();
+    expect($this->application->fresh()->registry_id)->toBe($other->id);
 });
 
 it('refuses a network that is not on this server', function () {

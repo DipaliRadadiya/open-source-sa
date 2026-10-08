@@ -461,3 +461,91 @@ it('keeps a stored failure when the containers are restarted', function () {
 
     expect($this->application->fresh()->container_status)->toBe('not_answering');
 });
+
+/*
+ * DS-12: the cross-check moves the badge both ways, and the check's own
+ * docker questions are bounded.
+ */
+
+it('drops a stored exit once Docker has the container running again', function () {
+    // The mirror of the DS-09 case: the site was fixed and started — Start
+    // runs no readiness check — and kept its red "failed" until a deploy.
+    $this->application->forceFill([
+        'container_status' => 'exited',
+        'last_failure' => ['reason' => 'container_exited', 'params' => [], 'log' => 'boom'],
+    ])->save();
+
+    fakeLiveProjects(['sv-app-'.$this->application->id]);
+    $live = readinessResource($this->application->fresh());
+
+    expect($live['container_status'])->toBeNull()
+        ->and($live['last_failure'])->toBeNull();
+
+    // Still down: the failure stands.
+    app()->forgetScopedInstances();
+    fakeLiveProjects(['sv-app-999']);
+    $down = readinessResource($this->application->fresh());
+
+    expect($down['container_status'])->toBe('exited')
+        ->and($down['last_failure']['reason'])->toBe('container_exited');
+
+    // Docker could not be asked: that is not a container that came back.
+    app()->forgetScopedInstances();
+    fakeLiveProjects(null);
+    expect(readinessResource($this->application->fresh())['container_status'])->toBe('exited');
+});
+
+it('does not read a running container as a fixed one when it never stopped', function (string $stored) {
+    // `not_answering` is a running container that does not answer, and a
+    // crash loop is running for part of every bounce: neither is fixed by
+    // being up.
+    $this->application->forceFill([
+        'container_status' => $stored,
+        'last_failure' => ['reason' => 'container_not_answering', 'params' => ['port' => 8082, 'seconds' => 90], 'log' => 'x'],
+    ])->save();
+
+    fakeLiveProjects(['sv-app-'.$this->application->id]);
+    $resource = readinessResource($this->application->fresh());
+
+    expect($resource['container_status'])->toBe($stored)
+        ->and($resource['last_failure'])->not->toBeNull();
+})->with(['not_answering', 'restarting']);
+
+it('asks its docker questions under a short ceiling, not the pull timeout', function () {
+    // `compose up` gets the 600 s a pull of gigabytes may need. `ps` and
+    // `logs` ran under the same 600 on every try and after the deadline.
+    $timeouts = [];
+
+    Process::fake(function ($process) use (&$timeouts) {
+        $args = $process->command;
+        $op = collect(['up', 'ps', 'logs'])->first(fn (string $word): bool => in_array($word, $args, true));
+
+        if ($op !== null && in_array('compose', $args, true)) {
+            $timeouts[$op][] = $process->timeout;
+        }
+
+        if (in_array('curl', $args, true)) {
+            return Process::result(output: '000');
+        }
+
+        if (in_array('--status', $args, true)) {
+            return Process::result(output: "abc123\n");
+        }
+
+        if (in_array('--format', $args, true) && in_array('json', $args, true)) {
+            return Process::result(output: json_encode(['Name' => 'sv-app-1-app-1', 'State' => 'running']));
+        }
+
+        return Process::result(output: in_array('inspect', $args, true) ? '0 '.now()->subMinutes(10)->toIso8601ZuluString() : '');
+    });
+
+    config(['server.docker.readiness.timeout' => 2, 'server.docker.readiness.interval' => 0]);
+
+    expect(applyMemos()?->reason)->toBe('container_not_answering')
+        ->and(array_unique($timeouts['up']))->toBe([600])
+        ->and(max($timeouts['ps']))->toBe(ContainerSupervisor::QUERY_TIMEOUT)
+        ->and(max($timeouts['logs']))->toBe(ContainerSupervisor::QUERY_TIMEOUT)
+        // What the check can spend after its deadline: one more sample and
+        // the diagnostics, still inside the 300 s request.
+        ->and(ContainerReadinessCheck::MAX_TIMEOUT + 3 * ContainerSupervisor::QUERY_TIMEOUT)->toBeLessThan(300);
+});

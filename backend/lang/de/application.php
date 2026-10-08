@@ -248,6 +248,7 @@ return [
     ],
 
     'failure_reason' => [
+        'container_port_missing' => 'Diese Website hat keinen Container-Port, daher weiß das Panel nicht, an welchen Port im Container es weiterleiten soll. Trage unter Container-Port den Port ein, auf dem die Anwendung lauscht, und speichere.',
         'attached_database_engine_mismatch' => 'Diese Anwendung hat bereits eine Datenbank, die jedoch auf einer Engine läuft, die diese Anwendung nicht verwenden kann. Trennen Sie sie, oder verknüpfen Sie eine auf einer unterstützten Engine, und versuchen Sie es erneut.',
         'serving_error' => 'Die Anwendung wurde gestartet, beantwortet aber jede Anfrage mit einem Fehler. Wahrscheinlich wurden ihre Assets nicht vollständig gebaut — Einzelheiten im Anwendungsprotokoll.',
         'not_answering' => 'Die Anwendung wurde gestartet, hat aber nie auf eine Anfrage geantwortet. Im Anwendungsprotokoll steht, warum sie nicht lauscht.',

@@ -32,6 +32,15 @@ class ContainerReadinessCheck
      * The longest wait, whatever is configured: `PUT /container` and `pull`
      * run this inside a request the panel's vhost cuts off at 300 s, after a
      * pull and a `compose up` that take their own share of it.
+     *
+     * It bounds this check, not the request (DS-12). The check's own docker
+     * questions are capped at `ContainerSupervisor::QUERY_TIMEOUT`, so the
+     * wait and the diagnostics after it stay under the 300 s even at their
+     * worst for a single-container site (a pasted stack adds a 20 s `docker
+     * inspect` per container to the last try, normally milliseconds). The
+     * `compose up`/`pull` before it run under `server.docker.command_timeout`
+     * (600 s), because an image may be gigabytes, and a slow pull can still
+     * take the request past the FastCGI timeout on its own.
      */
     public const MAX_TIMEOUT = 150;
 
@@ -45,7 +54,8 @@ class ContainerReadinessCheck
      * on a hung port for its full timeout, so "90 seconds" waited up to ~258.
      * `PUT /container` and `pull` wait for this synchronously, behind the
      * panel's own 300 s FastCGI timeout, and past it the user got a 504
-     * instead of the reason. The configured value is capped well under it.
+     * instead of the reason. The configured value is capped well under it —
+     * see MAX_TIMEOUT for what that does and does not bound.
      *
      * An answer always wins. A restart is only a failure once it has gone on
      * for `restart_grace` seconds with nothing answering — and in a pasted
