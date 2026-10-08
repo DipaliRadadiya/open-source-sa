@@ -20,12 +20,17 @@ class NoShellComment implements ValidationRule
 {
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        if (is_string($value) && $this->hasComment($value)) {
+        if (is_string($value) && self::commentStart($value) !== null) {
             $fail('errors/cronjob.shell_comment')->translate();
         }
     }
 
-    private function hasComment(string $command): bool
+    /**
+     * Where a shell comment begins, or null. Public for Sync, which splits an
+     * adopted job's comment off its command (it would otherwise be refused
+     * on the job's first edit).
+     */
+    public static function commentStart(string $command): ?int
     {
         $single = false;
         $double = false;
@@ -62,7 +67,7 @@ class NoShellComment implements ValidationRule
             }
 
             if ($char === '#' && $wordStart) {
-                return true;
+                return $i;
             }
 
             if ($char === '"') {
@@ -74,6 +79,6 @@ class NoShellComment implements ValidationRule
             $wordStart = str_contains(" \t;&|()<>", $char);
         }
 
-        return false;
+        return null;
     }
 }

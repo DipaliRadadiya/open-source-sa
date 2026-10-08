@@ -6,6 +6,7 @@ use App\Contracts\Discoverable;
 use App\Models\Cronjob;
 use App\Models\SyncRun;
 use App\Models\SystemUser;
+use App\Rules\NoShellComment;
 use App\Services\Server\ServerOps;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -252,11 +253,26 @@ class CronjobDiscoverer implements Discoverable
      */
     private function item($users, string $username, string $expression, string $command, array $evidence, ?string $crontabLine = null): array
     {
+        // A trailing `# note` is split off (the extra item on the frontend
+        // list): the panel writes `command >> log 2>&1`, so a comment kept
+        // in the command would swallow the redirect, and the save rule
+        // refuses one — the job's very first edit failed. The note becomes
+        // the job's name, which is what it was for.
+        $note = null;
+        $original = $command;
+
+        if (($at = NoShellComment::commentStart($command)) !== null) {
+            $note = trim(substr($command, $at + 1));
+            $command = rtrim(substr($command, 0, $at));
+        }
+
         // The slug names the file the panel would write. Derived from the
         // command so re-running the sync produces the same one, and suffixed
         // with a hash because two jobs can legitimately run the same command
         // on different schedules.
-        $slug = Str::slug(Str::limit($command, 30, '')).'-'.substr(md5($username.$expression.$command), 0, 6);
+        // From the line as found, so a job adopted before the note was split
+        // off keeps its slug and is not offered again.
+        $slug = Str::slug(Str::limit($original, 30, '')).'-'.substr(md5($username.$expression.$original), 0, 6);
 
         return [
             'key' => $username.':'.$slug,
@@ -280,7 +296,7 @@ class CronjobDiscoverer implements Discoverable
                     ? $evidence['path']
                     : 'crontab:'.$username,
                 'source_line' => $crontabLine,
-                'name' => Str::limit($command, 60),
+                'name' => Str::limit($note !== null && $note !== '' ? $note : $command, 60),
                 'username' => $username,
                 'system_user_id' => $users->get($username),
                 'expression' => $expression,

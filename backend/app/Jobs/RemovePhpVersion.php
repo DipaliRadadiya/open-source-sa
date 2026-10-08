@@ -90,6 +90,6 @@ class RemovePhpVersion implements ShouldBeUnique, ShouldQueue
      */
     public function failed(?Throwable $e): void
     {
-        app(InstallTracker::class)->abandonRemoval('php', $this->version);
+        app(InstallTracker::class)->abandonRemoval('php', $this->version, why: $e);
     }
 }

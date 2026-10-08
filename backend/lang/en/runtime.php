@@ -9,6 +9,7 @@ return [
     */
 
     'install_failed' => [
+        'timed_out' => 'The install ran out of time — usually a package mirror that did not answer. Try again; if it keeps happening, check the server can reach its package sources.',
         'package_not_found' => 'No package for :version is available from this server\'s package sources.',
         'apt_lock' => 'Another package operation is already running. Try again in a moment.',
         // ServerOps already knew: the grant is older than the panel.
@@ -33,12 +34,14 @@ return [
     ],
 
     'uninstall_failed' => [
+        'timed_out' => 'Removing PHP :version ran out of time. Try again.',
         'failed' => 'PHP :version could not be removed. Quote the reference below to support.',
         'worker' => 'Removing PHP :version stopped unexpectedly. It may have timed out — try again.',
         'unknown' => 'PHP :version could not be removed. Quote the reference below to support.',
     ],
 
     'extension_install_failed' => [
+        'timed_out' => 'Installing :extension ran out of time — usually a package mirror that did not answer. Try again.',
         'package_not_found' => 'No package for :extension on PHP :version. It may not exist for this version.',
         'apt_lock' => 'Another package operation is already running. Try again in a moment.',
         // ServerOps already knew: the grant is older than the panel.

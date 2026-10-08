@@ -248,6 +248,10 @@ return [
 
     'failure_reason' => [
 
+        'download_unreachable' => 'A transferência não aconteceu: o servidor não conseguiu chegar ao anfitrião de onde transfere. Verifique o acesso à Internet e o DNS do servidor e tente novamente.',
+
+        'release_not_found' => 'A lista de versões foi alcançada, mas não tem nenhuma versão que este servidor possa instalar. Verifique a versão do PHP ou tente mais tarde.',
+
         'verify_http' => 'Após a implementação, a aplicação respondeu com um erro de servidor (HTTP 5xx) em vez de uma página. Verifique o registo — o registo da implementação tem o estado exato.',
         'attached_database_engine_mismatch' => 'Esta aplicação já tem uma base de dados associada, mas funciona num motor que esta aplicação não consegue usar. Desassocie-a, ou associe uma num motor suportado, e tente novamente.',
         'serving_error' => 'A aplicação iniciou mas responde a todos os pedidos com um erro. Os seus recursos provavelmente não foram totalmente construídos — consulte o registo da aplicação.',

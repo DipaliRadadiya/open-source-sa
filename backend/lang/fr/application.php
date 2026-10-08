@@ -248,6 +248,10 @@ return [
 
     'failure_reason' => [
 
+        'download_unreachable' => 'Le téléchargement n’a pas eu lieu : le serveur n’a pas pu joindre l’hôte de téléchargement. Vérifiez l’accès à Internet et le DNS du serveur, puis réessayez.',
+
+        'release_not_found' => 'La liste des versions a été atteinte mais ne contient aucune version installable sur ce serveur. Vérifiez la version de PHP ou réessayez plus tard.',
+
         'verify_http' => 'Après le déploiement, l’application a répondu par une erreur serveur (HTTP 5xx) au lieu d’une page. Consultez son journal — le journal du déploiement indique le statut exact.',
         'attached_database_engine_mismatch' => 'Cette application a déjà une base de données associée, mais elle fonctionne sur un moteur que cette application ne peut pas utiliser. Détachez-la, ou associez-en une sur un moteur pris en charge, puis réessayez.',
         'serving_error' => 'L\'application a démarré mais répond à chaque requête par une erreur. Ses ressources n\'ont probablement pas été entièrement construites — voir le journal de l\'application.',

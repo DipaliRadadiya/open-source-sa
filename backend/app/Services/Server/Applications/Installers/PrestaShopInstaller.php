@@ -6,6 +6,7 @@ use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Rules\SupportedPhpVersion;
 use App\Services\Applications\Types\PrestaShopSiteType;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
@@ -185,7 +186,13 @@ class PrestaShopInstaller extends AbstractPhpInstaller
         }
 
         $php = $this->phpVersion($application);
-        $response = Http::timeout(15)->get((string) config('server.installers.prestashop.releases_api'));
+        // FS-B3: a release host that does not answer is a reason, not a
+        // bare "download failed".
+        try {
+            $response = Http::timeout(15)->get((string) config('server.installers.prestashop.releases_api'));
+        } catch (ConnectionException) {
+            throw new ProvisioningFailedException('download', (string) Str::uuid(), 'download_unreachable');
+        }
         $releases = $response->successful() ? $response->json() : null;
 
         $release = collect(is_array($releases) ? $releases : [])
@@ -210,7 +217,7 @@ class PrestaShopInstaller extends AbstractPhpInstaller
             // Unreachable, or nothing runs on this PHP. Either way nothing is
             // downloaded — never whatever else answers, unpacked into a live
             // web root.
-            throw new ProvisioningFailedException('download', (string) Str::uuid());
+            throw new ProvisioningFailedException('download', (string) Str::uuid(), $response->successful() ? 'release_not_found' : 'download_unreachable');
         }
 
         return $release;

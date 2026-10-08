@@ -75,8 +75,15 @@ class DatabaseComponent implements SetupComponent
         }
 
         $engine = (string) $versions->keys()->first();
+        $version = (string) $versions->first();
 
-        return trim(((string) config("server.databases.engines.{$engine}.label")).' '.((string) $versions->first()));
+        // "MariaDB 10.11.14", not the server's own string
+        // `10.11.14-MariaDB-0ubuntu0.24.04.1` after the label (FS-A9).
+        if (preg_match('/^\d+(\.\d+){0,2}/', $version, $short) === 1) {
+            $version = $short[0];
+        }
+
+        return trim(((string) config("server.databases.engines.{$engine}.label")).' '.$version);
     }
 
     public function action(): ?array

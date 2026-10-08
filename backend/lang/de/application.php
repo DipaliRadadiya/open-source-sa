@@ -248,6 +248,10 @@ return [
 
     'failure_reason' => [
 
+        'download_unreachable' => 'Der Download hat nicht stattgefunden: Der Server konnte den Host, von dem er lädt, nicht erreichen. Prüfen Sie Internetzugang und DNS des Servers und versuchen Sie es erneut.',
+
+        'release_not_found' => 'Die Release-Liste war erreichbar, enthält aber keine Version, die dieser Server installieren kann. Prüfen Sie die PHP-Version oder versuchen Sie es später erneut.',
+
         'verify_http' => 'Nach dem Deployment hat die Anwendung mit einem Serverfehler (HTTP 5xx) statt mit einer Seite geantwortet. Prüfen Sie ihr Log — das Deployment-Log enthält den genauen Status.',
         'attached_database_engine_mismatch' => 'Diese Anwendung hat bereits eine Datenbank, die jedoch auf einer Engine läuft, die diese Anwendung nicht verwenden kann. Trennen Sie sie, oder verknüpfen Sie eine auf einer unterstützten Engine, und versuchen Sie es erneut.',
         'serving_error' => 'Die Anwendung wurde gestartet, beantwortet aber jede Anfrage mit einem Fehler. Wahrscheinlich wurden ihre Assets nicht vollständig gebaut — Einzelheiten im Anwendungsprotokoll.',

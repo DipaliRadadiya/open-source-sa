@@ -105,6 +105,13 @@ class ProvisioningFailedException extends Exception
         // v2 with a 401 — neither of which contains the other's needles, but a
         // future needle added loosely to either set could overlap. The more
         // specific diagnosis goes first.
+        // FS-B3: the download never happened — a mirror or release host that
+        // did not resolve or answer. Saved with no reason it read as a broken
+        // installer; it is the network, and retrying later is the fix.
+        if (preg_match('/(Could not resolve host|Temporary failure in name resolution|unable to resolve host address|Failed to connect to|Connection timed out|Connection refused|Operation timed out|Network is unreachable)/i', $result->output()."\n".$result->errorOutput()) === 1) {
+            return 'download_unreachable';
+        }
+
         if (self::mentionsRejectedCredentials($result)) {
             return 'registry_credentials_rejected';
         }

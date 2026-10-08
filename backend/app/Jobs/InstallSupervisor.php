@@ -115,6 +115,6 @@ class InstallSupervisor implements ShouldQueue
      */
     public function failed(?Throwable $e): void
     {
-        app(InstallTracker::class)->abandon(self::RUNTIME, self::VERSION);
+        app(InstallTracker::class)->abandon(self::RUNTIME, self::VERSION, why: $e);
     }
 }

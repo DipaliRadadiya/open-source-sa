@@ -9,6 +9,7 @@ return [
     */
 
     'install_failed' => [
+        'timed_out' => 'इंस्टॉल का समय समाप्त हो गया — अक्सर कोई पैकेज मिरर जवाब नहीं देता। फिर से कोशिश करें; बार-बार हो तो जाँचें कि सर्वर अपने पैकेज स्रोतों तक पहुँचता है।',
         'package_not_found' => 'इस सर्वर के पैकेज स्रोतों में :version के लिए कोई पैकेज नहीं है।',
         'apt_lock' => 'एक अन्य पैकेज कार्य पहले से चल रहा है। थोड़ी देर बाद फिर कोशिश करें।',
         // ServerOps already knew: the grant is older than the panel.
@@ -33,12 +34,14 @@ return [
     ],
 
     'uninstall_failed' => [
+        'timed_out' => 'PHP :version हटाने का समय समाप्त हो गया। फिर से कोशिश करें।',
         'failed' => 'PHP :version हटाया नहीं जा सका। नीचे दिया गया संदर्भ सहायता को बताएं।',
         'worker' => 'PHP :version हटाना अप्रत्याशित रूप से रुक गया। समय समाप्त हो सकता है — फिर कोशिश करें।',
         'unknown' => 'PHP :version हटाया नहीं जा सका। नीचे दिया गया संदर्भ सहायता को बताएं।',
     ],
 
     'extension_install_failed' => [
+        'timed_out' => ':extension इंस्टॉल का समय समाप्त हो गया — अक्सर कोई पैकेज मिरर जवाब नहीं देता। फिर से कोशिश करें।',
         'package_not_found' => 'PHP :version पर :extension के लिए कोई पैकेज नहीं है। इस संस्करण के लिए यह उपलब्ध नहीं हो सकता।',
         'apt_lock' => 'एक अन्य पैकेज कार्य पहले से चल रहा है। थोड़ी देर बाद फिर कोशिश करें।',
         // ServerOps already knew: the grant is older than the panel.

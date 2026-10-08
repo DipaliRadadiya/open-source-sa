@@ -9,6 +9,7 @@ return [
     */
 
     'install_failed' => [
+        'timed_out' => 'インストールが時間切れになりました。多くの場合、パッケージミラーが応答していません。もう一度お試しください。繰り返す場合は、サーバーがパッケージの取得元に届くか確認してください。',
         'package_not_found' => 'このサーバーのパッケージソースに :version のパッケージがありません。',
         'apt_lock' => '別のパッケージ操作が実行中です。しばらくしてからもう一度お試しください。',
         // ServerOps already knew: the grant is older than the panel.
@@ -33,12 +34,14 @@ return [
     ],
 
     'uninstall_failed' => [
+        'timed_out' => 'PHP :version の削除が時間切れになりました。もう一度お試しください。',
         'failed' => 'PHP :version を削除できませんでした。以下の参照番号をサポートにお伝えください。',
         'worker' => 'PHP :version の削除が予期せず停止しました。タイムアウトの可能性があります — もう一度お試しください。',
         'unknown' => 'PHP :version を削除できませんでした。以下の参照番号をサポートにお伝えください。',
     ],
 
     'extension_install_failed' => [
+        'timed_out' => ':extension のインストールが時間切れになりました。多くの場合、パッケージミラーが応答していません。もう一度お試しください。',
         'package_not_found' => 'PHP :version 用の :extension パッケージがありません。このバージョンには存在しない可能性があります。',
         'apt_lock' => '別のパッケージ操作が実行中です。しばらくしてからもう一度お試しください。',
         // ServerOps already knew: the grant is older than the panel.

@@ -5,7 +5,10 @@ namespace App\Services\Runtime;
 use App\Enums\InstallStatus;
 use App\Models\RuntimeInstall;
 use App\Support\ProbeCache;
+use Illuminate\Queue\MaxAttemptsExceededException;
+use Illuminate\Queue\TimeoutExceededException;
 use Illuminate\Support\Collection;
+use Throwable;
 
 /**
  * The only thing that writes `runtime_installs`.
@@ -148,15 +151,26 @@ class InstallTracker
      * runs the job may already have recorded a real reason, and "the worker
      * died" would overwrite the more useful one.
      */
-    public function abandon(string $runtime, string $version, ?string $extension = null): void
+    public function abandon(string $runtime, string $version, ?string $extension = null, ?Throwable $why = null): void
     {
-        $this->abandonStatus($runtime, $version, $extension, InstallStatus::Installing, 'worker');
+        $this->abandonStatus($runtime, $version, $extension, InstallStatus::Installing, self::timedOut($why) ? 'timed_out' : 'worker');
+    }
+
+    /**
+     * The job ran out of time, as opposed to the worker dying (FS-A8): an
+     * apt mirror that never answers holds the job until its timeout, and
+     * that read as "the worker stopped".
+     */
+    private static function timedOut(?Throwable $why): bool
+    {
+        return $why instanceof TimeoutExceededException
+            || ($why instanceof MaxAttemptsExceededException && str_contains(strtolower($why->getMessage()), 'timed out'));
     }
 
     /** Mark a stranded removal failed without overwriting a recorded failure. */
-    public function abandonRemoval(string $runtime, string $version): void
+    public function abandonRemoval(string $runtime, string $version, ?Throwable $why = null): void
     {
-        $this->abandonStatus($runtime, $version, null, InstallStatus::Removing, 'remove_worker');
+        $this->abandonStatus($runtime, $version, null, InstallStatus::Removing, self::timedOut($why) ? 'remove_timed_out' : 'remove_worker');
     }
 
     /**

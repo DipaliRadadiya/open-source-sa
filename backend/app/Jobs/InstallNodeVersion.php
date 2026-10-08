@@ -87,6 +87,6 @@ class InstallNodeVersion implements ShouldBeUnique, ShouldQueue
      */
     public function failed(?Throwable $e): void
     {
-        app(InstallTracker::class)->abandon('node', $this->version);
+        app(InstallTracker::class)->abandon('node', $this->version, why: $e);
     }
 }

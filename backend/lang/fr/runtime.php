@@ -9,6 +9,7 @@ return [
     */
 
     'install_failed' => [
+        'timed_out' => 'L’installation a dépassé le délai — généralement un miroir de paquets qui n’a pas répondu. Réessayez ; si cela se reproduit, vérifiez que le serveur atteint ses sources de paquets.',
         'package_not_found' => 'Aucun paquet pour :version n\'est disponible dans les sources de paquets de ce serveur.',
         'apt_lock' => 'Une autre opération de paquets est déjà en cours. Réessayez dans un instant.',
         // ServerOps already knew: the grant is older than the panel.
@@ -33,12 +34,14 @@ return [
     ],
 
     'uninstall_failed' => [
+        'timed_out' => 'La suppression de PHP :version a dépassé le délai. Réessayez.',
         'failed' => 'PHP :version n\'a pas pu être supprimé. Communiquez la référence ci-dessous au support.',
         'worker' => 'La suppression de PHP :version s\'est arrêtée de façon inattendue. Elle a peut-être expiré — réessayez.',
         'unknown' => 'PHP :version n\'a pas pu être supprimé. Communiquez la référence ci-dessous au support.',
     ],
 
     'extension_install_failed' => [
+        'timed_out' => 'L’installation de :extension a dépassé le délai — généralement un miroir de paquets qui n’a pas répondu. Réessayez.',
         'package_not_found' => 'Aucun paquet pour :extension sur PHP :version. Il n\'existe peut-être pas pour cette version.',
         'apt_lock' => 'Une autre opération de paquets est déjà en cours. Réessayez dans un instant.',
         // ServerOps already knew: the grant is older than the panel.

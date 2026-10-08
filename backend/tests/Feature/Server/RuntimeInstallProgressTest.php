@@ -3,6 +3,7 @@
 use App\Enums\InstallStatus;
 use App\Exceptions\Server\Runtime\RuntimeInstallException;
 use App\Exceptions\Server\Setting\SettingOperationException;
+use App\Jobs\InstallFail2ban;
 use App\Jobs\InstallPhpExtension;
 use App\Jobs\InstallPhpVersion;
 use App\Jobs\RemovePhpVersion;
@@ -17,6 +18,7 @@ use App\Services\Server\Runtimes\PhpRuntime;
 use App\Services\Server\ServerOpsResult;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Process\FakeProcessResult;
+use Illuminate\Queue\TimeoutExceededException;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
@@ -496,4 +498,16 @@ describe('node', function () {
         expect($tracker->versions('php')->count())->toBe(1)
             ->and($tracker->versions('node')->count())->toBe(1);
     });
+});
+
+it('says an install ran out of time rather than that the worker stopped (FS-A8)', function () {
+    $tracker = app(InstallTracker::class);
+    $tracker->start('fail2ban', 'latest');
+
+    (new InstallFail2ban)->failed(new TimeoutExceededException('App\Jobs\InstallFail2ban has timed out.'));
+
+    $row = RuntimeInstall::query()->sole();
+
+    expect($row->reason)->toBe('timed_out')
+        ->and($row->message())->toBe(__('runtime.install_failed.timed_out'));
 });

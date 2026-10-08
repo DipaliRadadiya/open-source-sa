@@ -9,6 +9,7 @@ return [
     */
 
     'install_failed' => [
+        'timed_out' => 'A instalação excedeu o tempo limite — normalmente um espelho de pacotes que não respondeu. Tente novamente; se se repetir, verifique se o servidor alcança as suas fontes de pacotes.',
         'package_not_found' => 'Não há pacote para :version nas fontes de pacotes deste servidor.',
         'apt_lock' => 'Outra operação de pacotes já está em execução. Tente novamente em instantes.',
         // ServerOps already knew: the grant is older than the panel.
@@ -33,12 +34,14 @@ return [
     ],
 
     'uninstall_failed' => [
+        'timed_out' => 'A remoção do PHP :version excedeu o tempo limite. Tente novamente.',
         'failed' => 'Não foi possível remover o PHP :version. Informe a referência abaixo ao suporte.',
         'worker' => 'A remoção do PHP :version parou inesperadamente. Pode ter excedido o tempo — tente novamente.',
         'unknown' => 'Não foi possível remover o PHP :version. Informe a referência abaixo ao suporte.',
     ],
 
     'extension_install_failed' => [
+        'timed_out' => 'A instalação de :extension excedeu o tempo limite — normalmente um espelho de pacotes que não respondeu. Tente novamente.',
         'package_not_found' => 'Nenhum pacote para :extension no PHP :version. Pode não existir para esta versão.',
         'apt_lock' => 'Outra operação de pacotes já está em execução. Tente novamente em instantes.',
         // ServerOps already knew: the grant is older than the panel.

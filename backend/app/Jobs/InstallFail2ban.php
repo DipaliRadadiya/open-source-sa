@@ -105,6 +105,6 @@ class InstallFail2ban implements ShouldBeUnique, ShouldQueue
      */
     public function failed(?Throwable $e): void
     {
-        app(InstallTracker::class)->abandon(self::RUNTIME, self::VERSION);
+        app(InstallTracker::class)->abandon(self::RUNTIME, self::VERSION, why: $e);
     }
 }

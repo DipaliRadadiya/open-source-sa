@@ -77,6 +77,6 @@ class InstallIonCubeLoader implements ShouldQueue
      */
     public function failed(?Throwable $e): void
     {
-        app(InstallTracker::class)->abandon(self::RUNTIME, $this->version);
+        app(InstallTracker::class)->abandon(self::RUNTIME, $this->version, why: $e);
     }
 }

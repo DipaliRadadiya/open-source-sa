@@ -116,6 +116,6 @@ class InstallDatabaseEngine implements ShouldBeUniqueUntilProcessing, ShouldQueu
      */
     public function failed(?Throwable $e): void
     {
-        app(InstallTracker::class)->abandon('database', $this->engine);
+        app(InstallTracker::class)->abandon('database', $this->engine, why: $e);
     }
 }

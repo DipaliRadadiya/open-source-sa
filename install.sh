@@ -258,14 +258,16 @@ Control panel installer
                                  ols     OpenLiteSpeed + PHP
                                  docker  nginx + Docker
                                Asked interactively when not given and a terminal
-                               is available. Required for `curl | bash`, which
-                               has no terminal to ask on.
+                               is available. Under `curl | bash`, which has no
+                               terminal to ask on, the default (lemp) is used.
   --domain=panel.example.com   Use your own domain instead of a nip.io name.
                                Point its A record at this server first.
   --email=you@example.com      Address for Let's Encrypt expiry warnings.
   --branch=main                Branch to install from.
+  --repo=URL                   Git repository to install from (a fork or mirror).
   --no-ssl                     Serve plain HTTP. Fine behind another proxy.
-  --dry-run                    Print the steps without touching anything.
+  --dry-run                    Run the checks and print the plan, then stop.
+                               Nothing on the server is changed.
   --central-token=TOKEN        Register this server with a central panel that
                                already holds the same token. Optional; nothing
                                else needs it.
@@ -276,7 +278,11 @@ Control panel installer
                                not.
 USAGE
             exit 0 ;;
-        *) die "unknown option: $arg  (try --help)" ;;
+        # A usage mistake, not a failed install: no log to read, nothing to
+        # report (FS-A11). It used to print the "read the full log / open an
+        # issue" block over a typo.
+        *) printf 'Unknown option: %s\nRun with --help to see the options.\n' "$arg" >&2
+           exit 2 ;;
     esac
 done
 
@@ -367,10 +373,35 @@ preflight() {
 
     command -v systemctl >/dev/null 2>&1 || die "systemd is required"
 
+    # A dry run writes nothing at all (FS-A1) — not even the log, which a
+    # real install truncates here.
+    if (( DRY_RUN )); then
+        LOG_FILE=/dev/null
+        return 0
+    fi
+
     mkdir -p "$(dirname "$LOG_FILE")"
     : >"$LOG_FILE"
     chmod 600 "$LOG_FILE"
     ok "logging to $LOG_FILE"
+}
+
+# The plan a dry run prints, then stops (FS-A1). It used to carry on through
+# every step with `run` silenced — and the many writes that do not go through
+# `run` (vhosts, systemd units, the pool, cron, sudoers, both .env files) were
+# made anyway, on a run that promised to change nothing.
+dry_run_plan() {
+    step "Dry run — the checks passed; nothing was changed"
+    printf '     A real run would, in order:\n'
+    printf '       - make sure there is swap for the build\n'
+    printf '       - install the packages for the %s stack (%s)\n' "$STACK" "$WEB_SERVER"
+    printf '       - create the %s account and install Node\n' "$APP_USER"
+    printf '       - fetch the panel into %s\n' "$APP_DIR"
+    printf '       - configure Redis, mail, PHP and %s\n' "$WEB_SERVER"
+    printf '       - get a certificate for %s\n' "$PANEL_HOST"
+    printf '       - set up the backend, build the frontend, start the services\n'
+    printf '       - write the sudo grant and open ports 22, 80 and 443\n\n'
+    printf '     Run again without --dry-run to install.\n\n'
 }
 
 # ─── Stack ───────────────────────────────────────────────────────────────────
@@ -3764,11 +3795,17 @@ finish() {
     printf '  Log:     %s\n' "$LOG_FILE"
     printf '  Files:   %s\n\n' "$APP_DIR"
 
-    printf '  %sOpen the panel and register — the first account becomes the%s\n' "$BOLD" "$RESET"
-    printf '  %sadministrator, and registration closes behind it.%s\n\n' "$BOLD" "$RESET"
+    # Only while nobody has registered (FS-A3): a re-run on a panel with an
+    # administrator told them anyone could claim the account.
+    if sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan panel:registration-open' -- "$backend" "${PANEL_PHP_BIN}" >/dev/null 2>&1; then
+        printf '  %sOpen the panel and register — the first account becomes the%s\n' "$BOLD" "$RESET"
+        printf '  %sadministrator, and registration closes behind it.%s\n\n' "$BOLD" "$RESET"
 
-    printf '  %sDo that now.%s Until you do, anyone who reaches this address can\n' "$YELLOW" "$RESET"
-    printf '  claim the administrator account.\n\n'
+        printf '  %sDo that now.%s Until you do, anyone who reaches this address can\n' "$YELLOW" "$RESET"
+        printf '  claim the administrator account.\n\n'
+    else
+        printf '  Sign in with your administrator account.\n\n'
+    fi
 
     if [[ "${TLS_STATE:-none}" == "self-signed" ]]; then
         printf '  Your browser will warn about the certificate. To replace it with a\n'
@@ -3789,6 +3826,12 @@ main() {
     preflight
     resolve_stack
     resolve_hostnames
+
+    if (( DRY_RUN )); then
+        dry_run_plan
+        exit 0
+    fi
+
     configure_swap
     install_packages
     # fnm's shared runtime tree is owned by the panel account, so that

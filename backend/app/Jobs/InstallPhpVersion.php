@@ -89,6 +89,6 @@ class InstallPhpVersion implements ShouldBeUnique, ShouldQueue
      */
     public function failed(?Throwable $e): void
     {
-        app(InstallTracker::class)->abandon('php', $this->version);
+        app(InstallTracker::class)->abandon('php', $this->version, why: $e);
     }
 }

@@ -98,6 +98,17 @@ it('offers one engine choice per database, with MariaDB recommended', function (
     expect($options['mongodb']['recommended'])->toBeFalse();
 });
 
+it('names the engine version plainly (FS-A9)', function () {
+    Process::fake(fn ($process) => match (true) {
+        str_contains((string) $process->input, 'VERSION()') && ($process->command[0] ?? '') === 'mariadb' => Process::result(output: '10.11.14-MariaDB-0ubuntu0.24.04.1'),
+        ($process->command[0] ?? '') === 'mysql' => Process::result(errorOutput: "can't connect", exitCode: 1),
+        ($process->command[0] ?? '') === 'which' => Process::result(exitCode: 1),
+        default => Process::result(exitCode: 0),
+    });
+
+    expect(collect(fetchSetup()['components'])->firstWhere('key', 'database')['detail'])->toBe('MariaDB 10.11.14');
+});
+
 it('says why an engine is not offered (OLD-28)', function () {
     // MariaDB answers; MySQL cannot go on beside it.
     Process::fake(fn ($process) => match (true) {

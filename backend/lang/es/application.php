@@ -248,6 +248,10 @@ return [
 
     'failure_reason' => [
 
+        'download_unreachable' => 'La descarga no se realizó: el servidor no pudo llegar al host desde el que descarga. Compruebe el acceso a internet y el DNS del servidor y vuelva a intentarlo.',
+
+        'release_not_found' => 'Se accedió a la lista de versiones, pero no hay ninguna que este servidor pueda instalar. Compruebe la versión de PHP o vuelva a intentarlo más tarde.',
+
         'verify_http' => 'Tras el despliegue, la aplicación respondió con un error del servidor (HTTP 5xx) en lugar de una página. Revise su registro: el registro del despliegue tiene el estado exacto.',
         'attached_database_engine_mismatch' => 'Esta aplicación ya tiene una base de datos asociada, pero funciona con un motor que esta aplicación no puede usar. Desvincúlela, o asocie una en un motor compatible, e inténtelo de nuevo.',
         'serving_error' => 'La aplicación se inició pero responde a cada solicitud con un error. Lo más probable es que sus recursos no se compilaran por completo; consulte el registro de la aplicación.',

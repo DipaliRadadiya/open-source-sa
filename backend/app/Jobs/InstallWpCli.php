@@ -73,6 +73,6 @@ class InstallWpCli implements ShouldBeUnique, ShouldQueue
     /** Killed or timed out: release the row instead of spinning on it forever. */
     public function failed(?Throwable $e): void
     {
-        app(InstallTracker::class)->abandon(self::RUNTIME, self::VERSION);
+        app(InstallTracker::class)->abandon(self::RUNTIME, self::VERSION, why: $e);
     }
 }

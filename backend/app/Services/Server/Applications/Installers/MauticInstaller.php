@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications\Installers;
 
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
@@ -186,8 +187,14 @@ class MauticInstaller extends AbstractPhpInstaller
             return $configured;
         }
 
-        $response = Http::timeout(15)->acceptJson()
-            ->get((string) config('server.installers.mautic.releases_api'));
+        // FS-B3: a release host that does not answer is a reason, not a
+        // bare "download failed".
+        try {
+            $response = Http::timeout(15)->acceptJson()
+                ->get((string) config('server.installers.mautic.releases_api'));
+        } catch (ConnectionException) {
+            throw new ProvisioningFailedException('download', (string) Str::uuid(), 'download_unreachable');
+        }
 
         $url = collect($response->successful() ? $response->json('assets') ?? [] : [])
             ->pluck('browser_download_url')
@@ -196,7 +203,7 @@ class MauticInstaller extends AbstractPhpInstaller
                 && ! str_contains($candidate, '-update.'));
 
         if (! is_string($url)) {
-            throw new ProvisioningFailedException('download', (string) Str::uuid());
+            throw new ProvisioningFailedException('download', (string) Str::uuid(), $response->successful() ? 'release_not_found' : 'download_unreachable');
         }
 
         return $url;

@@ -82,6 +82,6 @@ class InstallPhpExtension implements ShouldBeUnique, ShouldQueue
      */
     public function failed(?Throwable $e): void
     {
-        app(InstallTracker::class)->abandon('php', $this->version, $this->extension);
+        app(InstallTracker::class)->abandon('php', $this->version, $this->extension, why: $e);
     }
 }

@@ -22,6 +22,7 @@ use App\Models\SyncRun;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Models\Worker;
+use App\Rules\NoShellComment;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Php\PoolManager;
 use App\Services\Server\Sync\Discoverers\ApplicationDiscoverer;
@@ -1565,6 +1566,21 @@ describe('discovering cronjobs', function () {
         expect($item->action)->toBe(SyncAction::Found)
             ->and($item->evidence['expression'])->toBe('0 3 * * *')
             ->and($item->evidence['username'])->toBe('siteowner');
+    });
+
+    it('splits a trailing note off an adopted command, so its first edit saves', function () {
+        fakeCron(crontabs: [
+            'siteowner' => "0 3 * * * /usr/bin/php /home/siteowner/shop/artisan backup:run # nightly backup\n",
+        ]);
+
+        $item = runSync(SyncMode::Apply)->items()->where('resource_type', 'cronjob')->first();
+        $job = Cronjob::query()->first();
+
+        expect($item->evidence['command'])->toBe('/usr/bin/php /home/siteowner/shop/artisan backup:run')
+            ->and($job?->command)->toBe('/usr/bin/php /home/siteowner/shop/artisan backup:run')
+            ->and($job?->name)->toBe('nightly backup')
+            // The panel's own save rule now accepts it.
+            ->and(NoShellComment::commentStart($job->command))->toBeNull();
     });
 
     it('leaves root\'s cron alone', function () {
