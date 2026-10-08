@@ -25,7 +25,7 @@ export const getPermissions = cache(async (level, applicationId) => {
 
   let res;
   try {
-    res = await fetchWithRetry(() =>
+    res = await fetchWithRetry((signal) =>
       fetch(url, {
         headers: {
           Accept: "application/json",
@@ -35,6 +35,7 @@ export const getPermissions = cache(async (level, applicationId) => {
           Origin: process.env.NEXT_PUBLIC_APP_URL,
         },
         cache: "no-store",
+        signal,
       }),
     );
   } catch (cause) {

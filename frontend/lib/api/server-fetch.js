@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { serverLocale } from "@/lib/i18n/server-locale";
+import { retryOnTransportFailure } from "@/lib/api/retry";
 
 // IMPORTANT: cookies() is awaited outside any try/catch, so Next's
 // DynamicServerError propagates and the route stays dynamic.
@@ -19,14 +20,18 @@ export async function serverFetch(path, { searchParams } = {}) {
     if (str) qs = `?${str}`;
   }
 
-  return fetch(`${process.env.NEXT_PUBLIC_API_URL}/api${path}${qs}`, {
-    headers: {
-      Accept: "application/json",
-      "Accept-Language": locale,
-      cookie: cookieStore.toString(),
-      Referer: process.env.NEXT_PUBLIC_APP_URL,
-      Origin: process.env.NEXT_PUBLIC_APP_URL,
-    },
-    cache: "no-store",
-  });
+  // One blip (an nginx reload mid-deploy) must not turn a whole page into "not answering".
+  return retryOnTransportFailure((signal) =>
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api${path}${qs}`, {
+      headers: {
+        Accept: "application/json",
+        "Accept-Language": locale,
+        cookie: cookieStore.toString(),
+        Referer: process.env.NEXT_PUBLIC_APP_URL,
+        Origin: process.env.NEXT_PUBLIC_APP_URL,
+      },
+      cache: "no-store",
+      signal,
+    }),
+  );
 }

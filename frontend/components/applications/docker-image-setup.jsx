@@ -277,7 +277,8 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
     requestAnimationFrame(() => inputRef.current?.focus());
   }
 
-  // A pasted reference is offered as its own row, ahead of the matches.
+  // A pasted reference is offered as its own row, after the matches: `changedetection.io`
+  // reads as a registry ref, but the user nearly always means dgtlmoon/changedetection.io.
   const showTyped =
     looksLikeImageRef(typed) &&
     typed.length <= DOCKER_LIMITS.image &&
@@ -285,8 +286,8 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
     (/[/:.@]/.test(typed) || ["offline", "unavailable", "empty"].includes(searchState));
   const options = useMemo(
     () => [
-      ...(showTyped ? [{ image: typed, typed: true }] : []),
       ...(searchState === "ready" ? searchResults : []),
+      ...(showTyped ? [{ image: typed, typed: true }] : []),
     ],
     [showTyped, typed, searchState, searchResults],
   );
@@ -305,7 +306,10 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
       setActive((index) => (index <= 0 ? options.length - 1 : index - 1));
     } else if (event.key === "Enter") {
       event.preventDefault();
-      choose(options[Math.max(active, 0)].image);
+      // Unhighlighted, Enter means "the best match": not known until the search answers,
+      // and the literal term is not a stand-in for it.
+      const option = active >= 0 ? options[active] : searchState === "loading" ? null : options[0];
+      if (option) choose(option.image);
     }
   }
 
@@ -392,7 +396,11 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
                       placeholder={t("searchPlaceholder")}
                       maxLength={DOCKER_LIMITS.image}
                       value={query}
-                      onChange={(event) => setQuery(event.target.value)}
+                      onChange={(event) => {
+                        setQuery(event.target.value);
+                        // The list is about to change under the highlight.
+                        setActive(-1);
+                      }}
                       onKeyDown={onSearchKeyDown}
                     />
                   </FormControl>

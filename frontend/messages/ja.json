@@ -3795,6 +3795,8 @@
       "php": "PHP バージョン",
       "node": "Node バージョン",
       "port": "アプリケーションポート",
+      "containerPort": "コンテナポート",
+      "proxyPort": "パネルのプロキシ: {port}",
       "description": "種類、システムユーザー、アプリケーションが公開されている場所です。"
     },
     "process": {

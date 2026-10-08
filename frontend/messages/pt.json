@@ -3795,6 +3795,8 @@
       "php": "Versão do PHP",
       "node": "Versão do Node",
       "port": "Porta da aplicação",
+      "containerPort": "Porta do contentor",
+      "proxyPort": "Proxy do painel: {port}",
       "description": "Tipo, usuário do sistema e onde esta aplicação fica."
     },
     "process": {

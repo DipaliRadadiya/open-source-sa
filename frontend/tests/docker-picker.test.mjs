@@ -223,3 +223,82 @@ test("a reset that keeps dirty values keeps the required keys with their rows", 
   assert.deepEqual(form().getValues("docker_required_env"), ["DATABASE_URL"]);
   assert.equal(dockerEnvProblem(form().getValues("docker_env"), form().getValues("docker_required_env")), true);
 });
+
+// DS-15 / DS-11 O1: `changedetection.io` reads as a registry ref, so "Use … as typed" was
+// listed first and Enter took the literal name instead of the official image.
+const CHANGEDETECTION = { image: "dgtlmoon/changedetection.io", description: "Website change detection", stars: 900, pulls: 5000000 };
+
+function pendingSearch() {
+  const pending = {};
+  stubApi({
+    search: (query) =>
+      new Promise((resolve) => {
+        pending[query] = (results) => resolve({ data: { results } });
+      }),
+  });
+  return pending;
+}
+// The search box is replaced by the chosen image; while it shows, nothing is chosen.
+const chosenRepository = () =>
+  screen.queryByRole("combobox", { name: /Docker image/ })
+    ? null
+    : document.querySelector('[data-field-name="image"] .font-mono')?.textContent ?? null;
+
+test("registry matches are listed above 'Use … as typed', and Enter picks the top match", async () => {
+  const pending = pendingSearch();
+  await renderPicker({ image: "" });
+  const input = screen.getByRole("combobox");
+  fireEvent.change(input, { target: { value: "changedetection.io" } });
+  await waitFor(() => assert.ok(pending["changedetection.io"]));
+  await act(async () => pending["changedetection.io"]([CHANGEDETECTION]));
+
+  const options = screen.getAllByRole("option").map((option) => option.textContent);
+  assert.equal(options.length, 2);
+  assert.match(options[0], /^dgtlmoon\/changedetection\.io/);
+  assert.match(options[1], /Use changedetection\.io as typed/);
+
+  fireEvent.keyDown(input, { key: "Enter" });
+  assert.equal(chosenRepository(), "dgtlmoon/changedetection.io");
+});
+
+test("Enter while results are loading does not take the literal term; it waits for a match", async () => {
+  const pending = pendingSearch();
+  await renderPicker({ image: "" });
+  const input = screen.getByRole("combobox");
+  fireEvent.change(input, { target: { value: "changedetection.io" } });
+  // Only the typed row exists while searching.
+  assert.equal(screen.getAllByRole("option").length, 1);
+  fireEvent.keyDown(input, { key: "Enter" });
+  assert.equal(chosenRepository(), null);
+  assert.equal(Boolean(screen.queryByRole("combobox")), true, "still searching, nothing chosen");
+
+  await waitFor(() => assert.ok(pending["changedetection.io"]));
+  await act(async () => pending["changedetection.io"]([CHANGEDETECTION]));
+  fireEvent.keyDown(input, { key: "Enter" });
+  assert.equal(chosenRepository(), "dgtlmoon/changedetection.io");
+});
+
+test("the typed term is still one deliberate keypress away", async () => {
+  const pending = pendingSearch();
+  await renderPicker({ image: "" });
+  const input = screen.getByRole("combobox");
+  fireEvent.change(input, { target: { value: "ghcr.io/acme/app" } });
+  await waitFor(() => assert.ok(pending["ghcr.io/acme/app"]));
+  await act(async () => pending["ghcr.io/acme/app"]([{ image: "acme/app" }]));
+
+  fireEvent.keyDown(input, { key: "ArrowUp" });
+  assert.match(screen.getAllByRole("option").at(-1).getAttribute("aria-selected"), /true/);
+  fireEvent.keyDown(input, { key: "Enter" });
+  assert.equal(chosenRepository(), "ghcr.io/acme/app");
+});
+
+test("with no matches, Enter takes the term as typed", async () => {
+  const pending = pendingSearch();
+  await renderPicker({ image: "" });
+  const input = screen.getByRole("combobox");
+  fireEvent.change(input, { target: { value: "registry.example/app" } });
+  await waitFor(() => assert.ok(pending["registry.example/app"]));
+  await act(async () => pending["registry.example/app"]([]));
+  fireEvent.keyDown(input, { key: "Enter" });
+  assert.equal(chosenRepository(), "registry.example/app");
+});

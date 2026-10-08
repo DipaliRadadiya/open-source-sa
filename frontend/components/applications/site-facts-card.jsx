@@ -358,7 +358,18 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
       onEdit: canManage && !nodeSwitching ? () => setEditingNode(true) : null,
       editLabel: t("nodeVersion.title"),
     },
-    { icon: Plug, label: t("facts.port"), value: application.app_port, mono: true, copy: true },
+    // A container's `app_port` is the host side of nginx -> 127.0.0.1:app_port -> container;
+    // the port the user chose or the image declared is `container_port`.
+    application.container_port
+      ? {
+          icon: Plug,
+          label: t("facts.containerPort"),
+          value: application.container_port,
+          mono: true,
+          copy: true,
+          note: application.app_port ? t("facts.proxyPort", { port: application.app_port }) : null,
+        }
+      : { icon: Plug, label: t("facts.port"), value: application.app_port, mono: true, copy: true },
     {
       icon: HardDrive,
       label: t("columns.size"),
