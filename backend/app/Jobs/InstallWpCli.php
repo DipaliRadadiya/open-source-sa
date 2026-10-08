@@ -45,6 +45,8 @@ class InstallWpCli implements ShouldBeUnique, ShouldQueue
         InstallTracker $installs,
         InstallFailureClassifier $classifier,
     ): void {
+        $installs->begin(self::RUNTIME, self::VERSION);
+
         foreach ($wpCli->installCommands() as $command) {
             $result = $serverOps->run($command, ['feature' => 'wp_cli', 'op' => 'install'], timeout: 240);
 

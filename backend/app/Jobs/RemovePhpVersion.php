@@ -46,7 +46,7 @@ class RemovePhpVersion implements ShouldBeUnique, ShouldQueue
 
     public function handle(PhpRuntime $php, ActivityLogger $log, InstallTracker $installs, ServerCapabilities $capabilities): void
     {
-        $row = $installs->current('php', $this->version);
+        $row = $installs->begin('php', $this->version);
         $progress = $row ? new InstallProgress($row) : null;
 
         try {

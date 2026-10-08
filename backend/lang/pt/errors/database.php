@@ -26,4 +26,8 @@ return [
     'remote_host_invalid' => 'Introduza um endereço ou intervalo IPv4, por exemplo 203.0.113.5 ou 203.0.113.0/24.',
     'remote_host_not_remote' => 'Esse endereço não é remoto. Use «Local» para este servidor ou «Qualquer lugar» para todos os endereços.',
     'engine_unreachable' => ':engine não está a responder, por isso o painel não consegue ler esta base de dados. Inicie :engine na página Serviços e tente novamente.',
+    'panel_user_protected' => '«:username» é a conta que o próprio painel usa para gerir as bases de dados. Não pode ser alterada nem removida aqui.',
+    'export_in_progress' => 'Esta exportação ainda está em curso. Aguarde que termine e depois elimine-a.',
+    'engine_install_in_progress' => ':engine já está a ser instalado. Aguarde que essa instalação termine.',
+    'panel_process_protected' => 'Esta é a ligação do próprio painel. Pará-la faria falhar o que o painel estiver a fazer.',
 ];

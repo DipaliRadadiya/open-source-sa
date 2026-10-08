@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Services\ActivityLogger;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\PersonalAccessToken;
 
@@ -131,6 +132,25 @@ it('allows an admin to delete another user', function () {
         ->assertNoContent();
 
     expect(User::find($target->id))->toBeNull();
+});
+
+it('keeps a deleted user\'s name on what they did, rather than "System" (FS-C22)', function () {
+    $admin = User::factory()->admin()->create();
+    $target = User::factory()->create(['username' => 'leaver']);
+    app(ActivityLogger::class)->log('user.profile_updated', $target, [], $target);
+    $token = $admin->createToken('test')->plainTextToken;
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->deleteJson("/api/admin/users/{$target->id}")
+        ->assertNoContent();
+
+    $row = collect($this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/admin/activity-log?per_page=100')
+        ->assertOk()
+        ->json('activity_log'))->firstWhere('action', 'profile_updated');
+
+    expect($row['is_system'])->toBeFalse()
+        ->and($row['user'])->toBe(['id' => null, 'username' => 'leaver', 'deleted' => true]);
 });
 
 it('prevents an admin from deleting their own account', function () {

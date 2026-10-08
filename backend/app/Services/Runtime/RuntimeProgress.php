@@ -91,11 +91,13 @@ class RuntimeProgress
     {
         return [
             'status' => InstallStatus::Ready->value,
+            'queued' => false,
             'started_at' => null,
             'started_at_human' => null,
             'reason' => null,
             'message' => null,
             'reference' => null,
+            'error_line' => null,
             // Named here too, so every version carries the same keys whether
             // or not an install touched it — a field that appears only
             // sometimes is one the frontend has to guard on every read.

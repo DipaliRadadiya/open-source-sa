@@ -28,19 +28,20 @@ class MemoryBudget
         $committed = 0;
         $sites = 0;
 
-        $settings = ApplicationPhpSettings::query()
-            ->with('application')
-            ->when($excluding !== null, fn ($query) => $query->where('application_id', '!=', $excluding->id))
+        // Every site with a pool of its own, saved settings or not
+        // (PHP-mem). Counting only saved rows left out every pool still on
+        // the defaults — 20 workers × 256M is 5 GB per site — so the screen
+        // showed memory free that was already spoken for.
+        $applications = Application::query()
+            ->whereNotNull('isolated_at')
+            ->with('phpSettings')
+            ->when($excluding !== null, fn ($query) => $query->whereKeyNot($excluding->id))
             ->get();
 
-        foreach ($settings as $row) {
-            // Only isolated sites have a pool of their own; the rest share the
-            // server pool, whose memory is already accounted for by the OS.
-            if ($row->application?->isolated_at === null) {
-                continue;
-            }
+        foreach ($applications as $application) {
+            $settings = $application->phpSettings ?? new ApplicationPhpSettings;
 
-            $committed += $row->memoryCeilingBytes();
+            $committed += $settings->memoryCeilingBytes();
             $sites++;
         }
 

@@ -46,7 +46,7 @@ class InstallNodeVersion implements ShouldBeUnique, ShouldQueue
 
     public function handle(NodeRuntime $node, ActivityLogger $log, InstallTracker $installs, ServerCapabilities $capabilities): void
     {
-        $row = $installs->current('node', $this->version);
+        $row = $installs->begin('node', $this->version);
         $progress = $row ? new InstallProgress($row) : null;
 
         try {

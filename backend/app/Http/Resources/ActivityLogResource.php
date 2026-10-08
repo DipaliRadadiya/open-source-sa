@@ -21,10 +21,22 @@ class ActivityLogResource extends JsonResource
             // can badge or group without keeping its own copy of the map.
             'scope' => app(ActivityScopes::class)->for($this->type),
             'description' => __('activity.'.$this->type.'.'.$this->action, $this->replacements()),
-            'user' => $this->whenLoaded('user', fn () => $this->user ? [
-                'id' => $this->user->id,
-                'username' => $this->user->username,
-            ] : null),
+            'user' => $this->when($this->relationLoaded('user'), fn () => match (true) {
+                $this->user !== null => [
+                    'id' => $this->user->id,
+                    'username' => $this->user->username,
+                    'deleted' => false,
+                ],
+                // The account is gone; the person still did this (FS-C22).
+                // Not whenLoaded(): it answers null for a null relation
+                // before the closure is ever asked.
+                $this->user_name !== null => [
+                    'id' => null,
+                    'username' => $this->user_name,
+                    'deleted' => true,
+                ],
+                default => null,
+            }),
             // No person did this — a scheduled reboot, an automatic disk clean,
             // a deploy from a git webhook. Stated outright rather than left for
             // the frontend to infer from a null user, because "the system did
@@ -34,7 +46,7 @@ class ActivityLogResource extends JsonResource
             // Deliberately not solved by writing an admin's id onto system
             // actions: that would make the audit log name someone who was not
             // there, and put machine activity in their personal history.
-            'is_system' => $this->user_id === null,
+            'is_system' => $this->user_id === null && $this->user_name === null,
             'created_at' => $this->created_at?->format('d-m-Y H:i:s'),
             'created_at_human' => $this->created_at?->diffForHumans(),
         ];

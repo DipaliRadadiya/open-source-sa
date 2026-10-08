@@ -55,6 +55,8 @@ class InstallSupervisor implements ShouldQueue
         InstallTracker $installs,
         InstallFailureClassifier $classifier,
     ): void {
+        $installs->begin(self::RUNTIME, self::VERSION);
+
         $result = $serverOps->apt(
             ['apt-get', 'install', '-y', '--no-install-recommends', 'supervisor'],
             ['feature' => 'application', 'op' => 'supervisor_install'],

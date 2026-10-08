@@ -47,10 +47,10 @@ it('records the dispatching user on the activity entry the job writes', function
 
     $installs = Mockery::mock(InstallTracker::class);
     $installs->shouldReceive('succeed')->once();
-    // The job asks for the in-flight row so it can report apt's progress to
+    // The job marks the row picked up and gets it back to report apt's progress to
     // it. Null is a legitimate answer -- a job running without one simply
     // reports nothing -- and this test is about the actor, not the progress.
-    $installs->shouldReceive('current')->andReturnNull();
+    $installs->shouldReceive('begin')->andReturnNull();
 
     // Run the job the way a worker would — no authenticated user in scope.
     (new InstallPhpVersion('8.3', $this->admin->id))
@@ -73,10 +73,10 @@ it('leaves the actor null when the dispatching user has been deleted', function 
 
     $installs = Mockery::mock(InstallTracker::class);
     $installs->shouldReceive('succeed')->once();
-    // The job asks for the in-flight row so it can report apt's progress to
+    // The job marks the row picked up and gets it back to report apt's progress to
     // it. Null is a legitimate answer -- a job running without one simply
     // reports nothing -- and this test is about the actor, not the progress.
-    $installs->shouldReceive('current')->andReturnNull();
+    $installs->shouldReceive('begin')->andReturnNull();
 
     // The install must still be recorded. Carrying the User model instead of
     // its id would have thrown ModelNotFoundException here and lost the job.

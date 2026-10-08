@@ -7,6 +7,7 @@ use App\Actions\Server\Database\AttachDatabaseToApplication;
 use App\Actions\Server\Database\CreateDatabase;
 use App\Actions\Server\Database\DeleteDatabase;
 use App\Enums\ExportStatus;
+use App\Enums\InstallStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Database\AdoptDatabasesRequest;
 use App\Http\Requests\Server\Database\DatabaseEngineRequest;
@@ -165,6 +166,18 @@ class DatabaseController extends Controller
         // So the check is now "installed *and* answering". A dispatch when it
         // is not answering re-runs provisionPanelAccount(), which is exactly
         // the repair — install() already skips apt when the package is there.
+        // FS-C14(d): a second click, or a second tab, while one is queued or
+        // running. It used to be dropped silently by the job's uniqueness,
+        // which answered 202 for an install that would never happen.
+        if ($installs->current('database', $engine)?->status === InstallStatus::Installing) {
+            return response()->json([
+                'message' => __('errors/database.engine_install_in_progress', [
+                    'engine' => (string) config("server.databases.engines.{$engine}.label", $engine),
+                ]),
+                'reason' => 'install_in_progress',
+            ], 409);
+        }
+
         $installed = $installers->installer($engine)->installed();
 
         if ($installed && $manager->engine($engine)->available()) {
@@ -463,6 +476,16 @@ class DatabaseController extends Controller
      */
     public function destroyExport(DatabaseExport $export, ActivityLogger $log): JsonResponse
     {
+        // FS-C14(c): a queued or running export is still going to write its
+        // file — deleting the row now leaves that file with nothing pointing
+        // at it. A stale one (its worker is gone) can still be cleared.
+        if (in_array($export->status, [ExportStatus::Queued, ExportStatus::Running], true) && ! $export->isStale()) {
+            return response()->json([
+                'message' => __('errors/database.export_in_progress'),
+                'reason' => 'export_in_progress',
+            ], 409);
+        }
+
         // basename() as well as the column, because this path is built from
         // stored data and a file value is still a file value however it got
         // there — one guard at the point of deletion, not a trust assumption.

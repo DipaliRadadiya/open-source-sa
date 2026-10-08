@@ -94,4 +94,7 @@ return [
 
     // Used for :os when /etc/os-release cannot be read.
     'this_server' => 'इस सर्वर का ऑपरेटिंग सिस्टम',
+
+    // FS-C18/FS-C19: apt's own error line, quoted after a generic failure.
+    'package_manager_said' => 'पैकेज मैनेजर ने कहा: “:line”',
 ];

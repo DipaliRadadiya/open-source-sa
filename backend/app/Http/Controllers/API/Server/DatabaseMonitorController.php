@@ -19,7 +19,16 @@ class DatabaseMonitorController extends Controller
     {
         $engine = $request->engine();
 
-        return response()->json(['processes' => $manager->engine($engine)->processes()]);
+        $own = $this->panelUsername($manager, $engine);
+
+        // `is_panel` (FS-C14b): the panel's own connection, which must not get
+        // a Stop button. Said here so the screen does not have to work it out.
+        $processes = array_map(
+            fn (array $process): array => $process + ['is_panel' => $this->isPanel($process, $own)],
+            $manager->engine($engine)->processes(),
+        );
+
+        return response()->json(['processes' => $processes]);
     }
 
     /**
@@ -28,6 +37,19 @@ class DatabaseMonitorController extends Controller
     public function killProcess(DatabaseEngineRequest $request, string $id, DatabaseManager $manager, ActivityLogger $log): JsonResponse
     {
         $engine = $request->engine();
+        $own = $this->panelUsername($manager, $engine);
+
+        // FS-C14(b): refused, not only hidden. Killing the panel's own
+        // connection fails whatever it was doing for somebody.
+        $target = collect($manager->engine($engine)->processes())->first(fn (array $p): bool => (string) $p['id'] === $id);
+
+        if ($target !== null && $this->isPanel($target, $own)) {
+            return response()->json([
+                'message' => __('errors/database.panel_process_protected'),
+                'reason' => 'panel_process',
+            ], 422);
+        }
+
         $manager->engine($engine)->killProcess($id);
 
         $log->log('database.process_killed', null, ['engine' => $engine, 'process' => $id]);
@@ -78,5 +100,23 @@ class DatabaseMonitorController extends Controller
         })->values();
 
         return response()->json(['metrics' => $metrics]);
+    }
+
+    private function panelUsername(DatabaseManager $manager, string $engine): ?string
+    {
+        $username = $manager->connection($engine)->username;
+
+        // `root` is the default before the panel has its own account: every
+        // root session on the box would then read as the panel's.
+        return $username === null || $username === '' || $username === 'root' ? null : (string) $username;
+    }
+
+    /**
+     * @param  array<string, mixed>  $process
+     */
+    private function isPanel(array $process, ?string $own): bool
+    {
+        // Some engines report `user@host`.
+        return $own !== null && explode('@', (string) ($process['user'] ?? ''))[0] === $own;
     }
 }

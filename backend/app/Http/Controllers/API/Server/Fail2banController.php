@@ -42,6 +42,7 @@ class Fail2banController extends Controller
                 // `installed` is then the honest answer.
                 'install' => $install === null ? null : [
                     'status' => $install->status->value,
+                    'queued' => $install->isQueued(),
                     // A classified code, never raw apt output — it names paths
                     // and cannot be translated. Rendered in the viewer's
                     // locale by the same keys the PHP screen uses.

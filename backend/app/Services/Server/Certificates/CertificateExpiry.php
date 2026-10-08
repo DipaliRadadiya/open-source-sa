@@ -4,6 +4,7 @@ namespace App\Services\Server\Certificates;
 
 use App\Enums\CertificateStatus;
 use App\Models\Certificate;
+use Throwable;
 
 /**
  * Reconciles what the panel says about a certificate with what is on disk.
@@ -85,6 +86,24 @@ class CertificateExpiry
         $certificate->update(['expires_at' => $expiry]);
 
         return true;
+    }
+
+    /**
+     * Ask the web server again right after an issue or upload (FS-C47).
+     *
+     * Only the served half: the file was written moments ago. Without this
+     * the last answer — about the certificate just replaced — stood until
+     * the daily refresh, and the screen warned that visitors still saw the
+     * old certificate when they did not. Never throws; a check that cannot
+     * run leaves the fields cleared, which reads as "not looked yet".
+     */
+    public function recheckServed(Certificate $certificate): void
+    {
+        try {
+            $this->refreshServed($certificate);
+        } catch (Throwable) {
+            // The certificate is serving; a failed look is not a failed issue.
+        }
     }
 
     /**

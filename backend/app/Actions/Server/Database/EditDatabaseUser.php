@@ -28,6 +28,15 @@ class EditDatabaseUser
      */
     public function execute(DatabaseUser $user, array $data): DatabaseUser
     {
+        // FS-C14(a): the panel's own account (and the engines' built-in
+        // ones). Removing or renaming it breaks every database operation
+        // with no way back through the panel — the screen only hid it.
+        if ($this->manager->isSystemUser($user->username)) {
+            throw ValidationException::withMessages([
+                'username' => [__('errors/database.panel_user_protected', ['username' => $user->username])],
+            ]);
+        }
+
         $database = $user->database;
         $engine = $this->manager->engine($database->engine);
 

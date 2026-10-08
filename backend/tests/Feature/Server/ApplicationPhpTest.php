@@ -627,6 +627,28 @@ describe('memory budget', function () {
         expect($this->actingAs($this->admin)->getJson(phpUrl())->json('php.memory.over_committed'))
             ->toBeTrue();
     });
+
+    it('counts another site\'s own pool even when its settings were never saved (PHP-mem)', function () {
+        fakePhpServer();
+        Application::forceCreate([
+            'system_user_id' => $this->application->system_user_id,
+            'name' => 'Other', 'slug' => 'other', 'domain' => 'other.test',
+            'site_type' => 'php', 'serving_profile' => 'php', 'status' => 'active',
+            'isolated_at' => now(),
+        ]);
+        // Shares the server pool: costs nothing of its own.
+        Application::forceCreate([
+            'system_user_id' => $this->application->system_user_id,
+            'name' => 'Shared', 'slug' => 'shared', 'domain' => 'shared.test',
+            'site_type' => 'php', 'serving_profile' => 'php', 'status' => 'active',
+        ]);
+
+        $memory = $this->actingAs($this->admin)->getJson(phpUrl())->json('php.memory');
+
+        // The other pool on the defaults, 256M × 20, plus this site.
+        expect($memory['committed'] - $memory['this_site'])->toBe(256 * 1024 * 1024 * 20)
+            ->and($memory['sites'])->toBe(2);
+    });
 });
 
 it('offers no way back onto the shared pool', function () {

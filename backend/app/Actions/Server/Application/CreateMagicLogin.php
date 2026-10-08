@@ -39,28 +39,11 @@ class CreateMagicLogin
             ]);
         }
 
-        if ($this->magicLogin->isMultisite($application)) {
-            throw ValidationException::withMessages([
-                'magic_login' => [__('errors/magic_login.multisite_unsupported')],
-            ]);
-        }
-
-        // Re-read rather than trusting the id off the request. A caller who
-        // sends the id of a subscriber — or of a user who was an administrator
-        // when the list was rendered and is not one now — must not be handed a
-        // token for them. The loader checks again at the moment of use; this is
-        // the half that can still give the user a sentence to read.
-        $administrators = $this->magicLogin->administrators($application);
-
-        $chosen = collect($administrators)->firstWhere('id', $wpUserId);
-
-        if ($chosen === null) {
-            throw ValidationException::withMessages([
-                'wp_user_id' => [__('errors/magic_login.not_an_administrator')],
-            ]);
-        }
-
+        // Multisite, "is this still an administrator", and the token write
+        // are all asked inside one WP-CLI run now (FS-C16) — see mint().
         $session = $this->magicLogin->mint($application, $wpUserId);
+        $chosen = $session['user'];
+        unset($session['user']);
 
         // Logged before the token is returned, and naming the account that was
         // assumed. An impersonation feature whose audit trail says only that

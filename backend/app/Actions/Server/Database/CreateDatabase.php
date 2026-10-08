@@ -5,6 +5,7 @@ namespace App\Actions\Server\Database;
 use App\Models\Database;
 use App\Services\ActivityLogger;
 use App\Services\Server\Databases\DatabaseManager;
+use App\Services\Server\Databases\RemoteAccessPreparer;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -15,6 +16,7 @@ class CreateDatabase
         private DatabaseManager $manager,
         private CreateDatabaseUser $createUser,
         private ActivityLogger $activityLogger,
+        private RemoteAccessPreparer $remoteAccess,
     ) {}
 
     /**
@@ -31,6 +33,17 @@ class CreateDatabase
 
             if (! empty($data['create_user'])) {
                 $this->createUser->ensureUsernameFree($engineName, $data['name'], $data['create_user'], 'create_user.username');
+
+                // FS-C14(e): a remote user that needs the cluster restarted
+                // was refused only after the database had been made — so
+                // every round created it, dropped it again, and logged a
+                // `database.created` for a database that no longer existed.
+                // Asked first; the user's own step then finds it settled.
+                $this->remoteAccess->prepare(
+                    new Database(['name' => $data['name'], 'engine' => $engineName]),
+                    (string) ($data['create_user']['connection_preference'] ?? 'localhost'),
+                    (bool) ($data['create_user']['restart_cluster'] ?? false),
+                );
             }
 
             $engine->createDatabase($data['name'], $charset, $collation);

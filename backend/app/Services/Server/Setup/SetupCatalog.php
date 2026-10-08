@@ -106,6 +106,8 @@ class SetupCatalog
             // no translation, so a missing key never reaches the user as text.
             'message' => $progress?->message(),
             'retryable' => $progress?->status === InstallStatus::Failed,
+            // Installing, but still waiting behind other jobs (FS-B1).
+            'queued' => $state === 'installing' && $progress?->isQueued() === true,
             'progress' => $key === 'database' && $state !== 'installed' && $progress !== null
                 ? DatabaseInstallProgress::describe($progress)
                 : null,

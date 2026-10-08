@@ -484,6 +484,22 @@ describe('old safety backups', function () {
         expect($restore->status)->toBe(RestoreStatus::Succeeded)
             ->and(Backup::where('is_safety', true)->count())->toBe($before + 1);
     });
+
+    it('never prunes the safety backup it is restoring from (FS-C4)', function () {
+        fakeSafetyBackupTar();
+
+        $first = app(RestoreRunner::class)->run(restoreFor(storedBackup()));
+        app(RestoreRunner::class)->run(restoreFor(storedBackup()));
+        $oldest = Backup::findOrFail($first->safety_backup_id);
+
+        // Undo back to the oldest of the two. Its own safety backup makes
+        // three, and the oldest is the one the prune would have taken.
+        $undo = app(RestoreRunner::class)->run(restoreFor($oldest));
+
+        expect($undo->status)->toBe(RestoreStatus::Succeeded)
+            ->and(Backup::find($oldest->id))->not->toBeNull()
+            ->and($this->fakeDisk->exists($oldest->manifest['key']))->toBeTrue();
+    });
 });
 
 it('leaves no staging directory beside the site, whatever happened', function () {

@@ -143,6 +143,62 @@ it('issues, records the paths and puts TLS into the vhost', function () {
     $this->assertDatabaseHas('activity_logs', ['type' => 'application', 'action' => 'certificate_issued']);
 });
 
+it('asks what is served right after a reissue, not at the next daily check (FS-C47)', function () {
+    // The certificate being replaced: its last look found the old date.
+    $certificate = Certificate::create([
+        'application_id' => $this->application->id,
+        'type' => CertificateType::LetsEncrypt,
+        'status' => CertificateStatus::Pending,
+        'domains' => ['shop.example.com'],
+        'served_expires_at' => now()->addDays(3),
+        'served_checked_at' => now()->subHour(),
+    ]);
+
+    Process::fake(function ($process) {
+        if (in_array('-enddate', $process->command, true)) {
+            return Process::result(output: 'notAfter=Jan  1 00:00:00 2030 GMT');
+        }
+
+        if (in_array('s_client', $process->command, true)) {
+            return Process::result(output: "Certificate chain\n   NotAfter: Jan  1 00:00:00 2030 GMT\n");
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    runIssueJob(new IssueCertificate($certificate->id));
+
+    $certificate->refresh();
+
+    expect($certificate->status)->toBe(CertificateStatus::Active)
+        ->and($certificate->served_expires_at?->format('Y-m-d'))->toBe('2030-01-01')
+        ->and($certificate->served_checked_at?->isToday())->toBeTrue();
+
+    $this->actingAs($this->admin)->getJson("/api/applications/{$this->application->id}/certificate")
+        ->assertJsonPath('certificate.serving_stale', false);
+});
+
+it('forgets the old served date even when the web server cannot be asked', function () {
+    $certificate = Certificate::create([
+        'application_id' => $this->application->id,
+        'type' => CertificateType::LetsEncrypt,
+        'status' => CertificateStatus::Pending,
+        'domains' => ['shop.example.com'],
+        'served_expires_at' => now()->addDays(3),
+    ]);
+
+    Process::fake(fn ($process) => match (true) {
+        in_array('-enddate', $process->command, true) => Process::result(output: 'notAfter=Jan  1 00:00:00 2030 GMT'),
+        in_array('s_client', $process->command, true) => Process::result(exitCode: 1, errorOutput: 'connect: Connection refused'),
+        default => Process::result(exitCode: 0),
+    });
+
+    runIssueJob(new IssueCertificate($certificate->id));
+
+    expect($certificate->fresh()->served_expires_at)->toBeNull()
+        ->and($certificate->fresh()->status)->toBe(CertificateStatus::Active);
+});
+
 it('removes the Let\'s Encrypt lineage a self-signed certificate replaced', function () {
     $certificate = Certificate::create([
         'application_id' => $this->application->id,

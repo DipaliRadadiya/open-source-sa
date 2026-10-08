@@ -94,4 +94,7 @@ return [
 
     // Used for :os when /etc/os-release cannot be read.
     'this_server' => 'このサーバーの OS',
+
+    // FS-C18/FS-C19: apt's own error line, quoted after a generic failure.
+    'package_manager_said' => 'パッケージマネージャーのメッセージ: 「:line」',
 ];

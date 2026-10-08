@@ -49,6 +49,10 @@ class InstallTracker
                 'current_step' => $initialStep,
                 'output' => null,
                 'started_at' => $now,
+                // Null until a worker picks the job up (FS-B1): one worker runs
+                // installs and site setups in turn, and an install waiting its
+                // turn read as "installing" for ten minutes. begin() stamps it.
+                'picked_up_at' => null,
                 'finished_at' => null,
                 'was_absent' => $wasAbsent,
                 'created_at' => $now,
@@ -60,7 +64,7 @@ class InstallTracker
             // records what was true when the install was first *asked for*,
             // and a retry asking the box again is exactly the mistake it
             // exists to prevent — by then the half-installed package is there.
-            ['status', 'reason', 'reference', 'current_step', 'output', 'started_at', 'finished_at', 'updated_at'],
+            ['status', 'reason', 'reference', 'current_step', 'output', 'started_at', 'picked_up_at', 'finished_at', 'updated_at'],
         );
 
         $row = $this->query($runtime, $version, $extension)->firstOrFail();
@@ -89,6 +93,20 @@ class InstallTracker
         return tap($this->start($runtime, $version), fn (RuntimeInstall $row) => $row
             ->forceFill(['status' => InstallStatus::Removing])
             ->save());
+    }
+
+    /**
+     * A worker has picked the job up: the install leaves the queue (FS-B1).
+     * Returns the row, as current() does, for the job to report progress to.
+     */
+    public function begin(string $runtime, string $version, ?string $extension = null): ?RuntimeInstall
+    {
+        $this->query($runtime, $version, $extension)
+            ->whereIn('status', [InstallStatus::Installing->value, InstallStatus::Removing->value])
+            ->whereNull('picked_up_at')
+            ->update(['picked_up_at' => now()]);
+
+        return $this->current($runtime, $version, $extension);
     }
 
     /** The in-flight row for one install, so a job can report progress to it. */

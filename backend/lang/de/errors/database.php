@@ -26,4 +26,8 @@ return [
     'remote_host_invalid' => 'Geben Sie eine IPv4-Adresse oder einen Bereich ein, z. B. 203.0.113.5 oder 203.0.113.0/24.',
     'remote_host_not_remote' => 'Diese Adresse ist keine entfernte. Verwenden Sie „Lokal“ für diesen Server oder „Überall“ für alle Adressen.',
     'engine_unreachable' => ':engine antwortet nicht, daher kann das Panel diese Datenbank nicht lesen. Starten Sie :engine auf der Seite „Dienste“ und versuchen Sie es erneut.',
+    'panel_user_protected' => '„:username“ ist das Konto, mit dem das Panel selbst die Datenbanken verwaltet. Es kann hier weder geändert noch entfernt werden.',
+    'export_in_progress' => 'Dieser Export läuft noch. Warten Sie, bis er abgeschlossen ist, und löschen Sie ihn dann.',
+    'engine_install_in_progress' => ':engine wird bereits installiert. Warten Sie, bis diese Installation abgeschlossen ist.',
+    'panel_process_protected' => 'Dies ist die eigene Verbindung des Panels. Wenn Sie sie beenden, schlägt fehl, was das Panel gerade tut.',
 ];

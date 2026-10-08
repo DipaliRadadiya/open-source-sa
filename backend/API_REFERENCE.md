@@ -341,12 +341,14 @@ Paginated (**`per_page` defaults to 10**, not 20). Filters: `filter[user_id]`, `
 **`filter[scope]` is the coarse one** — pass `account` or `server` and the backend expands it to that scope's type list server-side. Do not build it client-side by sending several `filter[type]` values; there is no multi-type filter, and the map lives in `config/activity.php`.
 
 ```json
-{"activity_log": [{"id": 1, "type": "user", "action": "registered", "scope": "account", "description": "Registered", "user": {"id": 1, "username": "admin"}, "is_system": false, "created_at": "…", "created_at_human": "2 hours ago"}], "meta": {"current_page": 1, "per_page": 20, "total": 150, "last_page": 8}}
+{"activity_log": [{"id": 1, "type": "user", "action": "registered", "scope": "account", "description": "Registered", "user": {"id": 1, "username": "admin", "deleted": false}, "is_system": false, "created_at": "…", "created_at_human": "2 hours ago"}], "meta": {"current_page": 1, "per_page": 20, "total": 150, "last_page": 8}}
 ```
 
 `description` is built at read time from `__('activity.'.$type.'.'.$action, $properties)` in the viewer's locale — not stored. **The `properties` bag itself is not returned** on any activity endpoint: it is the input to that sentence, not a field to read values out of.
 
 `scope` is which half of the panel the row is about — `account` (users, roles, permissions, central consent) or `server` (everything operational) — so the frontend can badge or group without keeping its own copy of the type→scope map. It is null for a type not yet in the map.
+
+**A deleted user's rows keep their name** (since 2026-10-08, FS-C22): `user` is `{"id": null, "username": "leaver", "deleted": true}` and `is_system` is `false`. Show it as "leaver (deleted)". Users deleted before this date have no name left, so their rows still read as system.
 
 **`is_system: true` means no person did this** — a scheduled reboot, an automatic disk clean, a deploy from a git webhook. It is stated outright rather than left to be inferred from a null `user`, and the backend deliberately does not paper over it by writing some admin's id onto a system action.
 
@@ -3671,6 +3673,7 @@ While an install is queued, running, or failed, `install_progress` carries the d
 ```json
 {
   "status": "installing",
+  "queued": false,
   "started_at": "27-08-2026 04:00:00",
   "started_at_human": "a few seconds ago",
   "reason": null,
@@ -3685,6 +3688,8 @@ While an install is queued, running, or failed, `install_progress` carries the d
 
 `current_step` is one of `queued`, `checking_conflicts`, `preparing_repository`, `updating_package_index`, `waiting_for_package_manager`, `preparing`, `downloading`, `unpacking`, `configuring`, `starting_service`, `verifying_cluster`, `verifying_connection`, or `creating_panel_account`. MongoDB uses the repository steps; MySQL and MariaDB use the conflict check; **PostgreSQL uses `verifying_cluster`** — a step of its own because neither of its systemd units can report a cluster that failed to start (`postgresql.service` is `ExecStart=/bin/true`, and `postgresql@.service` ignores its own exit code), so the panel asks `pg_isready` instead. It is a different failure from `verifying_connection`, which is about credentials, and telling someone with a dead cluster to check their password would send them the wrong way. `waiting_for_package_manager` means Ubuntu is holding the package lock — usually a freshly booted server running its own unattended upgrades. **The install is not stuck**: the panel waits up to ten minutes and continues on its own. A step that never appeared before will now show on a busy server instead of a failure. Package phases are parsed from APT's real output rather than advanced on a timer. `output` is an 8 KB tail of APT output and contains no command arguments or credentials. `current_step_title` and failure `message` are localized for the viewer. On failure, the last real step remains in place and `retryable` becomes `true`.
 
+**`queued`** (added 2026-10-08, FS-B1) is `true` while the install is still waiting for the queue worker — which runs installs and application setups one at a time, so an install can wait minutes behind them. `status` already reads `installing`; show "Waiting in the queue" rather than a progress bar while `queued` is true. Every install and removal row carries it (PHP versions and extensions, Node, database engines, fail2ban, `GET /setup` components as `queued`).
+
 The database component returned by `GET /setup` exposes the same object as `progress`. Once installation succeeds, the transient row is deleted, both progress objects become `null`, and `installed`/`running` are derived from the server itself.
 
 ---
@@ -3693,6 +3698,8 @@ The database component returned by `GET /setup` exposes the same object as `prog
 **Permission:** `database` (manage)
 
 Install a database engine. All three are installable now — MongoDB was the last one that was not, because it is not in Ubuntu's archive and needed its own apt repository.
+
+**`409`** `reason: install_in_progress` when that engine is already queued or installing (since 2026-10-08, FS-C14). A second click used to answer `202` for an install that was silently dropped.
 
 Do not hardcode which engines are installable: read `installable` from `GET /databases/engines`. It is driven by config, so an engine can be *operable* (the panel manages databases on one that already exists) before it is *installable*, and a `false` there means the button must not be offered.
 
@@ -3974,6 +3981,8 @@ Structure only — no data browsing.
 ]}
 ```
 
+**`503`** with `reason: engine_unreachable` when the engine is stopped or not answering (since 2026-10-08, FS-C12). It used to answer `{"tables": []}`, which read as an empty database.
+
 ---
 
 > **Removed 2026-09-08: `POST /databases/{database}/optimize` and `POST /databases/{database}/repair`.**
@@ -4036,6 +4045,8 @@ Stream a previously-created export for download. Filename is strictly validated 
 **Permission:** `database` (manage)
 
 Delete the export row **and** its file.
+
+**`409`** `reason: export_in_progress` while the export is queued or running (since 2026-10-08, FS-C14) — its job would still write the file afterwards. A stale one (its worker is gone) can be deleted.
 
 **Response `204`:**
 
@@ -4103,6 +4114,8 @@ Update username, connection preference, or password.
 
 ### DELETE `/databases/{database}/users/{user}`
 **Permission:** `database` (manage)
+
+The panel's own account (`panel_…`) and the engine's built-in accounts are refused with `422` on `username` — here and on `PATCH …/users/{user}` (since 2026-10-08, FS-C14).
 
 **Response `204`:**
 
@@ -4175,16 +4188,18 @@ Live process list for the active SQL engine.
 {"processes": [{
   "id": 42, "user": "shopuser", "host": "localhost",
   "db": "shop_db", "command": "Sleep", "time": 5,
-  "state": "", "query": null
+  "state": "", "query": null, "is_panel": false
 }]}
 ```
+
+`is_panel` (since 2026-10-08) is `true` for the panel's own connection: give it no Stop button.
 
 ---
 
 ### DELETE `/databases/processes/{id}`
 **Permission:** `database` (manage)
 
-Kill a process/op (`KILL`).
+Kill a process/op (`KILL`). The panel's own connection is refused with `422`, `reason: panel_process`.
 
 **Query:** `?engine=mariadb` (required; missing or unknown → `422` on `engine`)
 
@@ -4923,7 +4938,7 @@ is on disk:
 
 ```json
 {"install": {
-  "status": "installing",
+  "status": "installing", "queued": false,
   "reason": null, "reason_title": null, "reference": null,
   "started_at": "12-08-2026 15:20:11", "finished_at": null
 }}

@@ -69,6 +69,8 @@ class InstallBuildTools implements ShouldBeUnique, ShouldQueue
         InstallTracker $installs,
         InstallFailureClassifier $classifier,
     ): void {
+        $installs->begin(self::RUNTIME, self::VERSION);
+
         $result = $serverOps->apt(
             ['apt-get', 'install', '-y', self::PACKAGE],
             ['feature' => 'build_tools', 'op' => 'install'],

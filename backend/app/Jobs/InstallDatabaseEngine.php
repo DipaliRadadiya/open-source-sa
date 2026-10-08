@@ -67,7 +67,7 @@ class InstallDatabaseEngine implements ShouldBeUniqueUntilProcessing, ShouldQueu
         ActivityLogger $log,
         ServerCapabilities $capabilities,
     ): void {
-        $row = $installs->current('database', $this->engine);
+        $row = $installs->begin('database', $this->engine);
         $progress = $row === null ? null : new DatabaseInstallProgress($row);
 
         try {

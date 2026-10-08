@@ -262,11 +262,13 @@ class PhpExtensionManager
     {
         return $install?->toProgress() ?? [
             'status' => InstallStatus::Ready->value,
+            'queued' => false,
             'started_at' => null,
             'started_at_human' => null,
             'reason' => null,
             'message' => null,
             'reference' => null,
+            'error_line' => null,
             // Same keys whether or not an install touched this extension: a
             // field that appears only sometimes is one the frontend has to
             // guard on every read.

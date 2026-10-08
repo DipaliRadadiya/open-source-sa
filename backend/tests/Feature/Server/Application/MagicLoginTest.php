@@ -79,6 +79,21 @@ function fakeWpCli(array $admins, bool $multisite = false, bool $listFails = fal
                 : Process::result(output: json_encode($admins));
         }
 
+        // The mint script (FS-C16): answers the way the script would, from
+        // the payload it carries on stdin.
+        if (str_contains($command, 'eval-file -')) {
+            if ($multisite) {
+                return Process::result(output: "\n".json_encode(['error' => 'multisite']));
+            }
+
+            preg_match("/'user_id' => (\\d+)/", (string) $process->input, $match);
+            $admin = collect($admins)->firstWhere('ID', (int) ($match[1] ?? 0));
+
+            return Process::result(output: "Notice: something a plugin printed\n".json_encode($admin === null
+                ? ['error' => 'not_administrator']
+                : ['ok' => true, 'user' => ['id' => $admin['ID'], 'login' => $admin['user_login'], 'name' => $admin['display_name'], 'email' => $admin['user_email']]]));
+        }
+
         return Process::result(exitCode: 0);
     });
 }
@@ -174,10 +189,7 @@ it('refuses over plain http rather than leaking an admin session', function () {
     expect($response->json('errors.magic_login.0'))->toContain('HTTPS');
 
     // Nothing was written to the site for a request that was refused.
-    Process::assertNotRan(fn ($process) => str_contains(
-        is_array($process->command) ? implode(' ', $process->command) : (string) $process->command,
-        'option update'
-    ));
+    Process::assertNotRan(fn ($process) => str_contains(implode(' ', (array) $process->command), 'eval-file'));
 });
 
 it('refuses a multisite network instead of signing in with less access than it looks like', function () {
@@ -187,10 +199,12 @@ it('refuses a multisite network instead of signing in with less access than it l
         ->postJson("/api/applications/{$this->application->id}/magic-login", ['wp_user_id' => 1])
         ->assertStatus(422);
 
-    Process::assertNotRan(fn ($process) => str_contains(
-        is_array($process->command) ? implode(' ', $process->command) : (string) $process->command,
-        'option update'
-    ));
+    // The script stores nothing on a network: it answers before add_option.
+    expect(__('errors/magic_login.multisite_unsupported'))->toBe(
+        $this->actingAs($this->admin)
+            ->postJson("/api/applications/{$this->application->id}/magic-login", ['wp_user_id' => 1])
+            ->json('errors.magic_login.0'),
+    );
 });
 
 it('refuses an id that is not on the administrator list', function () {
@@ -219,18 +233,34 @@ it('stores only the hash of the token on the site, never the token', function ()
     // database does not yield a usable token — the same reason a password is
     // not stored. The panel keeps nothing at all.
     Process::assertRan(function ($process) use ($token) {
-        $command = is_array($process->command) ? implode(' ', $process->command) : (string) $process->command;
+        $command = implode(' ', (array) $process->command);
+        $script = (string) $process->input;
 
-        if (! str_contains($command, 'option update sv_magic_login_token')) {
+        if (! str_contains($command, 'eval-file -')) {
             return false;
         }
 
-        return str_contains($command, hash('sha256', $token))
-            && ! str_contains($command, $token)
+        return str_contains($script, hash('sha256', $token))
+            && ! str_contains($script, $token)
+            // Over stdin, never argv — argv is readable by every account.
+            && ! str_contains($command, hash('sha256', $token))
             // Read on exactly one request in its 60-second life; autoloading it
             // would fetch it on every page load of the whole site.
-            && str_contains($command, '--autoload=no');
+            && str_contains($script, "add_option('sv_magic_login_token', \$payload, '', false)");
     });
+});
+
+it('mints in one WP-CLI run, not three (FS-C16)', function () {
+    fakeWpCli(admins());
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/magic-login", ['wp_user_id' => 1])
+        ->assertStatus(201)
+        ->assertJsonPath('magic_login.user.login', 'owner');
+
+    // Every WP-CLI run boots WordPress, 1–2 s each — three of them were
+    // past the point where the browser still opens the new tab.
+    Process::assertRanTimes(fn ($process) => str_contains(implode(' ', (array) $process->command), '/wp '), 1);
 });
 
 it('installs the loader from this repository and never from a url', function () {

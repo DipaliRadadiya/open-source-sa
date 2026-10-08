@@ -44,6 +44,8 @@ class InstallIonCubeLoader implements ShouldQueue
 
     public function handle(IonCubeLoader $loader, ActivityLogger $log, InstallTracker $installs): void
     {
+        $installs->begin(self::RUNTIME, $this->version);
+
         try {
             $loader->install($this->version);
         } catch (PhpConfigException $e) {

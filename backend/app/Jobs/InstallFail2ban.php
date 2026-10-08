@@ -51,6 +51,8 @@ class InstallFail2ban implements ShouldBeUnique, ShouldQueue
         InstallTracker $installs,
         InstallFailureClassifier $classifier,
     ): void {
+        $installs->begin(self::RUNTIME, self::VERSION);
+
         $result = $serverOps->apt(
             ['apt-get', 'install', '-y', 'fail2ban'],
             ['feature' => 'fail2ban', 'op' => 'install'],

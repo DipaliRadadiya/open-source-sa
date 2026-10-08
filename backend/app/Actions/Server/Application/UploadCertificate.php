@@ -10,6 +10,7 @@ use App\Models\Certificate;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\InstallerManager;
 use App\Services\Server\Certificates\CertbotClient;
+use App\Services\Server\Certificates\CertificateExpiry;
 use App\Services\Server\Certificates\CertificateFiles;
 use Throwable;
 
@@ -101,11 +102,15 @@ class UploadCertificate
                     'expires_at' => $this->files->expiresAt($paths['certificate']),
                     'reason' => null,
                     'reference' => null,
+                    // The last look was at the certificate this replaces (FS-C47).
+                    'served_expires_at' => null,
+                    'served_checked_at' => null,
                 ],
             );
 
             $application = $application->fresh(['domains', 'certificate', 'systemUser']);
             $this->vhost->execute($application);
+            app(CertificateExpiry::class)->recheckServed($certificate->fresh());
         } catch (Throwable $exception) {
             if ($previousCertificate === null) {
                 $certificate?->delete();

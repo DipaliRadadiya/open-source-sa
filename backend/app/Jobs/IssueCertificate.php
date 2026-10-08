@@ -10,6 +10,7 @@ use App\Models\Certificate;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\InstallerManager;
 use App\Services\Server\Certificates\CertbotClient;
+use App\Services\Server\Certificates\CertificateExpiry;
 use App\Services\Server\Certificates\CertificateFiles;
 use App\Services\Server\WebServers\WebServerManager;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -112,12 +113,17 @@ class IssueCertificate implements ShouldQueue
                 // Encrypt has started issuing shorter-lived certificates, so a
                 // hardcoded 90 days would quietly become wrong.
                 'expires_at' => $files->expiresAt($paths['certificate']),
+                // What was served before belongs to the certificate this one
+                // replaces (FS-C47); asked again once the vhost has reloaded.
+                'served_expires_at' => null,
+                'served_checked_at' => null,
             ]);
 
             // Only now does the vhost gain its TLS directives — pointing a
             // server block at files that are not there fails the config test
             // and takes the site down over a certificate it never had.
             $vhost->execute($application->fresh(['domains', 'certificate']));
+            app(CertificateExpiry::class)->recheckServed($certificate->fresh());
         } catch (Throwable $exception) {
             try {
                 $installers->syncUrl($application, $previousUrl);

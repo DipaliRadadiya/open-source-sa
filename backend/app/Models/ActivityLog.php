@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Facades\DB;
 
-#[Fillable(['user_id', 'type', 'action', 'subject_type', 'subject_id', 'properties'])]
+#[Fillable(['user_id', 'user_name', 'type', 'action', 'subject_type', 'subject_id', 'properties'])]
 class ActivityLog extends Model
 {
     const UPDATED_AT = null;

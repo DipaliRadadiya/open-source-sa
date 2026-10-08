@@ -5,7 +5,9 @@ namespace App\Services\Server\Restores\Steps;
 use App\Actions\Server\Backup\DeleteBackup;
 use App\Contracts\RestoreStep;
 use App\Enums\BackupStatus;
+use App\Enums\RestoreStatus;
 use App\Models\Backup;
+use App\Models\Restore;
 use App\Services\Server\Backups\BackupRunner;
 use App\Services\Server\Restores\RestoreContext;
 use Illuminate\Support\Facades\Log;
@@ -73,7 +75,7 @@ class SafetyBackup implements RestoreStep
 
         $context->restore->update(['safety_backup_id' => $safety->id]);
 
-        $this->pruneOlderSafetyBackups($target->id, $safety->id);
+        $this->pruneOlderSafetyBackups($target->id, [$safety->id, $context->backup->id]);
     }
 
     public function cleanup(RestoreContext $context, bool $failed): void
@@ -96,12 +98,24 @@ class SafetyBackup implements RestoreStep
      * next restore, and does not fail this one: the safety backup this restore
      * depends on has already been taken.
      */
-    private function pruneOlderSafetyBackups(int $targetId, int $keepId): void
+    /**
+     * @param  list<int>  $keep  the new safety backup, and the backup this
+     *                           restore is reading from — an undo restores a
+     *                           safety backup, and pruning it mid-restore
+     *                           deleted the archive being extracted (FS-C4)
+     */
+    private function pruneOlderSafetyBackups(int $targetId, array $keep): void
     {
+        // Nor one another restore, queued or running, is about to read.
+        $inUse = Restore::query()
+            ->whereIn('status', [RestoreStatus::Pending, RestoreStatus::Running])
+            ->pluck('backup_id')
+            ->all();
+
         $expired = Backup::query()
             ->where('backup_target_id', $targetId)
             ->where('is_safety', true)
-            ->whereKeyNot($keepId)
+            ->whereKeyNot(array_values(array_unique([...$keep, ...$inUse])))
             ->orderByDesc('id')
             ->skip(self::KEEP - 1)
             ->take(100)

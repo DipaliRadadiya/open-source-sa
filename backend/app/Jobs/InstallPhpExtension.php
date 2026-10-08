@@ -41,7 +41,7 @@ class InstallPhpExtension implements ShouldBeUnique, ShouldQueue
     {
         $properties = ['version' => $this->version, 'extension' => $this->extension];
 
-        $row = $installs->current('php', $this->version, $this->extension);
+        $row = $installs->begin('php', $this->version, $this->extension);
         $progress = $row ? new InstallProgress($row) : null;
 
         try {

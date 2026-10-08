@@ -234,11 +234,62 @@ it('keeps the server-operation reference when a removal fails', function () {
     $php->shouldReceive('uninstall')->once()->andThrow(new SettingOperationException('ref-remove-actual'));
 
     $installs = Mockery::mock(InstallTracker::class);
-    $installs->shouldReceive('current')->once()->andReturnNull();
+    $installs->shouldReceive('begin')->once()->andReturnNull();
     $installs->shouldReceive('fail')->once()->with('php', '8.4', null, 'remove_failed', 'ref-remove-actual');
 
     expect(fn () => (new RemovePhpVersion('8.4'))->handle($php, app(ActivityLogger::class), $installs, app(ServerCapabilities::class)))
         ->toThrow(SettingOperationException::class);
+});
+
+it('says an install is queued until a worker picks it up (FS-B1)', function () {
+    $tracker = app(InstallTracker::class);
+    $tracker->start('php', '8.3');
+
+    expect(RuntimeInstall::query()->sole()->toProgress())
+        ->toMatchArray(['status' => 'installing', 'queued' => true]);
+
+    $tracker->begin('php', '8.3');
+
+    expect(RuntimeInstall::query()->sole()->toProgress())
+        ->toMatchArray(['status' => 'installing', 'queued' => false]);
+
+    // A retry is queued again, not left reading as picked up.
+    $tracker->fail('php', '8.3', null, 'network');
+    $tracker->start('php', '8.3');
+
+    expect(RuntimeInstall::query()->sole()->isQueued())->toBeTrue();
+});
+
+it('marks it picked up from inside the job', function () {
+    app(InstallTracker::class)->start('php', '8.3');
+    $php = Mockery::mock(PhpRuntime::class);
+    $php->shouldReceive('install')->once()->andReturnUsing(function () {
+        // Still running: the row says it has started.
+        expect(RuntimeInstall::query()->sole()->isQueued())->toBeFalse();
+    });
+
+    (new InstallPhpVersion('8.3'))->handle($php, app(ActivityLogger::class), app(InstallTracker::class), app(ServerCapabilities::class));
+});
+
+it('quotes apt\'s error line when the failure has no better reason (FS-C18/FS-C19)', function () {
+    $tracker = app(InstallTracker::class);
+    $tracker->start('php', '8.3', 'imagick');
+    RuntimeInstall::query()->sole()->update(['output' => "Reading package lists...\nE: Unable to correct problems, you have held broken packages.\n"]);
+    $tracker->fail('php', '8.3', 'imagick', 'unknown', 'ref-x');
+
+    $progress = RuntimeInstall::query()->sole()->toProgress();
+
+    expect($progress['error_line'])->toBe('E: Unable to correct problems, you have held broken packages.')
+        ->and($progress['message'])->toContain('E: Unable to correct problems, you have held broken packages.');
+});
+
+it('leaves a classified reason in its own words', function () {
+    $tracker = app(InstallTracker::class);
+    $tracker->start('php', '8.3');
+    RuntimeInstall::query()->sole()->update(['output' => "E: Could not get lock /var/lib/dpkg/lock-frontend\n"]);
+    $tracker->fail('php', '8.3', null, 'apt_lock');
+
+    expect(RuntimeInstall::query()->sole()->message())->toBe(__('runtime.install_failed.apt_lock'));
 });
 
 it('retrying clears the previous failure', function () {

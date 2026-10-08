@@ -106,9 +106,20 @@ class WordPressMagicLogin
     }
 
     /**
-     * Mint a single-use token for one administrator and return where to post it.
+     * Check, and mint a single-use token for one administrator, in one go.
      *
-     * @return array{url: string, token: string, expires_at: int}
+     * One WP-CLI run (FS-C16). It used to be three — `core is-installed
+     * --network`, the administrator list again, then `option update` — at
+     * roughly 1.2–2.3 s each, because every run boots WordPress. 3.6–7 s
+     * after the click is past the point where a browser still lets the page
+     * open the new tab, so the login fell back to a toast. The same three
+     * questions are asked inside one boot instead, and the answer to each is
+     * still a refusal with its own sentence.
+     *
+     * The script reaches WP-CLI over stdin, not argv: the payload holds the
+     * token's hash, and argv is readable by every account on the box.
+     *
+     * @return array{url: string, token: string, expires_at: int, user: array{id: int, login: string, name: string, email: string}}
      *
      * @throws ValidationException
      */
@@ -116,27 +127,39 @@ class WordPressMagicLogin
     {
         $this->installLoader($application);
 
-        // Generated here and never stored here. The site keeps only the SHA-256
-        // of it, so the panel's own database cannot be read to log into
-        // anybody's WordPress — the same reason a password is not stored.
         $token = Str::random(64);
         $expiresAt = time() + self::TTL_SECONDS;
 
-        $payload = json_encode([
+        $result = $this->wp($application, ['eval-file', '-'], $this->mintScript([
             'hash' => hash('sha256', $token),
             'user_id' => $wpUserId,
             'expires_at' => $expiresAt,
-        ], JSON_THROW_ON_ERROR);
+        ]));
 
-        // `--autoload=no`: this row is read on exactly one request in its
-        // 60-second life, and autoloaded options are fetched on every page
-        // load of the whole site.
-        $written = $this->wp($application, [
-            'option', 'update', self::OPTION, $payload,
-            '--format=json', '--autoload=no',
-        ]);
+        $answer = $this->lastJsonLine($result->output());
 
-        if ($written->failed()) {
+        if ($result->failed() || $answer === null) {
+            throw ValidationException::withMessages([
+                'magic_login' => [__('errors/magic_login.mint_failed')],
+            ]);
+        }
+
+        if (($answer['error'] ?? null) === 'multisite') {
+            throw ValidationException::withMessages([
+                'magic_login' => [__('errors/magic_login.multisite_unsupported')],
+            ]);
+        }
+
+        // Re-read inside WordPress rather than trusting the id off the request:
+        // a subscriber's id, or an account demoted since the list was shown,
+        // must not be handed a token. The loader checks again at use.
+        if (($answer['error'] ?? null) === 'not_administrator') {
+            throw ValidationException::withMessages([
+                'wp_user_id' => [__('errors/magic_login.not_an_administrator')],
+            ]);
+        }
+
+        if (($answer['ok'] ?? false) !== true || ! is_array($answer['user'] ?? null)) {
             throw ValidationException::withMessages([
                 'magic_login' => [__('errors/magic_login.mint_failed')],
             ]);
@@ -146,7 +169,53 @@ class WordPressMagicLogin
             'url' => $application->url(),
             'token' => $token,
             'expires_at' => $expiresAt,
+            'user' => [
+                'id' => (int) $answer['user']['id'],
+                'login' => (string) $answer['user']['login'],
+                'name' => (string) ($answer['user']['name'] ?: $answer['user']['login']),
+                'email' => (string) $answer['user']['email'],
+            ],
         ];
+    }
+
+    /**
+     * The PHP WP-CLI runs for mint(). The values are an int and two hex/int
+     * strings, written with var_export(), so nothing in them can become code.
+     *
+     * Not autoloaded: the token is read on exactly one request in its
+     * sixty-second life, and autoloading would fetch it on every page load.
+     *
+     * @param  array{hash: string, user_id: int, expires_at: int}  $payload
+     */
+    private function mintScript(array $payload): string
+    {
+        $option = var_export(self::OPTION, true);
+        $value = var_export($payload, true);
+
+        return <<<PHP
+        <?php
+        if (is_multisite()) { echo PHP_EOL.json_encode(['error' => 'multisite']); return; }
+        \$payload = {$value};
+        \$user = get_user_by('id', (int) \$payload['user_id']);
+        if (! \$user || ! in_array('administrator', (array) \$user->roles, true)) { echo PHP_EOL.json_encode(['error' => 'not_administrator']); return; }
+        delete_option({$option});
+        if (! add_option({$option}, \$payload, '', false)) { echo PHP_EOL.json_encode(['error' => 'not_saved']); return; }
+        echo PHP_EOL.json_encode(['ok' => true, 'user' => ['id' => \$user->ID, 'login' => \$user->user_login, 'name' => \$user->display_name, 'email' => \$user->user_email]]);
+        PHP;
+    }
+
+    /**
+     * The script's answer is its last line. Anything before it is whatever
+     * the site printed while booting — a PHP notice, a plugin's echo.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function lastJsonLine(string $output): ?array
+    {
+        $lines = preg_split('/\r?\n/', trim($output)) ?: [];
+        $decoded = json_decode((string) end($lines), true);
+
+        return is_array($decoded) ? $decoded : null;
     }
 
     /**
@@ -195,7 +264,7 @@ class WordPressMagicLogin
     /**
      * @param  array<int, string>  $arguments
      */
-    private function wp(Application $application, array $arguments): ServerOpsResult
+    private function wp(Application $application, array $arguments, ?string $input = null): ServerOpsResult
     {
         return $this->serverOps->run(
             array_merge(
@@ -214,6 +283,7 @@ class WordPressMagicLogin
             ),
             $this->context($application, 'magic_login'),
             timeout: 60,
+            input: $input,
         );
     }
 
