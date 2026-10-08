@@ -86,8 +86,9 @@ class DockerCheck implements DoctorCheck
         if ($result->denied) {
             return [
                 'status' => 'fail',
-                'detail' => "the panel's sudo grant does not cover docker"
-                    .($result->reference !== '' ? ' (reference '.$result->reference.')' : ''),
+                'detail' => $result->reference !== ''
+                    ? __('doctor.details.docker_sudo_ref', ['reference' => $result->reference])
+                    : __('doctor.details.docker_sudo'),
                 'fix' => 'doctor.fixes.docker_sudo',
             ];
         }
@@ -100,7 +101,7 @@ class DockerCheck implements DoctorCheck
         if (str_contains($stderr, 'permission denied')) {
             return [
                 'status' => 'fail',
-                'detail' => 'the daemon is reachable but refused the panel: '.trim($result->errorOutput()),
+                'detail' => __('doctor.details.docker_refused', ['error' => trim($result->errorOutput())]),
                 'fix' => 'doctor.fixes.docker_denied',
             ];
         }
@@ -117,8 +118,9 @@ class DockerCheck implements DoctorCheck
         // run and the panel would otherwise show containers as merely absent.
         return [
             'status' => 'fail',
-            'detail' => 'docker is installed but the daemon did not answer'
-                .($result->reference !== '' ? ' (reference '.$result->reference.')' : ''),
+            'detail' => $result->reference !== ''
+                ? __('doctor.details.docker_silent_ref', ['reference' => $result->reference])
+                : __('doctor.details.docker_silent'),
             'fix' => 'doctor.fixes.docker_down',
         ];
     }
@@ -138,14 +140,14 @@ class DockerCheck implements DoctorCheck
         if ($this->capabilities->recordedStack() === 'docker') {
             return [
                 'status' => 'warn',
-                'detail' => 'docker is not installed, but this server was built as a Docker stack',
+                'detail' => __('doctor.details.docker_missing_stack'),
                 'fix' => 'doctor.fixes.docker_missing',
             ];
         }
 
         return [
             'status' => 'pass',
-            'detail' => 'Docker is not installed (optional)',
+            'detail' => __('doctor.details.docker_optional'),
             'fix' => null,
         ];
     }

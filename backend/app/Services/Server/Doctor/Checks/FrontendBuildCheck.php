@@ -40,7 +40,7 @@ class FrontendBuildCheck implements DoctorCheck
             // A backend-only deployment is a legitimate arrangement; saying
             // the panel is broken because a directory it does not use is
             // absent would be wrong.
-            return ['status' => 'pass', 'detail' => 'no frontend in this installation', 'fix' => null];
+            return ['status' => 'pass', 'detail' => __('doctor.details.frontend_none'), 'fix' => null];
         }
 
         $buildId = $frontend.'/.next/BUILD_ID';
@@ -48,7 +48,7 @@ class FrontendBuildCheck implements DoctorCheck
         if (! is_file($buildId)) {
             return [
                 'status' => 'fail',
-                'detail' => 'no build output at frontend/.next',
+                'detail' => __('doctor.details.frontend_missing'),
                 'fix' => 'doctor.fixes.frontend_build_missing',
             ];
         }
@@ -59,18 +59,17 @@ class FrontendBuildCheck implements DoctorCheck
         if ($newestSource > $builtAt) {
             return [
                 'status' => 'warn',
-                'detail' => sprintf(
-                    'built %s, newest source %s — serving older code',
-                    date('Y-m-d H:i', $builtAt),
-                    date('Y-m-d H:i', $newestSource),
-                ),
+                'detail' => __('doctor.details.frontend_stale', [
+                    'built' => date('Y-m-d H:i', $builtAt),
+                    'source' => date('Y-m-d H:i', $newestSource),
+                ]),
                 'fix' => 'doctor.fixes.frontend_build_stale',
             ];
         }
 
         return [
             'status' => 'pass',
-            'detail' => 'built '.date('Y-m-d H:i', $builtAt),
+            'detail' => __('doctor.details.frontend_built', ['built' => date('Y-m-d H:i', $builtAt)]),
             'fix' => null,
         ];
     }

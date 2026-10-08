@@ -36,7 +36,7 @@ class HealthEndpointCheck implements DoctorCheck
         } catch (Throwable $e) {
             return [
                 'status' => 'fail',
-                'detail' => 'no response from '.$url,
+                'detail' => __('doctor.details.health_no_response', ['url' => $url]),
                 'fix' => 'doctor.fixes.health_unreachable',
             ];
         }
@@ -44,7 +44,7 @@ class HealthEndpointCheck implements DoctorCheck
         if (! $response->successful()) {
             return [
                 'status' => 'fail',
-                'detail' => $url.' returned '.$response->status(),
+                'detail' => __('doctor.details.health_status', ['url' => $url, 'status' => $response->status()]),
                 'fix' => 'doctor.fixes.health_unreachable',
             ];
         }
@@ -55,14 +55,16 @@ class HealthEndpointCheck implements DoctorCheck
         if ($running !== null && $served !== $running) {
             return [
                 'status' => 'warn',
-                'detail' => 'serving '.var_export($served, true).', code is '.$running,
+                'detail' => __('doctor.details.health_version', ['served' => var_export($served, true), 'running' => $running]),
                 'fix' => 'doctor.fixes.health_version_mismatch',
             ];
         }
 
         return [
             'status' => 'pass',
-            'detail' => $url.' → '.($served ?? 'no version'),
+            'detail' => $served === null
+                ? __('doctor.details.health_ok_no_version', ['url' => $url])
+                : __('doctor.details.health_ok', ['url' => $url, 'version' => $served]),
             'fix' => null,
         ];
     }

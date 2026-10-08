@@ -75,7 +75,7 @@ class BinariesCheck implements DoctorCheck
         if ($missingRequired !== []) {
             return [
                 'status' => 'fail',
-                'detail' => 'missing: '.implode(', ', $missingRequired),
+                'detail' => __('doctor.details.binaries_missing', ['tools' => implode(', ', $missingRequired)]),
                 'fix' => 'doctor.fixes.binaries_required',
             ];
         }
@@ -91,14 +91,14 @@ class BinariesCheck implements DoctorCheck
         if ($missingOptional !== []) {
             return [
                 'status' => 'warn',
-                'detail' => 'not installed: '.implode(', ', $missingOptional),
+                'detail' => __('doctor.details.binaries_optional_missing', ['tools' => implode(', ', $missingOptional)]),
                 'fix' => 'doctor.fixes.binaries_optional',
             ];
         }
 
         return [
             'status' => 'pass',
-            'detail' => count(self::REQUIRED) + count(self::OPTIONAL).' tools present',
+            'detail' => __('doctor.details.binaries_ok', ['count' => count(self::REQUIRED) + count(self::OPTIONAL)]),
             'fix' => null,
         ];
     }

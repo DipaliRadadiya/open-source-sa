@@ -54,14 +54,14 @@ class SiteRootLockCheck implements DoctorCheck
         if ($unlocked === [] && $unknown === []) {
             return [
                 'status' => 'pass',
-                'detail' => $total === 0 ? 'no sites' : $total.' site root(s) locked',
+                'detail' => $total === 0 ? __('doctor.details.roots_none') : __('doctor.details.roots_locked', ['count' => $total]),
                 'fix' => null,
             ];
         }
 
         $parts = array_filter([
-            $unlocked !== [] ? 'not locked: '.implode(', ', $unlocked) : null,
-            $unknown !== [] ? 'could not be checked: '.implode(', ', $unknown) : null,
+            $unlocked !== [] ? __('doctor.details.roots_unlocked', ['sites' => implode(', ', $unlocked)]) : null,
+            $unknown !== [] ? __('doctor.details.roots_unknown', ['sites' => implode(', ', $unknown)]) : null,
         ]);
 
         return [

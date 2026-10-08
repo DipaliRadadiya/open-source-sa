@@ -8,6 +8,7 @@ use App\Models\SystemUser;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Sleep;
 
 /*
  * Deleting a site can take its databases with it — `remove_databases`, the
@@ -284,6 +285,43 @@ describe('removing the system user with the application (OLD-20)', function () {
 
         expect(SystemUser::find($this->su->id))->toBeNull();
         Process::assertRan(fn ($p) => in_array('userdel', $p->command, true) && in_array('deploy', $p->command, true));
+    });
+
+    it('asks again while the site\'s last workers wind down, then removes it', function () {
+        Sleep::fake();
+        $calls = 0;
+        Process::fake(function ($p) use (&$calls) {
+            if (in_array('userdel', (array) $p->command, true)) {
+                // OpenLiteSpeed: the vhost is gone but its lsphp is still up.
+                return ++$calls < 3 ? Process::result(exitCode: 8) : Process::result();
+            }
+
+            return Process::result();
+        });
+        $site = siteForDeletion();
+
+        $this->withHeaders(siteDeleteHeaders())
+            ->deleteJson("/api/applications/{$site->id}?remove_system_user=1")
+            ->assertOk()
+            ->assertJsonPath('system_user.outcome', 'removed');
+
+        expect($calls)->toBe(3);
+        Sleep::assertSleptTimes(2);
+    });
+
+    it('says the account was kept when something of it keeps running', function () {
+        Sleep::fake();
+        Process::fake(fn ($p) => in_array('userdel', (array) $p->command, true) ? Process::result(exitCode: 8) : Process::result());
+        $site = siteForDeletion();
+
+        $this->withHeaders(siteDeleteHeaders())
+            ->deleteJson("/api/applications/{$site->id}?remove_system_user=1")
+            ->assertOk()
+            ->assertJsonPath('deleted', true)
+            ->assertJsonPath('system_user.outcome', 'has_processes');
+
+        expect(SystemUser::find($this->su->id))->not->toBeNull()
+            ->and(Application::find($site->id))->toBeNull();
     });
 
     it('keeps an account that owns other applications', function () {

@@ -62,10 +62,10 @@ class PhpIsolationCheck implements DoctorCheck
         if ($orphans !== []) {
             return [
                 'status' => 'fail',
-                'detail' => 'pool(s) naming a missing account: '.implode(', ', array_map(
-                    fn (array $orphan): string => basename($orphan['path']).' (user '.$orphan['user'].')',
+                'detail' => __('doctor.details.php_orphans', ['pools' => implode(', ', array_map(
+                    fn (array $orphan): string => __('doctor.details.php_orphan_item', ['pool' => basename($orphan['path']), 'user' => $orphan['user']]),
                     $orphans,
-                )),
+                ))]),
                 'fix' => 'doctor.fixes.php_pool_orphaned',
             ];
         }
@@ -106,7 +106,7 @@ class PhpIsolationCheck implements DoctorCheck
         if ($missing->isNotEmpty()) {
             return [
                 'status' => 'fail',
-                'detail' => 'pool file missing for '.$missing->implode(', '),
+                'detail' => __('doctor.details.php_pool_missing', ['sites' => $missing->implode(', ')]),
                 'fix' => 'doctor.fixes.php_isolation_missing',
             ];
         }
@@ -116,7 +116,7 @@ class PhpIsolationCheck implements DoctorCheck
         if ($unknown->isNotEmpty()) {
             return [
                 'status' => 'warn',
-                'detail' => 'could not check the pool file for '.$unknown->implode(', '),
+                'detail' => __('doctor.details.php_pool_unknown', ['sites' => $unknown->implode(', ')]),
                 'fix' => 'doctor.fixes.php_isolation_unknown',
             ];
         }
@@ -126,12 +126,11 @@ class PhpIsolationCheck implements DoctorCheck
         if ($memory['over_committed']) {
             return [
                 'status' => 'warn',
-                'detail' => sprintf(
-                    '%d isolated site(s) may use up to %s of %s',
-                    $memory['sites'],
-                    $this->human($memory['committed']),
-                    $this->human($memory['total']),
-                ),
+                'detail' => __('doctor.details.php_memory', [
+                    'count' => $memory['sites'],
+                    'committed' => $this->human($memory['committed']),
+                    'total' => $this->human($memory['total']),
+                ]),
                 'fix' => 'doctor.fixes.php_isolation_memory',
             ];
         }
@@ -142,7 +141,7 @@ class PhpIsolationCheck implements DoctorCheck
             // difference between per-site users meaning something and not.
             return [
                 'status' => 'warn',
-                'detail' => "{$shared} PHP site(s) still share the server pool and run as www-data",
+                'detail' => __('doctor.details.php_shared', ['count' => $shared]),
                 'fix' => 'doctor.fixes.php_isolation_shared',
             ];
         }
@@ -150,8 +149,8 @@ class PhpIsolationCheck implements DoctorCheck
         return [
             'status' => 'pass',
             'detail' => $applications->isEmpty()
-                ? 'no PHP sites'
-                : $isolated->count().' PHP site(s), each in its own pool',
+                ? __('doctor.details.php_none')
+                : __('doctor.details.php_ok', ['count' => $isolated->count()]),
             'fix' => null,
         ];
     }
@@ -185,9 +184,9 @@ class PhpIsolationCheck implements DoctorCheck
         if ($missing->isNotEmpty()) {
             return [
                 'status' => 'fail',
-                'detail' => 'PHP not installed for '.$missing
-                    ->map(fn (array $site): string => "{$site['domain']} (needs {$site['version']})")
-                    ->implode(', '),
+                'detail' => __('doctor.details.php_interpreter_missing', ['sites' => $missing
+                    ->map(fn (array $site): string => __('doctor.details.php_interpreter_item', ['domain' => $site['domain'], 'version' => $site['version']]))
+                    ->implode(', ')]),
                 'fix' => 'doctor.fixes.php_interpreter_missing',
             ];
         }
@@ -200,8 +199,7 @@ class PhpIsolationCheck implements DoctorCheck
         if ($shared !== []) {
             return [
                 'status' => 'fail',
-                'detail' => 'no extUser in the OpenLiteSpeed vhost for '.implode(', ', $shared)
-                    .' — those sites run as nobody, so each can read the others\' files',
+                'detail' => __('doctor.details.php_ols_extuser', ['sites' => implode(', ', $shared)]),
                 'fix' => 'doctor.fixes.ols_missing_extuser',
             ];
         }
@@ -214,16 +212,16 @@ class PhpIsolationCheck implements DoctorCheck
         if ($collisions !== []) {
             return [
                 'status' => 'fail',
-                'detail' => collect($collisions)
-                    ->map(fn (array $vhosts, string $name): string => "{$name} is defined by ".implode(', ', $vhosts))
-                    ->implode('; ').' — OpenLiteSpeed runs one process per name, so those sites share one user',
+                'detail' => __('doctor.details.php_ols_collision', ['collisions' => collect($collisions)
+                    ->map(fn (array $vhosts, string $name): string => __('doctor.details.php_ols_collision_item', ['name' => $name, 'vhosts' => implode(', ', $vhosts)]))
+                    ->implode('; ')]),
                 'fix' => 'doctor.fixes.ols_shared_processor',
             ];
         }
 
         return [
             'status' => 'pass',
-            'detail' => $stack->key().' — no FPM pools; every PHP site has its interpreter and its own user',
+            'detail' => __('doctor.details.php_ok_no_pools', ['stack' => $stack->key()]),
             'fix' => null,
         ];
     }

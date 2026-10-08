@@ -48,7 +48,7 @@ class Doctor
                 // answers, and "this check broke" is useful information.
                 $outcome = [
                     'status' => 'fail',
-                    'detail' => 'check errored: '.$e->getMessage(),
+                    'detail' => __('doctor.details.check_errored', ['error' => $e->getMessage()]),
                     'fix' => null,
                 ];
             }

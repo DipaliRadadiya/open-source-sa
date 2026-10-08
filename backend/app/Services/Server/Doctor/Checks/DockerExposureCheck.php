@@ -49,7 +49,7 @@ class DockerExposureCheck implements DoctorCheck
         if (! $this->serverOps->binaryExists('docker')) {
             return [
                 'status' => 'pass',
-                'detail' => 'Docker is not installed — nothing to expose',
+                'detail' => __('doctor.details.exposure_no_docker'),
                 'fix' => null,
             ];
         }
@@ -69,8 +69,7 @@ class DockerExposureCheck implements DoctorCheck
         if ($result->denied) {
             return [
                 'status' => 'warn',
-                'detail' => 'could not list containers: the panel\'s sudo grant does not cover docker, so'
-                    .' published ports were not checked (reference '.$result->reference.')',
+                'detail' => __('doctor.details.exposure_sudo', ['reference' => $result->reference]),
                 'fix' => 'doctor.fixes.docker_sudo',
             ];
         }
@@ -80,7 +79,7 @@ class DockerExposureCheck implements DoctorCheck
         if (! $result->answered) {
             return [
                 'status' => 'pass',
-                'detail' => 'no reachable Docker daemon — nothing to expose',
+                'detail' => __('doctor.details.exposure_no_daemon'),
                 'fix' => null,
             ];
         }
@@ -102,14 +101,14 @@ class DockerExposureCheck implements DoctorCheck
         if ($exposed !== []) {
             return [
                 'status' => 'fail',
-                'detail' => 'reachable from any address, past the firewall: '.implode(', ', $exposed),
+                'detail' => __('doctor.details.exposure_public', ['ports' => implode(', ', $exposed)]),
                 'fix' => 'doctor.fixes.docker_exposure',
             ];
         }
 
         return [
             'status' => 'pass',
-            'detail' => 'no container publishes to a public address',
+            'detail' => __('doctor.details.exposure_none'),
             'fix' => null,
         ];
     }

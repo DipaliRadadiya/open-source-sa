@@ -38,13 +38,13 @@ class WritablePathsCheck implements DoctorCheck
                 // Only a warning: the update state directory is created on
                 // first use if its parent allows it. A hard failure here would
                 // cry wolf on a panel that has simply never updated.
-                $problems[] = $label.' missing ('.$path.')';
+                $problems[] = __('doctor.details.writable_missing', ['label' => $label, 'path' => $path]);
 
                 continue;
             }
 
             if (! is_writable($path)) {
-                $problems[] = $label.' not writable ('.$path.')';
+                $problems[] = __('doctor.details.writable_not_writable', ['label' => $label, 'path' => $path]);
             }
         }
 

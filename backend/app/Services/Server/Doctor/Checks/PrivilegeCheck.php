@@ -89,7 +89,7 @@ class PrivilegeCheck implements DoctorCheck
         if ($asRoot && $serviceUser === null) {
             return [
                 'status' => 'warn',
-                'detail' => 'running as root and the panel\'s own account could not be identified, so its sudo access was not checked',
+                'detail' => __('doctor.details.privilege_root_unknown'),
                 'fix' => 'doctor.fixes.privilege_unknown_user',
             ];
         }
@@ -97,7 +97,7 @@ class PrivilegeCheck implements DoctorCheck
         if (! config('server.privilege.sudo', true)) {
             return [
                 'status' => 'fail',
-                'detail' => 'SERVER_OPS_SUDO is disabled but the panel is not root',
+                'detail' => __('doctor.details.privilege_sudo_disabled'),
                 'fix' => 'doctor.fixes.privilege_disabled',
             ];
         }
@@ -115,7 +115,9 @@ class PrivilegeCheck implements DoctorCheck
         if ($denied !== []) {
             return [
                 'status' => 'fail',
-                'detail' => 'not permitted'.($serviceUser === null ? '' : ' for '.$serviceUser).': '.implode(', ', $denied),
+                'detail' => $serviceUser === null
+                    ? __('doctor.details.privilege_denied', ['commands' => implode(', ', $denied)])
+                    : __('doctor.details.privilege_denied_for', ['user' => $serviceUser, 'commands' => implode(', ', $denied)]),
                 'fix' => 'doctor.fixes.privilege',
             ];
         }
@@ -140,14 +142,16 @@ class PrivilegeCheck implements DoctorCheck
         if ($ungranted !== []) {
             return [
                 'status' => 'fail',
-                'detail' => 'granted by sudo but missing: '.implode(', ', $ungranted),
+                'detail' => __('doctor.details.privilege_missing', ['commands' => implode(', ', $ungranted)]),
                 'fix' => 'doctor.fixes.privilege_outdated',
             ];
         }
 
         return [
             'status' => 'pass',
-            'detail' => count((array) config('server.privilege.binaries', [])).' commands permitted'.($serviceUser === null ? '' : ' for '.$serviceUser),
+            'detail' => $serviceUser === null
+                ? __('doctor.details.privilege_ok', ['count' => count((array) config('server.privilege.binaries', []))])
+                : __('doctor.details.privilege_ok_for', ['count' => count((array) config('server.privilege.binaries', [])), 'user' => $serviceUser]),
             'fix' => null,
         ];
     }

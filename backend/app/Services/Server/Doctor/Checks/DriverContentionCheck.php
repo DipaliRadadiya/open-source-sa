@@ -41,7 +41,7 @@ class DriverContentionCheck implements DoctorCheck
             // nothing here worth an opinion.
             return [
                 'status' => 'pass',
-                'detail' => $database.' database (concurrent writers)',
+                'detail' => __('doctor.details.contention_server_db', ['database' => $database]),
                 'fix' => null,
             ];
         }
@@ -55,20 +55,20 @@ class DriverContentionCheck implements DoctorCheck
         if ($onDatabase === []) {
             return [
                 'status' => 'pass',
-                'detail' => 'queue, sessions and cache are off SQLite',
+                'detail' => __('doctor.details.contention_off_sqlite'),
                 'fix' => null,
             ];
         }
 
-        $detail = implode(', ', $onDatabase).' on SQLite';
+        $drivers = implode(', ', $onDatabase);
 
         // Whether the advice is actionable depends on Redis being there — and
         // "move these to Redis" is useless advice on a box without one.
         return [
             'status' => 'warn',
             'detail' => $this->redisAnswers()
-                ? $detail.'; Redis is available'
-                : $detail.'; Redis did not answer',
+                ? __('doctor.details.contention_redis', ['drivers' => $drivers])
+                : __('doctor.details.contention_no_redis', ['drivers' => $drivers]),
             'fix' => $this->redisAnswers()
                 ? 'doctor.fixes.drivers_on_sqlite'
                 : 'doctor.fixes.drivers_no_redis',

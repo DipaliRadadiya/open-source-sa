@@ -300,6 +300,8 @@ Runs the same checks as the `panel:doctor` CLI command against the live server: 
 
 Throttled because each call shells out and makes an outbound HTTP request. It is a diagnostic, not something to poll.
 
+`title`, `detail` and `fix` are all in the viewer's language (`detail` since 2026-10-08, FS-C37 — it was English in every language). Names, paths, versions and command output inside `detail` are left as they are.
+
 ```json
 {"doctor": {
   "healthy": true, "passed": 11, "failed": 0, "warnings": 1,

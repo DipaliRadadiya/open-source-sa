@@ -37,7 +37,7 @@ class QueueCheck implements DoctorCheck
             // nothing.
             return [
                 'status' => 'pass',
-                'detail' => config('queue.default').' driver (backlog not inspected)',
+                'detail' => __('doctor.details.queue_driver', ['driver' => config('queue.default')]),
                 'fix' => null,
             ];
         }
@@ -51,7 +51,7 @@ class QueueCheck implements DoctorCheck
         } catch (Throwable $e) {
             return [
                 'status' => 'fail',
-                'detail' => 'cannot read the queue tables',
+                'detail' => __('doctor.details.queue_unreadable'),
                 'fix' => 'doctor.fixes.queue_unreadable',
             ];
         }
@@ -61,7 +61,7 @@ class QueueCheck implements DoctorCheck
         if ($waited > self::STALE_SECONDS) {
             return [
                 'status' => 'fail',
-                'detail' => $pending.' job(s) waiting, oldest for '.round($waited / 60).' min',
+                'detail' => __('doctor.details.queue_stalled', ['count' => $pending, 'minutes' => round($waited / 60)]),
                 'fix' => 'doctor.fixes.queue_stalled',
             ];
         }
@@ -72,14 +72,14 @@ class QueueCheck implements DoctorCheck
             // it has to be visible somewhere.
             return [
                 'status' => 'warn',
-                'detail' => $failed.' failed job(s); '.$pending.' waiting',
+                'detail' => __('doctor.details.queue_failed', ['failed' => $failed, 'count' => $pending]),
                 'fix' => 'doctor.fixes.queue_failed_jobs',
             ];
         }
 
         return [
             'status' => 'pass',
-            'detail' => $pending.' waiting, none stale',
+            'detail' => __('doctor.details.queue_ok', ['count' => $pending]),
             'fix' => null,
         ];
     }

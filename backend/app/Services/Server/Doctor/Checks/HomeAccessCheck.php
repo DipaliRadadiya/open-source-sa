@@ -49,14 +49,14 @@ class HomeAccessCheck implements DoctorCheck
         if ($open === []) {
             return [
                 'status' => 'pass',
-                'detail' => $total === 0 ? 'no system users' : $total.' home(s) closed to other users',
+                'detail' => $total === 0 ? __('doctor.details.home_none') : __('doctor.details.home_closed', ['count' => $total]),
                 'fix' => null,
             ];
         }
 
         return [
             'status' => 'warn',
-            'detail' => 'open to other users: '.implode(', ', $open),
+            'detail' => __('doctor.details.home_open', ['users' => implode(', ', $open)]),
             'fix' => 'doctor.fixes.home_open',
         ];
     }

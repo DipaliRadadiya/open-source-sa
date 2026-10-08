@@ -41,7 +41,7 @@ class AccountLocksCheck implements DoctorCheck
         $present = array_values(array_filter(self::LOCKS, 'file_exists'));
 
         if ($present === []) {
-            return ['status' => 'pass', 'detail' => 'no lock files present', 'fix' => null];
+            return ['status' => 'pass', 'detail' => __('doctor.details.locks_none'), 'fix' => null];
         }
 
         // A lock with a live holder is a normal moment in time — apt installing
@@ -50,14 +50,14 @@ class AccountLocksCheck implements DoctorCheck
         if ($this->heldBySomething($present)) {
             return [
                 'status' => 'pass',
-                'detail' => 'locked right now by a running process — normal',
+                'detail' => __('doctor.details.locks_held'),
                 'fix' => null,
             ];
         }
 
         return [
             'status' => 'fail',
-            'detail' => 'stale: '.implode(', ', $present),
+            'detail' => __('doctor.details.locks_stale', ['files' => implode(', ', $present)]),
             'fix' => 'doctor.fixes.account_locks',
         ];
     }

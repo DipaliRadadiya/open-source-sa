@@ -58,8 +58,7 @@ class WebServerCheck implements DoctorCheck
         if ($recorded !== null && $detected !== null && $recorded !== $detected) {
             return [
                 'status' => 'fail',
-                'detail' => "the panel is configured for {$recorded} but this server runs {$detected}"
-                    ." — every site the panel writes goes to {$recorded}'s directories",
+                'detail' => __('doctor.details.web_mismatch', ['recorded' => $recorded, 'detected' => $detected]),
                 'fix' => 'doctor.fixes.web_server_mismatch',
             ];
         }
@@ -67,7 +66,7 @@ class WebServerCheck implements DoctorCheck
         if ($detected === null) {
             return [
                 'status' => 'fail',
-                'detail' => 'none of '.implode(', ', array_keys((array) config('server.web_servers'))).' found',
+                'detail' => __('doctor.details.web_none', ['servers' => implode(', ', array_keys((array) config('server.web_servers')))]),
                 'fix' => 'doctor.fixes.web_server_missing',
             ];
         }
@@ -80,7 +79,7 @@ class WebServerCheck implements DoctorCheck
             // every site down at worst.
             return [
                 'status' => 'fail',
-                'detail' => $detected.' is installed but the panel has no driver for it',
+                'detail' => __('doctor.details.web_undrivable', ['server' => $detected]),
                 'fix' => 'doctor.fixes.web_server_undrivable',
             ];
         }
@@ -121,21 +120,21 @@ class WebServerCheck implements DoctorCheck
             if (! $this->permitted($binary)) {
                 return [
                     'status' => 'warn',
-                    'detail' => 'not permitted to run '.$test.', so the configuration was not tested',
+                    'detail' => __('doctor.details.web_untestable', ['command' => $test]),
                     'fix' => 'doctor.fixes.web_server_untestable',
                 ];
             }
 
             return [
                 'status' => 'fail',
-                'detail' => trim($detected.' config does not pass '.$test.': '.$this->firstLine($result->errorOutput() ?: $result->output())),
+                'detail' => trim(__('doctor.details.web_invalid', ['server' => $detected, 'command' => $test, 'error' => $this->firstLine($result->errorOutput() ?: $result->output())])),
                 'fix' => 'doctor.fixes.web_server_config',
             ];
         }
 
         return [
             'status' => 'pass',
-            'detail' => $detected.', config valid',
+            'detail' => __('doctor.details.web_ok', ['server' => $detected]),
             'fix' => null,
         ];
     }
@@ -160,7 +159,7 @@ class WebServerCheck implements DoctorCheck
         if (! $result->failed()) {
             return [
                 'status' => 'pass',
-                'detail' => 'openlitespeed, config valid',
+                'detail' => __('doctor.details.web_ok', ['server' => 'openlitespeed']),
                 'fix' => null,
             ];
         }
@@ -168,7 +167,7 @@ class WebServerCheck implements DoctorCheck
         if (! $this->permitted($binary)) {
             return [
                 'status' => 'warn',
-                'detail' => 'not permitted to run '.$test.', so the configuration was not tested',
+                'detail' => __('doctor.details.web_untestable', ['command' => $test]),
                 'fix' => 'doctor.fixes.web_server_untestable',
             ];
         }
@@ -179,7 +178,7 @@ class WebServerCheck implements DoctorCheck
         // back it up.
         return [
             'status' => 'fail',
-            'detail' => trim('openlitespeed config does not pass '.$test.': '.$this->firstLine($result->output() ?: $result->errorOutput())),
+            'detail' => trim(__('doctor.details.web_invalid', ['server' => 'openlitespeed', 'command' => $test, 'error' => $this->firstLine($result->output() ?: $result->errorOutput())])),
             'fix' => 'doctor.fixes.web_server_config',
         ];
     }

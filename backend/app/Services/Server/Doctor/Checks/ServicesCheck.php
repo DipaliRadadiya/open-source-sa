@@ -54,7 +54,7 @@ class ServicesCheck implements DoctorCheck
         if ($missing !== []) {
             return [
                 'status' => 'fail',
-                'detail' => 'no such unit: '.implode(', ', $missing),
+                'detail' => __('doctor.details.services_missing', ['units' => implode(', ', $missing)]),
                 'fix' => 'doctor.fixes.services_missing',
             ];
         }
@@ -62,7 +62,7 @@ class ServicesCheck implements DoctorCheck
         if ($down !== []) {
             return [
                 'status' => 'fail',
-                'detail' => 'not running: '.implode(', ', $down),
+                'detail' => __('doctor.details.services_down', ['units' => implode(', ', $down)]),
                 'fix' => 'doctor.fixes.services_down',
             ];
         }

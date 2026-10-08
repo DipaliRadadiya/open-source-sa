@@ -869,3 +869,36 @@ it('does not ask a non-PHP OpenLiteSpeed vhost for an extUser', function () {
 
     expect($report['checks'][0]['status'])->not->toBe('fail');
 });
+
+it('answers each check\'s finding in the viewer\'s language (FS-C37)', function () {
+    Process::fake(function ($process) {
+        return $process->command[1] === 'cat'
+            ? Process::result(errorOutput: 'No files found.', exitCode: 1)
+            : Process::result(output: 'inactive', exitCode: 3);
+    });
+    config()->set('server.doctor.checks', [ServicesCheck::class]);
+
+    $detail = $this->withHeaders(['Authorization' => "Bearer {$this->token}", 'Accept-Language' => 'de'])
+        ->getJson('/api/admin/doctor')
+        ->assertOk()
+        ->json('doctor.checks.0.detail');
+
+    // The unit names are values, not words: they stay as they are.
+    expect($detail)->toStartWith('keine solche Unit: ')
+        ->and($detail)->not->toContain('no such unit');
+});
+
+it('has every finding in every language, with the same values in each (FS-C37)', function () {
+    $english = trans('doctor.details', [], 'en');
+
+    foreach (['de', 'es', 'fr', 'pt', 'ja', 'ru', 'hi'] as $locale) {
+        $translated = trans('doctor.details', [], $locale);
+        expect(array_keys($translated))->toEqualCanonicalizing(array_keys($english));
+
+        foreach ($english as $key => $sentence) {
+            preg_match_all('/:[a-z]+/', $sentence, $want);
+            preg_match_all('/:[a-z]+/', $translated[$key], $got);
+            expect(array_unique($got[0]))->toEqualCanonicalizing(array_unique($want[0]), "{$locale}.{$key}");
+        }
+    }
+});

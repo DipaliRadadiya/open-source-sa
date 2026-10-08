@@ -30,7 +30,7 @@ class DatabaseCheck implements DoctorCheck
             return [
                 'status' => 'fail',
                 // The driver name is safe; the DSN and credentials are not.
-                'detail' => 'cannot connect ('.config('database.default').')',
+                'detail' => __('doctor.details.database_unreachable', ['connection' => config('database.default')]),
                 'fix' => 'doctor.fixes.database_unreachable',
             ];
         }
@@ -40,14 +40,14 @@ class DatabaseCheck implements DoctorCheck
         if ($pending > 0) {
             return [
                 'status' => 'fail',
-                'detail' => $pending.' pending migration'.($pending === 1 ? '' : 's'),
+                'detail' => trans_choice('doctor.details.database_pending', $pending, ['count' => $pending]),
                 'fix' => 'doctor.fixes.database_pending',
             ];
         }
 
         return [
             'status' => 'pass',
-            'detail' => config('database.default').', schema current',
+            'detail' => __('doctor.details.database_ok', ['connection' => config('database.default')]),
             'fix' => null,
         ];
     }

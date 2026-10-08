@@ -39,6 +39,7 @@ use App\Support\ListSort;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Sleep;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -412,12 +413,30 @@ class ApplicationController extends Controller
         if ($owner->applications()->exists()) {
             $outcome = 'still_used';
         } else {
-            try {
-                app(DeleteSystemUser::class)->execute($owner);
-            } catch (ValidationException) {
-                $outcome = 'has_processes';
-            } catch (Throwable) {
-                $outcome = 'failed';
+            // The site's own PHP workers can outlive its vhost by a few
+            // seconds — measured on OpenLiteSpeed, where the account's lsphp
+            // was still running when the delete reached userdel, and gone a
+            // moment later. So "still running something" is asked again for
+            // a short while before it is the answer.
+            for ($attempt = 0; ; $attempt++) {
+                try {
+                    app(DeleteSystemUser::class)->execute($owner);
+                    $outcome = 'removed';
+
+                    break;
+                } catch (ValidationException) {
+                    $outcome = 'has_processes';
+
+                    if ($attempt >= 4) {
+                        break;
+                    }
+
+                    Sleep::for(2)->seconds();
+                } catch (Throwable) {
+                    $outcome = 'failed';
+
+                    break;
+                }
             }
         }
 

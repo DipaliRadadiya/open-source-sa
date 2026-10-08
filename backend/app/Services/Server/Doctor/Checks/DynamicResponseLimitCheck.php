@@ -54,7 +54,7 @@ class DynamicResponseLimitCheck implements DoctorCheck
         if ($this->capabilities->recordedWebServer() !== 'openlitespeed') {
             return [
                 'status' => 'pass',
-                'detail' => 'not OpenLiteSpeed — no dynamic response cap applies',
+                'detail' => __('doctor.details.dyn_not_ols'),
                 'fix' => null,
             ];
         }
@@ -73,8 +73,7 @@ class DynamicResponseLimitCheck implements DoctorCheck
         if (! $result->answered) {
             return [
                 'status' => 'warn',
-                'detail' => self::CONFIG_PATH.' could not be read, so the download ceiling is unknown'
-                    .' (reference '.$result->reference.')',
+                'detail' => __('doctor.details.dyn_unreadable', ['path' => self::CONFIG_PATH, 'reference' => $result->reference]),
                 'fix' => 'doctor.fixes.dynamic_response_limit',
             ];
         }
@@ -84,7 +83,7 @@ class DynamicResponseLimitCheck implements DoctorCheck
         if ($configured === null) {
             return [
                 'status' => 'warn',
-                'detail' => 'no maxDynRespSize found in '.self::CONFIG_PATH,
+                'detail' => __('doctor.details.dyn_absent', ['path' => self::CONFIG_PATH]),
                 'fix' => 'doctor.fixes.dynamic_response_limit',
             ];
         }
@@ -92,8 +91,7 @@ class DynamicResponseLimitCheck implements DoctorCheck
         if ($configured < self::MINIMUM_BYTES) {
             return [
                 'status' => 'fail',
-                'detail' => 'maxDynRespSize is '.Bytes::human($configured)
-                    .', so any download larger than that is refused with a 413 before the panel sees it',
+                'detail' => __('doctor.details.dyn_low', ['size' => Bytes::human($configured)]),
                 'fix' => 'doctor.fixes.dynamic_response_limit',
             ];
         }
