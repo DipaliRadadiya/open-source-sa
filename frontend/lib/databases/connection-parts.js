@@ -12,7 +12,18 @@ export function primaryUser(database) {
 }
 
 // Host, port and protocol; the other parts have their own authoritative fields.
+// `connection` reaches view-only roles too; the string only adds the protocol.
 export function connectionAddress(user) {
+  const fromString = addressFromString(user);
+  if (!user?.connection) return fromString;
+  return {
+    ...fromString,
+    host: user.connection.host ?? fromString.host ?? null,
+    port: user.connection.port != null ? String(user.connection.port) : (fromString.port ?? null),
+  };
+}
+
+function addressFromString(user) {
   if (!user?.connection_string) return {};
   try {
     const url = new URL(user.connection_string);

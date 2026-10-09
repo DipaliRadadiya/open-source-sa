@@ -83,6 +83,20 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false,
           ? t("versions.usedBy", { count: usedBy })
           : null;
 
+  // A failed install with nothing on disk: DELETE clears the entry (204) instead of 404ing.
+  async function dismiss() {
+    setRunning("dismiss");
+    try {
+      await removeNodeVersion(version.version);
+      await refreshAndWait();
+      toast.success(t("versions.dismissed", { version: version.version }));
+    } catch (error) {
+      toast.error(apiMessage(error, t("versions.dismissFailed")));
+    } finally {
+      setRunning(null);
+    }
+  }
+
   async function retry() {
     setRunning("retry");
     try {
@@ -224,6 +238,14 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false,
                 >
                   {running === "retry" ? <Loader2 className="size-4 animate-spin" /> : null}
                   {t("versions.retry")}
+                </Button>
+              </ReasonTooltip>
+            ) : null}
+            {nothingToRemove ? (
+              <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+                <Button variant="ghost" size="sm" disabled={!canManage || pending} onClick={dismiss}>
+                  {running === "dismiss" ? <Loader2 className="size-4 animate-spin" /> : null}
+                  {t("versions.dismiss")}
                 </Button>
               </ReasonTooltip>
             ) : (

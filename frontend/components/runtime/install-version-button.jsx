@@ -30,6 +30,8 @@ const INSTALL = { php: installPhpVersion, node: installNodeVersion };
 export function InstallVersionButton({
   runtime,
   installable = [],
+  // Set when the version catalogue could not be fetched: an empty list is then not "none".
+  catalogError = null,
   installed = [],
   canManage,
   lifecycleAvailable = false,
@@ -61,7 +63,9 @@ export function InstallVersionButton({
   const unavailable = everythingInstalled
     ? t("install.allInstalled")
     : options.length === 0
-      ? t("install.noneAvailable")
+      ? catalogError
+        ? t("install.catalogUnreachable")
+        : t("install.noneAvailable")
       : null;
 
   // Warn before installing: an end-of-life version gets no security fixes.

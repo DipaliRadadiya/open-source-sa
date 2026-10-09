@@ -123,6 +123,9 @@ export async function BotTrafficCard({ appId, traffic, failed, days }) {
                       </TableCell>
                       <TableCell className="px-2 text-right text-xs tabular-nums sm:px-4">
                         {format.number(bot.hits)}
+                        {bot.blocked_hits > 0 ? (
+                          <span className="block text-muted-foreground">{t("blockedHits", { count: bot.blocked_hits })}</span>
+                        ) : null}
                       </TableCell>
                       <TableCell className="hidden text-xs text-muted-foreground xl:table-cell">
                         {bot.last_seen_human ?? "—"}

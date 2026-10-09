@@ -187,7 +187,9 @@
       "cancel": "Abbrechen",
       "confirm": "Benutzer löschen",
       "deleting": "Wird gelöscht…",
-      "copyUsername": "Benutzernamen kopieren"
+      "copyUsername": "Benutzernamen kopieren",
+      "endSessions": "Sitzungen beenden",
+      "endSessionsHint": "Meldet {username} ab und beendet alles, was dieses Konto ausführt, dann wird es gelöscht. Lassen Sie es aus, um stattdessen einen Hinweis zu erhalten."
     },
     "access": {
       "title": "Zugriff",
@@ -370,7 +372,8 @@
       "username": "Benutzername",
       "accountType": "Kontotyp",
       "roles": "Rollen",
-      "joined": "Beigetreten"
+      "joined": "Beigetreten",
+      "lastSignIn": "Letzte Anmeldung"
     },
     "actions": {
       "label": "Aktionen",
@@ -441,7 +444,8 @@
       "starting": "Wird gestartet…",
       "cancel": "Abbrechen"
     },
-    "loadFailed": "Benutzer konnten nicht geladen werden. Versuchen Sie es in Kürze erneut."
+    "loadFailed": "Benutzer konnten nicht geladen werden. Versuchen Sie es in Kürze erneut.",
+    "neverSignedIn": "Nie"
   },
   "roles": {
     "sync": {
@@ -645,7 +649,10 @@
     "system": "System",
     "filter": {
       "allTypes": "Alle Typen",
-      "allActions": "Alle Aktionen"
+      "allActions": "Alle Aktionen",
+      "kind": "Was ist passiert",
+      "allKinds": "Alle Ereignisse",
+      "security": "Sicherheitsereignisse"
     },
     "columns": {
       "when": "Wann",
@@ -2009,7 +2016,8 @@
         "passwordOff": "Anmeldungen mit Passwort funktionieren nicht mehr. Ohne Schlüssel, der schon auf diesem Server liegt, sind Sie ausgesperrt.",
         "rootOff": "Root kann sich nicht mehr anmelden. Stellen Sie sicher, dass ein anderer Benutzer es kann — mit sudo.",
         "rootPassword": "Root wird sich mit einem Passwort anmelden können — das Konto, das Angriffe zuerst probieren.",
-        "testFirst": "Testen Sie die neuen Einstellungen in einem anderen Terminal, bevor Sie dieses schließen."
+        "testFirst": "Testen Sie die neuen Einstellungen in einem anderen Terminal, bevor Sie dieses schließen.",
+        "enforcesAccess": "Ab jetzt greift der Schalter für die SSH-Anmeldung bei jedem Systembenutzer: Benutzer, bei denen er aus ist, können sich nicht mehr per SSH anmelden (sudo-Benutzer weiterhin schon)."
       },
       "rootPasswordWarning": "Root kann sich derzeit mit einem Passwort anmelden. Das ist das Konto, das automatisierte Angriffe zuerst probieren — setzen Sie die Root-Anmeldung auf „Nur mit Schlüssel“.",
       "signIn": {
@@ -2272,7 +2280,13 @@
       "completeInstall": "Installation vervollständigen",
       "completing": "PHP {version} wird vervollständigt …",
       "incompleteDefault": "Vervollständigen Sie zuerst die Installation – das Standard-PHP läuft überall dort, wo keine Version festgelegt ist.",
-      "statusRemoveFailed": "Entfernen fehlgeschlagen"
+      "statusRemoveFailed": "Entfernen fehlgeschlagen",
+      "dismiss": "Ausblenden",
+      "dismissed": "Die fehlgeschlagene Installation von PHP {version} wurde entfernt.",
+      "dismissFailed": "Die fehlgeschlagene Installation konnte nicht entfernt werden.",
+      "statusQueued": "Wartet auf eine andere Installation",
+      "queuedTitle": "PHP {version} wartet auf die Installation",
+      "queuedBody": "Eine andere Installation läuft. Diese beginnt, sobald sie fertig ist."
     },
     "extensions": {
       "title": "Erweiterungen",
@@ -2530,7 +2544,13 @@
       "removingSince": "Gestartet {when}. Die Seite aktualisiert sich von selbst.",
       "retry": "Erneut versuchen",
       "retrying": "Node {version} wird erneut installiert…",
-      "statusRemoveFailed": "Entfernen fehlgeschlagen"
+      "statusRemoveFailed": "Entfernen fehlgeschlagen",
+      "dismiss": "Ausblenden",
+      "dismissed": "Die fehlgeschlagene Installation von Node.js {version} wurde entfernt.",
+      "dismissFailed": "Die fehlgeschlagene Installation konnte nicht entfernt werden.",
+      "statusQueued": "Wartet auf eine andere Installation",
+      "queuedTitle": "Node.js {version} wartet auf die Installation",
+      "queuedBody": "Eine andere Installation läuft. Diese beginnt, sobald sie fertig ist."
     },
     "install": {
       "action": "Version installieren",
@@ -2545,7 +2565,8 @@
       "eolWarning": "Node.js {version} erhält keine Sicherheitsupdates mehr. Nur installieren, wenn eine Anwendung es benötigt.",
       "noneAvailable": "Die Liste der Node.js-Versionen konnte nicht abgerufen werden. Prüfen Sie, ob der Server nodejs.org erreicht, und laden Sie die Seite neu.",
       "installedTag": "Installiert",
-      "allInstalled": "Alle von diesem Server angebotenen Versionen sind bereits installiert."
+      "allInstalled": "Alle von diesem Server angebotenen Versionen sind bereits installiert.",
+      "catalogUnreachable": "Dieser Server erreicht nodejs.org nicht, daher kann die Versionsliste nicht geladen werden. Prüfen Sie den Netzwerkzugang des Servers und laden Sie die Seite neu."
     },
     "lifecycle": {
       "current": "Aktuell",
@@ -3540,6 +3561,12 @@
         "description": "Sie haben {keys} geändert oder entfernt. Das Panel hat diese Werte eingerichtet und die Anwendung ist darauf angewiesen: Ein neuer Verschlüsselungsschlüssel macht alle gespeicherten Zugangsdaten unlesbar, und ein anderer Port oder Ordner passt nicht mehr zum Dienst, den das Panel ausführt.",
         "cancel": "Weiter bearbeiten",
         "confirm": "Trotzdem speichern"
+      },
+      "preflight": {
+        "title": "Mit diesen Warnungen speichern?",
+        "description": "Es wurde noch nichts gespeichert. Damit startet die Anwendung mit dieser Datei möglicherweise nicht.",
+        "cancel": "Weiter bearbeiten",
+        "confirm": "Trotzdem speichern"
       }
     },
     "title": "Anwendungen",
@@ -3827,8 +3854,6 @@
       "systemUserGeneratePassword": "Erzeugen",
       "systemUserPasswordHint": "Automatisch generiert. Übernehmen, ändern oder löschen – Sie können es später auf der Seite Systembenutzer erneut einsehen.",
       "systemUserNew": "{username} (neu)",
-      "systemUserCreateFailed": "Der Systembenutzer konnte nicht angelegt werden, daher wurde auch die Anwendung nicht erstellt.",
-      "systemUserLeftBehind": "Der Systembenutzer {username} wurde angelegt, konnte aber nicht entfernt werden. Wählen Sie ihn unter „Vorhandenen Systembenutzer verwenden“ oder löschen Sie ihn unter Systembenutzer.",
       "tablePrefixInvalid": "Mit einem Buchstaben beginnen, nur Buchstaben und Ziffern verwenden und mit einem Unterstrich enden (zum Beispiel jml_)."
     },
     "actions": {
@@ -3868,7 +3893,9 @@
       "removeFilesHint": "Aus: Die Seite wird aus dem Panel entfernt, aber ihre Dateien bleiben auf dem Server. Ein: Die Dateien und die Sicherungen werden gelöscht und können nicht wiederhergestellt werden.",
       "removeDocker": "Auch Docker-Netzwerk und -Volumes dieser Website löschen ({count})",
       "removeDockerOn": "{names} wird gelöscht. Was eine andere Website noch verwendet, bleibt erhalten — der Server prüft das beim Löschen, nicht jetzt.",
-      "removeDockerOff": "{names} bleibt auf dem Server. Die Daten bleiben erhalten und können später auf der Docker-Seite entfernt werden."
+      "removeDockerOff": "{names} bleibt auf dem Server. Die Daten bleiben erhalten und können später auf der Docker-Seite entfernt werden.",
+      "removeSystemUser": "Auch den Systembenutzer {username} entfernen",
+      "removeSystemUserOn": "Er wird nur entfernt, wenn keine andere Anwendung ihn nutzt und niemand mit ihm angemeldet ist. Sie erfahren es, falls er behalten wird."
     },
     "systemUserMissing": {
       "title": "Der Systembenutzer dieser Anwendung fehlt",
@@ -4416,7 +4443,9 @@
         "discardTitle": "Nicht gespeicherte Änderungen verwerfen?",
         "discardDescription": "Ihre Änderungen an dieser Datei sind nicht gespeichert. Schließen Sie jetzt, gehen sie verloren.",
         "keepEditing": "Weiter bearbeiten",
-        "discardConfirm": "Änderungen verwerfen"
+        "discardConfirm": "Änderungen verwerfen",
+        "reload": "Datei neu laden",
+        "reloadFirst": "Laden Sie die Datei zuerst neu. Sie wurde geändert, nachdem Sie sie geöffnet haben."
       },
       "restore": {
         "action": "Wiederherstellen",
@@ -4431,8 +4460,7 @@
         "rootPlaceholder": "Anwendungswurzel",
         "pathLabelHint": "Ein Name allein bleibt in diesem Ordner. Ein Pfad zählt vom obersten Ordner der Anwendung.",
         "destination": "Entpackt nach",
-        "copyDestination": "Diesen Pfad kopieren",
-        "folderMissing": "Der Ordner „{folder}“ existiert nicht. Legen Sie ihn zuerst an oder wählen Sie einen anderen."
+        "copyDestination": "Diesen Pfad kopieren"
       },
       "rename": {
         "title": "„{name}“ umbenennen oder verschieben",
@@ -4897,7 +4925,7 @@
         "range": "{days} Tage",
         "unavailable": "Das Zugriffsprotokoll dieser Anwendung konnte nicht gelesen werden, daher gibt es noch nichts zu zeigen. Das ist nicht dasselbe wie „keine Bots waren da“.",
         "empty": "In den letzten {days} Tagen war kein KI-Bot hier.",
-        "summary": "{bots, plural, one {# Bot} other {# Bots}} · {hits, plural, one {# Anfrage} other {# Anfragen}} · {blocked, plural, other {# von Bots, die Sie blockieren}}",
+        "summary": "{bots, plural, one {# Bot} other {# Bots}} · {hits, plural, one {# Anfrage} other {# Anfragen}} · {blocked, plural, other {# blockiert}}",
         "partial": "Nur der neueste Teil des Protokolls wurde durchsucht, bei viel besuchten Anwendungen können es also mehr gewesen sein.",
         "blocked": "Blockieren",
         "allowed": "Erlauben",
@@ -4913,7 +4941,8 @@
           "search": "KI-Suche",
           "agent": "KI-Assistent",
           "custom": "Eigene Regel"
-        }
+        },
+        "blockedHits": "{count, plural, other {# blockiert}}"
       },
       "groupLabels": {
         "block_training": "Trainings-Crawler",
@@ -5391,7 +5420,27 @@
       "tooLong": "Diese Konfiguration ist zu lang. Jede Datei muss unter 65.535 Zeichen bleiben.",
       "invalidConfig": "Diese Konfiguration kann nicht gespeichert werden. Prüfen Sie, ob beide Dateien gefüllt sind.",
       "outputShowAll": "Alles anzeigen, was fail2ban gemeldet hat",
-      "outputErrorsOnly": "Nur die Fehler anzeigen"
+      "outputErrorsOnly": "Nur die Fehler anzeigen",
+      "bans": {
+        "title": "Gesperrte Adressen",
+        "subtitle": "Adressen, die der Jail dieser Anwendung gesperrt hat. Eine Sperre hier gilt nur für diese Anwendung, nicht für den Server.",
+        "none": "Derzeit ist niemand gesperrt.",
+        "notRunning": "Der Jail dieser Anwendung läuft nicht, daher kann hier noch nichts gesperrt werden.",
+        "noPermission": "Ihre Rolle umfasst Fail2ban für diese Anwendung nicht mit Verwaltungszugriff.",
+        "loadFailed": "Die gesperrten Adressen konnten nicht geladen werden.",
+        "banLabel": "Adresse sperren",
+        "ban": "Sperren",
+        "typeIp": "Geben Sie zuerst eine IP-Adresse ein.",
+        "invalidIp": "Geben Sie eine einzelne IPv4- oder IPv6-Adresse ein, z. B. 203.0.113.10.",
+        "banned": "{ip} ist für diese Anwendung gesperrt.",
+        "banFailed": "Die Adresse konnte nicht gesperrt werden.",
+        "unban": "Entsperren",
+        "unbanned": "{ip} kann diese Anwendung wieder erreichen.",
+        "unbanFailed": "Die Adresse konnte nicht entsperrt werden.",
+        "unbanTitle": "{ip} entsperren?",
+        "unbanBody": "Die Adresse erreicht diese Anwendung sofort wieder. Scheitern weitere Anmeldungen, sperrt der Jail sie erneut.",
+        "cancel": "Abbrechen"
+      }
     },
     "staging": {
       "pageTitle": "Staging-Bereich",
@@ -5457,7 +5506,11 @@
         "failed": "Die Übertragung wurde nicht abgeschlossen.",
         "copyAge": "Kopie erstellt {age}",
         "copyDomain": "Domain kopieren",
-        "whileRunning": "Die Anwendung ist währenddessen offline. Schlägt es mittendrin fehl, wird die Produktion wieder in den vorherigen Zustand versetzt."
+        "whileRunning": "Die Anwendung ist währenddessen offline. Schlägt es mittendrin fehl, wird die Produktion wieder in den vorherigen Zustand versetzt.",
+        "backupToggle": "Zuerst ein Backup der Live-Anwendung erstellen",
+        "backupOn": "Zuerst läuft ein Backup. Die Übertragung startet nur, wenn es abgeschlossen ist, sodass Sie danach daraus wiederherstellen können.",
+        "backupOff": "Es wird kein Backup erstellt. Nach Abschluss der Übertragung gibt es kein Zurück.",
+        "pushingWithBackup": "Backup läuft, dann Übertragung…"
       },
       "isCopy": {
         "title": "Diese Anwendung ist eine Staging-Kopie",
@@ -5469,6 +5522,18 @@
         "title": "Staging löschen",
         "body": "Löscht die Staging-Anwendung {domain}. {production} bleibt unberührt.",
         "action": "Löschen"
+      },
+      "safetyCopies": {
+        "title": "Vor einer Übertragung gesicherte Datenbankkopien",
+        "subtitle": "Jede Datenbank-Übertragung sichert zuerst die Live-Datenbank. Spielen Sie eine zurück, um eine Übertragung rückgängig zu machen.",
+        "restore": "Zurückspielen",
+        "restoring": "Wird zurückgespielt…",
+        "restoringNote": "Die aktuelle Live-Datenbank wird zuerst gesichert, daher lässt sich auch das rückgängig machen.",
+        "cancel": "Abbrechen",
+        "confirmTitle": "Diese Datenbankkopie zurückspielen?",
+        "confirmBody": "Die Live-Datenbank wird durch die Kopie von {when} ersetzt. Alles, was seitdem hineingeschrieben wurde, wird ebenfalls ersetzt. Die aktuelle Datenbank wird zuerst gesichert.",
+        "restored": "Die Live-Datenbank wurde aus der Kopie von {when} zurückgespielt.",
+        "restoreFailed": "Die Datenbankkopie konnte nicht zurückgespielt werden."
       }
     },
     "stagingBadge": "Staging",
@@ -6974,7 +7039,23 @@
       "unignoreFailed": "Das konnte nicht zurückgenommen werden.",
       "addFailed": "Das Hinzufügen zum Panel konnte nicht gestartet werden."
     },
-    "stalled": "Dieser Durchlauf meldet keinen Fortschritt mehr. Möglicherweise ist er auf dem Server fehlgeschlagen."
+    "stalled": "Dieser Durchlauf meldet keinen Fortschritt mehr. Möglicherweise ist er auf dem Server fehlgeschlagen.",
+    "handover": {
+      "title": "Umzug vom alten Agenten abschließen",
+      "body": "Ihre Anwendungen sind übernommen, aber der alte Agent hat noch Aufgaben, die dieses Panel übernehmen sollte.",
+      "agentRunning": "Der alte Agent ({unit}) läuft noch.",
+      "bootMissing": "{username}: Seine Anwendungen starten nach einem Neustart nicht wieder.",
+      "rotationMissing": "{username}: Seine Logs werden nie rotiert und wachsen weiter.",
+      "action": "Umzug abschließen",
+      "working": "Wird abgeschlossen…",
+      "done": "Der alte Agent ist stillgelegt; seine Aufgaben übernimmt jetzt dieses Panel.",
+      "partial": "Einige Schritte wurden nicht abgeschlossen:",
+      "agentFailed": "Den alten Agenten ({unit}) stoppen.",
+      "bootFailed": "Autostart für {username}.",
+      "rotationFailed": "Log-Rotation für {username}.",
+      "failed": "Der Umzug konnte nicht abgeschlossen werden.",
+      "noPermission": "Ihre Rolle umfasst Server-Sync nicht mit Verwaltungszugriff."
+    }
   },
   "central": {
     "title": "Zentrale Verwaltung",

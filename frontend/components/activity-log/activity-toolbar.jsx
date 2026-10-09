@@ -18,12 +18,14 @@ import { SELECT_WELL } from "@/components/data-table/toolbar-well";
 
 // `extraQuery` is merged into every navigation so the account page keeps its tab.
 // No action filter: the API only filters by exact, untranslated event ids.
-export function ActivityToolbar({ types, searchKey = "searchPlaceholder", extraQuery }) {
+// `security` (admin log only) adds "Security events" — sign-ins, failed sign-ins, user and role changes.
+export function ActivityToolbar({ types, kinds = [], security = false, searchKey = "searchPlaceholder", extraQuery }) {
   const t = useTranslations("activity");
   const setQuery = useSetQuery();
   const searchParams = useSearchParams();
 
   const selectedType = searchParams.get("type") ?? "all";
+  const selectedKind = searchParams.get("security") === "1" ? "security" : (searchParams.get("kind") ?? "all");
 
   // Own-history types come from existing rows, so empty means no activity at all.
   const hasFilters = types.length > 0;
@@ -55,6 +57,31 @@ export function ActivityToolbar({ types, searchKey = "searchPlaceholder", extraQ
                   {typeLabel(t, v)}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+        ) : null}
+
+        {kinds.length || security ? (
+          <Select
+            value={selectedKind}
+            onValueChange={(v) =>
+              apply({
+                kind: v === "all" || v === "security" ? undefined : v,
+                security: v === "security" ? "1" : undefined,
+              })
+            }
+          >
+            <SelectTrigger className={cn(SELECT_WELL, "min-w-0 flex-1 sm:w-40 sm:flex-none")} aria-label={t("filter.kind")}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper">
+              <SelectItem value="all">{t("filter.allKinds")}</SelectItem>
+              {kinds.map((kind) => (
+                <SelectItem key={kind.value} value={kind.value}>
+                  {kind.label}
+                </SelectItem>
+              ))}
+              {security ? <SelectItem value="security">{t("filter.security")}</SelectItem> : null}
             </SelectContent>
           </Select>
         ) : null}

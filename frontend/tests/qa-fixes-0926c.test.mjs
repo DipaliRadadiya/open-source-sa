@@ -41,7 +41,7 @@ test("the traffic table keeps its settings column on screen at 768", () => {
   assert.doesNotMatch(traffic, /md:table-cell/);
 });
 
-test("the traffic table says what the settings are, not that requests were blocked", () => {
+test("the traffic table says what the settings are; the count is real 403s (AB-B, 9 Oct)", () => {
   for (const l of LOCALES) {
     const tr = JSON.parse(read(`messages/${l}.json`)).applications.botBlocker.traffic;
     assert.notEqual(tr.columns.status, { en: "Right now" }[l] ?? null, l);
@@ -50,7 +50,9 @@ test("the traffic table says what the settings are, not that requests were block
   const en = JSON.parse(read("messages/en.json")).applications.botBlocker.traffic;
   assert.equal(en.columns.status, "Your settings");
   assert.equal(en.blocked, "Block");
-  assert.match(en.summary, /from bots you block/);
+  // Since AB-B the API counts requests that really got 403, so the summary says "blocked".
+  assert.match(en.summary, /\{blocked, plural, other \{# blocked\}\}/);
+  assert.match(en.blockedHits, /\{count, plural/);
 });
 
 test("Discard also clears a half-typed name and its error", () => {

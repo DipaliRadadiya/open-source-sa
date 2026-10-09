@@ -173,6 +173,7 @@ function ActionsCell({ row, table }) {
       application={row.original}
       canManage={table.options.meta?.canManage ?? false}
       canMagicLogin={table.options.meta?.canMagicLogin ?? false}
+      canRemoveSystemUser={table.options.meta?.canRemoveSystemUser ?? false}
     />
   );
 }
@@ -263,6 +264,7 @@ function ApplicationsList({
   siteTypes = [],
   canManage = false,
   canMagicLogin = false,
+  canRemoveSystemUser = false,
   // Ids of sites whose type needs a database and that have none. Empty when
   // the reader cannot see databases, or when the count could not be read.
   missingDatabase = new Set(),
@@ -355,9 +357,9 @@ function ApplicationsList({
     // Below lg the rows are cards of their own, so the list drops its frame there.
     <ListCard from="lg" toolbar={toolbar} footer={<DataTablePagination meta={meta} />}>
       {/* Cards below lg, the table from lg up. */}
-      <div className="lg:hidden"><ApplicationsCards applications={applications} canManage={canManage} canMagicLogin={canMagicLogin} gitProviders={gitProviders} /></div>
+      <div className="lg:hidden"><ApplicationsCards applications={applications} canManage={canManage} canMagicLogin={canMagicLogin} canRemoveSystemUser={canRemoveSystemUser} gitProviders={gitProviders} /></div>
       {/* fixedLayout so the column percentages are obeyed, not treated as hints. */}
-      <div className="hidden lg:block"><DataTable columns={columns} data={applications} meta={{ canManage, canMagicLogin, backupStanding }} fixedLayout bare roomy /></div>
+      <div className="hidden lg:block"><DataTable columns={columns} data={applications} meta={{ canManage, canMagicLogin, canRemoveSystemUser, backupStanding }} fixedLayout bare roomy /></div>
     </ListCard>
   );
 }

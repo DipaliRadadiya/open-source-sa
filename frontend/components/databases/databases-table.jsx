@@ -231,10 +231,9 @@ function DatabasesList({
     },
     {
       accessorKey: "size_bytes",
-      header: t("columns.size"),
-      meta: { className: COMPACT },
+      header: () => <SortHeader col="size_bytes" descFirst>{t("columns.size")}</SortHeader>,
+      meta: { sortKey: "size_bytes", className: COMPACT },
       cell: SizeCell,
-      // NOT sortable: `size_bytes` is not in the API's sort whitelist (422).
     },
     {
       accessorKey: "users_count",

@@ -13,7 +13,7 @@ import {
   Wand2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { saveEnvironment } from "@/lib/api/environment";
+import { checkEnvironment, saveEnvironment } from "@/lib/api/environment";
 import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
@@ -80,6 +80,8 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
   const [rawRefusal, setRawRefusal] = useState(false);
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [guarded, setGuarded] = useState([]);
+  // Warnings the check found in the text about to be saved, not yet in the saved file.
+  const [preflight, setPreflight] = useState([]);
 
   // Picks up a file changed elsewhere (useState ignores later props). `seenRaw` must
   // track only the prop, never the saved text, or the stale prop is copied back in.
@@ -110,7 +112,7 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
       ? t("saveApply")
       : t("save");
 
-  async function onSave({ confirmed = false } = {}) {
+  async function onSave({ confirmed = false, checked = false } = {}) {
     if (!dirty || saving || tooLarge) return;
     const touched = guardedChanges(env.raw, contents);
     if (touched.length && !confirmed) {
@@ -118,9 +120,30 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
       return;
     }
     setGuarded([]);
+    setPreflight([]);
     const sent = contents;
     setSaving(true);
     setSyntaxError(null);
+    if (!checked) {
+      // A failed check never blocks the save: the save runs the same checks itself.
+      const result = await checkEnvironment(appId, sent).catch(() => null);
+      if (result && result.saveable === false) {
+        const text = (result.refused ?? []).join("\n");
+        setRawRefusal(guardedChanges(env.raw, sent).some((key) => text.includes(key)));
+        setSyntaxError(text || t("saveFailed"));
+        setSaving(false);
+        return;
+      }
+      const known = new Set((env.checks ?? []).map((check) => `${check.code}:${check.key ?? ""}`));
+      const fresh = (result?.checks ?? []).filter(
+        (check) => check.severity !== "info" && !known.has(`${check.code}:${check.key ?? ""}`),
+      );
+      if (fresh.length) {
+        setPreflight(fresh);
+        setSaving(false);
+        return;
+      }
+    }
     try {
       const data = await saveEnvironment(appId, {
         raw: sent,
@@ -332,6 +355,28 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
         confirmLabel={t("guarded.confirm")}
         onConfirm={() => onSave({ confirmed: true })}
       />
+
+      <ConfirmDialog
+        open={preflight.length > 0}
+        onOpenChange={(next) => !next && setPreflight([])}
+        icon={TriangleAlert}
+        tone="warning"
+        title={t("preflight.title")}
+        description={t("preflight.description")}
+        cancelLabel={t("preflight.cancel")}
+        confirmLabel={t("preflight.confirm")}
+        onConfirm={() => onSave({ confirmed: true, checked: true })}
+      >
+        {/* Backend-localised, shown verbatim like the saved file's checks. */}
+        <ul className="space-y-2 text-sm">
+          {preflight.map((check, i) => (
+            <li key={`${check.code}-${i}`} className="rounded-lg border border-warning/30 bg-warning/5 p-3">
+              <p className="font-medium">{check.title}</p>
+              {check.detail ? <p className="mt-0.5 text-muted-foreground">{check.detail}</p> : null}
+            </li>
+          ))}
+        </ul>
+      </ConfirmDialog>
 
       {canManage && env.backups?.length ? (
         <RestoreBackupDialog

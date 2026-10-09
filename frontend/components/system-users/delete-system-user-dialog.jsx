@@ -5,6 +5,7 @@ import { TriangleAlert } from "lucide-react";
 import { deleteSystemUser } from "@/lib/api/system-users";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { CopyButton } from "@/components/ui/copy-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Caution } from "@/components/ui/caution";
@@ -19,6 +20,7 @@ export function DeleteSystemUserDialog({ user, open, onOpenChange, prevPage = nu
   // A refusal the person has to act on (a session still open) stays in the dialog;
   // a toast is gone before they have read it.
   const [refusal, setRefusal] = useState(null);
+  const [endSessions, setEndSessions] = useState(false);
   // The row, and the ⋯ that opened this, are gone once it is deleted.
   const removed = useRef(false);
 
@@ -29,6 +31,7 @@ export function DeleteSystemUserDialog({ user, open, onOpenChange, prevPage = nu
     if (!next) {
       setConfirm("");
       setRefusal(null);
+      setEndSessions(false);
     }
     onOpenChange?.(next);
   }
@@ -51,7 +54,7 @@ export function DeleteSystemUserDialog({ user, open, onOpenChange, prevPage = nu
       else refreshThen(after);
     };
     try {
-      await deleteSystemUser(user.id);
+      await deleteSystemUser(user.id, { endSessions });
       done(() => toast.success(t("toast.deleted")));
     } catch (error) {
       // Deleted elsewhere: what was asked for is already true.
@@ -93,6 +96,21 @@ export function DeleteSystemUserDialog({ user, open, onOpenChange, prevPage = nu
           <p>{refusal}</p>
         </Caution>
       ) : null}
+      {/* Named as the API's refusal names it ("delete again with End sessions on"). */}
+      <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-3">
+        <Checkbox
+          id="delete-su-end-sessions"
+          checked={endSessions}
+          onCheckedChange={(value) => setEndSessions(value === true)}
+          className="mt-0.5"
+        />
+        <div className="space-y-1">
+          <Label htmlFor="delete-su-end-sessions" className="text-sm font-medium">
+            {t("delete.endSessions")}
+          </Label>
+          <p className="text-xs leading-5 text-muted-foreground">{t("delete.endSessionsHint", { username })}</p>
+        </div>
+      </div>
       <div className="space-y-2">
         {/* Copy button, because the name must be typed exactly; matches the
             delete-application dialog. */}

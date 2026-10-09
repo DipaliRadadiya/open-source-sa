@@ -20,7 +20,7 @@ export default async function AdminActivityLogPage({ searchParams }) {
     getTranslations("activity"),
   ]);
 
-  const hasFilters = Boolean(sp.search || sp.type || sp.action);
+  const hasFilters = Boolean(sp.search || sp.type || sp.action || sp.kind || sp.security);
 
 
   // A typed or bookmarked ?page=99 must not read as an empty log.
@@ -38,7 +38,7 @@ export default async function AdminActivityLogPage({ searchParams }) {
       <NavTransitionProvider>
         {/* The pager is not gated on row count: it hides itself when the list is too short. */}
         <ListCard
-          toolbar={<ActivityToolbar types={filters.types} actions={filters.actions} />}
+          toolbar={<ActivityToolbar types={filters.types} actions={filters.actions} kinds={filters.kinds} security />}
           footer={<DataTablePagination meta={meta} />}
         >
           <ActivityTable data={entries} hasFilters={hasFilters} />

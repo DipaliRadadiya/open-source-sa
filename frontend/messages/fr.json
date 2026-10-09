@@ -187,7 +187,9 @@
       "cancel": "Annuler",
       "confirm": "Supprimer l'utilisateur",
       "deleting": "Suppression…",
-      "copyUsername": "Copier le nom d'utilisateur"
+      "copyUsername": "Copier le nom d'utilisateur",
+      "endSessions": "Fermer les sessions",
+      "endSessionsHint": "Déconnecte {username} et arrête tout ce qu'il exécute, puis supprime le compte. Laissez désactivé pour être prévenu à la place."
     },
     "access": {
       "title": "Accès",
@@ -370,7 +372,8 @@
       "username": "Nom d'utilisateur",
       "accountType": "Type de compte",
       "roles": "Rôles",
-      "joined": "Inscription"
+      "joined": "Inscription",
+      "lastSignIn": "Dernière connexion"
     },
     "actions": {
       "label": "Actions",
@@ -441,7 +444,8 @@
       "starting": "Démarrage…",
       "cancel": "Annuler"
     },
-    "loadFailed": "Les utilisateurs n'ont pas pu être chargés. Réessayez dans un instant."
+    "loadFailed": "Les utilisateurs n'ont pas pu être chargés. Réessayez dans un instant.",
+    "neverSignedIn": "Jamais"
   },
   "roles": {
     "sync": {
@@ -645,7 +649,10 @@
     "system": "Système",
     "filter": {
       "allTypes": "Tous les types",
-      "allActions": "Toutes les actions"
+      "allActions": "Toutes les actions",
+      "kind": "Ce qui s'est passé",
+      "allKinds": "Tous les événements",
+      "security": "Événements de sécurité"
     },
     "columns": {
       "when": "Quand",
@@ -2009,7 +2016,8 @@
         "passwordOff": "Les connexions par mot de passe cessent de fonctionner. Sans clé déjà présente sur ce serveur, vous serez bloqué.",
         "rootOff": "Root ne peut plus se connecter. Assurez-vous qu'un autre utilisateur peut le faire, avec sudo.",
         "rootPassword": "Root pourra se connecter avec un mot de passe — le compte que les attaques essaient en premier.",
-        "testFirst": "Testez les nouveaux paramètres dans un autre terminal avant de fermer celui-ci."
+        "testFirst": "Testez les nouveaux paramètres dans un autre terminal avant de fermer celui-ci.",
+        "enforcesAccess": "Désormais, l'interrupteur de connexion SSH de chaque utilisateur système s'applique : les utilisateurs pour qui il est désactivé ne peuvent plus se connecter en SSH (les utilisateurs sudo, si)."
       },
       "rootPasswordWarning": "Root peut se connecter avec un mot de passe actuellement. C'est le compte que les attaques automatisées essaient en premier — passez la connexion root sur « clé uniquement ».",
       "signIn": {
@@ -2272,7 +2280,13 @@
       "completeInstall": "Compléter l'installation",
       "completing": "Finalisation de PHP {version}…",
       "incompleteDefault": "Complétez d'abord l'installation — le PHP par défaut est celui qui s'exécute quand rien ne fixe de version.",
-      "statusRemoveFailed": "Échec de la suppression"
+      "statusRemoveFailed": "Échec de la suppression",
+      "dismiss": "Ignorer",
+      "dismissed": "L'installation échouée de PHP {version} a été effacée.",
+      "dismissFailed": "Impossible d'effacer l'installation échouée.",
+      "statusQueued": "En attente d'une autre installation",
+      "queuedTitle": "PHP {version} attend d'être installé",
+      "queuedBody": "Une autre installation est en cours. Celle-ci démarre dès qu'elle est terminée."
     },
     "extensions": {
       "title": "Extensions",
@@ -2530,7 +2544,13 @@
       "removingSince": "Démarré {when}. La page se met à jour toute seule.",
       "retry": "Réessayer",
       "retrying": "Nouvelle installation de Node {version}…",
-      "statusRemoveFailed": "Échec de la suppression"
+      "statusRemoveFailed": "Échec de la suppression",
+      "dismiss": "Ignorer",
+      "dismissed": "L'installation échouée de Node.js {version} a été effacée.",
+      "dismissFailed": "Impossible d'effacer l'installation échouée.",
+      "statusQueued": "En attente d'une autre installation",
+      "queuedTitle": "Node.js {version} attend d'être installé",
+      "queuedBody": "Une autre installation est en cours. Celle-ci démarre dès qu'elle est terminée."
     },
     "install": {
       "action": "Installer une version",
@@ -2545,7 +2565,8 @@
       "eolWarning": "Node.js {version} ne reçoit plus de correctifs de sécurité. Installez-la uniquement si une application en a besoin.",
       "noneAvailable": "La liste des versions de Node.js n'a pas pu être récupérée. Vérifiez que le serveur peut joindre nodejs.org, puis rechargez la page.",
       "installedTag": "Installée",
-      "allInstalled": "Toutes les versions proposées par ce serveur sont déjà installées."
+      "allInstalled": "Toutes les versions proposées par ce serveur sont déjà installées.",
+      "catalogUnreachable": "Ce serveur ne parvient pas à joindre nodejs.org, la liste des versions ne peut donc pas être chargée. Vérifiez l'accès réseau du serveur, puis rechargez."
     },
     "lifecycle": {
       "current": "Actuelle",
@@ -3540,6 +3561,12 @@
         "description": "Vous avez modifié ou supprimé {keys}. Le panneau les a configurés et l'application en dépend : une nouvelle clé de chiffrement rend illisibles tous les identifiants enregistrés, et un autre port ou dossier ne correspond plus au service que le panneau exécute.",
         "cancel": "Continuer à modifier",
         "confirm": "Enregistrer quand même"
+      },
+      "preflight": {
+        "title": "Enregistrer malgré ces avertissements ?",
+        "description": "Rien n'a encore été enregistré. Ces points peuvent empêcher l'application de démarrer avec ce fichier.",
+        "cancel": "Continuer à modifier",
+        "confirm": "Enregistrer quand même"
       }
     },
     "title": "Applications",
@@ -3827,8 +3854,6 @@
       "systemUserGeneratePassword": "Générer",
       "systemUserPasswordHint": "Généré pour vous. Conservez-le, modifiez-le ou effacez-le. Vous pourrez le revoir plus tard sur la page Utilisateurs système.",
       "systemUserNew": "{username} (nouveau)",
-      "systemUserCreateFailed": "L'utilisateur système n'a pas pu être créé, l'application n'a donc pas été créée non plus.",
-      "systemUserLeftBehind": "L'utilisateur système {username} a été créé mais n'a pas pu être supprimé. Choisissez-le dans « Utiliser un utilisateur système existant » ou supprimez-le depuis Utilisateurs système.",
       "tablePrefixInvalid": "Commencez par une lettre, utilisez uniquement des lettres et des chiffres et terminez par un tiret bas (par exemple jml_)."
     },
     "actions": {
@@ -3868,7 +3893,9 @@
       "removeFilesHint": "Désactivé, l'application est retirée du panneau mais ses fichiers restent sur le serveur. Activé, les fichiers et ses sauvegardes sont supprimés et ne peuvent pas être récupérés.",
       "removeDocker": "Supprimer aussi le réseau et les volumes Docker de ce site ({count})",
       "removeDockerOn": "{names} sera supprimé. Ce qu'un autre site utilise encore est conservé — le serveur le vérifie au moment de la suppression, pas maintenant.",
-      "removeDockerOff": "{names} reste sur le serveur. Ses données sont conservées et vous pourrez les supprimer plus tard depuis la page Docker."
+      "removeDockerOff": "{names} reste sur le serveur. Ses données sont conservées et vous pourrez les supprimer plus tard depuis la page Docker.",
+      "removeSystemUser": "Supprimer aussi l'utilisateur système {username}",
+      "removeSystemUserOn": "Il n'est supprimé que si aucune autre application ne l'utilise et que personne n'est connecté avec. Vous serez prévenu s'il est conservé."
     },
     "systemUserMissing": {
       "title": "L'utilisateur système de cette application est introuvable",
@@ -4416,7 +4443,9 @@
         "discardTitle": "Abandonner les modifications non enregistrées ?",
         "discardDescription": "Vos modifications sur ce fichier n'ont pas été enregistrées. Les fermer maintenant les perdra.",
         "keepEditing": "Continuer à modifier",
-        "discardConfirm": "Abandonner les modifications"
+        "discardConfirm": "Abandonner les modifications",
+        "reload": "Recharger le fichier",
+        "reloadFirst": "Rechargez d'abord le fichier. Il a changé depuis que vous l'avez ouvert."
       },
       "restore": {
         "action": "Restaurer",
@@ -4431,8 +4460,7 @@
         "rootPlaceholder": "Racine de l'application",
         "pathLabelHint": "Un nom seul reste dans ce dossier. Un chemin est compté depuis la racine du dossier de l'application.",
         "destination": "Extrait dans",
-        "copyDestination": "Copier ce chemin",
-        "folderMissing": "Le dossier « {folder} » n'existe pas. Créez-le d'abord ou choisissez-en un autre."
+        "copyDestination": "Copier ce chemin"
       },
       "rename": {
         "title": "Renommer ou déplacer « {name} »",
@@ -4897,7 +4925,7 @@
         "range": "{days} jours",
         "unavailable": "Le journal d'accès de cette application n'a pas pu être lu, il n'y a donc rien à afficher pour l'instant. Ce n'est pas la même chose qu'aucun bot n'ait visité.",
         "empty": "Aucun bot IA n'a visité au cours des {days} derniers jours.",
-        "summary": "{bots, plural, one {# bot} other {# bots}} · {hits, plural, one {# requête} other {# requêtes}} · {blocked, plural, other {# de bots que vous bloquez}}",
+        "summary": "{bots, plural, one {# bot} other {# bots}} · {hits, plural, one {# requête} other {# requêtes}} · {blocked, plural, one {# bloquée} other {# bloquées}}",
         "partial": "Seule la partie la plus récente du journal a été analysée ; les applications très actives peuvent en avoir eu davantage.",
         "blocked": "Bloquer",
         "allowed": "Autoriser",
@@ -4913,7 +4941,8 @@
           "search": "Recherche IA",
           "agent": "Assistant IA",
           "custom": "Votre propre règle"
-        }
+        },
+        "blockedHits": "{count, plural, one {# bloquée} other {# bloquées}}"
       },
       "groupLabels": {
         "block_training": "Crawlers d'entraînement",
@@ -5391,7 +5420,27 @@
       "tooLong": "Cette configuration est trop longue. Chaque fichier doit rester sous 65 535 caractères.",
       "invalidConfig": "Cette configuration ne peut pas être enregistrée. Vérifiez que les deux fichiers sont remplis.",
       "outputShowAll": "Afficher tout ce que fail2ban a renvoyé",
-      "outputErrorsOnly": "Afficher uniquement les erreurs"
+      "outputErrorsOnly": "Afficher uniquement les erreurs",
+      "bans": {
+        "title": "Adresses bannies",
+        "subtitle": "Adresses bloquées par la prison de cette application. Un bannissement ici ne bloque que cette application, pas le serveur.",
+        "none": "Personne n'est banni pour le moment.",
+        "notRunning": "La prison de cette application ne tourne pas, rien ne peut donc encore être banni ici.",
+        "noPermission": "Votre rôle n'inclut pas Fail2ban pour cette application avec l'accès Gérer.",
+        "loadFailed": "Impossible de charger les adresses bannies.",
+        "banLabel": "Bannir une adresse",
+        "ban": "Bannir",
+        "typeIp": "Saisissez d'abord une adresse IP.",
+        "invalidIp": "Saisissez une seule adresse IPv4 ou IPv6, par exemple 203.0.113.10.",
+        "banned": "{ip} est banni de cette application.",
+        "banFailed": "Impossible de bannir l'adresse.",
+        "unban": "Débannir",
+        "unbanned": "{ip} peut de nouveau accéder à cette application.",
+        "unbanFailed": "Impossible de débannir l'adresse.",
+        "unbanTitle": "Débannir {ip} ?",
+        "unbanBody": "Elle pourra de nouveau accéder à cette application immédiatement. Si les échecs de connexion continuent, la prison la bannira à nouveau.",
+        "cancel": "Annuler"
+      }
     },
     "staging": {
       "pageTitle": "Zone de préproduction",
@@ -5457,7 +5506,11 @@
         "failed": "L'envoi ne s'est pas terminé.",
         "copyAge": "Copie effectuée {age}",
         "copyDomain": "Copier le domaine",
-        "whileRunning": "L'application est hors ligne pendant l'opération. Si elle échoue en cours de route, la production est remise dans son état d'avant."
+        "whileRunning": "L'application est hors ligne pendant l'opération. Si elle échoue en cours de route, la production est remise dans son état d'avant.",
+        "backupToggle": "Sauvegarder d'abord l'application en production",
+        "backupOn": "Une sauvegarde est faite d'abord. L'envoi ne démarre que si elle se termine, vous pourrez donc restaurer à partir d'elle ensuite.",
+        "backupOff": "Aucune sauvegarde n'est faite. Impossible d'annuler une fois l'envoi terminé.",
+        "pushingWithBackup": "Sauvegarde puis envoi…"
       },
       "isCopy": {
         "title": "Cette application est une copie de préproduction",
@@ -5469,6 +5522,18 @@
         "title": "Supprimer la préproduction",
         "body": "Supprime l'application de préproduction {domain}. {production} n'est pas modifiée.",
         "action": "Supprimer"
+      },
+      "safetyCopies": {
+        "title": "Copies de la base de données enregistrées avant un envoi",
+        "subtitle": "Chaque envoi de la base de données enregistre d'abord la base en production. Remettez-en une pour annuler un envoi.",
+        "restore": "Remettre",
+        "restoring": "Remise en place…",
+        "restoringNote": "La base en production actuelle est d'abord enregistrée, cette opération peut donc elle aussi être annulée.",
+        "cancel": "Annuler",
+        "confirmTitle": "Remettre cette copie de la base de données ?",
+        "confirmBody": "La base en production est remplacée par la copie de {when}. Tout ce qui y a été écrit depuis est remplacé aussi. La base actuelle est enregistrée d'abord.",
+        "restored": "La base en production a été remise à partir de la copie de {when}.",
+        "restoreFailed": "Impossible de remettre la copie de la base de données."
       }
     },
     "stagingBadge": "Préproduction",
@@ -6974,7 +7039,23 @@
       "unignoreFailed": "Impossible d'annuler cette action.",
       "addFailed": "Impossible de lancer l'ajout au panneau."
     },
-    "stalled": "Cette analyse ne progresse plus. Elle a peut-être échoué sur le serveur."
+    "stalled": "Cette analyse ne progresse plus. Elle a peut-être échoué sur le serveur.",
+    "handover": {
+      "title": "Terminer le passage depuis l'ancien agent",
+      "body": "Vos applications sont reprises, mais l'ancien agent a encore des tâches que ce panneau doit reprendre.",
+      "agentRunning": "L'ancien agent ({unit}) tourne encore.",
+      "bootMissing": "{username} : ses applications ne redémarreront pas après un redémarrage.",
+      "rotationMissing": "{username} : ses journaux ne sont jamais renouvelés et ne cessent de grossir.",
+      "action": "Terminer le passage",
+      "working": "Finalisation…",
+      "done": "L'ancien agent est retiré et ses tâches sont désormais assurées par ce panneau.",
+      "partial": "Certaines étapes n'ont pas abouti :",
+      "agentFailed": "Arrêter l'ancien agent ({unit}).",
+      "bootFailed": "Démarrage automatique pour {username}.",
+      "rotationFailed": "Renouvellement des journaux pour {username}.",
+      "failed": "Impossible de terminer le passage.",
+      "noPermission": "Votre rôle n'inclut pas la synchronisation du serveur avec l'accès Gérer."
+    }
   },
   "central": {
     "title": "Gestion centralisée",

@@ -12,8 +12,8 @@ import {
 } from "@/lib/schemas/application";
 import { listQuery, EMPTY_LIST_META } from "@/lib/schemas/list";
 import { applicationPhpResponseSchema } from "@/lib/schemas/php-settings";
-import { applicationFail2banResponseSchema } from "@/lib/schemas/application-fail2ban";
-import { applicationStagingResponseSchema } from "@/lib/schemas/application-staging";
+import { applicationBansResponseSchema, applicationFail2banResponseSchema } from "@/lib/schemas/application-fail2ban";
+import { applicationStagingResponseSchema, stagingSafetyCopiesSchema } from "@/lib/schemas/application-staging";
 
 
 // Search, filters and sort run in the API. A stale filter value is a 422, not an empty list.
@@ -92,12 +92,19 @@ export async function getApplicationFail2ban(id) {
     config: result.data?.fail2ban ?? null,
     jailTemplate: result.data?.jail_template ?? "",
     filterTemplate: result.data?.filter_template ?? "",
+    filterNote: result.data?.filter_scope === "wordpress_only" ? (result.data?.filter_note ?? null) : null,
     failed: result.failed,
     status: result.status,
     failure: result.failure,
     message: result.message,
     debug: result.debug,
   };
+}
+
+// Under `app_fail2ban`, not the server's `fail2ban` permission (FS-C45).
+export async function getApplicationBans(id) {
+  const result = await read(`/applications/${id}/fail2ban/bans`, applicationBansResponseSchema);
+  return { jail: result.data?.jail ?? null, banned: result.data?.banned ?? [], failed: result.failed, message: result.message };
 }
 
 // Non-PHP site types get a 404, which is an answer, not a failure.
@@ -137,6 +144,12 @@ export async function getApplicationStaging(id) {
     message: result.message,
     debug: result.debug,
   };
+}
+
+// The database copies a push saved first. Empty on failure: the card is extra, not the page.
+export async function getStagingSafetyCopies(id) {
+  const result = await read(`/applications/${id}/staging/safety-copies`, stagingSafetyCopiesSchema);
+  return { copies: result.data?.safety_copies ?? [], kept: result.data?.kept ?? null, failed: result.failed };
 }
 
 // Active phpMyAdmin sites, matching the SSO endpoint's condition.

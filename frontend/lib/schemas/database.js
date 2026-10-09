@@ -104,8 +104,12 @@ export const databaseUserSchema = z.object({
   password: z.string().nullable().optional(),
   connection_preference: z.string().nullable().optional(),
   host: z.string().nullable().optional(),
-  // Ready to paste into an app's config.
+  // Ready to paste into an app's config; null for view-only roles (it holds the password).
   connection_string: z.string().nullable().optional(),
+  // Where to connect, sent to every viewer.
+  connection: z
+    .object({ host: z.string().nullish(), port: z.union([z.number(), z.string()]).nullish(), database: z.string().nullish() })
+    .nullish(),
   // False for users adopted from a migrated server (only a hash exists); the
   // API then withholds `connection_string`.
   password_known: z.boolean().nullish(),
@@ -360,6 +364,8 @@ export const dbProcessSchema = z.object({
   time: z.number().nullable().optional(),
   state: z.string().nullable().optional(),
   query: z.string().nullable().optional(),
+  // The panel's own connection (the one reading this list): never offered Stop.
+  is_panel: z.boolean().nullish(),
 });
 
 export const dbProcessesResponseSchema = z.object({

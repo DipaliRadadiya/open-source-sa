@@ -2,7 +2,7 @@ import Link from "@/components/ui/app-link";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
-import { getConnections, getEngines } from "@/lib/databases/get-databases";
+import { getEngines } from "@/lib/databases/get-databases";
 import {
   getEngineStatus,
   getDatabaseMetrics,
@@ -67,13 +67,11 @@ export default async function DatabaseMonitorPage({ searchParams }) {
     );
   }
 
-  const [status, metrics, processes, facts, connections] = await Promise.all([
+  const [status, metrics, processes, facts] = await Promise.all([
     getEngineStatus(selected.engine),
     getDatabaseMetrics(selected.engine),
     getProcesses(selected.engine),
     getServerFacts(),
-    // Only used to recognise the panel's own connection; must not fail the page.
-    getConnections().catch(() => []),
   ]);
 
   return (
@@ -115,7 +113,6 @@ export default async function DatabaseMonitorPage({ searchParams }) {
               <ProcessList
                 engine={selected.engine}
                 processes={processes}
-                connections={connections}
                 canManage={canManage}
                 fill
               />

@@ -37,3 +37,8 @@ export function ignoreSyncItem({ resourceType, resourceKey, note }) {
 export function unignoreSyncItem(ignoreId) {
   return api.delete(`/server/sync/ignores/${ignoreId}`);
 }
+
+// 500 with per-step results when a step failed, so it is never read as done.
+export function completeSyncHandover() {
+  return api.post("/server/sync/handover");
+}

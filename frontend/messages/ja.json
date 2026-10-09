@@ -187,7 +187,9 @@
       "cancel": "キャンセル",
       "confirm": "ユーザーを削除",
       "deleting": "削除中…",
-      "copyUsername": "ユーザー名をコピー"
+      "copyUsername": "ユーザー名をコピー",
+      "endSessions": "セッションを終了",
+      "endSessionsHint": "{username} をサインアウトさせ、実行中のものをすべて停止してからアカウントを削除します。オフのままにすると、代わりに通知されます。"
     },
     "access": {
       "title": "アクセス",
@@ -370,7 +372,8 @@
       "username": "ユーザー名",
       "accountType": "アカウント種別",
       "roles": "ロール",
-      "joined": "参加日"
+      "joined": "参加日",
+      "lastSignIn": "最終サインイン"
     },
     "actions": {
       "label": "操作",
@@ -441,7 +444,8 @@
       "starting": "起動中…",
       "cancel": "キャンセル"
     },
-    "loadFailed": "ユーザーを読み込めませんでした。少し経ってから再度お試しください。"
+    "loadFailed": "ユーザーを読み込めませんでした。少し経ってから再度お試しください。",
+    "neverSignedIn": "なし"
   },
   "roles": {
     "sync": {
@@ -645,7 +649,10 @@
     "system": "システム",
     "filter": {
       "allTypes": "すべての種類",
-      "allActions": "すべての操作"
+      "allActions": "すべての操作",
+      "kind": "実施内容",
+      "allKinds": "すべてのイベント",
+      "security": "セキュリティイベント"
     },
     "columns": {
       "when": "タイミング",
@@ -2009,7 +2016,8 @@
         "passwordOff": "パスワードログインは機能しなくなります。このサーバーに鍵が既にない場合、ロックアウトされます。",
         "rootOff": "root はログインできなくなります。sudo を使える別のユーザーがいることを確認してください。",
         "rootPassword": "root がパスワードでログインできるようになります — 自動攻撃が最初に狙うアカウントです。",
-        "testFirst": "このターミナルを閉じる前に、別のターミナルで新しい設定をテストしてください。"
+        "testFirst": "このターミナルを閉じる前に、別のターミナルで新しい設定をテストしてください。",
+        "enforcesAccess": "今後、各システムユーザーの SSH ログインのスイッチが有効になります。オフのユーザーは SSH でログインできなくなります（sudo ユーザーは引き続きログインできます）。"
       },
       "rootPasswordWarning": "現在、root がパスワードでログインできます。自動攻撃が最初に試すアカウントです — root ログインを「鍵のみ」に設定してください。",
       "signIn": {
@@ -2272,7 +2280,13 @@
       "completeInstall": "インストールを完了する",
       "completing": "PHP {version} を完了しています…",
       "incompleteDefault": "先にインストールを完了してください。デフォルトの PHP は、バージョンが指定されていないすべての処理で使われます。",
-      "statusRemoveFailed": "削除に失敗"
+      "statusRemoveFailed": "削除に失敗",
+      "dismiss": "閉じる",
+      "dismissed": "PHP {version} の失敗したインストールを消去しました。",
+      "dismissFailed": "失敗したインストールを消去できませんでした。",
+      "statusQueued": "他のインストールを待機中",
+      "queuedTitle": "PHP {version} はインストール待ちです",
+      "queuedBody": "別のインストールが実行中です。それが終わるとすぐに開始します。"
     },
     "extensions": {
       "title": "拡張機能",
@@ -2530,7 +2544,13 @@
       "removingSince": "{when} に開始しました。ページは自動的に更新されます。",
       "retry": "再試行",
       "retrying": "Node {version} を再度インストール中…",
-      "statusRemoveFailed": "削除に失敗"
+      "statusRemoveFailed": "削除に失敗",
+      "dismiss": "閉じる",
+      "dismissed": "Node.js {version} の失敗したインストールを消去しました。",
+      "dismissFailed": "失敗したインストールを消去できませんでした。",
+      "statusQueued": "他のインストールを待機中",
+      "queuedTitle": "Node.js {version} はインストール待ちです",
+      "queuedBody": "別のインストールが実行中です。それが終わるとすぐに開始します。"
     },
     "install": {
       "action": "バージョンをインストール",
@@ -2545,7 +2565,8 @@
       "eolWarning": "Node.js {version} はセキュリティ修正の提供が終了しています。アプリケーションが必要とする場合にのみインストールしてください。",
       "noneAvailable": "Node.js のバージョン一覧を取得できませんでした。サーバーが nodejs.org に接続できるか確認してから、ページを再読み込みしてください。",
       "installedTag": "インストール済み",
-      "allInstalled": "このサーバーが提供するすべてのバージョンはすでにインストールされています。"
+      "allInstalled": "このサーバーが提供するすべてのバージョンはすでにインストールされています。",
+      "catalogUnreachable": "このサーバーから nodejs.org に接続できないため、バージョン一覧を読み込めません。サーバーのネットワーク接続を確認してから再読み込みしてください。"
     },
     "lifecycle": {
       "current": "現在",
@@ -3540,6 +3561,12 @@
         "description": "{keys} を変更または削除しました。これらはパネルが設定したもので、アプリケーションが依存しています。新しい暗号化キーにすると保存済みの認証情報がすべて読めなくなり、ポートやフォルダーを変えるとパネルが実行するサービスと一致しなくなります。",
         "cancel": "編集を続ける",
         "confirm": "それでも保存"
+      },
+      "preflight": {
+        "title": "これらの警告があるまま保存しますか？",
+        "description": "まだ何も保存していません。このファイルではアプリケーションが起動しない可能性があります。",
+        "cancel": "編集を続ける",
+        "confirm": "それでも保存"
       }
     },
     "title": "アプリケーション",
@@ -3827,8 +3854,6 @@
       "systemUserGeneratePassword": "生成",
       "systemUserPasswordHint": "自動生成されます。保管、変更、削除が可能です。後で「システムユーザー」ページから再確認できます。",
       "systemUserNew": "{username}（新規）",
-      "systemUserCreateFailed": "システムユーザーを作成できなかったため、アプリケーションも作成されませんでした。",
-      "systemUserLeftBehind": "システムユーザー {username} は作成されましたが、削除できませんでした。「既存のシステムユーザーを使用」で選択するか、「システムユーザー」ページで削除してください。",
       "tablePrefixInvalid": "英字で始め、英字と数字のみを使い、アンダースコアで終えてください（例: jml_）。"
     },
     "actions": {
@@ -3868,7 +3893,9 @@
       "removeFilesHint": "オフにするとアプリケーションはパネルから削除されますが、ファイルはサーバーに残ります。オンにするとファイルとバックアップは削除され、元に戻せません。",
       "removeDocker": "このサイトの Docker ネットワークとボリュームも削除する ({count})",
       "removeDockerOn": "{names} を削除します。他のサイトがまだ使用しているものは保持されます。サーバーは削除時に確認します。",
-      "removeDockerOff": "{names} はサーバーに残ります。データは保持され、あとで Docker ページから削除できます。"
+      "removeDockerOff": "{names} はサーバーに残ります。データは保持され、あとで Docker ページから削除できます。",
+      "removeSystemUser": "システムユーザー {username} も削除する",
+      "removeSystemUserOn": "他のアプリケーションが使っておらず、誰もサインインしていない場合にのみ削除されます。残された場合はお知らせします。"
     },
     "systemUserMissing": {
       "title": "このアプリケーションのシステムユーザーが見つかりません",
@@ -4416,7 +4443,9 @@
         "discardTitle": "未保存の変更を破棄しますか？",
         "discardDescription": "このファイルへの編集は保存されていません。このまま閉じると編集内容が失われます。",
         "keepEditing": "編集を続ける",
-        "discardConfirm": "変更を破棄"
+        "discardConfirm": "変更を破棄",
+        "reload": "ファイルを再読み込み",
+        "reloadFirst": "先にファイルを再読み込みしてください。開いた後に変更されています。"
       },
       "restore": {
         "action": "復元",
@@ -4431,8 +4460,7 @@
         "rootPlaceholder": "アプリケーションルート",
         "pathLabelHint": "名前だけの場合はこのフォルダーに置かれます。パスはアプリケーションフォルダーの最上位から数えます。",
         "destination": "展開先",
-        "copyDestination": "このパスをコピー",
-        "folderMissing": "フォルダー「{folder}」は存在しません。先に作成するか、別のフォルダーを選んでください。"
+        "copyDestination": "このパスをコピー"
       },
       "rename": {
         "title": "\"{name}\" の名前を変更 / 移動",
@@ -4897,7 +4925,7 @@
         "range": "{days} 日間",
         "unavailable": "このアプリケーションのアクセスログを読み取れなかったため、表示できるデータがありません。これはボットの訪問がなかったという意味ではありません。",
         "empty": "過去 {days} 日間に AI ボットの訪問はありません。",
-        "summary": "{bots, plural, other{# 件のボット}} · {hits, plural, other{# 件のリクエスト}} · {blocked, plural, other{ブロック対象のボットから # 件}}",
+        "summary": "{bots, plural, other{# 件のボット}} · {hits, plural, other{# 件のリクエスト}} · {blocked, plural, other{# 件をブロック}}",
         "partial": "ログの最新部分のみをスキャンしたため、アクセスの多いアプリケーションではさらに多くのボットがいた可能性があります。",
         "blocked": "ブロック",
         "allowed": "許可",
@@ -4913,7 +4941,8 @@
           "search": "AI 検索",
           "agent": "AI アシスタント",
           "custom": "カスタムルール"
-        }
+        },
+        "blockedHits": "{count, plural, other{# 件をブロック}}"
       },
       "groupLabels": {
         "block_training": "学習用クローラー",
@@ -5391,7 +5420,27 @@
       "tooLong": "設定が長すぎます。各ファイルは 65,535 文字未満である必要があります。",
       "invalidConfig": "設定を保存できません。両方のファイルに内容が入力されているか確認してください。",
       "outputShowAll": "fail2ban の出力をすべて表示",
-      "outputErrorsOnly": "エラーのみ表示"
+      "outputErrorsOnly": "エラーのみ表示",
+      "bans": {
+        "title": "ブロック中のアドレス",
+        "subtitle": "このアプリケーションの jail がブロックしたアドレスです。ここでのブロックはこのアプリケーションだけに適用され、サーバー全体には適用されません。",
+        "none": "現在ブロックされているアドレスはありません。",
+        "notRunning": "このアプリケーションの jail が動作していないため、まだここではブロックできません。",
+        "noPermission": "あなたのロールには、このアプリケーションの Fail2ban の管理権限が含まれていません。",
+        "loadFailed": "ブロック中のアドレスを読み込めませんでした。",
+        "banLabel": "アドレスをブロック",
+        "ban": "ブロック",
+        "typeIp": "先に IP アドレスを入力してください。",
+        "invalidIp": "203.0.113.10 のような IPv4 または IPv6 アドレスを 1 つ入力してください。",
+        "banned": "{ip} をこのアプリケーションからブロックしました。",
+        "banFailed": "アドレスをブロックできませんでした。",
+        "unban": "ブロック解除",
+        "unbanned": "{ip} は再びこのアプリケーションにアクセスできます。",
+        "unbanFailed": "アドレスのブロックを解除できませんでした。",
+        "unbanTitle": "{ip} のブロックを解除しますか？",
+        "unbanBody": "すぐにこのアプリケーションへアクセスできるようになります。ログインの失敗が続けば、jail が再びブロックします。",
+        "cancel": "キャンセル"
+      }
     },
     "staging": {
       "pageTitle": "ステージング環境",
@@ -5457,7 +5506,11 @@
         "failed": "反映が完了しませんでした。",
         "copyAge": "{age} 前にコピー作成",
         "copyDomain": "ドメインをコピー",
-        "whileRunning": "実行中はアプリケーションがオフラインになります。途中で失敗した場合、本番は元の状態に戻されます。"
+        "whileRunning": "実行中はアプリケーションがオフラインになります。途中で失敗した場合、本番は元の状態に戻されます。",
+        "backupToggle": "先に本番アプリケーションをバックアップする",
+        "backupOn": "最初にバックアップを実行します。完了した場合のみ反映が始まるので、後でそこから復元できます。",
+        "backupOff": "バックアップは取得しません。反映が完了すると元に戻せません。",
+        "pushingWithBackup": "バックアップ後に反映中…"
       },
       "isCopy": {
         "title": "このアプリケーションはステージングコピーです",
@@ -5469,6 +5522,18 @@
         "title": "ステージングを削除",
         "body": "ステージングアプリケーション {domain} を削除します。{production} には影響しません。",
         "action": "削除"
+      },
+      "safetyCopies": {
+        "title": "反映前に保存したデータベースのコピー",
+        "subtitle": "データベースを反映するたびに、先に本番データベースを保存します。反映を取り消すには、そのコピーを戻します。",
+        "restore": "戻す",
+        "restoring": "戻しています…",
+        "restoringNote": "先に現在の本番データベースを保存するため、この操作も取り消せます。",
+        "cancel": "キャンセル",
+        "confirmTitle": "このデータベースのコピーを戻しますか？",
+        "confirmBody": "本番データベースを {when} のコピーに置き換えます。それ以降に書き込まれた内容も置き換わります。先に現在のデータベースを保存します。",
+        "restored": "本番データベースを {when} のコピーから戻しました。",
+        "restoreFailed": "データベースのコピーを戻せませんでした。"
       }
     },
     "stagingBadge": "ステージング",
@@ -6974,7 +7039,23 @@
       "unignoreFailed": "元に戻せませんでした。",
       "addFailed": "パネルへの追加を開始できませんでした。"
     },
-    "stalled": "このスキャンは進捗の報告を停止しています。サーバーで失敗した可能性があります。"
+    "stalled": "このスキャンは進捗の報告を停止しています。サーバーで失敗した可能性があります。",
+    "handover": {
+      "title": "旧エージェントからの移行を完了する",
+      "body": "アプリケーションは取り込み済みですが、旧エージェントにはこのパネルが引き継ぐべき処理がまだ残っています。",
+      "agentRunning": "旧エージェント（{unit}）がまだ動作しています。",
+      "bootMissing": "{username}: 再起動後にアプリケーションが自動で起動しません。",
+      "rotationMissing": "{username}: ログがローテーションされず、増え続けます。",
+      "action": "移行を完了",
+      "working": "完了しています…",
+      "done": "旧エージェントを停止し、その処理はこのパネルが引き継ぎました。",
+      "partial": "完了しなかった手順があります:",
+      "agentFailed": "旧エージェント（{unit}）の停止。",
+      "bootFailed": "{username} の起動時の自動開始。",
+      "rotationFailed": "{username} のログローテーション。",
+      "failed": "移行を完了できませんでした。",
+      "noPermission": "あなたのロールにはサーバー同期の管理権限が含まれていません。"
+    }
   },
   "central": {
     "title": "Central管理",

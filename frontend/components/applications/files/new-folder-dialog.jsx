@@ -26,8 +26,8 @@ export function NewFolderDialog({ appId, path, existingNames = [], open, onOpenC
   });
 
   async function onSubmit(values) {
-    // The API answers 200 for an existing folder (mkdir -p), so a taken name is
-    // checked against the visible list before sending.
+    // Checked against the visible list first so the answer is instant; the API
+    // refuses it too (path_exists) for a name the list has not loaded.
     if (existingNames.includes(values.name.trim())) {
       form.setError("name", { message: t("newFolder.taken", { name: values.name.trim() }) });
       return;

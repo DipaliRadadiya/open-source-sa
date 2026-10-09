@@ -10,6 +10,13 @@ export async function saveEnvironment(appId, { raw, restart = false }) {
   return res.data;
 }
 
+// A save's own checks and refusals with nothing written (ENV-1): warnings come before the
+// file is replaced and the service restarted on it.
+export async function checkEnvironment(appId, raw) {
+  const res = await api.post(`/applications/${appId}/environment/check`, { raw });
+  return res.data;
+}
+
 // One logged change, key by key with old and new values. Fetched on demand
 // because it reads backup files.
 export async function getEnvironmentDiff(appId, logId) {

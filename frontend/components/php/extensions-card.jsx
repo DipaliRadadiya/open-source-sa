@@ -228,7 +228,9 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
                               </span>
                             ) : (
                               <span className="truncate font-mono">
-                                {extension.output?.trimEnd().split("\n").pop() ||
+                                {extension.queued
+                                  ? t("versions.statusQueued")
+                                  : extension.output?.trimEnd().split("\n").pop() ||
                                   (extension.current_step
                                     ? t(`versions.steps.${extension.current_step}`)
                                     : t("extensions.installingShort"))}

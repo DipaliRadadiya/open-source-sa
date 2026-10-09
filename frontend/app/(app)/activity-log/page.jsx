@@ -2,8 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getServerActivity } from "@/lib/activity-log/get-server-activity";
-import { getActivityFilters, getMyActivityFilters } from "@/lib/activity-log/get-activity-filters";
-import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { getServerActivityFilters } from "@/lib/activity-log/get-activity-filters";
 import { ActivityToolbar } from "@/components/activity-log/activity-toolbar";
 import { typesForScope, actionsForScope } from "@/lib/activity-log/labels";
 import { MyActivityTable } from "@/components/activity-log/my-activity-table";
@@ -30,15 +29,12 @@ export default async function ActivityLogPage({ searchParams }) {
   ]);
 
   if (!can(permissions, "activity_log", "view")) return <PermissionDenied title={t("title")} />;
-  const user = await getCurrentUser();
   const [{ activity_log: entries, meta, failed, status, failure, message }, filters] = await Promise.all([
     getServerActivity(sp),
-    // No server-wide filter list exists yet: admins get the full catalog,
-    // everyone else the types they have touched.
-    user?.is_admin ? getActivityFilters() : getMyActivityFilters(),
+    getServerActivityFilters(),
   ]);
 
-  const isFiltered = Boolean(sp.search || sp.type || sp.action);
+  const isFiltered = Boolean(sp.search || sp.type || sp.action || sp.kind);
 
 
   // A bookmarked out-of-range ?page must not read as an empty log.
@@ -58,6 +54,7 @@ export default async function ActivityLogPage({ searchParams }) {
                 // The filters endpoint spans both scopes; this page is server-only.
                 types={typesForScope(filters.types, "server")}
                 actions={actionsForScope(filters.actions, filters.types, "server")}
+                kinds={filters.kinds}
                 searchKey="server.searchPlaceholder"
               />
             }

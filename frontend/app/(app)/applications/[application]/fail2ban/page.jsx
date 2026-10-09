@@ -3,7 +3,9 @@ import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/page-header";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
-import { getApplication, getApplicationFail2ban } from "@/lib/applications/get-applications";
+import { getApplication, getApplicationBans, getApplicationFail2ban } from "@/lib/applications/get-applications";
+import { BannedAddressesCard } from "@/components/applications/fail2ban/banned-addresses-card";
+import { Caution } from "@/components/ui/caution";
 import { Fail2banPanel } from "@/components/applications/fail2ban/fail2ban-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PermissionDenied } from "@/components/sections/permission-denied";
@@ -43,6 +45,8 @@ export default async function ApplicationFail2banPage({ params }) {
   const settled = isSettled(application);
 
   const status = settled ? await getApplicationFail2ban(id) : null;
+  // Only once a jail exists; before that there is nothing to ban into.
+  const bans = status?.config ? await getApplicationBans(id) : null;
 
   return (
     <div className="space-y-6">
@@ -59,13 +63,22 @@ export default async function ApplicationFail2banPage({ params }) {
         // A failed read must never render as "not protected".
         <LoadFailed description={t("loadFailed")} status={status.status} failure={status.failure} message={status.message} debug={status.debug} />
       ) : (
-        <Fail2banPanel
-          appId={id}
-          config={status.config}
-          jailTemplate={status.jailTemplate}
-          filterTemplate={status.filterTemplate}
-          canManage={canManage}
-        />
+        <div className="space-y-4">
+          {/* The default rules only catch WordPress logins; the API words it per site type. */}
+          {status.filterNote ? (
+            <Caution tone="warning" size="md">
+              <p>{status.filterNote}</p>
+            </Caution>
+          ) : null}
+          <Fail2banPanel
+            appId={id}
+            config={status.config}
+            jailTemplate={status.jailTemplate}
+            filterTemplate={status.filterTemplate}
+            canManage={canManage}
+          />
+          {bans ? <BannedAddressesCard appId={id} bans={bans} canManage={canManage} /> : null}
+        </div>
       )}
     </div>
   );

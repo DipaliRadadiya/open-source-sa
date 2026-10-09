@@ -102,6 +102,8 @@ export const fileContentSchema = z.object({
   content: z.string(),
   size: z.number().nullish(),
   backups: z.array(fileBackupSchema).default([]),
+  // Hash of the content as read; sent back on save so a change made meanwhile is a 409.
+  version: z.string().nullish(),
 });
 
 // Write schemas below mirror the request bodies the API takes.

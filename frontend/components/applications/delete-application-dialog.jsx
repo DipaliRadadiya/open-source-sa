@@ -18,7 +18,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 // The domain is what must be typed: it is what stops being served.
 // `remove_files` also destroys this site's backup archives in storage. Unticked, the backup rows
 // still cascade with the application, leaving archives the panel can no longer list or delete.
-export function DeleteApplicationDialog({ application, open, onOpenChange, afterDelete, redirectTo, closeWhenGone = false }) {
+export function DeleteApplicationDialog({ application, open, onOpenChange, afterDelete, redirectTo, closeWhenGone = false, canRemoveSystemUser = false }) {
   const t = useTranslations("applications.delete");
   const router = useRouter();
   const { refreshThen, pushAndWait } = useRefresh();
@@ -29,6 +29,9 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
   // Null when the user is gone; absent (undefined) when it was not loaded.
   const orphaned = application?.system_user === null;
   const [removeDatabases, setRemoveDatabases] = useState(true);
+  // Off by default: one account often serves several applications (the API keeps it then).
+  const [removeSystemUser, setRemoveSystemUser] = useState(false);
+  const systemUsername = application?.system_user?.username ?? null;
   // On by default, like files and databases: a volume holding a container site's
   // database is as unrecoverable as the database a LEMP site had.
   const [removeDockerResources, setRemoveDockerResources] = useState(true);
@@ -66,6 +69,7 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
       setConfirm("");
       setRemoveFiles(true);
       setRemoveDatabases(true);
+      setRemoveSystemUser(false);
       setDatabases([]);
     }
     onOpenChange?.(next);
@@ -99,6 +103,7 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
         removeDatabases: databases.length > 0 && removeDatabases,
         removeDockerResources:
           dockerResourceNames.length > 0 && removeDockerResources,
+        removeSystemUser: canRemoveSystemUser && Boolean(systemUsername) && removeSystemUser,
       });
 
       // A 200 can still carry database failures: warn, naming what is left.
@@ -111,6 +116,12 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
           });
         } else {
           toast.success(t("done", { name: application.name }));
+        }
+        // The server's own sentence: removed, or kept and why (still used, signed in).
+        const account = data?.system_user;
+        if (account?.message) {
+          if (account.outcome === "removed") toast.success(account.message);
+          else toast.warning(account.message, { duration: 15000 });
         }
       };
       if (afterDelete) await afterDelete();
@@ -239,10 +250,27 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
           </div>
         ) : null}
 
-        {/* The API cannot remove the Linux account; say so rather than stay silent. */}
-        {application?.system_user?.username ? (
+        {/* Only with the grant the API checks; otherwise say the account stays. */}
+        {systemUsername && canRemoveSystemUser ? (
+          <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-3">
+            <Checkbox
+              id="delete-app-system-user"
+              checked={removeSystemUser}
+              onCheckedChange={(value) => setRemoveSystemUser(value === true)}
+              className="mt-0.5"
+            />
+            <div className="space-y-1">
+              <Label htmlFor="delete-app-system-user" className="text-sm font-medium">
+                {t("removeSystemUser", { username: systemUsername })}
+              </Label>
+              <p className="text-xs leading-5 text-muted-foreground">
+                {removeSystemUser ? t("removeSystemUserOn") : t("systemUserStays", { username: systemUsername })}
+              </p>
+            </div>
+          </div>
+        ) : systemUsername ? (
           <p className="text-xs leading-5 text-muted-foreground">
-            {t("systemUserStays", { username: application.system_user.username })}
+            {t("systemUserStays", { username: systemUsername })}
           </p>
         ) : null}
 

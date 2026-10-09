@@ -16,3 +16,8 @@ export function readApplicationLog(appId, key, { lines, grep, signal } = {}) {
 export function clearApplicationLog(appId, key) {
   return api.delete(`/applications/${appId}/logs/${encodeURIComponent(key)}`);
 }
+
+// Cookie-authenticated `<a href download>`, like the server logs (LOG-dl).
+export function applicationLogDownloadUrl(appId, key) {
+  return `${process.env.NEXT_PUBLIC_API_URL}/api/applications/${appId}/logs/${encodeURIComponent(key)}/download`;
+}

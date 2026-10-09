@@ -30,8 +30,17 @@ export const activityResponseSchema = z.object({
 
 // `actions` is keyed by type (`all` = every verb; `<type>` = that type's verbs)
 // so the action dropdown can depend on the selected type.
+// Unknown values are dropped from the request rather than sent (the API 422s them).
+export const ACTIVITY_KINDS = ["created", "changed", "removed", "failed"];
+
 export const activityFiltersSchema = z.object({
   types: z.array(z.string()).default([]),
+  // created | changed | removed | failed, each with a label the API translates.
+  // `.catch`: a shape change here must not take the type filter down with it.
+  kinds: z
+    .array(z.object({ value: z.string(), label: z.string() }))
+    .default([])
+    .catch([]),
   actions: z.record(z.string(), z.array(z.string())).default({}),
   // Only scopes the caller has rows in; `label` is localized by the API.
   scopes: z

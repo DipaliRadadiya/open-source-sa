@@ -18,14 +18,14 @@ test("generating is the default", () => {
   assert.match(schema, /generate_system_user: z\.boolean\(\)\.default\(true\)/);
 });
 
-test("a generated user is created with the shown name and password, then used by id", () => {
-  // Krishna 2026-09-29: the name and password are shown and editable, which
-  // `generate_system_user` cannot carry — it picks its own name, sets no password.
-  assert.match(form, /createSystemUser\(\{\s*username: values\.system_user_username,\s*\.\.\.\(values\.system_user_password \? \{ password: values\.system_user_password \} : \{\}\)/);
-  assert.match(form, /payload\.system_user_id = newUser\?\.id;/);
-  assert.doesNotMatch(form, /generate_system_user: true/);
-  // A refused application leaves no account behind.
-  assert.match(form, /if \(newUser\?\.id && refused\) \{\s*const removed = await deleteSystemUser\(newUser\.id\)/);
+test("a generated user is created with the shown name and password, in the same request (FS-B9, 9 Oct)", () => {
+  // Krishna 2026-09-29: the name and password are shown and editable. Since 9 Oct the API
+  // takes them beside `generate_system_user`, so there is one request and nothing to roll back.
+  assert.match(form, /payload\.generate_system_user = true;\s*payload\.system_user = \{\s*username: values\.system_user_username,\s*\.\.\.\(values\.system_user_password \? \{ password: values\.system_user_password \} : \{\}\)/);
+  assert.match(form, /delete payload\.system_user_id;/);
+  assert.doesNotMatch(form, /createSystemUser|deleteSystemUser/);
+  // The account's own refusals land on its fields.
+  assert.match(form, /"system_user\.username": "system_user_username"/);
 });
 test("switching into generate mode clears any id already chosen", () => {
   // Otherwise a stale id rides along beside the flag and the API 422s.
@@ -72,7 +72,6 @@ test("every string exists in every locale", () => {
     "systemUserUsername",
     "systemUserPassword",
     "systemUserPasswordHint",
-    "systemUserCreateFailed",
   ];
 
   for (const locale of locales) {
@@ -87,16 +86,4 @@ test("every string exists in every locale", () => {
 
 test("a second click while creating does not create the user twice", () => {
   assert.match(form, /if \(submitting\.current\) return;\s*submitting\.current = true;/);
-});
-
-test("a user that could not be removed after a refused application is reported and offered", () => {
-  assert.match(form, /if \(!removed\) \{\s*toast\.warning\(t\("form\.systemUserLeftBehind", \{ username: newUser\.username \}\)[\s\S]{0,60}router\.refresh\(\);/);
-  for (const locale of locales) {
-    const value = JSON.parse(read(`messages/${locale}.json`)).applications.form.systemUserLeftBehind;
-    assert.match(value, /\{username\}/, locale);
-  }
-});
-
-test("the review row takes you to the Username field while generating", () => {
-  assert.match(form, /target: generateSystemUser \? "system_user_username" : "system_user_id"/);
 });

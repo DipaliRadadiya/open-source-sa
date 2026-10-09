@@ -1,7 +1,8 @@
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
-import { getLatestSyncRun, getSyncIgnores, getSyncRunItems } from "@/lib/server/get-sync";
+import { getLatestSyncRun, getSyncHandover, getSyncIgnores, getSyncRunItems } from "@/lib/server/get-sync";
+import { HandoverCard } from "@/components/sync/handover-card";
 import { SyncPanel } from "@/components/sync/sync-panel";
 import { serverSnapshot } from "@/lib/sync/server-snapshot";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -21,7 +22,7 @@ export default async function SyncPage() {
   if (!can(permissions, "sync", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "sync", "manage");
 
-  const [latest, ignoreList] = await Promise.all([getLatestSyncRun(), getSyncIgnores()]);
+  const [latest, ignoreList, handover] = await Promise.all([getLatestSyncRun(), getSyncIgnores(), getSyncHandover()]);
 
   if (latest.failed) {
     return (
@@ -44,6 +45,7 @@ export default async function SyncPage() {
   return (
     <div className="space-y-6">
       <Header t={t} />
+      {handover.data?.needed ? <HandoverCard status={handover.data} canManage={canManage} /> : null}
       {/* Keyed on the data: the panel seeds state from props once, so a
           refresh must remount it. */}
       <SyncPanel

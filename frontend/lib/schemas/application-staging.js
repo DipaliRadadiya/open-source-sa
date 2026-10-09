@@ -30,3 +30,11 @@ export const PUSH_MODES = ["files", "database", "full"];
 export const pushStagingFormSchema = z.object({
   mode: z.enum(PUSH_MODES, { message: "modeRequired" }),
 });
+
+// Database dumps taken before each push; the newest few are kept.
+export const stagingSafetyCopiesSchema = z.object({
+  safety_copies: z
+    .array(z.object({ name: z.string(), size_bytes: z.number().nullish(), created_at: z.string().nullish() }))
+    .default([]),
+  kept: z.number().nullish(),
+});

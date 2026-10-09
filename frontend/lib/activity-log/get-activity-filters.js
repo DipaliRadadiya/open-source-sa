@@ -20,6 +20,11 @@ export function getActivityFilters() {
   return fetchFilters("/admin/activity-log/filters");
 }
 
+// Every viewer of the server log, not only admins (FS-C11).
+export function getServerActivityFilters() {
+  return fetchFilters("/server/activity-log/filters");
+}
+
 export function getMyActivityFilters() {
   return fetchFilters("/activity-log/filters");
 }

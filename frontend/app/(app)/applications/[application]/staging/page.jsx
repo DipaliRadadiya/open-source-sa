@@ -4,7 +4,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { can } from "@/lib/permissions/can";
-import { getApplication, getApplicationStaging } from "@/lib/applications/get-applications";
+import { getApplication, getApplicationStaging, getStagingSafetyCopies } from "@/lib/applications/get-applications";
+import { getBackupTarget } from "@/lib/backups/get-backups";
 import { StagingPanel } from "@/components/applications/staging/staging-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PermissionDenied } from "@/components/sections/permission-denied";
@@ -51,6 +52,14 @@ export default async function ApplicationStagingPage({ params }) {
   const staging = settled ? await getApplicationStaging(id) : null;
   if (staging?.status === 403) return <PermissionDenied title={t("pageTitle")} />;
 
+  // Backing up as part of the push is the backup feature's power, and needs a target.
+  const canBackUp = can(appPermissions, "app_backup", "manage", "application");
+  const hasCopy = Boolean(staging?.staging);
+  const [{ target }, safety] = await Promise.all([
+    hasCopy && canManage && canBackUp ? getBackupTarget(id) : Promise.resolve({ target: null }),
+    canManage ? getStagingSafetyCopies(id) : Promise.resolve({ copies: [] }),
+  ]);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -74,6 +83,8 @@ export default async function ApplicationStagingPage({ params }) {
           staging={staging.staging}
           canManage={canManage}
           canDelete={canDelete}
+          canBackUp={canBackUp && Boolean(target)}
+          safetyCopies={safety.copies}
         />
       )}
     </div>

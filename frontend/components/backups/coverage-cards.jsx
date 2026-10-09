@@ -113,7 +113,7 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
                   ) : null}
                   <span className="block truncate">
                     {/* Same fallback as the table: a crashed run leaves last_run_at unset, so not "Never". */}
-                    {target.last_run_at_human ?? lastBackup?.created_at_human ?? t("neverRunShort")}
+                    {lastBackup?.created_at_human ?? target.last_backup_at_human ?? t("neverRunShort")}
                   </span>
                   {next ? (
                     <span className="block truncate text-xs text-muted-foreground">{next}</span>

@@ -41,7 +41,6 @@ import {
 } from "@/lib/api/applications";
 import { generatePassword } from "@/lib/applications/generate-password";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
-import { apiMessage } from "@/lib/api/error-message";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -93,7 +92,6 @@ import {
   sharedFieldNames,
 } from "@/lib/applications/form-reset";
 import { CreateReadinessPanel } from "@/components/applications/create-readiness-panel";
-import { createSystemUser, deleteSystemUser } from "@/lib/api/system-users";
 import { fallbackSystemUsername, suggestSystemUsername } from "@/lib/applications/system-username";
 
 const COMMON_FIELD_NAMES = new Set([
@@ -657,6 +655,11 @@ function ConfigField({
   );
 }
 
+function requiredByOtherField(requiredIf, values) {
+  if (!requiredIf || typeof requiredIf !== "object") return false;
+  return Object.entries(requiredIf).some(([field, accepted]) => accepted.includes(String(values?.[field] ?? "")));
+}
+
 export function CreateApplicationForm({
   siteTypes = [],
   initialType = "",
@@ -689,7 +692,7 @@ export function CreateApplicationForm({
   const tCommon = useTranslations("common");
   const { name: brand } = useBranding();
   const router = useRouter();
-  const { pushAndWait, refreshAndWait } = useRefresh();
+  const { pushAndWait } = useRefresh();
   const [accountsRefreshing, startAccountsRefresh] = useTransition();
   const [gitSource, setGitSource] = useState("account");
   const [repositories, setRepositories] = useState([]);
@@ -868,10 +871,9 @@ export function CreateApplicationForm({
         (config.depends_on !== "node_rendering" ||
           ["ssr", "csr"].includes(renderingType)),
     )
-    // The API requires start_command when rendering_type is "ssr" but the schema
-    // does not say so. Keyed on the name: `app_port` shares the dependency and is optional.
+    // `required_if` from the schema (start_command while rendering_type is "ssr").
     .map((config) =>
-      config.name === "start_command" ? { ...config, required: true } : config,
+      requiredByOtherField(config.required_if, dependencyValues) ? { ...config, required: true } : config,
     );
   const standardFields = visibleFields.filter((config) => !config.advanced);
   const advancedFields = visibleFields.filter((config) => config.advanced);
@@ -1359,26 +1361,15 @@ export function CreateApplicationForm({
       if (values.branch?.trim()) payload.branch = values.branch.trim();
     }
 
-    // Create the generated user first (`generate_system_user` sets no password);
-    // it is removed if the application is refused.
-    let newUser = null;
+    // One request (FS-B9): the account is made with the application, so a refusal
+    // leaves nothing behind to clean up.
     if (values.generate_system_user) {
-      try {
-        const { data } = await createSystemUser({
-          username: values.system_user_username,
-          ...(values.system_user_password ? { password: values.system_user_password } : {}),
-        });
-        newUser = data?.system_user ?? null;
-      } catch (error) {
-        const errors = error.response?.data?.errors ?? {};
-        const mapped = { username: "system_user_username", password: "system_user_password" };
-        const fields = Object.keys(errors).filter((key) => mapped[key]);
-        fields.forEach((key) => form.setError(mapped[key], { type: "server", message: errors[key][0] }));
-        if (fields.length) revealErrors(fields.map((key) => mapped[key]));
-        else toast.error(apiMessage(error, t("form.systemUserCreateFailed")));
-        return;
-      }
-      payload.system_user_id = newUser?.id;
+      delete payload.system_user_id;
+      payload.generate_system_user = true;
+      payload.system_user = {
+        username: values.system_user_username,
+        ...(values.system_user_password ? { password: values.system_user_password } : {}),
+      };
     }
 
     try {
@@ -1392,28 +1383,15 @@ export function CreateApplicationForm({
       );
       toast.success(t("created"));
     } catch (error) {
-      // Rolled back only when the server refused (4xx). After a 5xx or no answer the
-      // application may exist, and removing its system user would break it; the user
-      // is kept and offered under "Use an existing system user".
-      const refused = Boolean(error.response) && error.response.status < 500;
-      if (newUser?.id && !refused) {
-        // Switch to the kept user so pressing Create again does not hit "name taken".
-        await refreshAndWait();
-        form.setValue("generate_system_user", false);
-        form.setValue("system_user_id", String(newUser.id), { shouldValidate: true });
-      }
-      if (newUser?.id && refused) {
-        const removed = await deleteSystemUser(newUser.id).then(() => true, () => false);
-        // Left behind: a retry would find the name taken, so warn and refresh so it is
-        // offered under "Use an existing system user".
-        if (!removed) {
-          toast.warning(t("form.systemUserLeftBehind", { username: newUser.username }), { duration: 15000 });
-          router.refresh();
-        }
+      // The account's own errors come back as `system_user.*`; they belong on its fields.
+      const errors = error.response?.data?.errors ?? {};
+      const userFields = { "system_user.username": "system_user_username", "system_user.password": "system_user_password" };
+      for (const [key, field] of Object.entries(userFields)) {
+        if (errors[key]?.[0]) form.setError(field, { type: "server", message: errors[key][0] });
       }
       handleValidationError(error, form);
       // Surface backend field errors too, including inside the Advanced section.
-      revealErrors(Object.keys(error.response?.data?.errors ?? {}));
+      revealErrors(Object.keys(errors).map((key) => userFields[key] ?? key));
     }
   }
 

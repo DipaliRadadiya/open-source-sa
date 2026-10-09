@@ -16,6 +16,8 @@ const textField = z.object({
     .default([]),
   source: z.string().nullish(),
   depends_on: z.string().nullish(),
+  // Required only while another field has one of these values, e.g. start_command for ssr.
+  required_if: z.record(z.string(), z.array(z.string())).nullish(),
   generate: z.boolean().default(false),
   // package_manager → install+build command. PHP sends an empty map as [].
   build_templates: z
@@ -311,6 +313,9 @@ export const botTrafficBotSchema = z.object({
   category: z.string().nullish(),
   // What the CURRENT settings do to it — policy plus any per-bot rules.
   blocked: z.boolean().default(false),
+  // Requests that actually got 403, counted from the log (not from the current settings).
+  blocked_hits: z.number().default(0),
+  last_status: z.number().nullish(),
   last_seen: z.string().nullish(),
   last_seen_human: z.string().nullish(),
 });

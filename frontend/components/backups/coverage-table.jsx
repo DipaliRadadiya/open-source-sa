@@ -148,7 +148,7 @@ function RunsCell({ row }) {
         {/* Falls back to the backup's own timestamp, not "Never": the runner's
             crash path does not write `last_run_at`. */}
         <span className="truncate text-sm tabular-nums">
-          {target.last_run_at_human ?? lastBackup?.created_at_human ?? t("neverRunShort")}
+          {lastBackup?.created_at_human ?? target.last_backup_at_human ?? t("neverRunShort")}
         </span>
       </div>
       {/* `is_due` outranks the timestamp: a new target's first backup runs on

@@ -4,12 +4,11 @@ import fs from "node:fs";
 
 const read = (p) => fs.readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
 
-test("create: a generated system user is removed only when the server refused (4xx)", () => {
-  // After a 5xx or no answer the application may exist; deleting its user would break it.
+test("create: the generated system user travels with the application, so nothing is rolled back (9 Oct)", () => {
+  // One request since FS-B9; the 4xx/5xx rollback branches had nothing left to do.
   const src = read("components/applications/create-application-form.jsx");
-  assert.match(src, /const refused = Boolean\(error\.response\) && error\.response\.status < 500;/);
-  assert.match(src, /if \(newUser\?\.id && refused\) \{\s*const removed = await deleteSystemUser/);
-  assert.match(src, /form\.setValue\("generate_system_user", false\);\s*form\.setValue\("system_user_id", String\(newUser\.id\)/);
+  assert.doesNotMatch(src, /deleteSystemUser|const refused =/);
+  assert.match(src, /payload\.generate_system_user = true;/);
 });
 
 test("a failed Retry setup says the retry did not start, not the old step again", () => {

@@ -69,6 +69,8 @@ export function SshForm({
     ) {
       risks.push("rootPassword");
     }
+    // Any save, even an unrelated one: the server says whether it will start enforcing.
+    if (security?.save_enforces_ssh_access) risks.push("enforcesAccess");
     return risks;
   }
 

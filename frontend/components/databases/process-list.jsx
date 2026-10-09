@@ -16,7 +16,6 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { LocalSearchInput } from "@/components/data-table/local-search-input";
 import { useConfirmAction } from "@/hooks/use-confirm-action";
-import { isPanelProcess, panelUsernames } from "@/lib/databases/own-connection";
 import { activeQueries, isIdle } from "@/lib/databases/health";
 
 const POLL_MS = 5000;
@@ -60,7 +59,7 @@ function duration(seconds, t) {
 // Idle connections are counted, not listed, so a stuck query is not buried.
 // `fill`: the card takes its parent's height and the list scrolls inside it, with no
 // "Show all" cap: beside the chart it matches the chart's height (Krishna, 8 Oct).
-export function ProcessList({ engine, processes: initial = [], canManage, connections = [], fill = false }) {
+export function ProcessList({ engine, processes: initial = [], canManage, fill = false }) {
   const t = useTranslations("databases.monitor");
   const { refreshAndWait } = useRefresh();
   const [polled, setPolled] = useState(null);
@@ -69,7 +68,6 @@ export function ProcessList({ engine, processes: initial = [], canManage, connec
   const stop = useConfirmAction();
   // The panel's own admin accounts: on a quiet server its monitoring
   // connection may be the only row, and stopping it breaks this screen.
-  const ownUsers = panelUsernames(connections, engine);
   const [expanded, setExpanded] = useState(false);
   // Queries whose full text is open; ids, so a refresh keeps them open.
   const [openQueries, setOpenQueries] = useState(() => new Set());
@@ -219,7 +217,7 @@ export function ProcessList({ engine, processes: initial = [], canManage, connec
                 const open = openQueries.has(process.id);
                 const stopReason = !canManage
                   ? t("noPermission")
-                  : isPanelProcess(process, ownUsers)
+                  : process.is_panel
                     ? t("cannotStopOwn")
                     : null;
                 return (

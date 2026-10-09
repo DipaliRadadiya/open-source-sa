@@ -6,8 +6,9 @@ export function createSystemUser(values) {
   return api.post("/system-users", values);
 }
 
-export function deleteSystemUser(id) {
-  return api.delete(`/system-users/${id}`);
+// `endSessions`: kill the account's processes first (an open SSH session refuses the delete).
+export function deleteSystemUser(id, { endSessions = false } = {}) {
+  return api.delete(`/system-users/${id}`, { params: endSessions ? { end_sessions: 1 } : undefined });
 }
 
 export function setSystemUserPassword(id, values) {

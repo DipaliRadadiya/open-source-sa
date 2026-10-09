@@ -160,10 +160,13 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
     }
   }
 
+  // The run's own flag too: after a reload the local `dryRun` is gone.
+  const runIsDry = dryRun || Boolean(run?.dry_run);
+
   function onFinish() {
     // Reload only when the code changed: a dry run touches nothing, and a failed real
     // run was rolled back by the script's ERR trap.
-    if (!dryRun && run?.status === "succeeded") {
+    if (!runIsDry && run?.status === "succeeded") {
       acknowledgePanelUpdate(window.sessionStorage, run.id);
       window.location.reload();
       return;
@@ -216,11 +219,11 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
       <PageHeader title={title} subtitle={subtitle} />
 
       {isActive(run) ? (
-        <UpdateProgress run={run} reconnecting={reconnecting} slow={slow} dryRun={dryRun} onFinish={onFinish} />
+        <UpdateProgress run={run} reconnecting={reconnecting} slow={slow} dryRun={runIsDry} onFinish={onFinish} />
       ) : (
         <>
           {visibleRun ? (
-            <UpdateProgress run={visibleRun} dryRun={dryRun} onFinish={onFinish} />
+            <UpdateProgress run={visibleRun} dryRun={dryRun || Boolean(visibleRun.dry_run)} onFinish={onFinish} />
           ) : null}
 
           <Card className="gap-0 overflow-hidden py-0">

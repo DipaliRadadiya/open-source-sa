@@ -107,8 +107,9 @@ test("the backups screen never says 'never' when it could not ask", () => {
 
   const panel = strip(read("components/applications/backups/backups-panel.jsx"));
   assert.match(panel, /failed \? t\("historyFailed"\) : t\("noRuns"\)/);
-  // The summary line too: "No backup has run yet" is the same claim.
-  assert.match(panel, /lastBackupUnknown \? "—" : t\("neverRun"\)/);
+  // The summary line reads the target's own last_backup_at (9 Oct), so a failed history
+  // read can no longer turn into "No backup has run yet".
+  assert.match(panel, /target\.last_backup_at_human \?\? \(target\.last_run_at \? t\("noneKept"\) : t\("neverRun"\)\)/);
   for (const locale of LOCALES) {
     assert.equal(
       typeof messages[locale].backups?.application?.historyFailed,

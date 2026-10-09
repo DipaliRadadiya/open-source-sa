@@ -2,11 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { logReadResponseSchema } from "../lib/schemas/log.js";
-import { fileEntrySchema } from "../lib/schemas/file.js";
+import { fileEntrySchema, fileContentSchema } from "../lib/schemas/file.js";
 import { inFolder } from "../lib/files/path-helpers.js";
 
 const read = (p) => fs.readFileSync(p, "utf8");
-const LOCALES = ["en", "es", "hi", "de", "fr", "pt", "ja", "ru"];
 const F = "components/applications/files";
 
 test("a journal / privileged / worker log parses (cursor null), and a bad shape is a failed read", () => {
@@ -35,13 +34,13 @@ test("a bare archive name stays in the folder being looked at", () => {
   assert.equal(inFolder("/backup.zip", "wp-content"), "backup.zip");
 });
 
-test("a missing destination folder is named, not blamed on the item", () => {
-  const helper = read("lib/files/missing-folder.js");
-  assert.match(helper, /error\?\.response\?\.status !== 404/);
-  assert.match(read(`${F}/target-path-dialog.jsx`), /t\("targetDialog\.folderMissing", \{ folder:/);
-  assert.match(read(`${F}/bulk-dialogs.jsx`), /t\("targetDialog\.folderMissing", \{ folder \}\)/);
-  assert.match(read(`${F}/extract-dialog.jsx`), /targetIsFolder/);
-  for (const l of LOCALES) assert.ok(JSON.parse(read(`messages/${l}.json`)).applications.files.targetDialog.folderMissing.includes("{folder}"), l);
+test("a missing destination folder is named by the API on `target`, with no probe request (9 Oct)", () => {
+  // FI-B: the API answers 422 errors.target "The folder … does not exist", so the
+  // listing probe that guessed it from a 404 is gone.
+  assert.ok(!fs.existsSync("lib/files/missing-folder.js"));
+  assert.match(read(`${F}/target-path-dialog.jsx`), /errors\?\.target\?\.\[0\]/);
+  assert.match(read(`${F}/bulk-dialogs.jsx`), /errors\?\.target\?\.\[0\]/);
+  for (const f of ["target-path-dialog.jsx", "bulk-dialogs.jsx"]) assert.doesNotMatch(read(`${F}/${f}`), /destinationMissing|folderMissing/);
 });
 
 test("upload says 'uploaded' after the list shows the files", () => {
@@ -60,4 +59,13 @@ test("Japanese clear-log titles: no stray space, full-width question mark", () =
   const ja = read("messages/ja.json");
   assert.match(ja, /"\{label\}をクリアしますか？"/);
   assert.match(ja, /"\{label\} ログをクリアしますか？"/);
+});
+
+test("the editor sends the version it opened and stops on changed_on_disk (OLD-27, 9 Oct)", () => {
+  const s = read(`${F}/file-editor-dialog.jsx`);
+  assert.match(s, /saveFileContent\(appId, file\.path, contents, loaded\?\.version\)/);
+  assert.match(s, /reason === "changed_on_disk"/);
+  assert.match(s, /disabled=\{!dirty \|\| saving \|\| loading \|\| stale\}/);
+  assert.match(read("lib/api/files.js"), /\.\.\.\(version \? \{ version \} : \{\}\)/);
+  assert.equal(fileContentSchema.parse({ path: "a", content: "", version: "x".repeat(40) }).version, "x".repeat(40));
 });

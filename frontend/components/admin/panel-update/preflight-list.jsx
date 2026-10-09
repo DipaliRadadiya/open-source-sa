@@ -1,6 +1,6 @@
 import { useTranslations, useFormatter } from "next-intl";
 import { Check, CircleX, TriangleAlert } from "lucide-react";
-import { isUnknownDetail, megabytes, parseSizeDetail } from "@/lib/admin/preflight-detail";
+import { isUnknownDetail, megabytes, sizeFromValues } from "@/lib/admin/preflight-detail";
 
 // An ADVISORY check never gets a red row: it does not gate the update (UpdatePreflight::run()).
 // Grids are `auto-fit`, never a fixed column count, so the last row fills.
@@ -31,7 +31,8 @@ export function PreflightList({ checks }) {
   };
 
   // A null parse (or backend "unknown") means no figure to lead with.
-  const withSize = checks.map((c) => ({ ...c, measured: parseSizeDetail(c.detail) }));
+  // `message` is the translated sentence; `detail` stays English for logs.
+  const withSize = checks.map((c) => ({ ...c, measured: sizeFromValues(c.values), text: c.message ?? c.detail }));
   const failed = withSize.filter((c) => !c.passed && !c.advisory);
   const tiles = withSize.filter((c) => (c.passed || c.advisory) && c.measured);
   const rows = withSize.filter((c) => (c.passed || c.advisory) && !c.measured);
@@ -63,9 +64,9 @@ export function PreflightList({ checks }) {
                 </p>
               ) : isUnknownDetail(c.detail) ? (
                 <p className="shrink-0 text-xs text-muted-foreground">{t("detailUnknown")}</p>
-              ) : c.detail ? (
-                <p className="shrink-0 font-mono text-xs break-words text-muted-foreground">
-                  {c.detail}
+              ) : c.text ? (
+                <p className="shrink-0 text-xs break-words text-muted-foreground">
+                  {c.text}
                 </p>
               ) : null}
             </li>
@@ -112,9 +113,9 @@ export function PreflightList({ checks }) {
             >
               <StatusIcon passed={c.passed} advisory={c.advisory} />
               <span className="min-w-0 flex-1">{name(c.key)}</span>
-              {isUnknownDetail(c.detail) ? null : c.detail ? (
-                <span className="min-w-0 basis-full font-mono text-xs break-words text-muted-foreground sm:ml-auto sm:basis-auto">
-                  {c.detail}
+              {isUnknownDetail(c.detail) ? null : c.text ? (
+                <span className="min-w-0 basis-full text-xs break-words text-muted-foreground sm:ml-auto sm:basis-auto">
+                  {c.text}
                 </span>
               ) : null}
             </li>

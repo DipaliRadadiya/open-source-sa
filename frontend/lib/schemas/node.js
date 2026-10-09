@@ -23,6 +23,8 @@ export const nodeVersionSchema = z.object({
   reference: z.string().nullable().optional(),
   started_at: z.string().nullable().optional(),
   started_at_human: z.string().nullable().optional(),
+  // True until a worker picks the install up (another install is still running).
+  queued: z.boolean().nullish(),
   current_step: z.string().nullable().optional(),
   // fnm's own output: the only thing that says why an install stopped.
   output: z.string().nullable().optional(),
@@ -44,6 +46,8 @@ export const nodeGroupSchema = z.object({
     .object({ version: z.string(), path: z.string().nullable().optional() })
     .nullable()
     .optional(),
+  // "unreachable" when nodejs.org did not answer: an empty `installable` is then unknown, not empty.
+  installable_error: z.string().nullish(),
   // Same tolerance as PHP: a bare string or an object, so version skew cannot
   // fail the whole response.
   installable: z

@@ -1,18 +1,15 @@
-// Parses the backend's English `UpdatePreflight` detail; keep in step with its format.
-// Unmatched text falls back to the raw string. Only the memory check sends swap.
-const SIZE = /^(\d+)MB (free|available)(?: \+ (\d+)MB swap)?, (\d+)MB required$/;
-
-export function parseSizeDetail(detail) {
-  const match = SIZE.exec(String(detail ?? "").trim());
-  if (!match) return null;
-  const swapMb = match[3] === undefined ? null : Number(match[3]);
-  return {
+// The disk and memory checks send their figures in `values`; null when not measured.
+export function sizeFromValues(values) {
+  if (!values || !Number.isFinite(values.required_mb)) return null;
+  if (Number.isFinite(values.free_mb)) {
+    return { haveMb: values.free_mb, kind: "free", swapMb: null, needMb: values.required_mb };
+  }
+  if (Number.isFinite(values.available_mb)) {
+    const swapMb = Number.isFinite(values.swap_mb) ? values.swap_mb : null;
     // Swap counts toward what the build can use.
-    haveMb: Number(match[1]) + (swapMb ?? 0),
-    kind: match[2],
-    swapMb,
-    needMb: Number(match[4]),
-  };
+    return { haveMb: values.available_mb + (swapMb ?? 0), kind: "available", swapMb, needMb: values.required_mb };
+  }
+  return null;
 }
 
 /** Every check can report this when it cannot inspect the thing it checks. */

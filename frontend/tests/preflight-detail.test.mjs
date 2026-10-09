@@ -1,43 +1,21 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { isUnknownDetail, megabytes, parseSizeDetail } from "../lib/admin/preflight-detail.js";
+import { isUnknownDetail, megabytes, sizeFromValues } from "../lib/admin/preflight-detail.js";
 
-// The two sentences UpdatePreflight actually emits. If the backend ever changes
-// its wording these stop matching and the raw string is shown instead — which
-// is the old behaviour, not a break.
-test("the two size sentences the backend builds are understood", () => {
-  assert.deepEqual(parseSizeDetail("261887MB free, 2048MB required"), {
-    haveMb: 261887,
-    kind: "free",
-    swapMb: null,
-    needMb: 2048,
-  });
-  assert.deepEqual(parseSizeDetail("1097MB available, 768MB required"), {
-    haveMb: 1097,
-    kind: "available",
-    swapMb: null,
-    needMb: 768,
-  });
+// OLD-19 (9 Oct): the numbers come from `values`, not from parsing the English detail.
+test("the disk and memory figures are read from values", () => {
+  assert.deepEqual(sizeFromValues({ free_mb: 261887, required_mb: 2048 }), { haveMb: 261887, kind: "free", swapMb: null, needMb: 2048 });
+  assert.deepEqual(sizeFromValues({ available_mb: 1097, swap_mb: null, required_mb: 768 }), { haveMb: 1097, kind: "available", swapMb: null, needMb: 768 });
 });
 
-// The memory check grew a swap term. Before this parsed, it fell through to the
-// raw English sentence — the exact regression this file exists to catch.
-test("the memory sentence's swap term is understood and counted", () => {
-  assert.deepEqual(parseSizeDetail("700MB available + 2400MB swap, 2560MB required"), {
-    // Swap is added in: a 700MB box with 2.4GB of swap can finish the build,
-    // and leading with 700MB would tell the admin the opposite.
-    haveMb: 3100,
-    kind: "available",
-    swapMb: 2400,
-    needMb: 2560,
-  });
-  assert.equal(parseSizeDetail("700MB available + 0MB swap, 2560MB required").haveMb, 700);
+test("swap is counted toward what the build can use", () => {
+  // A 700MB box with 2.4GB of swap can finish the build; leading with 700MB would say the opposite.
+  assert.deepEqual(sizeFromValues({ available_mb: 700, swap_mb: 2400, required_mb: 2560 }), { haveMb: 3100, kind: "available", swapMb: 2400, needMb: 2560 });
+  assert.equal(sizeFromValues({ available_mb: 700, swap_mb: 0, required_mb: 2560 }).haveMb, 700);
 });
 
-test("anything else falls through rather than being guessed at", () => {
-  for (const detail of ["unknown", "", null, undefined, "2GB free, 1GB required", "free, required"]) {
-    assert.equal(parseSizeDetail(detail), null, `${detail} should not parse`);
-  }
+test("no values, no figure", () => {
+  for (const values of [null, undefined, {}, { free_mb: 5 }, { required_mb: 5 }]) assert.equal(sizeFromValues(values), null);
 });
 
 test("unknown is the one detail every check can report", () => {

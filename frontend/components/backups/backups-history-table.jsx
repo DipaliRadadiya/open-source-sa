@@ -6,8 +6,7 @@ import { CircleAlert, History, RotateCw, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/format/bytes";
 import { apiDuration } from "@/lib/format/api-date";
-import { reasonText } from "@/lib/backups/reason";
-import { isBackupStale } from "@/lib/backups/stale";
+import { backupFailureText } from "@/lib/backups/reason";
 import { BACKUP_IN_FLIGHT, backupHasArchive } from "@/lib/schemas/backup";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
@@ -53,7 +52,7 @@ function StatusCell({ row, table }) {
   const backup = row.original;
   const reason =
     backup.status === "failed"
-      ? reasonText(backup.reason_title, t("unknownReason"))
+      ? backupFailureText(backup, t("unknownReason"))
       : null;
 
   // One width on every list; badges wrap and the reason is clamped to two
@@ -202,7 +201,7 @@ function ActionsCell({ row, table }) {
     return (
       <div className="flex items-center justify-end gap-2">
         {download}
-        {canClear && isBackupStale(backup) ? (
+        {canClear && backup.clearable ? (
           <Button
             size="sm"
             variant="outline"

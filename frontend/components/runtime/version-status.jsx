@@ -42,6 +42,8 @@ export function RuntimeStatusBadge({ version, namespace }) {
       <Loader2 className="size-3 animate-spin" />
       {state === "removing"
         ? t("versions.statusRemoving")
+        : version.queued
+          ? t("versions.statusQueued")
         : // The apt phase, not a percentage: the total is unknown until apt finishes.
           version.current_step
           ? t(`versions.steps.${version.current_step}`)
@@ -75,6 +77,8 @@ export function RuntimeStatusNotice({ version, versionLabel, namespace }) {
   }
 
   const removing = state === "removing";
+  // No worker has picked it up yet: "installing since 3 minutes ago" would read as stuck.
+  const queued = !removing && version.queued;
 
   return (
     <EmptyState
@@ -82,18 +86,22 @@ export function RuntimeStatusNotice({ version, versionLabel, namespace }) {
       title={
         removing
           ? t("versions.removingTitle", { version: versionLabel })
-          : t("versions.installingTitle", { version: versionLabel })
+          : queued
+            ? t("versions.queuedTitle", { version: versionLabel })
+            : t("versions.installingTitle", { version: versionLabel })
       }
       description={
-        // "Started 17 minutes ago" shows whether it is progressing or stuck.
-        // Removing has its own sentence (the install one promises extensions).
-        version.started_at_human
-          ? t(removing ? "versions.removingSince" : "versions.installingSince", {
-              when: version.started_at_human,
-            })
-          : removing
-            ? t("versions.removingBody")
-            : t("versions.installingBody")
+        queued
+          ? t("versions.queuedBody")
+          : // "Started 17 minutes ago" shows whether it is progressing or stuck.
+            // Removing has its own sentence (the install one promises extensions).
+            version.started_at_human
+            ? t(removing ? "versions.removingSince" : "versions.installingSince", {
+                when: version.started_at_human,
+              })
+            : removing
+              ? t("versions.removingBody")
+              : t("versions.installingBody")
       }
     />
   );

@@ -7,6 +7,7 @@ import { Info } from "lucide-react";
 import {
   clearApplicationLog,
   readApplicationLog,
+  applicationLogDownloadUrl,
 } from "@/lib/api/application-logs";
 import { LINE_OPTIONS } from "@/lib/schemas/log";
 import { matchesSeverity } from "@/lib/logs/severity";
@@ -345,7 +346,7 @@ export function ApplicationLogsPanel({
               t("copiedLines", { count: visible.length }),
             )
           }
-          showDownload={false}
+          downloadUrl={source ? applicationLogDownloadUrl(appId, source.key) : undefined}
           onClear={canManage ? () => setConfirmClear(true) : null}
           clearing={clearing}
           busy={busy}

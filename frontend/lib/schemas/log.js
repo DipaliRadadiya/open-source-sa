@@ -49,6 +49,8 @@ export const logReadSchema = z.object({
   // cannot be tailed by offset (journal, privileged reads, worker logs).
   cursor: z.number().nullable(),
   truncated: z.boolean().optional(),
+  // A search only covered the newest lines, so "no matches" says nothing about the rest.
+  search_window_capped: z.boolean().optional().default(false),
 });
 
 export const logReadResponseSchema = z.object({ log: logReadSchema });

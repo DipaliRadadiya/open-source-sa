@@ -62,7 +62,7 @@ export function retryProvisioning(id) {
 }
 
 // Files are kept unless `remove_files` is sent; removing them is always the user's choice.
-export function deleteApplication(id, { removeFiles = false, removeDatabases = false, removeDockerResources = false } = {}) {
+export function deleteApplication(id, { removeFiles = false, removeDatabases = false, removeDockerResources = false, removeSystemUser = false } = {}) {
   // Flags are omitted when false; the API resolves the site's databases itself.
   const params = {};
   if (removeFiles) params.remove_files = true;
@@ -71,6 +71,8 @@ export function deleteApplication(id, { removeFiles = false, removeDatabases = f
   // volumes it mounts — and only the ones nothing else uses, which the server
   // decides at the moment it deletes, not this call.
   if (removeDockerResources) params.remove_docker_resources = true;
+  // Kept by the server when another application still uses it, or it is signed in.
+  if (removeSystemUser) params.remove_system_user = true;
 
   return api.delete(`/applications/${id}`, {
     params: Object.keys(params).length ? params : undefined,
@@ -140,8 +142,14 @@ export function createApplicationStaging(id, domain) {
   return api.post(`/applications/${id}/staging`, { domain });
 }
 
-export function pushApplicationStaging(id, mode) {
-  return api.post(`/applications/${id}/staging/push`, { mode });
+// `backup`: back the live application up first; the push only runs if that backup verifies.
+export function pushApplicationStaging(id, mode, { backup = false } = {}) {
+  return api.post(`/applications/${id}/staging/push`, { mode, ...(backup ? { backup: true } : {}) });
+}
+
+// Puts a pre-push database copy back; the current database is saved first.
+export function restoreStagingSafetyCopy(id, name) {
+  return api.post(`/applications/${id}/staging/safety-copies/${encodeURIComponent(name)}/restore`);
 }
 
 // Rewrites the vhost and reloads: a wrong value takes the site down until corrected.
@@ -163,4 +171,13 @@ export async function getApplicationStatus(id) {
 /** 202 while it switches (follow `node_version_change`), 200 if already on that version. */
 export function updateNodeVersion(id, nodeVersion) {
   return api.put(`/applications/${id}/node-version`, { node_version: nodeVersion });
+}
+
+// This application's jail only; the server and the caller's own address are refused.
+export function banApplicationIp(id, ip) {
+  return api.post(`/applications/${id}/fail2ban/bans`, { ip });
+}
+
+export function unbanApplicationIp(id, ip) {
+  return api.delete(`/applications/${id}/fail2ban/bans/${encodeURIComponent(ip)}`);
 }

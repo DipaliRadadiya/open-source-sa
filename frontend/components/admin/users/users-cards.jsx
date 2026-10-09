@@ -58,6 +58,7 @@ export function UsersCards({ users, roles = [], currentUserId }) {
                   <span className="text-muted-foreground">—</span>
                 )}
               </CardFact>
+              <CardFact label={t("columns.lastSignIn")} value={user.last_login_at_human ?? t("neverSignedIn")} />
               <CardFact label={t("columns.joined")} value={user.created_at_human} />
             </CardFacts>
           </CardListItem>

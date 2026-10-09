@@ -6,7 +6,7 @@ import { can } from "@/lib/permissions/can";
 import { getApplication, getSiteTypes } from "@/lib/applications/get-applications";
 import { getStorageDestinations } from "@/lib/storage/get-storage";
 import { cookies } from "next/headers";
-import { getActiveRestore, getBackupTarget, getBackupTargetOptions, getBackups } from "@/lib/backups/get-backups";
+import { getActiveRestore, getBackupTarget, getApplicationBackups, getBackupTargetOptions } from "@/lib/backups/get-backups";
 import { DISMISSED_RESTORES_COOKIE, parseDismissedRestores } from "@/lib/backups/dismissed-restores";
 import { getDatabaseCounts, getApplicationDatabases, getEngines, getUnattachedDatabases } from "@/lib/databases/get-databases";
 import { siteNeedsDatabase } from "@/lib/backups/database-availability";
@@ -60,7 +60,7 @@ export default async function ApplicationBackupsPage({ params }) {
     settled ? getBackupTarget(id) : Promise.resolve({ target: null }),
     getStorageDestinations(),
     settled
-      ? getBackups({ application: id, per_page: 5 })
+      ? getApplicationBackups(id, { per_page: 5 })
       : Promise.resolve({ backups: [], meta: { total: 0 } }),
     // Seeded from the server so a reload still shows a running restore.
     settled && canRestore
@@ -88,7 +88,7 @@ export default async function ApplicationBackupsPage({ params }) {
   // archive, and lowering "keep" must say how many it really deletes.
   const everyBackup =
     (canRestore || canManage) && !backupsFailed && meta.total > backups.length
-      ? (await getBackups({ application: id, per_page: 100 })).backups
+      ? (await getApplicationBackups(id, { per_page: 100 })).backups
       : backups;
   const archiveDestinations =
     canRestore && meta.total > backups.length ? everyBackup.map((backup) => backup.storage_destination_name) : [];

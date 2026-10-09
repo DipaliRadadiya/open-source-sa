@@ -11,10 +11,11 @@ import { CreateStagingDialog } from "@/components/applications/staging/create-st
 import { PushStagingDialog } from "@/components/applications/staging/push-staging-dialog";
 import { DeleteApplicationDialog } from "@/components/applications/delete-application-dialog";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { SafetyCopiesCard } from "@/components/applications/staging/safety-copies-card";
 
 // Push takes production offline and rsyncs with `--delete` (`files` mode keeps no
 // safety copy), so it needs typed confirmation and has no default mode.
-export function StagingPanel({ appId, production, staging, canManage, canDelete = false }) {
+export function StagingPanel({ appId, production, staging, canManage, canDelete = false, canBackUp = false, safetyCopies = [] }) {
   const t = useTranslations("applications.staging");
   const tApp = useTranslations("applications");
   const [creating, setCreating] = useState(false);
@@ -150,6 +151,8 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
         </div>
       </Card>
 
+      {canManage && safetyCopies.length ? <SafetyCopiesCard appId={appId} copies={safetyCopies} /> : null}
+
       {/* Kept apart from Push so the two are never one misclick apart. */}
       <Card className="gap-0 overflow-hidden py-0">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
@@ -179,6 +182,7 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
         staging={staging}
         open={pushing}
         onOpenChange={setPushing}
+        canBackUp={canBackUp}
       />
     </div>
   );

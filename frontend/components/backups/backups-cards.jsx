@@ -3,8 +3,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { CircleAlert, History, RotateCw, Trash2 } from "lucide-react";
 import { formatBytes } from "@/lib/format/bytes";
 import { apiDuration } from "@/lib/format/api-date";
-import { reasonText } from "@/lib/backups/reason";
-import { isBackupStale } from "@/lib/backups/stale";
+import { backupFailureText } from "@/lib/backups/reason";
 import { BACKUP_IN_FLIGHT } from "@/lib/schemas/backup";
 import { Button } from "@/components/ui/button";
 import { ActionIcon } from "@/components/ui/action-icon";
@@ -97,7 +96,7 @@ export function BackupsCards({
 
             {backup.status === "failed" ? (
               <p className="text-xs text-muted-foreground">
-                {reasonText(backup.reason_title, t("unknownReason"))}
+                {backupFailureText(backup, t("unknownReason"))}
               </p>
             ) : null}
 
@@ -122,7 +121,7 @@ export function BackupsCards({
                 <DownloadBackupButton backup={backup} canDownload={canRestore} label />
 
                 {["pending", "running"].includes(backup.status) ? (
-                  canClear && isBackupStale(backup) ? (
+                  canClear && backup.clearable ? (
                     <Button
                       size="sm"
                       variant="outline"

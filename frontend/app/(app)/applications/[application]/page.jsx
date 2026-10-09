@@ -9,8 +9,8 @@ import { installedNodeVersions } from "@/lib/node/installed-node-versions";
 import { siteNeedsDatabase } from "@/lib/backups/database-availability";
 import { can } from "@/lib/permissions/can";
 import { getApplication, getApplicationIssues } from "@/lib/applications/get-applications";
-import { getBackupTarget, getBackups } from "@/lib/backups/get-backups";
-import { BACKUP_IN_FLIGHT } from "@/lib/schemas/backup";
+import { getApplicationBackups, getBackupTarget } from "@/lib/backups/get-backups";
+import { nothingKept } from "@/lib/backups/reason";
 import { getGitAccounts } from "@/lib/git/get-git";
 import { gitProviderFor, providersByAccountId } from "@/lib/applications/git-provider";
 import { getLatestDeployment } from "@/lib/applications/get-deployments";
@@ -119,7 +119,7 @@ export default async function ApplicationDetailPage({ params }) {
       : Promise.resolve({ target: null, failed: false }),
     // One row is enough: `GET /backups` orders by newest id, so a run in flight is first.
     settled && canSeeBackups
-      ? getBackups({ application: id, per_page: 1 })
+      ? getApplicationBackups(id, { per_page: 1 })
       : Promise.resolve({ backups: [] }),
     settled && canSeeDatabases
       ? getApplicationDatabases(id)
@@ -272,9 +272,7 @@ export default async function ApplicationDetailPage({ params }) {
     canSeeBackups && !backup.failed
       ? {
           target: backup.target,
-          noneKept:
-            !backupRuns.failed &&
-            backupRuns.meta?.total === backupRuns.backups.filter((b) => BACKUP_IN_FLIGHT.includes(b.status)).length,
+          noneKept: nothingKept(backup.target),
         }
       : null;
   const deployTile = isGit && canSeeDeployment ? { inFlight: Boolean(latestDeploy.latest?.in_flight) } : null;
@@ -349,6 +347,7 @@ export default async function ApplicationDetailPage({ params }) {
               <ApplicationRowActions
                 application={application}
                 canManage={canManage}
+                canRemoveSystemUser={can(permissions, "system_user", "manage")}
                 showNavigation={false}
                 shortcuts={headerShortcuts}
                 redirectTo="/applications"

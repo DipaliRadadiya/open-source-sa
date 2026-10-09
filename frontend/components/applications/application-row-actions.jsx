@@ -52,6 +52,7 @@ export function ApplicationRowActions({
   canManage = false,
   // Only the list passes this; the app dashboard has its own Magic Login button.
   canMagicLogin = false,
+  canRemoveSystemUser = false,
   // On the app's own dashboard, "Open dashboard" and "Visit" would be redundant.
   showNavigation = true,
   // Permission-filtered keys of app screens. Only the detail header passes these,
@@ -316,6 +317,7 @@ export function ApplicationRowActions({
         onOpenChange={setDeleteOpen}
         afterDelete={afterDelete}
         redirectTo={redirectTo}
+        canRemoveSystemUser={canRemoveSystemUser}
       />
     </div>
   );

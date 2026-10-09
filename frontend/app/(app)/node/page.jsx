@@ -98,13 +98,16 @@ export default async function NodePage({ searchParams }) {
             // With nothing installable there is no install button; explain why instead.
             description={
               (node?.installable ?? []).length === 0
-                ? t("empty.noneInstallable")
+                ? node?.installable_error
+                  ? t("install.catalogUnreachable")
+                  : t("empty.noneInstallable")
                 : t("empty.description")
             }
             action={
               <InstallVersionButton
                 runtime="node"
                 installable={node?.installable ?? []}
+                catalogError={node?.installable_error ?? null}
                 installed={versions}
                 canManage={canManage}
                 lifecycleAvailable={lifecycleAvailable}
@@ -127,6 +130,7 @@ export default async function NodePage({ searchParams }) {
                 <InstallVersionButton
                   runtime="node"
                   installable={node?.installable ?? []}
+                  catalogError={node?.installable_error ?? null}
                   installed={versions}
                   canManage={canManage}
                   lifecycleAvailable={lifecycleAvailable}
@@ -147,6 +151,7 @@ export default async function NodePage({ searchParams }) {
                 <InstallVersionButton
                   runtime="node"
                   installable={node?.installable ?? []}
+                  catalogError={node?.installable_error ?? null}
                   installed={versions}
                   canManage={canManage}
                   lifecycleAvailable={lifecycleAvailable}

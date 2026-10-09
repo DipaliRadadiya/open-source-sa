@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { FileCode2, Loader2, History, Download, TriangleAlert } from "lucide-react";
+import { FileCode2, Loader2, History, Download, TriangleAlert, RotateCw } from "lucide-react";
 import { getFileContent, saveFileContent, fileDownloadUrl } from "@/lib/api/files";
 import { fileContentSchema } from "@/lib/schemas/file";
 import { apiMessage } from "@/lib/api/error-message";
@@ -60,6 +60,8 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
   // Why the last save was refused, shown beside the unsaved text rather than in a
   // toast that clears itself.
   const [saveError, setSaveError] = useState(null);
+  // The file changed on disk after it was opened: Save would overwrite someone else's edit.
+  const [stale, setStale] = useState(false);
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
 
@@ -68,6 +70,7 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
   async function reloadAfterRestore() {
     setLoading(true);
     setSaveError(null);
+    setStale(false);
     try {
       const { data } = await getFileContent(appId, file.path);
       const parsed = fileContentSchema.safeParse(data);
@@ -127,11 +130,11 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
   const canEdit = canManage;
 
   async function save() {
-    if (!dirty || saving) return;
+    if (!dirty || saving || stale) return;
     setSaving(true);
     setSaveError(null);
     try {
-      await saveFileContent(appId, file.path, contents);
+      await saveFileContent(appId, file.path, contents, loaded?.version);
       await refreshAndWait();
       toast.success(t("editor.saved"));
       saved.current = true;
@@ -140,6 +143,7 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
       // Shown in the dialog, not as a toast: the unsaved work stays open, so the reason
       // must too.
       setSaveError(apiMessage(error, t("editor.saveFailed")));
+      setStale(error.response?.status === 409 && error.response?.data?.reason === "changed_on_disk");
     } finally {
       setSaving(false);
     }
@@ -238,7 +242,8 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
                 value={contents}
                 onChange={(next) => {
                   // Editing is the retry; the previous error no longer describes what is on screen.
-                  if (saveError) setSaveError(null);
+                  // Not when stale: typing does not make the file on disk any less changed.
+                  if (saveError && !stale) setSaveError(null);
                   setContents(next);
                 }}
                 readOnly={!canEdit}
@@ -255,7 +260,14 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
             className="flex min-w-0 items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
           >
             <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-            <span className="min-w-0 break-words">{saveError}</span>
+            <span className="min-w-0 flex-1 break-words">{saveError}</span>
+            {stale ? (
+              // Copy is in the editor bar, so the user can keep their text before reloading.
+              <Button variant="outline" size="sm" className="-my-1 shrink-0 text-foreground" onClick={reloadAfterRestore}>
+                <RotateCw className="size-4" />
+                {t("editor.reload")}
+              </Button>
+            ) : null}
           </div>
         ) : null}
 
@@ -264,8 +276,8 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
             {t("cancel")}
           </Button>
           {canEdit && !blocked ? (
-            <ReasonTooltip reason={!dirty && !saving && !loading ? tc("nothingToSave") : null}>
-            <Button onClick={save} disabled={!dirty || saving || loading}>
+            <ReasonTooltip reason={stale ? t("editor.reloadFirst") : !dirty && !saving && !loading ? tc("nothingToSave") : null}>
+            <Button onClick={save} disabled={!dirty || saving || loading || stale}>
               {saving ? <Loader2 className="size-4 animate-spin" /> : null}
               {t("editor.save")}
               {/* Inside the button, as this action's shortcut. Hidden while saving so it does

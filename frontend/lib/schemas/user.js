@@ -27,6 +27,10 @@ export const userSchema = z.object({
   roles: z.array(roleRefSchema).default([]),
   created_at: z.string().nullable().optional(),
   created_at_human: z.string().nullable().optional(),
+  // Null until the first sign-in.
+  last_login_at: z.string().nullish(),
+  last_login_at_human: z.string().nullish(),
+  last_login_ip: z.string().nullish(),
 });
 
 export const usersMetaSchema = z.object({

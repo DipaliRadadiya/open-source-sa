@@ -83,6 +83,18 @@ function JoinedCell({ row }) {
   );
 }
 
+function LastSignInCell({ row }) {
+  const t = useTranslations("users");
+  const user = row.original;
+  if (!user.last_login_at_human) return <span className="text-muted-foreground">{t("neverSignedIn")}</span>;
+  return (
+    <span className="whitespace-nowrap">
+      {user.last_login_at_human}
+      {user.last_login_ip ? <span className="block font-mono text-xs text-muted-foreground">{user.last_login_ip}</span> : null}
+    </span>
+  );
+}
+
 function RowActionsCell({ row, table }) {
   const { roles, rolesFailed, currentUserId } = table.options.meta;
   return (
@@ -142,6 +154,7 @@ export function UsersTable({ data, roles = [], rolesFailed = false, currentUserI
     { accessorKey: "username", header: t("columns.username"), cell: UsernameCell },
     { accessorKey: "is_admin", header: t("columns.accountType"), cell: AccountTypeCell },
     { id: "roles", header: t("columns.roles"), cell: RolesCell },
+    { accessorKey: "last_login_at_human", header: t("columns.lastSignIn"), cell: LastSignInCell },
     { accessorKey: "created_at_human", header: t("columns.joined"), cell: JoinedCell },
     {
       id: "actions",

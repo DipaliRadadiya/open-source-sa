@@ -3,8 +3,7 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Folder, Loader2 } from "lucide-react";
 import { apiMessage } from "@/lib/api/error-message";
-import { destinationMissing } from "@/lib/files/missing-folder";
-import { dirname, placeTarget } from "@/lib/files/path-helpers";
+import { placeTarget } from "@/lib/files/path-helpers";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -41,9 +40,6 @@ export function TargetPathDialog({
   // Extract-at-root is the one case where the target is the site root, which this
   // app represents as an empty path; every other use requires a non-empty target.
   allowEmpty = false,
-  // Extract's value is the folder itself; elsewhere the folder is the value minus
-  // its last segment.
-  targetIsFolder = false,
   emptyPlaceholder,
   // Rendered above the path field with the field's state; Compress uses it for the
   // format choice, which rewrites the extension in the path.
@@ -115,11 +111,10 @@ export function TargetPathDialog({
         onOpenChange?.(false);
       });
     } catch (err) {
+      // A missing destination folder comes back on `target`, named by the API.
       const targetError = err.response?.data?.errors?.target?.[0];
       if (targetError) {
         setError(targetError);
-      } else if (await destinationMissing(appId, err, targetIsFolder ? trimmed : dirname(trimmed))) {
-        setError(t("targetDialog.folderMissing", { folder: targetIsFolder ? trimmed : dirname(trimmed) }));
       } else if (REFUSED_HERE.has(err.response?.status)) {
         // The API sends "already exists" / "not found" with no field key; shown in the
         // dialog since it stays open.

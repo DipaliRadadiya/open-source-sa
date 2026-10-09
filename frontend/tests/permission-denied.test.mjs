@@ -191,7 +191,7 @@ test("the clear button names what it actually clears", () => {
   assert.match(read("components/databases/databases-table.jsx"), /t\("empty\.clearSearch"\)/);
 });
 
-test("deleting an application admits the system user survives", () => {
+test("deleting an application offers to remove the system user, or admits it survives (9 Oct)", () => {
   /*
    * Create generates a Linux account nobody asked for; delete removes the
    * application, its files and its databases and leaves the account behind.
@@ -201,8 +201,11 @@ test("deleting an application admits the system user survives", () => {
    * this server ended up with `qa-throwaway` and `prestashop` owning nothing.
    */
   const dlg = read("components/applications/delete-application-dialog.jsx");
-  assert.match(dlg, /application\?\.system_user\?\.username \?/, "only when there is one to name");
-  assert.match(dlg, /t\("systemUserStays", \{ username: application\.system_user\.username \}\)/);
+  // Since OLD-20 the API can remove it (`remove_system_user`, needs system_user manage):
+  // a checkbox when allowed, the plain sentence otherwise.
+  assert.match(dlg, /systemUsername && canRemoveSystemUser \?/);
+  assert.match(dlg, /t\("systemUserStays", \{ username: systemUsername \}\)/);
+  assert.match(read("lib/api/applications.js"), /if \(removeSystemUser\) params\.remove_system_user = true;/);
 
   for (const locale of LOCALES) {
     const s = JSON.parse(read(`messages/${locale}.json`)).applications.delete.systemUserStays;

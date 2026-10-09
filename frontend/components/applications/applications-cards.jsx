@@ -17,6 +17,7 @@ export function ApplicationsCards({
   applications = [],
   canManage = false,
   canMagicLogin = false,
+  canRemoveSystemUser = false,
   gitProviders = new Map(),
 }) {
   const t = useTranslations("applications");
@@ -65,7 +66,7 @@ export function ApplicationsCards({
             </div>
             {/* shrink-0 keeps the menu in place however long the name is. */}
             <div className="-me-2 -mt-1 shrink-0">
-              <ApplicationRowActions application={application} canManage={canManage} canMagicLogin={canMagicLogin} />
+              <ApplicationRowActions application={application} canManage={canManage} canMagicLogin={canMagicLogin} canRemoveSystemUser={canRemoveSystemUser} />
             </div>
           </div>
 

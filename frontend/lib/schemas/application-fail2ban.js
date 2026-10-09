@@ -14,6 +14,15 @@ export const applicationFail2banResponseSchema = z.object({
   // defaults: a starting point only, never a way back to default.
   jail_template: z.string().default(""),
   filter_template: z.string().default(""),
+  // "wordpress_only" on other site types: the default rules match nothing there.
+  filter_scope: z.string().nullish(),
+  filter_note: z.string().nullish(),
+});
+
+// This application's own jail. `jail` is null when it is not running.
+export const applicationBansResponseSchema = z.object({
+  jail: z.string().nullish(),
+  banned: z.array(z.string()).default([]),
 });
 
 // The editor warns, not blocks, on removal: a real config may name an extra logpath directly.

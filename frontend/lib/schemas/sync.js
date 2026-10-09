@@ -112,3 +112,12 @@ export function confidenceBand(confidence) {
   if (confidence >= 60) return "medium";
   return "low";
 }
+
+// Whether moving off the old pm2 agent still has work left (FS-C26).
+export const syncHandoverSchema = z.object({
+  needed: z.boolean().default(false),
+  agent: z.object({ unit: z.string().nullish(), running: z.boolean().default(false) }).nullish(),
+  users: z
+    .array(z.object({ username: z.string(), boot_unit_healthy: z.boolean().nullish(), log_rotation: z.boolean().nullish() }))
+    .default([]),
+});

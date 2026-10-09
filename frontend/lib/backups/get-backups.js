@@ -31,7 +31,16 @@ function perPage(value) {
 
 // Paginated by the server: the table grows without bound.
 export async function getBackups(searchParams = {}) {
-  const result = await read("/backups", backupsResponseSchema, {
+  return listBackups("/backups", searchParams);
+}
+
+// One application's history under `app_backup`; the server-wide list needs `backup`.
+export async function getApplicationBackups(applicationId, searchParams = {}) {
+  return listBackups(`/applications/${applicationId}/backups`, searchParams);
+}
+
+async function listBackups(path, searchParams) {
+  const result = await read(path, backupsResponseSchema, {
     searchParams: {
         page: searchParams.page,
         per_page: perPage(searchParams.per_page),

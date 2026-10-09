@@ -187,7 +187,9 @@
       "cancel": "Cancel",
       "confirm": "Delete user",
       "deleting": "Deleting…",
-      "copyUsername": "Copy username"
+      "copyUsername": "Copy username",
+      "endSessions": "End sessions",
+      "endSessionsHint": "Signs {username} out and stops anything it is running, then deletes the account. Leave it off to be told instead."
     },
     "access": {
       "title": "Access",
@@ -370,7 +372,8 @@
       "username": "Username",
       "accountType": "Account type",
       "roles": "Roles",
-      "joined": "Joined"
+      "joined": "Joined",
+      "lastSignIn": "Last sign-in"
     },
     "actions": {
       "label": "Actions",
@@ -441,7 +444,8 @@
       "starting": "Starting…",
       "cancel": "Cancel"
     },
-    "loadFailed": "Users could not be loaded. Try again in a moment."
+    "loadFailed": "Users could not be loaded. Try again in a moment.",
+    "neverSignedIn": "Never"
   },
   "roles": {
     "sync": {
@@ -645,7 +649,10 @@
     "system": "System",
     "filter": {
       "allTypes": "All types",
-      "allActions": "All actions"
+      "allActions": "All actions",
+      "kind": "What happened",
+      "allKinds": "All events",
+      "security": "Security events"
     },
     "columns": {
       "when": "When",
@@ -2009,7 +2016,8 @@
         "passwordOff": "Password logins stop working. Without a key already on this server, you're locked out.",
         "rootOff": "Root can no longer log in. Make sure another user can, with sudo.",
         "rootPassword": "Root will be able to log in with a password — the account attacks try first.",
-        "testFirst": "Test the new settings in another terminal before closing this one."
+        "testFirst": "Test the new settings in another terminal before closing this one.",
+        "enforcesAccess": "From now on, the SSH login switch on each system user takes effect: users with it off can no longer log in over SSH (sudo users still can)."
       },
       "rootPasswordWarning": "Root can log in with a password right now. That is the account automated attacks try first — set Root login to “Key only”.",
       "signIn": {
@@ -2272,7 +2280,13 @@
       "completeInstall": "Complete install",
       "completing": "Completing PHP {version}…",
       "incompleteDefault": "Complete the install first — the default PHP is what runs when nothing pins a version.",
-      "statusRemoveFailed": "Removal failed"
+      "statusRemoveFailed": "Removal failed",
+      "dismiss": "Dismiss",
+      "dismissed": "Cleared the failed install of PHP {version}.",
+      "dismissFailed": "Couldn't clear the failed install.",
+      "statusQueued": "Waiting for another install",
+      "queuedTitle": "PHP {version} is waiting to install",
+      "queuedBody": "Another install is running. This one starts as soon as it finishes."
     },
     "extensions": {
       "title": "Extensions",
@@ -2530,7 +2544,13 @@
       "removingSince": "Started {when}. The page updates on its own.",
       "retry": "Try again",
       "retrying": "Installing Node {version} again…",
-      "statusRemoveFailed": "Removal failed"
+      "statusRemoveFailed": "Removal failed",
+      "dismiss": "Dismiss",
+      "dismissed": "Cleared the failed install of Node.js {version}.",
+      "dismissFailed": "Couldn't clear the failed install.",
+      "statusQueued": "Waiting for another install",
+      "queuedTitle": "Node.js {version} is waiting to install",
+      "queuedBody": "Another install is running. This one starts as soon as it finishes."
     },
     "install": {
       "action": "Install version",
@@ -2545,7 +2565,8 @@
       "eolWarning": "Node.js {version} no longer gets security fixes. Install it only if an application needs it.",
       "noneAvailable": "The list of Node.js versions could not be fetched. Check that the server can reach nodejs.org, then reload the page.",
       "installedTag": "Installed",
-      "allInstalled": "Every version this server offers is already installed."
+      "allInstalled": "Every version this server offers is already installed.",
+      "catalogUnreachable": "This server can't reach nodejs.org, so the list of versions can't be loaded. Check the server's network access, then reload."
     },
     "lifecycle": {
       "current": "Current",
@@ -3540,6 +3561,12 @@
         "description": "You changed or removed {keys}. The panel set these up and the application depends on them: a new encryption key makes every saved credential unreadable, and a different port or folder no longer matches the service the panel runs.",
         "cancel": "Keep editing",
         "confirm": "Save anyway"
+      },
+      "preflight": {
+        "title": "Save with these warnings?",
+        "description": "Nothing has been saved yet. These may stop the application from starting with this file.",
+        "cancel": "Keep editing",
+        "confirm": "Save anyway"
       }
     },
     "title": "Applications",
@@ -3827,8 +3854,6 @@
       "systemUserGeneratePassword": "Generate",
       "systemUserPasswordHint": "Generated for you. Keep it, change it or clear it. You can see it again later on the System Users page.",
       "systemUserNew": "{username} (new)",
-      "systemUserCreateFailed": "The system user couldn’t be created, so the application wasn’t created either.",
-      "systemUserLeftBehind": "The system user {username} was created but couldn’t be removed. Choose it under “Use an existing system user”, or delete it on System Users.",
       "tablePrefixInvalid": "Start with a letter, use only letters and numbers, and end with an underscore (for example jml_)."
     },
     "actions": {
@@ -3868,7 +3893,9 @@
       "removeFilesHint": "Off, the application is removed from the panel but its files stay on the server. On, the files and its backups are deleted and cannot be recovered.",
       "removeDocker": "Also delete this site's Docker network and volumes ({count})",
       "removeDockerOn": "{names} will be deleted. Anything another site is still using is kept — the server checks at the moment it deletes, not now.",
-      "removeDockerOff": "{names} stays on the server. Its data survives, and you can remove it later from the Docker page."
+      "removeDockerOff": "{names} stays on the server. Its data survives, and you can remove it later from the Docker page.",
+      "removeSystemUser": "Also remove the system user {username}",
+      "removeSystemUserOn": "It's removed only if no other application uses it and nobody is signed in as it. You'll be told if it was kept."
     },
     "systemUserMissing": {
       "title": "This application's system user is missing",
@@ -4416,7 +4443,9 @@
         "discardTitle": "Discard unsaved changes?",
         "discardDescription": "Your edits to this file haven't been saved. Closing now will lose them.",
         "keepEditing": "Keep editing",
-        "discardConfirm": "Discard changes"
+        "discardConfirm": "Discard changes",
+        "reload": "Reload file",
+        "reloadFirst": "Reload the file first. It changed after you opened it."
       },
       "restore": {
         "action": "Restore",
@@ -4431,8 +4460,7 @@
         "rootPlaceholder": "Application folder",
         "pathLabelHint": "A name on its own stays in this folder. A path is counted from the top of the application's folder.",
         "destination": "Extracts into",
-        "copyDestination": "Copy this path",
-        "folderMissing": "The folder “{folder}” doesn't exist. Create it first, or pick another one."
+        "copyDestination": "Copy this path"
       },
       "rename": {
         "title": "Rename or move \"{name}\"",
@@ -4897,7 +4925,7 @@
         "range": "{days} days",
         "unavailable": "This application’s access log couldn’t be read, so there’s nothing to show yet. This isn’t the same as no bots visiting.",
         "empty": "No AI bots have visited in the last {days} days.",
-        "summary": "{bots, plural, one {# bot} other {# bots}} · {hits, plural, one {# request} other {# requests}} · {blocked, plural, other {# from bots you block}}",
+        "summary": "{bots, plural, one {# bot} other {# bots}} · {hits, plural, one {# request} other {# requests}} · {blocked, plural, other {# blocked}}",
         "partial": "Only the most recent part of the log was scanned, so busy applications may have had more.",
         "blocked": "Block",
         "allowed": "Allow",
@@ -4913,7 +4941,8 @@
           "search": "AI search",
           "agent": "AI assistant",
           "custom": "Your own rule"
-        }
+        },
+        "blockedHits": "{count, plural, other {# blocked}}"
       },
       "groupLabels": {
         "block_training": "Training crawlers",
@@ -5391,7 +5420,27 @@
       "tooLong": "That config is too long. Each file has to stay under 65,535 characters.",
       "invalidConfig": "That config cannot be saved. Check both files are filled in.",
       "outputShowAll": "Show everything fail2ban said",
-      "outputErrorsOnly": "Show only the errors"
+      "outputErrorsOnly": "Show only the errors",
+      "bans": {
+        "title": "Banned addresses",
+        "subtitle": "Addresses this application's jail has blocked. A ban here blocks this application only, not the server.",
+        "none": "Nobody is banned right now.",
+        "notRunning": "This application's jail isn't running, so nothing can be banned here yet.",
+        "noPermission": "Your role does not include Fail2ban for this application with Manage access.",
+        "loadFailed": "The banned addresses couldn't be loaded.",
+        "banLabel": "Ban an address",
+        "ban": "Ban",
+        "typeIp": "Type an IP address first.",
+        "invalidIp": "Enter a single IPv4 or IPv6 address, like 203.0.113.10.",
+        "banned": "{ip} is banned from this application.",
+        "banFailed": "The address couldn't be banned.",
+        "unban": "Unban",
+        "unbanned": "{ip} can reach this application again.",
+        "unbanFailed": "The address couldn't be unbanned.",
+        "unbanTitle": "Unban {ip}?",
+        "unbanBody": "It can reach this application again straight away. If it keeps failing logins, the jail bans it again.",
+        "cancel": "Cancel"
+      }
     },
     "staging": {
       "pageTitle": "Staging Area",
@@ -5457,7 +5506,11 @@
         "failed": "The push did not finish.",
         "copyAge": "Copy made {age}",
         "copyDomain": "Copy domain",
-        "whileRunning": "The application is offline while this runs. If it fails partway, production is put back as it was."
+        "whileRunning": "The application is offline while this runs. If it fails partway, production is put back as it was.",
+        "backupToggle": "Back up the live application first",
+        "backupOn": "A backup runs first. The push only starts if it finishes, so you can restore from it afterwards.",
+        "backupOff": "No backup is taken. There is no undo once the push finishes.",
+        "pushingWithBackup": "Backing up, then pushing…"
       },
       "isCopy": {
         "title": "This application is a staging copy",
@@ -5469,6 +5522,18 @@
         "title": "Delete staging",
         "body": "Deletes the staging application {domain}. {production} is not touched.",
         "action": "Delete"
+      },
+      "safetyCopies": {
+        "title": "Database copies saved before a push",
+        "subtitle": "Each database push saves the live database first. Put one back to undo a push.",
+        "restore": "Put back",
+        "restoring": "Putting back…",
+        "restoringNote": "The current live database is saved first, so this can be undone too.",
+        "cancel": "Cancel",
+        "confirmTitle": "Put this database copy back?",
+        "confirmBody": "The live database is replaced with the copy from {when}. Anything written to it since then is replaced too. The current database is saved first.",
+        "restored": "The live database was put back from the copy from {when}.",
+        "restoreFailed": "The database copy couldn't be put back."
       }
     },
     "stagingBadge": "Staging",
@@ -6974,7 +7039,23 @@
       "unignoreFailed": "Couldn't undo that.",
       "addFailed": "Couldn't start adding to the panel."
     },
-    "stalled": "This scan has stopped reporting progress. It may have failed on the server."
+    "stalled": "This scan has stopped reporting progress. It may have failed on the server.",
+    "handover": {
+      "title": "Finish moving from the old agent",
+      "body": "Your applications are adopted, but the old agent still has jobs this panel should take over.",
+      "agentRunning": "The old agent ({unit}) is still running.",
+      "bootMissing": "{username}: its applications won't start again after a reboot.",
+      "rotationMissing": "{username}: its logs are never rotated, so they keep growing.",
+      "action": "Finish the move",
+      "working": "Finishing…",
+      "done": "The old agent is retired and its jobs are now run by this panel.",
+      "partial": "Some steps didn't finish:",
+      "agentFailed": "Stopping the old agent ({unit}).",
+      "bootFailed": "Start-on-boot for {username}.",
+      "rotationFailed": "Log rotation for {username}.",
+      "failed": "The move couldn't be finished.",
+      "noPermission": "Your role does not include Server Sync with Manage access."
+    }
   },
   "central": {
     "title": "Central management",

@@ -96,7 +96,7 @@ export function AppStatusTiles({
 
   if (backup) {
     const state = !backup.target ? "unprotected" : !backup.target.enabled || backup.target.frequency === "manual" ? "paused" : "protected";
-    const last = backup.target?.last_run_at_human;
+    const last = backup.target?.last_backup_at_human;
     tiles.push({
       key: "backups",
       icon: ArchiveRestore,

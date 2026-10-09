@@ -1,43 +1,28 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { isBackupStale } from "../lib/backups/stale.js";
+import { backupFailureText, nothingKept } from "../lib/backups/reason.js";
 import { phpSettingsFormSchema } from "../lib/schemas/php-settings.js";
-import { backupTargetFormSchema } from "../lib/schemas/backup.js";
+import { backupSchema, backupTargetFormSchema } from "../lib/schemas/backup.js";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const LOCALES = ["en", "es", "hi", "de", "fr", "pt", "ja", "ru"];
 const messages = Object.fromEntries(LOCALES.map((l) => [l, JSON.parse(read(`messages/${l}.json`))]));
 const at = (obj, path) => path.split(".").reduce((node, key) => node?.[key], obj);
 
-// "DD-MM-YYYY HH:mm:ss", UTC wall clock, as BackupResource formats it.
-const stamp = (ms) => {
-  const d = new Date(ms);
-  const p = (n) => String(n).padStart(2, "0");
-  return `${p(d.getUTCDate())}-${p(d.getUTCMonth() + 1)}-${d.getUTCFullYear()} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}`;
-};
-
-test("BK-B: Clear is offered only once the server would accept it", () => {
-  const now = Date.UTC(2026, 8, 25, 12, 0, 0);
-  const min = 60 * 1000;
-  // A run one second old — where Clear used to appear.
-  assert.equal(isBackupStale({ status: "running", started_at: stamp(now - 1000) }, now), false);
-  // No heartbeat: stale after 65 minutes from the start.
-  assert.equal(isBackupStale({ status: "pending", created_at: stamp(now - 64 * min) }, now), false);
-  assert.equal(isBackupStale({ status: "pending", created_at: stamp(now - 66 * min) }, now), true);
-  // A heartbeat keeps it alive whatever its age; stale 25 minutes after the last one.
-  assert.equal(isBackupStale({ status: "running", started_at: stamp(now - 300 * min), progress_at: stamp(now - 10 * min) }, now), false);
-  assert.equal(isBackupStale({ status: "running", started_at: stamp(now - 300 * min), progress_at: stamp(now - 26 * min) }, now), true);
-  // Finished runs are never stale.
-  assert.equal(isBackupStale({ status: "verified", created_at: stamp(now - 999 * min) }, now), false);
-  assert.match(read("components/backups/backups-history-table.jsx"), /canClear && isBackupStale\(backup\)/);
-  assert.match(read("components/backups/backups-cards.jsx"), /canClear && isBackupStale\(backup\)/);
+test("BK-B: Clear follows the server's own `clearable`, not a copy of the reaper (9 Oct)", () => {
+  assert.equal(backupSchema.parse({ id: 1, type: "full", status: "running", clearable: true, is_stale: true }).clearable, true);
+  assert.match(read("components/backups/backups-history-table.jsx"), /canClear && backup\.clearable/);
+  assert.match(read("components/backups/backups-cards.jsx"), /canClear && backup\.clearable/);
 });
 
 test("BK-A: an empty history is not reported as backed up or as a recent backup", () => {
   const panel = read("components/applications/backups/backups-panel.jsx");
-  // Since RP-2 a run still in progress does not count as kept either.
-  assert.match(panel, /noneKept=\{!backupsFailed && total - backups\.filter\(\(b\) => BACKUP_IN_FLIGHT\.includes\(b\.status\)\)\.length === 0\}/);
+  // `last_backup_at` is the newest verified copy still kept (null once all are deleted).
+  assert.match(panel, /noneKept=\{nothingKept\(target\)\}/);
+  assert.equal(nothingKept({ last_backup_at: null, last_run_at: "09-10-2026 06:22:47" }), true);
+  assert.equal(nothingKept({ last_backup_at: "09-10-2026 06:06:45" }), false);
+  assert.equal(nothingKept(null), false);
   assert.match(panel, /if \(noneKept\) return "empty";/);
   for (const l of LOCALES) {
     assert.ok(at(messages[l], "backups.application.state.empty.title"), l);
@@ -128,4 +113,19 @@ test("PHP-E: the extra-directives example is one the server accepts", () => {
 
 test("PHP-G: the over-commit sentence compares the total", () => {
   assert.match(read("components/applications/php/php-panel.jsx"), /required: formatBytes\(budget\.committed\)/);
+});
+
+test("FS-C33: a failed upload names what the storage said (9 Oct)", () => {
+  const b = { reason_title: "The archive could not be uploaded.", error_class_title: "The destination rejected the credentials." };
+  assert.equal(backupFailureText(b, "x"), "The destination rejected the credentials. The archive could not be uploaded.");
+  assert.equal(backupFailureText({ reason_title: "backup.errors.nope" }, "Unknown"), "Unknown");
+});
+
+test("Databases use the API's is_panel, connection and size sort (FS-C14, FS-B11, OLD-13 — 9 Oct)", async () => {
+  const { connectionAddress } = await import("../lib/databases/connection-parts.js");
+  // View-only: no string, but the address still comes through.
+  assert.deepEqual(connectionAddress({ connection_string: null, connection: { host: "127.0.0.1", port: 3306, database: "x" } }), { host: "127.0.0.1", port: "3306" });
+  assert.equal(connectionAddress({ connection_string: "mysql://u@db.example:3307/x", connection: { host: "127.0.0.1", port: 3306 } }).protocol, "mysql");
+  assert.match(read("components/databases/process-list.jsx"), /: process\.is_panel/);
+  assert.match(read("components/databases/databases-table.jsx"), /<SortHeader col="size_bytes" descFirst>/);
 });

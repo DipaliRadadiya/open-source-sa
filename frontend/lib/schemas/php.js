@@ -22,6 +22,8 @@ export const phpVersionSchema = z.object({
   // When the install began, to tell whether it is stuck.
   started_at: z.string().nullable().optional(),
   started_at_human: z.string().nullable().optional(),
+  // True until a worker picks the install up (another install is still running).
+  queued: z.boolean().nullish(),
   // Which apt phase, parsed from its output; null (shown as "starting") until recognisable.
   current_step: z.string().nullable().optional(),
   // Tail of apt's output: the only thing that says why an install stopped.
@@ -77,6 +79,7 @@ export const phpExtensionSchema = z.object({
   summary: z.string().nullish(),
   // The last operation on this extension: installing | ready | failed.
   status: z.string().nullish(),
+  queued: z.boolean().nullish(),
   current_step: z.string().nullish(),
   output: z.string().nullish(),
   reason: z.string().nullish(),

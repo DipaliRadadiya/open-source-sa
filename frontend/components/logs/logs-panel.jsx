@@ -74,6 +74,7 @@ export function LogsPanel({
     statusRef.current = status;
   }, [status]);
   const [truncated, setTruncated] = useState(Boolean(initial?.log?.truncated));
+  const [searchCapped, setSearchCapped] = useState(Boolean(initial?.log?.search_window_capped));
   const [clearing, setClearing] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [lineCount, setLineCount] = useState(initialLines);
@@ -120,6 +121,7 @@ export function LogsPanel({
     setStatus(initial?.status ?? "ok");
     setFailedMessage(initial?.message ?? null);
     setTruncated(Boolean(initial?.log?.truncated));
+    setSearchCapped(Boolean(initial?.log?.search_window_capped));
     setTailState("idle");
     setFollow(resolveFollow(followPref, sources.find((s) => s.key === selected)));
   }
@@ -185,6 +187,7 @@ export function LogsPanel({
         });
         setLines(cleanLines(data?.log?.lines));
         setTruncated(Boolean(data?.log?.truncated));
+        setSearchCapped(Boolean(data?.log?.search_window_capped));
         setStatus("ok");
         setFailedMessage(null);
         cursor.current = data?.log?.cursor ?? 0;
@@ -442,6 +445,8 @@ export function LogsPanel({
           term={debouncedTerm}
           severity={severity}
           filtered={Boolean(debouncedTerm) || severity !== "all"}
+          searchCapped={searchCapped}
+          searchedLines={lineCount}
           wrap={wrap}
           newestFirst={newestFirst}
           status={status}

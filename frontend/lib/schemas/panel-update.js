@@ -10,6 +10,8 @@ export const panelUpdateRunSchema = z
     current_step_title: z.string().nullish(),
     step_number: z.number().int().nonnegative().catch(0),
     total_steps: z.number().int().nonnegative().catch(0),
+    // A dry run changes nothing and has no to_version; it survives a reload, unlike local state.
+    dry_run: z.boolean().nullish(),
     from_version: z.string().nullish(),
     to_version: z.string().nullish(),
     from_commit: z.string().nullish(),
@@ -61,7 +63,10 @@ const preflightCheckSchema = z
   .object({
     key: z.string(),
     passed: z.boolean().default(false),
+    // English, for logs; show `message` (translated) and read numbers from `values`.
     detail: z.string().nullish(),
+    message: z.string().nullish(),
+    values: z.record(z.string(), z.number().nullish()).nullish(),
     // Reported but never gates the update button — see UpdatePreflight::run().
     // Defaults false so a check from an older backend stays blocking.
     advisory: z.boolean().default(false),

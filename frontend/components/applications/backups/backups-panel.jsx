@@ -24,6 +24,7 @@ import { EmptyState } from "@/components/data-table/empty-state";
 import { EmptyArt } from "@/components/data-table/empty-art";
 import { cn } from "@/lib/utils";
 import { BACKUP_IN_FLIGHT, RESTORE_IN_FLIGHT } from "@/lib/schemas/backup";
+import { nothingKept } from "@/lib/backups/reason";
 import { isBackupQueued, newestBackupId } from "@/lib/backups/queued";
 import { scheduleWhen } from "@/lib/backups/schedule-time";
 import { frequencyLabel } from "@/lib/backups/frequency";
@@ -220,14 +221,7 @@ export function BackupsPanel({
       <ProtectionCard
         target={target}
         options={backupOptions}
-        // The newest run: `last_run_at` is unset when a run crashes.
-        lastBackup={backups[0] ?? null}
-        // Otherwise a failed history read plus no `last_run_at` renders as
-        // "No backup has run yet".
-        lastBackupUnknown={backupsFailed}
-        // Known to hold nothing (not "could not ask"). `last_run_at` survives a
-        // deleted history, and in-flight runs are not kept backups.
-        noneKept={!backupsFailed && total - backups.filter((b) => BACKUP_IN_FLIGHT.includes(b.status)).length === 0}
+        noneKept={nothingKept(target)}
         canManage={canManage}
         // Spinner only for a run this page is waiting on: a listed in-flight row can stay
         // "running" forever if its worker died.
@@ -383,7 +377,7 @@ function stateOf(target, noneKept) {
   return "protected";
 }
 
-function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown = false, noneKept = false, canManage, running, blockedReason, onBackUpNow, onEdit, canTurnOff = false, turnOffBlockedReason = null, onTurnOff }) {
+function ProtectionCard({ target, options = null, noneKept = false, canManage, running, blockedReason, onBackUpNow, onEdit, canTurnOff = false, turnOffBlockedReason = null, onTurnOff }) {
   const t = useTranslations("backups.application");
   const tHistory = useTranslations("backups.history");
   const state = stateOf(target, noneKept);
@@ -430,14 +424,8 @@ function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown 
         },
         {
           label: t("summary.lastBackup"),
-          // Falls back to the run itself: a crashed run never writes last_run_at.
-          value: noneKept
-            ? target.last_run_at
-              ? t("noneKept")
-              : t("neverRun")
-            : (target.last_run_at_human ??
-              lastBackup?.created_at_human ??
-              (lastBackupUnknown ? "—" : t("neverRun"))),
+          // The newest backup still kept; a schedule that ran but kept nothing says so.
+          value: target.last_backup_at_human ?? (target.last_run_at ? t("noneKept") : t("neverRun")),
         },
         {
           label: t("summary.nextBackup"),

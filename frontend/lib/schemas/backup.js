@@ -69,6 +69,12 @@ export const backupSchema = z
     // Branch on `reason`, display `reason_title`.
     reason: z.string().nullish(),
     reason_title: z.string().nullish(),
+    // What the storage said, when the failing step was an upload (auth, permission, …).
+    error_class: z.string().nullish(),
+    error_class_title: z.string().nullish(),
+    // The server's own rule for whether Clear will be accepted.
+    is_stale: z.boolean().nullish(),
+    clearable: z.boolean().nullish(),
     size_bytes: z.number().nullish(),
     // Absent, not null, unless eager-loaded, so "no destination" and "not asked for" differ.
     storage_destination_name: z.string().nullish(),
@@ -129,8 +135,12 @@ export const backupTargetSchema = z
     enabled: z.boolean().default(true),
     file_excludes: z.array(z.string()).default([]),
     database_excludes: z.array(z.string()).default([]),
+    // When the schedule last fired, successful or not; the scheduler reads it.
     last_run_at: z.string().nullish(),
     last_run_at_human: z.string().nullish(),
+    // The newest verified backup still kept; null once they are all deleted.
+    last_backup_at: z.string().nullish(),
+    last_backup_at_human: z.string().nullish(),
     // Never recompute these from cron constants; a frontend copy would drift.
     next_run_at: z.string().nullish(),
     next_run_at_human: z.string().nullish(),

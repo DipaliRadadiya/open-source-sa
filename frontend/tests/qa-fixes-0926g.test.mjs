@@ -35,7 +35,7 @@ test("AD-E: failed server checks are not an all-clear", () => {
 });
 
 test("AD-F / AD-N: backup card", () => {
-  assert.match(page, /!backupRuns\.failed &&\s*backupRuns\.meta\?\.total === /);
+  assert.match(page, /noneKept: nothingKept\(backup\.target\)/);
   assert.match(backup, /noneKept \? t\("noneKept"\)/);
   assert.match(backup, /target \|\| failed \? t\("manage"\) : t\("setUp"\)/);
 });
@@ -92,8 +92,9 @@ test("RP-1: the SSL tab takes the certificate the page re-reads", () => {
 });
 
 test("RP-2: a running backup is not a kept one", () => {
-  assert.match(read("components/applications/backups/backups-panel.jsx"), /noneKept=\{!backupsFailed && total - backups\.filter\(\(b\) => BACKUP_IN_FLIGHT\.includes\(b\.status\)\)\.length === 0\}/);
-  assert.match(page, /backupRuns\.meta\?\.total === backupRuns\.backups\.filter\(\(b\) => BACKUP_IN_FLIGHT\.includes\(b\.status\)\)\.length/);
+  // last_backup_at counts verified copies only, so a run in flight is never "kept" (9 Oct).
+  assert.match(read("components/applications/backups/backups-panel.jsx"), /noneKept=\{nothingKept\(target\)\}/);
+  assert.match(page, /noneKept: nothingKept\(backup\.target\)/);
 });
 
 test("RP-3: an unsaved PHP value shows as saved → new", () => {

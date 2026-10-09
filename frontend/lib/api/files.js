@@ -19,8 +19,8 @@ export function getFileContent(appId, path) {
   return api.get(`/applications/${appId}/files/content`, { params: { path } });
 }
 
-export function saveFileContent(appId, path, content) {
-  return api.put(`/applications/${appId}/files/content`, { path, content });
+export function saveFileContent(appId, path, content, version) {
+  return api.put(`/applications/${appId}/files/content`, { path, content, ...(version ? { version } : {}) });
 }
 
 export function restoreFileContent(appId, path, backup) {

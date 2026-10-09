@@ -31,6 +31,8 @@ export const securitySettingsSchema = z.object({
   password_authentication: z.boolean(),
   // PUT 422s when password auth is disabled with no key; lets the form warn before the confirm.
   has_ssh_key: z.boolean().nullable().optional(),
+  // True when this save will start enforcing the per-user SSH switches (AllowGroups).
+  save_enforces_ssh_access: z.boolean().nullish(),
 });
 
 // `status` and `reason` are codes. `output` is null without `setting,manage`, so a missing log proves nothing.

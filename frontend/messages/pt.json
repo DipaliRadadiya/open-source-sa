@@ -187,7 +187,9 @@
       "cancel": "Cancelar",
       "confirm": "Excluir usuário",
       "deleting": "Excluindo…",
-      "copyUsername": "Copiar nome de usuário"
+      "copyUsername": "Copiar nome de usuário",
+      "endSessions": "Encerrar sessões",
+      "endSessionsHint": "Desconecta {username} e interrompe tudo o que ele estiver executando, depois exclui a conta. Deixe desligado para ser avisado em vez disso."
     },
     "access": {
       "title": "Acesso",
@@ -370,7 +372,8 @@
       "username": "Nome de usuário",
       "accountType": "Tipo de conta",
       "roles": "Papéis",
-      "joined": "Ingressou em"
+      "joined": "Ingressou em",
+      "lastSignIn": "Último acesso"
     },
     "actions": {
       "label": "Ações",
@@ -441,7 +444,8 @@
       "starting": "Iniciando…",
       "cancel": "Cancelar"
     },
-    "loadFailed": "Os usuários não puderam ser carregados. Tente novamente em instantes."
+    "loadFailed": "Os usuários não puderam ser carregados. Tente novamente em instantes.",
+    "neverSignedIn": "Nunca"
   },
   "roles": {
     "sync": {
@@ -645,7 +649,10 @@
     "system": "Sistema",
     "filter": {
       "allTypes": "Todos os tipos",
-      "allActions": "Todas as ações"
+      "allActions": "Todas as ações",
+      "kind": "O que aconteceu",
+      "allKinds": "Todos os eventos",
+      "security": "Eventos de segurança"
     },
     "columns": {
       "when": "Quando",
@@ -2009,7 +2016,8 @@
         "passwordOff": "Logins com senha param de funcionar. Sem uma chave já neste servidor, você ficará trancado fora.",
         "rootOff": "O root não poderá mais entrar. Garanta que outro usuário consegue, com sudo.",
         "rootPassword": "O root poderá entrar com senha — a conta que ataques automatizados tentam primeiro.",
-        "testFirst": "Teste as novas configurações em outro terminal antes de fechar este."
+        "testFirst": "Teste as novas configurações em outro terminal antes de fechar este.",
+        "enforcesAccess": "A partir de agora, a chave de login SSH de cada usuário do sistema passa a valer: usuários com ela desligada não conseguem mais entrar por SSH (usuários com sudo ainda conseguem)."
       },
       "rootPasswordWarning": "O root pode entrar com senha agora. Essa é a conta que ataques automatizados tentam primeiro — defina o login do root como “Apenas com chave”.",
       "signIn": {
@@ -2272,7 +2280,13 @@
       "completeInstall": "Concluir a instalação",
       "completing": "Concluindo o PHP {version}…",
       "incompleteDefault": "Conclua a instalação primeiro — o PHP padrão é o que roda quando nada fixa uma versão.",
-      "statusRemoveFailed": "Falha ao remover"
+      "statusRemoveFailed": "Falha ao remover",
+      "dismiss": "Dispensar",
+      "dismissed": "A instalação com falha do PHP {version} foi removida.",
+      "dismissFailed": "Não foi possível remover a instalação com falha.",
+      "statusQueued": "Aguardando outra instalação",
+      "queuedTitle": "PHP {version} está aguardando para ser instalado",
+      "queuedBody": "Outra instalação está em andamento. Esta começa assim que ela terminar."
     },
     "extensions": {
       "title": "Extensões",
@@ -2530,7 +2544,13 @@
       "removingSince": "Iniciado {when}. A página se atualiza sozinha.",
       "retry": "Tentar novamente",
       "retrying": "Instalando Node {version} novamente…",
-      "statusRemoveFailed": "Falha ao remover"
+      "statusRemoveFailed": "Falha ao remover",
+      "dismiss": "Dispensar",
+      "dismissed": "A instalação com falha do Node.js {version} foi removida.",
+      "dismissFailed": "Não foi possível remover a instalação com falha.",
+      "statusQueued": "Aguardando outra instalação",
+      "queuedTitle": "Node.js {version} está aguardando para ser instalado",
+      "queuedBody": "Outra instalação está em andamento. Esta começa assim que ela terminar."
     },
     "install": {
       "action": "Instalar versão",
@@ -2545,7 +2565,8 @@
       "eolWarning": "Node.js {version} não recebe mais correções de segurança. Instale apenas se alguma aplicação precisar.",
       "noneAvailable": "Não foi possível obter a lista de versões do Node.js. Verifique se o servidor consegue acessar nodejs.org e recarregue a página.",
       "installedTag": "Instalada",
-      "allInstalled": "Todas as versões oferecidas por este servidor já estão instaladas."
+      "allInstalled": "Todas as versões oferecidas por este servidor já estão instaladas.",
+      "catalogUnreachable": "Este servidor não consegue acessar nodejs.org, então a lista de versões não pode ser carregada. Verifique o acesso à rede do servidor e recarregue."
     },
     "lifecycle": {
       "current": "Atual",
@@ -3540,6 +3561,12 @@
         "description": "Você alterou ou removeu {keys}. O painel configurou esses valores e a aplicação depende deles: uma nova chave de criptografia torna ilegíveis todas as credenciais salvas, e outra porta ou pasta deixa de corresponder ao serviço que o painel executa.",
         "cancel": "Continuar editando",
         "confirm": "Salvar mesmo assim"
+      },
+      "preflight": {
+        "title": "Salvar com estes avisos?",
+        "description": "Nada foi salvo ainda. Isto pode impedir que a aplicação inicie com este arquivo.",
+        "cancel": "Continuar editando",
+        "confirm": "Salvar mesmo assim"
       }
     },
     "title": "Aplicações",
@@ -3827,8 +3854,6 @@
       "systemUserGeneratePassword": "Gerar",
       "systemUserPasswordHint": "Gerada para você. Guarde, altere ou limpe. Você pode vê-la novamente depois na página Usuários do sistema.",
       "systemUserNew": "{username} (novo)",
-      "systemUserCreateFailed": "Não foi possível criar o usuário do sistema, então a aplicação também não foi criada.",
-      "systemUserLeftBehind": "O usuário do sistema {username} foi criado, mas não pôde ser removido. Escolha-o em \"Usar um utilizador do sistema existente\" ou exclua-o em Usuários do sistema.",
       "tablePrefixInvalid": "Comece com uma letra, use apenas letras e números e termine com um sublinhado (por exemplo jml_)."
     },
     "actions": {
@@ -3868,7 +3893,9 @@
       "removeFilesHint": "Desligado, a aplicação é removida do painel, mas os arquivos permanecem no servidor. Ligado, os arquivos e suas cópias de segurança são excluídos e não podem ser recuperados.",
       "removeDocker": "Eliminar também a rede e os volumes Docker deste site ({count})",
       "removeDockerOn": "{names} será eliminado. O que outro site ainda estiver a usar é mantido — o servidor verifica no momento da eliminação, não agora.",
-      "removeDockerOff": "{names} permanece no servidor. Os dados sobrevivem e pode removê-los mais tarde na página do Docker."
+      "removeDockerOff": "{names} permanece no servidor. Os dados sobrevivem e pode removê-los mais tarde na página do Docker.",
+      "removeSystemUser": "Remover também o usuário do sistema {username}",
+      "removeSystemUserOn": "Ele só é removido se nenhuma outra aplicação o usar e ninguém estiver conectado com ele. Você será avisado se ele for mantido."
     },
     "systemUserMissing": {
       "title": "O usuário do sistema desta aplicação está faltando",
@@ -4416,7 +4443,9 @@
         "discardTitle": "Descartar alterações não salvas?",
         "discardDescription": "Suas edições neste arquivo não foram salvas. Fechar agora irá perdê-las.",
         "keepEditing": "Continuar editando",
-        "discardConfirm": "Descartar alterações"
+        "discardConfirm": "Descartar alterações",
+        "reload": "Recarregar o arquivo",
+        "reloadFirst": "Recarregue o arquivo primeiro. Ele mudou depois que você o abriu."
       },
       "restore": {
         "action": "Restaurar",
@@ -4431,8 +4460,7 @@
         "rootPlaceholder": "Raiz da aplicação",
         "pathLabelHint": "Só um nome fica nesta pasta. Um caminho é contado a partir do topo da pasta da aplicação.",
         "destination": "Extrai para",
-        "copyDestination": "Copiar este caminho",
-        "folderMissing": "A pasta “{folder}” não existe. Crie-a primeiro ou escolha outra."
+        "copyDestination": "Copiar este caminho"
       },
       "rename": {
         "title": "Renomear ou mover \"{name}\"",
@@ -4897,7 +4925,7 @@
         "range": "{days} dias",
         "unavailable": "Não foi possível ler o log de acesso desta aplicação, então ainda não há nada para mostrar. Isso não é o mesmo que nenhum bot ter visitado.",
         "empty": "Nenhum bot de IA visitou nos últimos {days} dias.",
-        "summary": "{bots, plural, one {# bot} other {# bots}} · {hits, plural, one {# requisição} other {# requisições}} · {blocked, plural, other {# de bots que você bloqueia}}",
+        "summary": "{bots, plural, one {# bot} other {# bots}} · {hits, plural, one {# requisição} other {# requisições}} · {blocked, plural, one {# bloqueada} other {# bloqueadas}}",
         "partial": "Apenas a parte mais recente do log foi analisada, então aplicações movimentadas podem ter recebido mais.",
         "blocked": "Bloquear",
         "allowed": "Permitir",
@@ -4913,7 +4941,8 @@
           "search": "Busca de IA",
           "agent": "Assistente de IA",
           "custom": "Sua própria regra"
-        }
+        },
+        "blockedHits": "{count, plural, one {# bloqueada} other {# bloqueadas}}"
       },
       "groupLabels": {
         "block_training": "Crawlers de treinamento",
@@ -5391,7 +5420,27 @@
       "tooLong": "Esta configuração é longa demais. Cada arquivo precisa ter menos de 65.535 caracteres.",
       "invalidConfig": "Esta configuração não pode ser salva. Verifique se os dois arquivos estão preenchidos.",
       "outputShowAll": "Mostrar tudo o que o fail2ban informou",
-      "outputErrorsOnly": "Mostrar só os erros"
+      "outputErrorsOnly": "Mostrar só os erros",
+      "bans": {
+        "title": "Endereços banidos",
+        "subtitle": "Endereços que a jail desta aplicação bloqueou. Um banimento aqui bloqueia só esta aplicação, não o servidor.",
+        "none": "Ninguém está banido no momento.",
+        "notRunning": "A jail desta aplicação não está em execução, então ainda não é possível banir nada aqui.",
+        "noPermission": "Seu papel não inclui Fail2ban para esta aplicação com acesso de gerenciamento.",
+        "loadFailed": "Não foi possível carregar os endereços banidos.",
+        "banLabel": "Bloquear um endereço",
+        "ban": "Banir",
+        "typeIp": "Digite primeiro um endereço IP.",
+        "invalidIp": "Digite um único endereço IPv4 ou IPv6, como 203.0.113.10.",
+        "banned": "{ip} foi banido desta aplicação.",
+        "banFailed": "Não foi possível banir o endereço.",
+        "unban": "Desbanir",
+        "unbanned": "{ip} pode acessar esta aplicação novamente.",
+        "unbanFailed": "Não foi possível desbanir o endereço.",
+        "unbanTitle": "Desbanir {ip}?",
+        "unbanBody": "Ele poderá acessar esta aplicação imediatamente. Se continuar errando logins, a jail o banirá de novo.",
+        "cancel": "Cancelar"
+      }
     },
     "staging": {
       "pageTitle": "Área de Staging",
@@ -5457,7 +5506,11 @@
         "failed": "O envio não foi concluído.",
         "copyAge": "Cópia feita {age}",
         "copyDomain": "Copiar domínio",
-        "whileRunning": "A aplicação fica offline durante o processo. Se falhar no meio, a produção volta a ficar como estava."
+        "whileRunning": "A aplicação fica offline durante o processo. Se falhar no meio, a produção volta a ficar como estava.",
+        "backupToggle": "Fazer antes um backup da aplicação em produção",
+        "backupOn": "Primeiro é feito um backup. A publicação só começa se ele terminar, para que você possa restaurar a partir dele depois.",
+        "backupOff": "Nenhum backup é feito. Não há como desfazer depois que a publicação terminar.",
+        "pushingWithBackup": "Fazendo backup e publicando…"
       },
       "isCopy": {
         "title": "Esta aplicação é uma cópia de staging",
@@ -5469,6 +5522,18 @@
         "title": "Excluir staging",
         "body": "Exclui a aplicação de staging {domain}. {production} não é alterado.",
         "action": "Excluir"
+      },
+      "safetyCopies": {
+        "title": "Cópias do banco de dados salvas antes de publicar",
+        "subtitle": "Cada publicação do banco de dados salva antes o banco em produção. Restaure uma para desfazer uma publicação.",
+        "restore": "Restaurar",
+        "restoring": "Restaurando…",
+        "restoringNote": "O banco atual em produção é salvo antes, então isso também pode ser desfeito.",
+        "cancel": "Cancelar",
+        "confirmTitle": "Restaurar esta cópia do banco de dados?",
+        "confirmBody": "O banco em produção é substituído pela cópia de {when}. Tudo o que foi gravado nele desde então também é substituído. O banco atual é salvo antes.",
+        "restored": "O banco em produção foi restaurado a partir da cópia de {when}.",
+        "restoreFailed": "Não foi possível restaurar a cópia do banco de dados."
       }
     },
     "stagingBadge": "Staging",
@@ -6974,7 +7039,23 @@
       "unignoreFailed": "Não foi possível desfazer.",
       "addFailed": "Não foi possível começar a adicionar ao painel."
     },
-    "stalled": "Esta varredura parou de reportar progresso. Pode ter falhado no servidor."
+    "stalled": "Esta varredura parou de reportar progresso. Pode ter falhado no servidor.",
+    "handover": {
+      "title": "Concluir a migração do agente antigo",
+      "body": "Suas aplicações foram adotadas, mas o agente antigo ainda tem tarefas que este painel deve assumir.",
+      "agentRunning": "O agente antigo ({unit}) ainda está em execução.",
+      "bootMissing": "{username}: suas aplicações não voltarão a iniciar após uma reinicialização.",
+      "rotationMissing": "{username}: seus logs nunca são rotacionados, então continuam crescendo.",
+      "action": "Concluir a migração",
+      "working": "Concluindo…",
+      "done": "O agente antigo foi desativado e as tarefas dele agora são feitas por este painel.",
+      "partial": "Algumas etapas não foram concluídas:",
+      "agentFailed": "Parar o agente antigo ({unit}).",
+      "bootFailed": "Início automático para {username}.",
+      "rotationFailed": "Rotação de logs para {username}.",
+      "failed": "Não foi possível concluir a migração.",
+      "noPermission": "Seu papel não inclui Sincronização do servidor com acesso de gerenciamento."
+    }
   },
   "central": {
     "title": "Gerenciamento central",

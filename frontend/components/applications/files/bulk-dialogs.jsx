@@ -18,7 +18,6 @@ import {
 } from "@/lib/api/files";
 import { bulkResult } from "@/lib/files/bulk-result";
 import { apiMessage } from "@/lib/api/error-message";
-import { destinationMissing } from "@/lib/files/missing-folder";
 import { compressSuggestion, dirname, inFolder, joinPath } from "@/lib/files/path-helpers";
 import { sharedMode, selectedFiles } from "@/lib/files/shared-mode";
 import { symbolicMode } from "@/lib/files/describe-mode";
@@ -90,11 +89,8 @@ export function BulkDialogs({ appId, action, paths: selectedPaths, files = [], p
         err.response?.data?.errors?.target_directory?.[0] ??
         err.response?.data?.errors?.mode?.[0] ??
         err.response?.data?.errors?.paths?.[0];
-      const folder = action === "compress" ? dirname(inFolder(target.trim(), dirname(paths[0]))) : target.trim();
       if (field) setError(field);
-      else if ((action === "move" || action === "copy" || action === "compress") && (await destinationMissing(appId, err, folder))) {
-        setError(t("targetDialog.folderMissing", { folder }));
-      } else if ([404, 409, 422].includes(err.response?.status)) setError(apiMessage(err, t("bulk.failed")));
+      else if ([404, 409, 422].includes(err.response?.status)) setError(apiMessage(err, t("bulk.failed")));
       else toast.error(apiMessage(err, t("bulk.failed")));
     } finally {
       setBusy(false);
