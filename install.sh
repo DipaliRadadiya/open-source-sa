@@ -3227,11 +3227,24 @@ WorkingDirectory=${backend}
 # are the ONLY queues drained: a job sent anywhere else is accepted, stored
 # and never run -- no error, no failed_jobs row. Backups shipped that way and
 # never once executed on a real install. Must match QueueWorker::QUEUES.
+# No signal support means no graceful drain: fail before accepting any job.
+# Must match QueueWorkerUnit::SIGNAL_CHECK and use the worker's interpreter.
+ExecStartPre=${PANEL_PHP_BIN} -r 'exit(extension_loaded("pcntl") && function_exists("pcntl_async_signals") && function_exists("pcntl_signal") && function_exists("pcntl_alarm") ? 0 : 1);'
 ExecStart=${PANEL_PHP_BIN} ${backend}/artisan queue:work --queue=high,default --sleep=3 --tries=1 --max-time=3600
 Restart=always
 RestartSec=5
-# Longer than the longest job, so a stop during a 30-minute install waits
-# rather than killing it half-applied.
+# TERM only the main worker: Laravel finishes its synchronous accepted job,
+# then exits before reserving the next. control-group would TERM sudo children
+# immediately, regardless of the long timeout (RC-F04).
+KillMode=mixed
+KillSignal=SIGTERM
+RestartKillSignal=SIGTERM
+SendSIGHUP=no
+# Bound the stop and kill ALL remaining cgroup processes at main exit/deadline.
+# Keep the existing 1800s bound; jobs exceeding it can still be interrupted.
+SendSIGKILL=yes
+FinalKillSignal=SIGKILL
+TimeoutStopFailureMode=kill
 TimeoutStopSec=1800
 StandardOutput=journal
 StandardError=journal

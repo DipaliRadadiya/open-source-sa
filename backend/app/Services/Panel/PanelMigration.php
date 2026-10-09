@@ -119,6 +119,10 @@ class PanelMigration
         $steps = [];
 
         $steps[] = ['step' => 'backup_database', 'commands' => [
+            // Refuse unsupported queue policy BEFORE moving any live path;
+            // snapshot only after the accepted job has drained, not before.
+            sprintf('%s %s panel:queue-worker', $this->php(), escapeshellarg($root.'/backend/artisan')),
+            sprintf('systemctl stop %s', escapeshellarg($this->service('queue'))),
             sprintf('%s %s panel:backup-database', $this->php(), escapeshellarg($root.'/backend/artisan')),
         ]];
 

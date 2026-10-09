@@ -3,6 +3,7 @@
 use App\Services\Panel\QueueWorker;
 use App\Services\Panel\UpdateScript;
 use Illuminate\Support\Facades\Process;
+use Tests\Support\QueueDrainUnit;
 
 /**
  * One worker, `high` before `default` (nginx QA #4: a certificate waited 22
@@ -76,7 +77,9 @@ describe('rewriting the worker unit', function () {
         mkdir($dir);
         config(['server.applications.systemd_dir' => $dir, 'panel_update.services.queue' => 'panel-queue.service']);
         file_put_contents("{$dir}/panel-queue.service", "[Service]\nExecStart=/usr/bin/php artisan queue:work --sleep=3\n");
-        Process::fake();
+        Process::fake(fn ($process) => ($process->command[1] ?? '') === 'show'
+            ? Process::result(output: QueueDrainUnit::metadata("{$dir}/panel-queue.service"))
+            : Process::result());
 
         $this->artisan('panel:queue-worker')->assertSuccessful();
 
@@ -84,26 +87,30 @@ describe('rewriting the worker unit', function () {
         Process::assertRan(fn ($process) => $process->command === ['systemctl', 'daemon-reload']);
         Process::assertNotRan(fn ($process) => in_array('restart', (array) $process->command, true));
 
-        // Idempotent: the second run changes nothing and reloads nothing.
-        // (Counted by hand: a second Process::fake keeps the first's record.)
+        // Idempotent: the second run changes/reloads nothing. It must still
+        // inspect effective drop-ins rather than trusting the base file alone.
         $GLOBALS['queueWorkerRuns'] = 0;
-        Process::fake(function () {
+        Process::fake(function ($process) use ($dir) {
             $GLOBALS['queueWorkerRuns']++;
 
-            return Process::result();
+            return ($process->command[1] ?? '') === 'show'
+                ? Process::result(output: QueueDrainUnit::metadata("{$dir}/panel-queue.service"))
+                : Process::result();
         });
         $this->artisan('panel:queue-worker')->expectsOutputToContain('is up to date')->assertSuccessful();
-        expect($GLOBALS['queueWorkerRuns'])->toBe(0);
+        expect($GLOBALS['queueWorkerRuns'])->toBe(1);
 
         array_map('unlink', glob("{$dir}/*"));
         rmdir($dir);
     });
 
-    it('does nothing where there is no unit', function () {
+    it('refuses an unavailable primary unit without running a service command', function () {
         config(['server.applications.systemd_dir' => sys_get_temp_dir().'/qw-absent-'.uniqid()]);
         Process::fake();
 
-        $this->artisan('panel:queue-worker')->assertSuccessful();
+        // Missing is not verified: a vendor/removed-but-loaded unit can still
+        // own an accepted job, so callers must not be authorized to stop it.
+        $this->artisan('panel:queue-worker')->assertFailed();
 
         Process::assertNothingRan();
     });
