@@ -6,6 +6,7 @@ use App\Contracts\Firewall;
 use App\Contracts\PhpStack;
 use App\Models\User;
 use App\Services\Admin\ApiErrorLogWriter;
+use App\Services\Recipes\RecipeRegistry;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Applications\ContainerLiveness;
 use App\Services\Server\Applications\DeploymentRecorder;
@@ -64,6 +65,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->singleton(RecipeRegistry::class);
+
         // The firewall engine — UFW today; swap the binding for firewalld later.
         $this->app->bind(Firewall::class, UfwFirewall::class);
 
