@@ -1,0 +1,52 @@
+{
+    "schema": 1,
+    "slug": "forgejo",
+    "version": 1,
+    "title": "Forgejo",
+    "tagline": {
+        "en": "Git hosting — community-governed fork of Gitea",
+        "es": "Alojamiento Git: bifurcación de Gitea gobernada por la comunidad",
+        "de": "Git-Hosting — von der Community verwalteter Gitea-Fork",
+        "fr": "Hébergement Git — fork de Gitea géré par la communauté",
+        "pt": "Alojamento Git — fork do Gitea governado pela comunidade",
+        "ja": "Git ホスティング — コミュニティ運営の Gitea フォーク",
+        "ru": "Хостинг Git — форк Gitea под управлением сообщества",
+        "hi": "Git होस्टिंग — कम्युनिटी द्वारा संचालित Gitea फ़ोर्क"
+    },
+    "category": "development",
+    "icon": "forgejo",
+    "popular": false,
+    "catalog_order": 40,
+    "images": {
+        "app": {
+            "ref": "codeberg.org/forgejo/forgejo:9",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "app",
+            "role": "app"
+        }
+    ],
+    "container_port": 3000,
+    "memory_floor": null,
+    "volumes": {
+        "data": "/data"
+    },
+    "secrets": [],
+    "url_env_key": "FORGEJO__server__ROOT_URL",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Offered alongside Gitea because existing sites are not interchangeable and community governance is part of the choice.",
+        "Like Gitea, persists SQLite in /data and does not publish SSH; the server owns host port 22.",
+        "ROOT_URL keeps clone commands, webhooks and emails pointed at the site domain."
+    ]
+}

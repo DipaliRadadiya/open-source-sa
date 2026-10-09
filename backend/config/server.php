@@ -6,10 +6,8 @@ use App\Services\Applications\Types\ChatwootSiteType;
 use App\Services\Applications\Types\CraftCmsSiteType;
 use App\Services\Applications\Types\DockerSiteType;
 use App\Services\Applications\Types\ExcalidrawSiteType;
-use App\Services\Applications\Types\ForgejoSiteType;
 use App\Services\Applications\Types\FreshRssSiteType;
 use App\Services\Applications\Types\GhostSiteType;
-use App\Services\Applications\Types\GiteaSiteType;
 use App\Services\Applications\Types\GitSiteType;
 use App\Services\Applications\Types\GlanceSiteType;
 use App\Services\Applications\Types\GrafanaSiteType;
@@ -33,7 +31,6 @@ use App\Services\Applications\Types\StatamicSiteType;
 use App\Services\Applications\Types\StaticSiteType;
 use App\Services\Applications\Types\StirlingPdfSiteType;
 use App\Services\Applications\Types\UptimeKumaSiteType;
-use App\Services\Applications\Types\VaultwardenSiteType;
 use App\Services\Applications\Types\WikiJsSiteType;
 use App\Services\Applications\Types\WordPressContainerSiteType;
 use App\Services\Applications\Types\WordPressSiteType;
@@ -2262,9 +2259,6 @@ return [
     'site_types' => [
         DockerSiteType::class,
         GhostSiteType::class,
-        VaultwardenSiteType::class,
-        GiteaSiteType::class,
-        ForgejoSiteType::class,
         FreshRssSiteType::class,
         StirlingPdfSiteType::class,
         ItToolsSiteType::class,

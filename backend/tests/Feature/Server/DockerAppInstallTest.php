@@ -6,6 +6,7 @@ use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Applications\Types\AbstractDockerAppType;
+use App\Services\Applications\Types\RecipeSiteType;
 use App\Services\Server\Applications\ComposeValidator;
 use App\Services\Server\Applications\InstallerManager;
 use App\Services\Server\Applications\Installers\DockerAppInstaller;
@@ -425,23 +426,31 @@ it('generates a different secret for every site', function (string $type, int $p
 it('ships no secret in the template itself', function (string $type, int $port, array $roles) {
     // Reading the template, not the render: a default that only shows up when a
     // caller forgets to pass a value is still a shipped credential.
-    $template = app(SiteTypeManager::class)->find($type)->composeTemplate();
-    $path = base_path('resources/views/'.str_replace('.', '/', $template).'.blade.php');
+    $siteType = app(SiteTypeManager::class)->find($type);
+    $recipe = $siteType instanceof RecipeSiteType;
+    if ($recipe) {
+        $source = $siteType->recipe()->template->source();
+    } else {
+        $template = $siteType->composeTemplate();
+        $source = file_get_contents(base_path('resources/views/'.str_replace('.', '/', $template).'.blade.php'));
+    }
+    expect($source)->not->toBeEmpty();
 
-    $source = file_get_contents($path);
+    $panelOnly = $siteType->panelOnlySecrets();
 
-    $panelOnly = app(SiteTypeManager::class)->find($type)->panelOnlySecrets();
-
-    foreach (app(SiteTypeManager::class)->find($type)->generatedSecrets() as $key) {
+    foreach ($siteType->generatedSecrets() as $key) {
+        $pattern = $recipe
+            ? '/\{\{\s*secret\.'.preg_quote($key, '/').'\s*(?:\|\s*base64\s*)?\}\}/'
+            : '/'.preg_quote("\$secrets['{$key}']", '/').'/';
         if (in_array($key, $panelOnly, true)) {
             // Must be ABSENT, not interpolated — asserted above.
-            expect($source)->not->toContain("\$secrets['{$key}']");
+            expect($source)->not->toMatch($pattern);
 
             continue;
         }
 
-        // Every secret is interpolated, never literal.
-        expect($source)->toContain("\$secrets['{$key}']");
+        // Every secret is interpolated, never literal (including base64 APP_KEY).
+        expect($source)->toMatch($pattern);
         expect($source)->not->toMatch('/'.preg_quote($key, '/').':\s*[A-Za-z0-9]{6,}\s*$/m');
     }
 })->with('docker apps');
