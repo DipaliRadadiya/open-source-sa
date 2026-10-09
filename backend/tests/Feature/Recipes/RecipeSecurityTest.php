@@ -58,6 +58,15 @@ it('rejects schema ambiguity and unrecognized claim references', function () {
     $d = $data;
     $d['after_install']['fields']['email'] = '{{ app.name|base64 }}';
     $cases[] = $d;
+    $d = $data;
+    $d['description'] = [];
+    $cases[] = $d;
+    $d = $data;
+    $d['icon'] = 123;
+    $cases[] = $d;
+    $d = $data;
+    $d['memory_floor'] = 512;
+    $cases[] = $d;
     foreach ($cases as $case) {
         expect(fn () => RecipeSchema::check($case, $directory))->toThrow(InvalidRecipeException::class);
     }

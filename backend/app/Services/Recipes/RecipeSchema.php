@@ -23,7 +23,7 @@ final class RecipeSchema
             'description.en' => ['required_with:description', 'string'],
             'description.*' => ['string', 'max:600'],
             'category' => ['required', Rule::in(explode(',', 'cms,security,development,productivity,monitoring,analytics,communication,database,ecommerce,automation,utility,business,education,marketing,community'))],
-            'icon' => ['required', 'regex:/^[a-z0-9_-]{1,40}$/D'],
+            'icon' => ['required', 'string', 'regex:/^[a-z0-9_-]{1,40}$/D'],
             'popular' => ['sometimes', 'boolean:strict'],
             'deprecated' => ['sometimes', 'boolean:strict'],
             'catalog_order' => ['required', 'integer:strict', 'between:1,9999'],
@@ -38,7 +38,7 @@ final class RecipeSchema
             'services.*.name' => ['required', 'distinct', 'regex:/^[a-z][a-z0-9_-]{0,30}$/D'],
             'services.*.role' => ['required', Rule::in(['app', 'database', 'cache', 'worker'])],
             'container_port' => ['required', 'integer:strict', 'between:1,65535'],
-            'memory_floor' => ['nullable', 'regex:/^\d+(b|k|m|g)?$/iD'],
+            'memory_floor' => ['nullable', 'string', 'regex:/^\d+(b|k|m|g)?$/iD'],
             'volumes' => ['sometimes', 'array'],
             'volumes.*' => ['required', 'regex:'.ContainerMountPath::PATTERN, Rule::notIn(['/'])],
             'secrets' => ['sometimes', 'array'],
@@ -82,6 +82,9 @@ final class RecipeSchema
             $fail('slug_mismatch');
         }
         foreach (['tagline', 'description'] as $key) {
+            if (array_key_exists($key, $data) && ! array_key_exists('en', $data[$key])) {
+                $fail('schema');
+            }
             if (array_diff(array_keys($data[$key] ?? []), config('recipes.locales'))) {
                 $fail('schema');
             }
@@ -107,10 +110,8 @@ final class RecipeSchema
         if (! empty($data['hook']) && ! empty($data['after_install'])) {
             $fail('schema');
         }
-        $keys = array_column($data['secrets'] ?? [],
-            'key');
-        $inputs = array_column($data['inputs'] ?? [],
-            'name');
+        $keys = array_column($data['secrets'] ?? [], 'key');
+        $inputs = array_column($data['inputs'] ?? [], 'name');
         foreach ($data['first_run']['credentials'] ?? [] as $item) {
             $sources = array_intersect(['value', 'secret', 'input', 'path'], array_keys($item));
             if (count($sources) !== 1) {
