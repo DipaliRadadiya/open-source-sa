@@ -1,0 +1,72 @@
+{
+    "schema": 1,
+    "slug": "ghost",
+    "version": 1,
+    "title": "Ghost",
+    "tagline": {
+        "en": "Publishing and newsletters — runs with its own MySQL",
+        "es": "Publicación y boletines: funciona con su propio MySQL",
+        "de": "Publizieren und Newsletter — läuft mit eigenem MySQL",
+        "fr": "Publication et newsletters — fonctionne avec son propre MySQL",
+        "pt": "Publicação e newsletters — funciona com o seu próprio MySQL",
+        "ja": "パブリッシングとニュースレター — 専用の MySQL 付きで動作",
+        "ru": "Публикации и рассылки — работает со своим MySQL",
+        "hi": "प्रकाशन और न्यूज़लेटर — अपने MySQL के साथ चलता है"
+    },
+    "category": "cms",
+    "icon": "ghost",
+    "popular": true,
+    "catalog_order": 10,
+    "images": {
+        "app": {
+            "ref": "ghost:5-alpine",
+            "tested": []
+        },
+        "db": {
+            "ref": "mysql:8.0",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "ghost",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 2368,
+    "memory_floor": null,
+    "volumes": {
+        "content": "/var/lib/ghost/content",
+        "db": "/var/lib/mysql"
+    },
+    "secrets": [
+        {
+            "key": "MYSQL_ROOT_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "GHOST_DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "url",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Production Ghost uses its own MySQL rather than unsupported development-mode SQLite; MySQL 8.0 matches Ghost 5 authentication support.",
+        "Ghost connects as a dedicated database user, never root, with separate app and root secrets.",
+        "The content volume preserves uploaded images and themes, while the database holds posts; the owner account is created through the setup wizard."
+    ]
+}

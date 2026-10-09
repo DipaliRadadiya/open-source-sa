@@ -1,0 +1,65 @@
+{
+    "schema": 1,
+    "slug": "wikijs",
+    "version": 1,
+    "title": "Wiki.js",
+    "tagline": {
+        "en": "Documentation wiki — runs with its own PostgreSQL",
+        "es": "Wiki de documentación: funciona con su propio PostgreSQL",
+        "de": "Dokumentations-Wiki — läuft mit eigenem PostgreSQL",
+        "fr": "Wiki de documentation — fonctionne avec son propre PostgreSQL",
+        "pt": "Wiki de documentação — funciona com o seu próprio PostgreSQL",
+        "ja": "ドキュメント Wiki — 専用の PostgreSQL 付きで動作",
+        "ru": "Вики для документации — работает со своим PostgreSQL",
+        "hi": "दस्तावेज़ीकरण विकी — अपने PostgreSQL के साथ चलता है"
+    },
+    "category": "cms",
+    "icon": "wikijs",
+    "popular": false,
+    "catalog_order": 160,
+    "images": {
+        "app": {
+            "ref": "ghcr.io/requarks/wiki:2",
+            "tested": []
+        },
+        "db": {
+            "ref": "postgres:16-alpine",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "wiki",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 3000,
+    "memory_floor": null,
+    "volumes": {
+        "db": "/var/lib/postgresql/data"
+    },
+    "secrets": [
+        {
+            "key": "DATABASE_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Pages, uploads and configuration all live in PostgreSQL, so only the database needs a persistent volume.",
+        "Finish the application setup wizard on the first visit."
+    ]
+}

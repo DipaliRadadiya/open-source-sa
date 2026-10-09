@@ -1,0 +1,72 @@
+{
+    "schema": 1,
+    "slug": "mattermost",
+    "version": 1,
+    "title": "Mattermost",
+    "tagline": {
+        "en": "Team chat — runs with its own PostgreSQL",
+        "es": "Chat de equipo: funciona con su propio PostgreSQL",
+        "de": "Team-Chat — läuft mit eigenem PostgreSQL",
+        "fr": "Chat d'équipe — fonctionne avec son propre PostgreSQL",
+        "pt": "Chat de equipa — funciona com o seu próprio PostgreSQL",
+        "ja": "チームチャット — 専用の PostgreSQL 付きで動作",
+        "ru": "Командный чат — работает со своим PostgreSQL",
+        "hi": "टीम चैट — अपने PostgreSQL के साथ चलता है"
+    },
+    "category": "communication",
+    "icon": "mattermost",
+    "popular": true,
+    "catalog_order": 120,
+    "images": {
+        "app": {
+            "ref": "mattermost/mattermost-team-edition:release-10",
+            "tested": []
+        },
+        "db": {
+            "ref": "postgres:16-alpine",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "mattermost",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 8065,
+    "memory_floor": "1g",
+    "volumes": {
+        "data": "/mattermost/data",
+        "config": "/mattermost/config",
+        "plugins": "/mattermost/plugins",
+        "client-plugins": "/mattermost/client/plugins",
+        "logs": "/mattermost/logs",
+        "db": "/var/lib/postgresql/data"
+    },
+    "secrets": [
+        {
+            "key": "DATABASE_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "MM_SERVICESETTINGS_SITEURL",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "open_registration",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The first registered account becomes the system admin; the site URL drives invitations, password resets and mobile connections.",
+        "Named config, data and plugins volumes preserve System Console edits, uploads and server-side plugins across rebuilds.",
+        "The image also declares logs and client/plugins: naming them prevents anonymous volumes and preserves the browser half of installed plugins.",
+        "The 1g memory floor supports the in-memory channel index for a small team."
+    ]
+}

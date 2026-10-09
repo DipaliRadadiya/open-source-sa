@@ -1,0 +1,66 @@
+{
+    "schema": 1,
+    "slug": "metabase",
+    "version": 1,
+    "title": "Metabase",
+    "tagline": {
+        "en": "Dashboards and questions over your data — runs with its own PostgreSQL",
+        "es": "Paneles y consultas sobre tus datos: funciona con su propio PostgreSQL",
+        "de": "Dashboards und Auswertungen Ihrer Daten — läuft mit eigenem PostgreSQL",
+        "fr": "Tableaux de bord et analyses de vos données — fonctionne avec son propre PostgreSQL",
+        "pt": "Painéis e análises sobre os seus dados — funciona com o seu próprio PostgreSQL",
+        "ja": "データのダッシュボードと分析 — 専用の PostgreSQL 付きで動作",
+        "ru": "Дашборды и аналитика по вашим данным — работает со своим PostgreSQL",
+        "hi": "आपके डेटा पर डैशबोर्ड और सवाल — अपने PostgreSQL के साथ चलता है"
+    },
+    "category": "analytics",
+    "icon": "metabase",
+    "popular": false,
+    "catalog_order": 150,
+    "images": {
+        "app": {
+            "ref": "metabase/metabase:latest",
+            "tested": []
+        },
+        "db": {
+            "ref": "postgres:16-alpine",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "metabase",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 3000,
+    "memory_floor": "2g",
+    "volumes": {
+        "db": "/var/lib/postgresql/data"
+    },
+    "secrets": [
+        {
+            "key": "DATABASE_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "PostgreSQL stores dashboards and configuration instead of the embedded H2 file, which is unsuitable for production and unsafe to copy while running.",
+        "The measured JVM memory floor is 2g: the default 512m ceiling caused startup crashes.",
+        "Everything persistent lives in the database volume; the site URL is configured through the setup wizard."
+    ]
+}

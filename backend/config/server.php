@@ -5,18 +5,12 @@ use App\Services\Applications\Types\BookStackSiteType;
 use App\Services\Applications\Types\ChatwootSiteType;
 use App\Services\Applications\Types\CraftCmsSiteType;
 use App\Services\Applications\Types\DockerSiteType;
-use App\Services\Applications\Types\GhostSiteType;
 use App\Services\Applications\Types\GitSiteType;
-use App\Services\Applications\Types\GrafanaSiteType;
 use App\Services\Applications\Types\JoomlaSiteType;
-use App\Services\Applications\Types\MatomoSiteType;
-use App\Services\Applications\Types\MattermostSiteType;
 use App\Services\Applications\Types\MauticSiteType;
-use App\Services\Applications\Types\MetabaseSiteType;
 use App\Services\Applications\Types\MoodleSiteType;
 use App\Services\Applications\Types\N8nSiteType;
 use App\Services\Applications\Types\NextcloudSiteType;
-use App\Services\Applications\Types\NocoDbSiteType;
 use App\Services\Applications\Types\NodeBbSiteType;
 use App\Services\Applications\Types\NodeRedSiteType;
 use App\Services\Applications\Types\PhpMyAdminSiteType;
@@ -25,7 +19,6 @@ use App\Services\Applications\Types\PrestaShopSiteType;
 use App\Services\Applications\Types\StatamicSiteType;
 use App\Services\Applications\Types\StaticSiteType;
 use App\Services\Applications\Types\UptimeKumaSiteType;
-use App\Services\Applications\Types\WikiJsSiteType;
 use App\Services\Applications\Types\WordPressContainerSiteType;
 use App\Services\Applications\Types\WordPressSiteType;
 use App\Services\Git\BitbucketProvider;
@@ -2252,14 +2245,7 @@ return [
 
     'site_types' => [
         DockerSiteType::class,
-        GhostSiteType::class,
-        NocoDbSiteType::class,
-        MatomoSiteType::class,
-        MattermostSiteType::class,
         ChatwootSiteType::class,
-        MetabaseSiteType::class,
-        WikiJsSiteType::class,
-        GrafanaSiteType::class,
         BookStackSiteType::class,
         WordPressContainerSiteType::class,
         WordPressSiteType::class,

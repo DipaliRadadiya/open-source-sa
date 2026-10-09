@@ -2,6 +2,7 @@
 
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Applications\Types\AbstractDockerAppType;
+use App\Services\Applications\Types\GhostSiteType;
 use App\Services\Applications\Types\RecipeSiteType;
 use App\Services\Recipes\RecipeRegistry;
 use App\Services\Server\Applications\InstallerManager;
@@ -56,7 +57,10 @@ it('rejects duplicate class and recipe names before building the catalog', funct
         $data['slug'] = 'ghost';
         file_put_contents($root.'/ghost/recipe.json', json_encode($data, JSON_THROW_ON_ERROR));
         copy($source.'/compose.yml.tpl', $root.'/ghost/compose.yml.tpl');
-        config(['recipes.path' => $root]);
+        config([
+            'recipes.path' => $root,
+            'server.site_types' => [...config('server.site_types'), GhostSiteType::class],
+        ]);
         app(RecipeRegistry::class)->flush();
         expect(fn () => app(SiteTypeManager::class)->all())->toThrow(LogicException::class, 'Duplicate site type names');
     } finally {

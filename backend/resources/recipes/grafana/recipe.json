@@ -1,0 +1,67 @@
+{
+    "schema": 1,
+    "slug": "grafana",
+    "version": 1,
+    "title": "Grafana",
+    "tagline": {
+        "en": "Dashboards and alerts over your metrics — the admin password is generated per site",
+        "es": "Paneles y alertas sobre sus métricas: la contraseña de administrador se genera por sitio",
+        "de": "Dashboards und Alarme über Ihre Metriken — das Admin-Passwort wird pro Site erzeugt",
+        "fr": "Tableaux de bord et alertes sur vos métriques — le mot de passe admin est généré par site",
+        "pt": "Painéis e alertas sobre as suas métricas — a palavra-passe de administrador é gerada por site",
+        "ja": "メトリクスのダッシュボードとアラート — 管理者パスワードはサイトごとに生成されます",
+        "ru": "Панели и оповещения по вашим метрикам — пароль администратора создаётся для каждого сайта",
+        "hi": "आपके मेट्रिक्स पर डैशबोर्ड और अलर्ट — एडमिन पासवर्ड हर साइट के लिए बनाया जाता है"
+    },
+    "category": "analytics",
+    "icon": "grafana",
+    "popular": true,
+    "catalog_order": 170,
+    "images": {
+        "app": {
+            "ref": "grafana/grafana:13.2",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "app",
+            "role": "app"
+        }
+    ],
+    "container_port": 3000,
+    "memory_floor": null,
+    "volumes": {
+        "data": "/var/lib/grafana"
+    },
+    "secrets": [
+        {
+            "key": "GF_SECURITY_ADMIN_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "GF_SERVER_ROOT_URL",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "username",
+                "value": "admin"
+            },
+            {
+                "label": "password",
+                "secret": "GF_SECURITY_ADMIN_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The per-site generated admin password is preserved on every boot and re-provision; never expose admin/admin on a public URL.",
+        "GF_SERVER_ROOT_URL drives absolute links, alert notifications and redirects; the app is served at the domain root.",
+        "The named data volume preserves SQLite, dashboards, users and alert rules; anonymous access and analytics reporting stay disabled."
+    ]
+}

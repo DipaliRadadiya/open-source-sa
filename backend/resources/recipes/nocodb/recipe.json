@@ -1,0 +1,67 @@
+{
+    "schema": 1,
+    "slug": "nocodb",
+    "version": 1,
+    "title": "NocoDB",
+    "tagline": {
+        "en": "Spreadsheet interface for a database — runs with its own PostgreSQL",
+        "es": "Interfaz de hoja de cálculo para una base de datos: funciona con su propio PostgreSQL",
+        "de": "Tabellenoberfläche für eine Datenbank — läuft mit eigenem PostgreSQL",
+        "fr": "Interface tableur pour une base de données — fonctionne avec son propre PostgreSQL",
+        "pt": "Interface de folha de cálculo para uma base de dados — funciona com o seu próprio PostgreSQL",
+        "ja": "データベースをスプレッドシートとして操作 — 専用の PostgreSQL 付きで動作",
+        "ru": "Табличный интерфейс к базе данных — работает со своим PostgreSQL",
+        "hi": "डेटाबेस के लिए स्प्रेडशीट इंटरफ़ेस — अपने PostgreSQL के साथ चलता है"
+    },
+    "category": "database",
+    "icon": "nocodb",
+    "popular": false,
+    "catalog_order": 100,
+    "images": {
+        "app": {
+            "ref": "nocodb/nocodb:latest",
+            "tested": []
+        },
+        "db": {
+            "ref": "postgres:16-alpine",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "nocodb",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 8080,
+    "memory_floor": "1g",
+    "volumes": {
+        "data": "/usr/app/data",
+        "db": "/var/lib/postgresql/data"
+    },
+    "secrets": [
+        {
+            "key": "DATABASE_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "NC_PUBLIC_URL",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "open_registration",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The first person to register becomes the super admin; open the public site promptly after install.",
+        "The measured 1g memory floor avoids the startup core dump seen at 512m.",
+        "NC_DB is the single PostgreSQL connection URL; NC_PUBLIC_URL supplies invitation and email links."
+    ]
+}

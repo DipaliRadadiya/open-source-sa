@@ -1,0 +1,72 @@
+{
+    "schema": 1,
+    "slug": "matomo",
+    "version": 1,
+    "title": "Matomo",
+    "tagline": {
+        "en": "Web analytics on your own server — a Google Analytics replacement",
+        "es": "Analítica web en tu propio servidor: una alternativa a Google Analytics",
+        "de": "Web-Analyse auf Ihrem eigenen Server — ein Ersatz für Google Analytics",
+        "fr": "Analyse web sur votre propre serveur — une alternative à Google Analytics",
+        "pt": "Analítica web no seu próprio servidor — uma alternativa ao Google Analytics",
+        "ja": "自分のサーバーで動くウェブ解析 — Google Analytics の代替",
+        "ru": "Веб-аналитика на своём сервере — замена Google Analytics",
+        "hi": "अपने सर्वर पर वेब एनालिटिक्स — Google Analytics का विकल्प"
+    },
+    "category": "analytics",
+    "icon": "matomo",
+    "popular": true,
+    "catalog_order": 110,
+    "images": {
+        "app": {
+            "ref": "matomo:5-apache",
+            "tested": []
+        },
+        "db": {
+            "ref": "mariadb:10.11",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "matomo",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 80,
+    "memory_floor": null,
+    "volumes": {
+        "app": "/var/www/html",
+        "db": "/var/lib/mysql"
+    },
+    "secrets": [
+        {
+            "key": "DATABASE_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "MARIADB_ROOT_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The database environment variables pre-fill the installation wizard, not config.ini.php; the first visitor must finish setup and create the superuser.",
+        "The app volume preserves configuration, plugins and GeoIP data written into the webroot across rebuilds.",
+        "Matomo connects with a dedicated database user, never MariaDB root; the app owns its URL configuration."
+    ]
+}
