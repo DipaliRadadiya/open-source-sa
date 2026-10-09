@@ -398,3 +398,9 @@
 @media (prefers-reduced-motion: reduce) {
   .skeleton-shimmer { animation: none; }
 }
+
+/* A field the create form's checklist jumped to: the input focus ring, held briefly. */
+[data-attention="true"] {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 50%, transparent);
+}

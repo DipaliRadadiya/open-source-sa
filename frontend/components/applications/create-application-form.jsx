@@ -971,7 +971,16 @@ export function CreateApplicationForm({
           {
             key: "source",
             target: missingGitTarget ?? "git_account_id",
-            label: t("sourceLabel"),
+            // Names the part still missing: "Missing: Source" read as wrong once the
+            // account was chosen and only the repository was left.
+            label: missingGitTarget
+              ? {
+                  git_account_id: t("gitAccount"),
+                  repository: t("repository"),
+                  branch: t("branch"),
+                  repository_url: t("publicRepository"),
+                }[missingGitTarget]
+              : t("sourceLabel"),
             value:
               gitSource === "account"
                 ? [
@@ -1272,6 +1281,12 @@ export function CreateApplicationForm({
         .map((selector) => container?.querySelector(selector))
         .find(Boolean);
       control?.focus({ preventScroll: true });
+      // A select focused by script after a mouse click shows no focus ring, so ring it
+      // briefly to show where the checklist jumped.
+      if (control) {
+        control.dataset.attention = "true";
+        setTimeout(() => delete control.dataset.attention, 1600);
+      }
       setFocusRequest(null);
     });
     return () => cancelAnimationFrame(frame);
