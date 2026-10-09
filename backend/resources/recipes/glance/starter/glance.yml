@@ -1,0 +1,14 @@
+# Glance configuration. Edit this file in the panel's File Manager,
+# then restart the site's container to apply it.
+# Reference: https://github.com/glanceapp/glance/blob/main/docs/configuration.md
+pages:
+  - name: Home
+    columns:
+      - size: full
+        widgets:
+          - type: clock
+            hour-format: 24h
+          - type: server-stats
+            servers:
+              - type: local
+                name: This server

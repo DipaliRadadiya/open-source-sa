@@ -5,12 +5,9 @@ use App\Services\Applications\Types\BookStackSiteType;
 use App\Services\Applications\Types\ChatwootSiteType;
 use App\Services\Applications\Types\CraftCmsSiteType;
 use App\Services\Applications\Types\DockerSiteType;
-use App\Services\Applications\Types\ExcalidrawSiteType;
 use App\Services\Applications\Types\GhostSiteType;
 use App\Services\Applications\Types\GitSiteType;
-use App\Services\Applications\Types\GlanceSiteType;
 use App\Services\Applications\Types\GrafanaSiteType;
-use App\Services\Applications\Types\HomepageSiteType;
 use App\Services\Applications\Types\JoomlaSiteType;
 use App\Services\Applications\Types\MatomoSiteType;
 use App\Services\Applications\Types\MattermostSiteType;
@@ -2256,13 +2253,10 @@ return [
     'site_types' => [
         DockerSiteType::class,
         GhostSiteType::class,
-        GlanceSiteType::class,
-        HomepageSiteType::class,
         NocoDbSiteType::class,
         MatomoSiteType::class,
         MattermostSiteType::class,
         ChatwootSiteType::class,
-        ExcalidrawSiteType::class,
         MetabaseSiteType::class,
         WikiJsSiteType::class,
         GrafanaSiteType::class,

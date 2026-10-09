@@ -1,0 +1,52 @@
+{
+    "schema": 1,
+    "slug": "homepage",
+    "version": 1,
+    "title": "Homepage",
+    "tagline": {
+        "en": "Start page for the services on your server",
+        "es": "Página de inicio para los servicios de tu servidor",
+        "de": "Startseite für die Dienste auf Ihrem Server",
+        "fr": "Page d'accueil des services de votre serveur",
+        "pt": "Página inicial para os serviços do seu servidor",
+        "ja": "サーバー上のサービスのスタートページ",
+        "ru": "Стартовая страница для сервисов вашего сервера",
+        "hi": "आपके सर्वर की सेवाओं के लिए प्रारंभ पृष्ठ"
+    },
+    "category": "monitoring",
+    "icon": "homepage",
+    "popular": false,
+    "catalog_order": 90,
+    "images": {
+        "app": {
+            "ref": "ghcr.io/gethomepage/homepage:latest",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "app",
+            "role": "app"
+        }
+    ],
+    "container_port": 3000,
+    "memory_floor": null,
+    "volumes": {
+        "config": "/app/config"
+    },
+    "secrets": [],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "none",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Configuration files persist in /app/config instead of a database.",
+        "Docker socket access is refused, even read-only, because it controls the daemon. Configure service widgets by hand.",
+        "HOMEPAGE_ALLOWED_HOSTS must match the site domain or the healthy container returns HTTP 400."
+    ]
+}

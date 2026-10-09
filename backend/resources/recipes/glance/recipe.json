@@ -1,0 +1,54 @@
+{
+    "schema": 1,
+    "slug": "glance",
+    "version": 1,
+    "title": "Glance",
+    "tagline": {
+        "en": "Dashboard for feeds, monitors and bookmarks",
+        "es": "Panel de feeds, monitores y marcadores",
+        "de": "Dashboard für Feeds, Monitore und Lesezeichen",
+        "fr": "Tableau de bord pour flux, sondes et favoris",
+        "pt": "Painel para feeds, monitores e favoritos",
+        "ja": "フィード・監視・ブックマークのダッシュボード",
+        "ru": "Панель для лент, мониторинга и закладок",
+        "hi": "फ़ीड, मॉनिटर और बुकमार्क का डैशबोर्ड"
+    },
+    "category": "monitoring",
+    "icon": "glance",
+    "popular": false,
+    "catalog_order": 80,
+    "images": {
+        "app": {
+            "ref": "glanceapp/glance:latest",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "app",
+            "role": "app"
+        }
+    ],
+    "container_port": 8080,
+    "memory_floor": null,
+    "volumes": {},
+    "secrets": [],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [
+        {
+            "path": "/app/config/glance.yml",
+            "source": "starter/glance.yml"
+        }
+    ],
+    "first_run": {
+        "kind": "none",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Configuration is a YAML file bind-mounted from the site directory, editable through the File Manager.",
+        "A minimal starter page with a clock and local server stats prevents an unusable first boot with a missing configuration file."
+    ]
+}
