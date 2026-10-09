@@ -39,7 +39,7 @@ class SiteTypeSuggestion
 
         return [
             'detected' => $detected,
-            'detected_title' => $detected === null ? null : __("application.types.{$detected}.title"),
+            'detected_title' => $detected === null ? null : app(SiteTypeText::class)->title($detected),
             'confidence' => $confidence === null ? null : (int) $confidence,
             // The file the verdict rests on, so the note can say *why*.
             'matched' => $matched,

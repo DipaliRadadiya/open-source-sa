@@ -19,6 +19,7 @@ services:
       PASSWORD: "{{ secret.PASSWORD|base64 }}"
     volumes:
       - {{ volume.data }}:/data
+      - {{ site_root }}/app/config:/app/config
   db:
     image: {{ image.db }}
     restart: unless-stopped

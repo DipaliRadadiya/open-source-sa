@@ -15,6 +15,7 @@ use App\Rules\SupportedNodeVersion;
 use App\Rules\SupportedPhpVersion;
 use App\Services\Applications\ServingProfile;
 use App\Services\Applications\SiteTypeManager;
+use App\Services\Applications\SiteTypeText;
 use App\Services\Server\Applications\ComposeValidator;
 use App\Services\Server\Applications\EngineVersionSupport;
 use App\Services\Server\Applications\GitDeployer;
@@ -236,7 +237,7 @@ class StoreApplicationRequest extends FormRequest
 
                     if (! in_array($value, $installer->acceptedEngines(), true)) {
                         $fail(__('errors/application.database_engine_unsupported', [
-                            'application' => __("application.types.{$type->name()}.title"),
+                            'application' => app(SiteTypeText::class)->title($type->name()),
                         ]));
 
                         return;
@@ -263,7 +264,7 @@ class StoreApplicationRequest extends FormRequest
 
                     if ($minimum !== null) {
                         $fail(__('errors/application.database_engine_too_old', [
-                            'application' => __("application.types.{$type->name()}.title"),
+                            'application' => app(SiteTypeText::class)->title($type->name()),
                             'engine' => (string) config("server.databases.engines.{$value}.label", $value),
                             'minimum' => $minimum,
                         ]));
@@ -331,7 +332,7 @@ class StoreApplicationRequest extends FormRequest
             $rules['node_version'][] = new SupportedNodeVersion(
                 $range['min'] ?? null,
                 $range['max'] ?? null,
-                __("application.types.{$type->name()}.title"),
+                app(SiteTypeText::class)->title($type->name()),
             );
         }
 
@@ -373,7 +374,7 @@ class StoreApplicationRequest extends FormRequest
         return new SupportedPhpVersion(
             $range['min'] ?? null,
             $range['max'] ?? null,
-            __("application.types.{$type->name()}.title"),
+            app(SiteTypeText::class)->title($type->name()),
             // What an empty field will actually run on: the field is
             // `nullable` and provisioning resolves a blank one to the server
             // default, so without this the range is enforced on every value
@@ -401,7 +402,7 @@ class StoreApplicationRequest extends FormRequest
 
         return [
             'web_root.in' => __('validation.web_root_fixed', [
-                'type' => __("application.types.{$type->name()}.title"),
+                'type' => app(SiteTypeText::class)->title($type->name()),
                 'web_root' => $fixed,
             ]),
         ];

@@ -6,6 +6,7 @@ use App\Enums\CertificateStatus;
 use App\Models\Application;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Applications\SiteTypeSuggestion;
+use App\Services\Applications\SiteTypeText;
 use App\Services\Git\Webhooks\WebhookManager;
 use App\Services\Server\Applications\ContainerLiveness;
 use App\Services\Server\Applications\ContainerSupervisor;
@@ -70,7 +71,7 @@ class ApplicationResource extends JsonResource
             'document_root' => $this->resource->systemUser ? $this->resource->documentRoot() : null,
             'path' => $this->resource->systemUser ? $this->resource->codePath() : null,
             'site_type' => $this->site_type,
-            'site_type_title' => __("application.types.{$this->site_type}.title"),
+            'site_type_title' => app(SiteTypeText::class)->title((string) $this->site_type),
             // What the last Detect found, and whether there is anything to
             // offer the user about it. `suggested` is null unless relabelling
             // would actually be allowed, so the frontend tests one field and

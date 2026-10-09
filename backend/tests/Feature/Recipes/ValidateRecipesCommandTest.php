@@ -3,9 +3,9 @@
 use App\Services\Recipes\RecipeRegistry;
 
 it('validates fixture recipes and accepts the empty shipped registry', function () {
-    config(['recipes.path' => base_path('tests/Fixtures/recipes/valid')]);
+    config(['recipes.path' => base_path('tests/Fixtures/recipes/valid'), 'recipes.hook_namespaces' => ['App\\Services\\Recipes\\Hooks\\', 'Tests\\Support\\Recipes\\']]);
     app(RecipeRegistry::class)->flush();
-    $this->artisan('recipes:validate')->expectsOutput('OK demo_multi v1')->expectsOutput('OK demo_single v1')->expectsOutput('OK demo_claim v1')->assertExitCode(0);
+    $this->artisan('recipes:validate')->expectsOutput('OK demo_multi v1')->expectsOutput('OK demo_single v1')->expectsOutput('OK demo_claim v1')->expectsOutput('OK demo_hook v1')->assertExitCode(0);
     config(['recipes.path' => resource_path('recipes')]);
     app(RecipeRegistry::class)->flush();
     $this->artisan('recipes:validate')->expectsOutput('No recipes found in '.resource_path('recipes'))->assertExitCode(0);

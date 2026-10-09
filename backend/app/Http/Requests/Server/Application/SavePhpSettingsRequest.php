@@ -7,6 +7,7 @@ use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
 use App\Rules\SupportedPhpVersion;
 use App\Services\Applications\SiteTypeManager;
+use App\Services\Applications\SiteTypeText;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Php\AdditionalDirectives;
 use App\Services\Server\Php\MemoryBudget;
@@ -306,7 +307,7 @@ class SavePhpSettingsRequest extends FormRequest
         return [new SupportedPhpVersion(
             $range['min'] ?? null,
             $range['max'] ?? null,
-            __("application.types.{$type->name()}.title"),
+            app(SiteTypeText::class)->title($type->name()),
         )];
     }
 

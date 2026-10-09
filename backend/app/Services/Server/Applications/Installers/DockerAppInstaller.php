@@ -7,9 +7,14 @@ use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Applications\Types\AbstractDockerAppType;
+use App\Services\Applications\Types\RecipeSiteType;
+use App\Services\Recipes\Exceptions\RecipeRenderException;
+use App\Services\Recipes\RecipeRenderer;
+use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\ContainerSupervisor;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
@@ -48,6 +53,7 @@ class DockerAppInstaller implements SiteInstaller
         private ContainerSupervisor $containers,
         private ManagedFile $files,
         private ServerOps $serverOps,
+        private RecipeRenderer $recipes,
     ) {}
 
     /**
@@ -139,7 +145,7 @@ class DockerAppInstaller implements SiteInstaller
         }
 
         $application->forceFill([
-            'compose' => $this->render($type, $application, $url, $secrets),
+            'compose' => $this->renderFor($application, $url),
         ])->save();
     }
 
@@ -336,6 +342,7 @@ class DockerAppInstaller implements SiteInstaller
                 $secrets,
                 $volumes,
                 $binds,
+                $documentRoot,
             ),
         ])->save();
     }
@@ -419,7 +426,12 @@ class DockerAppInstaller implements SiteInstaller
         array $secrets,
         array $volumes = [],
         array $binds = [],
+        ?string $documentRoot = null,
     ): string {
+        if ($type instanceof RecipeSiteType) {
+            return $this->renderRecipe($type, $application, $url, $secrets, $documentRoot);
+        }
+
         if ($volumes === []) {
             foreach ($type->volumeRoles() as $role => $path) {
                 $volumes[$role] = $this->containers->project($application)."_{$role}";
@@ -490,6 +502,49 @@ class DockerAppInstaller implements SiteInstaller
             // required key -- a template that does not use it never sees it.
             'redisImage' => (string) config("server.docker_apps.{$type->name()}.redis_image"),
         ])->render();
+    }
+
+    /**
+     * Render using the site's stored secrets, without changing the record or files.
+     */
+    public function renderFor(Application $application, string $url): ?string
+    {
+        $type = $this->typeFor($application);
+        if ($type === null) {
+            return null;
+        }
+
+        $secrets = $this->storedSecrets($application);
+        if ($type->generatedSecrets() !== [] && $secrets === []) {
+            return null;
+        }
+
+        return $this->render($type, $application, $url, $secrets);
+    }
+
+    private function renderRecipe(
+        RecipeSiteType $type,
+        Application $application,
+        string $url,
+        array $secrets,
+        ?string $documentRoot,
+    ): string {
+        $root = $documentRoot ?? app(ApplicationProvisioner::class)->documentRoot($application);
+
+        try {
+            return $this->recipes->render($type->recipe(), $application, $url, $secrets, $root);
+        } catch (RecipeRenderException $e) {
+            $reference = (string) Str::uuid();
+            Log::channel('server-ops')->error('Refused to render a recipe compose file', [
+                'reference' => $reference,
+                'feature' => 'application',
+                'op' => 'recipe_render',
+                'application' => $application->id,
+                'field' => $e->field,
+            ]);
+
+            throw new ProvisioningFailedException('compose_write', $reference);
+        }
     }
 
     /**

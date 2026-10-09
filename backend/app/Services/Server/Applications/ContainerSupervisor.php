@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications;
 
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
+use App\Services\Recipes\RecipeRegistry;
 use App\Services\Server\Docker\RegistryAuth;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
@@ -636,15 +637,13 @@ class ContainerSupervisor
      * app's template into the column — so the file is the panel's own work and
      * already carries everything the override exists to add.
      *
-     * Asked of `docker_apps`, the same registry the installer reads the image
-     * from, rather than by matching the site type against a class. A type that is
-     * in that list is by definition one whose compose file the panel generates,
-     * and the two cannot drift: a new one-click has to be registered there or it
-     * has no image.
+     * Recipes are panel-rendered too. Keep the legacy registry fallback until
+     * all class-based one-click apps have migrated to recipe folders.
      */
     public function panelRendered(Application $application): bool
     {
-        return config("server.docker_apps.{$application->site_type}") !== null;
+        return app(RecipeRegistry::class)->has((string) $application->site_type)
+            || config("server.docker_apps.{$application->site_type}") !== null;
     }
 
     /**

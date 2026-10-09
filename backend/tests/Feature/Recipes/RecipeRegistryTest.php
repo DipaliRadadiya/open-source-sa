@@ -4,10 +4,10 @@ use App\Services\Recipes\Exceptions\InvalidRecipeException;
 use App\Services\Recipes\RecipeRegistry;
 
 it('memoizes the sorted registry and supports explicit flushing', function () {
-    config(['recipes.path' => base_path('tests/Fixtures/recipes/valid')]);
+    config(['recipes.path' => base_path('tests/Fixtures/recipes/valid'), 'recipes.hook_namespaces' => ['App\\Services\\Recipes\\Hooks\\', 'Tests\\Support\\Recipes\\']]);
     $r = app(RecipeRegistry::class);
     $r->flush();
-    expect(array_keys($r->all()))->toBe(['demo_multi', 'demo_single', 'demo_claim'])->and($r->has('demo_single'))->toBeTrue()->and($r->find('missing'))->toBeNull()->and(app(RecipeRegistry::class))->toBe($r);
+    expect(array_keys($r->all()))->toBe(['demo_multi', 'demo_single', 'demo_claim', 'demo_hook'])->and($r->has('demo_single'))->toBeTrue()->and($r->find('missing'))->toBeNull()->and(app(RecipeRegistry::class))->toBe($r);
     config(['recipes.path' => resource_path('recipes')]);
     expect($r->has('demo_single'))->toBeTrue();
     $r->flush();

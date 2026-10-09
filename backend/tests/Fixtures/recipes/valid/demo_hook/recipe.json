@@ -1,15 +1,14 @@
 {
   "schema": 1,
-  "slug": "demo_single",
+  "slug": "demo_hook",
   "version": 1,
   "title": "Demo",
   "tagline": {
-    "en": "Demo application",
-    "ja": "デモアプリ"
+    "en": "Demo application"
   },
   "category": "utility",
   "icon": "demo",
-  "catalog_order": 20,
+  "catalog_order": 40,
   "images": {
     "app": {
       "ref": "ghost:5-alpine",
@@ -31,6 +30,11 @@
       "key": "PASSWORD",
       "complexity": "alnum",
       "panel_only": false
+    },
+    {
+      "key": "ADMIN_PASSWORD",
+      "complexity": "complex",
+      "panel_only": true
     }
   ],
   "url_env_key": "APP_URL",
@@ -42,5 +46,12 @@
         "secret": "PASSWORD"
       }
     ]
-  }
+  },
+  "inputs": [
+    {
+      "name": "admin_email",
+      "required": true
+    }
+  ],
+  "hook": "Tests\\Support\\Recipes\\FakeClaimHook"
 }

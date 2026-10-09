@@ -9,6 +9,8 @@ use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Exceptions\Server\ServerOperationException;
 use App\Models\Application;
 use App\Models\Database;
+use App\Services\Recipes\RecipeRegistry;
+use App\Services\Server\Applications\Installers\DockerAppInstaller;
 use App\Services\Server\Databases\DatabaseIdentifier;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\DatabasePassword;
@@ -46,7 +48,8 @@ class InstallerManager
      */
     public function hasInstaller(string $siteType): bool
     {
-        return config("server.installers.{$siteType}.driver") !== null;
+        return config("server.installers.{$siteType}.driver") !== null
+            || app(RecipeRegistry::class)->has($siteType);
     }
 
     public function installerFor(Application $application): ?SiteInstaller
@@ -62,7 +65,11 @@ class InstallerManager
     {
         $class = config("server.installers.{$siteType}.driver");
 
-        return $class === null ? null : app($class);
+        if ($class !== null) {
+            return app($class);
+        }
+
+        return app(RecipeRegistry::class)->has($siteType) ? app(DockerAppInstaller::class) : null;
     }
 
     /**

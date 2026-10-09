@@ -4,6 +4,10 @@ namespace App\Services\Applications;
 
 use App\Contracts\SiteType;
 use App\Rules\SupportedPhpVersion;
+use App\Services\Applications\Types\DockerSiteType;
+use App\Services\Applications\Types\RecipeSiteType;
+use App\Services\Recipes\Recipe;
+use App\Services\Recipes\RecipeRegistry;
 use App\Services\Server\Applications\EngineVersionSupport;
 use App\Services\Server\Applications\InstallerManager;
 use App\Services\Server\Capabilities\ServerCapabilities;
@@ -37,6 +41,7 @@ class SiteTypeManager
         private EngineVersionSupport $versions,
         private PhpVersionManager $phpVersions,
         private PhpRuntime $php,
+        private RecipeRegistry $recipes,
     ) {}
 
     /**
@@ -44,7 +49,23 @@ class SiteTypeManager
      */
     public function all(): array
     {
-        return array_map(fn (string $class) => app($class), (array) config('server.site_types', []));
+        $types = [];
+        foreach ((array) config('server.site_types', []) as $class) {
+            $types[] = app($class);
+            if ($class === DockerSiteType::class) {
+                array_push($types, ...array_map(
+                    fn (Recipe $recipe) => new RecipeSiteType($recipe),
+                    array_values($this->recipes->all()),
+                ));
+            }
+        }
+
+        $names = array_map(fn (SiteType $type) => $type->name(), $types);
+        if (count($names) !== count(array_unique($names))) {
+            throw new \LogicException('Duplicate site type names: '.implode(',', array_diff_assoc($names, array_unique($names))));
+        }
+
+        return $types;
     }
 
     public function find(string $name): ?SiteType
@@ -143,8 +164,8 @@ class SiteTypeManager
 
             return [
                 'name' => $type->name(),
-                'title' => __("application.types.{$type->name()}.title"),
-                'tagline' => __("application.types.{$type->name()}.tagline"),
+                'title' => app(SiteTypeText::class)->title($type->name()),
+                'tagline' => app(SiteTypeText::class)->tagline($type->name()),
                 'icon' => $type->icon(),
                 'category' => $type->category(),
                 'popular' => $type->popular(),
@@ -511,7 +532,7 @@ class SiteTypeManager
         // Newest first, so the suggestion is the one with the longest life left.
         $installable = array_values(array_filter($this->php->installable(), $fits));
         $replace = [
-            'type' => __("application.types.{$type->name()}.title"),
+            'type' => app(SiteTypeText::class)->title($type->name()),
             'range' => SupportedPhpVersion::describe($min, $max),
         ];
 

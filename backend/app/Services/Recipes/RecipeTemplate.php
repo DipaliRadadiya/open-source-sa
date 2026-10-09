@@ -85,7 +85,15 @@ final class RecipeTemplate
         return $this->body;
     }
 
-    public function render(array $values): string
+    /** Names substituted in the active branches, not merely declared in the source. */
+    public function activePlaceholders(array $values): array
+    {
+        preg_match_all(self::TOKEN, $this->selectedText($values), $matches, PREG_SET_ORDER);
+
+        return array_values(array_unique(array_column($matches, 1)));
+    }
+
+    private function selectedText(array $values): string
     {
         $lines = [];
         $keep = true;
@@ -107,7 +115,13 @@ final class RecipeTemplate
                 $lines[] = $line;
             }
         }
-        $text = implode("\n", $lines);
+
+        return implode("\n", $lines);
+    }
+
+    public function render(array $values): string
+    {
+        $text = $this->selectedText($values);
         $output = preg_replace_callback(self::TOKEN, function ($m) use ($values) {
             $name = $m[1];
             if (! array_key_exists($name, $values)) {
