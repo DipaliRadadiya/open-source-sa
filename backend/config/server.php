@@ -1,8 +1,6 @@
 <?php
 
 use App\Services\Applications\Types\AkauntingSiteType;
-use App\Services\Applications\Types\BookStackSiteType;
-use App\Services\Applications\Types\ChatwootSiteType;
 use App\Services\Applications\Types\CraftCmsSiteType;
 use App\Services\Applications\Types\DockerSiteType;
 use App\Services\Applications\Types\GitSiteType;
@@ -19,7 +17,6 @@ use App\Services\Applications\Types\PrestaShopSiteType;
 use App\Services\Applications\Types\StatamicSiteType;
 use App\Services\Applications\Types\StaticSiteType;
 use App\Services\Applications\Types\UptimeKumaSiteType;
-use App\Services\Applications\Types\WordPressContainerSiteType;
 use App\Services\Applications\Types\WordPressSiteType;
 use App\Services\Git\BitbucketProvider;
 use App\Services\Git\GithubProvider;
@@ -2245,9 +2242,6 @@ return [
 
     'site_types' => [
         DockerSiteType::class,
-        ChatwootSiteType::class,
-        BookStackSiteType::class,
-        WordPressContainerSiteType::class,
         WordPressSiteType::class,
         NextcloudSiteType::class,
         JoomlaSiteType::class,

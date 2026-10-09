@@ -1,0 +1,110 @@
+{
+    "schema": 1,
+    "slug": "chatwoot",
+    "version": 1,
+    "title": "Chatwoot",
+    "tagline": {
+        "en": "Customer support inbox — runs with its own PostgreSQL and Redis",
+        "es": "Bandeja de soporte al cliente — funciona con su propio PostgreSQL y Redis",
+        "de": "Kundensupport-Postfach — läuft mit eigenem PostgreSQL und Redis",
+        "fr": "Boîte de réception du support client — fonctionne avec son propre PostgreSQL et Redis",
+        "pt": "Caixa de entrada de suporte ao cliente — funciona com o seu próprio PostgreSQL e Redis",
+        "ja": "カスタマーサポート受信箱 — 専用の PostgreSQL と Redis で動作します",
+        "ru": "Входящие службы поддержки — работает с собственными PostgreSQL и Redis",
+        "hi": "ग्राहक सहायता इनबॉक्स — अपने स्वयं के PostgreSQL और Redis के साथ चलता है"
+    },
+    "category": "communication",
+    "icon": "chatwoot",
+    "popular": false,
+    "catalog_order": 130,
+    "images": {
+        "app": {
+            "ref": "chatwoot/chatwoot:v4.17.1",
+            "tested": []
+        },
+        "db": {
+            "ref": "pgvector/pgvector:pg16",
+            "tested": []
+        },
+        "redis": {
+            "ref": "redis:7-alpine",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "rails",
+            "role": "app"
+        },
+        {
+            "name": "sidekiq",
+            "role": "worker"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        },
+        {
+            "name": "redis",
+            "role": "cache"
+        }
+    ],
+    "container_port": 3000,
+    "memory_floor": "2g",
+    "volumes": {
+        "storage": "/app/storage",
+        "db": "/var/lib/postgresql/data",
+        "redis": "/data"
+    },
+    "secrets": [
+        {
+            "key": "SECRET_KEY_BASE",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "POSTGRES_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "REDIS_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "ADMIN_PASSWORD",
+            "complexity": "complex",
+            "panel_only": true
+        }
+    ],
+    "url_env_key": "FRONTEND_URL",
+    "inputs": [
+        {
+            "name": "admin_email",
+            "required": true
+        }
+    ],
+    "starter_files": [],
+    "first_run": {
+        "kind": "claimed",
+        "credentials": [
+            {
+                "label": "email",
+                "input": "admin_email"
+            },
+            {
+                "label": "password",
+                "secret": "ADMIN_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": "App\\Services\\Recipes\\Hooks\\ChatwootHook",
+    "notes": [
+        "Sidekiq handles outgoing email, webhooks and automation. PostgreSQL needs pgvector for the schema; Redis holds the queue and installation-onboarding flag.",
+        "The Rails entrypoint does not migrate the schema; db:chatwoot_prepare runs before the web server and is idempotent on upgrades. A separate restartable one-shot service would loop forever.",
+        "Only Rails publishes on loopback. Sidekiq has its own fixed 1g memory ceiling rather than duplicating the user-selected web ceiling.",
+        "The panel claims the first administrator before a stranger can. ADMIN_PASSWORD is complex, stored and panel-only; it is never rendered in compose. ChatwootHub subscription is deliberately omitted."
+    ]
+}

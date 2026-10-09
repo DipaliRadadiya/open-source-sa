@@ -69,7 +69,8 @@ function dockerAppSite(string $type, int $port = 20101, string $user = 'owner'):
         'system_user_id' => $systemUser->id,
         'name' => ucfirst($type).' '.$port,
         'slug' => $type.'-'.$port,
-        'domain' => "{$type}-{$port}.example.com",
+        // Slugs may contain underscores; real hostnames accepted by the API may not.
+        'domain' => str_replace('_', '-', $type)."-{$port}.example.com",
         'web_root' => 'public_html',
         'site_type' => $type,
         'serving_profile' => 'docker',

@@ -1,0 +1,73 @@
+{
+    "schema": 1,
+    "slug": "wordpress_container",
+    "version": 1,
+    "title": "WordPress",
+    "tagline": {
+        "en": "Blog and website builder — runs as a container with its own MariaDB",
+        "es": "Creador de blogs y sitios web: se ejecuta en un contenedor con su propia MariaDB",
+        "de": "Blog- und Website-Baukasten — läuft als Container mit eigener MariaDB",
+        "fr": "Création de blogs et de sites — fonctionne en conteneur avec son propre MariaDB",
+        "pt": "Criação de blogues e sites — corre como contentor com a sua própria MariaDB",
+        "ja": "ブログとサイトの構築 — 専用の MariaDB とともにコンテナとして動作します",
+        "ru": "Блоги и сайты — работает в контейнере со своей MariaDB",
+        "hi": "ब्लॉग और वेबसाइट बनाने का टूल — कंटेनर के रूप में अपने MariaDB के साथ चलता है"
+    },
+    "category": "cms",
+    "icon": "wordpress",
+    "popular": true,
+    "catalog_order": 190,
+    "images": {
+        "app": {
+            "ref": "wordpress:7.1-apache",
+            "tested": []
+        },
+        "db": {
+            "ref": "mariadb:11.4",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "app",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 80,
+    "memory_floor": null,
+    "volumes": {
+        "app": "/var/www/html",
+        "db": "/var/lib/mysql"
+    },
+    "secrets": [
+        {
+            "key": "DATABASE_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "MARIADB_ROOT_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "WORDPRESS_SITE_URL",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The wordpress_container slug keeps Docker WordPress distinct from the native PHP installer; the two are filtered by server stack.",
+        "WORDPRESS_CONFIG_EXTRA trusts the proxy forwarded protocol to avoid mixed content and redirect loops. Literal PHP variables are escaped with $$ for Compose.",
+        "WP_HOME and WP_SITEURL follow the panel domain through WORDPRESS_SITE_URL instead of leaving a changed domain locked to old database values.",
+        "The image generates and stores WordPress salts in wp-config.php in the app volume. MariaDB has its own volume and separate root and application passwords."
+    ]
+}

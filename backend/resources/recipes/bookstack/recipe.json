@@ -1,0 +1,87 @@
+{
+    "schema": 1,
+    "slug": "bookstack",
+    "version": 1,
+    "title": "BookStack",
+    "tagline": {
+        "en": "Documentation in shelves, books and pages — runs with its own MariaDB",
+        "es": "Documentación en estantes, libros y páginas: funciona con su propia MariaDB",
+        "de": "Dokumentation in Regalen, Büchern und Seiten — läuft mit eigener MariaDB",
+        "fr": "Documentation en étagères, livres et pages — fonctionne avec son propre MariaDB",
+        "pt": "Documentação em estantes, livros e páginas — funciona com a sua própria MariaDB",
+        "ja": "棚・本・ページで整理するドキュメント — 専用の MariaDB とともに動作します",
+        "ru": "Документация в виде полок, книг и страниц — работает со своей MariaDB",
+        "hi": "शेल्फ़, किताबों और पेजों में दस्तावेज़ीकरण — अपने MariaDB के साथ चलता है"
+    },
+    "category": "productivity",
+    "icon": "bookstack",
+    "popular": true,
+    "catalog_order": 180,
+    "images": {
+        "app": {
+            "ref": "lscr.io/linuxserver/bookstack:latest",
+            "tested": []
+        },
+        "db": {
+            "ref": "mariadb:11.4",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "app",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 80,
+    "memory_floor": null,
+    "volumes": {
+        "config": "/config",
+        "db": "/var/lib/mysql"
+    },
+    "secrets": [
+        {
+            "key": "APP_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DATABASE_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "MARIADB_ROOT_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "APP_URL",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "default_login",
+        "credentials": [
+            {
+                "label": "email",
+                "value": "admin@admin.com"
+            },
+            {
+                "label": "password",
+                "value": "password"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "APP_URL is required and drives every link, asset and redirect; domain changes must rewrite it.",
+        "APP_KEY is a stored 32-byte Laravel encryption key, base64-encoded in compose. Regenerating it loses sessions and encrypted settings.",
+        "The linuxserver image keeps configuration, uploads and generated files in /config. MariaDB has its own volume and separate root and application passwords.",
+        "Sign in with the documented default account, then change its password immediately."
+    ]
+}
