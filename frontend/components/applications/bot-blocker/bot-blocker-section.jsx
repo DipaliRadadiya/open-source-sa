@@ -280,7 +280,7 @@ function BotGroup({ label, bots }) {
   return (
     <div className="space-y-2">
       {/* Strong heading with a count so groups stand out from the chips. */}
-      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-foreground">
+      <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
         {label}
         <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
           {bots.length}
@@ -416,10 +416,10 @@ export function BotBlockerSection({
 
   return (
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
-      <div className="max-w-4xl space-y-4">
+      <div className="space-y-4">
         <Note icon={Bot}>{t("explainer")}</Note>
   
-        <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+        <Card className="gap-0 overflow-hidden py-0">
           <CardContent className="space-y-5 p-5">
             {/* Selectable cards over a real RadioGroup, keeping keyboard and
                 screen-reader semantics. */}

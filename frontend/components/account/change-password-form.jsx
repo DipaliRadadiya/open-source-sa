@@ -16,6 +16,7 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
+  CardFooter,
 } from "@/components/ui/card";
 import {
   Form,
@@ -54,7 +55,7 @@ export function ChangePasswordForm() {
       <form noValidate
         method="post"
         onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
-        className="max-w-3xl space-y-6"
+        className="space-y-6"
       >
         <Card>
           <CardHeader>
@@ -117,14 +118,14 @@ export function ChangePasswordForm() {
               />
             </div>
           </CardContent>
+          {/* Save sits inside the card it saves, as on every settings card. */}
+          <CardFooter className="justify-end">
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+              {isSubmitting ? t("password.saving") : t("password.submit")}
+            </Button>
+          </CardFooter>
         </Card>
-
-        <div className="flex justify-end">
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-            {isSubmitting ? t("password.saving") : t("password.submit")}
-          </Button>
-        </div>
       </form>
     </Form>
   );

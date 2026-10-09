@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/card";
 
 // Same card as PHP's, minus the panel-version rule and plus npm.
-export function VersionSummary({ version, canManage, lifecycleAvailable = false }) {
+export function VersionSummary({ version, canManage, lifecycleAvailable = false, children }) {
   const t = useTranslations("node");
   const { refreshAndWait } = useRefresh();
   const [confirming, setConfirming] = useState(false);
@@ -177,6 +177,7 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
           {/* Not shrink-0: a shrink-0 flex item keeps its max-content width, so its
               flex-wrap never fires and buttons overflow the card. */}
           <div className="flex min-w-0 flex-wrap items-center gap-2">
+            {children}
             {/* npm ships inside Node and updates separately. Null means unreadable: hide the
                 control rather than show a wrong number. */}
             {npm ? (

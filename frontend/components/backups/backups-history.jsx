@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations, useFormatter } from "next-intl";
 import { toast } from "sonner";
-import { Archive, CircleAlert, Loader2, RotateCw } from "lucide-react";
+import { Archive, CircleAlert, CircleCheck, CircleX, Loader2, RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   BACKUP_IN_FLIGHT,
@@ -19,10 +19,10 @@ import { newestBackupId, queuedApplications } from "@/lib/backups/queued";
 import { apiMessage } from "@/lib/api/error-message";
 import { formatBytes } from "@/lib/format/bytes";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
-import { Card, CardContent } from "@/components/ui/card";
 import { BackupsCards } from "@/components/backups/backups-cards";
 import { FacetSelect } from "@/components/data-table/facet-select";
 import { RefreshButton } from "@/components/data-table/refresh-button";
+import { ListCard } from "@/components/data-table/list-card";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { ClearFiltersButton } from "@/components/data-table/clear-filters-button";
 import { RestoreDialog } from "@/components/backups/restore-dialog";
@@ -38,6 +38,7 @@ export function BackupsHistory({
   canRestore,
   canRun,
   hasFilters,
+  pager = null,
 }) {
   const t = useTranslations("backups.history");
   const tr = useTranslations("backups.restore");
@@ -165,6 +166,56 @@ export function BackupsHistory({
   const busy =
     backups.some((backup) => BACKUP_IN_FLIGHT.includes(backup.status)) || restoreInFlight;
 
+  const toolbar = (
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+      {/* Searchable picker: `/backups` has no text search, so this is how a site is found. */}
+      <FacetSelect
+        paramKey="application"
+        label={t("columns.site")}
+        allLabel={t("allApplications")}
+        options={applications.map((application) => ({
+          value: String(application.id),
+          label: application.name,
+        }))}
+        className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
+      />
+      <FacetSelect
+        paramKey="status"
+        label={t("columns.status")}
+        allLabel={t("allStatuses")}
+        options={BACKUP_STATUSES.map((value) => ({
+          value,
+          label: t(`statuses.${value}`),
+        }))}
+        className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
+      />
+      {/* Presets rather than a date picker. */}
+      <FacetSelect
+        paramKey="period"
+        label={t("columns.when")}
+        allLabel={t("anyTime")}
+        options={BACKUP_PERIODS.map((value) => ({
+          value,
+          label: t("lastDays", { count: Number(value) }),
+        }))}
+        className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
+      />
+      {/* Phone: the last filter and Refresh share a row, so Refresh is not left alone on one. */}
+      <div className="flex items-center gap-3 sm:contents">
+        <FacetSelect
+          paramKey="type"
+          label={t("columns.type")}
+          allLabel={t("allTypes")}
+          options={BACKUP_TYPES.map((value) => ({ value, label: t(`types.${value}`) }))}
+          className="min-w-0 flex-1 sm:w-auto sm:min-w-36 sm:flex-none sm:shrink-0"
+        />
+        <div className="sm:ml-auto">
+          <RefreshButton />
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
       {busy || queuedNames.length ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
@@ -195,76 +246,34 @@ export function BackupsHistory({
 
       {/* Counts come from the API so they cover every page, not just this one. */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Tally label={t("counts.total")} value={counts.total} />
-        <Tally label={t("counts.complete")} value={counts.verified} tone="text-success" dot="bg-success" />
-        <Tally label={t("counts.failed")} value={counts.failed} tone="text-destructive" dot="bg-destructive" />
-        <Tally label={t("counts.running")} value={counts.running} tone="text-primary" dot="bg-primary" />
+        <Tally icon={Archive} label={t("counts.total")} value={counts.total} tone="primary" always />
+        <Tally icon={CircleCheck} label={t("counts.complete")} value={counts.verified} tone="success" />
+        <Tally icon={CircleX} label={t("counts.failed")} value={counts.failed} tone="destructive" />
+        <Tally icon={Loader2} label={t("counts.running")} value={counts.running} tone="primary" spin />
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        {/* Searchable picker: `/backups` has no text search, so this is how a site is found. */}
-        <FacetSelect
-          paramKey="application"
-          label={t("columns.site")}
-          allLabel={t("allApplications")}
-          options={applications.map((application) => ({
-            value: String(application.id),
-            label: application.name,
-          }))}
-          className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
-        />
-        <FacetSelect
-          paramKey="status"
-          label={t("columns.status")}
-          allLabel={t("allStatuses")}
-          options={BACKUP_STATUSES.map((value) => ({
-            value,
-            label: t(`statuses.${value}`),
-          }))}
-          className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
-        />
-        {/* Presets rather than a date picker. */}
-        <FacetSelect
-          paramKey="period"
-          label={t("columns.when")}
-          allLabel={t("anyTime")}
-          options={BACKUP_PERIODS.map((value) => ({
-            value,
-            label: t("lastDays", { count: Number(value) }),
-          }))}
-          className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
-        />
-        <FacetSelect
-          paramKey="type"
-          label={t("columns.type")}
-          allLabel={t("allTypes")}
-          options={BACKUP_TYPES.map((value) => ({ value, label: t(`types.${value}`) }))}
-          className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
-        />
-        <div className="sm:ml-auto">
-          <RefreshButton />
-        </div>
-      </div>
-
+      {/* The pager hides itself when the list is too short to page. */}
       {backups.length === 0 ? (
-        <EmptyState
-          icon={Archive}
-          title={hasFilters ? t("emptyFiltered.title") : t("empty.title")}
-          description={hasFilters ? t("emptyFiltered.description") : t("empty.description")}
-          // Only when filters emptied the list.
-          action={hasFilters ? <ClearFiltersButton keys={["application", "status", "period", "type", "search"]} /> : null}
-        />
+        <ListCard toolbar={toolbar}>
+          <EmptyState
+            icon={Archive}
+            title={hasFilters ? t("emptyFiltered.title") : t("empty.title")}
+            description={hasFilters ? t("emptyFiltered.description") : t("empty.description")}
+            badge={hasFilters ? "search" : null}
+            // Only when filters emptied the list.
+            action={hasFilters ? <ClearFiltersButton keys={["application", "status", "period", "type", "search"]} /> : null}
+          />
+        </ListCard>
       ) : (
-        <div className="@container">
-          {/* From the widest locale: German needs ~990px of table (Actions "Wiederherstellen",
-              Restores "Was zurückgeholt wurde"), so the table starts at 1000px of content. */}
+        // The table needs 1000px of content; narrower, the rows are cards and the list has no frame.
+        <ListCard from="c1000" toolbar={toolbar} footer={pager}>
           <div className="@min-[1000px]:hidden">
             <BackupsCards {...listProps} />
           </div>
           <div className="hidden @min-[1000px]:block">
-            <BackupsHistoryTable {...listProps} />
+            <BackupsHistoryTable {...listProps} bare />
           </div>
-        </div>
+        </ListCard>
       )}
 
       <ConfirmDialog
@@ -326,17 +335,37 @@ export function BackupsHistory({
 }
 
 /** The dot colours match the status badges in the table. */
-function Tally({ label, value, tone, dot }) {
+// Drawn like the panel's other number tiles: a soft tile carrying the colour, then
+// the number over its label.
+// The same tile as Database health's: an icon that says what is counted, the label
+// above the number (8 Oct: a dot in a circle said nothing). Colour only when the count
+// is not zero, so "0 Failed" does not shout in red.
+const TALLY_TONE = {
+  primary: "bg-primary/10 text-primary",
+  success: "bg-success-soft text-success",
+  destructive: "bg-destructive-soft text-destructive",
+};
+
+// `always`: the total keeps its colour at zero; it counts, it does not warn.
+function Tally({ icon: Icon, label, value, tone, spin = false, always = false }) {
+  const active = Number(value) > 0;
   return (
-    <Card className="gap-0 py-0 shadow-sm">
-      <CardContent className="flex items-center gap-2.5 px-3.5 py-2.5">
+    <div className="rounded-2xl border border-border/70 bg-card px-4 py-3 shadow-e1">
+      <div className="flex items-center gap-3">
         <span
-          className={cn("size-2 shrink-0 rounded-full", dot ?? "bg-muted-foreground/40")}
+          className={cn(
+            "flex size-9 shrink-0 items-center justify-center rounded-xl",
+            active || always ? TALLY_TONE[tone] : "bg-muted text-muted-foreground",
+          )}
           aria-hidden
-        />
-        <span className={cn("text-lg font-semibold leading-none tabular-nums", tone)}>{value}</span>
-        <span className="truncate text-xs text-muted-foreground">{label}</span>
-      </CardContent>
-    </Card>
+        >
+          <Icon className={cn("size-[18px]", spin && active && "animate-spin")} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs leading-tight text-muted-foreground">{label}</p>
+          <p className="text-lg font-semibold tabular-nums">{value}</p>
+        </div>
+      </div>
+    </div>
   );
 }

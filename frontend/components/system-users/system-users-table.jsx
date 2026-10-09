@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "@/components/ui/app-link";
-import { SearchX, Server, Plus } from "lucide-react";
+import { SearchX, Server, Plus, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { SearchInput } from "@/components/data-table/search-input";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { ListCard } from "@/components/data-table/list-card";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { useSetQuery } from "@/hooks/use-set-query";
 import { useSearchParams } from "next/navigation";
@@ -181,21 +182,23 @@ function SystemUsersList({
 
   const isFiltered = Boolean(searchParams.get("search"));
 
+  const toolbar = (
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      <SearchInput placeholder={t("searchPlaceholder")} />
+      <div className="flex flex-wrap items-center gap-2">
+        <RefreshButton />
+        <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+          <Button disabled={!canManage} onClick={() => setCreateOpen(true)} data-su-add>
+            <Plus className="size-4" />
+            {t("addUser")}
+          </Button>
+        </ReasonTooltip>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <SearchInput placeholder={t("searchPlaceholder")} />
-        <div className="flex flex-wrap items-center gap-2">
-          <RefreshButton />
-          <ReasonTooltip reason={canManage ? null : t("noPermission")}>
-            <Button disabled={!canManage} onClick={() => setCreateOpen(true)} data-su-add>
-              <Plus className="size-4" />
-              {t("addUser")}
-            </Button>
-          </ReasonTooltip>
-        </div>
-      </div>
-
       {/* Until Access & security is saved, sshd has no AllowGroups line, so "SSH
           login: off" keeps nobody out. Only `false`: `null` means sshd was not asked. */}
       {/* Managers only: the fix is theirs; a viewer can neither change the switches nor
@@ -218,41 +221,45 @@ function SystemUsersList({
       ) : null}
 
       {filtered.length === 0 ? (
-        isFiltered ? (
-          <EmptyState
-            icon={SearchX}
-            title={t("empty.filteredTitle")}
-            action={
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setQuery({ search: undefined }, { resetPage: true });
-                  // The button disappears with the empty state; focus the search box instead.
-                  document.querySelector("[data-search-input]")?.focus();
-                }}
-              >
-                {t("clearSearch")}
-              </Button>
-            }
-          />
-        ) : (
-          <EmptyState
-            icon={Server}
-            title={t("empty.title")}
-            description={t("empty.desc")}
-            action={
-              // Even on the empty state: a disabled button explains why the user can't act.
-              <ReasonTooltip reason={canManage ? null : t("noPermission")}>
-                <Button disabled={!canManage} onClick={() => setCreateOpen(true)}>
-                  <Plus className="size-4" />
-                  {t("addUser")}
+        <ListCard toolbar={toolbar}>
+          {isFiltered ? (
+            <EmptyState
+              icon={SearchX}
+              subject={Users}
+              title={t("empty.filteredTitle")}
+              action={
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setQuery({ search: undefined }, { resetPage: true });
+                    // The button disappears with the empty state; focus the search box instead.
+                    document.querySelector("[data-search-input]")?.focus();
+                  }}
+                >
+                  {t("clearSearch")}
                 </Button>
-              </ReasonTooltip>
-            }
-          />
-        )
+              }
+            />
+          ) : (
+            <EmptyState
+              icon={Server}
+              title={t("empty.title")}
+              description={t("empty.desc")}
+              action={
+                // Even on the empty state: a disabled button explains why the user can't act.
+                <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+                  <Button disabled={!canManage} onClick={() => setCreateOpen(true)}>
+                    <Plus className="size-4" />
+                    {t("addUser")}
+                  </Button>
+                </ReasonTooltip>
+              }
+            />
+          )}
+        </ListCard>
       ) : (
-        <>
+        // Below xl the rows are cards of their own, so the list drops its frame there.
+        <ListCard from="xl" toolbar={toolbar} footer={<DataTablePagination meta={meta} />}>
           {/* Cards below xl (1280), the table from there up, as in Cron Jobs: seven columns
               need ~950px, available at 1280 with the sidebar open. */}
           <div className="xl:hidden">
@@ -268,15 +275,15 @@ function SystemUsersList({
           </div>
           <div className="hidden xl:block">
             <DataTable
+              bare
+              roomy
               columns={columns}
               data={filtered}
               meta={{ canManage, shells, prevPage, sshEnforced, sshPasswordOff, canOpenSecurity }}
             />
           </div>
-        </>
+        </ListCard>
       )}
-
-      <DataTablePagination meta={meta} />
 
       {canManage ? (
         <CreateSystemUserDialog open={createOpen} onOpenChange={setCreateOpen} initialShells={shells} />

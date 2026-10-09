@@ -15,7 +15,7 @@ export default async function NewRolePage() {
   if (catalog.failed) return <LoadFailed description={t("catalogLoadFailed")} status={catalog.status} failure={catalog.failure} />;
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="space-y-6">
       <PageHeader title={t("form.createTitle")} subtitle={t("form.createSubtitle")} />
       <RoleForm mode="create" catalog={catalog} />
     </div>

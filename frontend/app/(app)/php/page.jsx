@@ -126,9 +126,9 @@ export default async function PhpPage({ searchParams }) {
           }
         />
       ) : (
-        <div className="max-w-5xl space-y-4">
+        <div className="space-y-4">
           {/* Install sits after the version chips; with one version there are no
-              chips, so it stands alone but must stay reachable. */}
+              chips, so it joins that version's card actions instead of floating. */}
           {versions.length > 1 ? (
             <VersionBar
               versions={versions}
@@ -145,15 +145,7 @@ export default async function PhpPage({ searchParams }) {
                 />
               }
             />
-          ) : (
-            <InstallVersionButton
-              runtime="php"
-              installable={php?.installable ?? []}
-              installed={versions}
-              canManage={canManage}
-              lifecycleAvailable={lifecycleAvailable}
-            />
-          )}
+          ) : null}
 
           {current ? (
             /* Keyed on version: without it a save could write one version's php.ini into another's. */
@@ -163,6 +155,15 @@ export default async function PhpPage({ searchParams }) {
               canManage={canManage}
               lifecycleAvailable={lifecycleAvailable}
             >
+              {versions.length === 1 ? (
+                <InstallVersionButton
+                  runtime="php"
+                  installable={php?.installable ?? []}
+                  installed={versions}
+                  canManage={canManage}
+                  lifecycleAvailable={lifecycleAvailable}
+                />
+              ) : null}
               <IniEditor
                 version={selected}
                 canManage={canManage}

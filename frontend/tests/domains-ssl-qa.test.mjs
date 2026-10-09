@@ -363,8 +363,9 @@ test("a coverage gap withdraws the green claim", () => {
    * which it reads as "a red box" and above the one at which it reads as
    * nothing at all.
    */
+  // Since 7 Oct the status is a flat head line: no tile, so no state washes anything.
   const fills = [...ssl.matchAll(/tint: "([^"]*)"/g)].map((m) => m[1]).filter(Boolean);
-  assert.deepEqual(fills, ["bg-destructive/[0.02]"], "only one state may wash its tile at all");
+  assert.deepEqual(fills, [], "no state may wash anything");
   assert.doesNotMatch(ssl, /bg-success\/5\b/, "and none may fill anything green");
 
   // `hasCoverageGap` must still be declared before anything reads it: `const`

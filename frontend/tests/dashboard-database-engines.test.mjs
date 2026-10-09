@@ -84,31 +84,28 @@ test("every engine's packaging is trimmed to the number people asked for", () =>
   assert.equal(shortVersion(undefined), null);
 });
 
-test("a wordmark logo is not read out twice", () => {
+test("the database tile uses a mark, so its printed name is said once", () => {
   /*
-   * The logo images are `aria-hidden`, so a chip carrying only a wordmark has
-   * no accessible name at all — but printing the name beside PostgreSQL's
-   * elephant-plus-name lockup said "PostgreSQL PostgreSQL". Same rule the
-   * databases page arrived at, for the same reason.
+   * A wordmark is unreadable at tile size (redesign, 6 Oct), so the tile shows
+   * the engine's mark-only icon (aria-hidden) and prints the name beside it —
+   * one name, read once.
    */
-  assert.match(strip(card), /engineLogo\(engine\.engine\)\?\.wordmark/);
-  assert.match(strip(card), /sr-only/);
+  assert.match(strip(card), /src=\{`\/runtimes\/\$\{mainEngine\.engine\}\.svg`\} alt=""/);
+  assert.doesNotMatch(strip(card), /EngineLogo/);
 });
 
 test("the full packaged string stays reachable", () => {
   // Somebody debugging a build needs "10.11.14-MariaDB-0ubuntu0.24.04.1", so
   // the chip keeps it on `title` rather than throwing it away.
-  assert.match(strip(card), /title=\{engine\.version \?\? undefined\}/);
+  assert.match(strip(card), /title=\{mainEngine\.version \?\? undefined\}/);
 });
 
-test("the status badges are not flush against the versions above them", () => {
+test("the services verdict sits on the heading row, not among the software chips", () => {
   /*
-   * Seven chips wrap at every width, so the two groups are now always stacked.
-   * At the old gap-y-2 the 8px between them was the same 8px between one chip
-   * and the next, so "3 sites need attention" read as one more runtime that
-   * had spilled over. Measured at 16px between the groups and 8px inside them.
+   * In a row of chips "All 9 services running" read as one more runtime that
+   * had spilled over. It now shares the "Main software" heading row instead.
    */
-  assert.match(strip(card), /gap-x-6 gap-y-4/);
+  assert.match(strip(card), /<h3 className="text-sm font-semibold">\{t\("info\.mainSoftware"\)\}<\/h3>\s*<ServiceHealthLine/);
 });
 
 test("the empty row still says so when there is nothing at all", () => {

@@ -37,18 +37,14 @@ test("every card on the page wears the panel's chrome", () => {
   assert.doesNotMatch(code, /<Card\s+className="[^"]*shadow-sm/);
 });
 
-test("every card carries a mark, and only one of them is filled", () => {
+test("card titles carry no icon marks, like every other card in the panel", () => {
   /*
-   * The filled mark is the page's single point of focus — the form is what you
-   * came here to use. A second filled mark, or a fourth card added without
-   * one, is how a page goes flat again.
+   * 7 Oct (Krishna, "this section needs ui improvements"): the app pages moved to
+   * one card shape — a plain title, a rule, then content — and the filled and
+   * tinted marks here were the only titles left with a chip.
    */
-  const filled = code.match(/bg-primary text-primary-foreground/g) ?? [];
-  assert.equal(filled.length, 1, "exactly one filled mark");
-
-  const titles = code.match(/<CardTitle/g) ?? [];
-  const marks = (code.match(/<CardMark/g) ?? []).length + filled.length;
-  assert.equal(marks, titles.length, "every card title has a mark beside it");
+  assert.doesNotMatch(code, /<CardMark/);
+  assert.doesNotMatch(code, /bg-primary text-primary-foreground/);
 });
 
 test("the copied / not-copied list never abbreviates an item", () => {
@@ -57,7 +53,7 @@ test("the copied / not-copied list never abbreviates an item", () => {
    * "Repository, branch & git acco…" — a list whose entire job is to state
    * what comes across, abbreviating one of the things that comes across.
    */
-  const list = between("function ImpactList", "function BeforeCard");
+  const list = between("function ImpactList", "function BeforeNotes");
   assert.doesNotMatch(list, /truncate/);
   assert.doesNotMatch(list, /grid-cols-2/);
 });
@@ -69,7 +65,7 @@ test("the not-copied half is not greyed out", () => {
    * the only real surprise on the page, that password protection does not
    * come across.
    */
-  const list = between("function ImpactList", "function BeforeCard");
+  const list = between("function ImpactList", "function BeforeNotes");
   assert.doesNotMatch(list, /text-muted-foreground"[^>]*>\{label\}/);
   assert.match(list, /warned && "font-medium text-warning"/);
 });
@@ -83,22 +79,18 @@ test("password protection is only flagged when the site actually has it on", () 
 
 test("the two columns can shrink below their content", () => {
   /*
-   * A grid item's min-width is `auto`, so a card whose content has a wide
-   * minimum pushes past its track — measured at 390px, the page scrolled
-   * sideways by 17px. Caught by asserting the overflow, not by looking at it.
+   * A grid item's min-width is `auto`, so content with a wide minimum pushes past
+   * its track — measured at 390px, the page scrolled sideways by 17px. Since 7 Oct
+   * the columns live inside the form card (fields | before-you-clone).
    */
-  // The FORM's grid — the in-flight progress view has one of its own, above.
-  const grid = between('<div className="grid gap-6 lg:grid-cols-12 lg:items-stretch">', "<ConfirmDialog");
-  const items = grid.match(/className="[^"]*lg:col-span-[57][^"]*"/g) ?? [];
-  assert.equal(items.length, 2, "two tracks");
-  for (const item of items) {
-    assert.match(item, /min-w-0/, item);
-  }
+  assert.match(code, /grid gap-5 @lg:grid-cols-2 @lg:items-start/);
+  assert.match(code, /<div className="@container min-w-0 space-y-5">/);
 });
 
-test("the source and the target are shown as the same kind of thing", () => {
-  // Two chips and an arrow IS the feature. Rendering the source as a name and
-  // the target as a bare domain made them look like different kinds of object.
-  assert.match(code, /function SiteChip\(/);
-  assert.equal((code.match(/<SiteChip/g) ?? []).length, 2);
+
+test("the form footer holds only the button", () => {
+  // 7 Oct: the source → copy chips (then one mono line) cut both domains short in the
+  // footer; the field above and the confirm dialog already show the copy's domain.
+  assert.doesNotMatch(code, /function SiteChip\(/);
+  assert.doesNotMatch(code, /t\("create\.placeholder"\)/);
 });

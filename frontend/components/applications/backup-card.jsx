@@ -6,7 +6,6 @@ import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import {
-  Archive,
   ArrowRight,
   CalendarArrowUp,
   CalendarClock,
@@ -25,7 +24,7 @@ import { isBackupQueued, newestBackupId } from "@/lib/backups/queued";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Same threshold the Backups screen uses before reporting a stalled queue.
 const QUEUE_STALLED_MS = 3 * 60 * 1000;
@@ -95,85 +94,25 @@ export function BackupCard({
       {/* Polls only while something is in progress; gives up after ten minutes. */}
       {inProgress ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
 
-      <CardHeader className="gap-1.5">
-        <div className="min-w-0 space-y-1">
-          <CardTitle as="h2" className="flex items-center gap-2 text-lg font-semibold">
-            <Archive className="size-4 text-primary" />
-            {t("title")}
-          </CardTitle>
-          <CardDescription>{t("description")}</CardDescription>
-        </div>
-        {/* A run in flight outranks the standing state, which is stale once it starts. */}
-        {failed ? null : inProgress ? (
-          <Badge variant="muted" className="w-fit gap-1.5 font-normal">
-            <Loader2 className="size-3 animate-spin" />
-            {t("state.running")}
-          </Badge>
-        ) : (
-          <Badge variant={meta.variant} className="w-fit gap-1.5 font-normal">
-            <Icon className="size-3" />
-            {t(`state.${state}`)}
-          </Badge>
-        )}
-      </CardHeader>
-
-      <CardContent className="flex flex-1 flex-col p-0">
-        {/* A failed read must not read as "no backups configured". */}
-        {failed ? (
-          <p className="px-(--card-spacing) text-sm text-muted-foreground">{t("loadFailed")}</p>
-        ) : (
-          <dl className="divide-y border-t text-sm">
-            {target?.frequency_title ? (
-              <div className="flex items-center gap-3 px-6 py-3">
-                <CalendarClock className="size-4 shrink-0 text-muted-foreground" />
-                <dt className="flex-1 font-medium">{t("schedule")}</dt>
-                <dd className="text-right text-muted-foreground">{target.frequency_title}</dd>
-              </div>
-            ) : null}
-            <div className="flex items-center gap-3 px-6 py-3">
-              <History className="size-4 shrink-0 text-muted-foreground" />
-              <dt className="flex-1 font-medium">{t("lastRun")}</dt>
-              {/* Never blank: "never" is a real answer. */}
-              <dd className="text-right text-muted-foreground">
-                {!target?.last_run_at_human ? t("never") : noneKept ? t("noneKept") : target.last_run_at_human}
-              </dd>
-            </div>
-            {target?.next_run_at_human && state === "protected" ? (
-              <div className="flex items-center gap-3 px-6 py-3">
-                <CalendarArrowUp className="size-4 shrink-0 text-muted-foreground" />
-                <dt className="flex-1 font-medium">{t("nextRun")}</dt>
-                <dd className="text-right text-muted-foreground">{target.next_run_at_human}</dd>
-              </div>
-            ) : null}
-          </dl>
-        )}
-        {/* States the consequence; paused is called out because it looks set up. Outside
-            the <dl>: a note is not a term/value pair. */}
-        {!failed && state !== "protected" ? (
-          <p className="border-t px-6 py-2.5 text-xs text-muted-foreground">
-            {state === "paused" ? t("pausedRisk") : t("unprotectedRisk")}
-          </p>
-        ) : null}
-
-        {/* Covers the gap between the click and the first row appearing. */}
-        {inProgress ? (
-          <p
-            role="status"
-            className={cn(
-              "mx-(--card-spacing) mt-(--card-spacing) flex items-start gap-2 rounded-lg px-3 py-2 text-sm",
-              stalled ? "bg-warning/10 text-foreground" : "bg-muted/50 text-muted-foreground",
-            )}
-          >
-            {stalled ? (
-              <CircleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
-            ) : (
-              <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-primary" />
-            )}
-            <span>{stalled ? t("queuedStalled") : queued ? t("queuedNote") : t("runningNote")}</span>
-          </p>
-        ) : null}
-
-        <div className="flex flex-wrap gap-2 px-(--card-spacing) pt-(--card-spacing)">
+      {/* State beside the title and the buttons in the header, like the other cards here:
+          a footer strip held one button and was mostly empty (7 Oct). */}
+      <CardHeader className="items-center border-b">
+        <CardTitle as="h2" className="flex flex-wrap items-center gap-2">
+          {t("title")}
+          {/* A run in flight outranks the standing state, which is stale once it starts. */}
+          {failed ? null : inProgress ? (
+            <Badge variant="muted" className="gap-1.5 font-normal">
+              <Loader2 className="size-3 animate-spin" />
+              {t("state.running")}
+            </Badge>
+          ) : (
+            <Badge variant={meta.variant} className="gap-1.5 font-normal">
+              <Icon className="size-3" />
+              {t(`state.${state}`)}
+            </Badge>
+          )}
+        </CardTitle>
+        <CardAction className="row-span-1 flex flex-wrap justify-end gap-2 self-center">
           {canManage && target ? (
             <Button
               variant="outline"
@@ -195,7 +134,63 @@ export function BackupCard({
               <ArrowRight className="size-4" />
             </Link>
           </Button>
-        </div>
+        </CardAction>
+      </CardHeader>
+
+      <CardContent className="p-0">
+        {/* A failed read must not read as "no backups configured". */}
+        {failed ? (
+          <p className="px-(--card-spacing) text-sm text-muted-foreground">{t("loadFailed")}</p>
+        ) : (
+          <dl className="-mt-(--card-spacing) divide-y text-sm">
+            {/* Always shown, so the card has the same rows whatever its state. */}
+            <div className="flex items-center gap-3 px-(--card-spacing) py-3">
+              <CalendarClock className="size-4 shrink-0 text-muted-foreground" />
+              <dt className="flex-1 font-medium">{t("schedule")}</dt>
+              <dd className="text-right text-muted-foreground">{target?.frequency_title ?? t("notSetUp")}</dd>
+            </div>
+            <div className="flex items-center gap-3 px-(--card-spacing) py-3">
+              <History className="size-4 shrink-0 text-muted-foreground" />
+              <dt className="flex-1 font-medium">{t("lastRun")}</dt>
+              {/* Never blank: "never" is a real answer. */}
+              <dd className="text-right text-muted-foreground">
+                {!target?.last_run_at_human ? t("never") : noneKept ? t("noneKept") : target.last_run_at_human}
+              </dd>
+            </div>
+            {target?.next_run_at_human && state === "protected" ? (
+              <div className="flex items-center gap-3 px-(--card-spacing) py-3">
+                <CalendarArrowUp className="size-4 shrink-0 text-muted-foreground" />
+                <dt className="flex-1 font-medium">{t("nextRun")}</dt>
+                <dd className="text-right text-muted-foreground">{target.next_run_at_human}</dd>
+              </div>
+            ) : null}
+          </dl>
+        )}
+        {/* States the consequence; paused is called out because it looks set up. Outside
+            the <dl>: a note is not a term/value pair. */}
+        {!failed && state !== "protected" ? (
+          <p className="border-t px-(--card-spacing) py-2.5 text-xs text-muted-foreground">
+            {state === "paused" ? t("pausedRisk") : t("unprotectedRisk")}
+          </p>
+        ) : null}
+
+        {/* Covers the gap between the click and the first row appearing. */}
+        {inProgress ? (
+          <p
+            role="status"
+            className={cn(
+              "mx-(--card-spacing) mt-3 flex items-start gap-2 rounded-lg px-3 py-2 text-sm",
+              stalled ? "bg-warning/10 text-foreground" : "bg-muted/50 text-muted-foreground",
+            )}
+          >
+            {stalled ? (
+              <CircleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+            ) : (
+              <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-primary" />
+            )}
+            <span>{stalled ? t("queuedStalled") : queued ? t("queuedNote") : t("runningNote")}</span>
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   );

@@ -92,9 +92,8 @@ export function FirstRunCredentials({ application, className }) {
       <CardHeader>
         <CardTitle
           as="h2"
-          className="flex items-center gap-2 text-lg font-semibold"
+          className="flex items-center gap-2"
         >
-          <KeyRound className="size-4 text-primary" />
           {t("title")}
         </CardTitle>
       </CardHeader>

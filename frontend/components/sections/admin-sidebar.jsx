@@ -21,6 +21,15 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
+// In menu order; a group starts where the first of its items appears.
+const ADMIN_GROUPS = ADMIN_NAV.reduce((groups, item) => {
+  const key = item.group ?? "";
+  const last = groups.at(-1);
+  if (last && last.key === key) last.items.push(item);
+  else groups.push({ key, items: [item] });
+  return groups;
+}, []);
+
 export function AdminSidebar() {
   const pathname = usePathname();
   const t = useTranslations("admin");
@@ -40,42 +49,47 @@ export function AdminSidebar() {
         </Link>
       </SidebarHeader>
       <SidebarContent className="gap-0 py-2">
-        <SidebarGroup className="py-1">
-          <SidebarGroupLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            {t("breadcrumbRoot")}
-          </SidebarGroupLabel>
-          <SidebarMenu className="gap-1.5">
-            {ADMIN_NAV.map((item) => {
-              const active = isAdminNavActive(pathname, item.url);
-              const title = t(`nav.${item.key}`);
-              return (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={active}
-                    tooltip={title}
-                    className={NAV_ITEM_CLASS}
-                    onClick={(event) => {
-                      if (
-                        !active &&
-                        guardNavigation(item.url, () => isMobile && setOpenMobile(false))
-                      ) {
-                        event.preventDefault();
-                        return;
-                      }
-                      if (isMobile) setOpenMobile(false);
-                    }}
-                  >
-                    <Link href={item.url}>
-                      <NavIcon name={item.icon} />
-                      <span>{title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              );
-            })}
-          </SidebarMenu>
-        </SidebarGroup>
+        {/* Grouped like the server menu: Dashboard on its own, then labelled groups. */}
+        {ADMIN_GROUPS.map((group) => (
+          <SidebarGroup key={group.key || "top"} className="py-1">
+            {group.key ? (
+              <SidebarGroupLabel className="text-[13px] font-semibold text-muted-foreground">
+                {t(`navGroups.${group.key}`)}
+              </SidebarGroupLabel>
+            ) : null}
+            <SidebarMenu className="gap-1.5">
+              {group.items.map((item) => {
+                const active = isAdminNavActive(pathname, item.url);
+                const title = t(`nav.${item.key}`);
+                return (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={active}
+                      tooltip={title}
+                      className={NAV_ITEM_CLASS}
+                      onClick={(event) => {
+                        if (
+                          !active &&
+                          guardNavigation(item.url, () => isMobile && setOpenMobile(false))
+                        ) {
+                          event.preventDefault();
+                          return;
+                        }
+                        if (isMobile) setOpenMobile(false);
+                      }}
+                    >
+                      <Link href={item.url}>
+                        <NavIcon name={item.icon} />
+                        <span>{title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
       <SidebarRail />
     </Sidebar>

@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { ShieldOff } from "lucide-react";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { getPermissions } from "@/lib/permissions/get-permissions";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { can } from "@/lib/permissions/can";
 import { getServerFacts } from "@/lib/server/get-server-facts";
 import { getServerHistory } from "@/lib/server/get-server-history";
@@ -13,9 +14,11 @@ import { getAllApplications } from "@/lib/applications/get-applications";
 import { getEngines } from "@/lib/databases/get-databases";
 import { attentionFindings } from "@/lib/dashboard/attention";
 import { SetupBanner } from "@/components/setup/setup-banner";
-import { ApplicationEmptyState } from "@/components/applications/application-empty-state";
+import { GettingStarted } from "@/components/dashboard/getting-started";
 import { LiveMetricsSection } from "@/components/dashboard/live-metrics-section";
 import { ServerInfoCard } from "@/components/dashboard/server-info-card";
+import { AttentionPanel } from "@/components/dashboard/attention-panel";
+import { DashboardHero } from "@/components/dashboard/dashboard-hero";
 import { ProcessesCard } from "@/components/dashboard/processes-card";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -27,10 +30,12 @@ export async function generateMetadata() {
 }
 
 export default async function DashboardPage() {
-  const [permissions, t, tDenied] = await Promise.all([
+  const [permissions, t, tDenied, user] = await Promise.all([
     getPermissions(),
     getTranslations("serverDashboard"),
     getTranslations("common.permissionDenied"),
+    // Cached: the layout already asked.
+    getCurrentUser().catch(() => null),
   ]);
 
   // Only someone who could act on setup gets the nudge, and only while the
@@ -71,33 +76,61 @@ export default async function DashboardPage() {
   const applications = known ? appResult.applications : [];
   const firstRun = known && applications.length === 0;
   const attention = attentionFindings(applications);
+  const canViewServices = can(permissions, "service", "view");
+  // With neither answer there is nothing the panel could vouch for.
+  const showAttention = canViewApplications || Boolean(health);
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      {/* The banner is the page heading; without `view` there is nothing for it to report. */}
+      {allowed ? (
+        <DashboardHero
+          userName={user?.name ?? null}
+          facts={facts}
+          health={health}
+          findings={attention}
+          applications={known ? applications : null}
+          canCreate={can(permissions, "application", "manage")}
+          canViewLogs={can(permissions, "logs", "view")}
+        />
+      ) : (
+        <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      )}
 
       <SetupBanner remaining={setupRemaining} />
 
       {allowed ? (
         <>
-          {/* Compact, so the live numbers stay above the fold. */}
+          {/* Only on an empty server, and only on a list we actually received. */}
           {firstRun ? (
-            <ApplicationEmptyState
-              canManage={can(permissions, "application", "manage")}
-              compact
+            <GettingStarted
+              canCreate={can(permissions, "application", "manage")}
+              ip={facts?.public_ip ?? facts?.ip}
             />
           ) : null}
-          <ServerInfoCard
-            facts={facts}
-            health={health}
-            siteAttention={attention}
-            engines={engineResult?.engines ?? []}
-            /* A failed read, distinct from "no databases". */
-            enginesFailed={Boolean(engineResult?.failed)}
-          />
+          {/* First after the banner: what needs doing outranks how busy the server is.
+              Renders nothing when all is well; the banner already says so. */}
+          {showAttention ? (
+            <AttentionPanel
+              findings={attention}
+              health={health}
+              applicationsKnown={known || !canViewApplications}
+              canViewServices={canViewServices}
+            />
+          ) : null}
           <LiveMetricsSection
             timeZone={facts?.timezone}
             history={historySeries(history)}
+            between={
+              <ServerInfoCard
+                facts={facts}
+                health={health}
+                engines={engineResult?.engines ?? []}
+                /* A failed read, distinct from "no databases". */
+                enginesFailed={Boolean(engineResult?.failed)}
+                canViewServices={canViewServices}
+              />
+            }
           />
           <ProcessesCard
             data={processResult.data}

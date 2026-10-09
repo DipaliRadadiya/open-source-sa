@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronDown, ChevronUp, ListTree } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PANEL_CARD } from "@/lib/theme/card-chrome";
 import { Button } from "@/components/ui/button";
@@ -31,10 +31,7 @@ function ProcessesCardInner({ data, failed, total, canManage }) {
     <Card className={cn("[--card-spacing:--spacing(5)]", PANEL_CARD)}>
       <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
-          <CardTitle as="h2" className="flex items-center gap-2.5 text-lg font-semibold">
-            <span className="flex shrink-0 items-center justify-center text-muted-foreground">
-              <ListTree className="size-4" />
-            </span>
+          <CardTitle as="h2" className="flex items-center gap-2">
             {t("processes.title")}
           </CardTitle>
           <CardDescription>{t("processes.topDescription")}</CardDescription>

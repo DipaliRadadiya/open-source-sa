@@ -172,6 +172,7 @@ export function ServicesTable({ data, phpVersions = [], canManage = false, busy,
 
   return (
     <DataTable
+      bare
       columns={columns}
       data={data}
       // With `auto`, a failed install's sentence pushed Actions off screen.

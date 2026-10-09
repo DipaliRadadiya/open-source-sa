@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { SearchX, ShieldX, Trash2, Pencil } from "lucide-react";
+import { SearchX, ShieldX, Trash2, Pencil, Shield } from "lucide-react";
 import { deleteFirewallRule, updateFirewallRule } from "@/lib/api/firewall";
 import { deleteRuleBodyKey } from "@/lib/firewall/state";
 import { unreachablePorts } from "@/lib/firewall/listening";
@@ -356,6 +356,7 @@ export function RulesCard({
             // Five filters live in the URL; the button clears all of them, including sort.
             <EmptyState
               icon={SearchX}
+              subject={Shield}
               title={t("rules.noMatches")}
               action={
                 <Button
@@ -400,9 +401,11 @@ export function RulesCard({
               />
             </div>
 
-            <div className="hidden max-h-[30rem] overflow-auto rounded-xl border lg:block [&>div]:rounded-none [&>div]:border-0">
+            {/* Edge to edge at the foot of the card, as every table inside a card. */}
+            <div className="-mx-(--card-spacing) -mb-(--card-spacing) hidden max-h-[30rem] overflow-auto border-t lg:block">
               {/* The API owns sort order, so pages are never re-sorted locally. */}
               <DataTable
+                bare
                 columns={columns}
                 data={rules}
                 stickyHeader

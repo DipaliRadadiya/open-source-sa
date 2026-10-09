@@ -102,6 +102,11 @@ function sslRowState(certificate, coverage, domain) {
   return null;
 }
 
+// Domain | DNS | HTTPS | actions, shared by the heading row and every domain row.
+// The actions column is fixed, not `auto`: header and rows are separate grids, and `auto`
+// sized each to its own content, so the headings drifted off their columns.
+const ROW_GRID = "md:grid-cols-[minmax(0,1fr)_10rem_10rem_13rem] md:items-start";
+
 export function DomainsSection({
   appId,
   domains = [],
@@ -224,138 +229,142 @@ export function DomainsSection({
             action={addButton}
           />
         ) : (
-          /* No border: the rows already sit inside a Card. */
-          <div className="-mx-(--card-spacing) -mb-(--card-spacing) divide-y overflow-hidden border-t">
+          /* Edge to edge in the card, as a list: one row per name, the same columns on
+             every row so several domains scan like a table. */
+          <div className="-mx-(--card-spacing) -mb-(--card-spacing) border-t">
+            <div
+              aria-hidden
+              className={cn(ROW_GRID, "hidden gap-x-4 border-b bg-muted/40 px-5 py-3 text-[13px] font-medium text-muted-foreground md:grid")}
+            >
+              <span>{t("columns.domain")}</span>
+              <span>{t("columns.dns")}</span>
+              <span>{t("columns.https")}</span>
+              <span />
+            </div>
+            <div className="divide-y">
             {domains.map((domain) => {
               const isPrimary = domain.type === "primary";
               const isVerifying = Boolean(verifying[domain.domain]);
+              const ssl = sslRowState(certificate, coverageOf(domain.domain), domain);
+              const SslIcon = ssl?.icon;
               return (
-                <div key={domain.id} className="flex flex-wrap items-start gap-3 p-4">
-                  {/* Tinted chip, matching the SSL tab's tiles. */}
-                  <span
-                    className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground"
-                    aria-hidden
-                  >
-                    <Globe2 className="size-4" />
-                  </span>
-
-                  <div className="min-w-40 flex-1 space-y-1.5">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {/* Name and copy button wrap as one unit. */}
-                      <span className="flex min-w-0 items-center gap-2">
-                        <span className="truncate font-mono text-sm">
+                // Phone: the name across the full width, then the two states as pills with the
+                // buttons at the end of that line.
+                // From md: the four columns of the heading row.
+                <div
+                  key={domain.id}
+                  className={cn("grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2.5 px-4 py-3.5 md:gap-x-4 md:px-5", ROW_GRID)}
+                >
+                  <div className="col-span-2 flex min-w-0 items-start gap-3 md:col-span-1">
+                    <span
+                      className="hidden size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground md:flex"
+                      aria-hidden
+                    >
+                      <Globe2 className="size-4" />
+                    </span>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        {/* Inline, so the copy button follows the last character of the name
+                            however the name wraps. */}
+                        <span className="min-w-0 font-mono text-sm break-all">
                           {domain.domain}
+                          <CopyButton
+                            value={domain.domain}
+                            label={t("copyDomain")}
+                            className="ml-1 inline-flex size-6 align-middle"
+                          />
                         </span>
-                        <CopyButton
-                          value={domain.domain}
-                          label={t("copyDomain")}
-                          className="size-6 shrink-0"
-                        />
-                      </span>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="inline-flex">
-                            <Badge
-                              variant={TYPE_VARIANT[domain.type] ?? "secondary"}
-                              className="font-normal"
-                            >
-                              {domain.type_title ?? domain.type}
-                            </Badge>
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {t(`type.${domain.type}Hint`)}
-                        </TooltipContent>
-                      </Tooltip>
-                      {domain.is_test ? (
-                        <Badge
-                          variant="outline"
-                          className="font-normal text-muted-foreground"
-                        >
-                          {t("testDomain")}
-                        </Badge>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex">
+                              <Badge variant={TYPE_VARIANT[domain.type] ?? "secondary"} className="font-normal">
+                                {domain.type_title ?? domain.type}
+                              </Badge>
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>{t(`type.${domain.type}Hint`)}</TooltipContent>
+                        </Tooltip>
+                        {domain.is_test ? (
+                          <Badge variant="outline" className="font-normal text-muted-foreground">
+                            {t("testDomain")}
+                          </Badge>
+                        ) : null}
+                      </div>
+
+                      {domain.type === "redirect" && domain.redirect_to ? (
+                        <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <ArrowRight className="size-3" />
+                          <span className="truncate font-mono">{domain.redirect_to}</span>
+                          {domain.redirect_status ? <span>· {domain.redirect_status}</span> : null}
+                        </p>
+                      ) : null}
+
+                      {/* Behind Cloudflare: a common support question. */}
+                      {domain.behind_proxy ? (
+                        <p className="flex items-start gap-1.5 text-xs text-warning">
+                          <ShieldAlert className="mt-0.5 size-3.5 shrink-0" />
+                          <span>{t("dns.behindProxy")}</span>
+                        </p>
+                      ) : null}
+
+                      {/* The A-record target as a next step. Skipped for proxied names and test domains (nip.io). */}
+                      {!domain.dns_verified && !domain.behind_proxy && !domain.is_test ? (
+                        serverIp ? (
+                          <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                            <span>{t("dns.pointLabel")}</span>
+                            <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-foreground">{serverIp}</code>
+                            <CopyButton value={serverIp} className="size-6" />
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">{t("dns.pointGeneric")}</p>
+                        )
                       ) : null}
                     </div>
-
-                    {domain.type === "redirect" && domain.redirect_to ? (
-                      <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <ArrowRight className="size-3" />
-                        <span className="truncate font-mono">
-                          {domain.redirect_to}
-                        </span>
-                        {domain.redirect_status ? (
-                          <span>· {domain.redirect_status}</span>
-                        ) : null}
-                      </p>
-                    ) : null}
-
-                    <p
-                      className={cn(
-                        "flex items-center gap-1.5 text-xs",
-                        domain.dns_verified
-                          ? "text-success"
-                          : "text-muted-foreground",
-                      )}
-                    >
-                      {domain.dns_verified ? (
-                        <CheckCircle2 className="size-3.5 shrink-0" />
-                      ) : (
-                        <CircleDashed className="size-3.5 shrink-0" />
-                      )}
-                      <span>
-                        {domain.dns_verified
-                          ? t("dns.verified")
-                          : t("dns.unverified")}
-                        {domain.dns_resolved_ip ? (
-                          <span className="ml-1 font-mono text-muted-foreground">
-                            ({domain.dns_resolved_ip})
-                          </span>
-                        ) : null}
-                      </span>
-                    </p>
-
-                    {/* HTTPS status for this name. */}
-                    {(() => {
-                      const ssl = sslRowState(certificate, coverageOf(domain.domain), domain);
-                      if (!ssl) return null;
-                      const SslIcon = ssl.icon;
-                      return (
-                        <p className={cn("flex items-center gap-1.5 text-xs", ssl.tone)}>
-                          <SslIcon className="size-3.5 shrink-0" aria-hidden />
-                          <span>{t(`sslRow.${ssl.key}`)}</span>
-                        </p>
-                      );
-                    })()}
-
-                    {/* Behind Cloudflare: a common support question. */}
-                    {domain.behind_proxy ? (
-                      <p className="flex items-start gap-1.5 text-xs text-warning">
-                        <ShieldAlert className="mt-0.5 size-3.5 shrink-0" />
-                        <span>{t("dns.behindProxy")}</span>
-                      </p>
-                    ) : null}
-
-                    {/* The A-record target as a next step. Skipped for proxied names and test domains (nip.io). */}
-                    {!domain.dns_verified &&
-                    !domain.behind_proxy &&
-                    !domain.is_test ? (
-                      serverIp ? (
-                        <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                          <span>{t("dns.pointLabel")}</span>
-                          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-foreground">
-                            {serverIp}
-                          </code>
-                          <CopyButton value={serverIp} className="size-6" />
-                        </p>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">
-                          {t("dns.pointGeneric")}
-                        </p>
-                      )
-                    ) : null}
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-1">
+                  {/* Both states on one line under the name on a phone (as pills); from md
+                      `contents` makes each its own column. */}
+                  <div className="row-start-2 flex flex-wrap items-center gap-1.5 md:contents">
+                  <p
+                    className={cn(
+                      "flex items-start gap-1.5 text-xs max-md:rounded-full max-md:px-2 max-md:py-0.5 md:pt-2",
+                      domain.dns_verified ? "text-success max-md:bg-success-soft" : "text-muted-foreground max-md:bg-muted",
+                    )}
+                  >
+                    {domain.dns_verified ? (
+                      <CheckCircle2 className="mt-px size-3.5 shrink-0" />
+                    ) : (
+                      <CircleDashed className="mt-px size-3.5 shrink-0" />
+                    )}
+                    <span className="min-w-0">
+                      {domain.dns_verified ? t("dns.verified") : t("dns.unverified")}
+                      {domain.dns_resolved_ip ? (
+                        <span className="block font-mono text-muted-foreground max-md:hidden">{domain.dns_resolved_ip}</span>
+                      ) : null}
+                    </span>
+                  </p>
+
+                  {/* HTTPS status for this name. */}
+                  <p
+                    className={cn(
+                      "flex items-start gap-1.5 text-xs max-md:rounded-full max-md:px-2 max-md:py-0.5 md:pt-2",
+                      ssl?.tone,
+                      { secured: "max-md:bg-success-soft", notCovered: "max-md:bg-warning-soft" }[ssl?.key] ?? "max-md:bg-muted",
+                      !ssl && "max-md:hidden",
+                    )}
+                  >
+                    {ssl ? (
+                      <>
+                        <SslIcon className="mt-px size-3.5 shrink-0" aria-hidden />
+                        <span>{t(`sslRow.${ssl.key}`)}</span>
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </p>
+                  </div>
+
+                  <div className="col-start-2 row-start-2 flex shrink-0 items-center gap-0.5 self-center md:col-auto md:row-auto md:justify-end md:gap-1 md:self-start">
                     {/* https only when the certificate covers this name. The slot is always held so buttons align. */}
                     <span className="inline-flex size-8 shrink-0 items-center justify-center">
                       {domain.dns_verified && domain.type !== "redirect" ? (
@@ -389,7 +398,8 @@ export function DomainsSection({
                       onClick={() => onVerify(domain)}
                     >
                       <RotateCw className={isVerifying ? "size-3.5 animate-spin" : "size-3.5"} />
-                      {t("dns.verify")}
+                      {/* Icon only on a phone, so the name keeps the width. */}
+                      <span className="max-md:sr-only">{t("dns.verify")}</span>
                     </Button>
                     {canManage ? (
                       <span className="inline-flex size-8 shrink-0 items-center justify-center">
@@ -435,6 +445,7 @@ export function DomainsSection({
                 </div>
               );
             })}
+            </div>
           </div>
         )}
       </CardContent>

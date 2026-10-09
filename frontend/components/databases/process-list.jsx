@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { Activity, ChevronDown, ChevronUp, Clock, Square, Timer } from "lucide-react";
+import { Activity, ChevronDown, ChevronUp, Clock, Square, Timer, SearchX } from "lucide-react";
+import { EmptyState } from "@/components/data-table/empty-state";
 import { cn } from "@/lib/utils";
 import { getProcesses, killProcess } from "@/lib/api/databases";
 import { dbProcessesResponseSchema } from "@/lib/schemas/database";
@@ -34,10 +35,11 @@ function tone(seconds) {
 }
 
 // The accent bar alone marks the row; no tinted background.
-const ROW_ACCENT = {
-  destructive: "border-l-destructive",
-  warning: "border-l-warning",
-  neutral: "border-l-transparent",
+// A long-running query's card takes the alarm colour on its edge.
+const CARD_EDGE = {
+  destructive: "border-destructive/50",
+  warning: "border-warning/50",
+  neutral: "",
 };
 
 const TIME_STYLE = {
@@ -55,24 +57,10 @@ function duration(seconds, t) {
   return t("durationHours", { hours: Math.floor(minutes / 60), minutes: minutes % 60 });
 }
 
-function Fact({ label, last, children }) {
-  return (
-    <span className="inline-flex min-w-0 items-baseline gap-1">
-      <span className="text-muted-foreground">{label}:</span>
-      <span className="truncate text-foreground">{children}</span>
-      {/* The separator belongs to the preceding fact so it never wraps alone;
-          hidden below `sm`, where each fact has its own line. */}
-      {last ? null : (
-        <span className="ml-1.5 hidden text-muted-foreground/60 sm:inline" aria-hidden>
-          ·
-        </span>
-      )}
-    </span>
-  );
-}
-
 // Idle connections are counted, not listed, so a stuck query is not buried.
-export function ProcessList({ engine, processes: initial = [], canManage, connections = [] }) {
+// `fill`: the card takes its parent's height and the list scrolls inside it, with no
+// "Show all" cap: beside the chart it matches the chart's height (Krishna, 8 Oct).
+export function ProcessList({ engine, processes: initial = [], canManage, connections = [], fill = false }) {
   const t = useTranslations("databases.monitor");
   const { refreshAndWait } = useRefresh();
   const [polled, setPolled] = useState(null);
@@ -83,6 +71,8 @@ export function ProcessList({ engine, processes: initial = [], canManage, connec
   // connection may be the only row, and stopping it breaks this screen.
   const ownUsers = panelUsernames(connections, engine);
   const [expanded, setExpanded] = useState(false);
+  // Queries whose full text is open; ids, so a refresh keeps them open.
+  const [openQueries, setOpenQueries] = useState(() => new Set());
   const [query, setQuery] = useState("");
   const [slowOnly, setSlowOnly] = useState(false);
 
@@ -108,7 +98,7 @@ export function ProcessList({ engine, processes: initial = [], canManage, connec
 
   // The cap hides only short queries because the list is sorted longest-first;
   // anything past the stuck threshold is always shown.
-  const shown = expanded
+  const shown = expanded || fill
     ? active
     : active.filter((p, i) => i < VISIBLE_COUNT || tone(p.time) === "destructive");
   const hidden = active.length - shown.length;
@@ -146,14 +136,11 @@ export function ProcessList({ engine, processes: initial = [], canManage, connec
 
   return (
     <>
-      <Card className="gap-0 overflow-hidden py-0">
-        <div className="flex flex-col gap-2 border-b px-5 py-3.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      <Card className={cn("gap-0 overflow-hidden py-0", fill && "h-full")}>
+        <div className="flex shrink-0 flex-col gap-2 border-b px-5 py-3.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex items-center gap-2.5">
-            <span className="flex shrink-0 items-center justify-center text-muted-foreground">
-              <Activity className="size-3.5" />
-            </span>
             <div>
-              <h2 className="text-base font-semibold tracking-tight">
+              <h2 className="text-[15px] font-semibold tracking-tight">
                 {t("processes")}
               </h2>
               <p className="text-sm text-muted-foreground">
@@ -164,18 +151,20 @@ export function ProcessList({ engine, processes: initial = [], canManage, connec
 
           {/* The running count answers "is anything stuck?" in the header; idle
               connections stay a count. */}
-          <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
+          <span className="min-w-0 text-sm tabular-nums text-muted-foreground">
             {t("runningCount", { count: running.length })}
             {idle.length > 0 ? ` · ${t("idleCount", { count: idle.length })}` : ""}
           </span>
         </div>
 
         {filterable ? (
-          <div className="flex flex-col gap-2 border-b px-5 py-3 sm:flex-row sm:items-center">
+          // Wraps rather than switching on the viewport: the card can sit in a narrow column.
+          <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-5 py-3">
             <LocalSearchInput
               value={query}
               onChange={setQuery}
               placeholder={t("searchQueries")}
+              className="min-w-48 flex-1 sm:max-w-none"
             />
             <Button
               variant={slowOnly ? "secondary" : "outline"}
@@ -190,14 +179,17 @@ export function ProcessList({ engine, processes: initial = [], canManage, connec
           </div>
         ) : null}
 
-        <CardContent className="px-5 py-0">
+        <CardContent className={cn("px-5 py-0", fill && "flex min-h-0 flex-1 flex-col")}>
           {active.length === 0 ? (
             // "Nothing running" and "nothing matched your filter" are different
             // states; only the latter can be cleared.
-            <div className="space-y-2 py-8 text-center">
-              <p className="text-sm text-muted-foreground">
-                {filtered ? t("noMatches") : t("noProcesses")}
-              </p>
+            <div className="space-y-2 py-5 text-center">
+              <EmptyState
+                compact
+                icon={filtered ? SearchX : Activity}
+                badge={filtered ? "search" : null}
+                title={filtered ? t("noMatches") : t("noProcesses")}
+              />
               {filtered ? (
                 <Button
                   variant="outline"
@@ -212,93 +204,97 @@ export function ProcessList({ engine, processes: initial = [], canManage, connec
               ) : null}
             </div>
           ) : (
-            // Expanded scrolls inside a fixed height so the chart stays put.
+            // One small card per query, as in the redesign; expanded scrolls inside a
+            // fixed height so the chart beside it stays put.
             <div
               className={cn(
-                "-mx-5 divide-y",
-                expanded && "max-h-[26rem] overflow-y-auto",
+                "space-y-3 py-4",
+                expanded && "max-h-[32rem] overflow-y-auto",
+                // Stacked (below xl) it still stops at 32rem; beside the chart, the card's height.
+                fill && "-mx-5 max-h-[32rem] min-h-0 flex-1 overflow-y-auto px-5 xl:max-h-none",
               )}
             >
               {shown.map((process) => {
                 const level = tone(process.time);
+                const open = openQueries.has(process.id);
+                const stopReason = !canManage
+                  ? t("noPermission")
+                  : isPanelProcess(process, ownUsers)
+                    ? t("cannotStopOwn")
+                    : null;
                 return (
                   <div
                     key={process.id}
-                    className={cn(
-                      "group flex flex-col gap-3 border-l-2 py-3.5 pl-4 pr-5 transition-colors hover:bg-muted/30 sm:flex-row sm:items-start sm:justify-between",
-                      ROW_ACCENT[level],
-                    )}
+                    className={cn("space-y-3 rounded-xl border bg-card p-3", CARD_EDGE[level])}
                   >
-                    <div className="min-w-0 flex-1 space-y-3">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        {/* The elapsed time leads. */}
-                        <span
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="inline-flex min-w-0 items-center gap-1.5 rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                        <Activity className="size-3.5 shrink-0" aria-hidden />
+                        <span className="truncate">{process.state || process.command || "—"}</span>
+                      </span>
+                      {/* The elapsed time, coloured once it is worth worrying about. */}
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-sm font-semibold tabular-nums",
+                          TIME_STYLE[level],
+                        )}
+                      >
+                        <Clock className="size-3.5" />
+                        {duration(process.time, t)}
+                      </span>
+                    </div>
+                    {level === "destructive" ? (
+                      <Badge variant="destructive">{t("longRunning")}</Badge>
+                    ) : null}
+
+                    <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-[13px]">
+                      <dt className="text-muted-foreground">{t("meta.database")}</dt>
+                      <dd className="truncate font-mono">{process.db || "—"}</dd>
+                      <dt className="text-muted-foreground">{t("meta.user")}</dt>
+                      <dd className="truncate font-mono">
+                        {process.user ?? "—"}
+                        {process.host ? `@${process.host}` : ""}
+                      </dd>
+                    </dl>
+
+                    {/* Two lines at rest in a narrow column; the whole query on request. */}
+                    {process.query ? (
+                      <div className="space-y-1">
+                        <pre
                           className={cn(
-                            "inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-sm font-semibold tabular-nums",
-                            TIME_STYLE[level],
+                            "whitespace-pre-wrap break-words rounded-md bg-muted px-2.5 py-2 font-mono text-xs leading-relaxed text-foreground dark:bg-muted/60",
+                            !open && "line-clamp-2",
                           )}
                         >
-                          <Clock className="size-3.5" />
-                          {duration(process.time, t)}
-                        </span>
-                        {/* Named, not only signalled by the red bar. */}
-                        {level === "destructive" ? (
-                          <Badge
-                            variant="outline"
-                            className="border-destructive/40 font-normal text-destructive"
-                          >
-                            {t("longRunning")}
-                          </Badge>
-                        ) : null}
-                      </div>
-
-                      {/* One line, dot-separated, always in the same order. */}
-                      <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5 text-[13px] leading-relaxed">
-                        <Fact label={t("meta.database")}>
-                          <span className="font-mono">{process.db || "—"}</span>
-                        </Fact>
-                        <Fact label={t("meta.user")}>
-                          <span className="font-mono">
-                            {process.user ?? "—"}
-                            {process.host ? `@${process.host}` : ""}
-                          </span>
-                        </Fact>
-                        <Fact label={t("meta.state")} last>
-                          {process.state || process.command || "—"}
-                        </Fact>
-                      </p>
-
-                      {/* Wrapped, not truncated: a cut-off query says nothing. */}
-                      {process.query ? (
-                        <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded-md border bg-muted px-3 py-2.5 font-mono text-[13px] leading-relaxed text-foreground dark:bg-muted/60">
                           {process.query}
                         </pre>
-                      ) : null}
-                    </div>
+                        <button
+                          type="button"
+                          className="text-xs font-medium text-primary hover:underline"
+                          aria-expanded={open}
+                          onClick={() =>
+                            setOpenQueries((current) => {
+                              const next = new Set(current);
+                              if (next.has(process.id)) next.delete(process.id);
+                              else next.add(process.id);
+                              return next;
+                            })
+                          }
+                        >
+                          {open ? t("queryShowLess") : t("queryShowFull")}
+                        </button>
+                      </div>
+                    ) : null}
 
-                    {/* Legible at rest: touch devices never hover. Overrides the outline variant's `bg-muted` hover. */}
-                    <ReasonTooltip
-                      reason={
-                        !canManage
-                          ? t("noPermission")
-                          : isPanelProcess(process, ownUsers)
-                            ? t("cannotStopOwn")
-                            : null
-                      }
-                    >
+                    <ReasonTooltip reason={stopReason}>
                       <Button
-                        variant="outline"
-                        disabled={!canManage || isPanelProcess(process, ownUsers)}
-                        className={cn(
-                          "shrink-0 font-medium text-foreground/80 transition-colors",
-                          "group-hover:border-destructive/40 group-hover:text-destructive",
-                          "hover:border-destructive/60 hover:bg-destructive/15 hover:text-destructive",
-                          "active:bg-destructive/25",
-                          "focus-visible:border-destructive/40 focus-visible:ring-destructive/20",
-                        )}
+                        variant="destructive"
+                        size="sm"
+                        className="w-full"
+                        disabled={Boolean(stopReason)}
                         onClick={() => stop.open(process)}
                       >
-                        <Square className="size-4" />
+                        <Square className="size-3.5" />
                         {t("stopQuery")}
                       </Button>
                     </ReasonTooltip>

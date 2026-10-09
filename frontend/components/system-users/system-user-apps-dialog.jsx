@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Link from "@/components/ui/app-link";
-import { Globe } from "lucide-react";
+import { Globe, AppWindow } from "lucide-react";
+import { EmptyState } from "@/components/data-table/empty-state";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -76,9 +77,7 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
               ))}
             </ul>
           ) : shown.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {t("detail.noApplications")}
-            </p>
+            <EmptyState compact icon={AppWindow} badge={null} title={t("detail.noApplications")} />
           ) : (
             <ul className="grid gap-2 sm:grid-cols-2">
               {shown.map((app) => (

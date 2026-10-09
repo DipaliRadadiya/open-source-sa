@@ -147,7 +147,7 @@ function UpdateStatus({ updates }) {
   return (
     <div
       className={cn(
-        "mt-3.5 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border px-3.5 py-2.5 text-sm",
+        "flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border px-3.5 py-2.5 text-sm",
         tone,
       )}
     >
@@ -304,7 +304,7 @@ function RunSecurityUpdates({ run, canManage }) {
       : null;
 
   return (
-    <div className="mt-3.5 space-y-3">
+    <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
         <ReasonTooltip reason={reason}>
           <Button
@@ -458,6 +458,7 @@ function UpdatesSection({ updates, canManage }) {
             name="security_updates_enabled"
             render={({ field }) => (
               <Row
+                toggle
                 label={t("updates.security")}
                 hint={t("updates.securityHint")}
               >
@@ -477,6 +478,7 @@ function UpdatesSection({ updates, canManage }) {
             name="auto_reboot"
             render={({ field }) => (
               <Row
+                toggle
                 label={t("updates.afterUpdate")}
                 hint={t("updates.afterUpdateHint")}
               >
@@ -525,6 +527,7 @@ function UpdatesSection({ updates, canManage }) {
                 name="reboot_with_users"
                 render={({ field }) => (
                   <Row
+                    toggle
                     label={t("updates.withUsers")}
                     hint={t("updates.withUsersHint")}
                   >
@@ -604,6 +607,7 @@ function ScheduleSection({ schedule, presets, presetsFailed, canManage }) {
             name="enabled"
             render={({ field }) => (
               <Row
+                toggle
                 label={t("schedule.enable")}
                 hint={
                   presetsFailed
@@ -844,7 +848,7 @@ function ManualSection({
     >
       {/* Read from systemd, so one scheduled from a shell shows up too. */}
       {pendingReboot?.scheduled ? (
-        <div className="mt-3.5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
           <span className="flex items-start gap-2">
             <CalendarClock className="mt-0.5 size-4 shrink-0 text-warning" />
             {/* `at` can be null on a pending shutdown with no systemd timestamp. */}
@@ -880,7 +884,7 @@ function ManualSection({
         </div>
       ) : pendingRebootFailed ? (
         // Not the same as "nothing scheduled".
-        <p className="mt-3.5 flex items-start gap-2 rounded-lg border p-3 text-sm text-muted-foreground">
+        <p className="flex items-start gap-2 rounded-lg border p-3 text-sm text-muted-foreground">
           <CircleAlert className="mt-0.5 size-4 shrink-0" />
           {t("reboot.pendingUnknown")}
         </p>
@@ -888,13 +892,13 @@ function ManualSection({
 
       {/* Inline because it is needed before pressing. */}
       {rebootRequired ? (
-        <p className="mt-3.5 flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+        <p className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
           <RotateCcw className="mt-0.5 size-4 shrink-0 text-warning" />
           {t("rebootRequired.title")}
         </p>
       ) : null}
 
-      <p className="pt-3.5 text-sm text-muted-foreground">
+      <p className="text-sm text-muted-foreground">
         {t("reboot.description")}
       </p>
 

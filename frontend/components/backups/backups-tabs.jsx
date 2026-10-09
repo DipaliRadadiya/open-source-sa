@@ -18,7 +18,7 @@ const SECTIONS = [
 const TAB =
   "relative inline-flex h-auto min-w-0 flex-none items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-2 text-sm font-medium whitespace-nowrap text-muted-foreground transition-all hover:bg-background/60 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none sm:gap-2 sm:px-4 [&_svg]:size-4 [&_svg]:shrink-0";
 const TAB_ACTIVE =
-  "bg-background text-foreground shadow-sm dark:border-input dark:bg-input/30";
+  "bg-card text-foreground shadow-sm dark:border-input dark:bg-input/30";
 
 export function BackupsTabs() {
   const t = useTranslations("backups");

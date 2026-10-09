@@ -201,9 +201,6 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
       <CardHeader>
         {/* Same tinted icon mark as every other card on this page. */}
         <CardTitle className="flex items-center gap-2.5">
-          <span className="flex shrink-0 items-center justify-center text-muted-foreground">
-            <Webhook className="size-4" />
-          </span>
           {t("webhook.title")}
         </CardTitle>
         <CardDescription>

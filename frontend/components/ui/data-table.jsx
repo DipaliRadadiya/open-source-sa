@@ -5,7 +5,8 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Rows3 } from "lucide-react";
+import { EmptyArt } from "@/components/data-table/empty-art";
 import {
   Table,
   TableBody,
@@ -46,6 +47,8 @@ export function DataTable({
   data,
   // Defaults to a translated t() string below, never an English literal here.
   emptyMessage,
+  // The picture over an empty list: the subject's own icon (an archive for backups…).
+  emptyIcon = Rows3,
   sortable = false,
   stickyHeader = false,
   defaultSorting = [],
@@ -64,6 +67,8 @@ export function DataTable({
   rowSelection,
   onRowSelectionChange,
   rowId,
+  // Taller rows for lists people scan rather than read line by line.
+  roomy = false,
 }) {
   const tc = useTranslations("common");
   const pending = useNavPending();
@@ -110,7 +115,8 @@ export function DataTable({
       className={cn(
         "transition-opacity",
         // Avoids a double line against the enclosing card's edge.
-        bare ? "[&_tbody_tr:last-child]:border-0" : "rounded-xl border",
+        // White and lifted like a card: the page behind is tinted.
+        bare ? "[&_tbody_tr:last-child]:border-0" : "rounded-2xl border border-border/70 bg-card shadow-e1",
         // Scroll rather than clip wide tables. Skipped with stickyHeader:
         // overflow-x:auto would nest a second scroller and break sticky.
         !stickyHeader && "overflow-x-auto",
@@ -118,44 +124,47 @@ export function DataTable({
       )}
     >
       <Table className={fixedLayout ? "table-fixed" : undefined}>
-        <TableHeader className={cn(stickyHeader && "sticky top-0 z-10 shadow-sm")}>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="bg-muted/40 hover:bg-muted/40">
-              {headerGroup.headers.map((header) => {
-                const canSort = header.column.getCanSort();
-                const direction = header.column.getIsSorted();
-                return (
-                  <TableHead
-                    key={header.id}
-                    // Sticky headers need an opaque background.
-                    // `meta.className` lets a caller constrain a column's width.
-                    className={cn(
-                      stickyHeader && "bg-muted",
-                      header.column.columnDef.meta?.className,
-                    )}
-                    /* Server-driven columns sort via the URL; `meta.sortKey` supplies aria-sort. */
-                    aria-sort={
-                      canSort
-                        ? { asc: "ascending", desc: "descending" }[direction] ?? "none"
-                        : header.column.columnDef.meta?.sortKey
-                          ? sortDirection(sortParam, header.column.columnDef.meta.sortKey)
-                          : undefined
-                    }
-                  >
-                    {header.isPlaceholder ? null : canSort ? (
-                      <SortableHeader
-                        header={header}
-                        label={header.column.columnDef.header}
-                      />
-                    ) : (
-                      flexRender(header.column.columnDef.header, header.getContext())
-                    )}
-                  </TableHead>
-                );
-              })}
-            </TableRow>
-          ))}
-        </TableHeader>
+        {/* No column headings (or select-all box) over a list with nothing in it. */}
+        {table.getRowModel().rows.length ? (
+          <TableHeader className={cn(stickyHeader && "sticky top-0 z-10 shadow-sm")}>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id} className="bg-muted/40 hover:bg-muted/40">
+                {headerGroup.headers.map((header) => {
+                  const canSort = header.column.getCanSort();
+                  const direction = header.column.getIsSorted();
+                  return (
+                    <TableHead
+                      key={header.id}
+                      // Sticky headers need an opaque background.
+                      // `meta.className` lets a caller constrain a column's width.
+                      className={cn(
+                        stickyHeader && "bg-muted",
+                        header.column.columnDef.meta?.className,
+                      )}
+                      /* Server-driven columns sort via the URL; `meta.sortKey` supplies aria-sort. */
+                      aria-sort={
+                        canSort
+                          ? { asc: "ascending", desc: "descending" }[direction] ?? "none"
+                          : header.column.columnDef.meta?.sortKey
+                            ? sortDirection(sortParam, header.column.columnDef.meta.sortKey)
+                            : undefined
+                      }
+                    >
+                      {header.isPlaceholder ? null : canSort ? (
+                        <SortableHeader
+                          header={header}
+                          label={header.column.columnDef.header}
+                        />
+                      ) : (
+                        flexRender(header.column.columnDef.header, header.getContext())
+                      )}
+                    </TableHead>
+                  );
+                })}
+              </TableRow>
+            ))}
+          </TableHeader>
+        ) : null}
         <TableBody>
           {table.getRowModel().rows.length ? (
             table.getRowModel().rows.map((row) => {
@@ -174,7 +183,7 @@ export function DataTable({
                     }
 
                     return (
-                      <TableCell key={cell.id} className={cell.column.columnDef.meta?.className}>
+                      <TableCell key={cell.id} className={cn(roomy && "py-4", cell.column.columnDef.meta?.className)}>
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     );
@@ -194,11 +203,14 @@ export function DataTable({
             })
           ) : (
             <TableRow className="hover:bg-transparent">
-              <TableCell
-                colSpan={columns.length}
-                className="h-28 text-center text-sm text-muted-foreground"
-              >
-                {emptyMessage ?? tc("noResults")}
+              <TableCell colSpan={columns.length} className="whitespace-normal">
+                {/* The panel's empty state, not a bare sentence: picture, then the message. */}
+                <div className="flex flex-col items-center gap-3 py-8 text-center">
+                  <EmptyArt icon={emptyIcon} />
+                  <p className="max-w-sm text-sm font-medium text-pretty text-foreground">
+                    {emptyMessage ?? tc("noResults")}
+                  </p>
+                </div>
               </TableCell>
             </TableRow>
           )}

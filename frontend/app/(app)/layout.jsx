@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentUser, getImpersonator } from "@/lib/auth/get-current-user";
 import { signedOutPath } from "@/lib/auth/signed-out-path";
@@ -43,13 +44,9 @@ export default async function AppLayout({ children }) {
   }
   if (!user) redirect(await signedOutPath());
 
-  let permissions, impersonatedBy, rebootRequired;
+  let permissions, impersonatedBy;
   try {
-    [permissions, impersonatedBy, rebootRequired] = await Promise.all([
-      getPermissions(),
-      getImpersonator(),
-      getRebootRequired(),
-    ]);
+    [permissions, impersonatedBy] = await Promise.all([getPermissions(), getImpersonator()]);
   } catch (error) {
     if (isRateLimited(error)) return <RateLimited />;
     if (isPanelUnavailable(error)) return <PanelUnavailable />;
@@ -84,18 +81,16 @@ export default async function AppLayout({ children }) {
                       admin={impersonatedBy.username}
                     />
                   ) : null}
-                  {rebootRequired ? (
-                    <RebootRequiredBanner
-                      canManage={can(permissions, "setting", "manage")}
-                    />
-                  ) : null}
-                  <AppHeader impersonating={!!impersonatedBy} />
-                  {/* Inside the sticky cluster, not `top-16`: the banners above are conditional. */}
-                  <div className="border-b bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/70">
-                    <div className="mx-auto w-full max-w-screen-xl px-4 py-2.5 sm:px-6 lg:px-8">
-                      <AppBreadcrumb items={permissions} />
-                    </div>
-                  </div>
+                  {/* Streamed: answering it runs commands on the server (~0.7 s), and every
+                      page waited on it before showing anything (Krishna, 7 Oct). */}
+                  <Suspense fallback={null}>
+                    <RebootNotice canManage={can(permissions, "setting", "manage")} />
+                  </Suspense>
+                  {/* One bar: the trail sits beside the controls rather than in a second band. */}
+                  <AppHeader
+                    impersonating={!!impersonatedBy}
+                    breadcrumb={<AppBreadcrumb items={permissions} />}
+                  />
                 </div>
                 <main id="main-content" tabIndex={-1} className="flex flex-1 flex-col">
                   <div className="mx-auto w-full max-w-screen-xl flex-1 p-4 sm:p-6 lg:p-8">
@@ -111,4 +106,9 @@ export default async function AppLayout({ children }) {
       </TooltipProvider>
     </AuthProvider>
   );
+}
+
+async function RebootNotice({ canManage }) {
+  const required = await getRebootRequired();
+  return required ? <RebootRequiredBanner canManage={canManage} /> : null;
 }

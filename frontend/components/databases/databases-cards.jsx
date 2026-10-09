@@ -55,7 +55,7 @@ export function DatabasesCards({
               {/* The three states, before the numbers. */}
               {users === 0 || (!backupsUnknown && !backup) || (!ownedBy && !orphanUnknown) ? (
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  {/* Same badge and fix button as the table. */}
+                  {/* Grey, not yellow (Krishna, 8 Oct); the same fix button as the table. */}
                   {!ownedBy && !orphanUnknown ? (
                     onAttach ? (
                       <button
@@ -64,23 +64,23 @@ export function DatabasesCards({
                         className="rounded-full focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
                         aria-label={`${t("columns.notLinked")}. ${t("columns.attachFor", { name: database.name })}`}
                       >
-                        <Badge variant="warning" className="cursor-pointer font-normal underline-offset-2 hover:underline">
+                        <Badge variant="muted" className="cursor-pointer font-normal underline-offset-2 hover:underline">
                           {t("columns.notLinked")}
                         </Badge>
                       </button>
                     ) : (
-                      <Badge variant="warning" className="font-normal">
+                      <Badge variant="muted" className="font-normal">
                         {t("columns.notLinked")}
                       </Badge>
                     )
                   ) : null}
                   {users === 0 ? (
-                    <Badge variant="warning" className="font-normal">
+                    <Badge variant="muted" className="font-normal">
                       {t("columns.noUsers")}
                     </Badge>
                   ) : null}
                   {!backupsUnknown && !backup ? (
-                    <Badge variant="warning" className="font-normal">
+                    <Badge variant="muted" className="font-normal">
                       {t("columns.neverExported")}
                     </Badge>
                   ) : null}

@@ -304,6 +304,7 @@ export function BackupsHistoryTable({
   // Hides the Site column on a site's own page.
   showSite = true,
   emptyMessage,
+  emptyIcon,
   // Set when the caller already wraps this in a Card.
   bare = false,
   // Deleting also removes the archive from object storage, so it needs the
@@ -407,6 +408,7 @@ export function BackupsHistoryTable({
         columns={columns}
         data={backups}
         emptyMessage={emptyMessage ?? t("empty.title")}
+        emptyIcon={emptyIcon}
         bare={bare}
         meta={{
           canRestore,

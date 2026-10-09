@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { ChevronDown, Info, Loader2, SearchX, TriangleAlert } from "lucide-react";
+import { ChevronDown, Info, Loader2, SearchX, TriangleAlert, Puzzle } from "lucide-react";
+import { EmptyState } from "@/components/data-table/empty-state";
 import { setPhpExtension } from "@/lib/api/php";
 import { LocalSearchInput } from "@/components/data-table/local-search-input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { FILTER_TOGGLE_ITEM } from "@/lib/theme/filter-toggle";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
@@ -140,33 +142,37 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
               if (!next) return;
               setFilter(next);
             }}
-            variant="outline"
             // Wraps rather than overflows in longer locales.
             className="flex-wrap gap-1"
           >
-            <ToggleGroupItem value="all" className="px-3">
+            <ToggleGroupItem value="all" className={FILTER_TOGGLE_ITEM}>
               {t("extensions.filterAll")}
             </ToggleGroupItem>
-            <ToggleGroupItem value="on" className="px-3">
+            <ToggleGroupItem value="on" className={FILTER_TOGGLE_ITEM}>
               {t("extensions.filterOn")}
             </ToggleGroupItem>
-            <ToggleGroupItem value="off" className="px-3">
+            <ToggleGroupItem value="off" className={FILTER_TOGGLE_ITEM}>
               {t("extensions.filterOff")}
             </ToggleGroupItem>
           </ToggleGroup>
         </div>
 
         {shown.length === 0 ? (
-          <p className="flex items-center justify-center gap-2 py-8 text-center text-sm text-muted-foreground">
-            <SearchX className="size-4 shrink-0" />
-            {/* A search that only matches a built-in names it. */}
-            {builtinMatch
-              ? t("extensions.noMatchesBuiltin", { name: builtinMatch.name })
-              : t("extensions.noMatches")}
-          </p>
+          <EmptyState
+            compact
+            icon={SearchX}
+            subject={Puzzle}
+            // A search that only matches a built-in names it.
+            title={
+              builtinMatch
+                ? t("extensions.noMatchesBuiltin", { name: builtinMatch.name })
+                : t("extensions.noMatches")
+            }
+          />
         ) : (
-          <div className="relative">
-            <div className="max-h-[32rem] overflow-y-auto rounded-lg border">
+          // Edge to edge, as every table inside a card.
+          <div className="relative -mx-(--card-spacing)">
+            <div className="max-h-[32rem] overflow-y-auto border-y">
             <Table>
               <TableHeader>
                 {/* Header labels the column of switches and badges. */}
@@ -295,7 +301,7 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
             </Table>
             </div>
             {/* Fade so the cut-off last row reads as scrollable. */}
-            <div className="pointer-events-none absolute inset-x-px bottom-px h-8 rounded-b-lg bg-gradient-to-t from-background to-transparent" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-px h-8 bg-gradient-to-t from-card to-transparent" />
           </div>
         )}
 

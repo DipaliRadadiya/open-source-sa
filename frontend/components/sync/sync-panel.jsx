@@ -184,42 +184,46 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
   const running = Boolean(run && !run.finished);
   const present = typesPresent(items);
 
+  const actions = (
+    <div className="flex flex-wrap items-center gap-2">
+      {canManage ? (
+        // Phone: the filled buttons take full rows and the two quiet ones share the
+        // last, instead of Refresh wrapping alone.
+        <Button onClick={() => begin("preview")} disabled={starting || running} className="max-sm:w-full">
+          {starting || running ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden />
+          ) : (
+            <ScanSearch className="size-4" aria-hidden />
+          )}
+          {run ? t("actions.rescan") : t("actions.scan")}
+        </Button>
+      ) : null}
+
+      {canManage && run?.finished && items.some((item) => item.action === "found") ? (
+        <Button variant="secondary" onClick={() => setAdoptOpen(true)} className="max-sm:w-full">
+          <DownloadCloud className="size-4" aria-hidden />
+          {t("actions.adopt")}
+        </Button>
+      ) : null}
+
+      <IgnoredSheet
+        ignores={ignores}
+        canManage={canManage}
+        pendingKeys={ignoring.pendingKeys}
+        onUnignore={onUnignore}
+      />
+
+      {run?.finished ? (
+        <Button variant="ghost" onClick={refresh} disabled={refreshing}>
+          <RefreshCw className={cn("size-4", refreshing && "animate-spin")} aria-hidden />
+          {t("actions.refresh")}
+        </Button>
+      ) : null}
+    </div>
+  );
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-2">
-        {canManage ? (
-          <Button onClick={() => begin("preview")} disabled={starting || running}>
-            {starting || running ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden />
-            ) : (
-              <ScanSearch className="size-4" aria-hidden />
-            )}
-            {run ? t("actions.rescan") : t("actions.scan")}
-          </Button>
-        ) : null}
-
-        {canManage && run?.finished && items.some((item) => item.action === "found") ? (
-          <Button variant="secondary" onClick={() => setAdoptOpen(true)}>
-            <DownloadCloud className="size-4" aria-hidden />
-            {t("actions.adopt")}
-          </Button>
-        ) : null}
-
-        <IgnoredSheet
-          ignores={ignores}
-          canManage={canManage}
-          pendingKeys={ignoring.pendingKeys}
-          onUnignore={onUnignore}
-        />
-
-        {run?.finished ? (
-          <Button variant="ghost" onClick={refresh} disabled={refreshing}>
-            <RefreshCw className={cn("size-4", refreshing && "animate-spin")} aria-hidden />
-            {t("actions.refresh")}
-          </Button>
-        ) : null}
-      </div>
-
       {/* Above the summary, whose counts are what stopped being true. */}
       {stalled ? (
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2.5 text-sm text-warning">
@@ -244,14 +248,18 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
           // Dismissed rows stay in the list (with Undo) but are not counted.
           loaded={running ? items.length : items.filter((item) => !ignoredKeys.has(ignoreKey(item))).length}
           running={running}
+          actions={actions}
         />
       ) : null}
 
       {!run ? (
         <EmptyState
           icon={ScanSearch}
+          // Not "nothing matches": no scan has run yet.
+          badge={null}
           title={t("empty.title")}
           description={t("empty.description")}
+          action={actions}
         />
       ) : items.length === 0 && running ? (
         // Nothing found yet is not "Nothing matches": rows stream in as the scan finds them.

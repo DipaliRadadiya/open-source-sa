@@ -5,7 +5,8 @@ import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
-import { Loader2, Trash2, Check, TriangleAlert, FolderTree } from "lucide-react";
+import { Loader2, Trash2, Check, TriangleAlert, FolderTree, Sparkles } from "lucide-react";
+import { EmptyState } from "@/components/data-table/empty-state";
 import { cn } from "@/lib/utils";
 import { cleanDisk } from "@/lib/api/disk-cleaner";
 import { apiMessage } from "@/lib/api/error-message";
@@ -152,9 +153,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
             ) : null}
   
             {nothingToClean ? (
-              <p className="px-6 py-6 text-center text-sm text-muted-foreground">
-                {t("list.allClean")}
-              </p>
+              <EmptyState compact icon={Sparkles} badge={null} title={t("list.allClean")} />
             ) : (
               <ul className="divide-y border-t">
                 {ordered.map((category) => {

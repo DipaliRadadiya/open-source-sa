@@ -29,16 +29,12 @@ test("every settings tab points at a route that exists", () => {
   }
 });
 
-test("the tab grid has exactly as many columns as there are tabs", () => {
-  // The one thing that breaks silently when a tab is added: the grid keeps its
-  // old column count, and the new tab either wraps onto a second row or the
-  // last one is squeezed. Nothing errors, and it only shows on a screen
-  // narrow enough to notice.
-  const count = sectionKeys().length;
-  const grid = tabs.match(/grid w-full grid-cols-(\d+)/);
-
-  assert.ok(grid, "the tab bar should declare its column count");
-  assert.equal(Number(grid[1]), count);
+test("the tab bar is sized to its tabs, like Backups", () => {
+  // 8 Oct (Krishna: Settings looked unlike every other page): a grid stretched
+  // across the page, now a strip as wide as its tabs, so there is no column
+  // count to keep in step with the tab list.
+  assert.match(tabs, /className="inline-flex w-fit gap-1 rounded-lg bg-muted p-1"/);
+  assert.doesNotMatch(tabs, /grid-cols-\d/);
 });
 
 test("each tab has a label in every locale", () => {

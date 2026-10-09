@@ -178,12 +178,21 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
   // no hover to explain.
   const blockedReason = !state.preflight.ready ? t("notReady") : null;
 
+  // On the status card, not in the page header: actions sit on the card they act on.
+  const checkButton = (
+    <Button variant="outline" onClick={checkAgain} disabled={checking}>
+      <RefreshCw className={checking ? "size-4 animate-spin" : "size-4"} />
+      {t("checkAgain")}
+    </Button>
+  );
+
   // Both actions plus the disabled reason, as one block closing the header row.
   const updateActions = (
     // A column sized by its wider row, which keeps the reason on one line under the
     // buttons.
     <div className="flex w-full flex-col items-end gap-1.5 sm:ml-auto sm:w-auto">
       <div className="flex flex-wrap items-center justify-end gap-2">
+        {checkButton}
         <Button variant="outline" onClick={() => begin(true)} disabled={starting}>
           <ActionIcon icon={FlaskConical} pending={starting} className="size-4" />
           {t("dryRun")}
@@ -204,14 +213,7 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <PageHeader title={title} subtitle={subtitle} />
-        {/* Not shrink-0: the label grows in other locales and wraps under the heading. */}
-        <Button variant="outline" onClick={checkAgain} disabled={checking}>
-          <RefreshCw className={checking ? "size-4 animate-spin" : "size-4"} />
-          {t("checkAgain")}
-        </Button>
-      </div>
+      <PageHeader title={title} subtitle={subtitle} />
 
       {isActive(run) ? (
         <UpdateProgress run={run} reconnecting={reconnecting} slow={slow} dryRun={dryRun} onFinish={onFinish} />
@@ -221,11 +223,11 @@ export function PanelUpdatePanel({ initialState, title, subtitle }) {
             <UpdateProgress run={visibleRun} dryRun={dryRun} onFinish={onFinish} />
           ) : null}
 
-          <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+          <Card className="gap-0 overflow-hidden py-0">
             <UpdateHeader
               state={state}
               divided={state.update_available}
-              actions={state.update_available ? updateActions : null}
+              actions={state.update_available ? updateActions : <div className="sm:ml-auto">{checkButton}</div>}
             />
 
             {state.update_available ? (

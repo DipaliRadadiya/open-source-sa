@@ -76,7 +76,7 @@ test("the button is gated by the permission, not by a hardcoded site type", () =
     page,
     /can\(appPermissions, "app_magic_login", "manage", "application"\)/,
   );
-  assert.match(page, /canMagicLogin && application\.status === "active"/);
+  assert.match(page, /application\.status === "active" \? \([\s\S]{0,700}\{canMagicLogin \? <MagicLoginLauncher/);
   assert.doesNotMatch(code(page), /site_type === "wordpress"/);
 });
 

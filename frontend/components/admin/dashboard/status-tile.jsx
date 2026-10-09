@@ -1,50 +1,41 @@
 import Link from "@/components/ui/app-link";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Card } from "@/components/ui/card";
 
-// Severity is a left-edge accent and tinted icon, never a filled card, so a row stays readable.
+// Drawn like the application page's status tiles: the colour lives in the icon tile (and
+// the value, when something is wrong); the card itself stays white.
 const TONES = {
-  attention: { chip: "bg-destructive/10 text-destructive", accent: "bg-destructive/50", value: "text-destructive", card: "bg-destructive/[0.02]" },
-  warning: { chip: "bg-warning/10 text-warning", accent: "bg-warning/50", value: "", card: "" },
-  action: { chip: "bg-primary/10 text-primary", accent: "bg-primary/50", value: "", card: "" },
-  good: { chip: "bg-success/10 text-success", accent: "bg-success/45", value: "", card: "" },
-  idle: { chip: "bg-muted text-muted-foreground", accent: "bg-border", value: "", card: "" },
+  attention: { chip: "bg-destructive-soft text-destructive", value: "text-destructive" },
+  warning: { chip: "bg-warning-soft text-warning", value: "text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:text-warning" },
+  action: { chip: "bg-primary/10 text-primary", value: "" },
+  good: { chip: "bg-success-soft text-success", value: "" },
+  idle: { chip: "bg-muted text-muted-foreground", value: "" },
 };
 
 export function StatusTile({ icon: Icon, title, value, hint, tone = "idle", href }) {
-  const { chip, accent, card, value: valueTint } = TONES[tone] ?? TONES.idle;
+  const { chip, value: valueTint } = TONES[tone] ?? TONES.idle;
 
   return (
-    <Card
-      className={cn(
-        "group relative gap-0 overflow-hidden py-0 shadow-sm transition-colors hover:bg-muted/40",
-        card,
-      )}
+    <Link
+      href={href}
+      prefetch={false}
+      // The whole tile is the click target.
+      className="group flex min-w-0 flex-col gap-3 rounded-2xl border border-border/70 bg-card p-4 shadow-e1 transition-[border-color,box-shadow] hover:border-primary/30 hover:shadow-e2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
-      <span className={cn("absolute inset-y-0 left-0 w-[2px]", accent)} aria-hidden />
-      <Link
-        href={href}
-        // The whole tile is the click target.
-        className="flex h-full flex-col gap-2 rounded-xl py-4 pr-4 pl-5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
-      >
-        <div className="flex items-center gap-2">
-          <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-md", chip)}>
-            <Icon className="size-3.5" aria-hidden />
-          </span>
-          <p className="min-w-0 flex-1 text-xs font-medium tracking-wide text-balance text-muted-foreground uppercase">
-            {title}
-          </p>
-          <ChevronRight
-            className="size-4 shrink-0 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5"
-            aria-hidden
-          />
-        </div>
-        <p className={cn("text-base leading-tight font-semibold tracking-tight", valueTint)}>
-          {value}
-        </p>
-        {hint ? <p className="mt-auto text-xs text-muted-foreground">{hint}</p> : null}
-      </Link>
-    </Card>
+      <div className="flex items-center gap-3">
+        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", chip)}>
+          <Icon className="size-[18px]" aria-hidden />
+        </span>
+        <p className="min-w-0 flex-1 text-xs font-medium break-words text-muted-foreground">{title}</p>
+        <ChevronRight
+          className="size-4 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5"
+          aria-hidden
+        />
+      </div>
+      <div className="min-w-0">
+        <p className={cn("text-[15px] font-semibold tracking-tight text-pretty break-words", valueTint)}>{value}</p>
+        {hint ? <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p> : null}
+      </div>
+    </Link>
   );
 }

@@ -2,45 +2,38 @@ import Link from "@/components/ui/app-link";
 import { getTranslations, getFormatter } from "next-intl/server";
 import { ArrowRight, CircleX, Terminal, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Card } from "@/components/ui/card";
 import { MAX_NAMES, summarizeAttention } from "@/lib/admin/attention-summary";
 
-// One row per kind of problem (at most three), linking to its detail page.
+// One slim line per kind of problem (at most three), linking to its detail page: the
+// same rows as the server dashboard's attention panel.
 function Row({ tone, icon: Icon, title, summary, action, href }) {
   return (
     <li>
       <Link
         href={href}
-        className="group flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3 transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        prefetch={false}
+        title={summary ?? undefined}
+        className="group flex min-w-0 items-center gap-3 rounded-xl bg-card px-3 py-2.5 shadow-e1 ring-1 ring-border/70 transition-colors hover:ring-primary/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <span
           className={cn(
-            "flex size-8 shrink-0 items-center justify-center rounded-lg",
-            tone === "fail" ? "bg-destructive/10" : "bg-warning/10",
+            "flex size-8 shrink-0 items-center justify-center rounded-xl",
+            tone === "fail" ? "bg-destructive-soft text-destructive" : "bg-warning-soft text-warning",
           )}
         >
-          <Icon
-            className={cn("size-4", tone === "fail" ? "text-destructive" : "text-warning")}
-            aria-hidden
-          />
+          <Icon className="size-4" aria-hidden />
         </span>
-        <div className="min-w-64 flex-1 space-y-0.5">
-          <p
-            className={cn(
-              "text-sm font-medium",
-              tone === "fail" ? "text-destructive" : "text-foreground",
-            )}
-          >
-            {title}
-          </p>
-          {summary ? <p className="text-sm text-muted-foreground">{summary}</p> : null}
-        </div>
+        <p className="flex min-w-0 flex-1 items-center gap-1.5 text-sm leading-snug">
+          {/* The names give way first, so the problem itself stays readable. */}
+          <span className={cn("min-w-0 font-medium break-words", tone === "fail" && "text-destructive")}>{title}</span>
+          {summary ? (
+            <span className="hidden min-w-0 shrink-[6] truncate text-muted-foreground md:inline">· {summary}</span>
+          ) : null}
+          {summary ? <span className="sr-only md:hidden">{summary}</span> : null}
+        </p>
         <span className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary">
           {action}
-          <ArrowRight
-            className="size-3.5 transition-transform group-hover:translate-x-0.5"
-            aria-hidden
-          />
+          <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
         </span>
       </Link>
     </li>
@@ -108,19 +101,15 @@ export async function AttentionList({ checks = [], errorGroups = [] }) {
   }
 
   return (
-    <Card className="gap-0 overflow-hidden py-0 shadow-sm">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b px-5 py-3.5">
-        <h2 className="font-heading text-base leading-snug font-semibold tracking-tight">
-          {t("title")}
-        </h2>
-        {/* Text, not a link: the issues live on two pages; each row links its own. */}
-        <p className="text-sm text-muted-foreground">{t("count", { count: total })}</p>
-      </div>
-      <ul className="divide-y">
+    // No card or heading of its own, as on the server dashboard: the tiles above already
+    // say something is wrong; these lines say what, and where to fix it.
+    <section aria-label={t("title")}>
+      {/* One per line: at most three rows, and the reason after each title needs the width. */}
+      <ul className="grid gap-2">
         {rows.map((row) => (
           <Row key={row.key} {...row} />
         ))}
       </ul>
-    </Card>
+    </section>
   );
 }

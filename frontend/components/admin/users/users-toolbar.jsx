@@ -15,6 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { SELECT_WELL } from "@/components/data-table/toolbar-well";
 
 export function UsersToolbar() {
   const t = useTranslations("users");
@@ -33,7 +35,7 @@ export function UsersToolbar() {
             setQuery({ is_admin: v === "all" ? undefined : v }, { resetPage: true })
           }
         >
-          <SelectTrigger className="w-full sm:w-44" aria-label={t("columns.accountType")}>
+          <SelectTrigger className={cn(SELECT_WELL, "w-full sm:w-44")} aria-label={t("columns.accountType")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

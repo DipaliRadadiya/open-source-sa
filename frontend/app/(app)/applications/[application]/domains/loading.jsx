@@ -1,15 +1,15 @@
-import { Skeleton } from "@/components/ui/skeleton";
+import { SkCard, SkHeader, SkRows, SkTabs } from "@/components/ui/skeleton-kit";
 
+
+// Domains & SSL: the two tabs, then the domains card.
 export default function Loading() {
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <Skeleton className="h-8 w-24" />
-        <Skeleton className="h-7 w-48" />
-        <Skeleton className="h-4 w-80" />
-      </div>
-      <Skeleton className="h-40 w-full rounded-2xl" />
-      <Skeleton className="h-32 w-full rounded-2xl" />
+    <div className="space-y-6" aria-busy="true">
+      <SkHeader />
+      <SkTabs count={2} />
+      <SkCard action>
+        <SkRows count={2} trailing="button" />
+      </SkCard>
     </div>
   );
 }

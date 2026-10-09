@@ -51,17 +51,7 @@ export default async function AdminDoctorPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <PageHeader title={t("title")} subtitle={t("subtitle")} />
-        {doctor ? (
-          // flex-wrap, not shrink-0: both labels grow in other locales and
-          // would overflow a 320px screen.
-          <div className="flex flex-wrap gap-2">
-            <CopyReportButton text={report} />
-            <RecheckButton />
-          </div>
-        ) : null}
-      </div>
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       {!doctor ? (
         <LoadFailed
@@ -71,8 +61,8 @@ export default async function AdminDoctorPage() {
         />
       ) : (
         <>
-          {/* Neutral surface so it reads as the list header; status is carried by the icon. */}
-          <div className="flex flex-wrap items-center gap-4 rounded-2xl border bg-muted/40 p-4">
+          {/* The summary card; status is carried by the icon, and the page's actions sit on it. */}
+          <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-border/70 bg-card p-4 shadow-e1">
             <span
               className={cn(
                 "flex size-11 shrink-0 items-center justify-center rounded-xl",
@@ -104,6 +94,12 @@ export default async function AdminDoctorPage() {
                 <p className="mt-1 text-sm text-muted-foreground">{t("blockingNote")}</p>
               ) : null}
             </div>
+            {/* flex-wrap, not shrink-0: both labels grow in other locales and would
+                overflow a 320px screen. */}
+            <div className="flex flex-wrap gap-2">
+              <CopyReportButton text={report} />
+              <RecheckButton />
+            </div>
           </div>
 
           <div className="space-y-3">
@@ -112,7 +108,7 @@ export default async function AdminDoctorPage() {
             ))}
             {passed.length && attention.length ? (
               <div className="flex items-center gap-3 pt-2">
-                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <span className="text-xs font-medium text-muted-foreground">
                   {t("passedGroup", { count: passed.length })}
                 </span>
                 <span className="h-px flex-1 bg-border" />

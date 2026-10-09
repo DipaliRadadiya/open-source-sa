@@ -7,10 +7,20 @@ import { Slot } from "radix-ui"
 import { ReasonTooltip, useDisabledReason } from "@/components/ui/reason-tooltip";
 import { cn } from "@/lib/utils"
 
-// Brand tint for labelled outline buttons in a card, Caution or notice; dialogs, toolbars
-// and the header stay neutral. Written out per scope: Tailwind needs literal classes.
+// Brand tint for labelled outline buttons in a card; dialogs, toolbars and the header
+// stay neutral. Written out per scope: Tailwind needs literal classes.
+// The text colour is repeated for hover and open: NEUTRAL's `hover:text-foreground`
+// otherwise won and turned the label black on hover (Krishna, 7 Oct).
+// A tinted border, not a transparent one: the base clips the fill to the padding box, so
+// a transparent border made it look 2px shorter than a neutral button beside it (8 Oct).
 const TINT_IN_CARDS =
-  "in-[.bg-card]:border-transparent in-[.bg-card]:bg-[color-mix(in_oklch,var(--primary)_9%,var(--background))] in-[.bg-card]:text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] in-[.bg-card]:hover:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-[.bg-card]:aria-expanded:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-[.bg-card]:dark:bg-primary/15 in-[.bg-card]:dark:text-[color-mix(in_oklch,var(--primary)_70%,white)] in-[.bg-card]:dark:hover:bg-primary/25 in-[.bg-card]:dark:aria-expanded:bg-primary/25 in-data-[slot=caution]:border-transparent in-data-[slot=caution]:bg-[color-mix(in_oklch,var(--primary)_9%,var(--background))] in-data-[slot=caution]:text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] in-data-[slot=caution]:hover:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-data-[slot=caution]:aria-expanded:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-data-[slot=caution]:dark:bg-primary/15 in-data-[slot=caution]:dark:text-[color-mix(in_oklch,var(--primary)_70%,white)] in-data-[slot=caution]:dark:hover:bg-primary/25 in-data-[slot=caution]:dark:aria-expanded:bg-primary/25 in-data-[slot=notice]:border-transparent in-data-[slot=notice]:bg-[color-mix(in_oklch,var(--primary)_9%,var(--background))] in-data-[slot=notice]:text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] in-data-[slot=notice]:hover:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-data-[slot=notice]:aria-expanded:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-data-[slot=notice]:dark:bg-primary/15 in-data-[slot=notice]:dark:text-[color-mix(in_oklch,var(--primary)_70%,white)] in-data-[slot=notice]:dark:hover:bg-primary/25 in-data-[slot=notice]:dark:aria-expanded:bg-primary/25";
+  "in-[.bg-card]:border-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-[.bg-card]:hover:border-[color-mix(in_oklch,var(--primary)_24%,var(--background))] in-[.bg-card]:dark:border-primary/25 in-[.bg-card]:bg-[color-mix(in_oklch,var(--primary)_9%,var(--background))] in-[.bg-card]:text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] in-[.bg-card]:hover:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-[.bg-card]:aria-expanded:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-[.bg-card]:dark:bg-primary/15 in-[.bg-card]:dark:text-[color-mix(in_oklch,var(--primary)_70%,white)] in-[.bg-card]:dark:hover:bg-primary/25 in-[.bg-card]:dark:aria-expanded:bg-primary/25 in-[.bg-card]:hover:text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] in-[.bg-card]:aria-expanded:text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] in-[.bg-card]:dark:hover:text-[color-mix(in_oklch,var(--primary)_70%,white)] in-[.bg-card]:dark:aria-expanded:text-[color-mix(in_oklch,var(--primary)_70%,white)]";
+
+// On a coloured note (Caution, notice) a white button with a border, not the blue tint:
+// light blue on amber read as neither (Krishna, 7 Oct). `!` because a note inside a card
+// matches both scopes.
+const ON_NOTE =
+  "in-data-[slot=caution]:border-border! in-data-[slot=caution]:bg-card! in-data-[slot=caution]:text-foreground! in-data-[slot=caution]:shadow-xs in-data-[slot=caution]:hover:bg-muted! in-data-[slot=caution]:aria-expanded:bg-muted! in-data-[slot=caution]:dark:border-input! in-data-[slot=caution]:dark:bg-input/40! in-data-[slot=caution]:dark:hover:bg-input/60! in-data-[slot=notice]:border-border! in-data-[slot=notice]:bg-card! in-data-[slot=notice]:text-foreground! in-data-[slot=notice]:shadow-xs in-data-[slot=notice]:hover:bg-muted! in-data-[slot=notice]:aria-expanded:bg-muted! in-data-[slot=notice]:dark:border-input! in-data-[slot=notice]:dark:bg-input/40! in-data-[slot=notice]:dark:hover:bg-input/60!";
 
 // Icon-only buttons stay neutral everywhere; tinted icon squares read as noise.
 const NEUTRAL =
@@ -62,7 +72,7 @@ const buttonVariants = cva(
       },
     },
     compoundVariants: [
-      { variant: "outline", size: ["default", "xs", "sm", "lg"], className: `${NEUTRAL} ${TINT_IN_CARDS}` },
+      { variant: "outline", size: ["default", "xs", "sm", "lg"], className: `${NEUTRAL} ${TINT_IN_CARDS} ${ON_NOTE}` },
       { variant: "outline", size: ["icon", "icon-xs", "icon-sm", "icon-lg"], className: NEUTRAL },
     ],
     defaultVariants: {

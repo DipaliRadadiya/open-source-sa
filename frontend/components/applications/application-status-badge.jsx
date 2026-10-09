@@ -35,6 +35,18 @@ export function isProcessDown(application) {
   );
 }
 
+// The pill's leading dot; it pulses only for a live state, as in the redesign.
+function PillDot({ tone, live = false }) {
+  return (
+    <span className="relative flex size-1.5 shrink-0" aria-hidden>
+      {live ? (
+        <span className={cn("absolute inline-flex size-full animate-ping rounded-full opacity-60 motion-reduce:hidden", tone)} />
+      ) : null}
+      <span className={cn("relative inline-flex size-1.5 rounded-full", tone)} />
+    </span>
+  );
+}
+
 // Badge and notes are split because the card and table place them differently.
 export function ApplicationStatusBadge({ application }) {
   const t = useTranslations("applications");
@@ -43,7 +55,8 @@ export function ApplicationStatusBadge({ application }) {
   // stays `active`. Amber, not destructive: deliberate, but worth noticing.
   if (application.is_disabled) {
     return (
-      <Badge variant="warning" className="font-normal">
+      <Badge variant="warning" className="gap-1.5 font-normal">
+        <PillDot tone="bg-warning" />
         {t("paused")}
       </Badge>
     );
@@ -53,7 +66,8 @@ export function ApplicationStatusBadge({ application }) {
   // serving its old code.
   if (isRedeploying(application)) {
     return (
-      <Badge variant="warning" className="font-normal">
+      <Badge variant="warning" className="gap-1.5 font-normal">
+        <PillDot tone="bg-warning" live />
         {t("deploying")}
       </Badge>
     );
@@ -61,17 +75,20 @@ export function ApplicationStatusBadge({ application }) {
 
   if (isProcessDown(application)) {
     return (
-      <Badge variant="warning" className="font-normal">
+      <Badge variant="warning" className="gap-1.5 font-normal">
+        <PillDot tone="bg-warning" />
         {t("processStoppedBadge")}
       </Badge>
     );
   }
 
+  const variant = STATUS_VARIANTS[application.status] ?? "muted";
   return (
-    <Badge
-      variant={STATUS_VARIANTS[application.status] ?? "muted"}
-      className="font-normal"
-    >
+    <Badge variant={variant} className="gap-1.5 font-normal">
+      <PillDot
+        tone={DOT_TONES[variant] ?? DOT_TONES.secondary}
+        live={application.status === "active" || application.status === "provisioning"}
+      />
       {t(`status.${application.status}`) ?? application.status_title ?? application.status}
     </Badge>
   );
@@ -83,10 +100,11 @@ const DOT_TONES = {
   destructive: "bg-destructive",
   warning: "bg-warning",
   secondary: "bg-muted-foreground/50",
+  muted: "bg-muted-foreground/50",
 };
 
 // Sidebar variant; shares `STATUS_VARIANTS` and the `is_disabled` precedence above.
-export function ApplicationStatusDot({ application, className }) {
+export function ApplicationStatusDot({ application, className, labelClassName }) {
   const t = useTranslations("applications");
   const paused = Boolean(application.is_disabled);
   const redeploying = isRedeploying(application);
@@ -103,10 +121,13 @@ export function ApplicationStatusDot({ application, className }) {
   return (
     <span className={cn("flex min-w-0 items-center gap-1.5", className)}>
       <span className={cn("size-1.5 shrink-0 rounded-full", DOT_TONES[variant] ?? DOT_TONES.secondary)} />
-      <span className="truncate text-xs text-muted-foreground">{label}</span>
+      <span className={cn("truncate text-xs text-muted-foreground", labelClassName)}>{label}</span>
     </span>
   );
 }
+
+// overflow-wrap:anywhere: if a long word still meets a narrower column it breaks instead of spilling over the next one.
+const NOTE_TAG = "flex w-fit max-w-full min-w-0 items-start gap-1 whitespace-normal [overflow-wrap:anywhere] rounded-md px-1.5 py-0.5 text-xs leading-4";
 
 export function ApplicationStatusNotes({ application, className }) {
   const t = useTranslations("applications");
@@ -153,16 +174,18 @@ export function ApplicationStatusNotes({ application, className }) {
           </p>
         )
       ) : null}
+      {/* Small tinted tags, not loose coloured text: an icon over two ragged lines read as
+          messy under the pill (Krishna, 7 Oct). They may wrap inside the tag in long locales. */}
       {processDown ? (
-        <p className="flex items-center gap-1 text-xs text-destructive">
-          <CircleAlert className="size-3 shrink-0" />
+        <p className={cn(NOTE_TAG, "bg-destructive-soft text-destructive")}>
+          <CircleAlert className="mt-0.5 size-3 shrink-0" />
           {t("markers.processFailed")}
         </p>
       ) : null}
       {deployFailed ? (
-        <p className="flex items-center gap-1 text-xs text-warning">
-          <TriangleAlert className="size-3 shrink-0" />
-          {t("markers.deployFailed")}
+        <p className={cn(NOTE_TAG, "bg-warning-soft text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:text-warning")}>
+          <TriangleAlert className="mt-0.5 size-3 shrink-0" />
+          {t("tiles.deployFailed")}
         </p>
       ) : null}
     </div>

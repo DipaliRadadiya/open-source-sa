@@ -1,15 +1,19 @@
-import { Skeleton } from "@/components/ui/skeleton";
+import { SkCard, SkFacts, SkHeader, SkNote, SkRows, SkTabs } from "@/components/ui/skeleton-kit";
 
+
+// Deployment: the deploy card with its facts, the tabs, then the history.
 export default function Loading() {
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <Skeleton className="h-8 w-40" />
-        <Skeleton className="h-7 w-36" />
-        <Skeleton className="h-4 w-80" />
-      </div>
-      <Skeleton className="h-56 w-full rounded-xl" />
-      <Skeleton className="h-64 w-full rounded-xl" />
+    <div className="space-y-6" aria-busy="true">
+      <SkHeader />
+      <SkCard action>
+        <SkNote tone="warning" />
+        <SkFacts count={4} className="mt-4" />
+      </SkCard>
+      <SkTabs count={3} />
+      <SkCard>
+        <SkRows count={3} trailing="button" />
+      </SkCard>
     </div>
   );
 }

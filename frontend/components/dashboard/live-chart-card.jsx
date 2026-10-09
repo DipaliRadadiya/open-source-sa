@@ -26,7 +26,10 @@ export function ChartPill({ dotClassName, label, value, note }) {
 }
 
 export function LiveChartCard({
-  icon: Icon,
+  // h3 inside the "Last 24 hours" section; the live pair stands alone, so h2.
+  headingLevel = "h3",
+  // The live pair is shorter than the 24h charts (the redesign); the wait matches it.
+  plotHeight = "h-72",
   title,
   description,
   badges,
@@ -57,13 +60,10 @@ export function LiveChartCard({
           {/* h3, not h2: these cards sit inside a section whose heading is the h2. */}
           {/* justify-between, not ml-auto: a wrapped pill group lands at the start. No width breakpoint: widths vary by locale. */}
           <CardTitle
-            as="h3"
-            className="flex flex-wrap items-center justify-between gap-x-2.5 gap-y-2 text-lg font-semibold"
+            as={headingLevel}
+            className="flex flex-wrap items-center justify-between gap-x-2.5 gap-y-2"
           >
             <span className="flex shrink-0 items-center gap-2.5">
-              <span className="flex shrink-0 items-center justify-center text-muted-foreground">
-                <Icon className="size-4" />
-              </span>
               {/* nowrap: otherwise the heading is the only shrinkable item beside shrink-0 pills. */}
               <span className="whitespace-nowrap">{title}</span>
             </span>
@@ -91,7 +91,7 @@ export function LiveChartCard({
           </div>
         ) : (
           // Same height as the plot so nothing jumps, and it shows the current reading.
-          <div className="flex h-72 flex-col items-center justify-center gap-2 px-6 text-center">
+          <div className={cn("flex flex-col items-center justify-center gap-2 px-6 text-center", plotHeight)}>
             {summary ? (
               <p className="text-lg font-semibold tabular-nums">{summary}</p>
             ) : null}

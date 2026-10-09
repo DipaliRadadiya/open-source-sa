@@ -98,28 +98,42 @@ test("one site with two problems is reported twice, with distinct ids", () => {
   assert.equal(new Set(found.map((f) => f.id)).size, 2);
 });
 
-test("the chip is a popover, because a tooltip is unreachable on touch", () => {
-  /*
-   * Radix tooltips never open on a touch device, so the detail — which site,
-   * what is wrong, what to do — would simply not exist on a phone.
-   */
-  const component = read("components/dashboard/site-attention.jsx");
-  assert.match(component, /from "@\/components\/ui\/popover"/);
-  assert.doesNotMatch(component, /TooltipTrigger/);
+/*
+ * The chip became a panel beside Server information (redesign, 6 Oct 2026).
+ * It summarises by KIND of problem: a dashboard says what is wrong and where
+ * to go, the applications page lists every site.
+ */
+const panel = read("components/dashboard/attention-panel.jsx");
+
+test("the panel has one row per kind of problem, not per application", () => {
+  assert.match(panel, /let kind = kinds\.find\(\(k\) => k\.kind === finding\.kind\)/);
+  // One site: its own sentence and its own page. Several: a count and the list.
+  assert.match(panel, /one \? t\(`attention\.\$\{kind\}\.chip`, \{ site: items\[0\]\.site \}\) : t\(`attention\.\$\{kind\}\.many`/);
+  assert.match(panel, /href=\{one \? items\[0\]\.href : "\/applications"\}/);
 });
 
-test("the popover is bounded and scrolls", () => {
-  // Four findings already reached 550px. Twenty sites would open a popover
-  // taller than the window with its last rows unreachable.
-  const component = read("components/dashboard/site-attention.jsx");
-  assert.match(component, /max-h-\[[^\]]+\][^"]*overflow-y-auto/);
+test("services that stopped come first", () => {
+  assert.ok(panel.indexOf("down.length ? (") < panel.indexOf("kinds.map("), "services are no longer first");
+});
+
+test("an unanswered applications read is never 'nothing needs attention'", () => {
+  // The panel only steps aside when the answer is known; a failed read says so.
+  assert.match(panel, /if \(!count && verdictKnown\) return null;/);
+  assert.match(panel, /t\("loadFailed"\)/);
+});
+
+test("it sits first after the banner, rows side by side", () => {
+  const page = read("app/(app)/dashboard/page.jsx");
+  assert.ok(page.indexOf("<AttentionPanel") < page.indexOf("<LiveMetricsSection"), "Needs attention is below the live readings again");
+  // One line per problem, side by side (Krishna, 6 Oct: the cards pushed Server information down).
+  assert.match(panel, /<ul className="grid gap-2 lg:grid-cols-\[repeat\(auto-fit,minmax\(26rem,1fr\)\)\]">/);
 });
 
 test("every string the chip can render exists in every locale", () => {
   const get = (o, p) => p.split(".").reduce((a, k) => a?.[k], o);
-  const keys = ["title", "count"];
-  for (const kind of ["insecure", "failed", "git"]) {
-    for (const part of ["chip", "detail", "action"]) keys.push(`${kind}.${part}`);
+  const keys = ["title", "viewApplications", "servicesAction"];
+  for (const kind of ["insecure", "failed", "deployFailed", "processDown", "git"]) {
+    for (const part of ["chip", "detail", "action", "many"]) keys.push(`${kind}.${part}`);
   }
 
   for (const locale of locales) {
@@ -133,8 +147,7 @@ test("every string the chip can render exists in every locale", () => {
     for (const kind of ["insecure", "failed", "git"]) {
       assert.match(get(attention, `${kind}.chip`), /\{site\}/, `${locale} ${kind}.chip lost {site}`);
     }
-    assert.match(attention.count, /\{count, plural,/, `${locale} count is not a plural`);
-  }
+    }
 });
 
 test("'Needs attention' keeps the wording the panel already used", () => {
@@ -150,53 +163,4 @@ test("'Needs attention' keeps the wording the panel already used", () => {
     if (!admin) continue;
     assert.equal(m.serverDashboard.attention.title, admin, `${locale} says it two ways`);
   }
-});
-
-/* -------------------------------------------------------------------------
- * Discoverability — Krishna: "user will not directly know that on click of
- * this badge give detail because it is badge."
- *
- * He was right, and the reason is its neighbours: the same footer row carries
- * php 8.4, node 24 and "All 9 services running", none of which do anything. A
- * chip that opens a panel while sitting in a line of chips that do not has no
- * way to say so.
- * ---------------------------------------------------------------------- */
-
-test("the chip carries a visible sign that it opens something", () => {
-  /*
-   * The cue has to be VISIBLE, not behavioural: hover alone leaves a phone and
-   * a keyboard with nothing, and "if a control doesn't look interactive, it
-   * isn't" (product-design-foundations-research.md [127-138]).
-   */
-  const source = read("components/dashboard/site-attention.jsx");
-  const trigger = source.slice(source.indexOf("<PopoverTrigger"), source.indexOf("</PopoverTrigger>"));
-  assert.match(trigger, /<ChevronDown/, "no chevron: nothing says it opens");
-  // And it reports the state rather than pointing the same way regardless.
-  assert.match(trigger, /open && "rotate-180"/);
-});
-
-test("hover is an addition to the click, never a replacement", () => {
-  // The panel holds a link to the screen that fixes the problem. Reaching it
-  // has to be possible without a pointer, so the button stays a button.
-  const source = read("components/dashboard/site-attention.jsx");
-  assert.match(source, /<button type="button"/);
-  assert.match(source, /useHoverPopover\(/);
-});
-
-test("a hover-opened panel does not steal focus, a clicked one takes it", () => {
-  /*
-   * Both halves matter. Hover-opening while someone is typing elsewhere must
-   * not move the caret; a click or Enter must hand focus over or the Fix
-   * button inside is unreachable from the keyboard.
-   */
-  const source = read("components/dashboard/site-attention.jsx");
-  assert.match(source, /onOpenAutoFocus=\{\(event\) => \{\s*if \(hoverOpened\.current\) event\.preventDefault\(\);/);
-});
-
-test("the pointer can travel from chip to panel without losing it", () => {
-  // There is a gap between the two. Without the content's own hover handlers
-  // it closes the moment you set off towards it.
-  const source = read("components/dashboard/site-attention.jsx");
-  const content = source.slice(source.indexOf("<PopoverContent"));
-  assert.match(content, /\{\.\.\.contentProps\}/);
 });

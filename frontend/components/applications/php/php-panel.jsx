@@ -131,7 +131,7 @@ export function PhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", appl
 
   return (
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
-      <div className="max-w-4xl space-y-4">
+      <div className="space-y-4">
         <IsolationCard php={php} canManage={canManage} busy={busy} onIsolate={isolate} />
   
         {php.isolated && php.managed === false ? (
@@ -210,7 +210,7 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, b
   }
 
   return (
-    <Card className="overflow-hidden shadow-sm">
+    <Card className="overflow-hidden">
       <CardContent className="p-0">
         {!php.isolation_supported ? (
           <p className="flex items-start gap-2.5 border-b px-5 py-3 text-sm">
@@ -293,7 +293,7 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, b
         {/* Hidden where the web server has no per-site pools: it can never be unlocked. */}
         {php.isolation_supported ? (
           <div className="border-t px-5 py-4">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="mb-3 text-xs font-semibold text-muted-foreground">
               {tShared("previewTitle")}
             </p>
             <div className="grid gap-2 sm:grid-cols-2">
@@ -496,7 +496,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ap
           <Stat icon={User} label={t("summary.runsAs")} value={php.runs_as ?? "—"} />
         </div>
 
-        <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+        <Card className="gap-0 overflow-hidden py-0">
           {/* All tab panels stay mounted (forceMount): unmounting would discard half-typed values. */}
           <Tabs key={resetKey} value={tab} onValueChange={setTab} className="gap-0">
             <div className="border-b px-5 py-3">
@@ -992,7 +992,7 @@ function IsolationCard({ php, canManage, busy, onIsolate }) {
   if (php.isolated) return null;
 
   return (
-    <Card className="gap-0 overflow-hidden border-blue-200 bg-blue-50/60 py-0 shadow-sm dark:border-blue-800 dark:bg-blue-950/20">
+    <Card className="gap-0 overflow-hidden border-blue-200 bg-blue-50/60 py-0 dark:border-blue-800 dark:bg-blue-950/20">
       <CardContent className="grid gap-4 px-5 py-4 sm:grid-cols-[1fr_auto] sm:items-center">
         <div className="flex min-w-0 items-start gap-3">
           {/* Hidden on the narrowest screens, where it costs a quarter of the column. */}

@@ -18,6 +18,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { FILTER_TOGGLE_ITEM } from "@/lib/theme/filter-toggle";
+import { ListCard } from "@/components/data-table/list-card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -134,36 +136,41 @@ export function SyncResults({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <LocalSearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder={t("results.searchPlaceholder")}
-        />
-        <p className="text-sm text-muted-foreground">
-          {t("results.showing", { shown: visible.length, total: items.length })}
-        </p>
-      </div>
+    // One card, as every list: search and type filters on top, rows below.
+    <ListCard
+      toolbar={
+        <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <LocalSearchInput
+                value={search}
+                onChange={setSearch}
+                placeholder={t("results.searchPlaceholder")}
+              />
+              <p className="text-sm text-muted-foreground">
+                {t("results.showing", { shown: visible.length, total: items.length })}
+              </p>
+            </div>
 
-      {presentTypes.length > 1 ? (
-        <ToggleGroup
-          type="multiple"
-          value={types}
-          onValueChange={setTypes}
-          variant="outline"
-          size="sm"
-          className="flex flex-wrap justify-start gap-2"
-        >
-          {presentTypes.map((type) => (
-            <ToggleGroupItem key={type} value={type} className="gap-1.5">
-              {t(`types.${type}`)}
-              <span className="text-xs text-muted-foreground">{countsByType.get(type)}</span>
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-      ) : null}
-
+            {presentTypes.length > 1 ? (
+              <ToggleGroup
+                type="multiple"
+                value={types}
+                onValueChange={setTypes}
+                variant="outline"
+                size="sm"
+                className="flex flex-wrap justify-start gap-2"
+              >
+                {presentTypes.map((type) => (
+                  <ToggleGroupItem key={type} value={type} className={cn(FILTER_TOGGLE_ITEM, "gap-1.5")}>
+                    {t(`types.${type}`)}
+                    <span className="text-xs text-muted-foreground">{countsByType.get(type)}</span>
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+            ) : null}
+        </div>
+      }
+    >
       {visible.length === 0 ? (
         <EmptyState
           icon={SearchX}
@@ -184,7 +191,7 @@ export function SyncResults({
           }
         />
       ) : (
-        <div className="overflow-x-auto rounded-xl border">
+        <div className="overflow-x-auto border-t">
           <Table>
             <ResultsHeader />
             <TableBody>
@@ -210,7 +217,9 @@ export function SyncResults({
                               type="button"
                               variant="ghost"
                               size="icon"
-                              className="size-7"
+                              // -my-1: a 28px button on a 20px first line sat 4px below
+                              // the type and name beside it.
+                              className="-my-1 size-7"
                               aria-expanded={isOpen}
                               aria-label={t("results.toggleDetails", { name: item.resource_key })}
                               onClick={() => toggleExpanded(item.id)}
@@ -270,7 +279,7 @@ export function SyncResults({
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="size-7"
+                                className="-my-1 size-7"
                                 disabled={pendingKeys.includes(key)}
                                 aria-label={
                                   ignored
@@ -314,6 +323,6 @@ export function SyncResults({
           </Table>
         </div>
       )}
-    </div>
+    </ListCard>
   );
 }

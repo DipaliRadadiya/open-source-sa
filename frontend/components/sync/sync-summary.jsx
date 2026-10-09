@@ -4,7 +4,7 @@ import { runTotals } from "@/lib/server/sync-selection";
 import { cn } from "@/lib/utils";
 
 // Preview and apply share this screen; the preview banner states nothing is written yet.
-export function SyncSummary({ run, loaded, running }) {
+export function SyncSummary({ run, loaded, running, actions = null }) {
   const t = useTranslations("sync");
   const totals = runTotals(run.totals);
   const preview = run.mode === "preview";
@@ -21,8 +21,8 @@ export function SyncSummary({ run, loaded, running }) {
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-4 rounded-2xl border p-4",
-        failed ? "border-destructive/40 bg-destructive/5" : "bg-muted/40",
+        "flex flex-wrap items-center gap-4 rounded-2xl border p-4 shadow-e1",
+        failed ? "border-destructive/40 bg-destructive/5" : "border-border/70 bg-card",
       )}
     >
       <span
@@ -86,6 +86,8 @@ export function SyncSummary({ run, loaded, running }) {
           </>
         )}
       </div>
+      {/* The page's actions live on its one summary card, not in a loose row above it. */}
+      {actions}
     </div>
   );
 }

@@ -50,7 +50,7 @@ test("every status badge is filled, including the quiet one", () => {
    * failed to render.
    */
   const badge = read("components/ui/badge.jsx");
-  assert.match(badge, /muted:\s*\n\s*"bg-muted text-muted-foreground/);
+  assert.match(badge, /muted:\s*\n\s*"[^"]*bg-muted text-muted-foreground/);
 
   const src = read("components/applications/application-status-badge.jsx");
   const variants = src.match(/export const STATUS_VARIANTS = \{([\s\S]*?)\}/)[1];

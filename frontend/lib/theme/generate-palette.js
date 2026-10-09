@@ -37,11 +37,14 @@ export function generatePalette(hex) {
     shades[step] = formatCss({ mode: "oklch", l, c: c * chroma, h: h ?? 0 });
   }
 
+  // The brand colour itself when it can carry a button (the redesign uses the
+  // exact brand blue); a very light or very dark one falls back to the 600 step.
+  const usable = base.l >= 0.45 && base.l <= 0.7;
   return {
     shades,
     light: {
-      primary: shades[600],
-      primaryForeground: pickForeground(SHADE_STEPS[600].l),
+      primary: usable ? formatCss({ mode: "oklch", l: base.l, c, h: h ?? 0 }) : shades[600],
+      primaryForeground: pickForeground(usable ? base.l : SHADE_STEPS[600].l),
     },
     dark: {
       primary: shades[400],

@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "@/components/ui/app-link";
+import { useState } from "react";
 import { useLinkStatus } from "next/link";
 import { usePathname, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, Loader2 } from "lucide-react";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { cn } from "@/lib/utils";
 import {
-  groupBySubLevel,
+  groupNavItems,
+  COLLAPSED_GROUPS,
   navTitle,
   isNavBuilt,
   findActiveNavItem,
@@ -22,6 +24,8 @@ import { VisitSiteLink } from "@/components/applications/visit-site-link";
 import { useUnsaved } from "@/components/ui/unsaved-guard";
 import { SidebarLevelTransition } from "@/components/sections/sidebar-level-transition";
 import { NavIcon } from "@/components/nav-icon";
+import { SidebarServerCard } from "@/components/sections/sidebar-server-card";
+import { can } from "@/lib/permissions/can";
 import {
   Sidebar,
   SidebarContent,
@@ -51,7 +55,7 @@ function MobileNavLink({ item, built, active, children, className }) {
       >
         <span aria-disabled="true">
           {children}
-          <span className="ml-auto rounded-sm bg-muted px-1.5 py-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground/70 group-data-[collapsible=icon]:hidden">
+          <span className="ml-auto rounded-sm bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground/70 group-data-[collapsible=icon]:hidden">
             {t("soon")}
           </span>
         </span>
@@ -118,11 +122,16 @@ export function AppSidebar({ items }) {
     .filter((item) => item?.permissions?.view)
     .filter((item) => item.level === currentPanel);
 
-  const groups = groupBySubLevel(visible);
+  const groups = groupNavItems(visible);
 
   // Longest match wins: the application Dashboard's href (`/applications/{id}`)
   // prefixes every sub-page, so pick the single deepest match.
   const activeItem = findActiveNavItem(visible, pathname);
+
+  // Only what the person toggled; everything else follows the default.
+  const [toggled, setToggled] = useState({});
+  const groupTitle = (group) =>
+    group.named ? t(`navGroups.${group.key === "protection" ? "security" : group.key}`) : group.title;
 
   return (
     <Sidebar collapsible="icon" label={t("serverNavigation")}>
@@ -141,6 +150,12 @@ export function AppSidebar({ items }) {
           )}
         </Link>
       </SidebarHeader>
+      {/* Which machine this is; only someone who may read the dashboard is asked. */}
+      {!insideApplication && can(items, "dashboard", "view") ? (
+        <SidebarGroup className="px-2 pt-3 pb-0 group-data-[collapsible=icon]:hidden">
+          <SidebarServerCard />
+        </SidebarGroup>
+      ) : null}
       {application ? (
         <SidebarGroup className="border-b px-2 pt-2 pb-4">
           <SidebarMenu className="gap-1">
@@ -161,17 +176,17 @@ export function AppSidebar({ items }) {
                 item={{ href: `/applications/${application.id}`, title: application.name }}
                 built
                 active={false}
-                /* Tinted so the card reads as the subject of the nav below, not another item. */
-                className="h-auto min-h-20 items-start rounded-xl border border-primary/25 bg-primary/5 p-3 hover:bg-primary/10 group-data-[collapsible=icon]:min-h-8! group-data-[collapsible=icon]:p-2!"
+                /* As in the redesign: a white card washed with the brand colour from one corner. */
+                className="relative h-auto min-h-20 items-start overflow-hidden rounded-xl bg-card bg-linear-135 from-primary/10 to-transparent to-70% p-3 shadow-e1 ring-1 ring-border/70 hover:bg-card hover:from-primary/15 active:bg-card data-[active=true]:bg-card group-data-[collapsible=icon]:min-h-8! group-data-[collapsible=icon]:p-2!"
               >
                 <Link
                   href={`/applications/${application.id}`}
                   prefetch={false}
                   className="min-w-0 flex-col items-stretch gap-0"
                 >
-                  <span className="flex w-full min-w-0 items-center gap-2.5">
+                  <span className="relative flex w-full min-w-0 items-center gap-2.5">
                     {/* On its own tile so the brand mark has a surface against the tint. */}
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-background shadow-xs group-data-[collapsible=icon]:size-5! group-data-[collapsible=icon]:border-0! group-data-[collapsible=icon]:bg-transparent! group-data-[collapsible=icon]:shadow-none!">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-card shadow-e1 ring-1 ring-border group-data-[collapsible=icon]:size-5! group-data-[collapsible=icon]:ring-0! group-data-[collapsible=icon]:border-0! group-data-[collapsible=icon]:shadow-none!">
                       <SiteTypeLogo name={application.site_type} provider={gitProvider} size="h-5 w-5" />
                     </span>
                     {/* Hidden explicitly when the rail collapses to icons: the sidebar only hides a
@@ -180,12 +195,19 @@ export function AppSidebar({ items }) {
                       <span className="block truncate text-sm font-semibold" title={application.name}>
                         {application.name}
                       </span>
-                      <ApplicationStatusDot application={application} className="mt-1" />
+                      {/* Status, then what it is: "Running · WordPress". */}
+                      <span className="mt-1 flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                        <ApplicationStatusDot application={application} className="shrink-0" />
+                        {application.site_type_title ? (
+                          <span className="truncate">· {application.site_type_title}</span>
+                        ) : null}
+                      </span>
                     </span>
                   </span>
                   {/* Its own full-width line, in a box: the domain is often the longest string and
                       would truncate mid-host beside the name. */}
-                  <span className="mt-2.5 block w-full truncate rounded-md bg-background/80 px-2 py-1 font-mono text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+                  {/* Right padding keeps the domain clear of the open-site icon drawn over this row. */}
+                  <span className="mt-2.5 block w-full truncate rounded-lg bg-background/80 py-1.5 pr-8 pl-2.5 font-mono text-xs text-muted-foreground ring-1 ring-border/60 group-data-[collapsible=icon]:hidden">
                     {application.domain}
                   </span>
                 </Link>
@@ -196,7 +218,8 @@ export function AppSidebar({ items }) {
                 <VisitSiteLink
                   href={application.url}
                   label={t("applicationContext.visit", { domain: application.domain })}
-                  className="absolute top-2 right-2 group-data-[collapsible=icon]:hidden"
+                  // On the domain row's right end, as in the redesign, not over the name.
+                  className="absolute right-3.5 bottom-3.5 group-data-[collapsible=icon]:hidden"
                 />
               ) : null}
             </SidebarMenuItem>
@@ -207,14 +230,31 @@ export function AppSidebar({ items }) {
         {/* Keyed on level AND application id: switching sites is also a level change,
             though `currentPanel` stays "application". */}
         <SidebarLevelTransition level={insideApplication ? `application:${applicationId}` : "server"}>
-        {groups.map((group) => (
+        {groups.map((group) => {
+          const title = groupTitle(group);
+          // Icon-only rail has no labels, so nothing in it may be hidden.
+          const open =
+            iconOnly ||
+            !title ||
+            (toggled[group.key] ??
+              (!COLLAPSED_GROUPS.has(group.key) || group.items.includes(activeItem)));
+          return (
           <SidebarGroup key={group.key} className="py-1">
-            {group.key && (
-              <SidebarGroupLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                {group.title}
+            {title ? (
+              <SidebarGroupLabel asChild className="text-[13px] font-semibold text-muted-foreground hover:text-foreground">
+                <button
+                  type="button"
+                  aria-expanded={open}
+                  onClick={() => setToggled((current) => ({ ...current, [group.key]: !open }))}
+                  className="w-full justify-between"
+                >
+                  {title}
+                  <ChevronDown className={cn("transition-transform", !open && "-rotate-90")} aria-hidden />
+                </button>
               </SidebarGroupLabel>
-            )}
-            <SidebarMenu className="gap-1.5">
+            ) : null}
+            {open ? (
+            <SidebarMenu className="gap-0.5">
               {group.items.map((item) => {
                 const built = isNavBuilt(currentPanel, item.url);
                 const active = item === activeItem;
@@ -244,8 +284,10 @@ export function AppSidebar({ items }) {
                 );
               })}
             </SidebarMenu>
+            ) : null}
           </SidebarGroup>
-        ))}
+          );
+        })}
         </SidebarLevelTransition>
       </SidebarContent>
       <SidebarRail />

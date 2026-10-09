@@ -16,15 +16,13 @@ const dashboard = read("app/(app)/dashboard/page.jsx");
 const emptyState = read("components/applications/application-empty-state.jsx");
 const table = read("components/applications/applications-table.jsx");
 
-test("the empty state declares its own client boundary", () => {
+test("the empty state is not imported by the server dashboard any more", () => {
   /*
-   * It calls useTranslations and useBranding, and got away with no directive
-   * for as long as its only caller was the client applications table, which
-   * carried the boundary for it. The dashboard is a Server Component: without
-   * this line the import builds completely clean and throws at render, which
-   * is the failure mode plain JS is worst at surfacing.
+   * It needed its own "use client" while the dashboard (a Server Component)
+   * rendered its compact variant. The dashboard now has the Get started
+   * checklist, so the card's only caller is the client applications table.
    */
-  assert.match(emptyState.split("\n")[0], /^"use client";$/);
+  assert.doesNotMatch(dashboard, /application-empty-state/);
 });
 
 test("an empty server is claimed only on a list we actually received", () => {
@@ -74,56 +72,42 @@ test("the card is fetched alongside the rest, not after it", () => {
 test("creating is gated on manage, viewing the card on view", () => {
   // The Applications page draws exactly this distinction: a viewer sees the
   // empty state, only a manager gets the button inside it.
-  assert.match(dashboard, /canManage=\{can\(permissions, "application", "manage"\)\}/);
+  assert.match(dashboard, /canCreate=\{can\(permissions, "application", "manage"\)\}/);
 });
 
-test("the dashboard takes the compact card and the Applications page does not", () => {
-  /*
-   * Measured on the real build at 1280x900: the full-height card is 394px and
-   * pushed all five live stat cards below the fold; compact is 223px and they
-   * fit. On the Applications page the card IS the page, so it stays generous.
-   */
-  assert.match(dashboard, /<ApplicationEmptyState[\s\S]{0,120}compact\s*\/?>/);
-  const call = table.slice(table.indexOf("<ApplicationEmptyState"));
-  assert.doesNotMatch(call.slice(0, 120), /compact/);
+/*
+ * Redesign (6 Oct 2026): the dashboard's compact copy of the empty state became
+ * a "Get started" checklist, the First visit screen Krishna approved.
+ */
+const start = read("components/dashboard/getting-started.jsx");
+
+test("the dashboard shows the checklist on an empty server, the Applications page keeps its card", () => {
+  assert.match(dashboard, /\{firstRun \? \(\s*<GettingStarted/);
+  assert.match(table, /<ApplicationEmptyState/);
 });
 
-test("compact lays the three steps across, which is where the height went", () => {
-  const compact = emptyState.slice(
-    emptyState.indexOf("if (compact)"),
-    emptyState.lastIndexOf("return ("),
-  );
-  assert.match(compact, /sm:grid-cols-3/);
-  // The stacked variant's spacing must not follow it in.
-  assert.doesNotMatch(compact, /space-y-4/);
+test("only the step that can be done now has a button", () => {
+  // Steps 3–5 need an application; a button there would lead nowhere yet.
+  assert.match(start, /\{current \? \(/);
+  assert.match(start, /: !complete \? \(\s*<span[^>]*>\{t\("afterApp"\)\}/);
+  // And a viewer reads why there is no Create, rather than meeting a missing button.
+  assert.match(start, /\{tApplications\("noPermission"\)\}<\/span>/);
 });
 
-test("compact leaves vertical padding to the Card", () => {
-  /*
-   * `Card` pads itself with `py-(--card-spacing)` (16px). A `py-*` on the
-   * CardContent inside it does not replace that — the two are different
-   * elements, so tailwind-merge has nothing to dedupe and they stack. `py-5`
-   * here read as a reasonable 20px and rendered as 36px top and bottom, which
-   * is the padding Krishna could see and I could not explain until I measured
-   * the computed style. Horizontal only; the height fix depends on it.
-   */
-  const compact = emptyState.slice(
-    emptyState.indexOf("if (compact)"),
-    emptyState.lastIndexOf("return ("),
-  );
-  const content = compact.match(/<CardContent className="([^"]*)"/);
-  assert.ok(content, "compact uses CardContent with an explicit class");
-  assert.doesNotMatch(content[1], /\bp-|\bpy-|\bpt-|\bpb-/);
-  assert.match(content[1], /\bpx-/);
+test("every checklist string exists in every locale", () => {
+  const get = (o, p) => p.split(".").reduce((a, k) => a?.[k], o);
+  const keys = ["title", "progress", "afterApp"];
+  for (const step of ["server", "app", "domain", "https", "backups"]) keys.push(`${step}.title`, `${step}.body`);
+  for (const locale of locales) {
+    const m = JSON.parse(read(`messages/${locale}.json`));
+    for (const key of keys) assert.equal(typeof get(m.serverDashboard.start, key), "string", `${locale} start.${key}`);
+    assert.match(m.serverDashboard.start.domain.body, /\{ip\}/, `${locale} lost {ip}`);
+  }
 });
 
-test("compact needs no string the full card did not already have", () => {
-  /*
-   * The whole point of a second layout inside one component rather than a
-   * second component: one copy of the words, so the two surfaces cannot drift
-   * and neither can ship an untranslated key. `empty.steps.*` is built with a
-   * template literal and is invisible to grep, so the steps are named here.
-   */
+test("the empty-state card has every string it uses", () => {
+  // `empty.steps.*` is built with a template literal and is invisible to grep,
+  // so the steps are named here.
   const used = new Set();
   for (const [, key] of emptyState.matchAll(/\bt\("([^"]+)"/g)) used.add(key);
   for (const step of ["choose", "configure", "provision"]) {

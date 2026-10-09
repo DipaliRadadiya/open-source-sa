@@ -83,10 +83,10 @@ export function AppBreadcrumb({ items }) {
                   className={cn(
                     "text-muted-foreground/50",
                     // Tied to the crumb BEFORE it, so a folded trail never opens with a dangling
-                    // chevron.
+                    // separator. A slash, as in the redesign.
                     foldedBelowSm(index - 1) && "hidden sm:block",
                   )}
-                />
+                >/</BreadcrumbSeparator>
               )}
               <BreadcrumbItem
                 className={cn("min-w-0", foldedBelowSm(index) && "hidden sm:inline-flex")}
@@ -94,7 +94,7 @@ export function AppBreadcrumb({ items }) {
                 {isLast ? (
                   // Foreground against muted ancestors marks "you are here"; bold would compete with
                   // the h1.
-                  <BreadcrumbPage className={cn("truncate", item.mono && "font-mono")}>
+                  <BreadcrumbPage className={cn("truncate font-medium", item.mono && "font-mono")}>
                     {item.label}
                   </BreadcrumbPage>
                 ) : item.href ? (

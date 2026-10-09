@@ -1,6 +1,7 @@
 import Link from "@/components/ui/app-link";
 import { getTranslations } from "next-intl/server";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, CircleAlert, History } from "lucide-react";
+import { EmptyState } from "@/components/data-table/empty-state";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { actionDotClass, humanizeActivity } from "@/lib/activity-log/labels";
@@ -21,9 +22,9 @@ export async function ActivityFeed({ entries = [], todayCount = 0, failed = fals
 
   return (
     // h-full: the card sits inside a col-span wrapper that stretches, not the card.
-    <Card className="flex h-full flex-col gap-0 overflow-hidden py-0 shadow-sm">
+    <Card className="flex h-full flex-col gap-0 overflow-hidden py-0">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b px-5 py-3.5">
-        <h2 className="font-heading text-base leading-snug font-semibold tracking-tight">
+        <h2 className="text-[15px] leading-snug font-semibold tracking-tight">
           {t("title")}
         </h2>
         {/* A failed stats read shows "—", never "0 today". */}
@@ -69,9 +70,9 @@ export async function ActivityFeed({ entries = [], todayCount = 0, failed = fals
         </ul>
       ) : (
         /* A failed read must not render as "nothing has happened". */
-        <p className="px-5 py-8 text-center text-sm text-muted-foreground">
-          {failed ? t("failed") : t("empty")}
-        </p>
+        <div className="p-5">
+          <EmptyState compact icon={failed ? CircleAlert : History} badge={null} title={failed ? t("failed") : t("empty")} />
+        </div>
       )}
 
       <div className="mt-auto border-t bg-muted/20 px-5 py-2.5">

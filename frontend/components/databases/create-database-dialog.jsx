@@ -142,9 +142,8 @@ export function CreateDatabaseDialog({
       toast.success(t("create.created", { name: submitted.name }));
       setCreated(data?.database ?? null);
     } catch (error) {
-      const restartAnswer = restart.ask(error);
-      if (restartAnswer && (await restartAnswer)) return onSubmit({ ...submitted, restart_cluster: true });
-      if (!restartAnswer) handleValidationError(withUserFieldErrors(error, form), form, { fallback: t("createFailed") });
+      if (await restart.retry(error, () => onSubmit({ ...submitted, restart_cluster: true }))) return;
+      handleValidationError(withUserFieldErrors(error, form), form, { fallback: t("createFailed") });
     }
   }
 

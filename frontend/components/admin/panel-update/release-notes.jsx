@@ -14,7 +14,7 @@ export function ReleaseNotes({ notes: raw, url }) {
       {notes ? (
         // Label beside the text from sm up; stacked on a phone so the URL has room.
         <div className="flex min-w-48 flex-1 flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-3">
-          <p className="shrink-0 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+          <p className="shrink-0 text-xs font-semibold text-muted-foreground">
             {t("whatsNew")}
           </p>
           {/* Capped so a long changelog cannot push the actions off screen. */}

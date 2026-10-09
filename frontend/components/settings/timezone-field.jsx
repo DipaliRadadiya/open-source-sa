@@ -45,7 +45,7 @@ export function TimezoneField({ value, onChange, disabled, groups = [], id }) {
         value={value}
         onChange={onChange}
         disabled={disabled}
-        className="w-full max-w-xs"
+        className="w-full"
         searchPlaceholder={t("timezoneSearch")}
       />
 

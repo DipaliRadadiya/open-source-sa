@@ -1,4 +1,5 @@
 import { EyeOff, Loader2, Undo2 } from "lucide-react";
+import { EmptyState } from "@/components/data-table/empty-state";
 import { useTranslations } from "next-intl";
 import { ignoreKey } from "@/lib/server/sync-selection";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,7 @@ export function IgnoredSheet({ ignores, canManage, pendingKeys = [], onUnignore 
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
           {ignores.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("ignored.empty")}</p>
+            <EmptyState compact icon={EyeOff} badge={null} title={t("ignored.empty")} />
           ) : (
             <ul className="divide-y">
               {ignores.map((ignore) => (

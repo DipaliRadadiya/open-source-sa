@@ -105,6 +105,7 @@ export function UsersTable({ data, roles = [], rolesFailed = false, currentUserI
     return hasFilters ? (
       <EmptyState
         icon={SearchX}
+        subject={Users}
         title={t("empty.filteredTitle")}
         description={t("empty.filteredDesc")}
         action={
@@ -164,8 +165,7 @@ export function UsersTable({ data, roles = [], rolesFailed = false, currentUserI
         />
       </div>
       <div className="hidden lg:block">
-        <DataTable columns={columns} data={data} meta={{ roles,
-          rolesFailed, currentUserId }} />
+        <DataTable bare roomy columns={columns} data={data} meta={{ roles, rolesFailed, currentUserId }} />
       </div>
     </div>
   );

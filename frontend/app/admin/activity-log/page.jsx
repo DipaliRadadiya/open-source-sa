@@ -3,6 +3,7 @@ import { getActivityLog } from "@/lib/activity-log/get-activity-log";
 import { getActivityFilters } from "@/lib/activity-log/get-activity-filters";
 import { ActivityToolbar } from "@/components/activity-log/activity-toolbar";
 import { ActivityTable } from "@/components/admin/activity/activity-table";
+import { ListCard } from "@/components/data-table/list-card";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
@@ -35,10 +36,13 @@ export default async function AdminActivityLogPage({ searchParams }) {
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       <NavTransitionProvider>
-        <ActivityToolbar types={filters.types} actions={filters.actions} />
-        <ActivityTable data={entries} hasFilters={hasFilters} />
-        {/* Not gated on row count: the selector hides itself when the list is too short. */}
-        <DataTablePagination meta={meta} />
+        {/* The pager is not gated on row count: it hides itself when the list is too short. */}
+        <ListCard
+          toolbar={<ActivityToolbar types={filters.types} actions={filters.actions} />}
+          footer={<DataTablePagination meta={meta} />}
+        >
+          <ActivityTable data={entries} hasFilters={hasFilters} />
+        </ListCard>
       </NavTransitionProvider>
     </div>
   );

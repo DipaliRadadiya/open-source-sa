@@ -7,6 +7,7 @@ import { listWorkers } from "@/lib/api/workers";
 import { workersResponseSchema } from "@/lib/schemas/worker";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { ListCard } from "@/components/data-table/list-card";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { WorkerChecksAlert } from "@/components/applications/workers/worker-checks-alert";
@@ -107,6 +108,28 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
       .map((state) => ({ state, count: counts[state] }));
   }
 
+  const toolbar = (
+    <div className="flex items-center justify-between gap-3">
+      {summaryParts ? (
+        <div className="flex items-center gap-3">
+          {summaryParts.map(({ state, count }) => (
+            <span key={state} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className={`size-1.5 shrink-0 rounded-full ${STATE_DOT[state]}`} />
+              {count} {t(`state.${state}`)}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <span />
+      )}
+      <div className="flex flex-wrap items-center gap-2">
+        <RefreshButton />
+        {/* Empty, the add button sits in the empty state instead of twice. */}
+        {workers.length ? addButton : null}
+      </div>
+    </div>
+  );
+
   return (
     <WorkerSiteProvider value={{ appRoot }}>
     <div className="space-y-4">
@@ -117,56 +140,40 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
 
       <WorkerChecksAlert checks={checks} />
 
-      <div className="flex items-center justify-between gap-3">
-        {summaryParts ? (
-          <div className="flex items-center gap-3">
-            {summaryParts.map(({ state, count }) => (
-              <span key={state} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className={`size-1.5 shrink-0 rounded-full ${STATE_DOT[state]}`} />
-                {count} {t(`state.${state}`)}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <span />
-        )}
-        <div className="flex flex-wrap items-center gap-2">
-          <RefreshButton />
-          {addButton}
-        </div>
-      </div>
-
       {workers.length === 0 ? (
-        <EmptyState
-          icon={Cog}
-          title={t("empty.title")}
-          description={t("empty.description")}
-          action={
-            <div className="flex flex-col items-center gap-4">
-              {addButton}
-              {canManage && presets.length > 0 ? (
-                <div className="flex flex-col items-center gap-2">
-                  <span className="text-xs text-muted-foreground">{t("empty.starters")}</span>
-                  <div className="flex flex-wrap justify-center gap-2">
-                    {presets.map((p) => (
-                      <Button
-                        key={p.key}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openCreate(p.key)}
-                      >
-                        <Wand2 className="size-3.5" />
-                        {p.title}
-                      </Button>
-                    ))}
+        <ListCard toolbar={toolbar}>
+          <EmptyState
+            icon={Cog}
+            title={t("empty.title")}
+            description={t("empty.description")}
+            action={
+              <div className="flex flex-col items-center gap-4">
+                {addButton}
+                {canManage && presets.length > 0 ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="text-xs text-muted-foreground">{t("empty.starters")}</span>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {presets.map((p) => (
+                        <Button
+                          key={p.key}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openCreate(p.key)}
+                        >
+                          <Wand2 className="size-3.5" />
+                          {p.title}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ) : null}
-            </div>
-          }
-        />
+                ) : null}
+              </div>
+            }
+          />
+        </ListCard>
       ) : (
-        <>
+        // Below lg the rows are cards of their own, so the list drops its frame there.
+        <ListCard from="lg" toolbar={toolbar}>
           <div className="lg:hidden">
             <WorkersCards
               data={workers}
@@ -191,7 +198,7 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
               onWorkerUpdated={applyWorker}
             />
           </div>
-        </>
+        </ListCard>
       )}
 
       {canManage ? (

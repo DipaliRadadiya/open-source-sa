@@ -96,8 +96,7 @@ export function ComposeEditor({
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between gap-4 space-y-0">
-        <CardTitle className="flex items-center gap-2">
-          <FileCode2 className="size-4" />
+        <CardTitle>
           {t("title")}
         </CardTitle>
         <CopyButton value={contents} label={t("copy")} />

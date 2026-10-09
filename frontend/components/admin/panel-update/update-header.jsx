@@ -63,7 +63,7 @@ export function UpdateHeader({ state, divided = false, actions = null }) {
 
       {/* min-w-48 makes the column wrap to its own line rather than squeeze to one word per line. */}
       <div className="min-w-48 flex-1 basis-0 space-y-1.5 sm:flex-none sm:basis-auto">
-        <h2 className={cn("text-xs font-semibold tracking-wider uppercase", tint)}>
+        <h2 className={cn("text-xs font-semibold", tint)}>
           {tone === "update"
             ? t("statusAvailable")
             : tone === "current"

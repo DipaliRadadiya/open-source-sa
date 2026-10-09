@@ -59,9 +59,8 @@ export function AddUserDialog({ database, open, onOpenChange, remoteUsers = true
       toast.success(t("added", { username: submitted.username }));
       setCreated({ ...database, users: [data?.user].filter(Boolean) });
     } catch (error) {
-      const restartAnswer = restart.ask(error);
-      if (restartAnswer && (await restartAnswer)) return onSubmit({ ...submitted, restart_cluster: true });
-      if (!restartAnswer) handleValidationError(error, form, { fallback: t("addFailed") });
+      if (await restart.retry(error, () => onSubmit({ ...submitted, restart_cluster: true }))) return;
+      handleValidationError(error, form, { fallback: t("addFailed") });
     }
   }
 

@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { useSetQuery } from "@/hooks/use-set-query";
 import { nextSearchValue } from "@/lib/tables/search-sync";
 import { useNavPending } from "@/components/data-table/nav-transition";
+import { SEARCH_WELL } from "@/components/data-table/toolbar-well";
+import { cn } from "@/lib/utils";
 
 export function SearchInput({
   placeholder,
@@ -53,9 +55,9 @@ export function SearchInput({
   return (
     <div className="relative w-full sm:max-w-xs">
       {pending ? (
-        <Loader2 className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+        <Loader2 className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
       ) : (
-        <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
       )}
       <Input
         ref={input}
@@ -63,7 +65,9 @@ export function SearchInput({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={placeholder}
-        className="px-8"
+        // Room for the clear button only once there is something to clear, so an empty
+        // box gives its placeholder the full width.
+        className={cn(SEARCH_WELL, "pl-9", value ? "pr-8" : "pr-3")}
       />
       {value ? (
         <button

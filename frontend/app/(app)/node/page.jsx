@@ -91,7 +91,7 @@ export default async function NodePage({ searchParams }) {
 
       {/* No managed Node is a normal state, not an error; the note covers a system Node. */}
       {versions.length === 0 ? (
-        <div className="max-w-5xl space-y-4">
+        <div className="space-y-4">
           <EmptyState
             icon={Hexagon}
             title={t("empty.title")}
@@ -114,9 +114,9 @@ export default async function NodePage({ searchParams }) {
           <SystemNodeNote system={node?.system} versions={node?.versions} />
         </div>
       ) : (
-        <div className="max-w-5xl space-y-4">
+        <div className="space-y-4">
           {/* Install sits at the end of the version chips. With a single version
-              there are no chips, so the button stands alone and stays reachable. */}
+              there are no chips, so it joins that version's card actions. */}
           {versions.length > 1 ? (
             <VersionBar
               versions={versions}
@@ -133,15 +133,7 @@ export default async function NodePage({ searchParams }) {
                 />
               }
             />
-          ) : (
-            <InstallVersionButton
-              runtime="node"
-              installable={node?.installable ?? []}
-              installed={versions}
-              canManage={canManage}
-              lifecycleAvailable={lifecycleAvailable}
-            />
-          )}
+          ) : null}
 
           {current ? (
             // Keyed on the version: the card seeds state from it on mount only.
@@ -150,7 +142,17 @@ export default async function NodePage({ searchParams }) {
               version={current}
               canManage={canManage}
               lifecycleAvailable={lifecycleAvailable}
-            />
+            >
+              {versions.length === 1 ? (
+                <InstallVersionButton
+                  runtime="node"
+                  installable={node?.installable ?? []}
+                  installed={versions}
+                  canManage={canManage}
+                  lifecycleAvailable={lifecycleAvailable}
+                />
+              ) : null}
+            </VersionSummary>
           ) : null}
 
           {/* Status of this version when it is not simply ready. Shared with PHP. */}

@@ -41,14 +41,12 @@ test("focus opens the note only when it came from the keyboard", () => {
 
 test("a caller has to ask for the focus route", () => {
   /*
-   * The second consumer — a chip in the dashboard footer — must NOT open on
-   * Tab: it is a button, Enter already opens it, and a panel appearing as you
-   * tab past is the same complaint in a new place. So the route is opt-in, and
-   * the hint is the one that opts in.
+   * A second consumer must not open on Tab by accident: a panel appearing as
+   * you tab past is the same complaint in a new place. So the route is opt-in,
+   * and the hint is the one that opts in.
    */
   assert.match(hook, /if \(!focusOpens\) return;/);
   assert.match(hint, /useHoverPopover\(\{\s*focusOpens: true,?\s*\}\)/);
-  assert.doesNotMatch(strip(read("components/dashboard/site-attention.jsx")), /focusOpens/);
 });
 
 test("hover and touch are untouched", () => {

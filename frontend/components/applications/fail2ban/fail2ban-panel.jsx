@@ -174,8 +174,8 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
 
   if (!config && !editing) {
     return (
-      <div className="max-w-4xl">
-        <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+      <div >
+        <Card className="gap-0 overflow-hidden py-0">
           <CardContent className="flex flex-col items-center gap-3 px-6 py-10 text-center">
             <span className="flex size-11 items-center justify-center rounded-lg bg-muted">
               <ShieldOff className="size-5 text-muted-foreground" />
@@ -198,8 +198,8 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
   }
 
   return (
-    <div className="max-w-4xl space-y-4">
-      <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+    <div className="space-y-4">
+      <Card className="gap-0 overflow-hidden py-0">
         <CardContent className="flex flex-wrap items-center gap-3 px-5 py-4">
           <span
             className={cn(
@@ -250,7 +250,7 @@ export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filte
         </CardContent>
       </Card>
 
-      <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+      <Card className="gap-0 overflow-hidden py-0">
         <Tabs value={tab} onValueChange={setTab} className="gap-0">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3">
             {/* Scrolls rather than wraps, like the Settings tab bar; ScrollFade

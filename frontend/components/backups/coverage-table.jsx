@@ -53,6 +53,14 @@ function SiteCell({ row }) {
             {t("staging")}
           </Badge>
         ) : null}
+        {/* Status beside the name, at every width. Not where the row already says it
+            (Krishna, 8 Oct): "Manual only" is in the Schedule column, and "None" is the
+            "Not set up" line across the row. */}
+        {row.original.state === "paused" || row.original.state === "unprotected" ? null : (
+          <span className="shrink-0">
+            <StatusCell row={row} />
+          </span>
+        )}
       </div>
       <DomainText domain={application.domain} className="text-xs text-muted-foreground" />
     </div>
@@ -81,7 +89,17 @@ function TypeCell({ row }) {
   const t = useTranslations("backups.coverage");
   const { target } = row.original;
   if (!target) return <Placeholder>{t("placeholders.type")}</Placeholder>;
-  return <span className="text-sm">{target.type_title ?? target.type}</span>;
+  return <span className="block truncate text-sm">{target.type_title ?? target.type}</span>;
+}
+
+function StorageCell({ row }) {
+  const t = useTranslations("backups.coverage");
+  const { target } = row.original;
+  return (
+    <span className="block truncate text-sm text-muted-foreground">
+      {target?.storage_destination_name ?? t("placeholders.storage")}
+    </span>
+  );
 }
 
 function ScheduleCell({ row, options }) {
@@ -96,25 +114,19 @@ function ScheduleCell({ row, options }) {
   const when = scheduleWhen(target, options, format);
   const time = when?.minute ? t("minutePast", { minute: when.minute }) : (when?.time ?? null);
 
+  // Amber when paused: this is the row's only "Manual only", since it has no badge.
+  const paused = row.original.state === "paused";
+
   return (
     <div className="min-w-0">
-      <p className="truncate text-sm">{frequencyLabel(target, (frequency) => tb("pausedFrequency", { frequency }))}</p>
+      <p className={cn("truncate text-sm", paused && "font-medium text-warning")}>
+        {frequencyLabel(target, (frequency) => tb("pausedFrequency", { frequency }))}
+      </p>
       {time ? <p className="truncate text-xs tabular-nums">{time}</p> : null}
       <p className="truncate text-xs tabular-nums text-muted-foreground">
         {t("keeps", { count: target.retention_count })}
       </p>
     </div>
-  );
-}
-
-function StorageCell({ row }) {
-  const t = useTranslations("backups.coverage");
-  const { target } = row.original;
-  if (!target) return <Placeholder>{t("placeholders.storage")}</Placeholder>;
-  return (
-    <span className="block truncate text-sm text-muted-foreground">
-      {target.storage_destination_name ?? t("placeholders.storage")}
-    </span>
   );
 }
 
@@ -248,21 +260,26 @@ function ActionsCell({ row, table }) {
   );
 }
 
-export function CoverageTable({ rows, options = null, canManage, onSetUp, onBackUpNow, busyIds = [], restoringId = null }) {
+export function CoverageTable({ rows, options = null, canManage, onSetUp, onBackUpNow, busyIds = [], restoringId = null, bare = false }) {
   const t = useTranslations("backups.coverage");
 
   const columns = [
     {
       accessorKey: "application.name",
       header: t("columns.site"),
-      meta: { className: "min-w-52" },
+      // max-w-0 lets the name and domain truncate; without it their full width
+      // set the column and the table needed 1,100px in French.
+      meta: { className: "w-[28%] max-w-0" },
       cell: SiteCell,
     },
     // Headers may wrap so long translations don't widen the columns.
-    { accessorKey: "state", header: wrapping(t("columns.status")), meta: { className: "w-32" }, cell: StatusCell },
-    { id: "type", header: wrapping(t("columns.type")), meta: { className: "w-28" }, cell: TypeCell },
+    // Own columns again (Krishna, 8 Oct: the stacked "Backup type / Storage" header read
+    // as cramped); dropping the Status column made the room.
+    // "Type", not "Backup type": on this page it can only mean that, and the long
+    // form wrapped to two lines at 1280.
+    { id: "type", header: wrapping(t("columns.typeShort")), meta: { className: "w-28" }, cell: TypeCell },
     { id: "schedule", header: wrapping(t("columns.schedule")), meta: { className: "w-32" }, cell: (ctx) => <ScheduleCell {...ctx} options={options} /> },
-    { id: "storage", header: wrapping(t("columns.storage")), meta: { className: "w-36" }, cell: StorageCell },
+    { id: "storage", header: wrapping(t("columns.storage")), meta: { className: "w-32" }, cell: StorageCell },
     { id: "runs", header: wrapping(t("columns.lastRun")), meta: { className: "w-36" }, cell: RunsCell },
     {
       id: "actions",
@@ -274,6 +291,7 @@ export function CoverageTable({ rows, options = null, canManage, onSetUp, onBack
 
   return (
     <DataTable
+      bare={bare}
       columns={columns}
       data={rows}
       emptyMessage={t("noMatches")}

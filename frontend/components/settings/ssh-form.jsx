@@ -109,6 +109,9 @@ export function SshForm({
             icon={KeyRound}
             title={t("title")}
             description={t("description")}
+            // Three questions, three columns: in two, the port sat alone under an
+            // empty half (Krishna, 8 Oct).
+            gridClassName="@4xl/section:grid-cols-3"
             readOnly={!canManage}
             changedBy={changedBy}
             actions={
@@ -125,13 +128,13 @@ export function SshForm({
           >
             {/* Only when the SAVED config is dangerous; names the fix. */}
             {security?.permit_root_login === "yes" ? (
-              <div className="mt-3.5 flex max-w-2xl gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+              <div className="flex gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
                 <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
                 <p>{t("rootPasswordWarning")}</p>
               </div>
             ) : null}
   
-            {/* Each choice has its consequence under it, so these take the full row. */}
+            {/* Side by side: each choice has its consequence under it, and half the card is room enough. */}
             <FormField
               control={form.control}
               name="password_authentication"
@@ -143,8 +146,6 @@ export function SshForm({
                     tv,
                     form.formState.errors.password_authentication?.message,
                   )}
-  
-                  wide
                 >
                   <ChoiceField
                     value={field.value ? "password" : "key"}
@@ -180,8 +181,6 @@ export function SshForm({
                 <Row
                   label={t("rootLogin.label")}
                   hint={t("rootLogin.hint")}
-  
-                  wide
                 >
                   <ChoiceField
                     value={field.value}

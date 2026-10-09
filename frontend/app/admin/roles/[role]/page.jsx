@@ -27,7 +27,7 @@ export default async function EditRolePage({ params }) {
   if (role.is_system) redirect("/admin/roles");
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="space-y-6">
       <PageHeader title={t("form.editTitle")} subtitle={t("form.editSubtitle")} />
       <RoleForm mode="edit" role={role} catalog={catalog} />
     </div>

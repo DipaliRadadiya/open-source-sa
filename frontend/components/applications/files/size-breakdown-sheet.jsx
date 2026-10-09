@@ -3,7 +3,7 @@ import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { PieChart } from "lucide-react";
 import { OTHER_TOKEN, SERIES_TOKENS, foldCategories } from "@/lib/charts/breakdown-option";
-import { Skeleton } from "@/components/ui/skeleton";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -18,7 +18,7 @@ import {
 // only on open), with a placeholder the donut's height so nothing jumps.
 const SizeBreakdownDonut = dynamic(
   () => import("@/components/applications/files/size-breakdown-donut").then((m) => m.SizeBreakdownDonut),
-  { ssr: false, loading: () => <Skeleton className="h-56 w-full rounded-lg" /> },
+  { ssr: false, loading: () => <SkeletonCard className="h-56 w-full" /> },
 );
 
 // Measured for the directory on screen, so the walk's cost is bounded.

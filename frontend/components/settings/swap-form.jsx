@@ -133,6 +133,8 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
             icon={HardDriveDownload}
             title={t("swap.title")}
             description={t("swap.description")}
+            // The size buttons need the wider share; the current usage is one line.
+            gridClassName="@3xl/section:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]"
             readOnly={!canManage}
             changedBy={changedBy}
             actions={
@@ -180,7 +182,6 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
                     tv,
                     form.formState.errors.size_mb?.message,
                   )}
-                  wide
                 >
                   <ToggleGroup
                     type="single"
@@ -213,13 +214,11 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
   
                   {/* Only once "Custom" is chosen, so there is one control per value. */}
                   {custom ? (
-                    <div className="flex items-center gap-2 pt-1 sm:w-fit">
+                    <div className="flex items-center gap-2 pt-1">
                       <FormControl>
                         <Input
                           placeholder="2048"
-                          // 14rem, the Settings control-column width; this `wide`
-                          // row has no column to inherit it from.
-                          className="w-full font-mono sm:w-56"
+                          className="w-full font-mono"
                           inputMode="numeric"
                           autoComplete="off"
                           disabled={!canManage}

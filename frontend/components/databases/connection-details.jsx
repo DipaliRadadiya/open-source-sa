@@ -1,27 +1,33 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Plug } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { KeyRound, Plug, Server } from "lucide-react";
+
 import { primaryUser, connectionAddress } from "@/lib/databases/connection-parts";
-import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { CardIcon } from "@/components/ui/card-icon";
 import { CopyButton } from "@/components/ui/copy-button";
-import { PhpmyadminButton } from "@/components/databases/phpmyadmin-button";
+import { ConnectionString } from "@/components/databases/connection-string";
+import { ACCESS_TONE } from "@/components/databases/database-users";
 
-// Two grid tracks: a generated name (~31 chars) needs ~275px.
-const WIDE_FIELDS = new Set(["database", "username"]);
-
-export function ConnectionDetails({ database, canManage = false, phpmyadminSites = null }) {
+// The string first, then its parts in two groups of three: where to connect, and who as.
+export function ConnectionDetails({ database, canManage = false }) {
   const t = useTranslations("databases.credentials");
+  const tAccess = useTranslations("databases.access");
   const user = primaryUser(database);
   if (!user) return null;
 
-  const { host, port } = connectionAddress(user);
+  const { host, port, protocol } = connectionAddress(user);
   const others = (database.users?.length ?? 0) - 1;
+  const access = user.connection_preference ?? "localhost";
 
-  const fields = [
+  const server = [
+    { key: "protocol", value: protocol },
     { key: "host", value: host },
     { key: "port", value: port },
+  ];
+  const credentials = [
     { key: "database", value: database.name },
     { key: "username", value: user.username },
     // Masked, not hidden: it is meant to be copied. Null without `database`
@@ -32,77 +38,30 @@ export function ConnectionDetails({ database, canManage = false, phpmyadminSites
       mask: true,
       withheld: !canManage && !user.password && user.password_known !== false,
     },
-  ].filter((field) => field.value || field.withheld);
+  ];
 
   return (
     <Card className="gap-0 overflow-hidden py-0">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
-        <div className="flex items-center gap-2.5">
-          <span className="flex shrink-0 items-center justify-center text-muted-foreground">
-            <Plug className="size-3.5" />
-          </span>
+        <div className="flex min-w-48 flex-1 items-center gap-3">
+          <CardIcon icon={Plug} />
           <div>
-            <h2 className="text-base font-semibold tracking-tight">
-              {t("title")}
-            </h2>
+            <h2 className="text-[15px] font-semibold tracking-tight">{t("title")}</h2>
             <p className="text-sm text-muted-foreground">{t("description")}</p>
           </div>
         </div>
-
-        {/* Labelled copy button: on a phone the masked preview is too wide to show. */}
-        <div className="flex flex-wrap items-center gap-2">
-          {user.connection_string ? (
-            <CopyButton
-              value={user.connection_string}
-              label={t("copyString")}
-              text
-            />
-          ) : null}
-          <PhpmyadminButton
-            database={database}
-            canManage={canManage}
-            sites={phpmyadminSites}
-          />
-        </div>
+        {/* Where this user may connect from: the first thing a remote app needs to know. */}
+        <Badge variant={ACCESS_TONE[access] ?? "muted"} className="font-normal">
+          {tAccess(`${access}.label`)}
+          {access === "remote" && user.host ? ` · ${user.host}` : ""}
+        </Badge>
       </div>
 
-      {/* Even track counts so wide fields span two and rows stay whole. */}
-      <CardContent className="grid grid-cols-2 gap-x-4 gap-y-3.5 px-5 py-4 sm:grid-cols-4 xl:grid-cols-6">
-        {fields.map((field) => (
-          <div
-            key={field.key}
-            className={cn(
-              "min-w-0",
-              // Two tracks at xl (~137px each); between sm and xl two tracks
-              // are too narrow, so the field takes the whole row.
-              WIDE_FIELDS.has(field.key) && "col-span-2 sm:col-span-4 xl:col-span-2",
-            )}
-          >
-            {/* Label and copy button on one line, value beneath: same cell as
-                the create dialog, and the button does not narrow the value. */}
-            <div className="flex items-center gap-0.5">
-              <p className="min-w-0 truncate text-xs text-muted-foreground">
-                {t(field.key)}
-              </p>
-              {field.value ? (
-                <CopyButton
-                  value={field.value}
-                  label={t("copyField", { field: t(field.key) })}
-                  className="size-6"
-                />
-              ) : null}
-            </div>
-            {/* Wraps rather than truncating: a cut-off name still looks valid. */}
-            {field.withheld ? (
-              <p className="text-sm text-muted-foreground">{t("passwordWithheld")}</p>
-            ) : (
-              <p className="font-mono text-sm break-all">
-                {field.mask ? "••••••••" : field.value}
-              </p>
-            )}
-          </div>
-        ))}
-      </CardContent>
+      <div className="space-y-5 px-5 py-5">
+        <ConnectionString value={user.connection_string} />
+        <FieldGroup icon={Server} title={t("server")} fields={server} t={t} />
+        <FieldGroup icon={KeyRound} title={t("credentialsTitle")} fields={credentials} t={t} />
+      </div>
 
       {/* One credential is shown; say when there are others. */}
       {others > 0 ? (
@@ -113,5 +72,40 @@ export function ConnectionDetails({ database, canManage = false, phpmyadminSites
         </div>
       ) : null}
     </Card>
+  );
+}
+
+function FieldGroup({ icon: Icon, title, fields, t }) {
+  return (
+    <section className="space-y-2">
+      <h3 className="flex items-center gap-1.5 text-sm font-medium">
+        <Icon className="size-4 text-muted-foreground" aria-hidden />
+        {title}
+      </h3>
+      <div className="grid divide-y overflow-hidden rounded-xl border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        {fields.map((field) => (
+          <div key={field.key} className="flex min-w-0 items-start justify-between gap-2 px-3.5 py-3">
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">{t(field.key)}</p>
+              {/* Wraps rather than truncating: a cut-off name still looks valid. */}
+              {field.withheld ? (
+                <p className="text-sm text-muted-foreground">{t("passwordWithheld")}</p>
+              ) : (
+                <p className="font-mono text-sm break-all">
+                  {field.value ? (field.mask ? "••••••••" : field.value) : "—"}
+                </p>
+              )}
+            </div>
+            {field.value ? (
+              <CopyButton
+                value={field.value}
+                label={t("copyField", { field: t(field.key) })}
+                className="-mt-0.5 -mr-1.5"
+              />
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }

@@ -18,7 +18,10 @@ import {
   PowerOff,
   ShieldAlert,
   ShieldCheck,
+  Archive,
 } from "lucide-react";
+import { EmptyState } from "@/components/data-table/empty-state";
+import { EmptyArt } from "@/components/data-table/empty-art";
 import { cn } from "@/lib/utils";
 import { BACKUP_IN_FLIGHT, RESTORE_IN_FLIGHT } from "@/lib/schemas/backup";
 import { isBackupQueued, newestBackupId } from "@/lib/backups/queued";
@@ -267,6 +270,7 @@ export function BackupsPanel({
           restoreRunning ? t("restoreRunning") : queued || busy ? t("alreadyRunning") : null
         }
         restoreInFlight={restoreRunning}
+        hasTarget={Boolean(target)}
       />
 
       {/* Edit mode when a target exists; `applicationId` is fixed, so the site
@@ -360,13 +364,12 @@ export function BackupsPanel({
 }
 
 const STATE = {
-  protected: { icon: ShieldCheck, tone: "bg-success/10 text-success", ring: "border-success/30" },
-  empty: { icon: ShieldAlert, tone: "bg-warning/15 text-warning", ring: "border-warning/30" },
-  paused: { icon: PauseCircle, tone: "bg-warning/15 text-warning", ring: "border-warning/30" },
+  protected: { icon: ShieldCheck, tone: "bg-success/10 text-success" },
+  empty: { icon: ShieldAlert, tone: "bg-warning/15 text-warning" },
+  paused: { icon: PauseCircle, tone: "bg-warning/15 text-warning" },
   unprotected: {
     icon: CircleSlash,
     tone: "bg-destructive/10 text-destructive",
-    ring: "border-destructive/30",
   },
 };
 
@@ -384,7 +387,7 @@ function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown 
   const t = useTranslations("backups.application");
   const tHistory = useTranslations("backups.history");
   const state = stateOf(target, noneKept);
-  const { icon: Icon, tone, ring } = STATE[state];
+  const { icon: Icon, tone } = STATE[state];
   // The stored time is 24-hour; format it so the card matches the locale-based picker.
   const format = useFormatter();
 
@@ -451,13 +454,15 @@ function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown 
   const noPermission = tHistory("noPermission");
 
   return (
-    <Card className={cn("gap-0 overflow-hidden py-0 shadow-sm", ring)}>
-      <div className="flex flex-col items-start gap-3 border-b px-5 py-4 sm:flex-row sm:items-center">
+    // The state is carried by the icon tile and the button, not a coloured card edge:
+    // the pink outline read as an error banner rather than a card (7 Oct).
+    <Card className="gap-0 overflow-hidden py-0">
+      <div className={cn("flex flex-col items-start gap-3 px-5 py-4 sm:flex-row sm:items-center", target && "border-b")}>
         <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-lg", tone)}>
           <Icon className="size-5" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="font-semibold tracking-tight">{t(`state.${state}.title`)}</p>
+          <h2 className="text-[15px] font-semibold tracking-tight">{t(`state.${state}.title`)}</h2>
           {/* `state.protected.body` requires {schedule} and {destination}. */}
           <p className="text-sm text-muted-foreground">
             {state === "protected"
@@ -474,8 +479,9 @@ function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown 
         {/* Column on a phone so long labels cannot overflow (buttons never
             wrap). Read-only roles see the buttons disabled with a reason. */}
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          {/* Filled when there is no schedule: setting one up is the page's main action. */}
           <Button
-            variant="outline"
+            variant={target ? "outline" : "default"}
             onClick={onEdit}
             disabled={!canManage}
             disabledReason={canManage ? null : noPermission}
@@ -507,10 +513,10 @@ function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown 
           <dl className="grid gap-x-6 gap-y-5 sm:grid-cols-3">
             {facts.map((fact) => (
               <div key={fact.label} className="min-w-0">
-                <dt className="text-[0.6875rem] font-medium uppercase tracking-wide text-muted-foreground">
+                <dt className="text-xs text-muted-foreground">
                   {fact.label}
                 </dt>
-                <dd className="mt-0.5 truncate text-sm font-semibold tabular-nums">
+                <dd className="mt-0.5 truncate text-sm font-medium tabular-nums">
                   {fact.value}
                 </dd>
               </div>
@@ -564,9 +570,13 @@ function RecentBackups({
   failed = false,
   forbidden = false,
   restoreInFlight = false,
+  hasTarget = false,
 }) {
   const t = useTranslations("backups.application");
   const router = useRouter();
+  // Nothing to list and nothing failed: say what this list will hold and offer the next
+  // step, instead of one grey line (Krishna, 7 Oct).
+  const firstRun = backups.length === 0 && !failed && !forbidden && !queued;
 
   // A failed request is not evidence that the site has no history.
   const emptyMessage = forbidden ? t("historyForbidden") : failed ? t("historyFailed") : t("noRuns");
@@ -589,11 +599,11 @@ function RecentBackups({
   };
 
   return (
-    <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+    <Card className="gap-0 overflow-hidden py-0">
       <div className="flex flex-wrap items-center gap-2 border-b px-5 py-3.5">
         {/* The count only shows when the list is capped at the newest five. */}
         <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-0.5">
-          <h3 className="text-base font-semibold tracking-tight">{t("recentTitle")}</h3>
+          <h3 className="text-[15px] font-semibold tracking-tight">{t("recentTitle")}</h3>
           {total > backups.length ? (
             <span className="text-xs tabular-nums text-muted-foreground">
               {t("showing", { shown: backups.length, total })}
@@ -634,19 +644,41 @@ function RecentBackups({
         </div>
       ) : null}
 
+      {firstRun ? (
+        <FirstBackupEmpty hasTarget={hasTarget} />
+      ) : (
       <CardContent className="p-0">
         {/* Cards below xl: with a site's columns the table needs ~930px. */}
         <div className="xl:hidden p-4">
           {backups.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">{emptyMessage}</p>
+            <EmptyState compact icon={Archive} title={emptyMessage} />
           ) : (
             <BackupsCards {...listProps} />
           )}
         </div>
         <div className="hidden xl:block">
-          <BackupsHistoryTable {...listProps} emptyMessage={emptyMessage} bare />
+          <BackupsHistoryTable {...listProps} emptyMessage={emptyMessage} emptyIcon={Archive} bare />
         </div>
       </CardContent>
+      )}
     </Card>
+  );
+}
+
+// The first-run state of the list: what will appear here, in one sentence. No button: the
+// status card above holds Set up / Back up now. (Three fact tiles were tried and read as
+// buttons nobody understood, 7 Oct.)
+function FirstBackupEmpty({ hasTarget }) {
+  const t = useTranslations("backups.application");
+  return (
+    <div className="flex flex-col items-center gap-4 px-6 py-10 text-center">
+      <EmptyArt icon={Archive} />
+      <div className="max-w-md space-y-1.5">
+        <p className="font-semibold">{t("noRuns")}</p>
+        <p className="text-sm text-muted-foreground">
+          {hasTarget ? t("emptyHint.scheduled") : t("emptyHint.unprotected")}
+        </p>
+      </div>
+    </div>
   );
 }

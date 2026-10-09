@@ -11,9 +11,11 @@ import {
   Loader2,
   Copy,
   X,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { filterToggleClass } from "@/lib/theme/filter-toggle";
+import { SEARCH_WELL, SELECT_WELL } from "@/components/data-table/toolbar-well";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -41,6 +43,9 @@ const CUSTOM_LINES = "custom";
 // The line under the title reports the result only when a filter narrowed it or the file is short.
 export function LogToolbar({
   label,
+  // Replaces the title, e.g. the app page's Access / Error switch (7 Oct: a tab
+  // strip above the card and the same name as the card title said it twice).
+  heading = null,
   shown,
   loaded,
   wholeFile,
@@ -82,14 +87,16 @@ export function LogToolbar({
   const [customLines, setCustomLines] = useState(false);
 
   return (
-    // Two rows: one would squeeze the heading to an ellipsis.
-    <div className="flex flex-col gap-3 border-b bg-muted/40 px-4 py-3">
+    // Two rows, as the panel's cards: the header (title, Live) over a rule, then the
+    // tools. One grey block holding both read as clutter (7 Oct).
+    <div className="flex flex-col">
       {/* Wraps the tail pill below rather than squeezing the heading: min-w-48, not
           min-w-0 (ru "Paused while filtering" left one word per line at 390). */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <div className="min-w-48 flex-1">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-3">
+        {/* With the source switch as heading, Live drops below it on a phone so no tab is cut. */}
+        <div className={cn("min-w-48 flex-1", heading && "max-sm:basis-full")}>
           <div className="flex items-center gap-2">
-            <h2 className="truncate font-medium">{label}</h2>
+            {heading ?? <h2 className="truncate text-[15px] font-semibold tracking-tight">{label}</h2>}
             {busy ? (
               <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
             ) : null}
@@ -165,8 +172,10 @@ export function LogToolbar({
       </div>
 
       {/* Filter anchored left (takes the slack), view actions pushed right. */}
-      <div className="flex flex-wrap items-center gap-2">
+      {/* White, not tinted: the search and select wells are grey and vanished on a grey band (7 Oct). */}
+      <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
         <div className="relative w-full min-w-40 flex-1 sm:max-w-sm">
+          <Search className="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
           <Input
             ref={searchRef}
             value={term}
@@ -175,7 +184,7 @@ export function LogToolbar({
             maxLength={200}
             placeholder={t("searchPlaceholder")}
             disabled={disabled}
-            className={cn("w-full", term && "pr-8")}
+            className={cn(SEARCH_WELL, "w-full pl-9", term && "pr-8")}
             aria-label={t("searchPlaceholder")}
           />
           {term ? (
@@ -261,7 +270,7 @@ export function LogToolbar({
               }}
               disabled={disabled}
             >
-              <SelectTrigger aria-label={t("linesLabel")} className="w-auto min-w-40">
+              <SelectTrigger aria-label={t("linesLabel")} className={cn(SELECT_WELL, "w-auto min-w-40")}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent position="popper">

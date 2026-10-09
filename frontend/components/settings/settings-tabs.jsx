@@ -25,7 +25,7 @@ const SECTIONS = [
 const TAB =
   "relative inline-flex h-auto flex-none items-center justify-center gap-2 rounded-md border border-transparent px-4 py-2 text-sm font-medium whitespace-nowrap text-muted-foreground transition-all hover:bg-background/60 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none [&_svg]:size-4 [&_svg]:shrink-0";
 const TAB_ACTIVE =
-  "bg-background text-foreground shadow-sm dark:border-input dark:bg-input/30";
+  "bg-card text-foreground shadow-sm dark:border-input dark:bg-input/30";
 
 export function SettingsTabs({ badges = {} }) {
   const t = useTranslations("settings");
@@ -37,7 +37,9 @@ export function SettingsTabs({ badges = {} }) {
     <ScrollFade className="-mx-1 px-1 pb-1">
       <nav
         aria-label={t("tabs.label")}
-        className="grid w-full grid-cols-4 gap-1 rounded-lg bg-muted p-1 max-sm:inline-flex max-sm:w-fit"
+        // Sized to its tabs, like Backups and Account: stretched across the page
+        // it read as a different kind of control.
+        className="inline-flex w-fit gap-1 rounded-lg bg-muted p-1"
       >
         {SECTIONS.map(({ key, href, icon: Icon }) => {
           const active = pathname === href;

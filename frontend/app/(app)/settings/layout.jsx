@@ -35,7 +35,7 @@ export default async function SettingsLayout({ children }) {
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       {/* One width for the tabs and every section, so nothing shifts between sections. */}
-      <div className="max-w-[48rem] space-y-6">
+      <div className="space-y-6">
           <SettingsTabs badges={badges} />
           {children}
         </div>

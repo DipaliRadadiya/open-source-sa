@@ -77,9 +77,8 @@ export function EditUserDialog({ database, user, open, onOpenChange, remoteUsers
       toast.success(t("updated"));
       onOpenChange?.(false);
     } catch (error) {
-      const restartAnswer = restart.ask(error);
-      if (restartAnswer && (await restartAnswer)) return onSubmit({ ...submitted, restart_cluster: true });
-      if (!restartAnswer) handleValidationError(error, form, { fallback: t("saveFailed") });
+      if (await restart.retry(error, () => onSubmit({ ...submitted, restart_cluster: true }))) return;
+      handleValidationError(error, form, { fallback: t("saveFailed") });
     }
   }
 

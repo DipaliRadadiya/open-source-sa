@@ -10,12 +10,12 @@ function read(relativePath) {
 }
 
 const jumpLink = read("components/ui/section-jump-link.jsx");
-const attentionStrip = read("components/applications/attention-strip.jsx");
+const healthCheck = read("components/applications/app-status-tiles.jsx");
 const protectionCard = read("components/applications/protection-card.jsx");
 
 test("the Security action keeps a native fragment-link fallback", () => {
-  assert.match(attentionStrip, /item\.href\.startsWith\("#"\)/);
-  assert.match(attentionStrip, /<SectionJumpLink[^>]*href=\{item\.href\}/);
+  assert.match(healthCheck, /item\.href\.startsWith\("#"\)/);
+  assert.match(healthCheck, /<SectionJumpLink href=\{item\.href\}/);
   assert.match(jumpLink, /<Link href=\{href\} prefetch=\{false\} onClick=\{jump\}>/);
 });
 

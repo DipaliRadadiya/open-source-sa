@@ -30,7 +30,7 @@ test("the row is gated on the Magic Login permission, not on application manage"
 test("the flag reaches the row through both the table and the cards", () => {
   // A break anywhere along here hides the item silently rather than erroring.
   assert.match(table, /canMagicLogin = false,/);
-  assert.match(table, /meta=\{\{ canManage, canMagicLogin \}\}/);
+  assert.match(table, /meta=\{\{ canManage, canMagicLogin, backupStanding \}\}/);
   assert.match(table, /table\.options\.meta\?\.canMagicLogin \?\? false/);
   assert.match(cards, /canMagicLogin = false/);
   assert.match(cards, /canMagicLogin=\{canMagicLogin\}/);

@@ -5,7 +5,7 @@ import { usePendingKeys } from "@/hooks/use-pending-keys";
 import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { Clock, SearchX, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Clock, SearchX, ShieldAlert, ShieldCheck, Archive } from "lucide-react";
 import { BACKUP_IN_FLIGHT, BACKUP_TYPES, RESTORE_IN_FLIGHT } from "@/lib/schemas/backup";
 import { useRestoreWatch } from "@/components/backups/restore-watch";
 import { runBackupNow } from "@/lib/api/backups";
@@ -16,7 +16,7 @@ import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { LocalSearchInput } from "@/components/data-table/local-search-input";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { EmptyState } from "@/components/data-table/empty-state";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { ListCard } from "@/components/data-table/list-card";
 import { FilterSelect } from "@/components/data-table/filter-select";
 import { DestinationHealth } from "@/components/backups/destination-health";
 import { CoverageTable, sortCoverage } from "@/components/backups/coverage-table";
@@ -122,11 +122,55 @@ export function CoverageCard({
   const inFlight = coverage.rows.some((row) => BACKUP_IN_FLIGHT.includes(row.lastBackup?.status));
   const watching = inFlight || justStarted;
 
+  const toolbar = (
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+      <LocalSearchInput value={search} onChange={setSearch} placeholder={t("searchPlaceholder")} />
+      <FilterSelect
+        value={state}
+        onChange={setState}
+        allLabel={th("allStatuses")}
+        label={t("columns.status")}
+        options={[
+          { value: "unprotected", label: t("filters.unprotected") },
+          { value: "protected", label: t("filters.protected") },
+        ]}
+        className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
+      />
+      {/* Phone: the last filter and Refresh share a row, so Refresh is not left alone on one. */}
+      <div className="flex items-center gap-3 sm:contents">
+        <FilterSelect
+          value={type}
+          onChange={setType}
+          allLabel={t("filters.anyType")}
+          label={t("columns.type")}
+          options={BACKUP_TYPES.map((value) => ({ value, label: t(`types.${value}`) }))}
+          className="min-w-0 flex-1 sm:w-auto sm:min-w-36 sm:flex-none sm:shrink-0"
+        />
+        <div className="sm:ml-auto">
+          <RefreshButton />
+        </div>
+      </div>
+    </div>
+  );
+
+  const footer = (
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
+      <span className="tabular-nums">{t("showing", { shown: rows.length, total: coverage.total })}</span>
+      {/* Stated once here: in the column header it forced horizontal scroll. */}
+      {scheduleTimezone ? (
+        <span className="flex items-center gap-1.5">
+          <Clock className="size-3.5 shrink-0" />
+          {t("timesShownIn", { timezone: scheduleTimezone })}
+        </span>
+      ) : null}
+    </div>
+  );
+
   return (
     <>
       {watching ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         {/* Above the coverage banner: a well-configured site can still be
             backing up to a bucket that rejects every write. */}
         <DestinationHealth
@@ -172,77 +216,43 @@ export function CoverageCard({
           </Button>
         </div>
 
-        {/* Wraps rather than squeezing: at 768 the type filter lost most of its text. */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-          <ToggleGroup
-            type="single"
-            value={state}
-            onValueChange={(value) => value && setState(value)}
-            variant="outline"
-            size="sm"
-          >
-            <ToggleGroupItem value="all">{t("filters.all")}</ToggleGroupItem>
-            <ToggleGroupItem value="unprotected">{t("filters.unprotected")}</ToggleGroupItem>
-            <ToggleGroupItem value="protected">{t("filters.protected")}</ToggleGroupItem>
-          </ToggleGroup>
-
-          <LocalSearchInput value={search} onChange={setSearch} placeholder={t("searchPlaceholder")} />
-
-          {/* Same dropdown as History, but filtering in memory (not in the URL). */}
-          <FilterSelect
-            value={type}
-            onChange={setType}
-            allLabel={t("filters.anyType")}
-            label={t("columns.type")}
-            options={BACKUP_TYPES.map((value) => ({ value, label: t(`types.${value}`) }))}
-            className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
-          />
-
-          <span className="text-xs tabular-nums text-muted-foreground sm:ml-auto">
-            {t("showing", { shown: rows.length, total: coverage.total })}
-          </span>
-          <RefreshButton />
-        </div>
-
-        {/* The filters are not in the URL, so an emptied list must say so. */}
-        {rows.length === 0 ? (
-          <EmptyState
-            icon={SearchX}
-            title={t("noMatches")}
-            action={
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSearch("");
-                  setState("all");
-                  setType("all");
-                }}
-              >
-                {tc("clearFilters")}
-              </Button>
-            }
-          />
-        ) : (
-          <>
-            {/* Stated once here: in the column header it forced horizontal scroll. */}
-            {scheduleTimezone ? (
-              <p className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Clock className="size-3.5 shrink-0" />
-                {t("timesShownIn", { timezone: scheduleTimezone })}
-              </p>
-            ) : null}
-            {/* Container query, not viewport: the table needs ~1,180px in the
-                widest locale. Cards until it fits. */}
-            <div className="@container">
-              <div className="@min-[1180px]:hidden">
+        {/* Inside the list's card, as on Applications: filters on top, the count and
+            time zone underneath. Loose above the table they read as part of the banner. */}
+        <div className="@container/coverage">
+          {rows.length === 0 ? (
+            // The filters are not in the URL, so an emptied list must say so.
+            <ListCard toolbar={toolbar}>
+              <EmptyState
+                icon={SearchX}
+                subject={Archive}
+                title={t("noMatches")}
+                action={
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSearch("");
+                      setState("all");
+                      setType("all");
+                    }}
+                  >
+                    {tc("clearFilters")}
+                  </Button>
+                }
+              />
+            </ListCard>
+          ) : (
+            // Container query, not viewport. The table from 900px (a 1280 laptop with the
+            // sidebar open); the status is a badge beside the name, not a column.
+            <ListCard from="c900" toolbar={toolbar} footer={footer}>
+              <div className="@min-[900px]/coverage:hidden">
                 <CoverageCards {...listProps} />
               </div>
-              <div className="hidden @min-[1180px]:block">
-                <CoverageTable {...listProps} />
+              <div className="hidden @min-[900px]/coverage:block">
+                <CoverageTable {...listProps} bare />
               </div>
-            </div>
-          </>
-        )}
+            </ListCard>
+          )}
+        </div>
       </div>
 
       <SetupBackupsDialog

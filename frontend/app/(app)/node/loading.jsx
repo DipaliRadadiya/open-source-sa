@@ -1,30 +1,18 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { SkCard, SkHeader } from "@/components/ui/skeleton-kit";
 
-// Same shape as the real page so it fills in place.
+
+// Node.js: the version card.
 export default function Loading() {
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <Skeleton className="h-7 w-28" />
-        <Skeleton className="h-4 w-72" />
-      </div>
-
-      <div className="max-w-5xl space-y-4">
-        <div className="rounded-xl border">
-          <div className="space-y-2 p-6">
-            <Skeleton className="h-5 w-56" />
-            <Skeleton className="h-4 w-80" />
+    <div className="space-y-6" aria-busy="true">
+      <SkHeader />
+      <div className="">
+        <SkCard action>
+          <div className="flex gap-2">
+            {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-6 w-20 rounded-md" />)}
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t bg-muted/30 px-6 py-4">
-            <Skeleton className="h-9 w-36" />
-            <div className="flex flex-wrap gap-2">
-              <Skeleton className="h-9 w-40" />
-              <Skeleton className="h-9 w-32" />
-            </div>
-          </div>
-        </div>
-
-        <Skeleton className="h-12 w-full rounded-lg" />
+        </SkCard>
       </div>
     </div>
   );

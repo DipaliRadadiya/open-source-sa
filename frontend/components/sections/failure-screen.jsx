@@ -45,7 +45,7 @@ export function FailureScreen({
 
 export function FailureFooterLabel({ children }) {
   return (
-    <p className="mb-2 text-[0.6875rem] font-medium tracking-wide text-muted-foreground uppercase">
+    <p className="mb-2 text-[0.6875rem] font-medium text-muted-foreground">
       {children}
     </p>
   );

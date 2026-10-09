@@ -14,10 +14,11 @@ import {
 import { getTables } from "@/lib/databases/get-monitor";
 import { Badge } from "@/components/ui/badge";
 import { DatabaseUsers } from "@/components/databases/database-users";
-import { DatabaseFacts } from "@/components/databases/database-facts";
 import { ConnectionDetails } from "@/components/databases/connection-details";
 import { DatabaseTabs } from "@/components/databases/database-tabs";
-import { UsedByCard } from "@/components/databases/used-by-card";
+import { DatabaseDetailsCard } from "@/components/databases/database-details-card";
+import { PhpmyadminButton } from "@/components/databases/phpmyadmin-button";
+import { parseApiDate } from "@/lib/format/api-date";
 import { DatabaseTables } from "@/components/databases/database-tables";
 import { DatabaseExports } from "@/components/databases/database-exports";
 import { applicationById } from "@/lib/backups/database-availability";
@@ -28,7 +29,9 @@ import { PermissionDenied } from "@/components/sections/permission-denied";
 import Link from "@/components/ui/app-link";
 import { Button } from "@/components/ui/button";
 import { Caution } from "@/components/ui/caution";
+import { DetailHeader } from "@/components/ui/detail-header";
 import { BackLink } from "@/components/ui/back-link";
+import { Database } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -93,26 +96,47 @@ export default async function DatabasePage({ params, searchParams }) {
   const engineDown = Boolean(engineRow?.installed) && !engineRow.running;
   const engineName = t(`engines.${data.engine}`);
 
+  // The newest restorable dump: completed and its file still on disk, as on the list.
+  const ownExports = exportList.exports.filter((row) => row.database_id === data.id);
+  const lastExport = exportList.failed
+    ? undefined
+    : (ownExports
+        .filter((row) => row.status === "completed" && row.available !== false)
+        .map((row) => ({ row, at: parseApiDate(row.finished_at ?? row.created_at)?.getTime() ?? 0 }))
+        .sort((a, b) => b.at - a.at)[0]?.row ?? null);
+
   return (
     <div className="space-y-6">
       <PageCrumb mono>{data.name}</PageCrumb>
 
+      {/* As wide as the cards below it. */}
       <div className="space-y-3">
+        {/* Asked for on 1 Oct, alongside the breadcrumb. */}
         <BackLink href="/databases">{t("backToList")}</BackLink>
-        <div className="space-y-1.5">
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="min-w-0 font-mono text-2xl font-semibold tracking-tight break-words">
-              {data.name}
-            </h1>
-            <Badge variant="secondary" className="font-normal">
-              {t(`engines.${data.engine}`)}
-            </Badge>
-          </div>
-          <DatabaseFacts database={data} hideSize={engineDown} />
-        </div>
+        <DetailHeader
+          icon={<Database aria-hidden />}
+          title={data.name}
+          mono
+          badges={<Badge variant="muted">{engineName}</Badge>}
+          facts={[
+            // The API reports 0 B while the engine is down, which would read as empty.
+            engineDown ? null : <span className="font-mono">{data.size_human}</span>,
+            data.created_at_human ? t("detail.createdWhen", { when: data.created_at_human }) : null,
+          ]}
+          // The one thing people open a database page to do, so it is the filled button.
+          actions={
+            <PhpmyadminButton
+              database={data}
+              canManage={canManage}
+              sites={phpmyadmin.known ? phpmyadmin.sites : null}
+              variant="default"
+              size="default"
+            />
+          }
+        />
       </div>
 
-      <div className="max-w-4xl space-y-4">
+      <div className="space-y-4">
         {engineDown ? (
           <Caution
             action={
@@ -125,31 +149,37 @@ export default async function DatabasePage({ params, searchParams }) {
           </Caution>
         ) : null}
 
-        {/* Above the tabs: connecting an application is the main task here. */}
-        <ConnectionDetails
-          database={data}
-          canManage={canManage}
-          phpmyadminSites={phpmyadmin.known ? phpmyadmin.sites : null}
-        />
-
-        <UsedByCard
-          database={data}
-          canManage={canManage}
-          applications={appList.applications}
-          databaseCounts={dbCounts.counts}
-          databasesKnown={dbCounts.known}
-          siteTypes={catalogue.siteTypes}
-        />
-
         <DatabaseTabs
           initial={sp?.tab}
+          overview={
+            <div className="space-y-4">
+              <ConnectionDetails database={data} canManage={canManage} />
+              <DatabaseDetailsCard
+                database={data}
+                engineName={engineName}
+                // "10.11.14", not the build string "10.11.14-MariaDB-0ubuntu0.24.04.1".
+                engineVersion={engineRow?.version?.match(/^\d+(?:\.\d+)*/)?.[0] ?? engineRow?.version ?? null}
+                engineDown={engineDown}
+                lastExport={lastExport === undefined ? undefined : (lastExport?.finished_at_human ?? lastExport?.created_at_human ?? null)}
+                canManage={canManage}
+                applications={appList.applications}
+                databaseCounts={dbCounts.counts}
+                databasesKnown={dbCounts.known}
+                siteTypes={catalogue.siteTypes}
+              />
+              {/* In the Overview, not under every tab: it is the page's last word, not a footer. */}
+              <DeleteDatabaseCard
+                database={data}
+                application={applicationById(appList.applications, data.application_id)}
+                canManage={canManage}
+              />
+            </div>
+          }
           counts={{
             users: data.users?.length ?? 0,
             // Null, not 0, when the list could not be read.
             tables: tables.failed || engineDown ? null : tables.tables.length,
-            exports: exportList.failed
-              ? null
-              : exportList.exports.filter((row) => row.database_id === data.id).length,
+            exports: exportList.failed ? null : ownExports.length,
           }}
           users={
             <DatabaseUsers
@@ -176,12 +206,6 @@ export default async function DatabasePage({ params, searchParams }) {
               canManage={canManage}
             />
           }
-        />
-
-        <DeleteDatabaseCard
-          database={data}
-          application={applicationById(appList.applications, data.application_id)}
-          canManage={canManage}
         />
       </div>
     </div>

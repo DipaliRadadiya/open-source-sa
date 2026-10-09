@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Network, HardDrive, Link2, Plus, Trash2, Lock } from "lucide-react";
+import { Link2, Plus, Trash2, Lock, HardDrive } from "lucide-react";
+import { EmptyState } from "@/components/data-table/empty-state";
 import {
   createDockerNetwork,
   createDockerVolume,
@@ -72,8 +73,7 @@ export function DockerResourcesPanel({
     <div className="space-y-6">
       <Card>
         <CardHeader className="flex-row items-center justify-between gap-4 space-y-0">
-          <CardTitle className="flex items-center gap-2">
-            <Network className="size-4" />
+          <CardTitle>
             {t("networks.title")}
           </CardTitle>
           {canManage ? (
@@ -248,8 +248,7 @@ export function DockerResourcesPanel({
 
       <Card>
         <CardHeader className="flex-row items-center justify-between gap-4 space-y-0">
-          <CardTitle className="flex items-center gap-2">
-            <HardDrive className="size-4" />
+          <CardTitle>
             {t("volumes.title")}
           </CardTitle>
           {canManage ? (
@@ -286,7 +285,7 @@ export function DockerResourcesPanel({
         <CardContent>
           <p className="mb-4 text-sm text-muted-foreground">{t("volumes.hint")}</p>
           {initialVolumes.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("volumes.empty")}</p>
+            <EmptyState compact icon={HardDrive} badge={null} title={t("volumes.empty")} />
           ) : (
             <Table>
               <TableHeader>

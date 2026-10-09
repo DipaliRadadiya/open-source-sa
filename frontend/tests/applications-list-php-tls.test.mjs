@@ -30,18 +30,18 @@ const tableCode = strip(table);
 const cardsCode = strip(cards);
 const { locales } = await import("../i18n/routing.js");
 
-test("the Type column is gone and PHP stands in its place", () => {
+test("the Type column is gone; Runs on (PHP, Node.js, Docker, static) stands in its place", () => {
   assert.doesNotMatch(tableCode, /function TypeCell/, "TypeCell should be gone, not orphaned");
   assert.doesNotMatch(tableCode, /columns\.type/);
   assert.doesNotMatch(tableCode, /SortHeader col="site_type"/);
-  assert.match(tableCode, /\{ id: "php", header: t\("columns\.php"\)/);
-  assert.match(tableCode, /function PhpCell/);
+  // 7 Oct (Krishna): PHP alone said nothing for Node and static sites.
+  assert.match(tableCode, /\{ id: "runsOn", header: t\("columns\.runsOn"\)/);
+  assert.match(tableCode, /function RunsOnCell/);
 });
 
-test("a site with no PHP shows a dash in the table", () => {
-  // Node, static, anything the API nulls. The same em-dash OwnerCell uses, so
-  // an empty cell looks the same everywhere in this table.
-  assert.match(tableCode, /\{value \?\? "—"\}/);
+test("a site with nothing to report shows a dash in the table", () => {
+  // The same em-dash OwnerCell uses, so an empty cell looks the same everywhere.
+  assert.match(tableCode, /if \(!runtime\) return <span className="text-muted-foreground">—<\/span>;/);
 });
 
 test("...but the card omits it rather than dashing it", () => {
@@ -50,31 +50,16 @@ test("...but the card omits it rather than dashing it", () => {
    * unmeasured size: in a wrapped line of facts a dash reads as a value, where
    * in a table column it reads as an empty cell.
    */
-  assert.match(cardsCode, /\{phpVersionShown\(application\) \? \(/);
+  // Only PHP and Node: for static and Docker the type beside it already says it (7 Oct).
+  assert.match(cardsCode, /\{\["php", "node"\]\.includes\(runtimeOf\(application\)\?\.kind\) \? \(/);
   assert.doesNotMatch(cardsCode, /php_version \?\? "—"/);
 });
 
 test("the column widths still total 100 at both breakpoints", () => {
-  // fixedLayout squeezes silently when they do not.
-  const widths = [...tableCode.matchAll(/className: "([^"]*w-\[[^"]*)"/g)].map((m) => m[1]);
-  const base = (cls) => {
-    const hit = cls.match(/(?:^|\s)w-\[(\d+)%\]/);
-    return hit ? Number(hit[1]) : 0;
-  };
-  const atXl = (cls) => {
-    const hit = cls.match(/xl:w-\[(\d+)%\]/);
-    // Falls back to the base width, which is how Actions (`w-[7%]`, no xl
-    // variant) participates. Summing only `xl:` classes reads 93 and calls a
-    // correct layout broken — which is exactly what the first version did.
-    return hit ? Number(hit[1]) : base(cls);
-  };
-
-  // lg: the Created column is `hidden xl:table-cell`, so it is out of the flow.
-  const lg = widths.filter((c) => !c.includes("hidden xl:table-cell")).reduce((t, c) => t + base(c), 0);
-  assert.equal(lg, 100, `lg widths total ${lg}, not 100`);
-
-  const xl = widths.reduce((t, c) => t + atXl(c), 0);
-  assert.equal(xl, 100, `xl widths total ${xl}, not 100`);
+  // fixedLayout squeezes silently when they do not. Checked per width set in
+  // tests/applications-table-columns.test.mjs since the sets were split (7 Oct).
+  assert.match(tableCode, /const COLUMN_WIDTHS = \{/);
+  assert.match(tableCode, /COLUMN_WIDTHS\[withBackups \? "withBackups" : "withoutBackups"\]/);
 });
 
 test("the logo names the type in the table, and stays silent everywhere else", () => {

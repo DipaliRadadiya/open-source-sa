@@ -2,6 +2,7 @@ import { useState } from "react";
 import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { History, Loader2, ExternalLink } from "lucide-react";
+import { EmptyState } from "@/components/data-table/empty-state";
 import { getMyActivityByType, getServerActivityByType } from "@/lib/api/activity-log";
 import { myActivityResponseSchema } from "@/lib/schemas/account";
 import { activityResponseSchema } from "@/lib/schemas/activity";
@@ -115,9 +116,7 @@ export function HistoryDialog({ everyone = false }) {
             message={state.message ?? null}
           />
         ) : state.entries.length === 0 ? (
-          <p className="py-10 text-center text-sm text-muted-foreground">
-            {everyone ? t("history.emptyEveryone") : t("history.empty")}
-          </p>
+          <EmptyState compact icon={History} badge={null} title={everyone ? t("history.emptyEveryone") : t("history.empty")} />
         ) : (
           <div className="space-y-4">
             <ul className="divide-y">

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Info, Loader2, ShieldCheck, Trash2, TriangleAlert } from "lucide-react";
+import { Info, Loader2, Trash2, TriangleAlert } from "lucide-react";
 
 import { installIonCube, removeIonCube } from "@/lib/api/php";
 import { apiMessage } from "@/lib/api/error-message";
@@ -76,9 +76,6 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
       <CardContent className="flex flex-col gap-4 px-5 py-4 @2xl:flex-row @2xl:items-start @2xl:justify-between">
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="flex shrink-0 items-center justify-center text-muted-foreground">
-              <ShieldCheck className="size-4" />
-            </span>
             <span className="font-medium">{t("title")}</span>
             {/* Installing wins over installed: during a reinstall both are true. */}
             {installing ? (

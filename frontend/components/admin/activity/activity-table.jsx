@@ -1,6 +1,6 @@
 "use client";
 
-import { ScrollText, SearchX } from "lucide-react";
+import { ScrollText, SearchX, History } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,8 +41,19 @@ function TypeCell({ row }) {
   );
 }
 
+// Below sm the When and User columns are hidden and ride under the description:
+// three columns at 390px wrapped "14 hours ago" onto three lines.
 function DescriptionCell({ row }) {
-  return <span>{row.original.description || "—"}</span>;
+  const t = useTranslations("activity");
+  const { description, user, created_at_human } = row.original;
+  return (
+    <>
+      <span>{description || "—"}</span>
+      <span className="mt-0.5 block text-xs text-muted-foreground sm:hidden">
+        {user ? `@${user.username}` : t("system")} · {created_at_human}
+      </span>
+    </>
+  );
 }
 
 export function ActivityTable({ data, hasFilters }) {
@@ -53,6 +64,7 @@ export function ActivityTable({ data, hasFilters }) {
     return hasFilters ? (
       <EmptyState
         icon={SearchX}
+        subject={History}
         title={t("empty.filteredTitle")}
         description={t("empty.filteredDesc")}
         action={
@@ -79,8 +91,8 @@ export function ActivityTable({ data, hasFilters }) {
   }
 
   const columns = [
-    { accessorKey: "created_at_human", header: t("columns.when"), cell: WhenCell },
-    { id: "user", header: t("columns.user"), cell: UserCell },
+    { accessorKey: "created_at_human", header: t("columns.when"), cell: WhenCell, meta: { className: "hidden sm:table-cell" } },
+    { id: "user", header: t("columns.user"), cell: UserCell, meta: { className: "hidden sm:table-cell" } },
     // Hidden on phones: the description column carries the same information.
     { id: "type", header: t("table.type"), cell: TypeCell, meta: { className: "hidden md:table-cell" } },
     {
@@ -91,5 +103,5 @@ export function ActivityTable({ data, hasFilters }) {
     },
   ];
 
-  return <DataTable columns={columns} data={data} />;
+  return <DataTable bare columns={columns} data={data} />;
 }

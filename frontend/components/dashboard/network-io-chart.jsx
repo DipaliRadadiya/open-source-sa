@@ -22,8 +22,8 @@ export function NetworkIoChart({ series, metrics, timeZone, stale }) {
   const clock = clockFormatter(format, timeZone, { second: "2-digit" });
 
   const lines = [
-    { key: "net_in", label: t("charts.network.in"), token: "chart-2", kind: "area" },
-    { key: "net_out", label: t("charts.network.out"), token: "chart-1", kind: "area" },
+    { key: "net_in", label: t("charts.network.in"), token: "chart-1", kind: "area" },
+    { key: "net_out", label: t("charts.network.out"), token: "chart-2", kind: "area" },
   ];
 
   const option = timeSeriesOption({
@@ -48,6 +48,8 @@ export function NetworkIoChart({ series, metrics, timeZone, stale }) {
 
   return (
     <LiveChartCard
+      headingLevel="h2"
+      plotHeight="h-52"
       icon={ArrowDownUp}
       title={t("charts.network.title")}
       description={t("charts.network.description")}
@@ -57,19 +59,19 @@ export function NetworkIoChart({ series, metrics, timeZone, stale }) {
         <>
           {/* Dots match the line tokens above. */}
           <ChartPill
-            dotClassName="bg-chart-2"
+            dotClassName="bg-chart-1"
             label={t("charts.network.in")}
             value={rate(metrics?.network?.in)}
           />
           <ChartPill
-            dotClassName="bg-chart-1"
+            dotClassName="bg-chart-2"
             label={t("charts.network.out")}
             value={rate(metrics?.network?.out)}
           />
         </>
       }
     >
-      <EChart option={option} dataTable={table} height="h-72" />
+      <EChart option={option} dataTable={table} height="h-52" />
     </LiveChartCard>
   );
 }

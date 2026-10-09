@@ -1,17 +1,20 @@
-import { Skeleton } from "@/components/ui/skeleton";
+import { SkCard, SkFooter, SkHeader, SkNote, SkOptions, SkRows } from "@/components/ui/skeleton-kit";
 
-// Mirrors `BotBlockerSection`; heights measured from the rendered page.
+
+// AI bot blocker: the note, the four choices, then the visits card.
 export default function Loading() {
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <Skeleton className="h-8 w-24" />
-        <Skeleton className="h-7 w-48" />
-        <Skeleton className="h-4 w-80" />
-      </div>
-      <div className="max-w-4xl space-y-4">
-        <Skeleton className="h-[55rem] w-full rounded-2xl" />
-        <Skeleton className="h-[14.5rem] w-full rounded-2xl" />
+    <div className="space-y-6" aria-busy="true">
+      <SkHeader />
+      <div className="space-y-6">
+        <SkNote />
+        <SkCard>
+          <SkOptions count={4} />
+          <SkFooter />
+        </SkCard>
+        <SkCard>
+          <SkRows count={3} icon={false} />
+        </SkCard>
       </div>
     </div>
   );

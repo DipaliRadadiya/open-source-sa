@@ -1,11 +1,12 @@
 import Link from "@/components/ui/app-link";
 import { getFormatter, getTranslations } from "next-intl/server";
-import { Activity, Bot, FileQuestion } from "lucide-react";
+import { Bot, FileQuestion } from "lucide-react";
+import { EmptyState } from "@/components/data-table/empty-state";
 import { cn } from "@/lib/utils";
 import { filterToggleClass } from "@/lib/theme/filter-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -28,14 +29,11 @@ export async function BotTrafficCard({ appId, traffic, failed, days }) {
   const totals = traffic?.totals ?? { bots: 0, hits: 0, blocked_hits: 0 };
 
   return (
-    <Card className="max-w-4xl gap-0 overflow-hidden py-0 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/20 px-5 py-3">
-        <div className="flex items-center gap-2.5">
-          <Activity className="size-4 shrink-0 text-muted-foreground" />
-          <div>
-            <p className="text-sm font-medium">{t("title")}</p>
-            <p className="text-xs text-muted-foreground">{t("subtitle")}</p>
-          </div>
+    <Card >
+      <CardHeader className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <CardTitle as="h2">{t("title")}</CardTitle>
+          <CardDescription>{t("subtitle")}</CardDescription>
         </div>
         {/* Links, so the range lives in the URL and the server component re-runs. */}
         <div className="flex items-center gap-1">
@@ -63,23 +61,17 @@ export async function BotTrafficCard({ appId, traffic, failed, days }) {
             </Button>
           ))}
         </div>
-      </div>
+      </CardHeader>
 
-      <CardContent className="p-3 sm:p-5">
+      <CardContent>
         {/* Both are ordinary states, shown as a quiet empty state, not an error. */}
         {status === "unavailable" || bots.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-6 text-center">
-            <span className="flex size-9 items-center justify-center rounded-full bg-muted-foreground/10 text-muted-foreground">
-              {status === "unavailable" ? (
-                <FileQuestion className="size-4" />
-              ) : (
-                <Bot className="size-4" />
-              )}
-            </span>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              {status === "unavailable" ? t("unavailable") : t("empty", { days })}
-            </p>
-          </div>
+          <EmptyState
+            compact
+            icon={status === "unavailable" ? FileQuestion : Bot}
+            badge={null}
+            title={status === "unavailable" ? t("unavailable") : t("empty", { days })}
+          />
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
@@ -90,7 +82,8 @@ export async function BotTrafficCard({ appId, traffic, failed, days }) {
               })}
             </p>
 
-            <div className="overflow-hidden rounded-lg border">
+            {/* Edge to edge, as every table inside a card. */}
+            <div className="-mx-(--card-spacing) border-y">
               <Table>
                 <TableHeader>
                   <TableRow>

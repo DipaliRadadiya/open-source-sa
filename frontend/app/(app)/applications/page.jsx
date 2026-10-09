@@ -6,6 +6,7 @@ import { can } from "@/lib/permissions/can";
 import { getApplications, getSiteTypes } from "@/lib/applications/get-applications";
 import { getDatabaseCounts } from "@/lib/databases/get-databases";
 import { getGitAccounts } from "@/lib/git/get-git";
+import { getBackupStanding } from "@/lib/backups/get-backups";
 import { providersByAccountId } from "@/lib/applications/git-provider";
 import { sitesMissingDatabase } from "@/lib/backups/database-availability";
 import { ApplicationsTable } from "@/components/applications/applications-table";
@@ -29,22 +30,25 @@ export default async function ApplicationsPage({ searchParams }) {
     Object.entries(sp ?? {}).filter(([, v]) => typeof v === "string"),
   ).toString();
 
-  const [permissions, appPermissions, t, result] = await Promise.all([
+  // Fetched together, not one after another: each waits on the API in turn otherwise.
+  const [permissions, appPermissions, t, result, { siteTypes }] = await Promise.all([
     getPermissions(),
     // Application-level catalog, unfiltered: role grants are global, so one
     // call answers Magic Login for every row.
     getPermissions("application").catch(() => []),
     getTranslations("applications"),
     getApplications(query),
+    // Filter options come from the catalog, not the current page of rows.
+    getSiteTypes(),
   ]);
-  // Filter options come from the catalog, not the current page of rows.
-  const { siteTypes } = await getSiteTypes();
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("title")} />;
-  // Without the server-level database permission, no missing-database marker.
-  const dbCounts = can(permissions, "database", "view")
-    ? await getDatabaseCounts()
-    : { counts: null, known: false };
+  // Without the server-level database permission, no missing-database marker; without
+  // `backup`, no Last backup column.
+  const [dbCounts, backupStanding] = await Promise.all([
+    can(permissions, "database", "view") ? getDatabaseCounts() : { counts: null, known: false },
+    can(permissions, "backup", "view") ? getBackupStanding().catch(() => null) : null,
+  ]);
 
   // Only to tell each account-linked git site's provider (the payload has no host).
   // A failure falls back to the generic git mark.
@@ -93,6 +97,7 @@ export default async function ApplicationsPage({ searchParams }) {
         // catalog is unfiltered by site type, so the row checks `site_type`.
         canMagicLogin={can(appPermissions, "app_magic_login", "manage", "application")}
         gitProviders={gitProviders}
+        backupStanding={backupStanding}
         missingDatabase={sitesMissingDatabase(
           result.applications,
           siteTypes,

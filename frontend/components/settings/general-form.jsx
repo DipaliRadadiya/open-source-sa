@@ -120,6 +120,7 @@ export function GeneralForm({ general, canManage, timezones = [], changedBy }) {
               name="ntp"
               render={({ field }) => (
                 <Row
+                  toggle
                   label={t("ntp")}
                   hint={
                     general?.clock_synchronized === false && general?.ntp

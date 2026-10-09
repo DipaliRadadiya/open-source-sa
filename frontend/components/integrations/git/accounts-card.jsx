@@ -108,11 +108,8 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
       <Card className="gap-0 overflow-hidden py-0">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
           <div className="flex items-center gap-2.5">
-            <span className="flex shrink-0 items-center justify-center text-muted-foreground">
-              <GitBranch className="size-3.5" />
-            </span>
             <div>
-              <h2 className="text-base font-semibold tracking-tight">
+              <h2 className="text-[15px] font-semibold tracking-tight">
                 {t("accounts.title")}
               </h2>
               <p className="text-sm text-muted-foreground">
@@ -148,7 +145,7 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
               </span>
 
               <div className="space-y-2">
-                <p className="text-base font-semibold tracking-tight">{t("empty.title")}</p>
+                <p className="text-[15px] font-semibold tracking-tight">{t("empty.title")}</p>
                 <p className="max-w-md text-sm leading-6 text-muted-foreground">
                   {t("empty.description")}
                 </p>

@@ -14,14 +14,11 @@ const STATUS_VARIANT = {
   unknown: "outline",
 };
 
-// Only the chip and bar carry status colour. The inset ring gives the low-alpha chip an edge.
+// Only the chip and bar carry status colour.
 const TONE_STYLES = {
-  primary: { chip: "bg-primary/15 text-primary ring-primary/25", bar: "bg-primary" },
-  warning: { chip: "bg-warning/20 text-warning ring-warning/30", bar: "bg-warning" },
-  destructive: {
-    chip: "bg-destructive/15 text-destructive ring-destructive/25",
-    bar: "bg-destructive",
-  },
+  primary: { chip: "bg-primary/10 text-primary", bar: "bg-primary" },
+  warning: { chip: "bg-warning-soft text-warning", bar: "bg-warning" },
+  destructive: { chip: "bg-destructive-soft text-destructive", bar: "bg-destructive" },
 };
 
 /* One brand-tinted track for every tone, so bars in a row look like one component. */
@@ -44,7 +41,7 @@ export function StatCard({
 
   return (
     // py-0 cancels Card's own padding. PANEL_CARD: see lib/theme/card-chrome.js.
-    <Card className={cn("gap-0 overflow-hidden bg-gradient-to-t from-primary/5 to-card py-0", PANEL_CARD)}>
+    <Card className={cn("gap-0 overflow-hidden py-0", PANEL_CARD)}>
       {/* Container query, not flex-wrap, so equal-width cards stack on the same tick. */}
       <CardContent className="@container/stat px-4 py-3.5">
         {/* The label gets the whole row; the status badge lives in the bottom row
@@ -53,15 +50,14 @@ export function StatCard({
           {/* Tinted chip only when not normal, so a warning stands out. */}
           <span
             className={cn(
-              "flex size-8 shrink-0 items-center justify-center rounded-lg",
-              tone === "primary"
-                ? "text-muted-foreground"
-                : cn("ring-1 ring-inset", styles.chip),
+              "flex size-9 shrink-0 items-center justify-center rounded-xl",
+              // Brand tint at rest, as the application status tiles; the tone takes over when not normal.
+              tone === "primary" ? "bg-primary/10 text-primary" : styles.chip,
             )}
           >
-            <Icon className="size-4" />
+            <Icon className="size-[18px]" />
           </span>
-          <span className="min-w-0 truncate text-sm font-medium text-muted-foreground">{label}</span>
+          <span className="min-w-0 truncate text-xs font-medium text-muted-foreground">{label}</span>
         </div>
 
         {/* Skeleton mirrors the loaded card line for line. */}

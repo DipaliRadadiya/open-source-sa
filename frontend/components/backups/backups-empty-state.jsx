@@ -25,7 +25,7 @@ export function BackupsEmptyState({
 
   return (
     <>
-      <Card className="shadow-sm">
+      <Card>
         <CardContent>
           <div className="mx-auto flex max-w-lg flex-col items-center gap-5 py-10 text-center sm:py-12">
             <span className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">

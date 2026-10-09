@@ -49,14 +49,9 @@ export default async function AdminLayout({ children }) {
           <SidebarAutoCollapse />
           <AdminSidebar />
           <SidebarInset className="min-w-0">
-            {/* Header + trail form one sticky cluster, identical to the server panel. */}
+            {/* One bar with the trail in it, identical to the server panel. */}
             <div className="sticky top-0 z-20">
-              <AdminHeader />
-              <div className="border-b bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/70">
-                <div className="mx-auto w-full max-w-screen-xl px-4 py-2.5 sm:px-6 lg:px-8">
-                  <AdminBreadcrumb />
-                </div>
-              </div>
+              <AdminHeader breadcrumb={<AdminBreadcrumb />} />
             </div>
             <main id="main-content" tabIndex={-1} className="flex flex-1 flex-col">
               <div className="mx-auto w-full max-w-screen-xl flex-1 p-4 sm:p-6 lg:p-8">

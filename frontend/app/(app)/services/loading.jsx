@@ -1,21 +1,19 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { TableSkeleton } from "@/components/data-table/table-skeleton";
+import { SkCard, SkHeader, SkRows } from "@/components/ui/skeleton-kit";
 
+
+// Services: the summary line, then the installed services list.
 export default function Loading() {
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <Skeleton className="h-7 w-32" />
-        <Skeleton className="h-4 w-80" />
+    <div className="space-y-6" aria-busy="true">
+      <SkHeader />
+      <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-card px-4 py-3 shadow-e1">
+        <Skeleton className="h-4 w-48" />
+        <Skeleton className="size-8 rounded-lg" />
       </div>
-
-      <div className="space-y-4">
-        <div className="flex items-center justify-end gap-2">
-          <Skeleton className="h-4 w-36" />
-          <Skeleton className="h-9 w-9" />
-        </div>
-        <TableSkeleton rows={7} columns={4} />
-      </div>
+      <SkCard>
+        <SkRows count={8} icon={false} trailing="button" />
+      </SkCard>
     </div>
   );
 }

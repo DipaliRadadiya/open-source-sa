@@ -17,6 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { FacetSelect } from "@/components/data-table/facet-select";
 import { RefreshButton } from "@/components/data-table/refresh-button";
+import { ListCard } from "@/components/data-table/list-card";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { ClearFiltersButton } from "@/components/data-table/clear-filters-button";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
@@ -30,7 +31,7 @@ function statusLabel(restore, t) {
   return t.has(key) ? t(key) : restore.status;
 }
 
-export function RestoresList({ restores, applications = [], hasFilters = false, canRestore = false }) {
+export function RestoresList({ restores, applications = [], hasFilters = false, canRestore = false, pager = null }) {
   const t = useTranslations("backups.restores");
 
   const running = restores.some((restore) => RESTORE_IN_FLIGHT.includes(restore.status));
@@ -43,70 +44,78 @@ export function RestoresList({ restores, applications = [], hasFilters = false, 
     { id: "undo", header: t("columns.undo"), meta: { className: "w-44" }, cell: UndoCell },
   ];
 
-  return (
-    <div className="space-y-4">
-      {running ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
-
-      {/* Same filters, order and widths as the backup history tab; URL-driven, so a view is a link. */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <FacetSelect
-          paramKey="application"
-          label={t("columns.site")}
-          allLabel={t("allApplications")}
-          options={applications.map((application) => ({
-            value: String(application.id),
-            label: application.name,
-          }))}
-          className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
-        />
-        <FacetSelect
-          paramKey="status"
-          label={t("columns.status")}
-          allLabel={t("allStatuses")}
-          options={RESTORE_STATUSES.map((value) => ({ value, label: t(`statuses.${value}`) }))}
-          className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
-        />
-        <FacetSelect
-          paramKey="period"
-          label={t("columns.when")}
-          allLabel={t("anyTime")}
-          options={BACKUP_PERIODS.map((value) => ({
-            value,
-            label: t("lastDays", { count: Number(value) }),
-          }))}
-          className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
-        />
+  // Same filters, order and widths as the backup history tab; URL-driven, so a view is a link.
+  const toolbar = (
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+      <FacetSelect
+        paramKey="application"
+        label={t("columns.site")}
+        allLabel={t("allApplications")}
+        options={applications.map((application) => ({
+          value: String(application.id),
+          label: application.name,
+        }))}
+        className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
+      />
+      <FacetSelect
+        paramKey="status"
+        label={t("columns.status")}
+        allLabel={t("allStatuses")}
+        options={RESTORE_STATUSES.map((value) => ({ value, label: t(`statuses.${value}`) }))}
+        className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
+      />
+      <FacetSelect
+        paramKey="period"
+        label={t("columns.when")}
+        allLabel={t("anyTime")}
+        options={BACKUP_PERIODS.map((value) => ({
+          value,
+          label: t("lastDays", { count: Number(value) }),
+        }))}
+        className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
+      />
+      {/* Phone: the last filter and Refresh share a row, so Refresh is not left alone on one. */}
+      <div className="flex items-center gap-3 sm:contents">
         <FacetSelect
           paramKey="type"
           label={t("columns.type")}
           allLabel={t("allTypes")}
           options={BACKUP_TYPES.map((value) => ({ value, label: t(`types.${value}`) }))}
-          className="w-full sm:w-auto sm:min-w-36 sm:shrink-0"
+          className="min-w-0 flex-1 sm:w-auto sm:min-w-36 sm:flex-none sm:shrink-0"
         />
         <div className="sm:ml-auto">
           <RefreshButton />
         </div>
       </div>
+    </div>
+  );
 
+  return (
+    <div className="space-y-4">
+      {running ? <AutoRefresh intervalMs={5000} stopAfterMs={600000} /> : null}
+
+      {/* The pager hides itself when the list is too short to page. */}
       {restores.length === 0 ? (
-        <EmptyState
-          icon={RotateCcw}
-          title={hasFilters ? t("emptyFiltered.title") : t("empty.title")}
-          description={hasFilters ? t("emptyFiltered.description") : t("empty.description")}
-          // Only when filters emptied the list.
-          action={hasFilters ? <ClearFiltersButton keys={["application", "status", "period", "type", "search"]} /> : null}
-        />
+        <ListCard toolbar={toolbar}>
+          <EmptyState
+            icon={RotateCcw}
+            title={hasFilters ? t("emptyFiltered.title") : t("empty.title")}
+            description={hasFilters ? t("emptyFiltered.description") : t("empty.description")}
+            badge={hasFilters ? "search" : null}
+            // Only when filters emptied the list.
+            action={hasFilters ? <ClearFiltersButton keys={["application", "status", "period", "type", "search"]} /> : null}
+          />
+        </ListCard>
       ) : (
-        <div className="@container">
-          {/* From the widest locale: German needs ~990px of table (Actions "Wiederherstellen",
-              Restores "Was zurückgeholt wurde"), so the table starts at 1000px of content. */}
+        // The table needs 1000px of content; narrower, the rows are cards and the list has no frame.
+        <ListCard from="c1000" toolbar={toolbar} footer={pager}>
           <div className="@min-[1000px]:hidden">
             <RestoreCards restores={restores} canRestore={canRestore} />
           </div>
           <div className="hidden @min-[1000px]:block">
-            <DataTable columns={columns} data={restores} emptyMessage={t("empty.title")} meta={{ canRestore }} />
+            <DataTable bare columns={columns} data={restores} emptyMessage={t("empty.title")} meta={{ canRestore }} />
           </div>
-        </div>
+        </ListCard>
       )}
     </div>
   );

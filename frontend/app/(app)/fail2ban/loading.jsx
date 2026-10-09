@@ -1,19 +1,29 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { TableSkeleton } from "@/components/data-table/table-skeleton";
+import { SkCard, SkCentered, SkHeader, SkTabs } from "@/components/ui/skeleton-kit";
 
+
+// Fail2ban: tabs, the jails card, then the banned addresses card.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">
-      <div className="space-y-2">
-        <Skeleton className="h-7 w-32" />
-        <Skeleton className="h-4 w-80" />
-      </div>
-      <Skeleton className="h-28 w-full rounded-xl" />
-      <TableSkeleton rows={6} columns={5} />
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Skeleton className="h-56 w-full rounded-xl" />
-        <Skeleton className="h-56 w-full rounded-xl" />
-      </div>
+      <SkHeader />
+      <SkTabs count={2} />
+      <SkCard>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="flex items-center justify-between rounded-xl border p-3">
+              <div className="space-y-2">
+                <Skeleton className="h-3.5 w-24" />
+                <Skeleton className="h-3 w-36" />
+              </div>
+              <Skeleton className="h-5 w-9 rounded-full" />
+            </div>
+          ))}
+        </div>
+      </SkCard>
+      <SkCard action>
+        <SkCentered />
+      </SkCard>
     </div>
   );
 }

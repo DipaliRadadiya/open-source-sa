@@ -35,7 +35,7 @@ test("AD-E: failed server checks are not an all-clear", () => {
 });
 
 test("AD-F / AD-N: backup card", () => {
-  assert.match(page, /noneKept=\{!backupRuns\.failed && backupRuns\.meta\?\.total === /);
+  assert.match(page, /!backupRuns\.failed &&\s*backupRuns\.meta\?\.total === /);
   assert.match(backup, /noneKept \? t\("noneKept"\)/);
   assert.match(backup, /target \|\| failed \? t\("manage"\) : t\("setUp"\)/);
 });

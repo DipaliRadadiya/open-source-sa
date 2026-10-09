@@ -1,7 +1,7 @@
 // Shared sidebar nav-item styling, used by both the server and admin panel
 // sidebars so they cannot drift.
 export const NAV_ITEM_CLASS =
-  "relative h-9 pl-3 transition-colors data-[active=true]:bg-primary/10 data-[active=true]:font-medium data-[active=true]:text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] data-[active=true]:hover:bg-primary/15 data-[active=true]:hover:text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] data-[active=true]:before:absolute data-[active=true]:before:inset-y-1 data-[active=true]:before:left-0 data-[active=true]:before:w-1 data-[active=true]:before:rounded-r-full data-[active=true]:before:bg-primary group-data-[collapsible=icon]:before:hidden";
+  "relative h-9 gap-3 rounded-lg px-2.5 font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground [&_svg]:size-[18px] [&_svg]:text-muted-foreground hover:[&_svg]:text-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:hover:bg-sidebar-accent data-[active=true]:hover:text-sidebar-accent-foreground data-[active=true]:[&_svg]:text-primary";
 
 // A nav item stays active on its sub-pages (e.g. `/settings/server`). Longest
 // match wins when two items share a prefix.
@@ -103,22 +103,87 @@ export function navTitle(item, t) {
   return item.title;
 }
 
-// Returns an array to keep catalog order; raw `sub_level` is the fallback title
-// for older catalogs.
-export function groupBySubLevel(items) {
+// Groups named after what a person is trying to do, keyed on the catalog's
+// stable `name`. The catalog only knows `server` and `integration`, which left
+// eighteen items in one list. Anything not listed here keeps its catalog group
+// (Integrations does), so a new backend screen still appears.
+const GROUP_OF = {
+  dashboard: "",
+  application: "",
+  database: "data",
+  backup: "data",
+  cronjob: "data",
+  firewall: "security",
+  fail2ban: "security",
+  system_user: "security",
+  php: "software",
+  node: "software",
+  docker: "software",
+  service: "software",
+  logs: "server",
+  disk_cleaner: "server",
+  sync: "server",
+  activity_log: "server",
+  setting: "server",
+  app_dashboard: "",
+  app_domain: "website",
+  app_deployment: "website",
+  app_container: "website",
+  app_compose: "website",
+  app_file: "website",
+  app_log: "website",
+  app_backup: "copies",
+  app_staging: "copies",
+  app_clone: "copies",
+  app_security: "protection",
+  app_firewall: "protection",
+  app_bot_blocker: "protection",
+  app_fail2ban: "protection",
+  app_php: "configuration",
+  app_environment: "configuration",
+  app_worker: "configuration",
+};
+
+// Shut until needed: the screens a newcomer does not start with. Settings lives in
+// "server" (not alone at the bottom, which read as an orphan), so that group stays open.
+export const COLLAPSED_GROUPS = new Set(["software"]);
+
+// Ordered by GROUP_ORDER, catalog order inside a group. Catalog groups keep
+// their own translated title; the raw `sub_level` is the fallback for older
+// catalogs. The caller names the rest from `common.navGroups`.
+const GROUP_ORDER = ["", "data", "security", "software", "server", "website", "copies", "protection", "configuration"];
+
+export function groupNavItems(items) {
   const groups = [];
   const byKey = new Map();
 
   for (const item of items || []) {
-    const key = item.sub_level || "";
+    const mapped = Object.hasOwn(GROUP_OF, item.name) ? GROUP_OF[item.name] : null;
+    const key = mapped ?? `catalog:${item.sub_level || ""}`;
     let group = byKey.get(key);
     if (!group) {
-      group = { key, title: item.sub_level_title || key, items: [] };
+      group = {
+        key,
+        // Catalog groups carry their own (translated) title; the top group has none.
+        title: mapped === null ? item.sub_level_title || item.sub_level || null : null,
+        named: mapped !== null && mapped !== "",
+        items: [],
+      };
       byKey.set(key, group);
       groups.push(group);
     }
     group.items.push(item);
   }
 
-  return groups;
+  const rank = (group) => {
+    const index = GROUP_ORDER.indexOf(group.key);
+    return index === -1 ? 500 : index;
+  };
+  // The catalog's own `server`/`application` group is the unnamed top group.
+  for (const group of groups) {
+    if (group.key === "catalog:server" || group.key === "catalog:application") {
+      group.title = null;
+    }
+  }
+  return groups.sort((a, b) => rank(a) - rank(b));
 }

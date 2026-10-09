@@ -121,19 +121,21 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
 
       {attention.length > 0 ? (
         <Section title={t("sections.attention.title")} hint={t("sections.attention.hint")}>
-          <ServiceAttentionList
-            services={attention}
-            phpVersions={phpVersions}
-            canManage={canManage}
-            busy={busy}
-            setRowBusy={setRowBusy}
-          />
+          <div className="px-4 pb-4">
+            <ServiceAttentionList
+              services={attention}
+              phpVersions={phpVersions}
+              canManage={canManage}
+              busy={busy}
+              setRowBusy={setRowBusy}
+            />
+          </div>
         </Section>
       ) : null}
 
       {installing.length > 0 ? (
         <Section title={t("sections.installing.title")} hint={t("sections.installing.hint")}>
-          <ul className="divide-y rounded-xl border">
+          <ul className="divide-y border-t">
             {installing.map((service) => (
               <li key={service.key} className="flex items-center justify-between gap-3 p-4">
                 <p className="min-w-0 truncate text-sm font-medium">{service.label}</p>
@@ -150,7 +152,7 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
       <Section title={t("sections.running.title")} hint={t("sections.running.hint")}>
         {/* Container query, not lg: 900px is where the widest locale's headers fit. */}
         <div className="@container/svc">
-        <div className="@min-[900px]/svc:hidden">
+        <div className="px-4 pb-4 @min-[900px]/svc:hidden">
           <ServicesCards
             data={running}
             phpVersions={phpVersions}
@@ -159,7 +161,7 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
             setRowBusy={setRowBusy}
           />
         </div>
-        <div className="hidden @min-[900px]/svc:block">
+        <div className="hidden border-t @min-[900px]/svc:block">
           <ServicesTable
             data={running}
             phpVersions={phpVersions}
@@ -175,11 +177,12 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
   );
 }
 
+// A card with the panel's card head; tables inside run edge to edge.
 function Section({ title, hint, children }) {
   return (
-    <section className="space-y-3">
-      <div className="space-y-0.5">
-        <h2 className="font-semibold tracking-tight">{title}</h2>
+    <section className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-e1">
+      <div className="space-y-1 px-4 pt-4 pb-3">
+        <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
         <p className="text-sm text-muted-foreground">{hint}</p>
       </div>
       {children}

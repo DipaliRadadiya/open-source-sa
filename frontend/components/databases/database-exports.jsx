@@ -7,11 +7,13 @@ import { toast } from "sonner";
 import { useTranslations, useFormatter } from "next-intl";
 import {
   Download,
+  FileArchive,
   HardDriveDownload,
   Loader2,
   Trash2,
   TriangleAlert,
 } from "lucide-react";
+import { EmptyState } from "@/components/data-table/empty-state";
 import { createExport, getExports, deleteExport } from "@/lib/api/databases";
 import { getLiveMetrics } from "@/lib/api/server-metrics";
 import { formatBytes } from "@/lib/format/bytes";
@@ -21,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { CardIcon } from "@/components/ui/card-icon";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
@@ -170,12 +173,10 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
         {/* flex-wrap plus a minimum width on the text, so the button drops to
             its own row instead of squeezing the sentence. */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
-          <div className="flex min-w-40 flex-1 items-center gap-2.5">
-            <span className="flex shrink-0 items-center justify-center text-muted-foreground">
-              <HardDriveDownload className="size-3.5" />
-            </span>
+          <div className="flex min-w-40 flex-1 items-center gap-3">
+            <CardIcon icon={FileArchive} />
             <div>
-              <h2 className="text-base font-semibold tracking-tight">
+              <h2 className="text-[15px] font-semibold tracking-tight">
                 {t("title")}
               </h2>
               <p className="text-sm text-muted-foreground">{t("description")}</p>
@@ -217,8 +218,8 @@ export function DatabaseExports({ database, exports: initial = [], canManage, re
               />
             </div>
           ) : rows.length === 0 ? (
-            <div className="py-8 text-center">
-              <p className="text-sm text-muted-foreground">{t("empty")}</p>
+            <div className="py-5">
+              <EmptyState compact icon={HardDriveDownload} badge={null} title={t("empty")} />
             </div>
           ) : (
             <div className="divide-y">

@@ -22,8 +22,8 @@ export function AdminBreadcrumb() {
   const atRoot = pathname === "/admin";
 
   return (
-    <Breadcrumb>
-      <BreadcrumbList className="gap-1.5 sm:gap-2">
+    <Breadcrumb className="min-w-0">
+      <BreadcrumbList className="flex-nowrap gap-1.5 sm:gap-2">
         <BreadcrumbItem>
           {atRoot ? (
             <span>{t("breadcrumbRoot")}</span>
@@ -43,9 +43,10 @@ export function AdminBreadcrumb() {
         </BreadcrumbItem>
         {current && (
           <>
-            <BreadcrumbSeparator className="text-muted-foreground/50" />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{t(`nav.${current.key}`)}</BreadcrumbPage>
+            {/* A slash, as in the server panel's trail. */}
+            <BreadcrumbSeparator className="text-muted-foreground/50">/</BreadcrumbSeparator>
+            <BreadcrumbItem className="min-w-0">
+              <BreadcrumbPage className="truncate font-medium">{t(`nav.${current.key}`)}</BreadcrumbPage>
             </BreadcrumbItem>
           </>
         )}

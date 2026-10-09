@@ -61,6 +61,9 @@ export function ApplicationRowActions({
   afterDelete,
   // Where to navigate after deleting. Passed through to DeleteApplicationDialog.
   redirectTo,
+  // The header shows ⋯ as an outlined button the height of its neighbours.
+  triggerVariant = "ghost",
+  triggerClassName = "size-8",
 }) {
   const t = useTranslations("applications");
   const { refreshThen } = useRefresh();
@@ -135,7 +138,7 @@ export function ApplicationRowActions({
     <div className="text-right">
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="size-8">
+          <Button variant={triggerVariant} size="icon" className={triggerClassName}>
             {retrying || magicLogin.pending ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (

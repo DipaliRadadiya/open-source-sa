@@ -6,36 +6,49 @@ import { RotateCw } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 // A local-only engine answers 409 `restart_required`; resend with `restart_cluster: true` if confirmed.
-// `ask(error)` returns null for any other error, else a promise of the answer.
+// `retry(error, resend)` returns false for any other error. For this one it asks, and on
+// yes keeps the question open with "Restarting…" until the resend settles: closing it
+// first left the form behind it saying "Adding…" with nothing to explain why (Krishna, 8 Oct).
 export function useRestartConfirm() {
   const t = useTranslations("databases.restartForRemote");
-  const [pending, setPending] = useState(null); // { message, resolve }
+  const [pending, setPending] = useState(null); // { resolve }
+  const [busy, setBusy] = useState(false);
 
-  function ask(error) {
+  async function retry(error, resend) {
     const data = error?.response?.data;
-    if (error?.response?.status !== 409 || data?.code !== "restart_required") return null;
-    return new Promise((resolve) => setPending({ message: data.message, resolve }));
+    if (error?.response?.status !== 409 || data?.code !== "restart_required") return false;
+    const confirmed = await new Promise((resolve) => setPending({ resolve }));
+    if (!confirmed) return true;
+    setBusy(true);
+    try {
+      await resend();
+    } finally {
+      setBusy(false);
+      setPending(null);
+    }
+    return true;
   }
 
-  function answer(value) {
-    pending?.resolve(value);
+  function cancel() {
+    pending?.resolve(false);
     setPending(null);
   }
 
   const dialog = (
     <ConfirmDialog
       open={pending !== null}
-      onOpenChange={(next) => !next && answer(false)}
+      onOpenChange={(next) => !next && !busy && cancel()}
       icon={RotateCw}
       tone="warning"
       title={t("title")}
       // Own wording: the API's message is written for a developer.
       description={t("description")}
       cancelLabel={t("cancel")}
-      confirmLabel={t("confirm")}
-      onConfirm={() => answer(true)}
+      confirmLabel={busy ? t("working") : t("confirm")}
+      pending={busy}
+      onConfirm={() => pending?.resolve(true)}
     />
   );
 
-  return { ask, dialog };
+  return { retry, dialog };
 }

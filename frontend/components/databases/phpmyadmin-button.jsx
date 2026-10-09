@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -26,6 +28,9 @@ export function PhpmyadminButton({
   database,
   canManage,
   compact = false,
+  // The page header passes the filled, full-size look; rows keep the small outline.
+  variant = "outline",
+  size = "sm",
   // Null when the lookup failed (NOT "none"); must not change what the button offers.
   sites = null,
 }) {
@@ -49,7 +54,7 @@ export function PhpmyadminButton({
   // so the domain and confirmation stay the user's.
   if (state === "install") {
     return (
-      <Button asChild variant="outline" size="sm">
+      <Button asChild variant={variant} size={size}>
         <Link href="/applications/create?type=phpmyadmin">
           <Download className="size-4" />
           {t("install")}
@@ -62,7 +67,7 @@ export function PhpmyadminButton({
   if (state === "needs-user") {
     return (
       <ReasonTooltip reason={t("needsUser")}>
-        <Button type="button" variant="outline" size="sm" disabled>
+        <Button type="button" variant={variant} size={size} disabled>
           <TableProperties className="size-4" />
           {compact ? "phpMyAdmin" : t("open")}
         </Button>
@@ -106,8 +111,8 @@ export function PhpmyadminButton({
           <DropdownMenuTrigger asChild>
             <Button
               type="button"
-              variant="outline"
-              size="sm"
+              variant={variant}
+              size={size}
               disabled={!canManage || opening}
             >
               {icon}
@@ -139,8 +144,8 @@ export function PhpmyadminButton({
           click event straight to the site-id parameter. */}
       <Button
         type="button"
-        variant="outline"
-        size="sm"
+        variant={variant}
+        size={size}
         onClick={() => open()}
         disabled={!canManage || opening}
       >

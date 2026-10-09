@@ -46,9 +46,9 @@ export async function PeopleCard({ users, roles, impersonation }) {
   ].filter(Boolean);
 
   return (
-    <Card className="flex flex-col gap-0 overflow-hidden py-0 shadow-sm">
+    <Card className="flex flex-col gap-0 overflow-hidden py-0">
       <div className="border-b px-5 py-3.5">
-        <h2 className="font-heading text-base leading-snug font-semibold tracking-tight">
+        <h2 className="text-[15px] leading-snug font-semibold tracking-tight">
           {t("title")}
         </h2>
       </div>

@@ -6,19 +6,19 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { useFormatter, useTranslations } from "next-intl";
 import { formatBytes } from "@/lib/format/bytes";
-import { ChevronRight, Plus, SearchX } from "lucide-react";
+import { ArchiveRestore, ChevronRight, SearchX, AppWindow } from "lucide-react";
 import { TlsMark, isServedOverTls } from "@/components/applications/tls-mark";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { Badge } from "@/components/ui/badge";
 import { VisitSiteLink } from "@/components/applications/visit-site-link";
 import { Button } from "@/components/ui/button";
-import { phpVersionShown } from "@/lib/applications/php-version-shown";
-import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { runtimeLabel, runtimeOf } from "@/lib/applications/runtime-of";
 import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { SearchInput } from "@/components/data-table/search-input";
 import { FacetSelect } from "@/components/data-table/facet-select";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { ListCard } from "@/components/data-table/list-card";
 import { useSetQuery } from "@/hooks/use-set-query";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { SortHeader } from "@/components/data-table/sort-header";
@@ -27,6 +27,7 @@ import { measureApplicationSize } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { ApplicationEmptyState } from "@/components/applications/application-empty-state";
+import { CreateApplicationButton } from "@/components/applications/create-application-button";
 import { ApplicationRowActions } from "@/components/applications/application-row-actions";
 import { ApplicationsCards } from "@/components/applications/applications-cards";
 import { gitProviderFor } from "@/lib/applications/git-provider";
@@ -45,11 +46,62 @@ import {
  * carries the full value. */
 /* Version only (the header says PHP); an em dash where it does not apply, the
  * same as OwnerCell. */
-function PhpCell({ row }) {
-  const value = phpVersionShown(row.original);
+// PHP or Node.js with its version, a container, or plain files; the logo first so
+// the column scans by shape.
+// One plain line, no logo (Krishna, 7 Oct): the Application column already shows the logo.
+function RunsOnCell({ row }) {
+  const t = useTranslations("applications");
+  const tDocker = useTranslations("docker");
+  const runtime = runtimeOf(row.original);
+  if (!runtime) return <span className="text-muted-foreground">—</span>;
   return (
-    <span className="block truncate tabular-nums text-muted-foreground" title={value ?? undefined}>
-      {value ?? "—"}
+    <span
+      className="block whitespace-normal break-words tabular-nums text-muted-foreground"
+      title={runtimeLabel(runtime, t, tDocker, { full: true })}
+    >
+      {runtimeLabel(runtime, t, tDocker)}
+    </span>
+  );
+}
+
+// From the backup targets list: one line with an icon, as in the prototype. Red only when
+// there is something to fix; the detail behind "Failed" / "Manual only" is in the title.
+function LastBackupCell({ row, table }) {
+  const t = useTranslations("applications");
+  const standing = table.options.meta?.backupStanding?.[row.original.id];
+  if (!standing || standing.state === "unprotected") {
+    // "Not set up" is itself the way out, to the Backups tab and its "Set up backups"
+    // button. A second line for the link made every row three or four lines tall.
+    return (
+      <Link
+        href={`/applications/${row.original.id}/backups`}
+        prefetch={false}
+        title={t("backups.setUp")}
+        className="flex min-w-0 items-start gap-1.5 text-sm text-destructive"
+      >
+        <ArchiveRestore className="mt-0.5 size-4 shrink-0" aria-hidden />
+        <span className="min-w-0 whitespace-normal break-words leading-snug underline decoration-dotted decoration-destructive/50 underline-offset-4 hover:decoration-solid">
+          {t("backups.notSetUp")}
+          <span className="sr-only">: {t("backups.setUp")}</span>
+        </span>
+      </Link>
+    );
+  }
+  let text, title, tone = "text-muted-foreground";
+  if (standing.lastFailed) {
+    text = t("status.failed");
+    title = standing.when;
+    tone = "text-destructive";
+  } else if (standing.state === "paused") {
+    text = t("backups.state.paused");
+    title = standing.when ?? t("backups.never");
+  } else {
+    text = standing.when ?? t("backups.never");
+  }
+  return (
+    <span className={`flex min-w-0 items-start gap-1.5 text-sm ${tone}`} title={title}>
+      <ArchiveRestore className="mt-0.5 size-4 shrink-0" aria-hidden />
+      <span className="min-w-0 whitespace-normal break-words leading-snug">{text}</span>
     </span>
   );
 }
@@ -127,7 +179,7 @@ function ActionsCell({ row, table }) {
 
 function NameCell({ row, missingDatabase = false, gitProvider = null }) {
   const t = useTranslations("applications");
-  return <div className="flex min-w-0 items-center gap-3"><SiteTypeLogo name={row.original.site_type} provider={gitProvider} label={row.original.site_type_title ?? row.original.site_type} /><div className="min-w-0"><div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1"><Link href={`/applications/${row.original.id}`} prefetch={false} className="group inline-flex min-w-0 items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline"><span className="truncate" title={row.original.name}>{row.original.name}</span><ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></Link>{/* A copy and the site it copies sit next to each other in this list under near-identical names. Marking the copy is the difference between editing the right site and the wrong one. */}{row.original.is_staging ? <Badge variant="warning" className="shrink-0 font-normal">{t("stagingBadge")}</Badge> : null}{/* Only for a site type that needs a database and has none: its backups will not contain one, and nothing else in this list would say so. */}{missingDatabase ? <Badge variant="warning" className="shrink-0 font-normal">{t("noDatabaseBadge")}</Badge> : null}</div><div className="flex min-w-0 items-center gap-1">{/* The padlock goes beside the DOMAIN, not in a column of its own: TLS is a property of the address, which is the convention every browser already taught people, and `url` only ever describes this one domain. It also costs no width in a table that is already at 100%. */}<TlsMark application={row.original} label={isServedOverTls(row.original) ? t("domains.secured") : t("domains.noCertificate")} /><DomainText domain={row.original.domain} className="font-mono text-xs text-muted-foreground" />{row.original.status === "active" && row.original.url ? <VisitSiteLink href={row.original.url} label={t("actions.visitNamed", { domain: row.original.domain })} className="size-5" /> : null}</div></div></div>;
+  return <div className="flex min-w-0 items-center gap-3">{/* On its own tile, so marks of every shape line up. */}<span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-card shadow-e1"><SiteTypeLogo name={row.original.site_type} provider={gitProvider} label={row.original.site_type_title ?? row.original.site_type} size="h-5 w-5" /></span><div className="min-w-0"><div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1"><Link href={`/applications/${row.original.id}`} prefetch={false} className="group inline-flex min-w-0 items-center gap-1.5 font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"><span className="truncate" title={row.original.name}>{row.original.name}</span><ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></Link>{/* A copy and the site it copies sit next to each other in this list under near-identical names. Marking the copy is the difference between editing the right site and the wrong one. */}{row.original.is_staging ? <Badge variant="warning" className="shrink-0 font-normal">{t("stagingBadge")}</Badge> : null}{/* Only for a site type that needs a database and has none: its backups will not contain one, and nothing else in this list would say so. */}{missingDatabase ? <Badge variant="warning" className="shrink-0 font-normal">{t("noDatabaseBadge")}</Badge> : null}</div><div className="flex min-w-0 items-center gap-1">{/* The padlock goes beside the DOMAIN, not in a column of its own: TLS is a property of the address, which is the convention every browser already taught people, and `url` only ever describes this one domain. It also costs no width in a table that is already at 100%. */}<TlsMark application={row.original} label={isServedOverTls(row.original) ? t("domains.secured") : t("domains.noCertificate")} /><DomainText domain={row.original.domain} className="font-mono text-xs text-muted-foreground" />{row.original.status === "active" && row.original.url ? <VisitSiteLink href={row.original.url} label={t("actions.visitNamed", { domain: row.original.domain })} className="size-5" /> : null}</div></div></div>;
 }
 
 
@@ -167,6 +219,34 @@ function Filters({ statusOptions, typeOptions, t }) {
 }
 
 // `siteTypes` comes from `GET /site-types`, not the visible rows, so every type stays filterable.
+// Percentages plus `fixedLayout` bound the columns so `truncate` works. Each set totals
+// 100 at lg, xl and 2xl. Sized from the widest locale's cell at the NARROWEST table of
+// each breakpoint (704px at 1024, 960px at 1280, 1215px at 1536), measured 7 Oct:
+// Status 166px (ru "Приостановлено"; de "fehlgeschlagen" in the deploy tag 148px),
+// Last backup 132px (pt), Runs on 120px (ru), Size 93px (es "Tamaño" + sort arrow).
+// Columns join as the table widens: Size from xl, System user and Created from 2xl.
+const COLUMN_WIDTHS = {
+  withBackups: {
+    name: "w-[33%] xl:w-[38%] 2xl:w-[25%]",
+    status: "w-[24%] xl:w-[18%] 2xl:w-[14%]",
+    runsOn: "w-[17%] xl:w-[13%] 2xl:w-[10%]",
+    lastBackup: "w-[19%] xl:w-[14%] 2xl:w-[11%]",
+    owner: "hidden 2xl:table-cell 2xl:w-[13%]",
+    size: "hidden xl:table-cell xl:w-[10%] 2xl:w-[8%]",
+    created: "hidden 2xl:table-cell 2xl:w-[12%]",
+    actions: "w-[7%]",
+  },
+  withoutBackups: {
+    name: "w-[52%] xl:w-[52%] 2xl:w-[36%]",
+    status: "w-[24%] xl:w-[18%] 2xl:w-[14%]",
+    runsOn: "w-[17%] xl:w-[13%] 2xl:w-[10%]",
+    owner: "hidden 2xl:table-cell 2xl:w-[15%]",
+    size: "hidden xl:table-cell xl:w-[10%] 2xl:w-[8%]",
+    created: "hidden 2xl:table-cell 2xl:w-[10%]",
+    actions: "w-[7%]",
+  },
+};
+
 export function ApplicationsTable(props) {
   // One transition shared by search, filters and pager, so the table shows
   // pending state while the server answers.
@@ -189,8 +269,13 @@ function ApplicationsList({
   // `git_account_id` → provider, resolved on the server. Empty (generic git mark)
   // when not needed, not permitted, or the fetch failed.
   gitProviders = new Map(),
+  // Application id → backup standing; null when the reader cannot see backups or the
+  // list could not be read, and then the column is left out.
+  backupStanding = null,
 }) {
   const t = useTranslations("applications");
+  const withBackups = backupStanding !== null;
+  const widths = COLUMN_WIDTHS[withBackups ? "withBackups" : "withoutBackups"];
   const tCommon = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -212,41 +297,33 @@ function ApplicationsList({
   const hasWorkingApplication = applications.some((application) => application.status === "pending" || application.status === "provisioning");
   useEffect(() => { if (!hasWorkingApplication) return undefined; const timer = window.setInterval(() => router.refresh(), 4000); return () => window.clearInterval(timer); }, [hasWorkingApplication, router]);
 
-  // Shown disabled to viewers, with the reason, like other pages' primary action.
-  const createButton = canManage ? (
-    <Button asChild><Link href="/applications/create"><Plus className="size-4" />{t("create")}</Link></Button>
-  ) : (
-    <ReasonTooltip reason={t("noPermission")}>
-      <Button disabled><Plus className="size-4" />{t("create")}</Button>
-    </ReasonTooltip>
-  );
   const columns = useMemo(
     () => [
-      // `col` must be on the API's sort whitelist (else 422). Percentages plus
-      // `fixedLayout` bound the columns so `truncate` works.
-      { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, meta: { className: "w-[32%] xl:w-[29%]", sortKey: "name" }, cell: ({ row }) => <NameCell row={row} missingDatabase={missingDatabase.has(row.original.id)} gitProvider={gitProviderFor(row.original, gitProviders)} /> },
-      // Widths must total 100 at lg (32+8+16+23+14+7) and xl (29+7+14+19+11+14+6),
-      // or `fixedLayout` squeezes a column.
-      { id: "php", header: t("columns.php"), meta: { className: "w-[8%] xl:w-[7%]" }, cell: PhpCell },
-      { accessorKey: "status", header: () => <SortHeader col="status">{t("columns.status")}</SortHeader>, meta: { className: "w-[16%] xl:w-[14%]", sortKey: "status" }, cell: StatusCell },
+      // `col` must be on the API's sort whitelist (else 422). Status sits right after
+      // the name: beside it, PHP's short value read as part of the domain (7 Oct).
+      { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, meta: { className: widths.name, sortKey: "name" }, cell: ({ row }) => <NameCell row={row} missingDatabase={missingDatabase.has(row.original.id)} gitProvider={gitProviderFor(row.original, gitProviders)} /> },
+      { accessorKey: "status", header: () => <SortHeader col="status">{t("columns.status")}</SortHeader>, meta: { className: widths.status, sortKey: "status" }, cell: StatusCell },
+      { id: "runsOn", header: t("columns.runsOn"), meta: { className: `${widths.runsOn} h-auto min-h-10 whitespace-normal` }, cell: RunsOnCell },
+      ...(withBackups ? [{ id: "lastBackup", header: t("columns.lastBackup"), meta: { className: `${widths.lastBackup} h-auto min-h-10 whitespace-normal` }, cell: LastBackupCell }] : []),
       // Sized for the widest locale's header (ru). Wraps below xl; `h-auto min-h-11`
       // because TableHead fixes 44px.
-      { id: "owner", header: t("columns.owner"), meta: { className: "w-[23%] xl:w-[19%] h-auto min-h-11 whitespace-normal" }, cell: OwnerCell },
+      { id: "owner", header: t("columns.owner"), meta: { className: `${widths.owner} h-auto min-h-11 whitespace-normal` }, cell: OwnerCell },
       // descFirst: largest and newest first is what people look for.
-      { id: "size", header: () => <SortHeader col="directory_size_bytes" descFirst>{t("columns.size")}</SortHeader>, meta: { className: "w-[14%] xl:w-[11%]", sortKey: "directory_size_bytes" }, cell: SizeCell },
-      { id: "created", header: () => <SortHeader col="created_at" descFirst>{t("columns.created")}</SortHeader>, meta: { className: "hidden xl:table-cell xl:w-[14%]", sortKey: "created_at" }, cell: CreatedCell },
-      { id: "actions", header: "", meta: { className: "w-[7%] xl:w-[6%]" }, cell: ActionsCell },
+      { id: "size", header: () => <SortHeader col="directory_size_bytes" descFirst>{t("columns.size")}</SortHeader>, meta: { className: widths.size, sortKey: "directory_size_bytes" }, cell: SizeCell },
+      { id: "created", header: () => <SortHeader col="created_at" descFirst>{t("columns.created")}</SortHeader>, meta: { className: widths.created, sortKey: "created_at" }, cell: CreatedCell },
+      { id: "actions", header: "", meta: { className: widths.actions }, cell: ActionsCell },
     ],
     // `missingDatabase` is a dependency: attaching a database refreshes the route,
     // and a stale closure would keep the badge.
-    [t, missingDatabase],
+    [t, missingDatabase, withBackups, widths],
   );
 
   const filters = <Filters statusOptions={statusOptions} typeOptions={typeOptions} t={t} />;
   const toolbar = (
     <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
       {filters}
-      <div className="flex flex-wrap items-center gap-2"><RefreshButton />{createButton}</div>
+      {/* Create sits with Refresh in the table's own toolbar (Krishna, 6 Oct). */}
+      <div className="flex flex-wrap items-center gap-2"><RefreshButton /><CreateApplicationButton canManage={canManage} /></div>
     </div>
   );
 
@@ -255,10 +332,10 @@ function ApplicationsList({
 
   if (!applications.length) {
     return (
-      <div className="space-y-4">
-        {toolbar}
+      <ListCard toolbar={toolbar}>
         <EmptyState
           icon={SearchX}
+          subject={AppWindow}
           title={t("empty.filteredTitle")}
           action={
             <Button
@@ -270,18 +347,17 @@ function ApplicationsList({
             </Button>
           }
         />
-      </div>
+      </ListCard>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {toolbar}
+    // Below lg the rows are cards of their own, so the list drops its frame there.
+    <ListCard from="lg" toolbar={toolbar} footer={<DataTablePagination meta={meta} />}>
       {/* Cards below lg, the table from lg up. */}
       <div className="lg:hidden"><ApplicationsCards applications={applications} canManage={canManage} canMagicLogin={canMagicLogin} gitProviders={gitProviders} /></div>
       {/* fixedLayout so the column percentages are obeyed, not treated as hints. */}
-      <div className="hidden lg:block"><DataTable columns={columns} data={applications} meta={{ canManage, canMagicLogin }} fixedLayout /></div>
-      <DataTablePagination meta={meta} />
-    </div>
+      <div className="hidden lg:block"><DataTable columns={columns} data={applications} meta={{ canManage, canMagicLogin, backupStanding }} fixedLayout bare roomy /></div>
+    </ListCard>
   );
 }

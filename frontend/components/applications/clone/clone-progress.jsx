@@ -91,7 +91,7 @@ export function CloneProgress({ clone: initial, sourceApplication, onDone, onAga
   const stepsMatch = total === STEP_KEYS.length;
 
   return (
-    <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+    <Card className="gap-0 overflow-hidden py-0">
       <div className="flex items-start gap-3 border-b px-5 py-4">
         <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10">
           <Loader2 className="size-6 animate-spin text-primary" aria-hidden />
@@ -194,7 +194,7 @@ function Completed({ clone, sourceApplication, onAgain }) {
     clone.domain && destinationName.toLowerCase() !== clone.domain.toLowerCase();
 
   return (
-    <Card className="h-full gap-0 overflow-hidden border-success/30 py-0 shadow-sm">
+    <Card className="h-full gap-0 overflow-hidden border-success/30 py-0">
       <CardContent className="flex h-full flex-col p-0">
         <div className="flex items-start gap-3 border-b bg-success/[0.04] px-5 py-5 sm:gap-4 sm:px-6">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-success/10 ring-1 ring-success/15">
@@ -217,7 +217,7 @@ function Completed({ clone, sourceApplication, onAgain }) {
         <div className="flex-1 space-y-4 px-5 py-5 sm:px-6">
           <dl className="grid gap-2 rounded-xl border bg-muted/20 p-3 sm:grid-cols-[minmax(0,1fr)_2.5rem_minmax(0,1.2fr)] sm:items-stretch">
             <div className="min-w-0 rounded-lg border bg-background/80 px-3 py-2.5">
-              <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <dt className="text-xs font-medium text-muted-foreground">
                 {t("source")}
               </dt>
               <dd className="mt-1 truncate text-sm font-medium">{sourceName ?? "—"}</dd>
@@ -234,7 +234,7 @@ function Completed({ clone, sourceApplication, onAgain }) {
             </span>
 
             <div className="min-w-0 rounded-lg border border-success/20 bg-success/[0.06] px-3 py-2.5">
-              <dt className="text-xs font-medium uppercase tracking-wide text-success">
+              <dt className="text-xs font-medium text-success">
                 {t("destination")}
               </dt>
               <dd className="mt-1 flex min-w-0 items-center gap-1.5">
@@ -292,7 +292,7 @@ function Failed({ clone, onAgain }) {
   const t = useTranslations("applications.clone.progress");
 
   return (
-    <Card className="gap-0 overflow-hidden border-destructive/30 py-0 shadow-sm">
+    <Card className="gap-0 overflow-hidden border-destructive/30 py-0">
       <CardContent className="space-y-4 px-5 py-5">
         <div className="flex items-start gap-3">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-destructive/10">
@@ -336,7 +336,7 @@ export function CloneNextSteps({ applicationId, sourceProtected, sourceHasReposi
   ];
 
   return (
-    <Card className="h-full gap-0 overflow-hidden py-0 shadow-sm">
+    <Card className="h-full gap-0 overflow-hidden py-0">
       <div className="border-b px-5 py-4">
         <h2 className="font-semibold tracking-tight">{t("title")}</h2>
         <p className="text-sm text-muted-foreground">{t("subtitle", { count: steps.length + (webhook?.url ? 1 : 0) })}</p>

@@ -207,9 +207,10 @@ test("both clocks are named, not just the older one", () => {
    * and left the block above unnamed — so the page read as some charts, then a
    * section. The live group gets a peer heading.
    */
-  assert.match(section, /title=\{t\("liveLabel"\)\}/);
+  // No leading icon since the redesign: card titles are words, as in the prototype.
+  assert.match(section, /<CardTitle as="h2">\s*\{t\("liveLabel"\)\}/);
   assert.match(section, /title=\{t\("historyLabel"\)\}/);
-  assert.match(section, /<h2 className="flex items-center gap-2 text-sm font-semibold">/);
+  assert.match(section, /<h2 className="text-base font-semibold tracking-tight">/);
 
   // And the old floating label is gone rather than left beside the new one.
   const code = section.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
@@ -223,7 +224,12 @@ test("the cards inside a section drop to h3", () => {
    * Processes keeps h2 — it is a direct child of the page, not of a section.
    */
   // Attribute, not the opening line: the tag is wrapped across lines now.
-  assert.match(chartCard, /<CardTitle\s[\s\S]{0,80}?as="h3"/);
+  assert.match(chartCard, /headingLevel = "h3"/);
+  assert.match(chartCard, /<CardTitle\s[\s\S]{0,80}?as=\{headingLevel\}/);
+  // The live pair has no section above it, so it is h2 rather than skipping a level.
+  for (const file of ["network-io-chart", "disk-io-chart"]) {
+    assert.match(fs.readFileSync(`components/dashboard/${file}.jsx`, "utf8"), /headingLevel="h2"/);
+  }
   assert.match(
     fs.readFileSync("components/dashboard/processes-card.jsx", "utf8"),
     /<CardTitle as="h2"/,
@@ -232,18 +238,18 @@ test("the cards inside a section drop to h3", () => {
 
 test("the live pill belongs to the live heading", () => {
   // As a floating row above the cards it belonged to nothing in particular.
-  assert.match(section, /<SectionHeading icon=\{Radio\} title=\{t\("liveLabel"\)\}>\s*<LiveStatus/);
+  assert.match(section, /<CardAction[^>]*>\s*<LiveStatus/);
 });
 
-test("the info tiles leave no hole at the two-column step", () => {
+test("the server facts fill whole rows at every width", () => {
   /*
-   * Five tiles with identity spanning two: at `sm` that leaves the kernel alone
-   * on the last row with an empty cell beside it. Found by rendering at 768px,
-   * where it was the only ragged edge on the page — a gap no single-width
-   * screenshot shows, because at 1440 all five sit on one line.
+   * Eight facts: four across at xl, two across below — never a lone tile. No IP
+   * or uptime: the banner shows both (Krishna, 6 Oct).
    */
   const info = fs.readFileSync("components/dashboard/server-info-card.jsx", "utf8");
-  assert.match(info, /className="sm:col-span-2 xl:col-span-1"/);
+  assert.match(info, /<dl className="grid gap-x-4 gap-y-1 sm:grid-cols-2 xl:grid-cols-4">/);
+  assert.equal((info.match(/<Fact icon=/g) ?? []).length, 8);
+  assert.doesNotMatch(info, /info\.ip"|info\.uptime"/);
 });
 
 /* -------------------------------------------------------------------------
@@ -264,7 +270,7 @@ test("a reading is named in words, not with a bare arrow glyph", () => {
     const code = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
     assert.doesNotMatch(code, /[↓↑]/, `${file} still labels a reading with an arrow`);
     assert.match(code, /label=\{t\("charts\./, `${file} does not name its series`);
-    assert.match(code, /dotClassName="bg-chart-[12]"/, `${file} lost its series colour`);
+    assert.match(code, /dotClassName="bg-chart-[1-5]"/, `${file} lost its series colour`);
   }
 });
 
@@ -406,11 +412,12 @@ test("the services line says something in every case it can be in", () => {
   );
 });
 
-test("the runtimes are in a real footer, not a bordered row of content", () => {
-  // As a plain div they sat in the card's own padding with a hairline above,
-  // so when the services half was empty they read as an unfinished line.
-  assert.match(info, /<CardFooter/);
-  assert.match(info, /import \{ Card, CardContent, CardFooter \}/);
+test("server information is one full-width card with the main software as equal tiles", () => {
+  // Krishna, 6 Oct: nothing beside it to leave a hole, and the tiles fill the width.
+  assert.match(info, /<MainSoftware\b/);
+  assert.match(info, /<ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">/);
+  const page = fs.readFileSync("app/(app)/dashboard/page.jsx", "utf8");
+  assert.doesNotMatch(page, /xl:grid-cols-\[minmax\(0,1fr\)_22rem\]/);
 });
 
 test("the empty-services wording is the one the Services page already ships", () => {
@@ -451,9 +458,10 @@ test("only the 24h cards collapse when empty", () => {
 
 test("the compact empty state is opt-in, so 32 other screens keep theirs", () => {
   assert.match(emptyState, /compact = false/);
-  // Solid and filled inside a card; dashed only when it fills a page, where
-  // "nothing here, put something here" is the right note.
-  assert.match(emptyState, /compact \? "gap-2 bg-muted\/40 px-6 py-8" : "gap-3 border border-dashed/);
+  // Solid and filled inside a card; on its own a card with the brand-tinted icon
+  // tile (the redesign, 6 Oct), and frameless if it lands inside a card anyway.
+  assert.match(emptyState, /\? "gap-2 bg-muted\/40 px-6 py-6"\s*: cn\(\s*"gap-3 rounded-2xl border border-border\/70 bg-card/);
+  assert.match(emptyState, /in-data-\[slot=card\]:border-0/);
 });
 
 test("the two no-rows states describe themselves and not each other", () => {

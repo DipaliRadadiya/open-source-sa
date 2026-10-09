@@ -65,7 +65,10 @@ test("colours come from the resolved tokens, never from literals", () => {
 
   assert.equal(option.series[0].lineStyle.color, TOKENS["chart-1"]);
   assert.equal(option.series[1].lineStyle.color, TOKENS["chart-2"]);
-  assert.equal(option.series[0].areaStyle.color, TOKENS["chart-1"]);
+  // The fill fades from the series colour to nothing (redesign, 6 Oct).
+  const stops = option.series[0].areaStyle.color.colorStops;
+  assert.equal(stops.length, 2);
+  assert.ok(stops.every((stop) => String(stop.color).length > 0));
 
   // An unresolved token must not fall back to an invented colour.
   const unresolved = timeSeriesOption({ data: DATA, series: SERIES, tokens: {} });

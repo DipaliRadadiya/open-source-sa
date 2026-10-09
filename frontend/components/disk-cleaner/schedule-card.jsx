@@ -127,7 +127,7 @@ export function ScheduleCard({ schedule, categories, canManage }) {
 
   return (
     <>
-      <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+      <Card className="gap-0 overflow-hidden py-0">
         <CardContent className="px-4 py-3.5">
           <div className="flex items-center gap-2">
             <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">

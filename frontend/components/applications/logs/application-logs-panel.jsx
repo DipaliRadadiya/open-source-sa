@@ -300,32 +300,29 @@ export function ApplicationLogsPanel({
       onValueChange={selectSource}
       className="gap-4"
     >
-      {/* Tabs, not a rail: a site has only 2–3 sources. Scrolls rather than
-          wraps; ScrollFade signals more to the side. */}
-      <ScrollFade className="-mx-1 px-1 pb-1">
-        <TabsList className="!h-auto w-fit gap-1 p-1">
-          {sources.map((s) => (
-            <TabsTrigger
-              key={s.key}
-              value={s.key}
-              className="!h-auto gap-2 px-4 py-2"
-            >
-              {s.label}
-              {!s.exists ? (
-                <span className="text-xs font-normal text-muted-foreground">
-                  {tApp("empty.badge")}
-                </span>
-              ) : null}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </ScrollFade>
-
       {/* Target of the tabs' aria-controls; text size and flex reset so the console is unchanged. */}
       <TabsContent value={current ?? ""} className="flex-none text-[length:inherit]">
       <section className="flex h-[calc(100svh-16rem)] min-h-[34rem] flex-col overflow-hidden rounded-xl border bg-card shadow-sm lg:min-h-[24rem]">
         <LogToolbar
           label={source?.label ?? t("noSource")}
+          // The source switch IS the card's title: a strip above the card and the same
+          // name as its heading said it twice (7 Oct). Scrolls rather than wraps.
+          heading={
+            <ScrollFade className="-my-1 min-w-0 py-1">
+              <TabsList className="!h-auto w-fit gap-1 p-1">
+                {sources.map((s) => (
+                  <TabsTrigger key={s.key} value={s.key} className="!h-auto gap-2 px-3.5 py-1.5">
+                    {s.label}
+                    {!s.exists ? (
+                      <span className="text-xs font-normal text-muted-foreground">
+                        {tApp("empty.badge")}
+                      </span>
+                    ) : null}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </ScrollFade>
+          }
           shown={visible.length}
           loaded={lines.length}
           wholeFile={!truncated && lines.length > 0}

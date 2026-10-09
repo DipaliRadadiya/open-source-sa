@@ -1,4 +1,4 @@
-import { phpVersionShown } from "@/lib/applications/php-version-shown";
+import { runtimeLabel, runtimeOf } from "@/lib/applications/runtime-of";
 import Link from "@/components/ui/app-link";
 import { useFormatter, useTranslations } from "next-intl";
 import { ChevronRight } from "lucide-react";
@@ -20,6 +20,7 @@ export function ApplicationsCards({
   gitProviders = new Map(),
 }) {
   const t = useTranslations("applications");
+  const tDocker = useTranslations("docker");
   const format = useFormatter();
 
   return (
@@ -76,9 +77,11 @@ export function ApplicationsCards({
             </span>
             {/* Omitted, not dashed, when the API has no version: in a wrapped list a dash
                 reads as a value. Node and static sites have none. */}
-            {phpVersionShown(application) ? (
+            {/* What it runs on, as in the table's Runs on column. Only PHP and Node: for
+                static and Docker the type beside it already says it ("Static site · Static files"). */}
+            {["php", "node"].includes(runtimeOf(application)?.kind) ? (
               <span className="whitespace-nowrap tabular-nums">
-                {t("phpFact", { version: phpVersionShown(application) })}
+                {runtimeLabel(runtimeOf(application), t, tDocker)}
               </span>
             ) : null}
             <span className="truncate font-mono">{application.system_user?.username ?? "—"}</span>

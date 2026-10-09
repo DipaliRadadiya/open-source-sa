@@ -60,7 +60,8 @@ test("the stale-certificate banner renders only on a definite yes", () => {
    */
   assert.match(ssl, /const healthy = !expired && !servingStale && !hasCoverageGap;/);
   assert.match(ssl, /icon=\{healthy \? ShieldCheck : ShieldAlert\}/);
-  assert.match(ssl, /<Card>/, "the outer frame takes no state class in any state");
+  // Layout classes only (7 Oct compact card); never a state class.
+  assert.match(ssl, /<Card className="gap-0 py-0" aria-label=\{t\("ssl\.sectionTitle"\)\}>/, "the outer frame takes no state class in any state");
   /*
    * Neutral, not red. Making it use the expired tone turned the frame, the
    * alert and the Remove button all red at once, and a wall of red says

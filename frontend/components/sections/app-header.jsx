@@ -11,7 +11,7 @@ import { UserMenu } from "@/components/sections/user-menu";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { useUnsaved } from "@/components/ui/unsaved-guard";
 
-export function AppHeader({ impersonating = false }) {
+export function AppHeader({ impersonating = false, breadcrumb = null }) {
   const user = useUser();
   const t = useTranslations("admin");
   const tAccount = useTranslations("account");
@@ -21,10 +21,13 @@ export function AppHeader({ impersonating = false }) {
   return (
     // Stickiness belongs to the layout's wrapping cluster. Small screens get a 44px
     // touch box without changing the controls' visual size.
-    <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-6 max-sm:[&_button]:min-h-11 max-sm:[&_button]:min-w-11">
-      {/* The trail lives at the top of the page content, where it has the page's width. */}
+    <header className="flex h-16 shrink-0 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70 sm:px-6 max-sm:[&_button]:min-h-11 max-sm:[&_button]:min-w-11">
       <SidebarToggle />
-      <div className="ml-auto flex items-center gap-2">
+      {/* min-w-0 so a long trail truncates instead of pushing the controls off screen.
+          Hidden on a phone: beside the controls it shrank to "Appli… > Q…"; the page
+          title and the sidebar's way back carry it there. */}
+      <div className="min-w-0 flex-1 max-sm:invisible">{breadcrumb}</div>
+      <div className="flex shrink-0 items-center gap-2">
         <LocaleSwitcher />
         <ThemeToggle />
         <UserMenu

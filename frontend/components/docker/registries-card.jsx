@@ -236,8 +236,7 @@ export function RegistriesCard({ initialRegistries, canManage }) {
     <>
       <Card>
         <CardHeader className="flex-row items-center justify-between gap-4 space-y-0">
-          <CardTitle className="flex items-center gap-2">
-            <KeyRound className="size-4" />
+          <CardTitle>
             {t("title")}
           </CardTitle>
           {canManage && editing === null ? (

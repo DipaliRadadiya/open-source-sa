@@ -13,8 +13,6 @@ import {
   Check,
   Clock,
   Copy,
-  CopyCheck,
-  ListChecks,
   Loader2,
   Lock,
   TriangleAlert,
@@ -244,18 +242,15 @@ export function CloneApplicationPanel({
   return (
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
       <div className="space-y-6">
-        {/* Pre-flight list sits under the form so both columns are roughly equal height. */}
-        <div className="grid gap-6 lg:grid-cols-12 lg:items-stretch">
-          <div className="min-w-0 space-y-6 lg:col-span-7">
+        {/* One form card (fields left, what to do first right), then what gets copied in
+            two columns. Two tall side-by-side cards left one half mostly empty (7 Oct). */}
+        <div className="space-y-6">
+          <div className="min-w-0">
             <PanelCard>
-              {/* The one filled mark on the page, as on the Deployments hero. */}
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2.5 text-base font-semibold">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-e1">
-                    <Copy className="size-4.5" />
-                  </span>
-                  {t("create.title")}
-                </CardTitle>
+              {/* Same card shape as the rest of the panel: title and one line, then a rule.
+                  No icon chips on titles (7 Oct). */}
+              <CardHeader className="border-b">
+                <CardTitle as="h2">{t("create.title")}</CardTitle>
                 <CardDescription>
                   {t("create.subtitle", { name: application.name })}
                 </CardDescription>
@@ -266,7 +261,11 @@ export function CloneApplicationPanel({
                   onSubmit={form.handleSubmit(() => setConfirming(true))}
                   className="flex flex-col gap-(--card-spacing)"
                 >
-                  <CardContent className="space-y-5 border-t pt-(--card-spacing)">
+                  <CardContent className="space-y-5">
+                    <div className="@container min-w-0 space-y-5">
+                    {/* Side by side: one under the other left the right half of each field
+                        empty (Krishna, 7 Oct). Equal widths: an uneven split read as a mistake. */}
+                    <div className="grid gap-5 @lg:grid-cols-2 @lg:items-start">
                     <FormField
                       control={form.control}
                       name="domain"
@@ -286,23 +285,26 @@ export function CloneApplicationPanel({
                             />
                           </FormControl>
 
-                          {/* Suggestion chip; skips domains already in use. */}
+                          {/* A one-click suggestion, as a line under the field (a chip
+                              repeated the placeholder above it). Skips domains in use. */}
                           {canManage && suggestion && !field.value ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                form.setValue("domain", suggestion, {
-                                  shouldDirty: true,
-                                });
-                                // The chip unmounts once the field has a value,
-                                // which would drop keyboard focus.
-                                form.setFocus("domain");
-                              }}
-                              className="inline-flex w-fit items-center gap-1.5 rounded-full border bg-muted/60 px-2.5 py-1 font-mono text-xs transition-colors hover:bg-muted"
-                            >
-                              <Copy className="size-3 shrink-0 text-muted-foreground" />
-                              {suggestion}
-                            </button>
+                            <p className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
+                              {t("form.suggested")}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  form.setValue("domain", suggestion, {
+                                    shouldDirty: true,
+                                  });
+                                  // The line unmounts once the field has a value,
+                                  // which would drop keyboard focus.
+                                  form.setFocus("domain");
+                                }}
+                                className="min-w-0 rounded font-mono font-medium break-all text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                              >
+                                {suggestion}
+                              </button>
+                            </p>
                           ) : null}
 
                           {domainTaken ? (
@@ -333,35 +335,18 @@ export function CloneApplicationPanel({
                         </FormItem>
                       )}
                     />
+                    </div>
+                    </div>
+                    {/* What to do first, full width under the fields: beside them it left empty
+                        space under the fields at 1440 and squeezed them at 1024 (7 Oct). */}
+                    <BeforeNotes sourceProtected={application.basic_auth_enabled} />
                   </CardContent>
 
-                  {/* Source → target summary beside the submit button; the
-                    target domain fills in as it is typed. */}
-                  <CardFooter className="flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    {canManage ? (
-                      <div className="flex min-w-0 items-center gap-2.5">
-                        <SiteChip
-                          name={application.name}
-                          domain={application.domain}
-                        />
-                        <ArrowRight
-                          className="size-4 shrink-0 text-muted-foreground"
-                          aria-hidden
-                        />
-                        {target ? (
-                          <SiteChip
-                            name={name?.trim() || defaultName}
-                            domain={target}
-                            highlight
-                          />
-                        ) : (
-                          <span className="rounded-lg border border-dashed px-3 py-2 font-mono text-xs text-muted-foreground">
-                            {t("create.placeholder")}
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
+                  {/* Just the button: a source → copy line beside it cut both domains short,
+                      and the field above and the confirm dialog already show the copy's domain. */}
+                  <CardFooter className="flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
+                    {canManage ? null : (
+                      <p className="text-sm text-muted-foreground sm:mr-auto">
                         {t("form.noPermission")}
                       </p>
                     )}
@@ -382,16 +367,15 @@ export function CloneApplicationPanel({
                 </form>
               </Form>
             </PanelCard>
-
-            <BeforeCard sourceProtected={application.basic_auth_enabled} />
           </div>
 
+          {/* Its own card again: inside the form card it made one crowded block (7 Oct). */}
           <ImpactCard
             siteType={siteType}
             application={application}
             sourceProtected={application.basic_auth_enabled}
-            className="min-w-0 lg:col-span-5"
           />
+
         </div>
 
         {copies.length ? <ExistingCopies copies={copies} /> : null}
@@ -449,41 +433,6 @@ function PanelCard({ className, children }) {
   );
 }
 
-/** The tinted mark the three supporting cards share. */
-function CardMark({ icon: Icon, tone = "primary" }) {
-  return (
-    <span
-      className={cn(
-        "flex size-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset",
-        tone === "warning"
-          ? "bg-warning/10 text-warning ring-warning/20"
-          : "bg-primary/10 text-primary ring-primary/20",
-      )}
-    >
-      <Icon className="size-4.5" />
-    </span>
-  );
-}
-
-/** A site as a chip: name over domain. The target one is tinted. */
-function SiteChip({ name, domain, highlight = false }) {
-  return (
-    <span
-      className={cn(
-        "flex min-w-0 flex-col rounded-lg border px-3 py-1.5",
-        highlight ? "border-primary/30 bg-primary/5" : "bg-background",
-      )}
-    >
-      <span className="truncate text-sm font-medium" title={name}>
-        {name}
-      </span>
-      <span className="font-mono text-xs break-all text-muted-foreground">
-        {domain}
-      </span>
-    </span>
-  );
-}
-
 // The empty form here would invite a second clone of a site already being copied.
 function Resuming() {
   const t = useTranslations("applications.clone.progress");
@@ -502,18 +451,17 @@ function Resuming() {
 }
 
 // No `truncate` (it cut labels mid-word). Not-copied items use foreground text so they don't read as disabled.
-function ImpactCard({ siteType, application, sourceProtected, className }) {
+function ImpactCard({ siteType, application, sourceProtected }) {
   const t = useTranslations("applications.clone.what");
 
   return (
-    <PanelCard className={className}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2.5 text-base font-semibold">
-          <CardMark icon={ListChecks} />
-          {t("title")}
-        </CardTitle>
+    <PanelCard>
+      <CardHeader className="border-b">
+        <CardTitle as="h2">{t("title")}</CardTitle>
       </CardHeader>
-      <CardContent className="divide-y border-t pt-0!">
+      {/* Two lines, label then the items running across: as two columns of lists the
+          card was mostly empty space (7 Oct). */}
+      <CardContent className="@container space-y-3">
         <ImpactList
           ok
           title={t("carries")}
@@ -538,15 +486,15 @@ function ImpactCard({ siteType, application, sourceProtected, className }) {
 
 function ImpactList({ ok = false, title, items, warn = null }) {
   return (
-    <div className="py-(--card-spacing)">
-      <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+    <div className="flex flex-col gap-x-6 gap-y-2 @md:flex-row @md:items-baseline">
+      <p className="shrink-0 text-xs font-semibold text-muted-foreground @md:w-32">
         {title}
       </p>
-      <ul className="mt-3 space-y-2.5">
+      <ul className="flex flex-wrap gap-x-5 gap-y-2">
         {items.map(({ key, label }) => {
           const warned = key === warn;
           return (
-            <li key={key} className="flex items-center gap-2.5 text-sm">
+            <li key={key} className="flex items-center gap-1.5 text-sm">
               {ok ? (
                 <Check className="size-4 shrink-0 text-success" aria-hidden />
               ) : (
@@ -569,7 +517,7 @@ function ImpactList({ ok = false, title, items, warn = null }) {
   );
 }
 
-function BeforeCard({ sourceProtected }) {
+function BeforeNotes({ sourceProtected }) {
   const t = useTranslations("applications.clone");
 
   const items = [
@@ -581,34 +529,25 @@ function BeforeCard({ sourceProtected }) {
   ];
 
   return (
-    <PanelCard>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2.5 text-base font-semibold">
-          <CardMark icon={TriangleAlert} tone="warning" />
-          {t("before.title")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="border-t pt-(--card-spacing)">
-        {/* One per line: as columns each sentence wrapped three times. */}
-        <ul className="space-y-4">
-          {items.map(({ key, icon: Icon, tone }) => (
-            <li key={key} className="flex items-start gap-3 text-sm">
-              <span
-                className={cn(
-                  "flex size-8 shrink-0 items-center justify-center rounded-lg",
-                  tone === "warning"
-                    ? "bg-warning/10 text-warning"
-                    : "bg-muted text-muted-foreground",
-                )}
-              >
-                <Icon className="size-4" aria-hidden />
-              </span>
-              <span className="leading-6">{t(`warnings.${key}`)}</span>
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-    </PanelCard>
+    <div className="h-fit rounded-xl border bg-muted/30 p-4">
+      <p className="text-sm font-semibold">{t("before.title")}</p>
+      {/* One per line: as columns each sentence wrapped three times. */}
+      <ul className="mt-3 space-y-3">
+        {items.map(({ key, icon: Icon, tone }) => (
+          <li key={key} className="flex items-start gap-2.5 text-sm">
+            <span
+              className={cn(
+                "flex size-7 shrink-0 items-center justify-center rounded-lg",
+                tone === "warning" ? "bg-warning/10 text-warning" : "bg-muted text-muted-foreground",
+              )}
+            >
+              <Icon className="size-3.5" aria-hidden />
+            </span>
+            <span className="pt-0.5 text-muted-foreground">{t(`warnings.${key}`)}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -660,17 +599,14 @@ function ExistingCopies({ copies }) {
 
   return (
     <PanelCard>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2.5 text-base font-semibold">
-          <CardMark icon={CopyCheck} />
-          {t("title", { count: copies.length })}
-        </CardTitle>
-        <CardAction>
+      <CardHeader className="items-center border-b">
+        <CardTitle as="h2">{t("title", { count: copies.length })}</CardTitle>
+        <CardAction className="row-span-1 self-center">
           <RefreshButton className="size-8" />
         </CardAction>
       </CardHeader>
 
-      <CardContent className="border-t p-0!">
+      <CardContent className="-mt-(--card-spacing) p-0!">
         <ul className="divide-y">
           {copies.map((copy) => (
             <li key={copy.id}>

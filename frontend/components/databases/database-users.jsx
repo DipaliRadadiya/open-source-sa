@@ -3,18 +3,14 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
-import {
-  KeyRound,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Trash2,
-  Users,
-} from "lucide-react";
+import { KeyRound, MoreHorizontal, Pencil, Plus, Trash2, Users } from "lucide-react";
+import { EmptyState } from "@/components/data-table/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CopyButton } from "@/components/ui/copy-button";
+import { CardIcon } from "@/components/ui/card-icon";
+import { ConnectionString } from "@/components/databases/connection-string";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
   DropdownMenu,
@@ -31,7 +27,7 @@ import { MenuItemHint } from "@/components/data-table/menu-item-hint";
 /** The panel's own account; the API refuses to remove it. */
 const PANEL_PREFIX = "panel_";
 
-const ACCESS_TONE = {
+export const ACCESS_TONE = {
   localhost: "success",
   remote: "warning",
   anywhere: "destructive",
@@ -62,12 +58,10 @@ export function DatabaseUsers({ database, canManage, remoteUsers = true }) {
           {/* flex-wrap plus a minimum width on the text, so the button drops to
               its own row instead of squeezing the sentence. */}
           <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
-            <div className="flex min-w-40 flex-1 items-center gap-2.5">
-              <span className="flex shrink-0 items-center justify-center text-muted-foreground">
-                <Users className="size-3.5" />
-              </span>
+            <div className="flex min-w-40 flex-1 items-center gap-3">
+              <CardIcon icon={Users} />
               <div>
-                <h2 className="text-base font-semibold tracking-tight">
+                <h2 className="text-[15px] font-semibold tracking-tight">
                   {t("title")}
                 </h2>
                 <p className="text-sm text-muted-foreground">{t("description")}</p>
@@ -78,12 +72,14 @@ export function DatabaseUsers({ database, canManage, remoteUsers = true }) {
   
           <CardContent className="px-5 py-0">
             {users.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 py-10 text-center">
-                <p className="text-sm font-medium">{t("empty.title")}</p>
-                <p className="max-w-sm text-sm text-muted-foreground">
-                  {t("empty.description")}
-                </p>
-                {addButton}
+              <div className="py-5">
+                <EmptyState
+                  compact
+                  icon={Users}
+                  title={t("empty.title")}
+                  description={t("empty.description")}
+                  action={addButton}
+                />
               </div>
             ) : (
               <div className="divide-y">
@@ -144,6 +140,7 @@ export function DatabaseUsers({ database, canManage, remoteUsers = true }) {
 
 function UserRow({ user, canManage, onEdit, onPassword, onDelete }) {
   const t = useTranslations("databases.users");
+  const tc = useTranslations("databases.credentials");
   const tAccess = useTranslations("databases.access");
   const isPanel = user.username.startsWith(PANEL_PREFIX);
 
@@ -152,9 +149,16 @@ function UserRow({ user, canManage, onEdit, onPassword, onDelete }) {
   // No flex-wrap: on a phone the actions button would drop onto its own line.
   // min-w-0 on the text side lets it shrink instead.
   return (
-    <div className="flex items-start justify-between gap-3 py-3.5">
-      <div className="min-w-0 space-y-1.5">
-        <div className="flex flex-wrap items-center gap-2">
+    <div className="flex items-start gap-3 py-4">
+      {/* The initial, so a list of similar generated names is easier to scan. */}
+      <span
+        aria-hidden
+        className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary uppercase"
+      >
+        {user.username.replace(PANEL_PREFIX, "").charAt(0) || "?"}
+      </span>
+      <div className="min-w-0 flex-1 space-y-2.5">
+        <div className="flex flex-wrap items-center gap-2 pt-1.5">
           <span className="min-w-0 font-mono text-sm font-medium break-all">{user.username}</span>
           {/* Config files want the username on its own. */}
           <CopyButton value={user.username} label={t("copyUsername")} />
@@ -173,16 +177,11 @@ function UserRow({ user, canManage, onEdit, onPassword, onDelete }) {
           ) : null}
         </div>
 
-        {/* Copy rather than display: the string carries the password. */}
+        {/* Masked on screen; Copy carries the password. */}
         {user.connection_string ? (
-          <div className="flex items-center gap-1.5">
-            <code className="truncate font-mono text-xs text-muted-foreground">
-              {user.connection_string.replace(/:[^:@/]*@/, ":••••••@")}
-            </code>
-            <CopyButton
-              value={user.connection_string}
-              label={t("copyConnection")}
-            />
+          <div className="space-y-1.5">
+            <p className="text-xs text-muted-foreground">{tc("connectionString")}</p>
+            <ConnectionString value={user.connection_string} variant="inline" />
           </div>
         ) : user.password_known === false ? (
           /* Withheld for users adopted from a migrated server: the engine keeps only a hash. */
@@ -195,7 +194,7 @@ function UserRow({ user, canManage, onEdit, onPassword, onDelete }) {
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="size-8 shrink-0" disabled={!canManage}>
+          <Button variant="outline" size="icon" className="mt-0.5 size-8 shrink-0" disabled={!canManage}>
             <MoreHorizontal className="size-4" />
             <span className="sr-only">{t("actions")}</span>
           </Button>

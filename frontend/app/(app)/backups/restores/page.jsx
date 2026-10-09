@@ -41,9 +41,8 @@ export default async function RestoresPage({ searchParams }) {
           hasFilters={hasFilters}
           // Undo is a restore, which overwrites the live site: `backup` manage, as in History.
           canRestore={can(permissions, "backup", "manage")}
+          pager={<DataTablePagination meta={meta} />}
         />
-        {/* Not gated on row count: the selector hides itself when too short to paginate. */}
-        <DataTablePagination meta={meta} />
       </div>
     </NavTransitionProvider>
   );

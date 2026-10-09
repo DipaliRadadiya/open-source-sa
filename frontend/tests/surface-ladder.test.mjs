@@ -79,15 +79,17 @@ for (const [name, selector] of [
   });
 }
 
-test("light theme: page and card are both plain white", () => {
+test("light theme: white cards on a faintly tinted page", () => {
   /*
-   * Both ways of colouring this were built and rejected by the person who has
-   * to look at it: a tinted page dulled every other screen, a tinted card
-   * "not looks good". Pinning both to white keeps that from being re-litigated
-   * by accident — and if it IS revisited deliberately, the ladder test above
-   * is what stops the badge disappearing again.
+   * Two tinted versions were rejected before: a tinted page dulled every other
+   * screen, a tinted card "not looks good". The redesign (Krishna, 6 Oct 2026)
+   * settled on a white card over a page tinted just enough to separate the
+   * two, with a soft shadow doing the rest. Pinned so a later change has to be
+   * deliberate: the page stays light enough not to dull content, and the card
+   * stays white.
    */
   const light = blockFor(":root");
-  assert.equal(lightness(light, "--background"), 1, "the page background is tinted again");
+  const page = lightness(light, "--background");
+  assert.ok(page < 1 && page >= 0.97, `the page background is ${page}, not a faint tint`);
   assert.equal(lightness(light, "--card"), 1, "the card surface is tinted again");
 });

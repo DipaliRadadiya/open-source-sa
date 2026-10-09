@@ -157,6 +157,8 @@ export function WorkersTable({ data, appId, presets = [], canManage = false, can
 
   return (
     <DataTable
+      bare
+      roomy
       columns={columns}
       data={data}
       meta={{ appId, presets, canManage, canViewLogs, busy, setRowBusy, onWorkerUpdated, workers: data }}

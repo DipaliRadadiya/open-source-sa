@@ -3,15 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations, useFormatter } from "next-intl";
-import { CircleAlert, History, Radio } from "lucide-react";
+import { CircleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
 import { clockFormatter } from "@/lib/format/time";
 import { useLiveMetrics } from "@/components/dashboard/use-live-metrics";
 import { StatCards } from "@/components/dashboard/stat-cards";
-import { ChartCardSkeleton } from "@/components/dashboard/chart-card-skeleton";
+import { ChartCardSkeleton, LiveChartCardSkeleton } from "@/components/dashboard/chart-card-skeleton";
 
 // Recharts is ~400 KB on the login landing screen. `ssr: false`: nothing real renders on the server.
-const chart = (load) => dynamic(load, { ssr: false, loading: ChartCardSkeleton });
+const chart = (load, loading = ChartCardSkeleton) => dynamic(load, { ssr: false, loading });
 
 const ServerLoadChart = chart(() =>
   import("@/components/dashboard/server-load-chart").then((m) => m.ServerLoadChart),
@@ -19,11 +20,13 @@ const ServerLoadChart = chart(() =>
 const ResourceUsageChart = chart(() =>
   import("@/components/dashboard/resource-usage-chart").then((m) => m.ResourceUsageChart),
 );
-const NetworkIoChart = chart(() =>
-  import("@/components/dashboard/network-io-chart").then((m) => m.NetworkIoChart),
+const NetworkIoChart = chart(
+  () => import("@/components/dashboard/network-io-chart").then((m) => m.NetworkIoChart),
+  LiveChartCardSkeleton,
 );
-const DiskIoChart = chart(() =>
-  import("@/components/dashboard/disk-io-chart").then((m) => m.DiskIoChart),
+const DiskIoChart = chart(
+  () => import("@/components/dashboard/disk-io-chart").then((m) => m.DiskIoChart),
+  LiveChartCardSkeleton,
 );
 
 /** Announce only meaningful connection transitions, never every metric poll. */
@@ -58,10 +61,9 @@ function LiveStatus({ failed, reason, updatedAt, timeZone }) {
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
       <span
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
-          failed
-            ? "border-destructive/30 bg-destructive/10 text-destructive"
-            : "border-success/30 bg-success/10 text-success",
+          // A solid soft pill, as in the redesign.
+          "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
+          failed ? "bg-destructive-soft text-destructive" : "bg-success-soft text-success",
         )}
       >
         {failed ? (
@@ -92,11 +94,10 @@ function LiveStatus({ failed, reason, updatedAt, timeZone }) {
 }
 
 // h2 under the page h1, so the cards inside use h3.
-function SectionHeading({ icon: Icon, title, children }) {
+function SectionHeading({ title, children }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b pb-2">
-      <h2 className="flex items-center gap-2 text-sm font-semibold">
-        <Icon className="size-4 text-muted-foreground" />
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <h2 className="text-base font-semibold tracking-tight">
         {title}
       </h2>
       {children}
@@ -104,7 +105,9 @@ function SectionHeading({ icon: Icon, title, children }) {
   );
 }
 
-export function LiveMetricsSection({ timeZone, history = [] }) {
+// `between` renders after the live readings and before the charts; it shares this
+// component's single poll instead of starting a second one.
+export function LiveMetricsSection({ timeZone, history = [], between = null }) {
   const t = useTranslations("serverDashboard");
   const { metrics, series, failed, reason, updatedAt, ratesReady } = useLiveMetrics();
   // Everything on screen is last-known, not current; the charts must show it too.
@@ -115,26 +118,37 @@ export function LiveMetricsSection({ timeZone, history = [] }) {
       {/* Grouped by clock: the 3s live poll vs the five-minute 24h collector. */}
       <ConnectionAnnouncement failed={failed} />
 
-      <section className="space-y-4">
-        {/* The Live pill is this section's status, so it sits in the heading row. */}
-        <SectionHeading icon={Radio} title={t("liveLabel")}>
-          <LiveStatus failed={failed} reason={reason} updatedAt={updatedAt} timeZone={timeZone} />
-        </SectionHeading>
-        <StatCards metrics={metrics} stale={stale} ratesReady={ratesReady} />
-        <div className="grid gap-4 lg:grid-cols-2">
-          <NetworkIoChart
-            series={series}
-            metrics={metrics}
-            timeZone={timeZone}
-            stale={stale}
-          />
-          <DiskIoChart series={series} metrics={metrics} timeZone={timeZone} stale={stale} />
-        </div>
-      </section>
+      {/* The Live pill is this section's status, so it sits in the heading row. */}
+      <Card className="[--card-spacing:--spacing(5)]">
+        {/* Stacked on a phone: beside the title the pill squeezed it onto two lines. */}
+        <CardHeader className="max-sm:grid-cols-1">
+          <CardTitle as="h2">
+            {t("liveLabel")}
+          </CardTitle>
+          <CardAction className="max-sm:col-start-1 max-sm:row-span-1 max-sm:row-start-2 max-sm:justify-self-start">
+            <LiveStatus failed={failed} reason={reason} updatedAt={updatedAt} timeZone={timeZone} />
+          </CardAction>
+        </CardHeader>
+        <CardContent>
+          <StatCards metrics={metrics} stale={stale} ratesReady={ratesReady} />
+        </CardContent>
+      </Card>
+
+      {between}
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <NetworkIoChart
+          series={series}
+          metrics={metrics}
+          timeZone={timeZone}
+          stale={stale}
+        />
+        <DiskIoChart series={series} metrics={metrics} timeZone={timeZone} stale={stale} />
+      </div>
 
       <section className="space-y-4">
-        <SectionHeading icon={History} title={t("historyLabel")} />
-        <div className="grid gap-4 lg:grid-cols-2">
+        <SectionHeading title={t("historyLabel")} />
+        <div className="grid gap-6 lg:grid-cols-2">
           <ServerLoadChart history={history} metrics={metrics} timeZone={timeZone} />
           <ResourceUsageChart history={history} timeZone={timeZone} />
         </div>

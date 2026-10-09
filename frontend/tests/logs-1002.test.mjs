@@ -28,7 +28,7 @@ test("axe fixes on System Logs: gutter, selected source, disabled download name"
 });
 
 test("the log header wraps the tail pill instead of squeezing the heading", () => {
-  assert.match(read("components/logs/log-toolbar.jsx"), /<div className="flex flex-wrap items-center gap-x-3 gap-y-2">\s*<div className="min-w-48 flex-1">/);
+  assert.match(read("components/logs/log-toolbar.jsx"), /<div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-3">[\s\S]{0,160}<div className=\{cn\("min-w-48 flex-1"/);
 });
 
 test("non-file logs show Download and Clear disabled with the reason; big logs explain why Live is off (Krishna 2 Oct)", () => {

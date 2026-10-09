@@ -441,7 +441,7 @@ export function AddRuleDialog({
 function Group({ title, children }) {
   return (
     <div className="space-y-2">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <p className="text-xs font-medium text-muted-foreground">
         {title}
       </p>
       {children}

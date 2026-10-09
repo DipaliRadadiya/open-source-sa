@@ -1,10 +1,10 @@
 import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
-import { ArrowRight, Globe2, Loader2, ShieldCheck, ShieldOff } from "lucide-react";
+import { ArrowRight, Globe2, Loader2 } from "lucide-react";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DomainText } from "@/components/ui/domain-text";
 
 // Four rows plus a counted remainder; the full list is on the Domains screen.
@@ -32,42 +32,37 @@ export function DomainsCard({ application, domains = [], certificate = null, fai
     <Card>
       {/* Re-reads until the certificate is issued or fails. */}
       {issuing ? <AutoRefresh intervalMs={5000} stopAfterMs={300000} /> : null}
-      <CardHeader className="gap-1.5">
-        <div className="min-w-0 space-y-1">
-          <CardTitle as="h2" className="flex items-center gap-2 text-lg font-semibold">
-            <Globe2 className="size-4 text-primary" />
-            {t("title")}
-          </CardTitle>
-          <CardDescription>{t("description")}</CardDescription>
-        </div>
-        {failed ? null : issuing ? (
-          <Badge variant="muted" className="w-fit gap-1.5 font-normal">
-            <Loader2 className="size-3 animate-spin" />
-            {t("ssl.issuing")}
-          </Badge>
-        ) : secure ? (
-          <Badge
-            variant={certificate.expiring_soon ? "warning" : "success"}
-            className="w-fit gap-1.5 font-normal"
-          >
-            <ShieldCheck className="size-3" />
-            {t("secured")}
-          </Badge>
-        ) : (
-          <Badge variant="warning" className="w-fit gap-1.5 font-normal">
-            <ShieldOff className="size-3" />
-            {t("noCertificate")}
-          </Badge>
-        )}
+      {/* HTTPS and its renewal date are the HTTPS tile's; the card lists the names. The
+          button sits in the header: a footer strip for one button was mostly empty (7 Oct). */}
+      <CardHeader className="items-center border-b">
+        <CardTitle as="h2" className="flex flex-wrap items-center gap-2">
+          {t("title")}
+          {!failed && issuing ? (
+            <Badge variant="muted" className="gap-1.5 font-normal">
+              <Loader2 className="size-3 animate-spin" />
+              {t("ssl.issuing")}
+            </Badge>
+          ) : null}
+        </CardTitle>
+        {href ? (
+          <CardAction className="row-span-1 self-center">
+            <Button asChild variant={promptCertificate ? "default" : "outline"} size="sm">
+              <Link href={promptCertificate ? `${href}?tab=ssl` : href} prefetch={false}>
+                {promptCertificate ? t("issueCertificate") : t("manage")}
+                <ArrowRight className="size-3.5" />
+              </Link>
+            </Button>
+          </CardAction>
+        ) : null}
       </CardHeader>
 
-      <CardContent className="flex flex-1 flex-col p-0">
+      <CardContent className="p-0">
         {failed ? (
           <p className="px-(--card-spacing) text-sm text-muted-foreground">{t("loadFailed")}</p>
         ) : (
-          <ul className="divide-y border-t">
+          <ul className="-mt-(--card-spacing) divide-y">
             {rows.map((domain) => (
-              <li key={domain.id} className="flex items-center gap-3 px-6 py-3">
+              <li key={domain.id} className="flex items-center gap-3 px-(--card-spacing) py-3">
                 <Globe2 className="size-4 shrink-0 text-muted-foreground" />
                 <DomainText domain={domain.domain} className="min-w-0 flex-1 font-mono text-xs" />
                 <Badge variant={domain.type === "primary" ? "default" : "outline"} className="shrink-0 font-normal">
@@ -76,30 +71,13 @@ export function DomainsCard({ application, domains = [], certificate = null, fai
               </li>
             ))}
             {extra > 0 ? (
-              <li className="px-6 py-2.5 text-xs text-muted-foreground">{t("more", { count: extra })}</li>
+              <li className="px-(--card-spacing) py-2.5 text-xs text-muted-foreground">{t("more", { count: extra })}</li>
             ) : null}
             {issuing ? (
-              <li className="px-6 py-2.5 text-xs text-muted-foreground">{t("ssl.issuingBody")}</li>
-            ) : null}
-            {secure && certificate.expires_at_human ? (
-              <li className="px-6 py-2.5 text-xs text-muted-foreground">
-                {t("expires", { when: certificate.expires_at_human })}
-              </li>
+              <li className="px-(--card-spacing) py-2.5 text-xs text-muted-foreground">{t("ssl.issuingBody")}</li>
             ) : null}
           </ul>
         )}
-
-        {href ? (
-          // No mt-auto: with a short list it would leave a large gap above the button.
-          <div className="px-(--card-spacing) pt-(--card-spacing)">
-            <Button asChild variant={promptCertificate ? "default" : "outline"} size="sm">
-              <Link href={promptCertificate ? `${href}?tab=ssl` : href} prefetch={false}>
-                {promptCertificate ? t("issueCertificate") : t("manage")}
-                <ArrowRight className="size-3.5" />
-              </Link>
-            </Button>
-          </div>
-        ) : null}
       </CardContent>
     </Card>
   );

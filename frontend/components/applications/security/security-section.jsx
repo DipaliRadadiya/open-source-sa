@@ -108,8 +108,8 @@ export function SecuritySection({ appId, application, domain, canManage }) {
   return (
     <DisabledReasonProvider reason={controlReason}>
       <Form {...form}>
-        <form noValidate method="post" onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())} className="max-w-4xl">
-          <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+        <form noValidate method="post" onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())} >
+          <Card className="gap-0 overflow-hidden py-0">
             <CardContent className="space-y-5 p-5">
               <FormField
                 control={form.control}

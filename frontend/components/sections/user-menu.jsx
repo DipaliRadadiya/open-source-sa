@@ -79,8 +79,8 @@ export function UserMenu({ extraItems, impersonating = false }) {
           className="rounded-full ring-2 ring-transparent transition-shadow hover:ring-border data-[state=open]:ring-primary/40"
           aria-label={t("openUserMenu")}
         >
-          <Avatar className="size-8">
-            <AvatarFallback className="bg-primary/10 text-xs font-medium text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))]">
+          <Avatar className="size-9">
+            <AvatarFallback className="bg-linear-to-br from-[var(--primary-600,var(--primary))] to-[color-mix(in_oklch,var(--primary-600,var(--primary)),#6366f1_45%)] text-xs font-semibold text-white">
               {initials(user?.name)}
             </AvatarFallback>
           </Avatar>
@@ -89,7 +89,7 @@ export function UserMenu({ extraItems, impersonating = false }) {
       <DropdownMenuContent align="end" className="w-56 p-0">
         <div className="flex items-center gap-2.5 p-2.5">
           <Avatar className="size-9">
-            <AvatarFallback className="bg-primary/10 text-xs font-medium text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))]">
+            <AvatarFallback className="bg-linear-to-br from-[var(--primary-600,var(--primary))] to-[color-mix(in_oklch,var(--primary-600,var(--primary)),#6366f1_45%)] text-xs font-semibold text-white">
               {initials(user?.name)}
             </AvatarFallback>
           </Avatar>

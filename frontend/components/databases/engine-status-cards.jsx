@@ -1,15 +1,13 @@
 "use client";
 
 import { useTranslations, useFormatter } from "next-intl";
-import { Clock, Plug, Activity, Timer } from "lucide-react";
+import { Plug, Activity, Gauge, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { StatCard } from "@/components/ui/stat-card";
 import {
   connectionsTone,
   slowQueriesTone,
   slowQueryRate,
   activityTone,
-  recentlyRestarted,
   activeQueries,
   STUCK_SECONDS,
 } from "@/lib/databases/health";
@@ -21,16 +19,7 @@ const VERDICT_TONE = {
   review: "text-destructive",
 };
 
-function secondsToHuman(seconds, t) {
-  if (!seconds) return null;
-  const days = Math.floor(seconds / 86400);
-  if (days >= 1) return t("uptimeDays", { days });
-  const hours = Math.floor(seconds / 3600);
-  if (hours >= 1) return t("uptimeHours", { hours });
-  return t("uptimeMinutes", { minutes: Math.max(1, Math.floor(seconds / 60)) });
-}
-
-// Client component: StatCard's `icon` cannot cross the server/client boundary.
+// Client component: the tiles take icon components, which cannot cross the server/client boundary.
 // Mongo returns nulls for SQL-only fields; those are omitted, not shown as zero.
 export function EngineStatusCards({ status, processes = [] }) {
   const t = useTranslations("databases.monitor");
@@ -59,20 +48,32 @@ export function EngineStatusCards({ status, processes = [] }) {
     });
   }
 
-  if (status.threads_running != null) {
-    const longRunning = activeQueries(processes).filter(
-      (p) => (p?.time ?? 0) >= STUCK_SECONDS,
-    ).length;
+  // Running queries for every engine: MongoDB has no thread counter, so it comes from the
+  // live process list instead (7 Oct: Mongo showed one card and an empty row).
+  {
+    const running = activeQueries(processes);
+    const longRunning = running.filter((p) => (p?.time ?? 0) >= STUCK_SECONDS).length;
     cards.push({
       key: "threads",
       icon: Activity,
       label: t("runningQueries"),
-      value: format.number(status.threads_running),
+      value: format.number(status.threads_running ?? running.length),
       // The long-running count beats a verdict word. Judged by the longest
       // query, not the total thread count.
       sub: longRunning
         ? note(t("longRunningCount", { count: longRunning }))
         : verdict(activityTone(processes)),
+    });
+  }
+
+  // Average queries per second since the last restart: every engine reports the total.
+  if (status.queries != null && status.uptime_seconds) {
+    cards.push({
+      key: "qps",
+      icon: Gauge,
+      label: t("qps"),
+      value: format.number(status.queries / status.uptime_seconds, { maximumFractionDigits: 1 }),
+      hint: t("avgShort"),
     });
   }
 
@@ -89,23 +90,37 @@ export function EngineStatusCards({ status, processes = [] }) {
     });
   }
 
-  const uptime = secondsToHuman(status.uptime_seconds, t);
-  if (uptime) {
-    cards.push({
-      key: "uptime",
-      icon: Clock,
-      label: t("uptime"),
-      value: uptime,
-      sub: note(recentlyRestarted(status) ? t("verdict.restarted") : t("sinceRestart")),
-    });
-  }
+  // No uptime card: the health summary above already says "Up 17 hours" and flags a
+  // recent restart (7 Oct: the tiles repeated it).
 
   if (cards.length === 0) return null;
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {cards.map(({ key, ...card }) => (
-        <StatCard key={key} hasSub {...card} />
+    // Compact tiles (7 Oct: tall cards were mostly empty). Three or four per engine; never a
+    // lone tile on its own row: four go 2×2 until there is room for one row.
+    <div className={cn("grid gap-3 sm:grid-cols-2", cards.length === 4 ? "xl:grid-cols-4" : "lg:grid-cols-3")}>
+      {cards.map(({ key, icon: Icon, label, value, hint, percent, sub }) => (
+        <div key={key} className="rounded-2xl border border-border/70 bg-card px-4 py-3 shadow-e1">
+          <div className="flex items-center gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Icon className="size-[18px]" aria-hidden />
+            </span>
+            <div className="min-w-0 flex-1">
+              {/* Wraps, never truncates: three tiles at 1024 cut "Running qu…" and "of 25,…". */}
+              <p className="text-xs leading-tight text-muted-foreground">{label}</p>
+              <p className="flex flex-wrap items-baseline gap-x-1.5">
+                <span className="text-lg font-semibold tabular-nums">{value}</span>
+                {hint ? <span className="text-xs text-muted-foreground tabular-nums">{hint}</span> : null}
+              </p>
+            </div>
+            {sub ? <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs">{sub}</span> : null}
+          </div>
+          {percent != null ? (
+            <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-primary/10" aria-hidden>
+              <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max(1, Math.min(100, percent))}%` }} />
+            </div>
+          ) : null}
+        </div>
       ))}
     </div>
   );

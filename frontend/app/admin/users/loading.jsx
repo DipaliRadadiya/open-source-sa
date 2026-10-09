@@ -8,14 +8,20 @@ export default function Loading() {
         <Skeleton className="h-7 w-40" />
         <Skeleton className="h-4 w-64" />
       </div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 flex-col gap-3 sm:flex-row">
-          <Skeleton className="h-9 w-full sm:max-w-xs" />
-          <Skeleton className="h-9 w-full sm:w-44" />
-        </div>
-        <Skeleton className="h-9 w-28" />
-      </div>
-      <TableSkeleton rows={6} columns={6} withAvatar />
+      <TableSkeleton
+        rows={6}
+        columns={6}
+        withAvatar
+        toolbar={
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-1 flex-col gap-3 sm:flex-row">
+              <Skeleton className="h-9 w-full sm:max-w-xs" />
+              <Skeleton className="h-9 w-full sm:w-44" />
+            </div>
+            <Skeleton className="h-9 w-28" />
+          </div>
+        }
+      />
     </div>
   );
 }

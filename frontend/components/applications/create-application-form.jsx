@@ -15,12 +15,9 @@ import {
   CircleAlert,
   ExternalLink,
   GitBranch,
-  Globe,
   Info,
-  LayoutGrid,
   Loader2,
   RefreshCw,
-  SlidersHorizontal,
   Sparkles,
   TriangleAlert,
   Wand2,
@@ -128,22 +125,23 @@ function fieldLabel(config) {
   return words ? words.charAt(0).toUpperCase() + words.slice(1) : label;
 }
 
-// Progress comes from the Create button's checklist, so the two cannot disagree.
-function SectionHeading({ icon: Icon, title, description, headingId, done = false }) {
+// Progress comes from the Create button's checklist, so the two cannot disagree. A
+// numbered step, not an icon (7 Oct): the page is three steps in order, and a finished
+// step turns into a tick.
+function SectionHeading({ step, title, description, headingId, done = false }) {
   return (
     <div className="flex items-start gap-3">
       <span
         className={cn(
-          "flex size-7 shrink-0 items-center justify-center rounded-lg border transition-colors",
-          done
-            ? "border-success/30 bg-success/10 text-success"
-            : "border-primary/30 bg-primary/10 text-primary",
+          "flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold tabular-nums transition-colors",
+          done ? "bg-success text-white" : "bg-primary/10 text-primary ring-1 ring-primary/25",
         )}
+        aria-hidden
       >
-        {done ? <Check className="size-4" aria-hidden /> : <Icon className="size-4" aria-hidden />}
+        {done ? <Check className="size-4" /> : step}
       </span>
-      <div className="space-y-0.5">
-        <h2 id={headingId} className="text-base font-semibold tracking-tight">{title}</h2>
+      <div className="min-w-0 space-y-0.5">
+        <h2 id={headingId} className="text-[15px] font-semibold tracking-tight">{title}</h2>
         <p className="text-sm leading-5 text-muted-foreground">{description}</p>
       </div>
     </div>
@@ -1419,6 +1417,37 @@ export function CreateApplicationForm({
     }
   }
 
+  // Cancel / Create: in the review column from 1280 (it stays in view while scrolling),
+  // in a card at the end of the form below that.
+  const actionButtons = (
+    <>
+      {/* Neutral, not the in-card blue tint: Cancel is not an action. */}
+      <Button
+        type="button"
+        variant="neutral"
+        onClick={handleCancel}
+        disabled={form.formState.isSubmitting}
+      >
+        {t("cancel")}
+      </Button>
+      <ReasonTooltip reason={submitReason}>
+        <Button
+          type="submit"
+          disabled={Boolean(submitReason) || form.formState.isSubmitting}
+        >
+          {form.formState.isSubmitting ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <ArrowRight className="size-4" />
+          )}
+          {form.formState.isSubmitting
+            ? t("creating")
+            : t("createAction")}
+        </Button>
+      </ReasonTooltip>
+    </>
+  );
+
   return (
     <Form {...form}>
       <form
@@ -1429,20 +1458,26 @@ export function CreateApplicationForm({
         noValidate
         className="mx-auto max-w-6xl"
       >
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        {/* The review column is there from the start (its first item is "Choose an application
+            type"): showing it only after a choice made the form jump from full width to
+            narrow (Krishna, 7 Oct). */}
+        <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
           {/* @container, not a viewport breakpoint: width depends on sidebar, summary and zoom. */}
           <div className="@container min-w-0 space-y-6">
             <section
-              className="space-y-3 rounded-xl bg-card p-4 shadow-sm ring-1 ring-foreground/10 sm:p-5"
+              className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-e1"
               aria-labelledby="application-type-heading"
             >
-              <SectionHeading
-                icon={LayoutGrid}
-                done={sectionDone[1]}
-                title={t("guided.stageType")}
-                description={t("guided.typeHint")}
-                headingId="application-type-heading"
-              />
+              <div className="border-b px-4 py-3.5 sm:px-5">
+                <SectionHeading
+                  step={1}
+                  done={sectionDone[1]}
+                  title={t("guided.stageType")}
+                  description={t("guided.typeHint")}
+                  headingId="application-type-heading"
+                />
+              </div>
+              <div className="space-y-4 p-4 sm:p-5">
               <FormField
                 control={form.control}
                 name="site_type"
@@ -1475,19 +1510,23 @@ export function CreateApplicationForm({
                   </FormItem>
                 )}
               />
+              </div>
             </section>
 
             <section
-              className="space-y-4 rounded-xl bg-card p-4 shadow-sm ring-1 ring-foreground/10 sm:p-5"
+              className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-e1"
               aria-labelledby="application-details-heading"
             >
-              <SectionHeading
-                icon={Globe}
-                done={sectionDone[2]}
-                title={t("form.detailsTitle")}
-                description={t("form.detailsHint")}
-                headingId="application-details-heading"
-              />
+              <div className="border-b px-4 py-3.5 sm:px-5">
+                <SectionHeading
+                  step={2}
+                  done={sectionDone[2]}
+                  title={t("form.detailsTitle")}
+                  description={t("form.detailsHint")}
+                  headingId="application-details-heading"
+                />
+              </div>
+              <div className="space-y-4 p-4 sm:p-5">
               <div className="grid grid-cols-1 items-start gap-4 @2xl:grid-cols-2">
                 <FormField
                   control={form.control}
@@ -1774,21 +1813,25 @@ export function CreateApplicationForm({
                   </div>
                 ) : null}
               </div>
+              </div>
             </section>
 
             <section
-              className="space-y-4 rounded-xl bg-card p-4 shadow-sm ring-1 ring-foreground/10 sm:p-5"
+              className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-e1"
               aria-labelledby="application-configure-heading"
             >
-              <SectionHeading
-                icon={SlidersHorizontal}
-                done={sectionDone[3]}
-                title={t("guided.stageConfigure")}
-                /* Before a type is chosen, the box below does the asking; the heading only
-                   describes the section. */
-                description={t("guided.configureHint")}
-                headingId="application-configure-heading"
-              />
+              <div className="border-b px-4 py-3.5 sm:px-5">
+                <SectionHeading
+                  step={3}
+                  done={sectionDone[3]}
+                  title={t("guided.stageConfigure")}
+                  /* Before a type is chosen, the box below does the asking; the heading only
+                     describes the section. */
+                  description={t("guided.configureHint")}
+                  headingId="application-configure-heading"
+                />
+              </div>
+              <div className="space-y-4 p-4 sm:p-5">
               {selected ? (
                 <div className="space-y-5">
                   {isGit ? (
@@ -2131,10 +2174,12 @@ export function CreateApplicationForm({
                   {t("form.chooseTypeHint")}
                 </p>
               )}
+              </div>
             </section>
 
+            {/* Beside the form from 1280; below that it took 320px the fields needed. */}
             {selected ? (
-              <div className="lg:hidden">
+              <div className="xl:hidden">
                 <CreateReadinessPanel
                   items={readinessItems}
                   onSelectItem={focusReadinessItem}
@@ -2142,47 +2187,27 @@ export function CreateApplicationForm({
               </div>
             ) : null}
 
-            {/* Sticky in the flow (not fixed), so Create stays reachable on a long form
-                without covering the last field. */}
-            <div className="sticky bottom-0 z-10 -mx-1 flex flex-col gap-3 rounded-xl bg-background/85 px-4 py-3 shadow-sm ring-1 ring-foreground/10 backdrop-blur-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-              <p className="text-sm text-muted-foreground">
-                {selected ? t("guided.reviewHint", { brand }) : t("form.chooseTypeHint")}
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCancel}
-                  disabled={form.formState.isSubmitting}
-                >
-                  {t("cancel")}
-                </Button>
-                <ReasonTooltip reason={submitReason}>
-                  <Button
-                    type="submit"
-                    disabled={Boolean(submitReason) || form.formState.isSubmitting}
-                  >
-                    {form.formState.isSubmitting ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : (
-                      <ArrowRight className="size-4" />
-                    )}
-                    {form.formState.isSubmitting
-                      ? t("creating")
-                      : t("createAction")}
-                  </Button>
-                </ReasonTooltip>
+            {/* Below 1280 (no review column): a plain card at the end of the form. It floated
+                over the fields as a sticky bar and looked stuck on (Krishna, 7 Oct). */}
+            <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-card px-4 py-3 shadow-e1 sm:px-5 xl:hidden">
+              {selected ? (
+                <p className="hidden min-w-0 flex-1 text-sm text-muted-foreground md:block">
+                  {t("guided.reviewHint", { brand })}
+                </p>
+              ) : null}
+              <div className="ml-auto flex w-full gap-2 sm:w-auto [&>*]:flex-1 sm:[&>*]:flex-none">
+                {actionButtons}
               </div>
             </div>
           </div>
           {/* Offset by the shell's measured sticky chrome, not a fixed value. */}
-          <aside className="hidden lg:sticky lg:top-[calc(var(--app-chrome,7rem)_+_1.5rem)] lg:block">
-            {selected ? (
-              <CreateReadinessPanel
-                items={readinessItems}
-                onSelectItem={focusReadinessItem}
-              />
-            ) : null}
+          <aside className="hidden xl:sticky xl:top-[calc(var(--app-chrome,7rem)_+_1.5rem)] xl:block">
+            <CreateReadinessPanel
+              items={readinessItems}
+              onSelectItem={focusReadinessItem}
+              footer={actionButtons}
+              className="max-h-[calc(100svh-var(--app-chrome,7rem)-7rem)]"
+            />
           </aside>
         </div>
       </form>

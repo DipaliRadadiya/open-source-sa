@@ -149,7 +149,7 @@ export function InstallVersionButton({
                     {/* Says why the row cannot be picked: already installed,
                         not unavailable. */}
                     {option.installed ? (
-                      <span className="rounded bg-muted-foreground/15 px-1.5 py-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      <span className="rounded bg-muted-foreground/15 px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
                         {t("install.installedTag")}
                       </span>
                     ) : (

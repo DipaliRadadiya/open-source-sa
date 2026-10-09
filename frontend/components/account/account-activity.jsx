@@ -54,20 +54,28 @@ function TypeCell({ row }) {
   );
 }
 
+// Below sm When is hidden and rides under the description, as on the Activity Log.
 function DescriptionCell({ row }) {
-  return <span>{row.original.description || "—"}</span>;
+  return (
+    <>
+      <span>{row.original.description || "—"}</span>
+      <span className="mt-0.5 block text-xs text-muted-foreground sm:hidden">{row.original.created_at_human}</span>
+    </>
+  );
 }
 
 export function AccountActivity({ data }) {
   const t = useTranslations("account");
 
   const columns = [
-    { accessorKey: "created_at_human", header: t("activity.when"), cell: WhenCell },
-    { accessorKey: "type", header: t("activity.type"), cell: TypeCell },
+    { accessorKey: "created_at_human", header: t("activity.when"), cell: WhenCell, meta: { className: "hidden sm:table-cell" } },
+    { accessorKey: "type", header: t("activity.type"), cell: TypeCell, meta: { className: "hidden md:table-cell" } },
     {
       accessorKey: "description",
       header: t("activity.descriptionHeader"),
       cell: DescriptionCell,
+      // TableCell is nowrap by default; on a phone this is the only column.
+      meta: { className: "whitespace-normal" },
     },
   ];
 

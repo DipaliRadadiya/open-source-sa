@@ -1,5 +1,6 @@
 import { getFormatter, getTranslations } from "next-intl/server";
-import { Eye, FileQuestion, ShieldCheck } from "lucide-react";
+import { FileQuestion, ShieldCheck } from "lucide-react";
+import { EmptyState } from "@/components/data-table/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RefreshButton } from "@/components/data-table/refresh-button";
@@ -11,13 +12,12 @@ export async function DetectLogCard({ rows = [], failed = false }) {
   const format = await getFormatter();
 
   return (
-    <Card className="max-w-4xl gap-0 overflow-hidden py-0 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/20 px-5 py-3">
+    <Card className="gap-0 overflow-hidden py-0">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
         <div className="flex min-w-48 flex-1 items-center gap-2.5">
-          <Eye className="size-4 shrink-0 text-muted-foreground" />
           <div className="min-w-0">
-            <p className="text-sm font-medium">{t("title")}</p>
-            <p className="text-xs text-muted-foreground">{t("subtitle")}</p>
+            <h2 className="text-[15px] font-semibold tracking-tight">{t("title")}</h2>
+            <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -33,14 +33,7 @@ export async function DetectLogCard({ rows = [], failed = false }) {
       <CardContent className="p-3 sm:p-5">
         {/* Both are ordinary states; an empty log is normal (it is created by the first match). */}
         {failed || rows.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-6 text-center">
-            <span className="flex size-9 items-center justify-center rounded-full bg-muted-foreground/10 text-muted-foreground">
-              {failed ? <FileQuestion className="size-4" /> : <ShieldCheck className="size-4" />}
-            </span>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              {failed ? t("unreadable") : t("empty")}
-            </p>
-          </div>
+          <EmptyState compact icon={failed ? FileQuestion : ShieldCheck} badge={null} title={failed ? t("unreadable") : t("empty")} />
         ) : (
           <div className="divide-y rounded-lg border">
             {rows.map((row, i) => (

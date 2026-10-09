@@ -17,6 +17,7 @@ const TOKENS = [
   "chart-2",
   "chart-3",
   "chart-4",
+  "chart-5",
   "border",
   "muted-foreground",
   "popover",
@@ -33,8 +34,8 @@ export function DiskIoChart({ series: chartSeries, metrics, timeZone, stale }) {
 
   // Same colours as the network card: down is chart-2, up is chart-1.
   const series = [
-    { key: "disk_read", label: t("charts.disk.read"), token: "chart-2", kind: "area" },
-    { key: "disk_write", label: t("charts.disk.write"), token: "chart-1", kind: "area" },
+    { key: "disk_read", label: t("charts.disk.read"), token: "chart-3", kind: "area" },
+    { key: "disk_write", label: t("charts.disk.write"), token: "chart-5", kind: "area" },
   ];
 
   const option = timeSeriesOption({
@@ -61,6 +62,8 @@ export function DiskIoChart({ series: chartSeries, metrics, timeZone, stale }) {
 
   return (
     <LiveChartCard
+      headingLevel="h2"
+      plotHeight="h-52"
       icon={HardDrive}
       title={t("charts.disk.title")}
       description={t("charts.disk.description")}
@@ -70,13 +73,13 @@ export function DiskIoChart({ series: chartSeries, metrics, timeZone, stale }) {
         <>
           {/* The op count rides along as the pill's `note`. */}
           <ChartPill
-            dotClassName="bg-chart-2"
+            dotClassName="bg-chart-3"
             label={t("charts.disk.read")}
             value={rate(metrics?.disk_io?.read)}
             note={t("charts.disk.iops", { ops: ops(metrics?.disk_io?.read_ops) })}
           />
           <ChartPill
-            dotClassName="bg-chart-1"
+            dotClassName="bg-chart-5"
             label={t("charts.disk.write")}
             value={rate(metrics?.disk_io?.write)}
             note={t("charts.disk.iops", { ops: ops(metrics?.disk_io?.write_ops) })}
@@ -84,7 +87,7 @@ export function DiskIoChart({ series: chartSeries, metrics, timeZone, stale }) {
         </>
       }
     >
-      <EChart option={option} dataTable={table} height="h-72" />
+      <EChart option={option} dataTable={table} height="h-52" />
     </LiveChartCard>
   );
 }

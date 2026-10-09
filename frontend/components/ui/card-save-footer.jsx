@@ -24,7 +24,7 @@ export function CardSaveFooter({
   const t = useTranslations("common.saveFooter");
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2 border-t bg-muted/20 px-5 py-3">
+    <div className="flex flex-wrap items-center justify-end gap-2 border-t bg-muted/30 px-5 py-3">
       {/* These saves reload the web server, so the wait is explained. */}
       {saving && savingNote ? (
         <p className="mr-auto text-xs text-muted-foreground">{savingNote}</p>

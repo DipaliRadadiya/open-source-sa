@@ -50,7 +50,7 @@ export function LogSourceList({ sources, selected, onSelect, now }) {
             {groups.map(({ group, items }) => (
               <SelectGroup key={group}>
                 {/* Same micro-label as the desktop rail. */}
-                <SelectLabel className="text-[12px] font-semibold uppercase tracking-wider text-foreground/75">
+                <SelectLabel className="text-[12px] font-semibold text-foreground/75">
                   {t.has(`groups.${group}`) ? t(`groups.${group}`) : group}
                 </SelectLabel>
                 {/* The reason is written on the item so it shows without hover or tap. */}
@@ -90,7 +90,7 @@ export function LogSourceList({ sources, selected, onSelect, now }) {
           // A hairline per group keeps the quiet headings findable.
           return (
             <section key={group} className="space-y-1 py-3 first:pt-0 last:pb-0">
-              <h3 className="flex items-center gap-2 px-2.5 text-[12px] font-semibold uppercase tracking-wider text-foreground/75">
+              <h3 className="flex items-center gap-2 px-2.5 text-[12px] font-semibold text-foreground/75">
                 <Icon className="size-3 shrink-0" />
                 {t.has(`groups.${group}`) ? t(`groups.${group}`) : group}
               </h3>

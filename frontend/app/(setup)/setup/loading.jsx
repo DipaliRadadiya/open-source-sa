@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
 
 export default function SetupLoading() {
   return (
@@ -10,7 +10,7 @@ export default function SetupLoading() {
       <Skeleton className="h-2 w-full rounded-full" />
       <div className="space-y-3">
         {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-24 w-full rounded-xl" />
+          <SkeletonCard key={i} className="h-24 w-full" lines={1} />
         ))}
       </div>
     </div>

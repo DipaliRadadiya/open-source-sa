@@ -29,7 +29,7 @@ export default async function StorageIntegrationsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
-      <div className="max-w-4xl">
+      <div >
         <DestinationsCard
           destinations={list.destinations}
           canManage={canManage}

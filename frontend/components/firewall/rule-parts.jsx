@@ -23,7 +23,7 @@ export function RuleName({ rule, muted, labels }) {
         {rule.description || labels.nameFor?.(rule) || labels.unnamed}
       </span>
       {off ? (
-        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
           {labels.off}
         </span>
       ) : null}
@@ -45,13 +45,7 @@ export function RuleName({ rule, muted, labels }) {
 export function ActionBadge({ rule, labels }) {
   const deny = rule.action === "deny";
   return (
-    <Badge
-      variant="outline"
-      className={cn(
-        "font-normal uppercase",
-        deny ? "border-destructive/40 text-destructive" : "border-success/40 text-success",
-      )}
-    >
+    <Badge variant={deny ? "destructive" : "success"}>
       {deny ? labels.deny : labels.allow}
     </Badge>
   );

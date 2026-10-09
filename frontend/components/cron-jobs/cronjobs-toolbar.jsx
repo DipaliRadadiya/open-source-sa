@@ -9,16 +9,21 @@ import { RefreshButton } from "@/components/data-table/refresh-button";
 export function CronjobsToolbar({
   systemUsers = [],
   cronjobs = [],
+  // `meta.usernames`: every run-as account across all pages. Older APIs omit it.
+  usernames = null,
   canManage = false,
   onCreate,
 }) {
   const t = useTranslations("cronJobs");
 
-  // Unmanaged accounts (root, www-data) filter by username. Only the current page's usernames:
-  // no endpoint lists every distinct cron username.
-  const unmanaged = [
-    ...new Set(cronjobs.filter((j) => !j.system_user).map((j) => j.username)),
-  ].sort();
+  // Unmanaged accounts (root, www-data) filter by username. The API's list covers every
+  // page; without it (older APIs) only this page's accounts can be offered.
+  const managed = new Set(systemUsers.map((u) => u.username));
+  const unmanaged = (
+    usernames
+      ? usernames.filter((name) => !managed.has(name))
+      : [...new Set(cronjobs.filter((j) => !j.system_user).map((j) => j.username))]
+  ).sort();
 
   const userOptions = [
     ...systemUsers.map((u) => ({ value: String(u.id), label: u.username })),

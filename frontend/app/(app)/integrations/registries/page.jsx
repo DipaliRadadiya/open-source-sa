@@ -39,7 +39,7 @@ export default async function RegistriesPage() {
   if (list.failed && list.status === 409) {
     return (
       <div className="space-y-6">
-        <PageHeader title={t("title")} />
+        <PageHeader title={t("title")} subtitle={t("subtitle")} />
         <EmptyState
           icon={Container}
           title={t("unavailableTitle")}
@@ -68,7 +68,7 @@ export default async function RegistriesPage() {
   return (
     <div className="space-y-6">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
-      <div className="max-w-5xl">
+      <div >
         <RegistriesCard
           initialRegistries={list.registries}
           canManage={canManage}

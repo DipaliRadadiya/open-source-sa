@@ -58,7 +58,7 @@ test("a label over 63 characters is refused in the form with its own message", (
 
 test("domain rows bleed to the card's own padding", () => {
   const section = read("components/applications/domains/domains-section.jsx");
-  assert.match(section, /-mx-\(--card-spacing\) -mb-\(--card-spacing\) divide-y/);
+  assert.match(section, /-mx-\(--card-spacing\) -mb-\(--card-spacing\) border-t/);
   assert.doesNotMatch(section, /-mx-6 -mb-6/);
 });
 

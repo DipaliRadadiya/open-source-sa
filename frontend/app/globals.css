@@ -34,6 +34,9 @@
     --color-border: var(--border);
     --color-destructive: var(--destructive);
     --color-success: var(--success);
+    --color-success-soft: var(--success-soft);
+    --color-warning-soft: var(--warning-soft);
+    --color-destructive-soft: var(--destructive-soft);
     --color-warning: var(--warning);
     --color-console: var(--console);
     --color-console-foreground: var(--console-foreground);
@@ -73,39 +76,41 @@
      * other screen look worse, and a shadow that only works against a grey page
      * is not a shadow, it is a cutout.
      */
-    --shadow-e1: 0 1px 2px 0 rgb(16 24 40 / 0.025), 0 1px 3px 0 rgb(16 24 40 / 0.03);
+    --shadow-e1: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 2px 8px -2px rgb(15 23 42 / 0.06);
     --shadow-e2: 0 1px 2px 0 rgb(16 24 40 / 0.03), 0 4px 10px -2px rgb(16 24 40 / 0.045);
     --shadow-e3: 0 2px 4px -1px rgb(16 24 40 / 0.04), 0 12px 24px -6px rgb(16 24 40 / 0.07);
 }
 
 :root {
     /*
-     * White, and the page is white too. Separation is bought with the border
-     * and shadow, not with colour.
-     *
-     * Both alternatives were built, shipped and rejected in turn: tinting the
-     * PAGE dulled every other screen, and tinting the CARD looked wrong on its
-     * own. What is left is the arrangement this file started with, so the value
-     * is unremarkable — the comment is here so the next person knows it is a
-     * decision rather than something nobody got round to.
+     * White cards on a faintly cool page, with a soft shadow. Chosen with
+     * Krishna on 6 Oct 2026 from the redesign prototype: the all-white page
+     * read as flat and "generated". Earlier tinted attempts failed because the
+     * tint was strong enough to dull the content; this one sits at 98% so it
+     * only separates the surfaces.
      */
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.28 0.014 264);
+    --card-foreground: oklch(0.24 0.02 265);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.28 0.014 264);
+    --popover-foreground: oklch(0.24 0.02 265);
     --primary: oklch(0.205 0 0);
     --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.968 0.004 264);
-    --secondary-foreground: oklch(0.28 0.014 264);
-    --muted: oklch(0.968 0.004 264);
+    --secondary: oklch(0.962 0.008 260);
+    --secondary-foreground: oklch(0.28 0.02 265);
+    --muted: oklch(0.962 0.008 260);
     /* 0.53: at 0.552 hints and table headers read 4.38:1 on bg-muted. */
-    --muted-foreground: oklch(0.53 0.012 264);
-    --accent: oklch(0.962 0.018 260);
-    --accent-foreground: oklch(0.32 0.09 260);
+    --muted-foreground: oklch(0.52 0.02 262);
+    --accent: oklch(0.955 0.02 258);
+    --accent-foreground: oklch(0.38 0.15 260);
     /* 0.54: at 0.577 red text read 3.7–4.0:1 on its own tint. */
     --destructive: oklch(0.54 0.22 27.3);
     /* 0.52, like --warning: 0.62 read 3.0:1 on its own badge tint (WCAG AA needs 4.5). */
     --success: oklch(0.52 0.14 150);
+    /* Soft fills for icon tiles and notes (the redesign's palette): the status
+       colour at full strength reads as an alarm on a tile this size. */
+    --success-soft: oklch(0.96 0.04 155);
+    --warning-soft: oklch(0.97 0.05 85);
+    --destructive-soft: oklch(0.96 0.03 25);
     /* Dark enough to read on its own tint. At 0.68 the amber badges and
        banners sat at 2.96:1 on a card and 2.56:1 on `bg-warning/15` — the
        colour was bright enough to read AS amber and not bright enough to read
@@ -130,8 +135,8 @@
     --console-error: oklch(0.72 0.17 25);
     --console-warning: oklch(0.82 0.13 75);
     --console-success: oklch(0.78 0.15 155);
-    --border: oklch(0.945 0.004 264);
-    --input: oklch(0.92 0.006 264);
+    --border: oklch(0.925 0.008 260);
+    --input: oklch(0.9 0.01 260);
     /* Focus ring follows the brand primary (set at runtime by the theme). */
     --ring: var(--primary);
     /* Categorical series colors — distinct hues so overlaid lines/areas stay
@@ -141,45 +146,48 @@
     --chart-3: oklch(0.72 0.16 70);
     --chart-4: oklch(0.62 0.2 15);
     --chart-5: oklch(0.62 0.2 305);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.984 0.003 264);
-    --sidebar-foreground: oklch(0.28 0.014 264);
+    --radius: 0.75rem;
+    --sidebar: oklch(1 0 0);
+    --sidebar-foreground: oklch(0.3 0.02 265);
     --sidebar-primary: oklch(0.205 0 0);
     --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.968 0.004 264);
-    --sidebar-accent-foreground: oklch(0.28 0.014 264);
-    --sidebar-border: oklch(0.945 0.004 264);
+    --sidebar-accent: oklch(0.96 0.02 258);
+    --sidebar-accent-foreground: oklch(0.4 0.18 260);
+    --sidebar-border: oklch(0.93 0.008 260);
     --sidebar-ring: var(--primary);
-    --background: oklch(1 0 0);
+    --background: oklch(0.982 0.004 260);
     /* Soft dark grey rather than near-black — pure black on white reads harsh
        and causes halation. Still ~11:1 on the background, well past WCAG AA. */
-    --foreground: oklch(0.28 0.014 264);
+    --foreground: oklch(0.24 0.02 265);
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
+    --background: oklch(0.16 0.015 265);
+    --foreground: oklch(0.95 0.005 260);
+    --card: oklch(0.205 0.018 265);
+    --card-foreground: oklch(0.95 0.005 260);
+    --popover: oklch(0.22 0.018 265);
+    --popover-foreground: oklch(0.95 0.005 260);
     --primary: oklch(0.922 0 0);
     --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.274 0.006 264);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.274 0.006 264);
-    --muted-foreground: oklch(0.708 0.01 264);
-    --accent: oklch(0.274 0.006 264);
-    --accent-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.26 0.02 265);
+    --secondary-foreground: oklch(0.95 0.005 260);
+    --muted: oklch(0.26 0.02 265);
+    --muted-foreground: oklch(0.72 0.015 260);
+    --accent: oklch(0.28 0.04 262);
+    --accent-foreground: oklch(0.9 0.05 258);
     --destructive: oklch(0.704 0.191 22.216);
     --success: oklch(0.7 0.15 150);
     --warning: oklch(0.78 0.13 70);
+    --success-soft: oklch(0.3 0.06 155);
+    --warning-soft: oklch(0.32 0.06 75);
+    --destructive-soft: oklch(0.3 0.07 22);
     /* Same console surface in dark mode: it is already terminal-dark, only the
        border needs to sit against a dark card rather than a white one. */
     --console: oklch(0.17 0.012 264);
     --console-border: oklch(0.26 0.012 264);
-    --border: oklch(1 0 0 / 7%);
-    --input: oklch(1 0 0 / 15%);
+    --border: oklch(1 0 0 / 8%);
+    --input: oklch(1 0 0 / 14%);
     --ring: var(--primary);
     /* Lifted lightness so the same hues stay readable on dark surfaces. */
     --chart-1: oklch(0.7 0.17 260);
@@ -187,12 +195,12 @@
     --chart-3: oklch(0.78 0.15 70);
     --chart-4: oklch(0.7 0.19 15);
     --chart-5: oklch(0.7 0.19 305);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar: oklch(0.185 0.017 265);
+    --sidebar-foreground: oklch(0.9 0.01 260);
     --sidebar-primary: oklch(0.488 0.243 264.376);
     --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.28 0.05 262);
+    --sidebar-accent-foreground: oklch(0.92 0.05 258);
     --sidebar-border: oklch(1 0 0 / 7%);
     --sidebar-ring: var(--primary);
 }
@@ -299,6 +307,29 @@
 }
 
 @layer utilities {
+  /* The brand banner. Built from the runtime brand shades, so a white-label
+     colour carries through; the fallbacks cover a palette that failed to parse.
+     Fixed shades rather than --primary, which turns pale in dark mode and would
+     wash out the white text. Darkest at the left, where the text sits. */
+  .bg-hero {
+    background:
+      radial-gradient(70% 130% at 100% 0%, rgb(255 255 255 / 0.28) 0%, transparent 60%),
+      radial-gradient(55% 110% at 88% 100%, rgb(255 255 255 / 0.16) 0%, transparent 70%),
+      linear-gradient(
+        115deg,
+        var(--primary-700, color-mix(in oklch, var(--primary), black 12%)) 0%,
+        var(--primary-600, var(--primary)) 50%,
+        var(--primary-500, color-mix(in oklch, var(--primary), white 25%)) 100%
+      );
+  }
+  .bg-hero-grid {
+    background-image:
+      linear-gradient(to right, rgb(255 255 255 / 0.07) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(255 255 255 / 0.07) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: radial-gradient(ellipse at 70% 30%, black 20%, transparent 75%);
+  }
+
   .animate-nav-progress {
     transform-origin: left;
     animation: nav-progress 8s cubic-bezier(0.1, 0.6, 0.3, 1) forwards;
@@ -323,4 +354,47 @@
       opacity: 0.6;
     }
   }
+}
+
+@keyframes hero-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* Loading placeholders: a bar a shade darker than the card it sits on, with a light
+   sweep across it, so a loading page reads as "coming" rather than as an empty one. */
+/* In a layer, so a bg-* utility on one placeholder (a tinted note) still wins. */
+@layer components {
+  .skeleton-shimmer {
+    background-color: color-mix(in oklch, var(--foreground) 6%, transparent);
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in oklch, var(--card) 60%, transparent) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    background-repeat: no-repeat;
+    animation: skeleton-sweep 1.4s ease-in-out infinite;
+  }
+  /* The wave in a chart placeholder. */
+  .skeleton-shimmer-fill {
+    fill: color-mix(in oklch, var(--primary) 7%, transparent);
+  }
+  .dark .skeleton-shimmer {
+    background-color: color-mix(in oklch, var(--foreground) 8%, transparent);
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in oklch, var(--foreground) 8%, transparent) 50%,
+      transparent 100%
+    );
+  }
+}
+@keyframes skeleton-sweep {
+  from { background-position: 150% 0; }
+  to { background-position: -50% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer { animation: none; }
 }

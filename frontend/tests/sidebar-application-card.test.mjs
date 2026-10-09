@@ -27,7 +27,8 @@ const sidebarCode = sidebar.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*
 const badge = read("components/applications/application-status-badge.jsx");
 
 test("the card is a surface of its own, not another shade of the rail", () => {
-  assert.match(sidebar, /rounded-xl border border-primary\/25 bg-primary\/5 p-3 hover:bg-primary\/10/);
+  // 7 Oct, as in the redesign prototype (Krishna): a white card washed with the brand colour.
+  assert.match(sidebar, /rounded-xl bg-card bg-linear-135 from-primary\/10 to-transparent/);
   assert.doesNotMatch(sidebarCode, /bg-sidebar-accent\/40/, "back to a grey card on a grey rail");
 });
 
@@ -65,12 +66,12 @@ test("the collapsed rail hides everything but the mark", () => {
   // It used to pin the whole class string including `text-[11px]`, so raising
   // the panel's 12px type floor failed a test that has nothing to say about
   // type size. A test should break when its own subject breaks.
-  assert.match(sidebar, /font-mono text-\w+ text-muted-foreground group-data-\[collapsible=icon\]:hidden/);
+  assert.match(sidebar, /font-mono text-\w+ text-muted-foreground ring-1 ring-border\/60 group-data-\[collapsible=icon\]:hidden/);
   assert.match(sidebar, /group-data-\[collapsible=icon\]:size-5!/);
 });
 
 test("the domain gets its own line rather than sharing the name's column", () => {
   // At 240px the domain is the longest string on the card; in the name's
   // column it truncated mid-host, which is the one thing read off this card.
-  assert.match(sidebar, /mt-2\.5 block w-full truncate rounded-md bg-background\/80/);
+  assert.match(sidebar, /mt-2\.5 block w-full truncate rounded-lg bg-background\/80/);
 });

@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useRef } from "react";
 import Link from "@/components/ui/app-link";
 import { Button } from "@/components/ui/button";

@@ -11,7 +11,6 @@ import {
   FolderTree,
   HardDrive,
   Hexagon,
-  Info,
   Package,
   Loader2,
   Pencil,
@@ -55,39 +54,30 @@ function factColumns(count) {
   return FACT_COLUMNS[4];
 }
 
-function Fact({ icon: Icon, label, value, mono, copy, onEdit, editLabel, action, note, noteTone, menu, menuLabel, menuBusy = false }) {
-  return (
-    // min-w-0: a grid item defaults to min-width:auto, so `truncate` would never fire.
-    <div className="flex min-w-0 items-center gap-2.5 rounded-lg border bg-muted/30 px-3 py-2.5">
-      <Icon className="size-4 shrink-0 text-muted-foreground" />
-      <div className="min-w-0 flex-1">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-        <p
-          className={`truncate text-sm font-medium ${mono ? "font-mono text-[13px] tabular-nums" : ""}`}
-        >
-          {value}
-        </p>
-        {/* Not truncated: a filename or refusal is the content. */}
-        {note ? (
-          <p className={`mt-0.5 text-xs leading-snug ${noteTone === "warning" ? "text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:text-warning" : "text-muted-foreground"}`}>
-            {note}
-          </p>
-        ) : null}
-      </div>
-      {copy ? <CopyButton value={String(value)} /> : null}
+function Fact({ icon: Icon, label, value, mono, copy, onEdit, editLabel, action, note, noteTone, menu, menuLabel, menuBusy = false, plain = false, strip = false }) {
+  const noteNode = note ? (
+    // Not truncated: a filename or refusal is the content.
+    <p className={`mt-0.5 text-xs leading-snug ${noteTone === "warning" ? "text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:text-warning" : "text-muted-foreground"}`}>
+      {note}
+    </p>
+  ) : null;
+  const controls = (
+    <>
+      {/* Outlined, like every other button: as bare icons they read as decoration (7 Oct). */}
+      {copy ? <CopyButton value={String(value)} className="border border-border/80 bg-card shadow-xs" /> : null}
       {/* One menu when the tile has several actions (probe, set type by hand). */}
       {menu?.length ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               size="icon-sm"
               /* `menuBusy` too: a menu action has no Review button to show it is running. */
               disabled={menuBusy || action?.busy}
               aria-label={menuLabel}
               title={menuLabel}
-              className="shrink-0"
+              className="size-7 shrink-0"
             >
               {menuBusy || action?.busy ? (
                 <Loader2 className="size-3.5 animate-spin" />
@@ -117,7 +107,7 @@ function Fact({ icon: Icon, label, value, mono, copy, onEdit, editLabel, action,
             onClick={action.onClick}
             disabled={action.busy}
             title={action.label}
-            className="shrink-0"
+            className="h-7 shrink-0"
           >
             {action.busy ? (
               <Loader2 className="size-3.5 animate-spin" />
@@ -129,13 +119,13 @@ function Fact({ icon: Icon, label, value, mono, copy, onEdit, editLabel, action,
         ) : (
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="icon-sm"
             onClick={action.onClick}
             disabled={action.busy}
             aria-label={action.label}
             title={action.label}
-            className="shrink-0"
+            className="size-7 shrink-0"
           >
             {action.busy ? (
               <Loader2 className="size-3.5 animate-spin" />
@@ -149,20 +139,78 @@ function Fact({ icon: Icon, label, value, mono, copy, onEdit, editLabel, action,
       {onEdit ? (
         <Button
           type="button"
-          variant="ghost"
+          variant="outline"
           size="icon-sm"
           onClick={onEdit}
           aria-label={editLabel}
-          className="shrink-0"
+          className="size-7 shrink-0"
         >
           <Pencil className="size-3.5" />
         </Button>
       ) : null}
+    </>
+  );
+
+  // `strip`: a label over its value, no box, for the facts row in the page header.
+  if (strip) {
+    return (
+      <div className="min-w-0">
+        <dt className="text-xs text-muted-foreground">{label}</dt>
+        <dd className="flex min-h-7 min-w-0 items-center gap-1">
+          <span
+            className={`min-w-0 truncate text-sm font-medium ${mono ? "font-mono text-[13px] tabular-nums" : ""}`}
+            title={typeof value === "string" ? value : undefined}
+          >
+            {value}
+          </span>
+          {controls}
+        </dd>
+        {noteNode ? <dd>{noteNode}</dd> : null}
+      </div>
+    );
+  }
+
+  // `plain`: one compact row, label left and value right, as the prototype's Details card.
+  if (plain) {
+    return (
+      <div className="min-w-0 py-2.5">
+        <div className="flex min-w-0 items-center gap-3">
+          <Icon className="size-4 shrink-0 text-muted-foreground" />
+          <span className="shrink-0 text-sm text-muted-foreground">{label}</span>
+          <span
+            className={`min-w-0 flex-1 truncate text-right text-sm font-medium ${mono ? "font-mono text-[13px] tabular-nums" : ""}`}
+            title={typeof value === "string" ? value : undefined}
+          >
+            {value}
+          </span>
+          {controls}
+        </div>
+        {noteNode ? <div className="ps-7">{noteNode}</div> : null}
+      </div>
+    );
+  }
+
+  return (
+    // min-w-0: a grid item defaults to min-width:auto, so `truncate` would never fire.
+    <div className="flex min-w-0 items-center gap-2.5 rounded-lg border bg-muted/30 px-3 py-2.5">
+      <Icon className="size-4 shrink-0 text-muted-foreground" />
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p
+          className={`truncate text-sm font-medium ${mono ? "font-mono text-[13px] tabular-nums" : ""}`}
+        >
+          {value}
+        </p>
+        {noteNode}
+      </div>
+      {controls}
     </div>
   );
 }
 
-export function SiteFactsCard({ application, canManage = false, siteTypes = [], nodeVersions = [], nodeVersionsFailed = false, className }) {
+// `strip`: no card, just the facts in a row, for the application header (Krishna, 7 Oct:
+// the details are what people open this page for, so they lead it).
+export function SiteFactsCard({ application, canManage = false, siteTypes = [], nodeVersions = [], nodeVersionsFailed = false, columns = null, list = false, strip = false, className }) {
   const t = useTranslations("applications");
   const format = useFormatter();
   const [editingWebRoot, setEditingWebRoot] = useState(false);
@@ -339,7 +387,8 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
     {
       icon: FileCode,
       label: t("facts.php"),
-      value: !application.serving_profile || application.serving_profile === "php" ? application.php_version : null,
+      // Not in `list`: the header already says it.
+      value: list ? null : !application.serving_profile || application.serving_profile === "php" ? application.php_version : null,
       mono: true,
     },
     {
@@ -371,24 +420,12 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
         ? { onClick: measure, busy: measuring, label: t("size.measureHint"), icon: Ruler }
         : null,
     },
-    { icon: CalendarClock, label: t("columns.created"), value: application.created_at_human },
-  ].filter((fact) => fact.value !== null && fact.value !== undefined && fact.value !== "");
+    // Not with `columns={2}`: the page header already shows when it was created.
+    (columns === 2 || list) && !strip ? null : { icon: CalendarClock, label: t("columns.created"), value: application.created_at_human },
+  ].filter((fact) => fact && fact.value !== null && fact.value !== undefined && fact.value !== "");
 
-  return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle as="h2" className="flex items-center gap-2 text-lg font-semibold">
-          <Info className="size-4 text-primary" />
-          {t("facts.title")}
-        </CardTitle>
-        <CardDescription>{t("facts.description")}</CardDescription>
-      </CardHeader>
-      <CardContent className={`grid gap-2 sm:grid-cols-2 ${factColumns(facts.length)}`}>
-        {facts.map((fact) => (
-          <Fact key={fact.label} editLabel={t("webRoot.title")} {...fact} />
-        ))}
-      </CardContent>
-
+  const dialogs = (
+    <>
       {/* Until the switch settles: `node_version_change` goes back to null, or to failed. */}
       {nodeSwitching ? <AutoRefresh intervalMs={3000} stopAfterMs={600000} /> : null}
 
@@ -419,6 +456,46 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
         targetTitle={relabelTitle}
         matched={relabelTo === suggestion ? detection?.matched : null}
       />
+    </>
+  );
+
+  if (strip) {
+    return (
+      <>
+        {/* One row up to six facts; seven or eight go four across, so none is left alone. */}
+        <dl className={`grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 ${facts.length > 6 ? "xl:grid-cols-4" : "xl:grid-cols-[repeat(auto-fit,minmax(8.5rem,1fr))]"} ${className ?? ""}`}>
+          {facts.map((fact) => (
+            <Fact key={fact.label} editLabel={t("webRoot.title")} strip {...fact} />
+          ))}
+        </dl>
+        {dialogs}
+      </>
+    );
+  }
+
+  return (
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle as="h2" className="flex items-center gap-2">
+          {t("facts.title")}
+        </CardTitle>
+        <CardDescription>{t("facts.description")}</CardDescription>
+      </CardHeader>
+      {/* `columns={2}`: the card shares its row with another, so it never goes four across. */}
+      {/* `list`: a plain one-column list for the narrow reference column. */}
+      <CardContent
+        className={
+          list
+            ? "divide-y divide-border/70 py-0"
+            : `grid gap-2 sm:grid-cols-2 ${columns === 2 ? "sm:[&>*:last-child:nth-child(odd)]:col-span-2" : factColumns(facts.length)}`
+        }
+      >
+        {facts.map((fact) => (
+          <Fact key={fact.label} editLabel={t("webRoot.title")} plain={list} {...fact} />
+        ))}
+      </CardContent>
+
+      {dialogs}
     </Card>
   );
 }

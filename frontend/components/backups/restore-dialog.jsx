@@ -170,7 +170,7 @@ export function RestoreDialog({ backup, open, onOpenChange, onStarted }) {
 function Fact({ label, value }) {
   return (
     <div className="min-w-0">
-      <dt className="text-[0.6875rem] font-medium uppercase tracking-wide text-muted-foreground">
+      <dt className="text-[0.6875rem] font-medium text-muted-foreground">
         {label}
       </dt>
       <dd className="mt-0.5 text-sm font-medium tabular-nums">{value}</dd>

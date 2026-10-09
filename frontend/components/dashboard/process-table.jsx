@@ -138,8 +138,10 @@ export function ProcessTable({
       accessorKey: "command",
       header: t("processes.command"),
       enableSorting: false,
-      // The command takes the remaining width; max-w-0 lets its child ellipsize.
-      meta: { className: "w-full min-w-36 max-w-0 @xl/procs:min-w-64" },
+      // The command takes the remaining width; max-w-0 lets its child ellipsize. With every
+      // column showing, each gets a share instead, or PID, User, CPU and Memory were pushed
+      // together at the right with the middle empty (Krishna, 8 Oct).
+      meta: { className: "w-full min-w-36 max-w-0 @xl/procs:min-w-64 @5xl/procs:w-[32%]" },
       cell: CommandCell,
     },
     {
@@ -148,13 +150,13 @@ export function ProcessTable({
       accessorFn: (row) => num(row.pid),
       sortingFn: "basic",
       header: t("processes.pid"),
-      meta: { className: "hidden w-20 @xl/procs:table-cell" },
+      meta: { className: "hidden w-20 @xl/procs:table-cell @5xl/procs:w-[12%]" },
       cell: PidCell,
     },
     {
       accessorKey: "user",
       header: t("processes.user"),
-      meta: { className: "hidden w-28 max-w-28 truncate @5xl/procs:table-cell" },
+      meta: { className: "hidden w-28 max-w-28 truncate @5xl/procs:table-cell @5xl/procs:w-[14%] @5xl/procs:max-w-none" },
       cell: UserCell,
     },
     {
@@ -162,7 +164,7 @@ export function ProcessTable({
       accessorFn: (row) => num(row.cpu),
       sortingFn: "basic",
       header: t("processes.cpu"),
-      meta: { className: "w-24 @xl/procs:w-32 xl:w-52" },
+      meta: { className: "w-24 @xl/procs:w-32 xl:w-52 @5xl/procs:w-[21%]" },
       cell: CpuCell,
     },
     {
@@ -170,7 +172,7 @@ export function ProcessTable({
       accessorFn: (row) => num(row.memory),
       sortingFn: "basic",
       header: t("processes.memory"),
-      meta: { className: "hidden w-32 xl:w-52 @xl/procs:table-cell" },
+      meta: { className: "hidden w-32 xl:w-52 @xl/procs:table-cell @5xl/procs:w-[21%]" },
       cell: MemoryCell,
     },
     {

@@ -128,10 +128,10 @@ export function FirewallSection({ appId, application, categories: catalog, modes
 
   return (
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
-      <div className="max-w-4xl space-y-4">
+      <div className="space-y-4">
         <Note icon={ShieldCheck}>{t("explainer")}</Note>
   
-        <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+        <Card className="gap-0 overflow-hidden py-0">
           <CardContent className="space-y-5 p-5">
             {/* A real <label> so the whole row toggles, not just the switch. */}
             <label

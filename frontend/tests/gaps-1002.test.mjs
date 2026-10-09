@@ -61,7 +61,7 @@ test("support references are not faded below 4.5:1", () => {
 test("an app whose process is stopped says Stopped, not Running (Krishna 2 Oct)", () => {
   const src = read("components/applications/application-status-badge.jsx");
   assert.match(src, /export function isProcessDown\(application\)/);
-  assert.match(src, /if \(isProcessDown\(application\)\) \{\s*return \(\s*<Badge variant="warning"[^>]*>\s*\{t\("processStoppedBadge"\)\}/);
+  assert.match(src, /if \(isProcessDown\(application\)\) \{\s*return \(\s*<Badge variant="warning"[^>]*>\s*(?:<PillDot[^>]*\/>\s*)?\{t\("processStoppedBadge"\)\}/);
   assert.match(src, /down\s*\?\s*t\("processStoppedBadge"\)/);
   for (const l of ["en", "es", "hi", "de", "fr", "pt", "ja", "ru"]) assert.ok(JSON.parse(read(`messages/${l}.json`)).applications.processStoppedBadge, l);
 });

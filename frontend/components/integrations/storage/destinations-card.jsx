@@ -75,21 +75,18 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
     <Card className="gap-0 overflow-hidden py-0">
       {/* Same header shape as the Git integration card. The add button only
           shows once there is a list; the empty state carries its own. */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/20 px-5 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
         <div className="flex items-center gap-2.5">
-          <span className="flex shrink-0 items-center justify-center text-muted-foreground">
-            <HardDrive className="size-3.5" />
-          </span>
           <div>
             <div className="flex items-center gap-1.5">
-              <p className="text-sm font-medium">{t("card.title")}</p>
+              <h2 className="text-[15px] font-semibold tracking-tight">{t("card.title")}</h2>
               {/* Test writes, reads back and deletes a file, so a read-only key never
                   passes. Popover, not tooltip, so it works on touch. */}
               <InfoHint label={t("card.whatTestDoes")}>
                 <p className="text-xs leading-relaxed">{t("card.testExplained")}</p>
               </InfoHint>
             </div>
-            <p className="text-xs text-muted-foreground">{t("card.subtitle")}</p>
+            <p className="text-sm text-muted-foreground">{t("card.subtitle")}</p>
           </div>
         </div>
         {destinations.length > 0 ? addButton : null}
@@ -104,7 +101,7 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
               <HardDrive className="size-6" aria-hidden />
             </span>
             <div className="space-y-2">
-              <p className="text-base font-semibold tracking-tight">{t("empty.title")}</p>
+              <p className="text-[15px] font-semibold tracking-tight">{t("empty.title")}</p>
               <p className="max-w-md text-sm leading-6 text-muted-foreground">{t("empty.body")}</p>
               {/* Keys are encrypted at rest and only used for this server's backups. */}
               <p className="max-w-md text-xs leading-5 text-muted-foreground">

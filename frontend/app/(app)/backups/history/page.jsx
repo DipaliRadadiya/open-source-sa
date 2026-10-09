@@ -45,10 +45,8 @@ export default async function BackupsHistoryPage({ searchParams }) {
           canRestore={canRestore}
           canRun={canRun}
           hasFilters={hasFilters}
+          pager={<DataTablePagination meta={meta} />}
         />
-        {/* Not gated on row count: the selector hides itself when the list is
-            too short to paginate (see data-table-pagination.jsx). */}
-        <DataTablePagination meta={meta} />
       </div>
     </NavTransitionProvider>
   );

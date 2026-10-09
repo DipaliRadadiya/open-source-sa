@@ -1,76 +1,99 @@
 import Link from "@/components/ui/app-link";
 import { getTranslations } from "next-intl/server";
-import { Server, Network, Cpu, Terminal, CircleCheck, CircleAlert } from "lucide-react";
+import {
+  Server,
+  Cpu,
+  Terminal,
+  CircleCheck,
+  CircleAlert,
+  Monitor,
+  MemoryStick,
+  HardDrive,
+  Globe,
+  Hexagon,
+  Binary,
+  Database,
+  ChevronRight,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PANEL_CARD } from "@/lib/theme/card-chrome";
 import { Badge } from "@/components/ui/badge";
-import { CopyButton } from "@/components/ui/copy-button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { SiteAttention } from "@/components/dashboard/site-attention";
-import { EngineLogo } from "@/components/databases/engine-logo";
-import { engineLogo } from "@/lib/databases/engine-logo";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { shortVersion } from "@/lib/databases/short-version";
 
 // Listed from `/databases/engines` instead, so filtered out of `/server/facts` runtimes.
 const DATABASE_ENGINES = new Set(["mysql", "mariadb", "mongodb", "postgresql"]);
 
-function Field({ icon: Icon, label, value, mono, copyLabel, className }) {
+// Product names, shown as-is in every language.
+const RUNTIMES = {
+  nginx: { name: "Nginx", logo: "/runtimes/nginx.svg", web: true },
+  apache: { name: "Apache", logo: "/runtimes/apache.svg", web: true },
+  openlitespeed: { name: "OpenLiteSpeed", logo: null, web: true },
+  php: { name: "PHP", logo: "/site-types/php.svg" },
+  node: { name: "Node.js", logo: "/runtimes/node.svg" },
+  redis: { name: "Redis", logo: "/runtimes/redis.svg" },
+};
+
+// What a site depends on: the web server, PHP, Node.js and one database. The
+// rest (Redis, a second engine) sits behind "+N more" on the Services page.
+const MAIN_RUNTIMES = new Set(["nginx", "apache", "openlitespeed", "php", "node"]);
+const MAIN_ENGINE_ORDER = ["mariadb", "mysql", "postgresql", "mongodb"];
+const ENGINE_MARKS = new Set(MAIN_ENGINE_ORDER);
+
+function Fact({ icon: Icon, label, value, mono }) {
   return (
-    // min-w-0: a grid item keeps min-width:auto, so without it the tile grows to
-    // its widest word and `truncate` below never fires.
-    <div
-      className={cn(
-        "flex min-w-0 items-center gap-2.5 rounded-lg border bg-muted/30 px-3.5 py-3",
-        className,
-      )}
-    >
-      <Icon className="size-4 shrink-0 text-muted-foreground" />
-      <div className="min-w-0 flex-1 space-y-0.5">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-        {/* Mono at a scale size, with tighter tracking to fit long values. */}
-        {value ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <p
-                tabIndex={0}
-                className={`truncate text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${mono ? "font-mono tracking-tight" : ""}`}
-              >
-                {value}
-              </p>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-sm break-all">{value}</TooltipContent>
-          </Tooltip>
-        ) : (
-          <p className={`truncate text-sm font-medium ${mono ? "font-mono tracking-tight" : ""}`}>
-            —
-          </p>
-        )}
+    <div className="flex min-w-0 items-center gap-3 rounded-lg px-2 py-2">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/70 text-muted-foreground ring-1 ring-border/70">
+        <Icon className="size-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <dt className="text-xs text-muted-foreground">{label}</dt>
+        <dd className="flex min-w-0 items-center gap-1">
+          {value ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  tabIndex={0}
+                  className={cn(
+                    "truncate text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                    mono && "font-mono tracking-tight",
+                  )}
+                >
+                  {value}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-sm break-all">{value}</TooltipContent>
+            </Tooltip>
+          ) : (
+            <span className="text-sm font-medium">—</span>
+          )}
+        </dd>
       </div>
-      {/* Always visible, not hover-revealed. */}
-      {copyLabel ? <CopyButton value={value} label={copyLabel} /> : null}
     </div>
   );
 }
 
-// A band, not a grid card, so the facts fit one line and the charts below form a 2×2.
-export async function ServerInfoCard({
-  facts,
-  health,
-  siteAttention = [],
-  engines = [],
-  enginesFailed = false,
-}) {
-  const t = await getTranslations("serverDashboard");
-  const tDatabases = await getTranslations("databases");
-  // `mysql` is dropped: `/server/facts` builds it from `mysql --version`, which on
-  // MariaDB reports the client under the wrong name.
-  const runtimes = Object.entries(facts?.runtimes ?? {}).filter(
-    ([name, version]) => version && !DATABASE_ENGINES.has(name),
+function SoftwareChip({ logo, icon: Icon = Hexagon, name, version, title }) {
+  return (
+    <li title={title} className="flex min-w-0 items-center gap-3 rounded-xl bg-muted/40 p-3 ring-1 ring-border/70">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-card shadow-e1 ring-1 ring-border/70 dark:bg-white">
+        {logo ?? <Icon className="size-4 text-muted-foreground" aria-hidden />}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-medium">{name}</span>
+        {version ? (
+          <span className="block truncate font-mono text-xs text-muted-foreground">{version}</span>
+        ) : null}
+      </span>
+    </li>
   );
-  // Installed, not running; whether services are up is the services badge's job.
-  const installedEngines = engines.filter((engine) => engine.installed);
-  const down = health?.down ?? [];
+}
+
+// One full-width card: the machine's facts, then the software its sites run on.
+// No IP or uptime here: the banner above shows both (Krishna, 6 Oct).
+export async function ServerInfoCard({ facts, health, engines = [], enginesFailed = false, canViewServices = false }) {
+  const t = await getTranslations("serverDashboard");
 
   if (!facts) {
     return (
@@ -85,130 +108,115 @@ export async function ServerInfoCard({
     );
   }
 
+  const cores = Number(facts.cpu?.cores) || 0;
+  const processor = facts.cpu?.model
+    ? cores
+      ? t("info.processor", { model: facts.cpu.model, count: cores })
+      : facts.cpu.model
+    : null;
+
   return (
-    // Same chrome as every other card on this page.
     <Card className={cn("[--card-spacing:--spacing(5)]", PANEL_CARD)}>
-      <CardContent className="space-y-4">
-        {/* Identity spans two of five columns; the hostname needs the width. */}
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          {/* Emphasised over its neighbours: the only tile that answers "which machine is this". */}
-          <div className="flex min-w-0 items-center gap-3 rounded-lg border border-primary/25 bg-primary/[0.07] px-3.5 py-3 shadow-e1 ring-1 ring-inset ring-background/60 sm:col-span-2">
-            {/* The one filled brand-colour chip on the page. */}
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-e1">
-              <Server className="size-5" />
-            </span>
-            <div className="min-w-0 flex-1 space-y-0.5">
-              {facts.hostname ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <p
-                      tabIndex={0}
-                      className="truncate font-mono text-base font-semibold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    >
-                      {facts.hostname}
-                    </p>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-sm break-all font-mono">
-                    {facts.hostname}
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-                <p className="truncate font-mono text-base font-semibold tracking-tight">—</p>
-              )}
-              <p className="truncate text-xs text-muted-foreground">
-                {[facts.os, facts.uptime?.human, facts.timezone].filter(Boolean).join(" · ") ||
-                  "—"}
-              </p>
-            </div>
-            {/* No reboot badge: the app shell already shows it on every page. */}
-          </div>
-
-          {/* public_ip first: `ip` is the interface address, often private on
-              cloud hosts and useless for DNS. Falls back when unknown. */}
-          <Field
-            icon={Network}
-            label={t("info.ip")}
-            value={facts.public_ip ?? facts.ip}
-            mono
-            copyLabel={t("info.copyIp")}
-          />
-          <Field icon={Cpu} label={t("info.cpuModel")} value={facts.cpu?.model} />
-          {/* Architecture rides along with the kernel. Full width at the
-              two-column step so it is not alone beside a gap. */}
-          <Field
-            icon={Terminal}
-            label={t("info.kernel")}
-            value={[facts.kernel, facts.arch].filter(Boolean).join(" · ")}
-            mono
-            className="sm:col-span-2 xl:col-span-1"
-          />
-        </div>
-
-        {down.length ? (
-          <Link
-            href="/services"
-            className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
-          >
-            <CircleAlert className="mt-0.5 size-4 shrink-0" />
-            <span>
-              {t("info.servicesDown", {
-                names: down.map((s) => s.label).join(", "),
-                count: down.length,
-              })}
-            </span>
-          </Link>
-        ) : null}
+      <CardHeader>
+        <CardTitle as="h2">{t("info.title")}</CardTitle>
+        <CardDescription>{t("info.description")}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {/* Eight facts so the four-across rows are always full. */}
+        <dl className="grid gap-x-4 gap-y-1 sm:grid-cols-2 xl:grid-cols-4">
+          <Fact icon={Server} label={t("info.hostname")} value={facts.hostname} mono />
+          <Fact icon={Monitor} label={t("info.os")} value={facts.os} />
+          <Fact icon={Cpu} label={t("info.cpuModel")} value={processor} />
+          <Fact icon={MemoryStick} label={t("info.memory")} value={facts.memory_total_human} />
+          <Fact icon={HardDrive} label={t("info.disk")} value={facts.disk_total_human} />
+          <Fact icon={Terminal} label={t("info.kernel")} value={facts.kernel} mono />
+          <Fact icon={Binary} label={t("info.arch")} value={facts.arch} mono />
+          <Fact icon={Globe} label={t("info.timezone")} value={facts.timezone} mono />
+        </dl>
+        <MainSoftware
+          facts={facts}
+          health={health}
+          engines={engines}
+          enginesFailed={enginesFailed}
+          canViewServices={canViewServices}
+        />
       </CardContent>
+    </Card>
+  );
+}
 
-      {/* Runtimes and service status share one footer, which keeps its shape when the
-          services list is empty. */}
-      <CardFooter className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          {/* mr-1 plus gap-2 so the label reads as a heading, not another chip. */}
-          <span className="mr-1 text-xs uppercase tracking-wide text-muted-foreground">
-            {t("info.runtimes")}
-          </span>
-          {runtimes.length || installedEngines.length || enginesFailed ? (
-            <>
-              {runtimes.map(([name, version]) => (
-                <Badge key={name} variant="outline" className="gap-1.5 bg-card py-1 font-normal">
-                  <span className="font-medium">{name}</span>
-                  <span className="font-mono text-xs text-muted-foreground">{version}</span>
-                </Badge>
-              ))}
+// The software sites depend on, as equal tiles across the card's full width.
+async function MainSoftware({ facts, health, engines, enginesFailed, canViewServices }) {
+  const t = await getTranslations("serverDashboard");
+  const tDatabases = await getTranslations("databases");
+  // `mysql` is dropped: `/server/facts` builds it from `mysql --version`, which on
+  // MariaDB reports the client under the wrong name.
+  const runtimes = Object.entries(facts.runtimes ?? {}).filter(
+    ([name, version]) => version && !DATABASE_ENGINES.has(name),
+  );
+  // Installed, not running; whether services are up is the services badge's job.
+  const installedEngines = engines.filter((engine) => engine.installed);
+  const down = health?.down ?? [];
+  const mainRuntimes = runtimes
+    .filter(([name]) => MAIN_RUNTIMES.has(name))
+    // Web server first, then the languages.
+    .sort(([a], [b]) => Number(Boolean(RUNTIMES[b]?.web)) - Number(Boolean(RUNTIMES[a]?.web)));
+  const engineRank = (engine) => {
+    const rank = MAIN_ENGINE_ORDER.indexOf(engine.engine);
+    return rank === -1 ? MAIN_ENGINE_ORDER.length : rank;
+  };
+  const [mainEngine, ...otherEngines] = [...installedEngines].sort((a, b) => engineRank(a) - engineRank(b));
+  const more = runtimes.length - mainRuntimes.length + otherEngines.length;
 
-              {/* With logos, matching the databases page. */}
-              {installedEngines.map((engine) => {
-                const name = tDatabases(`engines.${engine.engine}`);
-                return (
-                  <Badge
-                    key={`engine-${engine.engine}`}
-                    variant="outline"
-                    // The packaged string, for anyone who needs the build:
-                    // "10.11.14-MariaDB-0ubuntu0.24.04.1".
-                    title={engine.version ?? undefined}
-                    className="gap-1.5 bg-card py-1 font-normal"
-                  >
-                    <EngineLogo engine={engine.engine} className="!h-4 w-auto max-w-16" />
-                    {/* The logos are aria-hidden; a wordmark logo already shows
-                        the name, so it is screen-reader only there. */}
-                    {engineLogo(engine.engine)?.wordmark ? (
-                      <span className="sr-only">{name}</span>
-                    ) : (
-                      <span className="font-medium">{name}</span>
-                    )}
-                    {shortVersion(engine.version) ? (
-                      <span className="font-mono text-xs whitespace-nowrap text-muted-foreground">
-                        {shortVersion(engine.version)}
-                      </span>
-                    ) : null}
-                  </Badge>
-                );
-              })}
 
-              {/* Stated, not omitted, so the row never contradicts the databases
-                  page. Muted: nothing is broken on the server. */}
-              {enginesFailed ? (
+  return (
+    <section className="border-t pt-5">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold">{t("info.mainSoftware")}</h3>
+        <ServiceHealthLine health={health} down={down} t={t} />
+      </div>
+      <div>
+        {runtimes.length || installedEngines.length || enginesFailed ? (
+          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+            {mainRuntimes.map(([name, version]) => {
+              const known = RUNTIMES[name];
+              return (
+                <SoftwareChip
+                  key={name}
+                  name={known?.name ?? name}
+                  version={version}
+                  logo={
+                    known?.logo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={known.logo} alt="" className="size-5 object-contain" />
+                    ) : null
+                  }
+                />
+              );
+            })}
+
+            {mainEngine ? (
+              <SoftwareChip
+                name={tDatabases(`engines.${mainEngine.engine}`)}
+                // The packaged string, for anyone who needs the build:
+                // "10.11.14-MariaDB-0ubuntu0.24.04.1".
+                title={mainEngine.version ?? undefined}
+                version={shortVersion(mainEngine.version)}
+                // The mark only: a wordmark is unreadable at tile size, so the name is printed.
+                logo={
+                  ENGINE_MARKS.has(mainEngine.engine) ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={`/runtimes/${mainEngine.engine}.svg`} alt="" className="size-5 object-contain" />
+                  ) : null
+                }
+                icon={Database}
+              />
+            ) : null}
+
+            {/* Stated, not omitted, so the row never contradicts the databases
+                page. Muted: nothing is broken on the server. */}
+            {enginesFailed ? (
+              <li className="flex items-center">
                 <Badge
                   variant="outline"
                   className="gap-1.5 border-dashed bg-card py-1 font-normal text-muted-foreground"
@@ -216,20 +224,33 @@ export async function ServerInfoCard({
                   <CircleAlert className="size-3.5 shrink-0" aria-hidden />
                   {t("info.enginesUnknown")}
                 </Badge>
-              ) : null}
-            </>
-          ) : (
-            <span className="text-sm text-muted-foreground">{t("info.noRuntimes")}</span>
-          )}
-        </div>
+              </li>
+            ) : null}
 
-        {/* Site health and service health share one line. */}
-        <div className="flex flex-wrap items-center gap-2">
-          <SiteAttention findings={siteAttention} />
-          <ServiceHealthLine health={health} down={down} t={t} />
-        </div>
-      </CardFooter>
-    </Card>
+            {more > 0 ? (
+              <li>
+                {canViewServices ? (
+                  <Link
+                    href="/services"
+                    prefetch={false}
+                    className="flex h-full items-center justify-center gap-0.5 rounded-xl border border-dashed px-3 py-3 text-sm font-medium text-primary transition-colors hover:border-primary/40 hover:bg-primary/5"
+                  >
+                    {t("info.moreSoftware", { count: more })}
+                    <ChevronRight className="size-3.5" aria-hidden />
+                  </Link>
+                ) : (
+                  <span className="flex h-full items-center justify-center rounded-xl border border-dashed px-3 py-3 text-sm text-muted-foreground">
+                    {t("info.moreSoftware", { count: more })}
+                  </span>
+                )}
+              </li>
+            ) : null}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">{t("info.noRuntimes")}</p>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -237,7 +258,6 @@ function ServiceHealthLine({ health, down, t }) {
   // No permission, or the request failed: there is no verdict to give.
   if (!health) return null;
 
-  // A badge, matching the runtime chips beside it.
   if (down.length) {
     return (
       <Badge variant="destructive" className="gap-1.5 py-1 font-medium">

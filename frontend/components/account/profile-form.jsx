@@ -19,6 +19,7 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
+  CardFooter,
 } from "@/components/ui/card";
 import {
   Form,
@@ -67,7 +68,7 @@ export function ProfileForm({ user, onDirtyChange }) {
     <Form {...form}>
       <form noValidate
         onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
-        className="max-w-3xl space-y-6"
+        className="space-y-6"
       >
         <Card>
           <CardHeader>
@@ -111,17 +112,17 @@ export function ProfileForm({ user, onDirtyChange }) {
               )}
             />
           </CardContent>
+          {/* Save sits inside the card it saves, as on every settings card. */}
+          <CardFooter className="justify-end">
+            {/* Explains why Save is disabled ("no changes yet"). */}
+            <ReasonTooltip reason={!isDirty && !isSubmitting ? tc("nothingToSave") : null}>
+              <Button type="submit" disabled={isSubmitting || !isDirty}>
+                {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+                {isSubmitting ? t("profile.saving") : t("profile.submit")}
+              </Button>
+            </ReasonTooltip>
+          </CardFooter>
         </Card>
-
-        <div className="flex justify-end">
-          {/* Explains why Save is disabled ("no changes yet"). */}
-          <ReasonTooltip reason={!isDirty && !isSubmitting ? tc("nothingToSave") : null}>
-            <Button type="submit" disabled={isSubmitting || !isDirty}>
-              {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-              {isSubmitting ? t("profile.saving") : t("profile.submit")}
-            </Button>
-          </ReasonTooltip>
-        </div>
       </form>
     </Form>
   );

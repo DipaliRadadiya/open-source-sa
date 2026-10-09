@@ -23,14 +23,18 @@ const ALLOWED = new Map([
     "leads with the site's name, status and domain, not a page title",
   ],
   [
-    "app/(app)/databases/[database]/page.jsx",
-    "leads with the database name in mono, beside its engine",
+    "components/ui/detail-header.jsx",
+    "the masthead of a detail page (a database): name, badges and facts, as the application page",
   ],
   ["app/(setup)/setup/page.jsx", "onboarding card: an icon, then the heading"],
   ["components/sections/not-found-content.jsx", "centred 404, not a page shell"],
   [
     "components/integrations/storage/google-drive-callback.jsx",
     "centred OAuth result: the heading is the outcome, so each state owns it",
+  ],
+  [
+    "components/dashboard/dashboard-hero.jsx",
+    "the dashboard leads with the server banner; its heading is the health verdict",
   ],
   ["components/ui/page-header.jsx", "the component itself"],
 ]);

@@ -45,7 +45,9 @@ test("sorting is display-only and does not touch grouping", () => {
 test("the group heading outweighs the chips it labels", () => {
   // It was `text-xs font-medium text-muted-foreground` — lighter than the
   // things underneath it, so three groups read as one wall.
-  assert.match(code, /text-xs font-semibold uppercase tracking-wide text-foreground/);
+  // Sentence case since the redesign (all-caps labels were part of the dated look),
+  // so it carries the weight with size instead.
+  assert.match(code, /text-sm font-semibold text-foreground/);
   assert.doesNotMatch(code, /<p className="text-xs font-medium text-muted-foreground">\{label\}<\/p>/);
 });
 

@@ -259,7 +259,7 @@ export function DeployCard({
                 )}
                 <CopyButton value={commit} className="size-6" />
                 {incomplete ? (
-                  <Badge variant="outline" className="border-warning/40 bg-warning/10 font-normal text-warning">
+                  <Badge variant="warning">
                     {t("deploy.notFullyDeployed")}
                   </Badge>
                 ) : null}

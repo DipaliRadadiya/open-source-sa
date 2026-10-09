@@ -1,15 +1,16 @@
-import { Skeleton } from "@/components/ui/skeleton";
+import { SkCard, SkCentered, SkHeader } from "@/components/ui/skeleton-kit";
 
-// Sized to the not-yet-set-up state, which most sites are in.
+
+// Fail2ban: the card that sets it up.
 export default function Loading() {
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <Skeleton className="h-8 w-24" />
-        <Skeleton className="h-7 w-48" />
-        <Skeleton className="h-4 w-80" />
+    <div className="space-y-6" aria-busy="true">
+      <SkHeader />
+      <div className="">
+        <SkCard head={false}>
+          <SkCentered />
+        </SkCard>
       </div>
-      <Skeleton className="h-[19rem] w-full max-w-4xl rounded-2xl" />
     </div>
   );
 }

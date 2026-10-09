@@ -38,8 +38,8 @@ export function Caution({
       )}
     >
       <Icon className={cn("shrink-0", scale.icon, action && "mt-0 self-start sm:self-center", MARK[tone] ?? MARK.warning)} aria-hidden />
-      {/* max-w-prose for readability, except beside an action button. */}
-      <div className={cn("flex-1 space-y-2", action ? "min-w-48" : "min-w-0 [&>p]:max-w-prose")}>{children}</div>
+      {/* Full width: a cap on line length left the right half of wide notes empty (7 Oct). */}
+      <div className={cn("flex-1 space-y-2", action ? "min-w-48" : "min-w-0")}>{children}</div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>
   );

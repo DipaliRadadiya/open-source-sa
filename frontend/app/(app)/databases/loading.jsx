@@ -1,32 +1,34 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { SkHeader, SkNote } from "@/components/ui/skeleton-kit";
 import { TableSkeleton } from "@/components/data-table/table-skeleton";
 
-// Mirrors the real layout — heading, engine bar, search row, table — so the
-// content swaps in place rather than pushing everything down when it lands.
-export default function Loading() {
-  return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <Skeleton className="h-7 w-36" />
-        <Skeleton className="h-4 w-80" />
-      </div>
-
-      <div className="space-y-4">
-        <div className="flex items-center justify-between rounded-xl border px-4 py-3">
-          <Skeleton className="h-5 w-48" />
-          <Skeleton className="h-5 w-32" />
-        </div>
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <Skeleton className="h-9 w-full sm:w-64" />
+const TOOLBAR = (
+  <div className="flex items-center justify-between gap-3">
           <div className="flex gap-2">
-            <Skeleton className="h-9 w-9" />
+            <Skeleton className="h-9 w-64" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-9 size-9" />
             <Skeleton className="h-9 w-40" />
           </div>
         </div>
+);
 
-        <TableSkeleton rows={5} columns={5} />
+// Databases: the engine strip, the unlinked note, then the list card.
+export default function Loading() {
+  return (
+    <div className="space-y-6" aria-busy="true">
+      <SkHeader />
+      <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-card px-4 py-3 shadow-e1">
+        <div className="flex gap-2">
+          <Skeleton className="h-7 w-32 rounded-lg" />
+          <Skeleton className="h-7 w-32 rounded-lg" />
+          <Skeleton className="h-7 w-32 rounded-lg" />
+        </div>
+        <Skeleton className="h-8 w-24 rounded-lg" />
       </div>
+      <SkNote tone="warning" button />
+      <TableSkeleton rows={6} columns={6} toolbar={TOOLBAR} />
     </div>
   );
 }

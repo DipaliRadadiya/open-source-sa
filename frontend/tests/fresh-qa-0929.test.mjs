@@ -99,7 +99,8 @@ test("B1/B2: retry stays busy until the page shows the new run", () => {
 });
 
 test("B1: view-only sees Create disabled with a reason, and the create page says why", () => {
-  assert.match(read("components/applications/applications-table.jsx"), /<ReasonTooltip reason=\{t\("noPermission"\)\}>/);
+  // The button moved to the page header (redesign); same rule there.
+  assert.match(read("components/applications/create-application-button.jsx"), /<ReasonTooltip reason=\{t\("noPermission"\)\}>/);
   assert.match(read("app/(app)/applications/create/page.jsx"), /<PermissionDenied title=\{t\("createTitle"\)\} description=\{t\("noPermission"\)\} \/>/);
 });
 
@@ -126,8 +127,10 @@ test("B3: stopping a process announces once the list no longer shows it; view-on
   assert.match(src, /\? t\("kill\.noPermission"\)/);
 });
 
-test("B3: the attention chip counts applications, not findings", () => {
-  assert.match(read("components/dashboard/site-attention.jsx"), /new Set\(findings\.map\(\(finding\) => finding\.site\)\)\.size/);
+test("B3: the attention panel counts kinds of problem, and names each application once per kind", () => {
+  const panel = read("components/dashboard/attention-panel.jsx");
+  assert.match(panel, /const count = kinds\.length \+ \(down\.length \? 1 : 0\);/);
+  assert.match(panel, /names=\{one \? null : items\.map\(\(item\) => item\.site\)\.join\(", "\)\}/);
 });
 
 test("Resume closes the ⋯ menu once the page shows the application running", () => {
@@ -235,7 +238,7 @@ test("The SSH-not-enforced notice is one soft row with its action at the end", (
   assert.match(caution, /\{action \? <div className="shrink-0">\{action\}<\/div> : null\}/);
   // flex-1 beside a shrink-0 button squeezed the text to a word per line on a phone.
   assert.match(caution, /action \? "flex-wrap items-center" : "items-start"/);
-  assert.match(caution, /action \? "min-w-48" : "min-w-0 /);
+  assert.match(caution, /action \? "min-w-48" : "min-w-0"/);
   assert.match(read("components/system-users/system-users-table.jsx"), /<Caution\s+size="md"\s+action=\{/);
 });
 
@@ -299,8 +302,12 @@ test("Code review C–G: firewall protected rules lock always; unreadable state 
 
 test("Code review C–G: databases — remote access restart confirm, nested user errors, export download gated", () => {
   for (const f of ["add-user-dialog.jsx", "edit-user-dialog.jsx", "create-database-dialog.jsx"]) {
-    assert.match(read(`components/databases/${f}`), /restart\.ask\(error\)[\s\S]{0,160}restart_cluster: true/, f);
+    assert.match(read(`components/databases/${f}`), /restart\.retry\(error, \(\) => onSubmit\(\{ \.\.\.submitted, restart_cluster: true \}\)\)/, f);
   }
+  // 8 Oct: the question stays open, "Restarting…", until the resend settles.
+  const hook = read("components/databases/use-restart-confirm.jsx");
+  assert.match(hook, /confirmLabel=\{busy \? t\("working"\) : t\("confirm"\)\}/);
+  assert.match(hook, /finally \{\s*setBusy\(false\);\s*setPending\(null\);/);
   assert.match(read("components/databases/create-database-dialog.jsx"), /if \(field && form\.getValues\(field\) !== undefined\) form\.setError\(field/);
   assert.match(read("components/databases/database-exports.jsx"), /canManage && row\.download_url && row\.available/);
 });
@@ -487,11 +494,24 @@ test("Manual-only backups are labelled Manual only, not Paused (Krishna, 29 Sep)
 
 test("Backups overview: the table only shows when the widest locale fits, and its spanning line wraps", () => {
   const card = read("components/backups/coverage-card.jsx");
-  assert.match(card, /<div className="@container">\s*<div className="@min-\[1180px\]:hidden">\s*<CoverageCards/);
-  assert.match(card, /<div className="hidden @min-\[1180px\]:block">\s*<CoverageTable/);
   const table = read("components/backups/coverage-table.jsx");
+  // 8 Oct (Krishna: a table, cards take too much room with many applications): the table
+  // from 900px; status is a badge beside the name. Measured: French needed 1,097
+  // with every column, because untruncatable names set the first column's width.
+  assert.match(card, /<ListCard from="c900" toolbar=\{toolbar\} footer=\{footer\}>\s*<div className="@min-\[900px\]\/coverage:hidden">\s*<CoverageCards/);
+  assert.match(card, /<div className="hidden @min-\[900px\]\/coverage:block">\s*<CoverageTable \{\.\.\.listProps\} bare \/>/);
+  // Filters inside the list's card, as on Applications (Krishna, 8 Oct: "looks conjuncted").
+  assert.doesNotMatch(card, /ToggleGroup/);
+  // "Manual only" once per row, in the Schedule column, not as a badge (Krishna, 8 Oct).
+  assert.match(table, /\{row\.original\.state === "paused" \|\| row\.original\.state === "unprotected" \? null : \(/);
+  assert.match(table, /paused && "font-medium text-warning"/);
+  assert.match(read("components/backups/coverage-cards.jsx"), /\{state === "paused" \|\| state === "unprotected" \? null : \(\s*<Badge/);
   assert.match(table, /whitespace-normal text-muted-foreground\/80">\{t\("notSetUpLine"\)\}/);
-  assert.match(table, /header: wrapping\(t\("columns\.type"\)\)/);
+  assert.match(table, /header: wrapping\(t\("columns\.typeShort"\)\)/);
+  assert.match(table, /header: wrapping\(t\("columns\.storage"\)\)/);
+  assert.doesNotMatch(table, /StackedHeader/);
+  assert.match(table, /meta: \{ className: "w-\[28%\] max-w-0" \}/);
+  assert.doesNotMatch(table, /accessorKey: "state"/);
 });
 
 test("Firewall form accepts port 65535 like the API (PORT_MAX since 03aca0da)", () => {
@@ -535,7 +555,7 @@ test("Stat card helper line wraps instead of cutting off, and keeps numbers with
 });
 
 test("Firewall full pass: named filters, readable policy pill, even quick-add tiles", () => {
-  assert.match(read("components/data-table/filter-select.jsx"), /<SelectTrigger className=\{className\} aria-label=\{label\}>/);
+  assert.match(read("components/data-table/filter-select.jsx"), /<SelectTrigger className=\{cn\(SELECT_WELL, className\)\} aria-label=\{label\}>/);
   const rules = read("components/firewall/rules-card.jsx");
   for (const k of ["stateLabel", "actionLabel", "originLabel", "sortLabel"]) assert.match(rules, new RegExp(`label=\\{t\\("rules\\.filters\\.${k}"\\)\\}`), k);
   assert.match(read("components/firewall/firewall-status-card.jsx"), /<span className="font-medium text-foreground">\{value\}<\/span>/);
@@ -548,7 +568,9 @@ test("Firewall full pass: named filters, readable policy pill, even quick-add ti
 test("Red and grey tokens are dark enough for AA on their tints (Krishna OK, 30 Sep)", () => {
   const css = read("app/globals.css");
   assert.match(css, /--destructive: oklch\(0\.54 0\.22 27\.3\);/);
-  assert.match(css, /--muted-foreground: oklch\(0\.53 0\.012 264\);/);
+  // The redesign's grey (6 Oct) is darker still: what must hold is "no lighter than 0.53".
+  const grey = css.match(/:root \{[\s\S]*?--muted-foreground: oklch\(([\d.]+) /);
+  assert.ok(grey && Number(grey[1]) <= 0.53, `muted-foreground lightness ${grey?.[1]} is above 0.53`);
 });
 
 test("Fail2ban full pass: tab panels show focus, jail names translated, Russian tabs don't clash", () => {
@@ -567,7 +589,13 @@ test("Activity Log full pass: named filters, readable type badges, fits a phone 
   assert.match(bar, /aria-label=\{t\("table\.type"\)\}/);
   assert.doesNotMatch(bar, /selectedAction/);
   assert.match(read("lib/activity-log/labels.js"), /text-\[color-mix\(in_oklch,var\(--chart-5\)_55%,var\(--foreground\)\)\]/);
-  assert.match(read("components/activity-log/my-activity-table.jsx"), /meta: \{ className: "whitespace-normal sm:whitespace-nowrap" \}/);
+  // Phone (8 Oct): When/User hide and ride under the description; three columns at
+  // 390px wrapped "14 hours ago" onto three lines.
+  for (const f of ["components/activity-log/my-activity-table.jsx", "components/admin/activity/activity-table.jsx"]) {
+    const src = read(f);
+    assert.match(src, /cell: WhenCell, meta: \{ className: "hidden sm:table-cell" \}/, f);
+    assert.match(src, /mt-0\.5 block text-xs text-muted-foreground sm:hidden/, f);
+  }
 });
 
 test("Activity types are translated; the English-only Event badge and Action filter are gone (Krishna A)", () => {
@@ -591,15 +619,21 @@ test("Staging: the toast waits for the dialog to go, and neither dialog reopens 
 });
 
 test("Caution with an action: text uses the whole row (Krishna, 30 Sep)", () => {
-  assert.match(read("components/ui/caution.jsx"), /action \? "min-w-48" : "min-w-0 \[&>p\]:max-w-prose"/);
+  // And without one too, since 7 Oct: a line-length cap left the right half of wide notes empty.
+  assert.match(read("components/ui/caution.jsx"), /action \? "min-w-48" : "min-w-0"/);
 });
 
 test("Secondary buttons are tinted only inside cards and notices; elsewhere neutral (Krishna, 30 Sep)", () => {
   const src = read("components/ui/button.jsx");
-  assert.match(src, /const TINT_IN_CARDS =\s*"in-\[\.bg-card\]:border-transparent in-\[\.bg-card\]:bg-\[color-mix/);
-  assert.match(src, /in-data-\[slot=caution\]:bg-\[color-mix/);
-  assert.match(src, /in-data-\[slot=notice\]:bg-\[color-mix/);
-  assert.match(src, /\{ variant: "outline", size: \["default", "xs", "sm", "lg"\], className: `\$\{NEUTRAL\} \$\{TINT_IN_CARDS\}` \}/);
+  // A tinted border, not transparent: the fill is clipped to the padding box, so a
+  // transparent border looked 2px shorter than the neutral Refresh beside it (8 Oct).
+  assert.match(src, /const TINT_IN_CARDS =\s*"in-\[\.bg-card\]:border-\[color-mix\(in_oklch,var\(--primary\)_16%,var\(--background\)\)\]/);
+  assert.match(src, /in-\[\.bg-card\]:bg-\[color-mix/);
+  // On a coloured note (Caution, notice): white with a border since 7 Oct; the blue tint
+  // on amber "not looks like button".
+  assert.match(src, /in-data-\[slot=caution\]:bg-card!/);
+  assert.match(src, /in-data-\[slot=notice\]:bg-card!/);
+  assert.match(src, /\{ variant: "outline", size: \["default", "xs", "sm", "lg"\], className: `\$\{NEUTRAL\} \$\{TINT_IN_CARDS\} \$\{ON_NOTE\}` \}/);
   assert.match(src, /\{ variant: "outline", size: \["icon", "icon-xs", "icon-sm", "icon-lg"\], className: NEUTRAL \}/);
   assert.match(read("components/ui/caution.jsx"), /data-slot="caution"/);
   assert.match(read("components/sections/locale-switcher.jsx"), /<Button\s+variant="neutral"/);

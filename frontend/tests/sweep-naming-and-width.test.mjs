@@ -49,9 +49,11 @@ test("the fail2ban screen is called Fail2ban, everywhere", () => {
    * own name is what people search for, so the page moved to meet the nav
    * rather than the other way round.
    *
-   * No override, therefore — the catalog's own label is already right.
+   * No override, therefore — the catalog's own label is already right. (The
+   * name may appear in the sidebar's group map; only navTitle relabels.)
    */
-  assert.doesNotMatch(navigation, /app_fail2ban/);
+  const navTitleFn = navigation.slice(navigation.indexOf("export function navTitle"), navigation.indexOf("}", navigation.indexOf("export function navTitle")));
+  assert.doesNotMatch(navTitleFn, /app_fail2ban/);
 
   for (const locale of locales) {
     const m = JSON.parse(read(`messages/${locale}.json`));

@@ -4,12 +4,11 @@ import { scheduleWhen } from "@/lib/backups/schedule-time";
 import { frequencyLabel } from "@/lib/backups/frequency";
 import { BACKUP_IN_FLIGHT } from "@/lib/schemas/backup";
 import { BackupStatusBadge } from "@/components/backups/backup-status-badge";
-import { History, PlayCircle, Settings2, ShieldCheck } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { History, PlayCircle, Settings2, ShieldCheck, SearchX, Archive } from "lucide-react";
+import { EmptyState } from "@/components/data-table/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
-import { Card, CardContent } from "@/components/ui/card";
 import { ActionIcon } from "@/components/ui/action-icon";
 import { DomainText } from "@/components/ui/domain-text";
 import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-table/card-list";
@@ -22,7 +21,6 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
   const tb = useTranslations("backups");
   const ta = useTranslations("backups.application");
   const th = useTranslations("backups.history");
-  const tc = useTranslations("common");
   const format = useFormatter();
 
   // "Daily · 2:00 AM · keeps 7"; the timezone is named on the site's backups page instead.
@@ -39,11 +37,7 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
 
   if (rows.length === 0) {
     return (
-      <Card className="gap-0 py-0 shadow-sm">
-        <CardContent className="py-10 text-center text-sm text-muted-foreground">
-          {t("noMatches")}
-        </CardContent>
-      </Card>
+      <EmptyState icon={SearchX} subject={Archive} title={t("noMatches")} />
     );
   }
 
@@ -71,105 +65,114 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
                 </Link>
                 <DomainText domain={application.domain} className="text-xs text-muted-foreground" />
               </div>
-              <Badge variant={meta.variant} className="shrink-0 gap-1.5 font-normal">
-                <Icon className="size-3" />
-                {t(`status.${state}`)}
-              </Badge>
+              {/* No badge where the card already says it, as in the table: "Manual only"
+                  is on the Schedule line, "None" is the "Not set up" line. */}
+              {state === "paused" || state === "unprotected" ? null : (
+                <Badge variant={meta.variant} className="shrink-0 gap-1.5 font-normal">
+                  <Icon className="size-3" />
+                  {t(`status.${state}`)}
+                </Badge>
+              )}
             </div>
 
-            {/* An unconfigured site shows the same four facts, each saying "not set". */}
-            <CardFacts>
-              <CardFact
-                label={t("columns.type")}
-                className={cn(!target && "text-muted-foreground")}
-                value={target ? (target.type_title ?? target.type) : t("placeholders.type")}
-              />
-              <CardFact
-                label={t("columns.schedule")}
-                className={cn(!target && "text-muted-foreground")}
-                /* Includes the hour, same as the table. */
-                value={target ? scheduleFact(target) : t("placeholders.schedule")}
-              />
-              <CardFact
-                label={t("columns.storage")}
-                className={cn(!target && "text-muted-foreground")}
-                value={target?.storage_destination_name ?? t("placeholders.storage")}
-              />
-              <CardFact
-                label={t("columns.lastRun")}
-                className={cn(!target && "text-muted-foreground")}
-              >
-                {/* The table's status dot, as a badge: without it a run in progress or a
-                    failed one read as an ordinary "Last run". */}
-                {lastBackup && (BACKUP_IN_FLIGHT.includes(lastBackup.status) || lastBackup.status === "failed") ? (
-                  <span className="mb-1 block">
-                    <BackupStatusBadge backup={lastBackup} />
+            {/* Not set up: one line and the button, as in the table. Four facts each
+                saying "not set" made 22 tall, identical cards. */}
+            {!target ? (
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t pt-3">
+                <p className="min-w-48 flex-1 text-sm text-muted-foreground">{t("notSetUpLine")}</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!canManage}
+                  disabledReason={canManage ? null : th("noPermission")}
+                  onClick={() => onSetUp(application.id)}
+                >
+                  <ShieldCheck className="size-4" />
+                  {t("setUpShort")}
+                </Button>
+              </div>
+            ) : (
+            <>
+              <CardFacts>
+                <CardFact label={t("columns.type")} value={target.type_title ?? target.type} />
+                <CardFact
+                  label={t("columns.schedule")}
+                  /* Includes the hour, same as the table; amber when paused, since the
+                     card has no "Manual only" badge. */
+                  className={state === "paused" ? "[&>dd]:font-medium [&>dd]:text-warning" : undefined}
+                  value={scheduleFact(target)}
+                />
+                <CardFact label={t("columns.storage")} value={target.storage_destination_name ?? t("placeholders.storage")} />
+                <CardFact label={t("columns.lastRun")}>
+                  {/* The table's status dot, as a badge: without it a run in progress or a
+                      failed one read as an ordinary "Last run". */}
+                  {lastBackup && (BACKUP_IN_FLIGHT.includes(lastBackup.status) || lastBackup.status === "failed") ? (
+                    <span className="mb-1 block">
+                      <BackupStatusBadge backup={lastBackup} />
+                    </span>
+                  ) : null}
+                  <span className="block truncate">
+                    {/* Same fallback as the table: a crashed run leaves last_run_at unset, so not "Never". */}
+                    {target.last_run_at_human ?? lastBackup?.created_at_human ?? t("neverRunShort")}
                   </span>
-                ) : null}
-                <span className="block truncate">
-                  {/* Same fallback as the table: a crashed run leaves last_run_at unset, so not "Never". */}
-                  {target
-                    ? (target.last_run_at_human ?? lastBackup?.created_at_human ?? t("neverRunShort"))
-                    : t("placeholders.lastRun")}
-                </span>
-                {next ? (
-                  <span className="block truncate text-xs text-muted-foreground">{next}</span>
-                ) : null}
-              </CardFact>
-            </CardFacts>
+                  {next ? (
+                    <span className="block truncate text-xs text-muted-foreground">{next}</span>
+                  ) : null}
+                </CardFact>
+              </CardFacts>
 
-            {/* Viewers see the actions too, disabled with the reason. */}
-            <div className="mt-auto flex flex-wrap justify-end gap-2">
-                {state === "unprotected" ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={!canManage}
-                    disabledReason={canManage ? null : th("noPermission")}
-                    onClick={() => onSetUp(application.id)}
-                  >
-                    <ShieldCheck className="size-4" />
-                    {t("setUpShort")}
-                  </Button>
-                ) : (
-                  <>
-                    <ReasonTooltip
-                      reason={
-                        !canManage
-                          ? th("noPermission")
-                          : restoringId === application.id
-                            ? ta("restoreRunning")
-                            : !target && !busyIds.includes(application.id)
-                              ? tc("needsBackupTarget")
-                              : null
-                      }
+              {/* Viewers see the actions too, disabled with the reason. */}
+              <div className="mt-auto flex flex-wrap justify-end gap-2">
+                  {state === "unprotected" ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={!canManage}
+                      disabledReason={canManage ? null : th("noPermission")}
+                      onClick={() => onSetUp(application.id)}
                     >
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={!canManage || busyIds.includes(application.id) || !target || restoringId === application.id}
-                        onClick={() => onBackUpNow(application.id, application.name)}
+                      <ShieldCheck className="size-4" />
+                      {t("setUpShort")}
+                    </Button>
+                  ) : (
+                    <>
+                      <ReasonTooltip
+                        reason={
+                          !canManage
+                            ? th("noPermission")
+                            : restoringId === application.id
+                              ? ta("restoreRunning")
+                              : null
+                        }
                       >
-                        <ActionIcon icon={PlayCircle} pending={busyIds.includes(application.id)} className="size-4" />
-                        {t("runBackup")}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={!canManage || busyIds.includes(application.id) || restoringId === application.id}
+                          onClick={() => onBackUpNow(application.id, application.name)}
+                        >
+                          <ActionIcon icon={PlayCircle} pending={busyIds.includes(application.id)} className="size-4" />
+                          {t("runBackup")}
+                        </Button>
+                      </ReasonTooltip>
+                      <Button size="sm" variant="ghost" asChild>
+                        <Link href={`/backups/history?application=${application.id}`} prefetch={false}>
+                          <History className="size-4" />
+                          {t("viewBackups")}
+                        </Link>
                       </Button>
-                    </ReasonTooltip>
-                    <Button size="sm" variant="ghost" asChild>
-                      <Link href={`/backups/history?application=${application.id}`} prefetch={false}>
-                        <History className="size-4" />
-                        {t("viewBackups")}
-                      </Link>
-                    </Button>
-                    {/* Matches the table's row menu. */}
-                    <Button size="sm" variant="ghost" asChild>
-                      <Link href={`/applications/${application.id}/backups`} prefetch={false}>
-                        <Settings2 className="size-4" />
-                        {t("manage")}
-                      </Link>
-                    </Button>
-                  </>
-                )}
-            </div>
+                      {/* Matches the table's row menu. */}
+                      <Button size="sm" variant="ghost" asChild>
+                        <Link href={`/applications/${application.id}/backups`} prefetch={false}>
+                          <Settings2 className="size-4" />
+                          {t("manage")}
+                        </Link>
+                      </Button>
+                    </>
+                  )}
+              </div>
+            </>
+            )}
           </CardListItem>
         );
       })}

@@ -2,19 +2,23 @@ import { CheckCircle2, CircleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Container query, not a breakpoint: the card is narrow at wide viewports and wide at narrow ones.
-export function CreateReadinessPanel({ items = [], onSelectItem }) {
+// `className` lets the side column cap its height: then only the list scrolls and the
+// footer buttons stay on screen (on a short laptop they had been below the fold, 7 Oct).
+export function CreateReadinessPanel({ items = [], onSelectItem, footer = null, className }) {
   const t = useTranslations("applications");
   const done = items.filter((item) => item.ready).length;
+  // What is still missing comes first: it is what the reader has to act on (7 Oct).
+  const ordered = [...items.filter((item) => !item.ready), ...items.filter((item) => item.ready)];
   const complete = items.length > 0 && done === items.length;
 
   return (
-    <Card className="@container border-primary/20 bg-primary/[0.02]">
-      <CardHeader className="space-y-1 pb-3">
+    <Card className={cn("@container gap-0 py-0", className)}>
+      <CardHeader className="shrink-0 space-y-1 border-b py-4">
         <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-base">{t("guided.stageReview")}</CardTitle>
+          <CardTitle as="h2">{t("guided.stageReview")}</CardTitle>
           <Badge variant={complete ? "success" : "muted"} className="font-normal">
             {complete ? t("readiness.ready") : t("readiness.needsAttention")}
           </Badge>
@@ -40,13 +44,13 @@ export function CreateReadinessPanel({ items = [], onSelectItem }) {
           </div>
         ) : null}
       </CardHeader>
-      <CardContent className="grid gap-x-6 gap-y-2 @md:grid-cols-2 @3xl:grid-cols-3 @6xl:grid-cols-4">
-        {items.map((item) => (
+      <CardContent className="grid min-h-0 flex-1 content-start gap-x-6 gap-y-2.5 overflow-y-auto py-4 @md:grid-cols-2 @3xl:grid-cols-3 @6xl:grid-cols-4">
+        {ordered.map((item) => (
           <div
             key={item.key}
             className="grid grid-cols-[1rem_minmax(0,1fr)] items-start gap-2 text-sm"
           >
-            <span className={item.ready ? "mt-0.5 text-success" : "mt-0.5 text-muted-foreground"}>
+            <span className={item.ready ? "mt-0.5 text-success" : "mt-0.5 text-warning"}>
               {item.ready ? (
                 <CheckCircle2 className="size-4" aria-hidden />
               ) : (
@@ -74,6 +78,9 @@ export function CreateReadinessPanel({ items = [], onSelectItem }) {
           </div>
         ))}
       </CardContent>
+      {footer ? (
+        <CardFooter className="shrink-0 gap-2 py-3 [&>*]:flex-1">{footer}</CardFooter>
+      ) : null}
     </Card>
   );
 }

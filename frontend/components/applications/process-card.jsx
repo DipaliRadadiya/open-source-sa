@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useFormatter, useTranslations } from "next-intl";
@@ -9,7 +10,7 @@ import { controlApplicationProcess } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatBytes } from "@/lib/format/bytes";
 import { ConvertSupervisorDialog } from "@/components/applications/convert-supervisor-dialog";
@@ -94,7 +95,7 @@ export function ProcessCard({ application, canManage = false, className }) {
   }
 
   const facts = [
-    { label: t("state"), value: stateLabel },
+    // No "State" row: the pill in the header already says it.
     // `since` is the last start time, meaningless on a stopped process.
     { label: t("since"), value: state === "active" ? formatSince(process.since, format) : null },
     { label: t("memory"), value: memory },
@@ -103,13 +104,13 @@ export function ProcessCard({ application, canManage = false, className }) {
   ].filter((fact) => fact.value !== null && fact.value !== undefined && fact.value !== "");
 
   return (
-    <Card className={className}>
-      <CardHeader className="gap-1.5">
-        <CardTitle as="h2">{t("title")}</CardTitle>
-        <div className="flex flex-wrap items-center gap-2">
-          {/* `muted` is the STATE pill; `secondary` below is a label, which is
-              what the badge naming distinguishes. The branch predates that
-              distinction and used `secondary` for both. */}
+    // `#process`: the status tile jumps here when the process has stopped.
+    <Card id="process" className={cn("@container/process scroll-mt-[calc(var(--app-chrome,4rem)_+_1rem)]", className)}>
+      {/* State beside the title and buttons in the header, like the other cards on this page. */}
+      <CardHeader className="items-center border-b">
+        <CardTitle as="h2" className="flex flex-wrap items-center gap-2">
+          {t("title")}
+          {/* `muted` is the STATE pill; `secondary` below is a label. */}
           <Badge variant={STATE_VARIANT[state] ?? "muted"} className="font-normal">
             {stateLabel}
           </Badge>
@@ -118,24 +119,9 @@ export function ProcessCard({ application, canManage = false, className }) {
               {t("supervisorPm2")}
             </Badge>
           ) : null}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {notStartedYet ? (
-          <p className="text-sm text-muted-foreground">{t("deployToStart")}</p>
-        ) : null}
-
-        <div className="grid gap-4 text-sm sm:grid-cols-2">
-          {facts.map((fact) => (
-            <div key={fact.label} className="space-y-1">
-              <p className="text-xs text-muted-foreground">{fact.label}</p>
-              <p className="font-mono text-xs">{fact.value}</p>
-            </div>
-          ))}
-        </div>
-
+        </CardTitle>
         {canManage ? (
-          <div className="flex flex-wrap gap-2">
+          <CardAction className="row-span-1 flex flex-wrap justify-end gap-2 self-center">
             {[
               // Each disabled action says why; Stop is red as on the Services page.
               { action: "start", icon: Play, variant: "default", reason: state === "active" ? t("alreadyRunning") : null },
@@ -171,8 +157,25 @@ export function ProcessCard({ application, canManage = false, className }) {
                 {t("convert.action")}
               </Button>
             ) : null}
-          </div>
+          </CardAction>
         ) : null}
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {notStartedYet ? (
+          <p className="text-sm text-muted-foreground">{t("deployToStart")}</p>
+        ) : null}
+
+        {/* Three across when the card is wide; in a narrow column the start time
+            takes its own row so the date is not cut off. */}
+        <dl className="grid grid-cols-2 gap-2 [&>*:first-child]:col-span-2 @xl/process:grid-cols-3 @xl/process:[&>*:first-child]:col-span-1">
+          {facts.map((fact) => (
+            <div key={fact.label} className="min-w-0 rounded-lg bg-muted/40 px-3 py-2 ring-1 ring-border/60">
+              <dt className="text-xs text-muted-foreground">{fact.label}</dt>
+              <dd className="truncate text-sm font-medium tabular-nums">{fact.value}</dd>
+            </div>
+          ))}
+        </dl>
+
         <ConfirmDialog
           open={confirmStop}
           onOpenChange={(next) => !pending && setConfirmStop(next)}

@@ -50,7 +50,7 @@ export default async function DiskCleanerPage() {
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       {/* Status cards side by side across the top; the list gets full width below. */}
-      <div className="max-w-5xl space-y-4">
+      <div className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
           <DiskSummary
             disk={data.disk}

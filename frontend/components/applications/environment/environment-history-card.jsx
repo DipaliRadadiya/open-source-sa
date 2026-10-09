@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { ChevronDown, Cog, History, Loader2, Pencil, RotateCcw } from "lucide-react";
+import { ChevronDown, Cog, Loader2, Pencil, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getEnvironmentHistoryPage, restoreEnvironment } from "@/lib/api/environment";
 import { useRefresh } from "@/hooks/use-refresh";
@@ -98,8 +98,7 @@ export function EnvironmentHistoryCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <History className="size-4" />
+        <CardTitle>
           {t("title")}
         </CardTitle>
         <CardDescription>{t("subtitle")}</CardDescription>

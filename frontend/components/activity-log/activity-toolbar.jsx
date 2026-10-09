@@ -13,6 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { SELECT_WELL } from "@/components/data-table/toolbar-well";
 
 // `extraQuery` is merged into every navigation so the account page keeps its tab.
 // No action filter: the API only filters by exact, untranslated event ids.
@@ -33,8 +35,9 @@ export function ActivityToolbar({ types, searchKey = "searchPlaceholder", extraQ
       {/* The admin log also searches actor names; a personal history has one actor. */}
       <SearchInput placeholder={t(searchKey)} extraQuery={extraQuery} />
 
-      {hasFilters ? (
-        <>
+      {/* Phone: the filter and Refresh share a row, so Refresh is not left alone on one. */}
+      <div className="flex items-center gap-3 sm:contents">
+        {hasFilters ? (
           <Select
             value={selectedType}
             onValueChange={(v) =>
@@ -42,7 +45,7 @@ export function ActivityToolbar({ types, searchKey = "searchPlaceholder", extraQ
               apply({ type: v === "all" ? undefined : v, action: undefined })
             }
           >
-            <SelectTrigger className="w-full sm:w-40" aria-label={t("table.type")}>
+            <SelectTrigger className={cn(SELECT_WELL, "min-w-0 flex-1 sm:w-40 sm:flex-none")} aria-label={t("table.type")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent position="popper">
@@ -54,11 +57,11 @@ export function ActivityToolbar({ types, searchKey = "searchPlaceholder", extraQ
               ))}
             </SelectContent>
           </Select>
-        </>
-      ) : null}
+        ) : null}
 
-      <div className="sm:ml-auto">
-        <RefreshButton />
+        <div className="ml-auto">
+          <RefreshButton />
+        </div>
       </div>
     </div>
   );

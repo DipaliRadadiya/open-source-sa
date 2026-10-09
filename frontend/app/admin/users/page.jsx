@@ -5,6 +5,7 @@ import { getRoles } from "@/lib/roles/get-roles";
 import { UsersView } from "@/components/admin/users/users-view";
 import { UsersToolbar } from "@/components/admin/users/users-toolbar";
 import { UsersTable } from "@/components/admin/users/users-table";
+import { ListCard } from "@/components/data-table/list-card";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -52,17 +53,17 @@ export default async function AdminUsersPage({ searchParams }) {
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       <UsersView roles={roleOptions} rolesFailed={rolesFailed}>
-        <UsersToolbar />
-        <UsersTable
-          data={usersWithRoles}
-          roles={roleOptions}
-          rolesFailed={rolesFailed}
-          currentUserId={user?.id}
-          hasFilters={hasFilters}
-        />
-        {/* Not gated on row count: the selector hides itself when the list is too
-            short to paginate. */}
-        <DataTablePagination meta={meta} />
+        {/* Below lg the rows are cards of their own, so the list drops its frame there. The
+            pager is not gated on row count: it hides itself when the list is too short. */}
+        <ListCard from="lg" toolbar={<UsersToolbar />} footer={<DataTablePagination meta={meta} />}>
+          <UsersTable
+            data={usersWithRoles}
+            roles={roleOptions}
+            rolesFailed={rolesFailed}
+            currentUserId={user?.id}
+            hasFilters={hasFilters}
+          />
+        </ListCard>
       </UsersView>
     </div>
   );

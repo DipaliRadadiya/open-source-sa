@@ -1,18 +1,25 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { SkHeader } from "@/components/ui/skeleton-kit";
 import { TableSkeleton } from "@/components/data-table/table-skeleton";
 
+const TOOLBAR = (
+  <div className="flex items-center justify-between gap-3">
+          <div className="flex gap-2">
+            <Skeleton className="h-9 w-64" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-9 size-9" />
+            <Skeleton className="h-9 w-28" />
+          </div>
+        </div>
+);
+
+// System users: the SSH note, then the list card.
 export default function Loading() {
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <Skeleton className="h-7 w-40" />
-        <Skeleton className="h-4 w-80" />
-      </div>
-      <div className="flex items-center justify-between gap-3">
-        <Skeleton className="h-9 w-full max-w-xs" />
-        <Skeleton className="h-9 w-24" />
-      </div>
-      <TableSkeleton rows={5} columns={6} />
+    <div className="space-y-6" aria-busy="true">
+      <SkHeader />
+      <TableSkeleton rows={7} columns={7} toolbar={TOOLBAR} />
     </div>
   );
 }

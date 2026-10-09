@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Trash2 } from "lucide-react";
+import { Trash2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { CardIcon } from "@/components/ui/card-icon";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { DeleteDatabaseDialog } from "@/components/databases/delete-database-dialog";
 
@@ -16,9 +17,12 @@ export function DeleteDatabaseCard({ database, application = null, canManage }) 
   return (
     <>
       <Card className="flex-row flex-wrap items-center justify-between gap-4 border-destructive/30 px-5 py-4">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-destructive">{t("cardTitle")}</p>
-          <p className="text-sm text-muted-foreground">{t("cardDescription")}</p>
+        <div className="flex min-w-48 flex-1 items-center gap-3">
+          <CardIcon icon={TriangleAlert} tone="destructive" />
+          <div className="space-y-0.5">
+            <h2 className="text-[15px] font-semibold tracking-tight text-destructive">{t("cardTitle")}</h2>
+            <p className="text-sm text-muted-foreground">{t("cardDescription")}</p>
+          </div>
         </div>
 
         <ReasonTooltip reason={canManage ? null : t("noPermission")}>

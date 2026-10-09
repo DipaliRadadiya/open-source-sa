@@ -358,7 +358,7 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
 function NotSaved({ title, children }) {
   return (
     <div className="overflow-hidden rounded-lg border border-destructive/30 bg-destructive/5">
-      <div className="border-b border-destructive/20 px-3 py-1.5 text-xs uppercase tracking-wide text-destructive">
+      <div className="border-b border-destructive/20 px-3 py-1.5 text-xs text-destructive">
         {title}
       </div>
       <pre className="console-scroll max-h-40 overflow-auto p-3 font-mono text-xs leading-6 whitespace-pre-wrap text-destructive">

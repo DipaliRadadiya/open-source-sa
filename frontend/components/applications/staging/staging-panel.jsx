@@ -36,12 +36,9 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
   // This site is a staging copy: link back to production instead.
   if (production?.is_staging) {
     return (
-      <div className="max-w-4xl">
-        <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+      <div >
+        <Card className="gap-0 overflow-hidden py-0">
           <CardContent className="flex flex-wrap items-center gap-3 px-5 py-4">
-            <span className="flex shrink-0 items-center justify-center text-muted-foreground">
-              <FlaskConical className="size-4.5 text-primary" />
-            </span>
             <div className="min-w-60 flex-1 space-y-1">
               <p className="font-semibold">{t("isCopy.title")}</p>
               <p className="text-sm text-muted-foreground">{t("isCopy.body")}</p>
@@ -61,8 +58,8 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
 
   if (!staging) {
     return (
-      <div className="max-w-4xl">
-        <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+      <div >
+        <Card className="gap-0 overflow-hidden py-0">
           <CardContent className="flex flex-col items-center gap-3 px-6 py-10 text-center">
             <span className="flex size-11 items-center justify-center rounded-lg bg-muted">
               <FlaskConical className="size-5 text-muted-foreground" />
@@ -94,12 +91,9 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
   }
 
   return (
-    <div className="max-w-4xl space-y-4">
-      <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+    <div className="space-y-4">
+      <Card className="gap-0 overflow-hidden py-0">
         <CardContent className="flex flex-wrap items-center gap-3 px-5 py-4">
-          <span className="flex shrink-0 items-center justify-center text-muted-foreground">
-            <FlaskConical className="size-4.5 text-primary" />
-          </span>
           <div className="min-w-60 flex-1 space-y-1">
             <p className="flex flex-wrap items-center gap-2 font-semibold">
               {staging.name}
@@ -133,7 +127,7 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/20 px-5 py-4">
           <div className="min-w-0 space-y-1">
-            <p className="text-sm font-medium">{t("push.title")}</p>
+            <h2 className="text-[15px] font-semibold tracking-tight">{t("push.title")}</h2>
             <p className="text-sm text-muted-foreground">
               {t("push.body", { domain: production.domain })}
             </p>
@@ -157,10 +151,10 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
       </Card>
 
       {/* Kept apart from Push so the two are never one misclick apart. */}
-      <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+      <Card className="gap-0 overflow-hidden py-0">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
           <div className="min-w-60 flex-1 space-y-1">
-            <p className="text-sm font-medium">{t("remove.title")}</p>
+            <h2 className="text-[15px] font-semibold tracking-tight">{t("remove.title")}</h2>
             <p className="text-sm break-words text-muted-foreground">
               {t("remove.body", { domain: staging.domain, production: production.domain })}
             </p>

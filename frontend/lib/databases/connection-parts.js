@@ -11,13 +11,35 @@ export function primaryUser(database) {
   return own[0] ?? users[0] ?? null;
 }
 
-// Host and port only; the other parts have their own authoritative fields.
+// Host, port and protocol; the other parts have their own authoritative fields.
 export function connectionAddress(user) {
   if (!user?.connection_string) return {};
   try {
     const url = new URL(user.connection_string);
-    return { host: url.hostname || null, port: url.port || null };
+    return {
+      host: url.hostname || null,
+      port: url.port || null,
+      protocol: url.protocol.replace(/:$/, "") || null,
+    };
   } catch {
     return {};
+  }
+}
+
+/** The string split for display, password left out; null when it is not a URL. */
+export function connectionStringParts(value) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return {
+      scheme: url.protocol.replace(/:$/, ""),
+      username: decodeURIComponent(url.username),
+      host: url.hostname,
+      port: url.port,
+      // Path and query: the database name, plus Mongo's options.
+      rest: `${url.pathname}${url.search}`.replace(/^\//, ""),
+    };
+  } catch {
+    return null;
   }
 }

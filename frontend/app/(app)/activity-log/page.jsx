@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { ActivityToolbar } from "@/components/activity-log/activity-toolbar";
 import { typesForScope, actionsForScope } from "@/lib/activity-log/labels";
 import { MyActivityTable } from "@/components/activity-log/my-activity-table";
+import { ListCard } from "@/components/data-table/list-card";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -50,21 +51,25 @@ export default async function ActivityLogPage({ searchParams }) {
         <LoadFailed description={t("server.loadFailed")} status={status} failure={failure} message={message} />
       ) : (
         <NavTransitionProvider>
-          <ActivityToolbar
-            // The filters endpoint spans both scopes; this page is server-only.
-            types={typesForScope(filters.types, "server")}
-            actions={actionsForScope(filters.actions, filters.types, "server")}
-            searchKey="server.searchPlaceholder"
-          />
-          <MyActivityTable
-            data={entries}
-            showUser
-            emptyMessage={isFiltered ? t("mine.emptyFiltered") : t("server.empty")}
-            hasFilters={isFiltered}
-          />
-          {/* Not gated on row count: the selector hides itself when there is
-              nothing to paginate. */}
-          <DataTablePagination meta={meta} />
+          {/* The pager is not gated on row count: it hides itself when there is nothing to page. */}
+          <ListCard
+            toolbar={
+              <ActivityToolbar
+                // The filters endpoint spans both scopes; this page is server-only.
+                types={typesForScope(filters.types, "server")}
+                actions={actionsForScope(filters.actions, filters.types, "server")}
+                searchKey="server.searchPlaceholder"
+              />
+            }
+            footer={<DataTablePagination meta={meta} />}
+          >
+            <MyActivityTable
+              data={entries}
+              showUser
+              emptyMessage={isFiltered ? t("mine.emptyFiltered") : t("server.empty")}
+              hasFilters={isFiltered}
+            />
+          </ListCard>
         </NavTransitionProvider>
       )}
     </div>

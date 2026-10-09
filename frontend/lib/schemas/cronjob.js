@@ -150,5 +150,9 @@ export const cronjobsResponseSchema = z.object({
     per_page: z.number(),
     total: z.number(),
     last_page: z.number(),
+    // Every run-as account across ALL pages (sorted), for the "Runs as" filter.
+    usernames: z.array(z.string()).optional(),
+    // Whether the cron daemon runs at all; null when the server could not tell.
+    cron_running: z.boolean().nullable().optional(),
   }),
 });

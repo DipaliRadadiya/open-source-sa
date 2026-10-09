@@ -211,6 +211,8 @@ export function CronjobsTable({
       </div>
       <div className="hidden xl:block">
         <DataTable
+          bare
+          roomy
           columns={columns}
           data={data}
           meta={{

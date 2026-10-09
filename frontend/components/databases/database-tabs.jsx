@@ -7,18 +7,20 @@ import { ScrollFade } from "@/components/ui/scroll-fade";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // `replaceState`, not a route change: sections are loaded, and Back should return to the list.
-const VALUES = ["users", "tables", "exports"];
+const VALUES = ["overview", "users", "tables", "exports"];
 // Old tab values still appear in saved links.
 const LEGACY = { backups: "exports" };
 
-export function DatabaseTabs({ users, tables, exports: exportsNode, counts, initial }) {
+export function DatabaseTabs({ overview, users, tables, exports: exportsNode, counts, initial }) {
   const t = useTranslations("databases.tabs");
   const [tab, setTab] = useState(() => {
     const wanted = LEGACY[initial] ?? initial;
-    return VALUES.includes(wanted) ? wanted : "users";
+    return VALUES.includes(wanted) ? wanted : "overview";
   });
 
   const sections = [
+    // Connection details and the facts first: connecting an application is the main task.
+    { value: "overview", label: t("overview"), count: null, node: overview },
     { value: "users", label: t("users"), count: counts.users, node: users },
     { value: "tables", label: t("tables"), count: counts.tables, node: tables },
     { value: "exports", label: t("exports"), count: counts.exports, node: exportsNode },

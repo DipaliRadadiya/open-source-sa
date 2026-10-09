@@ -2,7 +2,7 @@ import { useCallback, useEffect, useImperativeHandle, useState } from "react";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { CircleAlert, CircleCheck, GitCommitHorizontal, History, Loader2, RotateCw, Rocket } from "lucide-react";
+import { CircleAlert, CircleCheck, GitCommitHorizontal, Loader2, RotateCw, Rocket } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchDeployment, redeployDeployment } from "@/lib/api/deployment";
 import { deploymentResponseSchema } from "@/lib/schemas/deploy-history";
@@ -127,9 +127,6 @@ export function DeployHistoryCard({ ref, applicationId, deployments, canManage }
 
       <div className="flex items-center justify-between gap-3 border-b px-5 py-4">
         <div className="flex min-w-0 items-start gap-3">
-          <span className="flex shrink-0 items-center justify-center text-muted-foreground">
-            <History className="size-4" />
-          </span>
         <div className="space-y-1">
           <p className="font-semibold">{t("title")}</p>
           <p className="text-sm text-muted-foreground">{t("subtitle")}</p>

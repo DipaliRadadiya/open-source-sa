@@ -13,6 +13,7 @@ import {
   GridComponent,
   LegendComponent,
   MarkLineComponent,
+  MarkPointComponent,
   TooltipComponent,
 } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
@@ -31,6 +32,8 @@ echarts.use([
   // Capacity lines on the load chart. ECharts silently drops config for
   // unregistered components, so a missing entry fails with no warning.
   MarkLineComponent,
+  // The peak marker on the database query chart.
+  MarkPointComponent,
   CanvasRenderer,
 ]);
 

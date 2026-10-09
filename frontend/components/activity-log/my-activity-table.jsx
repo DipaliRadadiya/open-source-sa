@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations, useFormatter } from "next-intl";
-import { SearchX } from "lucide-react";
+import { SearchX, History } from "lucide-react";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { ClearFiltersButton } from "@/components/data-table/clear-filters-button";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +27,7 @@ function WhenCell({ row }) {
   const format = useFormatter();
   const { created_at, created_at_human } = row.original;
   const label = (
-    <span className="tabular-nums text-muted-foreground sm:whitespace-nowrap">
+    <span className="tabular-nums whitespace-nowrap text-muted-foreground">
       {created_at_human}
     </span>
   );
@@ -71,8 +71,21 @@ const wrap = (label) => function WrappingHeader() {
   return <span className="whitespace-normal">{label}</span>;
 };
 
-function DescriptionCell({ row }) {
-  return <span>{row.original.description || "—"}</span>;
+// Below sm the When (and User) columns are hidden and ride under the description:
+// three columns at 390px wrapped "14 hours ago" onto three lines.
+function DescriptionCell({ row, column }) {
+  const t = useTranslations("activity");
+  const { description, user, created_at_human } = row.original;
+  const who = column.columnDef.meta?.showUser ? (user ? `@${user.username}` : t("system")) : null;
+  return (
+    <>
+      <span>{description || "—"}</span>
+      <span className="mt-0.5 block text-xs text-muted-foreground sm:hidden">
+        {who ? `${who} · ` : null}
+        {created_at_human}
+      </span>
+    </>
+  );
 }
 
 // `showUser` adds the "who" column for the server log, which spans all users.
@@ -83,8 +96,8 @@ export function MyActivityTable({ data, emptyMessage, hasFilters = false, showUs
   // column worth keeping on a phone.
   const columns = [
     // Headers may wrap so long locales fit on a phone.
-    { accessorKey: "created_at_human", header: wrap(t("table.when")), cell: WhenCell, meta: { className: "whitespace-normal sm:whitespace-nowrap" } },
-    ...(showUser ? [{ id: "user", header: t("columns.user"), cell: UserCell }] : []),
+    { accessorKey: "created_at_human", header: wrap(t("table.when")), cell: WhenCell, meta: { className: "hidden sm:table-cell" } },
+    ...(showUser ? [{ id: "user", header: t("columns.user"), cell: UserCell, meta: { className: "hidden sm:table-cell" } }] : []),
     {
       accessorKey: "type",
       header: t("table.type"),
@@ -96,7 +109,7 @@ export function MyActivityTable({ data, emptyMessage, hasFilters = false, showUs
       header: wrap(t("table.description")),
       cell: DescriptionCell,
       // TableCell is nowrap by default; the description must wrap.
-      meta: { className: "whitespace-normal" },
+      meta: { className: "whitespace-normal", showUser },
     },
   ];
 
@@ -106,6 +119,7 @@ export function MyActivityTable({ data, emptyMessage, hasFilters = false, showUs
     return (
       <EmptyState
         icon={SearchX}
+        subject={History}
         title={t("empty.filteredTitle")}
         description={t("empty.filteredDesc")}
         action={<ClearFiltersButton keys={["search", "type", "action"]} label={t("empty.clear")} />}
@@ -113,5 +127,5 @@ export function MyActivityTable({ data, emptyMessage, hasFilters = false, showUs
     );
   }
 
-  return <DataTable columns={columns} data={data} emptyMessage={emptyMessage} />;
+  return <DataTable bare columns={columns} data={data} emptyMessage={emptyMessage} />;
 }

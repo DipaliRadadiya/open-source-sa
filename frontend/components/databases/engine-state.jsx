@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
-import { Database, Loader2, Plug, TriangleAlert } from "lucide-react";
+import { Loader2, Plug, TriangleAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { EngineLogo } from "@/components/databases/engine-logo";
@@ -47,11 +47,8 @@ export function EngineState({ engines = [], connections = [], canManage }) {
         {/* No Health link: the monitor needs a running engine, and none is. */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-48 flex-1 items-center gap-2.5">
-            <span className="flex shrink-0 items-center justify-center text-muted-foreground">
-              <Database className="size-3.5" />
-            </span>
             <div>
-              <h2 className="text-base font-semibold tracking-tight">
+              <h2 className="text-[15px] font-semibold tracking-tight">
                 {t("engineList.title")}
               </h2>
               <p className="text-sm text-muted-foreground">
@@ -261,7 +258,7 @@ function EngineCard({
 
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
           {recommended ? (
-            <Badge variant="outline" className="border-primary/30 bg-primary/10 font-normal text-primary">
+            <Badge>
               {t("engineList.recommended")}
             </Badge>
           ) : null}

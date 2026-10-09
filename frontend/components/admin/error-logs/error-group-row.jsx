@@ -136,7 +136,7 @@ export function ErrorGroupRow({ group, now }) {
 
       <CollapsibleContent>
         <div className="border-t px-4 py-3">
-          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <p className="mb-2 text-xs font-medium text-muted-foreground">
             {t("everyOccurrence")}
           </p>
           {/* Own scroll so one busy group does not push the others off screen. */}

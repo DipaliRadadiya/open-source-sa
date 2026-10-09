@@ -45,7 +45,8 @@ export default async function RootLayout({ children }) {
       <head>
         {themeStyles && <style dangerouslySetInnerHTML={{ __html: themeStyles }} />}
       </head>
-      <body>
+      {/* Grayscale smoothing, as in the redesign: subpixel text read heavier. */}
+      <body className="antialiased">
         <IntlProvider locale={locale} messages={messages}>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             <BrandingProvider branding={branding}>

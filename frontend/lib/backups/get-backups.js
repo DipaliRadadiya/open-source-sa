@@ -187,6 +187,23 @@ export async function getBackupCoverage() {
   };
 }
 
+// Each application's backup standing for the Applications list, by id: one request for
+// the whole list (the API maximum of 100 rows). `null` when it could not be read, so
+// the column says nothing rather than "Not protected" for every row.
+export const getBackupStanding = cache(async function getBackupStanding() {
+  const result = await read("/backup-targets", backupTargetsResponseSchema, { searchParams: { per_page: 100 } });
+  if (result.failed) return null;
+  const byId = {};
+  for (const entry of result.data?.backup_targets ?? []) {
+    byId[entry.application_id] = {
+      state: classify(entry.backup_target, entry.last_backup),
+      when: entry.last_backup?.created_at_human ?? null,
+      lastFailed: entry.last_backup?.status === "failed",
+    };
+  }
+  return byId;
+});
+
 // `null` when unreadable: the form offers a retry, never a hard-coded list.
 export const getBackupTargetOptions = cache(async function getBackupTargetOptions() {
   const result = await read("/backup-targets/options", backupTargetOptionsSchema);

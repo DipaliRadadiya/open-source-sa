@@ -48,13 +48,13 @@ function UpdateOutput({ run, defaultOpen = false }) {
 
 function Outcome({ chip, tint, Icon, title, children, action }) {
   return (
-    <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+    <Card className="gap-0 overflow-hidden py-0">
       <div className="flex items-start gap-4 border-b px-5 py-4">
         <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-xl", chip)}>
           <Icon className={cn("size-6", tint)} aria-hidden />
         </span>
         <div className="min-w-0 flex-1 space-y-1">
-          <h2 className="font-heading text-base leading-snug font-semibold tracking-tight">
+          <h2 className="text-[15px] leading-snug font-semibold tracking-tight">
             {title}
           </h2>
           {children}
@@ -153,7 +153,7 @@ export function UpdateProgress({ run, reconnecting = false, slow = false, dryRun
   }
 
   return (
-    <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+    <Card className="gap-0 overflow-hidden py-0">
       <CardContent className="space-y-3 px-5 py-4">
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm">
           <span className="flex min-w-0 items-center gap-2 font-medium">

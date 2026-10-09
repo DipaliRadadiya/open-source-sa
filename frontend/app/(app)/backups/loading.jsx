@@ -1,24 +1,23 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { SkCard, SkFacts, SkNote } from "@/components/ui/skeleton-kit";
 
-// The restore banner is not reserved: it appears only while a restore runs.
+
+// Backups overview: the warning, the filters, the coverage cards.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">
-      <div className="space-y-1">
-        <Skeleton className="h-8 w-32" />
-        <Skeleton className="h-4 w-80" />
+      <SkNote tone="warning" button />
+      <div className="flex flex-wrap gap-2">
+        <Skeleton className="h-9 w-48" />
+        <Skeleton className="h-9 w-56" />
+        <Skeleton className="h-9 w-36" />
       </div>
-
-      {/* Overview / History / Restores. */}
-      <Skeleton className="h-11 w-[22rem] rounded-lg" />
-
-      <div className="space-y-4">
-        {/* The two banners the overview leads with. */}
-        <Skeleton className="h-20 w-full rounded-xl" />
-        {/* Filters. */}
-        <Skeleton className="h-10 w-full rounded-lg" />
-        {/* The coverage table. */}
-        <Skeleton className="h-[26rem] w-full rounded-xl" />
+      <div className="grid gap-4 md:grid-cols-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <SkCard key={i} action>
+            <SkFacts count={4} className="sm:grid-cols-2 xl:grid-cols-2" />
+          </SkCard>
+        ))}
       </div>
     </div>
   );

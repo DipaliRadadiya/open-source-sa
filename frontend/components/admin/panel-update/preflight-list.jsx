@@ -79,7 +79,7 @@ export function PreflightList({ checks }) {
             // Figure and caption sit at opposite ends of each row.
             <div key={c.key} className="rounded-xl border bg-muted/25 px-4 py-3">
               <div className="flex items-center gap-2">
-                <p className="min-w-0 flex-1 truncate text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                <p className="min-w-0 flex-1 truncate text-xs font-medium text-muted-foreground">
                   {shortName(c.key)}
                 </p>
                 <StatusIcon passed={c.passed} advisory={c.advisory} />

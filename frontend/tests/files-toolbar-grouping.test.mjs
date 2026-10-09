@@ -19,10 +19,11 @@ const panel = read("components/applications/files/files-panel.jsx");
 const fix = read("components/applications/files/fix-permissions-button.jsx");
 
 test("the controls sit on one surface, with search inside it", () => {
-  assert.match(panel, /@container\/toolbar flex flex-col gap-3 rounded-xl border bg-muted\/30 p-2/);
+  // A white card since 7 Oct: on a grey band the search well and neutral buttons vanished.
+  assert.match(panel, /@container\/toolbar flex flex-col gap-2 rounded-2xl border border-border\/70 bg-card p-2.5/);
   // Search used to own a row of its own to hold one input.
   assert.match(panel, /<LocalSearchInput/);
-  assert.match(panel, /className="sm:max-w-56"/);
+  assert.match(panel, /className="sm:max-w-44"/);
 });
 
 test("every control in the strip still looks like a control", () => {
@@ -68,7 +69,8 @@ test("every control in the strip still looks like a control", () => {
    * and red text, never the solid `destructive` variant. Solid red stays
    * reserved for the controls that actually delete.
    */
-  const trash = panel.slice(panel.indexOf("files?trash=1") - 600, panel.indexOf("files?trash=1"));
+  // 1200: the class list grew an in-card copy (7 Oct) so the red survives the toolbar card.
+  const trash = panel.slice(panel.indexOf("files?trash=1") - 1200, panel.indexOf("files?trash=1"));
   assert.match(trash, /bg-destructive\/5 text-destructive/);
   assert.doesNotMatch(trash, /variant="destructive"/);
 });

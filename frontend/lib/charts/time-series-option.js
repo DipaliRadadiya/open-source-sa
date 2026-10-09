@@ -38,8 +38,22 @@ export function timeSeriesOption({
       data: data.map((point) => [point.t, point[s.key] ?? null]),
     };
 
+    // A fade to nothing, as in the redesign; a flat tint (plus the aria decal
+    // stripes) read as a hatched block.
     if (s.kind === "area") {
-      line.areaStyle = { color: colour, opacity: 0.18 };
+      line.areaStyle = {
+        color: {
+          type: "linear",
+          x: 0,
+          y: 0,
+          x2: 0,
+          y2: 1,
+          colorStops: [
+            { offset: 0, color: withAlpha(colour, 0.3) },
+            { offset: 1, color: withAlpha(colour, 0) },
+          ],
+        },
+      };
     }
 
     return line;
@@ -61,7 +75,8 @@ export function timeSeriesOption({
 
   const option = {
     // Pairs with the hidden data table the wrapper renders for screen readers.
-    aria: { enabled: true, decal: { show: true } },
+    // No decal patterns: the legend, tooltip and data table already name each series.
+    aria: { enabled: true, decal: { show: false } },
     // Charts redraw on a poll; re-animating each time is unreadable.
     animation: false,
     /* ECharts does not lay out these bands relative to each other; keep in step: slider 4–34,

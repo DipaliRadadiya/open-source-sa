@@ -19,6 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { SELECT_WELL } from "@/components/data-table/toolbar-well";
 
 // Two searches on purpose: the text box filters what is loaded; the reference
 // lookup queries the server, since the entry may be older than the loaded lines.
@@ -62,7 +64,7 @@ export function ErrorLogPanel({ groups, now, truncated, lines, reference }) {
                 value={String(lines)}
                 onValueChange={(value) => setQuery({ lines: value })}
               >
-                <SelectTrigger className="w-[5.5rem]" aria-label={t("linesLabel")}>
+                <SelectTrigger className={cn(SELECT_WELL, "w-[5.5rem]")} aria-label={t("linesLabel")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

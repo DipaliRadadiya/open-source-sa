@@ -26,7 +26,7 @@ import { SourceCard } from "@/components/applications/source-card";
 import { ProcessCard } from "@/components/applications/process-card";
 import { DomainsCard } from "@/components/applications/domains-card";
 import { ProtectionCard } from "@/components/applications/protection-card";
-import { AttentionStrip } from "@/components/applications/attention-strip";
+import { AppStatusTiles } from "@/components/applications/app-status-tiles";
 import { RootLockButton } from "@/components/applications/root-lock-button";
 import { getRootLock } from "@/lib/applications/get-root-lock";
 import { issueItems, localKeysSupersededBy } from "@/lib/applications/issue-items";
@@ -252,151 +252,151 @@ export default async function ApplicationDetailPage({ params }) {
     // Drop local inferences the server's own findings already cover.
     .filter((item) => !superseded.has(item.key));
 
+  // A paused site serves a holding page: worth saying first, but not a fault.
+  // Covered by a status tile, so not repeated as a line under them.
+  const tileKeys = new Set(["ssl", "backups"]);
+  const alerts = attentionItems.filter(
+    (item) => !tileKeys.has(item.key) && !/^issue-(certificate|deploy_failed)-/.test(item.key),
+  );
+  // Each tile only when its read succeeded: a failed read is not a fact.
+  const httpsTile =
+    canSeeDomains && !certificate.failed
+      ? {
+          secured,
+          issuing: certificateIssuing,
+          expiringSoon: Boolean(certificate.certificate?.expiring_soon),
+          expiresHuman: certificate.certificate?.expires_at_human ?? null,
+        }
+      : null;
+  const backupTile =
+    canSeeBackups && !backup.failed
+      ? {
+          target: backup.target,
+          noneKept:
+            !backupRuns.failed &&
+            backupRuns.meta?.total === backupRuns.backups.filter((b) => BACKUP_IN_FLIGHT.includes(b.status)).length,
+        }
+      : null;
+  const deployTile = isGit && canSeeDeployment ? { inFlight: Boolean(latestDeploy.latest?.in_flight) } : null;
+
   return (
-    // space-y-4: header, strip and grid read as one masthead; the grid keeps gap-6.
-    <div className="space-y-4">
-      <div className="rounded-xl border bg-muted/30 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex min-w-0 items-start gap-3">
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-lg border bg-background">
+    <div className="space-y-6">
+      {/* The header card IS the application's details (Krishna, 7 Oct: they are what this
+          page is for and were far down it). Identity and actions on top, the facts below;
+          an 18px name, since the 20px one still read as a banner. */}
+      <div className="@container/masthead relative overflow-hidden rounded-2xl border bg-card shadow-e1">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_140%_at_100%_0%,color-mix(in_oklch,var(--primary)_8%,transparent),transparent_60%)]"
+        />
+        {/* Narrow: a grid, so ⋯ sits beside the name and the buttons fill the row below
+            (on its own line it looked forgotten). Wide: one flex row. */}
+        <div className="relative grid grid-cols-[minmax(0,1fr)_auto] gap-3 px-5 py-4 @3xl/masthead:flex @3xl/masthead:items-center @3xl/masthead:justify-between">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border bg-card">
               <SiteTypeLogo
                 name={application.site_type}
                 provider={gitProviderFor(application, providersByAccountId(gitAccounts))}
                 size="h-6 w-6"
               />
             </span>
-          <div className="min-w-0 space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="min-w-0 text-2xl font-semibold tracking-tight break-words">{application.name}</h1>
-              <ApplicationStatusBadge application={application} />
-              <Badge variant="secondary" className="font-normal">
-                {application.site_type_title ?? application.site_type}
-              </Badge>
-              {/* Staging copies look like the site they copy; mark them where the name is. */}
-              {application.is_staging ? (
-                <Badge variant="warning" className="font-normal">
-                  {t("stagingBadge")}
-                </Badge>
-              ) : null}
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="min-w-0 text-lg leading-tight font-semibold tracking-tight break-words">{application.name}</h1>
+                <ApplicationStatusBadge application={application} />
+                {/* Staging copies look like the site they copy; mark them where the name is. */}
+                {application.is_staging ? (
+                  <Badge variant="warning" className="font-normal">
+                    {t("stagingBadge")}
+                  </Badge>
+                ) : null}
+              </div>
+              {/* Inline text, not flex: on a phone the domain wraps at its dots and both
+                  icons follow its last letter (break-all split "116" and left the copy
+                  button floating beside the first line). */}
+              <p className="mt-0.5 font-mono text-[13px] leading-5 [overflow-wrap:anywhere]">
+                {application.status === "active" ? (
+                  <a href={siteUrl} target="_blank" rel="noreferrer" className="text-primary underline-offset-4 hover:underline">
+                    <BreakableDomain domain={application.domain}>
+                      <ExternalLink className="ml-1 inline size-3.5 align-[-2px]" aria-hidden />
+                    </BreakableDomain>
+                  </a>
+                ) : (
+                  <BreakableDomain domain={application.domain} />
+                )}
+                {/* U+2060 joins the button to the text so it never wraps alone. */}
+                {"\u2060"}
+                <CopyButton value={application.domain} className="-my-1 ml-0.5 inline-flex align-middle" />
+              </p>
             </div>
-            <div className="flex items-center gap-1">
-              {application.status === "active" ? (
-                <a
-                  href={siteUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-mono text-sm text-primary underline-offset-4 hover:underline"
-                >
-                  {application.domain}
-                </a>
-              ) : (
-                <span className="font-mono text-sm text-muted-foreground">
-                  {application.domain}
-                </span>
-              )}
-              <CopyButton value={application.domain} />
-            </div>
-          </div>
           </div>
 
-          {/* Wraps so ⋯ is not pushed off screen on a phone. */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Outline: filled is reserved for what a card asks you to do. */}
+          <div className="contents @3xl/masthead:flex @3xl/masthead:shrink-0 @3xl/masthead:items-center @3xl/masthead:gap-2">
             {application.status === "active" ? (
-              <Button asChild variant="outline" size="sm">
-                <a href={siteUrl} target="_blank" rel="noreferrer">
-                  <ExternalLink className="size-4" />
-                  {t("actions.visit")}
-                </a>
-              </Button>
+              <div className="col-span-2 flex flex-wrap gap-2 *:grow @3xl/masthead:*:grow-0">
+                <Button asChild variant="outline">
+                  <a href={siteUrl} target="_blank" rel="noreferrer">
+                    <ExternalLink className="size-4" />
+                    {t("actions.visit")}
+                  </a>
+                </Button>
+                {/* Beside Visit and filled: signing in as the site's administrator is what
+                    people open this page for most. */}
+                {canMagicLogin ? <MagicLoginLauncher appId={id} variant="default" size="default" /> : null}
+              </div>
             ) : null}
-            {/* Beside Visit: the same act as the site's administrator. */}
-            {canMagicLogin && application.status === "active" ? (
-              <MagicLoginLauncher appId={id} />
-            ) : null}
-            <ApplicationRowActions
+            <div className="col-start-2 row-start-1 self-start @3xl/masthead:self-auto">
+              <ApplicationRowActions
+                application={application}
+                canManage={canManage}
+                showNavigation={false}
+                shortcuts={headerShortcuts}
+                redirectTo="/applications"
+                triggerVariant="outline"
+                triggerClassName="size-9"
+              />
+            </div>
+          </div>
+        </div>
+        {/* Only once it is serving: before that there is no web root or size to show. */}
+        {settled ? (
+          <div className="relative border-t bg-muted/20 px-5 py-3.5">
+            <SiteFactsCard
               application={application}
               canManage={canManage}
-              showNavigation={false}
-              shortcuts={headerShortcuts}
-              redirectTo="/applications"
+              // Type titles arrive translated on the catalog, not from the message files.
+              siteTypes={siteTypes.siteTypes}
+              nodeVersions={installedNodeVersions(node.data)}
+              nodeVersionsFailed={node.failed}
+              strip
             />
           </div>
-        </div>
+        ) : null}
       </div>
-
-      {/* Padding, not margin: a bottom margin would collapse with `space-y-4`. */}
-      {settled ? (
-        <div className="pb-2">
-          <AttentionStrip items={attentionItems} />
-        </div>
-      ) : null}
 
       {/* Until it is serving, the provisioning card is the whole page. */}
       {!settled ? (
         <ProvisioningCard application={application} canManage={canManage} />
       ) : (
-        /* Cards are direct grid children so each row shares a height. */
-        <div className="grid items-stretch gap-6 lg:grid-cols-2 xl:grid-cols-3">
-          {/* Above the facts, once, full width. It disappears for good once somebody
-              says they have saved them, and these cannot be rotated from the panel. */}
-          {showFirstRunCredentials ? (
-            <FirstRunCredentials
-              application={application}
-              className="lg:col-span-2 xl:col-span-3"
-            />
-          ) : null}
+        <>
+          {/* It disappears for good once somebody says they have saved them, and
+              these cannot be rotated from the panel. */}
+          {showFirstRunCredentials ? <FirstRunCredentials application={application} /> : null}
 
-          <SiteFactsCard
+          {/* The four answers people come for (is it up, secure, restorable, deployed),
+              each said once; then two columns: what you work on, and the reference.
+              Krishna, 6 Oct: the old rows repeated each fact in two cards. */}
+          <AppStatusTiles
             application={application}
-            canManage={canManage}
-            // Type titles arrive translated on the catalog, not from the message files.
-            siteTypes={siteTypes.siteTypes}
-            nodeVersions={installedNodeVersions(node.data)}
-            nodeVersionsFailed={node.failed}
-            className="lg:col-span-2 xl:col-span-3"
+            appId={id}
+            https={httpsTile}
+            backup={backupTile}
+            deploy={deployTile}
+            alerts={alerts}
           />
-          <ProtectionCard application={application} items={protectionItems} />
 
-          {/* Domains stays above Source: certificates are what people come to check. */}
-          {canSeeDomains ? (
-            <DomainsCard
-              application={application}
-              domains={domainList.domains}
-              certificate={certificate.certificate}
-              failed={domainList.failed || certificate.failed}
-              href={`/applications/${id}/domains`}
-            />
-          ) : null}
-          {canSeeBackups ? (
-            <BackupCard
-              applicationId={id}
-              target={backup.target}
-              backups={backupRuns.backups}
-              // The target keeps its last run time after every backup is
-              // deleted, so the list decides whether one is actually kept.
-              noneKept={!backupRuns.failed && backupRuns.meta?.total === backupRuns.backups.filter((b) => BACKUP_IN_FLIGHT.includes(b.status)).length}
-              failed={backup.failed}
-              canManage={canRunBackup}
-              href={`/applications/${id}/backups`}
-            />
-          ) : null}
-
-          {/* Shown for every site type; the card itself distinguishes types
-              that need a database from those that do not declare it. */}
-          {canSeeDatabases ? (
-            <DatabaseCard
-              application={application}
-              unattached={spareDatabases.databases}
-              engines={engineList.engines}
-              databases={siteDatabases.databases}
-              failed={siteDatabases.failed}
-              needsDatabase={needsDatabase}
-              canSeeDatabases={canManageDatabases}
-            />
-          ) : null}
-
-          {/* Full width when alone on its line; shares it with a Process card. */}
+          {/* Deploy and Process are wide; the rest is an aligned two-by-two grid, every
+              card the same shape: title with its state, one button, rows (Krishna, 7 Oct). */}
           {isGit ? (
             <SourceCard
               application={application}
@@ -404,27 +404,71 @@ export default async function ApplicationDetailPage({ params }) {
               canDeploy={canDeploy}
               canSeeDeployment={canSeeDeployment}
               deployInFlight={Boolean(latestDeploy.latest?.in_flight)}
-              className={
-                application.has_process
-                  ? "xl:col-span-2"
-                  : "lg:col-span-2 xl:col-span-3"
-              }
             />
           ) : null}
-          {/* Same rule as Source: a lone card on the last line spans it. */}
-          {application.has_process ? (
-            <ProcessCard
-              application={application}
-              canManage={canManage}
-              className={isGit ? undefined : "lg:col-span-2 xl:col-span-3"}
-            />
-          ) : null}
-          {/* The container's own settings live on their own screen now. They
-              were a full-width card here, under the domains and the backups,
-              which is a long way from where anybody looks for "what is this
-              container doing" — see the Container item in this site's sidebar. */}
-        </div>
+          <div className="grid gap-6 lg:grid-cols-2">
+            {canSeeDomains ? (
+              <DomainsCard
+                application={application}
+                domains={domainList.domains}
+                certificate={certificate.certificate}
+                failed={domainList.failed || certificate.failed}
+                href={`/applications/${id}/domains`}
+              />
+            ) : null}
+            {/* Shown for every site type; the card itself distinguishes types
+                that need a database from those that do not declare it. */}
+            {canSeeDatabases ? (
+              <DatabaseCard
+                application={application}
+                unattached={spareDatabases.databases}
+                engines={engineList.engines}
+                databases={siteDatabases.databases}
+                failed={siteDatabases.failed}
+                needsDatabase={needsDatabase}
+                canSeeDatabases={canManageDatabases}
+              />
+            ) : null}
+            {canSeeBackups ? (
+              <BackupCard
+                applicationId={id}
+                target={backup.target}
+                backups={backupRuns.backups}
+                // The target keeps its last run time after every backup is
+                // deleted, so the list decides whether one is actually kept.
+                noneKept={backupTile?.noneKept ?? false}
+                failed={backup.failed}
+                canManage={canRunBackup}
+                href={`/applications/${id}/backups`}
+              />
+            ) : null}
+            <ProtectionCard application={application} items={protectionItems} />
+            {application.has_process ? (
+              <ProcessCard application={application} canManage={canManage} className="lg:col-span-2" />
+            ) : null}
+          </div>
+        </>
       )}
     </div>
+  );
+}
+
+// A break opportunity after each dot; the last label stays joined to whatever
+// follows it (the external-link icon), so an icon never starts a line.
+function BreakableDomain({ domain, children }) {
+  const labels = String(domain ?? "").split(".");
+  const last = labels.pop();
+  return (
+    <>
+      {labels.map((label, i) => (
+        <span key={i}>
+          {label}.<wbr />
+        </span>
+      ))}
+      <span className="whitespace-nowrap">
+        {last}
+        {children}
+      </span>
+    </>
   );
 }

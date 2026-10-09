@@ -72,7 +72,17 @@
     "loadingPage": "Seite wird geladen…",
     "close": "Schließen",
     "cancel": "Abbrechen",
-    "confirm": "Bestätigen"
+    "confirm": "Bestätigen",
+    "navGroups": {
+      "data": "Daten",
+      "security": "Sicherheit",
+      "software": "Software",
+      "website": "Website",
+      "copies": "Backups & Kopien",
+      "configuration": "Einstellungen",
+      "server": "Server"
+    },
+    "serverOnline": "Online"
   },
   "systemUsers": {
     "title": "Systembenutzer",
@@ -326,15 +336,11 @@
       "rolesConfigured": "{count, plural, one {# Rolle konfiguriert} other {# Rollen konfiguriert}}",
       "impersonationUsed": "{count, plural, one {Einmal verwendet} other {# Mal verwendet}}, zuletzt {when}"
     },
-    "quick": {
-      "title": "Schnellzugriff",
-      "health": "Systemprüfung ausführen",
-      "update": "Panel aktualisieren",
-      "errors": "Fehlerprotokoll ansehen",
-      "users": "Benutzer verwalten",
-      "central": "Central konfigurieren"
-    },
-    "navigationLabel": "Admin-Menü"
+    "navigationLabel": "Admin-Menü",
+    "navGroups": {
+      "access": "Zugriff",
+      "system": "System"
+    }
   },
   "users": {
     "title": "Benutzer",
@@ -891,21 +897,29 @@
     "swap": "Swap",
     "load": "Systemlast",
     "usedOf": "{used} von {total}",
-    "free": "{free} frei",
     "cores": "{count} Kerne",
     "loadHint": "5 Min.",
     "info": {
       "kernel": "Kernel",
-      "ip": "IP-Adresse",
       "cpuModel": "Prozessor",
-      "runtimes": "Laufzeitumgebungen",
       "noRuntimes": "Keine erkannt",
       "enginesUnknown": "Datenbankversionen konnten nicht gelesen werden",
       "copyIp": "IP-Adresse kopieren",
       "servicesOk": "{count, plural, one {# Dienst läuft} other {Alle # Dienste laufen}}",
       "servicesDown": "{count, plural, one {Nicht aktiv: {names}} other {Nicht aktiv: {names}}}",
       "noServices": "Keine Dienste gefunden",
-      "servicesDownCount": "{count, plural, one {# von {total} Diensten läuft nicht} other {# von {total} Diensten laufen nicht}}"
+      "servicesDownCount": "{count, plural, one {# von {total} Diensten läuft nicht} other {# von {total} Diensten laufen nicht}}",
+      "title": "Serverinformationen",
+      "description": "Was dieser Server ist und was darauf läuft",
+      "hostname": "Servername",
+      "os": "Betriebssystem",
+      "memory": "RAM",
+      "disk": "Festplatte",
+      "timezone": "Zeitzone",
+      "processor": "{model} · {count, plural, one {# Kern} other {# Kerne}}",
+      "mainSoftware": "Wichtigste Software",
+      "moreSoftware": "{count, plural, other {+# weitere}}",
+      "arch": "Architektur"
     },
     "charts": {
       "waiting": "Warte auf Messwerte…",
@@ -997,32 +1011,76 @@
     "liveLabel": "Aktuell",
     "attention": {
       "title": "Handlungsbedarf",
-      "count": "{count, plural, one {# Anwendung erfordert Aufmerksamkeit} other {# Anwendungen erfordern Aufmerksamkeit}}",
       "insecure": {
         "chip": "{site} hat kein SSL-Zertifikat",
         "detail": "Besucher erreichen die Anwendung über unverschlüsseltes HTTP, daher zeigen Browser ihnen eine Warnung „Nicht sicher“ an.",
-        "action": "SSL einrichten"
+        "action": "SSL einrichten",
+        "many": "{count, plural, other {# Anwendungen haben kein SSL-Zertifikat}}"
       },
       "failed": {
         "chip": "{site} wurde nicht fertig eingerichtet",
         "detail": "Die Einrichtung dieser Anwendung ist auf halbem Weg stehen geblieben, daher wird sie noch nicht ausgeliefert.",
-        "action": "Fehler ansehen"
+        "action": "Fehler ansehen",
+        "many": "{count, plural, other {# Anwendungen wurden nicht fertig eingerichtet}}"
       },
       "deployFailed": {
         "chip": "Die letzte Bereitstellung von {site} ist fehlgeschlagen",
         "detail": "Das letzte Deployment wurde nicht abgeschlossen, und der nächste Push schlägt genauso fehl, bis dies behoben ist.",
-        "action": "Bereitstellungsprotokoll ansehen"
+        "action": "Bereitstellungsprotokoll ansehen",
+        "many": "{count, plural, other {Bei # Anwendungen ist das letzte Deployment fehlgeschlagen}}"
       },
       "processDown": {
         "chip": "{site} läuft nicht mehr",
         "detail": "Der Prozess läuft nicht, daher erhalten Besucher einen Fehler, obwohl die Anwendung nicht pausiert ist.",
-        "action": "Prozess prüfen"
+        "action": "Prozess prüfen",
+        "many": "{count, plural, other {# Anwendungen laufen nicht mehr}}"
       },
       "git": {
         "chip": "{site} hat sein Git-Konto verloren",
         "detail": "Das Konto, aus dem bereitgestellt wird, existiert nicht mehr, daher wird die nächste Bereitstellung fehlschlagen.",
-        "action": "Bereitstellung neu verbinden"
-      }
+        "action": "Bereitstellung neu verbinden",
+        "many": "{count, plural, other {# Anwendungen haben ihr Git-Konto verloren}}"
+      },
+      "servicesAction": "Dienste öffnen",
+      "viewApplications": "Anwendungen ansehen"
+    },
+    "hero": {
+      "healthy": "Alles läuft",
+      "attention": "{count, plural, one {# Punkt braucht Ihre Aufmerksamkeit} other {# Punkte brauchen Ihre Aufmerksamkeit}}",
+      "down": "{count, plural, one {# Dienst läuft nicht} other {# Dienste laufen nicht}}",
+      "unknown": "Ihr Server",
+      "apps": "{total, plural, one {{online} von # Anwendung ist online.} other {{online} von # Anwendungen sind online.}}",
+      "noApps": "Noch keine Anwendungen – legen Sie Ihre erste an, um loszulegen.",
+      "up": "Läuft seit {time}",
+      "viewLogs": "Protokolle ansehen",
+      "welcome": "Bringen wir Ihre erste Website online",
+      "greeting": "Willkommen zurück, {name}",
+      "running": "Ihr Server läuft"
+    },
+    "start": {
+      "title": "Erste Schritte",
+      "progress": "{done} von {total} erledigt · jeder Schritt öffnet die passende Seite",
+      "server": {
+        "title": "Server verbinden",
+        "body": "Erledigt – das Panel ist installiert und überwacht diesen Server."
+      },
+      "app": {
+        "title": "Erste Anwendung anlegen",
+        "body": "Eine Website oder App – WordPress, PHP, Node.js, ein Git-Repository oder einfaches HTML."
+      },
+      "domain": {
+        "title": "Domain hierher zeigen lassen",
+        "body": "Richten Sie die Domain bei Ihrem Domain-Anbieter auf die IP-Adresse dieses Servers aus: {ip}."
+      },
+      "https": {
+        "title": "HTTPS aktivieren",
+        "body": "Ein kostenloses Zertifikat, damit Browser das Schloss zeigen. Es erneuert sich selbst."
+      },
+      "backups": {
+        "title": "Backups planen",
+        "body": "Eine regelmäßige Kopie von Dateien und Datenbank, damit sich ein Fehler rückgängig machen lässt."
+      },
+      "afterApp": "Nach Schritt 2"
     }
   },
   "cronJobs": {
@@ -1150,6 +1208,10 @@
       "sentenceRepeatOn": "Läuft {time}, {days}.",
       "nextRuns": "Nächste Ausführungen: {runs}",
       "never": "Dieses Datum gibt es nie, der Cron-Job würde also nie ausgeführt."
+    },
+    "cronDown": {
+      "title": "Cron läuft auf diesem Server nicht",
+      "body": "Bis Cron wieder gestartet wird, läuft kein geplanter Job – auch nicht die Aufgaben des Panels selbst. Starten Sie Cron in einem Terminal auf dem Server:"
     }
   },
   "errors": {
@@ -1339,7 +1401,7 @@
     "clearSubmit": "Log leeren",
     "clearDone": "{label} geleert.",
     "clearFailed": "Das Log konnte nicht geleert werden.",
-    "clearBodyAudit": "Dieses Log gehört zu der Aufzeichnung, was mit dem Server passiert ist — Anmeldungen, blockierte Anfragen, Sperren. Es zu leeren zerstört Beweise, die du nach einem Einbruch brauchen könntest, und ist nicht rückgängig zu machen. Die Datei zeichnet von jetzt an weiter auf.",
+    "clearBodyAudit": "Dieses Log gehört zu der Aufzeichnung, was mit dem Server passiert ist — Anmeldungen, blockierte Anfragen, Sperren. Es zu leeren zerstört Beweise, die Sie nach einem Einbruch brauchen könnten, und ist nicht rückgängig zu machen. Die Datei zeichnet von jetzt an weiter auf.",
     "loadingSource": "{label} wird geladen…",
     "linesCapped": "Es wird das Maximum angezeigt: {max, number} Zeilen.",
     "noPermission": "Ihre Rolle enthält nicht „Systemprotokolle“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
@@ -2083,12 +2145,12 @@
           "locked": "Ein anderer Paketmanager hielt apt belegt und gab es nicht frei. Es wurde nichts geändert — versuche es in ein paar Minuten erneut.",
           "stale_lock": "apt ist gesperrt, ohne dass jemand die Sperre hält: ein abgebrochenes Werkzeug hat eine Lock-Datei hinterlassen. Führe den Panel-Doctor aus, er nennt die zu löschende Datei.",
           "denied": "Das Panel darf unattended-upgrades nicht ausführen. Führe `artisan panel:sudoers` als root aus, um die Berechtigung neu zu schreiben.",
-          "timeout": "Das Upgrade lief noch, als die Zeit ablief. Es kann von selbst fertig geworden sein — prüfe das Protokoll, bevor du ein weiteres startest.",
+          "timeout": "Das Upgrade lief noch, als die Zeit ablief. Es kann von selbst fertig geworden sein — prüfen Sie das Protokoll, bevor Sie ein weiteres starten.",
           "dpkg": "Ein Paket konnte sich nicht konfigurieren. Der Grund steht im dpkg-Protokoll: /var/log/unattended-upgrades/unattended-upgrades-dpkg.log",
           "fetch": "Die Updates konnten nicht heruntergeladen werden. Prüfe, ob der Server seine Paket-Mirror erreicht.",
           "disk_full": "Während des Upgrades lief die Festplatte voll. Schaffe Platz und versuche es erneut.",
           "dependencies": "Die wartenden Pakete lassen sich nicht gemeinsam installieren. Dafür muss apt meist von Hand ausgeführt werden, um zu sehen, was zurückgehalten wird.",
-          "worker": "Der Prozess, der das Upgrade ausführte, ist verschwunden — höchstwahrscheinlich vom Upgrade selbst neu gestartet. apt hat die Arbeit möglicherweise trotzdem beendet: prüfe das Protokoll, bevor du ein weiteres startest.",
+          "worker": "Der Prozess, der das Upgrade ausführte, ist verschwunden — höchstwahrscheinlich vom Upgrade selbst neu gestartet. apt hat die Arbeit möglicherweise trotzdem beendet: prüfen Sie das Protokoll, bevor Sie ein weiteres starten.",
           "unknown": "Das Upgrade ist fehlgeschlagen. Die Ausgabe unten ist, was es gesagt hat."
         },
         "saveFailed": "Die Update-Einstellungen konnten nicht gespeichert werden."
@@ -2918,7 +2980,11 @@
       "copyString": "Verbindungszeichenfolge kopieren",
       "copyField": "{field} kopieren",
       "otherUsers": "{count, plural, =1 {Ein weiterer Benutzer kann sich mit dieser Datenbank verbinden.} other {# weitere Benutzer können sich mit dieser Datenbank verbinden.}} Siehe den Tab „Benutzer“.",
-      "passwordWithheld": "Verborgen – Ihre Rolle darf keine Datenbanken verwalten."
+      "passwordWithheld": "Verborgen – Ihre Rolle darf keine Datenbanken verwalten.",
+      "connectionString": "Verbindungszeichenfolge",
+      "server": "Server",
+      "credentialsTitle": "Zugangsdaten",
+      "protocol": "Protokoll"
     },
     "users": {
       "title": "Benutzer",
@@ -3105,13 +3171,14 @@
       "longRunning": "Lang laufende Abfrage",
       "meta": {
         "database": "Datenbank",
-        "user": "Benutzer",
-        "state": "Zustand"
+        "user": "Benutzer"
       },
       "summary": {
         "current": "Aktuell",
         "peak": "Spitze",
-        "average": "Durchschnitt"
+        "average": "Durchschnitt",
+        "peakMark": "Spitze {value}",
+        "averageMark": "Durchschnitt {value}"
       },
       "runningQueries": "Laufende Abfragen",
       "longRunningCount": "{count, plural, one {# lang laufend} other {# lang laufend}}",
@@ -3119,7 +3186,10 @@
       "zoomHint": "Ziehen Sie die Griffe unter dem Diagramm oder scrollen Sie darauf, um in einen Zeitraum zu zoomen.",
       "cannotStopOwn": "Das ist die eigene Verbindung des Panels zur Datenbank. Sie zu stoppen würde diese Seite abschneiden.",
       "loadFailed": "Die Datenbank-Engines konnten nicht geprüft werden.",
-      "backToList": "Zurück zu Datenbanken"
+      "backToList": "Zurück zu Datenbanken",
+      "queryShowLess": "Weniger anzeigen",
+      "queryShowFull": "Ganze Abfrage anzeigen",
+      "avgShort": "Ø"
     },
     "tables": {
       "title": "Tabellen",
@@ -3128,16 +3198,27 @@
       "summary": "{count, plural, one {# Tabelle} other {# Tabellen}} · etwa {rows} Zeilen",
       "summaryMongo": "{count, plural, one {# Collection} other {# Collections}} · etwa {rows} Dokumente",
       "empty": "Noch keine Tabellen.",
-      "rowCount": "{rows} Zeilen",
       "rowsEstimated": "Die Zeilenzahlen sind die eigene Schätzung der Engine, keine genaue Zählung.",
       "charsetLine": "Zeichensatz {charset} · Sortierung {collation}",
       "loadFailed": "Die Tabellen dieser Datenbank konnten nicht gelesen werden.",
-      "unavailable": "Nicht lesbar, solange {engine} nicht läuft."
+      "unavailable": "Nicht lesbar, solange {engine} nicht läuft.",
+      "filter": "Tabellen filtern…",
+      "noMatches": "Keine passenden Tabellen.",
+      "columns": {
+        "table": "Tabelle",
+        "collection": "Collection",
+        "rows": "Zeilen",
+        "documents": "Dokumente",
+        "size": "Größe"
+      },
+      "rowsWord": "{count, plural, one {Zeile} other {Zeilen}}",
+      "rowsWordMongo": "{count, plural, one {Dokument} other {Dokumente}}"
     },
     "tabs": {
       "users": "Benutzer",
       "tables": "Tabellen",
-      "exports": "Exporte"
+      "exports": "Exporte",
+      "overview": "Übersicht"
     },
     "phpmyadmin": {
       "open": "In phpMyAdmin öffnen",
@@ -3187,14 +3268,16 @@
       "title": "Datenbankserver neu starten?",
       "cancel": "Abbrechen",
       "confirm": "Neu starten und fortfahren",
-      "description": "Der Datenbankserver muss neu starten, um Verbindungen von anderen Adressen anzunehmen. Anwendungen, die ihn nutzen, verlieren kurz die Verbindung."
+      "description": "Der Datenbankserver muss neu starten, um Verbindungen von anderen Adressen anzunehmen. Anwendungen, die ihn nutzen, verlieren kurz die Verbindung.",
+      "working": "Wird neu gestartet…"
     },
     "backToList": "Zurück zu Datenbanken",
     "createFailed": "Die Datenbank konnte nicht erstellt werden.",
     "unavailable": {
       "title": "Datenbanken werden auf diesem Server nicht verwaltet",
       "body": "Dieser Server hostet Container. Eine Anwendung, die eine Datenbank braucht, bringt sie als eigenen Container mit, daher verwaltet das Panel hier keine Engine — und seine eigenen Daten liegen ohnehin in SQLite."
-    }
+    },
+    "detailsTitle": "Details"
   },
   "git": {
     "title": "Git",
@@ -3533,7 +3616,9 @@
       "owner": "Systembenutzer",
       "size": "Größe",
       "created": "Erstellt",
-      "php": "PHP"
+      "php": "PHP",
+      "runsOn": "Läuft mit",
+      "lastBackup": "Letztes Backup"
     },
     "empty": {
       "title": "Ihr Server ist bereit für die erste Anwendung",
@@ -3555,7 +3640,7 @@
         }
       }
     },
-    "searchPlaceholder": "Anwendungen suchen…",
+    "searchPlaceholder": "Nach Name oder Domain suchen",
     "details": {
       "title": "Anwendung",
       "settingUp": "Ihre Anwendung wird eingerichtet",
@@ -4039,6 +4124,11 @@
         "submit": "Änderungen speichern",
         "submitting": "Wird gespeichert…",
         "clearsTarget": "Der Wechsel zu einem Alias löscht das Weiterleitungsziel ({target}). Ein Alias liefert die Anwendung selbst aus."
+      },
+      "columns": {
+        "domain": "Domain",
+        "dns": "DNS",
+        "https": "HTTPS"
       }
     },
     "magicLogin": {
@@ -4056,8 +4146,7 @@
     },
     "markers": {
       "processFailed": "Prozess fehlgeschlagen",
-      "processStopped": "Prozess gestoppt",
-      "deployFailed": "Letztes Deployment fehlgeschlagen"
+      "processStopped": "Prozess gestoppt"
     },
     "sourceLabel": "Quelle",
     "deployment": {
@@ -4973,7 +5062,8 @@
         "noPermission": "Ihre Rolle enthält nicht „Anwendung klonen“ für diese Anwendung mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
         "defaultName": "{name} (Klon)",
         "name": "Name der Kopie",
-        "domainTaken": "Eine Anwendung auf diesem Server nutzt diese Domain schon."
+        "domainTaken": "Eine Anwendung auf diesem Server nutzt diese Domain schon.",
+        "suggested": "Vorschlag:"
       },
       "create": {
         "title": "Kopie erstellen",
@@ -5455,7 +5545,8 @@
       "queuedNote": "Backup eingeplant. Es beginnt, sobald der Server es aufnimmt.",
       "queuedStalled": "Dieses Backup hat noch nicht begonnen. Bleibt es so, läuft möglicherweise der Hintergrund-Worker nicht.",
       "alreadyRunning": "Es läuft schon ein Backup dieser Anwendung.",
-      "noneKept": "Keins aufbewahrt"
+      "noneKept": "Keins aufbewahrt",
+      "notSetUp": "Nicht eingerichtet"
     },
     "attention": {
       "title": "Handlungsbedarf",
@@ -5777,6 +5868,30 @@
       "switching": "Wechsel zu Node {target}…",
       "already": "Diese Anwendung läuft bereits mit Node {version}.",
       "failed": "Die Node-Version konnte nicht geändert werden."
+    },
+    "health": {
+      "online": "Online",
+      "onlineDetail": "Besucher können diese Anwendung erreichen.",
+      "paused": "Pausiert",
+      "pausedDetail": "Besucher sehen eine Platzhalterseite, bis Sie sie fortsetzen.",
+      "https": "HTTPS ist aktiv",
+      "httpsDetail": "Besucher erhalten eine sichere Verbindung."
+    },
+    "tiles": {
+      "status": "Status",
+      "deploy": "Letztes Deployment",
+      "runtime": "Laufzeit",
+      "lastBackup": "Letztes Backup {when}",
+      "deployed": "Deployt",
+      "deployFailed": "Deployment fehlgeschlagen",
+      "deployFailedDetail": "Das letzte Deployment wurde nicht abgeschlossen.",
+      "notDeployed": "Noch nicht deployt",
+      "stoppedDetail": "Der Prozess läuft nicht, daher sehen Besucher einen Fehler.",
+      "deployingDetail": "Die neue Version geht live, sobald es fertig ist.",
+      "expiresSoon": "Zertifikat läuft bald ab",
+      "staticFiles": "Statische Dateien",
+      "runtimeDetail": "Version und Limits ändern",
+      "staticDetail": "Werden unverändert ausgeliefert, nichts läuft"
     }
   },
   "panelUpdate": {
@@ -6230,6 +6345,7 @@
         "lastRun": "Letzter Lauf",
         "actions": "Aktionen",
         "type": "Backup-Art",
+        "typeShort": "Typ",
         "storage": "Speicher"
       },
       "status": {
@@ -6662,7 +6778,11 @@
       },
       "restoreRunning": "Eine Wiederherstellung läuft. Warten Sie, bis sie fertig ist.",
       "historyForbidden": "Ihre Rolle darf den Backup-Verlauf nicht sehen. Bitten Sie eine Administratorin oder einen Administrator um die Berechtigung „Backups“.",
-      "noneKept": "Keins aufbewahrt"
+      "noneKept": "Keins aufbewahrt",
+      "emptyHint": {
+        "unprotected": "Sobald ein Zeitplan eingerichtet ist, erscheint hier jedes Backup – mit einem Klick wiederherstellbar.",
+        "scheduled": "Jedes Backup erscheint hier, sobald es fertig ist – mit einem Klick wiederherstellbar. Starten Sie jetzt eines, um zu prüfen, ob alles funktioniert."
+      }
     },
     "empty": {
       "title": "Auf diesem Server wird noch nichts gesichert",

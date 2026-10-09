@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { KeySquare, KeyRound, Plus, Trash2, Loader2 } from "lucide-react";
+import { EmptyState } from "@/components/data-table/empty-state";
 import { sshKeySchema } from "@/lib/schemas/system-user";
 import {
   listSystemUserSshKeys,
@@ -200,9 +201,7 @@ export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
                   </Button>
                 </div>
               ) : keys.length === 0 ? (
-                <p className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
-                  {t("detail.noSshKeys")}
-                </p>
+                <EmptyState compact icon={KeyRound} badge={null} title={t("detail.noSshKeys")} />
               ) : (
                 <ul className="divide-y rounded-lg border">
                   {keys.map((key) => (
@@ -247,7 +246,7 @@ export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
 
               {canManage ? (
                 <div className="space-y-3 rounded-lg border p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <p className="text-xs font-semibold text-muted-foreground">
                     {t("sshForm.addHeading")}
                   </p>
                   <FormField

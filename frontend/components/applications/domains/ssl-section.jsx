@@ -28,14 +28,7 @@ import {
 import { runServiceAction } from "@/lib/api/services";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Caution } from "@/components/ui/caution";
 import { PendingSwitch } from "@/components/ui/pending-switch";
@@ -52,39 +45,31 @@ const isPending = (c) =>
 // Never retry a rate limit: the wait is a week.
 const NO_RETRY = new Set(["rate_limited"]);
 
-// Tile styles from `admin/dashboard/status-tile`: colour from the chip and accent, never a fill.
+// The status sits in the icon tile; the card itself stays white.
 const TONES = {
-  success: { chip: "bg-success/10 text-success", accent: "bg-success/45", tint: "", title: "" },
-  warning: { chip: "bg-warning/10 text-warning", accent: "bg-warning/50", tint: "", title: "" },
-  destructive: {
-    chip: "bg-destructive/10 text-destructive",
-    accent: "bg-destructive/50",
-    tint: "bg-destructive/[0.02]",
-    title: "text-destructive",
-  },
-  progress: { chip: "bg-primary/10 text-primary", accent: "bg-primary/50", tint: "", title: "" },
-  idle: { chip: "bg-muted text-muted-foreground", accent: "bg-border", tint: "", title: "" },
+  success: { chip: "bg-success-soft text-success", title: "" },
+  warning: { chip: "bg-warning-soft text-warning", title: "" },
+  destructive: { chip: "bg-destructive-soft text-destructive", title: "text-destructive" },
+  progress: { chip: "bg-primary/10 text-primary", title: "" },
+  idle: { chip: "bg-muted text-muted-foreground", title: "" },
 };
 
-/** The card's headline state: what the certificate is, in one tile. */
+/** The card's headline: what the certificate is, on one line beside its actions. */
 function Tile({ tone = "idle", icon: Icon, spin = false, title, badge, children }) {
-  const { chip, accent, tint, title: titleTint } = TONES[tone] ?? TONES.idle;
+  const { chip, title: titleTint } = TONES[tone] ?? TONES.idle;
   return (
-    <div className={cn("relative overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm", tint)}>
-      <span className={cn("absolute inset-y-0 left-0 w-[2px]", accent)} aria-hidden />
-      <div className="flex items-start gap-3 py-4 pr-4 pl-5">
-        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", chip)}>
-          <Icon className={cn("size-[18px]", spin && "animate-spin")} aria-hidden />
-        </span>
-        {/* min-w-48, not min-w-0: beside a shrink-0 chip a flex-1 child will
-            squeeze to one word per line rather than wrap. */}
-        <div className="min-w-48 flex-1 space-y-1">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <h3 className={cn("text-base leading-tight font-semibold", titleTint)}>{title}</h3>
-            {badge}
-          </div>
-          {children}
+    // min-w-64 on the whole head, so on a phone the actions drop below it rather than
+    // sliding under the text.
+    <div className="flex min-w-64 flex-1 items-start gap-3">
+      <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", chip)}>
+        <Icon className={cn("size-5", spin && "animate-spin")} aria-hidden />
+      </span>
+      <div className="min-w-0 flex-1 space-y-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <h2 className={cn("text-[15px] leading-tight font-semibold tracking-tight", titleTint)}>{title}</h2>
+          {badge}
         </div>
+        {children}
       </div>
     </div>
   );
@@ -217,7 +202,7 @@ export function SslSection({
     // --- No certificate ---
     if (!cert) {
       return {
-        content: (
+        head: (
           <Tile icon={ShieldOff} title={t("ssl.none")}>
             <p className="max-w-prose text-sm text-muted-foreground">
               {certifiable ? t("ssl.noneBody") : t("ssl.notCertifiable")}
@@ -237,19 +222,17 @@ export function SslSection({
     // --- Issuing ---
     if (isPending(cert)) {
       return {
-        content: (
-          <>
-            <Tile tone="progress" icon={Loader2} spin title={t("ssl.issuing")}>
-              <p className="max-w-prose text-sm text-muted-foreground">{t("ssl.issuingBody")}</p>
-            </Tile>
-            {/* A way out of an issuance that never completes. */}
-            {canManage ? (
-              <Note icon={Clock3}>
-                <p>{t("ssl.issuingStuck")}</p>
-              </Note>
-            ) : null}
-          </>
+        head: (
+          <Tile tone="progress" icon={Loader2} spin title={t("ssl.issuing")}>
+            <p className="max-w-prose text-sm text-muted-foreground">{t("ssl.issuingBody")}</p>
+          </Tile>
         ),
+        // A way out of an issuance that never completes.
+        notes: canManage ? (
+          <Note icon={Clock3}>
+            <p>{t("ssl.issuingStuck")}</p>
+          </Note>
+        ) : null,
         actions: canManage ? (
           <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
             <Trash2 className="size-4" />
@@ -265,9 +248,8 @@ export function SslSection({
       // Wrapped in an error shape so `apiMessage` can translate it.
       const certMessage = apiMessage({ response: { data: { message: cert.message } } }, null);
       return {
-        content: (
-          <>
-            <Tile tone="destructive" icon={ShieldAlert} title={t("ssl.failed")}>
+        head: (
+          <Tile tone="destructive" icon={ShieldAlert} title={t("ssl.failed")}>
               {/* Via `apiMessage`: some paths send an untranslated key. */}
               {certMessage ? <p className="max-w-prose text-sm">{certMessage}</p> : null}
               {cert.reference ? (
@@ -275,14 +257,13 @@ export function SslSection({
                   {t("ssl.reference", { reference: cert.reference })}
                 </p>
               ) : null}
-            </Tile>
-            {noRetry ? (
-              <Note icon={Clock3}>
-                <p>{t("ssl.rateLimited")}</p>
-              </Note>
-            ) : null}
-          </>
+          </Tile>
         ),
+        notes: noRetry ? (
+          <Note icon={Clock3}>
+            <p>{t("ssl.rateLimited")}</p>
+          </Note>
+        ) : null,
         // Remove and Reissue stay while rate-limited: only Let's Encrypt is closed.
         actions:
           canManage ? (
@@ -329,9 +310,7 @@ export function SslSection({
     const tone = expired ? "destructive" : healthy ? "success" : "warning";
 
     return {
-      content: (
-        <>
-          {/* The status tile: the only element with a status colour. */}
+      head: (
           <Tile
             tone={tone}
             icon={healthy ? ShieldCheck : ShieldAlert}
@@ -355,13 +334,15 @@ export function SslSection({
               </p>
             ) : null}
           </Tile>
-
-          {/* The names, with a count. */}
+      ),
+      // The names beside the setting, not stacked: one card, two columns.
+      body: (
+        <div className="grid md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] md:divide-x">
           {names.length ? (
-            <div className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
-              <div className="flex items-center gap-2 border-b border-border/60 bg-muted/30 px-4 py-2.5">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 px-5 pt-4 pb-1">
                 <Globe className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-                <h4 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                <h4 className="text-xs font-medium text-muted-foreground">
                   {t("ssl.namesTitle")}
                 </h4>
                 <span className="ml-auto text-xs text-muted-foreground tabular-nums">
@@ -372,10 +353,10 @@ export function SslSection({
                   })}
                 </span>
               </div>
-              <ul className="divide-y divide-border/60">
+              <ul className="px-5 pb-3">
                 {names.map(({ domain, state }) => (
                   // Left-grouped, not justify-between, to avoid a wide gap.
-                  <li key={domain} className="flex flex-wrap items-center gap-x-2.5 gap-y-1 px-4 py-2.5">
+                  <li key={domain} className="flex flex-wrap items-center gap-x-2.5 gap-y-1 py-1.5">
                     {state === "covered" ? (
                       <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden />
                     ) : (
@@ -402,55 +383,14 @@ export function SslSection({
             </div>
           ) : null}
 
-          {/* Problems, as notes. */}
-          {expired && cert.force_https ? (
-            <Note tone="destructive" icon={ShieldAlert}>
-              <p>{t("ssl.expiredForcedHttps")}</p>
-              {canManage ? (
-                <Button size="sm" disabled={busy} onClick={() => onToggleForceHttps(false)}>
-                  {savingHttps ? <Loader2 className="size-4 animate-spin" /> : null}
-                  {t("ssl.turnOffForceHttps")}
-                </Button>
-              ) : null}
-            </Note>
-          ) : null}
-
-          {servingStale ? (
-            <Note tone="destructive" icon={ShieldAlert}>
-              <p>{t("ssl.servingStale")}</p>
-              {asDate(cert.served_expires_at) ? (
-                <p className="text-xs text-muted-foreground tabular-nums">
-                  {t("ssl.servingStaleDetail", {
-                    served: asDate(cert.served_expires_at),
-                    onDisk: asDate(cert.expires_at) ?? "—",
-                  })}
-                </p>
-              ) : null}
-              {canManage && webServer ? (
-                /* Solid: it is the fix for what the note reports. */
-                <Button size="sm" className="w-fit" onClick={reloadWebServer} disabled={reloading}>
-                  {reloading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
-                  {t("ssl.reloadWebServer", { service: webServer })}
-                </Button>
-              ) : null}
-            </Note>
-          ) : null}
-
-          {hasCoverageGap ? (
-            <Note icon={AlertCircle}>
-              {/* Only a renewing certificate is held back; an uploaded one just misses the name. */}
-              <p>{t(cert.renewable ? "ssl.coverageGap" : "ssl.coverageGapManual")}</p>
-            </Note>
-          ) : null}
-
-          {/* The Force HTTPS setting, in its own tile. */}
+          {/* The Force HTTPS setting. */}
           {canManage ? (
-            <div className="flex items-start gap-3 rounded-xl border border-border/60 bg-card p-4 shadow-sm">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                <Lock className="size-[18px]" aria-hidden />
-              </span>
-              <Label htmlFor="force-https" className="block min-w-48 flex-1 cursor-pointer">
-                <span className="block text-sm font-medium">{t("ssl.forceHttps")}</span>
+            <div className="flex items-start gap-3 border-t px-5 py-4 md:border-t-0">
+              <Label htmlFor="force-https" className="block min-w-40 flex-1 cursor-pointer">
+                <span className="flex items-center gap-2 text-sm font-medium">
+                  <Lock className="size-3.5 text-muted-foreground" aria-hidden />
+                  {t("ssl.forceHttps")}
+                </span>
                 <span className="mt-0.5 block max-w-prose text-xs leading-relaxed font-normal text-muted-foreground">
                   {t("ssl.forceHttpsHint")}
                 </span>
@@ -462,10 +402,66 @@ export function SslSection({
                 pending={savingHttps}
                 disabled={busy}
                 onCheckedChange={onToggleForceHttps}
-                className="mt-1 shrink-0"
+                className="mt-0.5 shrink-0"
               />
             </div>
           ) : null}
+        </div>
+      ),
+      // Problems, as notes, between the status and the details.
+      notes: (
+        <>
+          {/* The fix sits at the note's right end, beside the sentence, not under it. */}
+          {expired && cert.force_https ? (
+            <Note
+              tone="destructive"
+              icon={ShieldAlert}
+              action={
+                canManage ? (
+                  <Button size="sm" disabled={busy} onClick={() => onToggleForceHttps(false)}>
+                    {savingHttps ? <Loader2 className="size-4 animate-spin" /> : null}
+                    {t("ssl.turnOffForceHttps")}
+                  </Button>
+                ) : null
+              }
+            >
+              <p>{t("ssl.expiredForcedHttps")}</p>
+            </Note>
+          ) : null}
+
+          {servingStale ? (
+            <Note
+              tone="destructive"
+              icon={ShieldAlert}
+              action={
+                canManage && webServer ? (
+                  /* Solid: it is the fix for what the note reports. */
+                  <Button size="sm" onClick={reloadWebServer} disabled={reloading}>
+                    {reloading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+                    {t("ssl.reloadWebServer", { service: webServer })}
+                  </Button>
+                ) : null
+              }
+            >
+              <p>{t("ssl.servingStale")}</p>
+              {asDate(cert.served_expires_at) ? (
+                <p className="text-xs text-muted-foreground tabular-nums">
+                  {t("ssl.servingStaleDetail", {
+                    served: asDate(cert.served_expires_at),
+                    onDisk: asDate(cert.expires_at) ?? "—",
+                  })}
+                </p>
+              ) : null}
+            </Note>
+          ) : null}
+
+          {hasCoverageGap ? (
+            <Note icon={AlertCircle}>
+              {/* Only a renewing certificate is held back; an uploaded one just misses the name. */}
+              <p>{t(cert.renewable ? "ssl.coverageGap" : "ssl.coverageGapManual")}</p>
+            </Note>
+          ) : null}
+
         </>
       ),
       // Both actions visible in every state.
@@ -491,18 +487,18 @@ export function SslSection({
     };
   }
 
-  const { content, actions } = view();
+  const { head, notes = null, body = null, actions } = view();
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base font-semibold">
-          {t("ssl.sectionTitle")}
-        </CardTitle>
-        <CardDescription>{t("ssl.sectionSubtitle")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">{content}</CardContent>
-      {actions ? <CardFooter className="justify-end gap-2">{actions}</CardFooter> : null}
+    // One compact card: the state with its actions on one line, any problem under it,
+    // then the names beside Force HTTPS. The tab already says "SSL", so no title band.
+    <Card className="gap-0 py-0" aria-label={t("ssl.sectionTitle")}>
+      <div className="flex flex-wrap items-start justify-between gap-4 p-5">
+        {head}
+        {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+      </div>
+      {notes ? <div className="space-y-3 px-5 pb-5 empty:hidden">{notes}</div> : null}
+      {body ? <div className="border-t">{body}</div> : null}
 
       <IssueCertDialog
         appId={appId}

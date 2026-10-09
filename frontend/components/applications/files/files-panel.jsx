@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import Link from "@/components/ui/app-link";
 import { FolderPlus, FilePlus, UploadCloud, Folder, SearchX, Globe, Trash2, Eye, EyeOff, MousePointerClick } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
@@ -208,7 +209,7 @@ export function FilesPanel({
   }
 
   const addButtons = (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-1.5">
       {/* A container query: the strip's width depends on the sidebar. 73rem is measured;
           72rem made the rule itself cause the wrap, 74rem hid it on rows that fit. */}
       <Separator
@@ -243,7 +244,12 @@ export function FilesPanel({
       <Button
         variant="outline"
         size="sm"
-        className="border-destructive/30 bg-destructive/5 text-destructive [--destructive-ink:color-mix(in_oklch,var(--destructive),var(--foreground)_22%)] text-(--destructive-ink) hover:bg-destructive/10 hover:text-(--destructive-ink) dark:border-destructive/40 dark:bg-destructive/10 dark:text-destructive dark:hover:bg-destructive/15 dark:hover:text-destructive"
+        className={cn(
+          "border-destructive/30 bg-destructive/5 text-destructive [--destructive-ink:color-mix(in_oklch,var(--destructive),var(--foreground)_22%)] text-(--destructive-ink) hover:bg-destructive/10 hover:text-(--destructive-ink) dark:border-destructive/40 dark:bg-destructive/10 dark:text-destructive dark:hover:bg-destructive/15 dark:hover:text-destructive",
+          // The toolbar is a card now, and outline buttons take the brand tint inside cards;
+          // Trash keeps its red over that.
+          "in-[.bg-card]:border-destructive/30 in-[.bg-card]:bg-destructive/5 in-[.bg-card]:text-(--destructive-ink) in-[.bg-card]:hover:bg-destructive/10 in-[.bg-card]:dark:border-destructive/40 in-[.bg-card]:dark:bg-destructive/10 in-[.bg-card]:dark:text-destructive in-[.bg-card]:dark:hover:bg-destructive/15",
+        )}
         asChild
       >
         <Link href={`/applications/${appId}/files?trash=1`} prefetch={false}>
@@ -290,12 +296,13 @@ export function FilesPanel({
 
       <FileShortcuts appId={appId} siteType={siteType} path={path} onAction={onAction} canManage={canManage} />
 
-      {/* One toolbar on one bordered surface, with search inside it, so the controls
-          read as a group tied to the table. */}
-      <div className="@container/toolbar flex flex-col gap-3 rounded-xl border bg-muted/30 p-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      {/* One toolbar on one white card, with search inside it, so the controls read as a
+          group tied to the table. White, not grey: on a grey band the grey search well and
+          the neutral buttons disappeared into it (Krishna, 7 Oct). */}
+      <div className="@container/toolbar flex flex-col gap-2 rounded-2xl border border-border/70 bg-card p-2.5 shadow-e1 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         {/* Sized to content, not `flex-1`, so the two groups wrap as wholes instead of
             squeezing each other. */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
           {files.length > 0 ? (
             <LocalSearchInput
               value={query}
@@ -304,9 +311,9 @@ export function FilesPanel({
                 setSiteSearch(false);
               }}
               placeholder={t("searchPlaceholder")}
-              // 224px, not the default 320: measured, the two groups otherwise overflow a
-              // 1196px strip by 10px.
-              className="sm:max-w-56"
+              // 176px: measured at 1440 with the sidebar open, the strip is 1098px and the
+              // two groups need 1154 at 224px; this and the 6px gaps bring it to one row.
+              className="sm:max-w-44"
             />
           ) : null}
           {/* Files change outside the panel (deploys, cron, SSH); this also refreshes trash and search. */}
@@ -394,6 +401,7 @@ export function FilesPanel({
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={SearchX}
+          subject={Folder}
           title={t("empty.filteredTitle")}
           action={
             <Button variant="outline" size="sm" onClick={() => setSiteSearch(true)}>

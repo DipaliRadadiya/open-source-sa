@@ -72,7 +72,17 @@
     "loadingPage": "Chargement de la page…",
     "close": "Fermer",
     "cancel": "Annuler",
-    "confirm": "Confirmer"
+    "confirm": "Confirmer",
+    "navGroups": {
+      "data": "Données",
+      "security": "Sécurité",
+      "software": "Logiciels",
+      "website": "Site web",
+      "copies": "Sauvegardes et copies",
+      "configuration": "Paramètres",
+      "server": "Serveur"
+    },
+    "serverOnline": "En ligne"
   },
   "systemUsers": {
     "title": "Utilisateurs système",
@@ -326,15 +336,11 @@
       "rolesConfigured": "{count, plural, one {# rôle configuré} other {# rôles configurés}}",
       "impersonationUsed": "{count, plural, one {Utilisé une fois} other {Utilisé # fois}}, dernier {when}"
     },
-    "quick": {
-      "title": "Actions rapides",
-      "health": "Lancer la vérification de santé",
-      "update": "Mettre à jour le panneau",
-      "errors": "Voir le journal d'erreurs",
-      "users": "Gérer les utilisateurs",
-      "central": "Configurer Central"
-    },
-    "navigationLabel": "Menu d'administration"
+    "navigationLabel": "Menu d'administration",
+    "navGroups": {
+      "access": "Accès",
+      "system": "Système"
+    }
   },
   "users": {
     "title": "Utilisateurs",
@@ -891,21 +897,29 @@
     "swap": "Swap",
     "load": "Charge moy.",
     "usedOf": "{used} sur {total}",
-    "free": "{free} libre",
     "cores": "{count} cœurs",
     "loadHint": "5 min",
     "info": {
       "kernel": "Noyau",
-      "ip": "Adresse IP",
       "cpuModel": "Processeur",
-      "runtimes": "Environnements",
       "noRuntimes": "Aucun détecté",
       "enginesUnknown": "Impossible de lire les versions des bases de données",
       "copyIp": "Copier l'adresse IP",
       "servicesOk": "{count, plural, one {# service en cours} other {# services en cours}}",
       "servicesDown": "{count, plural, one {Arrêté : {names}} other {Arrêtés : {names}}}",
       "noServices": "Aucun service détecté",
-      "servicesDownCount": "{count, plural, one {# service sur {total} ne fonctionne pas} other {# services sur {total} ne fonctionnent pas}}"
+      "servicesDownCount": "{count, plural, one {# service sur {total} ne fonctionne pas} other {# services sur {total} ne fonctionnent pas}}",
+      "title": "Informations sur le serveur",
+      "description": "Ce qu'est ce serveur et ce qu'il fait tourner",
+      "hostname": "Nom du serveur",
+      "os": "Système d'exploitation",
+      "memory": "Mémoire",
+      "disk": "Disque",
+      "timezone": "Fuseau horaire",
+      "processor": "{model} · {count, plural, one {# cœur} other {# cœurs}}",
+      "mainSoftware": "Logiciels principaux",
+      "moreSoftware": "{count, plural, other {+# de plus}}",
+      "arch": "Architecture"
     },
     "charts": {
       "waiting": "En attente d'échantillons…",
@@ -997,32 +1011,76 @@
     "liveLabel": "Maintenant",
     "attention": {
       "title": "À vérifier",
-      "count": "{count, plural, one {# application nécessite votre attention} other {# applications nécessitent votre attention}}",
       "insecure": {
         "chip": "{site} n’a aucun certificat SSL",
         "detail": "Les visiteurs y accèdent en HTTP non chiffré, les navigateurs leur affichent donc un avertissement « Non sécurisé ».",
-        "action": "Configurer le SSL"
+        "action": "Configurer le SSL",
+        "many": "{count, plural, other {# applications n'ont pas de certificat SSL}}"
       },
       "failed": {
         "chip": "{site} n’a pas fini son installation",
         "detail": "L'installation de cette application s'est arrêtée en cours de route, elle n'est donc pas encore servie.",
-        "action": "Voir l’échec"
+        "action": "Voir l’échec",
+        "many": "{count, plural, other {# applications n'ont pas fini leur installation}}"
       },
       "deployFailed": {
         "chip": "Le dernier déploiement de {site} a échoué",
         "detail": "Le dernier déploiement ne s'est pas terminé, et le prochain envoi échouera de la même façon tant que ce n'est pas corrigé.",
-        "action": "Voir le journal de déploiement"
+        "action": "Voir le journal de déploiement",
+        "many": "{count, plural, other {Le dernier déploiement de # applications a échoué}}"
       },
       "processDown": {
         "chip": "{site} ne fonctionne plus",
         "detail": "Son processus ne tourne pas, donc les visiteurs obtiennent une erreur même si l'application n'est pas en pause.",
-        "action": "Vérifier le processus"
+        "action": "Vérifier le processus",
+        "many": "{count, plural, other {# applications ne fonctionnent plus}}"
       },
       "git": {
         "chip": "{site} a perdu son compte Git",
         "detail": "Le compte depuis lequel il est déployé n’existe plus, le prochain déploiement échouera donc.",
-        "action": "Reconnecter le déploiement"
-      }
+        "action": "Reconnecter le déploiement",
+        "many": "{count, plural, other {# applications ont perdu leur compte Git}}"
+      },
+      "servicesAction": "Ouvrir les services",
+      "viewApplications": "Voir les applications"
+    },
+    "hero": {
+      "healthy": "Tout fonctionne",
+      "attention": "{count, plural, one {# point demande votre attention} other {# points demandent votre attention}}",
+      "down": "{count, plural, one {# service ne fonctionne pas} other {# services ne fonctionnent pas}}",
+      "unknown": "Votre serveur",
+      "apps": "{total, plural, one {{online} application sur # est en ligne.} other {{online} applications sur # sont en ligne.}}",
+      "noApps": "Aucune application pour l'instant — créez la première pour commencer.",
+      "up": "Actif depuis {time}",
+      "viewLogs": "Voir les journaux",
+      "welcome": "Mettons votre premier site web en ligne",
+      "greeting": "Bon retour, {name}",
+      "running": "Votre serveur fonctionne"
+    },
+    "start": {
+      "title": "Pour commencer",
+      "progress": "{done} sur {total} terminées · chaque étape ouvre le bon écran",
+      "server": {
+        "title": "Connectez votre serveur",
+        "body": "C'est fait — le panneau est installé et surveille ce serveur."
+      },
+      "app": {
+        "title": "Créez votre première application",
+        "body": "Un site web ou une application — WordPress, PHP, Node.js, un dépôt Git ou du HTML simple."
+      },
+      "domain": {
+        "title": "Faites pointer votre domaine ici",
+        "body": "Chez votre fournisseur de domaine, faites pointer le domaine vers l'adresse IP de ce serveur, {ip}."
+      },
+      "https": {
+        "title": "Activez HTTPS",
+        "body": "Un certificat gratuit, pour que les navigateurs affichent le cadenas. Il se renouvelle tout seul."
+      },
+      "backups": {
+        "title": "Planifiez des sauvegardes",
+        "body": "Une copie régulière des fichiers et de la base de données, pour pouvoir réparer une erreur."
+      },
+      "afterApp": "Après l'étape 2"
     }
   },
   "cronJobs": {
@@ -1150,6 +1208,10 @@
       "sentenceRepeatOn": "S'exécute {time}, {days}.",
       "nextRuns": "Prochaines exécutions : {runs}",
       "never": "Cette date n'arrive jamais : la tâche ne s'exécuterait jamais."
+    },
+    "cronDown": {
+      "title": "Cron ne fonctionne pas sur ce serveur",
+      "body": "Aucune tâche planifiée ne s'exécute tant qu'il n'est pas relancé, y compris les tâches du panneau lui-même. Démarrez-le depuis un terminal sur le serveur :"
     }
   },
   "errors": {
@@ -2918,7 +2980,11 @@
       "copyString": "Copier la chaîne de connexion",
       "copyField": "Copier {field}",
       "otherUsers": "{count, plural, =1 {Un autre utilisateur peut se connecter à cette base.} other {# autres utilisateurs peuvent se connecter à cette base.}} Voir l'onglet Utilisateurs.",
-      "passwordWithheld": "Masqué — votre rôle ne peut pas gérer les bases de données."
+      "passwordWithheld": "Masqué — votre rôle ne peut pas gérer les bases de données.",
+      "connectionString": "Chaîne de connexion",
+      "server": "Serveur",
+      "credentialsTitle": "Identifiants",
+      "protocol": "Protocole"
     },
     "users": {
       "title": "Utilisateurs",
@@ -3105,13 +3171,14 @@
       "longRunning": "Requête longue",
       "meta": {
         "database": "Base de données",
-        "user": "Utilisateur",
-        "state": "État"
+        "user": "Utilisateur"
       },
       "summary": {
         "current": "Actuelle",
         "peak": "Pic",
-        "average": "Moyenne"
+        "average": "Moyenne",
+        "peakMark": "Pic {value}",
+        "averageMark": "Moyenne {value}"
       },
       "runningQueries": "Requêtes en cours",
       "longRunningCount": "{count, plural, one {# longue} other {# longues}}",
@@ -3119,7 +3186,10 @@
       "zoomHint": "Faites glisser les poignées sous le graphique, ou utilisez la molette, pour zoomer sur une plage de temps.",
       "cannotStopOwn": "C'est la connexion du panel lui-même à la base de données. L'arrêter couperait cette page.",
       "loadFailed": "Impossible de vérifier les moteurs de base de données.",
-      "backToList": "Retour aux bases de données"
+      "backToList": "Retour aux bases de données",
+      "queryShowLess": "Afficher moins",
+      "queryShowFull": "Afficher la requête complète",
+      "avgShort": "moy."
     },
     "tables": {
       "title": "Tables",
@@ -3128,16 +3198,27 @@
       "summary": "{count, plural, one {# table} other {# tables}} · environ {rows} lignes",
       "summaryMongo": "{count, plural, one {# collection} other {# collections}} · environ {rows} documents",
       "empty": "Aucune table pour l'instant.",
-      "rowCount": "{rows} lignes",
       "rowsEstimated": "Les nombres de lignes sont des estimations du moteur, pas des comptages exacts.",
       "charsetLine": "Jeu de caractères {charset} · collation {collation}",
       "loadFailed": "Impossible de lire les tables de cette base de données.",
-      "unavailable": "Illisible tant que {engine} n'est pas en cours d'exécution."
+      "unavailable": "Illisible tant que {engine} n'est pas en cours d'exécution.",
+      "filter": "Filtrer les tables…",
+      "noMatches": "Aucune table ne correspond.",
+      "columns": {
+        "table": "Table",
+        "collection": "Collection",
+        "rows": "Lignes",
+        "documents": "Documents",
+        "size": "Taille"
+      },
+      "rowsWord": "{count, plural, one {ligne} other {lignes}}",
+      "rowsWordMongo": "{count, plural, one {document} other {documents}}"
     },
     "tabs": {
       "users": "Utilisateurs",
       "tables": "Tables",
-      "exports": "Exports"
+      "exports": "Exports",
+      "overview": "Vue d'ensemble"
     },
     "phpmyadmin": {
       "open": "Ouvrir dans phpMyAdmin",
@@ -3187,14 +3268,16 @@
       "title": "Redémarrer le serveur de bases de données ?",
       "cancel": "Annuler",
       "confirm": "Redémarrer et continuer",
-      "description": "Le serveur de bases de données doit redémarrer pour accepter des connexions depuis d'autres adresses. Les applications qui l'utilisent perdent leur connexion un instant."
+      "description": "Le serveur de bases de données doit redémarrer pour accepter des connexions depuis d'autres adresses. Les applications qui l'utilisent perdent leur connexion un instant.",
+      "working": "Redémarrage…"
     },
     "backToList": "Retour aux bases de données",
     "createFailed": "La base n'a pas pu être créée.",
     "unavailable": {
       "title": "Les bases de données ne sont pas gérées sur ce serveur",
       "body": "Ce serveur héberge des conteneurs. Une application qui a besoin d’une base de données en apporte une sous forme de conteneur, le panneau ne gère donc aucun moteur ici — et ses propres données sont en SQLite de toute façon."
-    }
+    },
+    "detailsTitle": "Détails"
   },
   "git": {
     "title": "Git",
@@ -3533,7 +3616,9 @@
       "owner": "Utilisateur système",
       "size": "Taille",
       "created": "Créé le",
-      "php": "PHP"
+      "php": "PHP",
+      "runsOn": "Tourne sur",
+      "lastBackup": "Dernière sauvegarde"
     },
     "empty": {
       "title": "Votre serveur est prêt pour sa première application",
@@ -3555,7 +3640,7 @@
         }
       }
     },
-    "searchPlaceholder": "Rechercher des applications…",
+    "searchPlaceholder": "Rechercher par nom ou domaine",
     "details": {
       "title": "Application",
       "settingUp": "Configuration de votre application",
@@ -4039,6 +4124,11 @@
         "submit": "Enregistrer les modifications",
         "submitting": "Enregistrement…",
         "clearsTarget": "Passer en alias efface la cible de redirection ({target}). Un alias sert l'application elle-même."
+      },
+      "columns": {
+        "domain": "Domaine",
+        "dns": "DNS",
+        "https": "HTTPS"
       }
     },
     "magicLogin": {
@@ -4056,8 +4146,7 @@
     },
     "markers": {
       "processFailed": "Processus en échec",
-      "processStopped": "Processus arrêté",
-      "deployFailed": "Dernier déploiement échoué"
+      "processStopped": "Processus arrêté"
     },
     "sourceLabel": "Source",
     "deployment": {
@@ -4973,7 +5062,8 @@
         "noPermission": "Votre rôle n'inclut pas Clonage d'application pour cette application avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
         "defaultName": "{name} (Copie)",
         "name": "Nom de la copie",
-        "domainTaken": "Une application de ce serveur utilise déjà ce domaine."
+        "domainTaken": "Une application de ce serveur utilise déjà ce domaine.",
+        "suggested": "Suggestion :"
       },
       "create": {
         "title": "Créer la copie",
@@ -5455,7 +5545,8 @@
       "queuedNote": "Sauvegarde en file. Elle démarre dès que le serveur la prend.",
       "queuedStalled": "Cette sauvegarde n'a pas encore démarré. Si cela persiste, le worker en arrière-plan ne tourne peut-être pas.",
       "alreadyRunning": "Une sauvegarde de cette application est déjà en cours.",
-      "noneKept": "Aucune conservée"
+      "noneKept": "Aucune conservée",
+      "notSetUp": "Non configurée"
     },
     "attention": {
       "title": "À vérifier",
@@ -5777,6 +5868,30 @@
       "switching": "Passage à Node {target}…",
       "already": "Cette application utilise déjà Node {version}.",
       "failed": "Impossible de changer la version de Node."
+    },
+    "health": {
+      "online": "En ligne",
+      "onlineDetail": "Les visiteurs peuvent accéder à cette application.",
+      "paused": "En pause",
+      "pausedDetail": "Les visiteurs voient une page d'attente jusqu'à la reprise.",
+      "https": "HTTPS est activé",
+      "httpsDetail": "Les visiteurs bénéficient d'une connexion sécurisée."
+    },
+    "tiles": {
+      "status": "Statut",
+      "deploy": "Dernier déploiement",
+      "runtime": "Exécution",
+      "lastBackup": "Dernière sauvegarde {when}",
+      "deployed": "Déployé",
+      "deployFailed": "Échec du déploiement",
+      "deployFailedDetail": "Le dernier déploiement n'est pas allé au bout.",
+      "notDeployed": "Pas encore déployé",
+      "stoppedDetail": "Le processus ne tourne pas, les visiteurs obtiennent donc une erreur.",
+      "deployingDetail": "La nouvelle version sera en ligne à la fin.",
+      "expiresSoon": "Le certificat expire bientôt",
+      "staticFiles": "Fichiers statiques",
+      "runtimeDetail": "Modifier la version et les limites",
+      "staticDetail": "Servis tels quels, rien à exécuter"
     }
   },
   "panelUpdate": {
@@ -6230,6 +6345,7 @@
         "lastRun": "Dernière exécution",
         "actions": "Actions",
         "type": "Type de sauvegarde",
+        "typeShort": "Type",
         "storage": "Stockage"
       },
       "status": {
@@ -6662,7 +6778,11 @@
       },
       "restoreRunning": "Une restauration est en cours. Attendez qu'elle se termine.",
       "historyForbidden": "Votre rôle ne peut pas voir l'historique des sauvegardes. Demandez à un administrateur l'autorisation Sauvegardes.",
-      "noneKept": "Aucune conservée"
+      "noneKept": "Aucune conservée",
+      "emptyHint": {
+        "unprotected": "Une fois une planification configurée, chaque sauvegarde apparaît ici, restaurable en un clic.",
+        "scheduled": "Chaque sauvegarde apparaît ici une fois terminée, restaurable en un clic. Lancez-en une maintenant pour vérifier que tout fonctionne."
+      }
     },
     "empty": {
       "title": "Rien n'est encore sauvegardé sur ce serveur",

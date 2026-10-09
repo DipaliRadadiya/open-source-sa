@@ -72,7 +72,17 @@
     "loadingPage": "ページを読み込んでいます…",
     "close": "閉じる",
     "cancel": "キャンセル",
-    "confirm": "確認"
+    "confirm": "確認",
+    "navGroups": {
+      "data": "データ",
+      "security": "セキュリティ",
+      "software": "ソフトウェア",
+      "website": "ウェブサイト",
+      "copies": "バックアップとコピー",
+      "configuration": "設定",
+      "server": "サーバー"
+    },
+    "serverOnline": "オンライン"
   },
   "systemUsers": {
     "title": "システムユーザー",
@@ -326,15 +336,11 @@
       "rolesConfigured": "{count, plural, other {# 件のロールが設定済み}}",
       "impersonationUsed": "{count, plural, other {使用回数: # 回}}、最終 {when}"
     },
-    "quick": {
-      "title": "クイック操作",
-      "health": "ヘルスチェックを実行",
-      "update": "パネルを更新",
-      "errors": "エラーログを表示",
-      "users": "ユーザーを管理",
-      "central": "Central を設定"
-    },
-    "navigationLabel": "管理メニュー"
+    "navigationLabel": "管理メニュー",
+    "navGroups": {
+      "access": "アクセス",
+      "system": "システム"
+    }
   },
   "users": {
     "title": "ユーザー",
@@ -891,21 +897,29 @@
     "swap": "スワップ",
     "load": "平均負荷",
     "usedOf": "{used} / {total}",
-    "free": "空き {free}",
     "cores": "{count} コア",
     "loadHint": "5分",
     "info": {
       "kernel": "カーネル",
-      "ip": "IP アドレス",
       "cpuModel": "プロセッサー",
-      "runtimes": "ランタイム",
       "noRuntimes": "検出されませんでした",
       "enginesUnknown": "データベースのバージョンを読み込めませんでした",
       "copyIp": "IPアドレスをコピー",
       "servicesOk": "{count, plural, one {# 個のサービスが実行中} other {すべての # 個のサービスが実行中}}",
       "servicesDown": "{count, plural, one {停止中: {names}} other {停止中: {names}}}",
       "noServices": "サービスが検出されませんでした",
-      "servicesDownCount": "{count, plural, other {{total} 件中 # 件のサービスが停止しています}}"
+      "servicesDownCount": "{count, plural, other {{total} 件中 # 件のサービスが停止しています}}",
+      "title": "サーバー情報",
+      "description": "このサーバーの概要と稼働中のソフトウェア",
+      "hostname": "サーバー名",
+      "os": "オペレーティングシステム",
+      "memory": "メモリ",
+      "disk": "ディスク",
+      "timezone": "タイムゾーン",
+      "processor": "{model} · {count, plural, other {#コア}}",
+      "mainSoftware": "主なソフトウェア",
+      "moreSoftware": "{count, plural, other {他#件}}",
+      "arch": "アーキテクチャ"
     },
     "charts": {
       "waiting": "サンプルを待機中…",
@@ -997,32 +1011,76 @@
     "liveLabel": "現在",
     "attention": {
       "title": "対応が必要",
-      "count": "{count, plural, other {# 件のアプリケーションが対応を必要としています}}",
       "insecure": {
         "chip": "{site} に SSL 証明書がありません",
         "detail": "訪問者は暗号化されていない HTTP で接続するため、ブラウザーに「保護されていない通信」の警告が表示されます。",
-        "action": "SSL を設定"
+        "action": "SSL を設定",
+        "many": "{count, plural, other {#個のアプリケーションにSSL証明書がありません}}"
       },
       "failed": {
         "chip": "{site} のセットアップが完了しませんでした",
         "detail": "このアプリケーションのセットアップが途中で停止したため、まだ配信されていません。",
-        "action": "失敗の内容を見る"
+        "action": "失敗の内容を見る",
+        "many": "{count, plural, other {#個のアプリケーションのセットアップが完了していません}}"
       },
       "deployFailed": {
         "chip": "{site} の前回のデプロイが失敗しました",
         "detail": "直近のデプロイは完了しておらず、修正するまで次のプッシュも同じように失敗します。",
-        "action": "デプロイログを見る"
+        "action": "デプロイログを見る",
+        "many": "{count, plural, other {#個のアプリケーションで前回のデプロイが失敗しました}}"
       },
       "processDown": {
         "chip": "{site} が停止しています",
         "detail": "プロセスが動作していないため、アプリケーションは一時停止していないのに訪問者にエラーが表示されます。",
-        "action": "プロセスを確認"
+        "action": "プロセスを確認",
+        "many": "{count, plural, other {#個のアプリケーションが停止しています}}"
       },
       "git": {
         "chip": "{site} の Git アカウントが失われました",
         "detail": "デプロイ元のアカウントが存在しないため、次のデプロイは失敗します。",
-        "action": "デプロイを再接続"
-      }
+        "action": "デプロイを再接続",
+        "many": "{count, plural, other {#個のアプリケーションのGitアカウントが失われました}}"
+      },
+      "servicesAction": "サービスを開く",
+      "viewApplications": "アプリケーションを表示"
+    },
+    "hero": {
+      "healthy": "すべて正常に動作しています",
+      "attention": "{count, plural, other {確認が必要な項目が#件あります}}",
+      "down": "{count, plural, other {#個のサービスが停止しています}}",
+      "unknown": "あなたのサーバー",
+      "apps": "{total, plural, other {#個中{online}個のアプリケーションがオンラインです。}}",
+      "noApps": "アプリケーションはまだありません。最初の1つを作成して始めましょう。",
+      "up": "稼働時間 {time}",
+      "viewLogs": "ログを表示",
+      "welcome": "最初のウェブサイトを公開しましょう",
+      "greeting": "おかえりなさい、{name}さん",
+      "running": "サーバーは稼働しています"
+    },
+    "start": {
+      "title": "はじめに",
+      "progress": "{total}件中{done}件完了 · 各ステップから該当の画面を開けます",
+      "server": {
+        "title": "サーバーを接続する",
+        "body": "完了 — パネルはインストール済みで、このサーバーを監視しています。"
+      },
+      "app": {
+        "title": "最初のアプリケーションを作成する",
+        "body": "ウェブサイトやアプリを1つ — WordPress、PHP、Node.js、Git リポジトリ、またはシンプルな HTML。"
+      },
+      "domain": {
+        "title": "ドメインをこのサーバーに向ける",
+        "body": "ドメイン事業者の管理画面で、ドメインをこのサーバーの IP アドレス {ip} に向けてください。"
+      },
+      "https": {
+        "title": "HTTPS を有効にする",
+        "body": "無料の証明書で、ブラウザに鍵マークが表示されます。自動で更新されます。"
+      },
+      "backups": {
+        "title": "バックアップを予約する",
+        "body": "ファイルとデータベースを定期的にコピーして、ミスを元に戻せるようにします。"
+      },
+      "afterApp": "ステップ2の後"
     }
   },
   "cronJobs": {
@@ -1150,6 +1208,10 @@
       "sentenceRepeatOn": "{days}、{time}に実行されます。",
       "nextRuns": "次回の実行: {runs}",
       "never": "この日付は存在しないため、ジョブは実行されません。"
+    },
+    "cronDown": {
+      "title": "このサーバーで Cron が動作していません",
+      "body": "再び起動するまで、パネル自身のタスクを含め、スケジュールされたジョブは一切実行されません。サーバーのターミナルで起動してください:"
     }
   },
   "errors": {
@@ -2918,7 +2980,11 @@
       "copyString": "接続文字列をコピー",
       "copyField": "{field} をコピー",
       "otherUsers": "{count, plural, =1 {このデータベースにはあと 1 人のユーザーが接続できます。} other {このデータベースにはあと # 人のユーザーが接続できます。}} 「ユーザー」タブを確認してください。",
-      "passwordWithheld": "非表示 — このロールではデータベースを管理できません。"
+      "passwordWithheld": "非表示 — このロールではデータベースを管理できません。",
+      "connectionString": "接続文字列",
+      "server": "サーバー",
+      "credentialsTitle": "認証情報",
+      "protocol": "プロトコル"
     },
     "users": {
       "title": "ユーザー",
@@ -3105,13 +3171,14 @@
       "longRunning": "長時間実行中のクエリ",
       "meta": {
         "database": "データベース",
-        "user": "ユーザー",
-        "state": "状態"
+        "user": "ユーザー"
       },
       "summary": {
         "current": "現在",
         "peak": "最大",
-        "average": "平均"
+        "average": "平均",
+        "peakMark": "最大 {value}",
+        "averageMark": "平均 {value}"
       },
       "runningQueries": "実行中のクエリ",
       "longRunningCount": "{count, plural, other {長時間実行中 # 件}}",
@@ -3119,7 +3186,10 @@
       "zoomHint": "チャート下のハンドルをドラッグするか、チャート上をスクロールすると時間範囲を拡大できます。",
       "cannotStopOwn": "これはパネルのデータベースへの接続です。停止するとこのページが切断されます。",
       "loadFailed": "データベースエンジンを確認できませんでした。",
-      "backToList": "データベース一覧に戻る"
+      "backToList": "データベース一覧に戻る",
+      "queryShowLess": "折りたたむ",
+      "queryShowFull": "クエリ全体を表示",
+      "avgShort": "平均"
     },
     "tables": {
       "title": "テーブル",
@@ -3128,16 +3198,27 @@
       "summary": "{count, plural, other {テーブル # 件}} · 約 {rows} 行",
       "summaryMongo": "{count, plural, other {コレクション # 件}} · 約 {rows} ドキュメント",
       "empty": "テーブルはまだありません。",
-      "rowCount": "{rows} 行",
       "rowsEstimated": "行数はエンジンによる概算であり、正確な数値ではありません。",
       "charsetLine": "文字セット {charset} · 照合順序 {collation}",
       "loadFailed": "このデータベースのテーブルを読み取れませんでした。",
-      "unavailable": "{engine} が実行されていない間は読み取れません。"
+      "unavailable": "{engine} が実行されていない間は読み取れません。",
+      "filter": "テーブルを絞り込む…",
+      "noMatches": "一致するテーブルはありません。",
+      "columns": {
+        "table": "テーブル",
+        "collection": "コレクション",
+        "rows": "行数",
+        "documents": "ドキュメント",
+        "size": "サイズ"
+      },
+      "rowsWord": "{count, plural, other {行}}",
+      "rowsWordMongo": "{count, plural, other {件}}"
     },
     "tabs": {
       "users": "ユーザー",
       "tables": "テーブル",
-      "exports": "エクスポート"
+      "exports": "エクスポート",
+      "overview": "概要"
     },
     "phpmyadmin": {
       "open": "phpMyAdmin で開く",
@@ -3187,14 +3268,16 @@
       "title": "データベースサーバーを再起動しますか？",
       "cancel": "キャンセル",
       "confirm": "再起動して続行",
-      "description": "他のアドレスからの接続を受け付けるには、データベースサーバーの再起動が必要です。これを使うアプリケーションの接続は一瞬切れます。"
+      "description": "他のアドレスからの接続を受け付けるには、データベースサーバーの再起動が必要です。これを使うアプリケーションの接続は一瞬切れます。",
+      "working": "再起動中…"
     },
     "backToList": "データベース一覧に戻る",
     "createFailed": "データベースを作成できませんでした。",
     "unavailable": {
       "title": "このサーバーではデータベースを管理しません",
       "body": "このサーバーはコンテナをホストしています。データベースが必要なアプリケーションは自前のコンテナとして持ち込むため、パネルはここでエンジンを管理しません。パネル自身のデータはいずれにせよ SQLite です。"
-    }
+    },
+    "detailsTitle": "詳細"
   },
   "git": {
     "title": "Git",
@@ -3533,7 +3616,9 @@
       "owner": "システムユーザー",
       "size": "サイズ",
       "created": "作成日",
-      "php": "PHP"
+      "php": "PHP",
+      "runsOn": "実行環境",
+      "lastBackup": "最終バックアップ"
     },
     "empty": {
       "title": "サーバーは最初のアプリケーションの準備ができています",
@@ -3555,7 +3640,7 @@
         }
       }
     },
-    "searchPlaceholder": "アプリケーションを検索…",
+    "searchPlaceholder": "名前またはドメインで検索",
     "details": {
       "title": "アプリケーション",
       "settingUp": "アプリケーションをセットアップ中",
@@ -4039,6 +4124,11 @@
         "submit": "変更を保存",
         "submitting": "保存中…",
         "clearsTarget": "エイリアスに変更すると、リダイレクト先 ({target}) は削除されます。エイリアスはアプリケーション自体を配信します。"
+      },
+      "columns": {
+        "domain": "ドメイン",
+        "dns": "DNS",
+        "https": "HTTPS"
       }
     },
     "magicLogin": {
@@ -4056,8 +4146,7 @@
     },
     "markers": {
       "processFailed": "プロセスが失敗しました",
-      "processStopped": "プロセスが停止しました",
-      "deployFailed": "直近のデプロイが失敗しました"
+      "processStopped": "プロセスが停止しました"
     },
     "sourceLabel": "ソース",
     "deployment": {
@@ -4973,7 +5062,8 @@
         "noPermission": "現在のロールには、このアプリケーションのアプリケーションクローンの管理権限が含まれていません。管理者に付与を依頼してください。",
         "defaultName": "{name} (複製)",
         "name": "コピー名",
-        "domainTaken": "このサーバー上の別アプリケーションがすでにそのドメインを使用しています。"
+        "domainTaken": "このサーバー上の別アプリケーションがすでにそのドメインを使用しています。",
+        "suggested": "候補:"
       },
       "create": {
         "title": "コピーの作成",
@@ -5455,7 +5545,8 @@
       "queuedNote": "バックアップをキューに追加しました。サーバーが処理を開始するとすぐに実行されます。",
       "queuedStalled": "このバックアップはまだ開始されていません。この状態が続く場合は、バックグラウンド worker が動作していない可能性があります。",
       "alreadyRunning": "このアプリケーションのバックアップはすでに実行中です。",
-      "noneKept": "保持なし"
+      "noneKept": "保持なし",
+      "notSetUp": "未設定"
     },
     "attention": {
       "title": "対応が必要",
@@ -5777,6 +5868,30 @@
       "switching": "Node {target} に切り替えています…",
       "already": "このアプリケーションはすでに Node {version} で動作しています。",
       "failed": "Node バージョンを変更できませんでした。"
+    },
+    "health": {
+      "online": "オンライン",
+      "onlineDetail": "訪問者はこのアプリケーションにアクセスできます。",
+      "paused": "一時停止中",
+      "pausedDetail": "再開するまで、訪問者には待機ページが表示されます。",
+      "https": "HTTPS が有効です",
+      "httpsDetail": "訪問者は安全な接続を利用できます。"
+    },
+    "tiles": {
+      "status": "状態",
+      "deploy": "前回のデプロイ",
+      "runtime": "ランタイム",
+      "lastBackup": "最終バックアップ {when}",
+      "deployed": "デプロイ済み",
+      "deployFailed": "デプロイに失敗しました",
+      "deployFailedDetail": "前回のデプロイは完了しませんでした。",
+      "notDeployed": "まだデプロイされていません",
+      "stoppedDetail": "プロセスが停止しているため、訪問者にはエラーが表示されます。",
+      "deployingDetail": "完了すると新しいバージョンが公開されます。",
+      "expiresSoon": "証明書の有効期限が近づいています",
+      "staticFiles": "静的ファイル",
+      "runtimeDetail": "バージョンと上限を変更",
+      "staticDetail": "そのまま配信され、実行するものはありません"
     }
   },
   "panelUpdate": {
@@ -6230,6 +6345,7 @@
         "lastRun": "最終実行",
         "actions": "操作",
         "type": "バックアップ種別",
+        "typeShort": "種類",
         "storage": "ストレージ"
       },
       "status": {
@@ -6662,7 +6778,11 @@
       },
       "restoreRunning": "復元を実行中です。完了するまでお待ちください。",
       "historyForbidden": "現在のロールではバックアップ履歴を表示できません。管理者にバックアップの権限を依頼してください。",
-      "noneKept": "保持なし"
+      "noneKept": "保持なし",
+      "emptyHint": {
+        "unprotected": "スケジュールを設定すると、各バックアップがここに表示され、ワンクリックで復元できます。",
+        "scheduled": "各バックアップは完了するとここに表示され、ワンクリックで復元できます。動作を確認するため、今すぐ1回実行してください。"
+      }
     },
     "empty": {
       "title": "このサーバーではまだ何もバックアップされていません",

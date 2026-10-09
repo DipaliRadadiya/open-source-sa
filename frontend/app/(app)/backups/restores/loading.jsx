@@ -1,18 +1,25 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableSkeleton } from "@/components/data-table/table-skeleton";
 
-// Overview tab skeleton only; heading and tabs are already on screen.
+const TOOLBAR = (
+  <div className="flex items-center justify-between gap-3">
+          <div className="flex gap-2">
+            <Skeleton className="h-9 w-40" />
+            <Skeleton className="h-9 w-36" />
+            <Skeleton className="h-9 w-36" />
+            <Skeleton className="h-9 w-36" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-9 size-9" />
+          </div>
+        </div>
+);
+
+// Restores: the list card.
 export default function Loading() {
   return (
-    <div className="space-y-4" aria-busy="true">
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <Skeleton className="h-9 w-full sm:max-w-xs" />
-        <Skeleton className="h-9 w-40" />
-      </div>
-      <TableSkeleton rows={6} columns={5} />
-      <div className="flex justify-end">
-        <Skeleton className="h-9 w-64" />
-      </div>
+    <div className="space-y-6" aria-busy="true">
+      <TableSkeleton rows={6} columns={6} toolbar={TOOLBAR} />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { SearchInput } from "@/components/data-table/search-input";
+import { ListCard } from "@/components/data-table/list-card";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { useSetQuery } from "@/hooks/use-set-query";
@@ -92,61 +93,65 @@ function RolesList({ data, meta }) {
 
   const isFiltered = Boolean(searchParams.get("search"));
 
+  const toolbar = (
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      <SearchInput placeholder={t("searchPlaceholder")} />
+      <div className="flex flex-wrap items-center gap-2">
+        <RefreshButton />
+        <SyncPermissionsButton />
+        <Button asChild>
+          <Link href="/admin/roles/new" data-roles-add>
+            <Plus className="size-4" />
+            {t("addRole")}
+          </Link>
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <SearchInput placeholder={t("searchPlaceholder")} />
-        <div className="flex flex-wrap items-center gap-2">
-          <RefreshButton />
-          <SyncPermissionsButton />
-          <Button asChild>
-            <Link href="/admin/roles/new" data-roles-add>
-              <Plus className="size-4" />
-              {t("addRole")}
-            </Link>
-          </Button>
-        </div>
-      </div>
-
       {filtered.length === 0 ? (
-        isFiltered ? (
-          <EmptyState
-            icon={SearchX}
-            title={t("empty.filteredTitle")}
-            description={t("empty.filteredDesc")}
-            action={
-              <Button variant="outline" onClick={() => setQuery({ search: undefined }, { resetPage: true })}>
-                {t("empty.clear")}
-              </Button>
-            }
-          />
-        ) : (
-          <EmptyState
-            icon={Shield}
-            title={t("empty.title")}
-            description={t("empty.desc")}
-            action={
-              <Button asChild>
-                <Link href="/admin/roles/new">
-                  <Plus className="size-4" />
-                  {t("addRole")}
-                </Link>
-              </Button>
-            }
-          />
-        )
+        <ListCard toolbar={toolbar}>
+          {isFiltered ? (
+            <EmptyState
+              icon={SearchX}
+              subject={Shield}
+              title={t("empty.filteredTitle")}
+              description={t("empty.filteredDesc")}
+              action={
+                <Button variant="outline" onClick={() => setQuery({ search: undefined }, { resetPage: true })}>
+                  {t("empty.clear")}
+                </Button>
+              }
+            />
+          ) : (
+            <EmptyState
+              icon={Shield}
+              title={t("empty.title")}
+              description={t("empty.desc")}
+              action={
+                <Button asChild>
+                  <Link href="/admin/roles/new">
+                    <Plus className="size-4" />
+                    {t("addRole")}
+                  </Link>
+                </Button>
+              }
+            />
+          )}
+        </ListCard>
       ) : (
-        <>
+        // Below lg the rows are cards of their own, so the list drops its frame there.
+        <ListCard from="lg" toolbar={toolbar} footer={<DataTablePagination meta={meta} />}>
           <div className="lg:hidden">
             <RolesCards roles={filtered} />
           </div>
           <div className="hidden lg:block">
-            <DataTable columns={columns} data={filtered} />
+            <DataTable bare roomy columns={columns} data={filtered} />
           </div>
-        </>
+        </ListCard>
       )}
-
-      <DataTablePagination meta={meta} />
     </div>
   );
 }

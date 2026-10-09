@@ -9,14 +9,15 @@ import {
   getProcesses,
 } from "@/lib/databases/get-monitor";
 import { getServerFacts } from "@/lib/server/get-server-facts";
-import { Button } from "@/components/ui/button";
+import { TAB_LINK_GROUP, tabLinkClass } from "@/lib/theme/tab-link";
 import { HealthSummary } from "@/components/databases/health-summary";
 import { EngineStatusCards } from "@/components/databases/engine-status-cards";
 import { QueryChart } from "@/components/databases/query-chart";
 import { ProcessList } from "@/components/databases/process-list";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { LoadFailed } from "@/components/data-table/load-failed";
-import { Activity } from "lucide-react";
+import { Activity, Database } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { PageCrumb } from "@/components/sections/page-crumb";
 import { PageHeader } from "@/components/ui/page-header";
 import { BackLink } from "@/components/ui/back-link";
@@ -80,24 +81,22 @@ export default async function DatabaseMonitorPage({ searchParams }) {
       <PageCrumb>{t("crumb")}</PageCrumb>
       <Header t={t} engine={selected} />
 
-      <div className="max-w-5xl space-y-4">
-        {/* Only with a real choice; with one engine its name is in the title. */}
+      <div className="space-y-4">
+        {/* Only with a real choice; with one engine its name is in the title. Only
+            running engines are listed, so each carries the green running dot. */}
         {running.length > 1 ? (
-          <div className="flex items-center gap-2">
+          <div className={TAB_LINK_GROUP}>
             {running.map((engine) => (
-              <Button
+              <Link
                 key={engine.engine}
-                asChild
-                size="sm"
-                variant={engine === selected ? "default" : "outline"}
+                href={`/databases/monitor?engine=${engine.engine}`}
+                aria-current={engine === selected ? "page" : undefined}
+                className={cn(tabLinkClass(engine === selected), "gap-2")}
               >
-                <Link
-                  href={`/databases/monitor?engine=${engine.engine}`}
-                  aria-current={engine === selected ? "page" : undefined}
-                >
-                  {tEngines(engine.engine)}
-                </Link>
-              </Button>
+                <Database className="size-4 text-muted-foreground" aria-hidden />
+                {tEngines(engine.engine)}
+                <span aria-hidden className="size-1.5 rounded-full bg-success" />
+              </Link>
             ))}
           </div>
         ) : null}
@@ -106,20 +105,33 @@ export default async function DatabaseMonitorPage({ searchParams }) {
 
         <EngineStatusCards status={status} processes={processes} />
 
-        {/* Queries before the chart: running queries are what the reader came to see. */}
-        <ProcessList
-          engine={selected.engine}
-          processes={processes}
-          connections={connections}
-          canManage={canManage}
-        />
-        <QueryChart metrics={metrics} timeZone={facts?.timezone} />
+        {/* The day's chart beside what is running now; stacked below xl, queries first,
+            since running queries are what the reader came to see. */}
+        {/* The chart sets the row's height; the queries card fills it and scrolls
+            inside (absolute, so a long list cannot make the row taller). */}
+        <div className="grid gap-4 xl:grid-cols-3">
+          <div className="xl:relative xl:order-2">
+            <div className="xl:absolute xl:inset-0">
+              <ProcessList
+                engine={selected.engine}
+                processes={processes}
+                connections={connections}
+                canManage={canManage}
+                fill
+              />
+            </div>
+          </div>
+          <div className="min-w-0 xl:order-1 xl:col-span-2">
+            <QueryChart metrics={metrics} timeZone={facts?.timezone} />
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-/** Plain title; engine, version and uptime live in the health summary below. */
+/** Plain title; engine, version and uptime live in the health summary below. The back
+    link was asked for (1 Oct) even with the breadcrumb, so it stays. */
 function Header({ t }) {
   return (
     <div className="space-y-3">

@@ -13,7 +13,6 @@ import { StatusTile } from "@/components/admin/dashboard/status-tile";
 import { AttentionList } from "@/components/admin/dashboard/attention-list";
 import { ActivityFeed } from "@/components/admin/dashboard/activity-feed";
 import { PeopleCard } from "@/components/admin/dashboard/people-card";
-import { QuickActions } from "@/components/admin/dashboard/quick-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -122,8 +121,6 @@ export default async function AdminDashboardPage() {
       </div>
 
       <AttentionList checks={attentionChecks} errorGroups={errorGroups} />
-
-      <QuickActions />
 
       {/* Feed is wider (its rows are sentences); both stretch to equal height and each
           card pins its footer link to the bottom. */}

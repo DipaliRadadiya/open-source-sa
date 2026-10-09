@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import Link from "@/components/ui/app-link";
-import { ShieldOff, Ban, ScrollText } from "lucide-react";
+import { ShieldOff, Ban, ScrollText, SearchX } from "lucide-react";
 import { unbanIp, unbanAll } from "@/lib/api/fail2ban";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SELECT_WELL } from "@/components/data-table/toolbar-well";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/data-table/empty-state";
@@ -245,7 +246,7 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
             />
             {jailOptions.length > 1 ? (
               <Select value={jailFilter} onValueChange={setJailFilter}>
-                <SelectTrigger className="sm:w-52">
+                <SelectTrigger className={cn(SELECT_WELL, "sm:w-52")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -268,9 +269,7 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
             description={t("banned.emptyBody")}
           />
         ) : visible.length === 0 ? (
-          <p className="py-10 text-center text-sm text-muted-foreground">
-            {t("banned.noMatches")}
-          </p>
+          <EmptyState compact icon={SearchX} subject={Ban} title={t("banned.noMatches")} />
         ) : (
           <>
             {/* Cards below lg, table from lg. The cards dim themselves here
@@ -288,8 +287,15 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null, s
 
             {/* Fixed-height scroll area keeps paging controls on screen; the
                 header sticks. */}
-            <div className="hidden max-h-[26rem] overflow-auto rounded-xl border lg:block [&>div]:rounded-none [&>div]:border-0">
+            {/* Edge to edge, as every table inside a card; at the foot when there is no pager. */}
+            <div
+              className={cn(
+                "-mx-(--card-spacing) hidden max-h-[26rem] overflow-auto border-t lg:block",
+                pageCount > 1 ? "border-b" : "-mb-(--card-spacing)",
+              )}
+            >
               <DataTable
+                bare
                 columns={columns}
                 data={visible}
                 emptyMessage={t("banned.noMatches")}

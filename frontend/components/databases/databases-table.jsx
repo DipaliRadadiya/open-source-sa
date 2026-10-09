@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { ChevronRight, Database, Plus, SearchX } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { DataTable } from "@/components/ui/data-table";
@@ -16,6 +15,7 @@ import { engineLogo } from "@/lib/databases/engine-logo";
 import { EngineLogo } from "@/components/databases/engine-logo";
 import { FilterX } from "lucide-react";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { ListCard } from "@/components/data-table/list-card";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { useSetQuery } from "@/hooks/use-set-query";
 import { SortHeader } from "@/components/data-table/sort-header";
@@ -30,15 +30,23 @@ import { DatabaseRowActions } from "@/components/databases/database-row-actions"
 /* Cells are module-level: inline cell functions remount every cell on each search keystroke. */
 
 // The name links to the detail page (users, credentials, connection string).
+// The short-value columns get 12px side padding, not 16: Russian at 1440 was 27px
+// too wide for the content box, and these four columns hold a logo or a few characters.
+const COMPACT = "px-3";
+
 function NameCell({ row }) {
   return (
     <Link
       href={`/databases/${row.original.id}`}
+      title={row.original.name}
       // Primary colour plus chevron, so the link does not rely on colour alone.
-      className="group inline-flex items-center gap-1.5 font-mono font-medium text-primary underline-offset-4 hover:underline"
+      // A usual name shows in full; past 13.5rem it ellipsises, so a long one cannot
+      // widen the column over its neighbours (Krishna, 8 Oct). A max-width, not
+      // max-w-0 on the cell: that cut every 27-character staging name too.
+      className="group flex min-w-0 items-center gap-1.5 font-mono font-medium text-primary underline-offset-4 hover:underline"
     >
-      {row.original.name}
-      <ChevronRight className="size-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+      <span className="max-w-54 truncate">{row.original.name}</span>
+      <ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
     </Link>
   );
 }
@@ -48,7 +56,8 @@ function EngineCell({ row, table }) {
   return (
     <span className="flex items-center gap-2 text-muted-foreground">
       {/* The name stays beside the logo: the column sorts and searches on it. */}
-      <EngineLogo engine={row.original.engine} />
+      {/* 64px, not 80: the widest locale needed the 16px for the Application column. */}
+      <EngineLogo engine={row.original.engine} size="h-5 w-auto max-w-16" />
       {/* Mark-only logos (PostgreSQL's elephant) need the printed name. */}
       {engineLogo(row.original.engine)?.wordmark ? (
         <span className="sr-only">{name}</span>
@@ -80,7 +89,7 @@ function ApplicationCell({ database, applications, onAttach }) {
         href={`/applications/${application.id}`}
         prefetch={false}
         title={application.name}
-        className="block truncate underline-offset-4 hover:underline"
+        className="break-words underline-offset-4 hover:underline"
       >
         {application.name}
       </Link>
@@ -93,43 +102,36 @@ function ApplicationCell({ database, applications, onAttach }) {
     return <span className="text-muted-foreground">{t("columns.applicationUnknown")}</span>;
   }
 
-  // The badge is the attach control when the reader can act; otherwise a
-  // plain badge rather than a button that would refuse.
+  // Grey text, not a yellow badge: three yellow badges a row made every row look
+  // broken (Krishna, 8 Oct). Still the attach control when the reader can act,
+  // dotted like "Not set up" on Applications; plain text otherwise.
   if (!onAttach) {
-    return (
-      <Badge variant="warning" className="font-normal">
-        {t("columns.notLinked")}
-      </Badge>
-    );
+    return <span className="text-muted-foreground">{t("columns.notLinked")}</span>;
   }
 
   return (
     <button
       type="button"
       onClick={() => onAttach(database)}
-      className="rounded-full focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+      className="rounded-sm text-left text-muted-foreground underline decoration-dotted underline-offset-4 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
       aria-label={`${t("columns.notLinked")}. ${t("columns.attachFor", { name: database.name })}`}
     >
-      <Badge
-        variant="warning"
-        className="cursor-pointer font-normal underline-offset-2 hover:underline"
-      >
-        {t("columns.notLinked")}
-      </Badge>
+      {t("columns.notLinked")}
     </button>
   );
 }
 
-// Zero users is highlighted: nothing can connect to that database.
+// Zero in grey: the header already says "Users", and "No users" in German was wide
+// enough to squeeze the Application column. The greyed-out phpMyAdmin flags it too.
 function UsersCell({ row }) {
   const t = useTranslations("databases");
   const count = row.original.users_count ?? 0;
 
   if (count === 0) {
     return (
-      <Badge variant="warning" className="font-normal">
-        {t("columns.noUsers")}
-      </Badge>
+      <span className="tabular-nums text-muted-foreground" title={t("columns.noUsers")}>
+        0
+      </span>
     );
   }
   return <span className="tabular-nums">{count}</span>;
@@ -146,24 +148,12 @@ function BackupCell({ row, table }) {
 
   const backup = lastBackup?.[row.original.id];
   if (!backup) {
-    return (
-      <Badge variant="warning" className="font-normal">
-        {t("columns.neverExported")}
-      </Badge>
-    );
+    return <span className="text-muted-foreground">{t("columns.neverExported")}</span>;
   }
 
   return (
     <span className="whitespace-nowrap text-muted-foreground">
       {backup.finished_at_human ?? backup.created_at_human ?? "—"}
-    </span>
-  );
-}
-
-function CreatedCell({ row }) {
-  return (
-    <span className="whitespace-nowrap text-muted-foreground">
-      {row.original.created_at_human ?? "—"}
     </span>
   );
 }
@@ -219,7 +209,7 @@ function DatabasesList({
   const columns = [
     { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, meta: { sortKey: "name" }, cell: NameCell },
     ...(showEngine
-      ? [{ accessorKey: "engine", header: () => <SortHeader col="engine">{t("columns.engine")}</SortHeader>, meta: { sortKey: "engine" }, cell: EngineCell }]
+      ? [{ accessorKey: "engine", header: () => <SortHeader col="engine">{t("columns.engine")}</SortHeader>, meta: { sortKey: "engine", className: COMPACT }, cell: EngineCell }]
       : []),
     {
       // The site link decides what gets backed up.
@@ -227,9 +217,9 @@ function DatabasesList({
       accessorFn: (row) =>
         applicationById(applications, row.application_id)?.name ?? "",
       header: t("columns.application"),
-      // Auto-layout table: `max-w-0` lets the link ellipsise, and the width %
-      // stops the column collapsing to ~70px.
-      meta: { className: "w-[22%] max-w-0" },
+      // Wraps rather than truncating: with `max-w-0` the action buttons squeezed this
+      // column to 32px in Russian. Wrapped, it never drops below its longest word.
+      meta: { className: "min-w-24 whitespace-normal" },
       cell: ({ row }) => (
         <ApplicationCell
           database={row.original}
@@ -242,13 +232,15 @@ function DatabasesList({
     {
       accessorKey: "size_bytes",
       header: t("columns.size"),
+      meta: { className: COMPACT },
       cell: SizeCell,
       // NOT sortable: `size_bytes` is not in the API's sort whitelist (422).
     },
     {
       accessorKey: "users_count",
       header: () => <SortHeader col="users_count" descFirst>{t("columns.users")}</SortHeader>,
-      meta: { sortKey: "users_count" },
+      // Long headers wrap ("Пользователи"), so they do not set the column width.
+      meta: { sortKey: "users_count", className: `${COMPACT} whitespace-normal` },
       cell: UsersCell,
     },
     {
@@ -257,15 +249,9 @@ function DatabasesList({
       // ascending and rises to the top descending.
       accessorFn: (row) => lastBackup?.[row.id]?.at ?? 0,
       header: t("columns.lastExport"),
+      meta: { className: `${COMPACT} whitespace-normal` },
       cell: BackupCell,
       sortingFn: "basic",
-    },
-    {
-      // Sorted by the API: created_at arrives as DD-MM-YYYY. Hidden below 1536px so row actions stay on screen.
-      meta: { className: "hidden 2xl:table-cell", sortKey: "created_at" },
-      id: "created",
-      header: () => <SortHeader col="created_at" descFirst>{t("columns.created")}</SortHeader>,
-      cell: CreatedCell,
     },
     ...(canManage
       ? [
@@ -303,89 +289,94 @@ function DatabasesList({
   const onlyUnlinked = searchParams.get("attached") === "0";
   const isFiltered = Boolean(searchParams.get("search")) || onlyUnlinked;
 
+  const toolbar = (
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      <div className="flex min-w-48 flex-1 flex-wrap items-center gap-2">
+        <SearchInput placeholder={t("searchPlaceholder")} />
+        {/* The one filter with no control of its own, so it is shown with a
+            way to clear it. */}
+        {onlyUnlinked ? (
+          <span className="flex items-center gap-1.5 rounded-full border border-warning/40 bg-warning/10 px-3 py-1 text-xs">
+            <FilterX className="size-3.5 shrink-0 text-warning" />
+            {t("unlinked.filtered")}
+            <ClearFiltersButton
+              keys={["attached"]}
+              label={t("unlinked.showAll")}
+              variant="link"
+              size="sm"
+              className="h-auto p-0 text-xs font-medium underline-offset-2"
+            />
+          </span>
+        ) : null}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <RefreshButton />
+        {createButton}
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <div className="flex min-w-48 flex-1 flex-wrap items-center gap-2">
-          <SearchInput placeholder={t("searchPlaceholder")} />
-          {/* The one filter with no control of its own, so it is shown with a
-              way to clear it. */}
-          {onlyUnlinked ? (
-            <span className="flex items-center gap-1.5 rounded-full border border-warning/40 bg-warning/10 px-3 py-1 text-xs">
-              <FilterX className="size-3.5 shrink-0 text-warning" />
-              {t("unlinked.filtered")}
-              <ClearFiltersButton
-                keys={["attached"]}
-                label={t("unlinked.showAll")}
-                variant="link"
-                size="sm"
-                className="h-auto p-0 text-xs font-medium underline-offset-2"
-              />
-            </span>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <RefreshButton />
-          {createButton}
-        </div>
-      </div>
-
       {data.length === 0 ? (
-        isFiltered ? (
-          <EmptyState
-            icon={SearchX}
-            title={t("empty.filteredTitle")}
-            action={
-              <Button variant="outline" onClick={() => setQuery({ search: undefined }, { resetPage: true })}>
-                {t("empty.clearSearch")}
-              </Button>
-            }
-          />
-        ) : (
-          <EmptyState
-            icon={Database}
-            title={t("empty.title")}
-            description={t("empty.description")}
-            action={createButton}
-          />
-        )
+        <ListCard toolbar={toolbar}>
+          {isFiltered ? (
+            <EmptyState
+              icon={SearchX}
+              subject={Database}
+              title={t("empty.filteredTitle")}
+              action={
+                <Button variant="outline" onClick={() => setQuery({ search: undefined }, { resetPage: true })}>
+                  {t("empty.clearSearch")}
+                </Button>
+              }
+            />
+          ) : (
+            <EmptyState
+              icon={Database}
+              title={t("empty.title")}
+              description={t("empty.description")}
+              action={createButton}
+            />
+          )}
+        </ListCard>
       ) : (
-        /* Cards below the breakpoint, the table above it. */
-        <>
-        {/* 1440 is measured: seven columns plus the sidebar first fit there.
-            The cards carry every field, so using them wider loses nothing. */}
-        <div className="min-[1440px]:hidden">
-          <DatabasesCards
-            databases={data}
-            canManage={canManage}
-            onDelete={setDeleting}
-            phpmyadminSites={phpmyadminSites}
-            showEngine={showEngine}
-            engineName={(engine) => t(`engines.${engine}`)}
-            lastBackup={lastBackup}
-            backupsUnknown={backupsUnknown}
-            applications={applications}
-            onAttach={canManage ? setAttaching : null}
-          />
-        </div>
-        <div className="hidden min-[1440px]:block">
-        <DataTable
-          columns={columns}
-          data={data}
-          meta={{
-            canManage,
-            onDelete: setDeleting,
-            engineName: (engine) => t(`engines.${engine}`),
-            lastBackup,
-            backupsUnknown,
-            phpmyadminSites,
-          }}
-        />
-        </div>
-        </>
+        // Below 1440 the rows are cards of their own, so the list drops its frame there.
+        <ListCard from="wide" toolbar={toolbar} footer={<DataTablePagination meta={meta} />}>
+          {/* 1440 is measured: seven columns plus the sidebar first fit there.
+              The cards carry every field, so using them wider loses nothing. */}
+          <div className="min-[1440px]:hidden">
+            <DatabasesCards
+              databases={data}
+              canManage={canManage}
+              onDelete={setDeleting}
+              phpmyadminSites={phpmyadminSites}
+              showEngine={showEngine}
+              engineName={(engine) => t(`engines.${engine}`)}
+              lastBackup={lastBackup}
+              backupsUnknown={backupsUnknown}
+              applications={applications}
+              onAttach={canManage ? setAttaching : null}
+            />
+          </div>
+          <div className="hidden min-[1440px]:block">
+            <DataTable
+              bare
+              roomy
+              columns={columns}
+              data={data}
+              meta={{
+                canManage,
+                onDelete: setDeleting,
+                engineName: (engine) => t(`engines.${engine}`),
+                lastBackup,
+                backupsUnknown,
+                phpmyadminSites,
+              }}
+            />
+          </div>
+        </ListCard>
       )}
-
-      <DataTablePagination meta={meta} />
 
       {canManage ? (
         <>

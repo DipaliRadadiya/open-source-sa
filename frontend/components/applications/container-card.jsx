@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Box, Network, KeyRound, RefreshCw, Gauge } from "lucide-react";
+import { Network, KeyRound, RefreshCw, Gauge } from "lucide-react";
 import Link from "@/components/ui/app-link";
 import { containerSettingsFormSchema } from "@/lib/schemas/docker";
 import { pullContainerImage, updateContainerSettings } from "@/lib/api/docker";
@@ -167,8 +167,7 @@ export function ContainerCard({
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
       <Card className={className}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Box className="size-4" />
+          <CardTitle>
             {t("title")}
           </CardTitle>
         </CardHeader>

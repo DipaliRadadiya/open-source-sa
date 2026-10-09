@@ -1,9 +1,54 @@
 import { useTranslations, useFormatter } from "next-intl";
-import { Cpu, MemoryStick, HardDrive, Activity, ArrowLeftRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { pct, usageStatus } from "@/lib/metrics/usage-level";
-import { StatCard } from "@/components/ui/stat-card";
+import { UsageRing } from "@/components/ui/usage-ring";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatBytes } from "@/lib/format/bytes";
+
+const STATUS_TEXT = {
+  normal: "text-success",
+  watch: "text-warning",
+  high: "text-destructive",
+  off: "text-muted-foreground",
+  unknown: "text-muted-foreground",
+};
+
+// One reading: the ring carries the number, the words say whether it matters.
+// No "… free" line: "1.9 GB of 5.8 GB" already says it, and five across has no room.
+// The label wraps rather than truncates; five across clipped most locales once.
+function UsageTile({ label, value, ringValue, hint, sub, percent, loading, status = null }) {
+  return (
+    <div className="@container/tile min-w-0 rounded-xl bg-muted/40 p-3 ring-1 ring-border/70">
+      <div className="flex min-w-0 items-center gap-3 @max-[11rem]/tile:flex-col @max-[11rem]/tile:items-start">
+        <UsageRing percent={loading ? null : percent} label={label}>
+          {loading ? <Skeleton className="h-3.5 w-8" /> : (ringValue ?? value)}
+        </UsageRing>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium break-words">{label}</p>
+          {loading ? (
+            <Skeleton className="mt-1.5 h-3.5 w-24" />
+          ) : (
+            <>
+              {hint ? <p className="text-xs break-words tabular-nums text-muted-foreground">{keepUnits(hint)}</p> : null}
+              {status || sub ? (
+                <p className="mt-1 text-xs break-words tabular-nums">
+                  {status ? <span className={cn("font-medium", STATUS_TEXT[status.key])}>{status.label}</span> : null}
+                  {status && sub ? <span className="text-muted-foreground"> · </span> : null}
+                  {sub ? <span className="text-muted-foreground">{keepUnits(sub)}</span> : null}
+                </p>
+              ) : null}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// "3.8 GB" wraps as a unit, never as "3.8 / GB".
+function keepUnits(value) {
+  return typeof value === "string" ? value.replace(/(\d)\s+(?=[A-Za-z%])/g, "$1\u00A0") : value;
+}
 
 export function StatCards({ metrics, stale = false, ratesReady = true }) {
   const t = useTranslations("serverDashboard");
@@ -48,28 +93,28 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
       : null;
 
   return (
-    // 5 cards: 1 → 2 → 5. NOT a live region: values change every 3s.
+    // 1 → 2 → 3 → 5. NOT a live region: values change every 3s.
     <div
       aria-busy={loading}
       className={cn(
-        "grid gap-4 transition-opacity sm:grid-cols-2 xl:grid-cols-5",
+        "grid gap-3 transition-opacity sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5",
         // Polling is failing: the numbers are last-known, not current.
         stale && "opacity-60",
       )}
     >
-      <StatCard
-        icon={Cpu}
+      <UsageTile
         label={t("cpu")}
         // A rate needs two samples and the API returns 0 until then; a dash means "not applicable".
         value={ratesReady ? percentText(cpu?.percent, 1) : t("measuring")}
+        // The ring cannot hold "Measuring…"; the hint says it instead.
+        ringValue={ratesReady ? percentText(cpu?.percent, 0) : "…"}
         percent={ratesReady ? cpu?.percent : null}
         // No level word until the second sample lands.
         status={ratesReady ? statusFor(cpu?.percent) : null}
-        hint={cpu?.cores ? t("cores", { count: cpu.cores }) : ""}
+        hint={ratesReady ? (cpu?.cores ? t("cores", { count: cpu.cores }) : "") : t("measuring")}
         loading={loading}
       />
-      <StatCard
-        icon={MemoryStick}
+      <UsageTile
         label={t("memory")}
         value={percentText(memory?.percent)}
         percent={memory?.percent}
@@ -79,12 +124,9 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
             ? t("usedOf", { used: size(memory.used, memory.used_human), total: size(memory.total, memory.total_human) })
             : ""
         }
-        sub={memory?.free_human ? t("free", { free: size(memory.free, memory.free_human) }) : ""}
-        hasSub
         loading={loading}
       />
-      <StatCard
-        icon={ArrowLeftRight}
+      <UsageTile
         label={t("swap")}
         value={
           Number(swap?.total) > 0 ? percentText(swap?.percent) : "—"
@@ -97,18 +139,11 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
             ? t("usedOf", { used: size(swap.used, swap.used_human), total: size(swap.total, swap.total_human) })
             : t("swapOff")
         }
-        sub={
-          Number(swap?.total) > 0 && swap?.free_human
-            ? t("free", { free: size(swap.free, swap.free_human) })
-            : ""
-        }
-        hasSub
         loading={loading}
       />
       {/* Guarded like swap: with no filesystem reported, disk_total is 0 and
           "0%" would look like a healthy empty disk. */}
-      <StatCard
-        icon={HardDrive}
+      <UsageTile
         label={t("disk")}
         value={Number(disk?.total) > 0 ? percentText(disk?.percent) : "—"}
         percent={Number(disk?.total) > 0 ? disk?.percent : null}
@@ -119,16 +154,9 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
             ? t("usedOf", { used: size(disk.used, disk.used_human), total: size(disk.total, disk.total_human) })
             : t("diskUnknown")
         }
-        sub={
-          Number(disk?.total) > 0 && disk?.free_human
-            ? t("free", { free: size(disk.free, disk.free_human) })
-            : ""
-        }
-        hasSub
         loading={loading}
       />
-      <StatCard
-        icon={Activity}
+      <UsageTile
         label={t("load")}
         // The headline deliberately favours the stable 15-minute average over
         // the noisier 1-minute figure.
@@ -137,7 +165,6 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
         status={statusFor(loadPercent)}
         hint={cores ? t("ofCores", { count: cores }) : ""}
         sub={load ? `${t("loadHint")}: ${decimal(load[5])}` : ""}
-        hasSub
         loading={loading}
       />
     </div>

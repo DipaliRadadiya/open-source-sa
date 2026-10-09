@@ -150,7 +150,7 @@ export function IgnoreListCard({ settings, canManage }) {
                   <span className="min-w-0 truncate font-mono text-sm">{ip}</span>
                   <div className="flex shrink-0 items-center gap-1">
                     {ip === yourIp ? (
-                      <span className="rounded bg-success/10 px-1.5 py-0.5 text-xs font-medium uppercase tracking-wide text-success">
+                      <span className="rounded bg-success/10 px-1.5 py-0.5 text-xs font-medium text-success">
                         {t("settings.you")}
                       </span>
                     ) : null}

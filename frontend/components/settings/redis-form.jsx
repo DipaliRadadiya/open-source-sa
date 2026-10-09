@@ -146,7 +146,7 @@ export function RedisForm({ redis, canManage, changedBy }) {
             {applying ? (
               <div
                 role="status"
-                className="mt-3.5 flex flex-wrap items-start justify-between gap-3 rounded-lg border border-warning/40 bg-warning/10 px-3.5 py-2.5 text-sm"
+                className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-warning/40 bg-warning/10 px-3.5 py-2.5 text-sm"
               >
                 <span className="flex items-start gap-2">
                   <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-warning motion-reduce:animate-none" />
@@ -167,14 +167,14 @@ export function RedisForm({ redis, canManage, changedBy }) {
             ) : null}
 
             {redis?.running === false ? (
-              <p className="mt-3.5 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3.5 py-2.5 text-sm text-destructive">
+              <p className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3.5 py-2.5 text-sm text-destructive">
                 <CircleAlert className="size-4 shrink-0" />
                 {t("redis.notRunning")}
               </p>
             ) : null}
 
             {redis?.password_out_of_sync === true ? (
-              <div className="mt-3.5 flex gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3.5 py-2.5 text-sm text-destructive">
+              <div className="flex gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3.5 py-2.5 text-sm text-destructive">
                 <CircleAlert className="mt-0.5 size-4 shrink-0" />
                 <div className="space-y-1">
                   <p>{t("redis.outOfSync")}</p>
@@ -278,7 +278,12 @@ export function RedisForm({ redis, canManage, changedBy }) {
                 >
                   <div className="space-y-1.5">
                     {showStored ? (
-                      <PasswordReveal password={redis.password} className="text-left" />
+                      // Shaped like the inputs beside it, at their full width, with its
+                      // two buttons inside: a short grey strip read as a different field.
+                      <PasswordReveal
+                        password={redis.password}
+                        className="min-h-9 rounded-md border border-input bg-muted/40 pr-1 text-left dark:bg-input/30 [&>code]:bg-transparent"
+                      />
                     ) : !canManage ? (
                       <p className="text-sm">
                         {redis?.has_password

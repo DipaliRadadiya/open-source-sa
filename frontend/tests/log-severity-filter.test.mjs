@@ -118,7 +118,7 @@ test("the Logs page tests found on 2026-09-23 stay fixed", () => {
   // Per-line copy buttons are out of the Tab order.
   assert.match(read("components/logs/log-line.jsx"), /tabIndex=\{-1\}/);
   // The line picker grows with its text (German, Russian).
-  assert.match(code, /className="w-auto min-w-40"/);
+  assert.match(code, /className=\{cn\(SELECT_WELL, "w-auto min-w-40"\)\}/);
 });
 
 test("new lines are counted by what is new, not by how much longer the buffer got", async () => {

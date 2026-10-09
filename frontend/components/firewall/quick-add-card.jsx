@@ -5,17 +5,7 @@ import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
-import {
-  Check,
-  Database,
-  Globe,
-  Layers,
-  Loader2,
-  PowerOff,
-  Trash2,
-  TriangleAlert,
-  Zap,
-} from "lucide-react";
+import { Check, Database, Globe, Layers, Loader2, PowerOff, Trash2, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   createFirewallRule,
@@ -143,8 +133,7 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base font-semibold">
-            <Zap className="size-4 text-primary" />
+          <CardTitle>
             {t("quick.title")}
           </CardTitle>
           <CardDescription>{t("quick.description")}</CardDescription>
@@ -346,11 +335,11 @@ function Tile({
           <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
             <span className="min-w-0 text-sm font-medium break-words">{title}</span>
             {done ? (
-              <span className="shrink-0 rounded bg-success/15 px-1.5 py-0.5 text-xs font-medium uppercase tracking-wide text-success">
+              <span className="shrink-0 rounded bg-success/15 px-1.5 py-0.5 text-xs font-medium text-success">
                 {doneLabel}
               </span>
             ) : off ? (
-              <span className="shrink-0 rounded bg-muted-foreground/15 px-1.5 py-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <span className="shrink-0 rounded bg-muted-foreground/15 px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
                 {offLabel}
               </span>
             ) : risky ? (
