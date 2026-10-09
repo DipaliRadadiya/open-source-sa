@@ -1,0 +1,63 @@
+name: sv-app-4242
+
+services:
+  app:
+    image: wordpress:7.1-apache
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    
+    ports:
+      - "127.0.0.1:20101:80"
+
+    environment:
+      WORDPRESS_DB_HOST: "db"
+      WORDPRESS_DB_NAME: "wordpress"
+      WORDPRESS_DB_USER: "wordpress"
+      WORDPRESS_SITE_URL: "http://wordpress-container.golden.test"
+      WORDPRESS_DB_PASSWORD: "8eb0d5f065f56aadc5d1375539d52c2a"
+      
+      WORDPRESS_CONFIG_EXTRA: |
+        if (isset($$_SERVER['HTTP_X_FORWARDED_PROTO']) && $$_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+            $$_SERVER['HTTPS'] = 'on';
+        }
+        if (getenv('WORDPRESS_SITE_URL')) {
+            define('WP_HOME', getenv('WORDPRESS_SITE_URL'));
+            define('WP_SITEURL', getenv('WORDPRESS_SITE_URL'));
+        }
+
+    volumes:
+      - sv-app-4242_app:/var/www/html
+
+    depends_on:
+      - db
+
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      MARIADB_DATABASE: wordpress
+      MARIADB_USER: wordpress
+      MARIADB_PASSWORD: "8eb0d5f065f56aadc5d1375539d52c2a"
+      MARIADB_ROOT_PASSWORD: "2d44e40203de4cb6de93a25e0286eec9"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/mysql
+
+volumes:
+  sv-app-4242_app:
+    external: true
+  sv-app-4242_db:
+    external: true

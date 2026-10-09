@@ -1,0 +1,25 @@
+name: sv-app-4242
+
+services:
+  app:
+    image: vaultwarden/server:latest
+    restart: unless-stopped
+    mem_limit: 640m
+    cpus: 1.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    
+    ports:
+      - "127.0.0.1:20101:80"
+
+    volumes:
+      - sv-app-4242_data:/data
+
+
+volumes:
+  sv-app-4242_data:
+    external: true

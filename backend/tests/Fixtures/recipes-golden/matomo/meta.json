@@ -1,0 +1,122 @@
+{
+    "slug": "matomo",
+    "container_port": 80,
+    "volume_roles": {
+        "app": "/var/www/html",
+        "db": "/var/lib/mysql"
+    },
+    "generated_secrets": [
+        "DATABASE_PASSWORD",
+        "MARIADB_ROOT_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": null,
+    "default_memory_limit": null,
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "analytics",
+    "icon": "matomo",
+    "popular": true,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "512m",
+            "help": "Optional. The most memory this app's own container may use, for example 512m or 2g. A bare number means bytes to Docker, not megabytes. Left empty it gets 512m. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_app",
+            "path": "/var/www/html"
+        },
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/mysql"
+        }
+    ],
+    "docker_secret_keys": [
+        "DATABASE_PASSWORD",
+        "MARIADB_ROOT_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Matomo",
+            "tagline": "Web analytics on your own server — a Google Analytics replacement"
+        },
+        "es": {
+            "title": "Matomo",
+            "tagline": "Analítica web en tu propio servidor: una alternativa a Google Analytics"
+        },
+        "de": {
+            "title": "Matomo",
+            "tagline": "Web-Analyse auf Ihrem eigenen Server — ein Ersatz für Google Analytics"
+        },
+        "fr": {
+            "title": "Matomo",
+            "tagline": "Analyse web sur votre propre serveur — une alternative à Google Analytics"
+        },
+        "pt": {
+            "title": "Matomo",
+            "tagline": "Analítica web no seu próprio servidor — uma alternativa ao Google Analytics"
+        },
+        "ja": {
+            "title": "Matomo",
+            "tagline": "自分のサーバーで動くウェブ解析 — Google Analytics の代替"
+        },
+        "ru": {
+            "title": "Matomo",
+            "tagline": "Веб-аналитика на своём сервере — замена Google Analytics"
+        },
+        "hi": {
+            "title": "Matomo",
+            "tagline": "अपने सर्वर पर वेब एनालिटिक्स — Google Analytics का विकल्प"
+        }
+    },
+    "catalog_en": {
+        "name": "matomo",
+        "icon": "matomo",
+        "category": "analytics",
+        "popular": true,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

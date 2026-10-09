@@ -1,0 +1,56 @@
+name: sv-app-4242
+
+services:
+  matomo:
+    image: matomo:5-apache
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:80"
+
+    environment:
+      MATOMO_DATABASE_HOST: db
+      MATOMO_DATABASE_ADAPTER: mysql
+      MATOMO_DATABASE_DBNAME: matomo
+      MATOMO_DATABASE_USERNAME: matomo
+      MATOMO_DATABASE_PASSWORD: 56f57d92125ecf8ca32b67aa63e768c3
+
+    volumes:
+      - sv-app-4242_app:/var/www/html
+
+    depends_on:
+      - db
+
+  db:
+    image: mariadb:10.11
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    
+    command: --max-allowed-packet=64MB
+
+    environment:
+      MARIADB_DATABASE: matomo
+      MARIADB_USER: matomo
+      MARIADB_PASSWORD: 56f57d92125ecf8ca32b67aa63e768c3
+      MARIADB_ROOT_PASSWORD: b30bbf96d1483411d6607fffd0deffcc
+
+    volumes:
+      - sv-app-4242_db:/var/lib/mysql
+
+volumes:
+  sv-app-4242_app:
+    external: true
+  sv-app-4242_db:
+    external: true

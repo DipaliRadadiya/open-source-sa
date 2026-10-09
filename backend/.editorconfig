@@ -16,3 +16,7 @@ indent_size = 2
 
 [{compose,docker-compose}.{yml,yaml}]
 indent_size = 4
+
+[{resources/recipes/**,tests/Fixtures/recipes-golden/**}]
+trim_trailing_whitespace = false
+insert_final_newline = false

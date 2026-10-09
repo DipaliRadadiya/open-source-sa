@@ -1,0 +1,152 @@
+{
+    "slug": "chatwoot",
+    "container_port": 3000,
+    "volume_roles": {
+        "storage": "/app/storage",
+        "db": "/var/lib/postgresql/data",
+        "redis": "/data"
+    },
+    "generated_secrets": [
+        "SECRET_KEY_BASE",
+        "POSTGRES_PASSWORD",
+        "REDIS_PASSWORD",
+        "ADMIN_PASSWORD"
+    ],
+    "complex_secrets": [
+        "ADMIN_PASSWORD"
+    ],
+    "panel_only_secrets": [
+        "ADMIN_PASSWORD"
+    ],
+    "url_env_key": "FRONTEND_URL",
+    "default_memory_limit": "2g",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "communication",
+    "icon": "chatwoot",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "2g",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 2g, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        },
+        {
+            "name": "admin_email",
+            "label": "Admin email",
+            "type": "email",
+            "required": true,
+            "advanced": false,
+            "placeholder": "you@example.com"
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit",
+        "admin_email"
+    ],
+    "starter_files": [],
+    "first_run_claim": {
+        "path": "/installation/onboarding",
+        "fields": {
+            "user[name]": "Admin",
+            "user[company]": "Golden chatwoot",
+            "user[email]": "owner@golden.test",
+            "user[password]": "9788c19f9910696c07b6d9dfd1c3719c"
+        }
+    },
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_storage",
+            "path": "/app/storage"
+        },
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/postgresql/data"
+        },
+        {
+            "volume": "sv-app-4242_redis",
+            "path": "/data"
+        }
+    ],
+    "docker_secret_keys": [
+        "SECRET_KEY_BASE",
+        "POSTGRES_PASSWORD",
+        "REDIS_PASSWORD",
+        "ADMIN_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Chatwoot",
+            "tagline": "Customer support inbox — runs with its own PostgreSQL and Redis"
+        },
+        "es": {
+            "title": "Chatwoot",
+            "tagline": "Bandeja de soporte al cliente — funciona con su propio PostgreSQL y Redis"
+        },
+        "de": {
+            "title": "Chatwoot",
+            "tagline": "Kundensupport-Postfach — läuft mit eigenem PostgreSQL und Redis"
+        },
+        "fr": {
+            "title": "Chatwoot",
+            "tagline": "Boîte de réception du support client — fonctionne avec son propre PostgreSQL et Redis"
+        },
+        "pt": {
+            "title": "Chatwoot",
+            "tagline": "Caixa de entrada de suporte ao cliente — funciona com o seu próprio PostgreSQL e Redis"
+        },
+        "ja": {
+            "title": "Chatwoot",
+            "tagline": "カスタマーサポート受信箱 — 専用の PostgreSQL と Redis で動作します"
+        },
+        "ru": {
+            "title": "Chatwoot",
+            "tagline": "Входящие службы поддержки — работает с собственными PostgreSQL и Redis"
+        },
+        "hi": {
+            "title": "Chatwoot",
+            "tagline": "ग्राहक सहायता इनबॉक्स — अपने स्वयं के PostgreSQL और Redis के साथ चलता है"
+        }
+    },
+    "catalog_en": {
+        "name": "chatwoot",
+        "icon": "chatwoot",
+        "category": "communication",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

@@ -1,0 +1,115 @@
+{
+    "slug": "metabase",
+    "container_port": 3000,
+    "volume_roles": {
+        "db": "/var/lib/postgresql/data"
+    },
+    "generated_secrets": [
+        "DATABASE_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": null,
+    "default_memory_limit": "2g",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "analytics",
+    "icon": "metabase",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "2g",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 2g, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/postgresql/data"
+        }
+    ],
+    "docker_secret_keys": [
+        "DATABASE_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Metabase",
+            "tagline": "Dashboards and questions over your data — runs with its own PostgreSQL"
+        },
+        "es": {
+            "title": "Metabase",
+            "tagline": "Paneles y consultas sobre tus datos: funciona con su propio PostgreSQL"
+        },
+        "de": {
+            "title": "Metabase",
+            "tagline": "Dashboards und Auswertungen Ihrer Daten — läuft mit eigenem PostgreSQL"
+        },
+        "fr": {
+            "title": "Metabase",
+            "tagline": "Tableaux de bord et analyses de vos données — fonctionne avec son propre PostgreSQL"
+        },
+        "pt": {
+            "title": "Metabase",
+            "tagline": "Painéis e análises sobre os seus dados — funciona com o seu próprio PostgreSQL"
+        },
+        "ja": {
+            "title": "Metabase",
+            "tagline": "データのダッシュボードと分析 — 専用の PostgreSQL 付きで動作"
+        },
+        "ru": {
+            "title": "Metabase",
+            "tagline": "Дашборды и аналитика по вашим данным — работает со своим PostgreSQL"
+        },
+        "hi": {
+            "title": "Metabase",
+            "tagline": "आपके डेटा पर डैशबोर्ड और सवाल — अपने PostgreSQL के साथ चलता है"
+        }
+    },
+    "catalog_en": {
+        "name": "metabase",
+        "icon": "metabase",
+        "category": "analytics",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

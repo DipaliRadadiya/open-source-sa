@@ -1,0 +1,61 @@
+name: sv-app-4242
+
+services:
+  app:
+    image: lscr.io/linuxserver/bookstack:latest
+    restart: unless-stopped
+    mem_limit: 640m
+    cpus: 1.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    
+    ports:
+      - "127.0.0.1:20101:80"
+
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: "UTC"
+      APP_URL: "https://bookstack.golden.test"
+      APP_KEY: "base64:MDQ0NzBiNTdiYzY5OTI1NTc4YjhhODY4ZjYwYjczYzk="
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_DATABASE: bookstack
+      DB_USERNAME: bookstack
+      DB_PASSWORD: "033f6dda6112e88697d70a6fa28fc573"
+
+    
+    volumes:
+      - sv-app-4242_config:/config
+
+    depends_on:
+      - db
+
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      MARIADB_DATABASE: bookstack
+      MARIADB_USER: bookstack
+      MARIADB_PASSWORD: "033f6dda6112e88697d70a6fa28fc573"
+      MARIADB_ROOT_PASSWORD: "a0c7b293e808430e0060f6d4cdc99458"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/mysql
+
+volumes:
+  sv-app-4242_config:
+    external: true
+  sv-app-4242_db:
+    external: true

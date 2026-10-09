@@ -1,0 +1,111 @@
+{
+    "slug": "gitea",
+    "container_port": 3000,
+    "volume_roles": {
+        "data": "/data"
+    },
+    "generated_secrets": [],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "GITEA__server__ROOT_URL",
+    "default_memory_limit": null,
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "development",
+    "icon": "gitea",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "512m",
+            "help": "Optional. The most memory this app's own container may use, for example 512m or 2g. A bare number means bytes to Docker, not megabytes. Left empty it gets 512m. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_data",
+            "path": "/data"
+        }
+    ],
+    "docker_secret_keys": [],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Gitea",
+            "tagline": "Git hosting with issues and pull requests"
+        },
+        "es": {
+            "title": "Gitea",
+            "tagline": "Alojamiento Git con incidencias y pull requests"
+        },
+        "de": {
+            "title": "Gitea",
+            "tagline": "Git-Hosting mit Issues und Pull Requests"
+        },
+        "fr": {
+            "title": "Gitea",
+            "tagline": "Hébergement Git avec tickets et pull requests"
+        },
+        "pt": {
+            "title": "Gitea",
+            "tagline": "Alojamento Git com issues e pull requests"
+        },
+        "ja": {
+            "title": "Gitea",
+            "tagline": "Issue とプルリクエスト付きの Git ホスティング"
+        },
+        "ru": {
+            "title": "Gitea",
+            "tagline": "Хостинг Git с задачами и pull request'ами"
+        },
+        "hi": {
+            "title": "Gitea",
+            "tagline": "इश्यू और पुल रिक्वेस्ट के साथ Git होस्टिंग"
+        }
+    },
+    "catalog_en": {
+        "name": "gitea",
+        "icon": "gitea",
+        "category": "development",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

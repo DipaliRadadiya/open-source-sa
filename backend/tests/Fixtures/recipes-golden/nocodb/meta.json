@@ -1,0 +1,120 @@
+{
+    "slug": "nocodb",
+    "container_port": 8080,
+    "volume_roles": {
+        "data": "/usr/app/data",
+        "db": "/var/lib/postgresql/data"
+    },
+    "generated_secrets": [
+        "DATABASE_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "NC_PUBLIC_URL",
+    "default_memory_limit": "1g",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "database",
+    "icon": "nocodb",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "1g",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 1g, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_data",
+            "path": "/usr/app/data"
+        },
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/postgresql/data"
+        }
+    ],
+    "docker_secret_keys": [
+        "DATABASE_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "NocoDB",
+            "tagline": "Spreadsheet interface for a database — runs with its own PostgreSQL"
+        },
+        "es": {
+            "title": "NocoDB",
+            "tagline": "Interfaz de hoja de cálculo para una base de datos: funciona con su propio PostgreSQL"
+        },
+        "de": {
+            "title": "NocoDB",
+            "tagline": "Tabellenoberfläche für eine Datenbank — läuft mit eigenem PostgreSQL"
+        },
+        "fr": {
+            "title": "NocoDB",
+            "tagline": "Interface tableur pour une base de données — fonctionne avec son propre PostgreSQL"
+        },
+        "pt": {
+            "title": "NocoDB",
+            "tagline": "Interface de folha de cálculo para uma base de dados — funciona com o seu próprio PostgreSQL"
+        },
+        "ja": {
+            "title": "NocoDB",
+            "tagline": "データベースをスプレッドシートとして操作 — 専用の PostgreSQL 付きで動作"
+        },
+        "ru": {
+            "title": "NocoDB",
+            "tagline": "Табличный интерфейс к базе данных — работает со своим PostgreSQL"
+        },
+        "hi": {
+            "title": "NocoDB",
+            "tagline": "डेटाबेस के लिए स्प्रेडशीट इंटरफ़ेस — अपने PostgreSQL के साथ चलता है"
+        }
+    },
+    "catalog_en": {
+        "name": "nocodb",
+        "icon": "nocodb",
+        "category": "database",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}
