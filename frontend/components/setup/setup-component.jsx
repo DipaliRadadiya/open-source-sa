@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { CircleAlert, Download, Loader2, RotateCw } from "lucide-react";
+import { CheckCircle2, CircleAlert, Download, Loader2, RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ const QUEUED_DATABASE_PROGRESS = {
   current_step: "queued",
 };
 
-function VersionInstall({ versions, action, disabled, disabledReason, onInstall }) {
+function VersionInstall({ versions, action, recommended, disabled, disabledReason, onInstall }) {
   const t = useTranslations("setup");
   const options = useMemo(
     () => versions.map((v) => ({ value: v.version, label: v.version, hint: v.lifecycle?.status })),
@@ -32,7 +32,7 @@ function VersionInstall({ versions, action, disabled, disabledReason, onInstall 
   }
 
   return (
-    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+    <div className="mt-3 flex flex-wrap items-center gap-2">
       <div className="w-full sm:w-56">
         <Combobox
           options={options}
@@ -45,6 +45,7 @@ function VersionInstall({ versions, action, disabled, disabledReason, onInstall 
       {/* No spinner: this picker unmounts once its own install starts, so one could only mean another install. */}
       <Button
         className="shrink-0"
+        variant={recommended ? "default" : "outline"}
         disabled={!version || disabled}
         disabledReason={disabled ? disabledReason : !version ? t("chooseVersionFirst") : null}
         onClick={() => onInstall(action, { version })}
@@ -67,7 +68,7 @@ function IconChip({ meta, small = false }) {
 }
 
 // States where the component stands, in words (never colour alone).
-function StatusPill({ state, recommended, detail }) {
+function StatusPill({ state, detail }) {
   const t = useTranslations("setup");
   // Beside the badge, not inside: a shrink-0 badge would overflow narrow screens.
   if (state === "installed") {
@@ -96,10 +97,8 @@ function StatusPill({ state, recommended, detail }) {
   if (state === "failed") {
     return <Badge variant="destructive" className="font-normal">{t("pillFailed")}</Badge>;
   }
-  // No "Optional" badge: it would read as "you can skip this".
-  return recommended ? (
-    <Badge variant="warning" className="font-normal">{t("recommended")}</Badge>
-  ) : null;
+  // Not-installed needs no badge: the section heading already says Recommended or Also available.
+  return null;
 }
 
 // Failure UI is gated strictly on `state === "failed"`.
@@ -128,32 +127,54 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
   /** A finished component is a compact line, so what still needs a decision carries the weight. */
   const primary = tier === "primary";
 
+  // Done: name, what is installed and a tick. The "why you need it" sentence is for
+  // deciding, and there is nothing left to decide.
   if (tier === "compact") {
     return (
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5">
-        <span
-          className={cn(
-            "flex size-7 shrink-0 items-center justify-center rounded-lg",
-            meta.chip,
-          )}
-        >
-          <meta.Icon className={cn("size-3.5", meta.tint)} aria-hidden />
-        </span>
-        <div className="min-w-0 flex-1 space-y-0.5">
+      <div className="flex items-center gap-3 px-4 py-3">
+        <IconChip meta={meta} small />
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">{component.title}</p>
-          {/* Keeps the description (why it matters); wraps rather than clamps. */}
-          {component.description ? (
-            <p className="text-xs text-muted-foreground">{component.description}</p>
+          {component.detail ? (
+            <p className="text-xs text-muted-foreground tabular-nums">{component.detail}</p>
           ) : null}
-          {note ? <p className="text-xs">{note}</p> : null}
+          {note ? <p className="mt-1 text-xs">{note}</p> : null}
         </div>
-        {/* Wraps, since `detail` can be a sentence. */}
-        <div className="flex min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-1">
-          <StatusPill state="installed" detail={component.detail} />
-        </div>
+        <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-success">
+          <CheckCircle2 className="size-4" aria-hidden />
+          {t("pillInstalled")}
+        </span>
       </div>
     );
   }
+
+  const trailing = installed || installing || isRuntime || hasOptions ? null : failed ? (
+    action && component.retryable ? (
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={blocked}
+        disabledReason={blockedReason}
+        onClick={() => onInstall(component, action)}
+      >
+        <RotateCw className="size-3.5" />
+        {t("retry")}
+      </Button>
+    ) : null
+  ) : action ? (
+    <Button
+      size="sm"
+      variant={component.recommended ? "default" : "outline"}
+      disabled={blocked}
+      disabledReason={blockedReason}
+      onClick={() => onInstall(component, action)}
+    >
+      <Download className="size-3.5" />
+      {t("install")}
+    </Button>
+  ) : (
+    <span className="text-xs text-muted-foreground">{t("notInstallable")}</span>
+  );
 
   return (
     <div
@@ -161,30 +182,29 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
       // Failure shows in the badge and reason box, not a red card. No tint for
       // recommended: a primary border means "selected" elsewhere.
       className={cn(
-        "rounded-2xl border transition-colors",
-        // Primary: a surface with a banded header; secondary: same anatomy, flatter.
-        primary ? "overflow-hidden bg-card shadow-sm" : "bg-card/50 p-4",
-        !primary && installed && "bg-muted/30 shadow-none",
-        !primary && unavailable && "bg-muted/20 shadow-none",
+        "rounded-2xl border border-border/70 bg-card shadow-e1 transition-colors",
+        // Primary: a banded header; secondary: the same anatomy in one block.
+        primary ? "overflow-hidden" : "p-4 sm:p-5",
+        !primary && unavailable && "bg-muted/30 shadow-none",
       )}
     >
       <div
         className={cn(
-          "flex gap-4",
+          "grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]",
           simple ? "items-center" : "items-start",
           primary && "border-b bg-muted/30 px-5 py-4",
         )}
       >
         <IconChip meta={meta} small={!primary} />
 
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0">
           {/* The interactive blocks stay outside this group so `space-y` cannot squeeze them. */}
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <p className={cn("font-medium leading-tight", primary && "text-base")}>
                 {component.title}
               </p>
-              <StatusPill state={unavailable ? "unavailable" : installing ? "installing" : state} recommended={component.recommended} detail={component.detail} />
+              <StatusPill state={unavailable ? "unavailable" : installing ? "installing" : state} detail={component.detail} />
             </div>
             {component.description ? (
               <p className="text-sm leading-5 text-muted-foreground">{component.description}</p>
@@ -211,35 +231,9 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
           )}
         </div>
 
-        {/* Simple states only; the others render inline above. */}
-        <div className="shrink-0">
-          {installed || installing || isRuntime || hasOptions ? null : failed ? (
-            action && component.retryable ? (
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={blocked}
-                disabledReason={blockedReason}
-                onClick={() => onInstall(component, action)}
-              >
-                <RotateCw className="size-3.5" />
-                {t("retry")}
-              </Button>
-            ) : null
-          ) : action ? (
-            <Button
-              size="sm"
-              disabled={blocked}
-              disabledReason={blockedReason}
-              onClick={() => onInstall(component, action)}
-            >
-              <Download className="size-3.5" />
-              {t("install")}
-            </Button>
-          ) : (
-            <span className="text-xs text-muted-foreground">{t("notInstallable")}</span>
-          )}
-        </div>
+        {/* Simple states only; the others render inline above. On a phone it sits under
+            the text, lined up with it, instead of squeezing it. */}
+        {trailing ? <div className="col-start-2 sm:col-start-auto">{trailing}</div> : null}
       </div>
 
       {primary ? (
@@ -334,6 +328,7 @@ function Body({
             <VersionInstall
               versions={runtimeVersions}
               action={action}
+              recommended={component.recommended}
               disabled={blocked}
               disabledReason={blockedReason}
               onInstall={(a, body) => onInstall(component, a, body)}

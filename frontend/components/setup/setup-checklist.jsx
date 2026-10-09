@@ -11,6 +11,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { SetupComponent } from "@/components/setup/setup-component";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 
 const POLL_MS = 3000;
 // Past this, stop implying steady progress (apt on a small box is slow).
@@ -156,74 +157,56 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
   );
 
   return (
-    <div className="space-y-6">
-      {setup.complete ? (
-        <div className="flex items-center gap-3 rounded-2xl border border-success/30 bg-success/5 px-4 py-3">
-          <CheckCircle2 className="size-5 shrink-0 text-success" />
-          <p className="text-sm">
-            <span className="font-medium">{t("allSetTitle")}</span>{" "}
-            <span className="text-muted-foreground">{t("allSetBody")}</span>
-          </p>
-        </div>
-      ) : null}
-
-      {/* Overview panel: how far along, what failed, what is still advised. */}
-      <div className="space-y-3 rounded-2xl border bg-card p-5 shadow-sm">
-        {/* Percentage and counts share a line; `flex-wrap` gives two rows on narrow
-            screens. */}
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5">
-          <p className="text-base font-semibold tracking-tight tabular-nums">
-            {t("percentComplete", { pct })}
-          </p>
-
-          {/* Separate items; failures get a tinted chip. */}
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm">
-            <span className="font-medium">
-              {setup.complete
-                ? t("progressComplete")
-                : t("recommendedProgress", { done: recommendedInstalled, total: recommended.length })}
+    <div className="space-y-8">
+      {/* Overview: one count and one bar while work is left; once done, the bar would only
+          repeat "all set", so the card says that instead. */}
+      <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-e1">
+        {setup.complete ? (
+          <div className={cn("flex gap-3", optionalLeft ? "items-start" : "items-center")}>
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
+              <CheckCircle2 className="size-[18px]" aria-hidden />
             </span>
-            {!setup.complete && failedCount ? (
-              <>
-                <Dot />
-                <span className="rounded-md bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
-                  {t("progressFailed", { count: failedCount })}
-                </span>
-              </>
-            ) : null}
-            {!setup.complete && recommendedLeft ? (
-              <>
-                <Dot />
-                <span className="text-muted-foreground">
-                  {t("recommendedLeft", { count: recommendedLeft })}
-                </span>
-              </>
-            ) : null}
-            {/* Named, so 100% does not read as "nothing else here". */}
-            {optionalLeft ? (
-              <>
-                <Dot />
-                <span className="text-muted-foreground">
-                  {t("optionalLeft", { count: optionalLeft })}
-                </span>
-              </>
-            ) : null}
+            <div className="min-w-48 flex-1 space-y-0.5">
+              <p className="font-semibold tracking-tight">{t("allSetTitle")}</p>
+              {/* It invites the optional extras, so only while there are some. */}
+              {optionalLeft ? <p className="text-sm text-muted-foreground">{t("allSetBody")}</p> : null}
+            </div>
           </div>
-        </div>
-
-        <Progress
-          value={pct}
-          role="progressbar"
-          aria-label={t("progressLabel")}
-          aria-valuenow={pct}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          className="h-2"
-        />
+        ) : (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+              <p className="font-semibold tracking-tight tabular-nums">
+                {t("recommendedProgress", { done: recommendedInstalled, total: recommended.length })}
+              </p>
+              {failedCount || optionalLeft ? (
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  {failedCount ? (
+                    <span className="rounded-md bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
+                      {t("progressFailed", { count: failedCount })}
+                    </span>
+                  ) : null}
+                  {/* Named, so a full bar does not read as "nothing else here". */}
+                  {optionalLeft ? (
+                    <span className="text-muted-foreground">{t("optionalLeft", { count: optionalLeft })}</span>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+            <Progress
+              value={pct}
+              role="progressbar"
+              aria-label={t("progressLabel")}
+              aria-valuenow={pct}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              className="h-2"
+            />
+          </div>
+        )}
 
         {/* While installing: what is running, one at a time, and a slow note later. */}
         {anyInstalling ? (
-          <p className="flex items-start gap-2 border-t pt-3 text-xs text-muted-foreground">
+          <p className="mt-4 flex items-start gap-2 border-t pt-3 text-xs text-muted-foreground">
             <Loader2 className="mt-0.5 size-3 shrink-0 animate-spin" />
             <span>
               {runningLabel ? `${runningLabel} — ` : ""}
@@ -233,24 +216,22 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
         ) : null}
       </div>
 
-      {/* Three groups: needs a decision, advised, done. */}
       <Section title={t("sectionAttention")} hint={t("sectionAttentionHint")} items={attention} render={(c) => renderComponent(c, "primary")} />
       <Section title={t("sectionRecommended")} hint={t("sectionRecommendedHint")} items={advised} render={(c) => renderComponent(c, "secondary")} />
       <Section title={t("sectionOptional")} hint={t("sectionOptionalHint")} items={optional} render={(c) => renderComponent(c, "secondary")} />
       <Section
         title={t("alreadyInstalled")}
-        hint={t("alreadyInstalledHint")}
         items={done}
-        className="divide-y overflow-hidden rounded-2xl border bg-muted/20"
+        className="divide-y overflow-hidden rounded-2xl border border-border/70 bg-card shadow-e1"
         render={(c) => renderComponent(c, "compact")}
       />
 
       {/* "Skip for now" only while something is outstanding; otherwise the button
           names its destination. */}
-      <div className="flex flex-col gap-3 rounded-2xl border bg-muted/30 px-4 py-3.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">
-          {setup.complete ? t("doneHint") : anyInstalling ? t("skipWhileInstalling") : t("skipHint")}
-        </p>
+      <div className="flex flex-col gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
+        {setup.complete ? <span className="hidden sm:block" /> : (
+          <p className="text-sm text-muted-foreground">{anyInstalling ? t("skipWhileInstalling") : t("skipHint")}</p>
+        )}
         <Button
           onClick={finish}
           variant={setup.complete ? "default" : "outline"}
@@ -259,9 +240,9 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, f
           disabledReason={finishing ? t("openingDashboard") : null}
           aria-busy={finishing}
         >
-          {finishing ? <Loader2 className="size-4 animate-spin" /> : setup.complete ? <CheckCircle2 className="size-4" /> : null}
+          {finishing ? <Loader2 className="size-4 animate-spin" /> : null}
           {finishing ? t("openingDashboard") : setup.complete ? t("continue") : t("skip")}
-          {finishing || setup.complete ? null : <ArrowRight className="size-4" />}
+          {finishing ? null : <ArrowRight className="size-4" />}
         </Button>
       </div>
     </div>
@@ -272,7 +253,7 @@ function Section({ title, hint, items, render, className = "space-y-3" }) {
   if (!items.length) return null;
   return (
     <section className="space-y-3">
-      <div className="space-y-0.5">
+      <div className="space-y-1">
         <div className="flex items-baseline gap-2">
           <h2 className="text-base font-semibold tracking-tight">{title}</h2>
           <span className="text-xs text-muted-foreground tabular-nums">{items.length}</span>
@@ -281,14 +262,5 @@ function Section({ title, hint, items, render, className = "space-y-3" }) {
       </div>
       <div className={className}>{items.map(render)}</div>
     </section>
-  );
-}
-
-// A character separator, not a border, so it wraps with the text.
-function Dot() {
-  return (
-    <span aria-hidden className="text-muted-foreground/50">
-      ·
-    </span>
   );
 }
