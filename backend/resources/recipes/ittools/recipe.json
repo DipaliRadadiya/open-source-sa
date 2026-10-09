@@ -1,0 +1,48 @@
+{
+    "schema": 1,
+    "slug": "ittools",
+    "version": 1,
+    "title": "IT-Tools",
+    "tagline": {
+        "en": "Developer utilities — nothing is stored",
+        "es": "Utilidades para desarrolladores: no se guarda nada",
+        "de": "Entwickler-Werkzeuge — es wird nichts gespeichert",
+        "fr": "Utilitaires pour développeurs — rien n'est conservé",
+        "pt": "Utilitários para desenvolvedores — nada é guardado",
+        "ja": "開発者向けツール — 何も保存しません",
+        "ru": "Утилиты для разработчиков — ничего не сохраняется",
+        "hi": "डेवलपर उपकरण — कुछ भी संग्रहित नहीं होता"
+    },
+    "category": "development",
+    "icon": "ittools",
+    "popular": false,
+    "catalog_order": 70,
+    "images": {
+        "app": {
+            "ref": "corentinth/it-tools:latest",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "app",
+            "role": "app"
+        }
+    ],
+    "container_port": 80,
+    "memory_floor": null,
+    "volumes": {},
+    "secrets": [],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "none",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "No volumes are needed: the container serves static assets and the utilities run in the browser."
+    ]
+}

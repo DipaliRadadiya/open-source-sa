@@ -1,0 +1,51 @@
+{
+    "schema": 1,
+    "slug": "stirlingpdf",
+    "version": 1,
+    "title": "Stirling PDF",
+    "tagline": {
+        "en": "Split, merge, sign and convert PDFs in the browser",
+        "es": "Divide, combina, firma y convierte PDF en el navegador",
+        "de": "PDFs im Browser teilen, zusammenführen, signieren und umwandeln",
+        "fr": "Diviser, fusionner, signer et convertir des PDF dans le navigateur",
+        "pt": "Dividir, juntar, assinar e converter PDFs no navegador",
+        "ja": "ブラウザで PDF を分割・結合・署名・変換",
+        "ru": "Разделяйте, объединяйте, подписывайте и конвертируйте PDF в браузере",
+        "hi": "ब्राउज़र में PDF बाँटें, जोड़ें, हस्ताक्षर करें और बदलें"
+    },
+    "category": "productivity",
+    "icon": "stirlingpdf",
+    "popular": false,
+    "catalog_order": 60,
+    "images": {
+        "app": {
+            "ref": "stirlingtools/stirling-pdf:latest",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "app",
+            "role": "app"
+        }
+    ],
+    "container_port": 8080,
+    "memory_floor": null,
+    "volumes": {
+        "data": "/usr/share/tessdata"
+    },
+    "secrets": [],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "none",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The named volume caches OCR language data; documents are processed and returned, never stored.",
+        "There are no accounts by default. Use panel password protection when exposing the site publicly."
+    ]
+}

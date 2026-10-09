@@ -1,0 +1,50 @@
+{
+    "schema": 1,
+    "slug": "freshrss",
+    "version": 1,
+    "title": "FreshRSS",
+    "tagline": {
+        "en": "Self-hosted feed reader",
+        "es": "Lector de feeds autoalojado",
+        "de": "Selbst gehosteter Feed-Reader",
+        "fr": "Lecteur de flux auto-hébergé",
+        "pt": "Leitor de feeds auto-hospedado",
+        "ja": "セルフホスト型フィードリーダー",
+        "ru": "Читалка лент на своём сервере",
+        "hi": "स्व-होस्टेड फ़ीड रीडर"
+    },
+    "category": "productivity",
+    "icon": "freshrss",
+    "popular": false,
+    "catalog_order": 50,
+    "images": {
+        "app": {
+            "ref": "freshrss/freshrss:latest",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "app",
+            "role": "app"
+        }
+    ],
+    "container_port": 80,
+    "memory_floor": null,
+    "volumes": {
+        "data": "/var/www/FreshRSS/data"
+    },
+    "secrets": [],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "SQLite lives in the data directory. The first visitor runs the installer and creates the administrator."
+    ]
+}
