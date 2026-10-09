@@ -3,6 +3,7 @@
 namespace App\Services\Server\WebServers;
 
 use App\Models\Application;
+use App\Services\Server\ServerOpsResult;
 
 class NginxDriver extends AbstractWebServerDriver
 {
@@ -65,6 +66,11 @@ class NginxDriver extends AbstractWebServerDriver
     protected function catchAllViewData(): array
     {
         return parent::catchAllViewData() + ['rejectHandshake' => $this->versionAtLeast('1.19.4')];
+    }
+
+    public function test(): ServerOpsResult
+    {
+        return app(NginxServerNameHash::class)->test(fn () => parent::test());
     }
 
     protected function testCommand(): array

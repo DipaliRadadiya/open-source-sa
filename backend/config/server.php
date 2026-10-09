@@ -910,6 +910,8 @@ return [
             // nginx would be told about "nginx" while an OpenLiteSpeed user got
             // "OpenLiteSpeed" — the same sentence in two registers.
             'label' => 'Nginx',
+            // Read/merge only when nginx diagnoses an undersized hostname hash.
+            'config_path' => env('SERVER_NGINX_CONFIG_PATH', '/etc/nginx/nginx.conf'),
             // The symlink nginx actually reads via its sites-enabled/* include.
             'sites_dir' => env('SERVER_NGINX_SITES_DIR', '/etc/nginx/sites-enabled'),
             // Where the real file is written; sites_dir then symlinks to it.
