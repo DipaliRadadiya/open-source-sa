@@ -17,8 +17,8 @@ const stubs = {
   "next/navigation": "tests/support/next-navigation-stub.js",
 };
 before(async () => {
-  harness = await loadComponent("tests/support/create-form-harness.jsx", stubs);
-  pickerHarness = await loadComponent("tests/support/deploy-source-harness.jsx", stubs);
+  harness = await loadComponent("tests/support/deploy-source-harness.jsx", stubs);
+  pickerHarness = harness;
 });
 beforeEach(() => {
   globalThis.__dockerApi = {

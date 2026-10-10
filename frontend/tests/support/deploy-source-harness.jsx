@@ -20,3 +20,7 @@ export function DeploySourceHarness({ messages, siteTypes, initialType = "", ini
 export function RecipeSummaryHarness({ messages, type }) {
   return <IntlProvider locale="en" messages={messages} timeZone="UTC"><RecipeSummary type={type} /></IntlProvider>;
 }
+
+// Own bundle entry: concurrent suites must not overwrite the Docker suite's
+// create-form-harness output while Node is importing it.
+export { CreateFormHarness, sent } from "./create-form-harness.jsx";
