@@ -574,7 +574,7 @@ it('answers with an empty set rather than failing when there are none', function
     $this->withHeaders(containerHeaders())
         ->getJson(containerUrl2())
         ->assertOk()
-        ->assertExactJson(['secrets' => []]);
+        ->assertExactJson(['secrets' => [], 'credentials' => null]);
 });
 
 function containerUrl2(): string

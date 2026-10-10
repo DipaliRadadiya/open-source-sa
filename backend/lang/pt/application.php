@@ -38,6 +38,7 @@ return [
     ],
 
     'unavailable' => [
+        'deprecated' => 'Esta aplicação de um clique foi descontinuada. Os sites existentes continuam a funcionar, mas não é possível criar novos.',
         'stack' => 'Este servidor executa apenas contentores, pelo que não aloja este tipo de aplicação.',
         'stack_profile' => 'Este servidor não está preparado para alojar este tipo de aplicação.',
         'profile' => 'Este servidor não serve sites :profile, por isso este tipo de renderização não pode ser usado aqui. Escolha um que este servidor sirva.',

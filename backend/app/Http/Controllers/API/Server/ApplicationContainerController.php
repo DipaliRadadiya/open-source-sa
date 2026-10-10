@@ -12,6 +12,7 @@ use App\Http\Requests\Server\Application\UpdateContainerRequest;
 use App\Http\Resources\ApplicationResource;
 use App\Models\Application;
 use App\Services\ActivityLogger;
+use App\Services\Recipes\RecipeCredentials;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\ContainerSupervisor;
 use Illuminate\Http\JsonResponse;
@@ -46,6 +47,7 @@ class ApplicationContainerController extends Controller
 
         return response()->json([
             'secrets' => (array) ($application->docker_secrets ?? []),
+            'credentials' => app(RecipeCredentials::class)->for($application),
         ]);
     }
 

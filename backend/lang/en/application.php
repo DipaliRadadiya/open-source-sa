@@ -43,6 +43,7 @@ return [
     ],
 
     'unavailable' => [
+        'deprecated' => 'This one-click app has been retired. Existing sites keep running, but new ones can\'t be created.',
         'stack' => 'This server runs containers only, so it does not host this kind of application.',
         'stack_profile' => 'This server is not set up to host this kind of application.',
         'profile' => 'This server does not serve :profile sites, so this rendering type cannot be used here. Choose one this server serves.',

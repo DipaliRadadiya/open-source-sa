@@ -8,6 +8,7 @@ use App\Services\Applications\SiteTypeManager;
 use App\Services\Applications\SiteTypeSuggestion;
 use App\Services\Applications\SiteTypeText;
 use App\Services\Git\Webhooks\WebhookManager;
+use App\Services\Recipes\ApplicationOrigin;
 use App\Services\Server\Applications\ContainerLiveness;
 use App\Services\Server\Applications\ContainerSupervisor;
 use App\Services\Server\Applications\ProcessSupervisor;
@@ -72,6 +73,7 @@ class ApplicationResource extends JsonResource
             'path' => $this->resource->systemUser ? $this->resource->codePath() : null,
             'site_type' => $this->site_type,
             'site_type_title' => app(SiteTypeText::class)->title((string) $this->site_type),
+            'origin' => app(ApplicationOrigin::class)->describe($this->resource),
             // What the last Detect found, and whether there is anything to
             // offer the user about it. `suggested` is null unless relabelling
             // would actually be allowed, so the frontend tests one field and

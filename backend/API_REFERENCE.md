@@ -643,6 +643,136 @@ nothing installable fixes them, so a card must not offer a button that cannot wo
 
 ---
 
+## Recipes (one-click apps)
+
+### GET `/recipes`
+**Permission:** `application` (view), authenticated. Same API throttle as `/site-types`.
+
+```bash
+curl --fail-with-body -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json' "$PANEL/api/recipes"
+curl --fail-with-body -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json' "$PANEL/api/recipes/ghost"
+```
+
+Returns `{"recipes": [<catalog entry>, ...]}`: exactly the entries from `/site-types` whose `recipe` is non-null, in the same order. `recipes` is always a JSON array, never a keyed object. The shipped Docker catalog contains nineteen recipes. On a non-Docker server it returns `{"recipes": []}`. Native one-click installers are not Docker recipes and are not included here.
+
+### GET `/recipes/{slug}`
+**Permission:** `application` (view), authenticated.
+
+Returns `{"recipe": <catalog entry>}`. The outer `recipe` is the complete site-type entry; its nested `recipe` contains public recipe metadata. Unknown, deprecated, non-recipe or stack-filtered slugs return `404`. Slugs match `[a-z][a-z0-9_]{1,39}`. Both routes return `401` without authentication and `403` without application view permission.
+
+Example Ghost response on a Docker server (the existing field labels/help are localized; the CPU count in help reflects that server):
+
+<!-- rc08-ghost-response -->
+```json
+{
+  "recipe": {
+    "name": "ghost",
+    "title": "Ghost",
+    "tagline": "Publishing and newsletters — runs with its own MySQL",
+    "icon": "ghost",
+    "category": "cms",
+    "popular": true,
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "accepted_engines": [],
+    "available": true,
+    "unavailable_reason": null,
+    "unavailable_code": null,
+    "installable_runtime": null,
+    "has_installer": true,
+    "node_version_range": null,
+    "php_version_range": null,
+    "fields": [
+      {
+        "name": "memory_limit",
+        "label": "Memory limit",
+        "type": "text",
+        "required": false,
+        "advanced": false,
+        "placeholder": "512m",
+        "help": "Optional. The most memory this app's own container may use, for example 512m or 2g. A bare number means bytes to Docker, not megabytes. Left empty it gets 512m. Any database this app brings has its own separate ceiling."
+      },
+      {
+        "name": "cpu_limit",
+        "label": "CPU limit",
+        "type": "text",
+        "required": false,
+        "advanced": false,
+        "placeholder": "No limit",
+        "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 8, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+      }
+    ],
+    "recipe": {
+      "slug": "ghost",
+      "version": 1,
+      "description": null,
+      "services": [
+        {
+          "name": "ghost",
+          "role": "app"
+        },
+        {
+          "name": "db",
+          "role": "database"
+        }
+      ],
+      "volumes": [
+        {
+          "role": "content",
+          "path": "/var/lib/ghost/content"
+        },
+        {
+          "role": "db",
+          "path": "/var/lib/mysql"
+        }
+      ],
+      "images": [
+        {
+          "role": "app",
+          "ref": "ghost:5-alpine",
+          "tested": []
+        },
+        {
+          "role": "db",
+          "ref": "mysql:8.0",
+          "tested": []
+        }
+      ],
+      "memory_floor": null,
+      "first_run": {
+        "kind": "setup_wizard",
+        "credential_labels": []
+      },
+      "inputs": [],
+      "docs_url": null,
+      "icon_data_uri": null
+    }
+  }
+}
+```
+
+### The `recipe` block on `/site-types` and `/recipes`
+
+Every `/site-types` entry gains a final `recipe` key. It is null for `docker` and every native/non-recipe type. Recipe summaries have exactly these keys, in this order: `slug`, `version`, `description`, `services`, `volumes`, `images`, `memory_floor`, `first_run`, `inputs`, `docs_url`, `icon_data_uri`.
+
+- `description` is localized with English fallback, or null when absent.
+- `services` is a list of `{name, role}`; roles are `app`, `database`, `cache`, `worker`.
+- `volumes` is a list of `{role, path}` and `images` a list of `{role, ref, tested}`; `tested` is a list. These are recipe metadata, not an inspection of the installed containers. The frozen legacy image environment overrides may change an actual deployment's image without changing recipe metadata.
+- `memory_floor` is a size string or null. `first_run` is `{kind, credential_labels}`. Credential labels are the declared `username`, `password`, `email`, `url`, `token` names, or `[]`; no credential values or source secret keys appear here.
+- `inputs` is a list of names (e.g. Chatwoot's `["admin_email"]`), not input definitions. The existing `fields` key still drives validation/form rendering.
+- `docs_url` is HTTPS or null; `icon_data_uri` is the sanitized recipe SVG data URI or null. Ghost currently declares neither, so both are null (do not invent the optional URL shown in the design sketch).
+
+**Deprecation:** recipes declaring `deprecated: true` are omitted from both catalogs, and their detail endpoint is `404`. The existing create validator refuses them with `422` on `site_type`, using `application.unavailable.deprecated`: “This one-click app has been retired. Existing sites keep running, but new ones can't be created.” The underlying availability reason code is `deprecated`, with no installable runtime; it takes precedence over the stack/runtime gates. This does not add an `unavailable_code` property to validation responses. Existing sites still resolve/render through the registry and retain their recipe origin, with `deprecated: true` there.
+
+**Creation is unchanged.** A recipe posts its slug as `site_type` plus its existing fields. Direct Docker still posts `site_type: "docker"` with `docker_mode: "simple"` (image/manual/search) or `"compose"` (pasted compose). No new request fields or database columns are needed.
+
+### How to add a recipe
+
+Add `backend/resources/recipes/<slug>/recipe.json` and `compose.yml.tpl`, optionally `starter/` files declared by `starter_files` and a sanitized `icon.svg`. No PHP registration or installer config entry is needed. Follow the recipe schema, declare explicit tagged images, first-run behavior/curated credentials and safe placeholders; new recipes do not need legacy image override entries. Run `cd backend && php artisan recipes:validate`, add Pest coverage and new-recipe goldens, and run the full suite plus Pint. Existing `tests/Fixtures/recipes-golden/**` and `GoldenComposeTest.php` are immutable: add goldens for the new recipe only, never recapture or alter an existing application's fixtures.
+
+---
+
 ## Applications
 
 ### GET `/applications`
@@ -684,10 +814,22 @@ Filtering by system user or by server is deliberately not offered — ask rather
 
 Every application in the list carries the **same full shape** as `GET /applications/{application}` below — this is one resource, used everywhere. The list is not a trimmed variant.
 
+**`origin` (list and detail)** is derived from the existing `site_type`, registry, `image` and `compose`; there is no migration or new column. It appears immediately after `site_type_title` and always has `{kind, recipe, image}`:
+
+```json
+{"kind":"recipe","recipe":{"slug":"ghost","title":"Ghost","version":1,"deprecated":false},"image":null}
+{"kind":"image","recipe":null,"image":"neosmemo/memos:0.31.0"}
+{"kind":"compose","recipe":null,"image":null}
+{"kind":"other","recipe":null,"image":null}
+```
+
+Registry membership wins, including retired recipes and recipe sites with stored compose. Otherwise a `docker` site with null/empty/whitespace-only compose is `image` (its stored image reference is returned); nonempty compose is `compose`. Every other site is `other`. No secret values or curated credentials are added to the application resource.
+
 ```json
 {"applications": [{
   "id": 1, "name": "shop", "domain": "shop.example.com",
   "site_type": "wordpress", "site_type_title": "WordPress",
+  "origin": {"kind": "other", "recipe": null, "image": null},
   "serving_profile": "php", "rendering_type": null,
   "status": "active", "status_title": "Active", "deployed": true,
   "is_disabled": false, "disabled_at": null,
@@ -791,6 +933,7 @@ They are equal for fifteen of the seventeen site types, because most application
   "document_root": "/home/siteowner/shop/public_html",
   "path": "/home/siteowner/shop/public_html",
   "site_type": "wordpress", "site_type_title": "WordPress",
+  "origin": {"kind": "other", "recipe": null, "image": null},
   "serving_profile": "php", "rendering_type": null,
 
   "status": "active", "status_title": "Active", "deployed": true,
@@ -6156,6 +6299,29 @@ On the application:
   "last_line": "…", "log": "<last 50 lines>", "at": "2026-10-07T18:40:00+00:00" }
 ```
 `message` is in the viewer's locale. `log` and `last_line` (and the last line in `message`) only for users with `app_log` view; otherwise `null`. The failure is also on `failed_step` / `failed_reason` (see the table above).
+
+---
+
+## Application — Container credentials
+
+### GET `/applications/{application}/container/secrets`
+**Permission:** `app_container` (**manage**), authenticated. **Throttle:** 6/min. Non-container/site-type-unsupported applications return `404` through the existing feature gate.
+
+```bash
+curl --fail-with-body -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json' "$PANEL/api/applications/1/container/secrets"
+```
+
+The existing `secrets` map is unchanged. `credentials` adds the recipe's curated first-run rows, in declaration order; for example Grafana:
+
+```json
+{"secrets":{"GF_SECURITY_ADMIN_PASSWORD":"stored-admin-value"},"credentials":[{"label":"username","value":"admin","secret":false},{"label":"password","value":"stored-admin-value","secret":true}]}
+```
+
+The values above are fixture examples, not real credentials. Each row is `{label, value, secret}`. A literal uses `secret: false`; a declared secret reads the stored `docker_secrets[KEY]` with `secret: true`; an input reads `installSettings()[name]` with `secret: false`; a path reads the site's actual `url(path)` (HTTP until its certificate can serve HTTPS), also `secret: false`. No password is regenerated by this GET. Empty/missing values are skipped and remaining rows are always a JSON list.
+
+`credentials` is null for direct Docker/non-recipe sites or recipes declaring none (e.g. Ghost's setup wizard), so clients can use their existing legacy key-list fallback. If rows are declared but every value is absent, it is `[]`, not null. Chatwoot's curated list shows the admin email and password without database/cache rows; the unchanged legacy secrets map still includes all stored secrets, including ADMIN_PASSWORD and its database/cache secrets. Retirement does not hide an existing site's credentials.
+
+The existing `application.container_secrets_viewed` activity is still recorded before disclosure with secret **key names only**, never values. View-only callers receive `403`, unauthenticated callers `401`, and throttled requests `429`. This adds nothing to `ApplicationResource`, and never changes the site's acknowledgement state.
 
 ---
 

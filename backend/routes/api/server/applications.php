@@ -11,6 +11,7 @@ use App\Http\Controllers\API\Server\ApplicationWebRootController;
 use App\Http\Controllers\API\Server\CertificateController;
 use App\Http\Controllers\API\Server\DeploymentController;
 use App\Http\Controllers\API\Server\MagicLoginController;
+use App\Http\Controllers\API\Server\RecipeController;
 use App\Http\Controllers\API\Server\ServerCapabilityController;
 use App\Http\Controllers\API\Server\SiteTypeController;
 use Illuminate\Support\Facades\Route;
@@ -25,6 +26,11 @@ use Illuminate\Support\Facades\Route;
 Route::get('/server/capabilities', [ServerCapabilityController::class, 'index'])->middleware('permission:application');
 
 Route::get('/site-types', [SiteTypeController::class, 'index'])->middleware('permission:application');
+
+Route::get('/recipes', [RecipeController::class, 'index'])->middleware('permission:application');
+Route::get('/recipes/{recipe}', [RecipeController::class, 'show'])
+    ->where('recipe', '[a-z][a-z0-9_]{1,39}')
+    ->middleware('permission:application');
 
 Route::get('/applications', [ApplicationController::class, 'index'])->middleware('permission:application');
 Route::post('/applications', [ApplicationController::class, 'store'])->middleware('permission:application,manage');

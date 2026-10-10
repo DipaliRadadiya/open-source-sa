@@ -38,6 +38,7 @@ return [
     ],
 
     'unavailable' => [
+        'deprecated' => 'Diese Ein-Klick-App wurde eingestellt. Bestehende Websites laufen weiter, aber neue können nicht erstellt werden.',
         'stack' => 'Dieser Server führt ausschließlich Container aus und hostet diese Art von Anwendung daher nicht.',
         'stack_profile' => 'Dieser Server ist nicht dafür eingerichtet, diese Art von Anwendung zu hosten.',
         'profile' => 'Dieser Server liefert keine :profile-Websites aus, daher ist diese Darstellungsart hier nicht möglich. Wähle eine, die dieser Server unterstützt.',

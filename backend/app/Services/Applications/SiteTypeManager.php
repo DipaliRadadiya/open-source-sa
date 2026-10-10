@@ -7,6 +7,7 @@ use App\Rules\SupportedPhpVersion;
 use App\Services\Applications\Types\DockerSiteType;
 use App\Services\Applications\Types\RecipeSiteType;
 use App\Services\Recipes\Recipe;
+use App\Services\Recipes\RecipePresenter;
 use App\Services\Recipes\RecipeRegistry;
 use App\Services\Server\Applications\EngineVersionSupport;
 use App\Services\Server\Applications\InstallerManager;
@@ -118,6 +119,8 @@ class SiteTypeManager
      */
     public const BLOCKED_STACK = 'stack';
 
+    public const BLOCKED_DEPRECATED = 'deprecated';
+
     /**
      * PHP is here, but no version this application runs on. The way out is the
      * PHP screen when the package index has one, and none when it does not —
@@ -127,8 +130,8 @@ class SiteTypeManager
 
     public function catalog(): array
     {
-        // Types this stack will never host are left out entirely, rather than
-        // rendered as blocked cards.
+        // Types this stack will never host and retired recipes are left out
+        // entirely, rather than rendered as blocked cards.
         //
         // Every other block is worth showing: a missing runtime or database
         // names something you can install, and a web-server refusal affects a
@@ -154,7 +157,7 @@ class SiteTypeManager
         // list assertion catches it.
         $types = array_values(array_filter(
             $this->all(),
-            fn (SiteType $type) => ($this->unavailable($type)['code'] ?? null) !== self::BLOCKED_STACK,
+            fn (SiteType $type) => ! in_array($this->unavailable($type)['code'] ?? null, [self::BLOCKED_STACK, self::BLOCKED_DEPRECATED], true),
         ));
 
         return array_map(function (SiteType $type) {
@@ -213,6 +216,7 @@ class SiteTypeManager
                 'node_version_range' => $type->supportedNodeRange(),
                 'php_version_range' => $type->supportedPhpRange(),
                 'fields' => [...$type->fields(), ...$this->engineField($type)],
+                'recipe' => $type instanceof RecipeSiteType ? app(RecipePresenter::class)->summary($type->recipe()) : null,
             ];
         }, $types);
     }
@@ -261,6 +265,14 @@ class SiteTypeManager
      */
     public function unavailable(SiteType $type): ?array
     {
+        if ($type instanceof RecipeSiteType && $type->recipe()->deprecated) {
+            return [
+                'code' => self::BLOCKED_DEPRECATED,
+                'reason' => __('application.unavailable.deprecated'),
+                'runtime' => null,
+            ];
+        }
+
         // First, because it is the strongest refusal and the others would
         // answer misleadingly. A Docker box HAS php and node installed — the
         // panel needs both — so the runtime check below passes cleanly for
