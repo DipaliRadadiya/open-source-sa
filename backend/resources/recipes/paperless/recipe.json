@@ -1,0 +1,99 @@
+{
+    "schema": 1,
+    "slug": "paperless",
+    "version": 1,
+    "title": "Paperless-ngx",
+    "tagline": {
+        "en": "Document management with OCR, PostgreSQL and Redis",
+        "es": "Gestión de documentos con OCR, PostgreSQL y Redis",
+        "de": "Dokumentenverwaltung mit OCR, PostgreSQL und Redis",
+        "fr": "Gestion de documents avec OCR, PostgreSQL et Redis",
+        "pt": "Gestão de documentos com OCR, PostgreSQL e Redis",
+        "ja": "OCR、PostgreSQL、Redis を備えたドキュメント管理",
+        "ru": "Управление документами с OCR, PostgreSQL и Redis",
+        "hi": "OCR, PostgreSQL और Redis के साथ दस्तावेज़ प्रबंधन"
+    },
+    "category": "productivity",
+    "icon": "paperless",
+    "popular": false,
+    "catalog_order": 210,
+    "docs_url": "https://docs.paperless-ngx.com/",
+    "images": {
+        "app": {
+            "ref": "paperlessngx/paperless-ngx:3.3",
+            "tested": []
+        },
+        "broker": {
+            "ref": "redis:7-alpine",
+            "tested": []
+        },
+        "db": {
+            "ref": "postgres:16-alpine",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "webserver",
+            "role": "app"
+        },
+        {
+            "name": "broker",
+            "role": "cache"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 8000,
+    "memory_floor": "1g",
+    "volumes": {
+        "data": "/usr/src/paperless/data",
+        "media": "/usr/src/paperless/media",
+        "db": "/var/lib/postgresql/data",
+        "broker": "/data"
+    },
+    "secrets": [
+        {
+            "key": "PAPERLESS_SECRET_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DATABASE_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "ADMIN_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "PAPERLESS_URL",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "username",
+                "value": "admin"
+            },
+            {
+                "label": "password",
+                "secret": "ADMIN_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Paperless 3.3 requires PAPERLESS_DBENGINE=postgresql explicitly; DBHOST alone now leaves the default SQLite engine selected.",
+        "The documented DBNAME and DBUSER defaults are paperless, matching the dedicated PostgreSQL database and user.",
+        "Only the webserver publishes a loopback port. PostgreSQL and Redis remain on the project's private network with separate named volumes.",
+        "PAPERLESS_ADMIN_USER and PAPERLESS_ADMIN_PASSWORD create the administrator at first boot without changing an existing user's password. Only the administrator login is shown in the first-run card.",
+        "The 3.3 stable minor tag was verified on Docker Hub for RC-09. The 1g application floor and all images await live RC-13 verification."
+    ]
+}

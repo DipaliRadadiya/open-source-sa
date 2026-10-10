@@ -10,9 +10,14 @@ require_once __DIR__.'/../../Support/Recipes/RecipeApiTestSupport.php';
 beforeEach(fn () => rc08RecipeSetup());
 afterEach(fn () => rc08RecipeCleanup());
 
-it('lists all nineteen recipes as a JSON list with application view alone', function () {
+it('lists every shipped recipe as a JSON list with application view alone', function () {
     $this->actingAs(rc08RecipeViewer());
-    $recipes = $this->getJson('/api/recipes')->assertOk()->assertJsonCount(19, 'recipes')->json('recipes');
+    $recipes = $this->getJson('/api/recipes')->assertOk()->assertJsonCount(count(app(RecipeRegistry::class)->all()), 'recipes')->json('recipes');
+    expect(array_column($recipes, 'name'))->toContain(
+        'bookstack', 'chatwoot', 'excalidraw', 'forgejo', 'freshrss', 'ghost', 'gitea', 'glance', 'grafana', 'homepage',
+        'ittools', 'matomo', 'mattermost', 'metabase', 'nocodb', 'stirlingpdf', 'vaultwarden', 'wikijs', 'wordpress_container',
+        'memos', 'paperless',
+    );
     expect(array_is_list($recipes))->toBeTrue();
     foreach ($recipes as $entry) {
         expect($entry['recipe']['slug'])->toBe($entry['name']);
