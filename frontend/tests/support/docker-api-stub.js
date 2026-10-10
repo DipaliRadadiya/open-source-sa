@@ -3,6 +3,8 @@
 const call =
   (name) =>
   (...args) => {
+    const counts = globalThis.__dockerApiCalls;
+    if (counts) counts[name] = (counts[name] ?? 0) + 1;
     const answer = globalThis.__dockerApi?.[name];
     return answer ? answer(...args) : Promise.reject(new Error(`no stub for ${name}`));
   };

@@ -5910,6 +5910,19 @@
       "docs": "दस्तावेज़",
       "recipeAvailable": "{title} एक-क्लिक ऐप के रूप में उपलब्ध है। पैनल आपके लिए सब कुछ सेट करता है।",
       "useRecipe": "एक-क्लिक {title} इस्तेमाल करें"
+    },
+    "dockerModes": {
+      "label": "आप कैसे डिप्लॉय करना चाहते हैं?",
+      "search": "इमेज खोजें",
+      "searchHint": "Docker Hub पर सार्वजनिक इमेज खोजें। पोर्ट, स्टोरेज और सेटिंग्स इमेज से पढ़े जाते हैं।",
+      "compose": "compose पेस्ट करें",
+      "composeHint": "docker-compose फ़ाइल पेस्ट करें। आप हर सर्विस नियंत्रित करते हैं; पैनल सुरक्षित सीमाएँ जोड़ता है।",
+      "manual": "खुद दर्ज करें",
+      "manualHint": "निजी रजिस्ट्री या खोज में न मिलने वाली इमेज का पूरा रेफ़रेंस दर्ज करें।",
+      "manualImageLabel": "इमेज रेफ़रेंस",
+      "manualImagePlaceholder": "registry.example.com/team/app:1.4.2",
+      "manualUse": "यह इमेज इस्तेमाल करें",
+      "manualInvalid": "name:tag या registry/name:tag जैसा रेफ़रेंस दर्ज करें।"
     }
   },
   "panelUpdate": {

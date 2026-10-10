@@ -1,6 +1,12 @@
 import { ENV_KEY_PATTERN } from "../schemas/docker.js";
 import { dockerCreateExtras } from "./image-ref.js";
 
+/** UI-only choice; search and manual share the backend's simple image mode. */
+export function setDockerSource(form, source) {
+  form.setValue("docker_source", source, { shouldDirty: true });
+  form.setValue("docker_mode", source === "compose" ? "compose" : "simple", { shouldDirty: true });
+}
+
 // The backend's caps (DockerSiteType rules); past these the request is a 422.
 export const DOCKER_LIMITS = {
   image: 255,

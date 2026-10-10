@@ -99,8 +99,10 @@ function volumeRowsFrom(inspection) {
  * `docker_env`, `docker_required_env` and `docker_image_state`, which the create
  * form turns into the request.
  */
-export function DockerImageSetup({ form, registryOptions = [], onUseCompose, initialQuery = "" }) {
+export function DockerImageSetup({ form, registryOptions = [], onUseCompose, mode = "search", recipes = [], onUseRecipe, initialQuery = "" }) {
   const t = useTranslations("applications.dockerImage");
+  const tm = useTranslations("applications.dockerModes");
+  const tr = useTranslations("applications.recipes");
   const format = useFormatter();
   const listId = useId();
   const versionId = useId();
@@ -121,7 +123,14 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, ini
   const [tag, setTag] = useState(initial.tag);
   const [inspection, setInspection] = useState({ state: "idle", data: null });
   const [portEditing, setPortEditing] = useState(false);
-  const [registryOpen, setRegistryOpen] = useState(Boolean(registryId));
+  const [registryOpen, setRegistryOpen] = useState(mode === "manual" || Boolean(registryId));
+  const [registryMode, setRegistryMode] = useState(mode);
+  // Switching modes keeps the chosen image/settings, but manual entry starts
+  // with saved registry credentials visible. Adjust only on the mode change.
+  if (registryMode !== mode) {
+    setRegistryMode(mode);
+    if (mode === "manual") setRegistryOpen(true);
+  }
   const inputRef = useRef(null);
 
   const chosen = Boolean(repository);
@@ -129,9 +138,15 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, ini
   const answered = search.query === typed;
   const searchState = answered ? search.state : "loading";
   const searchResults = useMemo(() => (answered ? search.results : []), [answered, search.results]);
+  const normalizedQuery = typed.toLowerCase();
+  const matchingRecipe = mode === "search" && typed.length >= 2
+    ? recipes.find((recipe) => recipe.name === normalizedQuery || recipe.title.toLowerCase() === normalizedQuery || recipe.title.toLowerCase().startsWith(normalizedQuery))
+    : null;
 
-  // Search as the user types, only while nothing is chosen.
+  // Search as the user types, only while nothing is chosen. Manual references
+  // never go to Docker Hub (including while switching away from a pending search).
   useEffect(() => {
+    if (mode === "manual") return undefined;
     if (chosen || typed.length < 2) return undefined;
     const controller = new AbortController();
     const timer = setTimeout(() => {
@@ -155,7 +170,7 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, ini
       controller.abort();
       clearTimeout(timer);
     };
-  }, [chosen, typed]);
+  }, [mode, chosen, typed]);
 
   // Versions for the chosen image; the recommended one is preselected unless the
   // user already named a tag.
@@ -264,6 +279,15 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, ini
     form.clearErrors("image");
   }
 
+  function chooseManualImage() {
+    if (!looksLikeImageRef(typed) || typed.length > DOCKER_LIMITS.image) {
+      form.setError("image", { type: "manual", message: tm("manualInvalid") });
+      inputRef.current?.focus();
+      return;
+    }
+    choose(typed);
+  }
+
   function clearChoice() {
     setRepository("");
     setTag("");
@@ -291,7 +315,7 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, ini
     ],
     [showTyped, typed, searchState, searchResults],
   );
-  const listOpen = !chosen && typed.length >= 2;
+  const listOpen = mode === "search" && !chosen && typed.length >= 2;
 
   function onSearchKeyDown(event) {
     if (!listOpen || !options.length) {
@@ -368,7 +392,7 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, ini
         name="image"
         render={() => (
           <FormItem data-field-name="image" className="min-w-0">
-            <FormLabel required hint={t("imageHint")}>{t("imageLabel")}</FormLabel>
+            <FormLabel required hint={t("imageHint")}>{mode === "manual" ? tm("manualImageLabel") : t("imageLabel")}</FormLabel>
             {chosen ? (
               <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
                 <BadgeCheck className="size-4 shrink-0 text-success" aria-hidden />
@@ -376,6 +400,33 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, ini
                 <Button type="button" variant="ghost" size="sm" className="ms-auto" onClick={clearChoice}>
                   <X className="size-3.5" aria-hidden />
                   {t("changeImage")}
+                </Button>
+              </div>
+            ) : mode === "manual" ? (
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <FormControl>
+                  <Input
+                    ref={inputRef}
+                    autoComplete="off"
+                    spellCheck={false}
+                    className="min-w-0 flex-1 font-mono"
+                    placeholder={tm("manualImagePlaceholder")}
+                    maxLength={DOCKER_LIMITS.image}
+                    value={query}
+                    onChange={(event) => {
+                      setQuery(event.target.value);
+                      form.clearErrors("image");
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        chooseManualImage();
+                      }
+                    }}
+                  />
+                </FormControl>
+                <Button type="button" className="h-auto whitespace-normal py-2" onClick={chooseManualImage}>
+                  {tm("manualUse")}
                 </Button>
               </div>
             ) : (
@@ -405,6 +456,16 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, ini
                     />
                   </FormControl>
                 </div>
+                {matchingRecipe ? (
+                  <Note>
+                    <p>{tr("recipeAvailable", { title: matchingRecipe.title })}</p>
+                    {onUseRecipe ? (
+                      <Button type="button" variant="link" className="h-auto max-w-full whitespace-normal p-0 text-start text-sm" onClick={() => onUseRecipe(matchingRecipe.name)}>
+                        {tr("useRecipe", { title: matchingRecipe.title })}
+                      </Button>
+                    ) : null}
+                  </Note>
+                ) : null}
                 {listOpen ? (
                   <div className="rounded-lg border bg-card">
                     {/* Announced as it changes: a screen reader is otherwise never told results arrived. */}
@@ -806,7 +867,7 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose, ini
         </section>
       ) : null}
 
-      {/* Private registry: collapsed, it is the rare case. */}
+      {/* Saved registry credentials are optional in search, open first in manual. */}
       {registryOptions.length ? (
         <Collapsible open={registryOpen} onOpenChange={setRegistryOpen}>
           <CollapsibleTrigger asChild>

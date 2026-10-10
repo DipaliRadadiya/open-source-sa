@@ -104,6 +104,7 @@ import {
   dockerEnvProblem,
   dockerServerErrors,
   dockerVolumeProblem,
+  setDockerSource,
 } from "@/lib/docker/create-request";
 import { createSystemUser, deleteSystemUser } from "@/lib/api/system-users";
 import { fallbackSystemUsername, suggestSystemUsername } from "@/lib/applications/system-username";
@@ -868,6 +869,7 @@ export function CreateApplicationForm({
   const containerServer = siteTypes.some((type) => type.name === "docker");
   const isDocker = selected?.name === "docker";
   const dockerMode = useWatch({ control: form.control, name: "docker_mode" });
+  const dockerSource = useWatch({ control: form.control, name: "docker_source" });
   const isDockerSimple = isDocker && (dockerMode || "simple") === "simple";
   const dockerImageState = useWatch({ control: form.control, name: "docker_image_state" });
   const dockerEnv = useWatch({ control: form.control, name: "docker_env" });
@@ -2190,11 +2192,12 @@ export function CreateApplicationForm({
                   {isDockerSimple ? (
                     <DockerImageSetup
                       form={form}
+                      mode={dockerSource === "manual" ? "manual" : "search"}
+                      recipes={siteTypes.filter((type) => type.recipe)}
+                      onUseRecipe={(slug) => form.setValue("site_type", slug, { shouldDirty: true })}
                       initialQuery={values.docker_search_query ?? ""}
                       registryOptions={registryOptions}
-                      onUseCompose={() =>
-                        form.setValue("docker_mode", "compose", { shouldDirty: true })
-                      }
+                      onUseCompose={() => setDockerSource(form, "compose")}
                     />
                   ) : isDocker ? (
                     <p className="rounded-lg bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
@@ -2203,9 +2206,7 @@ export function CreateApplicationForm({
                         type="button"
                         variant="link"
                         className="h-auto p-0 text-sm"
-                        onClick={() =>
-                          form.setValue("docker_mode", "simple", { shouldDirty: true })
-                        }
+                        onClick={() => setDockerSource(form, "search")}
                       >
                         {t("dockerImage.useImage")}
                       </Button>

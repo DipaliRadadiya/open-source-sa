@@ -5910,6 +5910,19 @@
       "docs": "Documentación",
       "recipeAvailable": "{title} está disponible como app con un clic. El panel lo configura todo por ti.",
       "useRecipe": "Usar {title} con un clic"
+    },
+    "dockerModes": {
+      "label": "¿Cómo quieres desplegar?",
+      "search": "Buscar imágenes",
+      "searchHint": "Busca una imagen pública en Docker Hub. El puerto, el almacenamiento y los ajustes se leen de la imagen.",
+      "compose": "Pegar compose",
+      "composeHint": "Pega un archivo docker-compose. Tú controlas cada servicio; el panel añade límites seguros.",
+      "manual": "Introducir a mano",
+      "manualHint": "Introduce una referencia de imagen completa para registros privados o imágenes que la búsqueda no encuentra.",
+      "manualImageLabel": "Referencia de imagen",
+      "manualImagePlaceholder": "registry.example.com/team/app:1.4.2",
+      "manualUse": "Usar esta imagen",
+      "manualInvalid": "Introduce una referencia como name:tag o registry/name:tag."
     }
   },
   "panelUpdate": {

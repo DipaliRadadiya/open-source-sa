@@ -5910,6 +5910,19 @@
       "docs": "Документация",
       "recipeAvailable": "{title} доступно как приложение в один клик. Панель всё настроит за вас.",
       "useRecipe": "Использовать {title} в один клик"
+    },
+    "dockerModes": {
+      "label": "Как вы хотите развернуть приложение?",
+      "search": "Поиск образов",
+      "searchHint": "Найдите публичный образ на Docker Hub. Порт, хранилище и настройки считываются из образа.",
+      "compose": "Вставить compose",
+      "composeHint": "Вставьте файл docker-compose. Вы управляете каждым сервисом, а панель добавляет безопасные ограничения.",
+      "manual": "Ввести вручную",
+      "manualHint": "Введите полную ссылку на образ из приватного реестра или образ, который поиск не находит.",
+      "manualImageLabel": "Ссылка на образ",
+      "manualImagePlaceholder": "registry.example.com/team/app:1.4.2",
+      "manualUse": "Использовать образ",
+      "manualInvalid": "Введите ссылку вида name:tag или registry/name:tag."
     }
   },
   "panelUpdate": {

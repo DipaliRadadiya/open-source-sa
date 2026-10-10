@@ -5910,6 +5910,19 @@
       "docs": "Documentation",
       "recipeAvailable": "{title} is available as a one-click app. The panel sets up everything for you.",
       "useRecipe": "Use one-click {title}"
+    },
+    "dockerModes": {
+      "label": "How do you want to deploy?",
+      "search": "Search images",
+      "searchHint": "Find a public image on Docker Hub. Port, storage and settings are read from the image.",
+      "compose": "Paste compose",
+      "composeHint": "Paste a docker-compose file. You control every service; the panel adds safe limits.",
+      "manual": "Enter manually",
+      "manualHint": "Type a full image reference, for private registries or images search can't find.",
+      "manualImageLabel": "Image reference",
+      "manualImagePlaceholder": "registry.example.com/team/app:1.4.2",
+      "manualUse": "Use this image",
+      "manualInvalid": "Enter a reference like name:tag or registry/name:tag."
     }
   },
   "panelUpdate": {

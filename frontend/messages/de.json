@@ -5910,6 +5910,19 @@
       "docs": "Dokumentation",
       "recipeAvailable": "{title} ist als Ein-Klick-App verfügbar. Das Panel richtet alles für Sie ein.",
       "useRecipe": "Ein-Klick-App {title} verwenden"
+    },
+    "dockerModes": {
+      "label": "Wie möchten Sie bereitstellen?",
+      "search": "Images suchen",
+      "searchHint": "Suchen Sie ein öffentliches Image auf Docker Hub. Port, Speicher und Einstellungen werden aus dem Image gelesen.",
+      "compose": "Compose einfügen",
+      "composeHint": "Fügen Sie eine docker-compose-Datei ein. Sie steuern jeden Dienst; das Panel ergänzt sichere Limits.",
+      "manual": "Manuell eingeben",
+      "manualHint": "Geben Sie eine vollständige Image-Referenz ein, für private Registries oder Images, die die Suche nicht findet.",
+      "manualImageLabel": "Image-Referenz",
+      "manualImagePlaceholder": "registry.example.com/team/app:1.4.2",
+      "manualUse": "Dieses Image verwenden",
+      "manualInvalid": "Geben Sie eine Referenz wie name:tag oder registry/name:tag ein."
     }
   },
   "panelUpdate": {

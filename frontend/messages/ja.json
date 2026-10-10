@@ -5910,6 +5910,19 @@
       "docs": "ドキュメント",
       "recipeAvailable": "{title}はワンクリックアプリとして利用できます。パネルがすべて設定します。",
       "useRecipe": "ワンクリックで{title}を使う"
+    },
+    "dockerModes": {
+      "label": "どの方法でデプロイしますか？",
+      "search": "イメージを検索",
+      "searchHint": "Docker Hub で公開イメージを検索します。ポート、ストレージ、設定はイメージから読み取ります。",
+      "compose": "compose を貼り付け",
+      "composeHint": "docker-compose ファイルを貼り付けます。各サービスは自分で管理し、パネルが安全な制限を追加します。",
+      "manual": "手動で入力",
+      "manualHint": "プライベートレジストリや検索で見つからないイメージの完全な参照を入力します。",
+      "manualImageLabel": "イメージ参照",
+      "manualImagePlaceholder": "registry.example.com/team/app:1.4.2",
+      "manualUse": "このイメージを使う",
+      "manualInvalid": "name:tag または registry/name:tag のような参照を入力してください。"
     }
   },
   "panelUpdate": {
