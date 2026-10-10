@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
+  ListChecks,
   ShieldAlert,
   ShieldCheck,
   ShieldQuestion,
@@ -15,11 +16,11 @@ import {
 } from "lucide-react";
 import { toggleFirewall } from "@/lib/api/firewall";
 import { firewallState } from "@/lib/firewall/state";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { apiMessage } from "@/lib/api/error-message";
 
 // Both directions are confirmed: ON blocks anything unlisted (the API seeds SSH and
@@ -56,97 +57,83 @@ export function FirewallStatusCard({ enabled, reference = null, policy, ruleCoun
 
   return (
     <>
-      <Card
-        className={
-          // Both off and exposed are warning states: rules are inert, or everything
-          // unlisted gets in.
-          safeLooking ? "border-success/30 bg-success/5" : "border-warning/40 bg-warning/5"
-        }
-      >
-        <CardContent className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <span
-              className={`flex size-10 shrink-0 items-center justify-center rounded-full ${
-                safeLooking ? "bg-success/15 text-success" : "bg-warning/15 text-warning"
-              }`}
-            >
-              {/* Not the "off" icon: this firewall IS running. */}
-              {state === "unknown" ? (
-                <ShieldQuestion className="size-5" />
-              ) : state === "on" ? (
-                <ShieldCheck className="size-5" />
-              ) : state === "exposed" ? (
-                <ShieldAlert className="size-5" />
-              ) : (
-                <ShieldOff className="size-5" />
-              )}
-            </span>
-            <div className="space-y-1">
-              <p className="text-base font-semibold">
-                {t(`status.${state}Title`)}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {state === "off"
-                  ? t("status.offBody", { count: ruleCount })
-                  : t(`status.${state}Body`)}
-              </p>
-              {state === "unknown" && reference ? (
-                <p className="font-mono text-xs text-muted-foreground">{t("status.reference", { reference })}</p>
-              ) : null}
-              {/* "by default" is carried by the label, so each pill shows only direction and
-                  value. */}
-              {enabled && policy?.incoming ? (
-                <div className="flex flex-wrap items-center gap-2 pt-1.5">
-                  <span className="text-xs text-muted-foreground">
-                    {t("status.defaultPolicy")}
-                  </span>
-                  <PolicyBadge
-                    icon={ArrowDownToLine}
-                    label={t("status.incomingLabel")}
-                    value={policyWord(t, policy.incoming)}
-                    tone={incomingTone(policy.incoming)}
-                  />
-                  <PolicyBadge
-                    icon={ArrowUpFromLine}
-                    label={t("status.outgoingLabel")}
-                    value={policyWord(t, policy.outgoing)}
-                    tone={outgoingTone(policy.outgoing)}
-                  />
-                </div>
-              ) : null}
-            </div>
+      {/* The headline with its action beside it, then the facts behind it. */}
+      <Card className={cn("gap-0 py-0", safeLooking ? undefined : "border-warning/40")}>
+        {/* The button sits beside the text, and under it on a phone, lined up with it. */}
+        <CardContent className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-3 py-4 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
+          <span
+            className={cn(
+              "flex size-10 shrink-0 items-center justify-center rounded-xl",
+              safeLooking ? "bg-success/10 text-success" : "bg-warning/15 text-warning",
+            )}
+          >
+            {/* Not the "off" icon: this firewall IS running. */}
+            {state === "unknown" ? (
+              <ShieldQuestion className="size-5" />
+            ) : state === "on" ? (
+              <ShieldCheck className="size-5" />
+            ) : state === "exposed" ? (
+              <ShieldAlert className="size-5" />
+            ) : (
+              <ShieldOff className="size-5" />
+            )}
+          </span>
+          <div className="min-w-0 space-y-1">
+            <p className="text-base font-semibold">{t(`status.${state}Title`)}</p>
+            <p className="text-sm text-muted-foreground">
+              {state === "off" ? t("status.offBody", { count: ruleCount }) : t(`status.${state}Body`)}
+            </p>
+            {state === "unknown" && reference ? (
+              <p className="font-mono text-xs text-muted-foreground">{t("status.reference", { reference })}</p>
+            ) : null}
           </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {/* The repair leads; the off switch stays beside it. */}
-            {state === "exposed" ? (
+          {state === "unknown" ? null : (
+            <div className="col-start-2 flex flex-wrap gap-2 sm:col-start-auto">
+              {/* The repair leads; the off switch stays beside it. */}
+              {state === "exposed" ? (
+                <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
+                  <Button disabled={!canManage || pending} onClick={() => setConfirming("secure")}>
+                    <ShieldCheck className="size-4" />
+                    {t("status.secureNow")}
+                  </Button>
+                </ReasonTooltip>
+              ) : null}
               <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
+                {/* Neutral when it is the off switch: the dangerous action is not the loudest on
+                    the page. The confirm dialog carries the warning and the red button. */}
                 <Button
+                  variant={enabled ? "neutral" : "default"}
                   disabled={!canManage || pending}
-                  onClick={() => setConfirming("secure")}
+                  onClick={() => setConfirming(enabled ? "off" : "on")}
                 >
-                  <ShieldCheck className="size-4" />
-                  {t("status.secureNow")}
+                  {enabled ? <ShieldOff className="size-4" /> : <ShieldCheck className="size-4" />}
+                  {enabled ? t("status.turnOff") : t("status.turnOn")}
                 </Button>
               </ReasonTooltip>
-            ) : null}
-
-            {state === "unknown" ? null : (
-            <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
-              {/* Destructive when it is the off switch: it stops enforcing every rule, and the
-                  confirm dialog is warning-toned too. */}
-              <Button
-                variant={enabled ? "destructive" : "default"}
-                disabled={!canManage || pending}
-                onClick={() => setConfirming(enabled ? "off" : "on")}
-              >
-                {enabled ? <ShieldOff className="size-4" /> : <ShieldCheck className="size-4" />}
-                {enabled ? t("status.turnOff") : t("status.turnOn")}
-              </Button>
-            </ReasonTooltip>
-            )}
-          </div>
+            </div>
+          )}
         </CardContent>
+
+        {/* "by default" is carried by the label row, so each cell shows only its value. */}
+        {enabled && policy?.incoming ? (
+          // Rows on a phone: three columns there split "Заблокировано" mid-word.
+          <div className="grid divide-y border-t sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+            <Fact
+              icon={ArrowDownToLine}
+              label={t("status.incomingLabel")}
+              value={policyWord(t, policy.incoming)}
+              tone={incomingTone(policy.incoming)}
+            />
+            <Fact
+              icon={ArrowUpFromLine}
+              label={t("status.outgoingLabel")}
+              value={policyWord(t, policy.outgoing)}
+              tone={outgoingTone(policy.outgoing)}
+            />
+            <Fact icon={ListChecks} label={t("rules.title")} value={ruleCount} tone="muted" />
+          </div>
+        ) : null}
+
       </Card>
 
       <ConfirmDialog
@@ -191,14 +178,26 @@ export function FirewallStatusCard({ enabled, reference = null, policy, ruleCoun
   );
 }
 
-// Text stays in the text colour (badge colours fail contrast on the tint).
-function PolicyBadge({ icon: Icon, label, value, tone }) {
+// One fact per cell: the label small and grey, the value in words. Colour only on the
+// icon, and only when the value is good or worth a second look.
+const FACT_TONE = {
+  success: "bg-success/10 text-success",
+  warning: "bg-warning/15 text-warning",
+  muted: "bg-muted text-muted-foreground",
+};
+
+function Fact({ icon: Icon, label, value, tone }) {
   return (
-    <Badge variant={tone} className="gap-1.5 font-normal">
-      <Icon className="size-3 opacity-70" />
-      <span className="text-foreground/75">{label}</span>
-      <span className="font-medium text-foreground">{value}</span>
-    </Badge>
+    <div className="flex min-w-0 items-center gap-2.5 px-4 py-2.5 sm:px-5 sm:py-3">
+      <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-lg sm:size-8", FACT_TONE[tone] ?? FACT_TONE.muted)}>
+        <Icon className="size-4" aria-hidden />
+      </span>
+      {/* Label and value side by side on a phone row, stacked in a column cell. */}
+      <div className="flex min-w-0 flex-1 items-baseline justify-between gap-3 sm:block">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-sm font-semibold tabular-nums">{value}</p>
+      </div>
+    </div>
   );
 }
 

@@ -1813,7 +1813,6 @@
       "enabled": "ルールを有効にしました。",
       "disabled": "ルールを無効にしました。削除されず保持されます。",
       "toggleFailed": "ルールを変更できませんでした。",
-      "unreachable": "{count, plural, one {使用中のポートが 1 件ありますがブロックされています: {ports}。外部から到達できません。} other {使用中のポートが # 件ありますがブロックされています: {ports}。外部から到達できません。}}",
       "edit": "ルールを編集",
       "off": "オフ",
       "loadFailed": "ルールを読み込めませんでした。少し経ってから再試行してください。",
@@ -1835,12 +1834,16 @@
         "actionLabel": "操作",
         "originLabel": "追加元",
         "sortLabel": "並べ替え"
-      }
+      },
+      "protectedTag": "保護中",
+      "allowPort": "{port} を許可",
+      "privateTitle": "{count, plural, other {# 個のポートがインターネットから閉じられています}}",
+      "privateBody": "{count, plural, other {このサーバーで動作していますが、ファイアウォールが外部からの接続をブロックしています。データベースなら通常の状態です。外部から接続する必要がある場合にのみルールを追加してください。}}"
     },
     "add": {
-      "action": "カスタムルール",
+      "action": "ルールを追加",
       "title": "ルールを作成",
-      "description": "クイックタイルで対応できない場合に使用します。",
+      "description": "ポートと、そこに接続できる相手を選びます。",
       "protocol": "プロトコル",
       "protocolAll": "TCP と UDP の両方",
       "actionAllow": "許可",
@@ -1881,28 +1884,6 @@
       "protectedLocked": "このルールはパネルによって設定され、使用中です。ポート・プロトコル・アクション・送信元は変更できません。名前のみ変更できます。",
       "protocolHint": "TCPはほぼ全ての通信に使われます(Webサイト、SSH、データベースなど)。UDPはDNS、VPN、一部のゲームサーバー向けです。",
       "onlyMyIpAlready": "あなたの IP はすでに入力されています。"
-    },
-    "quick": {
-      "title": "クイック追加",
-      "description": "ワンクリックでルールを作成します。後で削除できます。",
-      "tileTitle": "{name}",
-      "tileBody": "ポート {port} への受信 {protocol} を許可",
-      "tileDone": "追加済み",
-      "stackTitle": "Web サーバーセット",
-      "stackBody": "{names} をまとめて追加",
-      "added": "{names} を追加しました。",
-      "alreadyThere": "{names} は既に許可されています — 変更はありません。",
-      "failed": "ルールを追加できませんでした。",
-      "tileRisky": "{name} はインターネット全体に開放されます — カスタムルールで「自分の IP のみ」を選択してください。",
-      "tileRemoveHint": "クリックでこのルールを削除",
-      "tileAddHint": "クリックでこのルールを追加",
-      "stackAddHint": "クリックでこれらのルールを追加",
-      "switchedOn": "{names} を再度有効にしました。",
-      "tileOffBody": "ポート {port} への通信はありません — このルールは無効です。",
-      "tileOffHint": "クリックで再度有効化",
-      "riskyTitle": "{name} を全員に公開しますか？",
-      "riskyBody": "インターネット上の誰でもポート {port} の {name} に接続できるようになります。より安全な方法: カスタムルールで「自分の IP のみ」を選んでください。",
-      "riskyConfirm": "全員に公開"
     },
     "history": {
       "action": "履歴",

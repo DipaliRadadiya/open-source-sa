@@ -1813,7 +1813,6 @@
       "enabled": "Regel eingeschaltet.",
       "disabled": "Regel ausgeschaltet. Sie bleibt erhalten und wurde nicht gelöscht.",
       "toggleFailed": "Diese Regel konnte nicht geändert werden.",
-      "unreachable": "{count, plural, one {1 Port ist in Benutzung, aber blockiert: {ports}. Von außen erreicht ihn nichts.} other {# Ports sind in Benutzung, aber blockiert: {ports}. Von außen erreicht sie nichts.}}",
       "edit": "Regel bearbeiten",
       "off": "Aus",
       "loadFailed": "Die Regeln konnten nicht geladen werden. Versuchen Sie es gleich erneut.",
@@ -1835,12 +1834,16 @@
         "actionLabel": "Aktion",
         "originLabel": "Hinzugefügt von",
         "sortLabel": "Sortieren nach"
-      }
+      },
+      "protectedTag": "Geschützt",
+      "allowPort": "{port} erlauben",
+      "privateTitle": "{count, plural, one {# Port ist für das Internet gesperrt} other {# Ports sind für das Internet gesperrt}}",
+      "privateBody": "{count, plural, one {Er läuft auf diesem Server, aber die Firewall sperrt ihn von außen. Für eine Datenbank ist das normal. Fügen Sie nur dann eine Regel hinzu, wenn Sie ihn von außen erreichen müssen.} other {Sie laufen auf diesem Server, aber die Firewall sperrt sie von außen. Für eine Datenbank ist das normal. Fügen Sie nur dann eine Regel hinzu, wenn Sie einen davon von außen erreichen müssen.}}"
     },
     "add": {
-      "action": "Eigene Regel",
+      "action": "Regel hinzufügen",
       "title": "Regel erstellen",
-      "description": "Für alles, was die Schnellfelder nicht abdecken.",
+      "description": "Wählen Sie einen Port und wer ihn erreichen darf.",
       "protocol": "Protokoll",
       "protocolAll": "TCP und UDP",
       "actionAllow": "Erlauben",
@@ -1881,28 +1884,6 @@
       "protectedLocked": "Diese Regel hat das Panel eingerichtet und sie ist in Benutzung. Port, Protokoll, Aktion und Quelle lassen sich nicht ändern — nur der Name.",
       "protocolHint": "Über TCP läuft fast alles – Websites, SSH, Datenbanken. UDP wird für DNS, VPNs und einige Spieleserver verwendet.",
       "onlyMyIpAlready": "Ihre IP ist bereits eingetragen."
-    },
-    "quick": {
-      "title": "Schnell hinzufügen",
-      "description": "Ein Klick erstellt die Regel. Sie können sie danach wieder entfernen.",
-      "tileTitle": "{name}",
-      "tileBody": "Erlaubt eingehendes {protocol} auf Port {port}",
-      "tileDone": "Hinzugefügt",
-      "stackTitle": "Webserver-Set",
-      "stackBody": "{names} in einem Schritt",
-      "added": "{names} hinzugefügt.",
-      "alreadyThere": "{names} war schon erlaubt — nichts hat sich geändert.",
-      "failed": "Diese Regel konnte nicht hinzugefügt werden.",
-      "tileRisky": "{name} wäre für das ganze Internet offen — nehmen Sie „Eigene Regel“ und wählen Sie „Nur meine IP“.",
-      "tileRemoveHint": "Klicken, um diese Regel zu entfernen",
-      "tileAddHint": "Klicken, um diese Regel hinzuzufügen",
-      "stackAddHint": "Klicken, um diese Regeln hinzuzufügen",
-      "switchedOn": "{names} wieder eingeschaltet.",
-      "tileOffBody": "Port {port} wird von nichts erreicht — diese Regel ist ausgeschaltet.",
-      "tileOffHint": "Klicken, um sie wieder einzuschalten",
-      "riskyTitle": "{name} für alle öffnen?",
-      "riskyBody": "Jeder im Internet kann {name} dann auf Port {port} erreichen. Sicherer: Nehmen Sie „Eigene Regel“ und wählen Sie „Nur meine IP“.",
-      "riskyConfirm": "Für alle öffnen"
     },
     "history": {
       "action": "Verlauf",

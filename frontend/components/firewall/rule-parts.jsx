@@ -4,7 +4,8 @@ import { protectedReasonFor } from "@/lib/firewall/protected-rule";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useHoverPopover } from "@/lib/hooks/use-hover-popover";
 
 // Shared by the table and the mobile cards; copy arrives as a `labels` object.
 
@@ -27,16 +28,6 @@ export function RuleName({ rule, muted, labels }) {
           {labels.off}
         </span>
       ) : null}
-      {rule.protected ? (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span tabIndex={0} className="shrink-0 rounded">
-              <Lock className="size-3.5 text-muted-foreground" />
-            </span>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-60">{labels.protectedHint}</TooltipContent>
-        </Tooltip>
-      ) : null}
     </div>
   );
 }
@@ -54,6 +45,53 @@ export function ActionBadge({ rule, labels }) {
 export function PortText({ rule }) {
   const port = rule.port_to ? `${rule.port_from}–${rule.port_to}` : rule.port_from;
   return <span className="whitespace-nowrap font-mono text-sm">{port ?? "—"}</span>;
+}
+
+/** Port and protocol read as one value ("443 / TCP"), so they share a column. */
+export function PortProtocol({ rule, labels }) {
+  return (
+    <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
+      <PortText rule={rule} />
+      <span aria-hidden className="text-muted-foreground/50">/</span>
+      <ProtocolText rule={rule} labels={labels} />
+    </span>
+  );
+}
+
+/**
+ * In place of the switch and delete on a panel-seeded rule that is on: both are refused,
+ * and two faded controls read as broken rather than as kept on purpose.
+ */
+export function ProtectedTag({ labels }) {
+  // A Popover, not a Tooltip: the reason has to open on a phone tap too.
+  const { open, onOpenChange, triggerProps, contentProps } = useHoverPopover({ focusOpens: true });
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger
+        type="button"
+        data-slot="protected-tag"
+        className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md bg-muted px-2 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+        {...triggerProps}
+      >
+        <Lock className="size-3" aria-hidden />
+        {labels.protectedTag}
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-auto max-w-60 gap-0 rounded-md bg-foreground px-3 py-1.5 text-xs text-background shadow-none ring-0"
+        {...contentProps}
+        onOpenAutoFocus={(event) => event.preventDefault()}
+        onCloseAutoFocus={(event) => event.preventDefault()}
+      >
+        {labels.protectedReason}
+        <PopoverArrow className="bg-foreground fill-foreground" />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/** Seeded and on: the switch and delete would both be refused. */
+export function isLockedOn(rule, shownOn) {
+  return Boolean(rule.protected) && shownOn;
 }
 
 export function ProtocolText({ rule, labels }) {

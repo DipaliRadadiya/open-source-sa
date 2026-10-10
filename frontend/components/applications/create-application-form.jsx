@@ -1055,6 +1055,14 @@ export function CreateApplicationForm({
     setBranchesState(value ? "loading" : "idle");
   }
 
+  // Each application type declares its own fields. React Hook Form keeps a field's value
+  // after it unmounts, so Moodle's `mdl_` table prefix showed up in WordPress's field of
+  // the same name. Dropping the old type's fields lets the new type mount its own defaults.
+  function dropTypeFields(next) {
+    if (next === form.getValues("site_type")) return;
+    for (const config of typeFields) form.unregister(config.name);
+  }
+
   function focusReadinessItem(name) {
     if (advancedFieldNames.has(name)) setAdvancedOpen(true);
     setFocusRequest(name);
@@ -1482,7 +1490,10 @@ export function CreateApplicationForm({
                       <SiteTypePicker
                         types={siteTypes}
                         value={field.value}
-                        onChange={field.onChange}
+                        onChange={(next) => {
+                          dropTypeFields(next);
+                          field.onChange(next);
+                        }}
                       />
                     </div>
                     {/* Only once an application is chosen. */}
@@ -1635,15 +1646,19 @@ export function CreateApplicationForm({
                       {!temporary &&
                       serverIp &&
                       isValidApplicationDomain(domain) ? (
-                        <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-2.5 text-xs text-muted-foreground">
-                          <Info className="size-3.5 shrink-0" aria-hidden />
-                          <p className="flex flex-wrap items-center gap-1.5">
-                            <span>{t("form.dnsNote")}</span>
-                            <code className="rounded bg-background px-1.5 py-0.5 font-mono text-foreground">
-                              {serverIp}
-                            </code>
-                            <CopyButton value={serverIp} className="size-6" />
-                          </p>
+                        // Same shape as the add-domain note: sentence, then the IP on its own row,
+                        // icon on the first line.
+                        <div className="flex items-start gap-2.5 rounded-lg bg-muted/50 p-2.5 text-xs text-muted-foreground">
+                          <Info className="mt-px size-3.5 shrink-0" aria-hidden />
+                          <div className="min-w-0 space-y-1.5">
+                            <p>{t("form.dnsNote")}</p>
+                            <div className="flex items-center gap-1.5">
+                              <code className="rounded bg-background px-1.5 py-0.5 font-mono text-foreground">
+                                {serverIp}
+                              </code>
+                              <CopyButton value={serverIp} className="size-6" />
+                            </div>
+                          </div>
                         </div>
                       ) : null}
 
@@ -2097,7 +2112,7 @@ export function CreateApplicationForm({
                     <div className="grid grid-cols-1 items-start gap-4 @2xl:grid-cols-2">
                       {standardFields.map((config) => (
                         <ConfigField
-                          key={config.name}
+                          key={`${selectedName}:${config.name}`}
                           config={config}
                           form={form}
                           accounts={gitAccounts}
@@ -2144,7 +2159,7 @@ export function CreateApplicationForm({
                       <CollapsibleContent className="grid grid-cols-1 items-start gap-4 pt-4 @2xl:grid-cols-2">
                         {advancedFields.map((config) => (
                           <ConfigField
-                            key={config.name}
+                            key={`${selectedName}:${config.name}`}
                             config={config}
                             form={form}
                             accounts={gitAccounts}

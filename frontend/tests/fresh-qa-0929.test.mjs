@@ -329,7 +329,6 @@ test("Flicker sweep: dialogs re-read the page before they close and toast", () =
   assert.match(read("hooks/use-action.js"), /if \(refresh\) await refreshAndWait\(\);\s*if \(success\) toast\.success/);
   const swept = {
     "components/firewall/rules-card.jsx": "deleteFirewallRule",
-    "components/firewall/quick-add-card.jsx": "deleteFirewallRule",
     "components/firewall/firewall-status-card.jsx": "toggleFirewall",
     "components/firewall/add-rule-dialog.jsx": "createFirewallRule",
     "components/fail2ban/ban-ip-dialog.jsx": "banIp",
@@ -375,15 +374,9 @@ test("Deleting a Block rule does not say it will block things", async () => {
   }
 });
 
-test("A risky Quick add tile asks before opening a database to everyone", () => {
-  const src = read("components/firewall/quick-add-card.jsx");
-  assert.match(src, /risky && !off\s*\?\s*setOpening\(\{ preset, name: risky \}\)/);
-  assert.match(src, /onConfirm=\{\(\) => add\(\[opening\.preset\], opening\.preset\.key\)\}/);
-  assert.match(src, /\} finally \{[\s\S]{0,200}await refreshAndWait\(\);[\s\S]*?toast\.success\(t\("quick\.added"/);
-  for (const l of locales) {
-    const q = JSON.parse(read(`messages/${l}.json`)).firewall.quick;
-    assert.ok(q.riskyTitle.includes("{name}") && q.riskyBody.includes("{port}") && q.riskyConfirm, l);
-  }
+test("The add form warns before opening a database to everyone (Quick add removed 9 Oct)", () => {
+  assert.match(read("components/firewall/add-rule-dialog.jsx"), /t\("add\.riskyExposure", \{ name: risky \}\)/);
+  for (const l of locales) assert.ok(JSON.parse(read(`messages/${l}.json`)).firewall.add.riskyExposure.includes("{name}"), l);
 });
 
 test("Activity Log shows everyone's server activity, with who did it", () => {
@@ -558,10 +551,7 @@ test("Firewall full pass: named filters, readable policy pill, even quick-add ti
   assert.match(read("components/data-table/filter-select.jsx"), /<SelectTrigger className=\{cn\(SELECT_WELL, className\)\} aria-label=\{label\}>/);
   const rules = read("components/firewall/rules-card.jsx");
   for (const k of ["stateLabel", "actionLabel", "originLabel", "sortLabel"]) assert.match(rules, new RegExp(`label=\\{t\\("rules\\.filters\\.${k}"\\)\\}`), k);
-  assert.match(read("components/firewall/firewall-status-card.jsx"), /<span className="font-medium text-foreground">\{value\}<\/span>/);
-  const quick = read("components/firewall/quick-add-card.jsx");
-  assert.match(quick, /<ReasonTooltip reason=\{reason\} className="flex">/);
-  assert.match(quick, /"group flex w-full items-start/);
+  assert.match(read("components/firewall/firewall-status-card.jsx"), /<p className="text-sm font-semibold tabular-nums">\{value\}<\/p>/);
   for (const l of locales) { const f = JSON.parse(read(`messages/${l}.json`)).firewall.rules.filters; assert.ok(f.stateLabel && f.actionLabel && f.originLabel && f.sortLabel, l); }
 });
 

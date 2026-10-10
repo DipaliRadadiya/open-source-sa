@@ -1813,7 +1813,6 @@
       "enabled": "Regra ativada.",
       "disabled": "Regra desativada. Ela é mantida, não excluída.",
       "toggleFailed": "Não foi possível alterar essa regra.",
-      "unreachable": "{count, plural, one {1 porta está em uso, mas bloqueada: {ports}. Nada de fora consegue alcançá-la.} other {# portas estão em uso, mas bloqueadas: {ports}. Nada de fora consegue alcançá-las.}}",
       "edit": "Editar regra",
       "off": "Desligado",
       "loadFailed": "Não foi possível carregar as regras. Tente novamente em instantes.",
@@ -1835,12 +1834,16 @@
         "actionLabel": "Ação",
         "originLabel": "Adicionada por",
         "sortLabel": "Ordenar por"
-      }
+      },
+      "protectedTag": "Protegido",
+      "allowPort": "Permitir {port}",
+      "privateTitle": "{count, plural, one {# porta está fechada para a internet} other {# portas estão fechadas para a internet}}",
+      "privateBody": "{count, plural, one {Ela está em execução neste servidor, mas o firewall a bloqueia de fora. Isso é normal para um banco de dados. Adicione uma regra só se precisar acessá-la de fora.} other {Elas estão em execução neste servidor, mas o firewall as bloqueia de fora. Isso é normal para um banco de dados. Adicione uma regra só se precisar acessar uma delas de fora.}}"
     },
     "add": {
-      "action": "Regra personalizada",
+      "action": "Adicionar regra",
       "title": "Criar uma regra",
-      "description": "Para tudo o que os atalhos rápidos não cobrem.",
+      "description": "Escolha uma porta e quem pode acessá-la.",
       "protocol": "Protocolo",
       "protocolAll": "TCP e UDP",
       "actionAllow": "Permitir",
@@ -1881,28 +1884,6 @@
       "protectedLocked": "Esta regra foi configurada pelo painel e está em uso. Sua porta, protocolo, ação e origem não podem ser alterados — apenas o nome.",
       "protocolHint": "TCP carrega quase tudo — sites, SSH, bancos de dados. UDP é para DNS, VPNs e alguns servidores de jogos.",
       "onlyMyIpAlready": "Seu IP já está preenchido."
-    },
-    "quick": {
-      "title": "Adição rápida",
-      "description": "Um clique cria a regra. Você pode removê-la depois.",
-      "tileTitle": "{name}",
-      "tileBody": "Permite entrada {protocol} na porta {port}",
-      "tileDone": "Adicionado",
-      "stackTitle": "Conjunto de servidor web",
-      "stackBody": "{names} de uma vez",
-      "added": "{names} adicionadas.",
-      "alreadyThere": "{names} já estava permitida — nada foi alterado.",
-      "failed": "Não foi possível adicionar essa regra.",
-      "tileRisky": "{name} ficaria aberto para toda a internet — use Regra personalizada e escolha \"Apenas meu IP\".",
-      "tileRemoveHint": "Clique para remover esta regra",
-      "tileAddHint": "Clique para adicionar esta regra",
-      "stackAddHint": "Clique para adicionar estas regras",
-      "switchedOn": "{names} reativadas.",
-      "tileOffBody": "Nada está chegando na porta {port} — esta regra está desativada.",
-      "tileOffHint": "Clique para reativá-la",
-      "riskyTitle": "Abrir {name} para todos?",
-      "riskyBody": "Qualquer pessoa na internet poderá acessar {name} na porta {port}. Mais seguro: use Regra personalizada e escolha \"Apenas meu IP\".",
-      "riskyConfirm": "Abrir para todos"
     },
     "history": {
       "action": "Histórico",

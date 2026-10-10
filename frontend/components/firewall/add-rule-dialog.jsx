@@ -50,8 +50,8 @@ const DEFAULTS = {
 };
 
 // One port field accepts `443` or `8000-8090` (split on submit); service chips only fill the port.
-function valuesFrom(rule) {
-  if (!rule) return DEFAULTS;
+function valuesFrom(rule, initial = null) {
+  if (!rule) return initial ? { ...DEFAULTS, ...initial } : DEFAULTS;
   return {
     preset: CUSTOM_PRESET,
     ports: rule.port_to ? `${rule.port_from}-${rule.port_to}` : String(rule.port_from ?? ""),
@@ -70,6 +70,8 @@ export function AddRuleDialog({
   riskyPorts = [],
   // Editing: the caller owns open state and passes the rule. Creating: this owns its trigger.
   rule = null,
+  // Creating from a suggestion or a blocked port: opened by the caller, pre-filled.
+  initial = null,
   // Whether the firewall is enforcing (`ProtectedRuleGuard` locks seeded rules only while it is).
   firewallEnabled = false,
   onClose,
@@ -81,10 +83,12 @@ export function AddRuleDialog({
   // Locked even when the firewall is off: enabling it re-adds the panel's allow rule AFTER this one
   // and ufw matches the first, so an SSH rule edited to Block would lock the user out.
   const ruleLocked = editing && Boolean(rule.protected);
+  // The caller owns open state when it passes a rule or pre-filled values.
+  const controlled = editing || initial !== null;
   const [selfOpen, setSelfOpen] = useState(false);
-  const open = editing ? true : selfOpen;
+  const open = controlled ? true : selfOpen;
   const setOpen = (next) => {
-    if (editing) {
+    if (controlled) {
       if (!next) onClose?.();
       return;
     }
@@ -97,7 +101,7 @@ export function AddRuleDialog({
 
   const form = useForm({
     resolver: zodResolver(createFirewallRuleSchema),
-    defaultValues: valuesFrom(rule),
+    defaultValues: valuesFrom(rule, initial),
     // Not on blur: clicking "Only my IP" would blur and flag the empty port field.
     mode: "onSubmit",
     reValidateMode: "onChange",
@@ -107,12 +111,12 @@ export function AddRuleDialog({
   const blocking = values.action === "deny";
 
   // The last auto-filled name: replaced when the service changes; user-typed names never are.
-  const [autoName, setAutoName] = useState("");
+  const [autoName, setAutoName] = useState(initial?.description ?? "");
 
   // Everything a closed dialog must forget: values, field errors and the server's refusal.
   function resetForm() {
-    setAutoName("");
-    form.reset(valuesFrom(rule));
+    setAutoName(initial?.description ?? "");
+    form.reset(valuesFrom(rule, initial));
   }
 
   function choosePreset(key) {
@@ -199,7 +203,7 @@ export function AddRuleDialog({
   return (
     <>
       {/* Plain <Button>, like every other "add" in the app. */}
-      {editing ? null : (
+      {controlled ? null : (
         <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
           <Button disabled={!canManage} onClick={() => setOpen(true)}>
             <Plus className="size-4" />

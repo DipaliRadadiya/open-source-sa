@@ -209,16 +209,20 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
         ) : null}
 
         {/* On a secured site the neutral text is used: `dnsNote` promises HTTPS "can be issued". */}
-        <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
-          <Info className="size-3.5 shrink-0" />
+        {/* Icon on the first line of text, not centred on the block: when the IP wraps
+            below, a centred icon floated between the two lines (Krishna, 9 Oct). */}
+        <div className="flex items-start gap-2.5 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
+          <Info className="mt-px size-3.5 shrink-0" aria-hidden />
           {serverIp ? (
-            <p className="flex flex-wrap items-center gap-1.5">
-              <span>{t("add.dnsNoteIp")}</span>
-              <code className="rounded bg-background px-1.5 py-0.5 font-mono text-foreground">
-                {serverIp}
-              </code>
-              <CopyButton value={serverIp} className="size-6" />
-            </p>
+            <div className="min-w-0 space-y-1.5">
+              <p>{t("add.dnsNoteIp")}</p>
+              <div className="flex items-center gap-1.5">
+                <code className="rounded bg-background px-1.5 py-0.5 font-mono text-foreground">
+                  {serverIp}
+                </code>
+                <CopyButton value={serverIp} className="size-6" />
+              </div>
+            </div>
           ) : (
             <p>{t(active ? "add.dnsNoteSecured" : "add.dnsNote")}</p>
           )}

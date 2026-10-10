@@ -42,9 +42,6 @@ test("firewall and fail2ban layout fixes from the 1024 pass", () => {
   }
   assert.match(rules, /<div className="sm:max-w-xs sm:min-w-56 sm:flex-1">\s*<SearchInput placeholder=\{t\("rules\.search"\)\} \/>/);
   assert.match(rules, /<div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">/);
-  const quick = read("components/firewall/quick-add-card.jsx");
-  assert.doesNotMatch(quick, /min-w-0 truncate text-sm font-medium">\{title\}/);
-  assert.match(quick, /t\("quick\.tileRisky", \{ name: preset\.label \}\)/);
   assert.match(read("components/fail2ban/banned-card.jsx"), /xl:flex-row xl:items-start xl:justify-between/);
 });
 

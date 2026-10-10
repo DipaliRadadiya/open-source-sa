@@ -1,37 +1,37 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { SkCard, SkHeader, SkRows, SkSummary } from "@/components/ui/skeleton-kit";
+import { SK_CARD, SkCard, SkHeader, SkRows } from "@/components/ui/skeleton-kit";
 
-
-// Firewall: protected banner, quick add tiles, the rules list.
+// Firewall: the status card (headline and its button, three facts), then the rules card.
 export default function Loading() {
   return (
     <div className="space-y-6" aria-busy="true">
       <SkHeader />
-      <SkSummary tone="success" />
-      <SkCard>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex gap-3 rounded-xl border p-3">
-              <Skeleton className="size-7 rounded-lg" />
-              <div className="space-y-2">
-                <Skeleton className="h-3.5 w-20" />
-                <Skeleton className="h-3 w-36" />
-              </div>
+      <div className="space-y-4">
+        <div className={`${SK_CARD} overflow-hidden`} aria-hidden>
+          <div className="flex items-center gap-3 p-4">
+            <Skeleton className="size-10 shrink-0 rounded-xl" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-3 w-80" />
             </div>
-          ))}
+            <Skeleton className="hidden h-9 w-40 shrink-0 rounded-lg sm:block" />
+          </div>
+          <div className="grid divide-y border-t sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center gap-2.5 px-4 py-3 sm:px-5">
+                <Skeleton className="size-8 shrink-0 rounded-lg" />
+                <div className="space-y-1.5">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-3.5 w-20" />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      </SkCard>
-      <SkCard action>
-        <div className="flex gap-2">
-          <Skeleton className="h-9 w-56" />
-          <Skeleton className="h-9 w-32" />
-          <Skeleton className="h-9 w-32" />
-          <Skeleton className="h-9 w-32" />
-        </div>
-        <div className="mt-4">
-          <SkRows count={5} icon={false} trailing="switch" />
-        </div>
-      </SkCard>
+        <SkCard action>
+          <SkRows count={3} icon={false} trailing="pill" />
+        </SkCard>
+      </div>
     </div>
   );
 }

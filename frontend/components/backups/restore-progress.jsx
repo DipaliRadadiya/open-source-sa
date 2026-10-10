@@ -148,12 +148,14 @@ export function RestoreProgress({
   if (restore.status === "succeeded") {
     return (
       <>
-        <div className="flex flex-col items-start gap-3 rounded-2xl border border-success/30 bg-success/5 p-5">
-          <div className="flex items-start gap-3">
+        {/* Buttons on the right, beside the text: under it they left the right half empty
+            (Krishna, 9 Oct). On a phone they drop below, lined up with the text. */}
+        <div className="flex flex-col gap-3 rounded-2xl border border-success/30 bg-success/5 p-5 sm:flex-row sm:items-center">
+          <div className="flex min-w-0 flex-1 items-start gap-3">
             <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-success/10">
               <CircleCheck className="size-6 text-success" aria-hidden />
             </span>
-            <div className="space-y-1">
+            <div className="min-w-0 space-y-1">
               <p className="font-medium">{wasUndo ? t("undone") : t("succeeded")}</p>
               {/* Server and browser read the clock a moment apart. */}
               <p className="text-sm text-muted-foreground" suppressHydrationWarning>
@@ -163,11 +165,14 @@ export function RestoreProgress({
                     ? t("succeededBody", { when: finishedAgo })
                     : t("succeededBodyPlain")}
               </p>
+              {restore.safety_backup_id && !wasUndo ? (
+                <p className="text-xs text-muted-foreground">{t("undoHint")}</p>
+              ) : null}
             </div>
           </div>
 
           {/* Undo and Dismiss share one size and style. */}
-          <div className="sm:ml-14 flex flex-wrap gap-2">
+          <div className="ms-14 flex shrink-0 flex-wrap gap-2 sm:ms-0">
             {restore.safety_backup_id && !wasUndo ? (
               <Button size="sm" onClick={openUndo} disabled={loadingUndo}>
                 {loadingUndo ? (
@@ -183,10 +188,6 @@ export function RestoreProgress({
               {t("dismiss")}
             </Button>
           </div>
-
-          {restore.safety_backup_id && !wasUndo ? (
-            <p className="sm:ml-14 text-xs text-muted-foreground">{t("undoHint")}</p>
-          ) : null}
         </div>
 
         <RestoreDialog
@@ -209,8 +210,8 @@ export function RestoreProgress({
 
   if (restore.status === "failed") {
     return (
-      <div className="flex flex-col items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-5">
-        <div className="flex items-start gap-3">
+      <div className="flex flex-col gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-5 sm:flex-row sm:items-start">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-destructive/10">
             <CircleAlert className="size-6 text-destructive" aria-hidden />
           </span>
@@ -230,7 +231,7 @@ export function RestoreProgress({
             ) : null}
           </div>
         </div>
-        <Button variant="secondary" size="sm" onClick={onDismiss} className={cn("sm:ml-14", NEUTRAL)}>
+        <Button variant="secondary" size="sm" onClick={onDismiss} className={cn("ms-14 shrink-0 self-start sm:ms-0", NEUTRAL)}>
           <X className="size-4" />
           {t("dismiss")}
         </Button>
@@ -241,8 +242,8 @@ export function RestoreProgress({
   // Still in flight per the API, but not moving. Amber: nothing has reported a failure.
   if (stalled) {
     return (
-      <div className="flex flex-col items-start gap-3 rounded-2xl border border-warning/30 bg-warning/5 p-5">
-        <div className="flex items-start gap-3">
+      <div className="flex flex-col gap-3 rounded-2xl border border-warning/30 bg-warning/5 p-5 sm:flex-row sm:items-center">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-warning/15">
             <TriangleAlert className="size-6 text-warning" aria-hidden />
           </span>
@@ -260,7 +261,7 @@ export function RestoreProgress({
             ) : null}
           </div>
         </div>
-        <div className="sm:ml-14 flex flex-wrap gap-2">
+        <div className="ms-14 flex shrink-0 flex-wrap gap-2 sm:ms-0">
           <Button size="sm" onClick={checkAgain} disabled={checking}>
             <RefreshCw className={cn("size-4", checking && "animate-spin")} />
             {t("checkAgain")}

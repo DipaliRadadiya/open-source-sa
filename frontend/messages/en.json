@@ -1813,7 +1813,6 @@
       "enabled": "Rule switched on.",
       "disabled": "Rule switched off. It is kept, not deleted.",
       "toggleFailed": "That rule could not be changed.",
-      "unreachable": "{count, plural, one {1 port is in use but blocked: {ports}. Nothing outside can reach it.} other {# ports are in use but blocked: {ports}. Nothing outside can reach them.}}",
       "edit": "Edit rule",
       "off": "Off",
       "loadFailed": "Rules could not be loaded. Try again in a moment.",
@@ -1835,12 +1834,16 @@
         "actionLabel": "Action",
         "originLabel": "Added by",
         "sortLabel": "Sort by"
-      }
+      },
+      "protectedTag": "Protected",
+      "allowPort": "Allow {port}",
+      "privateTitle": "{count, plural, one {# port is closed to the internet} other {# ports are closed to the internet}}",
+      "privateBody": "{count, plural, one {It is running on this server, but the firewall blocks it from outside. That's normal for a database. Add a rule only if you need to reach it from outside.} other {They are running on this server, but the firewall blocks them from outside. That's normal for a database. Add a rule only if you need to reach one from outside.}}"
     },
     "add": {
-      "action": "Custom rule",
+      "action": "Add rule",
       "title": "Create a rule",
-      "description": "For anything the quick tiles do not cover.",
+      "description": "Choose a port and who can reach it.",
       "protocol": "Protocol",
       "protocolAll": "Both TCP and UDP",
       "actionAllow": "Allow",
@@ -1881,28 +1884,6 @@
       "protectedLocked": "This rule was set up by the panel and is in use. Its port, protocol, action and source cannot be changed — only its name.",
       "protocolHint": "TCP carries almost everything — websites, SSH, databases. UDP is for DNS, VPNs and some game servers.",
       "onlyMyIpAlready": "Your IP is already filled in."
-    },
-    "quick": {
-      "title": "Quick add",
-      "description": "One click creates the rule. You can remove it afterwards.",
-      "tileTitle": "{name}",
-      "tileBody": "Allows incoming {protocol} on port {port}",
-      "tileDone": "Added",
-      "stackTitle": "Web server set",
-      "stackBody": "{names} in one go",
-      "added": "Added {names}.",
-      "alreadyThere": "{names} was already allowed — nothing changed.",
-      "failed": "That rule could not be added.",
-      "tileRisky": "{name} would be open to the whole internet — use Custom rule and pick “Only my IP”.",
-      "tileRemoveHint": "Click to remove this rule",
-      "tileAddHint": "Click to add this rule",
-      "stackAddHint": "Click to add these rules",
-      "switchedOn": "Switched {names} back on.",
-      "tileOffBody": "Nothing is reaching port {port} — this rule is switched off.",
-      "tileOffHint": "Click to switch it back on",
-      "riskyTitle": "Open {name} to everyone?",
-      "riskyBody": "Anyone on the internet will be able to reach {name} on port {port}. Safer: use Custom rule and pick “Only my IP”.",
-      "riskyConfirm": "Open to everyone"
     },
     "history": {
       "action": "History",

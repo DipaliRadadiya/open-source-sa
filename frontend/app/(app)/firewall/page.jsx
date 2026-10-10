@@ -5,7 +5,6 @@ import { getFirewall, getFirewallPresets, getFirewallRules } from "@/lib/firewal
 import { FirewallStatusCard } from "@/components/firewall/firewall-status-card";
 import { BrowserIpProvider } from "@/components/network/browser-ip";
 import { RulesCard } from "@/components/firewall/rules-card";
-import { QuickAddCard } from "@/components/firewall/quick-add-card";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
@@ -66,18 +65,6 @@ export default async function FirewallPage({ searchParams }) {
               canManage={canManage}
             />
 
-            {/* One-click common rules above the list; most need no parameters. */}
-            {canManage ? (
-              <QuickAddCard
-                presets={presets}
-                rules={data.rules}
-                enabled={data.enabled}
-                sshPort={data.ssh_port ?? null}
-                riskyPorts={data.risky_ports}
-                canManage={canManage}
-              />
-            ) : null}
-
             {rulesFailed ? (
               <LoadFailed
                 description={t("rules.loadFailed")}
@@ -95,6 +82,7 @@ export default async function FirewallPage({ searchParams }) {
                 historyForEveryone={historyForEveryone}
                 riskyPorts={data.risky_ports}
                 listening={data.listening}
+                total={meta?.total ?? rules.length}
               />
               </BrowserIpProvider>
             )}

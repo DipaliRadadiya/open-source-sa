@@ -6,10 +6,11 @@ import { CardList, CardListItem } from "@/components/data-table/card-list";
 import {
   RuleName,
   ActionBadge,
-  PortText,
-  ProtocolText,
+  PortProtocol,
   SourceText,
   DeleteRuleButton,
+  ProtectedTag,
+  isLockedOn,
   protectedReasonFor,
 } from "@/components/firewall/rule-parts";
 
@@ -34,40 +35,45 @@ export function RulesCards({
               <RuleName rule={rule} muted={!enabled} labels={labels} />
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <ActionBadge rule={rule} labels={labels} />
-                <PortText rule={rule} />
-                <ProtocolText rule={rule} labels={labels} />
+                <PortProtocol rule={rule} labels={labels} />
               </div>
             </div>
             {/* Phone-only card with compact desktop-size controls; a 44px minimum box keeps
                 them tappable. */}
-            <div className="flex shrink-0 items-center gap-1 max-sm:[&_button:not([role=switch])]:min-h-11 max-sm:[&_button:not([role=switch])]:min-w-11">
-              {/* Same directional guard as the table: a protected rule can always be switched
-                  back ON, never OFF. */}
-              <ReasonTooltip
-                reason={protectedReasonFor({
-                  rule,
-                  enabled,
-                  canManage,
-                  labels,
-                  turningOff: shownEnabled(rule),
-                })}
-              >
-                <PendingSwitch
-                  checked={shownEnabled(rule)}
-                  pending={pending.includes(rule.id)}
-                  onCheckedChange={() => onToggle(rule)}
-                  disabled={Boolean(
-                    protectedReasonFor({
+            <div className="flex shrink-0 items-center gap-1 max-sm:[&_button:not([role=switch]):not([data-slot=protected-tag])]:min-h-11 max-sm:[&_button:not([role=switch]):not([data-slot=protected-tag])]:min-w-11">
+              {isLockedOn(rule, shownEnabled(rule)) ? (
+                <ProtectedTag labels={labels} />
+              ) : (
+                <>
+                  {/* Same directional guard as the table: a protected rule can always be switched
+                      back ON, never OFF. */}
+                  <ReasonTooltip
+                    reason={protectedReasonFor({
                       rule,
                       enabled,
                       canManage,
                       labels,
                       turningOff: shownEnabled(rule),
-                    }),
-                  )}
-                  aria-label={labels.toggle}
-                />
-              </ReasonTooltip>
+                    })}
+                  >
+                    <PendingSwitch
+                      checked={shownEnabled(rule)}
+                      pending={pending.includes(rule.id)}
+                      onCheckedChange={() => onToggle(rule)}
+                      disabled={Boolean(
+                        protectedReasonFor({
+                          rule,
+                          enabled,
+                          canManage,
+                          labels,
+                          turningOff: shownEnabled(rule),
+                        }),
+                      )}
+                      aria-label={labels.toggle}
+                    />
+                  </ReasonTooltip>
+                </>
+              )}
               <ReasonTooltip reason={canManage ? null : labels.noPermission}>
                 <Button
                   variant="ghost"
@@ -79,14 +85,16 @@ export function RulesCards({
                   <Pencil className="size-4" />
                 </Button>
               </ReasonTooltip>
-              <DeleteRuleButton
-                rule={rule}
-                enabled={enabled}
-                canManage={canManage}
-                pending={pending.includes(rule.id)}
-                onDelete={onDelete}
-                labels={labels}
-              />
+              {isLockedOn(rule, shownEnabled(rule)) ? null : (
+                <DeleteRuleButton
+                  rule={rule}
+                  enabled={enabled}
+                  canManage={canManage}
+                  pending={pending.includes(rule.id)}
+                  onDelete={onDelete}
+                  labels={labels}
+                />
+              )}
             </div>
           </div>
 

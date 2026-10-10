@@ -17,9 +17,12 @@ function Coloured({ value }) {
   if (!parts) return value.replace(/:[^:@/]*@/, ":••••••@");
   return (
     <>
+      {/* <wbr>: the line breaks between parts, not inside a name ("db_without_ap" / "p"). */}
       <span className="text-muted-foreground">{parts.scheme}://</span>
+      <wbr />
       <span className={PART.user}>{parts.username}</span>
       <span className="text-muted-foreground">:••••••@</span>
+      <wbr />
       <span className={PART.host}>{parts.host}</span>
       {parts.port ? (
         <>
@@ -29,6 +32,7 @@ function Coloured({ value }) {
       ) : null}
       {parts.rest ? (
         <>
+          <wbr />
           <span className="text-muted-foreground">/</span>
           <span className={PART.rest}>{parts.rest}</span>
         </>
@@ -65,7 +69,7 @@ export function ConnectionString({ value, variant = "block", hint = null, classN
         </p>
         <CopyButton value={value} label={t("copyString")} text />
       </div>
-      {/* Wraps at any character: on a phone the string is wider than the card. */}
+      {/* Wraps between parts; inside one only when a single part is wider than the card. */}
       <code className="block font-mono text-[13px] leading-relaxed [overflow-wrap:anywhere]">
         <Coloured value={value} />
       </code>

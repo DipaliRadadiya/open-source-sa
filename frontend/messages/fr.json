@@ -1813,7 +1813,6 @@
       "enabled": "Règle activée.",
       "disabled": "Règle désactivée. Elle est conservée, pas supprimée.",
       "toggleFailed": "Cette règle n'a pas pu être modifiée.",
-      "unreachable": "{count, plural, one {1 port est utilisé mais bloqué : {ports}. Rien de l'extérieur ne peut l'atteindre.} other {# ports sont utilisés mais bloqués : {ports}. Rien de l'extérieur ne peut les atteindre.}}",
       "edit": "Modifier la règle",
       "off": "Désactivé",
       "loadFailed": "Les règles n'ont pas pu être chargées. Réessayez dans un instant.",
@@ -1835,12 +1834,16 @@
         "actionLabel": "Action",
         "originLabel": "Ajoutée par",
         "sortLabel": "Trier par"
-      }
+      },
+      "protectedTag": "Protégé",
+      "allowPort": "Autoriser {port}",
+      "privateTitle": "{count, plural, one {# port est fermé à Internet} other {# ports sont fermés à Internet}}",
+      "privateBody": "{count, plural, one {Il tourne sur ce serveur, mais le pare-feu le bloque depuis l’extérieur. C’est normal pour une base de données. N’ajoutez une règle que si vous devez l’atteindre depuis l’extérieur.} other {Ils tournent sur ce serveur, mais le pare-feu les bloque depuis l’extérieur. C’est normal pour une base de données. N’ajoutez une règle que si vous devez en atteindre un depuis l’extérieur.}}"
     },
     "add": {
-      "action": "Règle personnalisée",
+      "action": "Ajouter la règle",
       "title": "Créer une règle",
-      "description": "Pour tout ce que les tuiles rapides ne couvrent pas.",
+      "description": "Choisissez un port et qui peut y accéder.",
       "protocol": "Protocole",
       "protocolAll": "TCP et UDP",
       "actionAllow": "Autoriser",
@@ -1881,28 +1884,6 @@
       "protectedLocked": "Cette règle a été créée par le panneau et est utilisée. Son port, protocole, action et source ne peuvent pas être modifiés — seul son nom.",
       "protocolHint": "TCP transporte presque tout — sites web, SSH, bases de données. UDP sert pour DNS, VPN et certains serveurs de jeu.",
       "onlyMyIpAlready": "Votre IP est déjà renseignée."
-    },
-    "quick": {
-      "title": "Ajout rapide",
-      "description": "Un clic crée la règle. Vous pourrez la supprimer ensuite.",
-      "tileTitle": "{name}",
-      "tileBody": "Autorise le trafic {protocol} entrant sur le port {port}",
-      "tileDone": "Ajouté",
-      "stackTitle": "Ensemble serveur web",
-      "stackBody": "{names} en une fois",
-      "added": "{names} ajouté(es).",
-      "alreadyThere": "{names} étai(ent) déjà autorisé(es) — rien n'a changé.",
-      "failed": "Cette règle n'a pas pu être ajoutée.",
-      "tileRisky": "{name} serait ouvert à tout internet — utilisez Règle personnalisée et choisissez « Uniquement mon IP ».",
-      "tileRemoveHint": "Cliquer pour supprimer cette règle",
-      "tileAddHint": "Cliquer pour ajouter cette règle",
-      "stackAddHint": "Cliquer pour ajouter ces règles",
-      "switchedOn": "{names} réactivé(es).",
-      "tileOffBody": "Rien n'atteint le port {port} — cette règle est désactivée.",
-      "tileOffHint": "Cliquer pour la réactiver",
-      "riskyTitle": "Ouvrir {name} à tout le monde ?",
-      "riskyBody": "N'importe qui sur internet pourra joindre {name} sur le port {port}. Plus sûr : utilisez Règle personnalisée et choisissez « Uniquement mon IP ».",
-      "riskyConfirm": "Ouvrir à tout le monde"
     },
     "history": {
       "action": "Historique",

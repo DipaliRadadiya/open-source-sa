@@ -337,15 +337,16 @@ export function BackupsHistoryTable({
       ? {
           accessorKey: "application_name",
           header: t("columns.site"),
-          meta: { className: "min-w-48" },
+          // A share, not a minimum: `min-w-48` let this column take all the slack and
+          // squeezed Type and Size onto two lines (Krishna, 9 Oct).
+          meta: { className: showDestination ? "w-[24%]" : "w-[30%]" },
           cell: SiteCell,
         }
       : null,
     // Sized to the badge, not reserved, to leave room for the actions column.
-    { accessorKey: "status", header: t("columns.status"), meta: { className: "w-32" }, cell: StatusCell },
-    // No fixed width, so long labels and the header wrap instead of crowding
-    // the actions column.
-    { id: "type", header: t("columns.type"), meta: { className: "w-32 whitespace-normal" }, cell: TypeCell },
+    { accessorKey: "status", header: t("columns.status"), meta: { className: "w-[17%]" }, cell: StatusCell },
+    // One line: "Files and / database" read as two values.
+    { id: "type", header: t("columns.type"), meta: { className: "w-[16%] whitespace-nowrap" }, cell: TypeCell },
     // Only when the API sends it: the field is absent (not null) on older
     // backends, and an always-empty column would look like a load failure.
     showDestination
@@ -358,12 +359,11 @@ export function BackupsHistoryTable({
           cell: DestinationCell,
         }
       : null,
-    { id: "when", header: t("columns.when"), meta: { className: "w-28" }, cell: WhenCell },
+    { id: "when", header: t("columns.when"), meta: { className: "w-[13%] whitespace-nowrap" }, cell: WhenCell },
     {
       id: "size",
       header: () => <span className="block text-right">{t("columns.size")}</span>,
-      // The "No archive" note may wrap so it does not widen the column.
-      meta: { className: "w-20 text-right whitespace-normal" },
+      meta: { className: "w-[10%] text-right whitespace-nowrap" },
       cell: SizeCell,
     },
     {

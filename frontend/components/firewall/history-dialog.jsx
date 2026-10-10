@@ -17,7 +17,7 @@ import { PER_PAGE_OPTIONS } from "@/lib/schemas/user";
 
 // `everyone` (the `activity_log` permission) reads the server log; without it only
 // the reader's own rows are shown, and the dialog says so.
-export function HistoryDialog({ everyone = false }) {
+export function HistoryDialog({ everyone = false, variant = "outline" }) {
   const t = useTranslations("firewall");
   const paginationT = useTranslations("pagination");
   const tActivity = useTranslations("activity");
@@ -71,7 +71,7 @@ export function HistoryDialog({ everyone = false }) {
   return (
     <>
       <Button
-        variant="outline"
+        variant={variant}
         onClick={() => {
           setOpen(true);
           load(1, perPage);
