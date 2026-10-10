@@ -5733,7 +5733,14 @@
         "laterHint": "ये कंटेनर → दिखाएँ में उपलब्ध रहते हैं।",
         "loading": "क्रेडेंशियल लोड हो रहे हैं",
         "failed": "क्रेडेंशियल लोड नहीं हो सके। इसे बंद न करें — पेज फिर लोड करें।",
-        "valuesNotShown": "मान स्क्रीन पर दिखने के बाद उपलब्ध।"
+        "valuesNotShown": "मान स्क्रीन पर दिखने के बाद उपलब्ध।",
+        "labels": {
+          "username": "उपयोगकर्ता नाम",
+          "password": "पासवर्ड",
+          "email": "ईमेल",
+          "url": "एडमिन URL",
+          "token": "टोकन"
+        }
       },
       "registry": "रजिस्ट्री",
       "noRegistry": "कोई नहीं — गुमनाम रूप से खींचें",
@@ -5923,6 +5930,17 @@
       "manualImagePlaceholder": "registry.example.com/team/app:1.4.2",
       "manualUse": "यह इमेज इस्तेमाल करें",
       "manualInvalid": "name:tag या registry/name:tag जैसा रेफ़रेंस दर्ज करें।"
+    },
+    "origin": {
+      "recipe": "एक-क्लिक ऐप",
+      "image": "Docker इमेज",
+      "compose": "Docker Compose",
+      "recipeTooltip": "जाँची गई {title} रेसिपी (वर्शन {version}) से इंस्टॉल किया गया।",
+      "imageTooltip": "{image} इमेज से डिप्लॉय किया गया।",
+      "composeTooltip": "आपकी दी गई compose फ़ाइल चलाता है।",
+      "factLabel": "स्रोत",
+      "factRecipe": "एक-क्लिक ऐप · {title} (रेसिपी v{version})",
+      "factImage": "Docker इमेज · {image}"
     }
   },
   "panelUpdate": {

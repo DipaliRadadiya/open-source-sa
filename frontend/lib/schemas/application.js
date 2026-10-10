@@ -137,6 +137,16 @@ export const applicationSchema = z.object({
   url: z.string().nullish(),
   site_type: z.string(),
   site_type_title: z.string().nullish(),
+  origin: z.object({
+    kind: z.enum(["recipe", "image", "compose", "other"]).catch("other"),
+    recipe: z.object({
+      slug: z.string(),
+      title: z.string(),
+      version: z.number(),
+      deprecated: z.boolean().default(false),
+    }).nullish(),
+    image: z.string().nullish(),
+  }).nullish(),
   // Populated only once Detect is pressed. `suggested` is pre-validated, so accepting it cannot 422.
   site_type_detection: z
     .object({

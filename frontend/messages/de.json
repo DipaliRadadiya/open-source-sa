@@ -5733,7 +5733,14 @@
         "laterHint": "Sie bleiben unter Container → Anzeigen verfügbar.",
         "loading": "Zugangsdaten werden geladen",
         "failed": "Die Zugangsdaten konnten nicht geladen werden. Schließen Sie dies nicht — laden Sie die Seite neu.",
-        "valuesNotShown": "Verfügbar, sobald die Werte angezeigt werden."
+        "valuesNotShown": "Verfügbar, sobald die Werte angezeigt werden.",
+        "labels": {
+          "username": "Benutzername",
+          "password": "Passwort",
+          "email": "E-Mail",
+          "url": "Admin-URL",
+          "token": "Token"
+        }
       },
       "registry": "Registry",
       "noRegistry": "Keine — anonym laden",
@@ -5923,6 +5930,17 @@
       "manualImagePlaceholder": "registry.example.com/team/app:1.4.2",
       "manualUse": "Dieses Image verwenden",
       "manualInvalid": "Geben Sie eine Referenz wie name:tag oder registry/name:tag ein."
+    },
+    "origin": {
+      "recipe": "Ein-Klick-App",
+      "image": "Docker-Image",
+      "compose": "Docker Compose",
+      "recipeTooltip": "Aus dem getesteten Rezept für {title} installiert (Version {version}).",
+      "imageTooltip": "Aus dem Image {image} bereitgestellt.",
+      "composeTooltip": "Führt die von Ihnen bereitgestellte Compose-Datei aus.",
+      "factLabel": "Quelle",
+      "factRecipe": "Ein-Klick-App · {title} (Rezept v{version})",
+      "factImage": "Docker-Image · {image}"
     }
   },
   "panelUpdate": {

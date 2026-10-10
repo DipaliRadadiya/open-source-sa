@@ -3,6 +3,7 @@ import Link from "@/components/ui/app-link";
 import { useFormatter, useTranslations } from "next-intl";
 import { ChevronRight } from "lucide-react";
 import { formatBytes } from "@/lib/format/bytes";
+import { ApplicationOriginBadge } from "@/components/applications/application-origin-badge";
 import { Badge } from "@/components/ui/badge";
 import { CardList, CardListItem } from "@/components/data-table/card-list";
 import { ApplicationRowActions } from "@/components/applications/application-row-actions";
@@ -71,6 +72,7 @@ export function ApplicationsCards({
           {/* Gaps, not middots: a separator stranded at a wrap reads as a missing value. */}
           <p className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t pt-3 text-xs text-muted-foreground">
             <ApplicationStatusBadge application={application} />
+            <ApplicationOriginBadge origin={application.origin} />
             <span className="truncate text-foreground">
               {application.site_type_title ?? application.site_type}
             </span>

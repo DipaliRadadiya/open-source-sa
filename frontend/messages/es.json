@@ -5733,7 +5733,14 @@
         "laterHint": "Siguen disponibles en Contenedor → Mostrar.",
         "loading": "Cargando credenciales",
         "failed": "No se pudieron cargar las credenciales. No cierre este aviso — recargue la página.",
-        "valuesNotShown": "Disponible cuando los valores estén en pantalla."
+        "valuesNotShown": "Disponible cuando los valores estén en pantalla.",
+        "labels": {
+          "username": "Usuario",
+          "password": "Contraseña",
+          "email": "Correo electrónico",
+          "url": "URL de administración",
+          "token": "Token"
+        }
       },
       "registry": "Registro",
       "noRegistry": "Ninguno — descargar de forma anónima",
@@ -5923,6 +5930,17 @@
       "manualImagePlaceholder": "registry.example.com/team/app:1.4.2",
       "manualUse": "Usar esta imagen",
       "manualInvalid": "Introduce una referencia como name:tag o registry/name:tag."
+    },
+    "origin": {
+      "recipe": "Aplicación con un clic",
+      "image": "Imagen de Docker",
+      "compose": "Docker Compose",
+      "recipeTooltip": "Instalada desde la receta probada de {title} (versión {version}).",
+      "imageTooltip": "Desplegada desde la imagen {image}.",
+      "composeTooltip": "Ejecuta el archivo compose que proporcionaste.",
+      "factLabel": "Origen",
+      "factRecipe": "Aplicación con un clic · {title} (receta v{version})",
+      "factImage": "Imagen de Docker · {image}"
     }
   },
   "panelUpdate": {

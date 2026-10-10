@@ -39,6 +39,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MagicLoginLauncher } from "@/components/applications/magic-login-launcher";
 import { CopyButton } from "@/components/ui/copy-button";
+import { ApplicationOriginBadge } from "@/components/applications/application-origin-badge";
 import { ApplicationStatusBadge } from "@/components/applications/application-status-badge";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { PermissionDenied } from "@/components/sections/permission-denied";
@@ -282,9 +283,12 @@ export default async function ApplicationDetailPage({ params }) {
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="min-w-0 text-2xl font-semibold tracking-tight break-words">{application.name}</h1>
               <ApplicationStatusBadge application={application} />
-              <Badge variant="secondary" className="font-normal">
-                {application.site_type_title ?? application.site_type}
-              </Badge>
+              {application.origin?.kind !== "image" && application.origin?.kind !== "compose" ? (
+                <Badge variant="secondary" className="font-normal">
+                  {application.site_type_title ?? application.site_type}
+                </Badge>
+              ) : null}
+              <ApplicationOriginBadge origin={application.origin} />
               {/* Staging copies look like the site they copy; mark them where the name is. */}
               {application.is_staging ? (
                 <Badge variant="warning" className="font-normal">

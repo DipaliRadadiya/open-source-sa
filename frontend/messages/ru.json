@@ -5733,7 +5733,14 @@
         "laterHint": "Они остаются доступны в разделе Контейнер → Показать.",
         "loading": "Загрузка учётных данных",
         "failed": "Не удалось загрузить учётные данные. Не закрывайте сообщение — перезагрузите страницу.",
-        "valuesNotShown": "Станет доступно, когда значения появятся на экране."
+        "valuesNotShown": "Станет доступно, когда значения появятся на экране.",
+        "labels": {
+          "username": "Имя пользователя",
+          "password": "Пароль",
+          "email": "Эл. почта",
+          "url": "URL администратора",
+          "token": "Токен"
+        }
       },
       "registry": "Реестр",
       "noRegistry": "Нет — загружать анонимно",
@@ -5923,6 +5930,17 @@
       "manualImagePlaceholder": "registry.example.com/team/app:1.4.2",
       "manualUse": "Использовать образ",
       "manualInvalid": "Введите ссылку вида name:tag или registry/name:tag."
+    },
+    "origin": {
+      "recipe": "Приложение в один клик",
+      "image": "Образ Docker",
+      "compose": "Docker Compose",
+      "recipeTooltip": "Установлено из проверенного рецепта {title} (версия {version}).",
+      "imageTooltip": "Развёрнуто из образа {image}.",
+      "composeTooltip": "Использует предоставленный вами файл compose.",
+      "factLabel": "Источник",
+      "factRecipe": "Приложение в один клик · {title} (рецепт v{version})",
+      "factImage": "Образ Docker · {image}"
     }
   },
   "panelUpdate": {

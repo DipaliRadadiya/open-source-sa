@@ -5733,7 +5733,14 @@
         "laterHint": "コンテナ → 表示 からいつでも確認できます。",
         "loading": "認証情報を読み込み中",
         "failed": "認証情報を読み込めませんでした。閉じずに、ページを再読み込みしてください。",
-        "valuesNotShown": "値が画面に表示されると使用できます。"
+        "valuesNotShown": "値が画面に表示されると使用できます。",
+        "labels": {
+          "username": "ユーザー名",
+          "password": "パスワード",
+          "email": "メールアドレス",
+          "url": "管理者URL",
+          "token": "トークン"
+        }
       },
       "registry": "レジストリ",
       "noRegistry": "なし — 匿名で取得",
@@ -5923,6 +5930,17 @@
       "manualImagePlaceholder": "registry.example.com/team/app:1.4.2",
       "manualUse": "このイメージを使う",
       "manualInvalid": "name:tag または registry/name:tag のような参照を入力してください。"
+    },
+    "origin": {
+      "recipe": "ワンクリックアプリ",
+      "image": "Docker イメージ",
+      "compose": "Docker Compose",
+      "recipeTooltip": "テスト済みの{title}レシピ（バージョン{version}）からインストールしました。",
+      "imageTooltip": "イメージ{image}からデプロイしました。",
+      "composeTooltip": "指定したcomposeファイルを実行します。",
+      "factLabel": "ソース",
+      "factRecipe": "ワンクリックアプリ · {title}（レシピv{version}）",
+      "factImage": "Docker イメージ · {image}"
     }
   },
   "panelUpdate": {

@@ -5733,7 +5733,14 @@
         "laterHint": "Ils restent disponibles via Conteneur → Afficher.",
         "loading": "Chargement des identifiants",
         "failed": "Impossible de charger les identifiants. Ne fermez pas ce message — rechargez la page.",
-        "valuesNotShown": "Disponible une fois les valeurs affichées."
+        "valuesNotShown": "Disponible une fois les valeurs affichées.",
+        "labels": {
+          "username": "Nom d'utilisateur",
+          "password": "Mot de passe",
+          "email": "E-mail",
+          "url": "URL d’administration",
+          "token": "Jeton"
+        }
       },
       "registry": "Registre",
       "noRegistry": "Aucun — récupération anonyme",
@@ -5923,6 +5930,17 @@
       "manualImagePlaceholder": "registry.example.com/team/app:1.4.2",
       "manualUse": "Utiliser cette image",
       "manualInvalid": "Saisissez une référence comme name:tag ou registry/name:tag."
+    },
+    "origin": {
+      "recipe": "Application en un clic",
+      "image": "Image Docker",
+      "compose": "Docker Compose",
+      "recipeTooltip": "Installée à partir de la recette testée de {title} (version {version}).",
+      "imageTooltip": "Déployée à partir de l’image {image}.",
+      "composeTooltip": "Exécute le fichier compose que vous avez fourni.",
+      "factLabel": "Source",
+      "factRecipe": "Application en un clic · {title} (recette v{version})",
+      "factImage": "Image Docker · {image}"
     }
   },
   "panelUpdate": {

@@ -43,10 +43,21 @@ export function FirstRunCredentials({ application, className }) {
   const t = useTranslations("applications.container.firstRun");
   const router = useRouter();
   const [secrets, setSecrets] = useState(null);
+  const [credentials, setCredentials] = useState(null);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const keys = application.container_secret_keys ?? [];
+  const LABELS = {
+    username: t("labels.username"),
+    password: t("labels.password"),
+    email: t("labels.email"),
+    url: t("labels.url"),
+    token: t("labels.token"),
+  };
+  const rows = Array.isArray(credentials)
+    ? credentials.map((item, index) => ({ key: `${item.label}-${index}`, label: LABELS[item.label], value: item.value, curated: true }))
+    : keys.map((key) => ({ key, label: key, value: secrets?.[key], curated: false }));
 
   useEffect(() => {
     let cancelled = false;
@@ -54,7 +65,10 @@ export function FirstRunCredentials({ application, className }) {
     async function load() {
       try {
         const { data } = await getContainerSecrets(application.id);
-        if (!cancelled) setSecrets(data?.secrets ?? {});
+        if (!cancelled) {
+          setSecrets(data?.secrets ?? {});
+          setCredentials(data?.credentials ?? null);
+        }
       } catch (requestError) {
         // Shown rather than swallowed. A card that promises credentials and
         // renders nothing is worse than no card — the user has no way to tell
@@ -109,13 +123,13 @@ export function FirstRunCredentials({ application, className }) {
           </Caution>
         ) : (
           <ul className="divide-y rounded-lg border">
-            {keys.map((key) => (
+            {rows.map((row) => (
               <li
-                key={key}
+                key={row.key}
                 className="flex items-center justify-between gap-3 px-3 py-2"
               >
-                <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">
-                  {key}
+                <span className={row.curated ? "min-w-0 text-xs text-muted-foreground" : "min-w-0 truncate font-mono text-xs text-muted-foreground"}>
+                  {row.label}
                 </span>
                 {secrets ? (
                   <span className="flex min-w-0 items-center gap-1.5">
@@ -123,9 +137,9 @@ export function FirstRunCredentials({ application, className }) {
                         somebody transcribes wrongly, and this card exists for
                         exactly the one reading where that matters. */}
                     <code className="min-w-0 break-all font-mono text-xs">
-                      {secrets[key]}
+                      {row.value}
                     </code>
-                    <CopyButton value={secrets[key] ?? ""} />
+                    <CopyButton value={row.value ?? ""} />
                   </span>
                 ) : (
                   <Loader2
