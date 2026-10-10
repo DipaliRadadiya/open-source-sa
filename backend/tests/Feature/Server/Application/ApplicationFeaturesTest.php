@@ -229,9 +229,9 @@ it('offers backups to container sites, and still no cloning', function (string $
     // Cloning is not, and must not be: it copies served files, so a clone of a
     // container site would be a site pointing at the original's volumes.
     //
-    // Asserted per type rather than once, because the two classes strip their
-    // features independently — `DockerSiteType` for the bring-your-own-image
-    // card and `AbstractDockerAppType` for all nineteen one-clicks — and the
+    // Asserted per type rather than once, because the two paths strip their
+    // features independently — the generic Docker type for bring-your-own images
+    // and the recipe-backed type for all nineteen one-clicks — and the
     // one-clicks were left without `app_container` once before by exactly this
     // kind of divergence.
     $sidebar = sidebarFor(makeFeatureApp($siteType, 'docker'));

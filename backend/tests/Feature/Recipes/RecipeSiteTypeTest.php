@@ -2,7 +2,6 @@
 
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Applications\Types\AbstractDockerAppType;
-use App\Services\Applications\Types\GhostSiteType;
 use App\Services\Applications\Types\RecipeSiteType;
 use App\Services\Recipes\RecipeRegistry;
 use App\Services\Server\Applications\InstallerManager;
@@ -28,7 +27,8 @@ it('inserts recipes after Docker in registry order and supplies the one-click in
     expect($type)->toBeInstanceOf(RecipeSiteType::class)->toBeInstanceOf(AbstractDockerAppType::class)
         ->and($type->containerPort())->toBe(80)->and($type->volumeRoles())->toBe(['data' => '/data'])
         ->and($type->generatedSecrets())->toBe(['PASSWORD'])->and($type->servingProfile())->toBe('docker')
-        ->and(fn () => $type->composeTemplate())->toThrow(LogicException::class);
+        ->and($type->recipe()->slug)->toBe('demo_single')
+        ->and(method_exists($type, 'composeTemplate'))->toBeFalse();
 });
 
 it('refuses recipe types on a non-Docker stack', function () {
@@ -50,23 +50,20 @@ it('adds input fields and rules without losing sizing fields', function () {
 
 it('rejects duplicate class and recipe names before building the catalog', function () {
     $root = storage_path('framework/testing/rc03-duplicate-'.bin2hex(random_bytes(6)));
-    mkdir($root.'/ghost', 0777, true);
+    mkdir($root.'/docker', 0777, true);
     try {
         $source = base_path('tests/Fixtures/recipes/valid/demo_single');
         $data = json_decode(file_get_contents($source.'/recipe.json'), true, flags: JSON_THROW_ON_ERROR);
-        $data['slug'] = 'ghost';
-        file_put_contents($root.'/ghost/recipe.json', json_encode($data, JSON_THROW_ON_ERROR));
-        copy($source.'/compose.yml.tpl', $root.'/ghost/compose.yml.tpl');
-        config([
-            'recipes.path' => $root,
-            'server.site_types' => [...config('server.site_types'), GhostSiteType::class],
-        ]);
+        $data['slug'] = 'docker';
+        file_put_contents($root.'/docker/recipe.json', json_encode($data, JSON_THROW_ON_ERROR));
+        copy($source.'/compose.yml.tpl', $root.'/docker/compose.yml.tpl');
+        config(['recipes.path' => $root]);
         app(RecipeRegistry::class)->flush();
         expect(fn () => app(SiteTypeManager::class)->all())->toThrow(LogicException::class, 'Duplicate site type names');
     } finally {
-        unlink($root.'/ghost/recipe.json');
-        unlink($root.'/ghost/compose.yml.tpl');
-        rmdir($root.'/ghost');
+        unlink($root.'/docker/recipe.json');
+        unlink($root.'/docker/compose.yml.tpl');
+        rmdir($root.'/docker');
         rmdir($root);
     }
 });

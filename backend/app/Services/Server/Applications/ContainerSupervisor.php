@@ -633,17 +633,16 @@ class ContainerSupervisor
     /**
      * Did the panel write this site's `compose` column itself?
      *
-     * True for every one-click app, because `DockerAppInstaller` renders that
-     * app's template into the column — so the file is the panel's own work and
+     * True for every recipe app, because `DockerAppInstaller` renders that
+     * recipe's template into the column — so the file is the panel's own work and
      * already carries everything the override exists to add.
      *
-     * Recipes are panel-rendered too. Keep the legacy registry fallback until
-     * all class-based one-click apps have migrated to recipe folders.
+     * The recipe registry is the source of truth, including deprecated recipes
+     * that must still resolve for existing sites.
      */
     public function panelRendered(Application $application): bool
     {
-        return app(RecipeRegistry::class)->has((string) $application->site_type)
-            || config("server.docker_apps.{$application->site_type}") !== null;
+        return app(RecipeRegistry::class)->has((string) $application->site_type);
     }
 
     /**

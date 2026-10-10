@@ -6,7 +6,6 @@ use App\Contracts\SiteInstaller;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Services\Applications\SiteTypeManager;
-use App\Services\Applications\Types\AbstractDockerAppType;
 use App\Services\Applications\Types\RecipeSiteType;
 use App\Services\Recipes\Exceptions\RecipeRenderException;
 use App\Services\Recipes\RecipeRenderer;
@@ -15,7 +14,6 @@ use App\Services\Server\Applications\ContainerSupervisor;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\View;
 use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
 
@@ -23,7 +21,7 @@ use Illuminate\Support\Str;
  * Turns a one-click Docker app into a compose file this site can run.
  *
  * One installer for every Docker app, not one per app: the differences between
- * Ghost and Strapi are entirely in the site type — template, port, volumes,
+ * the apps are entirely in their recipes — template, port, volumes,
  * secrets — and a class per app would be five methods of delegation each.
  * Contrast the PHP one-clicks, where each app genuinely runs different commands.
  *
@@ -39,12 +37,11 @@ use Illuminate\Support\Str;
  * brings the site up, both already on the provisioning path immediately after
  * this. Reaching for them here would be a second place that starts containers.
  *
- * **Why the rendered file is stored per site.** The alternative is rendering it
- * fresh on every deploy, which would silently move a running site to a new image
- * the day the panel bumped a default. A site's compose file is its own; changing
- * the app's version is a deliberate act and needs its own feature. The cost is
- * that a template fix does not reach existing sites, which is the same trade the
- * panel already makes for a vhost.
+ * **Why the rendered file is stored per site.** Ordinary container deploys use
+ * the site's stored compose rather than silently re-rendering current defaults.
+ * URL-aware recipes are re-rendered by `syncUrl()` on domain changes and during
+ * `sites:resync`, including panel upgrades. A recipe template or image-default
+ * change can therefore reach those existing sites and must preserve compatibility.
  */
 class DockerAppInstaller implements SiteInstaller
 {
@@ -300,12 +297,10 @@ class DockerAppInstaller implements SiteInstaller
         // Named `sv-app-<id>_<role>`, the convention Compose itself uses for a
         // project's volumes — so a reader of `docker volume ls` sees one naming
         // scheme, and `DockerResources` can already attribute them to a site.
-        $volumes = [];
         $mounts = [];
 
         foreach ($type->volumeRoles() as $role => $path) {
             $name = $this->containers->project($application)."_{$role}";
-            $volumes[$role] = $name;
             $mounts[] = ['volume' => $name, 'path' => $path];
         }
 
@@ -327,7 +322,7 @@ class DockerAppInstaller implements SiteInstaller
         // and bind-mounted in. Written before the compose file, so a failure here
         // stops provisioning rather than producing a container that crash-loops on
         // a missing config — which is what Glance did.
-        $binds = $this->writeStarterFiles($type, $application, $documentRoot);
+        $this->writeStarterFiles($type, $application, $documentRoot);
 
         $application->forceFill([
             'container_port' => $type->containerPort(),
@@ -340,8 +335,6 @@ class DockerAppInstaller implements SiteInstaller
                 $application,
                 $this->url($application),
                 $secrets,
-                $volumes,
-                $binds,
                 $documentRoot,
             ),
         ])->save();
@@ -357,7 +350,7 @@ class DockerAppInstaller implements SiteInstaller
      *
      * @return array<string, string>
      */
-    private function generate(AbstractDockerAppType $type): array
+    private function generate(RecipeSiteType $type): array
     {
         $secrets = [];
 
@@ -417,91 +410,15 @@ class DockerAppInstaller implements SiteInstaller
 
     /**
      * @param  array<string, string>  $secrets
-     * @param  array<string, string>  $volumes
      */
     private function render(
-        AbstractDockerAppType $type,
+        RecipeSiteType $type,
         Application $application,
         string $url,
         array $secrets,
-        array $volumes = [],
-        array $binds = [],
         ?string $documentRoot = null,
     ): string {
-        if ($type instanceof RecipeSiteType) {
-            return $this->renderRecipe($type, $application, $url, $secrets, $documentRoot);
-        }
-
-        if ($volumes === []) {
-            foreach ($type->volumeRoles() as $role => $path) {
-                $volumes[$role] = $this->containers->project($application)."_{$role}";
-            }
-        }
-
-        // `path => name` as well as `role => name`: the shared template writes a
-        // mount line per path, and a role is not a path. Both shapes are passed
-        // because the per-app templates name roles explicitly and the shared one
-        // cannot know them.
-        $mounts = [];
-
-        foreach ($type->volumeRoles() as $role => $path) {
-            if (isset($volumes[$role])) {
-                $mounts[$path] = $volumes[$role];
-            }
-        }
-
-        // Bind mounts of the starter directories, alongside the named volumes.
-        // The template writes `source:target` either way; the difference is only
-        // whether the source is a volume name or a path.
-        foreach ($binds as $target => $source) {
-            $mounts[$target] = $source;
-        }
-
-        $environment = $type->environment($application);
-
-        if (($key = $type->urlEnvKey()) !== null) {
-            $environment[$key] = $url;
-        }
-
-        return View::make($type->composeTemplate(), [
-            'mounts' => $mounts,
-            'environment' => $environment,
-            'project' => $this->containers->project($application),
-            'appPort' => (int) $application->app_port,
-            'containerPort' => $type->containerPort(),
-            // The user's explicit choice, then the app's own floor, then the
-            // server default. An app that needs 2g to start would otherwise get
-            // 512m and fail as a 502 with nothing about memory in the panel.
-            'memoryLimit' => (string) ($application->memory_limit
-                ?: $type->defaultMemoryLimit()
-                ?: config('server.docker.default_memory_limit', '512m')),
-            // A database is not the application, and giving them one budget
-            // means the app's ceiling is really the pair's. MySQL's own default
-            // buffer pool alone is 128M.
-            'dbMemoryLimit' => (string) config('server.docker.default_db_memory_limit', '512m'),
-            // The user's choice or nothing — no app floor and no server default,
-            // unlike memory above. A CPU default would cap every container site
-            // already on this box the next time it deployed, and the symptom
-            // would be unexplained slowness from a feature nobody turned on.
-            //
-            // Applied to the APP service only. A bundled database service gets no
-            // quota: splitting one number across two containers would mean
-            // guessing the ratio, and the guess would be wrong for every app whose
-            // work is in its database. So the field limits the thing the user
-            // named, and the pair's total is the app's limit plus an unbounded
-            // engine — which is the same shape memory already has, where the two
-            // ceilings are separate numbers.
-            'cpuLimit' => $application->cpu_limit ?: null,
-            'url' => $url,
-            'secrets' => $secrets,
-            'volumes' => $volumes,
-            'image' => (string) config("server.docker_apps.{$type->name()}.image"),
-            'dbImage' => (string) config("server.docker_apps.{$type->name()}.db_image"),
-            // Chatwoot is the first app here needing a third image. Absent for
-            // every other app, which is why it is a plain lookup rather than a
-            // required key -- a template that does not use it never sees it.
-            'redisImage' => (string) config("server.docker_apps.{$type->name()}.redis_image"),
-        ])->render();
+        return $this->renderRecipe($type, $application, $url, $secrets, $documentRoot);
     }
 
     /**
@@ -548,7 +465,7 @@ class DockerAppInstaller implements SiteInstaller
     }
 
     /**
-     * Write the files an app cannot start without, and return their bind mounts.
+     * Write the starter files the recipe's compose template bind-mounts.
      *
      * Inside the site's document root, so `ComposeValidator` accepts the bind and
      * the File Manager can edit the result. Directories rather than single files:
@@ -559,22 +476,17 @@ class DockerAppInstaller implements SiteInstaller
      * Never overwrites. A reinstall or a Retry Setup must not replace a
      * configuration somebody has edited — which is the same rule as the secrets,
      * for the same reason.
-     *
-     * @return array<string, string> container path of the directory => host path
      */
     private function writeStarterFiles(
-        AbstractDockerAppType $type,
+        RecipeSiteType $type,
         Application $application,
         string $documentRoot,
-    ): array {
-        $binds = [];
+    ): void {
         $root = rtrim($documentRoot, '/');
 
         foreach ($type->starterFiles() as $containerPath => $contents) {
             $directory = dirname($containerPath);
             $host = $root.$directory;
-
-            $binds[$directory] = $host;
 
             $file = $host.'/'.basename($containerPath);
             $context = ['feature' => 'application', 'op' => 'docker_app_starter', 'application' => $application->id];
@@ -628,8 +540,6 @@ class DockerAppInstaller implements SiteInstaller
                 );
             }
         }
-
-        return $binds;
     }
 
     /**
@@ -670,10 +580,10 @@ class DockerAppInstaller implements SiteInstaller
         return 'https://'.$application->domain;
     }
 
-    private function typeFor(Application $application): ?AbstractDockerAppType
+    private function typeFor(Application $application): ?RecipeSiteType
     {
         $type = $this->siteTypes->find((string) $application->site_type);
 
-        return $type instanceof AbstractDockerAppType ? $type : null;
+        return $type instanceof RecipeSiteType ? $type : null;
     }
 }

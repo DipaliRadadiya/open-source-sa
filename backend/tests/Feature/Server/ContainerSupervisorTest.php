@@ -1057,9 +1057,8 @@ it('writes no override for a file the panel rendered itself', function () {
     // The override is for a HAND-WRITTEN file, which has no limits of its own.
     // A generated one needs nothing added and must not have its numbers replaced.
     //
-    // Keyed on `docker_apps` — the same registry the installer reads the image
-    // from — so a new one-click cannot be added without being covered: a type
-    // missing from that list has no image either.
+    // Keyed on the recipe registry — the same source the installer renders
+    // from — so a new one-click cannot be added without being covered.
     $pasted = <<<'YAML'
     services:
       ghost:

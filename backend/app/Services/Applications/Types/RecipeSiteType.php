@@ -5,7 +5,6 @@ namespace App\Services\Applications\Types;
 use App\Models\Application;
 use App\Services\Recipes\Recipe;
 use App\Services\Recipes\RecipeClaims;
-use LogicException;
 
 final class RecipeSiteType extends AbstractDockerAppType
 {
@@ -34,11 +33,6 @@ final class RecipeSiteType extends AbstractDockerAppType
     public function popular(): bool
     {
         return $this->recipe->popular;
-    }
-
-    public function composeTemplate(): string
-    {
-        throw new LogicException('Recipe types render through RecipeRenderer.');
     }
 
     public function containerPort(): int

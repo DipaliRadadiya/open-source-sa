@@ -5,7 +5,7 @@ namespace App\Console\Commands;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Services\Applications\SiteTypeManager;
-use App\Services\Applications\Types\AbstractDockerAppType;
+use App\Services\Applications\Types\RecipeSiteType;
 use App\Services\Server\Applications\Installers\DockerAppInstaller;
 use Illuminate\Console\Command;
 
@@ -24,7 +24,7 @@ final class VerifyInstalledRecipes extends Command
 
         $different = false;
         foreach ($sites->lazyById() as $application) {
-            if (! $types->find((string) $application->site_type) instanceof AbstractDockerAppType) {
+            if (! $types->find((string) $application->site_type) instanceof RecipeSiteType) {
                 continue;
             }
 
