@@ -5884,6 +5884,32 @@
         "cancel": "Abbrechen",
         "invalid": "Geben Sie einen Port von 1 bis 65535 ein."
       }
+    },
+    "recipes": {
+      "tabOneClick": "Ein-Klick-Apps",
+      "tabOneClickHint": "Getestete Apps. Das Panel richtet Datenbank, Passwörter und Datenspeicher für Sie ein.",
+      "tabDocker": "Docker",
+      "tabDockerHint": "Starten Sie Ihren eigenen Container: Suchen Sie ein Image, fügen Sie eine Compose-Datei ein oder geben Sie ein Image von Hand ein.",
+      "searchPlaceholder": "Ein-Klick-Apps suchen",
+      "noMatch": "Keine Ein-Klick-App passt zu „{query}“.",
+      "searchDockerInstead": "Docker-Images für „{query}“ suchen",
+      "containers": "{count, plural, one {# Container} other {# Container}}",
+      "memoryFloor": "Benötigt mindestens {memory} RAM",
+      "detailsTitle": "Das erhalten Sie",
+      "servicesLabel": "Startet",
+      "storageLabel": "Speichert Daten in",
+      "noStorage": "Nichts aufzubewahren: Diese App speichert keine Daten.",
+      "firstRunLabel": "Nach der Installation",
+      "firstRunCredentials": "Das Panel erstellt das Administratorkonto und zeigt Ihnen dessen Passwort einmal an.",
+      "firstRunClaimed": "Das Panel erstellt das Administratorkonto für die eingegebene E-Mail-Adresse.",
+      "firstRunSetupWizard": "Öffnen Sie die Website, um die Einrichtung der App abzuschließen.",
+      "firstRunOpenRegistration": "Die erste registrierte Person wird Administrator. Öffnen Sie die Website, sobald sie bereit ist.",
+      "firstRunDefaultLogin": "Melden Sie sich mit den nach der Installation angezeigten Standardzugangsdaten an und ändern Sie sofort das Passwort.",
+      "firstRunNone": "Keine Einrichtung nötig: Öffnen Sie die Website und nutzen Sie sie.",
+      "testedVersions": "Getestete Versionen",
+      "docs": "Dokumentation",
+      "recipeAvailable": "{title} ist als Ein-Klick-App verfügbar. Das Panel richtet alles für Sie ein.",
+      "useRecipe": "Ein-Klick-App {title} verwenden"
     }
   },
   "panelUpdate": {

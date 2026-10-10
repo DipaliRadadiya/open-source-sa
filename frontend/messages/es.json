@@ -5884,6 +5884,32 @@
         "cancel": "Cancelar",
         "invalid": "Introduce un puerto entre 1 y 65535."
       }
+    },
+    "recipes": {
+      "tabOneClick": "Apps con un clic",
+      "tabOneClickHint": "Apps probadas. El panel configura la base de datos, las contraseñas y el almacenamiento por ti.",
+      "tabDocker": "Docker",
+      "tabDockerHint": "Ejecuta tu propio contenedor: busca una imagen, pega un archivo compose o introduce una imagen a mano.",
+      "searchPlaceholder": "Buscar apps con un clic",
+      "noMatch": "Ninguna app con un clic coincide con «{query}».",
+      "searchDockerInstead": "Buscar imágenes Docker para «{query}»",
+      "containers": "{count, plural, one {# contenedor} other {# contenedores}}",
+      "memoryFloor": "Necesita al menos {memory} de RAM",
+      "detailsTitle": "Qué incluye",
+      "servicesLabel": "Ejecuta",
+      "storageLabel": "Guarda los datos en",
+      "noStorage": "Nada que conservar: esta app no guarda datos.",
+      "firstRunLabel": "Tras la instalación",
+      "firstRunCredentials": "El panel crea la cuenta de administrador y te muestra su contraseña una sola vez.",
+      "firstRunClaimed": "El panel crea la cuenta de administrador para el correo que introduzcas.",
+      "firstRunSetupWizard": "Abre el sitio para terminar la configuración de la app.",
+      "firstRunOpenRegistration": "La primera persona que se registre será el administrador. Abre el sitio en cuanto esté listo.",
+      "firstRunDefaultLogin": "Inicia sesión con las credenciales predeterminadas que se muestran tras instalar la app y cambia la contraseña enseguida.",
+      "firstRunNone": "No hay nada que configurar: abre el sitio y úsalo.",
+      "testedVersions": "Versiones probadas",
+      "docs": "Documentación",
+      "recipeAvailable": "{title} está disponible como app con un clic. El panel lo configura todo por ti.",
+      "useRecipe": "Usar {title} con un clic"
     }
   },
   "panelUpdate": {

@@ -54,6 +54,27 @@ export const siteTypeSchema = z.object({
   php_version_range: versionRange,
   node_version_range: versionRange,
   fields: z.array(textField).default([]),
+  // Declared here or Zod would strip the recipe metadata from the catalog.
+  recipe: z.object({
+    slug: z.string(),
+    version: z.number(),
+    description: z.string().nullish(),
+    services: z.array(z.object({ name: z.string(), role: z.string() })).default([]),
+    volumes: z.array(z.object({ role: z.string(), path: z.string() })).default([]),
+    images: z.array(z.object({
+      role: z.string(),
+      ref: z.string(),
+      tested: z.array(z.string()).default([]),
+    })).default([]),
+    memory_floor: z.string().nullish(),
+    first_run: z.object({
+      kind: z.string(),
+      credential_labels: z.array(z.string()).default([]),
+    }).nullish(),
+    inputs: z.array(z.string()).default([]),
+    docs_url: z.string().nullish(),
+    icon_data_uri: z.string().nullish(),
+  }).nullish(),
 });
 
 export const siteTypesResponseSchema = z.object({

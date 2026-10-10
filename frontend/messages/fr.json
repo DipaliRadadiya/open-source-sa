@@ -5884,6 +5884,32 @@
         "cancel": "Annuler",
         "invalid": "Saisissez un port entre 1 et 65535."
       }
+    },
+    "recipes": {
+      "tabOneClick": "Apps en un clic",
+      "tabOneClickHint": "Apps testées. Le panneau configure pour vous la base de données, les mots de passe et le stockage.",
+      "tabDocker": "Docker",
+      "tabDockerHint": "Lancez votre propre conteneur : cherchez une image, collez un fichier compose ou saisissez une image à la main.",
+      "searchPlaceholder": "Chercher des apps en un clic",
+      "noMatch": "Aucune app en un clic ne correspond à « {query} ».",
+      "searchDockerInstead": "Chercher des images Docker pour « {query} »",
+      "containers": "{count, plural, one {# conteneur} other {# conteneurs}}",
+      "memoryFloor": "Nécessite au moins {memory} de RAM",
+      "detailsTitle": "Ce qui est inclus",
+      "servicesLabel": "Exécute",
+      "storageLabel": "Conserve les données dans",
+      "noStorage": "Rien à conserver : cette app ne stocke pas de données.",
+      "firstRunLabel": "Après l'installation",
+      "firstRunCredentials": "Le panneau crée le compte administrateur et vous montre son mot de passe une seule fois.",
+      "firstRunClaimed": "Le panneau crée le compte administrateur pour l'adresse e-mail que vous saisissez.",
+      "firstRunSetupWizard": "Ouvrez le site pour terminer la configuration de l'app.",
+      "firstRunOpenRegistration": "La première personne inscrite devient administrateur. Ouvrez le site dès qu'il est prêt.",
+      "firstRunDefaultLogin": "Connectez-vous avec les identifiants par défaut affichés après l'installation, puis changez immédiatement le mot de passe.",
+      "firstRunNone": "Rien à configurer : ouvrez le site et utilisez-le.",
+      "testedVersions": "Versions testées",
+      "docs": "Documentation",
+      "recipeAvailable": "{title} est disponible en un clic. Le panneau configure tout pour vous.",
+      "useRecipe": "Utiliser {title} en un clic"
     }
   },
   "panelUpdate": {

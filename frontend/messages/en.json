@@ -5884,6 +5884,32 @@
         "cancel": "Cancel",
         "invalid": "Enter a port from 1 to 65535."
       }
+    },
+    "recipes": {
+      "tabOneClick": "One-click apps",
+      "tabOneClickHint": "Tested apps. The panel sets up the database, passwords and storage for you.",
+      "tabDocker": "Docker",
+      "tabDockerHint": "Run your own container: search for an image, paste a compose file, or enter an image by hand.",
+      "searchPlaceholder": "Search one-click apps",
+      "noMatch": "No one-click app matches “{query}”.",
+      "searchDockerInstead": "Search Docker images for “{query}”",
+      "containers": "{count, plural, one {# container} other {# containers}}",
+      "memoryFloor": "Needs at least {memory} RAM",
+      "detailsTitle": "What you get",
+      "servicesLabel": "Runs",
+      "storageLabel": "Keeps data in",
+      "noStorage": "Nothing to keep: this app stores no data.",
+      "firstRunLabel": "After install",
+      "firstRunCredentials": "The panel creates the admin account and shows you its password once.",
+      "firstRunClaimed": "The panel creates the admin account for the email you enter.",
+      "firstRunSetupWizard": "Open the site to finish the app's own setup.",
+      "firstRunOpenRegistration": "The first person to sign up becomes the admin. Open the site as soon as it is ready.",
+      "firstRunDefaultLogin": "Sign in with the app's default login shown after install, then change the password right away.",
+      "firstRunNone": "Nothing to set up: open the site and use it.",
+      "testedVersions": "Tested versions",
+      "docs": "Documentation",
+      "recipeAvailable": "{title} is available as a one-click app. The panel sets up everything for you.",
+      "useRecipe": "Use one-click {title}"
     }
   },
   "panelUpdate": {

@@ -99,7 +99,7 @@ function volumeRowsFrom(inspection) {
  * `docker_env`, `docker_required_env` and `docker_image_state`, which the create
  * form turns into the request.
  */
-export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
+export function DockerImageSetup({ form, registryOptions = [], onUseCompose, initialQuery = "" }) {
   const t = useTranslations("applications.dockerImage");
   const format = useFormatter();
   const listId = useId();
@@ -113,7 +113,7 @@ export function DockerImageSetup({ form, registryOptions = [], onUseCompose }) {
 
   const initial = splitImageRef(image);
   const [repository, setRepository] = useState(initial.repository);
-  const [query, setQuery] = useState(initial.repository);
+  const [query, setQuery] = useState(initial.repository || initialQuery);
   // Tagged with its query: an answer for an earlier query is never shown for this one.
   const [search, setSearch] = useState({ query: "", state: "idle", results: [] });
   const [active, setActive] = useState(-1);

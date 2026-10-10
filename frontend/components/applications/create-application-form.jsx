@@ -89,6 +89,7 @@ import {
 } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import { SiteTypePicker } from "@/components/applications/site-type-picker";
+import { DeploySourcePicker } from "@/components/applications/deploy-source-picker";
 import { RequiredServices } from "@/components/applications/required-services";
 import { RuntimeRefresh } from "@/components/applications/runtime-refresh";
 import {
@@ -681,6 +682,7 @@ function ConfigField({
 export function CreateApplicationForm({
   siteTypes = [],
   initialType = "",
+  initialDockerSource = "search",
   initialName = "",
   initialGitAccountId = "",
   systemUsers = [],
@@ -756,6 +758,10 @@ export function CreateApplicationForm({
       // Seeded from the URL when a caller links to a specific type (e.g. "Install
       // phpMyAdmin").
       site_type: initialType,
+      // UI-only deployment choice: never a backend type field or request key.
+      docker_source: initialDockerSource,
+      docker_search_query: "",
+      ...(initialType === "docker" ? { docker_mode: initialDockerSource === "compose" ? "compose" : "simple" } : {}),
       name: initialName,
       domain: "",
       // On by default; off for users who cannot create system users, since the API
@@ -859,6 +865,7 @@ export function CreateApplicationForm({
     [nodeVersions, selected],
   );
   const isGit = selected?.method === "git" || selected?.name === "git";
+  const containerServer = siteTypes.some((type) => type.name === "docker");
   const isDocker = selected?.name === "docker";
   const dockerMode = useWatch({ control: form.control, name: "docker_mode" });
   const isDockerSimple = isDocker && (dockerMode || "simple") === "simple";
@@ -1564,11 +1571,21 @@ export function CreateApplicationForm({
                     {/* min-w-0: a grid item defaults to min-width:auto, so the trigger's long
                         tagline would widen the page instead of truncating. */}
                     <div className="min-w-0">
-                      <SiteTypePicker
-                        types={siteTypes}
-                        value={field.value}
-                        onChange={field.onChange}
-                      />
+                      {containerServer ? (
+                        <DeploySourcePicker
+                          siteTypes={siteTypes}
+                          value={field.value}
+                          onChange={field.onChange}
+                          form={form}
+                          initialSource={initialType === "docker" ? initialDockerSource : undefined}
+                        />
+                      ) : (
+                        <SiteTypePicker
+                          types={siteTypes}
+                          value={field.value}
+                          onChange={field.onChange}
+                        />
+                      )}
                     </div>
                     {/* Only once an application is chosen. */}
                     {field.value ? (
@@ -2173,6 +2190,7 @@ export function CreateApplicationForm({
                   {isDockerSimple ? (
                     <DockerImageSetup
                       form={form}
+                      initialQuery={values.docker_search_query ?? ""}
                       registryOptions={registryOptions}
                       onUseCompose={() =>
                         form.setValue("docker_mode", "compose", { shouldDirty: true })

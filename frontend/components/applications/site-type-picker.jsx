@@ -39,6 +39,13 @@ function TypeTile({ type, dimmed, size = "h-9 w-14" }) {
   if (siteTypeLogo(type.name)) {
     return <SiteTypeLogo name={type.name} size={size} className={cn(dimmed && "opacity-50")} />;
   }
+  if (type.recipe?.icon_data_uri) {
+    return (
+      // A validated recipe SVG data URI, not a remote image to optimise.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={type.recipe.icon_data_uri} alt="" className={cn("size-8 shrink-0 rounded", dimmed && "opacity-50")} />
+    );
+  }
   return (
     <span
       className={cn(
@@ -166,7 +173,7 @@ function blockerFixes(type) {
 
 // A logo grid while nothing is chosen, collapsing to one row with Change once chosen.
 // Unavailable types stay visible, greyed, with their reason and fix link.
-export function SiteTypePicker({ types = [], value, onChange }) {
+export function SiteTypePicker({ types = [], value, onChange, searchPlaceholder, renderNoMatch }) {
   const t = useTranslations("applications");
   const tg = useTranslations("applications.guided");
   const tc = useTranslations("common");
@@ -272,8 +279,8 @@ export function SiteTypePicker({ types = [], value, onChange }) {
           ref={searchRef}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder={t("form.typeSearch")}
-          aria-label={t("form.typeSearch")}
+          placeholder={searchPlaceholder ?? t("form.typeSearch")}
+          aria-label={searchPlaceholder ?? t("form.typeSearch")}
           className="ps-9 pe-9"
         />
         {query ? (
@@ -374,12 +381,20 @@ export function SiteTypePicker({ types = [], value, onChange }) {
                       {type.tagline}
                     </TruncatedText>
                   ) : null}
+                  {type.recipe ? (
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      {t("recipes.containers", { count: type.recipe.services.length })}
+                      {type.recipe.memory_floor ? <> · {t("recipes.memoryFloor", { memory: type.recipe.memory_floor })}</> : null}
+                    </span>
+                  ) : null}
                 </span>
 
               </Card>
             );
           })}
         </div>
+      ) : query.trim() && !hiddenByGroup && renderNoMatch ? (
+        renderNoMatch(query.trim())
       ) : (
         /* Search matches only outside the active chip: name it and offer one click back. */
         <div className="rounded-xl border border-dashed px-3 py-8 text-center">

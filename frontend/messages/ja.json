@@ -5884,6 +5884,32 @@
         "cancel": "キャンセル",
         "invalid": "1〜65535 のポートを入力してください。"
       }
+    },
+    "recipes": {
+      "tabOneClick": "ワンクリックアプリ",
+      "tabOneClickHint": "動作確認済みのアプリです。パネルがデータベース、パスワード、ストレージを設定します。",
+      "tabDocker": "Docker",
+      "tabDockerHint": "自分でコンテナーを実行します。イメージの検索、composeファイルの貼り付け、イメージの手入力ができます。",
+      "searchPlaceholder": "ワンクリックアプリを検索",
+      "noMatch": "「{query}」に一致するワンクリックアプリはありません。",
+      "searchDockerInstead": "「{query}」のDockerイメージを検索",
+      "containers": "{count, plural, other {コンテナー#個}}",
+      "memoryFloor": "少なくとも{memory}のRAMが必要です",
+      "detailsTitle": "構成内容",
+      "servicesLabel": "実行するサービス",
+      "storageLabel": "データの保存先",
+      "noStorage": "保存するものはありません。このアプリはデータを保存しません。",
+      "firstRunLabel": "インストール後",
+      "firstRunCredentials": "パネルが管理者アカウントを作成し、パスワードを一度だけ表示します。",
+      "firstRunClaimed": "入力したメールアドレスでパネルが管理者アカウントを作成します。",
+      "firstRunSetupWizard": "サイトを開いてアプリの初期設定を完了してください。",
+      "firstRunOpenRegistration": "最初に登録した人が管理者になります。サイトの準備ができ次第、すぐに開いてください。",
+      "firstRunDefaultLogin": "インストール後に表示される既定の認証情報でログインし、すぐにパスワードを変更してください。",
+      "firstRunNone": "設定は不要です。サイトを開いて利用してください。",
+      "testedVersions": "動作確認済みのバージョン",
+      "docs": "ドキュメント",
+      "recipeAvailable": "{title}はワンクリックアプリとして利用できます。パネルがすべて設定します。",
+      "useRecipe": "ワンクリックで{title}を使う"
     }
   },
   "panelUpdate": {
