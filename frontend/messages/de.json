@@ -5893,13 +5893,13 @@
       }
     },
     "recipes": {
-      "tabOneClick": "Ein-Klick-Apps",
-      "tabOneClickHint": "Getestete Apps. Das Panel richtet Datenbank, Passwörter und Datenspeicher für Sie ein.",
-      "tabDocker": "Docker",
-      "tabDockerHint": "Starten Sie Ihren eigenen Container: Suchen Sie ein Image, fügen Sie eine Compose-Datei ein oder geben Sie ein Image von Hand ein.",
-      "searchPlaceholder": "Ein-Klick-Apps suchen",
-      "noMatch": "Keine Ein-Klick-App passt zu „{query}“.",
-      "searchDockerInstead": "Docker-Images für „{query}“ suchen",
+      "tabOneClick": "1-Click Rezepte",
+      "tabOneClickHint": "Getestete 1-Click Rezepte. Das Panel richtet Datenbank, Passwörter und Datenspeicher für Sie ein.",
+      "tabDocker": "Container",
+      "tabDockerHint": "Unter Container starten Sie Ihren eigenen Container: Suchen Sie ein Image, fügen Sie eine Compose-Datei ein oder geben Sie ein Image von Hand ein.",
+      "searchPlaceholder": "1-Click Rezepte suchen",
+      "noMatch": "Kein 1-Click Rezept passt zu „{query}“.",
+      "searchDockerInstead": "Unter Container nach „{query}“ suchen",
       "containers": "{count, plural, one {# Container} other {# Container}}",
       "memoryFloor": "Benötigt mindestens {memory} RAM",
       "detailsTitle": "Das erhalten Sie",
@@ -5915,8 +5915,8 @@
       "firstRunNone": "Keine Einrichtung nötig: Öffnen Sie die Website und nutzen Sie sie.",
       "testedVersions": "Getestete Versionen",
       "docs": "Dokumentation",
-      "recipeAvailable": "{title} ist als Ein-Klick-App verfügbar. Das Panel richtet alles für Sie ein.",
-      "useRecipe": "Ein-Klick-App {title} verwenden"
+      "recipeAvailable": "{title} ist unter 1-Click Rezepte verfügbar. Das Panel richtet alles für Sie ein.",
+      "useRecipe": "{title} unter 1-Click Rezepte verwenden"
     },
     "dockerModes": {
       "label": "Wie möchten Sie bereitstellen?",

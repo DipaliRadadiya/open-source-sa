@@ -438,6 +438,7 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
         /* Type titles are not in frontend i18n. No example lookup call here: check-i18n greps
            comments and would flag it as an unresolved key. */
         targetTitle={relabelTitle}
+        siteTypes={siteTypes}
         matched={relabelTo === suggestion ? detection?.matched : null}
       />
     </Card>

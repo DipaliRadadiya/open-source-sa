@@ -36,15 +36,8 @@ function TypeIcon({ type, className }) {
 
 // Logos get no tile; only the fallback glyph keeps one.
 function TypeTile({ type, dimmed, size = "h-9 w-14" }) {
-  if (siteTypeLogo(type.name)) {
-    return <SiteTypeLogo name={type.name} size={size} className={cn(dimmed && "opacity-50")} />;
-  }
-  if (type.recipe?.icon_data_uri) {
-    return (
-      // A validated recipe SVG data URI, not a remote image to optimise.
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={type.recipe.icon_data_uri} alt="" className={cn("size-8 shrink-0 rounded", dimmed && "opacity-50")} />
-    );
+  if (type.recipe?.icon_data_uri || siteTypeLogo(type.name)) {
+    return <SiteTypeLogo name={type.name} iconDataUri={type.recipe?.icon_data_uri} size={size} className={cn(dimmed && "opacity-50")} />;
   }
   return (
     <span

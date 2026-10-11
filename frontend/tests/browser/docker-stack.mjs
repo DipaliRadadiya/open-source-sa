@@ -147,9 +147,9 @@ try {
   if (await allChip.count()) { await allChip.first().click(); await page.waitForTimeout(800); }
 
   const cardTitles = (await page.locator("button .text-sm.font-medium").allTextContents()).map((t) => t.trim());
-  is("One-click apps is the default tab", await page.getByRole("tab", { name: "One-click apps" }).getAttribute("aria-selected"), "true");
+  is("1-Click Recipes is the default tab", await page.getByRole("tab", { name: "1-Click Recipes" }).getAttribute("aria-selected"), "true");
   cardTitles.includes("Ghost")
-    ? ok("One-click apps lists Ghost")
+    ? ok("1-Click Recipes lists Ghost")
     : bad("Ghost recipe card", cardTitles.slice(0, 12).join(", "));
   is("Docker is not mixed into the recipe cards", cardTitles.includes("Docker container"), false);
   is("every application card is an application", cardTitles.length >= 18, true);
@@ -166,7 +166,7 @@ try {
   chips.includes("Databases") ? bad("no Databases category chip", "still present") : ok("no Databases category chip");
 
   // ---- 7. choosing Docker leads with the image search, not an image+port form
-  await page.getByRole("tab", { name: "Docker", exact: true }).click();
+  await page.getByRole("tab", { name: "Container", exact: true }).click();
   await page.waitForTimeout(2500);
   const search = page.getByRole("combobox", { name: "Docker image" });
   is("the image is chosen by searching", await search.count(), 1);

@@ -126,9 +126,9 @@ function ActionsCell({ row, table }) {
   );
 }
 
-function NameCell({ row, missingDatabase = false, gitProvider = null }) {
+function NameCell({ row, missingDatabase = false, gitProvider = null, iconDataUri }) {
   const t = useTranslations("applications");
-  return <div className="flex min-w-0 items-center gap-3"><SiteTypeLogo name={row.original.site_type} provider={gitProvider} label={row.original.site_type_title ?? row.original.site_type} /><div className="min-w-0"><div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1"><Link href={`/applications/${row.original.id}`} prefetch={false} className="group inline-flex min-w-0 items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline"><span className="truncate" title={row.original.name}>{row.original.name}</span><ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></Link>{/* A copy and the site it copies sit next to each other in this list under near-identical names. Marking the copy is the difference between editing the right site and the wrong one. */}{row.original.is_staging ? <Badge variant="warning" className="shrink-0 font-normal">{t("stagingBadge")}</Badge> : null}<ApplicationOriginBadge origin={row.original.origin} compact />{/* Only for a site type that needs a database and has none: its backups will not contain one, and nothing else in this list would say so. */}{missingDatabase ? <Badge variant="warning" className="shrink-0 font-normal">{t("noDatabaseBadge")}</Badge> : null}</div><div className="flex min-w-0 items-center gap-1">{/* The padlock goes beside the DOMAIN, not in a column of its own: TLS is a property of the address, which is the convention every browser already taught people, and `url` only ever describes this one domain. It also costs no width in a table that is already at 100%. */}<TlsMark application={row.original} label={isServedOverTls(row.original) ? t("domains.secured") : t("domains.noCertificate")} /><DomainText domain={row.original.domain} className="font-mono text-xs text-muted-foreground" />{row.original.status === "active" && row.original.url ? <VisitSiteLink href={row.original.url} label={t("actions.visitNamed", { domain: row.original.domain })} className="size-5" /> : null}</div></div></div>;
+  return <div className="flex min-w-0 items-center gap-3"><SiteTypeLogo name={row.original.site_type} provider={gitProvider} label={row.original.site_type_title ?? row.original.site_type} iconDataUri={iconDataUri} /><div className="min-w-0"><div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1"><Link href={`/applications/${row.original.id}`} prefetch={false} className="group inline-flex min-w-0 items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline"><span className="truncate" title={row.original.name}>{row.original.name}</span><ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></Link>{/* A copy and the site it copies sit next to each other in this list under near-identical names. Marking the copy is the difference between editing the right site and the wrong one. */}{row.original.is_staging ? <Badge variant="warning" className="shrink-0 font-normal">{t("stagingBadge")}</Badge> : null}<ApplicationOriginBadge origin={row.original.origin} compact />{/* Only for a site type that needs a database and has none: its backups will not contain one, and nothing else in this list would say so. */}{missingDatabase ? <Badge variant="warning" className="shrink-0 font-normal">{t("noDatabaseBadge")}</Badge> : null}</div><div className="flex min-w-0 items-center gap-1">{/* The padlock goes beside the DOMAIN, not in a column of its own: TLS is a property of the address, which is the convention every browser already taught people, and `url` only ever describes this one domain. It also costs no width in a table that is already at 100%. */}<TlsMark application={row.original} label={isServedOverTls(row.original) ? t("domains.secured") : t("domains.noCertificate")} /><DomainText domain={row.original.domain} className="font-mono text-xs text-muted-foreground" />{row.original.status === "active" && row.original.url ? <VisitSiteLink href={row.original.url} label={t("actions.visitNamed", { domain: row.original.domain })} className="size-5" /> : null}</div></div></div>;
 }
 
 
@@ -225,7 +225,7 @@ function ApplicationsList({
     () => [
       // `col` must be on the API's sort whitelist (else 422). Percentages plus
       // `fixedLayout` bound the columns so `truncate` works.
-      { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, meta: { className: "w-[32%] xl:w-[29%]", sortKey: "name" }, cell: ({ row }) => <NameCell row={row} missingDatabase={missingDatabase.has(row.original.id)} gitProvider={gitProviderFor(row.original, gitProviders)} /> },
+      { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, meta: { className: "w-[32%] xl:w-[29%]", sortKey: "name" }, cell: ({ row }) => <NameCell row={row} missingDatabase={missingDatabase.has(row.original.id)} gitProvider={gitProviderFor(row.original, gitProviders)} iconDataUri={siteTypes.find((type) => type.name === row.original.site_type)?.recipe?.icon_data_uri} /> },
       // Widths must total 100 at lg (32+8+16+23+14+7) and xl (29+7+14+19+11+14+6),
       // or `fixedLayout` squeezes a column.
       { id: "php", header: t("columns.php"), meta: { className: "w-[8%] xl:w-[7%]" }, cell: PhpCell },
@@ -240,7 +240,7 @@ function ApplicationsList({
     ],
     // `missingDatabase` is a dependency: attaching a database refreshes the route,
     // and a stale closure would keep the badge.
-    [t, missingDatabase],
+    [t, missingDatabase, gitProviders, siteTypes],
   );
 
   const filters = <Filters statusOptions={statusOptions} typeOptions={typeOptions} t={t} />;
@@ -279,7 +279,7 @@ function ApplicationsList({
     <div className="space-y-4">
       {toolbar}
       {/* Cards below lg, the table from lg up. */}
-      <div className="lg:hidden"><ApplicationsCards applications={applications} canManage={canManage} canMagicLogin={canMagicLogin} gitProviders={gitProviders} /></div>
+      <div className="lg:hidden"><ApplicationsCards applications={applications} canManage={canManage} canMagicLogin={canMagicLogin} gitProviders={gitProviders} siteTypes={siteTypes} /></div>
       {/* fixedLayout so the column percentages are obeyed, not treated as hints. */}
       <div className="hidden lg:block"><DataTable columns={columns} data={applications} meta={{ canManage, canMagicLogin }} fixedLayout /></div>
       <DataTablePagination meta={meta} />

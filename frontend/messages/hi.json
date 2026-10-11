@@ -5893,13 +5893,13 @@
       }
     },
     "recipes": {
-      "tabOneClick": "एक-क्लिक ऐप्स",
-      "tabOneClickHint": "जाँचे हुए ऐप्स। पैनल आपके लिए डेटाबेस, पासवर्ड और स्टोरेज सेट करता है।",
-      "tabDocker": "Docker",
-      "tabDockerHint": "अपना कंटेनर चलाएँ: इमेज खोजें, compose फ़ाइल पेस्ट करें या इमेज हाथ से दर्ज करें।",
-      "searchPlaceholder": "एक-क्लिक ऐप्स खोजें",
-      "noMatch": "“{query}” से मेल खाने वाला कोई एक-क्लिक ऐप नहीं है।",
-      "searchDockerInstead": "“{query}” के लिए Docker इमेज खोजें",
+      "tabOneClick": "1-Click रेसिपी",
+      "tabOneClickHint": "जाँची हुई 1-Click रेसिपी। पैनल आपके लिए डेटाबेस, पासवर्ड और स्टोरेज सेट करता है।",
+      "tabDocker": "कंटेनर",
+      "tabDockerHint": "कंटेनर टैब में अपना कंटेनर चलाएँ: इमेज खोजें, compose फ़ाइल पेस्ट करें या इमेज हाथ से दर्ज करें।",
+      "searchPlaceholder": "1-Click रेसिपी खोजें",
+      "noMatch": "“{query}” से मेल खाने वाली कोई 1-Click रेसिपी नहीं है।",
+      "searchDockerInstead": "कंटेनर टैब में “{query}” खोजें",
       "containers": "{count, plural, one {# कंटेनर} other {# कंटेनर}}",
       "memoryFloor": "कम से कम {memory} RAM चाहिए",
       "detailsTitle": "आपको क्या मिलेगा",
@@ -5915,8 +5915,8 @@
       "firstRunNone": "सेटअप की ज़रूरत नहीं: साइट खोलें और इस्तेमाल करें।",
       "testedVersions": "जाँचे हुए संस्करण",
       "docs": "दस्तावेज़",
-      "recipeAvailable": "{title} एक-क्लिक ऐप के रूप में उपलब्ध है। पैनल आपके लिए सब कुछ सेट करता है।",
-      "useRecipe": "एक-क्लिक {title} इस्तेमाल करें"
+      "recipeAvailable": "{title} 1-Click रेसिपी में उपलब्ध है। पैनल आपके लिए सब कुछ सेट करता है।",
+      "useRecipe": "1-Click रेसिपी में {title} इस्तेमाल करें"
     },
     "dockerModes": {
       "label": "आप कैसे डिप्लॉय करना चाहते हैं?",

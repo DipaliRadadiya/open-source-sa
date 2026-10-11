@@ -83,7 +83,7 @@ async function submit() {
 
 test("Docker server defaults to One-click recipes and offers no Docker container card", () => {
   renderForm();
-  assert.equal(screen.getByRole("tab", { name: "One-click apps" }).getAttribute("aria-selected"), "true");
+  assert.equal(screen.getByRole("tab", { name: "1-Click Recipes" }).getAttribute("aria-selected"), "true");
   assert.ok(screen.getByRole("button", { name: /Ghost/ }));
   assert.ok(screen.getByRole("button", { name: /Vaultwarden/ }));
   assert.equal(screen.queryByRole("button", { name: /Docker container/ }), null);
@@ -92,10 +92,10 @@ test("Docker server defaults to One-click recipes and offers no Docker container
 
 test("empty recipe search cross-links into Docker and seeds the exact image query", async () => {
   renderForm();
-  fireEvent.change(screen.getByRole("textbox", { name: "Search one-click apps" }), { target: { value: "zzz" } });
-  assert.ok(screen.getByText("No one-click app matches “zzz”."));
-  fireEvent.click(screen.getByRole("button", { name: "Search Docker images for “zzz”" }));
-  assert.equal(screen.getByRole("tab", { name: "Docker", exact: true }).getAttribute("aria-selected"), "true");
+  fireEvent.change(screen.getByRole("textbox", { name: "Search 1-Click Recipes" }), { target: { value: "zzz" } });
+  assert.ok(screen.getByText("No 1-Click Recipe matches “zzz”."));
+  fireEvent.click(screen.getByRole("button", { name: "Search in Container for “zzz”" }));
+  assert.equal(screen.getByRole("tab", { name: "Container", exact: true }).getAttribute("aria-selected"), "true");
   assert.equal((await screen.findByRole("combobox", { name: /^Docker image/ })).value, "zzz");
   assert.equal(harness.sent.length, 0);
 });
@@ -124,7 +124,7 @@ test("LEMP keeps the existing type picker with no source tabs", () => {
 
 test("compose URL props activate Docker and submit existing Compose fields, not docker_source", async () => {
   renderForm({ initialType: "docker", initialDockerSource: "compose" });
-  assert.equal(screen.getByRole("tab", { name: "Docker", exact: true }).getAttribute("aria-selected"), "true");
+  assert.equal(screen.getByRole("tab", { name: "Container", exact: true }).getAttribute("aria-selected"), "true");
   const compose = "services:\n  app:\n    image: nginx:alpine\n";
   fireEvent.change(await screen.findByRole("textbox", { name: /^Compose file/ }), { target: { value: compose } });
   assert.equal(screen.queryByRole("combobox", { name: /^Docker image/ }), null);
@@ -162,43 +162,43 @@ test("explicit Docker cross-link replaces a prior image while ordinary tab round
   fireEvent.change(input, { target: { value: "usememos/memos:1.0" } });
   fireEvent.click(await screen.findByRole("option", { name: /as typed/ }));
   await waitFor(() => assert.ok(screen.getAllByText("3000").length));
-  chooseTab("One-click apps");
-  chooseTab("Docker");
+  chooseTab("1-Click Recipes");
+  chooseTab("Container");
   assert.ok(screen.getByText("usememos/memos", { exact: true }));
   assert.equal(screen.queryByRole("combobox", { name: /^Docker image/ }), null);
-  chooseTab("One-click apps");
-  fireEvent.change(screen.getByRole("textbox", { name: "Search one-click apps" }), { target: { value: "new-query" } });
-  fireEvent.click(screen.getByRole("button", { name: "Search Docker images for “new-query”" }));
+  chooseTab("1-Click Recipes");
+  fireEvent.change(screen.getByRole("textbox", { name: "Search 1-Click Recipes" }), { target: { value: "new-query" } });
+  fireEvent.click(screen.getByRole("button", { name: "Search in Container for “new-query”" }));
   assert.equal((await screen.findByRole("combobox", { name: /^Docker image/ })).value, "new-query");
   assert.equal(screen.queryByText("usememos/memos", { exact: true }), null);
-  await waitFor(() => assert.equal(document.activeElement, screen.getByRole("tab", { name: "Docker", exact: true })));
+  await waitFor(() => assert.equal(document.activeElement, screen.getByRole("tab", { name: "Container", exact: true })));
   assert.equal(harness.sent.length, 0);
 });
 
 test("tabs restore the last selected recipe, or clear when none was chosen", () => {
   renderPicker();
-  chooseTab("Docker");
+  chooseTab("Container");
   assert.equal(pickerValues().site_type, "docker");
-  chooseTab("One-click apps");
+  chooseTab("1-Click Recipes");
   assert.equal(pickerValues().site_type, "");
   fireEvent.click(screen.getByRole("button", { name: /Ghost/ }));
-  chooseTab("Docker");
-  chooseTab("One-click apps");
+  chooseTab("Container");
+  chooseTab("1-Click Recipes");
   assert.equal(pickerValues().site_type, "ghost");
   assert.ok(screen.getByText("ghost, db"));
 });
 
 test("initial compose mode selects Docker with form-only compose source preserved", () => {
   renderPicker({ initialType: "docker", initialSource: "compose" });
-  assert.equal(screen.getByRole("tab", { name: "Docker", exact: true }).getAttribute("aria-selected"), "true");
+  assert.equal(screen.getByRole("tab", { name: "Container", exact: true }).getAttribute("aria-selected"), "true");
   assert.equal(pickerValues().docker_source, "compose");
 });
 
 test("no-match cross-link clears Compose mode and records search/query without choosing an image", () => {
   renderPicker({ initialType: "docker", initialSource: "compose" });
-  chooseTab("One-click apps");
-  fireEvent.change(screen.getByRole("textbox", { name: "Search one-click apps" }), { target: { value: "  missing-app  " } });
-  fireEvent.click(screen.getByRole("button", { name: "Search Docker images for “missing-app”" }));
+  chooseTab("1-Click Recipes");
+  fireEvent.change(screen.getByRole("textbox", { name: "Search 1-Click Recipes" }), { target: { value: "  missing-app  " } });
+  fireEvent.click(screen.getByRole("button", { name: "Search in Container for “missing-app”" }));
   assert.deepEqual(pickerValues(), {
     site_type: "docker", docker_source: "search", docker_mode: "simple", docker_search_query: "missing-app",
     image: "", container_port: "", docker_image_state: "", docker_volumes: [], docker_env: [], docker_required_env: [],
@@ -208,19 +208,19 @@ test("no-match cross-link clears Compose mode and records search/query without c
 test("a match hidden by Popular offers All categories instead of a false Docker no-match", () => {
   const unpopular = { ...VAULTWARDEN, popular: false };
   renderPicker({ siteTypes: [DOCKER, GHOST, unpopular] });
-  fireEvent.change(screen.getByRole("textbox", { name: "Search one-click apps" }), { target: { value: "vaultwarden" } });
-  assert.equal(screen.queryByRole("button", { name: /Search Docker images/ }), null);
+  fireEvent.change(screen.getByRole("textbox", { name: "Search 1-Click Recipes" }), { target: { value: "vaultwarden" } });
+  assert.equal(screen.queryByRole("button", { name: /Search in Container/ }), null);
   fireEvent.click(screen.getByRole("button", { name: "Search all categories" }));
   assert.ok(screen.getByRole("button", { name: /Vaultwarden/ }));
 });
 
 test("whitespace search does not claim no recipe match, and query markup stays text", () => {
   renderPicker();
-  const input = screen.getByRole("textbox", { name: "Search one-click apps" });
+  const input = screen.getByRole("textbox", { name: "Search 1-Click Recipes" });
   fireEvent.change(input, { target: { value: "   " } });
-  assert.equal(screen.queryByRole("button", { name: /Search Docker images/ }), null);
+  assert.equal(screen.queryByRole("button", { name: /Search in Container/ }), null);
   fireEvent.change(input, { target: { value: "<script>bad()</script>" } });
-  assert.ok(screen.getByText('No one-click app matches “<script>bad()</script>”.'));
+  assert.ok(screen.getByText('No 1-Click Recipe matches “<script>bad()</script>”.'));
   assert.equal(document.querySelector("script"), null);
 });
 
@@ -273,4 +273,20 @@ test("a new recipe without a built-in logo uses the catalog's data URI", () => {
   const image = document.querySelector(`img[src="${uri}"]`);
   assert.ok(image);
   assert.equal(image.getAttribute("alt"), "");
+});
+
+
+test("recipe card and summary both prefer the catalog logo over the WordPress static map", () => {
+  const uri = "data:image/svg+xml;base64,PHN2Zy8+";
+  const wordpress = { ...recipeType("wordpress_container", { icon_data_uri: uri }), title: "WordPress" };
+  renderPicker({ siteTypes: [DOCKER, wordpress] });
+  const card = screen.getByRole("button", { name: /WordPress/ });
+  const cardLogo = card.querySelector("img");
+  assert.equal(cardLogo.getAttribute("src"), uri);
+  assert.equal(cardLogo.getAttribute("aria-hidden"), "true");
+  fireEvent.click(card);
+  const heading = screen.getByRole("heading", { name: "What you get" });
+  assert.equal(heading.querySelector("img").getAttribute("src"), uri);
+  assert.equal(heading.querySelector("img").getAttribute("alt"), "");
+  assert.equal(heading.querySelector("img").getAttribute("aria-hidden"), "true");
 });

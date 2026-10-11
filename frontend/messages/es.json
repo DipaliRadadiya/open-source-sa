@@ -5893,13 +5893,13 @@
       }
     },
     "recipes": {
-      "tabOneClick": "Apps con un clic",
-      "tabOneClickHint": "Apps probadas. El panel configura la base de datos, las contraseñas y el almacenamiento por ti.",
-      "tabDocker": "Docker",
-      "tabDockerHint": "Ejecuta tu propio contenedor: busca una imagen, pega un archivo compose o introduce una imagen a mano.",
-      "searchPlaceholder": "Buscar apps con un clic",
-      "noMatch": "Ninguna app con un clic coincide con «{query}».",
-      "searchDockerInstead": "Buscar imágenes Docker para «{query}»",
+      "tabOneClick": "1-Click Recetas",
+      "tabOneClickHint": "Recetas 1-Click probadas. El panel configura la base de datos, las contraseñas y el almacenamiento por ti.",
+      "tabDocker": "Contenedor",
+      "tabDockerHint": "En Contenedor, ejecuta tu propio contenedor: busca una imagen, pega un archivo compose o introduce una imagen a mano.",
+      "searchPlaceholder": "Buscar recetas 1-Click",
+      "noMatch": "Ninguna receta 1-Click coincide con «{query}».",
+      "searchDockerInstead": "Buscar en Contenedor «{query}»",
       "containers": "{count, plural, one {# contenedor} other {# contenedores}}",
       "memoryFloor": "Necesita al menos {memory} de RAM",
       "detailsTitle": "Qué incluye",
@@ -5915,8 +5915,8 @@
       "firstRunNone": "No hay nada que configurar: abre el sitio y úsalo.",
       "testedVersions": "Versiones probadas",
       "docs": "Documentación",
-      "recipeAvailable": "{title} está disponible como app con un clic. El panel lo configura todo por ti.",
-      "useRecipe": "Usar {title} con un clic"
+      "recipeAvailable": "{title} está disponible en 1-Click Recetas. El panel lo configura todo por ti.",
+      "useRecipe": "Usar {title} en 1-Click Recetas"
     },
     "dockerModes": {
       "label": "¿Cómo quieres desplegar?",

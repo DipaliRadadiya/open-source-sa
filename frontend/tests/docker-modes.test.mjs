@@ -89,9 +89,9 @@ test("Search is the default, and its first local Ghost hint selects the recipe a
   assert.ok(screen.getByRole("radiogroup", { name: mode.label }));
   fireEvent.change(searchInput(), { target: { value: "  gHoSt  " } });
   assert.ok(screen.getByText(messages.applications.recipes.recipeAvailable.replace("{title}", "Ghost")));
-  assert.equal(screen.queryByRole("button", { name: "Use one-click Ghost Second" }), null);
-  fireEvent.click(screen.getByRole("button", { name: "Use one-click Ghost", exact: true }));
-  await waitFor(() => assert.equal(screen.getByRole("tab", { name: "One-click apps" }).getAttribute("aria-selected"), "true"));
+  assert.equal(screen.queryByRole("button", { name: "Use Ghost Second in 1-Click Recipes" }), null);
+  fireEvent.click(screen.getByRole("button", { name: "Use Ghost in 1-Click Recipes", exact: true }));
+  await waitFor(() => assert.equal(screen.getByRole("tab", { name: "1-Click Recipes" }).getAttribute("aria-selected"), "true"));
   assert.ok(screen.getByRole("heading", { name: "What you get" }));
   await fillDetails();
   const body = await submit();
@@ -103,11 +103,11 @@ test("Search is the default, and its first local Ghost hint selects the recipe a
 test("local recipe hint needs two characters, accepts title prefixes, and leaves unmatched search alone", () => {
   renderForm();
   fireEvent.change(searchInput(), { target: { value: "g" } });
-  assert.equal(screen.queryByRole("button", { name: /Use one-click/ }), null);
+  assert.equal(screen.queryByRole("button", { name: /in 1-Click Recipes/ }), null);
   fireEvent.change(searchInput(), { target: { value: "gh" } });
-  assert.ok(screen.getByRole("button", { name: "Use one-click Ghost" }));
+  assert.ok(screen.getByRole("button", { name: "Use Ghost in 1-Click Recipes" }));
   fireEvent.change(searchInput(), { target: { value: "nginx" } });
-  assert.equal(screen.queryByRole("button", { name: /Use one-click/ }), null);
+  assert.equal(screen.queryByRole("button", { name: /in 1-Click Recipes/ }), null);
 });
 
 test("clicking the active mode cannot deselect it", () => {
@@ -195,7 +195,7 @@ test("moving to Manual cancels a debounced search, hides recipe hints and opens 
   renderForm();
   fireEvent.change(searchInput(), { target: { value: "ghost" } });
   changeMode(mode.manual);
-  assert.equal(screen.queryByRole("button", { name: /Use one-click/ }), null);
+  assert.equal(screen.queryByRole("button", { name: /in 1-Click Recipes/ }), null);
   assert.equal(screen.queryByRole("listbox"), null);
   assert.ok(screen.getByRole("combobox", { name: messages.applications.dockerImage.privateRegistry }));
   await new Promise((resolve) => setTimeout(resolve, 350));
@@ -216,11 +216,11 @@ test("changing modes keeps a chosen image and edited settings without inspecting
 
 test("Compose survives a recipe tab round-trip even though type reset unregisters backend fields", async () => {
   renderForm({ initialType: "ghost" });
-  changeTab("Docker");
+  changeTab("Container");
   changeMode(mode.compose);
-  changeTab("One-click apps");
+  changeTab("1-Click Recipes");
   assert.ok(screen.getByRole("heading", { name: "What you get" }));
-  changeTab("Docker");
+  changeTab("Container");
   assert.equal(screen.getByRole("radio", { name: mode.compose }).getAttribute("aria-checked"), "true");
   assert.ok(await screen.findByRole("textbox", { name: /^Compose file/ }));
   assert.equal(screen.queryByRole("combobox", { name: /^Docker image/ }), null);

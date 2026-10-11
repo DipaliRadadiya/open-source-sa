@@ -50,7 +50,7 @@ test("a finding with nowhere to go still gets a chip and no hover", () => {
 
 test("the header is an identity card carrying the site's own mark", () => {
   assert.match(page, /import \{ SiteTypeLogo \}/);
-  assert.match(page, /<SiteTypeLogo\s+name=\{application\.site_type\}[\s\S]{0,120}size="h-6 w-6"\s*\/>/);
+  assert.match(page, /<SiteTypeLogo\s+name=\{application\.site_type\}[\s\S]{0,300}size="h-6 w-6"\s*\/>/);
   assert.match(page, /flex size-11 shrink-0 items-center justify-center rounded-lg border bg-background/);
   // One surface, matching the Files toolbar so the two pages read as one product.
   assert.match(page, /<div className="rounded-xl border bg-muted\/30 p-4">/);

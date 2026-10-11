@@ -5893,13 +5893,13 @@
       }
     },
     "recipes": {
-      "tabOneClick": "ワンクリックアプリ",
-      "tabOneClickHint": "動作確認済みのアプリです。パネルがデータベース、パスワード、ストレージを設定します。",
-      "tabDocker": "Docker",
-      "tabDockerHint": "自分でコンテナーを実行します。イメージの検索、composeファイルの貼り付け、イメージの手入力ができます。",
-      "searchPlaceholder": "ワンクリックアプリを検索",
-      "noMatch": "「{query}」に一致するワンクリックアプリはありません。",
-      "searchDockerInstead": "「{query}」のDockerイメージを検索",
+      "tabOneClick": "1-Click レシピ",
+      "tabOneClickHint": "動作確認済みの1-Click レシピです。パネルがデータベース、パスワード、ストレージを設定します。",
+      "tabDocker": "コンテナ",
+      "tabDockerHint": "コンテナタブで自分のコンテナーを実行します。イメージの検索、composeファイルの貼り付け、イメージの手入力ができます。",
+      "searchPlaceholder": "1-Click レシピを検索",
+      "noMatch": "「{query}」に一致する1-Click レシピはありません。",
+      "searchDockerInstead": "コンテナタブで「{query}」を検索",
       "containers": "{count, plural, other {コンテナー#個}}",
       "memoryFloor": "少なくとも{memory}のRAMが必要です",
       "detailsTitle": "構成内容",
@@ -5915,8 +5915,8 @@
       "firstRunNone": "設定は不要です。サイトを開いて利用してください。",
       "testedVersions": "動作確認済みのバージョン",
       "docs": "ドキュメント",
-      "recipeAvailable": "{title}はワンクリックアプリとして利用できます。パネルがすべて設定します。",
-      "useRecipe": "ワンクリックで{title}を使う"
+      "recipeAvailable": "{title}は1-Click レシピで利用できます。パネルがすべて設定します。",
+      "useRecipe": "1-Click レシピで{title}を使う"
     },
     "dockerModes": {
       "label": "どの方法でデプロイしますか？",

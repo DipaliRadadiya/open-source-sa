@@ -19,6 +19,7 @@ export function ApplicationsCards({
   canManage = false,
   canMagicLogin = false,
   gitProviders = new Map(),
+  siteTypes = [],
 }) {
   const t = useTranslations("applications");
   const format = useFormatter();
@@ -31,6 +32,7 @@ export function ApplicationsCards({
             <SiteTypeLogo
               name={application.site_type}
               provider={gitProviderFor(application, gitProviders)}
+              iconDataUri={siteTypes.find((type) => type.name === application.site_type)?.recipe?.icon_data_uri}
               className="mt-0.5"
             />
             <div className="min-w-0 flex-1">

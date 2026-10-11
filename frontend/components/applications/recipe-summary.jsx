@@ -1,3 +1,4 @@
+import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { useTranslations } from "next-intl";
 import { ChevronDown, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,10 @@ export function RecipeSummary({ type }) {
   return (
     <Card size="sm">
       <CardHeader>
-        <CardTitle as="h3">{t("recipes.detailsTitle")}</CardTitle>
+        <CardTitle as="h3" className="flex items-center gap-3">
+          <SiteTypeLogo name={type.name} iconDataUri={recipe.icon_data_uri} />
+          {t("recipes.detailsTitle")}
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-x-4 sm:gap-y-2">

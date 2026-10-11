@@ -276,6 +276,7 @@ export default async function ApplicationDetailPage({ params }) {
               <SiteTypeLogo
                 name={application.site_type}
                 provider={gitProviderFor(application, providersByAccountId(gitAccounts))}
+                iconDataUri={siteTypes.siteTypes.find((type) => type.name === application.site_type)?.recipe?.icon_data_uri}
                 size="h-6 w-6"
               />
             </span>
