@@ -746,7 +746,7 @@ Example Ghost response on a Docker server (the existing field labels/help are lo
       },
       "inputs": [],
       "docs_url": null,
-      "icon_data_uri": null
+      "icon_data_uri": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIj48cmVjdCB4PSIwLjAiIHk9IjAuMCIgd2lkdGg9IjI0LjAiIGhlaWdodD0iMjQuMCIgcng9IjIuODgiIGZpbGw9IiNmZmZmZmYiIC8+PHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0yNCAxMkMyNCAxOC42Mjc0IDE4LjYyNzQgMjQgMTIgMjRDNS4zNzI1OCAyNCAwIDE4LjYyNzQgMCAxMkMwIDUuMzcyNTggNS4zNzI1OCAwIDEyIDBDMTguNjI3NCAwIDI0IDUuMzcyNTggMjQgMTJaTTExLjgzMjYgMi4zMzg3OUM2LjM3Nzg1IDIuOTUxODkgMy45NTkwMSA1LjIwNzk3IDMuNDExMjYgOS43NDY5OUMzLjM0ODk2IDEwLjI2MzIgMy4yMjY0MiAxMC43ODA1IDMuMTA0NDMgMTEuMjk1NEMyLjkzMjc3IDEyLjAyIDIuNzYyMjEgMTIuNzQgMi43NjIyMSAxMy40NDU4QzIuNzYyMjEgMTcuOTg4NSA2LjU4NTYgMjEuNTU2IDExLjEyODMgMjEuNTU2QzEyLjg5NTkgMjEuNTU2IDE0LjQ0MzMgMjAuODE0NCAxNS44NzU2IDIwLjA0OEMxOS4wNTM2IDE4LjM0NzggMjIuMDMyOCAxNi4yNTk3IDIyLjAzMjggMTIuNTQxMUMyMi4wMzI4IDkuOTE1MTIgMjAuMTA1MSA3LjU2OTMyIDE4LjQ2NiA1LjU3NDdDMTguMzgzNCA1LjQ3NDE2IDE4LjMwMTUgNS4zNzQ1MSAxOC4yMjA2IDUuMjc1NzdDMTcuMzg2NiA0LjI1NzQyIDE0LjQzMzMgMi4wNDY0MyAxMS44MzI2IDIuMzM4NzlaIiBmaWxsPSIjMTUxNzFBIiAvPjwvc3ZnPgo="
     }
   }
 }
@@ -761,7 +761,7 @@ Every `/site-types` entry gains a final `recipe` key. It is null for `docker` an
 - `volumes` is a list of `{role, path}` and `images` a list of `{role, ref, tested}`; `tested` is a list. These are recipe metadata, not an inspection of the installed containers. The frozen legacy image environment overrides may change an actual deployment's image without changing recipe metadata.
 - `memory_floor` is a size string or null. `first_run` is `{kind, credential_labels}`. Credential labels are the declared `username`, `password`, `email`, `url`, `token` names, or `[]`; no credential values or source secret keys appear here.
 - `inputs` is a list of names (e.g. Chatwoot's `["admin_email"]`), not input definitions. The existing `fields` key still drives validation/form rendering.
-- `docs_url` is HTTPS or null; `icon_data_uri` is the sanitized recipe SVG data URI or null. Ghost currently declares neither, so both are null (do not invent the optional URL shown in the design sketch).
+- `docs_url` is HTTPS or null; `icon_data_uri` is the sanitized recipe SVG data URI or null. Ghost ships an SVG icon, so `icon_data_uri` is set; `docs_url` remains null (do not invent the optional URL shown in the design sketch).
 
 **Deprecation:** recipes declaring `deprecated: true` are omitted from both catalogs, and their detail endpoint is `404`. The existing create validator refuses them with `422` on `site_type`, using `application.unavailable.deprecated`: “This one-click app has been retired. Existing sites keep running, but new ones can't be created.” The underlying availability reason code is `deprecated`, with no installable runtime; it takes precedence over the stack/runtime gates. This does not add an `unavailable_code` property to validation responses. Existing sites still resolve/render through the registry and retain their recipe origin, with `deprecated: true` there.
 

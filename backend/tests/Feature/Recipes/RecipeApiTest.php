@@ -42,7 +42,7 @@ it('returns the same Ghost catalog entry with list-shaped images and volumes', f
         'volumes' => [['role' => 'content', 'path' => '/var/lib/ghost/content'], ['role' => 'db', 'path' => '/var/lib/mysql']],
         'images' => [['role' => 'app', 'ref' => 'ghost:5-alpine', 'tested' => ['ghost:5-alpine']], ['role' => 'db', 'ref' => 'mysql:8.0', 'tested' => ['mysql:8.0']]],
         'memory_floor' => null, 'first_run' => ['kind' => 'setup_wizard', 'credential_labels' => []],
-        'inputs' => [], 'docs_url' => null, 'icon_data_uri' => null,
+        'inputs' => [], 'docs_url' => null, 'icon_data_uri' => app(RecipeRegistry::class)->find('ghost')->iconDataUri,
     ]);
     $catalog = $this->getJson('/api/site-types')->assertOk()->json('site_types');
     expect($entry)->toBe(collect($catalog)->firstWhere('name', 'ghost'));
