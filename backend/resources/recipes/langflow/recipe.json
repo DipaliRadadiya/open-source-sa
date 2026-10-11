@@ -21,11 +21,15 @@
     "images": {
         "app": {
             "ref": "langflowai/langflow:1.12.5",
-            "tested": []
+            "tested": [
+                "langflowai/langflow:1.12.5"
+            ]
         },
         "db": {
             "ref": "postgres:16.15-alpine",
-            "tested": []
+            "tested": [
+                "postgres:16.15-alpine"
+            ]
         }
     },
     "services": [

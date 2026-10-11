@@ -21,11 +21,15 @@
     "images": {
         "app": {
             "ref": "odoo:19.0-20260926",
-            "tested": []
+            "tested": [
+                "odoo:19.0-20260926"
+            ]
         },
         "db": {
             "ref": "postgres:16.15-alpine",
-            "tested": []
+            "tested": [
+                "postgres:16.15-alpine"
+            ]
         }
     },
     "services": [

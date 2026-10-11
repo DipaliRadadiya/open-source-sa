@@ -21,11 +21,15 @@
     "images": {
         "app": {
             "ref": "ghcr.io/umami-software/umami:3.4.0",
-            "tested": []
+            "tested": [
+                "ghcr.io/umami-software/umami:3.4.0"
+            ]
         },
         "db": {
             "ref": "postgres:16.15-alpine",
-            "tested": []
+            "tested": [
+                "postgres:16.15-alpine"
+            ]
         }
     },
     "services": [
