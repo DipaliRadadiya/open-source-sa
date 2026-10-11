@@ -731,12 +731,12 @@ Example Ghost response on a Docker server (the existing field labels/help are lo
         {
           "role": "app",
           "ref": "ghost:5-alpine",
-          "tested": []
+          "tested": ["ghost:5-alpine"]
         },
         {
           "role": "db",
           "ref": "mysql:8.0",
-          "tested": []
+          "tested": ["mysql:8.0"]
         }
       ],
       "memory_floor": null,

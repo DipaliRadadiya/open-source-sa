@@ -3,6 +3,7 @@
 namespace App\Services\Server\Applications\Installers;
 
 use App\Contracts\SiteInstaller;
+use App\Enums\ApplicationStatus;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Services\Applications\SiteTypeManager;
@@ -16,6 +17,7 @@ use App\Services\Server\ServerOps;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * Turns a one-click Docker app into a compose file this site can run.
@@ -141,9 +143,61 @@ class DockerAppInstaller implements SiteInstaller
             return;
         }
 
-        $application->forceFill([
-            'compose' => $this->renderFor($application, $url),
-        ])->save();
+        $previous = $application->compose;
+        $rendered = $this->renderFor($application, $url);
+
+        // Installation publishes later through the provisioner. A disabled
+        // application must never be started by a URL or certificate change;
+        // enable() publishes its stored compose before restoring the vhost.
+        /** @var ApplicationStatus $status The model casts this column to the enum. */
+        $status = $application->status;
+        if ($status !== ApplicationStatus::Active || $application->disabled_at !== null) {
+            if ($rendered !== $previous) {
+                $application->forceFill(['compose' => $rendered])->save();
+            }
+
+            return;
+        }
+
+        $root = app(ApplicationProvisioner::class)->documentRoot($application);
+        $disk = $this->files->get($this->containers->composePath($application, $root), [
+            'feature' => 'application', 'application' => $application->id,
+        ]);
+
+        if ($disk->failed()) {
+            throw new ProvisioningFailedException('compose_read', $disk->reference);
+        }
+
+        $published = $disk->output();
+
+        // A previous version changed only the DB. Compare the actual file as
+        // well, so upgrades repair that drift without recreating healthy sites.
+        if ($rendered === $previous && $rendered === $published) {
+            return;
+        }
+
+        $application->forceFill(['compose' => $rendered])->save();
+
+        try {
+            $this->containers->apply($application, $root);
+        } catch (Throwable $exception) {
+            try {
+                // Restore the bytes that were actually serving, not a database
+                // render that may already have drifted from them.
+                $application->forceFill(['compose' => $published])->save();
+                $this->containers->apply($application, $root);
+            } catch (Throwable) {
+                // Preserve the original publish failure and its reference.
+            } finally {
+                try {
+                    $application->forceFill(['compose' => $previous])->save();
+                } catch (Throwable) {
+                    // A failed compensation must not hide the publish failure.
+                }
+            }
+
+            throw $exception;
+        }
     }
 
     /**

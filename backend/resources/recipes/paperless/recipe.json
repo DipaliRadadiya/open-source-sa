@@ -21,15 +21,21 @@
     "images": {
         "app": {
             "ref": "paperlessngx/paperless-ngx:3.3",
-            "tested": []
+            "tested": [
+                "paperlessngx/paperless-ngx:3.3"
+            ]
         },
         "broker": {
             "ref": "redis:7-alpine",
-            "tested": []
+            "tested": [
+                "redis:7-alpine"
+            ]
         },
         "db": {
             "ref": "postgres:16-alpine",
-            "tested": []
+            "tested": [
+                "postgres:16-alpine"
+            ]
         }
     },
     "services": [

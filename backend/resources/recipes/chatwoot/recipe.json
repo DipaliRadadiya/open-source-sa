@@ -20,15 +20,21 @@
     "images": {
         "app": {
             "ref": "chatwoot/chatwoot:v4.17.1",
-            "tested": []
+            "tested": [
+                "chatwoot/chatwoot:v4.17.1"
+            ]
         },
         "db": {
             "ref": "pgvector/pgvector:pg16",
-            "tested": []
+            "tested": [
+                "pgvector/pgvector:pg16"
+            ]
         },
         "redis": {
             "ref": "redis:7-alpine",
-            "tested": []
+            "tested": [
+                "redis:7-alpine"
+            ]
         }
     },
     "services": [

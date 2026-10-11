@@ -20,11 +20,15 @@
     "images": {
         "app": {
             "ref": "matomo:5-apache",
-            "tested": []
+            "tested": [
+                "matomo:5-apache"
+            ]
         },
         "db": {
             "ref": "mariadb:10.11",
-            "tested": []
+            "tested": [
+                "mariadb:10.11"
+            ]
         }
     },
     "services": [

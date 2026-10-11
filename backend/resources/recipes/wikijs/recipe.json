@@ -20,11 +20,15 @@
     "images": {
         "app": {
             "ref": "ghcr.io/requarks/wiki:2",
-            "tested": []
+            "tested": [
+                "ghcr.io/requarks/wiki:2"
+            ]
         },
         "db": {
             "ref": "postgres:16-alpine",
-            "tested": []
+            "tested": [
+                "postgres:16-alpine"
+            ]
         }
     },
     "services": [

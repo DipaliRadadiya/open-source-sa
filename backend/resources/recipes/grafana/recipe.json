@@ -20,7 +20,9 @@
     "images": {
         "app": {
             "ref": "grafana/grafana:13.2",
-            "tested": []
+            "tested": [
+                "grafana/grafana:13.2"
+            ]
         }
     },
     "services": [

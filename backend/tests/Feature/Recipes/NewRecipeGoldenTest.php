@@ -191,11 +191,11 @@ it('uses the documented Paperless database engine and first boot credentials', f
     }
 });
 
-it('ships all eight new recipe taglines without claiming live tested images', function (string $slug) {
+it('ships all eight new recipe taglines with the images verified on both supported OS versions', function (string $slug) {
     $recipe = app(SiteTypeManager::class)->find($slug)->recipe();
     expect(array_keys($recipe->taglines))->toBe(Golden::LOCALES)
         ->and($recipe->hook)->toBeNull()->and($recipe->afterInstall)->toBeNull();
     foreach ($recipe->images as $image) {
-        expect($image['tested'])->toBe([]);
+        expect($image['tested'])->toBe([$image['ref']]);
     }
 })->with('new golden apps');

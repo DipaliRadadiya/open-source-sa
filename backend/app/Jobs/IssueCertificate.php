@@ -47,6 +47,7 @@ class IssueCertificate implements ShouldQueue
         public ?int $actorId = null,
         public ?string $previousCertName = null,
         public array $previousFiles = [],
+        public ?string $previousUrl = null,
     ) {}
 
     public function handle(
@@ -64,6 +65,10 @@ class IssueCertificate implements ShouldQueue
             // The application was deleted between the request and the worker.
             return;
         }
+
+        // Requests snapshot before changing Active to Pending. Older queued
+        // jobs have no snapshot; read their current scheme before Issuing.
+        $previousUrl = $this->previousUrl ?? $certificate->application->fresh(['certificate'])->url();
 
         $certificate->update([
             'status' => CertificateStatus::Issuing,
@@ -88,7 +93,6 @@ class IssueCertificate implements ShouldQueue
         }
 
         $application = $certificate->application->fresh(['domains', 'certificate', 'systemUser']);
-        $previousUrl = $application->url();
         $targetUrl = $certificate->covers((string) $application->domain)
             ? 'https://'.$application->domain
             : 'http://'.$application->domain;

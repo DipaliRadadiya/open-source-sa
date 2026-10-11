@@ -20,11 +20,15 @@
     "images": {
         "app": {
             "ref": "metabase/metabase:latest",
-            "tested": []
+            "tested": [
+                "metabase/metabase:latest"
+            ]
         },
         "db": {
             "ref": "postgres:16-alpine",
-            "tested": []
+            "tested": [
+                "postgres:16-alpine"
+            ]
         }
     },
     "services": [

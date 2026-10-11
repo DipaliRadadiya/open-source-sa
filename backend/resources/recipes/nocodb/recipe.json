@@ -20,11 +20,15 @@
     "images": {
         "app": {
             "ref": "nocodb/nocodb:latest",
-            "tested": []
+            "tested": [
+                "nocodb/nocodb:latest"
+            ]
         },
         "db": {
             "ref": "postgres:16-alpine",
-            "tested": []
+            "tested": [
+                "postgres:16-alpine"
+            ]
         }
     },
     "services": [

@@ -20,7 +20,9 @@
     "images": {
         "app": {
             "ref": "corentinth/it-tools:latest",
-            "tested": []
+            "tested": [
+                "corentinth/it-tools:latest"
+            ]
         }
     },
     "services": [

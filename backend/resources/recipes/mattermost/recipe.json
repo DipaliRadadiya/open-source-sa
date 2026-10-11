@@ -20,11 +20,15 @@
     "images": {
         "app": {
             "ref": "mattermost/mattermost-team-edition:release-10",
-            "tested": []
+            "tested": [
+                "mattermost/mattermost-team-edition:release-10"
+            ]
         },
         "db": {
             "ref": "postgres:16-alpine",
-            "tested": []
+            "tested": [
+                "postgres:16-alpine"
+            ]
         }
     },
     "services": [

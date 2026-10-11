@@ -20,11 +20,15 @@
     "images": {
         "app": {
             "ref": "lscr.io/linuxserver/bookstack:latest",
-            "tested": []
+            "tested": [
+                "lscr.io/linuxserver/bookstack:latest"
+            ]
         },
         "db": {
             "ref": "mariadb:11.4",
-            "tested": []
+            "tested": [
+                "mariadb:11.4"
+            ]
         }
     },
     "services": [

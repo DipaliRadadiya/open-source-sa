@@ -20,7 +20,9 @@
     "images": {
         "app": {
             "ref": "ghcr.io/gethomepage/homepage:latest",
-            "tested": []
+            "tested": [
+                "ghcr.io/gethomepage/homepage:latest"
+            ]
         }
     },
     "services": [

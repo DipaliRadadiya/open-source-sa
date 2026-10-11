@@ -40,7 +40,7 @@ it('returns the same Ghost catalog entry with list-shaped images and volumes', f
         'slug' => 'ghost', 'version' => 1, 'description' => null,
         'services' => [['name' => 'ghost', 'role' => 'app'], ['name' => 'db', 'role' => 'database']],
         'volumes' => [['role' => 'content', 'path' => '/var/lib/ghost/content'], ['role' => 'db', 'path' => '/var/lib/mysql']],
-        'images' => [['role' => 'app', 'ref' => 'ghost:5-alpine', 'tested' => []], ['role' => 'db', 'ref' => 'mysql:8.0', 'tested' => []]],
+        'images' => [['role' => 'app', 'ref' => 'ghost:5-alpine', 'tested' => ['ghost:5-alpine']], ['role' => 'db', 'ref' => 'mysql:8.0', 'tested' => ['mysql:8.0']]],
         'memory_floor' => null, 'first_run' => ['kind' => 'setup_wizard', 'credential_labels' => []],
         'inputs' => [], 'docs_url' => null, 'icon_data_uri' => null,
     ]);

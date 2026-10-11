@@ -20,11 +20,15 @@
     "images": {
         "app": {
             "ref": "ghost:5-alpine",
-            "tested": []
+            "tested": [
+                "ghost:5-alpine"
+            ]
         },
         "db": {
             "ref": "mysql:8.0",
-            "tested": []
+            "tested": [
+                "mysql:8.0"
+            ]
         }
     },
     "services": [

@@ -20,7 +20,9 @@
     "images": {
         "app": {
             "ref": "glanceapp/glance:latest",
-            "tested": []
+            "tested": [
+                "glanceapp/glance:latest"
+            ]
         }
     },
     "services": [

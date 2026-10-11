@@ -790,6 +790,16 @@ class ApplicationProvisioner
         $documentRoot = $this->documentRoot($application);
         $disabledAt = $application->disabled_at;
 
+        // Domain/certificate changes while disabled update stored compose but
+        // must not start a site. Publish that state before exposing its vhost.
+        if ($application->serving_profile === 'docker') {
+            try {
+                $this->containers->apply($application, $documentRoot);
+            } catch (ProvisioningFailedException $exception) {
+                throw new ApplicationAvailabilityException($exception->reference);
+            }
+        }
+
         // The process first: the real vhost proxies to it.
         if ($this->supervisor->runs($application)) {
             $started = $this->supervisor->resume($application);

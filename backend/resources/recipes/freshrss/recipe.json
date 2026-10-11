@@ -20,7 +20,9 @@
     "images": {
         "app": {
             "ref": "freshrss/freshrss:latest",
-            "tested": []
+            "tested": [
+                "freshrss/freshrss:latest"
+            ]
         }
     },
     "services": [

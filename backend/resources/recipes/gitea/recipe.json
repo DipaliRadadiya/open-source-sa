@@ -20,7 +20,9 @@
     "images": {
         "app": {
             "ref": "gitea/gitea:1",
-            "tested": []
+            "tested": [
+                "gitea/gitea:1"
+            ]
         }
     },
     "services": [

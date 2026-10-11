@@ -20,7 +20,9 @@
     "images": {
         "app": {
             "ref": "stirlingtools/stirling-pdf:latest",
-            "tested": []
+            "tested": [
+                "stirlingtools/stirling-pdf:latest"
+            ]
         }
     },
     "services": [
@@ -39,13 +41,22 @@
     "inputs": [],
     "starter_files": [],
     "first_run": {
-        "kind": "none",
-        "credentials": null
+        "kind": "default_login",
+        "credentials": [
+            {
+                "label": "username",
+                "value": "admin"
+            },
+            {
+                "label": "password",
+                "value": "stirling"
+            }
+        ]
     },
     "after_install": null,
     "hook": null,
     "notes": [
         "The named volume caches OCR language data; documents are processed and returned, never stored.",
-        "There are no accounts by default. Use panel password protection when exposing the site publicly."
+        "Sign in with the documented default account, then change its password immediately."
     ]
 }

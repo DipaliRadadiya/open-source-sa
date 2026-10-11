@@ -20,7 +20,9 @@
     "images": {
         "app": {
             "ref": "codeberg.org/forgejo/forgejo:9",
-            "tested": []
+            "tested": [
+                "codeberg.org/forgejo/forgejo:9"
+            ]
         }
     },
     "services": [

@@ -21,7 +21,9 @@
     "images": {
         "app": {
             "ref": "neosmemo/memos:0.31.0",
-            "tested": []
+            "tested": [
+                "neosmemo/memos:0.31.0"
+            ]
         }
     },
     "services": [
