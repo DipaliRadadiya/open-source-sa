@@ -26,6 +26,15 @@ These marks identify the upstream applications; they do not imply endorsement. U
 | `wikijs` | [source](https://raw.githubusercontent.com/Requarks/wiki/cf411e543f5db9c4555897370dc5797d161f8b56/frontend/public/_assets/logo-wikijs.svg) | AGPL-3.0 | Removed editor metadata and minified path separators to remain below 32 KiB. |
 | `wordpress_container` | [source](../../../frontend/public/site-types/wordpress.svg) | GPL-2.0-or-later (WordPress mark; existing panel asset) | Byte-for-byte copy of the existing panel WordPress icon as required. |
 
+## RC-16 sources
+
+| Recipe | Source URL | Licence | Adaptation / attribution |
+| --- | --- | --- | --- |
+| `openwebui` | [official mark](https://raw.githubusercontent.com/open-webui/open-webui/v0.12.0/static/static/favicon.svg) · [branding](https://raw.githubusercontent.com/open-webui/open-webui/v0.12.0/static/static/BRANDING.md) | Open WebUI Licence (v0.12.0; BSD-3-Clause terms with additional branding condition) | The official SVG embeds a PNG, forbidden by the recipe icon rules. Faithful pure-vector geometric redraw of its square mark: white circular plate, black O ring and I bar. Original branding retained; full upstream licence notice in SVG comment. No raster embedded. |
+| `langflow` | [official vector](https://raw.githubusercontent.com/langflow-ai/langflow/v1.12.5/src/frontend/src/assets/langflow-icon-smooth.svg) | MIT | Official square application mark; paths unchanged, licence notice retained in SVG comment. |
+| `umami` | [official vector](https://raw.githubusercontent.com/umami-software/umami/v3.4.0/src/assets/logo.svg) | MIT | Square padding, fixed dark color and white backing for both panel themes; paths unchanged. |
+| `odoo` | [official square O](https://raw.githubusercontent.com/odoo/odoo/2ff84495182bc2d6e87b616731f865677a12b213/addons/account/static/src/img/Odoo_logo_O.svg) | LGPL-3.0 | Official application mark; whitespace normalization only. |
+
 ## Licence references
 
 - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) — Simple Icons / BookStack fallback.

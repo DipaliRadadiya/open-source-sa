@@ -1,0 +1,89 @@
+{
+    "schema": 1,
+    "slug": "langflow",
+    "version": 1,
+    "title": "Langflow",
+    "tagline": {
+        "en": "Visual AI workflow builder with a private PostgreSQL database",
+        "es": "Constructor visual de flujos de IA con una base de datos PostgreSQL privada",
+        "de": "Visueller KI-Workflow-Builder mit privater PostgreSQL-Datenbank",
+        "fr": "Créateur visuel de workflows IA avec une base PostgreSQL privée",
+        "pt": "Criador visual de fluxos de IA com um banco PostgreSQL privado",
+        "ja": "専用 PostgreSQL データベースを備えたビジュアル AI ワークフロービルダー",
+        "ru": "Визуальный конструктор ИИ-процессов с приватной базой PostgreSQL",
+        "hi": "निजी PostgreSQL डेटाबेस के साथ विज़ुअल AI वर्कफ़्लो बिल्डर"
+    },
+    "category": "automation",
+    "icon": "langflow",
+    "popular": false,
+    "catalog_order": 230,
+    "docs_url": "https://docs.langflow.org/",
+    "images": {
+        "app": {
+            "ref": "langflowai/langflow:1.12.5",
+            "tested": []
+        },
+        "db": {
+            "ref": "postgres:16.15-alpine",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "langflow",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 7860,
+    "memory_floor": "2g",
+    "volumes": {
+        "data": "/app/langflow",
+        "db": "/var/lib/postgresql/data"
+    },
+    "secrets": [
+        {
+            "key": "LANGFLOW_SECRET_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DATABASE_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "ADMIN_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "username",
+                "value": "admin"
+            },
+            {
+                "label": "password",
+                "secret": "ADMIN_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "LANGFLOW_AUTO_LOGIN=False requires authentication instead of exposing a superuser session. The initial administrator is admin with a generated password; LANGFLOW_NEW_USER_IS_ACTIVE=False prevents newly registered users from becoming active without approval.",
+        "Only Langflow publishes a loopback port. PostgreSQL is private, with a dedicated database and user, and LANGFLOW_CONFIG_DIR persists logs, file storage and configuration in a separate named volume.",
+        "The upstream v1.12.5 example uses PostgreSQL 16-trixie to stabilize its Debian base. This new recipe pins the verified PostgreSQL 16.15-alpine patch as requested; do not switch an existing database volume between libc families without checking collation compatibility.",
+        "The latest verified Langflow release is pinned rather than older versions affected by CVE-2025-3248. The 2g application floor is provisional until both-OS live memory checks.",
+        "Exact release tags were verified for linux/amd64. Tested lists remain empty until live verification on Ubuntu 24.04 and 26.04."
+    ]
+}

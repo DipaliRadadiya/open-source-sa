@@ -61,7 +61,7 @@ function rc09GoldenSite(string $slug, array $overrides = []): Application
         'status' => 'pending',
         'app_port' => Golden::APP_PORT,
         'docker_secrets' => $secrets,
-        'settings' => null,
+        'settings' => in_array($slug, ['openwebui'], true) ? ['admin_email' => 'owner@golden.test'] : null,
     ]);
 }
 
@@ -72,7 +72,7 @@ function rc09GoldenInstall(Application $application): Application
     return $application->fresh();
 }
 
-dataset('new golden apps', array_combine(['memos', 'paperless'], array_map(fn ($slug) => [$slug], ['memos', 'paperless'])));
+dataset('new golden apps', array_combine(['memos', 'paperless', 'openwebui', 'langflow', 'umami', 'odoo'], array_map(fn ($slug) => [$slug], ['memos', 'paperless', 'openwebui', 'langflow', 'umami', 'odoo'])));
 
 it('renders the same compose on install', function (string $slug) {
     Golden::assertMatches(Golden::dir($slug).'/install-default.yml', rc09GoldenInstall(rc09GoldenSite($slug))->compose);

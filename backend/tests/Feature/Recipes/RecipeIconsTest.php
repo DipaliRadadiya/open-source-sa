@@ -7,11 +7,12 @@ require_once __DIR__.'/../../Support/Recipes/RecipeApiTestSupport.php';
 beforeEach(fn () => rc08RecipeSetup());
 afterEach(fn () => rc08RecipeCleanup());
 
-it('loads a safe vector icon for all twenty one shipped recipes', function () {
+it('loads a safe vector icon for every shipped recipe', function () {
     $recipes = app(RecipeRegistry::class)->all();
     expect(array_keys($recipes))->toEqualCanonicalizing([
         'bookstack', 'chatwoot', 'excalidraw', 'forgejo', 'freshrss', 'ghost', 'gitea', 'glance', 'grafana', 'homepage',
         'ittools', 'matomo', 'mattermost', 'memos', 'metabase', 'nocodb', 'paperless', 'stirlingpdf', 'vaultwarden', 'wikijs', 'wordpress_container',
+        'openwebui', 'langflow', 'umami', 'odoo',
     ]);
 
     foreach ($recipes as $recipe) {
@@ -32,7 +33,7 @@ it('loads a safe vector icon for all twenty one shipped recipes', function () {
 it('exposes each shipped icon unchanged in both authenticated recipe catalogs', function () {
     $this->actingAs(rc08RecipeViewer());
     $recipes = app(RecipeRegistry::class)->all();
-    $entries = $this->getJson('/api/recipes')->assertOk()->assertJsonCount(21, 'recipes')->json('recipes');
+    $entries = $this->getJson('/api/recipes')->assertOk()->assertJsonCount(count(app(RecipeRegistry::class)->all()), 'recipes')->json('recipes');
     $siteTypes = collect($this->getJson('/api/site-types')->assertOk()->json('site_types'));
 
     foreach ($entries as $entry) {

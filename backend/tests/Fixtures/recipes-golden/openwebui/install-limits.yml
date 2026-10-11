@@ -1,0 +1,49 @@
+name: sv-app-4242
+
+services:
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:v0.12.0
+    restart: unless-stopped
+    mem_limit: 640m
+    cpus: 1.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:8080"
+
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      WEBUI_SECRET_KEY: "a56e06f5176f09c8b17a260e33912907"
+      WEBUI_ADMIN_EMAIL: "owner@golden.test"
+      WEBUI_ADMIN_PASSWORD: "cba44bf01995db36238464f42b902f55"
+      WEBUI_ADMIN_NAME: Admin
+      WEBUI_URL: "https://openwebui.golden.test"
+
+    volumes:
+      - sv-app-4242_data:/app/backend/data
+
+    depends_on:
+      - ollama
+
+  ollama:
+    image: ollama/ollama:0.40.3
+    restart: unless-stopped
+    mem_limit: 4g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    volumes:
+      - sv-app-4242_ollama:/root/.ollama
+
+volumes:
+  sv-app-4242_data:
+    external: true
+  sv-app-4242_ollama:
+    external: true

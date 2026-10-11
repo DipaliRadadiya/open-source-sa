@@ -1,0 +1,124 @@
+{
+    "slug": "langflow",
+    "container_port": 7860,
+    "volume_roles": {
+        "data": "/app/langflow",
+        "db": "/var/lib/postgresql/data"
+    },
+    "generated_secrets": [
+        "LANGFLOW_SECRET_KEY",
+        "DATABASE_PASSWORD",
+        "ADMIN_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": null,
+    "default_memory_limit": "2g",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "automation",
+    "icon": "langflow",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "2g",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 2g, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_data",
+            "path": "/app/langflow"
+        },
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/postgresql/data"
+        }
+    ],
+    "docker_secret_keys": [
+        "LANGFLOW_SECRET_KEY",
+        "DATABASE_PASSWORD",
+        "ADMIN_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Langflow",
+            "tagline": "Visual AI workflow builder with a private PostgreSQL database"
+        },
+        "es": {
+            "title": "Langflow",
+            "tagline": "Constructor visual de flujos de IA con una base de datos PostgreSQL privada"
+        },
+        "de": {
+            "title": "Langflow",
+            "tagline": "Visueller KI-Workflow-Builder mit privater PostgreSQL-Datenbank"
+        },
+        "fr": {
+            "title": "Langflow",
+            "tagline": "Créateur visuel de workflows IA avec une base PostgreSQL privée"
+        },
+        "pt": {
+            "title": "Langflow",
+            "tagline": "Criador visual de fluxos de IA com um banco PostgreSQL privado"
+        },
+        "ja": {
+            "title": "Langflow",
+            "tagline": "専用 PostgreSQL データベースを備えたビジュアル AI ワークフロービルダー"
+        },
+        "ru": {
+            "title": "Langflow",
+            "tagline": "Визуальный конструктор ИИ-процессов с приватной базой PostgreSQL"
+        },
+        "hi": {
+            "title": "Langflow",
+            "tagline": "निजी PostgreSQL डेटाबेस के साथ विज़ुअल AI वर्कफ़्लो बिल्डर"
+        }
+    },
+    "catalog_en": {
+        "name": "langflow",
+        "icon": "langflow",
+        "category": "automation",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

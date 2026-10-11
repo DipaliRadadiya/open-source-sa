@@ -1,0 +1,55 @@
+name: sv-app-4242
+
+services:
+  langflow:
+    image: langflowai/langflow:1.12.5
+    restart: unless-stopped
+    mem_limit: 640m
+    cpus: 1.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:7860"
+
+    environment:
+      LANGFLOW_DATABASE_URL: "postgresql://langflow:ec97cfdd1ba4158d53a300cb7fabf90f@db:5432/langflow"
+      LANGFLOW_CONFIG_DIR: /app/langflow
+      LANGFLOW_AUTO_LOGIN: "False"
+      LANGFLOW_SUPERUSER: admin
+      LANGFLOW_SUPERUSER_PASSWORD: "3d2623234eda7ea0bff1a2d7c9a24ed1"
+      LANGFLOW_SECRET_KEY: "5948fcd870b0e296548ed05853f88eb3"
+      LANGFLOW_NEW_USER_IS_ACTIVE: "False"
+
+    volumes:
+      - sv-app-4242_data:/app/langflow
+
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16.15-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      POSTGRES_DB: langflow
+      POSTGRES_USER: langflow
+      POSTGRES_PASSWORD: "ec97cfdd1ba4158d53a300cb7fabf90f"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/postgresql/data
+
+volumes:
+  sv-app-4242_data:
+    external: true
+  sv-app-4242_db:
+    external: true

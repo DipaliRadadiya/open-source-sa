@@ -1,0 +1,89 @@
+{
+    "schema": 1,
+    "slug": "openwebui",
+    "version": 1,
+    "title": "Open WebUI",
+    "tagline": {
+        "en": "Private AI chat with Open WebUI and a CPU-only Ollama",
+        "es": "Chat de IA privado con Open WebUI y Ollama solo con CPU",
+        "de": "Privater KI-Chat mit Open WebUI und Ollama nur auf der CPU",
+        "fr": "Chat IA privé avec Open WebUI et Ollama sur CPU uniquement",
+        "pt": "Chat de IA privado com Open WebUI e Ollama apenas na CPU",
+        "ja": "Open WebUI と CPU のみの Ollama によるプライベート AI チャット",
+        "ru": "Приватный ИИ-чат с Open WebUI и Ollama только на CPU",
+        "hi": "Open WebUI और केवल CPU पर चलने वाले Ollama के साथ निजी AI चैट"
+    },
+    "category": "productivity",
+    "icon": "openwebui",
+    "popular": false,
+    "catalog_order": 220,
+    "docs_url": "https://docs.openwebui.com/",
+    "images": {
+        "app": {
+            "ref": "ghcr.io/open-webui/open-webui:v0.12.0",
+            "tested": []
+        },
+        "ollama": {
+            "ref": "ollama/ollama:0.40.3",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "openwebui",
+            "role": "app"
+        },
+        {
+            "name": "ollama",
+            "role": "worker"
+        }
+    ],
+    "container_port": 8080,
+    "memory_floor": "2g",
+    "volumes": {
+        "data": "/app/backend/data",
+        "ollama": "/root/.ollama"
+    },
+    "secrets": [
+        {
+            "key": "WEBUI_SECRET_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "ADMIN_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "WEBUI_URL",
+    "inputs": [
+        {
+            "name": "admin_email",
+            "required": true
+        }
+    ],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "email",
+                "input": "admin_email"
+            },
+            {
+                "label": "password",
+                "secret": "ADMIN_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Only Open WebUI publishes a loopback port. Ollama's unauthenticated API stays private at http://ollama:11434 and is never published.",
+        "WEBUI_ADMIN_EMAIL and WEBUI_ADMIN_PASSWORD create the administrator only when no users exist. Successful headless admin creation disables sign-up; existing users and changed passwords are preserved on restart.",
+        "This is CPU-only: recipes do not expose GPUs. Small models of 4B parameters or less are realistic within Ollama's fixed 4g ceiling; model weights persist in a named volume and are downloaded separately.",
+        "The 2g application floor is provisional until both-OS live memory checks. Only the administrator login is shown; the generated WEBUI_SECRET_KEY persists with the application's secrets.",
+        "Exact release tags were verified for linux/amd64. Tested lists remain empty until live verification on Ubuntu 24.04 and 26.04."
+    ]
+}

@@ -1,0 +1,83 @@
+{
+    "schema": 1,
+    "slug": "umami",
+    "version": 1,
+    "title": "Umami",
+    "tagline": {
+        "en": "Privacy-focused web analytics with PostgreSQL",
+        "es": "Analítica web centrada en la privacidad con PostgreSQL",
+        "de": "Datenschutzorientierte Webanalyse mit PostgreSQL",
+        "fr": "Analyse web axée sur la confidentialité avec PostgreSQL",
+        "pt": "Análise web focada na privacidade com PostgreSQL",
+        "ja": "PostgreSQL を使用したプライバシー重視のウェブ解析",
+        "ru": "Веб-аналитика с защитой конфиденциальности и PostgreSQL",
+        "hi": "PostgreSQL के साथ गोपनीयता-केंद्रित वेब विश्लेषण"
+    },
+    "category": "analytics",
+    "icon": "umami",
+    "popular": false,
+    "catalog_order": 240,
+    "docs_url": "https://umami.is/docs/install",
+    "images": {
+        "app": {
+            "ref": "ghcr.io/umami-software/umami:3.4.0",
+            "tested": []
+        },
+        "db": {
+            "ref": "postgres:16.15-alpine",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "umami",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 3000,
+    "memory_floor": "512m",
+    "volumes": {
+        "db": "/var/lib/postgresql/data"
+    },
+    "secrets": [
+        {
+            "key": "APP_SECRET",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DATABASE_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "default_login",
+        "credentials": [
+            {
+                "label": "username",
+                "value": "admin"
+            },
+            {
+                "label": "password",
+                "value": "umami"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Change the default admin password immediately after the first login. Umami creates admin/umami when initializing a new database; existing passwords are preserved.",
+        "Umami v3 uses the exact GHCR tag 3.4.0, not the older postgresql-v-prefixed tag scheme. Its official startup runs database migrations before starting the application.",
+        "PostgreSQL 16.15 is supported by Umami's documented PostgreSQL 12.14 minimum. The database has no published port and persists in its own named volume.",
+        "Two-factor authentication is not configured: Umami requires a separate persistent 64-character hexadecimal TWO_FACTOR_ENCRYPTION_KEY before users can enable 2FA.",
+        "The 512m application floor is provisional until measured on both supported Ubuntu releases; tested image lists remain empty until live verification."
+    ]
+}
