@@ -26,6 +26,7 @@ services:
       LITELLM_SALT_KEY: "sk-{{ secret.SALT_KEY }}"
       UI_USERNAME: admin
       UI_PASSWORD: "{{ secret.UI_PASSWORD }}"
+      FORWARDED_ALLOW_IPS: "*"
 
     depends_on:
       db:

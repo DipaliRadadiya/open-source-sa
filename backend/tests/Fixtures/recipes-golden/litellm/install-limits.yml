@@ -22,6 +22,7 @@ services:
       LITELLM_SALT_KEY: "sk-6cb06a391c7e0c3ccd8e2fcf3acb2520"
       UI_USERNAME: admin
       UI_PASSWORD: "9f6c212149d472bacea5ea141e4c76dc"
+      FORWARDED_ALLOW_IPS: "*"
 
     depends_on:
       db:

@@ -89,6 +89,7 @@
         "LITELLM_SALT_KEY encrypts the provider credentials stored in the database. LiteLLM's production guide says to set it once and never change it: changing it makes every stored provider key unreadable.",
         "The litellm-database image is the official build for database-backed deployments; with DATABASE_URL set it applies its Prisma migrations on start. STORE_MODEL_IN_DB lets models be managed from the UI instead of a config file.",
         "v1.105.0 is the release main-stable pointed to when this recipe was written (same digest). PostgreSQL 16.15 (the official compose's major version, pinned) has its own named volume and no published port; the proxy keeps no other data on disk.",
+        "FORWARDED_ALLOW_IPS=* makes uvicorn honour the panel proxy's X-Forwarded-Proto. Without it uvicorn trusts only 127.0.0.1, but the proxy reaches the container from the Docker network gateway, so /ui redirected to http:// and the admin login fell back to plain HTTP (found live, RC-26). The port is published on 127.0.0.1 only, so the panel proxy is the only client that can set these headers.",
         "The healthcheck is the official one (/health/liveliness through python3) pointed at 127.0.0.1. The database uses the panel database-memory default."
     ]
 }
