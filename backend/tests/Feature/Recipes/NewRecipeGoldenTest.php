@@ -72,7 +72,7 @@ function rc09GoldenInstall(Application $application): Application
     return $application->fresh();
 }
 
-dataset('new golden apps', array_combine(['memos', 'paperless', 'langflow', 'umami', 'odoo', 'immich', 'twenty', 'affine', 'penpot', 'openclaw'], array_map(fn ($slug) => [$slug], ['memos', 'paperless', 'langflow', 'umami', 'odoo', 'immich', 'twenty', 'affine', 'penpot', 'openclaw'])));
+dataset('new golden apps', array_combine(['memos', 'paperless', 'langflow', 'umami', 'odoo', 'immich', 'twenty', 'affine', 'penpot', 'openclaw', 'dify'], array_map(fn ($slug) => [$slug], ['memos', 'paperless', 'langflow', 'umami', 'odoo', 'immich', 'twenty', 'affine', 'penpot', 'openclaw', 'dify'])));
 
 it('renders the same compose on install', function (string $slug) {
     Golden::assertMatches(Golden::dir($slug).'/install-default.yml', rc09GoldenInstall(rc09GoldenSite($slug))->compose);

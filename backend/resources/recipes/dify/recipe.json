@@ -1,0 +1,175 @@
+{
+    "schema": 1,
+    "slug": "dify",
+    "version": 1,
+    "title": "Dify",
+    "tagline": {
+        "en": "Build AI apps, chatflows and agents with a visual workflow studio",
+        "es": "Crea aplicaciones de IA, chatflows y agentes con un estudio visual de flujos de trabajo",
+        "de": "KI-Apps, Chatflows und Agenten in einem visuellen Workflow-Studio erstellen",
+        "fr": "Créez des applications d’IA, des chatflows et des agents avec un studio visuel de workflows",
+        "pt": "Crie aplicações de IA, chatflows e agentes com um estúdio visual de fluxos de trabalho",
+        "ja": "ビジュアルなワークフロースタジオで AI アプリ、チャットフロー、エージェントを構築",
+        "ru": "Создавайте ИИ-приложения, чат-потоки и агентов в визуальной студии рабочих процессов",
+        "hi": "विज़ुअल वर्कफ़्लो स्टूडियो से AI ऐप, चैटफ़्लो और एजेंट बनाएँ"
+    },
+    "category": "ai",
+    "icon": "dify",
+    "popular": false,
+    "catalog_order": 310,
+    "docs_url": "https://docs.dify.ai/en/self-host/quick-start/docker-compose",
+    "images": {
+        "nginx": {
+            "ref": "nginx:1.30.5-alpine",
+            "tested": []
+        },
+        "api": {
+            "ref": "langgenius/dify-api:1.17.1",
+            "tested": []
+        },
+        "web": {
+            "ref": "langgenius/dify-web:1.17.1",
+            "tested": []
+        },
+        "sandbox": {
+            "ref": "langgenius/dify-sandbox:0.2.15",
+            "tested": []
+        },
+        "plugin_daemon": {
+            "ref": "langgenius/dify-plugin-daemon:0.6.10-local",
+            "tested": []
+        },
+        "squid": {
+            "ref": "ubuntu/squid:6.6-24.04_edge",
+            "tested": []
+        },
+        "db": {
+            "ref": "pgvector/pgvector:0.8.7-pg16-bookworm",
+            "tested": []
+        },
+        "redis": {
+            "ref": "redis:6.2.24-alpine",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "nginx",
+            "role": "app"
+        },
+        {
+            "name": "api",
+            "role": "worker"
+        },
+        {
+            "name": "worker",
+            "role": "worker"
+        },
+        {
+            "name": "worker_beat",
+            "role": "worker"
+        },
+        {
+            "name": "web",
+            "role": "worker"
+        },
+        {
+            "name": "sandbox",
+            "role": "worker"
+        },
+        {
+            "name": "plugin_daemon",
+            "role": "worker"
+        },
+        {
+            "name": "ssrf_proxy",
+            "role": "worker"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        },
+        {
+            "name": "redis",
+            "role": "cache"
+        }
+    ],
+    "container_port": 80,
+    "memory_floor": "256m",
+    "volumes": {
+        "storage": "/app/api/storage",
+        "plugins": "/app/storage",
+        "sandbox-deps": "/dependencies",
+        "db": "/var/lib/postgresql/data",
+        "redis": "/data"
+    },
+    "secrets": [
+        {
+            "key": "SECRET_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "REDIS_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "SANDBOX_API_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "PLUGIN_DAEMON_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "PLUGIN_DIFY_INNER_API_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "FILES_URL",
+    "inputs": [],
+    "starter_files": [
+        {
+            "path": "/etc/nginx/conf.d/default.conf",
+            "source": "starter/nginx-default.conf"
+        },
+        {
+            "path": "/etc/nginx/conf.d/dify-proxy.inc",
+            "source": "starter/nginx-proxy.inc"
+        },
+        {
+            "path": "/etc/squid/dify/squid.conf",
+            "source": "starter/squid.conf"
+        },
+        {
+            "path": "/conf/config.yaml",
+            "source": "starter/sandbox-config.yaml"
+        }
+    ],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "First run: open the site and Dify sends you to /install, where the first visitor creates the admin account (email, name, password). Do it right after the install: until then anyone who reaches the site can claim it. INIT_PASSWORD is not set because Dify caps it at 30 characters and the panel's secrets are 32.",
+        "Core stack only, from the official docker/docker-compose.yaml of the 1.17.1 release: nginx (the published app), api, worker, worker_beat, web, sandbox, plugin_daemon, ssrf_proxy, PostgreSQL and Redis. Left out: Weaviate and every other vector store, the collaboration websocket service (ENABLE_COLLABORATION_MODE=false), certbot, MySQL, init_permissions, and the 1.17 Agent V2 trio (agent_backend, local_sandbox, agent_ssrf_proxy); the web image keeps Agent V2 off when NEXT_PUBLIC_ENABLE_AGENT_V2 is unset. Every image is pinned exactly; upstream floats nginx:latest, ubuntu/squid:latest, redis:6-alpine and pgvector:pg16.",
+        "One PostgreSQL server with the pgvector extension is both the application database (dify) and the vector store (VECTOR_STORE=pgvector, PGVECTOR_* point at db). The plugin daemon creates and migrates its own dify_plugin database on the same server.",
+        "The nginx, Squid and sandbox configurations are starter files written once into the site folder (etc/nginx/conf.d, etc/squid/dify, conf) and bind-mounted; they are pre-rendered copies of the upstream templates, so nothing in them is substituted at start. The panel never overwrites them, so edits survive redeploys.",
+        "URLs: FILES_URL is the url key because signed file links are handed to model providers and must be absolute. TRIGGER_URL and ENDPOINT_URL_TEMPLATE use https://<domain> so webhook and plugin endpoint URLs shown in the UI are reachable. Every other *_URL is set empty (the images default some of them to 127.0.0.1) so the browser uses same-origin URLs. The inner nginx passes the panel's X-Forwarded-Proto through and the API trusts one proxy hop (RESPECT_XFORWARD_HEADERS_ENABLED), so generated links say https. With CONSOLE_WEB_URL/CONSOLE_API_URL empty, Dify does not mark its session cookies Secure.",
+        "The api container starts as root only to give the storage volume to the image's dify user (uid 1001), which is what upstream's one-shot init_permissions service did, then runs the upstream entrypoint as dify via setpriv. api, worker and worker_beat all run the upstream migration step; it holds a Redis lock, so only one migrates.",
+        "Network isolation follows upstream: the sandbox is only on an internal network shared with ssrf_proxy, api, worker, worker_beat and plugin_daemon, so code run by Code nodes reaches the internet only through the Squid proxy, which refuses private addresses. The plugin daemon installs plugins from the Dify Marketplace and PyPI and needs outbound internet. Its remote-debugging port (5003) is not published.",
+        "Secrets: SECRET_KEY, DB_PASSWORD, REDIS_PASSWORD, SANDBOX_API_KEY, PLUGIN_DAEMON_KEY and PLUGIN_DIFY_INNER_API_KEY, named as in the official .env, each 32 alphanumeric characters. SECRET_KEY signs sessions and encrypts stored provider keys; it must never change after install.",
+        "Memory: nginx takes the app limit (floor 256m); api 2g, worker 2g, plugin_daemon 2g (installed plugins run inside it), web 1g, worker_beat, sandbox and ssrf_proxy 512m; PostgreSQL and Redis use the panel database default. Model providers and API keys are added in Settings after the admin is created; the recipe ships none."
+    ]
+}

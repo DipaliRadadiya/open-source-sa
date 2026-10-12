@@ -44,6 +44,12 @@ These marks identify the upstream applications; they do not imply endorsement. U
 | `penpot` | [official vector](https://raw.githubusercontent.com/penpot/penpot/2.18.3/frontend/resources/images/assets/penpot-logo-icon.svg) | MPL-2.0 | Official application mark, path unchanged; fixed dark color and white backing for both panel themes. |
 | `openclaw` | [official vector](https://raw.githubusercontent.com/openclaw/openclaw/v2026.10.2/apps/linux/src-tauri/icons/icon.svg) | MIT | Official static application mark (the Clawd lobster); unchanged. |
 
+## RC-19 sources
+
+| Recipe | Source URL | Licence | Adaptation / attribution |
+| --- | --- | --- | --- |
+| `dify` | [official vector](https://raw.githubusercontent.com/langgenius/dify/1.17.1/web/public/logo/logo.svg) | Dify Open Source License (Apache-2.0 with additional conditions) | Official logo (the brand has no separate square symbol); paths unchanged, centred and scaled 1.1 on a white rounded square for both panel themes. |
+
 ## Licence references
 
 - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) — Simple Icons / BookStack fallback.
@@ -51,5 +57,6 @@ These marks identify the upstream applications; they do not imply endorsement. U
 - [MIT](https://opensource.org/license/mit) — Chatwoot Inc., Excalidraw contributors, Ghost Foundation, Gitea contributors, Memos contributors, Stirling PDF Inc., OpenClaw Foundation and TOEVERYTHING PTE. LTD. (AFFiNE); see the source repositories for copyright notices.
 - [GPL 2.0](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html), [GPL 3.0](https://www.gnu.org/licenses/gpl-3.0.html) and [AGPL 3.0](https://www.gnu.org/licenses/agpl-3.0.html) — the corresponding upstream projects and contributors; see their source repositories for notices.
 - [MPL 2.0](https://www.mozilla.org/en-US/MPL/2.0/) — Penpot (Kaleidos INC); see the source repository for notices.
+- [Dify Open Source License](https://github.com/langgenius/dify/blob/1.17.1/LICENSE) — LangGenius, Inc. (Apache 2.0 with additional conditions; the logo is shown unmodified).
 
 The Memos contour trace and the FreshRSS/Matomo symbol crops remain under their respective upstream licences.

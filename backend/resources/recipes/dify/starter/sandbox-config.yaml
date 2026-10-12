@@ -1,0 +1,17 @@
+# Managed by the panel's Dify recipe (RC-19): Dify 1.17.1
+# docker/volumes/sandbox/conf/config.yaml, unchanged. The compose file's API_KEY,
+# GIN_MODE, WORKER_TIMEOUT, ENABLE_NETWORK and proxy variables override the
+# matching values below at start, so the key here is never the one in use.
+app:
+  port: 8194
+  debug: True
+  key: dify-sandbox
+max_workers: 4
+max_requests: 50
+worker_timeout: 5
+enable_network: True # please make sure there is no network risk in your environment
+allowed_syscalls: # please leave it empty if you have no idea how seccomp works
+proxy:
+  socks5: ''
+  http: ''
+  https: ''
