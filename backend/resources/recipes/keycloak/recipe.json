@@ -21,11 +21,15 @@
     "images": {
         "app": {
             "ref": "quay.io/keycloak/keycloak:26.8.0",
-            "tested": []
+            "tested": [
+                "quay.io/keycloak/keycloak:26.8.0"
+            ]
         },
         "db": {
             "ref": "postgres:17.11-alpine",
-            "tested": []
+            "tested": [
+                "postgres:17.11-alpine"
+            ]
         }
     },
     "services": [
@@ -79,6 +83,8 @@
         "Sign in to the admin console at /admin with admin and the generated ADMIN_PASSWORD. Keycloak creates this bootstrap admin only when the master realm is first created and labels it temporary: create a permanent admin user in the master realm and delete the temporary one.",
         "Every realm, user and session lives in PostgreSQL 17.11 (supported by Keycloak 26.8), which has its own named volume and no published port; Keycloak itself keeps no data on disk.",
         "Health endpoints (/health, /health/ready, /health/live) are enabled on the management port 9000, which is not published. The image ships no curl or wget, so the app service has no Docker healthcheck.",
-        "The JVM sizes its heap from the container limit (70% maximum, 50% initial); the 1536m floor follows Keycloak's sizing guidance. The database uses the panel database-memory default."
+        "The JVM sizes its heap from the container limit (70% maximum, 50% initial); the 1536m floor follows Keycloak's sizing guidance. The database uses the panel database-memory default.",
+        "The panel can report Running a few seconds before the first-start build finishes; a 503 on the very first page load clears on reload (seen live, RC-26).",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-26): created from the 1-Click Recipes tab, Running, HTTPS, first login and a real-use check passed; every image ref below is in its tested list."
     ]
 }

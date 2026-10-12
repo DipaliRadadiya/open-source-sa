@@ -21,11 +21,15 @@
     "images": {
         "app": {
             "ref": "ghcr.io/berriai/litellm-database:v1.105.0",
-            "tested": []
+            "tested": [
+                "ghcr.io/berriai/litellm-database:v1.105.0"
+            ]
         },
         "db": {
             "ref": "postgres:16.15-alpine",
-            "tested": []
+            "tested": [
+                "postgres:16.15-alpine"
+            ]
         }
     },
     "services": [
@@ -90,6 +94,8 @@
         "The litellm-database image is the official build for database-backed deployments; with DATABASE_URL set it applies its Prisma migrations on start. STORE_MODEL_IN_DB lets models be managed from the UI instead of a config file.",
         "v1.105.0 is the release main-stable pointed to when this recipe was written (same digest). PostgreSQL 16.15 (the official compose's major version, pinned) has its own named volume and no published port; the proxy keeps no other data on disk.",
         "FORWARDED_ALLOW_IPS=* makes uvicorn honour the panel proxy's X-Forwarded-Proto. Without it uvicorn trusts only 127.0.0.1, but the proxy reaches the container from the Docker network gateway, so /ui redirected to http:// and the admin login fell back to plain HTTP (found live, RC-26). The port is published on 127.0.0.1 only, so the panel proxy is the only client that can set these headers.",
-        "The healthcheck is the official one (/health/liveliness through python3) pointed at 127.0.0.1. The database uses the panel database-memory default."
+        "The healthcheck is the official one (/health/liveliness through python3) pointed at 127.0.0.1. The database uses the panel database-memory default.",
+        "The admin UI shows a banner that environment-credential login is enabled: admin + UI_PASSWORD is one shared static admin login. Keep it private, or add named admin users in the UI for each person.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-26): created from the 1-Click Recipes tab, Running, HTTPS, first login and a real-use check passed; every image ref below is in its tested list."
     ]
 }

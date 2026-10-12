@@ -21,15 +21,21 @@
     "images": {
         "app": {
             "ref": "infisical/infisical:v0.166.4",
-            "tested": []
+            "tested": [
+                "infisical/infisical:v0.166.4"
+            ]
         },
         "db": {
             "ref": "postgres:16.15-alpine",
-            "tested": []
+            "tested": [
+                "postgres:16.15-alpine"
+            ]
         },
         "cache": {
             "ref": "redis:7.4.7-alpine",
-            "tested": []
+            "tested": [
+                "redis:7.4.7-alpine"
+            ]
         }
     },
     "services": [
@@ -86,6 +92,7 @@
         "PostgreSQL 16.15 (the version Infisical is tested with) and Redis 7.4.7 each have a named volume and no published port. Redis is a required, persistent store for Infisical (queues, scheduled jobs), so it runs with append-only persistence and the noeviction policy upstream asks for.",
         "SMTP is not configured, so invitation and password-reset emails are not sent.",
         "The healthcheck probes /api/status on 127.0.0.1:8080 with the image's wget. Redis uses the panel database-memory default, like the database.",
-        "Memory floor 1536m: with 1g the app sat at 63-77% idle and peaked at 76-88% during the first start and migrations on Ubuntu 24.04 and 26.04 (RC-26 live smoke); the image's own NODE_OPTIONS allow a 2 GB heap."
+        "Memory floor 1536m: with 1g the app sat at 63-77% idle and peaked at 76-88% during the first start and migrations on Ubuntu 24.04 and 26.04 (RC-26 live smoke); the image's own NODE_OPTIONS allow a 2 GB heap.",
+        "Verified live on Ubuntu 24.04 and 26.04 (RC-26): created from the 1-Click Recipes tab, Running, HTTPS, first login and a real-use check passed; every image ref below is in its tested list."
     ]
 }
