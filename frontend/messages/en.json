@@ -1470,7 +1470,6 @@
       "body": "None of the services this panel manages are installed on this server yet."
     },
     "alwaysOn": "Always on",
-    "checkedAt": "Checked at {time}",
     "copyReference": "Copy reference",
     "error": {
       "start": "Could not start {name} — it is still stopped.",
@@ -1495,6 +1494,8 @@
     "viewLogs": "View logs",
     "configTest": {
       "action": "Test configuration",
+      "runningTitle": "Testing {name} configuration…",
+      "runningBody": "Checking the files. Nothing is reloaded.",
       "okTitle": "{name} configuration is valid",
       "failTitle": "{name} configuration has a problem",
       "okBody": "Nothing was reloaded — this only checked the files.",
@@ -1534,11 +1535,16 @@
       "retryOnDocker": "Retry on the Docker page"
     },
     "summary": {
-      "attention": "{count, plural, =1 {1 service needs attention} other {# services need attention}}",
-      "running": "{count, plural, =1 {1 running} other {# running}}",
-      "installing": "{count, plural, =1 {1 installing} other {# installing}}",
-      "allRunning": "{count, plural, =0 {No services detected} =1 {The one service is running} other {All # services are running}}",
-      "stopped": "{count, plural, =1 {1 stopped} other {# stopped}}"
+      "installing": "{count, plural, =1 {1 installing} other {# installing}}"
+    },
+    "tiles": {
+      "running": "Running",
+      "runningValue": "{active} of {total}",
+      "stopped": "Stopped",
+      "attention": "Needs attention",
+      "count": "{count, plural, =1 {1 service} other {# services}}",
+      "none": "None",
+      "checked": "Last checked"
     },
     "sections": {
       "attention": {

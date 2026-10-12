@@ -1470,7 +1470,6 @@
       "body": "इस पैनल द्वारा प्रबंधित कोई भी सेवा अभी इस सर्वर पर इंस्टॉल नहीं है।"
     },
     "alwaysOn": "हमेशा चालू",
-    "checkedAt": "{time} पर जाँचा गया",
     "copyReference": "संदर्भ कॉपी करें",
     "error": {
       "start": "{name} शुरू नहीं हो सकी — यह अब भी बंद है।",
@@ -1495,6 +1494,8 @@
     "viewLogs": "लॉग देखें",
     "configTest": {
       "action": "कॉन्फ़िगरेशन जाँचें",
+      "runningTitle": "{name} का कॉन्फ़िगरेशन जाँचा जा रहा है…",
+      "runningBody": "फ़ाइलों की जाँच हो रही है। कुछ भी रीलोड नहीं होगा।",
       "okTitle": "{name} का कॉन्फ़िगरेशन सही है",
       "failTitle": "{name} के कॉन्फ़िगरेशन में समस्या है",
       "okBody": "कुछ भी रीलोड नहीं हुआ — यह केवल फ़ाइलों की जाँच थी।",
@@ -1534,11 +1535,16 @@
       "retryOnDocker": "Docker पृष्ठ पर पुनः प्रयास करें"
     },
     "summary": {
-      "attention": "{count, plural, =1 {1 सेवा पर ध्यान देना ज़रूरी है} other {# सेवाओं पर ध्यान देना ज़रूरी है}}",
-      "running": "{count, plural, =1 {1 चल रही} other {# चल रही}}",
-      "installing": "{count, plural, =1 {1 इंस्टॉल हो रही} other {# इंस्टॉल हो रही}}",
-      "allRunning": "{count, plural, =0 {कोई सेवा नहीं मिली} =1 {एकमात्र सेवा चल रही है} other {सभी # सेवाएँ चल रही हैं}}",
-      "stopped": "{count, plural, =1 {1 रुकी हुई} other {# रुकी हुई}}"
+      "installing": "{count, plural, =1 {1 इंस्टॉल हो रही} other {# इंस्टॉल हो रही}}"
+    },
+    "tiles": {
+      "running": "चल रही हैं",
+      "runningValue": "{total} में से {active}",
+      "stopped": "बंद है",
+      "attention": "ध्यान चाहिए",
+      "count": "{count, plural, =1 {1 सेवा} other {# सेवाएँ}}",
+      "none": "कोई नहीं",
+      "checked": "आखिरी जाँच"
     },
     "sections": {
       "attention": {

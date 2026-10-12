@@ -1470,7 +1470,6 @@
       "body": "このパネルが管理するサービスはまだこのサーバーにインストールされていません。"
     },
     "alwaysOn": "常に有効",
-    "checkedAt": "{time} に確認",
     "copyReference": "リファレンスをコピー",
     "error": {
       "start": "{name} を開始できませんでした — まだ停止しています。",
@@ -1495,6 +1494,8 @@
     "viewLogs": "ログを表示",
     "configTest": {
       "action": "設定をテスト",
+      "runningTitle": "{name} の設定をテストしています…",
+      "runningBody": "ファイルをチェックしています。リロードは行われません。",
       "okTitle": "{name} の設定は有効です",
       "failTitle": "{name} の設定に問題があります",
       "okBody": "リロードは行われていません — ファイルのチェックのみ実行しました。",
@@ -1534,11 +1535,16 @@
       "retryOnDocker": "Docker ページで再試行"
     },
     "summary": {
-      "attention": "{count, plural, =1 {1 件のサービスに対応が必要です} other {# 件のサービスに対応が必要です}}",
-      "running": "{count, plural, =1 {1 件実行中} other {# 件実行中}}",
-      "installing": "{count, plural, =1 {1 件インストール中} other {# 件インストール中}}",
-      "allRunning": "{count, plural, =0 {サービスは検出されませんでした} =1 {1 件のサービスが実行中です} other {すべての # 件のサービスが実行中です}}",
-      "stopped": "{count, plural, =1 {1 件停止中} other {# 件停止中}}"
+      "installing": "{count, plural, =1 {1 件インストール中} other {# 件インストール中}}"
+    },
+    "tiles": {
+      "running": "実行中",
+      "runningValue": "{active} / {total}",
+      "stopped": "停止しました",
+      "attention": "対応が必要",
+      "count": "{count, plural, other {# 件}}",
+      "none": "なし",
+      "checked": "最終確認"
     },
     "sections": {
       "attention": {

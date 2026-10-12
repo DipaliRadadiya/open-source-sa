@@ -16,18 +16,36 @@ const TONE = {
   neutral: { tile: "bg-muted text-muted-foreground", value: "text-foreground" },
 };
 
-function Tile({ icon: Icon, label, value, detail, tone, href }) {
+// Also drawn on the Services page; `action` sits where a linked tile shows its chevron.
+// `compact` puts label and value beside the icon in one row, for short values that
+// left the stacked tile mostly empty (Krishna, 12 Oct).
+export function Tile({ icon: Icon, label, value, detail, tone, href, action, compact = false }) {
   const t = TONE[tone] ?? TONE.neutral;
-  const body = (
+  const end = href ? (
+    <ChevronRight className="size-4 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" aria-hidden />
+  ) : (
+    action ?? null
+  );
+  const body = compact ? (
+    <div className="flex items-center gap-3">
+      <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", t.tile)}>
+        <Icon className="size-5" aria-hidden />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-medium break-words text-muted-foreground">{label}</p>
+        <p className={cn("text-[15px] font-semibold tracking-tight text-pretty break-words", t.value)}>{value}</p>
+        {detail ? <p className="line-clamp-2 text-xs text-muted-foreground">{detail}</p> : null}
+      </div>
+      {end}
+    </div>
+  ) : (
     <>
       <div className="flex items-center gap-3">
         <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", t.tile)}>
           <Icon className="size-[18px]" aria-hidden />
         </span>
         <span className="min-w-0 flex-1 text-xs font-medium break-words text-muted-foreground">{label}</span>
-        {href ? (
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" aria-hidden />
-        ) : null}
+        {end}
       </div>
       <div className="min-w-0">
         {/* Wraps, never truncates: German "Deployment fehlgeschlagen" was cut mid-word. */}
@@ -36,8 +54,10 @@ function Tile({ icon: Icon, label, value, detail, tone, href }) {
       </div>
     </>
   );
-  const className =
-    "group flex min-w-0 flex-col gap-3 rounded-2xl border border-border/70 bg-card p-4 shadow-e1 transition-[border-color,box-shadow]";
+  const className = cn(
+    "group flex min-w-0 flex-col rounded-2xl border border-border/70 bg-card shadow-e1 transition-[border-color,box-shadow]",
+    compact ? "justify-center px-4 py-3" : "gap-3 p-4",
+  );
   return href ? (
     <Link
       href={href}

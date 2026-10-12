@@ -10,7 +10,7 @@ const en = JSON.parse(read("messages/en.json")).services;
 test("the summary counts a stopped service as stopped, not running", () => {
   const panel = read("components/services/services-panel.jsx");
   assert.match(panel, /const active = running\.filter\(\(s\) => s\.status !== "inactive"\);/);
-  assert.match(panel, /t\("summary\.stopped", \{ count: stopped \}\)/);
+  assert.match(panel, /stopped > 0 \? t\("tiles\.count", \{ count: stopped \}\)/);
   assert.equal(en.sections.running.title, "Installed services");
 });
 

@@ -218,7 +218,7 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
               <DropdownMenuItem
                 // A read (`nginx -t` / `php-fpm -t`); the API allows it with view access.
                 disabled={configTest.pending}
-                // Closing the menu is fine: the dialog is rendered outside it.
+                // Closing the menu is fine: the dialog opens at once and shows the wait.
                 onSelect={() => configTest.run()}
               >
                 {configTest.pending ? (
@@ -245,6 +245,8 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
 
       <ConfigTestDialog
         service={service}
+        open={configTest.open}
+        pending={configTest.pending}
         result={configTest.result}
         onDismiss={configTest.dismiss}
       />

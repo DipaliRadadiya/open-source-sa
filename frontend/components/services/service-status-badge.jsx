@@ -15,7 +15,7 @@ export function ServiceStatusBadge({ status, state = "installed", busyAction }) 
   // While an action is in flight, report the transition rather than a stale state.
   if (busyAction && t.has(`busy.${busyAction}`)) {
     return (
-      <Badge variant="outline" className="gap-1.5 font-normal text-muted-foreground">
+      <Badge variant="muted">
         <Loader2 className="size-3 animate-spin" />
         {t(`busy.${busyAction}`)}
       </Badge>
@@ -26,7 +26,7 @@ export function ServiceStatusBadge({ status, state = "installed", busyAction }) 
   // A FAILED install falls through to the `failed` badge.
   if (state === "installing") {
     return (
-      <Badge variant="outline" className="gap-1.5 font-normal text-muted-foreground">
+      <Badge variant="muted">
         <Loader2 className="size-3 animate-spin" />
         {t("state.installing")}
       </Badge>
@@ -37,7 +37,7 @@ export function ServiceStatusBadge({ status, state = "installed", busyAction }) 
   const meta = STATUS_META[status];
   const Icon = meta?.icon ?? CircleHelp;
   return (
-    <Badge variant={meta?.variant ?? "outline"} className="gap-1.5 font-normal">
+    <Badge variant={meta?.variant ?? "muted"}>
       <Icon className="size-3" />
       {t.has(`status.${status}`) ? t(`status.${status}`) : status}
     </Badge>

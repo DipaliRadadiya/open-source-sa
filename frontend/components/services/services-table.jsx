@@ -58,7 +58,7 @@ function ServiceCell({ row }) {
 
   return (
     <div className="min-w-0">
-      <p className="font-medium">{label}</p>
+      <p className="font-medium whitespace-normal wrap-anywhere">{label}</p>
       {secondLine}
     </div>
   );
@@ -99,11 +99,16 @@ function CpuCell({ row }) {
 function BootCell({ row, table }) {
   const { canManage, setRowBusy } = table.options.meta;
   return (
-    <ServiceBootSwitch
-      service={row.original}
-      canManage={canManage}
-      onBusyChange={(action) => setRowBusy(row.original.key, action)}
-    />
+    <div className="flex items-center justify-center">
+      {/* Balance PendingSwitch's reserved spinner slot so the switch itself,
+          not just its enclosing group, aligns with the column heading. */}
+      {!row.original.protected ? <span aria-hidden className="w-6 shrink-0" /> : null}
+      <ServiceBootSwitch
+        service={row.original}
+        canManage={canManage}
+        onBusyChange={(action) => setRowBusy(row.original.key, action)}
+      />
+    </div>
   );
 }
 
@@ -130,21 +135,21 @@ export function ServicesTable({ data, phpVersions = [], canManage = false, busy,
     {
       accessorKey: "label",
       header: t("columns.service"),
-      meta: { className: "w-[34%]" },
+      meta: { className: "w-[15%]" },
       // No lock icon here: the "Always on" cell already carries one.
       cell: ServiceCell,
     },
     {
       accessorKey: "status",
       header: t("columns.status"),
-      meta: { className: "w-[13%]" },
+      meta: { className: "w-[22%] text-center" },
       cell: StatusCell,
     },
       // Two plain columns; the header labels them.
     {
       id: "memory",
       header: () => <span className="block text-right">{t("memoryShort")}</span>,
-      meta: { className: "w-[10%] text-right" },
+      meta: { className: "w-[12%] text-right" },
       cell: MemoryCell,
     },
     {
@@ -152,20 +157,20 @@ export function ServicesTable({ data, phpVersions = [], canManage = false, busy,
       // Padding lives on the column class, which covers header and body cells;
       // repeating it here would misalign the label.
       header: () => <span className="block text-right">{t("cpuShort")}</span>,
-      meta: { className: "w-[10%] pr-8 text-right" },
+      meta: { className: "w-[10%] text-right" },
       cell: CpuCell,
     },
     {
       id: "boot",
       // Wraps: "Beim Systemstart starten" is twice the column's width.
       header: () => <span className="block whitespace-normal leading-tight">{t("columns.boot")}</span>,
-      meta: { className: "w-[15%]" },
+      meta: { className: "w-[16%] text-center" },
       cell: BootCell,
     },
     {
       id: "actions",
       header: () => <span className="block text-right">{t("columns.actions")}</span>,
-      meta: { className: "w-[18%] text-right" },
+      meta: { className: "w-[25%] text-right" },
       cell: ActionsCell,
     },
   ];

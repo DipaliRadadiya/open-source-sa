@@ -99,3 +99,15 @@ test("the slot scaffolding went with the decision it propped up", () => {
     );
   }
 });
+
+test("config test opens its dialog on click and shows the wait", () => {
+  // The menu closes on select; if the dialog waited for the answer, the click
+  // looked like it did nothing for the whole request.
+  const hook = read("components/services/config-test.jsx");
+  assert.match(hook, /setOpen\(true\);\s*\n\s*setPending\(true\);/);
+  assert.match(hook, /<Dialog open=\{open\}/);
+  assert.match(hook, /t\("configTest\.runningTitle"/);
+  // Closed before the answer: a late result must not reopen it.
+  assert.match(hook, /if \(id !== runId\.current\) return;/);
+  assert.match(actions, /open=\{configTest\.open\}\s*\n\s*pending=\{configTest\.pending\}/);
+});

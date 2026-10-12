@@ -1470,7 +1470,6 @@
       "body": "Aucun des services gérés par ce panneau n'est encore installé sur ce serveur."
     },
     "alwaysOn": "Toujours activé",
-    "checkedAt": "Vérifié à {time}",
     "copyReference": "Copier la référence",
     "error": {
       "start": "Impossible de démarrer {name} — il est toujours arrêté.",
@@ -1495,6 +1494,8 @@
     "viewLogs": "Voir les journaux",
     "configTest": {
       "action": "Tester la configuration",
+      "runningTitle": "Test de la configuration de {name}…",
+      "runningBody": "Vérification des fichiers. Rien n'est rechargé.",
       "okTitle": "La configuration de {name} est valide",
       "failTitle": "La configuration de {name} pose problème",
       "okBody": "Rien n'a été rechargé — seuls les fichiers ont été vérifiés.",
@@ -1534,11 +1535,16 @@
       "retryOnDocker": "Réessayer depuis la page Docker"
     },
     "summary": {
-      "attention": "{count, plural, =1 {1 service à vérifier} other {# services à vérifier}}",
-      "running": "{count, plural, =1 {1 en exécution} other {# en exécution}}",
-      "installing": "{count, plural, =1 {1 en cours d'installation} other {# en cours d'installation}}",
-      "allRunning": "{count, plural, =0 {Aucun service détecté} =1 {L'unique service est en exécution} other {Les # services sont tous en exécution}}",
-      "stopped": "{count, plural, =1 {1 arrêté} other {# arrêtés}}"
+      "installing": "{count, plural, =1 {1 en cours d'installation} other {# en cours d'installation}}"
+    },
+    "tiles": {
+      "running": "En exécution",
+      "runningValue": "{active} sur {total}",
+      "stopped": "Arrêtés",
+      "attention": "À vérifier",
+      "count": "{count, plural, =1 {1 service} other {# services}}",
+      "none": "Aucune",
+      "checked": "Dernière vérification"
     },
     "sections": {
       "attention": {

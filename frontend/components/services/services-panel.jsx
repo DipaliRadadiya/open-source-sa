@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
+import { CircleCheck, CircleStop, Clock, TriangleAlert } from "lucide-react";
 import { listServices } from "@/lib/api/services";
 import { servicesResponseSchema } from "@/lib/schemas/service";
 import { ServicesTable } from "@/components/services/services-table";
@@ -9,6 +10,7 @@ import { ServiceAttentionList } from "@/components/services/service-attention-li
 import { ServiceStatusBadge } from "@/components/services/service-status-badge";
 import { ServicesCards } from "@/components/services/services-cards";
 import { RefreshButton } from "@/components/data-table/refresh-button";
+import { Tile } from "@/components/applications/app-status-tiles";
 
 // Fast enough that CPU reads as live, light enough on the server.
 const POLL_MS = 3000;
@@ -72,55 +74,61 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
   // The table lists stopped units with running ones; the counts must not.
   const active = running.filter((s) => s.status !== "inactive");
   const stopped = running.length - active.length;
+  const showRunning = running.length > 0 || services.length === 0;
+  // Refresh sits in the Installed services header; when that card is hidden, in the
+  // first card that is shown, so the page never loses it.
+  const refreshIn = showRunning ? "running" : attention.length > 0 ? "attention" : "installing";
 
   return (
     <div className="space-y-6">
-      {/* The two key counts plus the sample time. Tinted only when something
-          is wrong. */}
-      <div
-        className={`flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border px-4 py-3 text-sm ${
-          attention.length > 0 ? "border-destructive/30 bg-destructive/5" : "bg-muted/30"
-        }`}
-      >
-        {/* One phrase when all is well; the count only appears as the remainder
-            when something is wrong. */}
-        {attention.length > 0 ? (
-          <>
-            <span className="font-medium text-destructive">
-              {t("summary.attention", { count: attention.length })}
-            </span>
-            <span className="text-muted-foreground">
-              {t("summary.running", { count: active.length })}
-            </span>
-            {stopped > 0 ? (
-              <span className="text-muted-foreground">{t("summary.stopped", { count: stopped })}</span>
-            ) : null}
-          </>
-        ) : stopped > 0 ? (
-          <>
-            <span className="text-muted-foreground">{t("summary.running", { count: active.length })}</span>
-            <span className="font-medium text-foreground">{t("summary.stopped", { count: stopped })}</span>
-          </>
-        ) : (
-          <span className="text-muted-foreground">
-            {t("summary.allRunning", { count: running.length })}
-          </span>
-        )}
-        {installing.length > 0 ? (
-          <span className="text-muted-foreground">
-            {t("summary.installing", { count: installing.length })}
-          </span>
-        ) : null}
-        {/* The stamp and its refresh button sit at page level, since they
-            cover the whole page, not one section. */}
-        <span className="ms-auto flex items-center gap-2 text-xs tabular-nums text-muted-foreground">
-          {t("checkedAt", { time: checkedAt })}
-          <RefreshButton />
-        </span>
+      {/* Colour only when something is wrong: amber for stopped, red for failed.
+          1 / 2 / 4 across by the page's own width: auto-fit split them 3 + 1, and two
+          to a phone row squeezed "Last checked" beside the refresh button mid-word. */}
+      <div className="@container/tiles">
+      <div className="grid gap-3 sm:gap-4 @min-[30rem]/tiles:grid-cols-2 @min-[52rem]/tiles:grid-cols-4">
+        <Tile
+          compact
+          icon={CircleCheck}
+          label={t("tiles.running")}
+          value={t("tiles.runningValue", { active: active.length, total: services.length })}
+          detail={
+            installing.length > 0
+              ? t("summary.installing", { count: installing.length })
+              : null
+          }
+          tone={active.length > 0 ? "success" : "neutral"}
+        />
+        <Tile
+          compact
+          icon={CircleStop}
+          label={t("tiles.stopped")}
+          value={stopped > 0 ? t("tiles.count", { count: stopped }) : t("tiles.none")}
+          tone={stopped > 0 ? "warning" : "neutral"}
+        />
+        <Tile
+          compact
+          icon={TriangleAlert}
+          label={t("tiles.attention")}
+          value={attention.length > 0 ? t("tiles.count", { count: attention.length }) : t("tiles.none")}
+          tone={attention.length > 0 ? "destructive" : "neutral"}
+        />
+        {/* Moves only on a successful poll, so a stalled backend shows as a stopped clock. */}
+        <Tile
+          compact
+          icon={Clock}
+          label={t("tiles.checked")}
+          value={<span className="tabular-nums">{checkedAt}</span>}
+          tone="neutral"
+        />
+      </div>
       </div>
 
       {attention.length > 0 ? (
-        <Section title={t("sections.attention.title")} hint={t("sections.attention.hint")}>
+        <Section
+          title={t("sections.attention.title")}
+          hint={t("sections.attention.hint")}
+          action={refreshIn === "attention" ? <RefreshButton /> : null}
+        >
           <div className="px-4 pb-4">
             <ServiceAttentionList
               services={attention}
@@ -134,7 +142,11 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
       ) : null}
 
       {installing.length > 0 ? (
-        <Section title={t("sections.installing.title")} hint={t("sections.installing.hint")}>
+        <Section
+          title={t("sections.installing.title")}
+          hint={t("sections.installing.hint")}
+          action={refreshIn === "installing" ? <RefreshButton /> : null}
+        >
           <ul className="divide-y border-t">
             {installing.map((service) => (
               <li key={service.key} className="flex items-center justify-between gap-3 p-4">
@@ -148,8 +160,12 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
 
       {/* Hidden when nothing is running (the summary already says so). Kept
           when there are no services at all, to explain an otherwise blank page. */}
-      {running.length > 0 || services.length === 0 ? (
-      <Section title={t("sections.running.title")} hint={t("sections.running.hint")}>
+      {showRunning ? (
+      <Section
+        title={t("sections.running.title")}
+        hint={t("sections.running.hint")}
+        action={<RefreshButton />}
+      >
         {/* Container query, not lg: 900px is where the widest locale's headers fit. */}
         <div className="@container/svc">
         <div className="px-4 pb-4 @min-[900px]/svc:hidden">
@@ -178,12 +194,15 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
 }
 
 // A card with the panel's card head; tables inside run edge to edge.
-function Section({ title, hint, children }) {
+function Section({ title, hint, action, children }) {
   return (
     <section className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-e1">
-      <div className="space-y-1 px-4 pt-4 pb-3">
-        <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
-        <p className="text-sm text-muted-foreground">{hint}</p>
+      <div className="flex items-start gap-3 px-4 pt-4 pb-3">
+        <div className="min-w-0 flex-1 space-y-1">
+          <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
+          <p className="text-sm text-muted-foreground">{hint}</p>
+        </div>
+        {action}
       </div>
       {children}
     </section>

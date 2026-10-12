@@ -1470,7 +1470,6 @@
       "body": "Todavía no hay instalado en este servidor ninguno de los servicios que gestiona este panel."
     },
     "alwaysOn": "Siempre activo",
-    "checkedAt": "Comprobado a las {time}",
     "copyReference": "Copiar la referencia",
     "error": {
       "start": "No se pudo iniciar {name}: sigue detenido.",
@@ -1495,6 +1494,8 @@
     "viewLogs": "Ver registros",
     "configTest": {
       "action": "Probar la configuración",
+      "runningTitle": "Probando la configuración de {name}…",
+      "runningBody": "Comprobando los archivos. No se recarga nada.",
       "okTitle": "La configuración de {name} es válida",
       "failTitle": "La configuración de {name} tiene un problema",
       "okBody": "No se recargó nada: esto solo comprobó los archivos.",
@@ -1534,11 +1535,16 @@
       "retryOnDocker": "Reintentar en la página de Docker"
     },
     "summary": {
-      "attention": "{count, plural, =1 {1 servicio necesita atención} other {# servicios necesitan atención}}",
-      "running": "{count, plural, =1 {1 en ejecución} other {# en ejecución}}",
-      "installing": "{count, plural, =1 {1 instalándose} other {# instalándose}}",
-      "allRunning": "{count, plural, =0 {No se detectaron servicios} =1 {El único servicio está funcionando} other {Los # servicios están funcionando}}",
-      "stopped": "{count, plural, =1 {1 detenido} other {# detenidos}}"
+      "installing": "{count, plural, =1 {1 instalándose} other {# instalándose}}"
+    },
+    "tiles": {
+      "running": "En ejecución",
+      "runningValue": "{active} de {total}",
+      "stopped": "Detenidos",
+      "attention": "Requiere atención",
+      "count": "{count, plural, =1 {1 servicio} other {# servicios}}",
+      "none": "Ninguna",
+      "checked": "Última comprobación"
     },
     "sections": {
       "attention": {

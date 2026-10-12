@@ -1470,7 +1470,6 @@
       "body": "Keiner der Dienste, die dieses Panel verwaltet, ist bisher auf diesem Server installiert."
     },
     "alwaysOn": "Immer an",
-    "checkedAt": "Geprüft um {time}",
     "copyReference": "Referenz kopieren",
     "error": {
       "start": "{name} konnte nicht gestartet werden — er ist weiterhin gestoppt.",
@@ -1495,6 +1494,8 @@
     "viewLogs": "Protokolle ansehen",
     "configTest": {
       "action": "Konfiguration testen",
+      "runningTitle": "Konfiguration von {name} wird getestet…",
+      "runningBody": "Die Dateien werden geprüft. Es wird nichts neu geladen.",
       "okTitle": "Die Konfiguration von {name} ist gültig",
       "failTitle": "Die Konfiguration von {name} hat ein Problem",
       "okBody": "Es wurde nichts neu geladen — dies hat nur die Dateien geprüft.",
@@ -1534,11 +1535,16 @@
       "retryOnDocker": "Auf der Docker-Seite erneut versuchen"
     },
     "summary": {
-      "attention": "{count, plural, =1 {1 Dienst braucht Aufmerksamkeit} other {# Dienste brauchen Aufmerksamkeit}}",
-      "running": "{count, plural, =1 {1 läuft} other {# laufen}}",
-      "installing": "{count, plural, =1 {1 wird installiert} other {# werden installiert}}",
-      "allRunning": "{count, plural, =0 {Keine Dienste gefunden} =1 {Der eine Dienst läuft} other {Alle # Dienste laufen}}",
-      "stopped": "{count, plural, =1 {1 gestoppt} other {# gestoppt}}"
+      "installing": "{count, plural, =1 {1 wird installiert} other {# werden installiert}}"
+    },
+    "tiles": {
+      "running": "Läuft",
+      "runningValue": "{active} von {total}",
+      "stopped": "Gestoppt",
+      "attention": "Handlungsbedarf",
+      "count": "{count, plural, =1 {1 Dienst} other {# Dienste}}",
+      "none": "Keine",
+      "checked": "Zuletzt geprüft"
     },
     "sections": {
       "attention": {
