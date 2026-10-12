@@ -29,6 +29,7 @@ services:
       MEILI_HOST: http://meilisearch:7700
       MEILI_MASTER_KEY: "{{ secret.MEILI_MASTER_KEY }}"
       MEILI_NO_ANALYTICS: "true"
+      SCHEDULES_SINGLE_PROCESS: "true"
       CREDS_KEY_SEED: "{{ secret.CREDS_KEY_SEED }}"
       CREDS_IV_SEED: "{{ secret.CREDS_IV_SEED }}"
       JWT_SECRET: "{{ secret.JWT_SECRET }}"

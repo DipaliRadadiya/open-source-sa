@@ -25,6 +25,7 @@ services:
       MEILI_HOST: http://meilisearch:7700
       MEILI_MASTER_KEY: "004aaefc32bb943d984761adf6523590"
       MEILI_NO_ANALYTICS: "true"
+      SCHEDULES_SINGLE_PROCESS: "true"
       CREDS_KEY_SEED: "63dfb42077f9c4f739f3f532017caa0d"
       CREDS_IV_SEED: "9e3f33119c10bbc56e07136290c3de32"
       JWT_SECRET: "9c27d1c8daeb0cd06f36068276890e35"

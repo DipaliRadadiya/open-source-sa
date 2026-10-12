@@ -92,6 +92,8 @@
         "PostgreSQL is the pgvector image (as in the official compose) so the knowledge-base and tool-search features find the vector extension; it is PostgreSQL 17 with pgvector 0.8.7 instead of the official file's PostgreSQL 14, which reaches end of life in November 2026. Redis 7.4.7 holds the job queue, so it runs with append-only persistence and the noeviction policy.",
         "Telemetry is off (AP_TELEMETRY_ENABLED=false). Database migrations run inside the app on every start.",
         "The app and worker each keep a pieces cache volume; the database and Redis each have a named volume. Nothing but the app publishes a port.",
+        "The worker's limit is 1536m: it keeps five warm sandboxes (AP_WORKER_CONCURRENCY=5, about 145 MB each) next to its own process, and with 1g it idled at 72-74% and peaked at 78% on Ubuntu 24.04 and 26.04 (RC-27 live smoke).",
+        "On its first start the app downloads the piece catalogue (about 13,500 piece versions) from cloud.activepieces.com. If that download fails part-way, the flow builder lists no triggers or actions until the next sync; restarting the activepieces service starts it again.",
         "The healthcheck probes /api/v1/health on 127.0.0.1:80 with the image's curl; the first start installs pieces and runs migrations, so it is given two minutes."
     ]
 }

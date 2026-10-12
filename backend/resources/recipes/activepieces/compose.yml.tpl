@@ -62,7 +62,7 @@ services:
   worker:
     image: {{ image.app }}
     restart: unless-stopped
-    mem_limit: 1g
+    mem_limit: 1536m
     logging:
       driver: json-file
       options:

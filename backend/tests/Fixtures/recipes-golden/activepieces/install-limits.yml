@@ -58,7 +58,7 @@ services:
   worker:
     image: ghcr.io/activepieces/activepieces:0.92.3
     restart: unless-stopped
-    mem_limit: 1g
+    mem_limit: 1536m
     logging:
       driver: json-file
       options:
