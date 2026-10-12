@@ -3718,6 +3718,7 @@
       "blockedNode": "Nécessite Node",
       "blockedPhp": "Nécessite PHP",
       "categoryAll": "Tout",
+      "categoryAi": "IA",
       "categoryCms": "CMS",
       "categoryDevelopment": "Développement",
       "categoryTools": "Outils",

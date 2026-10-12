@@ -291,7 +291,7 @@ export function SiteTypePicker({ types = [], value, onChange, searchPlaceholder,
         ) : null}
       </div>
 
-      {/* Four buckets from type-categories.js; empty ones are not rendered. Chips, not Tabs:
+      {/* Buckets from type-categories.js; empty ones are not rendered. Chips, not Tabs:
           they filter one grid rather than switching panels. */}
       {groups.length > 1 ? (
         <div className="flex flex-wrap gap-1.5">

@@ -68,7 +68,7 @@ test("the categories the empty state can name are real groups", () => {
   // through `form.category<Key>`. A key with no string would print raw.
   const en = JSON.parse(fs.readFileSync("messages/en.json", "utf8"));
   const keys = new Set(["popular", "all", "others"]);
-  for (const category of ["cms", "ecommerce", "developer", "utility", "automation", "monitoring", "productivity", "business", "education", "marketing", "community", "made-up"]) {
+  for (const category of ["ai", "cms", "ecommerce", "developer", "development", "utility", "automation", "monitoring", "productivity", "business", "education", "marketing", "community", "made-up"]) {
     keys.add(groupForType({ category }));
   }
   for (const key of keys) {
