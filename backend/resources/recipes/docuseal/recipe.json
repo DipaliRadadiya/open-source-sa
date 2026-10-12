@@ -1,0 +1,76 @@
+{
+    "schema": 1,
+    "slug": "docuseal",
+    "version": 1,
+    "title": "DocuSeal",
+    "tagline": {
+        "en": "Open-source document signing: create PDF forms and collect e-signatures",
+        "es": "Firma de documentos de código abierto: crea formularios PDF y recoge firmas electrónicas",
+        "de": "Open-Source-Dokumentensignatur: PDF-Formulare erstellen und E-Signaturen einholen",
+        "fr": "Signature de documents open source : créez des formulaires PDF et collectez des signatures électroniques",
+        "pt": "Assinatura de documentos de código aberto: crie formulários PDF e colete assinaturas eletrônicas",
+        "ja": "オープンソースの文書署名: PDF フォームを作成して電子署名を集める",
+        "ru": "Подписание документов с открытым исходным кодом: создавайте PDF-формы и собирайте электронные подписи",
+        "hi": "ओपन-सोर्स दस्तावेज़ हस्ताक्षर: PDF फ़ॉर्म बनाएँ और ई-हस्ताक्षर एकत्र करें"
+    },
+    "category": "business",
+    "icon": "docuseal",
+    "popular": false,
+    "catalog_order": 340,
+    "docs_url": "https://www.docuseal.com/on-premises",
+    "images": {
+        "app": {
+            "ref": "docuseal/docuseal:3.3.2",
+            "tested": []
+        },
+        "db": {
+            "ref": "postgres:17.11-alpine",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "docuseal",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 3000,
+    "memory_floor": "1g",
+    "volumes": {
+        "data": "/data/docuseal",
+        "db": "/var/lib/postgresql/data"
+    },
+    "secrets": [
+        {
+            "key": "SECRET_KEY_BASE",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The first visitor creates the administrator account and the organisation on the setup page. Open the site and claim it immediately after install.",
+        "SECRET_KEY_BASE is generated and passed explicitly, so DocuSeal does not write its own docuseal.env into the data volume. DocuSeal derives its database encryption key from it: keep it with your backups, because a changed value makes stored encrypted settings unreadable.",
+        "Uploaded templates and signed documents live in the data volume (/data/docuseal, the image's working directory). PostgreSQL 17.11 has its own volume and no published port. DocuSeal runs its own Redis and background jobs inside the app container.",
+        "HOST is the site's domain and is used for links in emails. FORCE_SSL is not set: the panel terminates TLS and forwards the scheme, and leaving it off keeps sign-in working before a certificate is issued.",
+        "Sending signing requests by email needs SMTP, configured in DocuSeal's settings; signing links can also be copied and shared directly.",
+        "The 1g floor covers the Rails app, its embedded Redis and background jobs; the database uses the panel database-memory default."
+    ]
+}

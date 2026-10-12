@@ -1,0 +1,74 @@
+name: sv-app-4242
+
+services:
+  directus:
+    image: directus/directus:12.5.0
+    restart: unless-stopped
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:8055"
+
+    environment:
+      SECRET: "d38076a5f258a58eb48d7e01a8a57944"
+      PUBLIC_URL: "http://directus.golden.test"
+      DB_CLIENT: pg
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_DATABASE: directus
+      DB_USER: directus
+      DB_PASSWORD: "70c2053d85104e398cd229299e19c318"
+      ADMIN_EMAIL: "owner@golden.test"
+      ADMIN_PASSWORD: "1a1f92b81e0153db04604f1e6cdb39d9"
+
+    volumes:
+      - sv-app-4242_uploads:/directus/uploads
+      - sv-app-4242_extensions:/directus/extensions
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8055/server/ping || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+  db:
+    image: postgres:17.11-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      POSTGRES_DB: directus
+      POSTGRES_USER: directus
+      POSTGRES_PASSWORD: "70c2053d85104e398cd229299e19c318"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD", "pg_isready", "--host=localhost", "--username=directus", "--dbname=directus"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  sv-app-4242_uploads:
+    external: true
+  sv-app-4242_extensions:
+    external: true
+  sv-app-4242_db:
+    external: true

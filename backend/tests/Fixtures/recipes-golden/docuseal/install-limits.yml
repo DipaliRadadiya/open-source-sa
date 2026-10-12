@@ -1,0 +1,65 @@
+name: sv-app-4242
+
+services:
+  docuseal:
+    image: docuseal/docuseal:3.3.2
+    restart: unless-stopped
+    mem_limit: 640m
+    cpus: 1.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:3000"
+
+    environment:
+      DATABASE_URL: "postgresql://docuseal:3bd29e83d7f5826af508472033177e84@db:5432/docuseal"
+      SECRET_KEY_BASE: "ad4841729e4b798172827f75f6120592"
+      HOST: "docuseal.golden.test"
+
+    volumes:
+      - sv-app-4242_data:/data/docuseal
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:3000/up || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
+
+  db:
+    image: postgres:17.11-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    environment:
+      POSTGRES_DB: docuseal
+      POSTGRES_USER: docuseal
+      POSTGRES_PASSWORD: "3bd29e83d7f5826af508472033177e84"
+
+    volumes:
+      - sv-app-4242_db:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "docuseal", "-d", "docuseal"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  sv-app-4242_data:
+    external: true
+  sv-app-4242_db:
+    external: true

@@ -50,13 +50,23 @@ These marks identify the upstream applications; they do not imply endorsement. U
 | --- | --- | --- | --- |
 | `dify` | [official vector](https://raw.githubusercontent.com/langgenius/dify/1.17.1/web/public/logo/logo.svg) | Dify Open Source License (Apache-2.0 with additional conditions) | Official logo (the brand has no separate square symbol); paths unchanged, centred and scaled 1.1 on a white rounded square for both panel themes. |
 
+## RC-25 sources
+
+| Recipe | Source URL | Licence | Adaptation / attribution |
+| --- | --- | --- | --- |
+| `codeserver` | [official vector](https://raw.githubusercontent.com/coder/code-server/v4.141.0/src/browser/media/favicon.svg) | MIT | Official code-server mark; path unchanged, fixed black on a white rounded square for both panel themes. |
+| `directus` | [official vector](https://raw.githubusercontent.com/directus/directus/v12.5.0/app/src/assets/logo.svg) | MSCL-1.0-GPL (Directus 12 source licence; brand mark) | Official rabbit mark; path unchanged, white on a Directus-purple (#6644FF) rounded square. |
+| `docuseal` | [official vector](https://raw.githubusercontent.com/docusealco/docuseal/3.3.2/public/favicon.svg) | AGPL-3.0 | Official square application icon; unchanged. |
+| `listmonk` | [official vector](https://raw.githubusercontent.com/knadh/listmonk/v6.2.0/frontend/src/assets/logo.svg) | AGPL-3.0 | Isolated the ring symbol (the same mark as the official favicon) from the logo-plus-wordmark; circle unchanged, viewBox cropped to it. |
+
 ## Licence references
 
 - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) — Simple Icons / BookStack fallback.
 - [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) — Caesar Schinas (Forgejo logo); this normalized mark remains under that licence.
-- [MIT](https://opensource.org/license/mit) — Chatwoot Inc., Excalidraw contributors, Ghost Foundation, Gitea contributors, Memos contributors, Stirling PDF Inc., OpenClaw Foundation and TOEVERYTHING PTE. LTD. (AFFiNE); see the source repositories for copyright notices.
+- [MIT](https://opensource.org/license/mit) — Chatwoot Inc., Excalidraw contributors, Ghost Foundation, Gitea contributors, Memos contributors, Stirling PDF Inc., OpenClaw Foundation, Coder Technologies (code-server) and TOEVERYTHING PTE. LTD. (AFFiNE); see the source repositories for copyright notices.
 - [GPL 2.0](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html), [GPL 3.0](https://www.gnu.org/licenses/gpl-3.0.html) and [AGPL 3.0](https://www.gnu.org/licenses/agpl-3.0.html) — the corresponding upstream projects and contributors; see their source repositories for notices.
 - [MPL 2.0](https://www.mozilla.org/en-US/MPL/2.0/) — Penpot (Kaleidos INC); see the source repository for notices.
 - [Dify Open Source License](https://github.com/langgenius/dify/blob/1.17.1/LICENSE) — LangGenius, Inc. (Apache 2.0 with additional conditions; the logo is shown unmodified).
+- [MSCL-1.0-GPL](https://github.com/directus/directus/blob/v12.5.0/license) — Monospace, Inc. (Directus); the rabbit path is unmodified.
 
 The Memos contour trace and the FreshRSS/Matomo symbol crops remain under their respective upstream licences.

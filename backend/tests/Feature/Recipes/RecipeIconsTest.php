@@ -12,7 +12,7 @@ it('loads a safe vector icon for every shipped recipe', function () {
     expect(array_keys($recipes))->toEqualCanonicalizing([
         'bookstack', 'chatwoot', 'excalidraw', 'forgejo', 'freshrss', 'ghost', 'gitea', 'glance', 'grafana', 'homepage',
         'ittools', 'matomo', 'mattermost', 'memos', 'metabase', 'nocodb', 'paperless', 'stirlingpdf', 'vaultwarden', 'wikijs', 'wordpress_container',
-        'langflow', 'umami', 'odoo', 'immich', 'twenty', 'affine', 'penpot', 'openclaw', 'dify',
+        'langflow', 'umami', 'odoo', 'immich', 'twenty', 'affine', 'penpot', 'openclaw', 'dify', 'codeserver', 'directus', 'docuseal', 'listmonk',
     ]);
 
     foreach ($recipes as $recipe) {

@@ -1,0 +1,122 @@
+{
+    "slug": "docuseal",
+    "container_port": 3000,
+    "volume_roles": {
+        "data": "/data/docuseal",
+        "db": "/var/lib/postgresql/data"
+    },
+    "generated_secrets": [
+        "SECRET_KEY_BASE",
+        "DB_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": null,
+    "default_memory_limit": "1g",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "business",
+    "icon": "docuseal",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "1g",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 1g, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_data",
+            "path": "/data/docuseal"
+        },
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/postgresql/data"
+        }
+    ],
+    "docker_secret_keys": [
+        "SECRET_KEY_BASE",
+        "DB_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "DocuSeal",
+            "tagline": "Open-source document signing: create PDF forms and collect e-signatures"
+        },
+        "es": {
+            "title": "DocuSeal",
+            "tagline": "Firma de documentos de código abierto: crea formularios PDF y recoge firmas electrónicas"
+        },
+        "de": {
+            "title": "DocuSeal",
+            "tagline": "Open-Source-Dokumentensignatur: PDF-Formulare erstellen und E-Signaturen einholen"
+        },
+        "fr": {
+            "title": "DocuSeal",
+            "tagline": "Signature de documents open source : créez des formulaires PDF et collectez des signatures électroniques"
+        },
+        "pt": {
+            "title": "DocuSeal",
+            "tagline": "Assinatura de documentos de código aberto: crie formulários PDF e colete assinaturas eletrônicas"
+        },
+        "ja": {
+            "title": "DocuSeal",
+            "tagline": "オープンソースの文書署名: PDF フォームを作成して電子署名を集める"
+        },
+        "ru": {
+            "title": "DocuSeal",
+            "tagline": "Подписание документов с открытым исходным кодом: создавайте PDF-формы и собирайте электронные подписи"
+        },
+        "hi": {
+            "title": "DocuSeal",
+            "tagline": "ओपन-सोर्स दस्तावेज़ हस्ताक्षर: PDF फ़ॉर्म बनाएँ और ई-हस्ताक्षर एकत्र करें"
+        }
+    },
+    "catalog_en": {
+        "name": "docuseal",
+        "icon": "docuseal",
+        "category": "business",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

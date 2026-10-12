@@ -1,0 +1,84 @@
+{
+    "schema": 1,
+    "slug": "listmonk",
+    "version": 1,
+    "title": "Listmonk",
+    "tagline": {
+        "en": "Self-hosted newsletter and mailing list manager",
+        "es": "Gestor de boletines y listas de correo autoalojado",
+        "de": "Selbst gehosteter Newsletter- und Mailinglisten-Manager",
+        "fr": "Gestionnaire de newsletters et de listes de diffusion auto-hébergé",
+        "pt": "Gerenciador de newsletters e listas de e-mail auto-hospedado",
+        "ja": "セルフホスト型のニュースレター・メーリングリスト管理ツール",
+        "ru": "Самостоятельно размещаемый менеджер рассылок и списков адресатов",
+        "hi": "सेल्फ-होस्टेड न्यूज़लेटर और मेलिंग सूची प्रबंधक"
+    },
+    "category": "marketing",
+    "icon": "listmonk",
+    "popular": false,
+    "catalog_order": 350,
+    "docs_url": "https://listmonk.app/docs/installation/",
+    "images": {
+        "app": {
+            "ref": "listmonk/listmonk:v6.2.0",
+            "tested": []
+        },
+        "db": {
+            "ref": "postgres:17.11-alpine",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "listmonk",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 9000,
+    "memory_floor": "256m",
+    "volumes": {
+        "uploads": "/listmonk/uploads",
+        "db": "/var/lib/postgresql/data"
+    },
+    "secrets": [
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "ADMIN_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "username",
+                "value": "admin"
+            },
+            {
+                "label": "password",
+                "secret": "ADMIN_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The official start command installs the schema once (--install --idempotent), applies migrations (--upgrade) and starts listmonk, all configured from LISTMONK_* variables (--config ''). On the first install it creates the Super Admin admin with the generated ADMIN_PASSWORD; later starts keep the existing users.",
+        "Set the Root URL to https://<your domain> under Settings → General after the first login. Listmonk keeps it in the database (default http://localhost:9000) and environment variables cannot override it; links in emails and public pages use it.",
+        "Sending campaigns needs an SMTP provider, configured under Settings → SMTP.",
+        "Uploads go to /listmonk/uploads, the default media path, in its own named volume. PostgreSQL 17.11 (the official compose's major version, pinned) has its own volume and no published port.",
+        "Listmonk is a single Go binary; the 256m floor leaves ample headroom. The database uses the panel database-memory default."
+    ]
+}
