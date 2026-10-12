@@ -1,0 +1,90 @@
+{
+    "schema": 1,
+    "slug": "infisical",
+    "version": 1,
+    "title": "Infisical",
+    "tagline": {
+        "en": "Open-source secrets manager for teams and infrastructure",
+        "es": "Gestor de secretos de código abierto para equipos e infraestructura",
+        "de": "Open-Source-Secrets-Manager für Teams und Infrastruktur",
+        "fr": "Gestionnaire de secrets open source pour les équipes et l'infrastructure",
+        "pt": "Gerenciador de segredos de código aberto para equipes e infraestrutura",
+        "ja": "チームとインフラ向けのオープンソースシークレット管理",
+        "ru": "Менеджер секретов с открытым исходным кодом для команд и инфраструктуры",
+        "hi": "टीमों और इन्फ्रास्ट्रक्चर के लिए ओपन-सोर्स सीक्रेट्स मैनेजर"
+    },
+    "category": "security",
+    "icon": "infisical",
+    "popular": false,
+    "catalog_order": 370,
+    "docs_url": "https://infisical.com/docs/self-hosting/deployment-options/docker-compose",
+    "images": {
+        "app": {
+            "ref": "infisical/infisical:v0.166.4",
+            "tested": []
+        },
+        "db": {
+            "ref": "postgres:16.15-alpine",
+            "tested": []
+        },
+        "cache": {
+            "ref": "redis:7.4.7-alpine",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "infisical",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        },
+        {
+            "name": "redis",
+            "role": "cache"
+        }
+    ],
+    "container_port": 8080,
+    "memory_floor": "1g",
+    "volumes": {
+        "db": "/var/lib/postgresql/data",
+        "redis": "/data"
+    },
+    "secrets": [
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "ENCRYPTION_KEY_SEED",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "AUTH_SECRET",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "SITE_URL",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "First run: open the site and sign up. The first account becomes the instance (server) administrator, so do it right after the install. Then close sign-ups in the Server Admin Console (Admin → General → Allow user signups: disabled), or restrict them to your email domain.",
+        "ENCRYPTION_KEY must be 16 bytes of hex (32 characters). It is derived in the start command from the 32-character ENCRYPTION_KEY_SEED secret with sha256sum and cut -c1-32, so a recreated container gets the same key; the seed variable is unset before Infisical starts. Never change the seed: everything stored is encrypted under it.",
+        "AUTH_SECRET is the base64 form of a 32-character secret (exactly 32 bytes), as Infisical requires; changing it signs everyone out.",
+        "Infisical runs its database migrations itself on every start, so there is no separate migration job.",
+        "PostgreSQL 16.15 (the version Infisical is tested with) and Redis 7.4.7 each have a named volume and no published port. Redis is a required, persistent store for Infisical (queues, scheduled jobs), so it runs with append-only persistence and the noeviction policy upstream asks for.",
+        "SMTP is not configured, so invitation and password-reset emails are not sent.",
+        "The healthcheck probes /api/status on 127.0.0.1:8080 with the image's wget. Redis uses the panel database-memory default, like the database."
+    ]
+}

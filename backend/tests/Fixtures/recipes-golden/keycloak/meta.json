@@ -1,0 +1,117 @@
+{
+    "slug": "keycloak",
+    "container_port": 8080,
+    "volume_roles": {
+        "db": "/var/lib/postgresql/data"
+    },
+    "generated_secrets": [
+        "DB_PASSWORD",
+        "ADMIN_PASSWORD"
+    ],
+    "complex_secrets": [],
+    "panel_only_secrets": [],
+    "url_env_key": "KC_HOSTNAME",
+    "default_memory_limit": "1536m",
+    "method": "one_click",
+    "serving_profile": "docker",
+    "needs_database": false,
+    "features": [
+        "app_dashboard",
+        "app_domain",
+        "app_log",
+        "app_backup",
+        "app_file",
+        "app_security",
+        "app_firewall",
+        "app_bot_blocker",
+        "app_fail2ban",
+        "app_container",
+        "app_compose"
+    ],
+    "category": "security",
+    "icon": "keycloak",
+    "popular": false,
+    "fields": [
+        {
+            "name": "memory_limit",
+            "label": "Memory limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "1536m",
+            "help": "Optional. The most memory this app's own container may use. Left empty it gets 1536m, which is what this app has been measured to need — set it lower and the app may not start, and it will fail as a 502 with nothing about memory to explain it. Any database this app brings has its own separate ceiling."
+        },
+        {
+            "name": "cpu_limit",
+            "label": "CPU limit",
+            "type": "text",
+            "required": false,
+            "advanced": false,
+            "placeholder": "No limit",
+            "help": "Optional. How many CPU cores this app's own container may use — 1 for one full core, 0.5 for half. This server has 4, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this does not kill anything; the container waits, so the symptom is slowness rather than an error. Any database this app brings is not limited by it."
+        }
+    ],
+    "rule_keys": [
+        "memory_limit",
+        "cpu_limit"
+    ],
+    "starter_files": [],
+    "first_run_claim": null,
+    "volume_mounts": [
+        {
+            "volume": "sv-app-4242_db",
+            "path": "/var/lib/postgresql/data"
+        }
+    ],
+    "docker_secret_keys": [
+        "DB_PASSWORD",
+        "ADMIN_PASSWORD"
+    ],
+    "installer": "App\\Services\\Server\\Applications\\Installers\\DockerAppInstaller",
+    "catalog": {
+        "en": {
+            "title": "Keycloak",
+            "tagline": "Open-source identity and access management with single sign-on"
+        },
+        "es": {
+            "title": "Keycloak",
+            "tagline": "Gestión de identidades y accesos de código abierto con inicio de sesión único"
+        },
+        "de": {
+            "title": "Keycloak",
+            "tagline": "Open-Source-Identitäts- und Zugriffsverwaltung mit Single Sign-on"
+        },
+        "fr": {
+            "title": "Keycloak",
+            "tagline": "Gestion des identités et des accès open source avec authentification unique"
+        },
+        "pt": {
+            "title": "Keycloak",
+            "tagline": "Gestão de identidades e acessos de código aberto com login único"
+        },
+        "ja": {
+            "title": "Keycloak",
+            "tagline": "シングルサインオン対応のオープンソースID・アクセス管理"
+        },
+        "ru": {
+            "title": "Keycloak",
+            "tagline": "Управление идентификацией и доступом с открытым исходным кодом и единым входом"
+        },
+        "hi": {
+            "title": "Keycloak",
+            "tagline": "सिंगल साइन-ऑन के साथ ओपन-सोर्स पहचान और एक्सेस प्रबंधन"
+        }
+    },
+    "catalog_en": {
+        "name": "keycloak",
+        "icon": "keycloak",
+        "category": "security",
+        "popular": false,
+        "method": "one_click",
+        "serving_profile": "docker",
+        "needs_database": false,
+        "accepted_engines": [],
+        "available": true,
+        "has_installer": true
+    }
+}

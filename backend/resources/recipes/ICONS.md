@@ -59,6 +59,14 @@ These marks identify the upstream applications; they do not imply endorsement. U
 | `docuseal` | [official vector](https://raw.githubusercontent.com/docusealco/docuseal/3.3.2/public/favicon.svg) | AGPL-3.0 | Official square application icon; unchanged. |
 | `listmonk` | [official vector](https://raw.githubusercontent.com/knadh/listmonk/v6.2.0/frontend/src/assets/logo.svg) | AGPL-3.0 | Isolated the ring symbol (the same mark as the official favicon) from the logo-plus-wordmark; circle unchanged, viewBox cropped to it. |
 
+## RC-26 sources
+
+| Recipe | Source URL | Licence | Adaptation / attribution |
+| --- | --- | --- | --- |
+| `keycloak` | [official vector](https://raw.githubusercontent.com/keycloak/keycloak-web/2961e7a16a835ea5143d25a939809d232b4a00ed/resources/images/icon.svg) | Apache-2.0 | Official Keycloak icon from the keycloak.org site repository; paths and colours unchanged, inline styles reduced to fill attributes, viewBox squared. |
+| `infisical` | [official vector](https://raw.githubusercontent.com/Infisical/infisical/v0.166.4/frontend/public/images/gradientLogo.svg) | MIT | Official infinity mark; path unchanged, filled with Infisical yellow (#E0ED34) on the dark (#0E1117) rounded square of the official logo instead of the light gradient. |
+| `litellm` | [official vector](https://raw.githubusercontent.com/BerriAI/litellm/v1.105.0/ui/litellm-dashboard/public/assets/logos/litellm_monogram.svg) | MIT | Official LiteLLM monogram; paths unchanged, CSS class colour (#0117BE) inlined, over a rounded white backing. |
+
 ## Licence references
 
 - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) — Simple Icons / BookStack fallback.

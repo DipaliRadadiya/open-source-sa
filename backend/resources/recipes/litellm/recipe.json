@@ -1,0 +1,94 @@
+{
+    "schema": 1,
+    "slug": "litellm",
+    "version": 1,
+    "title": "LiteLLM",
+    "tagline": {
+        "en": "AI gateway that serves 100+ LLM providers through one OpenAI-compatible API",
+        "es": "Pasarela de IA que ofrece más de 100 proveedores de LLM con una sola API compatible con OpenAI",
+        "de": "KI-Gateway, das über 100 LLM-Anbieter über eine OpenAI-kompatible API bereitstellt",
+        "fr": "Passerelle IA qui expose plus de 100 fournisseurs de LLM via une seule API compatible OpenAI",
+        "pt": "Gateway de IA que oferece mais de 100 provedores de LLM por uma única API compatível com OpenAI",
+        "ja": "100以上のLLMプロバイダーを1つのOpenAI互換APIで提供するAIゲートウェイ",
+        "ru": "ИИ-шлюз, предоставляющий более 100 LLM-провайдеров через единый API, совместимый с OpenAI",
+        "hi": "AI गेटवे जो एक OpenAI-संगत API से 100+ LLM प्रदाताओं तक पहुँच देता है"
+    },
+    "category": "ai",
+    "icon": "litellm",
+    "popular": false,
+    "catalog_order": 380,
+    "docs_url": "https://docs.litellm.ai/docs/proxy/deploy",
+    "images": {
+        "app": {
+            "ref": "ghcr.io/berriai/litellm-database:v1.105.0",
+            "tested": []
+        },
+        "db": {
+            "ref": "postgres:16.15-alpine",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "litellm",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 4000,
+    "memory_floor": "1536m",
+    "volumes": {
+        "db": "/var/lib/postgresql/data"
+    },
+    "secrets": [
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "MASTER_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "SALT_KEY",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "UI_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "username",
+                "value": "admin"
+            },
+            {
+                "label": "password",
+                "secret": "UI_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Sign in to the admin UI at /ui with admin and the generated UI_PASSWORD. Add models and create the API (virtual) keys your apps use there; the API is served at https://<your domain>/ (OpenAI-compatible routes such as /v1/chat/completions).",
+        "The master key (sk- followed by the generated MASTER_KEY, as LiteLLM requires the sk- prefix) is the proxy's internal admin key: keep it inside the server and hand out virtual keys instead.",
+        "LITELLM_SALT_KEY encrypts the provider credentials stored in the database. LiteLLM's production guide says to set it once and never change it: changing it makes every stored provider key unreadable.",
+        "The litellm-database image is the official build for database-backed deployments; with DATABASE_URL set it applies its Prisma migrations on start. STORE_MODEL_IN_DB lets models be managed from the UI instead of a config file.",
+        "v1.105.0 is the release main-stable pointed to when this recipe was written (same digest). PostgreSQL 16.15 (the official compose's major version, pinned) has its own named volume and no published port; the proxy keeps no other data on disk.",
+        "The healthcheck is the official one (/health/liveliness through python3) pointed at 127.0.0.1. The database uses the panel database-memory default."
+    ]
+}

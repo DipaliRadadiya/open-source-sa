@@ -1,0 +1,84 @@
+{
+    "schema": 1,
+    "slug": "keycloak",
+    "version": 1,
+    "title": "Keycloak",
+    "tagline": {
+        "en": "Open-source identity and access management with single sign-on",
+        "es": "Gestión de identidades y accesos de código abierto con inicio de sesión único",
+        "de": "Open-Source-Identitäts- und Zugriffsverwaltung mit Single Sign-on",
+        "fr": "Gestion des identités et des accès open source avec authentification unique",
+        "pt": "Gestão de identidades e acessos de código aberto com login único",
+        "ja": "シングルサインオン対応のオープンソースID・アクセス管理",
+        "ru": "Управление идентификацией и доступом с открытым исходным кодом и единым входом",
+        "hi": "सिंगल साइन-ऑन के साथ ओपन-सोर्स पहचान और एक्सेस प्रबंधन"
+    },
+    "category": "security",
+    "icon": "keycloak",
+    "popular": false,
+    "catalog_order": 360,
+    "docs_url": "https://www.keycloak.org/server/containers",
+    "images": {
+        "app": {
+            "ref": "quay.io/keycloak/keycloak:26.8.0",
+            "tested": []
+        },
+        "db": {
+            "ref": "postgres:17.11-alpine",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "keycloak",
+            "role": "app"
+        },
+        {
+            "name": "db",
+            "role": "database"
+        }
+    ],
+    "container_port": 8080,
+    "memory_floor": "1536m",
+    "volumes": {
+        "db": "/var/lib/postgresql/data"
+    },
+    "secrets": [
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        },
+        {
+            "key": "ADMIN_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "KC_HOSTNAME",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "username",
+                "value": "admin"
+            },
+            {
+                "label": "password",
+                "secret": "ADMIN_PASSWORD"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Keycloak runs in production mode (start) behind the panel's TLS proxy: KC_HTTP_ENABLED serves plain HTTP on 8080 inside the container, KC_PROXY_HEADERS=xforwarded trusts the proxy's X-Forwarded-* headers and KC_HOSTNAME is the site's full URL, so issuer and redirect URLs use https://<your domain>.",
+        "The first start builds the server for PostgreSQL before it listens (about a minute); later starts are faster.",
+        "Sign in to the admin console at /admin with admin and the generated ADMIN_PASSWORD. Keycloak creates this bootstrap admin only when the master realm is first created and labels it temporary: create a permanent admin user in the master realm and delete the temporary one.",
+        "Every realm, user and session lives in PostgreSQL 17.11 (supported by Keycloak 26.8), which has its own named volume and no published port; Keycloak itself keeps no data on disk.",
+        "Health endpoints (/health, /health/ready, /health/live) are enabled on the management port 9000, which is not published. The image ships no curl or wget, so the app service has no Docker healthcheck.",
+        "The JVM sizes its heap from the container limit (70% maximum, 50% initial); the 1536m floor follows Keycloak's sizing guidance. The database uses the panel database-memory default."
+    ]
+}
