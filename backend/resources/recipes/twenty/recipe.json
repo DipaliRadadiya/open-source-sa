@@ -83,12 +83,12 @@
     "after_install": null,
     "hook": null,
     "notes": [
-        "The first signup creates the workspace and becomes its administrator. Single-workspace mode is explicitly enabled: after the first workspace exists, new public signups are disabled and additional users need an invitation. Claim the instance immediately.",
+        "The first signup creates the workspace and becomes its administrator. Single-workspace mode is explicitly enabled: after the first workspace exists, new public signups are refused (verified live: the server answers FORBIDDEN and the form shows no error) and additional users need an invitation. Claim the instance immediately.",
         "The upstream image entrypoint initializes the database, runs upgrades and registers cron jobs on the server. The worker runs yarn worker:prod with DISABLE_DB_MIGRATIONS=true and DISABLE_CRON_JOBS_REGISTRATION=true, and waits for the healthy server. The server healthcheck has a 300s start_period (not upstream): the first boot runs about two minutes of migrations, and without it the check turned unhealthy mid-migration on Ubuntu 24.04, so compose refused to start the worker and the install failed.",
         "Only the server publishes a loopback port. Server and worker share the local-storage named volume; PostgreSQL has its own named volume. Redis uses the upstream noeviction policy and stores transient queue/cache data without a persistent volume, so pending jobs may be lost if its container is recreated.",
         "Twenty v2.46.0 recommends a dedicated ENCRYPTION_KEY for new installs, in addition to APP_SECRET. Both are generated and shared by server and worker. Preserve the encryption key with backups: losing or changing it can make stored OAuth tokens and other encrypted secrets unreadable.",
         "No SMTP, external object storage or OAuth provider is configured. Password authentication and the upstream default of no required email verification support initial setup; email invitations and password-reset delivery require configuring email later.",
-        "Upstream requires at least 2GB environment RAM. The server floor of 2g and worker limit of 1g are provisional; database and cache use the panel database-memory default. Parent live checks must confirm idle use below 70% and no OOM kills.",
+        "Upstream requires at least 2GB environment RAM. Server floor 2g; the worker gets a 2g literal because Node sizes its heap from the container limit: at 1g (about 560 MB of heap) the worker crashed four times with 'JavaScript heap out of memory' running GenerateSdkClientJob after the first workspace was created. Database and cache use the panel database-memory default.",
         "The upstream PostgreSQL 16 and unversioned Redis images are pinned to verified exact 16.15 Debian and 8.2.2 releases with immutable digests. Tested lists remain empty until live verification on Ubuntu 24.04 and 26.04."
     ]
 }
