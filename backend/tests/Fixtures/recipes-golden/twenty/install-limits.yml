@@ -41,6 +41,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+      start_period: 300s
 
   worker:
     image: twentycrm/twenty:v2.46.0@sha256:bb4e94f0215cbd14c7356b0324d9b7ac10ccd077042cd6d5058ad02ef2080605

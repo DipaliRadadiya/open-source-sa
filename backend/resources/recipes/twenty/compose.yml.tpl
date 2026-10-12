@@ -45,6 +45,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+      start_period: 300s
 
   worker:
     image: {{ image.app }}
