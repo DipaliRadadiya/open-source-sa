@@ -303,3 +303,33 @@ export const imageInspectResponseSchema = z.object({
 
 /** Matches DS-03's create rule for env keys. */
 export const ENV_KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/**
+ * `GET /applications/{id}/container/access` (RC-23): what the Command-line access
+ * card needs to write one `ssh … docker exec` line. `ssh_users` is `[]` for a viewer
+ * without the `system_user` permission, never an error.
+ */
+export const containerAccessSchema = z.object({
+  host: z.string().min(1),
+  ssh_port: z.number().int().nullish(),
+  project: z.string().nullish(),
+  containers: z
+    .array(
+      z.object({
+        service: z.string(),
+        name: z.string().min(1),
+        main: z.boolean().default(false),
+      }),
+    )
+    .min(1),
+  ssh_users: z
+    .array(
+      z.object({
+        username: z.string().min(1),
+        ssh_access: z.boolean().default(false),
+        sudo: z.boolean().default(false),
+        has_password: z.boolean().nullish(),
+      }),
+    )
+    .default([]),
+});

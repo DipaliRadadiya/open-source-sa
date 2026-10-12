@@ -5942,6 +5942,24 @@
       "factLabel": "Quelle",
       "factRecipe": "Ein-Klick-App · {title} (Rezept v{version})",
       "factImage": "Docker-Image · {image}"
+    },
+    "containerAccess": {
+      "title": "Kommandozeilenzugriff",
+      "description": "Öffnen Sie von Ihrem Computer aus eine Shell im Container dieser Anwendung.",
+      "loading": "Kommandozeilenzugriff wird geladen",
+      "copied": "Befehl kopiert",
+      "step1": {
+        "title": "Systembenutzer anlegen",
+        "body": "Sie brauchen einen Systembenutzer mit SSH-Zugriff, Passwort und sudo. Überspringen Sie diesen Schritt, wenn Sie sich als root anmelden.",
+        "open": "Systembenutzer öffnen",
+        "pick": "Anmelden als",
+        "pickPlaceholder": "Benutzer auswählen"
+      },
+      "step2": {
+        "title": "Diesen Befehl ausführen",
+        "container": "Container",
+        "note": "sudo fragt nach dem Passwort dieses Benutzers. Mit <code>exit</code> verlassen Sie den Container."
+      }
     }
   },
   "panelUpdate": {

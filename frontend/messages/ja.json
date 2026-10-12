@@ -5942,6 +5942,24 @@
       "factLabel": "ソース",
       "factRecipe": "ワンクリックアプリ · {title}（レシピv{version}）",
       "factImage": "Docker イメージ · {image}"
+    },
+    "containerAccess": {
+      "title": "コマンドラインアクセス",
+      "description": "お使いのコンピューターから、このアプリのコンテナ内でシェルを開きます。",
+      "loading": "コマンドラインアクセスを読み込んでいます",
+      "copied": "コマンドをコピーしました",
+      "step1": {
+        "title": "システムユーザーを作成する",
+        "body": "SSH アクセス、パスワード、sudo を持つシステムユーザーが必要です。root でログインする場合は省略できます。",
+        "open": "システムユーザーを開く",
+        "pick": "ログインするユーザー",
+        "pickPlaceholder": "ユーザーを選択"
+      },
+      "step2": {
+        "title": "このコマンドを実行する",
+        "container": "コンテナ",
+        "note": "sudo がそのユーザーのパスワードを尋ねます。コンテナから出るには <code>exit</code> と入力します。"
+      }
     }
   },
   "panelUpdate": {

@@ -115,6 +115,14 @@ export function acknowledgeContainerSecrets(id) {
 }
 
 /**
+ * The host, SSH port, containers and ready system users for the Command-line
+ * access card (RC-23). A read, gated like the compose file.
+ */
+export function getContainerAccess(id) {
+  return api.get(`/applications/${id}/container/access`);
+}
+
+/**
  * Image discovery (DS-02). All three read the registry without pulling, so
  * they are safe to call while the user types; `signal` lets a newer keystroke
  * abandon an older request.

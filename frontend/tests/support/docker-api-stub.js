@@ -15,3 +15,4 @@ export const inspectDockerImage = call("inspect");
 export const updateContainerSettings = call("update");
 export const pullContainerImage = call("pull");
 export const getContainerSecrets = call("secrets");
+export const getContainerAccess = call("access");

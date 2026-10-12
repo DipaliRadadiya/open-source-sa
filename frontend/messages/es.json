@@ -5942,6 +5942,24 @@
       "factLabel": "Origen",
       "factRecipe": "Aplicación con un clic · {title} (receta v{version})",
       "factImage": "Imagen de Docker · {image}"
+    },
+    "containerAccess": {
+      "title": "Acceso por línea de comandos",
+      "description": "Abra una shell dentro del contenedor de esta aplicación desde su ordenador.",
+      "loading": "Cargando el acceso por línea de comandos",
+      "copied": "Comando copiado",
+      "step1": {
+        "title": "Cree un usuario del sistema",
+        "body": "Necesita un usuario del sistema con acceso SSH, contraseña y sudo. Omita este paso si inicia sesión como root.",
+        "open": "Abrir Usuarios del sistema",
+        "pick": "Iniciar sesión como",
+        "pickPlaceholder": "Elija un usuario"
+      },
+      "step2": {
+        "title": "Ejecute este comando",
+        "container": "Contenedor",
+        "note": "sudo le pedirá la contraseña de ese usuario. Escriba <code>exit</code> para salir del contenedor."
+      }
     }
   },
   "panelUpdate": {

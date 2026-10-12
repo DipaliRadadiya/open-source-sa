@@ -22,6 +22,8 @@ import { ProvisioningCard } from "@/components/applications/provisioning-card";
 import { ContainerFailurePanel } from "@/components/applications/container-failure-panel";
 import { hasContainerFailure } from "@/lib/applications/container-state";
 import { FirstRunCredentials } from "@/components/applications/first-run-credentials";
+import { ContainerAccessCard } from "@/components/applications/container-access-card";
+import { showsContainerAccess } from "@/lib/applications/container-access";
 import { ApplicationRowActions } from "@/components/applications/application-row-actions";
 import { SiteFactsCard } from "@/components/applications/site-facts-card";
 import { SourceCard } from "@/components/applications/source-card";
@@ -108,6 +110,11 @@ export default async function ApplicationDetailPage({ params }) {
     !application.credentials_acknowledged &&
     (application.container_secret_keys ?? []).length > 0 &&
     can(appPermissions, "app_container", "manage", "application");
+
+  // Gated like the compose file it is read from (RC-23).
+  const showContainerAccess =
+    showsContainerAccess(application) &&
+    can(appPermissions, "app_compose", "view", "application");
 
   // The payload has `git_account_id` but no provider. `cache()`d, no provider API call.
   const gitAccounts =
@@ -388,6 +395,13 @@ export default async function ApplicationDetailPage({ params }) {
             nodeVersionsFailed={node.failed}
             className="lg:col-span-2 xl:col-span-3"
           />
+          {showContainerAccess ? (
+            <ContainerAccessCard
+              application={application}
+              canSeeSystemUsers={can(permissions, "system_user", "view")}
+              className="lg:col-span-2 xl:col-span-3"
+            />
+          ) : null}
           <ProtectionCard application={application} items={protectionItems} />
 
           {/* Domains stays above Source: certificates are what people come to check. */}

@@ -5942,6 +5942,24 @@
       "factLabel": "Source",
       "factRecipe": "One-click app · {title} (recipe v{version})",
       "factImage": "Docker image · {image}"
+    },
+    "containerAccess": {
+      "title": "Command-line access",
+      "description": "Open a shell inside this app's container from your computer.",
+      "loading": "Loading command-line access",
+      "copied": "Command copied",
+      "step1": {
+        "title": "Create a system user",
+        "body": "You need a system user with SSH access, a password and sudo. Skip this if you log in as root.",
+        "open": "Open System Users",
+        "pick": "Log in as",
+        "pickPlaceholder": "Choose a user"
+      },
+      "step2": {
+        "title": "Run this command",
+        "container": "Container",
+        "note": "sudo will ask for that user's password. Type <code>exit</code> to leave the container."
+      }
     }
   },
   "panelUpdate": {
