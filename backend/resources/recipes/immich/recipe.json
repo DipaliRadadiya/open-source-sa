@@ -1,0 +1,88 @@
+{
+    "schema": 1,
+    "slug": "immich",
+    "version": 1,
+    "title": "Immich",
+    "tagline": {
+        "en": "Private photo and video library with search and machine learning",
+        "es": "Biblioteca privada de fotos y vídeos con búsqueda y aprendizaje automático",
+        "de": "Private Foto- und Videobibliothek mit Suche und maschinellem Lernen",
+        "fr": "Photothèque et vidéothèque privées avec recherche et apprentissage automatique",
+        "pt": "Biblioteca privada de fotos e vídeos com pesquisa e aprendizado de máquina",
+        "ja": "検索と機械学習を備えたプライベートな写真・動画ライブラリ",
+        "ru": "Личная библиотека фото и видео с поиском и машинным обучением",
+        "hi": "खोज और मशीन लर्निंग के साथ निजी फ़ोटो और वीडियो लाइब्रेरी"
+    },
+    "category": "productivity",
+    "icon": "immich",
+    "popular": false,
+    "catalog_order": 270,
+    "docs_url": "https://docs.immich.app/",
+    "images": {
+        "app": {
+            "ref": "ghcr.io/immich-app/immich-server:v3.3.1@sha256:db996e352359771c6a3db121a0ed8761516b22f727fc092a0f46dcfef82c1bc1",
+            "tested": []
+        },
+        "ml": {
+            "ref": "ghcr.io/immich-app/immich-machine-learning:v3.3.1@sha256:513c831cfb010ad319341a0c86b42c575a0d5b688d3e8cae346ee624074a58ed",
+            "tested": []
+        },
+        "cache": {
+            "ref": "valkey/valkey:9@sha256:c123e3715db63d06d4ad6964884037aa0d5d4d703939b9929954112889708e1d",
+            "tested": []
+        },
+        "db": {
+            "ref": "ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "immich-server",
+            "role": "app"
+        },
+        {
+            "name": "immich-machine-learning",
+            "role": "worker"
+        },
+        {
+            "name": "redis",
+            "role": "cache"
+        },
+        {
+            "name": "database",
+            "role": "database"
+        }
+    ],
+    "container_port": 2283,
+    "memory_floor": "2g",
+    "volumes": {
+        "upload": "/data",
+        "model-cache": "/cache",
+        "db": "/var/lib/postgresql/data"
+    },
+    "secrets": [
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": null,
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The first visitor who completes Getting Started becomes the administrator. Claim the instance immediately; additional users are created by the administrator.",
+        "Immich v3.3.1 stores uploads in /data. CPU machine learning uses /cache; the release-specific PostgreSQL image includes VectorChord and pgvectors. All persistent storage uses separate named volumes, with no host mounts or hardware acceleration.",
+        "Only the Immich server publishes a loopback port. PostgreSQL and Valkey stay private; TZ=Etc/UTC replaces the upstream /etc/localtime host mount.",
+        "Upstream requires at least 6GB RAM for the stack, recommends 8GB, and requires x86-64-v2 on amd64 for machine learning v3. The application floor and ML limit are 2g each; PostgreSQL is explicitly limited to 2g because upstream requires at least 2GB when resource-limited. Live memory and upload checks must confirm these provisional limits.",
+        "The panel nginx upload limit follows the application post_max_size setting, which defaults to 128M. A single photo or video larger than that is rejected until the existing application setting is raised.",
+        "Exact release images and upstream dependency digests were verified for linux/amd64. Tested lists remain empty until live verification on Ubuntu 24.04 and 26.04."
+    ]
+}

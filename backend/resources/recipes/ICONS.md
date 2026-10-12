@@ -34,11 +34,21 @@ These marks identify the upstream applications; they do not imply endorsement. U
 | `umami` | [official vector](https://raw.githubusercontent.com/umami-software/umami/v3.4.0/src/assets/logo.svg) | MIT | Square padding, fixed dark color and white backing for both panel themes; paths unchanged. |
 | `odoo` | [official square O](https://raw.githubusercontent.com/odoo/odoo/2ff84495182bc2d6e87b616731f865677a12b213/addons/account/static/src/img/Odoo_logo_O.svg) | LGPL-3.0 | Official application mark; whitespace normalization only. |
 
+## RC-18 sources
+
+| Recipe | Source URL | Licence | Adaptation / attribution |
+| --- | --- | --- | --- |
+| `immich` | [official vector](https://raw.githubusercontent.com/immich-app/immich/v3.3.1/design/immich-logo.svg) | AGPL-3.0 | Official application mark; line-ending normalization only. |
+| `twenty` | [official square mark](https://raw.githubusercontent.com/twentyhq/twenty/twenty/v2.46.0/packages/twenty-front/public/images/integrations/twenty-logo.svg) | AGPL-3.0 | Official square application mark; unchanged. |
+| `affine` | [official vector](https://raw.githubusercontent.com/toeverything/AFFiNE/v0.27.4/packages/frontend/admin/src/modules/auth/logo.svg) | MIT (frontend, `LICENSE-MIT`) | Isolated the triangle symbol path from the official logo-plus-wordmark, unchanged; fixed dark color and white backing for both panel themes. |
+| `penpot` | [official vector](https://raw.githubusercontent.com/penpot/penpot/2.18.3/frontend/resources/images/assets/penpot-logo-icon.svg) | MPL-2.0 | Official application mark, path unchanged; fixed dark color and white backing for both panel themes. |
+
 ## Licence references
 
 - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) — Simple Icons / BookStack fallback.
 - [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) — Caesar Schinas (Forgejo logo); this normalized mark remains under that licence.
-- [MIT](https://opensource.org/license/mit) — Chatwoot Inc., Excalidraw contributors, Ghost Foundation, Gitea contributors, Memos contributors and Stirling PDF Inc.; see the source repositories for copyright notices.
+- [MIT](https://opensource.org/license/mit) — Chatwoot Inc., Excalidraw contributors, Ghost Foundation, Gitea contributors, Memos contributors, Stirling PDF Inc. and TOEVERYTHING PTE. LTD. (AFFiNE); see the source repositories for copyright notices.
 - [GPL 2.0](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html), [GPL 3.0](https://www.gnu.org/licenses/gpl-3.0.html) and [AGPL 3.0](https://www.gnu.org/licenses/agpl-3.0.html) — the corresponding upstream projects and contributors; see their source repositories for notices.
+- [MPL 2.0](https://www.mozilla.org/en-US/MPL/2.0/) — Penpot (Kaleidos INC); see the source repository for notices.
 
 The Memos contour trace and the FreshRSS/Matomo symbol crops remain under their respective upstream licences.

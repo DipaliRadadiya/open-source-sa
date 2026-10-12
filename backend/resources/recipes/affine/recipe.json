@@ -1,0 +1,79 @@
+{
+    "schema": 1,
+    "slug": "affine",
+    "version": 1,
+    "title": "AFFiNE",
+    "tagline": {
+        "en": "Collaborative documents and whiteboards with private PostgreSQL and Redis",
+        "es": "Documentos y pizarras colaborativos con PostgreSQL y Redis privados",
+        "de": "Gemeinsame Dokumente und Whiteboards mit privatem PostgreSQL und Redis",
+        "fr": "Documents et tableaux blancs collaboratifs avec PostgreSQL et Redis privés",
+        "pt": "Documentos e quadros brancos colaborativos com PostgreSQL e Redis privados",
+        "ja": "専用 PostgreSQL と Redis を備えた共同編集ドキュメントとホワイトボード",
+        "ru": "Совместные документы и доски с приватными PostgreSQL и Redis",
+        "hi": "निजी PostgreSQL और Redis के साथ सहयोगी दस्तावेज़ और व्हाइटबोर्ड"
+    },
+    "category": "productivity",
+    "icon": "affine",
+    "popular": false,
+    "catalog_order": 290,
+    "docs_url": "https://docs.affine.pro/self-host-affine",
+    "images": {
+        "app": {
+            "ref": "ghcr.io/toeverything/affine:0.27.4",
+            "tested": []
+        },
+        "redis": {
+            "ref": "redis:7.4.7-alpine",
+            "tested": []
+        },
+        "db": {
+            "ref": "pgvector/pgvector:0.8.2-pg16-bookworm",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "affine",
+            "role": "app"
+        },
+        {
+            "name": "redis",
+            "role": "cache"
+        },
+        {
+            "name": "postgres",
+            "role": "database"
+        }
+    ],
+    "container_port": 3010,
+    "memory_floor": "2g",
+    "volumes": {
+        "storage": "/root/.affine/storage",
+        "config": "/root/.affine/config",
+        "db": "/var/lib/postgresql/data"
+    },
+    "secrets": [
+        {
+            "key": "DB_PASSWORD",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "AFFINE_SERVER_EXTERNAL_URL",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "setup_wizard",
+        "credentials": null
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "The first visitor to /admin/setup creates the administrator. Complete setup immediately after deployment; the panel does not claim the administrator or configure SMTP.",
+        "The upstream self-host-predeploy.js prepares the persistent signing key and runs Prisma and data migrations before the official node ./dist/main.js server command. It runs on each start instead of using a restartable one-shot migration service.",
+        "AFFINE_SERVER_EXTERNAL_URL follows the application's public URL. The indexer is disabled to reduce memory use; indexed search features are therefore unavailable.",
+        "Storage, the signing-key configuration directory and PostgreSQL use separate external named volumes; Redis holds only cache and queue data and has no volume, as upstream. Only AFFiNE publishes a loopback port; PostgreSQL uses a generated password instead of upstream trust authentication.",
+        "The 2g application floor is provisional pending dual-OS live memory measurements. Exact release images were verified for linux/amd64; tested lists remain empty until Ubuntu 24.04 and 26.04 live verification."
+    ]
+}
