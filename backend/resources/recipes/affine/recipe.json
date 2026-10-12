@@ -21,15 +21,21 @@
     "images": {
         "app": {
             "ref": "ghcr.io/toeverything/affine:0.27.4",
-            "tested": []
+            "tested": [
+                "ghcr.io/toeverything/affine:0.27.4"
+            ]
         },
         "redis": {
             "ref": "redis:7.4.7-alpine",
-            "tested": []
+            "tested": [
+                "redis:7.4.7-alpine"
+            ]
         },
         "db": {
             "ref": "pgvector/pgvector:0.8.2-pg16-bookworm",
-            "tested": []
+            "tested": [
+                "pgvector/pgvector:0.8.2-pg16-bookworm"
+            ]
         }
     },
     "services": [
@@ -74,6 +80,6 @@
         "The upstream self-host-predeploy.js prepares the persistent signing key and runs Prisma and data migrations before the official node ./dist/main.js server command. It runs on each start instead of using a restartable one-shot migration service.",
         "AFFINE_SERVER_EXTERNAL_URL follows the application's public URL. The indexer is disabled to reduce memory use; indexed search features are therefore unavailable.",
         "Storage, the signing-key configuration directory and PostgreSQL use separate external named volumes; Redis holds only cache and queue data and has no volume, as upstream. Only AFFiNE publishes a loopback port; PostgreSQL uses a generated password instead of upstream trust authentication.",
-        "The 2g application floor is provisional pending dual-OS live memory measurements. Exact release images were verified for linux/amd64; tested lists remain empty until Ubuntu 24.04 and 26.04 live verification."
+        "The 2g application floor leaves headroom: measured live, AFFiNE idles around 10% of it, PostgreSQL and Redis well under their defaults. Exact release images were verified for linux/amd64. Verified live on Ubuntu 24.04 and 26.04 (RC-18): every image ref below is in its tested list."
     ]
 }

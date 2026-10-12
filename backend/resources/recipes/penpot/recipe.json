@@ -21,23 +21,33 @@
     "images": {
         "frontend": {
             "ref": "penpotapp/frontend:2.18.3",
-            "tested": []
+            "tested": [
+                "penpotapp/frontend:2.18.3"
+            ]
         },
         "backend": {
             "ref": "penpotapp/backend:2.18.3",
-            "tested": []
+            "tested": [
+                "penpotapp/backend:2.18.3"
+            ]
         },
         "exporter": {
             "ref": "penpotapp/exporter:2.18.3",
-            "tested": []
+            "tested": [
+                "penpotapp/exporter:2.18.3"
+            ]
         },
         "db": {
             "ref": "postgres:15.18-bookworm",
-            "tested": []
+            "tested": [
+                "postgres:15.18-bookworm"
+            ]
         },
         "cache": {
             "ref": "valkey/valkey:8.1.5-alpine",
-            "tested": []
+            "tested": [
+                "valkey/valkey:8.1.5-alpine"
+            ]
         }
     },
     "services": [
@@ -96,6 +106,6 @@
         "PENPOT_SECRET_KEY signs sessions and tokens and must never change after install. It is 32 alphanumeric characters; upstream suggests 512-bit base64, but the pinned config accepts any string.",
         "Valkey keeps no disk volume: upstream uses it only for websocket coordination and a 128mb volatile-lfu cache, set here on the command line instead of VALKEY_EXTRA_FLAGS. PostgreSQL keeps the upstream --data-checksums init argument and SIGINT stop signal.",
         "Upload limit inside Penpot is 350 MiB (upstream default). The panel's own nginx limit in front of the site follows the application post_max_size (default 128M), so larger single uploads fail until that setting is raised.",
-        "Memory: frontend floor 512m, backend 2g (JVM sizes its heap from the limit), exporter 1g (headless Chromium for PNG/PDF export); PostgreSQL and Valkey use the panel database default. Images are the exact 2.18.3 release; the upstream compose floats 2.18, postgres:15 and valkey:8.1, pinned here to verified releases. Tested lists stay empty until live verification on Ubuntu 24.04 and 26.04."
+        "Memory: frontend floor 512m, backend 2g (JVM sizes its heap from the limit), exporter 1g (headless Chromium for PNG/PDF export); PostgreSQL and Valkey use the panel database default. Images are the exact 2.18.3 release; the upstream compose floats 2.18, postgres:15 and valkey:8.1, pinned here to verified releases. Verified live on Ubuntu 24.04 and 26.04 (RC-18): every image ref below is in its tested list. Measured idle: frontend about 26%, backend 37%, exporter 38% of their limits after a PNG export."
     ]
 }

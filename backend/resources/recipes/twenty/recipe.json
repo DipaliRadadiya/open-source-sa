@@ -21,15 +21,21 @@
     "images": {
         "app": {
             "ref": "twentycrm/twenty:v2.46.0@sha256:bb4e94f0215cbd14c7356b0324d9b7ac10ccd077042cd6d5058ad02ef2080605",
-            "tested": []
+            "tested": [
+                "twentycrm/twenty:v2.46.0@sha256:bb4e94f0215cbd14c7356b0324d9b7ac10ccd077042cd6d5058ad02ef2080605"
+            ]
         },
         "db": {
             "ref": "postgres:16.15@sha256:ca0bd484cb98bf4b24eb1010e73fb3fcbd6714d240fbc1a10eea5b7dbecb641d",
-            "tested": []
+            "tested": [
+                "postgres:16.15@sha256:ca0bd484cb98bf4b24eb1010e73fb3fcbd6714d240fbc1a10eea5b7dbecb641d"
+            ]
         },
         "cache": {
             "ref": "redis:8.2.2@sha256:4521b581dbddea6e7d81f8fe95ede93f5648aaa66a9dacd581611bf6fe7527bd",
-            "tested": []
+            "tested": [
+                "redis:8.2.2@sha256:4521b581dbddea6e7d81f8fe95ede93f5648aaa66a9dacd581611bf6fe7527bd"
+            ]
         }
     },
     "services": [
@@ -89,6 +95,6 @@
         "Twenty v2.46.0 recommends a dedicated ENCRYPTION_KEY for new installs, in addition to APP_SECRET. Both are generated and shared by server and worker. Preserve the encryption key with backups: losing or changing it can make stored OAuth tokens and other encrypted secrets unreadable.",
         "No SMTP, external object storage or OAuth provider is configured. Password authentication and the upstream default of no required email verification support initial setup; email invitations and password-reset delivery require configuring email later.",
         "Upstream requires at least 2GB environment RAM. Server floor 2g; the worker gets a 2g literal because Node sizes its heap from the container limit: at 1g (about 560 MB of heap) the worker crashed four times with 'JavaScript heap out of memory' running GenerateSdkClientJob after the first workspace was created. Database and cache use the panel database-memory default.",
-        "The upstream PostgreSQL 16 and unversioned Redis images are pinned to verified exact 16.15 Debian and 8.2.2 releases with immutable digests. Tested lists remain empty until live verification on Ubuntu 24.04 and 26.04."
+        "The upstream PostgreSQL 16 and unversioned Redis images are pinned to verified exact 16.15 Debian and 8.2.2 releases with immutable digests. Verified live on Ubuntu 24.04 and 26.04 (RC-18): every image ref below is in its tested list."
     ]
 }
