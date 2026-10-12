@@ -1,0 +1,52 @@
+name: sv-app-4242
+
+services:
+  openclaw:
+    image: ghcr.io/openclaw/openclaw:2026.10.2
+    restart: unless-stopped
+    mem_limit: 2g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "127.0.0.1:20101:18789"
+
+    user: "0:0"
+    environment:
+      HOME: /home/node
+      OPENCLAW_STATE_DIR: /data/.openclaw
+      OPENCLAW_WORKSPACE_DIR: /data/workspace
+      OPENCLAW_GATEWAY_PORT: "18789"
+      OPENCLAW_GATEWAY_TOKEN: "929551d2fa812d2e1fd22bb492d3aea0"
+      OPENCLAW_CONTROL_UI_ORIGIN: "https://openclaw.golden.test"
+
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        mkdir -p /data/.openclaw /data/workspace
+        find /data ! -user node -exec chown node:node {} +
+        CONFIG=$$(node -e '
+        const route = require("fs").readFileSync("/proc/net/route", "utf8").split("\n").slice(1)
+          .map((line) => line.trim().split(/\s+/)).find((fields) => fields[1] === "00000000");
+        if (!route) { console.error("no default route"); process.exit(1); }
+        const proxy = route[2].match(/../g).reverse().map((byte) => parseInt(byte, 16)).join(".");
+        console.log(JSON.stringify([
+          { path: "gateway.mode", value: "local" },
+          { path: "gateway.bind", value: "lan" },
+          { path: "gateway.controlUi.allowedOrigins", value: [process.env.OPENCLAW_CONTROL_UI_ORIGIN] },
+          { path: "gateway.trustedProxies", value: [proxy + "/32"] },
+        ]));
+        ')
+        setpriv --reuid=node --regid=node --init-groups node dist/index.js config set --batch-json "$$CONFIG"
+        exec setpriv --reuid=node --regid=node --init-groups node dist/index.js gateway --port 18789
+
+    volumes:
+      - sv-app-4242_data:/data
+
+volumes:
+  sv-app-4242_data:
+    external: true

@@ -1,0 +1,68 @@
+{
+    "schema": 1,
+    "slug": "openclaw",
+    "version": 1,
+    "title": "OpenClaw",
+    "tagline": {
+        "en": "Personal AI assistant gateway with a browser Control UI",
+        "es": "Gateway de asistente personal de IA con una interfaz de control en el navegador",
+        "de": "Gateway für einen persönlichen KI-Assistenten mit Control UI im Browser",
+        "fr": "Passerelle d’assistant IA personnel avec une interface de contrôle dans le navigateur",
+        "pt": "Gateway de assistente pessoal de IA com uma interface de controle no navegador",
+        "ja": "ブラウザーのコントロール UI を備えたパーソナル AI アシスタントのゲートウェイ",
+        "ru": "Шлюз персонального ИИ-ассистента с панелью управления в браузере",
+        "hi": "ब्राउज़र कंट्रोल UI के साथ निजी AI असिस्टेंट गेटवे"
+    },
+    "category": "ai",
+    "icon": "openclaw",
+    "popular": false,
+    "catalog_order": 260,
+    "docs_url": "https://docs.openclaw.ai/web/control-ui/connect-and-pair",
+    "images": {
+        "app": {
+            "ref": "ghcr.io/openclaw/openclaw:2026.10.2",
+            "tested": []
+        }
+    },
+    "services": [
+        {
+            "name": "openclaw",
+            "role": "app"
+        }
+    ],
+    "container_port": 18789,
+    "memory_floor": "2g",
+    "volumes": {
+        "data": "/data"
+    },
+    "secrets": [
+        {
+            "key": "OPENCLAW_GATEWAY_TOKEN",
+            "complexity": "alnum",
+            "panel_only": false
+        }
+    ],
+    "url_env_key": "OPENCLAW_CONTROL_UI_ORIGIN",
+    "inputs": [],
+    "starter_files": [],
+    "first_run": {
+        "kind": "credentials",
+        "credentials": [
+            {
+                "label": "token",
+                "secret": "OPENCLAW_GATEWAY_TOKEN"
+            }
+        ]
+    },
+    "after_install": null,
+    "hook": null,
+    "notes": [
+        "Sign in to the Control UI with the generated gateway token. OpenClaw then asks you to approve each new browser once, from the server: this runs inside the container. Over SSH run `sudo docker exec -it -u node sv-app-<id>-openclaw-1 openclaw devices list`, then `sudo docker exec -it -u node sv-app-<id>-openclaw-1 openclaw devices approve <requestId>` with the request id the browser shows; or open a shell with the Command-line access card on the app page and run `openclaw devices approve <requestId>` there. Run `devices list` right before approving, because a retrying browser gets a new request id. Once one browser is approved, further browsers can also be approved from its Devices screen.",
+        "Model providers and API keys are set from the Control UI after the browser is approved; the recipe ships no provider key.",
+        "There is no docker.sock in the container, so OpenClaw's agent sandboxing stays off and the container itself is the boundary. Agent tools run with the container's access to the /data volume and the internet.",
+        "The container starts as root only to create /data/.openclaw and /data/workspace and give them to the image's node user (Northflank layout); the gateway and its config writes run as node via setpriv. Use `-u node` with docker exec so CLI writes stay owned by node; a restart re-owns anything root left behind.",
+        "Before the gateway starts, `config set --batch-json` writes gateway.mode=local, gateway.bind=lan, the panel's HTTPS origin as the only allowed Control UI origin, and the container's own bridge gateway (/32, read from /proc/net/route at every start) as the only trusted proxy. The panel's nginx reaches the container through that address, and without it OpenClaw rejects proxied requests with proxy_attribution_required. Token auth stays on.",
+        "OPENCLAW_CONTROL_UI_ORIGIN is the url key, so a domain change or a new certificate re-renders the allowed origin. The Control UI needs HTTPS: browser device identity requires a secure context.",
+        "The exact 2026.10.2 stable release is pinned (not latest, main or extended-stable), and the plain image is used rather than the -browser variant. The 2g floor follows the RC-17 spike: about 850 MiB idle on 2026.10.1."
+    ]
+}
